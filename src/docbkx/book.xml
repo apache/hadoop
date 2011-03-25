@@ -74,12 +74,73 @@
 
   <chapter xml:id="mapreduce">
   <title>HBase and MapReduce</title>
-  <para>See <link xlink:href="http://hbase.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#package_description">HBase and MapReduce</link>
-  up in javadocs.</para>
+  <para>See <link xlink:href="http://hbase.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#package_description">HBase and MapReduce</link> up in javadocs.  Start there.  Below are is some additional
+  help.</para>
+  <section xml:id="splitter">
+  <title>The default HBase MapReduce Splitter</title>
+  <para>When an HBase table is used as a MapReduce source,
+  a map task will be created for each region in the table.
+  Thus, if there are 100 regions in the table, there will be
+  100 map-tasks for the job - regardless of how many column families are selected in the Scan.</para>
+  </section>
+  <section xml:id="mapreduce.example">
+  <title>HBase Input MapReduce Example</title>
+  <para>To use HBase as a MapReduce source, the job would be configured via <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableMapReduceUtil.html">TableMapReduceUtil</link> in the following manner...
+	<programlisting>
+  Job job = ...;	
+  Scan scan = new Scan();
+  scan.setCaching(500);  // 1 is the default in Scan, which will be bad for MapReduce jobs
+  scan.setCacheBlocks(false);  
+  // set other scan attrs
+  
+  TableMapReduceUtil.initTableMapperJob(
+    tableName,   		// input HBase table name
+    scan, 			// Scan instance to control CF and attribute selection
+    MyMapper.class,		// mapper
+    Text.class,		// reducer key 
+    LongWritable.class,	// reducer value
+    job			// job instance
+    );
+  </programlisting>
+  ...and the mapper instance would extend <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableMapper.html">TableMapper</link>...
+	<programlisting>
+    public class MyMapper extends TableMapper&lt;Text, LongWritable&gt; {
+  	  public void map(ImmutableBytesWritable row, Result value, Context context) 
+      throws InterruptedException, IOException {
+
+      // process data for the row from the Result instance.
+    </programlisting>
+  	</para>
+   </section>
+   <section xml:id="mapreduce.htable.access">
+   <title>Accessing Other HBase Tables in a MapReduce Job</title>
+	<para>Although the framework currently allows one HBase table as input to a
+    MapReduce job, other HBase tables can 
+	be accessed as lookup tables, etc., in a
+    MapReduce job via creating an HTable instance in the setup method of the Mapper.
+	<programlisting>
+    public class MyMapper extends TableMapper&lt;Text, LongWritable&gt; {
+  	  private HTable myOtherTable;
+
+      @Override
+      public void setup(Context context) {
+        myOtherTable = new HTable("myOtherTable");
+     }
+   </programlisting>
+   </para>
+    </section>
   </chapter>
 
   <chapter xml:id="schema">
   <title>HBase and Schema Design</title>
+  <section xml:id="schema.creation">
+  <title>
+      Schema Creation
+  </title>
+      <para>HBase schemas can be created or updated through the <link linkend="shell">HBase shell</link>
+      or by using <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html">HBaseAdmin</link> in the Java API.
+      </para>
+  </section>   
   <section xml:id="number.of.cfs">
       <para>A good general introduction on the strength and weaknesses modelling on
           the various non-rdbms datastores is Ian Varleys' Master thesis,
@@ -102,14 +163,14 @@
         i.e. you query one column family or the other but usually not both at the one time.
     </para>
   </section>
-  <section>
+  <section xml:id="timeseries">
   <title>
   Monotonically Increasing Row Keys/Timeseries Data
   </title>
   <para>
       In the HBase chapter of Tom White's book <link xlink:url="http://oreilly.com/catalog/9780596521981">Hadoop: The Definitive Guide</link> (O'Reilly) there is a an optimization note on watching out for a phenomenon where an import process walks in lock-step with all clients in concert pounding one of the table's regions (and thus, a single node), then moving onto the next region, etc.  With monotonically increasing row-keys (i.e., using a timestamp), this will happen.  See this comic by IKai Lan on why monotically increasing row keys are problematic in BigTable-like datastores:
       <link xlink:href="http://ikaisays.com/2011/01/25/app-engine-datastore-tip-monotonically-increasing-values-are-bad/">monotonically increasing values are bad</link>.  The pile-up on a single region brought on
-      by monoticially increasing keys can be mitigated by randomizing the input records to not be in sorted order, but in general its best to avoid using a timestamp as the row-key. 
+      by monoticially increasing keys can be mitigated by randomizing the input records to not be in sorted order, but in general its best to avoid using a timestamp or a sequence (e.g. 1, 2, 3) as the row-key. 
   </para>
 
 
@@ -138,7 +199,7 @@
                   names.
       `</para>
   </section>
-  <section>
+  <section xml:id="precreate.regions">
   <title>
   Table Creation: Pre-Creating Regions
   </title>
@@ -146,7 +207,7 @@
 Tables in HBase are initially created with one region by default.  For bulk imports, this means that all clients will write to the same region until it is large enough to split and become distributed across the cluster.  A useful pattern to speed up the bulk import process is to pre-create empty regions.  Be somewhat conservative in this, because too-many regions can actually degrade performance.  An example of pre-creation using hex-keys is as follows (note:  this example may need to be tweaked to the individual applications keys):
 </para>
 <para>
-<pre>
+<programlisting>
   public static boolean createTable(HBaseAdmin admin, HTableDescriptor table, byte[][] splits)
     throws IOException {
       try {
@@ -174,7 +235,7 @@ Tables in HBase are initially created with one region by default.  For bulk impo
 
       return splits;
     }
-  </pre>
+  </programlisting>
   </para>
   </section>
 
@@ -182,8 +243,60 @@ Tables in HBase are initially created with one region by default.  For bulk impo
 
   <chapter xml:id="hbase_metrics">
   <title>Metrics</title>
-  <para>See <link xlink:href="http://hbase.apache.org/metrics.html">Metrics</link>.
+  <section xml:id="metric_setup">
+  <title>Metric Setup</title>
+  <para>See <link xlink:href="http://hbase.apache.org/metrics.html">Metrics</link> for
+  an introduction and how to enable Metrics emission.
   </para>
+  </section>
+   <section xml:id="rs_metrics">
+   <title>Region Server Metrics</title>
+          <section xml:id="hbase.regionserver.blockCacheCount"><title><varname>hbase.regionserver.blockCacheCount</varname></title>
+          <para></para>
+		  </section>
+         <section xml:id="hbase.regionserver.blockCacheFree"><title><varname>hbase.regionserver.blockCacheFree</varname></title>
+          <para></para>
+		  </section>
+         <section xml:id="hbase.regionserver.blockCacheHitRatio"><title><varname>hbase.regionserver.blockCacheHitRatio</varname></title>
+          <para></para>
+		  </section>
+          <section xml:id="hbase.regionserver.blockCacheSize"><title><varname>hbase.regionserver.blockCacheSize</varname></title>
+          <para></para>
+		  </section>
+          <section xml:id="hbase.regionserver.fsReadLatency_avg_time"><title><varname>hbase.regionserver.fsReadLatency_avg_time</varname></title>
+          <para></para>
+		  </section>
+          <section xml:id="hbase.regionserver.fsReadLatency_num_ops"><title><varname>hbase.regionserver.fsReadLatency_num_ops</varname></title>
+          <para></para>
+		  </section>
+          <section xml:id="hbase.regionserver.fsSyncLatency_avg_time"><title><varname>hbase.regionserver.fsSyncLatency_avg_time</varname></title>
+          <para></para>
+		  </section>
+          <section xml:id="hbase.regionserver.fsSyncLatency_num_ops"><title><varname>hbase.regionserver.fsSyncLatency_num_ops</varname></title>
+          <para></para>
+		  </section>
+          <section xml:id="hbase.regionserver.fsWriteLatency_avg_time"><title><varname>hbase.regionserver.fsWriteLatency_avg_time</varname></title>
+          <para></para>
+		  </section>
+          <section xml:id="hbase.regionserver.fsWriteLatency_num_ops"><title><varname>hbase.regionserver.fsWriteLatency_num_ops</varname></title>
+          <para></para>
+		  </section>
+          <section xml:id="hbase.regionserver.memstoreSizeMB"><title><varname>hbase.regionserver.memstoreSizeMB</varname></title>
+          <para></para>
+		  </section>
+          <section xml:id="hbase.regionserver.regions"><title><varname>hbase.regionserver.regions</varname></title>
+          <para></para>
+		  </section>
+          <section xml:id="hbase.regionserver.requests"><title><varname>hbase.regionserver.requests</varname></title>
+          <para></para>
+		  </section>
+          <section xml:id="hbase.regionserver.storeFileIndexSizeMB"><title><varname>hbase.regionserver.storeFileIndexSizeMB</varname></title>
+          <para></para>
+		  </section>
+          <section xml:id="hbase.regionserver.stores"><title><varname>hbase.regionserver.stores</varname></title>
+          <para></para>
+		  </section>
+   </section>
   </chapter>
 
   <chapter xml:id="cluster_replication">
@@ -346,25 +459,24 @@ Tables in HBase are initially created with one region by default.  For bulk impo
           </itemizedlist>
 
         </section>
-        <section>
+        <section xml:id="default_get_example">
         <title>Default Get Example</title>
         <para>The following Get will only retrieve the current version of the row
         <programlisting>
-        Get get = new Get( Bytes.toBytes("row1") );
+        Get get = new Get(Bytes.toBytes("row1"));
         Result r = htable.get(get);
-        byte[] b = r.getValue( Bytes.toBytes("cf"), Bytes.toBytes("attr") );  // returns current version of value      
-        </programlisting>
+        byte[] b = r.getValue(Bytes.toBytes("cf"), Bytes.toBytes("attr"));  // returns current version of value          </programlisting>
         </para>
         </section>
-        <section>
+        <section xml:id="versioned_get_example">
         <title>Versioned Get Example</title>
         <para>The following Get will return the last 3 versions of the row.
         <programlisting>
-        Get get = new Get( Bytes.toBytes("row1") );
+        Get get = new Get(Bytes.toBytes("row1"));
         get.setMaxVersions(3);  // will return last 3 versions of row
         Result r = htable.get(get);
-        byte[] b = r.getValue( Bytes.toBytes("cf"), Bytes.toBytes("attr") );  // returns current version of value
-        List&lt;KeyValue&gt; kv = r.getColumn( Bytes.toBytes("cf"), Bytes.toBytes("attr") );  // returns all versions of this column       
+        byte[] b = r.getValue(Bytes.toBytes("cf"), Bytes.toBytes("attr"));  // returns current version of value
+        List&lt;KeyValue&gt; kv = r.getColumn(Bytes.toBytes("cf"), Bytes.toBytes("attr"));  // returns all versions of this column       
         </programlisting>
         </para>
         </section>
@@ -382,7 +494,7 @@ Tables in HBase are initially created with one region by default.  For bulk impo
           <para>To overwrite an existing value, do a put at exactly the same
           row, column, and version as that of the cell you would
           overshadow.</para>
-          <section>
+          <section xml:id="implicit_version_example">
           <title>Implicit Version Example</title>
           <para>The following Put will be implicitly versioned by HBase with the current time.
           <programlisting>
@@ -392,13 +504,13 @@ Tables in HBase are initially created with one region by default.  For bulk impo
           </programlisting>
           </para>
           </section>
-          <section>
+          <section xml:id="explicit_version_example">
           <title>Explicit Version Example</title>
           <para>The following Put has the version timestamp explicitly set.
           <programlisting>
-          Put put = new Put( Bytes.toBytes( row ) );
+          Put put = new Put( Bytes.toBytes(row ));
           long explicitTimeInMs = 555;  // just an example
-          put.add(Bytes.toBytes("cf"), Bytes.toBytes("attr1"), explicitTimeInMs, Bytes.toBytes( data));
+          put.add(Bytes.toBytes("cf"), Bytes.toBytes("attr1"), explicitTimeInMs, Bytes.toBytes(data));
           htable.put(put);
           </programlisting>
           </para>
@@ -512,7 +624,7 @@ Tables in HBase are initially created with one region by default.  For bulk impo
         </para>
     </note>
 
-    <section>
+    <section xml:id="arch.regions.size">
       <title>Region Size</title>
 
       <para>Region size is one of those tricky things, there are a few factors

@@ -1,27 +1,26 @@
-<?xml version="1.0"?>
-  <preface xml:id="preface"
-      version="5.0" xmlns="http://docbook.org/ns/docbook"
-      xmlns:xlink="http://www.w3.org/1999/xlink"
-      xmlns:xi="http://www.w3.org/2001/XInclude"
-      xmlns:svg="http://www.w3.org/2000/svg"
-      xmlns:m="http://www.w3.org/1998/Math/MathML"
-      xmlns:html="http://www.w3.org/1999/xhtml"
-      xmlns:db="http://docbook.org/ns/docbook">
-    <title>Preface</title>
+<?xml version="1.0" encoding="UTF-8"?>
+<preface version="5.0" xml:id="preface" xmlns="http://docbook.org/ns/docbook"
+         xmlns:xlink="http://www.w3.org/1999/xlink"
+         xmlns:xi="http://www.w3.org/2001/XInclude"
+         xmlns:svg="http://www.w3.org/2000/svg"
+         xmlns:m="http://www.w3.org/1998/Math/MathML"
+         xmlns:html="http://www.w3.org/1999/xhtml"
+         xmlns:db="http://docbook.org/ns/docbook">
+  <title>Preface</title>
 
-    <para>This book aims to be the official guide for the <link
-    xlink:href="http://hbase.apache.org/">HBase</link> version it ships with.
-    This document describes HBase version <emphasis><?eval ${project.version}?></emphasis>.
-    Herein you will find either the definitive documentation on an HBase topic
-    as of its standing when the referenced HBase version shipped, or 
-    this book will point to the location in <link
-    xlink:href="http://hbase.apache.org/docs/current/api/index.html">javadoc</link>,
-    <link xlink:href="https://issues.apache.org/jira/browse/HBASE">JIRA</link>
-    or <link xlink:href="http://wiki.apache.org/hadoop/Hbase">wiki</link>
-    where the pertinent information can be found.</para>
+  <para>This book aims to be the official guide for the <link
+  xlink:href="http://hbase.apache.org/">HBase</link> version it ships with.
+  This document describes HBase version <emphasis><?eval ${project.version}?></emphasis>.
+  Herein you will find either the definitive documentation on an HBase topic
+  as of its standing when the referenced HBase version shipped, or this book
+  will point to the location in <link
+  xlink:href="http://hbase.apache.org/docs/current/api/index.html">javadoc</link>,
+  <link xlink:href="https://issues.apache.org/jira/browse/HBASE">JIRA</link>
+  or <link xlink:href="http://wiki.apache.org/hadoop/Hbase">wiki</link> where
+  the pertinent information can be found.</para>
 
-    <para>This book is a work in progress. It is lacking in many areas but we
-    hope to fill in the holes with time. Feel free to add to this book should
-    by adding a patch to an issue up in the HBase <link
-    xlink:href="https://issues.apache.org/jira/browse/HBASE">JIRA</link>.</para>
-  </preface>
+  <para>This book is a work in progress. It is lacking in many areas but we
+  hope to fill in the holes with time. Feel free to add to this book by adding
+  a patch to an issue up in the HBase <link
+  xlink:href="https://issues.apache.org/jira/browse/HBASE">JIRA</link>.</para>
+</preface>

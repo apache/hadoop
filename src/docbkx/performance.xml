@@ -1,39 +1,168 @@
-<?xml version="1.0"?>
-<chapter xml:id="performance"
-      version="5.0" xmlns="http://docbook.org/ns/docbook"
-      xmlns:xlink="http://www.w3.org/1999/xlink"
-      xmlns:xi="http://www.w3.org/2001/XInclude"
-      xmlns:svg="http://www.w3.org/2000/svg"
-      xmlns:m="http://www.w3.org/1998/Math/MathML"
-      xmlns:html="http://www.w3.org/1999/xhtml"
-      xmlns:db="http://docbook.org/ns/docbook">
-    
-    <title>Performance Tuning</title>
-    <para>Start with the <link xlink:href="http://wiki.apache.org/hadoop/PerformanceTuning">wiki Performance Tuning</link> page.
-        It has a general discussion of the main factors involved; RAM, compression, JVM settings, etc.
-        Afterward, come back here for more pointers.
-    </para>
-    <section xml:id="jvm">
-        <title>Java</title>
+<?xml version="1.0" encoding="UTF-8"?>
+<chapter version="5.0" xml:id="performance"
+         xmlns="http://docbook.org/ns/docbook"
+         xmlns:xlink="http://www.w3.org/1999/xlink"
+         xmlns:xi="http://www.w3.org/2001/XInclude"
+         xmlns:svg="http://www.w3.org/2000/svg"
+         xmlns:m="http://www.w3.org/1998/Math/MathML"
+         xmlns:html="http://www.w3.org/1999/xhtml"
+         xmlns:db="http://docbook.org/ns/docbook">
+  <title>Performance Tuning</title>
+
+  <para>Start with the <link
+  xlink:href="http://wiki.apache.org/hadoop/PerformanceTuning">wiki
+  Performance Tuning</link> page. It has a general discussion of the main
+  factors involved; RAM, compression, JVM settings, etc. Afterward, come back
+  here for more pointers.</para>
+
+  <section xml:id="jvm">
+    <title>Java</title>
+
     <section xml:id="gc">
-        <title>The Garage Collector and HBase</title>
-        <section xml:id="gcpause">
-            <title>Long GC pauses</title>
-        <para>
-            In his presentation,
-            <link xlink:href="http://www.slideshare.net/cloudera/hbase-hug-presentation">Avoiding Full GCs with MemStore-Local Allocation Buffers</link>,
-            Todd Lipcon describes two cases of stop-the-world garbage collections common in HBase, especially during loading;
-            CMS failure modes and old generation heap fragmentation brought.  To address the first,
-            start the CMS earlier than default by adding <code>-XX:CMSInitiatingOccupancyFraction</code>
-            and setting it down from defaults.  Start at 60 or 70 percent (The lower you bring down
-            the threshold, the more GCing is done, the more CPU used).  To address the second
-            fragmentation issue, Todd added an experimental facility that must be 
-            explicitly enabled in HBase 0.90.x (Its defaulted to be on in 0.92.x HBase).  See
-            <code>hbase.hregion.memstore.mslab.enabled</code> to true in your
-            <classname>Configuration</classname>.  See the cited slides for background and
-            detail.
-        </para>
+      <title>The Garage Collector and HBase</title>
+
+      <section xml:id="gcpause">
+        <title>Long GC pauses</title>
+
+        <para>In his presentation, <link
+        xlink:href="http://www.slideshare.net/cloudera/hbase-hug-presentation">Avoiding
+        Full GCs with MemStore-Local Allocation Buffers</link>, Todd Lipcon
+        describes two cases of stop-the-world garbage collections common in
+        HBase, especially during loading; CMS failure modes and old generation
+        heap fragmentation brought. To address the first, start the CMS
+        earlier than default by adding
+        <code>-XX:CMSInitiatingOccupancyFraction</code> and setting it down
+        from defaults. Start at 60 or 70 percent (The lower you bring down the
+        threshold, the more GCing is done, the more CPU used). To address the
+        second fragmentation issue, Todd added an experimental facility that
+        must be explicitly enabled in HBase 0.90.x (Its defaulted to be on in
+        0.92.x HBase). See <code>hbase.hregion.memstore.mslab.enabled</code>
+        to true in your <classname>Configuration</classname>. See the cited
+        slides for background and detail.</para>
       </section>
     </section>
+  </section>
+
+  <section xml:id="perf.configurations">
+    <title>Configurations</title>
+
+    <para>See the section on <link
+    linkend="recommended_configurations">recommended
+    configurations</link>.</para>
+
+    <section xml:id="perf.number.of.regions">
+      <title>Number of Regions</title>
+
+      <para>The number of regions for an HBase table is driven by the <link
+      linkend="bigger.regions">filesize</link>. Also, see the architecture
+      section on <link linkend="arch.regions.size">region size</link></para>
     </section>
-  </chapter>
+
+    <section xml:id="perf.compactions.and.splits">
+      <title>Managing Compactions</title>
+
+      <para>For larger systems, managing <link
+      linkend="disable.splitting">compactions and splits</link> may be
+      something you want to consider.</para>
+    </section>
+
+    <section xml:id="perf.compression">
+      <title>Compression</title>
+
+      <para>Production systems should use compression such as <link
+      linkend="lzo">LZO</link> compression with their column family
+      definitions.</para>
+    </section>
+  </section>
+
+  <section xml:id="perf.number.of.cfs">
+    <title>Number of Column Families</title>
+
+    <para>See the section on <link linkend="number.of.cfs">Number of Column
+    Families</link>.</para>
+  </section>
+
+  <section xml:id="perf.one.region">
+    <title>Data Clumping</title>
+
+    <para>If all your data is being written to one region, then re-read the
+    section on processing <link linkend="timeseries">timeseries</link>
+    data.</para>
+  </section>
+
+  <section xml:id="perf.batch.loading">
+    <title>Batch Loading</title>
+
+    <para>See the section on <link linkend="precreate.regions">Pre Creating
+    Regions</link> as well as bulk loading</para>
+  </section>
+
+  <section>
+    <title>HBase Client</title>
+
+    <section xml:id="perf.hbase.client.autoflush">
+      <title>AutoFlush</title>
+
+      <para>When performing a lot of Puts, make sure that setAutoFlush is set
+      to false on <link
+      xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>
+      instance. Otherwise, the Puts will be sent one at a time to the
+      regionserver. Puts added via... <programlisting>
+htable.add(Put);
+</programlisting> ... and ... <programlisting>
+htable.add( &lt;List&gt; Put);
+</programlisting> ... wind up in the same write buffer. If autoFlush=false,
+      these messages are not sent until the write-buffer is filled. To
+      explicitly flush the messages, call .flushCommits(). Calling .close() on
+      the htable instance will invoke flushCommits().</para>
+    </section>
+
+    <section xml:id="perf.hbase.client.caching">
+      <title>Scan Caching</title>
+
+      <para>If HBase is used as an input source for a MapReduce job, for
+      example, make sure that the input <link
+      xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scan</link>
+      instance to the MapReduce job has setCaching set to something greater
+      than the default (which is 1). Using the default value means that the
+      map-task will make call back to the region-server for every record
+      processed. Setting this value to 500, for example, will transfer 500
+      rows at a time to the client to be processed. There is a cost/benefit to
+      have the cache value be large because it costs more in memory for both
+      client and regionserver, so bigger isn't always better.</para>
+    </section>
+
+    <section xml:id="perf.hbase.client.scannerclose">
+      <title>Close ResultScanners</title>
+
+      <para>This isn't so much about improving performance but rather
+      <emphasis>avoiding</emphasis> performance problems. If you forget to
+      close <link
+      xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/ResultScanner.html">ResultScanners</link>
+      you can cause problems on the regionservers. Always have ResultScanner
+      processing enclosed in try/catch blocks... <programlisting>
+Scan scan = new Scan();
+// set attrs...
+ResultScanner rs = htable.getScanner(scan);
+try {
+  for (Result r = rs.next(); r != null; r = rs.next()) {
+  // process result...
+} finally {
+  rs.close();  // always close the ResultScanner!
+}
+htable.close();
+</programlisting></para>
+    </section>
+
+    <section xml:id="perf.hbase.client.blockcache">
+      <title>Block Cache</title>
+
+      <para><link
+      xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scan</link>
+      instances can be set to use the block cache in the region server via the
+      setCacheBlocks method. For input Scans to MapReduce jobs, this should be
+      false. For frequently access rows, it is advisable to use the block
+      cache.</para>
+    </section>
+  </section>
+</chapter>
