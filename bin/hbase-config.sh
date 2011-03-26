@@ -84,6 +84,7 @@ fi
 if [ -z "$JAVA_HOME" ]; then
   for candidate in \
     /usr/lib/jvm/java-6-sun \
+    /usr/lib/jvm/java-1.6.0-sun-1.6.0.* \
     /usr/lib/j2sdk1.6-sun \
     /usr/java/jdk1.6* \
     /usr/java/jre1.6* \
