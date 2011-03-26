@@ -88,8 +88,9 @@ public class Exec extends Invocation implements Row {
     out.writeUTF(this.methodName);
     out.writeInt(parameterClasses.length);
     for (int i = 0; i < parameterClasses.length; i++) {
-      HbaseObjectWritable.writeObject(out, parameters[i], parameters[i].getClass(),
-                                 conf);
+      HbaseObjectWritable.writeObject(out, parameters[i],
+          parameters[i] != null ? parameters[i].getClass() : parameterClasses[i],
+          conf);
       out.writeUTF(parameterClasses[i].getName());
     }
     // fields for Exec

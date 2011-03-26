@@ -81,6 +81,9 @@ public class TestServerCustomProtocol {
 
     @Override
     public String hello(String name) {
+      if (name == null) {
+        return "Who are you?";
+      }
       return "Hello, "+name;
     }
 
@@ -149,6 +152,8 @@ public class TestServerCustomProtocol {
     assertEquals("Invalid custom protocol response", "pong", result);
     result = pinger.hello("George");
     assertEquals("Invalid custom protocol response", "Hello, George", result);
+    result = pinger.hello(null);
+    assertEquals("Should handle NULL parameter", "Who are you?", result);
     int cnt = pinger.getPingCount();
     assertTrue("Count should be incremented", cnt > 0);
     int newcnt = pinger.incrementCount(5);
@@ -273,6 +278,23 @@ public class TestServerCustomProtocol {
     verifyRegionResults(table, results, "Hello, pong", ROW_A);
     verifyRegionResults(table, results, "Hello, pong", ROW_B);
     verifyRegionResults(table, results, "Hello, pong", ROW_C);
+  }
+
+  @Test
+  public void testNullCall() throws Throwable {
+    HTable table = new HTable(util.getConfiguration(), TEST_TABLE);
+
+    Map<byte[],String> results = table.coprocessorExec(PingProtocol.class,
+        ROW_A, ROW_C,
+        new Batch.Call<PingProtocol,String>() {
+          public String call(PingProtocol instance) {
+            return instance.hello(null);
+          }
+        });
+
+    verifyRegionResults(table, results, "Who are you?", ROW_A);
+    verifyRegionResults(table, results, "Who are you?", ROW_B);
+    verifyRegionResults(table, results, "Who are you?", ROW_C);
   }
 
   private void verifyRegionResults(HTable table,
