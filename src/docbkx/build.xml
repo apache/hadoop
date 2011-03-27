@@ -10,11 +10,34 @@
     <title>Building HBase</title>
     <section xml:id="mvn_repo">
         <title>Adding an HBase release to Apache's Maven Repository</title>
-        <para>Follow the instructions at <link xlink:href="http://www.apache.org/dev/publishing-maven-artifacts.html">Publishing Maven Artifacts</link>.
+        <para>Follow the instructions at
+        <link xlink:href="http://www.apache.org/dev/publishing-maven-artifacts.html">Publishing Maven Artifacts</link>.
             The 'trick' to making it all work is answering the questions put to you by the mvn release plugin properly,
-            making sure it is using the actual branch,
-            and finally, before doing the mvn release:perform,
-            VERY IMPORTANT, hand edit the release.properties file that was put under HBASE_HOME by the previous step, release:perform. You need to edit it to make it point at right locations in SVN.
+            making sure it is using the actual branch AND before doing the <command>mvn release:perform</command> step,
+            VERY IMPORTANT, hand edit the release.properties file that was put under <varname>${HBASE_HOME}</varname>
+            by the previous step, <command>release:perform</command>. You need to edit it to make it point at
+            right locations in SVN.
+        </para>
+        <para>If you see run into the below, its because you need to edit version in the pom.xml and add
+        <code>-SNAPSHOT</code> to the version (and commit).
+        <computeroutput>[INFO] Scanning for projects...
+[INFO] Searching repository for plugin with prefix: 'release'.
+[INFO] ------------------------------------------------------------------------
+[INFO] Building HBase
+[INFO]    task-segment: [release:prepare] (aggregator-style)
+[INFO] ------------------------------------------------------------------------
+[INFO] [release:prepare {execution: default-cli}]
+[INFO] ------------------------------------------------------------------------
+[ERROR] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] You don't have a SNAPSHOT project in the reactor projects list.
+[INFO] ------------------------------------------------------------------------
+[INFO] For more information, run Maven with the -e switch
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time: 3 seconds
+[INFO] Finished at: Sat Mar 26 18:11:07 PDT 2011
+[INFO] Final Memory: 35M/423M
+[INFO] -----------------------------------------------------------------------</computeroutput>
         </para>
     </section>
           
