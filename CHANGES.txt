@@ -347,6 +347,9 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7154. Should set MALLOC_ARENA_MAX in hadoop-env.sh (todd)
 
+    HADOOP-7187. Fix socket leak in GangliaContext.  (Uma Maheswara Rao G
+    via szetszwo)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
@@ -604,8 +607,8 @@ Release 0.21.1 - Unreleased
     HADOOP-7174. Null is displayed in the "fs -copyToLocal" command.
     (Uma Maheswara Rao G via szetszwo)
 
-    HADOOP-7187. Fix socket leak in GangliaContext.  (Uma Maheswara Rao G
-    via szetszwo)
+    HADOOP-7194. Fix resource leak in IOUtils.copyBytes(..).
+    (Devaraj K via szetszwo)
 
 Release 0.21.0 - 2010-08-13
 

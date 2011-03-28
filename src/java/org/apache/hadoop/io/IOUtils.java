@@ -47,10 +47,16 @@ public class IOUtils {
 
     try {
       copyBytes(in, out, buffSize);
-    } finally {
       if(close) {
         out.close();
+        out = null;
         in.close();
+        in = null;
+      }
+    } finally {
+      if(close) {
+        closeStream(out);
+        closeStream(in);
       }
     }
   }
