@@ -84,6 +84,8 @@ Trunk (unreleased changes)
     HADOOP-7180. Better support on CommandFormat on the API and exceptions.
     (Daryn Sharp via szetszwo)
 
+    HADOOP-7202. Improve shell Command base class.  (Daryn Sharp via szetszwo)
+
   OPTIMIZATIONS
     
     HADOOP-6949. Reduce RPC packet size of primitive arrays using

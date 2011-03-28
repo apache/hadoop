@@ -370,7 +370,7 @@ public class FsShell extends Configured implements Tool {
 
   private class TextRecordInputStream extends InputStream {
     SequenceFile.Reader r;
-    WritableComparable key;
+    WritableComparable<?> key;
     Writable val;
 
     DataInputBuffer inbuf;
@@ -1691,8 +1691,6 @@ public class FsShell extends Configured implements Tool {
           delete(argv[i], true, rmSkipTrash);
         } else if ("-df".equals(cmd)) {
           df(argv[i]);
-        } else if (Count.matches(cmd)) {
-          new Count(argv, i, getConf()).runAll();
         } else if ("-ls".equals(cmd)) {
           exitCode = ls(argv[i], false);
         } else if ("-lsr".equals(cmd)) {
@@ -1759,7 +1757,7 @@ public class FsShell extends Configured implements Tool {
     } else if ("-df".equals(cmd) ) {
       System.err.println("Usage: java FsShell" +
                          " [" + cmd + " [<path>]]");
-    } else if (Count.matches(cmd)) {
+    } else if ("-count".equals(cmd)) {
       System.err.println(prefix + " [" + Count.USAGE + "]");
     } else if ("-rm".equals(cmd) || "-rmr".equals(cmd)) {
       System.err.println("Usage: java FsShell [" + cmd + 
@@ -1948,8 +1946,13 @@ public class FsShell extends Configured implements Tool {
         du(argv, i);
       } else if ("-dus".equals(cmd)) {
         dus(argv, i);
-      } else if (Count.matches(cmd)) {
-        exitCode = new Count(argv, i, getConf()).runAll();
+      } else if ("-count".equals(cmd)) {
+        // TODO: next two lines are a temporary crutch until this entire
+        // block is overhauled
+        LinkedList<String> args = new LinkedList<String>(Arrays.asList(argv));
+        args.removeFirst();
+        Count runner = ReflectionUtils.newInstance(Count.class, getConf());
+        exitCode = runner.run(cmd, args);
       } else if ("-mkdir".equals(cmd)) {
         exitCode = doall(cmd, argv, i);
       } else if ("-touchz".equals(cmd)) {
