@@ -267,6 +267,16 @@ public class ImportTsv {
         } else {
           throw new IOException(badLine);
         }
+      } catch (IllegalArgumentException e) {
+        if (skipBadLines) {
+          System.err.println(
+              "Bad line at offset: " + offset.get() + ":\n" +
+              badLine.getMessage());
+          badLineCount.increment(1);
+          return;
+        } else {
+          throw new IOException(badLine);
+        }
       } catch (InterruptedException e) {
         e.printStackTrace();
       }

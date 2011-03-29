@@ -52,6 +52,8 @@ Release 0.91.0 - Unreleased
    HBASE-3688  Setters of class HTableDescriptor do not work properly
    HBASE-3702  Fix NPE in Exec method parameter serialization
    HBASE-3709  HFile compression not sharing configuration
+   HBASE-3711  importtsv fails if rowkey length exceeds MAX_ROW_LENGTH
+               (Kazuki Ohta via todd)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
