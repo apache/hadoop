@@ -24,6 +24,9 @@ Release 0.20.204.0 - unreleased
     HDFS-1541. Not marking datanodes dead when namenode in safemode.
     (hairong)
 
+    HDFS-1767. Namenode ignores non-initial block report from datanodes
+    when in safemode during startup. (Matt Foley via suresh)
+
 Release 0.20.203.0 - unreleased
 
     HADOOP-7190. Add metrics v1 back for backwards compatibility. (omalley)
