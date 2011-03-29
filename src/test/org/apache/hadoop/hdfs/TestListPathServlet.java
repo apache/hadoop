@@ -94,7 +94,7 @@ public class TestListPathServlet {
     checkStatus("/");
 
     // A directory with files and directories
-    createFile("/dir/.a.crc", 1);
+    createFile("/dir/a", 1);
     createFile("/dir/b", 1);
     mkdirs("/dir/dir1");
     checkStatus("/dir");

@@ -32,9 +32,6 @@ Release 0.20.203.0 - unreleased
     MAPREDUCE-2364. Don't hold the rjob lock while localizing resources. (ddas
     via omalley)
 
-    HDFS:1598. Directory listing on hftp:// does not show
-    .*.crc files.  (szetszwo)
-
     MAPREDUCE-2365. New counters for FileInputFormat (BYTES_READ) and 
     FileOutputFormat (BYTES_WRITTEN). 
     New counter MAP_OUTPUT_MATERIALIZED_BYTES for compressed MapOutputSize.

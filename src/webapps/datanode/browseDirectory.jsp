@@ -117,6 +117,7 @@
           for (int i = 0; i < files.length; i++) {
             //Get the location of the first block of the file
             String localname = files[i].getLocalName();
+            if (localname.endsWith(".crc")) continue;
             if (!files[i].isDir()) {
               cols[1] = "file";
               cols[2] = StringUtils.byteDesc(files[i].getLen());
