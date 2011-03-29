@@ -66,6 +66,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.io.IOUtils;
 
@@ -323,7 +324,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       // in the future, we might want to do some sort of datanode-local
       // recovery for these blocks. For example, crc validation.
       //
-      this.tmpDir = new File(bpDir, "tmp");
+      this.tmpDir = new File(bpDir, DataStorage.STORAGE_DIR_TMP);
       if (tmpDir.exists()) {
         FileUtil.fullyDelete(tmpDir);
       }
@@ -705,6 +706,73 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       BlockPoolSlice bp = new BlockPoolSlice(bpid, this, bpdir, conf);
       map.put(bpid, bp);
     }
+    
+    public void shutdownBlockPool(String bpid) {
+      BlockPoolSlice bp = map.get(bpid);
+      if (bp!=null) {
+        bp.shutdown();
+      }
+      map.remove(bpid);
+    }
+
+    private boolean isBPDirEmpty(String bpid)
+        throws IOException {
+      File volumeCurrentDir = this.getCurrentDir();
+      File bpDir = new File(volumeCurrentDir, bpid);
+      File bpCurrentDir = new File(bpDir, DataStorage.STORAGE_DIR_CURRENT);
+      File finalizedDir = new File(bpCurrentDir,
+          DataStorage.STORAGE_DIR_FINALIZED);
+      File rbwDir = new File(bpCurrentDir, DataStorage.STORAGE_DIR_RBW);
+      if (finalizedDir.exists() && finalizedDir.list().length != 0) {
+        return false;
+      }
+      if (rbwDir.exists() && rbwDir.list().length != 0) {
+        return false;
+      }
+      return true;
+    }
+    
+    private void deleteBPDirectories(String bpid, boolean force)
+        throws IOException {
+      File volumeCurrentDir = this.getCurrentDir();
+      File bpDir = new File(volumeCurrentDir, bpid);
+      if (!bpDir.isDirectory()) {
+        // nothing to be deleted
+        return;
+      }
+      File tmpDir = new File(bpDir, DataStorage.STORAGE_DIR_TMP);
+      File bpCurrentDir = new File(bpDir, DataStorage.STORAGE_DIR_CURRENT);
+      File finalizedDir = new File(bpCurrentDir,
+          DataStorage.STORAGE_DIR_FINALIZED);
+      File rbwDir = new File(bpCurrentDir, DataStorage.STORAGE_DIR_RBW);
+      if (force) {
+        FileUtil.fullyDelete(bpDir);
+      } else {
+        if (!rbwDir.delete()) {
+          throw new IOException("Failed to delete " + rbwDir);
+        }
+        if (!finalizedDir.delete()) {
+          throw new IOException("Failed to delete " + finalizedDir);
+        }
+        FileUtil.fullyDelete(tmpDir);
+        for (File f : bpCurrentDir.listFiles()) {
+          if (!f.delete()) {
+            throw new IOException("Failed to delete " + f);
+          }
+        }
+        if (!bpCurrentDir.delete()) {
+          throw new IOException("Failed to delete " + bpCurrentDir);
+        }
+        for (File f : bpDir.listFiles()) {
+          if (!f.delete()) {
+            throw new IOException("Failed to delete " + f);
+          }
+        }
+        if (!bpDir.delete()) {
+          throw new IOException("Failed to delete " + bpDir);
+        }
+      }
+    }
   }
     
   static class FSVolumeSet {
@@ -864,6 +932,12 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
         throws IOException {
       for (FSVolume v : volumes) {
         v.addBlockPool(bpid, conf);
+      }
+    }
+    
+    private void removeBlockPool(String bpid) {
+      for (FSVolume v : volumes) {
+        v.shutdownBlockPool(bpid);
       }
     }
     
@@ -2462,6 +2536,12 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     volumes.getVolumeMap(bpid, volumeMap);
   }
   
+  public synchronized void shutdownBlockPool(String bpid) {
+    DataNode.LOG.info("Removing block pool " + bpid);
+    volumeMap.cleanUpBlockPool(bpid);
+    volumes.removeBlockPool(bpid);
+  }
+  
   /**
    * get list of all bpids
    * @return list of bpids
@@ -2505,5 +2585,23 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
           volume.getReserved()));
     }
     return info;
+  }
+  
+  @Override //FSDatasetInterface
+  public synchronized void deleteBlockPool(String bpid, boolean force)
+      throws IOException {
+    if (!force) {
+      for (FSVolume volume : volumes.volumes) {
+        if (!volume.isBPDirEmpty(bpid)) {
+          DataNode.LOG.warn(bpid
+              + " has some block files, cannot delete unless forced");
+          throw new IOException("Cannot delete block pool, "
+              + "it contains some block files");
+        }
+      }
+    }
+    for (FSVolume volume : volumes.volumes) {
+      volume.deleteBPDirectories(bpid, force);
+    }
   }
 }

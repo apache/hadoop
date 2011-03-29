@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -482,6 +483,7 @@ public class DFSAdmin extends FsShell {
       "\t[refreshSuperUserGroupsConfiguration]\n" +
       "\t[-printTopology]\n" +
       "\t[-refreshNamenodes datanodehost:port]\n"+
+      "\t[-deleteBlockPool datanodehost:port blockpoolId [force]]\n"+
       "\t[-help [cmd]]\n";
 
     String report ="-report: \tReports basic filesystem information and statistics.\n";
@@ -551,6 +553,15 @@ public class DFSAdmin extends FsShell {
                               "\t\tstops serving the removed block-pools\n"+
                               "\t\tand starts serving new block-pools\n";
     
+    String deleteBlockPool = "-deleteBlockPool: Arguments are datanodehost:port, blockpool id\n"+
+                             "\t\t and an optional argument \"force\". If force is passed,\n"+
+                             "\t\t block pool directory for the given blockpool id on the given\n"+
+                             "\t\t datanode is deleted along with its contents, otherwise\n"+
+                             "\t\t the directory is deleted only if it is empty. The command\n" +
+                             "\t\t will fail if datanode is still serving the block pool.\n" +
+                             "\t\t   Refer to refreshNamenodes to shutdown a block pool\n" +
+                             "\t\t service on a datanode.\n";
+    
     String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
       "\t\tis specified.\n";
 
@@ -588,6 +599,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(printTopology);
     } else if ("refreshNamenodes".equals(cmd)) {
       System.out.println(refreshNamenodes);
+    } else if ("deleteBlockPool".equals(cmd)) {
+      System.out.println(deleteBlockPool);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -609,6 +622,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(refreshSuperUserGroupsConfiguration);
       System.out.println(printTopology);
       System.out.println(refreshNamenodes);
+      System.out.println(deleteBlockPool);
       System.out.println(help);
       System.out.println();
       ToolRunner.printGenericCommandUsage(System.out);
@@ -891,6 +905,9 @@ public class DFSAdmin extends FsShell {
     } else if ("-refreshNamenodes".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [-refreshNamenodes datanode-host:port]");
+    } else if ("-deleteBlockPool".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+          + " [-deleteBlockPool datanode-host:port blockpoolId [force]]");
     } else {
       System.err.println("Usage: java DFSAdmin");
       System.err.println("           [-report]");
@@ -906,6 +923,7 @@ public class DFSAdmin extends FsShell {
       System.err.println("           [-refreshSuperUserGroupsConfiguration]");
       System.err.println("           [-printTopology]");
       System.err.println("           [-refreshNamenodes datanodehost:port]");
+      System.err.println("           [-deleteBlockPool datanode-host:port blockpoolId [force]]");
       System.err.println("           ["+SetQuotaCommand.USAGE+"]");
       System.err.println("           ["+ClearQuotaCommand.USAGE+"]");
       System.err.println("           ["+SetSpaceQuotaCommand.USAGE+"]");
@@ -996,6 +1014,11 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if ("-deleteBlockPool".equals(cmd)) {
+      if ((argv.length != 3) && (argv.length != 4)) {
+        printUsage(cmd);
+        return exitCode;
+      }
     }
     
     // initialize DFSAdmin
@@ -1046,6 +1069,8 @@ public class DFSAdmin extends FsShell {
         exitCode = printTopology();
       } else if ("-refreshNamenodes".equals(cmd)) {
         exitCode = refreshNamenodes(argv, i);
+      } else if ("-deleteBlockPool".equals(cmd)) {
+        exitCode = deleteBlockPool(argv, i);
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);
@@ -1083,33 +1108,42 @@ public class DFSAdmin extends FsShell {
     return exitCode;
   }
 
-  private int refreshNamenodes(String[] argv, int i) throws IOException {
-    String datanode = argv[i];
-    
-    int colonIndex = datanode.indexOf(':');
-    String datanodeHostname = datanode.substring(0, colonIndex);
-    String portString = datanode.substring(colonIndex+1);
-    int port = Integer.valueOf(portString).intValue();
-    
-    InetSocketAddress datanodeAddr = new InetSocketAddress(datanodeHostname,
-        port);
-    
+  private ClientDatanodeProtocol getDataNodeProxy(String datanode)
+      throws IOException {
+    InetSocketAddress datanodeAddr = DFSUtil.getSocketAddress(datanode);
     // Get the current configuration
     Configuration conf = getConf();
-    
-    // for security authorization
-    // server principal for this call   
-    // should be NN's one.
-    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY, 
+
+    // For datanode proxy the server principal should be DN's one.
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY,
         conf.get(DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY, ""));
 
     // Create the client
-    ClientDatanodeProtocol refreshProtocol = (ClientDatanodeProtocol) RPC
-        .getProxy(ClientDatanodeProtocol.class,
-            ClientDatanodeProtocol.versionID, datanodeAddr, getUGI(), conf,
-            NetUtils.getSocketFactory(conf, ClientDatanodeProtocol.class));
-    
-    // Refresh the authorization policy in-effect
+    ClientDatanodeProtocol dnProtocol = (ClientDatanodeProtocol) RPC.getProxy(
+        ClientDatanodeProtocol.class, ClientDatanodeProtocol.versionID,
+        datanodeAddr, getUGI(), conf, NetUtils.getSocketFactory(conf,
+            ClientDatanodeProtocol.class));
+    return dnProtocol;
+  }
+  
+  private int deleteBlockPool(String[] argv, int i) throws IOException {
+    ClientDatanodeProtocol dnProxy = getDataNodeProxy(argv[i]);
+    boolean force = false;
+    if (argv.length-1 == i+2) {
+      if ("force".equals(argv[i+2])) {
+        force = true;
+      } else {
+        printUsage("-deleteBlockPool");
+        return -1;
+      }
+    }
+    dnProxy.deleteBlockPool(argv[i+1], force);
+    return 0;
+  }
+  
+  private int refreshNamenodes(String[] argv, int i) throws IOException {
+    String datanode = argv[i];
+    ClientDatanodeProtocol refreshProtocol = getDataNodeProxy(datanode);
     refreshProtocol.refreshNamenodes();
     
     return 0;

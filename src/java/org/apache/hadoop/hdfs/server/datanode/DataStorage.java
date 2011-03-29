@@ -68,6 +68,7 @@ public class DataStorage extends Storage {
   final static String STORAGE_DIR_DETACHED = "detach";
   public final static String STORAGE_DIR_RBW = "rbw";
   public final static String STORAGE_DIR_FINALIZED = "finalized";
+  public final static String STORAGE_DIR_TMP = "tmp";
 
   private static final Pattern PRE_GENSTAMP_META_FILE_PATTERN = 
     Pattern.compile("(.*blk_[-]*\\d+)\\.meta$");
@@ -754,5 +755,9 @@ public class DataStorage extends Storage {
     if (!this.bpStorageMap.containsKey(bpID)) {
       this.bpStorageMap.put(bpID, bpStorage);
     }
+  }
+
+  synchronized void removeBlockPoolStorage(String bpId) {
+    bpStorageMap.remove(bpId);
   }
 }

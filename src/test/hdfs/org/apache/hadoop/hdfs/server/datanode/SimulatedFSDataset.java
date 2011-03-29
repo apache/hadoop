@@ -342,6 +342,10 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       map.put(bpid, new SimulatedBPStorage());
     }
     
+    synchronized void removeBlockPool(String bpid) {
+      map.remove(bpid);
+    }
+    
     private SimulatedBPStorage getBPStorage(String bpid) throws IOException {
       SimulatedBPStorage bpStorage = map.get(bpid);
       if (bpStorage == null) {
@@ -941,6 +945,17 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     Map<Block, BInfo> map = new HashMap<Block, BInfo>();
     blockMap.put(bpid, map);
     storage.addBlockPool(bpid);
+  }
+  
+  @Override // FSDatasetInterface
+  public void shutdownBlockPool(String bpid) {
+    blockMap.remove(bpid);
+    storage.removeBlockPool(bpid);
+  }
+  
+  @Override // FSDatasetInterface
+  public void deleteBlockPool(String bpid, boolean force) {
+     return;
   }
 
   @Override

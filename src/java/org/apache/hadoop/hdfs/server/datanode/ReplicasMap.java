@@ -201,6 +201,13 @@ class ReplicasMap {
     }
   }
   
+  void cleanUpBlockPool(String bpid) {
+    checkBlockPool(bpid);
+    synchronized(mutex) {
+      map.remove(bpid);
+    }
+  }
+  
   /**
    * Give access to mutex used for synchronizing ReplicasMap
    * @return object used as lock

@@ -369,4 +369,23 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @param conf Configuration
    */
   public void addBlockPool(String bpid, Configuration conf) throws IOException;
+  
+  /**
+   * Shutdown and remove the block pool from underlying storage.
+   * @param bpid Block pool Id to be removed
+   */
+  public void shutdownBlockPool(String bpid) ;
+  
+  /**
+   * Deletes the block pool directories. If force is false, directories are 
+   * deleted only if no block files exist for the block pool. If force 
+   * is true entire directory for the blockpool is deleted along with its
+   * contents.
+   * @param bpid BlockPool Id to be deleted.
+   * @param force If force is false, directories are deleted only if no
+   *        block files exist for the block pool, otherwise entire 
+   *        directory for the blockpool is deleted along with its contents.
+   * @throws IOException
+   */
+  public void deleteBlockPool(String bpid, boolean force) throws IOException;
 }

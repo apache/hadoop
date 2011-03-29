@@ -40,9 +40,9 @@ public interface ClientDatanodeProtocol extends VersionedProtocol {
   public static final Log LOG = LogFactory.getLog(ClientDatanodeProtocol.class);
 
   /**
-   * 8: Add refreshNamenodes method
+   * 9: Added deleteBlockPool method
    */
-  public static final long versionID = 8L;
+  public static final long versionID = 9L;
 
   /** Return the visible length of a replica. */
   long getReplicaVisibleLength(ExtendedBlock b) throws IOException;
@@ -54,4 +54,16 @@ public interface ClientDatanodeProtocol extends VersionedProtocol {
    * @throws IOException on error
    **/
   void refreshNamenodes() throws IOException;
+
+  /**
+   * Delete the block pool directory. If force is false it is deleted only if
+   * it is empty, otherwise it is deleted along with its contents.
+   * 
+   * @param bpid Blockpool id to be deleted.
+   * @param force If false blockpool directory is deleted only if it is empty 
+   *          i.e. if it doesn't contain any block files, otherwise it is 
+   *          deleted along with its contents.
+   * @throws IOException
+   */
+  void deleteBlockPool(String bpid, boolean force) throws IOException; 
 }
