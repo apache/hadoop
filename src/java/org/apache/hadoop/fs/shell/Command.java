@@ -17,53 +17,27 @@
  */
 package org.apache.hadoop.fs.shell;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
+import java.io.*;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * An abstract class for the execution of a file system command
  */
-@InterfaceAudience.Private
-@InterfaceStability.Evolving
-
 abstract public class Command extends Configured {
   protected String[] args;
-  protected String cmdName;
-  protected int exitCode = 0;
-  protected int numErrors = 0;
-  protected boolean recursive = false;
-  protected ArrayList<Exception> exceptions = new ArrayList<Exception>();
-
-  private static final Log LOG = LogFactory.getLog(Command.class);
-
-  /** allows stdout to be captured if necessary */
-  public PrintStream out = System.out;
-  /** allows stderr to be captured if necessary */
-  public PrintStream err = System.err;
-
-  protected Command() {}
   
   /** Constructor */
   protected Command(Configuration conf) {
     super(conf);
   }
   
-  /** @return the command's name excluding the leading character - */
+  /** Return the command's name excluding the leading character - */
   abstract public String getCommandName();
   
   /** 
@@ -83,273 +57,30 @@ abstract public class Command extends Configured {
     int exitCode = 0;
     for (String src : args) {
       try {
-        List<PathData> srcs = expandGlob(src);
-        for(PathData s : srcs) {
-          run(s.path);
+        Path srcPath = new Path(src);
+        FileSystem fs = srcPath.getFileSystem(getConf());
+        FileStatus[] statuses = fs.globStatus(srcPath);
+        if (statuses == null) {
+          System.err.println("Can not find listing for " + src);
+          exitCode = -1;
+        } else {
+          for(FileStatus s : statuses) {
+            run(s.getPath());
+          }
         }
+      } catch (RemoteException re) {
+        exitCode = -1;
+        String content = re.getLocalizedMessage();
+        int eol = content.indexOf('\n');
+        if (eol>=0) {
+          content = content.substring(0, eol);
+        }
+        System.err.println(getCommandName() + ": " + content);
       } catch (IOException e) {
         exitCode = -1;
-        displayError(e);
+        System.err.println(getCommandName() + ": " + e.getLocalizedMessage());
       }
     }
     return exitCode;
-  }
-
-  /**
-   * Invokes the command handler.  The default behavior is to process options,
-   * expand arguments, and then process each argument.
-   * <pre>
-   * run
-   * \-> {@link #processOptions(LinkedList)}
-   * \-> {@link #expandArguments(LinkedList)} -> {@link #expandArgument(String)}*
-   * \-> {@link #processArguments(LinkedList)}
-   *     \-> {@link #processArgument(PathData)}*
-   *         \-> {@link #processPathArgument(PathData)}
-   *             \-> {@link #processPaths(PathData, PathData...)}
-   *                 \-> {@link #processPath(PathData)}*
-   *         \-> {@link #processNonexistentPathArgument(PathData)}
-   * </pre>
-   * Most commands will chose to implement just
-   * {@link #processOptions(LinkedList)} and {@link #processPath(PathData)}
-   * 
-   * @param cmd the command's name
-   * @param args the list of command line arguments
-   * @return the exit code for the command
-   * @throws IllegalArgumentException if called with invalid arguments
-   */
-  public int run(String cmd, LinkedList<String> args) {
-    cmdName = cmd;
-    try {
-      processOptions(args);
-      processArguments(expandArguments(args));
-    } catch (IOException e) {
-      displayError(e);
-    }
-    
-    return (numErrors == 0) ? exitCode : 1;
-  }
-
-  /**
-   * Must be implemented by commands to process the command line flags and
-   * check the bounds of the remaining arguments.  If an
-   * IllegalArgumentException is thrown, the FsShell object will print the
-   * short usage of the command.
-   * @param args the command line arguments
-   * @throws IOException
-   */
-  protected void processOptions(LinkedList<String> args) throws IOException {}
-
-  /**
-   *  Expands a list of arguments into {@link PathData} objects.  The default
-   *  behavior is to call {@link #expandArgument(String)} on each element
-   *  which by default globs the argument.  The loop catches IOExceptions,
-   *  increments the error count, and displays the exception.
-   * @param args strings to expand into {@link PathData} objects
-   * @return list of all {@link PathData} objects the arguments
-   * @throws IOException if anything goes wrong...
-   */
-  protected LinkedList<PathData> expandArguments(LinkedList<String> args)
-  throws IOException {
-    LinkedList<PathData> expandedArgs = new LinkedList<PathData>();
-    for (String arg : args) {
-      try {
-        expandedArgs.addAll(expandArgument(arg));
-      } catch (IOException e) { // other exceptions are probably nasty
-        displayError(e);
-      }
-    }
-    return expandedArgs;
-  }
-
-  /**
-   * Expand the given argument into a list of {@link PathData} objects.
-   * The default behavior is to expand globs.  Commands may override to
-   * perform other expansions on an argument.
-   * @param arg string pattern to expand
-   * @return list of {@link PathData} objects
-   * @throws IOException if anything goes wrong...
-   */
-  protected List<PathData> expandArgument(String arg) throws IOException {
-    return expandGlob(arg);
-  }
-
-  /**
-   *  Processes the command's list of expanded arguments.
-   *  {@link #processArgument(PathData)} will be invoked with each item
-   *  in the list.  The loop catches IOExceptions, increments the error
-   *  count, and displays the exception.
-   *  @param args a list of {@link PathData} to process
-   *  @throws IOException if anything goes wrong... 
-   */
-  protected void processArguments(LinkedList<PathData> args)
-  throws IOException {
-    for (PathData arg : args) {
-      try {
-        processArgument(arg);
-      } catch (IOException e) {
-        displayError(e);
-      }
-    }
-  }
-
-  /**
-   * Processes a {@link PathData} item, calling
-   * {@link #processPathArgument(PathData)} or
-   * {@link #processNonexistentPathArgument(PathData)} on each item.
-   * @param arg {@link PathData} item to process
-   * @throws IOException if anything goes wrong...
-   */
-  protected void processArgument(PathData item) throws IOException {
-    if (item.exists) {
-      processPathArgument(item);
-    } else {
-      processNonexistentPathArgument(item);
-    }
-  }
-
-  /**
-   *  This is the last chance to modify an argument before going into the
-   *  (possibly) recursive {@link #processPaths(PathData, PathData...)}
-   *  -> {@link #processPath(PathData)} loop.  Ex.  ls and du use this to
-   *  expand out directories.
-   *  @param item a {@link PathData} representing a path which exists
-   *  @throws IOException if anything goes wrong... 
-   */
-  protected void processPathArgument(PathData item) throws IOException {
-    // null indicates that the call is not via recursion, ie. there is
-    // no parent directory that was expanded
-    processPaths(null, item);
-  }
-  
-  /**
-   *  Provides a hook for handling paths that don't exist.  By default it
-   *  will throw an exception.  Primarily overriden by commands that create
-   *  paths such as mkdir or touch.
-   *  @param item the {@link PathData} that doesn't exist
-   *  @throws FileNotFoundException if arg is a path and it doesn't exist
-   *  @throws IOException if anything else goes wrong... 
-   */
-  protected void processNonexistentPathArgument(PathData item)
-  throws IOException {
-    throw new FileNotFoundException(item + ": No such file or directory");
-  }
-
-  /**
-   *  Iterates over the given expanded paths and invokes
-   *  {@link #processPath(PathData)} on each element.  If "recursive" is true,
-   *  will do a post-visit DFS on directories.
-   *  @param parent if called via a recurse, will be the parent dir, else null
-   *  @param items a list of {@link PathData} objects to process
-   *  @throws IOException if anything goes wrong...
-   */
-  protected void processPaths(PathData parent, PathData ... items)
-  throws IOException {
-    // TODO: this really should be iterative
-    for (PathData item : items) {
-      try {
-        processPath(item);
-        if (recursive && item.stat.isDirectory()) {
-          recursePath(item);
-        }
-      } catch (IOException e) {
-        displayError(e);
-      }
-    }
-  }
-
-  /**
-   * Hook for commands to implement an operation to be applied on each
-   * path for the command.  Note implementation of this method is optional
-   * if earlier methods in the chain handle the operation.
-   * @param item a {@link PathData} object
-   * @throws RuntimeException if invoked but not implemented
-   * @throws IOException if anything else goes wrong in the user-implementation
-   */  
-  protected void processPath(PathData item) throws IOException {
-    throw new RuntimeException("processPath() is not implemented");    
-  }
-
-  /**
-   *  Gets the directory listing for a path and invokes
-   *  {@link #processPaths(PathData, PathData...)}
-   *  @param item {@link PathData} for directory to recurse into
-   *  @throws IOException if anything goes wrong...
-   */
-  protected void recursePath(PathData item) throws IOException {
-    processPaths(item, item.getDirectoryContents());
-  }
- 
-  /**
-   * Expand the given path as a glob pattern.  Non-existent paths do not 
-   * throw an exception because creation commands like touch and mkdir need
-   * to create them.  The "stat" field will be null if the path does not
-   * exist.
-   * @param pattern the glob to expand
-   * @return list of {@link PathData} objects
-   * @throws FileNotFoundException the path is a glob with no matches
-   * @throws IOException anything else goes wrong...
-   */
-  protected List<PathData> expandGlob(String pattern) throws IOException {
-    Path path = new Path(pattern);
-    FileSystem fs = path.getFileSystem(getConf());
-    FileStatus[] stats = fs.globStatus(path);
-    
-    if (stats != null && stats.length == 0) { // glob failed to match
-      throw new FileNotFoundException(path + ": No such file or directory");
-    }
-    
-    List<PathData> items = new LinkedList<PathData>();
-    if (stats == null) { // not a glob & file not found, so null stat block
-      items.add(new PathData(fs, path, null));
-    } else {
-      // convert all the stats to PathData objs
-      for (FileStatus stat : stats) {
-        items.add(new PathData(fs, stat));
-      }
-    }
-    return items;
-  }
-
-  /**
-   * Display an exception prefaced with the command name.  Also increments
-   * the error count for the command which will result in a non-zero exit
-   * code.
-   * @param e exception to display
-   */
-  public void displayError(Exception e) {
-    // build up a list of exceptions that occurred
-    exceptions.add(e);
-    
-    String errorMessage = e.getLocalizedMessage();
-    if (errorMessage == null) {
-      // this is an unexpected condition, so dump the whole exception since
-      // it's probably a nasty internal error where the backtrace would be
-      // useful
-      errorMessage = StringUtils.stringifyException(e);
-      LOG.debug(errorMessage);
-    } else {
-      errorMessage = errorMessage.split("\n", 2)[0];
-    }
-    displayError(errorMessage);
-  }
-  
-  /**
-   * Display an error string prefaced with the command name.  Also increments
-   * the error count for the command which will result in a non-zero exit
-   * code.
-   * @param message error message to display
-   */
-  public void displayError(String message) {
-    numErrors++;
-    displayWarning(message);
-  }
-  
-  /**
-   * Display an warning string prefaced with the command name.
-   * @param message warning message to display
-   */
-  public void displayWarning(String message) {
-    String cmd = cmdName.startsWith("-") ? cmdName.substring(1) : cmdName;
-    err.println(cmd + ": " + message);
   }
 }
