@@ -271,11 +271,11 @@ public class ImportTsv {
         if (skipBadLines) {
           System.err.println(
               "Bad line at offset: " + offset.get() + ":\n" +
-              badLine.getMessage());
+              e.getMessage());
           badLineCount.increment(1);
           return;
         } else {
-          throw new IOException(badLine);
+          throw new IOException(e);
         }
       } catch (InterruptedException e) {
         e.printStackTrace();
