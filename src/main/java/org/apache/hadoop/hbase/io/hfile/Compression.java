@@ -26,7 +26,6 @@ import java.io.OutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
@@ -83,12 +82,10 @@ public final class Compression {
       @Override
       CompressionCodec getCodec() {
         if (lzoCodec == null) {
-          Configuration conf = new Configuration();
-          conf.setBoolean("hadoop.native.lib", true);
           try {
             Class<?> externalCodec =
                 ClassLoader.getSystemClassLoader().loadClass("com.hadoop.compression.lzo.LzoCodec");
-            lzoCodec = (CompressionCodec) ReflectionUtils.newInstance(externalCodec, conf);
+            lzoCodec = (CompressionCodec) ReflectionUtils.newInstance(externalCodec, getConf());
           } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
           }
@@ -102,10 +99,8 @@ public final class Compression {
       @Override
       DefaultCodec getCodec() {
         if (codec == null) {
-          Configuration conf = new Configuration();
-          conf.setBoolean("hadoop.native.lib", true);
           codec = new GzipCodec();
-          codec.setConf(conf);
+          codec.setConf(getConf());
         }
 
         return codec;
@@ -145,6 +140,7 @@ public final class Compression {
       }
     };
 
+    private final Configuration conf;
     private final String compressName;
 	// data input buffer size to absorb small reads from application.
     private static final int DATA_IBUF_SIZE = 1 * 1024;
@@ -152,10 +148,16 @@ public final class Compression {
     private static final int DATA_OBUF_SIZE = 4 * 1024;
 
     Algorithm(String name) {
+      this.conf = new Configuration();
+      this.conf.setBoolean("hadoop.native.lib", true);
       this.compressName = name;
     }
 
     abstract CompressionCodec getCodec();
+
+    public Configuration getConf() {
+      return conf;
+    }
 
     public InputStream createDecompressionStream(
         InputStream downStream, Decompressor decompressor,
@@ -163,8 +165,7 @@ public final class Compression {
       CompressionCodec codec = getCodec();
       // Set the internal buffer size to read from down stream.
       if (downStreamBufferSize > 0) {
-        Configurable c = (Configurable) codec;
-        c.getConf().setInt("io.file.buffer.size", downStreamBufferSize);
+        getConf().setInt("io.file.buffer.size", downStreamBufferSize);
       }
       CompressionInputStream cis =
           codec.createInputStream(downStream, decompressor);
@@ -184,8 +185,7 @@ public final class Compression {
       else {
         bos1 = downStream;
       }
-      Configurable c = (Configurable) codec;
-      c.getConf().setInt("io.file.buffer.size", 32 * 1024);
+      getConf().setInt("io.file.buffer.size", 32 * 1024);
       CompressionOutputStream cos =
           codec.createOutputStream(bos1, compressor);
       BufferedOutputStream bos2 =
@@ -197,7 +197,7 @@ public final class Compression {
     public Compressor getCompressor() {
       CompressionCodec codec = getCodec();
       if (codec != null) {
-        Compressor compressor = CodecPool.getCompressor(codec);
+        Compressor compressor = CodecPool.getCompressor(codec, getConf());
         if (compressor != null) {
           if (compressor.finished()) {
             // Somebody returns the compressor to CodecPool but is still using

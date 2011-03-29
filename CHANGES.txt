@@ -51,6 +51,7 @@ Release 0.91.0 - Unreleased
                Andrew Purtell)
    HBASE-3688  Setters of class HTableDescriptor do not work properly
    HBASE-3702  Fix NPE in Exec method parameter serialization
+   HBASE-3709  HFile compression not sharing configuration
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
