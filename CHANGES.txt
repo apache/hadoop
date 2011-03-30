@@ -76,9 +76,6 @@ Trunk (unreleased changes)
 
     HADOOP-7166. Add DaemonFactory to common. (Erik Steffl & jitendra)
 
-    HADOOP-7167. Amend previous commit under this JIRA to fix issue on
-    cygwin. (todd)
-
     HADOOP-7175. Add isEnabled() to Trash.  (Daryn Sharp via szetszwo)
 
     HADOOP-7180. Better support on CommandFormat on the API and exceptions.
