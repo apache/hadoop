@@ -399,7 +399,8 @@ stopping hbase...............</programlisting></para>
         <code>10/12/08 20:10:31 INFO hdfs.DFSClient: Could not obtain block
         blk_XXXXXXXXXXXXXXXXXXXXXX_YYYYYYYY from any node:
         java.io.IOException: No live nodes contain current block. Will get new
-        block locations from namenode and retry...</code></para>
+        block locations from namenode and retry...</code>
+        <footnote><para>See <link xlink:href="http://ccgtech.blogspot.com/2010/02/hadoop-hdfs-deceived-by-xciever.html">Hadoop HDFS: Deceived by Xciever</link> for an informative rant on xceivering.</para></footnote></para>
       </section>
 
       <section xml:id="windows">
