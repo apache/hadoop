@@ -302,8 +302,8 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
     <title>Data Model</title>
   <para>In short, applications store data into HBase <link linkend="table">tables</link>.
       Tables are made of <link linkend="row">rows</link> and <emphasis>columns</emphasis>.
-      All colums in HBase belong to a particular
-      <link linkend="columnfamily">Column Family</link>.
+      All columns in HBase belong to a particular
+      <link linkend="columnfamily">column family</link>.
       Table <link linkend="cell">cells</link> -- the intersection of row and column
       coordinates -- are versioned.
       A cell’s content is an uninterpreted array of bytes.
@@ -314,6 +314,99 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
       are sorted by row key. The sort is byte-ordered. All table accesses are
       via the table row key -- its primary key.
 </para>
+
+    <section xml:id="conceptual.view"><title>Conceptual View</title>
+	<para>
+        The following example is a slightly modified form of the one on page
+        2 of the <link xlink:href="http://labs.google.com/papers/bigtable.html">BigTable</link> paper.
+    There is a table called <varname>webtable</varname> that contains two column families named
+    <varname>contents</varname> and <varname>anchor</varname>.
+    In this example, <varname>anchor</varname> contains two
+    columns (<varname>anchor:cssnsi.com</varname>, <varname>anchor:my.look.ca</varname>)
+    and <varname>contents</varname> contains one column (<varname>contents:html</varname>).
+    <note>
+        <title>Column Names</title>
+      <para>
+      By convention, a column name is made of its column family prefix and a
+      <emphasis>qualifier</emphasis>. For example, the
+      column
+      <emphasis>contents:html</emphasis> is of the column family <varname>contents</varname>
+          The colon character (<literal
+          moreinfo="none">:</literal>) delimits the column family from the
+          column family <emphasis>qualifier</emphasis>.
+    </para>
+    </note>
+    <table frame='all'><title>Table <varname>webtable</varname></title>
+	<tgroup cols='4' align='left' colsep='1' rowsep='1'>
+	<colspec colname='c1'/>
+	<colspec colname='c2'/>
+	<colspec colname='c3'/>
+	<colspec colname='c4'/>
+	<thead>
+        <row><entry>Row Key</entry><entry>Time Stamp</entry><entry>ColumnFamily <varname>contents</varname></entry><entry>ColumnFamily <varname>anchor</varname></entry></row>
+	</thead>
+	<tbody>
+        <row><entry>"com.cnn.www"</entry><entry>t9</entry><entry></entry><entry><varname>anchor:cnnsi.com</varname> = "CNN"</entry></row>
+        <row><entry>"com.cnn.www"</entry><entry>t8</entry><entry></entry><entry><varname>anchor:my.look.ca</varname> = "CNN.com"</entry></row>
+        <row><entry>"com.cnn.www"</entry><entry>t6</entry><entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry><entry></entry></row>
+        <row><entry>"com.cnn.www"</entry><entry>t5</entry><entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry><entry></entry></row>
+        <row><entry>"com.cnn.www"</entry><entry>t3</entry><entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry><entry></entry></row>
+	</tbody>
+	</tgroup>
+	</table>
+	</para>
+	</section>
+    <section xml:id="physical.view"><title>Physical View</title>
+	<para>
+        Although at a conceptual level tables may be viewed as a sparse set of rows.
+        Physically they are stored on a per-column family basis.  New columns
+        (i.e., <varname>columnfamily:column</varname>) can be added to any
+        column family without pre-announcing them. 
+        <table frame='all'><title>ColumnFamily <varname>anchor</varname></title>
+	<tgroup cols='3' align='left' colsep='1' rowsep='1'>
+	<colspec colname='c1'/>
+	<colspec colname='c2'/>
+	<colspec colname='c3'/>
+	<thead>
+        <row><entry>Row Key</entry><entry>Time Stamp</entry><entry>Column Family <varname>anchor</varname></entry></row>
+	</thead>
+	<tbody>
+        <row><entry>"com.cnn.www"</entry><entry>t9</entry><entry><varname>anchor:cnnsi.com</varname> = "CNN"</entry></row>
+        <row><entry>"com.cnn.www"</entry><entry>t8</entry><entry><varname>anchor:my.look.ca</varname> = "CNN.com"</entry></row>
+	</tbody>
+	</tgroup>
+	</table>
+    <table frame='all'><title>ColumnFamily <varname>contents</varname></title>
+	<tgroup cols='3' align='left' colsep='1' rowsep='1'>
+	<colspec colname='c1'/>
+	<colspec colname='c2'/>
+	<colspec colname='c3'/>
+	<thead>
+	<row><entry>Row Key</entry><entry>Time Stamp</entry><entry>ColumnFamily "contents:"</entry></row>
+	</thead>
+	<tbody>
+        <row><entry>"com.cnn.www"</entry><entry>t6</entry><entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry><entry></entry></row>
+        <row><entry>"com.cnn.www"</entry><entry>t5</entry><entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry><entry></entry></row>
+        <row><entry>"com.cnn.www"</entry><entry>t3</entry><entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry><entry></entry></row>
+	</tbody>
+	</tgroup>
+	</table>
+    It is important to note in the diagram above that the empty cells shown in the
+    conceptual view are not stored since they need not be in a column-oriented
+    storage format. Thus a request for the value of the <varname>contents:html</varname>
+    column at time stamp <literal>t8</literal> would return no value. Similarly, a
+    request for an <varname>anchor:my.look.ca</varname> value at time stamp
+    <literal>t9</literal> would return no value.  However, if no timestamp is
+    supplied, the most recent value for a particular column would be returned
+    and would also be the first one found since timestamps are stored in
+    descending order. Thus a request for the values of all columns in the row
+    <varname>com.cnn.www</varname> if no timestamp is specified would be:
+    the value of <varname>contents:html</varname> from time stamp
+    <literal>t6</literal>, the value of <varname>anchor:cnnsi.com</varname>
+    from time stamp <literal>t9</literal>, the value of 
+    <varname>anchor:my.look.ca</varname> from time stamp <literal>t8</literal>.
+	</para>
+	</section>
 
     <section xml:id="table">
       <title>Table</title>
@@ -334,7 +427,7 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
       <title>Column Family<indexterm><primary>Column Family</primary></indexterm></title>
         <para>
       Columns in HBase are grouped into <emphasis>column families</emphasis>.
-      All column members of a column family have a common prefix.  For example, the
+      All column members of a column family have the same prefix.  For example, the
       columns <emphasis>courses:history</emphasis> and
       <emphasis>courses:math</emphasis> are both members of the
       <emphasis>courses</emphasis> column family.

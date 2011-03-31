@@ -110,6 +110,8 @@ Release 0.91.0 - Unreleased
                calls from HBase (Liyin Tang via Stack)
    HBASE-3717  deprecate HTable isTableEnabled() methods in favor of
                HBaseAdmin methods (David Butler via Stack)
+   HBASE-3720  Book.xml - porting conceptual-view / physical-view sections of
+               HBaseArchitecture wiki (Doug Meil via Stack)
 
   TASK
    HBASE-3559  Move report of split to master OFF the heartbeat channel
