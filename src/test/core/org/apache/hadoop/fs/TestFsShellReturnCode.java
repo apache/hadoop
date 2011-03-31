@@ -18,19 +18,19 @@
 
 package org.apache.hadoop.fs;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
+import java.net.URI;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.IOUtils;
-
-import org.junit.Test;
 import org.junit.Assert;
-import static org.junit.Assert.assertTrue;
+import org.junit.Test;
 
 /**
  * This test validates that chmod, chown, chgrp returning correct exit codes
@@ -41,7 +41,6 @@ public class TestFsShellReturnCode {
       .getLog("org.apache.hadoop.fs.TestFsShellReturnCode");
 
   private static final Configuration conf = new Configuration();
-  private FileSystem fs;
 
   private static String TEST_ROOT_DIR = System.getProperty("test.build.data",
       "build/test/data/testCHReturnCode");
@@ -52,7 +51,7 @@ public class TestFsShellReturnCode {
     stm.close();
   }
 
-  public void verify(FileSystem fs, String cmd, String argv[], int cmdIndex,
+  public void verify(String cmd, String argv[], int cmdIndex,
       FsShell fsShell, int exitCode) throws Exception {
     int ec;
     ec = FsShellPermissions.changePermissions(cmd, argv, cmdIndex, fsShell);
@@ -72,9 +71,6 @@ public class TestFsShellReturnCode {
   public void testChmod() throws Exception {
 
     FsShell fsShell = new FsShell(conf);
-    if (this.fs == null) {
-      this.fs = FileSystem.get(fsShell.getConf());
-    }
 
     final String f1 = TEST_ROOT_DIR + "/" + "testChmod/fileExists";
     final String f2 = TEST_ROOT_DIR + "/" + "testChmod/fileDoesNotExist";
@@ -96,15 +92,15 @@ public class TestFsShellReturnCode {
 
     // Test 1: Test 1: exit code for chmod on existing is 0
     String argv[] = { "-chmod", "777", f1 };
-    verify(fs, "-chmod", argv, 1, fsShell, 0);
+    verify("-chmod", argv, 1, fsShell, 0);
 
     // Test 2: exit code for chmod on non-existing path is 1
     String argv2[] = { "-chmod", "777", f2 };
-    verify(fs, "-chmod", argv2, 1, fsShell, 1);
+    verify("-chmod", argv2, 1, fsShell, 1);
 
     // Test 3: exit code for chmod on non-existing path with globbed input is 1
     String argv3[] = { "-chmod", "777", f3 };
-    verify(fs, "-chmod", argv3, 1, fsShell, 1);
+    verify("-chmod", argv3, 1, fsShell, 1);
 
     // create required files
     writeFile(fileSys, p4);
@@ -116,7 +112,7 @@ public class TestFsShellReturnCode {
 
     // Test 4: exit code for chmod on existing path with globbed input is 0
     String argv4[] = { "-chmod", "777", f7 };
-    verify(fs, "-chmod", argv4, 1, fsShell, 0);
+    verify("-chmod", argv4, 1, fsShell, 0);
 
   }
 
@@ -133,9 +129,6 @@ public class TestFsShellReturnCode {
   public void testChown() throws Exception {
 
     FsShell fsShell = new FsShell(conf);
-    if (this.fs == null) {
-      this.fs = FileSystem.get(fsShell.getConf());
-    }
 
     final String f1 = TEST_ROOT_DIR + "/" + "testChown/fileExists";
     final String f2 = TEST_ROOT_DIR + "/" + "testChown/fileDoesNotExist";
@@ -157,15 +150,15 @@ public class TestFsShellReturnCode {
 
     // Test 1: exit code for chown on existing file is 0
     String argv[] = { "-chown", "admin", f1 };
-    verify(fs, "-chown", argv, 1, fsShell, 0);
+    verify("-chown", argv, 1, fsShell, 0);
 
     // Test 2: exit code for chown on non-existing path is 1
     String argv2[] = { "-chown", "admin", f2 };
-    verify(fs, "-chown", argv2, 1, fsShell, 1);
+    verify("-chown", argv2, 1, fsShell, 1);
 
     // Test 3: exit code for chown on non-existing path with globbed input is 1
     String argv3[] = { "-chown", "admin", f3 };
-    verify(fs, "-chown", argv3, 1, fsShell, 1);
+    verify("-chown", argv3, 1, fsShell, 1);
 
     // create required files
     writeFile(fileSys, p4);
@@ -177,8 +170,21 @@ public class TestFsShellReturnCode {
 
     // Test 4: exit code for chown on existing path with globbed input is 0
     String argv4[] = { "-chown", "admin", f7 };
-    verify(fs, "-chown", argv4, 1, fsShell, 0);
+    verify("-chown", argv4, 1, fsShell, 0);
 
+   //Test 5: test for setOwner invocation on FS from command handler.
+    conf.set("fs.testfs.impl","org.apache.hadoop.fs.TestFsShellReturnCode$LocalFileSystemExtn");
+    final String file = "testfs:///testFile";
+    LocalFileSystemExtn fileSystem = (LocalFileSystemExtn)FileSystem.get(new URI(file), conf);
+    String argv5[] = { "-chown", "admin:Test", file };
+    FsShellPermissions.changePermissions("-chown", argv5, 1, fsShell);
+    assertTrue("Not invoked the setOwner on Fs",fileSystem.groupname.equals("Test"));
+    assertTrue("Not invoked the setOwner on Fs",fileSystem.username.equals("admin"));
+    String argv6[] = { "-chown", "admin:", file };
+    FsShellPermissions.changePermissions("-chown", argv6, 1, fsShell);
+    assertTrue("Not invoked the setOwner on Fs",fileSystem.groupname == null);
+    assertTrue("Not invoked the setOwner on Fs",fileSystem.username.equals("admin"));
+    
   }
 
   /**
@@ -194,9 +200,6 @@ public class TestFsShellReturnCode {
   public void testChgrp() throws Exception {
 
     FsShell fsShell = new FsShell(conf);
-    if (this.fs == null) {
-      this.fs = FileSystem.get(fsShell.getConf());
-    }
 
     final String f1 = TEST_ROOT_DIR + "/" + "testChgrp/fileExists";
     final String f2 = TEST_ROOT_DIR + "/" + "testChgrp/fileDoesNotExist";
@@ -218,15 +221,15 @@ public class TestFsShellReturnCode {
 
     // Test 1: exit code for chgrp on existing file is 0
     String argv[] = { "-chgrp", "admin", f1 };
-    verify(fs, "-chgrp", argv, 1, fsShell, 0);
+    verify("-chgrp", argv, 1, fsShell, 0);
 
     // Test 2: exit code for chgrp on non existing path is 1
     String argv2[] = { "-chgrp", "admin", f2 };
-    verify(fs, "-chgrp", argv2, 1, fsShell, 1);
+    verify("-chgrp", argv2, 1, fsShell, 1);
 
     // Test 3: exit code for chgrp on non-existing path with globbed input is 1
     String argv3[] = { "-chgrp", "admin", f3 };
-    verify(fs, "-chgrp", argv3, 1, fsShell, 1);
+    verify("-chgrp", argv3, 1, fsShell, 1);
 
     // create required files
     writeFile(fileSys, p4);
@@ -238,7 +241,7 @@ public class TestFsShellReturnCode {
 
     // Test 4: exit code for chgrp on existing path with globbed input is 0
     String argv4[] = { "-chgrp", "admin", f7 };
-    verify(fs, "-chgrp", argv4, 1, fsShell, 0);
+    verify("-chgrp", argv4, 1, fsShell, 0);
 
   }
   
@@ -271,6 +274,23 @@ public class TestFsShellReturnCode {
     }
   }
   
-  
-  
+  static class LocalFileSystemExtn extends RawLocalFileSystem {
+
+    private String username;
+    private String groupname;
+
+    @Override
+    public void setOwner(Path p, String username, String groupname)
+        throws IOException {
+      this.username = username;
+      this.groupname = groupname;
+
+    }
+
+    @Override
+    public FileStatus getFileStatus(Path f) throws IOException {
+      return new FileStatus();
+    }
+  }
+ 
 }
