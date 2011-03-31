@@ -700,6 +700,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     // Do this call outside of synchronized block.
     int maximumBalanceTime = getBalancerCutoffTime();
     long cutoffTime = System.currentTimeMillis() + maximumBalanceTime;
+    boolean balancerRan;
     synchronized (this.balancer) {
       // Only allow one balance run at at time.
       if (this.assignmentManager.isRegionsInTransition()) {
@@ -741,6 +742,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       List<RegionPlan> plans = this.balancer.balanceCluster(assignments);
       int rpCount = 0;	// number of RegionPlans balanced so far
       long totalRegPlanExecTime = 0;
+      balancerRan = plans != null;
       if (plans != null && !plans.isEmpty()) {
         for (RegionPlan plan: plans) {
           LOG.info("balance " + plan);
@@ -766,7 +768,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         }
       }
     }
-    return true;
+    return balancerRan;
   }
 
   @Override

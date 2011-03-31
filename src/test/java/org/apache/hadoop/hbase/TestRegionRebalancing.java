@@ -159,7 +159,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     // TODO: Fix this test.  Old balancer used to run with 'slop'.  New
     // balancer does not.
     boolean success = false;
-    float slop = (float)0.1;
+    float slop = (float)conf.getFloat("hbase.regions.slop", 0.1f);
     if (slop <= 0) slop = 1;
 
     for (int i = 0; i < 5; i++) {
