@@ -319,13 +319,19 @@ stopping hbase...............</programlisting></para>
       </section>
 
       <section xml:id="ulimit">
-        <title><varname>ulimit</varname><indexterm>
+        <title>
+          <varname>ulimit</varname><indexterm>
             <primary>ulimit</primary>
-          </indexterm></title>
+            </indexterm>
+            and
+          <varname>nproc</varname><indexterm>
+            <primary>nproc</primary>
+            </indexterm>
+        </title>
 
-        <para>HBase is a database, it uses a lot of files at the same time.
-        The default ulimit -n of 1024 on *nix systems is insufficient. Any
-        significant amount of loading will lead you to <link
+        <para>HBase is a database, it uses a lot of files all at the same time.
+        The default ulimit -n -- i.e. user file limit -- of 1024 on *nix systems
+        is insufficient. Any significant amount of loading will lead you to <link
         xlink:href="http://wiki.apache.org/hadoop/Hbase/FAQ#A6">FAQ: Why do I
         see "java.io.IOException...(Too many open files)" in my logs?</link>.
         You may also notice errors such as <programlisting>
@@ -333,9 +339,14 @@ stopping hbase...............</programlisting></para>
       2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Abandoning block blk_-6935524980745310745_1391901
       </programlisting> Do yourself a favor and change the upper bound on the
         number of file descriptors. Set it to north of 10k. See the above
-        referenced FAQ for how.</para>
+        referenced FAQ for how.  You should also up the hbase users'
+        <varname>nproc</varname> setting; under load, a low-nproc
+        setting could manifest as <classname>OutOfMemoryError</classname>
+        <footnote><para>See Jack Levin's <link xlink:href="">major hdfs issues</link>
+        note up on the user list.</para></footnote>.
+    </para>
 
-        <para>To be clear, upping the file descriptors for the user who is
+        <para>To be clear, upping the file descriptors and nproc for the user who is
         running the HBase process is an operating system configuration, not an
         HBase configuration. Also, a common mistake is that administrators
         will up the file descriptors for a particular user but for whatever
@@ -358,12 +369,12 @@ stopping hbase...............</programlisting></para>
           a line like: <programlisting>hadoop  -       nofile  32768</programlisting>
           Replace <varname>hadoop</varname> with whatever user is running
           Hadoop and HBase. If you have separate users, you will need 2
-          entries, one for each user.</para>
+          entries, one for each user.  In the same file set nproc hard and soft
+          limits.  For example: <programlisting>hadoop soft/hard nproc 32000</programlisting>.</para>
 
           <para>In the file <filename>/etc/pam.d/common-session</filename> add
           as the last line in the file: <programlisting>session required  pam_limits.so</programlisting>
-          Otherwise the changes in
-          <filename>/etc/security/limits.conf</filename> won't be
+          Otherwise the changes in <filename>/etc/security/limits.conf</filename> won't be
           applied.</para>
 
           <para>Don't forget to log out and back in again for the changes to

@@ -140,7 +140,7 @@ case $startStop in
     echo starting $command, logging to $logout
     # Add to the command log file vital stats on our environment.
     echo "`date` Starting $command on `hostname`" >> $loglog
-    echo "ulimit -n `ulimit -n`" >> $loglog 2>&1
+    echo "`ulimit -a`" >> $loglog 2>&1
     nohup nice -n $HBASE_NICENESS "$HBASE_HOME"/bin/hbase \
         --config "${HBASE_CONF_DIR}" \
         $command $startStop "$@" > "$logout" 2>&1 < /dev/null &
