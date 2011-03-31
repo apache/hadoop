@@ -223,7 +223,9 @@ public class HTable implements HTableInterface {
    * @param tableName Name of table to check.
    * @return {@code true} if table is online.
    * @throws IOException if a remote or network exception occurs
+	* @deprecated use {@link HBaseAdmin#isTableEnabled(byte[])}
    */
+  @Deprecated
   public static boolean isTableEnabled(String tableName) throws IOException {
     return isTableEnabled(Bytes.toBytes(tableName));
   }
@@ -233,7 +235,9 @@ public class HTable implements HTableInterface {
    * @param tableName Name of table to check.
    * @return {@code true} if table is online.
    * @throws IOException if a remote or network exception occurs
+	* @deprecated use {@link HBaseAdmin#isTableEnabled(byte[])}
    */
+  @Deprecated
   public static boolean isTableEnabled(byte[] tableName) throws IOException {
     return isTableEnabled(HBaseConfiguration.create(), tableName);
   }
@@ -244,7 +248,9 @@ public class HTable implements HTableInterface {
    * @param tableName Name of table to check.
    * @return {@code true} if table is online.
    * @throws IOException if a remote or network exception occurs
+	* @deprecated use {@link HBaseAdmin#isTableEnabled(byte[])}
    */
+  @Deprecated
   public static boolean isTableEnabled(Configuration conf, String tableName)
   throws IOException {
     return isTableEnabled(conf, Bytes.toBytes(tableName));
