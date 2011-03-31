@@ -147,7 +147,7 @@ public class TrackerDistributedCacheManager {
                      boolean isPublic, CacheFile file) throws IOException {
     String key;
     String user = getLocalizedCacheOwner(isPublic);
-    key = getKey(cache, conf, confFileStamp, user);
+    key = getKey(cache, conf, confFileStamp, user, isArchive);
     CacheStatus lcacheStatus;
     Path localizedPath = null;
     Path localPath = null;
@@ -573,11 +573,12 @@ public class TrackerDistributedCacheManager {
     return true;
   }
 
-  String getKey(URI cache, Configuration conf, long timeStamp, String user) 
-      throws IOException {
-    return makeRelative(cache, conf) + String.valueOf(timeStamp) + user;
+  String getKey(URI cache, Configuration conf, long timeStamp, String user,
+      boolean isArchive) throws IOException {
+    return (isArchive ? "a" : "f") + "^" + makeRelative(cache, conf)
+        + String.valueOf(timeStamp) + user;
   }
-  
+
   /**
    * This method create symlinks for all files in a given dir in another 
    * directory.

@@ -319,7 +319,51 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     checkLocalizedPath(true);
     checkLocalizedPath(false);
   }
-  
+
+  public void testSameNameFileArchiveCache() throws IOException,
+      InterruptedException {
+    if (!canRun()) {
+      return;
+    }
+    TrackerDistributedCacheManager manager = new TrackerDistributedCacheManager(
+        conf, taskController);
+    String userName = getJobOwnerName();
+    File workDir = new File(TEST_ROOT_DIR, "workdir");
+    Path cacheFile = new Path(TEST_ROOT_DIR, "fileArchiveCacheFile");
+
+    createPublicTempFile(cacheFile);
+    Configuration conf1 = new Configuration(conf);
+    conf1.set("user.name", userName);
+
+    DistributedCache.addCacheFile(cacheFile.toUri(), conf1);
+    DistributedCache.addCacheArchive(cacheFile.toUri(), conf1);
+    TrackerDistributedCacheManager.determineTimestamps(conf1);
+    TrackerDistributedCacheManager.determineCacheVisibilities(conf1);
+    dumpState(conf1);
+
+    TaskDistributedCacheManager handle = manager
+        .newTaskDistributedCacheManager(new JobID("jt", 1), conf1);
+    handle.setupCache(conf1, TaskTracker.getPublicDistributedCacheDir(),
+        TaskTracker.getPrivateDistributedCacheDir(userName));
+
+    TaskDistributedCacheManager.CacheFile cFile = handle.getCacheFiles().get(0);
+    TaskDistributedCacheManager.CacheFile cArchive = handle.getCacheFiles()
+        .get(1);
+
+    String distCacheDir = TaskTracker.getPublicDistributedCacheDir();
+
+    Path localizedPathForFile = manager.getLocalCache(cacheFile.toUri(), conf1,
+        distCacheDir, fs.getFileStatus(cacheFile), false, cFile.timestamp,
+        true, cFile);
+
+    Path localizedPathForArchive = manager.getLocalCache(cacheFile.toUri(),
+        conf1, distCacheDir, fs.getFileStatus(cacheFile), true,
+        cArchive.timestamp, true, cArchive);
+    assertNotSame("File and Archive resolve to the same path: "
+        + localizedPathForFile + ". Should differ.", localizedPathForFile,
+        localizedPathForArchive);
+  }
+
   private void appendStringArray(StringBuilder buffer, String[] data) {
     if (data != null && data.length != 0) {
       buffer.append(data[0]);

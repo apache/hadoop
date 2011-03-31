@@ -18,7 +18,10 @@ Release 0.20.204.0 - unreleased
     HDFS-1773. Do not show decommissioned datanodes, which are not in both
     include and exclude lists, on web and JMX interfaces.
     (Tanping Wang via szetszwo)
-  
+
+    MAPREDUCE-2409. Distinguish distributed cache artifacts localized as
+    files, archives. (Siddharth Seth via cdouglas)
+
   IMPROVEMENTS
 
     HDFS-1541. Not marking datanodes dead when namenode in safemode.
