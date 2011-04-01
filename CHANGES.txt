@@ -31,6 +31,9 @@ Release 0.20.204.0 - unreleased
     HDFS-1258. Clearing namespace quota on "/" corrupts fs image.  
     (Aaron T. Myers via szetszwo)
 
+    HADOOP-7215. RPC clients must use network interface corresponding to 
+    the host in the client's kerberos principal key. (suresh)
+  
   IMPROVEMENTS
 
     HDFS-1541. Not marking datanodes dead when namenode in safemode.
