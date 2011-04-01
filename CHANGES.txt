@@ -127,6 +127,9 @@ Trunk (unreleased changes)
     HADOOP-7215. RPC clients must use network interface corresponding to 
     the host in the client's kerberos principal key. (suresh)
 
+    HADOOP-7019. Refactor build targets to enable faster cross project dev
+    cycles. (Luke Lu via cos)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
