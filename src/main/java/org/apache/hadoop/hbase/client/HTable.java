@@ -842,6 +842,7 @@ public class HTable implements HTableInterface {
   @Override
   public void close() throws IOException {
     flushCommits();
+    this.pool.shutdown();
   }
 
   // validate for well-formedness

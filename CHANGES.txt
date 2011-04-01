@@ -56,6 +56,8 @@ Release 0.91.0 - Unreleased
                (Kazuki Ohta via todd)
    HBASE-3716  Intermittent TestRegionRebalancing failure
                (Ted Yu via Stack)
+   HBASE-3712  HTable.close() doesn't shutdown thread pool
+               (Ted Yu via Stack)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
