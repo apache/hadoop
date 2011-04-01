@@ -274,4 +274,13 @@ public class SecurityUtil {
       throw new RuntimeException(ex);
     }
   }
+  
+  /**
+   * Get the host name from the principal name of format <service>/host@realm.
+   * @param principalName principal name of format as described above
+   * @return host name if the the string conforms to the above format, else null
+   */
+  public static String getHostFromPrincipal(String principalName) {
+    return new KerberosName(principalName).getHostName();
+  }
 }

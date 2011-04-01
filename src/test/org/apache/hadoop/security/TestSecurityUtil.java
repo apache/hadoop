@@ -82,4 +82,12 @@ public class TestSecurityUtil {
     assertEquals("hdfs/" + local + "@REALM", SecurityUtil.getServerPrincipal(
         "hdfs/_HOST@REALM", "0.0.0.0"));
   }
+  
+  @Test
+  public void testGetHostFromPrincipal() {
+    assertEquals("host", 
+        SecurityUtil.getHostFromPrincipal("service/host@realm"));
+    assertEquals(null,
+        SecurityUtil.getHostFromPrincipal("service@realm"));
+  }
 }
