@@ -120,6 +120,8 @@ Release 0.91.0 - Unreleased
    HBASE-3715  Book.xml - adding architecture section on client, adding section
                on spec-ex under mapreduce (Doug Meil via Stack)
    HBASE-3684  Support column range filter (Jerry Chen via Stack)
+   HBASE-3647  Distinguish read and write request count in region
+               (Ted Yu via Stack)
 
   TASK
    HBASE-3559  Move report of split to master OFF the heartbeat channel
