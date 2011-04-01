@@ -28,6 +28,9 @@ Release 0.20.204.0 - unreleased
     MAPREDUCE-2411. Force an exception when the queue has an invalid name or
     its ACLs are misconfigured. (Dick King via cdouglas)
 
+    HDFS-1258. Clearing namespace quota on "/" corrupts fs image.  
+    (Aaron T. Myers via szetszwo)
+
   IMPROVEMENTS
 
     HDFS-1541. Not marking datanodes dead when namenode in safemode.

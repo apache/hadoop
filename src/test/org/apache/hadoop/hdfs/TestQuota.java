@@ -267,6 +267,12 @@ public class TestQuota extends TestCase {
           return null;
         }
       });
+
+      // 19: clrQuota on the root directory ("/") should fail
+      runCommand(admin, true, "-clrQuota", "/");
+
+      // 20: setQuota on the root directory ("/") should succeed
+      runCommand(admin, false, "-setQuota", "1000000", "/");
     } finally {
       cluster.shutdown();
     }

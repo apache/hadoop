@@ -1280,6 +1280,8 @@ class FSDirectory implements FSConstants, Closeable {
       throw new FileNotFoundException("Directory does not exist: " + srcs);
     } else if (!targetNode.isDirectory()) {
       throw new FileNotFoundException("Cannot set quota on a file: " + srcs);  
+    } else if (targetNode.isRoot() && nsQuota == FSConstants.QUOTA_RESET) {
+      throw new IllegalArgumentException("Cannot clear namespace quota on root.");
     } else { // a directory inode
       INodeDirectory dirNode = (INodeDirectory)targetNode;
       long oldNsQuota = dirNode.getNsQuota();
