@@ -59,7 +59,8 @@ public class TestQuota extends TestCase {
     final Configuration conf = new Configuration();
     // set a smaller block size so that we can test with smaller 
     // Space quotas
-    conf.set("dfs.block.size", "512");
+    final int DEFAULT_BLOCK_SIZE = 512;
+    conf.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     conf.setBoolean("dfs.support.append", true);
     final MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     final FileSystem fs = cluster.getFileSystem();
@@ -273,6 +274,60 @@ public class TestQuota extends TestCase {
 
       // 20: setQuota on the root directory ("/") should succeed
       runCommand(admin, false, "-setQuota", "1000000", "/");
+ 
+      runCommand(admin, true, "-clrQuota", "/");
+      runCommand(admin, false, "-clrSpaceQuota", "/");
+      runCommand(admin, new String[]{"-clrQuota", parent.toString()}, false);
+      runCommand(admin, false, "-clrSpaceQuota", parent.toString());
+ 
+ 
+      // 2: create directory /test/data2
+      final Path childDir2 = new Path(parent, "data2");
+      assertTrue(dfs.mkdirs(childDir2));
+
+
+      final Path childFile2 = new Path(childDir2, "datafile2");
+      final Path childFile3 = new Path(childDir2, "datafile3");
+      final long spaceQuota2 = DEFAULT_BLOCK_SIZE * replication;
+      final long fileLen2 = DEFAULT_BLOCK_SIZE;
+      // set space quota to a real low value 
+      runCommand(admin, false, "-setSpaceQuota", Long.toString(spaceQuota2), childDir2.toString());
+      // clear space quota
+      runCommand(admin, false, "-clrSpaceQuota", childDir2.toString());
+      // create a file that is greater than the size of space quota
+      DFSTestUtil.createFile(fs, childFile2, fileLen2, replication, 0);
+
+      // now set space quota again. This should succeed
+      runCommand(admin, false, "-setSpaceQuota", Long.toString(spaceQuota2), childDir2.toString());
+
+      hasException = false;
+      try {
+        DFSTestUtil.createFile(fs, childFile3, fileLen2, replication, 0);
+      } catch (DSQuotaExceededException e) {
+        hasException = true;
+      }
+      assertTrue(hasException);
+
+      // now test the same for root
+      final Path childFile4 = new Path("/", "datafile2");
+      final Path childFile5 = new Path("/", "datafile3");
+
+      runCommand(admin, true, "-clrQuota", "/");
+      runCommand(admin, false, "-clrSpaceQuota", "/");
+      // set space quota to a real low value 
+      runCommand(admin, false, "-setSpaceQuota", Long.toString(spaceQuota2), "/");
+      runCommand(admin, false, "-clrSpaceQuota", "/");
+      DFSTestUtil.createFile(fs, childFile4, fileLen2, replication, 0);
+      runCommand(admin, false, "-setSpaceQuota", Long.toString(spaceQuota2), "/");
+
+      hasException = false;
+      try {
+        DFSTestUtil.createFile(fs, childFile5, fileLen2, replication, 0);
+      } catch (DSQuotaExceededException e) {
+        hasException = true;
+      }
+      assertTrue(hasException);
+
     } finally {
       cluster.shutdown();
     }

@@ -1296,6 +1296,13 @@ class FSDirectory implements FSConstants, Closeable {
       if (dirNode instanceof INodeDirectoryWithQuota) { 
         // a directory with quota; so set the quota to the new value
         ((INodeDirectoryWithQuota)dirNode).setQuota(nsQuota, dsQuota);
+        if (!dirNode.isQuotaSet()) {
+          // will not come here for root because root's nsQuota is always set
+          INodeDirectory newNode = new INodeDirectory(dirNode);
+          INodeDirectory parent = (INodeDirectory)inodes[inodes.length-2];
+          dirNode = newNode;
+          parent.replaceChild(newNode);
+        }
       } else {
         // a non-quota directory; so replace it with a directory with quota
         INodeDirectoryWithQuota newNode = 

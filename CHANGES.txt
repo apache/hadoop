@@ -33,6 +33,9 @@ Release 0.20.204.0 - unreleased
 
     HADOOP-7215. RPC clients must use network interface corresponding to 
     the host in the client's kerberos principal key. (suresh)
+
+    HDFS-1189. Quota counts missed between clear quota and set quota.
+    (John George via szetszwo)
   
   IMPROVEMENTS
 
