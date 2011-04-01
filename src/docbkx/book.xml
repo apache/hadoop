@@ -124,6 +124,16 @@ throws InterruptedException, IOException {
   }</programlisting>
    </para>
     </section>
+  <section xml:id="mapreduce.specex">
+  <title>Speculative Execution</title>
+  <para>It is generally advisable to turn off speculative execution for
+      MapReduce jobs that use HBase as a source.  This can either be done on a
+      per-Job basis through properties, on on the entire cluster.  Especially
+      for longer running jobs, speculative execution will create duplicate
+      map-tasks which will double-write your data to HBase; this is probably
+      not what you want.
+  </para>
+  </section>
   </chapter>
 
   <chapter xml:id="schema">
@@ -694,6 +704,30 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
 
   <chapter xml:id="architecture">
     <title>Architecture</title>
+
+	<section xml:id="client">
+	 <title>Client</title>
+     <para>The HBase client
+         <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>
+         is responsible for finding RegionServers that are serving the
+         particular row range of interest.  It does this by querying
+         the <code>.META.</code> and <code>-ROOT</code> catalog tables
+         (TODO: Explain).  After locating the required
+         region(s), the client <emphasis>directly</emphasis> contacts
+         the RegionServer serving that region (i.e., it does not go
+         through the master) and issues the read or write request.
+         This information is cached in the client so that subsequent requests
+         need not go through the lookup process.  Should a region be reassigned
+         either by the master load balancer or because a RegionServer has died,
+         the client will requery the catalog tables to determine the new
+         location of the user region. 
+    </para>
+    <para>Administrative functions are handled through <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html">HBaseAdmin</link>
+    </para>
+    <para>For connection configuration information, see the <link linkend="client_dependencies">configuration</link> section. 
+    </para>
+	</section>
+    
     <section xml:id="daemons">
      <title>Daemons</title>
      <section xml:id="master"><title>Master</title>

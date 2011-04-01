@@ -117,6 +117,8 @@ Release 0.91.0 - Unreleased
    HBASE-3720  Book.xml - porting conceptual-view / physical-view sections of
                HBaseArchitecture wiki (Doug Meil via Stack)
    HBASE-3705  Allow passing timestamp into importtsv (Andy Sautins via Stack)
+   HBASE-3715  Book.xml - adding architecture section on client, adding section
+               on spec-ex under mapreduce (Doug Meil via Stack)
 
   TASK
    HBASE-3559  Move report of split to master OFF the heartbeat channel
