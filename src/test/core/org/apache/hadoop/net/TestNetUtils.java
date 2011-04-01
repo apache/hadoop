@@ -24,6 +24,8 @@ import java.net.Socket;
 import java.net.ConnectException;
 import java.net.SocketException;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+
 import org.apache.hadoop.conf.Configuration;
 
 public class TestNetUtils {
@@ -57,5 +59,17 @@ public class TestNetUtils {
       // here. This is also OK.
       assertTrue(se.getMessage().contains("Invalid argument"));
     }
+  }
+  
+  /**
+   * Test for {
+   * @throws UnknownHostException @link NetUtils#getLocalInetAddress(String)
+   * @throws SocketException 
+   */
+  @Test
+  public void testGetLocalInetAddress() throws Exception {
+    assertNotNull(NetUtils.getLocalInetAddress("127.0.0.1"));
+    assertNull(NetUtils.getLocalInetAddress("invalid-address-for-test"));
+    assertNull(NetUtils.getLocalInetAddress(null));
   }
 }
