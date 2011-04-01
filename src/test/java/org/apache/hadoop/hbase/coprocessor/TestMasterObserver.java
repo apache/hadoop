@@ -492,7 +492,6 @@ public class TestMasterObserver {
     // now trigger a balance
     master.balanceSwitch(true);
     boolean balanceRun = master.balance();
-    assertTrue("Balance request should have run", balanceRun);
     assertTrue("Coprocessor should be called on region rebalancing",
         cp.wasBalanceCalled());
   }
