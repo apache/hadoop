@@ -63,6 +63,7 @@ public class ImportTsv {
   final static String BULK_OUTPUT_CONF_KEY = "importtsv.bulk.output";
   final static String COLUMNS_CONF_KEY = "importtsv.columns";
   final static String SEPARATOR_CONF_KEY = "importtsv.separator";
+  final static String TIMESTAMP_CONF_KEY = "importtsv.timestamp";
   final static String DEFAULT_SEPARATOR = "\t";
 
   static class TsvParser {
@@ -220,7 +221,7 @@ public class ImportTsv {
       if (parser.getRowKeyColumnIndex() == -1) {
         throw new RuntimeException("No row key column specified");
       }
-      ts = System.currentTimeMillis();
+      ts = conf.getLong(TIMESTAMP_CONF_KEY, System.currentTimeMillis());
 
       skipBadLines = context.getConfiguration().getBoolean(
         SKIP_LINES_CONF_KEY, true);
@@ -356,7 +357,9 @@ public class ImportTsv {
       "\n" +
       "Other options that may be specified with -D include:\n" +
       "  -D" + SKIP_LINES_CONF_KEY + "=false - fail if encountering an invalid line\n" +
-      "  '-D" + SEPARATOR_CONF_KEY + "=|' - eg separate on pipes instead of tabs";
+      "  '-D" + SEPARATOR_CONF_KEY + "=|' - eg separate on pipes instead of tabs\n" +
+      "  -D" + TIMESTAMP_CONF_KEY + "=currentTimeAsLong - use the specified timestamp for the import\n";
+
     System.err.println(usage);
   }
 
