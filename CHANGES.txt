@@ -22,6 +22,9 @@ Release 0.20.204.0 - unreleased
     MAPREDUCE-2409. Distinguish distributed cache artifacts localized as
     files, archives. (Siddharth Seth via cdouglas)
 
+    MAPREDUCE-118 Fix Job.getJobID() to get the new ID as soon as it's 
+    assigned. (Amareshwari Sriramadasu and Dick King via cdouglas)
+
   IMPROVEMENTS
 
     HDFS-1541. Not marking datanodes dead when namenode in safemode.

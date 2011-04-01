@@ -137,7 +137,14 @@ public class TestMapReduceLocal extends TestCase {
     job.setInputFormatClass(TrackingTextInputFormat.class);
     FileInputFormat.addInputPath(job, new Path(TEST_ROOT_DIR + "/in"));
     FileOutputFormat.setOutputPath(job, new Path(TEST_ROOT_DIR + "/out"));
+    assertNull("job.getJobID() must be null before the job is submitted",
+	       job.getJobID());
+    job.submit();
+    assertNotNull("job.getJobID() can't be null after the job is submitted",
+		  job.getJobID());
     assertTrue(job.waitForCompletion(false));
+    assertNotNull("job.getJobID() can't be null again after the job is finished",
+		  job.getJobID());
     String out = readFile("out/part-r-00000");
     System.out.println(out);
     assertEquals("a\t1\ncount\t1\nis\t1\nmore\t1\nof\t1\ntest\t4\nthis\t1\nword\t1\n",

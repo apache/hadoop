@@ -463,6 +463,7 @@ public class Job extends JobContext {
     // Connect to the JobTracker and submit the job
     connect();
     info = jobClient.submitJobInternal(conf);
+    super.setJobID(info.getID());
     state = JobState.RUNNING;
    }
   

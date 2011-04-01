@@ -49,7 +49,7 @@ public class JobContext {
 
   protected final org.apache.hadoop.mapred.JobConf conf;
   protected final Credentials credentials;
-  private final JobID jobId;
+  private JobID jobId;
 
   public static final String JOB_NAMENODES = "mapreduce.job.hdfs-servers";
 
@@ -81,6 +81,10 @@ public class JobContext {
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  void setJobID(JobID jobId) {
+    this.jobId = jobId;
   }
 
   /**
