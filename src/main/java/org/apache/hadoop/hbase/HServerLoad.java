@@ -28,17 +28,13 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
-import org.apache.hadoop.io.VersionedWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
  * This class encapsulates metrics for determining the load on a HRegionServer
  */
-public class HServerLoad extends VersionedWritable
-  implements WritableComparable<HServerLoad> {
-  private static final byte VERSION = 0;
-
+public class HServerLoad implements WritableComparable<HServerLoad> {
   /** number of regions */
     // could just use regionLoad.size() but master.RegionManager likes to play
     // around with this value while passing HServerLoad objects around during
@@ -52,11 +48,6 @@ public class HServerLoad extends VersionedWritable
   private int maxHeapMB;
   /** per-region load metrics */
   private Map<byte[], RegionLoad> regionLoad = new TreeMap<byte[], RegionLoad>(Bytes.BYTES_COMPARATOR);
-
-  /** @return the object version number */
-  public byte getVersion() {
-    return VERSION;
-  }
 
   /**
    * Encapsulates per-region loading metrics.
@@ -74,10 +65,8 @@ public class HServerLoad extends VersionedWritable
     private int memstoreSizeMB;
     /** the current total size of storefile indexes for the region, in MB */
     private int storefileIndexSizeMB;
-    /** the current total read requests made to region */
-    private int readRequestsCount;
-    /** the current total write requests made to region */
-    private int writeRequestsCount;
+    /** the current total request made to region */
+    private long requestsCount;
 
     /**
      * Constructor, for Writable
@@ -93,21 +82,18 @@ public class HServerLoad extends VersionedWritable
      * @param storefileSizeMB
      * @param memstoreSizeMB
      * @param storefileIndexSizeMB
-     * @param readRequestsCount
-     * @param writeRequestsCount
+     * @param requestsCount
      */
     public RegionLoad(final byte[] name, final int stores,
         final int storefiles, final int storefileSizeMB,
-        final int memstoreSizeMB, final int storefileIndexSizeMB,
-        final int readRequestsCount, final int writeRequestsCount) {
+        final int memstoreSizeMB, final int storefileIndexSizeMB,final long requestsCount) {
       this.name = name;
       this.stores = stores;
       this.storefiles = storefiles;
       this.storefileSizeMB = storefileSizeMB;
       this.memstoreSizeMB = memstoreSizeMB;
       this.storefileIndexSizeMB = storefileIndexSizeMB;
-      this.readRequestsCount = readRequestsCount;
-      this.writeRequestsCount = writeRequestsCount;
+      this.requestsCount = requestsCount;
     }
 
     // Getters
@@ -160,26 +146,12 @@ public class HServerLoad extends VersionedWritable
     public int getStorefileIndexSizeMB() {
       return storefileIndexSizeMB;
     }
-    
+
     /**
      * @return the number of requests made to region
      */
     public long getRequestsCount() {
-      return readRequestsCount + writeRequestsCount;
-    }
-
-    /**
-     * @return the number of read requests made to region
-     */
-    public long getReadRequestsCount() {
-      return readRequestsCount;
-    }
-
-    /**
-     * @return the number of read requests made to region
-     */
-    public long getWriteRequestsCount() {
-      return writeRequestsCount;
+      return requestsCount;
     }
 
     // Setters
@@ -221,17 +193,10 @@ public class HServerLoad extends VersionedWritable
     }
 
     /**
-     * @param requestsCount the number of read requests to region
+     * @param requestsCount the number of requests to region
      */
-    public void setReadRequestsCount(int requestsCount) {
-      this.readRequestsCount = requestsCount;
-    }
-
-    /**
-     * @param requestsCount the number of write requests to region
-     */
-    public void setWriteRequestsCount(int requestsCount) {
-      this.writeRequestsCount = requestsCount;
+    public void setRequestsCount(long requestsCount) {
+      this.requestsCount = requestsCount;
     }
 
     // Writable
@@ -244,8 +209,7 @@ public class HServerLoad extends VersionedWritable
       this.storefileSizeMB = in.readInt();
       this.memstoreSizeMB = in.readInt();
       this.storefileIndexSizeMB = in.readInt();
-      this.readRequestsCount = in.readInt();
-      this.writeRequestsCount = in.readInt();
+      this.requestsCount = in.readLong();
     }
 
     public void write(DataOutput out) throws IOException {
@@ -256,8 +220,7 @@ public class HServerLoad extends VersionedWritable
       out.writeInt(storefileSizeMB);
       out.writeInt(memstoreSizeMB);
       out.writeInt(storefileIndexSizeMB);
-      out.writeInt(readRequestsCount);
-      out.writeInt(writeRequestsCount);
+      out.writeLong(requestsCount);
     }
 
     /**
@@ -275,10 +238,8 @@ public class HServerLoad extends VersionedWritable
         Integer.valueOf(this.memstoreSizeMB));
       sb = Strings.appendKeyValue(sb, "storefileIndexSizeMB",
         Integer.valueOf(this.storefileIndexSizeMB));
-      sb = Strings.appendKeyValue(sb, "readRequestsCount",
-          Long.valueOf(this.readRequestsCount));
-      sb = Strings.appendKeyValue(sb, "writeRequestsCount",
-          Long.valueOf(this.writeRequestsCount));
+      sb = Strings.appendKeyValue(sb, "requestsCount",
+          Long.valueOf(this.requestsCount));
       return sb.toString();
     }
   }
@@ -522,9 +483,9 @@ public class HServerLoad extends VersionedWritable
   public void addRegionInfo(final byte[] name, final int stores,
       final int storefiles, final int storefileSizeMB,
       final int memstoreSizeMB, final int storefileIndexSizeMB,
-      final int readRequestsCount, final int writeRequestsCount) {
+      final long requestsCount) {
     this.regionLoad.put(name, new HServerLoad.RegionLoad(name, stores, storefiles,
-      storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB, readRequestsCount, writeRequestsCount));
+      storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB, requestsCount));
   }
 
   // Writable

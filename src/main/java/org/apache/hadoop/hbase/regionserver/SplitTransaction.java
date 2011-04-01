@@ -543,8 +543,7 @@ public class SplitTransaction {
     HRegion r = HRegion.newHRegion(this.parent.getTableDir(),
       this.parent.getLog(), fs, this.parent.getConf(),
       hri, rsServices);
-    r.readRequestsCount.set(this.parent.getReadRequestsCount() / 2);
-    r.writeRequestsCount.set(this.parent.getWriteRequestsCount() / 2);
+    r.requestsCount.set(this.parent.getRequestsCount() / 2);
     HRegion.moveInitialFilesIntoPlace(fs, regionDir, r.getRegionDir());
     return r;
   }
