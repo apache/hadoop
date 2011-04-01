@@ -22,8 +22,11 @@ Release 0.20.204.0 - unreleased
     MAPREDUCE-2409. Distinguish distributed cache artifacts localized as
     files, archives. (Siddharth Seth via cdouglas)
 
-    MAPREDUCE-118 Fix Job.getJobID() to get the new ID as soon as it's 
+    MAPREDUCE-118. Fix Job.getJobID() to get the new ID as soon as it's 
     assigned. (Amareshwari Sriramadasu and Dick King via cdouglas)
+
+    MAPREDUCE-2411. Force an exception when the queue has an invalid name or
+    its ACLs are misconfigured. (Dick King via cdouglas)
 
   IMPROVEMENTS
 

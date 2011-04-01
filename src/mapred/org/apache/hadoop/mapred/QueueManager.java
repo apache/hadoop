@@ -380,14 +380,15 @@ class QueueManager {
   synchronized AccessControlList getQueueACL(String queueName, QueueACL qACL) {
     if (aclsEnabled) {
       Queue q = queues.get(queueName);
-      assert q != null : "There is no queue named " + queueName;
+      if (q == null) {
+        throw new IllegalArgumentException(
+            "There is no queue named " + queueName);
+      }
       Map<String, AccessControlList> acls = q.getAcls();
-      assert acls != null
-        : ( "The queue named "
-            + queueName
-            + " does not have any access control lists.  "
-            + "An error log message should have shown up "
-            + "in the cluster initialization logs.");
+      if (acls == null) {
+        throw new IllegalArgumentException("The queue named " + queueName +
+            " is misconfigured: its access control lists are undefined.");
+      }
       return acls.get(toFullPropertyName(queueName, qACL.getAclName()));
     }
     return new AccessControlList("*");
