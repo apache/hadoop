@@ -1,5 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8"
-  import="java.util.Map"
+  import="java.util.HashMap"
   import="org.apache.hadoop.io.Writable"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.client.HTable"
@@ -7,6 +7,8 @@
   import="org.apache.hadoop.hbase.HRegionInfo"
   import="org.apache.hadoop.hbase.HServerAddress"
   import="org.apache.hadoop.hbase.HServerInfo"
+  import="org.apache.hadoop.hbase.HServerLoad"
+  import="org.apache.hadoop.hbase.HServerLoad.RegionLoad"
   import="org.apache.hadoop.hbase.io.ImmutableBytesWritable"
   import="org.apache.hadoop.hbase.master.HMaster" 
   import="org.apache.hadoop.hbase.util.Bytes"
@@ -18,7 +20,7 @@
   HBaseAdmin hbadmin = new HBaseAdmin(conf);
   String tableName = request.getParameter("name");
   HTable table = new HTable(conf, tableName);
-  String tableHeader = "<h2>Table Regions</h2><table><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th></tr>";
+  String tableHeader = "<h2>Table Regions</h2><table><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Requests</th></tr>";
   HServerAddress rl = master.getCatalogTracker().getRootLocation();
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
   Map<String, Integer> frags = null;
@@ -133,6 +135,7 @@
 <%  } %>
 </table>
 <%
+  Map<String, Integer> regDistribution = new HashMap<String, Integer>();
   Map<HRegionInfo, HServerAddress> regions = table.getRegionsInfo();
   if(regions != null && regions.size() > 0) { %>
 <%=     tableHeader %>
@@ -140,6 +143,7 @@
   for(Map.Entry<HRegionInfo, HServerAddress> hriEntry : regions.entrySet()) {
     HRegionInfo regionInfo = hriEntry.getKey();
     HServerAddress addr = hriEntry.getValue();
+    long req = 0;
 
     int infoPort = 0;
     String urlRegionServer = null;
@@ -147,9 +151,17 @@
     if (addr != null) {
       HServerInfo info = master.getServerManager().getHServerInfo(addr);
       if (info != null) {
+        HServerLoad sl = info.getLoad();
+        Map<byte[], RegionLoad> map = sl.getRegionsLoad();
+        if (map.containsKey(regionInfo.getRegionName())) {
+          req = map.get(regionInfo.getRegionName()).getRequestsCount();
+        }
         infoPort = info.getInfoPort();
         urlRegionServer =
             "http://" + addr.getHostname().toString() + ":" + infoPort + "/";
+        Integer i = regDistribution.get(urlRegionServer);
+        if (null == i) i = new Integer(0);
+        regDistribution.put(urlRegionServer, i+1);
       }
     }
 %>
@@ -170,6 +182,18 @@
   %>
   <td><%= Bytes.toStringBinary(regionInfo.getStartKey())%></td>
   <td><%= Bytes.toStringBinary(regionInfo.getEndKey())%></td>
+  <td><%= req%></td>
+</tr>
+<% } %>
+</table>
+<h2>Regions by Region Server</h2>
+<table><tr><th>Region Server</th><th>Region Count</th></tr>
+<%
+  for (Map.Entry<String, Integer> rdEntry : regDistribution.entrySet()) {
+%>
+<tr>
+  <td><%= rdEntry.getKey()%></td>
+  <td><%= rdEntry.getValue()%></td>
 </tr>
 <% } %>
 </table>
