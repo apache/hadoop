@@ -28,13 +28,17 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
+import org.apache.hadoop.io.VersionedWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
  * This class encapsulates metrics for determining the load on a HRegionServer
  */
-public class HServerLoad implements WritableComparable<HServerLoad> {
+public class HServerLoad extends VersionedWritable
+  implements WritableComparable<HServerLoad> {
+  private static final byte VERSION = 0;
+
   /** number of regions */
     // could just use regionLoad.size() but master.RegionManager likes to play
     // around with this value while passing HServerLoad objects around during
@@ -48,6 +52,11 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
   private int maxHeapMB;
   /** per-region load metrics */
   private Map<byte[], RegionLoad> regionLoad = new TreeMap<byte[], RegionLoad>(Bytes.BYTES_COMPARATOR);
+
+  /** @return the object version number */
+  public byte getVersion() {
+    return VERSION;
+  }
 
   /**
    * Encapsulates per-region loading metrics.
@@ -65,8 +74,10 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
     private int memstoreSizeMB;
     /** the current total size of storefile indexes for the region, in MB */
     private int storefileIndexSizeMB;
-    /** the current total request made to region */
-    private long requestsCount;
+    /** the current total read requests made to region */
+    private int readRequestsCount;
+    /** the current total write requests made to region */
+    private int writeRequestsCount;
 
     /**
      * Constructor, for Writable
@@ -82,18 +93,21 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
      * @param storefileSizeMB
      * @param memstoreSizeMB
      * @param storefileIndexSizeMB
-     * @param requestsCount
+     * @param readRequestsCount
+     * @param writeRequestsCount
      */
     public RegionLoad(final byte[] name, final int stores,
         final int storefiles, final int storefileSizeMB,
-        final int memstoreSizeMB, final int storefileIndexSizeMB,final long requestsCount) {
+        final int memstoreSizeMB, final int storefileIndexSizeMB,
+        final int readRequestsCount, final int writeRequestsCount) {
       this.name = name;
       this.stores = stores;
       this.storefiles = storefiles;
       this.storefileSizeMB = storefileSizeMB;
       this.memstoreSizeMB = memstoreSizeMB;
       this.storefileIndexSizeMB = storefileIndexSizeMB;
-      this.requestsCount = requestsCount;
+      this.readRequestsCount = readRequestsCount;
+      this.writeRequestsCount = writeRequestsCount;
     }
 
     // Getters
@@ -146,12 +160,26 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
     public int getStorefileIndexSizeMB() {
       return storefileIndexSizeMB;
     }
-
+    
     /**
      * @return the number of requests made to region
      */
     public long getRequestsCount() {
-      return requestsCount;
+      return readRequestsCount + writeRequestsCount;
+    }
+
+    /**
+     * @return the number of read requests made to region
+     */
+    public long getReadRequestsCount() {
+      return readRequestsCount;
+    }
+
+    /**
+     * @return the number of read requests made to region
+     */
+    public long getWriteRequestsCount() {
+      return writeRequestsCount;
     }
 
     // Setters
@@ -193,10 +221,17 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
     }
 
     /**
-     * @param requestsCount the number of requests to region
+     * @param requestsCount the number of read requests to region
      */
-    public void setRequestsCount(long requestsCount) {
-      this.requestsCount = requestsCount;
+    public void setReadRequestsCount(int requestsCount) {
+      this.readRequestsCount = requestsCount;
+    }
+
+    /**
+     * @param requestsCount the number of write requests to region
+     */
+    public void setWriteRequestsCount(int requestsCount) {
+      this.writeRequestsCount = requestsCount;
     }
 
     // Writable
@@ -209,7 +244,8 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
       this.storefileSizeMB = in.readInt();
       this.memstoreSizeMB = in.readInt();
       this.storefileIndexSizeMB = in.readInt();
-      this.requestsCount = in.readLong();
+      this.readRequestsCount = in.readInt();
+      this.writeRequestsCount = in.readInt();
     }
 
     public void write(DataOutput out) throws IOException {
@@ -220,7 +256,8 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
       out.writeInt(storefileSizeMB);
       out.writeInt(memstoreSizeMB);
       out.writeInt(storefileIndexSizeMB);
-      out.writeLong(requestsCount);
+      out.writeInt(readRequestsCount);
+      out.writeInt(writeRequestsCount);
     }
 
     /**
@@ -238,8 +275,10 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
         Integer.valueOf(this.memstoreSizeMB));
       sb = Strings.appendKeyValue(sb, "storefileIndexSizeMB",
         Integer.valueOf(this.storefileIndexSizeMB));
-      sb = Strings.appendKeyValue(sb, "requestsCount",
-          Long.valueOf(this.requestsCount));
+      sb = Strings.appendKeyValue(sb, "readRequestsCount",
+          Long.valueOf(this.readRequestsCount));
+      sb = Strings.appendKeyValue(sb, "writeRequestsCount",
+          Long.valueOf(this.writeRequestsCount));
       return sb.toString();
     }
   }
@@ -483,9 +522,9 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
   public void addRegionInfo(final byte[] name, final int stores,
       final int storefiles, final int storefileSizeMB,
       final int memstoreSizeMB, final int storefileIndexSizeMB,
-      final long requestsCount) {
+      final int readRequestsCount, final int writeRequestsCount) {
     this.regionLoad.put(name, new HServerLoad.RegionLoad(name, stores, storefiles,
-      storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB, requestsCount));
+      storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB, readRequestsCount, writeRequestsCount));
   }
 
   // Writable

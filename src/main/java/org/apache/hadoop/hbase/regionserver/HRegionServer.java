@@ -59,7 +59,6 @@ import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -74,6 +73,7 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
@@ -897,7 +897,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     int storefileSizeMB = 0;
     int memstoreSizeMB = (int) (r.memstoreSize.get() / 1024 / 1024);
     int storefileIndexSizeMB = 0;
-    long requestsCount = r.requestsCount.get();
     synchronized (r.stores) {
       stores += r.stores.size();
       for (Store store : r.stores.values()) {
@@ -907,7 +906,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       }
     }
     return new HServerLoad.RegionLoad(name,stores, storefiles,
-        storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB, requestsCount);
+        storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB,
+        (int) r.readRequestsCount.get(), (int) r.writeRequestsCount.get());
   }
 
   /**
@@ -1142,12 +1142,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     int stores = 0;
     int storefiles = 0;
     long memstoreSize = 0;
-    long requestsCount = 0;
+    int readRequestsCount = 0;
+    int writeRequestsCount = 0;
     long storefileIndexSize = 0;
     for (Map.Entry<String, HRegion> e : this.onlineRegions.entrySet()) {
         HRegion r = e.getValue();
         memstoreSize += r.memstoreSize.get();
-        requestsCount += r.requestsCount.get();
+        readRequestsCount += r.readRequestsCount.get();
+        writeRequestsCount += r.writeRequestsCount.get();
         synchronized (r.stores) {
           stores += r.stores.size();
           for (Map.Entry<byte[], Store> ee : r.stores.entrySet()) {
@@ -1160,7 +1162,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.metrics.stores.set(stores);
     this.metrics.storefiles.set(storefiles);
     this.metrics.memstoreSizeMB.set((int) (memstoreSize / (1024 * 1024)));
-    this.metrics.requestsCount.set(requestsCount);
+    this.metrics.readRequestsCount.set(readRequestsCount);
+    this.metrics.writeRequestsCount.set(writeRequestsCount);
     this.metrics.storefileIndexSizeMB
         .set((int) (storefileIndexSize / (1024 * 1024)));
     this.metrics.compactionQueueSize.set(compactSplitThread

@@ -177,7 +177,8 @@ public class HRegion implements HeapSize { // , Writable{
 
   final AtomicLong memstoreSize = new AtomicLong(0);
 
-  final Counter requestsCount = new Counter();
+  final Counter readRequestsCount = new Counter();
+  final Counter writeRequestsCount = new Counter();
 
   /**
    * The directory for the table this region is part of.
@@ -462,7 +463,17 @@ public class HRegion implements HeapSize { // , Writable{
 
   /** @return requestsCount for this region */
   public long getRequestsCount() {
-    return this.requestsCount.get();
+    return this.readRequestsCount.get() + this.writeRequestsCount.get();
+  }
+
+  /** @return readRequestsCount for this region */
+  public long getReadRequestsCount() {
+    return this.readRequestsCount.get();
+  }
+
+  /** @return writeRequestsCount for this region */
+  public long getWriteRequestsCount() {
+    return this.writeRequestsCount.get();
   }
 
   /** @return true if region is closed */
@@ -1131,6 +1142,7 @@ public class HRegion implements HeapSize { // , Writable{
     // closest key is across all column families, since the data may be sparse
     checkRow(row);
     startRegionOperation();
+    this.readRequestsCount.increment();
     try {
       Store store = getStore(family);
       KeyValue kv = new KeyValue(row, HConstants.LATEST_TIMESTAMP);
@@ -1167,6 +1179,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   protected InternalScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners) throws IOException {
     startRegionOperation();
+    this.readRequestsCount.increment();
     try {
       // Verify families are all valid
       if(scan.hasFamilies()) {
@@ -1235,6 +1248,7 @@ public class HRegion implements HeapSize { // , Writable{
     checkResources();
     Integer lid = null;
     startRegionOperation();
+    this.writeRequestsCount.increment();
     try {
       byte [] row = delete.getRow();
       // If we did not pass an existing row lock, obtain a new one
@@ -1388,6 +1402,7 @@ public class HRegion implements HeapSize { // , Writable{
     // will be extremely rare; we'll deal with it when it happens.
     checkResources();
     startRegionOperation();
+    this.writeRequestsCount.increment();
     try {
       // We obtain a per-row lock, so other clients will block while one client
       // performs an update. The read lock is released by the client calling
@@ -1460,6 +1475,7 @@ public class HRegion implements HeapSize { // , Writable{
 
       long newSize;
       startRegionOperation();
+      this.writeRequestsCount.increment();
       try {
         long addedSize = doMiniBatchPut(batchOp);
         newSize = memstoreSize.addAndGet(addedSize);
@@ -1661,6 +1677,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     startRegionOperation();
+    this.writeRequestsCount.increment();
     try {
       RowLock lock = isPut ? ((Put)w).getRowLock() : ((Delete)w).getRowLock();
       Get get = new Get(row, lock);
@@ -2229,23 +2246,9 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public Integer obtainRowLock(final byte [] row) throws IOException {
     startRegionOperation();
+    this.writeRequestsCount.increment();
     try {
       return internalObtainRowLock(row, true);
-    } finally {
-      closeRegionOperation();
-    }
-  }
-
-  /**
-   * Tries to obtain a row lock on the given row, but does not block if the
-   * row lock is not available. If the lock is not available, returns false.
-   * Otherwise behaves the same as the above method.
-   * @see HRegion#obtainRowLock(byte[])
-   */
-  public Integer tryObtainRowLock(final byte[] row) throws IOException {
-    startRegionOperation();
-    try {
-      return internalObtainRowLock(row, false);
     } finally {
       closeRegionOperation();
     }
@@ -2362,6 +2365,7 @@ public class HRegion implements HeapSize { // , Writable{
   public void bulkLoadHFile(String hfilePath, byte[] familyName)
   throws IOException {
     startRegionOperation();
+    this.writeRequestsCount.increment();
     try {
       Store store = getStore(familyName);
       if (store == null) {
@@ -2467,6 +2471,7 @@ public class HRegion implements HeapSize { // , Writable{
             "or a lengthy garbage collection");
       }
       startRegionOperation();
+      readRequestsCount.increment();
       try {
 
         // This could be a new thread from the last time we called next().
@@ -2973,7 +2978,8 @@ public class HRegion implements HeapSize { // , Writable{
       listPaths(fs, newRegionDir);
     }
     HRegion dstRegion = HRegion.newHRegion(tableDir, log, fs, conf, newRegionInfo, null);
-    dstRegion.requestsCount.set(a.requestsCount.get() + b.requestsCount.get());
+    dstRegion.readRequestsCount.set(a.readRequestsCount.get() + b.readRequestsCount.get());
+    dstRegion.writeRequestsCount.set(a.writeRequestsCount.get() + b.writeRequestsCount.get());
     dstRegion.initialize();
     dstRegion.compactStores();
     if (LOG.isDebugEnabled()) {
@@ -3219,6 +3225,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     // Lock row
     startRegionOperation();
+    this.writeRequestsCount.increment();
     try {
       Integer lid = getLock(lockid, row, true);
       this.updatesLock.readLock().lock();
@@ -3309,6 +3316,7 @@ public class HRegion implements HeapSize { // , Writable{
     // Lock row
     long result = amount;
     startRegionOperation();
+    this.writeRequestsCount.increment();
     try {
       Integer lid = obtainRowLock(row);
       this.updatesLock.readLock().lock();
@@ -3383,7 +3391,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
       (4 * Bytes.SIZEOF_LONG) + ClassSize.ARRAY +
-      ClassSize.align(25 * ClassSize.REFERENCE) + ClassSize.OBJECT +
+      ClassSize.align(26 * ClassSize.REFERENCE) + ClassSize.OBJECT +
       ClassSize.align(Bytes.SIZEOF_INT));
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
@@ -3563,7 +3571,6 @@ public class HRegion implements HeapSize { // , Writable{
         } finally {
           scanner.close();
         }
-        // System.out.println(region.getClosestRowBefore(Bytes.toBytes("GeneratedCSVContent2,E3652782193BC8D66A0BA1629D0FAAAB,9993372036854775807")));
       }
     } finally {
       region.close();
@@ -3647,7 +3654,6 @@ public class HRegion implements HeapSize { // , Writable{
       throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
           " is closed");
     }
-    this.requestsCount.increment();
   }
 
   /**

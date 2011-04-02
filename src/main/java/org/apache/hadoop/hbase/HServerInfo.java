@@ -27,6 +27,7 @@ import java.util.Comparator;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.io.VersionedWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -43,7 +44,10 @@ import org.apache.hadoop.io.WritableComparable;
  * by.  In subsequent communications, the regionserver will pass a HServerInfo
  * with the master-supplied address.
  */
-public class HServerInfo implements WritableComparable<HServerInfo> {
+public class HServerInfo extends VersionedWritable
+  implements WritableComparable<HServerInfo> {
+  private static final byte VERSION = 0;
+  
   /*
    * This character is used as separator between server hostname and port and
    * its startcode. Servername is formatted as
@@ -60,6 +64,11 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   // Hostname of the regionserver.
   private String hostname;
   private String cachedHostnamePort = null;
+
+  /** @return the object version number */
+  public byte getVersion() {
+    return VERSION;
+  }
 
   public HServerInfo() {
     this(new HServerAddress(), 0, HConstants.DEFAULT_REGIONSERVER_INFOPORT,
