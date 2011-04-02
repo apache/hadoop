@@ -902,6 +902,16 @@ public class ZKUtil {
       zkw.getZooKeeper().create(znode, new byte[0], Ids.OPEN_ACL_UNSAFE,
           CreateMode.PERSISTENT);
     } catch(KeeperException.NodeExistsException nee) {
+    } catch(KeeperException.NoAuthException nee){
+      try {
+        if (null == zkw.getZooKeeper().exists(znode, false)) {
+          // If we failed to create the file and it does not already exist.
+          throw(nee);
+        }
+      } catch (InterruptedException ie) {
+        zkw.interruptedException(ie);
+      }
+
     } catch(InterruptedException ie) {
       zkw.interruptedException(ie);
     }

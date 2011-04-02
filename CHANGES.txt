@@ -58,6 +58,8 @@ Release 0.91.0 - Unreleased
                (Ted Yu via Stack)
    HBASE-3712  HTable.close() doesn't shutdown thread pool
                (Ted Yu via Stack)
+   HBASE-3238  HBase needs to have the CREATE permission on the parent of its
+               ZooKeeper parent znode (Alex Newman via Stack)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

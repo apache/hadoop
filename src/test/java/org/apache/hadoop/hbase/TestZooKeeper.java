@@ -40,7 +40,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
 import org.junit.AfterClass;
@@ -234,4 +236,36 @@ public class TestZooKeeper {
     String reconstructedKey = ZKUtil.getZooKeeperClusterKey(conf);
     assertEquals(key, reconstructedKey);
   }
+
+  /**
+   * A test for HBASE-3238
+   * @throws IOException A connection attempt to zk failed
+   * @throws InterruptedException One of the non ZKUtil actions was interrupted
+   * @throws KeeperException Any of the zookeeper connections had a
+   * KeeperException
+   */
+  @Test
+  public void testCreateSilentIsReallySilent() throws InterruptedException,
+      KeeperException, IOException {
+    Configuration c = TEST_UTIL.getConfiguration();
+
+    String aclZnode = "/aclRoot";
+    String quorumServers = ZKConfig.getZKQuorumServersString(c);
+    int sessionTimeout = 5 * 1000; // 5 seconds
+    ZooKeeper zk = new ZooKeeper(quorumServers, sessionTimeout, EmptyWatcher.instance);
+    zk.addAuthInfo("digest", "hbase:rox".getBytes());
+
+    // Assumes the  root of the ZooKeeper space is writable as it creates a node
+    // wherever the cluster home is defined.
+    ZooKeeperWatcher zk2 = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
+        "testMasterAddressManagerFromZK",
+        null);
+
+    // I set this acl after the attempted creation of the cluster home node.
+    zk.setACL("/", ZooDefs.Ids.CREATOR_ALL_ACL, -1);
+    zk.create(aclZnode, null, ZooDefs.Ids.CREATOR_ALL_ACL, CreateMode.PERSISTENT);
+    zk.close();
+
+    ZKUtil.createAndFailSilent(zk2, aclZnode);
+ }
 }
