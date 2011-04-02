@@ -97,8 +97,7 @@ public class TestSplitTransactionOnCluster {
    */
   @Test (timeout = 600000) public void testPendingCloseAndSplit()
   throws IOException, InterruptedException, NodeExistsException, KeeperException {
-    final byte [] tableName =
-      Bytes.toBytes("pendingClose");
+    final byte [] tableName = Bytes.toBytes("pendingCloseAndSplit");
 
     // Create table then get the single region for our new table.
     HTable t = TESTING_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
@@ -126,6 +125,7 @@ public class TestSplitTransactionOnCluster {
       MiniHBaseCluster.MiniHBaseClusterRegionServer.TEST_SKIP_CLOSE = true;
       this.cluster.getMaster().unassign(hri.getRegionName(), false);
       // Now try splitting and it should work.
+      LOG.info("Running split on server " + server.toString());
       split(hri, server, regionCount);
       // Get daughters
       List<HRegion> daughters = this.cluster.getRegions(tableName);
@@ -133,8 +133,14 @@ public class TestSplitTransactionOnCluster {
       // Assert the ephemeral node is gone in zk.
       String path = ZKAssign.getNodeName(t.getConnection().getZooKeeperWatcher(),
         hri.getEncodedName());
-      Stat stats = t.getConnection().getZooKeeperWatcher().getZooKeeper().exists(path, false);
-      assertTrue(stats == null);
+      Stat stat = null;
+      for (int i = 0; i < 10; i++) {
+        stat = t.getConnection().getZooKeeperWatcher().getZooKeeper().exists(path, false);
+        LOG.info("Stat for znode path=" + path + ": " + stat);
+        if (stat == null) break;
+        org.apache.hadoop.hbase.util.Threads.sleep(100);
+      }
+      assertTrue(stat == null);
     } finally {
       // Set this flag back.
       MiniHBaseCluster.MiniHBaseClusterRegionServer.TEST_SKIP_CLOSE = false;
