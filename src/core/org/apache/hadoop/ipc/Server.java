@@ -53,6 +53,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
@@ -567,6 +568,12 @@ public abstract class Server {
         }
       }
       readPool.shutdown();
+      try {
+          readPool.awaitTermination(10, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+       LOG.info("Exception occured in doStop:" + e.getMessage());
+      }
+      readPool.shutdownNow();
     }
 
     // The method that will return the next reader to work with

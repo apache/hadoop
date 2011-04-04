@@ -591,6 +591,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
             removed_vols = new ArrayList<FSVolume>(1);
           }
           removed_vols.add(volumes[idx]);
+          volumes[idx].dfsUsage.shutdown(); //Shutdown the running DU thread
           volumes[idx] = null; //remove the volume
         }
       }

@@ -36,6 +36,10 @@ Release 0.20.204.0 - unreleased
 
     HDFS-1189. Quota counts missed between clear quota and set quota.
     (John George via szetszwo)
+
+    HDFS-1692. In secure mode, Datanode process doesn't exit when disks 
+    fail. (bharathm via boryas)
+
   
   IMPROVEMENTS
 

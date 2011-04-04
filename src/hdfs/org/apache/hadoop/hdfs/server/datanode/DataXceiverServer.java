@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.nio.channels.AsynchronousCloseException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -133,9 +134,13 @@ class DataXceiverServer implements Runnable, FSConstants {
             new DataXceiver(s, datanode, this)).start();
       } catch (SocketTimeoutException ignored) {
         // wake up to see if should continue to run
+      } catch (AsynchronousCloseException ace) {
+          LOG.warn(datanode.dnRegistration + ":DataXceiveServer:"
+                  + StringUtils.stringifyException(ace));
+          datanode.shouldRun = false;
       } catch (IOException ie) {
-        LOG.warn(datanode.dnRegistration + ":DataXceiveServer: " 
-                                + StringUtils.stringifyException(ie));
+        LOG.warn(datanode.dnRegistration + ":DataXceiveServer: IOException due to:"
+                                 + StringUtils.stringifyException(ie));
       } catch (Throwable te) {
         LOG.error(datanode.dnRegistration + ":DataXceiveServer: Exiting due to:" 
                                  + StringUtils.stringifyException(te));
@@ -145,9 +150,10 @@ class DataXceiverServer implements Runnable, FSConstants {
     try {
       ss.close();
     } catch (IOException ie) {
-      LOG.warn(datanode.dnRegistration + ":DataXceiveServer: " 
-                              + StringUtils.stringifyException(ie));
+      LOG.warn(datanode.dnRegistration + ":DataXceiveServer: Close exception due to: "
+                               + StringUtils.stringifyException(ie));
     }
+    LOG.info("Exiting DataXceiveServer");
   }
   
   void kill() {
