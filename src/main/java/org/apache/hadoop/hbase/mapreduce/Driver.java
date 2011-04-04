@@ -35,6 +35,8 @@ public class Driver {
     ProgramDriver pgd = new ProgramDriver();
     pgd.addClass(RowCounter.NAME, RowCounter.class,
       "Count rows in HBase table");
+    pgd.addClass(CellCounter.NAME, CellCounter.class,
+      "Count cells in HBase table");
     pgd.addClass(Export.NAME, Export.class, "Write table data to HDFS.");
     pgd.addClass(Import.NAME, Import.class, "Import data written by Export.");
     pgd.addClass(ImportTsv.NAME, ImportTsv.class, "Import data in TSV format.");
