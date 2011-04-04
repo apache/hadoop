@@ -65,6 +65,11 @@ public interface RegionServerServices extends OnlineRegions {
    * @return The HServerInfo for this RegionServer.
    */
   public HServerInfo getServerInfo();
+  
+  /**
+   * @return the RegionServerAccounting for this Region Server
+   */
+  public RegionServerAccounting getRegionServerAccounting();
 
   /**
    * Tasks to perform after region open to complete deploy of region on

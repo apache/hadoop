@@ -424,6 +424,28 @@ public class HRegion implements HeapSize { // , Writable{
     }
     return false;
   }
+  
+  public AtomicLong getMemstoreSize() {
+    return memstoreSize;
+  }
+  
+  /**
+   * Increase the size of mem store in this region and the size of global mem 
+   * store
+   * @param memStoreSize
+   * @return the size of memstore in this region
+   */
+  public long addAndGetGlobalMemstoreSize(long memStoreSize) {
+    if (this.rsServices != null) {
+      RegionServerAccounting rsAccounting = 
+        this.rsServices.getRegionServerAccounting();
+      
+      if (rsAccounting != null) {
+        rsAccounting.addAndGetGlobalMemstoreSize(memStoreSize);
+      }
+    }
+    return this.memstoreSize.getAndAdd(memStoreSize);  
+  }
 
   /*
    * Write out an info file under the region directory.  Useful recovering
@@ -1044,7 +1066,7 @@ public class HRegion implements HeapSize { // , Writable{
       storeFlushers.clear();
 
       // Set down the memstore size by amount of flush.
-      this.memstoreSize.addAndGet(-currentMemStoreSize);
+      this.addAndGetGlobalMemstoreSize(-currentMemStoreSize);
     } catch (Throwable t) {
       // An exception here means that the snapshot was not persisted.
       // The hlog needs to be replayed so its content is restored to memstore.
@@ -1346,7 +1368,7 @@ public class HRegion implements HeapSize { // , Writable{
 
       // Now make changes to the memstore.
       long addedSize = applyFamilyMapToMemstore(familyMap);
-      flush = isFlushSize(memstoreSize.addAndGet(addedSize));
+      flush = isFlushSize(this.addAndGetGlobalMemstoreSize(addedSize));
 
       if (coprocessorHost != null) {
         coprocessorHost.postDelete(familyMap, writeToWAL);
@@ -1478,7 +1500,7 @@ public class HRegion implements HeapSize { // , Writable{
       this.writeRequestsCount.increment();
       try {
         long addedSize = doMiniBatchPut(batchOp);
-        newSize = memstoreSize.addAndGet(addedSize);
+        newSize = this.addAndGetGlobalMemstoreSize(addedSize);
       } finally {
         closeRegionOperation();
       }
@@ -1858,7 +1880,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
 
       long addedSize = applyFamilyMapToMemstore(familyMap);
-      flush = isFlushSize(memstoreSize.addAndGet(addedSize));
+      flush = isFlushSize(this.addAndGetGlobalMemstoreSize(addedSize));
     } finally {
       this.updatesLock.readLock().unlock();
     }
@@ -2172,7 +2194,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @return True if we should flush.
    */
   protected boolean restoreEdit(final Store s, final KeyValue kv) {
-    return isFlushSize(this.memstoreSize.addAndGet(s.add(kv)));
+    return isFlushSize(this.addAndGetGlobalMemstoreSize(s.add(kv)));
   }
 
   /*
@@ -3281,7 +3303,7 @@ public class HRegion implements HeapSize { // , Writable{
             walEdits, now);
         }
 
-        size = this.memstoreSize.addAndGet(size);
+        size = this.addAndGetGlobalMemstoreSize(size);
         flush = isFlushSize(size);
       } finally {
         this.updatesLock.readLock().unlock();
@@ -3357,7 +3379,7 @@ public class HRegion implements HeapSize { // , Writable{
         // returns the change in the size of the memstore from operation
         long size = store.updateColumnValue(row, family, qualifier, result);
 
-        size = this.memstoreSize.addAndGet(size);
+        size = this.addAndGetGlobalMemstoreSize(size);
         flush = isFlushSize(size);
       } finally {
         this.updatesLock.readLock().unlock();

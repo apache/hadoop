@@ -273,6 +273,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   // Replication services. If no replication, this handler will be null.
   private Replication replicationHandler;
 
+  private final RegionServerAccounting regionServerAccounting;
+  
   /**
    * Starts a HRegionServer at the default location
    *
@@ -351,6 +353,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // login the server principal (if using secure Hadoop)
     User.login(conf, "hbase.regionserver.keytab.file",
         "hbase.regionserver.kerberos.principal", serverInfo.getHostname());
+    
+    regionServerAccounting = new RegionServerAccounting();
   }
 
   private static final int NORMAL_QOS = 0;
@@ -883,6 +887,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
   }
 
+  public RegionServerAccounting getRegionServerAccounting() {
+    return regionServerAccounting;
+  }
+  
   /*
    * @param r Region to get RegionLoad for.
    *
@@ -2521,19 +2529,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   protected LinkedBlockingQueue<HMsg> getOutboundMsgs() {
     return this.outboundMsgs;
-  }
-
-  /**
-   * Return the total size of all memstores in every region.
-   *
-   * @return memstore size in bytes
-   */
-  public long getGlobalMemStoreSize() {
-    long total = 0;
-    for (HRegion region : onlineRegions.values()) {
-      total += region.memstoreSize.get();
-    }
-    return total;
   }
 
   /**

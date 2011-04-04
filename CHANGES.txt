@@ -127,6 +127,8 @@ Release 0.91.0 - Unreleased
                (Ted Yu via Stack)
    HBASE-3704  Show per region request count in table.jsp
                (Ted Yu via Stack)
+   HBASE-3694  high multiput latency due to checking global mem store size
+               in a synchronized function (Liyin Tang via Stack)
 
   TASK
    HBASE-3559  Move report of split to master OFF the heartbeat channel

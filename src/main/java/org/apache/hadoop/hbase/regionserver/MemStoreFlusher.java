@@ -290,14 +290,16 @@ class MemStoreFlusher extends Thread implements FlushRequester {
    * Return true if global memory usage is above the high watermark
    */
   private boolean isAboveHighWaterMark() {
-    return server.getGlobalMemStoreSize() >= globalMemStoreLimit;
+    return server.getRegionServerAccounting().
+      getGlobalMemstoreSize() >= globalMemStoreLimit;
   }
 
   /**
    * Return true if we're above the high watermark
    */
   private boolean isAboveLowWaterMark() {
-    return server.getGlobalMemStoreSize() >= globalMemStoreLimitLowMark;
+    return server.getRegionServerAccounting().
+      getGlobalMemstoreSize() >= globalMemStoreLimitLowMark;
   }
 
   public void requestFlush(HRegion r) {
