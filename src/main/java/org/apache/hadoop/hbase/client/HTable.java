@@ -69,9 +69,10 @@ import org.apache.zookeeper.KeeperException;
  *
  * <p>Instances of HTable passed the same {@link Configuration} instance will
  * share connections to servers out on the cluster and to the zookeeper ensemble
- * as well as caches of  region locations.  This is usually a *good* thing.
+ * as well as caches of region locations.  This is usually a *good* thing and it
+ * is recommended to reuse the same configuration object for all your tables.
  * This happens because they will all share the same underlying
- * {@link HConnection} instance.  See {@link HConnectionManager} for more on
+ * {@link HConnection} instance. See {@link HConnectionManager} for more on
  * how this mechanism works.
  *
  * <p>{@link HConnection} will read most of the
