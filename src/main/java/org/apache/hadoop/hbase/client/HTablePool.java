@@ -137,10 +137,12 @@ public class HTablePool {
    */
   public void closeTablePool(final String tableName)  {
     Queue<HTableInterface> queue = tables.get(tableName);
-    HTableInterface table = queue.poll();
-    while (table != null) {
-      this.tableFactory.releaseHTableInterface(table);
-      table = queue.poll();
+    if (queue != null) {
+      HTableInterface table = queue.poll();
+      while (table != null) {
+        this.tableFactory.releaseHTableInterface(table);
+        table = queue.poll();
+      }
     }
     HConnectionManager.deleteConnection(this.config, true);
   }
