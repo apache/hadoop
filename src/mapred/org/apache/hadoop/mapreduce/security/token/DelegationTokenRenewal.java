@@ -25,13 +25,11 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -42,7 +40,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.VersionMismatchException;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
@@ -143,6 +143,21 @@ public class DelegationTokenRenewal {
     }
   }
   
+  protected static long renewDelegationTokenOverHttps(
+      final Token<DelegationTokenIdentifier> token, final Configuration conf) 
+  throws InterruptedException, IOException{
+    final String httpAddress = getHttpAddressForToken(token, conf);
+    
+    Long expDate = (Long) UserGroupInformation.getLoginUser().doAs(
+        new PrivilegedExceptionAction<Long>() {
+      public Long run() throws IOException {
+        return DelegationTokenFetcher.renewDelegationToken(httpAddress, token);  
+      }
+    });
+    LOG.info("Renew over HTTP done. addr="+httpAddress+";res="+expDate);
+    return expDate;
+  }
+  
   private static long renewDelegationToken(DelegationTokenToRenew dttr) 
   throws Exception {
     long newExpirationDate=System.currentTimeMillis()+3600*1000;
@@ -151,10 +166,17 @@ public class DelegationTokenRenewal {
     
     if(token.getKind().equals(kindHdfs)) {
       try {
-        DistributedFileSystem dfs = getDFSForToken(token, conf);
-        newExpirationDate = dfs.renewDelegationToken(token);
-      } catch (InvalidToken ite) {
-        LOG.warn("invalid token - not scheduling for renew");
+        try {
+          DistributedFileSystem dfs = getDFSForToken(token, conf);
+          newExpirationDate = dfs.renewDelegationToken(token);
+        } catch(VersionMismatchException vme) {
+          // if there is a version mismatch we try over https
+          LOG.info("Delegation token renew for t=" + token.getService() +
+              " failed with VersionMissmaptch:" + vme.toString()+". Trying over https");
+          renewDelegationTokenOverHttps(token, conf);
+        }
+      }catch (InvalidToken ite) {
+        LOG.warn("invalid token - not scheduling for renew: " + ite.getLocalizedMessage());
         removeFailedDelegationToken(dttr);
         throw new IOException("failed to renew token", ite);
       } catch (AccessControlException ioe) {
@@ -166,7 +188,7 @@ public class DelegationTokenRenewal {
         // returns default expiration date
       }
     } else {
-      throw new Exception("unknown token type to renew+"+token.getKind());
+      throw new Exception("unknown token type to renew: "+token.getKind());
     }
     return newExpirationDate;
   }
@@ -200,6 +222,20 @@ public class DelegationTokenRenewal {
     }
   }
   
+  private static String getHttpAddressForToken(
+      Token<DelegationTokenIdentifier> token, final Configuration conf) 
+  throws IOException {
+    
+    String[] ipaddr = token.getService().toString().split(":");
+    
+    InetAddress iaddr = InetAddress.getByName(ipaddr[0]);
+    String dnsName = iaddr.getCanonicalHostName();
+    String httpsPort = conf.get("dfs.https.port", "50470");
+    
+    // always use https (it is for security only)
+    return "https://" + dnsName+":"+httpsPort;
+  }
+    
   private static DistributedFileSystem getDFSForToken(
       Token<DelegationTokenIdentifier> token, final Configuration conf) 
   throws Exception {

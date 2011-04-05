@@ -40,7 +40,8 @@ Release 0.20.204.0 - unreleased
     HDFS-1692. In secure mode, Datanode process doesn't exit when disks 
     fail. (bharathm via boryas)
 
-  
+    MAPREDUCE-2420. JobTracker should be able to renew delegation token 
+    over HTTP (boryas)
   IMPROVEMENTS
 
     HDFS-1541. Not marking datanodes dead when namenode in safemode.

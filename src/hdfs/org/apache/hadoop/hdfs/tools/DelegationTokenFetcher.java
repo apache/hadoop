@@ -198,21 +198,56 @@ public class DelegationTokenFetcher {
     buf.append("=");
     buf.append(tok.encodeToUrlString());
     BufferedReader in = null;
+    HttpURLConnection connection = null;
     try {
       URL url = new URL(buf.toString());
       SecurityUtil.fetchServiceTicket(url);
-      URLConnection connection = url.openConnection();
+      connection = (HttpURLConnection)url.openConnection();
       in = new BufferedReader(new InputStreamReader
                               (connection.getInputStream()));
       long result = Long.parseLong(in.readLine());
       in.close();
       return result;
     } catch (IOException ie) {
+      LOG.info("error in renew over HTTP", ie);
+      IOException e = null;
+      if(connection != null) {
+        String resp = connection.getResponseMessage();
+        e = getExceptionFromResponse(resp);
+      }
+      
       IOUtils.cleanup(LOG, in);
+      if(e!=null) {
+        LOG.info("rethrowing exception from HTTP request: " + e.getLocalizedMessage());
+        throw e;
+      }
       throw ie;
     }
   }
 
+  static private IOException getExceptionFromResponse(String resp) {
+    String exceptionClass = "", exceptionMsg = "";
+    if(resp != null && !resp.isEmpty()) {
+      String[] rs = resp.split(";");
+      exceptionClass = rs[0];
+      exceptionMsg = rs[1];
+    }
+    LOG.info("Error response from HTTP request=" + resp + 
+        ";ec=" + exceptionClass + ";em="+exceptionMsg);
+    IOException e = null;
+    if(exceptionClass != null  && !exceptionClass.isEmpty()) {
+      if(exceptionClass.contains("InvalidToken")) {
+        e = new org.apache.hadoop.security.token.SecretManager.InvalidToken(exceptionMsg);
+        e.setStackTrace(new StackTraceElement[0]); // stack is not relevant
+      } else if(exceptionClass.contains("AccessControlException")) {
+        e = new org.apache.hadoop.security.AccessControlException(exceptionMsg);
+        e.setStackTrace(new StackTraceElement[0]); // stack is not relevant
+      }
+    }
+    LOG.info("Exception from HTTP response=" + e.getLocalizedMessage());
+    return e;
+  }
+  
   /**
    * Cancel a Delegation Token.
    * @param nnAddr the NameNode's address
