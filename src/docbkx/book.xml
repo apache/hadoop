@@ -372,9 +372,9 @@ throws InterruptedException, IOException {
 	<row><entry>Row Key</entry><entry>Time Stamp</entry><entry>ColumnFamily "contents:"</entry></row>
 	</thead>
 	<tbody>
-        <row><entry>"com.cnn.www"</entry><entry>t6</entry><entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry><entry></entry></row>
-        <row><entry>"com.cnn.www"</entry><entry>t5</entry><entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry><entry></entry></row>
-        <row><entry>"com.cnn.www"</entry><entry>t3</entry><entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry><entry></entry></row>
+        <row><entry>"com.cnn.www"</entry><entry>t6</entry><entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry></row>
+        <row><entry>"com.cnn.www"</entry><entry>t5</entry><entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry></row>
+        <row><entry>"com.cnn.www"</entry><entry>t3</entry><entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry></row>
 	</tbody>
 	</tgroup>
 	</table>
