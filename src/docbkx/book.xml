@@ -1123,7 +1123,8 @@ false
             <programlisting>$ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --reload --debug $i; done &amp;> /tmp/log.txt &amp;
             </programlisting>
             Tail the output of <filename>/tmp/log.txt</filename> to follow the scripts
-            progress.
+            progress. The above does regionservers only.  You'd need to do the master
+            update separately.
         </para>
     </section>
   </appendix>
