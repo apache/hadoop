@@ -51,18 +51,15 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
 
   static class JournalRecord {
     byte op;
-    long txid;
     Writable[] args;
 
-    JournalRecord(byte op, long txid, Writable ... writables) {
+    JournalRecord(byte op, Writable ... writables) {
       this.op = op;
-      this.txid = txid;
       this.args = writables;
     }
 
     void write(DataOutputStream out) throws IOException {
       out.write(op);
-      out.writeLong(txid);
       if(args == null)
         return;
       for(Writable w : args)
@@ -108,8 +105,8 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
   }
 
   @Override // EditLogOutputStream
-  void write(byte op, long txid, Writable ... writables) throws IOException {
-    bufCurrent.add(new JournalRecord(op, txid, writables));
+  void write(byte op, Writable ... writables) throws IOException {
+    bufCurrent.add(new JournalRecord(op, writables));
   }
 
   /**

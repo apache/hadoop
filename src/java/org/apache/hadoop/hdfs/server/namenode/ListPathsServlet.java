@@ -63,10 +63,11 @@ public class ListPathsServlet extends DfsServlet {
    * Node information includes path, modification, permission, owner and group.
    * For files, it also includes size, replication and block-size. 
    */
-  static void writeInfo(String parent, HdfsFileStatus i, XMLOutputter doc) throws IOException {
+  static void writeInfo(final Path fullpath, final HdfsFileStatus i,
+      final XMLOutputter doc) throws IOException {
     final SimpleDateFormat ldf = df.get();
     doc.startTag(i.isDir() ? "directory" : "file");
-    doc.attribute("path", i.getFullPath(new Path(parent)).toUri().getPath());
+    doc.attribute("path", fullpath.toUri().getPath());
     doc.attribute("modified", ldf.format(new Date(i.getModificationTime())));
     doc.attribute("accesstime", ldf.format(new Date(i.getAccessTime())));
     if (!i.isDir()) {
@@ -154,7 +155,7 @@ public class ListPathsServlet extends DfsServlet {
 
           HdfsFileStatus base = nn.getFileInfo(path);
           if ((base != null) && base.isDir()) {
-            writeInfo(path, base, doc);
+            writeInfo(base.getFullPath(new Path(path)), base, doc);
           }
 
           Stack<String> pathstack = new Stack<String>();
@@ -177,7 +178,8 @@ public class ListPathsServlet extends DfsServlet {
                 }
                 HdfsFileStatus[] listing = thisListing.getPartialListing();
                 for (HdfsFileStatus i : listing) {
-                  String localName = i.getLocalName();
+                  final Path fullpath = i.getFullPath(new Path(p));
+                  final String localName = fullpath.getName();
                   if (exclude.matcher(localName).matches()
                       || !filter.matcher(localName).matches()) {
                     continue;
@@ -185,7 +187,7 @@ public class ListPathsServlet extends DfsServlet {
                   if (recur && i.isDir()) {
                     pathstack.push(new Path(p, localName).toUri().getPath());
                   }
-                  writeInfo(p, i, doc);
+                  writeInfo(fullpath, i, doc);
                 }
                 lastReturnedName = thisListing.getLastName();
               } while (thisListing.hasMore());

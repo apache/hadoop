@@ -67,7 +67,6 @@ public class NNStorage extends Storage implements Closeable {
   private static final Log LOG = LogFactory.getLog(NNStorage.class.getName());
 
   static final String MESSAGE_DIGEST_PROPERTY = "imageMD5Digest";
-  static final String CHECKPOINT_TXID_PROPERTY = "checkpointTxId";
 
   //
   // The filenames used for storing the images
@@ -151,13 +150,6 @@ public class NNStorage extends Storage implements Closeable {
   private boolean disablePreUpgradableLayoutCheck = false;
 
   private long checkpointTime = -1L;  // The age of the image
-
-  /**
-   * TxId of the last transaction that was included in the most
-   * recent fsimage file. This does not include any transactions
-   * that have since been written to the edit log.
-   */
-  protected long checkpointTxId;
 
   /**
    * list of failed (and thus removed) storages
@@ -501,20 +493,6 @@ public class NNStorage extends Storage implements Closeable {
   }
 
   /**
-   * Set the transaction ID of the last checkpoint
-   */
-  void setCheckpointTxId(long checkpointTxId) {
-    this.checkpointTxId = checkpointTxId;
-  }
-
-  /**
-   * Return the transaction ID of the last checkpoint.
-   */
-  long getCheckpointTxId() {
-    return checkpointTxId;
-  }
-
-  /**
    * Set the current checkpoint time. Writes the new checkpoint
    * time to all available storage directories.
    * @param newCpT The new checkpoint time.
@@ -723,21 +701,6 @@ public class NNStorage extends Storage implements Closeable {
           " has image MD5 digest when version is " + layoutVersion);
     }
 
-    String sCheckpointId = props.getProperty(CHECKPOINT_TXID_PROPERTY);
-    if (layoutVersion <= -28) {
-      if (sCheckpointId == null) {
-        throw new InconsistentFSStateException(sd.getRoot(),
-            "file " + STORAGE_FILE_VERSION
-            + " does not have the checkpoint transaction id set.");
-      }
-      this.checkpointTxId = Long.valueOf(sCheckpointId);
-    } else if (sCheckpointId != null) {
-      throw new InconsistentFSStateException(sd.getRoot(),
-          "file " + STORAGE_FILE_VERSION +
-          " has checkpoint transaction id when version is " 
-          + layoutVersion);
-    }
-
     this.setCheckpointTime(readCheckpointTime(sd));
   }
 
@@ -773,7 +736,7 @@ public class NNStorage extends Storage implements Closeable {
     }
 
     props.setProperty(MESSAGE_DIGEST_PROPERTY, imageDigest.toString());
-    props.setProperty(CHECKPOINT_TXID_PROPERTY, String.valueOf(checkpointTxId));
+
     writeCheckpointTime(sd);
   }
 

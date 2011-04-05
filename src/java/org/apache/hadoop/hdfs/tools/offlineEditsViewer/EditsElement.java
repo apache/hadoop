@@ -31,7 +31,6 @@ public enum EditsElement {
   EDITS_VERSION,
   RECORD,
   OPCODE,
-  TRANSACTION_ID,
   DATA,
     // elements in the data part of the editLog records
     LENGTH,

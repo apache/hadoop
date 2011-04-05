@@ -81,18 +81,10 @@ class EditLogFileOutputStream extends EditLogOutputStream {
     bufCurrent.write(b);
   }
 
-  /**
-   * Write a transaction to the stream. The serialization format is:
-   * <ul>
-   *   <li>the opcode (byte)</li>
-   *   <li>the transaction id (long)</li>
-   *   <li>the actual Writables for the transaction</li>
-   * </ul>
-   * */
+  /** {@inheritDoc} */
   @Override
-  void write(byte op, long txid, Writable... writables) throws IOException {
+  void write(byte op, Writable... writables) throws IOException {
     write(op);
-    bufCurrent.writeLong(txid);
     for (Writable w : writables) {
       w.write(bufCurrent);
     }

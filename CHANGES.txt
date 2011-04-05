@@ -251,6 +251,10 @@ Trunk (unreleased changes)
     HDFS-1791. Federation: Add command to delete block pool directories 
     from a datanode. (jitendra)
 
+    HDFS-1785. In BlockReceiver and DataXceiver, clientName.length() is used
+    multiple times for determining whether the source is a client or a
+    datanode.  (szetszwo)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
@@ -307,8 +311,8 @@ Trunk (unreleased changes)
     HDFS-1763. Replace hard-coded option strings with variables from
     DFSConfigKeys. (eli)
 
-    HDFS-1521. Persist transaction ID on disk between NN restarts. (Ivan Kelly
-    and Todd Lipcon via todd)
+    HDFS-1541. Not marking datanodes dead when namenode in safemode.
+    (hairong)
 
   OPTIMIZATIONS
 
@@ -1812,12 +1816,8 @@ Release 0.21.0 - 2010-08-13
     HDFS-1598.  Directory listing on hftp:// does not show .*.crc files.
     (szetszwo)
 
-    HDFS-1413. Fix broken links to HDFS Wiki. (shv)
-
-    HDFS-1420. Clover build doesn't generate per-test coverage (cos)
-
-    HDFS-1598.  Directory listing on hftp:// does not show .*.crc files.
-    (szetszwo)
+    HDFS-1750. ListPathsServlet should not use HdfsFileStatus.getLocalName()
+    to get file name since it may return an empty string.  (szetszwo)
 
 Release 0.20.3 - 2011-1-5
 

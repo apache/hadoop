@@ -55,7 +55,6 @@ public class BackupImage extends FSImage {
 
   /** Is journal spooling in progress */
   volatile JSpoolState jsState;
-  private long lastAppliedTxId = 0;
 
   static enum JSpoolState {
     OFF,
@@ -154,11 +153,6 @@ public class BackupImage extends FSImage {
     if(!editLog.isOpen())
       editLog.open();
 
-    // set storage fields
-    storage.setStorageInfo(sig);
-    storage.setImageDigest(sig.getImageDigest());
-    storage.setCheckpointTime(sig.checkpointTime);
-
     FSDirectory fsDir = getFSNamesystem().dir;
     if(fsDir.isEmpty()) {
       Iterator<StorageDirectory> itImage
@@ -169,7 +163,6 @@ public class BackupImage extends FSImage {
         throw new IOException("Could not locate checkpoint directories");
       StorageDirectory sdName = itImage.next();
       StorageDirectory sdEdits = itEdits.next();
-
       getFSDirectoryRootLock().writeLock();
       try { // load image under rootDir lock
         loadFSImage(NNStorage.getStorageFile(sdName, NameNodeFile.IMAGE));
@@ -177,8 +170,12 @@ public class BackupImage extends FSImage {
         getFSDirectoryRootLock().writeUnlock();
       }
       loadFSEdits(sdEdits);
-      lastAppliedTxId = getEditLog().getLastWrittenTxId();
     }
+
+    // set storage fields
+    storage.setStorageInfo(sig);
+    storage.setImageDigest(sig.imageDigest);
+    storage.setCheckpointTime(sig.checkpointTime);
   }
 
   /**
@@ -230,8 +227,7 @@ public class BackupImage extends FSImage {
           backupInputStream.setBytes(data);
           FSEditLogLoader logLoader = new FSEditLogLoader(namesystem);
           logLoader.loadEditRecords(storage.getLayoutVersion(),
-              backupInputStream.getDataInputStream(), true,
-              lastAppliedTxId + 1);
+                    backupInputStream.getDataInputStream(), true);
           getFSNamesystem().dir.updateCountForINodeWithQuota(); // inefficient!
           break;
         case INPROGRESS:
@@ -352,18 +348,12 @@ public class BackupImage extends FSImage {
       EditLogFileInputStream edits = new EditLogFileInputStream(jSpoolFile);
       DataInputStream in = edits.getDataInputStream();
       FSEditLogLoader logLoader = new FSEditLogLoader(namesystem);
-      int loaded = logLoader.loadFSEdits(in, false, lastAppliedTxId + 1);
-
-      lastAppliedTxId += loaded;
-      numEdits += loaded;
+      numEdits += logLoader.loadFSEdits(in, false);
 
       // first time reached the end of spool
       jsState = JSpoolState.WAIT;
-      loaded = logLoader.loadEditRecords(storage.getLayoutVersion(),
-                                         in, true, lastAppliedTxId + 1);
-      numEdits += loaded;
-      lastAppliedTxId += loaded;
-
+      numEdits += logLoader.loadEditRecords(storage.getLayoutVersion(),
+                                            in, true);
       getFSNamesystem().dir.updateCountForINodeWithQuota();
       edits.close();
     }
