@@ -50,9 +50,9 @@ public class TestCorruptFilesJsp  {
 
       Configuration conf = new HdfsConfiguration();
       // datanode scans directories
-      conf.setInt("dfs.datanode.directoryscan.interval", 1);
+      conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1);
       // datanode sends block reports
-      conf.setInt("dfs.blockreport.intervalMsec", 3 * 1000);
+      conf.setInt(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 3 * 1000);
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
 

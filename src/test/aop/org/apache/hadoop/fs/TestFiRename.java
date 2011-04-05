@@ -60,7 +60,7 @@ public class TestFiRename {
   
   private static Configuration CONF = new Configuration();
   static {
-    CONF.setLong("dfs.block.size", 1);
+    CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1);
     CONF.setInt("io.bytes.per.checksum", 1);
   }
 

@@ -25,6 +25,8 @@ import java.nio.channels.ServerSocketChannel;
 import org.apache.commons.daemon.Daemon;
 import org.apache.commons.daemon.DaemonContext;
 import org.apache.hadoop.conf.Configuration;
+
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.http.HttpServer;
 import org.mortbay.jetty.nio.SelectChannelConnector;
@@ -68,7 +70,7 @@ public class SecureDataNodeStarter implements Daemon {
     
     // Obtain secure port for data streaming to datanode
     InetSocketAddress socAddr = DataNode.getStreamingAddr(conf);
-    int socketWriteTimeout = conf.getInt("dfs.datanode.socket.write.timeout",
+    int socketWriteTimeout = conf.getInt(DFSConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY,
         HdfsConstants.WRITE_TIMEOUT);
     
     ServerSocket ss = (socketWriteTimeout > 0) ? 

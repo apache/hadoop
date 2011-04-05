@@ -311,7 +311,7 @@ public class TestReplication extends TestCase {
     
     try {
       Configuration conf = new HdfsConfiguration();
-      conf.set("dfs.replication", Integer.toString(numDataNodes));
+      conf.set(DFSConfigKeys.DFS_REPLICATION_KEY, Integer.toString(numDataNodes));
       //first time format
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
       cluster.waitActive();
@@ -371,7 +371,7 @@ public class TestReplication extends TestCase {
       
       LOG.info("Restarting minicluster after deleting a replica and corrupting 2 crcs");
       conf = new HdfsConfiguration();
-      conf.set("dfs.replication", Integer.toString(numDataNodes));
+      conf.set(DFSConfigKeys.DFS_REPLICATION_KEY, Integer.toString(numDataNodes));
       conf.set(DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, Integer.toString(2));
       conf.set("dfs.datanode.block.write.timeout.sec", Integer.toString(5));
       conf.set(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, "0.75f"); // only 3 copies exist

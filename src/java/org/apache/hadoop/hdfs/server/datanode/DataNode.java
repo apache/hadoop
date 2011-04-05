@@ -436,7 +436,7 @@ public class DataNode extends Configured
   private void initConfig(Configuration conf) {
     this.socketTimeout =  conf.getInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY,
                                       HdfsConstants.READ_TIMEOUT);
-    this.socketWriteTimeout = conf.getInt("dfs.datanode.socket.write.timeout",
+    this.socketWriteTimeout = conf.getInt(DFSConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY,
                                           HdfsConstants.WRITE_TIMEOUT);
     /* Based on results on different platforms, we might need set the default 
      * to false on some of them. */
@@ -446,15 +446,15 @@ public class DataNode extends Configured
                                        DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
 
     this.blockReportInterval =
-      conf.getLong("dfs.blockreport.intervalMsec", BLOCKREPORT_INTERVAL);
-    this.initialBlockReportDelay = conf.getLong("dfs.blockreport.initialDelay",
+      conf.getLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, BLOCKREPORT_INTERVAL);
+    this.initialBlockReportDelay = conf.getLong(DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY,
                                             BLOCKREPORT_INITIAL_DELAY)* 1000L; 
     if (this.initialBlockReportDelay >= blockReportInterval) {
       this.initialBlockReportDelay = 0;
       LOG.info("dfs.blockreport.initialDelay is greater than " +
         "dfs.blockreport.intervalMsec." + " Setting initial delay to 0 msec:");
     }
-    this.heartBeatInterval = conf.getLong("dfs.heartbeat.interval", HEARTBEAT_INTERVAL) * 1000L;
+    this.heartBeatInterval = conf.getLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, HEARTBEAT_INTERVAL) * 1000L;
 
     // do we need to sync block file contents to disk when blockfile is closed?
     this.syncOnClose = conf.getBoolean(DFSConfigKeys.DFS_DATANODE_SYNCONCLOSE_KEY, 
@@ -516,9 +516,10 @@ public class DataNode extends Configured
     InetSocketAddress ipcAddr = NetUtils.createSocketAddr(
         conf.get("dfs.datanode.ipc.address"));
     ipcServer = RPC.getServer(DataNode.class, this, ipcAddr.getHostName(),
-        ipcAddr.getPort(), conf.getInt("dfs.datanode.handler.count", 3), false,
-        conf, blockPoolTokenSecretManager);
-    
+                              ipcAddr.getPort(), 
+                              conf.getInt(DFS_DATANODE_HANDLER_COUNT_KEY, 
+                                          DFS_DATANODE_HANDLER_COUNT_DEFAULT), 
+                              false, conf, blockPoolTokenSecretManager);
     // set service-level authorization security policy
     if (conf.getBoolean(
         CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false)) {

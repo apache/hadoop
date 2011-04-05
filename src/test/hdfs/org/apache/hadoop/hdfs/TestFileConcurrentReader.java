@@ -196,7 +196,7 @@ public class TestFileConcurrentReader extends junit.framework.TestCase {
     final int writeSize = 10 * blockSize;
     Configuration conf = new Configuration();
     
-    conf.setLong("dfs.block.size", blockSize);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     init(conf);
 
     final int requiredSuccessfulOpens = 100;

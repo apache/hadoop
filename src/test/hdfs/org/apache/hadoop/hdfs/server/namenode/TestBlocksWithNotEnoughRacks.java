@@ -50,7 +50,7 @@ public class TestBlocksWithNotEnoughRacks extends TestCase {
   //The block should be replicated to the new rack
   public void testSufficientlyReplicatedBlocksWithNotEnoughRacks() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    conf.setLong("dfs.heartbeat.interval", 1L);
+    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
     conf.set(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY, "xyz");
     final short REPLICATION_FACTOR = 3;
@@ -103,7 +103,7 @@ public class TestBlocksWithNotEnoughRacks extends TestCase {
 
   public void testUnderReplicatedNotEnoughRacks() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    conf.setLong("dfs.heartbeat.interval", 1L);
+    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, 1);
     conf.set(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY, "xyz");

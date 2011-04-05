@@ -56,7 +56,7 @@ public class TestReadWhileWriting {
     final Configuration conf = new HdfsConfiguration();
     //enable append
     conf.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, true);
-    conf.setLong("dfs.heartbeat.interval", 1);
+    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
 
     // create cluster
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();

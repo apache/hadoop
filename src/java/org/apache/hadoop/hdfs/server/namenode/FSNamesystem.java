@@ -352,8 +352,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     replthread.start();
 
     this.dnthread = new Daemon(new DecommissionManager(this).new Monitor(
-        conf.getInt("dfs.namenode.decommission.interval", 30),
-        conf.getInt("dfs.namenode.decommission.nodes.per.interval", 5)));
+        conf.getInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 
+                    DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_DEFAULT),
+        conf.getInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_NODES_PER_INTERVAL_KEY, 
+                    DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_NODES_PER_INTERVAL_DEFAULT)));
     dnthread.start();
 
     this.dnsToSwitchMapping = ReflectionUtils.newInstance(
@@ -496,7 +498,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         conf.getLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE),
         conf.getInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, DEFAULT_BYTES_PER_CHECKSUM),
         conf.getInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, DEFAULT_WRITE_PACKET_SIZE),
-        (short) conf.getInt("dfs.replication", DEFAULT_REPLICATION_FACTOR),
+        (short) conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, DEFAULT_REPLICATION_FACTOR),
         conf.getInt("io.file.buffer.size", DEFAULT_FILE_BUFFER_SIZE));
     this.maxFsObjects = conf.getLong(DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_KEY, 
                                      DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_DEFAULT);

@@ -72,7 +72,8 @@ public class DatanodeJspHelper {
    * @return the number of bytes to chunk in
    */
   private static int getDefaultChunkSize(Configuration conf) {
-    return conf.getInt("dfs.default.chunk.view.size", 32 * 1024);
+    return conf.getInt(DFSConfigKeys.DFS_DEFAULT_CHUNK_VIEW_SIZE_KEY,
+                       DFSConfigKeys.DFS_DEFAULT_CHUNK_VIEW_SIZE_DEFAULT);
   }
 
   static void generateDirectoryStructure(JspWriter out, 

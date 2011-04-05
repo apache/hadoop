@@ -33,6 +33,7 @@ import java.util.TreeSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -53,7 +54,6 @@ public class BlockManager {
   // Default initial capacity and load factor of map
   public static final int DEFAULT_INITIAL_MAP_CAPACITY = 16;
   public static final float DEFAULT_MAP_LOAD_FACTOR = 0.75f;
-  public static final int DEFAULT_MAX_CORRUPT_FILES_RETURNED = 500;
 
   private final FSNamesystem namesystem;
 
@@ -130,9 +130,9 @@ public class BlockManager {
   BlockManager(FSNamesystem fsn, Configuration conf, int capacity)
       throws IOException {
     namesystem = fsn;
-    pendingReplications = new PendingReplicationBlocks(
-        conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
-            DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_DEFAULT) * 1000L);
+    pendingReplications = new PendingReplicationBlocks(conf.getInt(
+      DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
+      DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_DEFAULT) * 1000L);
     setConfigurationParameters(conf);
     blocksMap = new BlocksMap(capacity, DEFAULT_MAP_LOAD_FACTOR);
   }
@@ -143,10 +143,13 @@ public class BlockManager {
                          namesystem,
                          namesystem.clusterMap);
 
-    this.maxCorruptFilesReturned = conf.getInt("dfs.corruptfilesreturned.max",
-        DEFAULT_MAX_CORRUPT_FILES_RETURNED);
-    this.defaultReplication = conf.getInt("dfs.replication", 3);
-    this.maxReplication = conf.getInt("dfs.replication.max", 512);
+    this.maxCorruptFilesReturned = conf.getInt(
+      DFSConfigKeys.DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED_KEY,
+      DFSConfigKeys.DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED);
+    this.defaultReplication = conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 
+                                          DFSConfigKeys.DFS_REPLICATION_DEFAULT);
+    this.maxReplication = conf.getInt(DFSConfigKeys.DFS_REPLICATION_MAX_KEY, 
+                                      DFSConfigKeys.DFS_REPLICATION_MAX_DEFAULT);
     this.minReplication = conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY,
                                       DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_DEFAULT);
     if (minReplication <= 0)

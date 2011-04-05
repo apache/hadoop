@@ -45,7 +45,7 @@ public class TestHDFSCLI extends CLITestHelper {
         HDFSPolicyProvider.class, PolicyProvider.class);
     
     // Many of the tests expect a replication value of 1 in the output
-    conf.setInt("dfs.replication", 1);
+    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
     
     // Build racks and hosts configuration to test dfsAdmin -printTopology
     String [] racks =  {"/rack1", "/rack1", "/rack2", "/rack2",

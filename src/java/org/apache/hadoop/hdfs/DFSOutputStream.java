@@ -832,7 +832,8 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
     private DatanodeInfo[] nextBlockOutputStream(String client) throws IOException {
       LocatedBlock lb = null;
       DatanodeInfo[] nodes = null;
-      int count = conf.getInt("dfs.client.block.write.retries", 3);
+      int count = conf.getInt(DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_RETRIES_KEY,
+                              DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_RETRIES_DEFAULT);
       boolean success = false;
       do {
         hasError = false;
@@ -965,7 +966,9 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
     private LocatedBlock locateFollowingBlock(long start,
         DatanodeInfo[] excludedNodes) 
         throws IOException, UnresolvedLinkException {
-      int retries = conf.getInt("dfs.client.block.write.locateFollowingBlock.retries", 5);
+      int retries = 
+        conf.getInt(DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY,
+                    DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_DEFAULT);
       long sleeptime = 400;
       while (true) {
         long localstart = System.currentTimeMillis();

@@ -53,10 +53,10 @@ public class TestFiDataTransferProtocol2 {
 
   static final Configuration conf = new Configuration();
   static {
-    conf.setInt("dfs.datanode.handler.count", 1);
-    conf.setInt("dfs.replication", REPLICATION);
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, REPLICATION);
     conf.setInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, PACKET_SIZE);
-    conf.setInt("dfs.socket.timeout", 5000);
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 5000);
   }
 
   static final byte[] bytes = new byte[MAX_N_PACKET * PACKET_SIZE];

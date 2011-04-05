@@ -108,9 +108,9 @@ public class TestBackupNode extends TestCase {
     Path file2 = new Path("checkpoint2.dat");
 
     Configuration conf = new HdfsConfiguration();
-    short replication = (short)conf.getInt("dfs.replication", 3);
-    conf.set("dfs.blockreport.initialDelay", "0");
-    conf.setInt("dfs.datanode.scan.period.hours", -1); // disable block scanner
+    short replication = (short)conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
+    conf.set(DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY, "0");
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1); // disable block scanner
     int numDatanodes = Math.max(3, replication);
     MiniDFSCluster cluster = null;
     FileSystem fileSys = null;

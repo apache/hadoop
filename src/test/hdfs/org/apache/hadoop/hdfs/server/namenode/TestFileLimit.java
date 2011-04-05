@@ -78,8 +78,8 @@ public class TestFileLimit extends TestCase {
     Configuration conf = new HdfsConfiguration();
     int maxObjects = 5;
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_KEY, maxObjects);
-    conf.setLong("dfs.blockreport.intervalMsec", 1000L);
-    conf.setInt("dfs.heartbeat.interval", 1);
+    conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
+    conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     int currentNodes = 0;
     
     if (simulatedStorage) {

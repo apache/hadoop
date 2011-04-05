@@ -205,7 +205,7 @@ public class TestCrcCorruption {
     //
     System.out.println("TestCrcCorruption with default parameters");
     Configuration conf1 = new HdfsConfiguration();
-    conf1.setInt("dfs.blockreport.intervalMsec", 3 * 1000);
+    conf1.setInt(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 3 * 1000);
     DFSTestUtil util1 = new DFSTestUtil("TestCrcCorruption", 40, 3, 8*1024);
     thistest(conf1, util1);
 
@@ -249,7 +249,7 @@ public class TestCrcCorruption {
     Path file = new Path("/testFile");
 
     Configuration conf = new Configuration();
-    conf.setInt("dfs.replication", numDataNodes);
+    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, numDataNodes);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
 
     try {

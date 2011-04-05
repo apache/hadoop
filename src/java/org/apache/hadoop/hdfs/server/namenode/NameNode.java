@@ -17,8 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_DEFAULT;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 import java.io.File;
 import java.io.IOException;
@@ -371,7 +370,9 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     UserGroupInformation.setConfiguration(conf);
     SecurityUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
         DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, socAddr.getHostName());
-    int handlerCount = conf.getInt("dfs.namenode.handler.count", 10);
+    int handlerCount = 
+      conf.getInt(DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_KEY, 
+                  DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_DEFAULT);
 
     NameNode.initMetrics(conf, this.getRole());
     loadNamesystem(conf);
@@ -440,7 +441,9 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   }
 
   private void startTrashEmptier(Configuration conf) throws IOException {
-    long trashInterval = conf.getLong("fs.trash.interval", 0);
+    long trashInterval 
+      = conf.getLong(CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY, 
+                     CommonConfigurationKeys.FS_TRASH_INTERVAL_DEFAULT);
     if(trashInterval == 0)
       return;
     this.emptier = new Thread(new Trash(conf).getEmptier(), "Trash Emptier");
@@ -1412,12 +1415,12 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   private static boolean format(Configuration conf,
                                 boolean isConfirmationNeeded)
       throws IOException {
-    if (!conf.getBoolean(DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY, 
-                         DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_DEFAULT)) {
-      throw new IOException("The option " + DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY
+    if (!conf.getBoolean(DFSConfigKeys.DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY, 
+                         DFSConfigKeys.DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_DEFAULT)) {
+      throw new IOException("The option " + DFSConfigKeys.DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY
                              + " is set to false for this filesystem, so it "
                              + "cannot be formatted. You will need to set "
-                             + DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY +" parameter "
+                             + DFSConfigKeys.DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY +" parameter "
                              + "to true in order to format this filesystem");
     }
     

@@ -94,7 +94,7 @@ public class TestFsck extends TestCase {
       Configuration conf = new HdfsConfiguration();
       final long precision = 1L;
       conf.setLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, precision);
-      conf.setLong("dfs.blockreport.intervalMsec", 10000L);
+      conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
       fs = cluster.getFileSystem();
       final String fileName = "/srcdat";
@@ -164,7 +164,7 @@ public class TestFsck extends TestCase {
     FileSystem fs = null;
     try {
       Configuration conf = new HdfsConfiguration();
-      conf.setLong("dfs.blockreport.intervalMsec", 10000L);
+      conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
       fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat");
@@ -183,7 +183,7 @@ public class TestFsck extends TestCase {
   public void testFsckPermission() throws Exception {
     final DFSTestUtil util = new DFSTestUtil(getClass().getSimpleName(), 20, 3, 8*1024);
     final Configuration conf = new HdfsConfiguration();
-    conf.setLong("dfs.blockreport.intervalMsec", 10000L);
+    conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
 
     MiniDFSCluster cluster = null;
     try {
@@ -233,8 +233,8 @@ public class TestFsck extends TestCase {
     FileSystem fs = null;
     try {
       Configuration conf = new HdfsConfiguration();
-      conf.setLong("dfs.blockreport.intervalMsec", 10000L);
-      conf.setInt("dfs.datanode.directoryscan.interval", 1);
+      conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
+      conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1);
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
       String topDir = "/srcdat";
       fs = cluster.getFileSystem();
@@ -289,7 +289,7 @@ public class TestFsck extends TestCase {
     FileSystem fs = null;
     try {
       Configuration conf = new HdfsConfiguration();
-      conf.setLong("dfs.blockreport.intervalMsec", 10000L);
+      conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
       String topDir = "/srcdat";
       String randomString = "HADOOP  ";
@@ -335,7 +335,7 @@ public class TestFsck extends TestCase {
 
   public void testCorruptBlock() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    conf.setLong("dfs.blockreport.intervalMsec", 1000);
+    conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000);
     FileSystem fs = null;
     DFSClient dfsClient = null;
     LocatedBlocks blocks = null;
@@ -446,8 +446,8 @@ public class TestFsck extends TestCase {
   /** check if option -list-corruptfiles of fsck command works properly */
   public void testFsckListCorruptFilesBlocks() throws Exception {
     Configuration conf = new Configuration();
-    conf.setLong("dfs.blockreport.intervalMsec", 1000);
-    conf.setInt("dfs.datanode.directoryscan.interval", 1);
+    conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000);
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1);
     FileSystem fs = null;
 
     MiniDFSCluster cluster = null;

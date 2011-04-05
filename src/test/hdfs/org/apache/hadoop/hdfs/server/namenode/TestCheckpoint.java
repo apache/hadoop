@@ -645,7 +645,7 @@ public class TestCheckpoint extends TestCase {
 
     Configuration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, "0.0.0.0:0");
-    replication = (short)conf.getInt("dfs.replication", 3);
+    replication = (short)conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
                                                .numDataNodes(numDatanodes).build();
     cluster.waitActive();

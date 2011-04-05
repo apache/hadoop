@@ -56,7 +56,7 @@ public class TestLoadGenerator extends Configured implements Tool {
   static {
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
     CONF.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, DEFAULT_BLOCK_SIZE);
-    CONF.setLong("dfs.heartbeat.interval", 1L);
+    CONF.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
   }
 
   /** Test if the structure generator works fine */ 

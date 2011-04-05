@@ -104,7 +104,7 @@ public class OfflineEditsViewerHelper {
     config.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY,
       Util.fileAsURI(new File(dfsDir, "namesecondary1")).toString());
     // blocksize for concat (file size must be multiple of blocksize)
-    config.setLong("dfs.blocksize", blockSize);
+    config.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     // for security to work (fake JobTracker user)
     config.set("hadoop.security.auth_to_local",
       "RULE:[2:$1@$0](JobTracker@.*FOO.COM)s/@.*//" + "DEFAULT");

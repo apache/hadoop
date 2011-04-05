@@ -104,7 +104,7 @@ public class NNThroughputBenchmark {
     config = conf;
     // We do not need many handlers, since each thread simulates a handler
     // by calling name-node methods directly
-    config.setInt("dfs.namenode.handler.count", 1);
+    config.setInt(DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_KEY, 1);
     // set exclude file
     config.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE,
       "${hadoop.tmp.dir}/dfs/hosts/exclude");
@@ -208,7 +208,7 @@ public class NNThroughputBenchmark {
 
     OperationStatsBase() {
       baseDir = BASE_DIR_NAME + "/" + getOpName();
-      replication = (short) config.getInt("dfs.replication", 3);
+      replication = (short) config.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
       numOpsRequired = 10;
       numThreads = 3;
       logLevel = Level.ERROR;
@@ -908,7 +908,7 @@ public class NNThroughputBenchmark {
       this.blocksPerReport = 100;
       this.blocksPerFile = 10;
       // set heartbeat interval to 3 min, so that expiration were 40 min
-      config.setLong("dfs.heartbeat.interval", 3 * 60);
+      config.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 3 * 60);
       parseArguments(args);
       // adjust replication to the number of data-nodes
       this.replication = (short)Math.min((int)replication, getNumDatanodes());

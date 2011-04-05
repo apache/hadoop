@@ -184,7 +184,7 @@ public class TestDFSUpgradeFromImage extends TestCase {
       if (System.getProperty("test.build.data") == null) { // to allow test to be run outside of Ant
         System.setProperty("test.build.data", "build/test/data");
       }
-      conf.setInt("dfs.datanode.scan.period.hours", -1); // block scanning off
+      conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1); // block scanning off
       cluster = new MiniDFSCluster.Builder(conf)
                                   .numDataNodes(numDataNodes)
                                   .format(false)

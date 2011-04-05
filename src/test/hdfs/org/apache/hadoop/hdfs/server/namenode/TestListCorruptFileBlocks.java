@@ -62,8 +62,8 @@ public class TestListCorruptFileBlocks {
     
     try {
       Configuration conf = new HdfsConfiguration();
-      conf.setInt("dfs.datanode.directoryscan.interval", 1); // datanode scans directories
-      conf.setInt("dfs.blockreport.intervalMsec", 3 * 1000); // datanode sends block reports
+      conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1); // datanode scans directories
+      conf.setInt(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 3 * 1000); // datanode sends block reports
       cluster = new MiniDFSCluster.Builder(conf).build();
       FileSystem fs = cluster.getFileSystem();
 
@@ -137,9 +137,9 @@ public class TestListCorruptFileBlocks {
     try {
       Configuration conf = new HdfsConfiguration();
       // datanode scans directories
-      conf.setInt("dfs.datanode.directoryscan.interval", 1);
+      conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1);
       // datanode sends block reports
-      conf.setInt("dfs.blockreport.intervalMsec", 3 * 1000);
+      conf.setInt(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 3 * 1000);
       // never leave safemode automatically
       conf.setFloat(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY,
                     1.5f);
@@ -262,8 +262,8 @@ public class TestListCorruptFileBlocks {
   @Test
   public void testlistCorruptFileBlocks() throws Exception {
     Configuration conf = new Configuration();
-    conf.setLong("dfs.blockreport.intervalMsec", 1000);
-    conf.setInt("dfs.datanode.directoryscan.interval", 1); // datanode scans
+    conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000);
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1); // datanode scans
                                                            // directories
     FileSystem fs = null;
 
@@ -369,8 +369,8 @@ public class TestListCorruptFileBlocks {
   @Test
   public void testlistCorruptFileBlocksDFS() throws Exception {
     Configuration conf = new Configuration();
-    conf.setLong("dfs.blockreport.intervalMsec", 1000);
-    conf.setInt("dfs.datanode.directoryscan.interval", 1); // datanode scans
+    conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000);
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1); // datanode scans
                                                            // directories
     FileSystem fs = null;
 
@@ -442,8 +442,8 @@ public class TestListCorruptFileBlocks {
     MiniDFSCluster cluster = null;
     try {
       Configuration conf = new HdfsConfiguration();
-      conf.setInt("dfs.datanode.directoryscan.interval", 15); // datanode scans directories
-      conf.setInt("dfs.blockreport.intervalMsec", 3 * 1000); // datanode sends block reports
+      conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 15); // datanode scans directories
+      conf.setInt(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 3 * 1000); // datanode sends block reports
       cluster = new MiniDFSCluster.Builder(conf).build();
       FileSystem fs = cluster.getFileSystem();
       final int maxCorruptFileBlocks = 

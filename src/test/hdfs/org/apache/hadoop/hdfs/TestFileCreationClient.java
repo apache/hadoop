@@ -48,8 +48,8 @@ public class TestFileCreationClient extends junit.framework.TestCase {
   public void testClientTriggeredLeaseRecovery() throws Exception {
     final int REPLICATION = 3;
     Configuration conf = new HdfsConfiguration();
-    conf.setInt("dfs.datanode.handler.count", 1);
-    conf.setInt("dfs.replication", REPLICATION);
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, REPLICATION);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION).build();
 
     try {

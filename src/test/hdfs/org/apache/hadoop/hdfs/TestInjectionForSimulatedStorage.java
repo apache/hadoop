@@ -134,7 +134,7 @@ public class TestInjectionForSimulatedStorage extends TestCase {
     
     try {
       Configuration conf = new HdfsConfiguration();
-      conf.set("dfs.replication", Integer.toString(numDataNodes));
+      conf.set(DFSConfigKeys.DFS_REPLICATION_KEY, Integer.toString(numDataNodes));
       conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, checksumSize);
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
       //first time format

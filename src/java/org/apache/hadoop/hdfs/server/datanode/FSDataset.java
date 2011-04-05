@@ -536,7 +536,8 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     private final long reserved;
     
     FSVolume(File currentDir, Configuration conf) throws IOException {
-      this.reserved = conf.getLong("dfs.datanode.du.reserved", 0);
+      this.reserved = conf.getLong(DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY,
+                                   DFSConfigKeys.DFS_DATANODE_DU_RESERVED_DEFAULT);
       this.currentDir = currentDir; 
       File parent = currentDir.getParentFile();
       this.usage = new DF(parent, conf);
@@ -1147,9 +1148,12 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
    * An FSDataset has a directory where it loads its data files.
    */
   public FSDataset(DataStorage storage, Configuration conf) throws IOException {
-    this.maxBlocksPerDir = conf.getInt("dfs.datanode.numblocks", 64);
-    this.supportAppends = conf.getBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY,
-                                      DFSConfigKeys.DFS_SUPPORT_APPEND_DEFAULT);
+    this.maxBlocksPerDir = 
+      conf.getInt(DFSConfigKeys.DFS_DATANODE_NUMBLOCKS_KEY,
+                  DFSConfigKeys.DFS_DATANODE_NUMBLOCKS_DEFAULT);
+    this.supportAppends = 
+      conf.getBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY,
+                      DFSConfigKeys.DFS_SUPPORT_APPEND_DEFAULT);
     // The number of volumes required for operation is the total number 
     // of volumes minus the number of failed volumes we can tolerate.
     final int volFailuresTolerated =

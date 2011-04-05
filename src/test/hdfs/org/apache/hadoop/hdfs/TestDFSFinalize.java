@@ -89,7 +89,7 @@ public class TestDFSFinalize extends TestCase {
        * not changed.
        */
       conf = new HdfsConfiguration();
-      conf.setInt("dfs.datanode.scan.period.hours", -1);
+      conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);
       conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
       String[] nameNodeDirs = conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
       String[] dataNodeDirs = conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);

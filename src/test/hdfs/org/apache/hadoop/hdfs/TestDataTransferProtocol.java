@@ -324,7 +324,7 @@ public class TestDataTransferProtocol extends TestCase {
     int numDataNodes = 1;
     
     Configuration conf = new HdfsConfiguration();
-    conf.setInt("dfs.replication", numDataNodes); 
+    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, numDataNodes); 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
     try {
     cluster.waitActive();

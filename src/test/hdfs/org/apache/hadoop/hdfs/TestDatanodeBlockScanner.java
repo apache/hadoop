@@ -148,7 +148,7 @@ public class TestDatanodeBlockScanner extends TestCase {
 
   public void testBlockCorruptionPolicy() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    conf.setLong("dfs.blockreport.intervalMsec", 1000L);
+    conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
     Random random = new Random();
     FileSystem fs = null;
     DFSClient dfsClient = null;
@@ -258,9 +258,9 @@ public class TestDatanodeBlockScanner extends TestCase {
                                              int numCorruptReplicas) 
                                              throws IOException {
     Configuration conf = new HdfsConfiguration();
-    conf.setLong("dfs.blockreport.intervalMsec", 30L);
+    conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 30L);
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 30);
-    conf.setLong("dfs.heartbeat.interval", 30L);
+    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 30L);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY, false);
     FileSystem fs = null;
     DFSClient dfsClient = null;

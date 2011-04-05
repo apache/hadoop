@@ -311,7 +311,7 @@ public class TestDFSStorageStateRecovery extends TestCase {
 
     for (int numDirs = 1; numDirs <= 2; numDirs++) {
       conf = new HdfsConfiguration();
-      conf.setInt("dfs.datanode.scan.period.hours", -1);      
+      conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);      
       conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
       for (int i = 0; i < NUM_NN_TEST_CASES; i++) {
         boolean[] testCase = testCases[i];
@@ -355,7 +355,7 @@ public class TestDFSStorageStateRecovery extends TestCase {
     // First setup the datanode storage directory
     for (int numDirs = 1; numDirs <= 2; numDirs++) {
       conf = new HdfsConfiguration();
-      conf.setInt("dfs.datanode.scan.period.hours", -1);      
+      conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);      
       conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
       for (int i = 0; i < NUM_DN_TEST_CASES; i++) {
         boolean[] testCase = testCases[i];

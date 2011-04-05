@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.DatanodeDescriptor;
@@ -51,7 +52,7 @@ public class TestNamenodeCapacityReport extends TestCase {
 
     // Set aside fifth of the total capacity as reserved
     long reserved = 10000;
-    conf.setLong("dfs.datanode.du.reserved", reserved);
+    conf.setLong(DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY, reserved);
     
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();

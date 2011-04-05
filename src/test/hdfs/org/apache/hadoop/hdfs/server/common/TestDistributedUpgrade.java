@@ -26,6 +26,7 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDFSUpgradeFromImage;
@@ -111,7 +112,7 @@ public class TestDistributedUpgrade extends TestCase {
     if (System.getProperty("test.build.data") == null) { // to test to be run outside of ant
       System.setProperty("test.build.data", "build/test/data");
     }
-    conf.setInt("dfs.datanode.scan.period.hours", -1); // block scanning off
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1); // block scanning off
 
     log("NameNode start in regular mode when dustributed upgrade is required", numDirs);
     startNameNodeShouldFail(StartupOption.REGULAR);

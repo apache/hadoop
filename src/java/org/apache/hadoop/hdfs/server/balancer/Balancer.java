@@ -1467,7 +1467,9 @@ public class Balancer {
     public int run(String[] args) {
       final long startTime = Util.now();
       final Configuration conf = getConf();
-      WIN_WIDTH = conf.getLong("dfs.balancer.movedWinWidth", WIN_WIDTH);
+      WIN_WIDTH = conf.getLong(
+          DFSConfigKeys.DFS_BALANCER_MOVEDWINWIDTH_KEY, 
+          DFSConfigKeys.DFS_BALANCER_MOVEDWINWIDTH_DEFAULT);
 
       try {
         checkReplicationPolicyCompatibility(conf);

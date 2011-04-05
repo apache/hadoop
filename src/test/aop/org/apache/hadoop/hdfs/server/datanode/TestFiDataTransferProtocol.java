@@ -52,8 +52,8 @@ public class TestFiDataTransferProtocol {
 
   static final Configuration conf = new HdfsConfiguration();
   static {
-    conf.setInt("dfs.datanode.handler.count", 1);
-    conf.setInt("dfs.replication", REPLICATION);
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, REPLICATION);
     conf.setInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 5000);
   }
 

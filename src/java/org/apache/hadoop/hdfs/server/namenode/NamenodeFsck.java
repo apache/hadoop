@@ -36,6 +36,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -485,7 +486,7 @@ public class NamenodeFsck {
         chosenNode = bestNode(dfs, lblock.getLocations(), deadNodes);
         targetAddr = NetUtils.createSocketAddr(chosenNode.getName());
       }  catch (IOException ie) {
-        if (failures >= DFSClient.MAX_BLOCK_ACQUIRE_FAILURES) {
+        if (failures >= DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT) {
           throw new IOException("Could not obtain block " + lblock);
         }
         LOG.info("Could not obtain block from any node:  " + ie);
@@ -618,7 +619,8 @@ public class NamenodeFsck {
     final short replication;
     
     private Result(Configuration conf) {
-      this.replication = (short)conf.getInt("dfs.replication", 3);
+      this.replication = (short)conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 
+                                            DFSConfigKeys.DFS_REPLICATION_DEFAULT);
     }
     
     /**

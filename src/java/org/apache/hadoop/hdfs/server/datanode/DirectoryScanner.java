@@ -220,7 +220,7 @@ public class DirectoryScanner implements Runnable {
 
   DirectoryScanner(FSDataset dataset, Configuration conf) {
     this.dataset = dataset;
-    int interval = conf.getInt("dfs.datanode.directoryscan.interval",
+    int interval = conf.getInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY,
         DEFAULT_SCAN_INTERVAL);
     scanPeriodMsecs = interval * 1000L; //msec
     int threads = 

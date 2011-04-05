@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
@@ -138,7 +139,8 @@ public class BackupNode extends NameNode {
   protected void initialize(Configuration conf) throws IOException {
     // Trash is disabled in BackupNameNode,
     // but should be turned back on if it ever becomes active.
-    conf.setLong("fs.trash.interval", 0L);
+    conf.setLong(CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY, 
+                 CommonConfigurationKeys.FS_TRASH_INTERVAL_DEFAULT);
     NamespaceInfo nsInfo = handshake(conf);
     super.initialize(conf);
     // Backup node should never do lease recovery,

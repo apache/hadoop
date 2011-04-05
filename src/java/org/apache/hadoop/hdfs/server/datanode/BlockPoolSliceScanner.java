@@ -42,6 +42,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
@@ -144,7 +145,8 @@ class BlockPoolSliceScanner {
     this.datanode = datanode;
     this.dataset = dataset;
     this.blockPoolId  = bpid;
-    scanPeriod = conf.getInt("dfs.datanode.scan.period.hours", 0);
+    scanPeriod = conf.getInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, 
+                             DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_DEFAULT);
     if ( scanPeriod <= 0 ) {
       scanPeriod = DEFAULT_SCAN_PERIOD_HOURS;
     }

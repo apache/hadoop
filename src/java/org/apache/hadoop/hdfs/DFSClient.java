@@ -119,7 +119,6 @@ import org.apache.hadoop.util.StringUtils;
 public class DFSClient implements FSConstants, java.io.Closeable {
   public static final Log LOG = LogFactory.getLog(DFSClient.class);
   public static final long SERVER_DEFAULTS_VALIDITY_PERIOD = 60 * 60 * 1000L; // 1 hour
-  public static final int MAX_BLOCK_ACQUIRE_FAILURES = 3;
   static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
   final ClientProtocol namenode;
   private final ClientProtocol rpcNamenode;
@@ -241,12 +240,14 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     throws IOException {
     this.conf = conf;
     this.stats = stats;
-    this.socketTimeout = conf.getInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 
-                                     HdfsConstants.READ_TIMEOUT);
+    this.socketTimeout = 
+      conf.getInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 
+                  HdfsConstants.READ_TIMEOUT);
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
     // dfs.write.packet.size is an internal config variable
-    this.writePacketSize = conf.getInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 
-                                       DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
+    this.writePacketSize = 
+      conf.getInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 
+                  DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
     // The hdfsTimeout is currently the same as the ipc timeout 
     this.hdfsTimeout = Client.getTimeout(conf);
 
@@ -256,7 +257,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     this.clientName = "DFSClient_" + taskId + "_" +
                       r.nextInt() + "_" + Thread.currentThread().getId(); 
     defaultBlockSize = conf.getLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
-    defaultReplication = (short) conf.getInt("dfs.replication", 3);
+    defaultReplication = (short) 
+      conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 
+                  DFSConfigKeys.DFS_REPLICATION_DEFAULT);
 
     if (nameNodeAddr != null && rpcNamenode == null) {
       this.rpcNamenode = createRPCNamenode(nameNodeAddr, conf, ugi);
@@ -276,8 +279,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * to retrieve block locations when reading.
    */
   int getMaxBlockAcquireFailures() {
-    return conf.getInt("dfs.client.max.block.acquire.failures",
-                       MAX_BLOCK_ACQUIRE_FAILURES);
+    return conf.getInt(DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY,
+                       DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT);
   }
 
   /**
@@ -286,7 +289,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    */
   int getDatanodeWriteTimeout(int numNodes) {
     int confTime =
-        conf.getInt("dfs.datanode.socket.write.timeout",
+        conf.getInt(DFSConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY,
                     HdfsConstants.WRITE_TIMEOUT);
 
     return (confTime > 0) ?

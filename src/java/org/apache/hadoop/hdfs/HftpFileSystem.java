@@ -49,6 +49,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -84,7 +85,6 @@ public class HftpFileSystem extends FileSystem {
     HttpURLConnection.setFollowRedirects(true);
   }
 
-  private static final int DEFAULT_PORT = 50470;
   private String nnHttpUrl;
   private URI hdfsURI;
   protected InetSocketAddress nnAddr;
@@ -116,7 +116,7 @@ public class HftpFileSystem extends FileSystem {
 
   @Override
   protected int getDefaultPort() {
-    return DEFAULT_PORT;
+    return DFSConfigKeys.DFS_HTTPS_PORT_DEFAULT;
   }
 
   @Override
@@ -139,14 +139,16 @@ public class HftpFileSystem extends FileSystem {
     this.ugi = UserGroupInformation.getCurrentUser(); 
     nnAddr = NetUtils.createSocketAddr(name.toString());
    
-    nnHttpUrl = buildUri("https://", NetUtils.normalizeHostName(name.getHost()), 
-        conf.getInt("dfs.https.port", DEFAULT_PORT));
+    nnHttpUrl = buildUri("https://", 
+                         NetUtils.normalizeHostName(name.getHost()), 
+                         conf.getInt(DFSConfigKeys.DFS_HTTPS_PORT_KEY, 
+                                     DFSConfigKeys.DFS_HTTPS_PORT_DEFAULT));
 
     // if one uses RPC port different from the Default one,  
     // one should specify what is the setvice name for this delegation token
     // otherwise it is hostname:RPC_PORT
     String key = HftpFileSystem.HFTP_SERVICE_NAME_KEY+
-    SecurityUtil.buildDTServiceName(name, DEFAULT_PORT);
+    SecurityUtil.buildDTServiceName(name, DFSConfigKeys.DFS_HTTPS_PORT_DEFAULT);
     if(LOG.isDebugEnabled()) {
       LOG.debug("Trying to find DT for " + name + " using key=" + key + 
           "; conf=" + conf.get(key, ""));

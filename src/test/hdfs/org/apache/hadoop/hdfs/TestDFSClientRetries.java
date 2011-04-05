@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -83,11 +84,11 @@ public class TestDFSClientRetries extends TestCase {
     
     final int writeTimeout = 100; //milliseconds.
     // set a very short write timeout for datanode, so that tests runs fast.
-    conf.setInt("dfs.datanode.socket.write.timeout", writeTimeout); 
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY, writeTimeout); 
     // set a smaller block size
     final int blockSize = 10*1024*1024;
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
-    conf.setInt("dfs.client.max.block.acquire.failures", 1);
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY, 1);
     // set a small buffer size
     final int bufferSize = 4096;
     conf.setInt("io.file.buffer.size", bufferSize);
@@ -136,8 +137,7 @@ public class TestDFSClientRetries extends TestCase {
     final String exceptionMsg = "Nope, not replicated yet...";
     final int maxRetries = 1; // Allow one retry (total of two calls)
     Configuration conf = new HdfsConfiguration();
-   conf.setInt(DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY, 
-                maxRetries);
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY, maxRetries);
     
     NameNode mockNN = mock(NameNode.class);
     Answer<Object> answer = new ThrowsException(new IOException()) {
@@ -380,9 +380,10 @@ public class TestDFSClientRetries extends TestCase {
     int bufferSize = 4096;
     
     Configuration conf = new HdfsConfiguration();
-    conf.setInt("dfs.datanode.max.xcievers",xcievers);
-    conf.setInt("dfs.client.max.block.acquire.failures", retries);
-    conf.setInt("dfs.client.retry.window.base", timeWin);
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_MAX_XCIEVERS_KEY,xcievers);
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY, 
+                retries);
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, timeWin);
 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(replicationFactor).build();
     cluster.waitActive();

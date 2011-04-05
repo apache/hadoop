@@ -37,6 +37,7 @@ import javax.servlet.jsp.JspWriter;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
@@ -823,8 +824,9 @@ class NamenodeJspHelper {
         doc.endTag();
       }
       
-      doc.startTag("dfs_replication");
-      doc.pcdata(""+conf.getInt("dfs.replication", 3));
+      doc.startTag(DFSConfigKeys.DFS_REPLICATION_KEY);
+      doc.pcdata(""+conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 
+                                DFSConfigKeys.DFS_REPLICATION_DEFAULT));
       doc.endTag();
       
       doc.startTag("num_missing_blocks");
