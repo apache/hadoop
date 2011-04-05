@@ -23,10 +23,10 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
@@ -151,7 +151,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
     SortedMap<Long, HRegion> regionsBySize =
         server.getCopyOfOnlineRegionsSortedBySize();
 
-    Set<HRegion> excludedRegions = new TreeSet<HRegion>();
+    Set<HRegion> excludedRegions = new HashSet<HRegion>();
 
     boolean flushedOne = false;
     while (!flushedOne) {

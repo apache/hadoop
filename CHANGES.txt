@@ -61,6 +61,8 @@ Release 0.91.0 - Unreleased
    HBASE-3238  HBase needs to have the CREATE permission on the parent of its
                ZooKeeper parent znode (Alex Newman via Stack)
    HBASE-3728  NPE in HTablePool.closeTablePool (Ted Yu via Stack)
+   HBASE-3733  MemStoreFlusher.flushOneForGlobalPressure() shouldn't
+               be using TreeSet for HRegion (Ted Yu via J-D)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
