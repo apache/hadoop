@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
+import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
 
@@ -67,10 +68,8 @@ class FSImageFormat {
     /** Set to true once a file has been loaded using this loader. */
     private boolean loaded = false;
 
-    /** The image version of the loaded file */
-    private int imgVersion;
-    /** The namespace ID of the loaded file */
-    private int imgNamespaceID;
+    /** The transaction ID of the last edit represented by the loaded file */
+    private long imgTxId;
     /** The MD5 sum of the loaded file */
     private MD5Hash imgDigest;
 
@@ -80,15 +79,6 @@ class FSImageFormat {
     }
 
     /**
-     * Return the version number of the image that has been loaded.
-     * @throws IllegalStateException if load() has not yet been called.
-     */
-    int getLoadedImageVersion() {
-      checkLoaded();
-      return imgVersion;
-    }
-    
-    /**
      * Return the MD5 checksum of the image that has been loaded.
      * @throws IllegalStateException if load() has not yet been called.
      */
@@ -97,13 +87,9 @@ class FSImageFormat {
       return imgDigest;
     }
 
-    /**
-     * Return the namespace ID of the image that has been loaded.
-     * @throws IllegalStateException if load() has not yet been called.
-     */
-    int getLoadedNamespaceID() {
+    long getLoadedImageTxId() {
       checkLoaded();
-      return imgNamespaceID;
+      return imgTxId;
     }
 
     /**
@@ -152,10 +138,14 @@ class FSImageFormat {
          * it should not contain version and namespace fields
          */
         // read image version: first appeared in version -1
-        imgVersion = in.readInt();
+        long imgVersion = in.readInt();
+        if(getLayoutVersion() != imgVersion)
+          throw new InconsistentFSStateException(curFile, 
+              "imgVersion " + imgVersion +
+              " expected to be " + getLayoutVersion());
 
         // read namespaceID: first appeared in version -2
-        imgNamespaceID = in.readInt();
+        in.readInt();
 
         // read number of files
         long numFiles = readNumFiles(in);
@@ -165,6 +155,15 @@ class FSImageFormat {
           long genstamp = in.readLong();
           namesystem.setGenerationStamp(genstamp); 
         }
+        
+        // read the transaction ID of the last edit represented by
+        // this image
+        if (imgVersion <= -28) {
+          imgTxId = in.readLong();
+        } else {
+          imgTxId = 0;
+        }
+        
 
         // read compression related info
         FSImageCompression compression;
@@ -256,11 +255,12 @@ class FSImageFormat {
    * @return an inode
    */
   private INode loadINode(DataInputStream in)
-  throws IOException {
+      throws IOException {
     long modificationTime = 0;
     long atime = 0;
     long blockSize = 0;
     
+    long imgVersion = getLayoutVersion();
     short replication = in.readShort();
     replication = namesystem.adjustReplication(replication);
     modificationTime = in.readLong();
@@ -326,7 +326,10 @@ class FSImageFormat {
           modificationTime, atime, nsQuota, dsQuota, blockSize);
     }
 
-    private void loadDatanodes(DataInputStream in) throws IOException {
+    private void loadDatanodes(DataInputStream in)
+        throws IOException {
+      long imgVersion = getLayoutVersion();
+
       if (imgVersion > -3) // pre datanode image version
         return;
       if (imgVersion <= -12) {
@@ -342,6 +345,7 @@ class FSImageFormat {
     private void loadFilesUnderConstruction(DataInputStream in)
     throws IOException {
       FSDirectory fsDir = namesystem.dir;
+      long imgVersion = getLayoutVersion();
       if (imgVersion > -13) // pre lease image version
         return;
       int size = in.readInt();
@@ -367,7 +371,10 @@ class FSImageFormat {
       }
     }
 
-    private void loadSecretManagerState(DataInputStream in) throws IOException {
+    private void loadSecretManagerState(DataInputStream in)
+        throws IOException {
+      long imgVersion = getLayoutVersion();
+
       if (imgVersion > -23) {
         //SecretManagerState is not available.
         //This must not happen if security is turned on.
@@ -376,8 +383,14 @@ class FSImageFormat {
       namesystem.loadSecretManagerState(in);
     }
 
+    private long getLayoutVersion() {
+      return namesystem.getFSImage().getStorage().getLayoutVersion();
+    }
 
-    private long readNumFiles(DataInputStream in) throws IOException {
+    private long readNumFiles(DataInputStream in)
+        throws IOException {
+      long imgVersion = getLayoutVersion();
+
       if (imgVersion <= -16) {
         return in.readLong();
       } else {
@@ -472,9 +485,12 @@ class FSImageFormat {
       DataOutputStream out = new DataOutputStream(fos);
       try {
         out.writeInt(FSConstants.LAYOUT_VERSION);
-        out.writeInt(sourceNamesystem.getFSImage().getStorage().getNamespaceID()); // TODO bad dependency
+        out.writeInt(sourceNamesystem.getFSImage()
+                     .getStorage().getNamespaceID()); // TODO bad dependency
         out.writeLong(fsDir.rootDir.numItemsInTree());
         out.writeLong(sourceNamesystem.getGenerationStamp());
+        long txid = sourceNamesystem.getEditLog().getLastWrittenTxId();
+        out.writeLong(txid);
 
         // write compression info and set up compressed stream
         out = compression.writeHeaderAndWrapStream(fos);

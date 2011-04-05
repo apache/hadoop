@@ -88,7 +88,7 @@ public interface FSConstants {
   // Version is reflected in the data storage file.
   // Versions are negative.
   // Decrement LAYOUT_VERSION to define a new version.
-  public static final int LAYOUT_VERSION = -28;
+  public static final int LAYOUT_VERSION = -29;
   // Current version: 
-  // -28: Adding support for block pools and multiple namenodes
+  // -29: Adding support for block pools and multiple namenodes
 }

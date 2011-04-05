@@ -30,12 +30,15 @@ import org.apache.hadoop.fs.permission.*;
 
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
+
+import org.apache.hadoop.util.StringUtils;
  
 import org.mockito.Mockito;
 
@@ -49,6 +52,26 @@ public class TestEditLog extends TestCase {
   // 2 * NUM_TRANSACTIONS Transactions concurrently.
   static final int NUM_TRANSACTIONS = 100;
   static final int NUM_THREADS = 100;
+
+  /** An edits log with 3 edits from 0.20 - the result of
+   * a fresh namesystem followed by hadoop fs -touchz /myfile */
+  static final byte[] HADOOP20_SOME_EDITS =
+    StringUtils.hexStringToByte((
+        "ffff ffed 0a00 0000 0000 03fa e100 0000" +
+        "0005 0007 2f6d 7966 696c 6500 0133 000d" +
+        "3132 3932 3331 3634 3034 3138 3400 0d31" +
+        "3239 3233 3136 3430 3431 3834 0009 3133" +
+        "3432 3137 3732 3800 0000 0004 746f 6464" +
+        "0a73 7570 6572 6772 6f75 7001 a400 1544" +
+        "4653 436c 6965 6e74 5f2d 3136 3136 3535" +
+        "3738 3931 000b 3137 322e 3239 2e35 2e33" +
+        "3209 0000 0005 0007 2f6d 7966 696c 6500" +
+        "0133 000d 3132 3932 3331 3634 3034 3138" +
+        "3400 0d31 3239 3233 3136 3430 3431 3834" +
+        "0009 3133 3432 3137 3732 3800 0000 0004" +
+        "746f 6464 0a73 7570 6572 6772 6f75 7001" +
+        "a4ff 0000 0000 0000 0000 0000 0000 0000"
+    ).replace(" ",""));
 
   //
   // an object that does a bunch of transactions
@@ -78,6 +101,51 @@ public class TestEditLog extends TestCase {
         editLog.logSync();
       }
     }
+  }
+
+  /**
+   * Test case for an empty edit log from a prior version of Hadoop.
+   */
+  public void testPreTxIdEditLogNoEdits() throws Exception {
+    FSNamesystem namesys = Mockito.mock(FSNamesystem.class);
+    int numEdits = testLoad(
+        StringUtils.hexStringToByte("ffffffed"), // just version number
+        namesys);
+    assertEquals(0, numEdits);
+  }
+  
+  /**
+   * Test case for loading a very simple edit log from a format
+   * prior to the inclusion of edit transaction IDs in the log.
+   */
+  public void testPreTxidEditLogWithEdits() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster.waitActive();
+      final FSNamesystem namesystem = cluster.getNamesystem();
+
+      int numEdits = testLoad(HADOOP20_SOME_EDITS, namesystem);
+      assertEquals(3, numEdits);
+      // Sanity check the edit
+      HdfsFileStatus fileInfo = namesystem.getFileInfo("/myfile", false);
+      assertEquals("supergroup", fileInfo.getGroup());
+      assertEquals(3, fileInfo.getReplication());
+    } finally {
+      cluster.shutdown();
+    }
+  }
+  
+  private int testLoad(byte[] data, FSNamesystem namesys) throws IOException {
+    FSEditLogLoader loader = new FSEditLogLoader(namesys);
+    EditLogInputStream mockStream = Mockito.mock(EditLogInputStream.class);
+    ByteArrayInputStream bais = new ByteArrayInputStream(data);
+    Mockito.doReturn(new DataInputStream(bais))
+      .when(mockStream).getDataInputStream();
+    
+    return loader.loadFSEdits(mockStream, 1);
   }
 
   /**
@@ -145,13 +213,13 @@ public class TestEditLog extends TestCase {
       // If there were any corruptions, it is likely that the reading in
       // of these transactions will throw an exception.
       //
-      FSEditLogLoader loader = new FSEditLogLoader(namesystem);
       for (Iterator<StorageDirectory> it = 
               fsimage.getStorage().dirIterator(NameNodeDirType.EDITS); it.hasNext();) {
+        FSEditLogLoader loader = new FSEditLogLoader(namesystem);
         File editFile = NNStorage.getStorageFile(it.next(), NameNodeFile.EDITS);
         System.out.println("Verifying file: " + editFile);
         int numEdits = loader.loadFSEdits(
-                                  new EditLogFileInputStream(editFile));
+            new EditLogFileInputStream(editFile), 1);
         int numLeases = namesystem.leaseManager.countLease();
         System.out.println("Number of outstanding leases " + numLeases);
         assertEquals(0, numLeases);

@@ -307,6 +307,9 @@ Trunk (unreleased changes)
     HDFS-1763. Replace hard-coded option strings with variables from
     DFSConfigKeys. (eli)
 
+    HDFS-1521. Persist transaction ID on disk between NN restarts. (Ivan Kelly
+    and Todd Lipcon via todd)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
@@ -366,6 +369,8 @@ Trunk (unreleased changes)
     null when an attribute value is not available (tanping vi boryas)
 
     HDFS-1757. Don't compile fuse-dfs by default. (eli)
+
+    HDFS-1770. TestFiRename fails due to invalid block size. (eli)
 
 Release 0.22.0 - Unreleased
 

@@ -167,7 +167,7 @@ public class FSImage implements NNStorageListener, Closeable {
       storage.setUpgradeManager(ns.upgradeManager);
     }
   }
-
+ 
   void setCheckpointDirectories(Collection<URI> dirs,
                                 Collection<URI> editsDirs) {
     checkpointDirs = dirs;
@@ -661,16 +661,22 @@ public class FSImage implements NNStorageListener, Closeable {
     //
     // Load in bits
     //
+    latestEditsSD.read();
+    long editsVersion = storage.getLayoutVersion();
     latestNameSD.read();
-    needToSave |= loadFSImage(NNStorage.getStorageFile(latestNameSD,
-                                                       NameNodeFile.IMAGE));
+    long imageVersion = storage.getLayoutVersion();
+
+    loadFSImage(NNStorage.getStorageFile(latestNameSD, NameNodeFile.IMAGE));
     
     // Load latest edits
-    if (latestNameCheckpointTime > latestEditsCheckpointTime)
+    if (latestNameCheckpointTime > latestEditsCheckpointTime) {
       // the image is already current, discard edits
       needToSave |= true;
-    else // latestNameCheckpointTime == latestEditsCheckpointTime
-      needToSave |= (loadFSEdits(latestEditsSD) > 0);
+    } else { // latestNameCheckpointTime == latestEditsCheckpointTime
+      needToSave |= loadFSEdits(latestEditsSD);
+    }
+    needToSave |= (editsVersion != FSConstants.LAYOUT_VERSION 
+                    || imageVersion != FSConstants.LAYOUT_VERSION);
     
     return needToSave;
   }
@@ -680,7 +686,7 @@ public class FSImage implements NNStorageListener, Closeable {
    * filenames and blocks.  Return whether we should
    * "re-save" and consolidate the edit-logs
    */
-  boolean loadFSImage(File curFile) throws IOException {
+  void loadFSImage(File curFile) throws IOException {
     FSImageFormat.Loader loader = new FSImageFormat.Loader(
         conf, getFSNamesystem());
     loader.load(curFile);
@@ -697,44 +703,42 @@ public class FSImage implements NNStorageListener, Closeable {
           " is corrupt with MD5 checksum of " + readImageMd5 +
           " but expecting " + storage.getImageDigest());
     }
-
-    storage.namespaceID = loader.getLoadedNamespaceID();
-    storage.layoutVersion = loader.getLoadedImageVersion();
-
-    boolean needToSave =
-      loader.getLoadedImageVersion() != FSConstants.LAYOUT_VERSION;
-    return needToSave;
+    storage.setCheckpointTxId(loader.getLoadedImageTxId());
   }
 
   /**
    * Load and merge edits from two edits files
    * 
    * @param sd storage directory
-   * @return number of edits loaded
+   * @return true if the image should be re-saved
    * @throws IOException
    */
-  int loadFSEdits(StorageDirectory sd) throws IOException {
+  boolean loadFSEdits(StorageDirectory sd) throws IOException {
     FSEditLogLoader loader = new FSEditLogLoader(namesystem);
     
-    int numEdits = 0;
     EditLogFileInputStream edits =
       new EditLogFileInputStream(NNStorage.getStorageFile(sd,
                                                           NameNodeFile.EDITS));
-    
-    numEdits = loader.loadFSEdits(edits);
+    long startingTxId = storage.getCheckpointTxId() + 1;
+    long numLoaded = loader.loadFSEdits(edits, startingTxId);
+    startingTxId += numLoaded;
+
     edits.close();
     File editsNew = NNStorage.getStorageFile(sd, NameNodeFile.EDITS_NEW);
     
     if (editsNew.exists() && editsNew.length() > 0) {
       edits = new EditLogFileInputStream(editsNew);
-      numEdits += loader.loadFSEdits(edits);
+      numLoaded += loader.loadFSEdits(edits, startingTxId);
       edits.close();
     }
     
     // update the counts.
     getFSNamesystem().dir.updateCountForINodeWithQuota();    
     
-    return numEdits;
+    // update the txid for the edit log
+    editLog.setNextTxId(storage.getCheckpointTxId() + numLoaded + 1);
+    
+    return numLoaded > 0;
   }
 
   /**
@@ -745,6 +749,7 @@ public class FSImage implements NNStorageListener, Closeable {
     FSImageCompression compression = FSImageCompression.createCompression(conf);
     saver.save(newFile, getFSNamesystem(), compression);
     storage.setImageDigest(saver.getSavedDigest());
+    storage.setCheckpointTxId(editLog.getLastWrittenTxId());
   }
 
   /**

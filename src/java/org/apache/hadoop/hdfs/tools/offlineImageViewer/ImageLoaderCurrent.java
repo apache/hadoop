@@ -156,6 +156,10 @@ class ImageLoaderCurrent implements ImageLoader {
 
       v.visit(ImageElement.GENERATION_STAMP, in.readLong());
 
+      if (imageVersion <= -28) {
+        v.visit(ImageElement.TRANSACTION_ID, in.readLong());
+      }
+
       if (imageVersion <= -25) {
         boolean isCompressed = in.readBoolean();
         v.visit(ImageElement.IS_COMPRESSED, imageVersion);

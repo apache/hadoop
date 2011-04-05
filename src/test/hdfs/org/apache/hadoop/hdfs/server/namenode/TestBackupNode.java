@@ -171,6 +171,14 @@ public class TestBackupNode extends TestCase {
       //
       backup = startBackupNode(conf, op, 1);
       waitCheckpointDone(backup);
+
+      for (int i = 0; i < 10; i++) {
+        writeFile(fileSys, new Path("file_" + i), replication);
+      }
+
+      backup.doCheckpoint();
+      waitCheckpointDone(backup);
+
     } catch(IOException e) {
       LOG.error("Error in TestBackupNode:", e);
       assertTrue(e.getLocalizedMessage(), false);

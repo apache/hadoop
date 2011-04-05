@@ -187,20 +187,27 @@ public class TestEditLogRace {
 
       startTransactionWorkers(namesystem, caughtErr);
 
+      long previousLogTxId = 1;
+
       for (int i = 0; i < NUM_ROLLS && caughtErr.get() == null; i++) {
         try {
           Thread.sleep(20);
         } catch (InterruptedException e) {}
 
         LOG.info("Starting roll " + i + ".");
-        editLog.rollEditLog();
-        LOG.info("Roll complete " + i + ".");
+        long nextTxId = 0L;
+        synchronized (editLog) {
+          editLog.rollEditLog();
+          nextTxId = editLog.getLastWrittenTxId() + 1;
+        }
+        LOG.info("Roll " + i + " complete before txid " + nextTxId);
 
-        verifyEditLogs(namesystem, fsimage);
+        verifyEditLogs(namesystem, fsimage, previousLogTxId);
 
         LOG.info("Starting purge " + i + ".");
         editLog.purgeEditLog();
         LOG.info("Complete purge " + i + ".");
+        previousLogTxId = nextTxId;
       }
     } finally {
       stopTransactionWorkers();
@@ -213,7 +220,8 @@ public class TestEditLogRace {
     }
   }
 
-  private void verifyEditLogs(FSNamesystem namesystem, FSImage fsimage)
+  private void verifyEditLogs(FSNamesystem namesystem, FSImage fsimage, 
+                              long startingTxId)
     throws IOException {
     // Verify that we can read in all the transactions that we have written.
     // If there were any corruptions, it is likely that the reading in
@@ -222,8 +230,9 @@ public class TestEditLogRace {
            fsimage.getStorage().dirIterator(NameNodeDirType.EDITS); it.hasNext();) {
       File editFile = fsimage.getStorage().getStorageFile(it.next(), NameNodeFile.EDITS);
       System.out.println("Verifying file: " + editFile);
-      int numEdits = new FSEditLogLoader(namesystem).loadFSEdits(
-        new EditLogFileInputStream(editFile));
+      FSEditLogLoader loader = new FSEditLogLoader(namesystem);
+      int numEdits = loader.loadFSEdits(new EditLogFileInputStream(editFile), 
+                                        startingTxId);
       System.out.println("Number of edits: " + numEdits);
     }
   }
@@ -265,14 +274,19 @@ public class TestEditLogRace {
         namesystem.enterSafeMode();
 
         // Verify edit logs before the save
-        verifyEditLogs(namesystem, fsimage);
+        // They should start with the first edit after the checkpoint
+        verifyEditLogs(namesystem, fsimage, 
+                       fsimage.getStorage().getCheckpointTxId() + 1);
 
         LOG.info("Save " + i + ": saving namespace");
         namesystem.saveNamespace();
         LOG.info("Save " + i + ": leaving safemode");
 
         // Verify that edit logs post save are also not corrupt
-        verifyEditLogs(namesystem, fsimage);
+        verifyEditLogs(namesystem, fsimage, 
+                       fsimage.getStorage().getCheckpointTxId() + 1);
+        assertEquals(fsimage.getStorage().getCheckpointTxId(), 
+                     editLog.getLastWrittenTxId());
 
         namesystem.leaveSafeMode(false);
         LOG.info("Save " + i + ": complete");
@@ -393,7 +407,9 @@ public class TestEditLogRace {
       doAnEditThread.join();
       assertNull(deferredException.get());
 
-      verifyEditLogs(namesystem, fsimage);
+      // Since we did one transaction before the saveNamespace, the new
+      // log starts at txid 2
+      verifyEditLogs(namesystem, fsimage, 2);
     } finally {
       LOG.info("Closing namesystem");
       if(namesystem != null) namesystem.close();
@@ -478,7 +494,9 @@ public class TestEditLogRace {
       doAnEditThread.join();
       assertNull(deferredException.get());
 
-      verifyEditLogs(namesystem, fsimage);
+      // Since we did one transaction before the saveNamespace, the new
+      // log starts at txid 2
+      verifyEditLogs(namesystem, fsimage, 2);
     } finally {
       LOG.info("Closing namesystem");
       if(namesystem != null) namesystem.close();

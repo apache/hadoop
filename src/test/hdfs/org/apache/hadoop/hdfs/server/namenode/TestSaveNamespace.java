@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyObject;
@@ -30,6 +31,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -41,6 +43,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.log4j.Level;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -57,6 +60,10 @@ import org.mockito.stubbing.Answer;
  * </ol>
  */
 public class TestSaveNamespace {
+  static {
+    ((Log4JLogger)FSImage.LOG).getLogger().setLevel(Level.ALL);
+  }
+  
   private static final Log LOG = LogFactory.getLog(TestSaveNamespace.class);
 
   private static class FaultySaveImage implements Answer<Void> {
@@ -307,7 +314,37 @@ public class TestSaveNamespace {
       }
     }
   }
+  
+  @Test
+  public void testTxIdPersistence() throws Exception {
+    Configuration conf = getConf();
+    NameNode.initMetrics(conf, NamenodeRole.ACTIVE);
+    NameNode.format(conf);
+    FSNamesystem fsn = new FSNamesystem(conf);
 
+    try {
+      assertEquals(0, fsn.getEditLog().getLastWrittenTxId());
+      doAnEdit(fsn, 1);
+      assertEquals(1, fsn.getEditLog().getLastWrittenTxId());
+      
+      fsn.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fsn.saveNamespace();
+      
+      // Shut down and restart
+      fsn.getFSImage().close();
+      fsn.close();
+      fsn = null;
+      
+      fsn = new FSNamesystem(conf);
+      assertEquals(1, fsn.getEditLog().getLastWrittenTxId());
+      
+    } finally {
+      if (fsn != null) {
+        fsn.close();
+      }
+    }
+  }
+  
   private void doAnEdit(FSNamesystem fsn, int id) throws IOException {
     // Make an edit
     fsn.mkdirs(

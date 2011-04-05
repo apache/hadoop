@@ -46,10 +46,12 @@ implements JournalStream {
    * an array of Writable arguments.
    * 
    * @param op operation
+   * @param txid the transaction ID of this operation
    * @param writables array of Writable arguments
    * @throws IOException
    */
-  abstract void write(byte op, Writable ... writables) throws IOException;
+  abstract void write(byte op, long txid, Writable ... writables)
+  throws IOException;
 
   /**
    * Create and initialize underlying persistent edits log storage.
