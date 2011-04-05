@@ -329,10 +329,10 @@ stopping hbase...............</programlisting></para>
             </indexterm>
         </title>
 
-        <para>HBase is a database, it uses a lot of files all at the same time.
-        The default ulimit -n -- i.e. user file limit -- of 1024 on *nix systems
-        is insufficient. Any significant amount of loading will lead you to <link
-        xlink:href="http://wiki.apache.org/hadoop/Hbase/FAQ#A6">FAQ: Why do I
+        <para>HBase is a database.  It uses a lot of files all at the same time.
+        The default ulimit -n -- i.e. user file limit -- of 1024 on most *nix systems
+        is insufficient (On mac os x its 256). Any significant amount of loading will
+        lead you to <link xlink:href="http://wiki.apache.org/hadoop/Hbase/FAQ#A6">FAQ: Why do I
         see "java.io.IOException...(Too many open files)" in my logs?</link>.
         You may also notice errors such as <programlisting>
       2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Exception increateBlockOutputStream java.io.EOFException
@@ -343,7 +343,12 @@ stopping hbase...............</programlisting></para>
         <varname>nproc</varname> setting; under load, a low-nproc
         setting could manifest as <classname>OutOfMemoryError</classname>
         <footnote><para>See Jack Levin's <link xlink:href="">major hdfs issues</link>
-        note up on the user list.</para></footnote>.
+                note up on the user list.</para></footnote>
+        <footnote><para>The requirement that a database requires upping of system limits
+        is not peculiar to HBase.  See for example the section
+        <emphasis>Setting Shell Limits for the Oracle User</emphasis> in
+        <link xlink:href="http://www.akadia.com/services/ora_linux_install_10g.html">
+        Short Guide to install Oracle 10 on Linux</link>.</para></footnote>.
     </para>
 
         <para>To be clear, upping the file descriptors and nproc for the user who is
