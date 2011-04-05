@@ -134,6 +134,7 @@ Release 0.91.0 - Unreleased
    HBASE-3559  Move report of split to master OFF the heartbeat channel
    HBASE-3573  Move shutdown messaging OFF hearbeat; prereq for fix of
                hbase-1502
+   HBASE-3071  Graceful decommissioning of a regionserver
 
 
   NEW FEATURES

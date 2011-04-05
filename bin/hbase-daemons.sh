@@ -38,7 +38,7 @@ bin=`cd "$bin">/dev/null; pwd`
 . $bin/hbase-config.sh
 
 remote_cmd="cd ${HBASE_HOME}; $bin/hbase-daemon.sh --config ${HBASE_CONF_DIR} $@"
-args="--config ${HBASE_CONF_DIR} $remote_cmd"
+args="--hosts ${HBASE_REGIONSERVERS} --config ${HBASE_CONF_DIR} $remote_cmd"
 
 command=$2
 case $command in

@@ -276,5 +276,9 @@ if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
   HBASE_OPTS="$HBASE_OPTS -Djava.library.path=$JAVA_LIBRARY_PATH"
 fi
 
-# run it
-exec "$JAVA" $JAVA_HEAP_MAX $HBASE_OPTS -classpath "$CLASSPATH" $CLASS "$@"
+# Exec unless HBASE_NOEXEC is set.
+if [ "${HBASE_NOEXEC}" != "" ]; then
+  "$JAVA" $JAVA_HEAP_MAX $HBASE_OPTS -classpath "$CLASSPATH" $CLASS "$@"
+else
+  exec "$JAVA" $JAVA_HEAP_MAX $HBASE_OPTS -classpath "$CLASSPATH" $CLASS "$@"
+fi

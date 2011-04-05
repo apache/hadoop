@@ -1076,6 +1076,56 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
     <section xml:id="compression.tool"><title>Compression Tool</title>
         <para>See <link linkend="compression.tool" >Compression Tool</link>.</para>
     </section>
+    <section xml:id="decommission"><title>Node Decommission</title>
+        <para>You can have a node gradually shed its load and then shutdown using the
+            <command>graceful_restart.sh</command> script.  Here is its usage:
+            <computeroutput>$ ./bin/graceful_stop.sh 
+Usage: graceful_stop.sh [--config &amp;conf-dir>] [--restart] [--reload] &amp;hostname>
+  restart     If we should restart after graceful stop
+  reload      Move offloaded regions back on to the stopped server
+  debug       Move offloaded regions back on to the stopped server
+  hostname    Hostname of server we are to stop</computeroutput>
+        </para>
+        <para>
+            To decommission a loaded regionserver, run the following:
+            <programlisting>$  ./bin/graceful_stop.sh HOSTNAME</programlisting>
+            where <varname>HOSTNAME</varname> is the host carrying the RegionServer
+            you would decommission.  The script will move the regions off the
+            decommissioned regionserver one at a time to minimize region churn.
+            It will verify the region deployed in the new location before it
+            will moves the next region and so on until the decommissioned server
+            is carrying zero regions.  At this point, the <command>graceful_stop</command>
+            tells the RegionServer stop.  The master will at this point notice the
+            RegionServer gone but all regions will have already been redeployed
+            and because the RegionServer went down cleanly, there will be no
+            WAL logs to split.
+            <note><title>Load Balancer</title>
+            <para> 
+                It is assumed that the Region Load Balancer is disabled while the
+                <command>graceful_stop</command> script runs (otherwise the balancer
+                and the decommission script will end up fighting over region deployments).
+                Use the shell to disable the balancer:
+                <programlisting>hbase(main):001:0> balance_switch false
+true
+0 row(s) in 0.3590 seconds</programlisting>
+This turns the balancer OFF.  To reenable, do:
+                <programlisting>hbase(main):001:0> balance_switch true
+false
+0 row(s) in 0.3590 seconds</programlisting>
+            </para> 
+        </note>
+        </para>
+        <para>
+            You can also ask this script to restart a RegionServer after the shutdown
+            AND move its old regions back into place.  The latter you might do to
+            retain data locality.  A primitive rolling restart might be effected by
+            running something like the following:
+            <programlisting>$ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --reload --debug $i; done &amp;> /tmp/log.txt &amp;
+            </programlisting>
+            Tail the output of <filename>/tmp/log.txt</filename> to follow the scripts
+            progress.
+        </para>
+    </section>
   </appendix>
 
   <appendix xml:id="compression">
