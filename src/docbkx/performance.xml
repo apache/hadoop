@@ -92,9 +92,47 @@
 
   <section xml:id="perf.batch.loading">
     <title>Batch Loading</title>
+    <para>Use the bulk load tool if you can.  See
+        <link xlink:href="http://hbase.apache.org/bulk-loads.html">Bulk Loads</link>.
+        Otherwise, pay attention to the below.
+    </para>
 
-    <para>See the section on <link linkend="precreate.regions">Pre Creating
-    Regions</link> as well as bulk loading</para>
+  <section xml:id="precreate.regions">
+  <title>
+  Table Creation: Pre-Creating Regions
+  </title>
+<para>
+Tables in HBase are initially created with one region by default.  For bulk imports, this means that all clients will write to the same region until it is large enough to split and become distributed across the cluster.  A useful pattern to speed up the bulk import process is to pre-create empty regions.  Be somewhat conservative in this, because too-many regions can actually degrade performance.  An example of pre-creation using hex-keys is as follows (note:  this example may need to be tweaked to the individual applications keys):
+</para>
+<para>
+<programlisting>public static boolean createTable(HBaseAdmin admin, HTableDescriptor table, byte[][] splits)
+throws IOException {
+  try {
+    admin.createTable( table, splits );
+    return true;
+  } catch (TableExistsException e) {
+    logger.info("table " + table.getNameAsString() + " already exists");
+    // the table already exists...
+    return false;  
+  }
+}
+
+public static byte[][] getHexSplits(String startKey, String endKey, int numRegions) {
+  byte[][] splits = new byte[numRegions-1][];
+  BigInteger lowestKey = new BigInteger(startKey, 16);
+  BigInteger highestKey = new BigInteger(endKey, 16);
+  BigInteger range = highestKey.subtract(lowestKey);
+  BigInteger regionIncrement = range.divide(BigInteger.valueOf(numRegions));
+  lowestKey = lowestKey.add(regionIncrement);
+  for(int i=0; i &lt; numRegions-1;i++) {
+    BigInteger key = lowestKey.add(regionIncrement.multiply(BigInteger.valueOf(i)));
+    byte[] b = String.format("%016x", key).getBytes();
+    splits[i] = b;
+  }
+  return splits;
+}</programlisting>
+  </para>
+  </section>
   </section>
 
   <section>
