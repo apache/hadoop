@@ -1850,10 +1850,12 @@ public class DataNode extends Configured
     "LastPacketInBlock" set to true or with a zero length. If there is 
     no checksum error, it replies to DataNode with OP_STATUS_CHECKSUM_OK:
     
-    Client optional response at the end of data transmission :
+    Client optional response at the end of data transmission of any length:
       +------------------------------+
       | 2 byte OP_STATUS_CHECKSUM_OK |
       +------------------------------+
+    The DataNode always checks OP_STATUS_CHECKSUM_OK. It will close the
+    client connection if it is absent.
     
     PACKET : Contains a packet header, checksum and data. Amount of data
     ======== carried is set by BUFFER_SIZE.
