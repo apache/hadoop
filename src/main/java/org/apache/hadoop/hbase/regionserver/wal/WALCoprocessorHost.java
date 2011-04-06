@@ -95,24 +95,19 @@ public class WALCoprocessorHost
    */
   public boolean preWALWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit)
       throws IOException {
-    try {
-      boolean bypass = false;
-      coprocessorLock.readLock().lock();
-      for (WALEnvironment env: coprocessors) {
-        if (env.getInstance() instanceof 
-            org.apache.hadoop.hbase.coprocessor.WALObserver) {
-          ((org.apache.hadoop.hbase.coprocessor.WALObserver)env.getInstance()).
-              preWALWrite(env, info, logKey, logEdit);
-          bypass |= env.shouldBypass();
-          if (env.shouldComplete()) {
-            break;
-          }
+    boolean bypass = false;
+    for (WALEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof
+          org.apache.hadoop.hbase.coprocessor.WALObserver) {
+        ((org.apache.hadoop.hbase.coprocessor.WALObserver)env.getInstance()).
+            preWALWrite(env, info, logKey, logEdit);
+        bypass |= env.shouldBypass();
+        if (env.shouldComplete()) {
+          break;
         }
       }
-      return bypass;
-    } finally {
-      coprocessorLock.readLock().unlock();
     }
+    return bypass;
   }
 
   /**
@@ -123,20 +118,15 @@ public class WALCoprocessorHost
    */
   public void postWALWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit)
       throws IOException {
-    try {
-      coprocessorLock.readLock().lock();
-      for (WALEnvironment env: coprocessors) {
-        if (env.getInstance() instanceof 
-            org.apache.hadoop.hbase.coprocessor.WALObserver) {
-          ((org.apache.hadoop.hbase.coprocessor.WALObserver)env.getInstance()).
-              postWALWrite(env, info, logKey, logEdit);
-          if (env.shouldComplete()) {
-            break;
-          }
+    for (WALEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof
+          org.apache.hadoop.hbase.coprocessor.WALObserver) {
+        ((org.apache.hadoop.hbase.coprocessor.WALObserver)env.getInstance()).
+            postWALWrite(env, info, logKey, logEdit);
+        if (env.shouldComplete()) {
+          break;
         }
       }
-    } finally {
-      coprocessorLock.readLock().unlock();
     }
   }
 }

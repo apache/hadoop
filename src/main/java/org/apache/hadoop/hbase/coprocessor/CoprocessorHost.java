@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.SortedCopyOnWriteSet;
 import org.apache.hadoop.hbase.util.VersionInfo;
 
 import java.io.File;
@@ -38,7 +39,6 @@ import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Provides the common setup framework and runtime services for coprocessor
@@ -56,9 +56,9 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
 
   private static final Log LOG = LogFactory.getLog(CoprocessorHost.class);
   /** Ordered set of loaded coprocessors with lock */
-  protected final ReentrantReadWriteLock coprocessorLock = new ReentrantReadWriteLock();
-  protected Set<E> coprocessors =
-    new TreeSet<E>(new EnvironmentPriorityComparator());
+  protected SortedSet<E> coprocessors =
+      new SortedCopyOnWriteSet<E>(new EnvironmentPriorityComparator());
+  protected Configuration conf;
   // unique file prefix to use for local copies of jars when classloading
   protected String pathPrefix;
 
@@ -79,6 +79,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       return;
     StringTokenizer st = new StringTokenizer(defaultCPClasses, ",");
     int priority = Coprocessor.Priority.SYSTEM.intValue();
+    List<E> configured = new ArrayList<E>();
     while (st.hasMoreTokens()) {
       String className = st.nextToken();
       if (findCoprocessor(className) != null) {
@@ -88,7 +89,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       Thread.currentThread().setContextClassLoader(cl);
       try {
         implClass = cl.loadClass(className);
-        load(implClass, Coprocessor.Priority.SYSTEM);
+        configured.add(loadInstance(implClass, Coprocessor.Priority.SYSTEM));
         LOG.info("System coprocessor " + className + " was loaded " +
             "successfully with priority (" + priority++ + ").");
       } catch (ClassNotFoundException e) {
@@ -99,6 +100,9 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
             e.getMessage());
       }
     }
+
+    // add entire set to the collection for COW efficiency
+    coprocessors.addAll(configured);
   }
 
   /**
@@ -109,7 +113,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * @throws java.io.IOException Exception
    */
   @SuppressWarnings("deprecation")
-  public void load(Path path, String className, Coprocessor.Priority priority)
+  public E load(Path path, String className, Coprocessor.Priority priority)
       throws IOException {
     Class<?> implClass = null;
 
@@ -163,7 +167,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       }
     }
 
-    load(implClass, priority);
+    return loadInstance(implClass, priority);
   }
 
   /**
@@ -172,6 +176,12 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * @throws java.io.IOException Exception
    */
   public void load(Class<?> implClass, Coprocessor.Priority priority)
+      throws IOException {
+    E env = loadInstance(implClass, priority);
+    coprocessors.add(env);
+  }
+
+  public E loadInstance(Class<?> implClass, Coprocessor.Priority priority)
       throws IOException {
     // create the instance
     Coprocessor impl;
@@ -189,13 +199,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     if (env instanceof Environment) {
       ((Environment)env).startup();
     }
-
-    try {
-      coprocessorLock.writeLock().lock();
-      coprocessors.add(env);
-    } finally {
-      coprocessorLock.writeLock().unlock();
-    }
+    return env;
   }
 
   /**
@@ -220,18 +224,13 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    */
   public Coprocessor findCoprocessor(String className) {
     // initialize the coprocessors
-    try {
-      coprocessorLock.readLock().lock();
-      for (E env: coprocessors) {
-        if (env.getInstance().getClass().getName().equals(className) ||
-            env.getInstance().getClass().getSimpleName().equals(className)) {
-          return env.getInstance();
-        }
+    for (E env: coprocessors) {
+      if (env.getInstance().getClass().getName().equals(className) ||
+          env.getInstance().getClass().getSimpleName().equals(className)) {
+        return env.getInstance();
       }
-      return null;
-    } finally {
-      coprocessorLock.readLock().unlock();
     }
+    return null;
   }
 
   /**

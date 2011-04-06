@@ -139,6 +139,8 @@ Release 0.91.0 - Unreleased
                (Doug Meil via Stack)
    HBASE-3738  Book.xml - expanding Architecture Client section
                (Doug Meil via Stack)
+   HBASE-3587  Eliminate use of read-write lock to guard loaded
+               coprocessor collection
 
   TASK
    HBASE-3559  Move report of split to master OFF the heartbeat channel
