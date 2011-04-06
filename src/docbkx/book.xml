@@ -232,49 +232,55 @@ throws InterruptedException, IOException {
    <section xml:id="rs_metrics">
    <title>Region Server Metrics</title>
           <section xml:id="hbase.regionserver.blockCacheCount"><title><varname>hbase.regionserver.blockCacheCount</varname></title>
-          <para></para>
+          <para>Block cache item count in memory.  This is the number of blocks of storefiles (HFiles) in the cache.</para>
 		  </section>
          <section xml:id="hbase.regionserver.blockCacheFree"><title><varname>hbase.regionserver.blockCacheFree</varname></title>
-          <para></para>
+          <para>Block cache memory available (MB).</para>
 		  </section>
          <section xml:id="hbase.regionserver.blockCacheHitRatio"><title><varname>hbase.regionserver.blockCacheHitRatio</varname></title>
-          <para></para>
+          <para>Block cache hit ratio (0 to 100).  TODO:  describe impact to ratio where read requests that have cacheBlocks=false</para>
 		  </section>
           <section xml:id="hbase.regionserver.blockCacheSize"><title><varname>hbase.regionserver.blockCacheSize</varname></title>
-          <para></para>
+          <para>Block cache size in memory (MB)</para>
+		  </section>
+          <section xml:id="hbase.regionserver.compactionQueueSize"><title><varname>hbase.regionserver.compactionQueueSize</varname></title>
+          <para>Size of the compaction queue.</para>
 		  </section>
           <section xml:id="hbase.regionserver.fsReadLatency_avg_time"><title><varname>hbase.regionserver.fsReadLatency_avg_time</varname></title>
-          <para></para>
+          <para>Filesystem read latency (ms)</para>
 		  </section>
           <section xml:id="hbase.regionserver.fsReadLatency_num_ops"><title><varname>hbase.regionserver.fsReadLatency_num_ops</varname></title>
-          <para></para>
+          <para>TODO</para>
 		  </section>
           <section xml:id="hbase.regionserver.fsSyncLatency_avg_time"><title><varname>hbase.regionserver.fsSyncLatency_avg_time</varname></title>
-          <para></para>
+          <para>Filesystem sync latency (ms)</para>
 		  </section>
           <section xml:id="hbase.regionserver.fsSyncLatency_num_ops"><title><varname>hbase.regionserver.fsSyncLatency_num_ops</varname></title>
-          <para></para>
+          <para>TODO</para>
 		  </section>
           <section xml:id="hbase.regionserver.fsWriteLatency_avg_time"><title><varname>hbase.regionserver.fsWriteLatency_avg_time</varname></title>
-          <para></para>
+          <para>Filesystem write latency (ms)</para>
 		  </section>
           <section xml:id="hbase.regionserver.fsWriteLatency_num_ops"><title><varname>hbase.regionserver.fsWriteLatency_num_ops</varname></title>
-          <para></para>
+          <para>TODO</para>
 		  </section>
           <section xml:id="hbase.regionserver.memstoreSizeMB"><title><varname>hbase.regionserver.memstoreSizeMB</varname></title>
-          <para></para>
+          <para>Sum of all the memstore sizes in this regionserver (MB)</para>
 		  </section>
           <section xml:id="hbase.regionserver.regions"><title><varname>hbase.regionserver.regions</varname></title>
-          <para></para>
+          <para>Number of regions served by the regionserver</para>
 		  </section>
           <section xml:id="hbase.regionserver.requests"><title><varname>hbase.regionserver.requests</varname></title>
-          <para></para>
+          <para>Total number of read and write requests.  Requests correspond to regionserver RPC calls, thus a single Get will result in 1 request, but a Scan with caching set to 1000 will result in 1 request for each 'next' call (i.e., not each row).  A bulk-load request will constitute 1 request per HFile.</para>
 		  </section>
           <section xml:id="hbase.regionserver.storeFileIndexSizeMB"><title><varname>hbase.regionserver.storeFileIndexSizeMB</varname></title>
-          <para></para>
+          <para>Sum of all the storefile index sizes in this regionserver (MB)</para>
 		  </section>
           <section xml:id="hbase.regionserver.stores"><title><varname>hbase.regionserver.stores</varname></title>
-          <para></para>
+          <para>Number of stores open on the regionserver.  A store corresponds to a column family.  For example, if a table (which contains the column family) has 3 regions on a regionserver, there will be 3 stores open for that column family. </para>
+		  </section>
+          <section xml:id="hbase.regionserver.storeFiles"><title><varname>hbase.regionserver.storeFiles</varname></title>
+          <para>Number of store filles open on the regionserver.  A store may have more than one storefile (HFile).</para>
 		  </section>
    </section>
   </chapter>
@@ -1055,24 +1061,38 @@ throws InterruptedException, IOException {
     </section>
     <section xml:id="decommission"><title>Node Decommission</title>
         <para>You can have a node gradually shed its load and then shutdown using the
-            <command>graceful_restart.sh</command> script.  Here is its usage:
-            <computeroutput>$ ./bin/graceful_stop.sh 
-Usage: graceful_stop.sh [--config &amp;conf-dir>] [--restart] [--reload] &amp;hostname>
-  restart     If we should restart after graceful stop
-  reload      Move offloaded regions back on to the stopped server
-  debug       Move offloaded regions back on to the stopped server
-  hostname    Hostname of server we are to stop</computeroutput>
+            <filename>graceful_stop.sh</filename> script.  Here is its usage:
+            <programlisting>$ ./bin/graceful_stop.sh 
+Usage: graceful_stop.sh [--config &amp;conf-dir>] [--restart] [--reload] [--thrift] [--rest] &amp;hostname>
+ thrift      If we should stop/start thrift before/after the hbase stop/start
+ rest        If we should stop/start rest before/after the hbase stop/start
+ restart     If we should restart after graceful stop
+ reload      Move offloaded regions back on to the stopped server
+ debug       Move offloaded regions back on to the stopped server
+ hostname    Hostname of server we are to stop</programlisting>
         </para>
         <para>
             To decommission a loaded regionserver, run the following:
-            <programlisting>$  ./bin/graceful_stop.sh HOSTNAME</programlisting>
+            <programlisting>$ ./bin/graceful_stop.sh HOSTNAME</programlisting>
             where <varname>HOSTNAME</varname> is the host carrying the RegionServer
-            you would decommission.  The script will move the regions off the
+            you would decommission.  
+            <note><title>On <varname>HOSTNAME</varname></title>
+                <para>The <varname>HOSTNAME</varname> passed to <filename>graceful_stop.sh</filename>
+            must match the hostname that hbase is using to identify regionservers.
+            Check the list of regionservers in the master UI for how HBase is
+            referring to servers. Its usually hostname but can also be FQDN.
+            Whatever HBase is using, this is what you should pass the
+            <filename>graceful_stop.sh</filename> decommission
+            script.  If you pass IPs, the script is not yet smart enough to make
+            a hostname (or FQDN) of it and so it will fail when it checks if server is
+            currently running; the graceful unloading of regions will not run.
+            </para>
+        </note> The <filename>graceful_stop.sh</filename> script will move the regions off the
             decommissioned regionserver one at a time to minimize region churn.
             It will verify the region deployed in the new location before it
             will moves the next region and so on until the decommissioned server
-            is carrying zero regions.  At this point, the <command>graceful_stop</command>
-            tells the RegionServer stop.  The master will at this point notice the
+            is carrying zero regions.  At this point, the <filename>graceful_stop.sh</filename>
+            tells the RegionServer <command>stop</command>.  The master will at this point notice the
             RegionServer gone but all regions will have already been redeployed
             and because the RegionServer went down cleanly, there will be no
             WAL logs to split.

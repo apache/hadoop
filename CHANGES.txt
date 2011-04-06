@@ -135,6 +135,8 @@ Release 0.91.0 - Unreleased
                (Ted Yu via Stack)
    HBASE-3694  high multiput latency due to checking global mem store size
                in a synchronized function (Liyin Tang via Stack)
+   HBASE-3710  Book.xml - fill out descriptions of metrics
+               (Doug Meil via Stack)
 
   TASK
    HBASE-3559  Move report of split to master OFF the heartbeat channel
