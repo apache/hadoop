@@ -19,7 +19,7 @@
     <title>Java</title>
 
     <section xml:id="gc">
-      <title>The Garage Collector and HBase</title>
+      <title>The Garbage Collector and HBase</title>
 
       <section xml:id="gcpause">
         <title>Long GC pauses</title>
