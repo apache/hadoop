@@ -45,7 +45,8 @@ Trunk (unreleased changes)
 
     HADOOP-7059. Remove "unused" warning in native code.  (Noah Watkins via eli)
 
-    HADOOP-6864. Provide a JNI-based implementation of ShellBasedUnixGroupsNetgroupMapping 
+    HADOOP-6864. Provide a JNI-based implementation of
+     ShellBasedUnixGroupsNetgroupMapping
     (implementation of GroupMappingServiceProvider) (Erik Seffl via boryas)
 
     HADOOP-7078. Improve javadocs for RawComparator interface.
@@ -82,9 +83,6 @@ Trunk (unreleased changes)
     (Daryn Sharp via szetszwo)
 
   OPTIMIZATIONS
-    
-    HADOOP-6949. Reduce RPC packet size of primitive arrays using
-    ArrayPrimitiveWritable instead of ObjectWritable. (Matt Foley via suresh)
 
   BUG FIXES
 
@@ -363,6 +361,9 @@ Release 0.22.0 - Unreleased
 
     HADOOP-6683. ZlibCompressor does not fully utilize the buffer.
     (Kang Xiao via eli)
+
+    HADOOP-6949. Reduce RPC packet size of primitive arrays using
+    ArrayPrimitiveWritable instead of ObjectWritable. (Matt Foley via suresh)
 
   BUG FIXES
 
