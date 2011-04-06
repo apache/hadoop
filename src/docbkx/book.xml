@@ -707,8 +707,38 @@ throws InterruptedException, IOException {
     </para>
     <para>Administrative functions are handled through <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html">HBaseAdmin</link>
     </para>
-    <para>For connection configuration information, see the <link linkend="client_dependencies">configuration</link> section. 
-    </para>
+	   <section xml:id="client.connections"><title>Connections</title>
+         <para>For connection configuration information, see the <link linkend="client_dependencies">configuration</link> section. 
+         </para>
+         <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>
+instances are not thread-safe.  When creating HTable instances, it is advisable to use the same <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HBaseConfiguration">HBaseConfiguration</link>
+instance.  This will ensure sharing of zookeeper and socket instances to the region servers
+which is usually what you want.  For example, this is preferred:
+		<programlisting>HBaseConfiguration conf = HBaseConfiguration.create();
+HTable table1 = new HTable(conf, "myTable");
+HTable table2 = new HTable(conf, "myTable");</programlisting>
+		a s opposed to this:
+        <programlisting>HBaseConfiguration conf1 = HBaseConfiguration.create();
+HTable table1 = new HTable(conf1, "myTable");
+HBaseConfiguration conf2 = HBaseConfiguration.create();
+HTable table2 = new HTable(conf2, "myTable");</programlisting>
+        For more information about how connections are handled in the HBase client,
+        see <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HConnectionManager.html">HConnectionManager</link>.
+          </para>
+   	  </section>
+	   <section xml:id="client.writebuffer"><title>WriteBuffer and Batch Methods</title>
+           <para>If <link linkend="perf.hbase.client.autoflush">autoflush</link> is turned off on <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>,
+               <classname>Put</classname>s are sent to region servers when the writebuffer
+               is filled.  The writebuffer is 2MB by default.  Before an HTable instance is
+               discarded, either <methodname>close()</methodname> or
+               <methodname>flushCommits()</methodname> should be invoked so Puts
+               will not be lost. 
+	   </para> 
+       <para>For fine-grained control of batching of
+           <classname>Put</classname>s or <classname>Delete</classname>s,
+           see the <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#batch%28java.util.List%29">batch</link> methods on HTable.
+	   </para>
+	   </section>
 	</section>
     
     <section xml:id="daemons">
