@@ -63,6 +63,8 @@ Release 0.91.0 - Unreleased
    HBASE-3728  NPE in HTablePool.closeTablePool (Ted Yu via Stack)
    HBASE-3733  MemStoreFlusher.flushOneForGlobalPressure() shouldn't
                be using TreeSet for HRegion (Ted Yu via J-D)
+   HBASE-3739  HMaster.getProtocolVersion() should distinguish
+               HMasterInterface and HMasterRegionInterface versions
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

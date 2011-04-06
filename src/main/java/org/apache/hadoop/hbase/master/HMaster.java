@@ -485,7 +485,14 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   }
 
   public long getProtocolVersion(String protocol, long clientVersion) {
-    return HMasterInterface.VERSION;
+    if (HMasterInterface.class.getName().equals(protocol)) {
+      return HMasterInterface.VERSION;
+    } else if (HMasterRegionInterface.class.getName().equals(protocol)) {
+      return HMasterRegionInterface.VERSION;
+    }
+    // unknown protocol
+    LOG.warn("Version requested for unimplemented protocol: "+protocol);
+    return -1;
   }
 
   /** @return InfoServer object. Maybe null.*/
