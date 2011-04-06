@@ -23,7 +23,9 @@
 # Move regions off a server then stop it.  Optionally restart and reload.
 # Turn off the balancer before running this script.
 function usage {
-  echo "Usage: graceful_stop.sh [--config <conf-dir>] [--restart] [--reload] <hostname>" 
+  echo "Usage: graceful_stop.sh [--config <conf-dir>] [--restart] [--reload] [--thrift] [--rest] <hostname>" 
+  echo " thrift      If we should stop/start thrift before/after the hbase stop/start"
+  echo " rest        If we should stop/start rest before/after the hbase stop/start"
   echo " restart     If we should restart after graceful stop"
   echo " reload      Move offloaded regions back on to the stopped server"
   echo " debug       Move offloaded regions back on to the stopped server"
@@ -43,9 +45,13 @@ bin=`cd "$bin">/dev/null; pwd`
 restart=
 reload=
 debug=
+thrift=
+rest=
 while [ $# -gt 0 ]
 do
   case "$1" in
+    --thrift)  thrift=true; shift;;
+    --rest)  rest=true; shift;;
     --restart)  restart=true; shift;;
     --reload)   reload=true; shift;;
     --debug)    debug="--debug"; shift;;
@@ -69,9 +75,22 @@ echo "Unloaded $hostname region(s)"
 # Stop the server. Have to put hostname into its own little file for hbase-daemons.sh
 hosts="/tmp/$(basename $0).$$.tmp"
 echo $hostname >> $hosts
+if [ "$thrift" != "" ]; then
+  "$bin"/hbase-daemons.sh --hosts ${hosts} stop thrift
+fi
+if [ "$rest" != "" ]; then
+  "$bin"/hbase-daemons.sh --hosts ${hosts} stop rest
+fi
 "$bin"/hbase-daemons.sh --hosts ${hosts} stop regionserver
 if [ "$restart" != "" ]; then
   "$bin"/hbase-daemons.sh --hosts ${hosts} start regionserver
+  if [ "$thrift" != "" ]; then
+    # -b 0.0.0.0 says listen on all interfaces rather than just default.
+    "$bin"/hbase-daemons.sh --hosts ${hosts} start thrift -b 0.0.0.0
+  fi
+  if [ "$rest" != "" ]; then
+    "$bin"/hbase-daemons.sh --hosts ${hosts} start rest
+  fi
   if [ "$reload" != "" ]; then
     echo "Reloading $hostname region(s)"
     HBASE_NOEXEC=true "$bin"/hbase org.jruby.Main "$bin"/region_mover.rb --file=$filename $debug load $hostname

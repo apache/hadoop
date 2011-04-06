@@ -141,6 +141,7 @@ Release 0.91.0 - Unreleased
    HBASE-3573  Move shutdown messaging OFF hearbeat; prereq for fix of
                hbase-1502
    HBASE-3071  Graceful decommissioning of a regionserver
+   HBASE-3748  Add rolling of thrift/rest daemons to graceful_stop.sh script
 
 
   NEW FEATURES
