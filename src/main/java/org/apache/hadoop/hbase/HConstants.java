@@ -153,6 +153,12 @@ public final class HConstants {
   /** Maximum value length, enforced on KeyValue construction */
   public static final int MAXIMUM_VALUE_LENGTH = Integer.MAX_VALUE;
 
+  /** name of the file for unique cluster ID */
+  public static final String CLUSTER_ID_FILE_NAME = "hbase.id";
+
+  /** Configuration key storing the cluster ID */
+  public static final String CLUSTER_ID = "hbase.cluster.id";
+
   // Always store the location of the root table's HRegion.
   // This HRegion is never split.
 

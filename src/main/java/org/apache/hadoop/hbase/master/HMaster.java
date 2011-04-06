@@ -25,7 +25,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -82,6 +81,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.hadoop.hbase.zookeeper.ClusterId;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -347,6 +347,10 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
     this.fileSystemManager = new MasterFileSystem(this, metrics);
+    // publish cluster ID
+    ClusterId.setClusterId(this.zooKeeper,
+        fileSystemManager.getClusterId());
+
     this.connection = HConnectionManager.getConnection(conf);
     this.executorService = new ExecutorService(getServerName());
 
@@ -1084,7 +1088,12 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     status.setServerInfo(serverManager.getOnlineServers().values());
     status.setDeadServers(serverManager.getDeadServers());
     status.setRegionsInTransition(assignmentManager.getRegionsInTransition());
+    status.setClusterId(fileSystemManager.getClusterId());
     return status;
+  }
+
+  public String getClusterId() {
+    return fileSystemManager.getClusterId();
   }
 
   @Override

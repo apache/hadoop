@@ -45,15 +45,25 @@ import org.apache.hadoop.io.VersionedWritable;
  * <li>Detailed region server loading and resource usage information,
  *  per server and per region.</li>
  *  <li>Regions in transition at master</li>
+ *  <li>The unique cluster ID</li>
  * </ul>
  */
 public class ClusterStatus extends VersionedWritable {
-  private static final byte VERSION = 0;
+  /**
+   * Version for object serialization.  Incremented for changes in serialized
+   * representation.
+   * <dl>
+   *   <dt>0</dt> <dd>initial version</dd>
+   *   <dt>1</dt> <dd>added cluster ID</dd>
+   * </dl>
+   */
+  private static final byte VERSION = 1;
 
   private String hbaseVersion;
   private Collection<HServerInfo> liveServerInfo;
   private Collection<String> deadServers;
   private Map<String, RegionState> intransition;
+  private String clusterId;
 
   /**
    * Constructor, for Writable
@@ -194,6 +204,14 @@ public class ClusterStatus extends VersionedWritable {
     this.intransition = m;
   }
 
+  public String getClusterId() {
+    return clusterId;
+  }
+
+  public void setClusterId(String id) {
+    this.clusterId = id;
+  }
+
   //
   // Writable
   //
@@ -214,6 +232,7 @@ public class ClusterStatus extends VersionedWritable {
       out.writeUTF(e.getKey());
       e.getValue().write(out);
     }
+    out.writeUTF(clusterId);
   }
 
   public void readFields(DataInput in) throws IOException {
@@ -239,5 +258,6 @@ public class ClusterStatus extends VersionedWritable {
       regionState.readFields(in);
       this.intransition.put(key, regionState);
     }
+    this.clusterId = in.readUTF();
   }
 }

@@ -275,6 +275,103 @@ public class FSUtils {
   }
 
   /**
+   * Checks that a cluster ID file exists in the HBase root directory
+   * @param fs the root directory FileSystem
+   * @param rootdir the HBase root directory in HDFS
+   * @param wait how long to wait between retries
+   * @return <code>true</code> if the file exists, otherwise <code>false</code>
+   * @throws IOException if checking the FileSystem fails
+   */
+  public static boolean checkClusterIdExists(FileSystem fs, Path rootdir,
+      int wait) throws IOException {
+    while (true) {
+      try {
+        Path filePath = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
+        return fs.exists(filePath);
+      } catch (IOException ioe) {
+        if (wait > 0) {
+          LOG.warn("Unable to check cluster ID file in " + rootdir.toString() +
+              ", retrying in "+wait+"msec: "+StringUtils.stringifyException(ioe));
+          try {
+            Thread.sleep(wait);
+          } catch (InterruptedException ie) {
+            Thread.interrupted();
+            break;
+          }
+        } else {
+          throw ioe;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Returns the value of the unique cluster ID stored for this HBase instance.
+   * @param fs the root directory FileSystem
+   * @param rootdir the path to the HBase root directory
+   * @return the unique cluster identifier
+   * @throws IOException if reading the cluster ID file fails
+   */
+  public static String getClusterId(FileSystem fs, Path rootdir)
+      throws IOException {
+    Path idPath = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
+    String clusterId = null;
+    if (fs.exists(idPath)) {
+      FSDataInputStream in = fs.open(idPath);
+      try {
+        clusterId = in.readUTF();
+      } catch (EOFException eof) {
+        LOG.warn("Cluster ID file "+idPath.toString()+" was empty");
+      } finally{
+        in.close();
+      }
+    } else {
+      LOG.warn("Cluster ID file does not exist at " + idPath.toString());
+    }
+    return clusterId;
+  }
+
+  /**
+   * Writes a new unique identifier for this cluster to the "hbase.id" file
+   * in the HBase root directory
+   * @param fs the root directory FileSystem
+   * @param rootdir the path to the HBase root directory
+   * @param clusterId the unique identifier to store
+   * @param wait how long (in milliseconds) to wait between retries
+   * @throws IOException if writing to the FileSystem fails and no wait value
+   */
+  public static void setClusterId(FileSystem fs, Path rootdir, String clusterId,
+      int wait) throws IOException {
+    while (true) {
+      try {
+        Path filePath = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
+        FSDataOutputStream s = fs.create(filePath);
+        s.writeUTF(clusterId);
+        s.close();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Created cluster ID file at " + filePath.toString() +
+              " with ID: " + clusterId);
+        }
+        return;
+      } catch (IOException ioe) {
+        if (wait > 0) {
+          LOG.warn("Unable to create cluster ID file in " + rootdir.toString() +
+              ", retrying in "+wait+"msec: "+StringUtils.stringifyException(ioe));
+          try {
+            Thread.sleep(wait);
+          } catch (InterruptedException ie) {
+            Thread.interrupted();
+            break;
+          }
+        } else {
+          throw ioe;
+        }
+      }
+    }
+  }
+
+  /**
    * Verifies root directory path is a valid URI with a scheme
    *
    * @param root root directory path

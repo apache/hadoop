@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -58,6 +59,8 @@ public class MasterFileSystem {
   Server master;
   // metrics for master
   MasterMetrics metrics;
+  // Persisted unique cluster ID
+  private String clusterId;
   // Keep around for convenience.
   private final FileSystem fs;
   // Is the fileystem ok?
@@ -149,6 +152,14 @@ public class MasterFileSystem {
   }
 
   /**
+   * Returns the unique identifier generated for this cluster
+   * @return
+   */
+  public String getClusterId() {
+    return clusterId;
+  }
+
+  /**
    * Inspect the log directory to recover any log file without
    * an active region server.
    * @param onlineServers Map of online servers keyed by
@@ -223,7 +234,7 @@ public class MasterFileSystem {
    * needed populating the directory with necessary bootup files).
    * @throws IOException
    */
-  private static Path checkRootDir(final Path rd, final Configuration c,
+  private Path checkRootDir(final Path rd, final Configuration c,
     final FileSystem fs)
   throws IOException {
     // If FS is in safe mode wait till out of it.
@@ -246,6 +257,14 @@ public class MasterFileSystem {
       FSUtils.checkVersion(fs, rd, true, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
         10 * 1000));
     }
+    // Make sure cluster ID exists
+    if (!FSUtils.checkClusterIdExists(fs, rd, c.getInt(
+        HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000))) {
+      FSUtils.setClusterId(fs, rd, UUID.randomUUID().toString(), c.getInt(
+          HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000));
+    }
+    clusterId = FSUtils.getClusterId(fs, rd);
+
     // Make sure the root region directory exists!
     if (!FSUtils.rootRegionExists(fs, rd)) {
       bootstrap(rd, c);

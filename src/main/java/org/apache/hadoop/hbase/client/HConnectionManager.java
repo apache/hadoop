@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.ClusterId;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -230,6 +231,7 @@ public class HConnectionManager {
     // ZooKeeper-based master address tracker
     private MasterAddressTracker masterAddressTracker;
     private RootRegionTracker rootRegionTracker;
+    private ClusterId clusterId;
     
     private final Object metaRegionLock = new Object();
 
@@ -299,6 +301,8 @@ public class HConnectionManager {
 
       this.rootRegionTracker = new RootRegionTracker(this.zooKeeper, this);
       this.rootRegionTracker.start();
+
+      this.clusterId = new ClusterId(this.zooKeeper, this);
     }
 
     private synchronized void resetZooKeeperTrackers()
@@ -308,6 +312,7 @@ public class HConnectionManager {
       masterAddressTracker = null;
       rootRegionTracker.stop();
       rootRegionTracker = null;
+      clusterId = null;
       this.zooKeeper = null;
       setupZookeeperTrackers();
     }
@@ -349,6 +354,9 @@ public class HConnectionManager {
               throw new MasterNotRunningException();
             }
 
+            if (clusterId.hasId()) {
+              conf.set(HConstants.CLUSTER_ID, clusterId.getId());
+            }
             HMasterInterface tryMaster = (HMasterInterface)HBaseRPC.getProxy(
                 HMasterInterface.class, HMasterInterface.VERSION,
                 masterLocation.getInetSocketAddress(), this.conf, this.rpcTimeout);
@@ -954,6 +962,9 @@ public class HConnectionManager {
           server = this.servers.get(rsName);
           if (server == null) {
             try {
+              if (clusterId.hasId()) {
+                conf.set(HConstants.CLUSTER_ID, clusterId.getId());
+              }
               // definitely a cache miss. establish an RPC for this RS
               server = (HRegionInterface) HBaseRPC.waitForProxy(
                   serverInterfaceClass, HRegionInterface.VERSION,

@@ -4,6 +4,8 @@ Release 0.91.0 - Unreleased
   INCOMPATIBLE CHANGES
    HBASE-2002  Coprocessors: Client side support; Support RPC interface
                changes at runtime (Gary Helmling via Andrew Purtell)
+   HBASE-3677  Generate a globally unique cluster ID (changed
+               ClusterStatus serialization)
 
   BUG FIXES
    HBASE-3280  YouAreDeadException being swallowed in HRS getMaster

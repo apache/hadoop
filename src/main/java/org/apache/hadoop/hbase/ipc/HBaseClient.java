@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.ipc;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
@@ -84,6 +85,7 @@ public class HBaseClient {
 
   protected final SocketFactory socketFactory;           // how to create sockets
   private int refCount = 1;
+  protected String clusterId;
 
   final private static String PING_INTERVAL_NAME = "ipc.ping.interval";
   final private static String SOCKET_TIMEOUT = "ipc.socket.timeout";
@@ -686,6 +688,7 @@ public class HBaseClient {
     }
     this.conf = conf;
     this.socketFactory = factory;
+    this.clusterId = conf.get(HConstants.CLUSTER_ID, "default");
   }
 
   /**

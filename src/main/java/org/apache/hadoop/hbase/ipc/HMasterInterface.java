@@ -44,7 +44,8 @@ public interface HMasterInterface extends VersionedProtocol {
   // maintained a single global version number on all HBase Interfaces.  This
   // meant all HBase RPC was broke though only one of the three RPC Interfaces
   // had changed.  This has since been undone.
-  public static final long VERSION = 28L;
+  // 29:  4/3/2010 - changed ClusterStatus serialization
+  public static final long VERSION = 29L;
 
   /** @return true if master is available */
   public boolean isMasterRunning();

@@ -87,6 +87,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
   public String assignmentZNode;
   // znode used for table disabling/enabling
   public String tableZNode;
+  // znode containing the unique cluster ID
+  public String clusterIdZNode;
 
   private final Configuration conf;
 
@@ -191,6 +193,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
         conf.get("zookeeper.znode.unassigned", "unassigned"));
     tableZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.tableEnableDisable", "table"));
+    clusterIdZNode = ZKUtil.joinZNode(baseZNode,
+        conf.get("zookeeper.znode.clusterId", "hbaseid"));
   }
 
   /**
