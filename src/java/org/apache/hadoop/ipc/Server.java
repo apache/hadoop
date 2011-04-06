@@ -105,7 +105,9 @@ public abstract class Server {
   // 1 : Introduce ping and server does not throw away RPCs
   // 3 : Introduce the protocol into the RPC connection header
   // 4 : Introduced SASL security layer
-  public static final byte CURRENT_VERSION = 4;
+  // 5 : Introduced use of {@link ArrayPrimitiveWritable$Internal}
+  //     in ObjectWritable to efficiently transmit arrays of primitives
+  public static final byte CURRENT_VERSION = 5;
 
   /**
    * Initial and max size of response buffer

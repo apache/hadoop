@@ -234,6 +234,9 @@ Release 0.22.0 - Unreleased
     HADOOP-6683. ZlibCompressor does not fully utilize the buffer.
     (Kang Xiao via eli)
 
+    HADOOP-6949. Reduce RPC packet size of primitive arrays using
+    ArrayPrimitiveWritable instead of ObjectWritable. (Matt Foley via suresh)
+
   BUG FIXES
 
     HADOOP-6638. try to relogin in a case of failed RPC connection (expired 
