@@ -17,17 +17,23 @@
  */
 package org.apache.hadoop.fs.shell;
 
-import java.io.*;
-import java.util.List;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.LinkedList;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FsShell;
 
 /**
  * Count the number of directories, files, bytes, quota, and remaining quota.
  */
-public class Count extends Command {
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
+
+public class Count extends FsCommand {
   public static final String NAME = "count";
   public static final String USAGE = "-" + NAME + "[-q] <path>";
   public static final String DESCRIPTION = CommandUtils.formatDescription(USAGE, 
@@ -37,41 +43,42 @@ public class Count extends Command {
       "QUOTA REMAINING_QUATA SPACE_QUOTA REMAINING_SPACE_QUOTA ",
       "      DIR_COUNT FILE_COUNT CONTENT_SIZE FILE_NAME");
   
-  private boolean qOption;
+  private boolean showQuotas;
 
-  /** Constructor
-   * 
-   * @param cmd the count command
-   * @param pos the starting index of the arguments 
-   */
-  public Count(String[] cmd, int pos, Configuration conf) {
-    super(conf);
-    CommandFormat c = new CommandFormat(NAME, 1, Integer.MAX_VALUE, "q");
-    List<String> parameters = c.parse(cmd, pos);
-    this.args = parameters.toArray(new String[parameters.size()]);
-    if (this.args.length == 0) { // default path is the current working directory
-      this.args = new String[] {"."};
-    }
-    this.qOption = c.getOpt("q") ? true: false;
+  /** Constructor */
+  public Count() {
+    setCommandName(NAME);
   }
   
-  /** Check if a command is the count command
-   * 
-   * @param cmd A string representation of a command starting with "-"
-   * @return true if this is a count command; false otherwise
+  /** Constructor
+   * @deprecated invoke via {@link FsShell}
+   * @param cmd the count command
+   * @param pos the starting index of the arguments 
+   * @param conf configuration
    */
-  public static boolean matches(String cmd) {
-    return ("-" + NAME).equals(cmd); 
+  @Deprecated
+  public Count(String[] cmd, int pos, Configuration conf) {
+    super(conf);
+    setCommandName(NAME);
+    LinkedList<String> parameters = new LinkedList<String>(Arrays.asList(cmd));
+    parameters.subList(0, pos).clear();
+    processOptions(parameters);
+    this.args = parameters.toArray(new String[0]);
   }
 
   @Override
-  public String getCommandName() {
-    return NAME;
+  protected void processOptions(LinkedList<String> args) {
+    CommandFormat cf = new CommandFormat(NAME, 1, Integer.MAX_VALUE, "q");
+    cf.parse(args);
+    if (args.isEmpty()) { // default path is the current working directory
+      args.add(".");
+    }
+    showQuotas = cf.getOpt("q");
   }
 
   @Override
-  protected void run(Path path) throws IOException {
-    FileSystem fs = path.getFileSystem(getConf());
-    System.out.println(fs.getContentSummary(path).toString(qOption) + path);
+  protected void processPath(PathData src) throws IOException {
+    ContentSummary summary = src.fs.getContentSummary(src.path);
+    out.println(summary.toString(showQuotas) + src.path);
   }
 }
