@@ -22,22 +22,30 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
 
 /** Test transferring RBW between datanodes */
 public class TestTransferRbw {
   private static final Log LOG = LogFactory.getLog(TestTransferRbw.class);
+  
+  {
+    ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
+  }
 
   private static final Random RAN = new Random();
   private static final short REPLICATION = (short)1;
@@ -87,7 +95,6 @@ public class TestTransferRbw {
       final ReplicaBeingWritten oldrbw;
       final DataNode newnode;
       final DatanodeInfo newnodeinfo;
-      final long visible;
       final String bpid = cluster.getNamesystem().getBlockPoolId();
       {
         final DataNode oldnode = cluster.getDataNodes().get(0);
@@ -98,6 +105,7 @@ public class TestTransferRbw {
         cluster.startDataNodes(conf, 1, true, null, null);
         newnode = cluster.getDataNodes().get(REPLICATION);
         
+        final DatanodeInfo oldnodeinfo;
         {
           final DatanodeInfo[] datatnodeinfos = cluster.getNameNode(
               ).getDatanodeReport(DatanodeReportType.LIVE);
@@ -107,23 +115,17 @@ public class TestTransferRbw {
               i < datatnodeinfos.length && !datatnodeinfos[i].equals(dnReg); i++);
           Assert.assertTrue(i < datatnodeinfos.length);
           newnodeinfo = datatnodeinfos[i];
+          oldnodeinfo = datatnodeinfos[1 - i];
         }
         
         //transfer RBW
-        visible = oldnode.transferBlockForPipelineRecovery(new ExtendedBlock(
-            bpid, oldrbw), new DatanodeInfo[] { newnodeinfo });
+        final ExtendedBlock b = new ExtendedBlock(bpid, oldrbw.getBlockId(), oldrbw.getBytesAcked(),
+            oldrbw.getGenerationStamp());
+        final DataTransferProtocol.Status s = DFSTestUtil.transferRbw(
+            b, fs.getClient(), oldnodeinfo, newnodeinfo);
+        Assert.assertEquals(DataTransferProtocol.Status.SUCCESS, s);
       }
 
-      //check temporary
-      final ReplicaInPipeline temp = getReplica(newnode, bpid,
-          ReplicaState.TEMPORARY);
-      LOG.info("temp = " + temp);
-      Assert.assertEquals(oldrbw.getBlockId(), temp.getBlockId());
-      Assert.assertEquals(oldrbw.getGenerationStamp(), temp.getGenerationStamp());
-      final ExtendedBlock b = new ExtendedBlock(bpid, oldrbw.getBlockId(),
-          visible, oldrbw.getGenerationStamp());
-      //convert temporary to rbw
-      newnode.convertTemporaryToRbw(b);
       //check new rbw
       final ReplicaBeingWritten newrbw = getRbw(newnode, bpid);
       LOG.info("newrbw = " + newrbw);

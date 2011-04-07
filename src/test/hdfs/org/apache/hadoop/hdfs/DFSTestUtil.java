@@ -18,13 +18,16 @@
 
 package org.apache.hadoop.hdfs;
 
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.FileInputStream;
-import java.io.DataInputStream;
+import java.net.Socket;
 import java.net.URL;
 import java.net.URLConnection;
 import java.security.PrivilegedExceptionAction;
@@ -40,16 +43,22 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem.Statistics;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.TestTransferRbw;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.junit.Assert;
 
 /** Utilities for HDFS tests */
 public class DFSTestUtil {
@@ -388,5 +397,24 @@ public class DFSTestUtil {
     byte[] content = new byte[(int)file.length()];
     in.readFully(content);
     return content;
+  }
+
+  /** For {@link TestTransferRbw} */
+  public static DataTransferProtocol.Status transferRbw(final ExtendedBlock b, 
+      final DFSClient dfsClient, final DatanodeInfo... datanodes) throws IOException {
+    Assert.assertEquals(2, datanodes.length);
+    final Socket s = DFSOutputStream.createSocketForPipeline(datanodes, dfsClient);
+    final long writeTimeout = dfsClient.getDatanodeWriteTimeout(datanodes.length);
+    final DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
+        NetUtils.getOutputStream(s, writeTimeout),
+        DataNode.SMALL_BUFFER_SIZE));
+    final DataInputStream in = new DataInputStream(NetUtils.getInputStream(s));
+
+    // send the request
+    DataTransferProtocol.Sender.opTransferBlock(out, b, dfsClient.clientName,
+        new DatanodeInfo[]{datanodes[1]}, new Token<BlockTokenIdentifier>());
+    out.flush();
+
+    return DataTransferProtocol.Status.read(in);
   }
 }

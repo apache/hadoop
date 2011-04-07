@@ -85,14 +85,15 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
   /** The client name.  It is empty if a datanode is the client */
   private final String clientname;
   private final boolean isClient; 
-  private final boolean isDatanode; 
+  private final boolean isDatanode;
 
   /** the block to receive */
   private final ExtendedBlock block; 
   /** the replica to write */
   private final ReplicaInPipelineInterface replicaInfo;
   /** pipeline stage */
-  private final BlockConstructionStage initialStage;
+  private final BlockConstructionStage stage;
+  private final boolean isTransfer;
 
   BlockReceiver(final ExtendedBlock block, final DataInputStream in,
       final String inAddr, final String myAddr,
@@ -114,8 +115,19 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
 
       //for datanode, we have
       //1: clientName.length() == 0, and
-      //2: stage == null, PIPELINE_SETUP_CREATE or TRANSFER_RBW
-      this.initialStage = stage;
+      //2: stage == null or PIPELINE_SETUP_CREATE
+      this.stage = stage;
+      this.isTransfer = stage == BlockConstructionStage.TRANSFER_RBW
+          || stage == BlockConstructionStage.TRANSFER_FINALIZED;
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(getClass().getSimpleName() + ": " + block
+            + "\n  isClient  =" + isClient + ", clientname=" + clientname
+            + "\n  isDatanode=" + isDatanode + ", srcDataNode=" + srcDataNode
+            + "\n  inAddr=" + inAddr + ", myAddr=" + myAddr
+            );
+      }
+
       //
       // Open local disk out
       //
@@ -147,6 +159,11 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
           }
           block.setGenerationStamp(newGs);
           break;
+        case TRANSFER_RBW:
+        case TRANSFER_FINALIZED:
+          // this is a transfer destination
+          replicaInfo = datanode.data.createTemporary(block);
+          break;
         default: throw new IOException("Unsupported stage " + stage + 
               " while receiving block " + block + " from " + inAddr);
         }
@@ -156,7 +173,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       this.bytesPerChecksum = checksum.getBytesPerChecksum();
       this.checksumSize = checksum.getChecksumSize();
       
-      final boolean isCreate = isDatanode 
+      final boolean isCreate = isDatanode || isTransfer 
           || stage == BlockConstructionStage.PIPELINE_SETUP_CREATE;
       streams = replicaInfo.createStreams(isCreate,
           this.bytesPerChecksum, this.checksumSize);
@@ -643,7 +660,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       throttler = throttlerArg;
 
     try {
-      if (isClient) {
+      if (isClient && !isTransfer) {
         responder = new Daemon(datanode.threadGroup, 
             new PacketResponder(this, block, mirrIn, replyOut, 
                                 numTargets, Thread.currentThread()));
@@ -663,16 +680,20 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
         responderClosed = true;
       }
 
-      // if this write is for a replication request (and not
-      // from a client), then finalize block. For client-writes, 
-      // the block is finalized in the PacketResponder.
-      if (isDatanode) {
+      // If this write is for a replication or transfer-RBW/Finalized,
+      // then finalize block or convert temporary to RBW.
+      // For client-writes, the block is finalized in the PacketResponder.
+      if (isDatanode || isTransfer) {
         // close the block/crc files
         close();
+        block.setNumBytes(replicaInfo.getNumBytes());
 
-        if (initialStage != BlockConstructionStage.TRANSFER_RBW) {
+        if (stage == BlockConstructionStage.TRANSFER_RBW) {
+          // for TRANSFER_RBW, convert temporary to RBW
+          datanode.data.convertTemporaryToRbw(block);
+        } else {
+          // for isDatnode or TRANSFER_FINALIZED
           // Finalize the block. Does this fsync()?
-          block.setNumBytes(replicaInfo.getNumBytes());
           datanode.data.finalizeBlock(block);
         }
         datanode.myMetrics.blocksWritten.inc();
@@ -705,8 +726,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
    * if this write is for a replication request (and not from a client)
    */
   private void cleanupBlock() throws IOException {
-    if (isDatanode
-        && initialStage != BlockConstructionStage.TRANSFER_RBW) {
+    if (isDatanode) {
       datanode.data.unfinalizeBlock(block);
     }
   }

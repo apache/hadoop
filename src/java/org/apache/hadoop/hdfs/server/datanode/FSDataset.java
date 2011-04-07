@@ -1695,40 +1695,51 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     final long blockId = b.getBlockId();
     final long expectedGs = b.getGenerationStamp();
     final long visible = b.getNumBytes();
-    DataNode.LOG.info("Covert the temporary replica " + b
-        + " to RBW, visible length is " + visible);
+    DataNode.LOG.info("Convert replica " + b
+        + " from Temporary to RBW, visible length=" + visible);
 
-    // get replica
-    final ReplicaInfo r = volumeMap.get(b.getBlockPoolId(), blockId);
-    if (r == null) {
-      throw new ReplicaNotFoundException(
-          ReplicaNotFoundException.NON_EXISTENT_REPLICA + b);
-    }
-    // check the replica's state
-    if (r.getState() != ReplicaState.TEMPORARY) {
-      throw new ReplicaNotFoundException(
-          "r.getState() != ReplicaState.TEMPORARY, r=" + r);
+    final ReplicaInPipeline temp;
+    {
+      // get replica
+      final ReplicaInfo r = volumeMap.get(b.getBlockPoolId(), blockId);
+      if (r == null) {
+        throw new ReplicaNotFoundException(
+            ReplicaNotFoundException.NON_EXISTENT_REPLICA + b);
+      }
+      // check the replica's state
+      if (r.getState() != ReplicaState.TEMPORARY) {
+        throw new ReplicaAlreadyExistsException(
+            "r.getState() != ReplicaState.TEMPORARY, r=" + r);
+      }
+      temp = (ReplicaInPipeline)r;
     }
     // check generation stamp
-    if (r.getGenerationStamp() != expectedGs) {
-      throw new ReplicaNotFoundException(
-          "r.getGenerationStamp() != expectedGs = " + expectedGs + ", r=" + r);
+    if (temp.getGenerationStamp() != expectedGs) {
+      throw new ReplicaAlreadyExistsException(
+          "temp.getGenerationStamp() != expectedGs = " + expectedGs
+          + ", temp=" + temp);
     }
+
+    // TODO: check writer?
+    // set writer to the current thread
+    // temp.setWriter(Thread.currentThread());
+
     // check length
-    final long numBytes = r.getNumBytes();
+    final long numBytes = temp.getNumBytes();
     if (numBytes < visible) {
-      throw new ReplicaNotFoundException(numBytes + " = numBytes < visible = "
-          + visible + ", r=" + r);
+      throw new IOException(numBytes + " = numBytes < visible = "
+          + visible + ", temp=" + temp);
     }
     // check volume
-    final FSVolume v = r.getVolume();
+    final FSVolume v = temp.getVolume();
     if (v == null) {
-      throw new IOException("r.getVolume() = null, temp="  + r);
+      throw new IOException("r.getVolume() = null, temp="  + temp);
     }
     
     // move block files to the rbw directory
-    final File dest = moveBlockFiles(b.getLocalBlock(), r.getBlockFile(),
-        v.getRbwDir(b.getBlockPoolId()));
+    BlockPoolSlice bpslice = v.getBlockPoolSlice(b.getBlockPoolId());
+    final File dest = moveBlockFiles(b.getLocalBlock(), temp.getBlockFile(), 
+        bpslice.getRbwDir());
     // create RBW
     final ReplicaBeingWritten rbw = new ReplicaBeingWritten(
         blockId, numBytes, expectedGs,

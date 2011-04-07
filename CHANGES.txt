@@ -251,6 +251,10 @@ Trunk (unreleased changes)
     HDFS-1791. Federation: Add command to delete block pool directories 
     from a datanode. (jitendra)
 
+    HDFS-1761. Add a new DataTransferProtocol operation, Op.TRANSFER_BLOCK,
+    for transferring RBW/Finalized with acknowledgement and without using RPC.
+    (szetszwo)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
@@ -386,6 +390,9 @@ Trunk (unreleased changes)
 
     HDFS-1611. Fix up some log messages in DFSClient and MBean registration
     (Uma Maheswara Rao G via todd)
+
+    HDFS-1543. Reduce dev. cycle time by moving system testing artifacts from
+    default build and push to maven for HDFS (Luke Lu via cos)
 
 Release 0.22.0 - Unreleased
 

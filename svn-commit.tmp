@@ -1,0 +1,21 @@
+Merging changes r1087114:r1087900 from trunk to federation
+--This line, and those below, will be ignored--
+
+_M   .
+M    CHANGES.txt
+_M   src/test/hdfs
+M    src/test/hdfs/org/apache/hadoop/hdfs/server/datanode/TestTransferRbw.java
+M    src/test/hdfs/org/apache/hadoop/hdfs/DFSTestUtil.java
+_M   src/contrib/hdfsproxy
+_M   src/java
+M    src/java/org/apache/hadoop/hdfs/protocol/DataTransferProtocol.java
+M    src/java/org/apache/hadoop/hdfs/server/datanode/DataXceiver.java
+M    src/java/org/apache/hadoop/hdfs/server/datanode/FSDataset.java
+M    src/java/org/apache/hadoop/hdfs/server/datanode/DataNode.java
+M    src/java/org/apache/hadoop/hdfs/server/datanode/BlockReceiver.java
+_M   src/java/org/apache/hadoop/hdfs/server/datanode/ReplicaInfo.java
+_M   src/webapps/datanode
+_M   src/webapps/hdfs
+_M   src/webapps/secondary
+_M   src/c++/libhdfs
+MM   build.xml

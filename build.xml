@@ -1550,7 +1550,7 @@
          uri="urn:maven-artifact-ant" classpathref="mvn-ant-task.classpath"/>
   </target>   
 
-  <target name="mvn-install" depends="mvn-taskdef,jar,jar-test,set-version,-mvn-system-install"
+  <target name="mvn-install" depends="mvn-taskdef,jar,jar-test,set-version"
      description="To install hadoop hdfs and test jars to local filesystem's m2 cache">
      <artifact:pom file="${hadoop-hdfs.pom}" id="hadoop.hdfs"/>
      <artifact:pom file="${hadoop-hdfs-test.pom}" id="hadoop.hdfs.test"/>
@@ -1563,6 +1563,9 @@
         <attach file="${hadoop-hdfs-test-sources.jar}" classifier="sources" />
      </artifact:install>
    </target>
+
+   <target name="mvn-si-install" depends="mvn-install,-mvn-system-install"
+           description="Install system integration tests jars as well"/>
   
    <target name="mvn-deploy" depends="mvn-taskdef, jar, jar-test,
      jar-system, jar-test-system, set-version, signanddeploy, simpledeploy"

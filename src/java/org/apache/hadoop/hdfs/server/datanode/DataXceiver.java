@@ -32,6 +32,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
@@ -220,8 +221,25 @@ class DataXceiver extends DataTransferProtocol.Receiver
     updateCurrentThreadName("Receiving block " + block + " client=" + clientname);
     final boolean isDatanode = clientname.length() == 0;
     final boolean isClient = !isDatanode;
+    final boolean isTransfer = stage == BlockConstructionStage.TRANSFER_RBW
+        || stage == BlockConstructionStage.TRANSFER_FINALIZED;
+
+    // check single target for transfer-RBW/Finalized 
+    if (isTransfer && targets.length > 0) {
+      throw new IOException(stage + " does not support multiple targets "
+          + Arrays.asList(targets));
+    }
 
     if (LOG.isDebugEnabled()) {
+      LOG.debug("opWriteBlock: stage=" + stage + ", clientname=" + clientname 
+      		+ "\n  block  =" + block + ", newGs=" + newGs
+      		+ ", bytesRcvd=[" + minBytesRcvd + ", " + maxBytesRcvd + "]"
+          + "\n  targets=" + Arrays.asList(targets)
+          + "; pipelineSize=" + pipelineSize + ", srcDataNode=" + srcDataNode
+          );
+      LOG.debug("isDatanode=" + isDatanode
+          + ", isClient=" + isClient
+          + ", isTransfer=" + isTransfer);
       LOG.debug("writeBlock receive buf size " + s.getReceiveBufferSize() +
                 " tcp no delay " + s.getTcpNoDelay());
     }
@@ -331,8 +349,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
         }
       }
 
-      // send connect ack back to source (only for clients)
-      if (isClient) {
+      // send connect-ack to source for clients and not transfer-RBW/Finalized
+      if (isClient && !isTransfer) {
         if (LOG.isDebugEnabled() || mirrorInStatus != SUCCESS) {
           LOG.info("Datanode " + targets.length +
                    " forwarding connect ack to upstream firstbadlink is " +
@@ -348,6 +366,14 @@ class DataXceiver extends DataTransferProtocol.Receiver
         String mirrorAddr = (mirrorSock == null) ? null : mirrorNode;
         blockReceiver.receiveBlock(mirrorOut, mirrorIn, replyOut,
             mirrorAddr, null, targets.length);
+
+        // send close-ack for transfer-RBW/Finalized 
+        if (isTransfer) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("TRANSFER: send close-ack");
+          }
+          SUCCESS.write(replyOut);
+        }
       }
 
       // update its generation stamp
@@ -360,8 +386,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
       // if this write is for a replication request or recovering
       // a failed close for client, then confirm block. For other client-writes,
       // the block is finalized in the PacketResponder.
-      if ((isDatanode  && stage != BlockConstructionStage.TRANSFER_RBW)
-          ||
+      if (isDatanode ||
           stage == BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
         datanode.closeBlock(block, DataNode.EMPTY_DEL_HINT);
         LOG.info("Received block " + block + 
@@ -387,6 +412,26 @@ class DataXceiver extends DataTransferProtocol.Receiver
     updateDuration(datanode.myMetrics.writeBlockOp);
     updateCounter(datanode.myMetrics.writesFromLocalClient,
                   datanode.myMetrics.writesFromRemoteClient);
+  }
+
+  @Override
+  protected void opTransferBlock(final DataInputStream in,
+      final ExtendedBlock blk, final String client,
+      final DatanodeInfo[] targets,
+      final Token<BlockTokenIdentifier> blockToken) throws IOException {
+    final DataOutputStream out = new DataOutputStream(
+        NetUtils.getOutputStream(s, datanode.socketWriteTimeout));
+    checkAccess(out, blk, blockToken,
+        DataTransferProtocol.Op.TRANSFER_BLOCK,
+        BlockTokenSecretManager.AccessMode.COPY);
+
+    updateCurrentThreadName(DataTransferProtocol.Op.TRANSFER_BLOCK + " " + blk);
+    try {
+      datanode.transferReplicaForPipelineRecovery(blk, targets, client);
+      SUCCESS.write(out);
+    } finally {
+      IOUtils.closeStream(out);
+    }
   }
 
   /**
