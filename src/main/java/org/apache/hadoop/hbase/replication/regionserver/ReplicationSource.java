@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -568,16 +569,18 @@ public class ReplicationSource extends Thread
         break;
 
       } catch (IOException ioe) {
-        LOG.warn("Unable to replicate because ", ioe);
+        if (ioe instanceof RemoteException) {
+          ioe = ((RemoteException) ioe).unwrapRemoteException();
+          LOG.warn("Can't replicate because of an error on the remote cluster: ", ioe);
+        } else {
+          LOG.warn("Can't replicate because of a local or network error: ", ioe);
+        }
         try {
           boolean down;
           do {
             down = isSlaveDown();
             if (down) {
-              LOG.debug("The region server we tried to ping didn't answer, " +
-                  "sleeping " + sleepForRetries + " times " + sleepMultiplier);
-              Thread.sleep(this.sleepForRetries * sleepMultiplier);
-              if (sleepMultiplier < maxRetriesMultiplier) {
+              if (sleepForRetries("Since we are unable to replicate", sleepMultiplier)) {
                 sleepMultiplier++;
               } else {
                 chooseSinks();
@@ -673,6 +676,9 @@ public class ReplicationSource extends Thread
           rrs.getHServerInfo();
           latch.countDown();
         } catch (IOException ex) {
+          if (ex instanceof RemoteException) {
+            ex = ((RemoteException) ex).unwrapRemoteException();
+          }
           LOG.info("Slave cluster looks down: " + ex.getMessage());
         }
       }
