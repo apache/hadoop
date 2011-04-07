@@ -235,16 +235,16 @@ throws InterruptedException, IOException {
           <para>Block cache item count in memory.  This is the number of blocks of storefiles (HFiles) in the cache.</para>
 		  </section>
          <section xml:id="hbase.regionserver.blockCacheFree"><title><varname>hbase.regionserver.blockCacheFree</varname></title>
-          <para>Block cache memory available (MB).</para>
+          <para>Block cache memory available (bytes).</para>
 		  </section>
          <section xml:id="hbase.regionserver.blockCacheHitRatio"><title><varname>hbase.regionserver.blockCacheHitRatio</varname></title>
           <para>Block cache hit ratio (0 to 100).  TODO:  describe impact to ratio where read requests that have cacheBlocks=false</para>
 		  </section>
           <section xml:id="hbase.regionserver.blockCacheSize"><title><varname>hbase.regionserver.blockCacheSize</varname></title>
-          <para>Block cache size in memory (MB)</para>
+          <para>Block cache size in memory (bytes)</para>
 		  </section>
           <section xml:id="hbase.regionserver.compactionQueueSize"><title><varname>hbase.regionserver.compactionQueueSize</varname></title>
-          <para>Size of the compaction queue.</para>
+          <para>Size of the compaction queue.  This is the number of stores in the region that have been targeted for compaction.</para>
 		  </section>
           <section xml:id="hbase.regionserver.fsReadLatency_avg_time"><title><varname>hbase.regionserver.fsReadLatency_avg_time</varname></title>
           <para>Filesystem read latency (ms)</para>
