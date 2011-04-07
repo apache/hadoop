@@ -345,6 +345,15 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>dfs.datanode.block.volume.choice.policy</name>
+  <value>org.apache.hadoop.hdfs.server.datanode.RoundRobinVolumesPolicy</value>
+  <description>The policy class to use to determine into which of the
+  datanode's available volumes a block must be written to. Default is a simple
+  round-robin policy that chooses volumes in a cyclic order.
+  </description>
+</property>
+
+<property>
   <name>dfs.heartbeat.interval</name>
   <value>3</value>
   <description>Determines datanode heartbeat interval in seconds.</description>

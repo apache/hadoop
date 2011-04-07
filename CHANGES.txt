@@ -314,6 +314,9 @@ Trunk (unreleased changes)
     HDFS-1541. Not marking datanodes dead when namenode in safemode.
     (hairong)
 
+    HDFS-1120. Make DataNode's block-to-device placement policy pluggable
+    (Harsh J Chouraria via todd)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

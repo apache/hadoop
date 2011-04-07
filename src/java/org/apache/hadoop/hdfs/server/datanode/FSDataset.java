@@ -65,8 +65,8 @@ import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
-import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.io.IOUtils;
 
@@ -782,11 +782,12 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
      * This list is replaced on modification holding "this" lock.
      */
     private volatile List<FSVolume> volumes = null;
-    private int curVolume = 0; // Synchronized using "this"
+    BlockVolumeChoosingPolicy blockChooser;
       
-    FSVolumeSet(FSVolume[] volumes) {
+    FSVolumeSet(FSVolume[] volumes, BlockVolumeChoosingPolicy blockChooser) {
       List<FSVolume> list = Arrays.asList(volumes);
       this.volumes = Collections.unmodifiableList(list);
+      this.blockChooser = blockChooser;
     }
     
     private int numberOfVolumes() {
@@ -800,29 +801,8 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
      * @param blockSize free space needed on the volume
      * @return next volume to store the block in.
      */
-    FSVolume getNextVolume(long blockSize) throws IOException {
-      synchronized(this) {
-        if(volumes.size() < 1) {
-          throw new DiskOutOfSpaceException("No more available volumes");
-        }
-        // since volumes could've been removed because of the failure
-        // make sure we are not out of bounds
-        if(curVolume >= volumes.size()) {
-          curVolume = 0;
-        }
-        
-        int startVolume = curVolume;
-        
-        while (true) {
-          FSVolume volume = volumes.get(curVolume);
-          curVolume = (curVolume + 1) % volumes.size();
-          if (volume.getAvailable() > blockSize) { return volume; }
-          if (curVolume == startVolume) {
-            throw new DiskOutOfSpaceException(
-                "Insufficient space for an additional block");
-          }
-        }
-      }
+    synchronized FSVolume getNextVolume(long blockSize) throws IOException {
+      return blockChooser.chooseVolume(volumes, blockSize);
     }
       
     private long getDfsUsed() throws IOException {
@@ -1173,8 +1153,14 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
           + storage.getStorageDir(idx).getCurrentDir());
     }
     volumeMap = new ReplicasMap(this);
-    
-    volumes = new FSVolumeSet(volArray);
+
+    BlockVolumeChoosingPolicy blockChooserImpl =
+      (BlockVolumeChoosingPolicy) ReflectionUtils.newInstance(
+        conf.getClass(DFSConfigKeys.DFS_DATANODE_BLOCKVOLUMECHOICEPOLICY,
+            RoundRobinVolumesPolicy.class,
+            BlockVolumeChoosingPolicy.class),
+        conf);
+    volumes = new FSVolumeSet(volArray, blockChooserImpl);
     volumes.getVolumeMap(volumeMap);
 
     File[] roots = new File[storage.getNumStorageDirs()];
