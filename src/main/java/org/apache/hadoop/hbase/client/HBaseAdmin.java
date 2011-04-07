@@ -75,17 +75,17 @@ public class HBaseAdmin implements Abortable {
   /**
    * Constructor
    *
-   * @param conf Configuration object
+   * @param c Configuration object
    * @throws MasterNotRunningException if the master is not running
    * @throws ZooKeeperConnectionException if unable to connect to zookeeper
    */
-  public HBaseAdmin(Configuration conf)
+  public HBaseAdmin(Configuration c)
   throws MasterNotRunningException, ZooKeeperConnectionException {
-    this.connection = HConnectionManager.getConnection(conf);
-    this.conf = conf;
-    this.pause = conf.getLong("hbase.client.pause", 1000);
-    this.numRetries = conf.getInt("hbase.client.retries.number", 10);
-    this.retryLongerMultiplier = conf.getInt("hbase.client.retries.longer.multiplier", 10);
+    this.conf = HBaseConfiguration.create(c);
+    this.connection = HConnectionManager.getConnection(this.conf);
+    this.pause = this.conf.getLong("hbase.client.pause", 1000);
+    this.numRetries = this.conf.getInt("hbase.client.retries.number", 10);
+    this.retryLongerMultiplier = this.conf.getInt("hbase.client.retries.longer.multiplier", 10);
     this.connection.getMaster();
   }
 
@@ -101,7 +101,7 @@ public class HBaseAdmin implements Abortable {
     CatalogTracker ct = null;
     try {
       HConnection connection =
-        HConnectionManager.getConnection(new Configuration(this.conf));
+        HConnectionManager.getConnection(this.conf);
       ct = new CatalogTracker(connection);
       ct.start();
     } catch (InterruptedException e) {
@@ -114,7 +114,6 @@ public class HBaseAdmin implements Abortable {
 
   private void cleanupCatalogTracker(final CatalogTracker ct) {
     ct.stop();
-    HConnectionManager.deleteConnection(ct.getConnection().getConfiguration(), true);
   }
 
   @Override
@@ -822,7 +821,7 @@ public class HBaseAdmin implements Abortable {
     try {
       if (isRegionName) {
         Pair<HRegionInfo, HServerAddress> pair =
-          MetaReader.getRegion(getCatalogTracker(), tableNameOrRegionName);
+          MetaReader.getRegion(ct, tableNameOrRegionName);
         if (pair == null || pair.getSecond() == null) {
           LOG.info("No server in .META. for " +
             Bytes.toString(tableNameOrRegionName) + "; pair=" + pair);
@@ -831,7 +830,7 @@ public class HBaseAdmin implements Abortable {
         }
       } else {
         List<Pair<HRegionInfo, HServerAddress>> pairs =
-          MetaReader.getTableRegionsAndLocations(getCatalogTracker(),
+          MetaReader.getTableRegionsAndLocations(ct,
               Bytes.toString(tableNameOrRegionName));
         for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
           if (pair.getFirst().isOffline()) continue;
@@ -1079,7 +1078,7 @@ public class HBaseAdmin implements Abortable {
       if (isRegionName(tableNameOrRegionName)) {
         // Its a possible region name.
         Pair<HRegionInfo, HServerAddress> pair =
-          MetaReader.getRegion(getCatalogTracker(), tableNameOrRegionName);
+          MetaReader.getRegion(ct, tableNameOrRegionName);
         if (pair == null || pair.getSecond() == null) {
           LOG.info("No server in .META. for " +
             Bytes.toString(tableNameOrRegionName) + "; pair=" + pair);
@@ -1088,7 +1087,7 @@ public class HBaseAdmin implements Abortable {
         }
       } else {
         List<Pair<HRegionInfo, HServerAddress>> pairs =
-          MetaReader.getTableRegionsAndLocations(getCatalogTracker(),
+          MetaReader.getTableRegionsAndLocations(ct,
               Bytes.toString(tableNameOrRegionName));
         for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
           // May not be a server for a particular row
