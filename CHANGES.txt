@@ -67,6 +67,8 @@ Release 0.91.0 - Unreleased
                be using TreeSet for HRegion (Ted Yu via J-D)
    HBASE-3739  HMaster.getProtocolVersion() should distinguish
                HMasterInterface and HMasterRegionInterface versions
+   HBASE-3723  Major compact should be done when there is only one storefile
+               and some keyvalue is outdated (Zhou Shuaifeng via Stack)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

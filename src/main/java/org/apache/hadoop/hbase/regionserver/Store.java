@@ -787,6 +787,11 @@ public class Store implements HeapSize {
                 " because one (major) compacted file only and oldestTime " +
                 oldest + "ms is < ttl=" + this.ttl);
           }
+        } else if (this.ttl != HConstants.FOREVER && oldest > this.ttl) {
+          LOG.debug("Major compaction triggered on store " + this.storeNameStr +
+            ", because keyvalues outdated; time since last major compaction " + 
+            (now - lowTimestamp) + "ms");
+          result = true;
         }
       } else {
         if (LOG.isDebugEnabled()) {
