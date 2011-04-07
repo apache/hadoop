@@ -474,7 +474,7 @@
   <path id="test.classpath">
   	<pathelement location="${proxy.conf.test}" />
     <pathelement location="${test.build.dir}" />
-    <pathelement location="${hadoop.root}/build/test/classes"/>
+    <pathelement location="${hadoop.root}/build/test/hdfs/classes"/>
     <!--<pathelement location="${hadoop.root}/src/contrib/test"/>-->
     <pathelement location="${hadoop.root}/conf"/>
     <pathelement location="${hadoop.root}/build"/>

@@ -171,7 +171,7 @@
     <subant buildpath="build.xml" target="-do-jar-test">
       <property name="build.dir" value="${system-test-build-dir}"/>
       <property name="test.hdfs.final.name" value="${name}-${herriot.suffix}-test-${version}"/>
-      <property name="test.build.classes"
+      <property name="test.hdfs.build.classes"
         value="${system-test-build-dir}/test/classes"/>
     </subant>
     <jar jarfile="${hadoop-hdfs-instrumented-test-sources.jar}">
@@ -185,22 +185,23 @@
     </subant>
   </target>
 
-  <target name="-compile-test-system.wrapper" depends="ivy-retrieve-common, ivy-retrieve-system">
+  <target name="-compile-test-system.wrapper" depends="inject-system-faults, ivy-retrieve-common, ivy-retrieve-system">
     <macro-compile-hdfs-test
       target.dir="${system-test-build-dir}/test/classes"
       source.dir="${test.src.dir}/system/test"
       dest.dir="${system-test-build-dir}/test/classes"
-      classpath="test.classpath"/>
+      classpath="test.system.classpath"/>
   </target>
 
   <macrodef name="weave-injectfault-aspects">
     <attribute name="dest.dir" />
     <attribute name="src.dir" />
     <attribute name="aspects.jar"/>
+    <attribute name="base.build.dir" default="${build-fi.dir}"/>
     <sequential>
       <subant buildpath="build.xml" target="-compile-fault-inject"
         output="${compile-inject.output}">
-        <property name="build.dir" value="${build-fi.dir}" />
+        <property name="build.dir" value="@{base.build.dir}" />
         <property name="src.dir.path" value="@{src.dir}" />
         <property name="dest.dir" value="@{dest.dir}" />
         <property name="hadoop.instrumented.jar" value="@{aspects.jar}"/>
@@ -210,15 +211,15 @@
 
   <target name="inject-system-faults"
           description="Inject system faults">
-    <property name="build-fi.dir" value="${system-test-build-dir}" />
-    <mkdir dir="${build-fi.dir}"/>
+    <mkdir dir="${system-test-build-dir}"/>
     <delete file="${compile-inject.output}"/>
     <subant buildpath="build.xml" target="ivy-retrieve-system">
-      <property name="build.dir" value="${build-fi.dir}"/>
+      <property name="build.dir" value="${system-test-build-dir}"/>
     </subant>
     <weave-injectfault-aspects dest.dir="${system-test-build-dir}/classes"
                                src.dir="${test.src.dir}/system/java;${test.src.dir}/system/aop"
-      aspects.jar="${build-fi.dir}/ivy/lib/${ant.project.name}/system/hadoop-common-${herriot.suffix}-${project.version}.jar">
+      aspects.jar="${system-test-build-dir}/ivy/lib/${ant.project.name}/system/hadoop-common-${herriot.suffix}-${project.version}.jar"
+      base.build.dir="${system-test-build-dir}">
     </weave-injectfault-aspects>
   </target>
 

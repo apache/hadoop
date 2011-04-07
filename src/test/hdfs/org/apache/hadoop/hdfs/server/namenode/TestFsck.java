@@ -28,7 +28,6 @@ import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.nio.channels.FileChannel;
 import java.security.PrivilegedExceptionAction;
-import java.util.Collection;
 import java.util.Random;
 import java.util.regex.Pattern;
 

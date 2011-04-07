@@ -560,9 +560,6 @@ Release 0.22.0 - Unreleased
 
     HDFS-1426. Remove unused method BlockInfo#listCount. (hairong)
 
-    HDFS-1456. Provide builder for constructing instances of MiniDFSCluster.
-    (jghoman)
-
     HDFS-1472. Allow programmatic access to fsck output.
     (Ramkumar Vadali via dhruba)
 
@@ -619,6 +616,9 @@ Release 0.22.0 - Unreleased
     file reading/writing. (Todd Lipcon via eli)
 
     HDFS-1582. Remove auto-generated native build files. (rvs via eli)
+
+    HDFS-1456. Provide builder for constructing instances of MiniDFSCluster.
+    (jghoman)
 
   OPTIMIZATIONS
 
@@ -777,6 +777,7 @@ Release 0.22.0 - Unreleased
 
     HDFS-1625. Ignore disk space values in TestDataNodeMXBean.  (szetszwo)
 
+Release 0.21.1 - Unreleased
     HDFS-1466. TestFcHdfsSymlink relies on /tmp/test not existing. (eli)
 
     HDFS-874. TestHDFSFileContextMainOperations fails on weirdly 
@@ -1444,9 +1445,6 @@ Release 0.21.0 - 2010-08-13
     cos)
 
     HDFS-806. Add new unit tests to the 10-mins 'run-commit-test' target (cos)
-
-    HDFS-1411. Correct backup node startup command in hdfs user guide.
-    (Ching-Shen Chen via shv) 
 
   OPTIMIZATIONS
 

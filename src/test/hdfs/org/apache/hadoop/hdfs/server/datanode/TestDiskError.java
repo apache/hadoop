@@ -51,7 +51,6 @@ public class TestDiskError {
   private FileSystem fs;
   private MiniDFSCluster cluster;
   private Configuration conf;
-  private String dataDir;
 
   @Before
   public void setUp() throws Exception {
@@ -60,7 +59,6 @@ public class TestDiskError {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
-    dataDir = cluster.getDataDirectory();
   }
 
   @After

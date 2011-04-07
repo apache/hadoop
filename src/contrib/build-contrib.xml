@@ -96,7 +96,6 @@
   <!-- the unit test classpath -->
   <path id="test.classpath">
     <pathelement location="${build.test}" />
-    <pathelement location="${hadoop.root}/build/test/classes"/>
     <pathelement location="${hadoop.root}/build/test/core/classes"/>
     <pathelement location="${hadoop.root}/build/test/hdfs/classes"/>
     <pathelement location="${hadoop.root}/build/test/mapred/classes"/>

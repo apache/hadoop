@@ -230,11 +230,13 @@ public class TestStartup extends TestCase {
       sd = it.next();
 
       if(sd.getStorageDirType().isOfType(NameNodeDirType.IMAGE)) {
-        File imf = img.getStorage().getStorageFile(sd, NameNodeFile.IMAGE);
+        img.getStorage();
+        File imf = NNStorage.getStorageFile(sd, NameNodeFile.IMAGE);
         LOG.info("--image file " + imf.getAbsolutePath() + "; len = " + imf.length() + "; expected = " + expectedImgSize);
         assertEquals(expectedImgSize, imf.length());	
       } else if(sd.getStorageDirType().isOfType(NameNodeDirType.EDITS)) {
-        File edf = img.getStorage().getStorageFile(sd, NameNodeFile.EDITS);
+        img.getStorage();
+        File edf = NNStorage.getStorageFile(sd, NameNodeFile.EDITS);
         LOG.info("-- edits file " + edf.getAbsolutePath() + "; len = " + edf.length()  + "; expected = " + expectedEditsSize);
         assertEquals(expectedEditsSize, edf.length());	
       } else {

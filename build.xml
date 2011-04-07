@@ -81,7 +81,6 @@
   <property name="test.cache.data" value="${test.build.dir}/cache"/>
   <property name="test.debug.data" value="${test.build.dir}/debug"/>
   <property name="test.log.dir" value="${test.build.dir}/logs"/>
-  <property name="test.build.classes" value="${test.build.dir}/classes"/>
   <property name="test.build.extraconf" value="${test.build.dir}/extraconf"/>
   <property name="test.build.javadoc" value="${test.build.dir}/docs/api"/>
   <property name="test.build.javadoc.dev" value="${test.build.dir}/docs/dev-api"/>
@@ -96,7 +95,7 @@
   <property name="test.junit.maxmemory" value="512m" />
   <property name="test.conf.dir" value="${build.dir}/test/conf" />
 
-  <property name="test.hdfs.build.classes" value="${test.build.dir}/classes"/>
+  <property name="test.hdfs.build.classes" value="${test.build.dir}/hdfs/classes"/>
 
   <property name="test.hdfs.commit.tests.file" value="${test.src.dir}/commit-tests" />
   <property name="test.hdfs.smoke.tests.file" value="${test.src.dir}/smoke-tests" />
@@ -239,7 +238,7 @@
   <!-- the cluster test classpath: uses conf.dir for configuration -->
   <path id="test.cluster.classpath">
     <path refid="classpath"/>
-    <pathelement location="${test.build.classes}" />
+    <pathelement location="${test.hdfs.build.classes}" />
     <pathelement location="${test.src.dir}"/>
     <pathelement location="${build.dir}"/>
   </path>
@@ -273,7 +272,7 @@
     <mkdir dir="${build.dir}/c++"/>
     
     <mkdir dir="${test.build.dir}"/>
-    <mkdir dir="${test.build.classes}"/>
+    <mkdir dir="${test.hdfs.build.classes}"/>
     <mkdir dir="${test.build.extraconf}"/>
     <tempfile property="touch.temp.file" destDir="${java.io.tmpdir}"/>
     <touch millis="0" file="${touch.temp.file}">
@@ -459,9 +458,6 @@
   <target name="jar-test" depends="jar-hdfs-test" description="Make hadoop-test.jar"/> 
 
   <target name="jar-hdfs-test" depends="compile-hdfs-test" description="Make hadoop-hdfs-test.jar">
-    <copy todir="${test.build.classes}">
-      <fileset dir="${test.hdfs.build.classes}"/>
-    </copy>
     <subant buildpath="build.xml" target="-do-jar-test">
     </subant>
     <jar jarfile="${hadoop-hdfs-test-sources.jar}">
@@ -472,7 +468,7 @@
 
   <target name="-do-jar-test">
     <jar jarfile="${build.dir}/${test.hdfs.final.name}.jar"
-         basedir="${test.build.classes}">
+         basedir="${test.hdfs.build.classes}">
          <manifest>
            <attribute name="Main-Class"
                       value="org/apache/hadoop/test/HdfsTestDriver"/>

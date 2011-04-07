@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs;
 
 import java.util.List;
 
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.fs.Path;
 
@@ -30,8 +29,6 @@ import org.junit.BeforeClass;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
-
-import static org.junit.Assert.*;
 
 public class TestClientBlockVerification {
 

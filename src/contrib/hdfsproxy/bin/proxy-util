@@ -88,8 +88,8 @@ fi
 if [ -d "$HDFSPROXY_HOME/build/webapps" ]; then
   CLASSPATH=${CLASSPATH}:$HDFSPROXY_HOME/build
 fi
-if [ -d "$HDFSPROXY_HOME/build/test/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$HDFSPROXY_HOME/build/test/classes
+if [ -d "$HDFSPROXY_HOME/build/test/hdfs/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HDFSPROXY_HOME/build/test/hdfs/classes
 fi
 
 # so that filenames w/ spaces are handled correctly in loops below
