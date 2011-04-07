@@ -916,13 +916,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         setBlockTokens(locatedblocks);
       }
 
-      if (last.isComplete()) {
-        return new LocatedBlocks(n, inode.isUnderConstruction(), locatedblocks,
-          blockManager.getBlockLocation(last, n-last.getNumBytes()), true);
-      } else {
-        return new LocatedBlocks(n, inode.isUnderConstruction(), locatedblocks,
-          blockManager.getBlockLocation(last, n), false);
-      }
+      LocatedBlock lastBlock = last.isComplete() ? blockManager
+          .getBlockLocation(last, n - last.getNumBytes()) : blockManager
+          .getBlockLocation(last, n);
+      setBlockToken(lastBlock);
+      return new LocatedBlocks(n, inode.isUnderConstruction(), locatedblocks,
+          lastBlock, last.isComplete());
     }
     } finally {
       readUnlock();
@@ -938,12 +937,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   /** Generate block tokens for the blocks to be returned. */
   private void setBlockTokens(List<LocatedBlock> locatedBlocks) throws IOException {
     for(LocatedBlock l : locatedBlocks) {
-      Token<BlockTokenIdentifier> token = 
-        blockTokenSecretManager.generateToken(l.getBlock(), 
-            EnumSet.of(BlockTokenSecretManager.AccessMode.READ));
-    
-      l.setBlockToken(token);
+      setBlockToken(l);
     }
+  }
+  
+  /** Generate block token for a LocatedBlock. */
+  private void setBlockToken(LocatedBlock l) throws IOException {
+    Token<BlockTokenIdentifier> token = blockTokenSecretManager.generateToken(l
+        .getBlock(), EnumSet.of(BlockTokenSecretManager.AccessMode.READ));
+    l.setBlockToken(token);
   }
 
   /**
