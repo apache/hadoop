@@ -5024,8 +5024,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>TokenComparator</type>
-          <expected-output>get: null</expected-output>
+          <type>RegexpComparator</type>
+          <expected-output>get: .*: No such file or directory</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5040,8 +5040,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>TokenComparator</type>
-          <expected-output>get: null</expected-output>
+          <type>RegexpComparator</type>
+          <expected-output>get: .*: No such file or directory</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5056,8 +5056,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>TokenComparator</type>
-          <expected-output>get: null</expected-output>
+          <type>RegexpComparator</type>
+          <expected-output>get: .*: No such file or directory</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5072,8 +5072,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>TokenComparator</type>
-          <expected-output>get: null</expected-output>
+          <type>RegexpComparator</type>
+          <expected-output>get: .*: No such file or directory</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5459,8 +5459,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>TokenComparator</type>
-          <expected-output>copyToLocal: null</expected-output>
+          <type>RegexpComparator</type>
+          <expected-output>copyToLocal: .*: No such file or directory</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5475,8 +5475,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>TokenComparator</type>
-          <expected-output>copyToLocal: null</expected-output>
+          <type>RegexpComparator</type>
+          <expected-output>copyToLocal: .*: No such file or directory</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5491,8 +5491,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>TokenComparator</type>
-          <expected-output>copyToLocal: null</expected-output>
+          <type>RegexpComparator</type>
+          <expected-output>copyToLocal: .*: No such file or directory</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5507,8 +5507,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>TokenComparator</type>
-          <expected-output>copyToLocal: null</expected-output>
+          <type>RegexpComparator</type>
+          <expected-output>copyToLocal: .*: No such file or directory</expected-output>
         </comparator>
      </comparators>
     </test>
@@ -15593,11 +15593,15 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-touchz &lt;path&gt;: Write a timestamp in yyyy-MM-dd HH:mm:ss format( )*</expected-output>
+          <expected-output>^-touchz &lt;path&gt;: Creates a file of zero length( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*in a file at &lt;path&gt;. An error is returned if the file exists with non-zero length( )*</expected-output>
+          <expected-output>^( |\t)*at &lt;path&gt; with current time as the timestamp of that &lt;path&gt;.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)* An error is returned if the file exists with non-zero length( )*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16927,7 +16931,7 @@
         <command>-fs NAMENODE -mkdir /test </command>
         <command>-fs NAMENODE -touchz /test/file1 </command>
         <dfs-admin-command>-fs NAMENODE -safemode enter </dfs-admin-command>
-        <command>-fs NAMENODE -chown root /test/file1 </command>
+        <command>-fs NAMENODE -chown newgroup /test/file1 </command>
       </test-commands>
       <cleanup-commands>
         <dfs-admin-command>-fs NAMENODE -safemode leave </dfs-admin-command>

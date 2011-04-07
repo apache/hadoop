@@ -24,8 +24,8 @@ import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
-import java.io.InterruptedIOException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.BufferOverflowException;
@@ -46,21 +46,23 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PacketHeader;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PipelineAck;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PacketHeader;
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PipelineAck;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.io.EnumSetWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
@@ -70,8 +72,6 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.PureJavaCrc32;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 
 /****************************************************************
  * DFSOutputStream creates files from a stream of bytes.
@@ -888,18 +888,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
 
       boolean result = false;
       try {
-        if(DFSClient.LOG.isDebugEnabled()) {
-          DFSClient.LOG.debug("Connecting to " + nodes[0].getName());
-        }
-        InetSocketAddress target = NetUtils.createSocketAddr(nodes[0].getName());
-        s = dfsClient.socketFactory.createSocket();
-        int timeoutValue = dfsClient.getDatanodeReadTimeout(nodes.length);
-        NetUtils.connect(s, target, timeoutValue);
-        s.setSoTimeout(timeoutValue);
-        s.setSendBufferSize(DFSClient.DEFAULT_DATA_SOCKET_SIZE);
-        if(DFSClient.LOG.isDebugEnabled()) {
-          DFSClient.LOG.debug("Send buf size " + s.getSendBufferSize());
-        }
+        s = createSocketForPipeline(nodes, dfsClient);
         long writeTimeout = dfsClient.getDatanodeWriteTimeout(nodes.length);
 
         //
@@ -1033,6 +1022,29 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         lastException = e;
       }
     }
+  }
+
+  /**
+   * Create a socket for a write pipeline
+   * @param datanodes the datanodes on the pipeline 
+   * @param client
+   * @return the socket connected to the first datanode
+   */
+  static Socket createSocketForPipeline(final DatanodeInfo[] datanodes,
+      final DFSClient client) throws IOException {
+    if(DFSClient.LOG.isDebugEnabled()) {
+      DFSClient.LOG.debug("Connecting to datanode " + datanodes[0].getName());
+    }
+    final InetSocketAddress isa = NetUtils.createSocketAddr(datanodes[0].getName());
+    final Socket sock = client.socketFactory.createSocket();
+    final int timeout = client.getDatanodeReadTimeout(datanodes.length);
+    NetUtils.connect(sock, isa, timeout);
+    sock.setSoTimeout(timeout);
+    sock.setSendBufferSize(DFSClient.DEFAULT_DATA_SOCKET_SIZE);
+    if(DFSClient.LOG.isDebugEnabled()) {
+      DFSClient.LOG.debug("Send buf size " + sock.getSendBufferSize());
+    }
+    return sock;
   }
 
   private void isClosed() throws IOException {

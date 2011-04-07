@@ -143,7 +143,7 @@ if [ "$starting_secure_dn" = "true" ]; then
    HADOOP_SECURE_DN_PID="$HADOOP_PID_DIR/hadoop_secure_dn.pid"
   fi
 
-  exec "$HADOOP_HOME/bin/jsvc" \
+  exec "$HADOOP_HDFS_HOME/bin/jsvc" \
            -Dproc_$COMMAND -outfile "$HADOOP_LOG_DIR/jsvc.out" \
            -errfile "$HADOOP_LOG_DIR/jsvc.err" \
            -pidfile "$HADOOP_SECURE_DN_PID" \

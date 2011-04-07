@@ -1410,7 +1410,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
                 ". Lease recovery is in progress. Try again later.");
 
         } else {
-          if(pendingFile.getLastBlock().getBlockUCState() ==
+          BlockInfoUnderConstruction lastBlock=pendingFile.getLastBlock();
+          if(lastBlock != null && lastBlock.getBlockUCState() ==
             BlockUCState.UNDER_RECOVERY) {
             throw new RecoveryInProgressException(
               "Recovery in progress, file [" + src + "], " +
@@ -3144,6 +3145,14 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       throw new IOException("ProcessReport from dead or unregisterted node: "
                             + nodeID.getName());
     }
+    // To minimize startup time, we discard any second (or later) block reports
+    // that we receive while still in startup phase.
+    if (isInStartupSafeMode() && node.numBlocks() > 0) {
+      NameNode.stateChangeLog.info("BLOCK* NameSystem.processReport: "
+          + "discarded non-initial block report from " + nodeID.getName()
+          + " because namenode still in startup phase");
+      return;
+    }
 
     blockManager.processReport(node, newReport);
     NameNode.getNameNodeMetrics().blockReport.inc((int) (now() - startTime));
@@ -4221,6 +4230,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       return false;
     return safeMode.isOn();
   }
+  
+  /**
+   * Check whether the name node is in startup mode.
+   */
+  synchronized boolean isInStartupSafeMode() {
+    if (safeMode == null)
+      return false;
+    return safeMode.isOn() && !safeMode.isManual();
+  }
 
   /**
    * Check whether replication queues are populated.
@@ -4594,7 +4612,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       bean = new StandardMBean(this,FSNamesystemMBean.class);
       mbeanName = MBeanUtil.registerMBean("NameNode", "FSNamesystemState", bean);
     } catch (NotCompliantMBeanException e) {
-      e.printStackTrace();
+      LOG.warn("Exception in initializing StandardMBean as FSNamesystemMBean",
+	  e);
     }
 
     LOG.info("Registered FSNamesystemStatusMBean");

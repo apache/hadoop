@@ -251,10 +251,6 @@ Trunk (unreleased changes)
     HDFS-1791. Federation: Add command to delete block pool directories 
     from a datanode. (jitendra)
 
-    HDFS-1785. In BlockReceiver and DataXceiver, clientName.length() is used
-    multiple times for determining whether the source is a client or a
-    datanode.  (szetszwo)
-
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
@@ -300,9 +296,6 @@ Trunk (unreleased changes)
     HDFS-1736. Remove the dependency from DatanodeJspHelper to FsShell.
     (Daryn Sharp via szetszwo)
     
-    HDFS-1731. Amend previous commit for this JIRA to fix build on Cygwin.
-    (todd)
-
     HDFS-780. Revive TestFuseDFS. (eli)
 
     HDFS-1445. Batch the calls in DataStorage to FileUtil.createHardLink().
@@ -316,6 +309,16 @@ Trunk (unreleased changes)
 
     HDFS-1120. Make DataNode's block-to-device placement policy pluggable
     (Harsh J Chouraria via todd)
+
+    HDFS-1785. In BlockReceiver and DataXceiver, clientName.length() is used
+    multiple times for determining whether the source is a client or a
+    datanode.  (szetszwo)
+
+    HDFS-1789. Refactor frequently used codes from DFSOutputStream and
+    DataXceiver.  (szetszwo)
+
+    HDFS-1767. Namenode ignores non-initial block report from datanodes
+    when in safemode during startup. (Matt Foley via suresh)
 
   OPTIMIZATIONS
 
@@ -378,6 +381,11 @@ Trunk (unreleased changes)
     HDFS-1757. Don't compile fuse-dfs by default. (eli)
 
     HDFS-1770. TestFiRename fails due to invalid block size. (eli)
+
+    HDFS-1797. Fix new findbugs warning introduced by HDFS-1120 (todd)
+
+    HDFS-1611. Fix up some log messages in DFSClient and MBean registration
+    (Uma Maheswara Rao G via todd)
 
 Release 0.22.0 - Unreleased
 
@@ -832,6 +840,11 @@ Release 0.22.0 - Unreleased
     HDFS-1001. DataXceiver and BlockReader disagree on when to send/recv
     CHECKSUM_OK. (bc Wong via eli)
 
+    HDFS-1781. Fix the path for jsvc in bin/hdfs.  (John George via szetszwo)
+
+    HDFS-1782. Fix an NPE in RFSNamesystem.startFileInternal(..).
+    (John George via szetszwo)
+
 Release 0.21.1 - Unreleased
 
     HDFS-1411. Correct backup node startup command in hdfs user guide.
@@ -884,6 +897,9 @@ Release 0.21.1 - Unreleased
 
     HDFS-1596. Replace fs.checkpoint.* with dfs.namenode.checkpoint.*
     in documentations.  (Harsh J Chouraria via szetszwo)
+
+    HDFS-1786. Some cli test cases expect a "null" message
+    (Uma Maheswara Rao G via todd)
 
 Release 0.21.0 - 2010-08-13
 

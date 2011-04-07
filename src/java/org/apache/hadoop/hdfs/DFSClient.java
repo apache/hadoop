@@ -192,7 +192,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     InetSocketAddress addr = NetUtils.createSocketAddr(
       datanodeid.getHost() + ":" + datanodeid.getIpcPort());
     if (ClientDatanodeProtocol.LOG.isDebugEnabled()) {
-      ClientDatanodeProtocol.LOG.info("ClientDatanodeProtocol addr=" + addr);
+      ClientDatanodeProtocol.LOG.debug("ClientDatanodeProtocol addr=" + addr);
     }
     UserGroupInformation ticket = UserGroupInformation
         .createRemoteUser(locatedBlock.getBlock().getLocalBlock().toString());
