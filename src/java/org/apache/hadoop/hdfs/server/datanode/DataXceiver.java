@@ -447,7 +447,6 @@ class DataXceiver extends DataTransferProtocol.Receiver
         } finally {
           IOUtils.closeStream(out);
         }
-
       }
     }
 
