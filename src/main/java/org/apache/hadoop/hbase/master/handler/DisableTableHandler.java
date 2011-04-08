@@ -142,7 +142,7 @@ public class DisableTableHandler extends EventHandler {
       long remaining = timeout;
       List<HRegionInfo> regions = null;
       while (!server.isStopped() && remaining > 0) {
-        Thread.sleep(1000);
+        Thread.sleep(waitingTimeForEvents);
         regions = assignmentManager.getRegionsOfTable(tableName);
         if (regions.isEmpty()) break;
         remaining = timeout - (System.currentTimeMillis() - startTime);

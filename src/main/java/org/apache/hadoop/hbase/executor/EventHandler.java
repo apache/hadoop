@@ -70,6 +70,9 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
   // Listener to call pre- and post- processing.  May be null.
   private EventHandlerListener listener;
 
+  // Time to wait for events to happen, should be kept short
+  protected final int waitingTimeForEvents;
+
   /**
    * This interface provides pre- and post-process hooks for events.
    */
@@ -145,6 +148,8 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
     this.server = server;
     this.eventType = eventType;
     seqid = seqids.incrementAndGet();
+    this.waitingTimeForEvents = server.getConfiguration().
+        getInt("hbase.master.event.waiting.time", 1000);
   }
 
   public void run() {

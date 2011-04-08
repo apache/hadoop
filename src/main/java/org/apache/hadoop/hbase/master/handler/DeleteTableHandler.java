@@ -53,7 +53,7 @@ public class DeleteTableHandler extends TableEventHandler {
       while (System.currentTimeMillis() < done) {
         AssignmentManager.RegionState rs = am.isRegionInTransition(region);
         if (rs == null) break;
-        Threads.sleep(1000);
+        Threads.sleep(waitingTimeForEvents);
         LOG.debug("Waiting on  region to clear regions in transition; " + rs);
       }
       if (am.isRegionInTransition(region) != null) {

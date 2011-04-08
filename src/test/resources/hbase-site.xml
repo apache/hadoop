@@ -32,13 +32,13 @@
   </property>
   <property>
     <name>hbase.client.pause</name>
-    <value>5000</value>
+    <value>1000</value>
     <description>General client pause value.  Used mostly as value to wait
     before running a retry of a failed get, region lookup, etc.</description>
   </property>
   <property>
     <name>hbase.client.retries.number</name>
-    <value>4</value>
+    <value>10</value>
     <description>Maximum retries.  Used as maximum for all retryable
     operations such as fetching of the root region from root region
     server, getting a cell's value, starting a row update, etc.
@@ -50,6 +50,12 @@
     <value>1000</value>
     <description>Time to sleep in between searches for work (in milliseconds).
     Used as sleep interval by service threads such as META scanner and log roller.
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.event.waiting.time</name>
+    <value>50</value>
+    <description>Time to sleep between checks to see if a table event took place.
     </description>
   </property>
   <property>

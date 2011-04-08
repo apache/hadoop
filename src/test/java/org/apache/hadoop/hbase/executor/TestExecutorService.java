@@ -28,10 +28,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService.Executor;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.junit.Test;
+import static org.mockito.Mockito.*;
 
 public class TestExecutorService {
   private static final Log LOG = LogFactory.getLog(TestExecutorService.class);
@@ -41,6 +44,9 @@ public class TestExecutorService {
     int maxThreads = 5;
     int maxTries = 10;
     int sleepInterval = 10;
+
+    Server mockedServer = mock(Server.class);
+    when(mockedServer.getConfiguration()).thenReturn(HBaseConfiguration.create());
 
     // Start an executor service pool with max 5 threads
     ExecutorService executorService = new ExecutorService("unit_test");

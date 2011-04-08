@@ -164,7 +164,7 @@ public class EnableTableHandler extends EventHandler {
       long remaining = timeout;
       List<HRegionInfo> regions = null;
       while (!server.isStopped() && remaining > 0) {
-        Thread.sleep(1000);
+        Thread.sleep(waitingTimeForEvents);
         regions = assignmentManager.getRegionsOfTable(tableName);
         if (isDone(regions)) break;
         remaining = timeout - (System.currentTimeMillis() - startTime);
