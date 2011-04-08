@@ -69,7 +69,6 @@ Release 0.91.0 - Unreleased
                HMasterInterface and HMasterRegionInterface versions
    HBASE-3723  Major compact should be done when there is only one storefile
                and some keyvalue is outdated (Zhou Shuaifeng via Stack)
-   HBASE-3756  Can't move META or ROOT from shell
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
@@ -182,6 +181,7 @@ Release 0.90.3 - Unreleased
    HBASE-3746  Clean up CompressionTest to not directly reference
                DistributedFileSystem (todd)
    HBASE-3734  HBaseAdmin creates new configurations in getCatalogTracker
+   HBASE-3756  Can't move META or ROOT from shell
 
 
   IMPROVEMENTS
@@ -189,7 +189,7 @@ Release 0.90.3 - Unreleased
    HBASE-3652  Speed up tests by lowering some sleeps
 
 
-Release 0.90.2 - Unreleased
+Release 0.90.2 - 20110408
   
   BUG FIXES
    HBASE-3545  Possible liveness issue with MasterServerAddress in
