@@ -49,6 +49,7 @@ HBase includes:
 
         </section>
         <section name="News">
+            <p>April 12th, HBase 0.90.2 released. <a href="http://www.apache.org/dyn/closer.cgi/hbase/">Download it!</a></p>
             <p>March 21st, <a href="http://www.meetup.com/hackathon/events/16770852/">HBase 0.92 Hackathon at StumbleUpon, SF</a></p>
             <p>February 22nd, <a href="http://www.meetup.com/hbaseusergroup/events/16492913/">HUG12: February HBase User Group at StumbleUpon SF</a></p>
             <p>December 13th, <a href="http://www.meetup.com/hackathon/calendar/15597555/">HBase Hackathon: Coprocessor Edition</a></p>
