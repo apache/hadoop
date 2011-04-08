@@ -66,7 +66,8 @@ public class TestExecutorService {
     // Submit maxThreads executors.
     for (int i = 0; i < maxThreads; i++) {
       executorService.submit(
-        new TestEventHandler(EventType.M_SERVER_SHUTDOWN, lock, counter));
+        new TestEventHandler(mockedServer, EventType.M_SERVER_SHUTDOWN,
+            lock, counter));
     }
 
     // The TestEventHandler will increment counter when it starts.
@@ -101,7 +102,8 @@ public class TestExecutorService {
     // Make sure we don't get RejectedExecutionException.
     for (int i = 0; i < (2 * maxThreads); i++) {
       executorService.submit(
-        new TestEventHandler(EventType.M_SERVER_SHUTDOWN, lock, counter));
+        new TestEventHandler(mockedServer, EventType.M_SERVER_SHUTDOWN,
+            lock, counter));
     }
     // Now interrupt the running Executor
     synchronized (lock) {
@@ -118,9 +120,9 @@ public class TestExecutorService {
     private AtomicBoolean lock;
     private AtomicInteger counter;
 
-    public TestEventHandler(EventType eventType, AtomicBoolean lock,
-        AtomicInteger counter) {
-      super(null, eventType);
+    public TestEventHandler(Server server, EventType eventType,
+                            AtomicBoolean lock, AtomicInteger counter) {
+      super(server, eventType);
       this.lock = lock;
       this.counter = counter;
     }
