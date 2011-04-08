@@ -130,6 +130,9 @@ Trunk (unreleased changes)
     HADOOP-7019. Refactor build targets to enable faster cross project dev
     cycles. (Luke Lu via cos)
 
+    HADOOP-7216. Add FsCommand.runAll() with deprecated annotation for the
+    transition of Command base class improvement.  (Daryn Sharp via szetszwo)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

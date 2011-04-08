@@ -47,7 +47,16 @@ abstract public class FsCommand extends Command {
     return name.startsWith("-") ? name.substring(1) : name; 
   }
   
+  // abstract method that normally is invoked by runall() which is
+  // overridden below
   protected void run(Path path) throws IOException {
     throw new RuntimeException("not supposed to get here");
+  }
+  
+  /** @deprecated use {@link #run(String...argv)} */
+  @Deprecated
+  @Override
+  public int runAll() {
+    return run(args);
   }
 }

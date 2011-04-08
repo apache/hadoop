@@ -1954,11 +1954,9 @@ public class FsShell extends Configured implements Tool {
       } else if ("-count".equals(cmd)) {
         // TODO: next two lines are a temporary crutch until this entire
         // block is overhauled
-        LinkedList<String> args = new LinkedList<String>(Arrays.asList(argv));
-        String cmdName = args.removeFirst();
         Count runner = ReflectionUtils.newInstance(Count.class, getConf());
-        runner.setCommandName(cmdName); // TODO: will change with factory
-        exitCode = runner.run(args);
+        runner.setCommandName(cmd); // TODO: will change with factory
+        exitCode = runner.run(Arrays.copyOfRange(argv, 1, argv.length));
       } else if ("-mkdir".equals(cmd)) {
         exitCode = doall(cmd, argv, i);
       } else if ("-touchz".equals(cmd)) {

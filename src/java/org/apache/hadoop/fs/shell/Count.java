@@ -60,10 +60,7 @@ public class Count extends FsCommand {
   public Count(String[] cmd, int pos, Configuration conf) {
     super(conf);
     setCommandName(NAME);
-    LinkedList<String> parameters = new LinkedList<String>(Arrays.asList(cmd));
-    parameters.subList(0, pos).clear();
-    processOptions(parameters);
-    this.args = parameters.toArray(new String[0]);
+    this.args = Arrays.copyOfRange(cmd, pos, cmd.length);
   }
 
   @Override
