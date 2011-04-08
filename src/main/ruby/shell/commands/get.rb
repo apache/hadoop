@@ -27,9 +27,11 @@ Get row or cell contents; pass table name, row, and optionally
 a dictionary of column(s), timestamp and versions. Examples:
 
   hbase> get 't1', 'r1'
+  hbase> get 't1', 'r1', {TIMERANGE => [ts1, ts2]}
   hbase> get 't1', 'r1', {COLUMN => 'c1'}
   hbase> get 't1', 'r1', {COLUMN => ['c1', 'c2', 'c3']}
   hbase> get 't1', 'r1', {COLUMN => 'c1', TIMESTAMP => ts1}
+  hbase> get 't1', 'r1', {COLUMN => 'c1', TIMERANGE => [ts1, ts2], VERSIONS => 4}
   hbase> get 't1', 'r1', {COLUMN => 'c1', TIMESTAMP => ts1, VERSIONS => 4}
   hbase> get 't1', 'r1', 'c1'
   hbase> get 't1', 'r1', 'c1', 'c2'

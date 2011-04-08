@@ -195,8 +195,9 @@ public class AssignmentManager extends ZooKeeperListener {
    * transition.  Presumes <code>.META.</code> and <code>-ROOT-</code> deployed.
    * @throws KeeperException
    * @throws IOException
+   * @throws InterruptedException 
    */
-  void processFailover() throws KeeperException, IOException {
+  void processFailover() throws KeeperException, IOException, InterruptedException {
     // Concurrency note: In the below the accesses on regionsInTransition are
     // outside of a synchronization block where usually all accesses to RIT are
     // synchronized.  The presumption is that in this case it is safe since this
@@ -205,6 +206,14 @@ public class AssignmentManager extends ZooKeeperListener {
     // TODO: Check list of user regions and their assignments against regionservers.
     // TODO: Regions that have a null location and are not in regionsInTransitions
     // need to be handled.
+
+    // Add -ROOT- and .META. on regions map.  They must be deployed if we got
+    // this far.  Caller takes care of it.
+    HServerInfo hsi =
+      this.serverManager.getHServerInfo(this.catalogTracker.getMetaLocation());
+    regionOnline(HRegionInfo.FIRST_META_REGIONINFO, hsi);
+    hsi = this.serverManager.getHServerInfo(this.catalogTracker.getRootLocation());
+    regionOnline(HRegionInfo.ROOT_REGIONINFO, hsi);
 
     // Scan META to build list of existing regions, servers, and assignment
     // Returns servers who have not checked in (assumed dead) and their regions
