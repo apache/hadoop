@@ -20,7 +20,7 @@
         </para>
         <para>If you see run into the below, its because you need to edit version in the pom.xml and add
         <code>-SNAPSHOT</code> to the version (and commit).
-        <computeroutput>[INFO] Scanning for projects...
+        <programlisting>[INFO] Scanning for projects...
 [INFO] Searching repository for plugin with prefix: 'release'.
 [INFO] ------------------------------------------------------------------------
 [INFO] Building HBase
@@ -37,7 +37,7 @@
 [INFO] Total time: 3 seconds
 [INFO] Finished at: Sat Mar 26 18:11:07 PDT 2011
 [INFO] Final Memory: 35M/423M
-[INFO] -----------------------------------------------------------------------</computeroutput>
+[INFO] -----------------------------------------------------------------------</programlisting>
         </para>
     </section>
           
