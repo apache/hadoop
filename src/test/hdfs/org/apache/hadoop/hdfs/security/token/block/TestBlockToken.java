@@ -29,9 +29,16 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.io.TestWritable;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtocolSignature;
@@ -46,6 +53,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.log4j.Level;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
@@ -259,4 +267,43 @@ public class TestBlockToken {
       tokenGenerationAndVerification(masterHandler, bpMgr.get(bpid));
     }
   }
+  
+  /**
+   * This test writes a file and gets the block locations without closing
+   * the file, and tests the block token in the last block. Block token is
+   * verified by ensuring it is of correct kind.
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  @Test
+  public void testBlockTokenInLastLocatedBlock() throws IOException,
+      InterruptedException {
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 512);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numNameNodes(1)
+        .numDataNodes(1).build();
+    cluster.waitActive();
+
+    try {
+      FileSystem fs = cluster.getFileSystem();
+      String fileName = "/testBlockTokenInLastLocatedBlock";
+      Path filePath = new Path(fileName);
+      FSDataOutputStream out = fs.create(filePath, (short) 1);
+      out.write(new byte[1000]);
+      LocatedBlocks locatedBlocks = cluster.getNameNode().getBlockLocations(
+          fileName, 0, 1000);
+      while (locatedBlocks.getLastLocatedBlock() == null) {
+        Thread.sleep(100);
+        locatedBlocks = cluster.getNameNode().getBlockLocations(fileName, 0,
+            1000);
+      }
+      Token<BlockTokenIdentifier> token = locatedBlocks.getLastLocatedBlock()
+          .getBlockToken();
+      Assert.assertEquals(BlockTokenIdentifier.KIND_NAME, token.getKind());
+      out.close();
+    } finally {
+      cluster.shutdown();
+    }
+  } 
 }
