@@ -1354,8 +1354,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           try {
             initJob(jip);
           } catch (Throwable t) {
-            LOG.error("Job initialization failed : \n" 
-                      + StringUtils.stringifyException(t));
+            LOG.error("Job initialization failed : \n"
+                + StringUtils.stringifyException(t));
+            jip.status.setFailureInfo("Job Initialization failed: \n"
+                + StringUtils.stringifyException(t));
             failJob(jip);
             throw new IOException(t);
           }

@@ -56,6 +56,7 @@
 <b>Launched At: </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.LAUNCH_TIME), job.getLong(Keys.SUBMIT_TIME)) %><br/>
 <b>Finished At: </b>  <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.FINISH_TIME), job.getLong(Keys.LAUNCH_TIME)) %><br/>
 <b>Status: </b> <%= ((job.get(Keys.JOB_STATUS) == "")?"Incomplete" :job.get(Keys.JOB_STATUS)) %><br/> 
+<b>Failure Info: </b> <%= ((job.get(Keys.FAIL_REASON) == null)?"NA" : job.get(Keys.FAIL_REASON)) %><br/>
 <%
     Map<String, JobHistory.Task> tasks = job.getAllTasks();
     int totalMaps = 0 ; 

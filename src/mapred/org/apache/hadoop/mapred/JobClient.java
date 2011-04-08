@@ -383,7 +383,9 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         "file: " + profile.getJobFile() + "\n" + 
         "tracking URL: " + profile.getURL() + "\n" + 
         "map() completion: " + status.mapProgress() + "\n" + 
-        "reduce() completion: " + status.reduceProgress();
+        "reduce() completion: " + status.reduceProgress() + "\n" +
+        ((status.getRunState() == JobStatus.FAILED) ? ("Failure Info: " + status.getFailureInfo()) : "");
+      
     }
         
     /**
@@ -1643,13 +1645,23 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         if (job == null) {
           System.out.println("Could not find job " + jobid);
         } else {
-          Counters counters = job.getCounters();
+          Throwable counterException = null;
+          Counters counters = null;
+          try {
+            counters = job.getCounters();
+          } catch (IOException e) {
+            counterException = e;
+          }
           System.out.println();
           System.out.println(job);
           if (counters != null) {
             System.out.println(counters);
           } else {
-            System.out.println("Counters not available. Job is retired.");
+            if (counterException != null) {
+              System.out.println("Error fetching counters: " + counterException.getMessage());
+            } else {
+              System.out.println("Counters not available. Job is retired.");
+            }
           }
           exitCode = 0;
         }
@@ -1658,10 +1670,21 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         if (job == null) {
           System.out.println("Could not find job " + jobid);
         } else {
-          Counters counters = job.getCounters();
+          Throwable counterException = null;
+          Counters counters = null;
+          try {
+            counters = job.getCounters();
+          } catch (IOException e) {
+            counterException = e;
+          }
           if (counters == null) {
-            System.out.println("Counters not available for retired job " + 
-                jobid);
+            if (counterException != null) {
+              System.out
+                  .println("Error fetching counters: " + counterException.getMessage());
+            } else {
+              System.out.println("Counters not available for retired job "
+                  + jobid);
+            }
             exitCode = -1;
           } else {
             Group group = counters.getGroup(counterGroupName);

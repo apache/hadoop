@@ -4,6 +4,9 @@ Release 0.20.204.0 - unreleased
 
   BUG FIXES
 
+    MAPREDUCE-2418. Show job errors in JobHistory page. (Siddharth Seth via
+    acmurthy) 
+
     HDFS-1592. At Startup, Valid volumes required in FSDataset doesn't
     handle consistently with volumes tolerated. (Bharath Mundlapudi)
 

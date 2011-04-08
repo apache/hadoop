@@ -2724,7 +2724,8 @@ public class JobInProgress {
         // Log to job-history
         JobHistory.JobInfo.logFailed(this.status.getJobID(), finishTime, 
                                      this.finishedMapTasks, 
-                                     this.finishedReduceTasks);
+                                     this.finishedReduceTasks,
+                                     this.status.getFailureInfo());
       } else {
         changeStateTo(JobStatus.KILLED);
 
@@ -3022,6 +3023,19 @@ public class JobInProgress {
             ((++failedReduceTIPs*100) > (reduceFailuresPercent*numReduceTasks));
       
       if (killJob) {
+        String failureInfo = "";
+        if (tip.isJobCleanupTask()) {
+          failureInfo = "JobCleanup Task Failure, Task: " + tip.getTIPId();
+        } else if (tip.isJobSetupTask()) {
+          failureInfo = "JobSetup Task Failure, Task: " + tip.getTIPId();
+        } else if (tip.isMapTask()) {
+          failureInfo = "# of failed Map Tasks exceeded allowed limit. FailedCount: "
+              + failedMapTIPs + ". LastFailedTask: " + tip.getTIPId();
+        } else {
+          failureInfo = "# of failed Reduce Tasks exceeded allowed limit. FailedCount: "
+              + failedReduceTIPs + ". LastFailedTask: " + tip.getTIPId();
+        }
+        this.status.setFailureInfo(failureInfo);
         LOG.info("Aborting job " + profile.getJobID());
         JobHistory.Task.logFailed(tip.getTIPId(), 
                                   taskType,  

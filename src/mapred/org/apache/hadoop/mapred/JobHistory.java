@@ -476,7 +476,7 @@ public class JobHistory {
     ERROR, TASK_ATTEMPT_ID, TASK_STATUS, COPY_PHASE, SORT_PHASE, REDUCE_PHASE, 
     SHUFFLE_FINISHED, SORT_FINISHED, COUNTERS, SPLITS, JOB_PRIORITY, HTTP_PORT, 
     TRACKER_NAME, STATE_STRING, VERSION, MAP_COUNTERS, REDUCE_COUNTERS,
-    VIEW_JOB, MODIFY_JOB, JOB_QUEUE
+    VIEW_JOB, MODIFY_JOB, JOB_QUEUE, FAIL_REASON
   }
 
   /**
@@ -1926,14 +1926,14 @@ public class JobHistory {
      * @param finishedMaps no finished map tasks. 
      * @param finishedReduces no of finished reduce tasks. 
      */
-    public static void logFailed(JobID jobid, long timestamp, int finishedMaps, int finishedReduces){
+    public static void logFailed(JobID jobid, long timestamp, int finishedMaps, int finishedReduces, String failReason){
       ArrayList<PrintWriter> writer = fileManager.getWriters(jobid); 
 
       if (null != writer){
         JobHistory.log(writer, RecordTypes.Job,
-                       new Keys[] {Keys.JOBID, Keys.FINISH_TIME, Keys.JOB_STATUS, Keys.FINISHED_MAPS, Keys.FINISHED_REDUCES },
+                       new Keys[] {Keys.JOBID, Keys.FINISH_TIME, Keys.JOB_STATUS, Keys.FINISHED_MAPS, Keys.FINISHED_REDUCES, Keys.FAIL_REASON },
                        new String[] {jobid.toString(),  String.valueOf(timestamp), Values.FAILED.name(), String.valueOf(finishedMaps), 
-                                     String.valueOf(finishedReduces)}, jobid); 
+                                     String.valueOf(finishedReduces), failReason}, jobid); 
         for (PrintWriter out : writer) {
           out.close();
         }
