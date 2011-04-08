@@ -182,6 +182,7 @@ Release 0.90.3 - Unreleased
                DistributedFileSystem (todd)
    HBASE-3734  HBaseAdmin creates new configurations in getCatalogTracker
    HBASE-3756  Can't move META or ROOT from shell
+   HBASE-3740  hbck doesn't reset the number of errors when retrying
 
 
   IMPROVEMENTS

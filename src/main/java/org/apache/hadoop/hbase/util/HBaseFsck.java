@@ -805,6 +805,7 @@ public class HBaseFsck {
     public void detail(String details);
     public void progress();
     public void print(String message);
+    public void resetErrors();
   }
 
   private static class PrintingErrorReporter implements ErrorReporter {
@@ -835,6 +836,11 @@ public class HBaseFsck {
       if (!summary) {
         System.out.println(message);
       }
+    }
+
+    @Override
+    public void resetErrors() {
+      errorCount = 0;
     }
 
     public synchronized void detail(String message) {
@@ -1120,6 +1126,7 @@ public class HBaseFsck {
       }
       // Just report
       fsck.setFixErrors(false);
+      fsck.errors.resetErrors();
       code = fsck.doWork();
     }
 
