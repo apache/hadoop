@@ -67,9 +67,9 @@ public class RegionCoprocessorHost
      * @param priority chaining priority
      */
     public RegionEnvironment(final Coprocessor impl,
-        Coprocessor.Priority priority, final HRegion region,
+        final Coprocessor.Priority priority, final int seq, final HRegion region,
         final RegionServerServices services) {
-      super(impl, priority);
+      super(impl, priority, seq);
       this.region = region;
       this.rsServices = services;
     }
@@ -152,7 +152,7 @@ public class RegionCoprocessorHost
 
   @Override
   public RegionEnvironment createEnvironment(
-      Class<?> implClass, Coprocessor instance, Coprocessor.Priority priority) {
+      Class<?> implClass, Coprocessor instance, Coprocessor.Priority priority, int seq) {
     // Check if it's an Endpoint.
     // Due to current dynamic protocol design, Endpoint
     // uses a different way to be registered and executed.
@@ -165,7 +165,7 @@ public class RegionCoprocessorHost
       }
     }
 
-    return new RegionEnvironment(instance, priority, region, rsServices);
+    return new RegionEnvironment(instance, priority, seq, region, rsServices);
   }
 
   /**

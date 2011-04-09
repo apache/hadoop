@@ -43,8 +43,8 @@ public class MasterCoprocessorHost
     private MasterServices masterServices;
 
     public MasterEnvironment(Class<?> implClass, Coprocessor impl,
-        Coprocessor.Priority priority, MasterServices services) {
-      super(impl, priority);
+        Coprocessor.Priority priority, int seq, MasterServices services) {
+      super(impl, priority, seq);
       this.masterServices = services;
     }
 
@@ -63,8 +63,8 @@ public class MasterCoprocessorHost
 
   @Override
   public MasterEnvironment createEnvironment(Class<?> implClass,
-      Coprocessor instance, Coprocessor.Priority priority) {
-    return new MasterEnvironment(implClass, instance, priority, masterServices);
+      Coprocessor instance, Coprocessor.Priority priority, int seq) {
+    return new MasterEnvironment(implClass, instance, priority, seq, masterServices);
   }
 
   /* Implementation of hooks for invoking MasterObservers */

@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.coprocessor;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.client.HTableInterface;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 
 /**
  * Coprocessor environment state.
@@ -38,6 +36,9 @@ public interface CoprocessorEnvironment {
 
   /** @return the priority assigned to the loaded coprocessor */
   public Coprocessor.Priority getPriority();
+
+  /** @return the load sequence number */
+  public int getLoadSequence();
 
   /**
    * @return an interface for accessing the given table

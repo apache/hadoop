@@ -61,6 +61,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   protected Configuration conf;
   // unique file prefix to use for local copies of jars when classloading
   protected String pathPrefix;
+  protected volatile int loadSequence;
 
   public CoprocessorHost() {
     pathPrefix = UUID.randomUUID().toString();
@@ -195,7 +196,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       throw new IOException(e);
     }
     // create the environment
-    E env = createEnvironment(implClass, impl, priority);
+    E env = createEnvironment(implClass, impl, priority, ++loadSequence);
     if (env instanceof Environment) {
       ((Environment)env).startup();
     }
@@ -206,7 +207,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * Called when a new Coprocessor class is loaded
    */
   public abstract E createEnvironment(Class<?> implClass, Coprocessor instance,
-      Coprocessor.Priority priority);
+      Coprocessor.Priority priority, int sequence);
 
   public void shutdown(CoprocessorEnvironment e) {
     if (e instanceof Environment) {
@@ -242,6 +243,11 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       if (env1.getPriority().intValue() < env2.getPriority().intValue()) {
         return -1;
       } else if (env1.getPriority().intValue() > env2.getPriority().intValue()) {
+        return 1;
+      }
+      if (env1.getLoadSequence() < env2.getLoadSequence()) {
+        return -1;
+      } else if (env1.getLoadSequence() > env2.getLoadSequence()) {
         return 1;
       }
       return 0;
@@ -436,6 +442,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     /** Accounting for tables opened by the coprocessor */
     protected List<HTableInterface> openTables =
       Collections.synchronizedList(new ArrayList<HTableInterface>());
+    private int seq;
     static final ThreadLocal<Boolean> bypass = new ThreadLocal<Boolean>() {
       @Override protected Boolean initialValue() {
         return Boolean.FALSE;
@@ -452,10 +459,11 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
      * @param impl the coprocessor instance
      * @param priority chaining priority
      */
-    public Environment(final Coprocessor impl, Coprocessor.Priority priority) {
+    public Environment(final Coprocessor impl, Coprocessor.Priority priority, int seq) {
       this.impl = impl;
       this.priority = priority;
       this.state = Coprocessor.State.INSTALLED;
+      this.seq = seq;
     }
 
     /** Initialize the environment */
@@ -521,6 +529,11 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     @Override
     public Coprocessor.Priority getPriority() {
       return priority;
+    }
+
+    @Override
+    public int getLoadSequence() {
+      return seq;
     }
 
     /** @return the coprocessor environment version */
