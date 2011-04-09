@@ -30,7 +30,9 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * Base class used bulk assigning and unassigning regions.
  * Encapsulates a fixed size thread pool of executors to run assignment/unassignment.
  * Implement {@link #populatePool(java.util.concurrent.ExecutorService)} and
- * {@link #waitUntilDone(long)}.
+ * {@link #waitUntilDone(long)}.  The default implementation of
+ * the {@link #getUncaughtExceptionHandler()} is to abort the hosting
+ * Server.
  */
 public abstract class BulkAssigner {
   final Server server;
@@ -42,8 +44,11 @@ public abstract class BulkAssigner {
     this.server = server;
   }
 
+  /**
+   * @return What to use for a thread prefix when executor runs.
+   */
   protected String getThreadNamePrefix() {
-    return this.server.getServerName() + "-BulkAssigner";
+    return this.server.getServerName() + "-" + this.getClass().getName(); 
   }
 
   protected UncaughtExceptionHandler getUncaughtExceptionHandler() {
@@ -63,17 +68,22 @@ public abstract class BulkAssigner {
 
   protected long getTimeoutOnRIT() {
     return this.server.getConfiguration().
-      getLong("hbase.bulk.assignment.waiton.empty.rit", 10 * 60 * 1000);
+      getLong("hbase.bulk.assignment.waiton.empty.rit", 5 * 60 * 1000);
   }
 
   protected abstract void populatePool(final java.util.concurrent.ExecutorService pool);
 
+  public boolean bulkAssign() throws InterruptedException {
+    return bulkAssign(true);
+  }
+
   /**
    * Run the bulk assign.
+   * @param sync Whether to assign synchronously.
    * @throws InterruptedException
    * @return True if done.
    */
-  public boolean bulkAssign() throws InterruptedException {
+  public boolean bulkAssign(boolean sync) throws InterruptedException {
     boolean result = false;
     ThreadFactoryBuilder builder = new ThreadFactoryBuilder();
     builder.setDaemon(true);
@@ -86,7 +96,7 @@ public abstract class BulkAssigner {
       populatePool(pool);
       // How long to wait on empty regions-in-transition.  If we timeout, the
       // RIT monitor should do fixup.
-      result = waitUntilDone(getTimeoutOnRIT());
+      if (sync) result = waitUntilDone(getTimeoutOnRIT());
     } finally {
       // We're done with the pool.  It'll exit when its done all in queue.
       pool.shutdown();

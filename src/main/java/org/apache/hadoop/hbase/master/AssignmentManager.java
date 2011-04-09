@@ -21,11 +21,11 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.EOFException;
 import java.io.IOException;
-import java.net.ConnectException;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -893,8 +893,7 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
-   * Bulk assign regions to <code>destination</code>.  If we fail in any way,
-   * we'll abort the server.
+   * Bulk assign regions to <code>destination</code>.
    * @param destination
    * @param regions Regions to assign.
    */
@@ -931,14 +930,10 @@ public class AssignmentManager extends ZooKeeperListener {
       if (count == total) break;
       Threads.sleep(1);
     }
-    // Move on to open regions.
     try {
-      // Send OPEN RPC. This can fail if the server on other end is is not up.
-      // If we fail, fail the startup by aborting the server.  There is one
-      // exception we will tolerate: ServerNotRunningException.  This is thrown
-      // between report of regionserver being up and 
       long maxWaitTime = System.currentTimeMillis() +
-        this.master.getConfiguration().getLong("hbase.regionserver.rpc.startup.waittime", 60000);
+        this.master.getConfiguration().
+          getLong("hbase.regionserver.rpc.startup.waittime", 60000);
       while (!this.master.isStopped()) {
         try {
           this.serverManager.sendRegionOpen(destination, regions);
@@ -953,10 +948,10 @@ public class AssignmentManager extends ZooKeeperListener {
           Thread.sleep(1000);
         }
       }
-    } catch (Throwable t) {
-      this.master.abort("Failed assignment of regions to " + destination +
-        "; bulk assign FAILED", t);
-      return;
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
     }
     LOG.debug("Bulk assigning done for " + destination.getServerName());
   }
@@ -1341,29 +1336,7 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
-   * Assigns list of user regions in round-robin fashion, if any exist.
-   * <p>
-   * This is a synchronous call and will return once every region has been
-   * assigned.  If anything fails, an exception is thrown
-   * @throws InterruptedException
-   * @throws IOException
-   */
-  public void assignUserRegions(HRegionInfo[] regions, List<HServerInfo> servers) throws IOException, InterruptedException {
-    if (regions == null)
-      return;
-    Map<HServerInfo, List<HRegionInfo>> bulkPlan = null;
-    // Generate a round-robin bulk assignment plan
-    bulkPlan = LoadBalancer.roundRobinAssignment(regions, servers);
-    LOG.info("Bulk assigning " + regions.length + " region(s) round-robin across " +
-               servers.size() + " server(s)");
-    // Use fixed count thread pool assigning.
-    BulkAssigner ba = new BulkStartupAssigner(this.master, bulkPlan, this);
-    ba.bulkAssign();
-    LOG.info("Bulk assigning done");
-  }
-
-  /**
-   * Assigns all user regions, if any exist.  Used during cluster startup.
+   * Assigns all user regions, if any.  Used during cluster startup.
    * <p>
    * This is a synchronous call and will return once every region has been
    * assigned.  If anything fails, an exception is thrown and the cluster
@@ -1390,26 +1363,30 @@ public class AssignmentManager extends ZooKeeperListener {
       bulkPlan = LoadBalancer.retainAssignment(allRegions, servers);
     } else {
       // assign regions in round-robin fashion
-      assignUserRegions(allRegions.keySet().toArray(new HRegionInfo[allRegions.size()]), servers);
-      return;
+      HRegionInfo [] regions =
+        allRegions.keySet().toArray(new HRegionInfo[allRegions.size()]);
+      bulkPlan = LoadBalancer.roundRobinAssignment(regions, servers);
     }
     LOG.info("Bulk assigning " + allRegions.size() + " region(s) across " +
       servers.size() + " server(s), retainAssignment=" + retainAssignment);
 
     // Use fixed count thread pool assigning.
-    BulkAssigner ba = new BulkStartupAssigner(this.master, bulkPlan, this);
+    BulkAssigner ba = new StartupBulkAssigner(this.master, bulkPlan, this);
     ba.bulkAssign();
     LOG.info("Bulk assigning done");
   }
 
   /**
-   * Run bulk assign on startup.
+   * Run bulk assign on startup.  Does one RCP per regionserver passing a
+   * batch of reginons using {@link SingleServerBulkAssigner}.
+   * Uses default {@link #getUncaughtExceptionHandler()}
+   * which will abort the Server if exception.
    */
-  static class BulkStartupAssigner extends BulkAssigner {
-    private final Map<HServerInfo, List<HRegionInfo>> bulkPlan;
-    private final AssignmentManager assignmentManager;
+  static class StartupBulkAssigner extends BulkAssigner {
+    final Map<HServerInfo, List<HRegionInfo>> bulkPlan;
+    final AssignmentManager assignmentManager;
 
-    BulkStartupAssigner(final Server server,
+    StartupBulkAssigner(final Server server,
         final Map<HServerInfo, List<HRegionInfo>> bulkPlan,
         final AssignmentManager am) {
       super(server);
@@ -1418,11 +1395,11 @@ public class AssignmentManager extends ZooKeeperListener {
     }
 
     @Override
-    public boolean bulkAssign() throws InterruptedException {
+    public boolean bulkAssign(boolean sync) throws InterruptedException {
       // Disable timing out regions in transition up in zk while bulk assigning.
       this.assignmentManager.timeoutMonitor.bulkAssign(true);
       try {
-        return super.bulkAssign();
+        return super.bulkAssign(sync);
       } finally {
         // Reenable timing out regions in transition up in zi.
         this.assignmentManager.timeoutMonitor.bulkAssign(false);
@@ -1430,21 +1407,60 @@ public class AssignmentManager extends ZooKeeperListener {
     }
 
     @Override
-   protected String getThreadNamePrefix() {
-    return super.getThreadNamePrefix() + "-startup";
-   }
+    protected String getThreadNamePrefix() {
+      return this.server.getServerName() + "-StartupBulkAssigner";
+    }
 
     @Override
     protected void populatePool(java.util.concurrent.ExecutorService pool) {
       for (Map.Entry<HServerInfo, List<HRegionInfo>> e: this.bulkPlan.entrySet()) {
         pool.execute(new SingleServerBulkAssigner(e.getKey(), e.getValue(),
-          this.assignmentManager));
+          this.assignmentManager, true));
       }
     }
 
     protected boolean waitUntilDone(final long timeout)
     throws InterruptedException {
-      return this.assignmentManager.waitUntilNoRegionsInTransition(timeout);
+      Set<HRegionInfo> regionSet = new HashSet<HRegionInfo>();
+      for (List<HRegionInfo> regionList : bulkPlan.values()) {
+        regionSet.addAll(regionList);
+      }
+      return this.assignmentManager.waitUntilNoRegionsInTransition(timeout, regionSet);
+    }
+
+    @Override
+    protected long getTimeoutOnRIT() {
+      // Guess timeout.  Multiply the number of regions on a random server
+      // by how long we thing one region takes opening.
+      long perRegionOpenTimeGuesstimate =
+        this.server.getConfiguration().getLong("hbase.bulk.assignment.perregion.open.time", 1000);
+      int regionsPerServer =
+        this.bulkPlan.entrySet().iterator().next().getValue().size();
+      long timeout = perRegionOpenTimeGuesstimate * regionsPerServer;
+      LOG.debug("Timeout-on-RIT=" + timeout);
+      return timeout;
+    }
+  }
+
+  /**
+   * Bulk user region assigner.
+   * If failed assign, lets timeout in RIT do cleanup.
+   */
+  static class GeneralBulkAssigner extends StartupBulkAssigner {
+    GeneralBulkAssigner(final Server server,
+        final Map<HServerInfo, List<HRegionInfo>> bulkPlan,
+        final AssignmentManager am) {
+      super(server, bulkPlan, am);
+    }
+
+    @Override
+    protected UncaughtExceptionHandler getUncaughtExceptionHandler() {
+      return new UncaughtExceptionHandler() {
+        @Override
+        public void uncaughtException(Thread t, Throwable e) {
+          LOG.warn("Assigning regions in " + t.getName(), e);
+        }
+      };
     }
   }
 
@@ -1457,7 +1473,8 @@ public class AssignmentManager extends ZooKeeperListener {
     private final AssignmentManager assignmentManager;
 
     SingleServerBulkAssigner(final HServerInfo regionserver,
-        final List<HRegionInfo> regions, final AssignmentManager am) {
+        final List<HRegionInfo> regions, final AssignmentManager am,
+        final boolean startUp) {
       this.regionserver = regionserver;
       this.regions = regions;
       this.assignmentManager = am;
@@ -1492,6 +1509,40 @@ public class AssignmentManager extends ZooKeeperListener {
       }
     }
     return regionsInTransition.isEmpty();
+  }
+
+  /**
+   * Wait until no regions from set regions are in transition.
+   * @param timeout How long to wait.
+   * @param regions set of regions to wait for
+   * @return True if nothing in regions in transition.
+   * @throws InterruptedException
+   */
+  boolean waitUntilNoRegionsInTransition(final long timeout, Set<HRegionInfo> regions)
+  throws InterruptedException {
+    // Blocks until there are no regions in transition.
+    long startTime = System.currentTimeMillis();
+    long remaining = timeout;
+    boolean stillInTransition = true;
+    synchronized (regionsInTransition) {
+      while (regionsInTransition.size() > 0 && !this.master.isStopped() &&
+          remaining > 0 && stillInTransition) {
+        int count = 0;
+        for (RegionState rs : regionsInTransition.values()) {
+          if (regions.contains(rs.getRegion())) {
+            count++;
+            break;
+          }
+        }
+        if (count == 0) {
+          stillInTransition = false;
+          break;
+        }
+        regionsInTransition.wait(remaining);
+        remaining = timeout - (System.currentTimeMillis() - startTime);
+      }
+    }
+    return stillInTransition;
   }
 
   /**
@@ -2015,6 +2066,30 @@ public class AssignmentManager extends ZooKeeperListener {
         }
       }
     }
+  }
+
+  /**
+   * Assigns list of user regions in round-robin fashion, if any.
+   * @param sync True if we are to wait on all assigns.
+   * @param startup True if this is server startup time.
+   * @throws InterruptedException
+   * @throws IOException
+   */
+  void bulkAssignUserRegions(final HRegionInfo [] regions,
+      final List<HServerInfo> servers, final boolean sync)
+  throws IOException {
+    Map<HServerInfo, List<HRegionInfo>> bulkPlan =
+      LoadBalancer.roundRobinAssignment(regions, servers);
+    LOG.info("Bulk assigning " + regions.length + " region(s) " +
+      "round-robin across " + servers.size() + " server(s)");
+    // Use fixed count thread pool assigning.
+    BulkAssigner ba = new GeneralBulkAssigner(this.master, bulkPlan, this);
+    try {
+      ba.bulkAssign(sync);
+    } catch (InterruptedException e) {
+      throw new IOException("InterruptedException bulk assigning", e);
+    }
+    LOG.info("Bulk assigning done");
   }
 
   /**

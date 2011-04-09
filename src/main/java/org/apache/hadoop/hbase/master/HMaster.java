@@ -882,25 +882,24 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   }
 
   private synchronized void createTable(final HRegionInfo [] newRegions,
-      boolean sync)
+      final boolean sync)
   throws IOException {
     String tableName = newRegions[0].getTableDesc().getNameAsString();
     if(MetaReader.tableExists(catalogTracker, tableName)) {
       throw new TableExistsException(tableName);
     }
-    for(HRegionInfo newRegion : newRegions) {
-
+    for (HRegionInfo newRegion : newRegions) {
       // 1. Set table enabling flag up in zk.
       try {
         assignmentManager.getZKTable().setEnabledTable(tableName);
       } catch (KeeperException e) {
         throw new IOException("Unable to ensure that the table will be" +
-            " enabled because of a ZooKeeper issue", e);
+          " enabled because of a ZooKeeper issue", e);
       }
 
       // 2. Create HRegion
       HRegion region = HRegion.createHRegion(newRegion,
-          fileSystemManager.getRootDir(), conf);
+        fileSystemManager.getRootDir(), conf);
 
       // 3. Insert into META
       MetaEditor.addRegionToMeta(catalogTracker, region.getRegionInfo());
@@ -912,23 +911,18 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
     // 5. Trigger immediate assignment of the regions in round-robin fashion
     List<HServerInfo> servers = serverManager.getOnlineServersList();
-    try {
-      this.assignmentManager.assignUserRegions(newRegions, servers);
-    } catch (InterruptedException ie) {
-      LOG.error("Caught " + ie + " during round-robin assignment");
-      throw new IOException(ie);
-    }
+    this.assignmentManager.bulkAssignUserRegions(newRegions, servers, sync);
 
-    // 5. If sync, wait for assignment of regions
-    if(sync) {
-      LOG.debug("Waiting for " + newRegions.length + " region(s) to be " +
-          "assigned before returning");
-      for(HRegionInfo regionInfo : newRegions) {
+    // 6. If sync, wait for assignment of regions
+    if (sync) {
+      LOG.debug("Waiting for " + newRegions.length + " region(s) to be assigned");
+      for (HRegionInfo regionInfo : newRegions) {
         try {
-          assignmentManager.waitForAssignment(regionInfo);
+          this.assignmentManager.waitForAssignment(regionInfo);
         } catch (InterruptedException e) {
           LOG.info("Interrupted waiting for region to be assigned during " +
-              "create table call");
+              "create table call", e);
+          Thread.currentThread().interrupt();
           return;
         }
       }

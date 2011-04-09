@@ -183,7 +183,8 @@ Release 0.90.3 - Unreleased
    HBASE-3734  HBaseAdmin creates new configurations in getCatalogTracker
    HBASE-3756  Can't move META or ROOT from shell
    HBASE-3740  hbck doesn't reset the number of errors when retrying
-
+   HBASE-3744  createTable blocks until all regions are out of transition
+               (Ted Yu via Stack)
 
   IMPROVEMENTS
    HBASE-3747  ReplicationSource should differanciate remote and local exceptions
