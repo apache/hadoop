@@ -1090,7 +1090,7 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
         <para>See <link linkend="compression.tool" >Compression Tool</link>.</para>
     </section>
     <section xml:id="decommission"><title>Node Decommission</title>
-        <para>You can have a node gradually shed its load and then shutdown using the
+        <para>Since HBase 0.90.2, you can have a node gradually shed its load and then shutdown using the
             <filename>graceful_stop.sh</filename> script.  Here is its usage:
             <programlisting>$ ./bin/graceful_stop.sh 
 Usage: graceful_stop.sh [--config &amp;conf-dir>] [--restart] [--reload] [--thrift] [--rest] &amp;hostname>
