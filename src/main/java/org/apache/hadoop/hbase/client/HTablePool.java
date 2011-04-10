@@ -19,11 +19,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.LinkedList;
-import java.util.Queue;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.hadoop.conf.Configuration;
@@ -118,7 +116,11 @@ public class HTablePool {
    */
   public void putTable(HTableInterface table) {
     Queue<HTableInterface> queue = tables.get(Bytes.toString(table.getTableName()));
-    if(queue.size() >= maxSize) return;
+    if(queue.size() >= maxSize) {
+      // release table instance since we're not reusing it
+      this.tableFactory.releaseHTableInterface(table);
+      return;
+    }
     queue.add(table);
   }
 
