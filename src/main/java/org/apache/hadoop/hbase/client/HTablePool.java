@@ -111,7 +111,7 @@ public class HTablePool {
    * Puts the specified HTable back into the pool.<p>
    *
    * If the pool already contains <i>maxSize</i> references to the table,
-   * then nothing happens.
+   * then the table instance gets closed after flushing buffered edits.
    * @param table table
    */
   public void putTable(HTableInterface table) {
