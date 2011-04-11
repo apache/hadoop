@@ -189,7 +189,12 @@ public class RowResource extends ResourceBase {
                   Response.Status.SERVICE_UNAVAILABLE);
     } finally {
       if (table != null) {
-        pool.putTable(table);
+        try {
+          pool.putTable(table);
+        } catch (IOException ioe) {
+          throw new WebApplicationException(ioe,
+              Response.Status.SERVICE_UNAVAILABLE);
+        }
       }
     }
   }
@@ -248,7 +253,12 @@ public class RowResource extends ResourceBase {
                   Response.Status.SERVICE_UNAVAILABLE);
     } finally {
       if (table != null) {
-        pool.putTable(table);
+        try {
+          pool.putTable(table);
+        } catch (IOException ioe) {
+          throw new WebApplicationException(ioe,
+              Response.Status.SERVICE_UNAVAILABLE);
+        }
       }
     }
   }
@@ -337,7 +347,12 @@ public class RowResource extends ResourceBase {
                   Response.Status.SERVICE_UNAVAILABLE);
     } finally {
       if (table != null) {
-        pool.putTable(table);
+        try {
+          pool.putTable(table);
+        } catch (IOException ioe) {
+          throw new WebApplicationException(ioe,
+              Response.Status.SERVICE_UNAVAILABLE);
+        }
       }
     }
     return Response.ok().build();

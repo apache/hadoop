@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 
 
@@ -43,5 +45,5 @@ public interface HTableInterfaceFactory {
    * Release the HTable resource represented by the table.
    * @param table
    */
-  void releaseHTableInterface(final HTableInterface table);
+  void releaseHTableInterface(final HTableInterface table) throws IOException;
 }

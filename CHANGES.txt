@@ -6,6 +6,8 @@ Release 0.91.0 - Unreleased
                changes at runtime (Gary Helmling via Andrew Purtell)
    HBASE-3677  Generate a globally unique cluster ID (changed
                ClusterStatus serialization)
+   HBASE-3762  HTableFactory.releaseHTableInterface() should throw IOException
+               instead of wrapping in RuntimeException (Ted Yu via garyh)
 
   BUG FIXES
    HBASE-3280  YouAreDeadException being swallowed in HRS getMaster

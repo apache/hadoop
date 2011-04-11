@@ -40,11 +40,7 @@ public class HTableFactory implements HTableInterfaceFactory {
   }
 
   @Override
-  public void releaseHTableInterface(HTableInterface table) {
-    try {
-      table.close();
-    } catch (IOException ioe) {
-      throw new RuntimeException(ioe);
-    }
+  public void releaseHTableInterface(HTableInterface table) throws IOException {
+    table.close();
   }
 }

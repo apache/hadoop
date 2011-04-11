@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -114,7 +115,7 @@ public class HTablePool {
    * then the table instance gets closed after flushing buffered edits.
    * @param table table
    */
-  public void putTable(HTableInterface table) {
+  public void putTable(HTableInterface table) throws IOException {
     Queue<HTableInterface> queue = tables.get(Bytes.toString(table.getTableName()));
     if(queue.size() >= maxSize) {
       // release table instance since we're not reusing it
@@ -137,7 +138,7 @@ public class HTablePool {
    *
    * @param tableName
    */
-  public void closeTablePool(final String tableName)  {
+  public void closeTablePool(final String tableName) throws IOException {
     Queue<HTableInterface> queue = tables.get(tableName);
     if (queue != null) {
       HTableInterface table = queue.poll();
@@ -154,7 +155,7 @@ public class HTablePool {
    *
    * @param tableName
    */
-  public void closeTablePool(final byte[] tableName)  {
+  public void closeTablePool(final byte[] tableName) throws IOException {
     closeTablePool(Bytes.toString(tableName));
   }
 

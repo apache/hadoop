@@ -401,7 +401,13 @@ public class AvroServer {
 	ioe.message = new Utf8(e.getMessage());
         throw ioe;
       } finally {
-        htablePool.putTable(htable);
+        try {
+          htablePool.putTable(htable);
+        } catch (IOException e) {
+          AIOError ioe = new AIOError();
+          ioe.message = new Utf8(e.getMessage());
+          throw ioe;
+        }
       }
     }
 
@@ -414,7 +420,13 @@ public class AvroServer {
 	ioe.message = new Utf8(e.getMessage());
         throw ioe;
       } finally {
-        htablePool.putTable(htable);
+        try {
+          htablePool.putTable(htable);
+        } catch (IOException e) {
+          AIOError ioe = new AIOError();
+          ioe.message = new Utf8(e.getMessage());
+          throw ioe;
+        } 
       }
     }
 
@@ -428,7 +440,13 @@ public class AvroServer {
         ioe.message = new Utf8(e.getMessage());
         throw ioe;
       } finally {
-        htablePool.putTable(htable);
+        try {
+          htablePool.putTable(htable);
+        } catch (IOException e) {
+          AIOError ioe = new AIOError();
+          ioe.message = new Utf8(e.getMessage());
+          throw ioe;
+        }
       }
     }
 
@@ -442,7 +460,13 @@ public class AvroServer {
 	ioe.message = new Utf8(e.getMessage());
         throw ioe;
       } finally {
-        htablePool.putTable(htable);
+        try {
+          htablePool.putTable(htable);
+        } catch (IOException e) {
+          AIOError ioe = new AIOError();
+          ioe.message = new Utf8(e.getMessage());
+          throw ioe;
+        }
       }
     }
 
@@ -455,7 +479,13 @@ public class AvroServer {
         ioe.message = new Utf8(e.getMessage());
         throw ioe;
       } finally {
-        htablePool.putTable(htable);
+        try {
+          htablePool.putTable(htable);
+        } catch (IOException e) {
+          AIOError ioe = new AIOError();
+          ioe.message = new Utf8(e.getMessage());
+          throw ioe;
+        }
       }
     }
 
@@ -473,7 +503,13 @@ public class AvroServer {
 	ioe.message = new Utf8(e.getMessage());
         throw ioe;
       } finally {
-        htablePool.putTable(htable);
+        try {
+          htablePool.putTable(htable);
+        } catch (IOException e) {
+          AIOError ioe = new AIOError();
+          ioe.message = new Utf8(e.getMessage());
+          throw ioe;
+        }
       }
     }
 
