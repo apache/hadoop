@@ -52,7 +52,7 @@ public class TestHTablePool  {
   }
 
   @Test
-  public void testTableWithStringName() {
+  public void testTableWithStringName() throws Exception {
     HTablePool pool =
       new HTablePool(TEST_UTIL.getConfiguration(), Integer.MAX_VALUE);
     String tableName = Bytes.toString(TABLENAME);
@@ -86,7 +86,7 @@ public class TestHTablePool  {
   }
 
   @Test
-  public void testTableWithMaxSize() {
+  public void testTableWithMaxSize() throws Exception {
     HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(), 2);
 
     // Request tables from an empty pool
