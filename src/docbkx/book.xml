@@ -1142,6 +1142,8 @@ false
             </para> 
         </note>
         </para>
+        <section xml:id="rolling">
+            <title>Rolling Restart</title>
         <para>
             You can also ask this script to restart a RegionServer after the shutdown
             AND move its old regions back into place.  The latter you might do to
@@ -1150,9 +1152,50 @@ false
             <programlisting>$ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --reload --debug $i; done &amp;> /tmp/log.txt &amp;
             </programlisting>
             Tail the output of <filename>/tmp/log.txt</filename> to follow the scripts
-            progress. The above does regionservers only.  You'd need to do the master
-            update separately.
+            progress. The above does regionservers only.  Be sure to disable the
+            load balancer before doing the above.  You'd need to do the master
+            update separately.  Do it before you run the above script.
+            Here is a pseudo-script for how you might craft a rolling restart script:
+            <orderedlist>
+                <listitem><para>Untar your release, make sure of its configuration and
+                        then rsync it across the cluster. If this is 0.90.2, patch it
+                        with HBASE-3744 and HBASE-3756.
+                    </para>
+                </listitem>
+                <listitem>
+                    <para>Run hbck to ensure the cluster consistent
+                        <programlisting>$ ./bin/hbase hbck</programlisting>
+                    Effect repairs if inconsistent.
+                    </para>
+                </listitem>
+                <listitem>
+                    <para>Restart the Master: <programlisting>$ ./bin/hbase-daemon.sh stop master; ./bin/hbase-daemon.sh start master</programlisting>
+                    </para>
+                </listitem>
+                <listitem>
+                    <para>
+                       Disable the region balancer:<programlisting>$ echo "balance_switch false" | ./bin/hbase</programlisting>
+                    </para>
+                </listitem>
+                <listitem>
+                     <para>Run the <filename>graceful_stop.sh</filename> script per regionserver.  For example:
+            <programlisting>$ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --reload --debug $i; done &amp;> /tmp/log.txt &amp;
+            </programlisting>
+                     If you are running thrift or rest servers on the regionserver, pass --thrift or --rest options (See usage
+                     for <filename>graceful_stop.sh</filename> script).
+                 </para>
+                </listitem>
+                <listitem>
+                    <para>Restart the Master again.  This will clear out dead servers list and reenable the balancer.
+                    </para>
+                </listitem>
+                <listitem>
+                    <para>Run hbck to ensure the cluster is consistent.
+                    </para>
+                </listitem>
+            </orderedlist>
         </para>
+    </section>
     </section>
   </appendix>
 
