@@ -148,6 +148,7 @@ Release 0.91.0 - Unreleased
                coprocessor collection
    HBASE-3729  Get cells via shell with a time range predicate
                (Ted Yu via Stack)
+   HBASE-3764  Book.xml - adding 2 FAQs (SQL and arch question)
 
   TASK
    HBASE-3559  Move report of split to master OFF the heartbeat channel

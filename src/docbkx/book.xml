@@ -1235,6 +1235,26 @@ false
                 </para>
             </answer>
         </qandaentry>
+        <qandaentry xml:id="faq.sql">
+            <question><para>Does HBase support SQL?</para></question>
+            <answer>
+                <para>
+                    Not really.  SQL-ish support for HBase via <link xlink:href="http://hive.apache.org/">Hive</link> is in development, however Hive is based on MapReduce which is not generally suitable for low-latency requests.
+                    See the <link linkend="datamodel">Data Model</link> section for examples on the HBase client.
+                </para>
+            </answer>
+        </qandaentry>
+        <qandaentry xml:id="faq.hdfs.hbase">
+            <question><para>How does HBase work on top of HDFS?</para></question>
+            <answer>
+                <para>
+                    <link xlink:href="http://hadoop.apache.org/hdfs/">HDFS</link> is a distributed file system that is well suited for the storage of large files.  It's documentation 
+                    states that it is not, however, a general purpose file system, and does not provide fast individual record lookups in files. 
+                    HBase, on the other hand, is built on top of HDFS and provides fast record lookups (and updates) for large tables.  This can sometimes be a point of conceptual confusion.
+                    See the <link linkend="datamodel">Data Model</link> and <link linkend="architecture">Architecture</link> sections for more information on how HBase achieves its goals.
+                </para>
+            </answer>
+        </qandaentry>
         <qandaentry xml:id="brand.new.compressor">
             <question><para>Why are logs flooded with '2011-01-10 12:40:48,407 INFO org.apache.hadoop.io.compress.CodecPool: Got
             brand-new compressor' messages?</para></question>
