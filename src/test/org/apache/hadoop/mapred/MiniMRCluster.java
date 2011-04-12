@@ -581,7 +581,7 @@ public class MiniMRCluster {
       new TaskAttemptID(jtId, jobId.getId(), false, 0, 0);
     return taskTrackerList.get(index).getTaskTracker()
                                      .getMapCompletionEvents(jobId, 0, max, 
-                                                             dummy);
+                                                             dummy, null);
   }
   
   /**

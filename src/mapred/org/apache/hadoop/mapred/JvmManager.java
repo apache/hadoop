@@ -128,6 +128,14 @@ class JvmManager {
     }
   }
 
+  public boolean validateTipToJvm(TaskInProgress tip, JVMId jvmId) {
+    if (jvmId.isMapJVM()) {
+      return mapJvmManager.validateTipToJvm(tip, jvmId);
+    } else {
+      return reduceJvmManager.validateTipToJvm(tip, jvmId);
+    }
+  }
+
   public TaskInProgress getTaskForJvm(JVMId jvmId)
       throws IOException {
     if (jvmId.isMapJVM()) {
@@ -223,6 +231,23 @@ class JvmManager {
       jvmIdToRunner.get(jvmId).setBusy(true);
     }
     
+    synchronized public boolean validateTipToJvm(TaskInProgress tip, JVMId jvmId) {
+      if (jvmId == null) {
+        LOG.warn("Null jvmId. Cannot verify Jvm. validateTipToJvm returning false");
+        return false;
+      }
+      TaskRunner taskRunner = jvmToRunningTask.get(jvmId);
+      if (taskRunner == null) {
+        return false; //JvmId not known.
+      }
+      TaskInProgress knownTip = taskRunner.getTaskInProgress();
+      if (knownTip == tip) { // Valid to compare the addresses ? (or equals)
+        return true;
+      } else {
+        return false;
+      }
+    }
+
     synchronized public TaskInProgress getTaskForJvm(JVMId jvmId)
         throws IOException {
       if (jvmToRunningTask.containsKey(jvmId)) {

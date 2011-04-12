@@ -61,7 +61,7 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
    * Version 18 Added fatalError for child to communicate fatal errors to TT
    * */
 
-  public static final long versionID = 18L;
+  public static final long versionID = 19L;
   
   /**
    * Called when a child task process starts, to get its task.
@@ -77,66 +77,78 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
    * 
    * @param taskId task-id of the child
    * @param taskStatus status of the child
+   * @param jvmContext context the jvmContext running the task.
    * @throws IOException
    * @throws InterruptedException
    * @return True if the task is known
    */
-  boolean statusUpdate(TaskAttemptID taskId, TaskStatus taskStatus) 
-  throws IOException, InterruptedException;
+  boolean statusUpdate(TaskAttemptID taskId, TaskStatus taskStatus,
+      JvmContext context) throws IOException, InterruptedException;
   
   /** Report error messages back to parent.  Calls should be sparing, since all
    *  such messages are held in the job tracker.
    *  @param taskid the id of the task involved
    *  @param trace the text to report
+   *  @param jvmContext context the jvmContext running the task.
    */
-  void reportDiagnosticInfo(TaskAttemptID taskid, String trace) throws IOException;
+  void reportDiagnosticInfo(TaskAttemptID taskid, String trace,
+      JvmContext jvmContext) throws IOException;
   
   /**
    * Report the record range which is going to process next by the Task.
    * @param taskid the id of the task involved
    * @param range the range of record sequence nos
+   * @param jvmContext context the jvmContext running the task.
    * @throws IOException
    */
-  void reportNextRecordRange(TaskAttemptID taskid, SortedRanges.Range range) 
-    throws IOException;
+  void reportNextRecordRange(TaskAttemptID taskid, SortedRanges.Range range,
+      JvmContext jvmContext) throws IOException;
 
-  /** Periodically called by child to check if parent is still alive. 
+  /** Periodically called by child to check if parent is still alive.
+   * @param taskid the id of the task involved
+   * @param jvmContext context the jvmContext running the task.
    * @return True if the task is known
    */
-  boolean ping(TaskAttemptID taskid) throws IOException;
+  boolean ping(TaskAttemptID taskid, JvmContext jvmContext) throws IOException;
 
   /** Report that the task is successfully completed.  Failure is assumed if
    * the task process exits without calling this.
    * @param taskid task's id
+   * @param jvmContext context the jvmContext running the task.
    */
-  void done(TaskAttemptID taskid) throws IOException;
+  void done(TaskAttemptID taskid, JvmContext jvmContext) throws IOException;
   
   /** 
    * Report that the task is complete, but its commit is pending.
    * 
    * @param taskId task's id
    * @param taskStatus status of the child
+   * @param jvmContext context the jvmContext running the task.
    * @throws IOException
    */
-  void commitPending(TaskAttemptID taskId, TaskStatus taskStatus) 
-  throws IOException, InterruptedException;  
+  void commitPending(TaskAttemptID taskId, TaskStatus taskStatus,
+      JvmContext jvmContext) throws IOException, InterruptedException;  
 
   /**
    * Polling to know whether the task can go-ahead with commit 
    * @param taskid
+   * @param jvmContext context the jvmContext running the task.
    * @return true/false 
    * @throws IOException
    */
-  boolean canCommit(TaskAttemptID taskid) throws IOException;
+  boolean canCommit(TaskAttemptID taskid, JvmContext jvmContext) throws IOException;
 
-  /** Report that a reduce-task couldn't shuffle map-outputs.*/
-  void shuffleError(TaskAttemptID taskId, String message) throws IOException;
+  /** Report that a reduce-task couldn't shuffle map-outputs. */
+  void shuffleError(TaskAttemptID taskId, String message, JvmContext jvmContext)
+      throws IOException;
   
   /** Report that the task encounted a local filesystem error.*/
-  void fsError(TaskAttemptID taskId, String message) throws IOException;
+  void fsError(TaskAttemptID taskId, String message, JvmContext jvmContext)
+      throws IOException;
 
   /** Report that the task encounted a fatal error.*/
-  void fatalError(TaskAttemptID taskId, String message) throws IOException;
+  void fatalError(TaskAttemptID taskId, String message, JvmContext jvmContext)
+      throws IOException;
   
   /** Called by a reduce task to get the map output locations for finished maps.
    * Returns an update centered around the map-task-completion-events. 
@@ -154,7 +166,8 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
   MapTaskCompletionEventsUpdate getMapCompletionEvents(JobID jobId, 
                                                        int fromIndex, 
                                                        int maxLocs,
-                                                       TaskAttemptID id) 
+                                                       TaskAttemptID id,
+                                                       JvmContext jvmContext) 
   throws IOException;
 
   /**

@@ -4,6 +4,9 @@ Release 0.20.204.0 - unreleased
 
   BUG FIXES
 
+    MAPREDUCE-2429. Validate JVM in TaskUmbilicalProtocol. (Siddharth Seth via
+    acmurthy) 
+
     MAPREDUCE-2418. Show job errors in JobHistory page. (Siddharth Seth via
     acmurthy) 
 

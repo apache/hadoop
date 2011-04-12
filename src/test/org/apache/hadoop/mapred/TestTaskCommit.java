@@ -99,32 +99,37 @@ public class TestTaskCommit extends HadoopTestCase {
     boolean taskDone = false;
 
     @Override
-    public boolean canCommit(TaskAttemptID taskid) throws IOException {
+    public boolean canCommit(TaskAttemptID taskid, JvmContext jvmContext)
+        throws IOException {
       return false;
     }
 
     @Override
-    public void commitPending(TaskAttemptID taskId, TaskStatus taskStatus)
-        throws IOException, InterruptedException {
+    public void commitPending(TaskAttemptID taskId, TaskStatus taskStatus,
+        JvmContext jvmContext) throws IOException, InterruptedException {
       fail("Task should not go to commit-pending");
     }
 
     @Override
-    public void done(TaskAttemptID taskid) throws IOException {
+    public void done(TaskAttemptID taskid, JvmContext jvmContext)
+        throws IOException {
       taskDone = true;
     }
 
     @Override
-    public void fatalError(TaskAttemptID taskId, String message)
-        throws IOException { }
+    public void fatalError(TaskAttemptID taskId, String message,
+        JvmContext jvmContext) throws IOException {
+    }
 
     @Override
-    public void fsError(TaskAttemptID taskId, String message)
-        throws IOException { }
+    public void fsError(TaskAttemptID taskId, String message,
+        JvmContext jvmContext) throws IOException {
+    }
 
     @Override
     public MapTaskCompletionEventsUpdate getMapCompletionEvents(JobID jobId,
-        int fromIndex, int maxLocs, TaskAttemptID id) throws IOException {
+        int fromIndex, int maxLocs, TaskAttemptID id, JvmContext jvmContext)
+        throws IOException {
       return null;
     }
 
@@ -134,28 +139,29 @@ public class TestTaskCommit extends HadoopTestCase {
     }
 
     @Override
-    public boolean ping(TaskAttemptID taskid) throws IOException {
+    public boolean ping(TaskAttemptID taskid, JvmContext jvmContext)
+        throws IOException {
       return true;
     }
 
     @Override
-    public void reportDiagnosticInfo(TaskAttemptID taskid, String trace)
-        throws IOException {
+    public void reportDiagnosticInfo(TaskAttemptID taskid, String trace,
+        JvmContext jvmContext) throws IOException {
     }
 
     @Override
-    public void reportNextRecordRange(TaskAttemptID taskid, Range range)
-        throws IOException {
+    public void reportNextRecordRange(TaskAttemptID taskid, Range range,
+        JvmContext jvmContext) throws IOException {
     }
 
     @Override
-    public void shuffleError(TaskAttemptID taskId, String message)
-        throws IOException {
+    public void shuffleError(TaskAttemptID taskId, String message,
+        JvmContext jvmContext) throws IOException {
     }
 
     @Override
-    public boolean statusUpdate(TaskAttemptID taskId, TaskStatus taskStatus)
-        throws IOException, InterruptedException {
+    public boolean statusUpdate(TaskAttemptID taskId, TaskStatus taskStatus,
+        JvmContext jvmContext) throws IOException, InterruptedException {
       return true;
     }
 
@@ -166,9 +172,9 @@ public class TestTaskCommit extends HadoopTestCase {
     }
 
     @Override
-    public void 
-    updatePrivateDistributedCacheSizes(org.apache.hadoop.mapreduce.JobID jobId,
-                                       long[] sizes) throws IOException {
+    public void updatePrivateDistributedCacheSizes(
+        org.apache.hadoop.mapreduce.JobID jobId, long[] sizes)
+        throws IOException {
       // NOTHING
     }
   }

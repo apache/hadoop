@@ -53,19 +53,23 @@ public class IsolationRunner {
       return TaskUmbilicalProtocol.versionID;
     }
     
-    public void done(TaskAttemptID taskid) throws IOException {
+    public void done(TaskAttemptID taskid, JvmContext jvmContext)
+        throws IOException {
       LOG.info("Task " + taskid + " reporting done.");
     }
 
-    public void fsError(TaskAttemptID taskId, String message) throws IOException {
+    public void fsError(TaskAttemptID taskId, String message,
+        JvmContext jvmContext) throws IOException {
       LOG.info("Task " + taskId + " reporting file system error: " + message);
     }
 
-    public void shuffleError(TaskAttemptID taskId, String message) throws IOException {
+    public void shuffleError(TaskAttemptID taskId, String message,
+        JvmContext jvmContext) throws IOException {
       LOG.info("Task " + taskId + " reporting shuffle error: " + message);
     }
 
-    public void fatalError(TaskAttemptID taskId, String msg) throws IOException{
+    public void fatalError(TaskAttemptID taskId, String msg,
+        JvmContext jvmContext) throws IOException {
       LOG.info("Task " + taskId + " reporting fatal error: " + msg);
     }
 
@@ -73,20 +77,21 @@ public class IsolationRunner {
       return null;
     }
 
-    public boolean ping(TaskAttemptID taskid) throws IOException {
+    public boolean ping(TaskAttemptID taskid, JvmContext jvmContext) throws IOException {
       return true;
     }
 
-    public void commitPending(TaskAttemptID taskId, TaskStatus taskStatus) 
-    throws IOException, InterruptedException {
-      statusUpdate(taskId, taskStatus);
+    public void commitPending(TaskAttemptID taskId, TaskStatus taskStatus,
+        JvmContext jvmContext) throws IOException, InterruptedException {
+      statusUpdate(taskId, taskStatus, jvmContext);
     }
     
-    public boolean canCommit(TaskAttemptID taskid) throws IOException {
+    public boolean canCommit(TaskAttemptID taskid, JvmContext jvmContext)
+        throws IOException {
       return true;
     }
     
-    public boolean statusUpdate(TaskAttemptID taskId, TaskStatus taskStatus) 
+    public boolean statusUpdate(TaskAttemptID taskId, TaskStatus taskStatus, JvmContext context) 
     throws IOException, InterruptedException {
       StringBuffer buf = new StringBuffer("Task ");
       buf.append(taskId);
@@ -103,18 +108,20 @@ public class IsolationRunner {
       return true;
     }
 
-    public void reportDiagnosticInfo(TaskAttemptID taskid, String trace) throws IOException {
+    public void reportDiagnosticInfo(TaskAttemptID taskid, String trace,
+        JvmContext jvmContext) throws IOException {
       LOG.info("Task " + taskid + " has problem " + trace);
     }
     
-    public MapTaskCompletionEventsUpdate getMapCompletionEvents(JobID jobId, 
-        int fromEventId, int maxLocs, TaskAttemptID id) throws IOException {
-      return new MapTaskCompletionEventsUpdate(TaskCompletionEvent.EMPTY_ARRAY, 
-                                               false);
+    public MapTaskCompletionEventsUpdate getMapCompletionEvents(JobID jobId,
+        int fromEventId, int maxLocs, TaskAttemptID id, JvmContext jvmContext)
+        throws IOException {
+      return new MapTaskCompletionEventsUpdate(TaskCompletionEvent.EMPTY_ARRAY,
+          false);
     }
 
     public void reportNextRecordRange(TaskAttemptID taskid, 
-        SortedRanges.Range range) throws IOException {
+        SortedRanges.Range range, JvmContext jvmContext) throws IOException {
       LOG.info("Task " + taskid + " reportedNextRecordRange " + range);
     }
 

@@ -341,12 +341,13 @@ class MapTask extends Task {
   }
 
   @Override
-  public void run(final JobConf job, final TaskUmbilicalProtocol umbilical)
+  public void run(final JobConf job, final TaskUmbilicalProtocol umbilical) 
     throws IOException, ClassNotFoundException, InterruptedException {
     this.umbilical = umbilical;
 
     // start thread that will handle communication with parent
-    TaskReporter reporter = new TaskReporter(getProgress(), umbilical);
+    TaskReporter reporter = new TaskReporter(getProgress(), umbilical,
+        jvmContext);
     reporter.startCommunicationThread();
     boolean useNewApi = job.getUseNewMapper();
     initialize(job, getJobID(), reporter, useNewApi);

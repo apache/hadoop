@@ -356,7 +356,8 @@ class ReduceTask extends Task {
       reducePhase = getProgress().addPhase("reduce");
     }
     // start thread that will handle communication with parent
-    TaskReporter reporter = new TaskReporter(getProgress(), umbilical);
+    TaskReporter reporter = new TaskReporter(getProgress(), umbilical,
+        jvmContext);
     reporter.startCommunicationThread();
     boolean useNewApi = job.getUseNewReducer();
     initialize(job, getJobID(), reporter, useNewApi);
@@ -1330,7 +1331,7 @@ class ReduceTask extends Task {
             LOG.error("Task: " + reduceTask.getTaskID() + " - FSError: " + 
                       StringUtils.stringifyException(e));
             try {
-              umbilical.fsError(reduceTask.getTaskID(), e.getMessage());
+              umbilical.fsError(reduceTask.getTaskID(), e.getMessage(), jvmContext);
             } catch (IOException io) {
               LOG.error("Could not notify TT of FSError: " + 
                       StringUtils.stringifyException(io));
@@ -2299,7 +2300,7 @@ class ReduceTask extends Task {
                             "Killing task " + getTaskID() + ".");
                   umbilical.shuffleError(getTaskID(), 
                                          "Exceeded MAX_FAILED_UNIQUE_FETCHES;"
-                                         + " bailing-out.");
+                                         + " bailing-out.", jvmContext);
                 }
               }
                 
@@ -2857,7 +2858,7 @@ class ReduceTask extends Task {
           umbilical.getMapCompletionEvents(reduceTask.getJobID(), 
                                            fromEventId.get(), 
                                            MAX_EVENTS_TO_FETCH,
-                                           reduceTask.getTaskID());
+                                           reduceTask.getTaskID(), jvmContext);
         TaskCompletionEvent events[] = update.getMapTaskCompletionEvents();
           
         // Check if the reset is required.

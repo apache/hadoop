@@ -311,7 +311,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
 
     public JvmTask getTask(JvmContext context) { return null; }
 
-    public boolean statusUpdate(TaskAttemptID taskId, TaskStatus taskStatus) 
+    public boolean statusUpdate(TaskAttemptID taskId, TaskStatus taskStatus, JvmContext context) 
     throws IOException, InterruptedException {
       LOG.info(taskStatus.getStateString());
       float taskIndex = mapIds.indexOf(taskId);
@@ -333,9 +333,10 @@ class LocalJobRunner implements JobSubmissionProtocol {
      * and it is waiting for the commit Response
      */
     public void commitPending(TaskAttemptID taskid,
-                              TaskStatus taskStatus) 
+                              TaskStatus taskStatus,
+                              JvmContext jvmContext) 
     throws IOException, InterruptedException {
-      statusUpdate(taskid, taskStatus);
+      statusUpdate(taskid, taskStatus, jvmContext);
     }
 
     /**
@@ -347,51 +348,55 @@ class LocalJobRunner implements JobSubmissionProtocol {
       completedTaskCounters.incrAllCounters(task.getCounters());
     }
 
-    public void reportDiagnosticInfo(TaskAttemptID taskid, String trace) {
+    public void reportDiagnosticInfo(TaskAttemptID taskid, String trace,
+        JvmContext jvmContext) {
       // Ignore for now
     }
     
     public void reportNextRecordRange(TaskAttemptID taskid, 
-        SortedRanges.Range range) throws IOException {
+        SortedRanges.Range range, JvmContext jvmContext) throws IOException {
       LOG.info("Task " + taskid + " reportedNextRecordRange " + range);
     }
 
-    public boolean ping(TaskAttemptID taskid) throws IOException {
+    public boolean ping(TaskAttemptID taskid, JvmContext jvmContext) throws IOException {
       return true;
     }
     
-    public boolean canCommit(TaskAttemptID taskid) 
+    public boolean canCommit(TaskAttemptID taskid, JvmContext jvmContext) 
     throws IOException {
       return true;
     }
     
-    public void done(TaskAttemptID taskId) throws IOException {
+    public void done(TaskAttemptID taskId, JvmContext jvmContext)
+        throws IOException {
       int taskIndex = mapIds.indexOf(taskId);
-      if (taskIndex >= 0) {                       // mapping
+      if (taskIndex >= 0) { // mapping
         status.setMapProgress(1.0f);
       } else {
         status.setReduceProgress(1.0f);
       }
     }
 
-    public synchronized void fsError(TaskAttemptID taskId, String message) 
-    throws IOException {
-      LOG.fatal("FSError: "+ message + "from task: " + taskId);
+    public synchronized void fsError(TaskAttemptID taskId, String message,
+        JvmContext jvmContext) throws IOException {
+      LOG.fatal("FSError: " + message + "from task: " + taskId);
     }
 
-    public void shuffleError(TaskAttemptID taskId, String message) throws IOException {
-      LOG.fatal("shuffleError: "+ message + "from task: " + taskId);
+    public void shuffleError(TaskAttemptID taskId, String message,
+        JvmContext jvmContext) throws IOException {
+      LOG.fatal("shuffleError: " + message + "from task: " + taskId);
     }
     
-    public synchronized void fatalError(TaskAttemptID taskId, String msg) 
-    throws IOException {
-      LOG.fatal("Fatal: "+ msg + "from task: " + taskId);
+    public synchronized void fatalError(TaskAttemptID taskId, String msg,
+        JvmContext jvmContext) throws IOException {
+      LOG.fatal("Fatal: " + msg + "from task: " + taskId);
     }
     
-    public MapTaskCompletionEventsUpdate getMapCompletionEvents(JobID jobId, 
-        int fromEventId, int maxLocs, TaskAttemptID id) throws IOException {
+    public MapTaskCompletionEventsUpdate getMapCompletionEvents(JobID jobId,
+        int fromEventId, int maxLocs, TaskAttemptID id, JvmContext jvmContext)
+        throws IOException {
       return new MapTaskCompletionEventsUpdate(TaskCompletionEvent.EMPTY_ARRAY,
-                                               false);
+          false);
     }
 
     @Override
