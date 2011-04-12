@@ -659,7 +659,8 @@ public abstract class FileSystem extends Configured implements Closeable {
                                             long blockSize,
                                             Progressable progress
                                             ) throws IOException {
-    return this.create(f, FsPermission.getDefault(), overwrite, bufferSize,
+    return this.create(f, FsPermission.getDefault().applyUMask(
+        FsPermission.getUMask(getConf())), overwrite, bufferSize,
         replication, blockSize, progress);
   }
 
