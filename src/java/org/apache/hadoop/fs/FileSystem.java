@@ -50,6 +50,8 @@ import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -363,7 +365,23 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @return a new delegation token
    * @throws IOException
    */
+  @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
   public Token<?> getDelegationToken(String renewer) throws IOException {
+    return null;
+  }
+  
+  /**
+   * Get one or more delegation tokens associated with the filesystem. Normally
+   * a file system returns a single delegation token. A file system that manages
+   * multiple file systems underneath, could return set of delegation tokens for
+   * all the file systems it manages.
+   * 
+   * @param renewer the account name that is allowed to renew the token.
+   * @return list of new delegation tokens
+   * @throws IOException
+   */
+  @InterfaceAudience.LimitedPrivate( { "HDFS", "MapReduce" })
+  public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
     return null;
   }
 

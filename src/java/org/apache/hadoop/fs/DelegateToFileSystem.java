@@ -22,12 +22,17 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.EnumSet;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.util.Progressable;
 
 /**
@@ -206,5 +211,15 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
      * should override getLinkTarget. 
      */
     throw new AssertionError();
+  }
+
+  @Override //AbstractFileSystem
+  public String getCanonicalServiceName() {
+    return fsImpl.getCanonicalServiceName();
+  }
+  
+  @Override //AbstractFileSystem
+  public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
+    return fsImpl.getDelegationTokens(renewer);
   }
 }

@@ -21,12 +21,13 @@ package org.apache.hadoop.fs;
 import java.io.*;
 import java.net.URI;
 import java.util.EnumSet;
-import java.util.Iterator;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 
 /****************************************************************
@@ -365,5 +366,20 @@ public class FilterFileSystem extends FileSystem {
   protected boolean primitiveMkdir(Path f, FsPermission abdolutePermission)
       throws IOException {
     return fs.primitiveMkdir(f, abdolutePermission);
+  }
+  
+  @Override // FileSystem
+  public String getCanonicalServiceName() {
+    return fs.getCanonicalServiceName();
+  }
+  
+  @Override // FileSystem
+  public Token<?> getDelegationToken(String renewer) throws IOException {
+    return fs.getDelegationToken(renewer);
+  }
+  
+  @Override // FileSystem
+  public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
+    return fs.getDelegationTokens(renewer);
   }
 }

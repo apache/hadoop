@@ -18,6 +18,8 @@ Trunk (unreleased changes)
     HADOOP-7096. Allow setting of end-of-record delimiter for TextInputFormat
     (Ahmed Radwan via todd)
 
+    HADOOP-6994. Api to get delegation token in AbstractFileSystem. (jitendra)
+
   IMPROVEMENTS
 
     HADOOP-7042. Updates to test-patch.sh to include failed test names and
