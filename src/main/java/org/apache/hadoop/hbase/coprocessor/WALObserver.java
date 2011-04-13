@@ -42,26 +42,26 @@ public interface WALObserver extends Coprocessor {
    * Called before a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
    * is writen to WAL.
    *
-   * @param env
+   * @param ctx
    * @param info
    * @param logKey
    * @param logEdit
    * @return true if default behavior should be bypassed, false otherwise
    * @throws IOException
    */
-  boolean preWALWrite(CoprocessorEnvironment env,
+  boolean preWALWrite(ObserverContext<WALCoprocessorEnvironment> ctx,
       HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException;
 
   /**
    * Called after a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
    * is writen to WAL.
    *
-   * @param env
+   * @param ctx
    * @param info
    * @param logKey
    * @param logEdit
    * @throws IOException
    */
-  void postWALWrite(CoprocessorEnvironment env,
+  void postWALWrite(ObserverContext<WALCoprocessorEnvironment> ctx,
       HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException;
 }

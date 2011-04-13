@@ -49,94 +49,97 @@ public abstract class BaseRegionObserverCoprocessor implements RegionObserver {
   public void stop(CoprocessorEnvironment e) { }
 
   @Override
-  public void preOpen(RegionCoprocessorEnvironment e) { }
+  public void preOpen(ObserverContext<RegionCoprocessorEnvironment> e) { }
 
   @Override
-  public void postOpen(RegionCoprocessorEnvironment e) { }
+  public void postOpen(ObserverContext<RegionCoprocessorEnvironment> e) { }
 
   @Override
-  public void preClose(RegionCoprocessorEnvironment e, boolean abortRequested)
-    { }
+  public void preClose(ObserverContext<RegionCoprocessorEnvironment> e,
+      boolean abortRequested) { }
 
   @Override
-  public void postClose(RegionCoprocessorEnvironment e, boolean abortRequested)
-    { }
+  public void postClose(ObserverContext<RegionCoprocessorEnvironment> e,
+      boolean abortRequested) { }
 
   @Override
-  public void preFlush(RegionCoprocessorEnvironment e) { }
+  public void preFlush(ObserverContext<RegionCoprocessorEnvironment> e) { }
 
   @Override
-  public void postFlush(RegionCoprocessorEnvironment e) { }
+  public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e) { }
 
   @Override
-  public void preSplit(RegionCoprocessorEnvironment e) { }
+  public void preSplit(ObserverContext<RegionCoprocessorEnvironment> e) { }
 
   @Override
-  public void postSplit(RegionCoprocessorEnvironment e, HRegion l, HRegion r) { }
+  public void postSplit(ObserverContext<RegionCoprocessorEnvironment> e,
+      HRegion l, HRegion r) { }
 
   @Override
-  public void preCompact(RegionCoprocessorEnvironment e, boolean willSplit) { }
+  public void preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
+      boolean willSplit) { }
 
   @Override
-  public void postCompact(RegionCoprocessorEnvironment e, boolean willSplit) { }
+  public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e,
+      boolean willSplit) { }
 
   @Override
-  public void preGetClosestRowBefore(final RegionCoprocessorEnvironment e,
+  public void preGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> e,
       final byte [] row, final byte [] family, final Result result)
     throws IOException {
   }
 
   @Override
-  public void postGetClosestRowBefore(final RegionCoprocessorEnvironment e,
+  public void postGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> e,
       final byte [] row, final byte [] family, final Result result)
       throws IOException {
   }
 
   @Override
-  public void preGet(final RegionCoprocessorEnvironment e, final Get get,
-      final List<KeyValue> results) throws IOException {
+  public void preGet(final ObserverContext<RegionCoprocessorEnvironment> e,
+      final Get get, final List<KeyValue> results) throws IOException {
   }
 
   @Override
-  public void postGet(final RegionCoprocessorEnvironment e, final Get get,
-      final List<KeyValue> results) throws IOException {
+  public void postGet(final ObserverContext<RegionCoprocessorEnvironment> e,
+      final Get get, final List<KeyValue> results) throws IOException {
   }
 
   @Override
-  public boolean preExists(final RegionCoprocessorEnvironment e, final Get get,
-      final boolean exists) throws IOException {
+  public boolean preExists(final ObserverContext<RegionCoprocessorEnvironment> e,
+      final Get get, final boolean exists) throws IOException {
     return exists;
   }
 
   @Override
-  public boolean postExists(final RegionCoprocessorEnvironment e, final Get get,
-      boolean exists) throws IOException {
+  public boolean postExists(final ObserverContext<RegionCoprocessorEnvironment> e,
+      final Get get, boolean exists) throws IOException {
     return exists;
   }
 
   @Override
-  public void prePut(final RegionCoprocessorEnvironment e, final Map<byte[],
+  public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Map<byte[],
       List<KeyValue>> familyMap, final boolean writeToWAL) throws IOException {
   }
 
   @Override
-  public void postPut(final RegionCoprocessorEnvironment e, final Map<byte[],
+  public void postPut(final ObserverContext<RegionCoprocessorEnvironment> e, final Map<byte[],
       List<KeyValue>> familyMap, final boolean writeToWAL) throws IOException {
   }
 
   @Override
-  public void preDelete(final RegionCoprocessorEnvironment e, final Map<byte[],
+  public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> e, final Map<byte[],
       List<KeyValue>> familyMap, final boolean writeToWAL) throws IOException {
   }
 
   @Override
-  public void postDelete(final RegionCoprocessorEnvironment e,
+  public void postDelete(final ObserverContext<RegionCoprocessorEnvironment> e,
       final Map<byte[], List<KeyValue>> familyMap, final boolean writeToWAL)
       throws IOException {
   }
 
   @Override
-  public boolean preCheckAndPut(final RegionCoprocessorEnvironment e,
+  public boolean preCheckAndPut(final ObserverContext<RegionCoprocessorEnvironment> e,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final WritableByteArrayComparable comparator,
       final Put put, final boolean result) throws IOException {
@@ -144,7 +147,7 @@ public abstract class BaseRegionObserverCoprocessor implements RegionObserver {
   }
 
   @Override
-  public boolean postCheckAndPut(final RegionCoprocessorEnvironment e,
+  public boolean postCheckAndPut(final ObserverContext<RegionCoprocessorEnvironment> e,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final WritableByteArrayComparable comparator,
       final Put put, final boolean result) throws IOException {
@@ -152,7 +155,7 @@ public abstract class BaseRegionObserverCoprocessor implements RegionObserver {
   }
 
   @Override
-  public boolean preCheckAndDelete(final RegionCoprocessorEnvironment e,
+  public boolean preCheckAndDelete(final ObserverContext<RegionCoprocessorEnvironment> e,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final WritableByteArrayComparable comparator,
       final Delete delete, final boolean result) throws IOException {
@@ -160,7 +163,7 @@ public abstract class BaseRegionObserverCoprocessor implements RegionObserver {
   }
 
   @Override
-  public boolean postCheckAndDelete(final RegionCoprocessorEnvironment e,
+  public boolean postCheckAndDelete(final ObserverContext<RegionCoprocessorEnvironment> e,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final WritableByteArrayComparable comparator,
       final Delete delete, final boolean result) throws IOException {
@@ -168,14 +171,14 @@ public abstract class BaseRegionObserverCoprocessor implements RegionObserver {
   }
 
   @Override
-  public long preIncrementColumnValue(final RegionCoprocessorEnvironment e,
+  public long preIncrementColumnValue(final ObserverContext<RegionCoprocessorEnvironment> e,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final long amount, final boolean writeToWAL) throws IOException {
     return amount;
   }
 
   @Override
-  public long postIncrementColumnValue(final RegionCoprocessorEnvironment e,
+  public long postIncrementColumnValue(final ObserverContext<RegionCoprocessorEnvironment> e,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final long amount, final boolean writeToWAL, long result)
       throws IOException {
@@ -183,58 +186,58 @@ public abstract class BaseRegionObserverCoprocessor implements RegionObserver {
   }
 
   @Override
-  public void preIncrement(final RegionCoprocessorEnvironment e,
+  public void preIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
       final Increment increment, final Result result) throws IOException {
   }
 
   @Override
-  public void postIncrement(final RegionCoprocessorEnvironment e,
+  public void postIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
       final Increment increment, final Result result) throws IOException {
   }
 
   @Override
-  public InternalScanner preScannerOpen(final RegionCoprocessorEnvironment e,
+  public InternalScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
       final Scan scan, final InternalScanner s) throws IOException {
     return s;
   }
 
   @Override
-  public InternalScanner postScannerOpen(final RegionCoprocessorEnvironment e,
+  public InternalScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
       final Scan scan, final InternalScanner s) throws IOException {
     return s;
   }
 
   @Override
-  public boolean preScannerNext(final RegionCoprocessorEnvironment e,
+  public boolean preScannerNext(final ObserverContext<RegionCoprocessorEnvironment> e,
       final InternalScanner s, final List<Result> results,
       final int limit, final boolean hasMore) throws IOException {
     return hasMore;
   }
 
   @Override
-  public boolean postScannerNext(final RegionCoprocessorEnvironment e,
+  public boolean postScannerNext(final ObserverContext<RegionCoprocessorEnvironment> e,
       final InternalScanner s, final List<Result> results, final int limit,
       final boolean hasMore) throws IOException {
     return hasMore;
   }
 
   @Override
-  public void preScannerClose(final RegionCoprocessorEnvironment e,
+  public void preScannerClose(final ObserverContext<RegionCoprocessorEnvironment> e,
       final InternalScanner s) throws IOException {
   }
 
   @Override
-  public void postScannerClose(final RegionCoprocessorEnvironment e,
+  public void postScannerClose(final ObserverContext<RegionCoprocessorEnvironment> e,
       final InternalScanner s) throws IOException {
   }
 
   @Override
-  public void preWALRestore(RegionCoprocessorEnvironment env, HRegionInfo info,
+  public void preWALRestore(ObserverContext<RegionCoprocessorEnvironment> env, HRegionInfo info,
       HLogKey logKey, WALEdit logEdit) throws IOException {
   }
 
   @Override
-  public void postWALRestore(RegionCoprocessorEnvironment env,
+  public void postWALRestore(ObserverContext<RegionCoprocessorEnvironment> env,
       HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException {
   }
 }

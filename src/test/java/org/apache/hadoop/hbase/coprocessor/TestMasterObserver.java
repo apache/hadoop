@@ -88,13 +88,13 @@ public class TestMasterObserver {
     private boolean stopCalled;
 
     @Override
-    public void preCreateTable(MasterCoprocessorEnvironment env,
+    public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> env,
         HTableDescriptor desc, byte[][] splitKeys) throws IOException {
       preCreateTableCalled = true;
     }
 
     @Override
-    public void postCreateTable(MasterCoprocessorEnvironment env,
+    public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> env,
         HRegionInfo[] regions, boolean sync) throws IOException {
       postCreateTableCalled = true;
     }
@@ -104,13 +104,13 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preDeleteTable(MasterCoprocessorEnvironment env,
+    public void preDeleteTable(ObserverContext<MasterCoprocessorEnvironment> env,
         byte[] tableName) throws IOException {
       preDeleteTableCalled = true;
     }
 
     @Override
-    public void postDeleteTable(MasterCoprocessorEnvironment env,
+    public void postDeleteTable(ObserverContext<MasterCoprocessorEnvironment> env,
         byte[] tableName) throws IOException {
       postDeleteTableCalled = true;
     }
@@ -120,13 +120,13 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preModifyTable(MasterCoprocessorEnvironment env,
+    public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> env,
         byte[] tableName, HTableDescriptor htd) throws IOException {
       preModifyTableCalled = true;
     }
 
     @Override
-    public void postModifyTable(MasterCoprocessorEnvironment env,
+    public void postModifyTable(ObserverContext<MasterCoprocessorEnvironment> env,
         byte[] tableName, HTableDescriptor htd) throws IOException {
       postModifyTableCalled = true;
     }
@@ -136,13 +136,13 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preAddColumn(MasterCoprocessorEnvironment env,
+    public void preAddColumn(ObserverContext<MasterCoprocessorEnvironment> env,
         byte[] tableName, HColumnDescriptor column) throws IOException {
       preAddColumnCalled = true;
     }
 
     @Override
-    public void postAddColumn(MasterCoprocessorEnvironment env,
+    public void postAddColumn(ObserverContext<MasterCoprocessorEnvironment> env,
         byte[] tableName, HColumnDescriptor column) throws IOException {
       postAddColumnCalled = true;
     }
@@ -152,13 +152,13 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preModifyColumn(MasterCoprocessorEnvironment env,
+    public void preModifyColumn(ObserverContext<MasterCoprocessorEnvironment> env,
         byte[] tableName, HColumnDescriptor descriptor) throws IOException {
       preModifyColumnCalled = true;
     }
 
     @Override
-    public void postModifyColumn(MasterCoprocessorEnvironment env,
+    public void postModifyColumn(ObserverContext<MasterCoprocessorEnvironment> env,
         byte[] tableName, HColumnDescriptor descriptor) throws IOException {
       postModifyColumnCalled = true;
     }
@@ -168,13 +168,13 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preDeleteColumn(MasterCoprocessorEnvironment env,
+    public void preDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> env,
         byte[] tableName, byte[] c) throws IOException {
       preDeleteColumnCalled = true;
     }
 
     @Override
-    public void postDeleteColumn(MasterCoprocessorEnvironment env,
+    public void postDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> env,
         byte[] tableName, byte[] c) throws IOException {
       postDeleteColumnCalled = true;
     }
@@ -184,13 +184,13 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preEnableTable(MasterCoprocessorEnvironment env,
+    public void preEnableTable(ObserverContext<MasterCoprocessorEnvironment> env,
         byte[] tableName) throws IOException {
       preEnableTableCalled = true;
     }
 
     @Override
-    public void postEnableTable(MasterCoprocessorEnvironment env,
+    public void postEnableTable(ObserverContext<MasterCoprocessorEnvironment> env,
         byte[] tableName) throws IOException {
       postEnableTableCalled = true;
     }
@@ -200,13 +200,13 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preDisableTable(MasterCoprocessorEnvironment env,
+    public void preDisableTable(ObserverContext<MasterCoprocessorEnvironment> env,
         byte[] tableName) throws IOException {
       preDisableTableCalled = true;
     }
 
     @Override
-    public void postDisableTable(MasterCoprocessorEnvironment env,
+    public void postDisableTable(ObserverContext<MasterCoprocessorEnvironment> env,
         byte[] tableName) throws IOException {
       postDisableTableCalled = true;
     }
@@ -216,14 +216,14 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preMove(MasterCoprocessorEnvironment env,
+    public void preMove(ObserverContext<MasterCoprocessorEnvironment> env,
         HRegionInfo region, HServerInfo srcServer, HServerInfo destServer)
     throws UnknownRegionException {
       preMoveCalled = true;
     }
 
     @Override
-    public void postMove(MasterCoprocessorEnvironment env, HRegionInfo region,
+    public void postMove(ObserverContext<MasterCoprocessorEnvironment> env, HRegionInfo region,
         HServerInfo srcServer, HServerInfo destServer)
     throws UnknownRegionException {
       postMoveCalled = true;
@@ -234,13 +234,13 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preAssign(MasterCoprocessorEnvironment env,
+    public void preAssign(ObserverContext<MasterCoprocessorEnvironment> env,
         final byte [] regionName, final boolean force) throws IOException {
       preAssignCalled = true;
     }
 
     @Override
-    public void postAssign(MasterCoprocessorEnvironment env,
+    public void postAssign(ObserverContext<MasterCoprocessorEnvironment> env,
         final HRegionInfo regionInfo) throws IOException {
       postAssignCalled = true;
     }
@@ -250,13 +250,13 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preUnassign(MasterCoprocessorEnvironment env,
+    public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> env,
         final byte [] regionName, final boolean force) throws IOException {
       preUnassignCalled = true;
     }
 
     @Override
-    public void postUnassign(MasterCoprocessorEnvironment env,
+    public void postUnassign(ObserverContext<MasterCoprocessorEnvironment> env,
         final HRegionInfo regionInfo, final boolean force) throws IOException {
       postUnassignCalled = true;
     }
@@ -266,13 +266,13 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preBalance(MasterCoprocessorEnvironment env)
+    public void preBalance(ObserverContext<MasterCoprocessorEnvironment> env)
         throws IOException {
       preBalanceCalled = true;
     }
 
     @Override
-    public void postBalance(MasterCoprocessorEnvironment env)
+    public void postBalance(ObserverContext<MasterCoprocessorEnvironment> env)
         throws IOException {
       postBalanceCalled = true;
     }
@@ -282,14 +282,14 @@ public class TestMasterObserver {
     }
 
     @Override
-    public boolean preBalanceSwitch(MasterCoprocessorEnvironment env, boolean b)
+    public boolean preBalanceSwitch(ObserverContext<MasterCoprocessorEnvironment> env, boolean b)
         throws IOException {
       preBalanceSwitchCalled = true;
       return b;
     }
 
     @Override
-    public void postBalanceSwitch(MasterCoprocessorEnvironment env,
+    public void postBalanceSwitch(ObserverContext<MasterCoprocessorEnvironment> env,
         boolean oldValue, boolean newValue) throws IOException {
       postBalanceSwitchCalled = true;
     }
@@ -299,13 +299,13 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preShutdown(MasterCoprocessorEnvironment env)
+    public void preShutdown(ObserverContext<MasterCoprocessorEnvironment> env)
         throws IOException {
       preShutdownCalled = true;
     }
 
     @Override
-    public void preStopMaster(MasterCoprocessorEnvironment env)
+    public void preStopMaster(ObserverContext<MasterCoprocessorEnvironment> env)
         throws IOException {
       preStopMasterCalled = true;
     }

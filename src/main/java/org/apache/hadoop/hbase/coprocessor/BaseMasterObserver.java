@@ -30,142 +30,145 @@ import java.io.IOException;
 
 public class BaseMasterObserver implements MasterObserver {
   @Override
-  public void preCreateTable(MasterCoprocessorEnvironment env,
+  public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> env,
       HTableDescriptor desc, byte[][] splitKeys) throws IOException {
   }
 
   @Override
-  public void postCreateTable(MasterCoprocessorEnvironment env,
+  public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> env,
       HRegionInfo[] regions, boolean sync) throws IOException {
   }
 
   @Override
-  public void preDeleteTable(MasterCoprocessorEnvironment env, byte[] tableName)
-      throws IOException {
+  public void preDeleteTable(ObserverContext<MasterCoprocessorEnvironment> env,
+      byte[] tableName) throws IOException {
   }
 
   @Override
-  public void postDeleteTable(MasterCoprocessorEnvironment env, byte[] tableName)
-      throws IOException {
+  public void postDeleteTable(ObserverContext<MasterCoprocessorEnvironment> env,
+      byte[] tableName) throws IOException {
   }
 
   @Override
-  public void preModifyTable(MasterCoprocessorEnvironment env,
+  public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> env,
       byte[] tableName, HTableDescriptor htd) throws IOException {
   }
 
   @Override
-  public void postModifyTable(MasterCoprocessorEnvironment env,
+  public void postModifyTable(ObserverContext<MasterCoprocessorEnvironment> env,
       byte[] tableName, HTableDescriptor htd) throws IOException {
   }
 
   @Override
-  public void preAddColumn(MasterCoprocessorEnvironment env,
+  public void preAddColumn(ObserverContext<MasterCoprocessorEnvironment> env,
       byte[] tableName, HColumnDescriptor column) throws IOException {
   }
 
   @Override
-  public void postAddColumn(MasterCoprocessorEnvironment env, byte[] tableName,
-      HColumnDescriptor column) throws IOException {
+  public void postAddColumn(ObserverContext<MasterCoprocessorEnvironment> env,
+      byte[] tableName, HColumnDescriptor column) throws IOException {
   }
 
   @Override
-  public void preModifyColumn(MasterCoprocessorEnvironment env,
+  public void preModifyColumn(ObserverContext<MasterCoprocessorEnvironment> env,
       byte[] tableName, HColumnDescriptor descriptor) throws IOException {
   }
 
   @Override
-  public void postModifyColumn(MasterCoprocessorEnvironment env,
+  public void postModifyColumn(ObserverContext<MasterCoprocessorEnvironment> env,
       byte[] tableName, HColumnDescriptor descriptor) throws IOException {
   }
 
   @Override
-  public void preDeleteColumn(MasterCoprocessorEnvironment env,
+  public void preDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> env,
       byte[] tableName, byte[] c) throws IOException {
   }
 
   @Override
-  public void postDeleteColumn(MasterCoprocessorEnvironment env,
+  public void postDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> env,
       byte[] tableName, byte[] c) throws IOException {
   }
 
   @Override
-  public void preEnableTable(MasterCoprocessorEnvironment env, byte[] tableName)
-      throws IOException {
-  }
-
-  @Override
-  public void postEnableTable(MasterCoprocessorEnvironment env,
+  public void preEnableTable(ObserverContext<MasterCoprocessorEnvironment> env,
       byte[] tableName) throws IOException {
   }
 
   @Override
-  public void preDisableTable(MasterCoprocessorEnvironment env,
+  public void postEnableTable(ObserverContext<MasterCoprocessorEnvironment> env,
       byte[] tableName) throws IOException {
   }
 
   @Override
-  public void postDisableTable(MasterCoprocessorEnvironment env,
+  public void preDisableTable(ObserverContext<MasterCoprocessorEnvironment> env,
       byte[] tableName) throws IOException {
   }
 
   @Override
-  public void preMove(MasterCoprocessorEnvironment env, HRegionInfo region,
-      HServerInfo srcServer, HServerInfo destServer)
+  public void postDisableTable(ObserverContext<MasterCoprocessorEnvironment> env,
+      byte[] tableName) throws IOException {
+  }
+
+  @Override
+  public void preMove(ObserverContext<MasterCoprocessorEnvironment> env,
+      HRegionInfo region, HServerInfo srcServer, HServerInfo destServer)
   throws UnknownRegionException {
   }
 
   @Override
-  public void postMove(MasterCoprocessorEnvironment env, HRegionInfo region,
-      HServerInfo srcServer, HServerInfo destServer)
+  public void postMove(ObserverContext<MasterCoprocessorEnvironment> env,
+      HRegionInfo region, HServerInfo srcServer, HServerInfo destServer)
   throws UnknownRegionException {
   }
 
   @Override
-  public void preAssign(MasterCoprocessorEnvironment env, byte[] regionName,
-      boolean force) throws IOException {
+  public void preAssign(ObserverContext<MasterCoprocessorEnvironment> env,
+      byte[] regionName, boolean force) throws IOException {
   }
 
   @Override
-  public void postAssign(MasterCoprocessorEnvironment env,
+  public void postAssign(ObserverContext<MasterCoprocessorEnvironment> env,
       HRegionInfo regionInfo) throws IOException {
   }
 
   @Override
-  public void preUnassign(MasterCoprocessorEnvironment env, byte[] regionName,
-      boolean force) throws IOException {
+  public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> env,
+      byte[] regionName, boolean force) throws IOException {
   }
 
   @Override
-  public void postUnassign(MasterCoprocessorEnvironment env,
+  public void postUnassign(ObserverContext<MasterCoprocessorEnvironment> env,
       HRegionInfo regionInfo, boolean force) throws IOException {
   }
 
   @Override
-  public void preBalance(MasterCoprocessorEnvironment env) throws IOException {
-  }
-
-  @Override
-  public void postBalance(MasterCoprocessorEnvironment env) throws IOException {
-  }
-
-  @Override
-  public boolean preBalanceSwitch(MasterCoprocessorEnvironment env, boolean b)
+  public void preBalance(ObserverContext<MasterCoprocessorEnvironment> env)
       throws IOException {
+  }
+
+  @Override
+  public void postBalance(ObserverContext<MasterCoprocessorEnvironment> env)
+      throws IOException {
+  }
+
+  @Override
+  public boolean preBalanceSwitch(ObserverContext<MasterCoprocessorEnvironment> env,
+      boolean b) throws IOException {
     return b;
   }
 
   @Override
-  public void postBalanceSwitch(MasterCoprocessorEnvironment env,
+  public void postBalanceSwitch(ObserverContext<MasterCoprocessorEnvironment> env,
       boolean oldValue, boolean newValue) throws IOException {
   }
 
   @Override
-  public void preShutdown(MasterCoprocessorEnvironment env) throws IOException {
+  public void preShutdown(ObserverContext<MasterCoprocessorEnvironment> env)
+      throws IOException {
   }
 
   @Override
-  public void preStopMaster(MasterCoprocessorEnvironment env)
+  public void preStopMaster(ObserverContext<MasterCoprocessorEnvironment> env)
       throws IOException {
   }
 

@@ -78,14 +78,14 @@ implements WALObserver {
 
 
   @Override
-  public void postWALWrite(CoprocessorEnvironment env, HRegionInfo info,
-      HLogKey logKey, WALEdit logEdit) throws IOException {
+  public void postWALWrite(ObserverContext<WALCoprocessorEnvironment> env,
+      HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException {
     postWALWriteCalled = true;
   }
 
   @Override
-  public boolean preWALWrite(CoprocessorEnvironment env, HRegionInfo info,
-      HLogKey logKey, WALEdit logEdit) throws IOException {
+  public boolean preWALWrite(ObserverContext<WALCoprocessorEnvironment> env,
+      HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException {
     boolean bypass = false;
     // check table name matches or not.
     if (!Arrays.equals(HRegionInfo.getTableName(info.getRegionName()), this.tableName)) {
@@ -125,8 +125,8 @@ implements WALObserver {
    * Restoreed.
    */
   @Override
-  public void preWALRestore(RegionCoprocessorEnvironment env, HRegionInfo info,
-      HLogKey logKey, WALEdit logEdit) throws IOException {
+  public void preWALRestore(ObserverContext<RegionCoprocessorEnvironment> env,
+      HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException {
     preWALRestoreCalled = true;
   }
 
@@ -135,7 +135,7 @@ implements WALObserver {
    * Restoreed.
    */
   @Override
-  public void postWALRestore(RegionCoprocessorEnvironment env,
+  public void postWALRestore(ObserverContext<RegionCoprocessorEnvironment> env,
       HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException {
     postWALRestoreCalled = true;
   }

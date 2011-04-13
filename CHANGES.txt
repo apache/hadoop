@@ -157,6 +157,8 @@ Release 0.91.0 - Unreleased
                (Erik Onnen via Stack)
    HBASE-3765  metrics.xml - small format change and adding nav to hbase
                book metrics section (Doug Meil)
+   HBASE-3759  Eliminate use of ThreadLocals for CoprocessorEnvironment
+               bypass() and complete() 
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

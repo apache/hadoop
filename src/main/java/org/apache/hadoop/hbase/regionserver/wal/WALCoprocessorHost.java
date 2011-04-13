@@ -65,8 +65,7 @@ public class WALCoprocessorHost
   HLog wal;
   /**
    * Constructor
-   * @param region the region
-   * @param rsServices interface to available region server functionality
+   * @param log the write ahead log
    * @param conf the configuration
    */
   public WALCoprocessorHost(final HLog log, final Configuration conf) {
@@ -92,13 +91,15 @@ public class WALCoprocessorHost
   public boolean preWALWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit)
       throws IOException {
     boolean bypass = false;
+    ObserverContext<WALCoprocessorEnvironment> ctx = null;
     for (WALEnvironment env: coprocessors) {
       if (env.getInstance() instanceof
           org.apache.hadoop.hbase.coprocessor.WALObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
         ((org.apache.hadoop.hbase.coprocessor.WALObserver)env.getInstance()).
-            preWALWrite(env, info, logKey, logEdit);
-        bypass |= env.shouldBypass();
-        if (env.shouldComplete()) {
+            preWALWrite(ctx, info, logKey, logEdit);
+        bypass |= ctx.shouldBypass();
+        if (ctx.shouldComplete()) {
           break;
         }
       }
@@ -114,12 +115,14 @@ public class WALCoprocessorHost
    */
   public void postWALWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit)
       throws IOException {
+    ObserverContext<WALCoprocessorEnvironment> ctx = null;
     for (WALEnvironment env: coprocessors) {
       if (env.getInstance() instanceof
           org.apache.hadoop.hbase.coprocessor.WALObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
         ((org.apache.hadoop.hbase.coprocessor.WALObserver)env.getInstance()).
-            postWALWrite(env, info, logKey, logEdit);
-        if (env.shouldComplete()) {
+            postWALWrite(ctx, info, logKey, logEdit);
+        if (ctx.shouldComplete()) {
           break;
         }
       }

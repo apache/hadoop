@@ -45,18 +45,4 @@ public interface CoprocessorEnvironment {
    * @throws IOException
    */
   public HTableInterface getTable(byte[] tableName) throws IOException;
-
-  /* Control flow changes */
-
-  /**
-   * Causes framework to bypass default actions and return with the results
-   * from a preXXX chain.
-   */
-  public void bypass();
-
-  /**
-   * Mark coprocessor chain processing as complete. Causes framework to return
-   * immediately without calling any additional chained coprocessors.
-   */
-  public void complete();
 }

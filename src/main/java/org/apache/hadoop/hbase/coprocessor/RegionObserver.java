@@ -44,77 +44,77 @@ public interface RegionObserver extends Coprocessor {
 
   /**
    * Called before the region is reported as open to the master.
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    */
-  public void preOpen(final RegionCoprocessorEnvironment e);
+  public void preOpen(final ObserverContext<RegionCoprocessorEnvironment> c);
 
   /**
    * Called after the region is reported as open to the master.
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    */
-  public void postOpen(final RegionCoprocessorEnvironment e);
+  public void postOpen(final ObserverContext<RegionCoprocessorEnvironment> c);
 
   /**
    * Called before the memstore is flushed to disk.
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    */
-  public void preFlush(final RegionCoprocessorEnvironment e);
+  public void preFlush(final ObserverContext<RegionCoprocessorEnvironment> c);
 
   /**
    * Called after the memstore is flushed to disk.
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    */
-  public void postFlush(final RegionCoprocessorEnvironment e);
+  public void postFlush(final ObserverContext<RegionCoprocessorEnvironment> c);
 
   /**
    * Called before compaction.
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param willSplit true if compaction will result in a split, false
    * otherwise
    */
-  public void preCompact(final RegionCoprocessorEnvironment e,
+  public void preCompact(final ObserverContext<RegionCoprocessorEnvironment> c,
     final boolean willSplit);
 
   /**
    * Called after compaction.
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param willSplit true if compaction will result in a split, false
    * otherwise
    */
-  public void postCompact(final RegionCoprocessorEnvironment e,
+  public void postCompact(final ObserverContext<RegionCoprocessorEnvironment> c,
     final boolean willSplit);
 
   /**
    * Called before the region is split.
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * (e.getRegion() returns the parent region)
    */
-  public void preSplit(final RegionCoprocessorEnvironment e);
+  public void preSplit(final ObserverContext<RegionCoprocessorEnvironment> c);
 
   /**
    * Called after the region is split.
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * (e.getRegion() returns the parent region)
    * @param l the left daughter region
    * @param r the right daughter region
    */
-  public void postSplit(final RegionCoprocessorEnvironment e, final HRegion l,
+  public void postSplit(final ObserverContext<RegionCoprocessorEnvironment> c, final HRegion l,
     final HRegion r);
 
   /**
    * Called before the region is reported as closed to the master.
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param abortRequested true if the region server is aborting
    */
-  public void preClose(final RegionCoprocessorEnvironment e,
+  public void preClose(final ObserverContext<RegionCoprocessorEnvironment> c,
       boolean abortRequested);
 
   /**
    * Called after the region is reported as closed to the master.
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param abortRequested true if the region server is aborting
    */
-  public void postClose(final RegionCoprocessorEnvironment e,
+  public void postClose(final ObserverContext<RegionCoprocessorEnvironment> c,
       boolean abortRequested);
 
   /**
@@ -124,7 +124,7 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param row the row
    * @param family the family
    * @param result The result to return to the client if default processing
@@ -132,7 +132,7 @@ public interface RegionObserver extends Coprocessor {
    * is not bypassed.
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void preGetClosestRowBefore(final RegionCoprocessorEnvironment e,
+  public void preGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final Result result)
     throws IOException;
 
@@ -141,13 +141,13 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param row the row
    * @param family the desired family
    * @param result the result to return to the client, modify as necessary
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void postGetClosestRowBefore(final RegionCoprocessorEnvironment e,
+  public void postGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final Result result)
     throws IOException;
 
@@ -158,14 +158,14 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param get the Get request
    * @param result The result to return to the client if default processing
    * is bypassed. Can be modified. Will not be used if default processing
    * is not bypassed.
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void preGet(final RegionCoprocessorEnvironment e, final Get get,
+  public void preGet(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
       final List<KeyValue> result)
     throws IOException;
 
@@ -174,12 +174,12 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param get the Get request
    * @param result the result to return to the client, modify as necessary
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void postGet(final RegionCoprocessorEnvironment e, final Get get,
+  public void postGet(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
       final List<KeyValue> result)
     throws IOException;
 
@@ -190,13 +190,13 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param get the Get request
    * @param exists
    * @return the value to return to the client if bypassing default processing
    * @throws IOException if an error occurred on the coprocessor
    */
-  public boolean preExists(final RegionCoprocessorEnvironment e, final Get get,
+  public boolean preExists(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
       final boolean exists)
     throws IOException;
 
@@ -205,13 +205,13 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param get the Get request
    * @param exists the result returned by the region server
    * @return the result to return to the client
    * @throws IOException if an error occurred on the coprocessor
    */
-  public boolean postExists(final RegionCoprocessorEnvironment e, final Get get,
+  public boolean postExists(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
       final boolean exists)
     throws IOException;
 
@@ -222,12 +222,12 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param familyMap map of family to edits for the given family
    * @param writeToWAL true if the change should be written to the WAL
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void prePut(final RegionCoprocessorEnvironment e, final Map<byte[],
+  public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, final Map<byte[],
       List<KeyValue>> familyMap, final boolean writeToWAL)
     throws IOException;
 
@@ -236,12 +236,12 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param familyMap map of family to edits for the given family
    * @param writeToWAL true if the change should be written to the WAL
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void postPut(final RegionCoprocessorEnvironment e, final Map<byte[],
+  public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c, final Map<byte[],
       List<KeyValue>> familyMap, final boolean writeToWAL)
     throws IOException;
 
@@ -252,12 +252,12 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param familyMap map of family to edits for the given family
    * @param writeToWAL true if the change should be written to the WAL
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void preDelete(final RegionCoprocessorEnvironment e, final Map<byte[],
+  public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> c, final Map<byte[],
       List<KeyValue>> familyMap, final boolean writeToWAL)
     throws IOException;
 
@@ -266,12 +266,12 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param familyMap map of family to edits for the given family
    * @param writeToWAL true if the change should be written to the WAL
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void postDelete(final RegionCoprocessorEnvironment e,
+  public void postDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Map<byte[], List<KeyValue>> familyMap, final boolean writeToWAL)
     throws IOException;
 
@@ -282,7 +282,7 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
@@ -294,7 +294,7 @@ public interface RegionObserver extends Coprocessor {
    * processing
    * @throws IOException if an error occurred on the coprocessor
    */
-  public boolean preCheckAndPut(final RegionCoprocessorEnvironment e,
+  public boolean preCheckAndPut(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final WritableByteArrayComparable comparator,
       final Put put, final boolean result)
@@ -305,7 +305,7 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
@@ -316,7 +316,7 @@ public interface RegionObserver extends Coprocessor {
    * @return the possibly transformed return value to return to client
    * @throws IOException if an error occurred on the coprocessor
    */
-  public boolean postCheckAndPut(final RegionCoprocessorEnvironment e,
+  public boolean postCheckAndPut(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final WritableByteArrayComparable comparator,
       final Put put, final boolean result)
@@ -329,7 +329,7 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
@@ -340,7 +340,7 @@ public interface RegionObserver extends Coprocessor {
    * @return the value to return to client if bypassing default processing
    * @throws IOException if an error occurred on the coprocessor
    */
-  public boolean preCheckAndDelete(final RegionCoprocessorEnvironment e,
+  public boolean preCheckAndDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final WritableByteArrayComparable comparator,
       final Delete delete, final boolean result)
@@ -351,7 +351,7 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
@@ -362,7 +362,7 @@ public interface RegionObserver extends Coprocessor {
    * @return the possibly transformed returned value to return to client
    * @throws IOException if an error occurred on the coprocessor
    */
-  public boolean postCheckAndDelete(final RegionCoprocessorEnvironment e,
+  public boolean postCheckAndDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final WritableByteArrayComparable comparator,
       final Delete delete, final boolean result)
@@ -375,7 +375,7 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
@@ -384,7 +384,7 @@ public interface RegionObserver extends Coprocessor {
    * @return value to return to the client if bypassing default processing
    * @throws IOException if an error occurred on the coprocessor
    */
-  public long preIncrementColumnValue(final RegionCoprocessorEnvironment e,
+  public long preIncrementColumnValue(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final long amount, final boolean writeToWAL)
     throws IOException;
@@ -394,7 +394,7 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
@@ -404,7 +404,7 @@ public interface RegionObserver extends Coprocessor {
    * @return the result to return to the client
    * @throws IOException if an error occurred on the coprocessor
    */
-  public long postIncrementColumnValue(final RegionCoprocessorEnvironment e,
+  public long postIncrementColumnValue(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final long amount, final boolean writeToWAL, final long result)
     throws IOException;
@@ -416,14 +416,14 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param increment increment object
    * @param result The result to return to the client if default processing
    * is bypassed. Can be modified. Will not be used if default processing
    * is not bypassed.
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void preIncrement(final RegionCoprocessorEnvironment e,
+  public void preIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Increment increment, final Result result)
     throws IOException;
 
@@ -432,12 +432,12 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param increment increment object
    * @param result the result returned by increment, can be modified
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void postIncrement(final RegionCoprocessorEnvironment e,
+  public void postIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Increment increment, final Result result)
     throws IOException;
 
@@ -448,14 +448,14 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param scan the Scan specification
    * @param s if not null, the base scanner
    * @return an InternalScanner instance to use instead of the base scanner if
    * overriding default behavior, null otherwise
    * @throws IOException if an error occurred on the coprocessor
    */
-  public InternalScanner preScannerOpen(final RegionCoprocessorEnvironment e,
+  public InternalScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Scan scan, final InternalScanner s)
     throws IOException;
 
@@ -464,13 +464,13 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param scan the Scan specification
    * @param s if not null, the base scanner
    * @return the scanner instance to use
    * @throws IOException if an error occurred on the coprocessor
    */
-  public InternalScanner postScannerOpen(final RegionCoprocessorEnvironment e,
+  public InternalScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Scan scan, final InternalScanner s)
     throws IOException;
 
@@ -481,7 +481,7 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param s the scanner
    * @param result The result to return to the client if default processing
    * is bypassed. Can be modified. Will not be returned if default processing
@@ -491,7 +491,7 @@ public interface RegionObserver extends Coprocessor {
    * @return 'has more' indication that should be sent to client
    * @throws IOException if an error occurred on the coprocessor
    */
-  public boolean preScannerNext(final RegionCoprocessorEnvironment e,
+  public boolean preScannerNext(final ObserverContext<RegionCoprocessorEnvironment> c,
       final InternalScanner s, final List<Result> result,
       final int limit, final boolean hasNext)
     throws IOException;
@@ -501,7 +501,7 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param s the scanner
    * @param result the result to return to the client, can be modified
    * @param limit the maximum number of results to return
@@ -509,7 +509,7 @@ public interface RegionObserver extends Coprocessor {
    * @return 'has more' indication that should be sent to client
    * @throws IOException if an error occurred on the coprocessor
    */
-  public boolean postScannerNext(final RegionCoprocessorEnvironment e,
+  public boolean postScannerNext(final ObserverContext<RegionCoprocessorEnvironment> c,
       final InternalScanner s, final List<Result> result, final int limit,
       final boolean hasNext)
     throws IOException;
@@ -521,11 +521,11 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param s the scanner
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void preScannerClose(final RegionCoprocessorEnvironment e,
+  public void preScannerClose(final ObserverContext<RegionCoprocessorEnvironment> c,
       final InternalScanner s)
     throws IOException;
 
@@ -534,11 +534,11 @@ public interface RegionObserver extends Coprocessor {
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
-   * @param e the environment provided by the region server
+   * @param c the environment provided by the region server
    * @param s the scanner
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void postScannerClose(final RegionCoprocessorEnvironment e,
+  public void postScannerClose(final ObserverContext<RegionCoprocessorEnvironment> c,
       final InternalScanner s)
     throws IOException;
 
@@ -546,25 +546,25 @@ public interface RegionObserver extends Coprocessor {
    * Called before a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
    * replayed for this region.
    *
-   * @param env
+   * @param ctx
    * @param info
    * @param logKey
    * @param logEdit
    * @throws IOException
    */
-  void preWALRestore(final RegionCoprocessorEnvironment env,
+  void preWALRestore(final ObserverContext<RegionCoprocessorEnvironment> ctx,
       HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException;
 
   /**
    * Called after a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
    * replayed for this region.
    *
-   * @param env
+   * @param ctx
    * @param info
    * @param logKey
    * @param logEdit
    * @throws IOException
    */
-  void postWALRestore(final RegionCoprocessorEnvironment env,
+  void postWALRestore(final ObserverContext<RegionCoprocessorEnvironment> ctx,
       HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException;
 }

@@ -443,16 +443,6 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     protected List<HTableInterface> openTables =
       Collections.synchronizedList(new ArrayList<HTableInterface>());
     private int seq;
-    static final ThreadLocal<Boolean> bypass = new ThreadLocal<Boolean>() {
-      @Override protected Boolean initialValue() {
-        return Boolean.FALSE;
-      }
-    };
-    static final ThreadLocal<Boolean> complete = new ThreadLocal<Boolean>() {
-      @Override protected Boolean initialValue() {
-        return Boolean.FALSE;
-      }
-    };
 
     /**
      * Constructor
@@ -509,18 +499,6 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       }
     }
 
-    public boolean shouldBypass() {
-      boolean current = bypass.get();
-      bypass.set(false);
-      return current;
-    }
-
-    public boolean shouldComplete() {
-      boolean current = complete.get();
-      complete.set(false);
-      return current;
-    }
-
     @Override
     public Coprocessor getInstance() {
       return impl;
@@ -558,14 +536,5 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     public HTableInterface getTable(byte[] tableName) throws IOException {
       return new HTableWrapper(tableName);
     }
-
-    @Override
-    public void complete() {
-      complete.set(true);
-    }
-
-    @Override
-    public void bypass() {
-      bypass.set(true);
-    }
-  }}
+  }
+}
