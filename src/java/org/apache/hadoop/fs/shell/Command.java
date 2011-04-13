@@ -365,4 +365,35 @@ abstract public class Command extends Configured {
   public void displayWarning(String message) {
     err.println(getCommandName() + ": " + message);
   }
+  
+  /**
+   * The short usage suitable for the synopsis
+   * @return "name options"
+   */
+  public String getUsage() {
+    return getCommandField("USAGE");
+  }
+
+  /**
+   * The long usage suitable for help output
+   * @return text of the usage
+   */
+  public String getDescription() {
+    return getCommandField("DESCRIPTION");
+  }
+
+  /**
+   * Get a public static class field
+   * @param field the field to retrieve
+   * @return String of the field
+   */
+  private String getCommandField(String field) {
+    String value;
+    try {
+      value = (String)this.getClass().getField(field).get(null);
+    } catch (Exception e) {
+      throw new RuntimeException(StringUtils.stringifyException(e));
+    }
+    return value;
+  }
 }

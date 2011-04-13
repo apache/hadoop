@@ -26,7 +26,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.TimeZone;
 import java.util.zip.GZIPInputStream;
@@ -36,8 +35,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.shell.Command;
+import org.apache.hadoop.fs.shell.CommandFactory;
 import org.apache.hadoop.fs.shell.CommandFormat;
-import org.apache.hadoop.fs.shell.Count;
+import org.apache.hadoop.fs.shell.FsCommand;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
@@ -61,6 +62,8 @@ public class FsShell extends Configured implements Tool {
 
   protected FileSystem fs;
   private Trash trash;
+  protected CommandFactory commandFactory;
+
   public static final SimpleDateFormat dateForm = 
     new SimpleDateFormat("yyyy-MM-dd HH:mm");
   protected static final SimpleDateFormat modifFmt =
@@ -86,6 +89,7 @@ public class FsShell extends Configured implements Tool {
     super(conf);
     fs = null;
     trash = null;
+    commandFactory = new CommandFactory();
   }
   
   protected void init() throws IOException {
@@ -1398,9 +1402,7 @@ public class FsShell extends Configured implements Tool {
       "[-tail [-f] <path>] [-text <path>]\n\t" +
       "[" + FsShellPermissions.CHMOD_USAGE + "]\n\t" +
       "[" + FsShellPermissions.CHOWN_USAGE + "]\n\t" +
-      "[" + FsShellPermissions.CHGRP_USAGE + "]\n\t" +      
-      "[" + Count.USAGE + "]\n\t" +      
-      "[-help [cmd]]\n";
+      "[" + FsShellPermissions.CHGRP_USAGE + "]";
 
     String conf ="-conf <configuration file>:  Specify an application configuration file.";
  
@@ -1559,7 +1561,10 @@ public class FsShell extends Configured implements Tool {
     String help = "-help [cmd]: \tDisplays help for given command or all commands if none\n" +
       "\t\tis specified.\n";
 
-    if ("fs".equals(cmd)) {
+    Command instance = commandFactory.getInstance("-" + cmd);
+    if (instance != null) {
+      System.out.println(instance.getDescription());
+    } else if ("fs".equals(cmd)) {
       System.out.println(fs);
     } else if ("conf".equals(cmd)) {
       System.out.println(conf);
@@ -1623,12 +1628,16 @@ public class FsShell extends Configured implements Tool {
       System.out.println(chown);
     } else if ("chgrp".equals(cmd)) {
       System.out.println(chgrp);
-    } else if (Count.NAME.equals(cmd)) {
-      System.out.println(Count.DESCRIPTION);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
       System.out.println(summary);
+      for (String thisCmdName : commandFactory.getNames()) {
+        instance = commandFactory.getInstance(thisCmdName);
+        System.out.println(instance.getUsage());
+      }
+      System.out.println("\t[-help [cmd]]\n");
+      
       System.out.println(fs);
       System.out.println(ls);
       System.out.println(lsr);
@@ -1657,7 +1666,12 @@ public class FsShell extends Configured implements Tool {
       System.out.println(chmod);
       System.out.println(chown);      
       System.out.println(chgrp);
-      System.out.println(Count.DESCRIPTION);
+
+      for (String thisCmdName : commandFactory.getNames()) {
+        instance = commandFactory.getInstance(thisCmdName);
+        System.out.println(instance.getDescription());
+      }
+
       System.out.println(help);
     }        
   }
@@ -1742,9 +1756,13 @@ public class FsShell extends Configured implements Tool {
    * Displays format of commands.
    * 
    */
-  private static void printUsage(String cmd) {
+  private void printUsage(String cmd) {
     String prefix = "Usage: java " + FsShell.class.getSimpleName();
-    if ("-fs".equals(cmd)) {
+
+    Command instance = commandFactory.getInstance(cmd);
+    if (instance != null) {
+      System.err.println(prefix + " [" + instance.getUsage() + "]");
+    } else if ("-fs".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
                          " [-fs <local | file system URI>]");
     } else if ("-conf".equals(cmd)) {
@@ -1762,8 +1780,6 @@ public class FsShell extends Configured implements Tool {
     } else if ("-df".equals(cmd) ) {
       System.err.println("Usage: java FsShell" +
                          " [" + cmd + " [<path>]]");
-    } else if ("-count".equals(cmd)) {
-      System.err.println(prefix + " [" + Count.USAGE + "]");
     } else if ("-rm".equals(cmd) || "-rmr".equals(cmd)) {
       System.err.println("Usage: java FsShell [" + cmd + 
                            " [-skipTrash] <src>]");
@@ -1801,7 +1817,6 @@ public class FsShell extends Configured implements Tool {
       System.err.println("           [-df [<path>]]");
       System.err.println("           [-du [-s] [-h] <path>]");
       System.err.println("           [-dus <path>]");
-      System.err.println("           [" + Count.USAGE + "]");
       System.err.println("           [-mv <src> <dst>]");
       System.err.println("           [-cp <src> <dst>]");
       System.err.println("           [-rm [-skipTrash] <path>]");
@@ -1825,6 +1840,10 @@ public class FsShell extends Configured implements Tool {
       System.err.println("           [" + FsShellPermissions.CHMOD_USAGE + "]");      
       System.err.println("           [" + FsShellPermissions.CHOWN_USAGE + "]");
       System.err.println("           [" + FsShellPermissions.CHGRP_USAGE + "]");
+      for (String name : commandFactory.getNames()) {
+      	instance = commandFactory.getInstance(name);
+        System.err.println("           [" + instance.getUsage() + "]");
+      }
       System.err.println("           [-help [cmd]]");
       System.err.println();
       ToolRunner.printGenericCommandUsage(System.err);
@@ -1835,7 +1854,12 @@ public class FsShell extends Configured implements Tool {
    * run
    */
   public int run(String argv[]) throws Exception {
-
+    // TODO: This isn't the best place, but this class is being abused with
+    // subclasses which of course override this method.  There really needs
+    // to be a better base class for all commands
+    commandFactory.setConf(getConf());
+    commandFactory.registerCommands(FsCommand.class);
+    
     if (argv.length < 1) {
       printUsage(""); 
       return -1;
@@ -1890,7 +1914,19 @@ public class FsShell extends Configured implements Tool {
 
     exitCode = 0;
     try {
-      if ("-put".equals(cmd) || "-copyFromLocal".equals(cmd)) {
+      Command instance = commandFactory.getInstance(cmd);
+      if (instance != null) {
+        try {
+          exitCode = instance.run(Arrays.copyOfRange(argv, i, argv.length));
+        } catch (Exception e) {
+          exitCode = -1;
+          LOG.debug("Error", e);
+          instance.displayError(e);
+          if (e instanceof IllegalArgumentException) {
+            printUsage(cmd);
+          }
+        }
+      } else if ("-put".equals(cmd) || "-copyFromLocal".equals(cmd)) {
         Path[] srcs = new Path[argv.length-2];
         for (int j=0 ; i < argv.length-1 ;) 
           srcs[j++] = new Path(argv[i++]);
@@ -1951,12 +1987,6 @@ public class FsShell extends Configured implements Tool {
         du(argv, i);
       } else if ("-dus".equals(cmd)) {
         dus(argv, i);
-      } else if ("-count".equals(cmd)) {
-        // TODO: next two lines are a temporary crutch until this entire
-        // block is overhauled
-        Count runner = ReflectionUtils.newInstance(Count.class, getConf());
-        runner.setCommandName(cmd); // TODO: will change with factory
-        exitCode = runner.run(Arrays.copyOfRange(argv, 1, argv.length));
       } else if ("-mkdir".equals(cmd)) {
         exitCode = doall(cmd, argv, i);
       } else if ("-touchz".equals(cmd)) {

@@ -37,6 +37,14 @@ import org.apache.hadoop.fs.Path;
 // used to implement unnecessary abstract methods in the base class
 
 abstract public class FsCommand extends Command {
+  /**
+   * Register the command classes used by the fs subcommand
+   * @param factory where to register the class
+   */
+  public static void registerCommands(CommandFactory factory) {
+    Count.registerCommands(factory);
+  }
+
   protected FsCommand() {}
   
   protected FsCommand(Configuration conf) {
