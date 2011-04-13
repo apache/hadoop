@@ -151,6 +151,8 @@ Release 0.91.0 - Unreleased
    HBASE-3764  Book.xml - adding 2 FAQs (SQL and arch question)
    HBASE-3770  Make FilterList accept var arg Filters in its constructor
                as a convenience (Erik Onnen via Stack)
+   HBASE-3769  TableMapReduceUtil is inconsistent with other table-related
+               classes that accept byte[] as a table name (Erik Onnen via Stack)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
