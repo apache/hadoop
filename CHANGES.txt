@@ -84,6 +84,9 @@ Trunk (unreleased changes)
 
     HADOOP-7202. Improve shell Command base class.  (Daryn Sharp via szetszwo)
 
+    HADOOP-7223. FileContext createFlag combinations are not clearly defined.
+    (suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
