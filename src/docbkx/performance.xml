@@ -199,5 +199,16 @@ htable.close();</programlisting></para>
       <varname>false</varname>. For frequently accessed rows, it is advisable to use the block
       cache.</para>
     </section>
+    <section xml:id="perf.hbase.client.rowkeyonly">
+      <title>Optimal Loading of Row Keys</title>
+      <para>When performing a table <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">scan</link>
+            where only the row keys are needed (no families, qualifiers, values or timestamps), add a FilterList with a
+            <varname>MUST_PASS_ALL</varname> operator to the scanner using <methodname>setFilter</methodname>. The filter list
+            should include both a <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FirstKeyOnlyFilter.html">FirstKeyOnlyFilter</link>
+            and a <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/KeyOnlyFilter.html">KeyOnlyFilter</link>.
+            Using this filter combination will result in a worst case scenario of a region server reading a single value from disk
+            and minimal network traffic to the client for a single row.
+      </para>
+    </section>
   </section>
 </chapter>
