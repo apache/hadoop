@@ -4,6 +4,7 @@
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.client.HTable"
   import="org.apache.hadoop.hbase.client.HBaseAdmin"
+  import="org.apache.hadoop.hbase.client.HConnectionManager"
   import="org.apache.hadoop.hbase.HRegionInfo"
   import="org.apache.hadoop.hbase.HServerAddress"
   import="org.apache.hadoop.hbase.HServerInfo"
@@ -202,6 +203,8 @@
   ex.printStackTrace(System.err);
 }
 } // end else
+
+HConnectionManager.deleteConnection(hbadmin.getConfiguration(), false);
 %>
 
 <p><hr><p>

@@ -8,6 +8,7 @@
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.client.HBaseAdmin"
+  import="org.apache.hadoop.hbase.client.HConnectionManager"
   import="org.apache.hadoop.hbase.HServerInfo"
   import="org.apache.hadoop.hbase.HServerAddress"
   import="org.apache.hadoop.hbase.HTableDescriptor" %><%
@@ -108,7 +109,10 @@
 <%} %>
 
 <h2>User Tables</h2>
-<% HTableDescriptor[] tables = new HBaseAdmin(conf).listTables(); 
+<%
+   HBaseAdmin hba = new HBaseAdmin(conf);
+   HTableDescriptor[] tables = hba.listTables();
+   HConnectionManager.deleteConnection(hba.getConfiguration(), false);
    if(tables != null && tables.length > 0) { %>
 <table>
 <tr>

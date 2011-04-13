@@ -3,6 +3,7 @@
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.client.HBaseAdmin"
   import="org.apache.hadoop.hbase.client.HConnection"
+  import="org.apache.hadoop.hbase.client.HConnectionManager"
   import="org.apache.hadoop.hbase.HRegionInfo"
   import="org.apache.hadoop.hbase.zookeeper.ZKUtil"
   import="org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher"
@@ -31,6 +32,7 @@
 <hr id="head_rule" />
 <pre>
 <%= ZKUtil.dump(watcher) %>
+<% HConnectionManager.deleteConnection(hbadmin.getConfiguration(), false); %>
 </pre>
 
 </body>
