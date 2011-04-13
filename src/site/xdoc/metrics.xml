@@ -29,8 +29,7 @@
       HBase emits Hadoop <a href="http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/metrics/package-summary.html">metrics</a>.
       </p>
       </section>
-      <section>
-        <title>HOWTO</title>
+      <section name="Setup">
       <p>First read up on Hadoop <a href="http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/metrics/package-summary.html">metrics</a>.
       If you are using ganglia, the <a href="http://wiki.apache.org/hadoop/GangliaMetrics">GangliaMetrics</a>
       wiki page is useful read.</p>
@@ -136,6 +135,11 @@ export HBASE_REGIONSERVER_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.p
       able to run JConsole (included with the JDK since JDK 5.0) to view 
       the statistics via JMX.  HBase MBeans are exported under the 
       <strong><code>hadoop</code></strong> domain in JMX.
+      </p>
+      </section>
+      <section name="Understanding HBase Metrics">
+      <p>
+      For more information on understanding HBase metrics, see the <a href="book.html#hbase_metrics">metrics section</a> in the HBase book. 
       </p>
       </section>
     </section>

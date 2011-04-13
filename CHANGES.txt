@@ -155,6 +155,8 @@ Release 0.91.0 - Unreleased
                classes that accept byte[] as a table name (Erik Onnen via Stack)
    HBASE-3768  Add best practice to book for loading row key only
                (Erik Onnen via Stack)
+   HBASE-3765  metrics.xml - small format change and adding nav to hbase
+               book metrics section (Doug Meil)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
