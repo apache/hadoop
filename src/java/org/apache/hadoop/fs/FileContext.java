@@ -511,7 +511,7 @@ public final class FileContext {
    * writing into the file.
    * 
    * @param f the file name to open
-   * @param createFlag gives the semantics of create; see {@link CreateFlag}
+   * @param createFlag gives the semantics of create: overwrite, append etc.
    * @param opts file creation options; see {@link Options.CreateOpts}.
    *          <ul>
    *          <li>Progress - to report progress on the operation - default null
@@ -2057,10 +2057,7 @@ public final class FileContext {
         OutputStream out = null;
         try {
           in = open(qSrc);
-          EnumSet<CreateFlag> createFlag = overwrite ? EnumSet.of(
-              CreateFlag.CREATE, CreateFlag.OVERWRITE) : 
-                EnumSet.of(CreateFlag.CREATE);
-          out = create(qDst, createFlag);
+          out = create(qDst, EnumSet.of(CreateFlag.OVERWRITE));
           IOUtils.copyBytes(in, out, conf, true);
         } catch (IOException e) {
           IOUtils.closeStream(out);

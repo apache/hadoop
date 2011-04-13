@@ -337,9 +337,8 @@ public abstract class ChecksumFs extends FilterFs {
       int bytesPerSum = fs.getBytesPerSum();
       int sumBufferSize = fs.getSumBufferSize(bytesPerSum, bufferSize);
       this.sums = fs.getRawFs().createInternal(fs.getChecksumFile(file),
-          EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE),
-          absolutePermission, sumBufferSize, replication, blockSize, progress,
-          bytesPerChecksum, createParent);
+          EnumSet.of(CreateFlag.OVERWRITE), absolutePermission, sumBufferSize,
+          replication,  blockSize,  progress, bytesPerChecksum,  createParent);
       sums.write(CHECKSUM_VERSION, 0, CHECKSUM_VERSION.length);
       sums.writeInt(bytesPerSum);
     }
