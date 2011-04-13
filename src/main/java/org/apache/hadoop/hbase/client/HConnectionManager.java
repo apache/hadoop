@@ -1000,8 +1000,11 @@ public class HConnectionManager {
       if(zooKeeper == null) {
         try {
           this.zooKeeper = new ZooKeeperWatcher(conf, "hconnection", this);
+        } catch(ZooKeeperConnectionException zce) {
+          throw zce;
         } catch (IOException e) {
-          throw new ZooKeeperConnectionException(e);
+          throw new ZooKeeperConnectionException("An error is preventing" +
+              " HBase from connecting to ZooKeeper", e);
         }
       }
       return zooKeeper;

@@ -43,7 +43,7 @@ public class ZooKeeperConnectionException extends IOException {
    * Constructor taking another exception.
    * @param e Exception to grab data from.
    */
-  public ZooKeeperConnectionException(Exception e) {
-    super(e);
+  public ZooKeeperConnectionException(String message, Exception e) {
+    super(message, e);
   }
 }

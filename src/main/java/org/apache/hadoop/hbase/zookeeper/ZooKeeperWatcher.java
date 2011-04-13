@@ -146,13 +146,28 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
         }
       } while (isFinishedRetryingRecoverable(finished));
       // Convert connectionloss exception to ZKCE.
-      if (ke != null) throw new ZooKeeperConnectionException(ke);
+      if (ke != null) {
+        try {
+          // If we don't close it, the zk connection managers won't be killed
+          this.zooKeeper.close();
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          LOG.warn("Interrupted while closing", e);
+        }
+        throw new ZooKeeperConnectionException("HBase is able to connect to" +
+            " ZooKeeper but the connection closes immediately. This could be" +
+            " a sign that the server has too many connections (30 is the" +
+            " default). Consider inspecting your ZK server logs for that" +
+            " error and then make sure you are reusing HBaseConfiguration" +
+            " as often as you can. See HTable's javadoc for more information.",
+            ke);
+      }
       ZKUtil.createAndFailSilent(this, assignmentZNode);
       ZKUtil.createAndFailSilent(this, rsZNode);
       ZKUtil.createAndFailSilent(this, tableZNode);
     } catch (KeeperException e) {
-      LOG.error(prefix("Unexpected KeeperException creating base node"), e);
-      throw new IOException(e);
+      throw new ZooKeeperConnectionException(
+          prefix("Unexpected KeeperException creating base node"), e);
     }
   }
 

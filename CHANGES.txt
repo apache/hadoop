@@ -150,12 +150,11 @@ Release 0.91.0 - Unreleased
                (Ted Yu via Stack)
    HBASE-3764  Book.xml - adding 2 FAQs (SQL and arch question)
 
-  TASK
+  TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
    HBASE-3573  Move shutdown messaging OFF hearbeat; prereq for fix of
                hbase-1502
    HBASE-3071  Graceful decommissioning of a regionserver
-   HBASE-3748  Add rolling of thrift/rest daemons to graceful_stop.sh script
 
 
   NEW FEATURES
@@ -191,11 +190,15 @@ Release 0.90.3 - Unreleased
                (Ted Yu via Stack)
    HBASE-3750  HTablePool.putTable() should call releaseHTableInterface()
                for discarded tables (Ted Yu via garyh)
+   HBASE=3755  Catch zk's ConnectionLossException and augment error
+               message with more help
 
   IMPROVEMENTS
    HBASE-3747  ReplicationSource should differanciate remote and local exceptions
    HBASE-3652  Speed up tests by lowering some sleeps
 
+  TASKS
+   HBASE-3748  Add rolling of thrift/rest daemons to graceful_stop.sh script
 
 Release 0.90.2 - 20110408
   
