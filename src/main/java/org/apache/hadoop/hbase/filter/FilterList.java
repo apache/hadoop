@@ -29,6 +29,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -72,6 +73,15 @@ public class FilterList implements Filter {
   }
 
   /**
+   * Constructor that takes a var arg number of {@link Filter}s. The fefault operator
+   * MUST_PASS_ALL is assumed.
+   * @param rowFilters
+   */
+  public FilterList(final Filter... rowFilters) {
+    this.filters = Arrays.asList(rowFilters);
+  }
+
+  /**
    * Constructor that takes an operator.
    *
    * @param operator Operator to process filter set with.
@@ -88,6 +98,17 @@ public class FilterList implements Filter {
    */
   public FilterList(final Operator operator, final List<Filter> rowFilters) {
     this.filters = rowFilters;
+    this.operator = operator;
+  }
+
+  /**
+   * Constructor that takes a var arg number of {@link Filter}s and an operator.
+   *
+   * @param operator Operator to process filter set with.
+   * @param rowFilters Filters to use
+   */
+  public FilterList(final Operator operator, final Filter... rowFilters) {
+    this.filters = Arrays.asList(rowFilters);
     this.operator = operator;
   }
 
