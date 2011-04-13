@@ -216,6 +216,7 @@ public class MasterFileSystem {
       splitTime = splitter.getTime();
       splitLogSize = splitter.getSize();
     } catch (IOException e) {
+      checkFileSystem();
       LOG.error("Failed splitting " + logDir.toString(), e);
     } finally {
       this.splitLogLock.unlock();
