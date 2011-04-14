@@ -163,6 +163,52 @@ public class TestTimestampsFilter {
     }
   }
 
+  @Test
+  public void testMultiColumns() throws Exception {
+    byte [] TABLE = Bytes.toBytes("testTimestampsFilterMultiColumns");
+    byte [] FAMILY = Bytes.toBytes("event_log");
+    byte [][] FAMILIES = new byte[][] { FAMILY };
+    KeyValue kvs[];
+
+    // create table; set versions to max...
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES, Integer.MAX_VALUE);
+
+    Put p = new Put(Bytes.toBytes("row"));
+    p.add(FAMILY, Bytes.toBytes("column0"), 3, Bytes.toBytes("value0-3"));
+    p.add(FAMILY, Bytes.toBytes("column1"), 3, Bytes.toBytes("value1-3"));
+    p.add(FAMILY, Bytes.toBytes("column2"), 1, Bytes.toBytes("value2-1"));
+    p.add(FAMILY, Bytes.toBytes("column2"), 2, Bytes.toBytes("value2-2"));
+    p.add(FAMILY, Bytes.toBytes("column2"), 3, Bytes.toBytes("value2-3"));
+    p.add(FAMILY, Bytes.toBytes("column3"), 2, Bytes.toBytes("value3-2"));
+    p.add(FAMILY, Bytes.toBytes("column4"), 1, Bytes.toBytes("value4-1"));
+    p.add(FAMILY, Bytes.toBytes("column4"), 2, Bytes.toBytes("value4-2"));
+    p.add(FAMILY, Bytes.toBytes("column4"), 3, Bytes.toBytes("value4-3"));
+    ht.put(p);
+
+    ArrayList timestamps = new ArrayList();
+    timestamps.add(new Long(3));
+    TimestampsFilter filter = new TimestampsFilter(timestamps);
+
+    Get g = new Get(Bytes.toBytes("row"));
+    g.setFilter(filter);
+    g.setMaxVersions();
+    g.addColumn(FAMILY, Bytes.toBytes("column2"));
+    g.addColumn(FAMILY, Bytes.toBytes("column4"));
+
+    Result result = ht.get(g);
+    for (KeyValue kv : result.list()) {
+      System.out.println("found row " + Bytes.toString(kv.getRow()) +
+          ", column " + Bytes.toString(kv.getQualifier()) + ", value "
+          + Bytes.toString(kv.getValue()));
+    }
+
+    assertEquals(result.list().size(), 2);
+    assertEquals(Bytes.toString(result.list().get(0).getValue()),
+        "value2-3");
+    assertEquals(Bytes.toString(result.list().get(1).getValue()),
+        "value4-3");
+  }
+
   /**
    * Test TimestampsFilter in the presence of version deletes.
    *

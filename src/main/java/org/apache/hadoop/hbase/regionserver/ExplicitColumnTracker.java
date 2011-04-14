@@ -206,6 +206,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
     while (this.column != null) {
       int compare = Bytes.compareTo(column.getBuffer(), column.getOffset(),
           column.getLength(), bytes, offset, length);
+      resetTS();
       if (compare == 0) {
         this.columns.remove(this.index);
         if (this.columns.size() == this.index) {
