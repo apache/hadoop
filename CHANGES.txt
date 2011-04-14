@@ -161,6 +161,8 @@ Release 0.91.0 - Unreleased
                bypass() and complete() 
    HBASE-3701  revisit ArrayList creation (Ted Yu via Stack)
    HBASE-3753  Book.xml - architecture, adding more Store info (Doug Meil)
+   HBASE-3784  book.xml - adding small subsection in architecture/client on
+               filters (Doug Meil)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

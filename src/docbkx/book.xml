@@ -739,6 +739,11 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
            see the <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#batch%28java.util.List%29">batch</link> methods on HTable.
 	   </para>
 	   </section>
+	   <section xml:id="client.filter"><title>Filters</title>
+           <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html">Get</link> and <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scan</link> instances can be
+           optionally configured with <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/Filter.html">filters</link> which are applied on the region server. 
+    	   </para>
+		</section>
 	</section>
     
     <section xml:id="daemons">
