@@ -823,11 +823,17 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
 
       <section xml:id="store">
           <title>Store</title>
-          <para>A Store hosts a MemStore and 0 or more StoreFiles.
-              StoreFiles are HFiles.
+          <para>A Store hosts a MemStore and 0 or more StoreFiles (HFiles). A Store corresponds to a column family for a table for a given region.
           </para>
+    <section xml:id="store.memstore">
+      <title>MemStore</title>
+      <para>The MemStore holds in-memory modifications to the Store.  Modifications are KeyValues.
+       When asked to flush, current memstore is moved to snapshot and is cleared. 
+       HBase continues to serve edits out of new memstore and backing snapshot until flusher reports in that the 
+       flush succeeded. At this point the snapshot is let go.</para>
+      </section>
     <section xml:id="hfile">
-      <title>HFile</title>
+      <title>StoreFile (HFile)</title>
       <section><title>HFile Format</title>
           <para>The <emphasis>hfile</emphasis> file format is based on
               the SSTable file described in the <link xlink:href="http://labs.google.com/papers/bigtable.html">BigTable [2006]</link> paper and on
@@ -852,6 +858,19 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
         tool.</para>
       </section>
       </section>
+      <section xml:id="compaction">
+        <title>Compaction</title>
+        <para>There are two types of compactions:  minor and major.  Minor compactions will usually pick up a couple of the smaller adjacent
+         files and rewrite them as one.  Minors do not drop deletes or expired cells, only major compactions do this.  Sometimes a minor compaction
+         will pick up all  the files in the store and in this case it actually promotes itself to being a major compaction.  
+         For a description of how a minor compaction picks files to compact, see the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/regionserver/Store.html#836">ascii diagram in the Store source code.</link>
+         </para>
+         <para>After a major compaction runs there will be a single storefile per store, and this will help performance usually.  Caution:  major compactions rewrite all of the stores data and on a loaded system, this may not be tenable;
+          major compactions will usually have to be <link linkend="disable.splitting">managed</link> on large systems.
+        </para>
+      </section>
+
+
       </section>
 
     </section>
