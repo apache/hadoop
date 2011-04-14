@@ -878,40 +878,40 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
 
       </section>
 
-    </section>
-  </chapter>
 
-  <chapter xml:id="wal">
-    <title >The WAL</title>
+  </section>
+      <section xml:id="wal">
+       <title >Write Ahead Log (WAL)</title>
 
-    <subtitle>HBase's<link
-    xlink:href="http://en.wikipedia.org/wiki/Write-ahead_logging"> Write-Ahead
-    Log</link></subtitle>
+       <section xml:id="purpose.wal">
+         <title>Purpose</title>
 
-    <para>Each RegionServer adds updates to its Write-ahead Log (WAL)
-    first, and then to memory.</para>
+        <para>Each RegionServer adds updates (Puts, Deletes) to its write-ahead log (WAL)
+        first, and then to the <link linkend="store.memstore">MemStore</link> for the affected <link linkend="store">Store</link>.  
+        This ensures that HBase has durable writes. Without WAL, there is the possibility of data loss in the case of a RegionServer failure 
+        before each MemStore is flushed and new StoreFiles are written.  <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/wal/HLog.html">HLog</link> 
+        is the HBase WAL implementation, and there is one HLog instance per RegionServer.
+       </para>The WAL is in HDFS in <filename>/hbase/.logs/</filename> with subdirectories per region.
+       <para>
+        For more general information about the concept of write ahead logs, see the Wikipedia
+        <link xlink:href="http://en.wikipedia.org/wiki/Write-ahead_logging">Write-Ahead Log</link> article.
+       </para>
+       </section>
+       <section xml:id="wal_flush">
+        <title>WAL Flushing</title>
+          <para>TODO (describe).
+          </para>
+        </section>
 
-    <section xml:id="purpose.wal">
-      <title>What is the purpose of the HBase WAL</title>
+        <section xml:id="wal_splitting">
+         <title>WAL Splitting</title>
 
-      <para>
-     See the Wikipedia
-     <link xlink:href="http://en.wikipedia.org/wiki/Write-ahead_logging">Write-Ahead
-    Log</link> article.
-
-      </para>
-    </section>
-
-    <section xml:id="wal_splitting">
-      <title>WAL splitting</title>
-
-      <subtitle>How edits are recovered from a crashed RegionServer</subtitle>
-
-      <para>When a RegionServer crashes, it will lose its ephemeral lease in
-      ZooKeeper...TODO</para>
-
-      <section>
-        <title><varname>hbase.hlog.split.skip.errors</varname></title>
+        <section><title>How edits are recovered from a crashed RegionServer</title>
+         <para>When a RegionServer crashes, it will lose its ephemeral lease in
+         ZooKeeper...TODO</para>
+		 </section>
+         <section>
+         <title><varname>hbase.hlog.split.skip.errors</varname></title>
 
         <para>When set to <constant>true</constant>, the default, any error
         encountered splitting will be logged, the problematic WAL will be
@@ -944,8 +944,9 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
       </section>
     </section>
 
+    </section>
   </chapter>
-
+  
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="performance.xml" />
 
   <chapter xml:id="blooms">

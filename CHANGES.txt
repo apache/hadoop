@@ -163,6 +163,8 @@ Release 0.91.0 - Unreleased
    HBASE-3753  Book.xml - architecture, adding more Store info (Doug Meil)
    HBASE-3784  book.xml - adding small subsection in architecture/client on
                filters (Doug Meil)
+   HBASE-3785  book.xml - moving WAL into architecture section, plus adding
+               more description on what it does (Doug Meil)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
