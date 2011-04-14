@@ -23,8 +23,9 @@ module Shell
     class Balancer < Command
       def help
         return <<-EOF
-Trigger the cluster balancer. Returns true if balancer ran.  Otherwise
-false (Will not run if regions in transition).
+Trigger the cluster balancer. Returns true if balancer ran and was able to
+tell the region servers to unassign all the regions to balance  (the re-assignment itself is async). 
+Otherwise false (Will not run if regions in transition).
 EOF
       end
 
