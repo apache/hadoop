@@ -900,7 +900,7 @@ public class ZKUtil {
   throws KeeperException {
     try {
       ZooKeeper zk = zkw.getZooKeeper();
-      if (zk.exists(znode, false) != null) {
+      if (zk.exists(znode, false) == null) {
         zk.create(znode, new byte[0], Ids.OPEN_ACL_UNSAFE,
             CreateMode.PERSISTENT);
       }
