@@ -159,6 +159,7 @@ Release 0.91.0 - Unreleased
                book metrics section (Doug Meil)
    HBASE-3759  Eliminate use of ThreadLocals for CoprocessorEnvironment
                bypass() and complete() 
+   HBASE-3701  revisit ArrayList creation (Ted Yu via Stack)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

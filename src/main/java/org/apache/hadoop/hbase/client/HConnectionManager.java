@@ -1202,6 +1202,8 @@ public class HConnectionManager {
       HServerAddress [] lastServers = new HServerAddress[results.length];
       List<Row> workingList = new ArrayList<Row>(list);
       boolean retry = true;
+      // count that helps presize actions array
+      int actionCount = 0;
       Throwable singleRowCause = null;
 
       for (int tries = 0; tries < numRetries && retry; ++tries) {
@@ -1292,6 +1294,7 @@ public class HConnectionManager {
         // order), so they can be retried.
         retry = false;
         workingList.clear();
+        actionCount = 0;
         for (int i = 0; i < results.length; i++) {
           // if null (fail) or instanceof Throwable && not instanceof DNRIOE
           // then retry that row. else dont.
@@ -1300,11 +1303,14 @@ public class HConnectionManager {
                   !(results[i] instanceof DoNotRetryIOException))) {
 
             retry = true;
-
+            actionCount++;
             Row row = list.get(i);
             workingList.add(row);
             deleteCachedLocation(tableName, row.getRow());
           } else {
+            if (results[i] != null && results[i] instanceof Throwable) {
+              actionCount++;
+            }
             // add null to workingList, so the order remains consistent with the original list argument.
             workingList.add(null);
           }
@@ -1319,9 +1325,9 @@ public class HConnectionManager {
       }
 
 
-      List<Throwable> exceptions = new ArrayList<Throwable>();
-      List<Row> actions = new ArrayList<Row>();
-      List<HServerAddress> addresses = new ArrayList<HServerAddress>();
+      List<Throwable> exceptions = new ArrayList<Throwable>(actionCount);
+      List<Row> actions = new ArrayList<Row>(actionCount);
+      List<HServerAddress> addresses = new ArrayList<HServerAddress>(actionCount);
 
       for (int i = 0 ; i < results.length; i++) {
         if (results[i] == null || results[i] instanceof Throwable) {
