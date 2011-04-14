@@ -64,6 +64,9 @@
       <outputDirectory>/lib</outputDirectory>
       <unpack>false</unpack>
       <scope>runtime</scope>
+      <excludes>
+        <exclude>org.apache.hbase:hbase</exclude>
+      </excludes>
     </dependencySet>
   </dependencySets>
 </assembly>
