@@ -320,7 +320,7 @@ public class ZKUtil {
    * @return list of znode names, null if the node doesn't exist
    * @throws KeeperException
    */
-  public static List<String> listChildrenAndWatchThem(ZooKeeperWatcher zkw, 
+  public static List<String> listChildrenAndWatchThem(ZooKeeperWatcher zkw,
       String znode) throws KeeperException {
     List<String> children = listChildrenAndWatchForNewChildren(zkw, znode);
     if (children == null) {
@@ -718,7 +718,7 @@ public class ZKUtil {
    * @param zkw zk reference
    * @param znode path of node
    * @param data data to set for node
-   * @throws KeeperException 
+   * @throws KeeperException
    */
   public static void createSetData(final ZooKeeperWatcher zkw, final String znode,
       final byte [] data)
@@ -899,8 +899,11 @@ public class ZKUtil {
       String znode)
   throws KeeperException {
     try {
-      zkw.getZooKeeper().create(znode, new byte[0], Ids.OPEN_ACL_UNSAFE,
-          CreateMode.PERSISTENT);
+      ZooKeeper zk = zkw.getZooKeeper();
+      if (zk.exists(znode, false) != null) {
+        zk.create(znode, new byte[0], Ids.OPEN_ACL_UNSAFE,
+            CreateMode.PERSISTENT);
+      }
     } catch(KeeperException.NodeExistsException nee) {
     } catch(KeeperException.NoAuthException nee){
       try {
