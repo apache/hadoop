@@ -60,7 +60,7 @@ public class FsShell extends Configured implements Tool {
   
   static final Log LOG = LogFactory.getLog(FsShell.class);
 
-  protected FileSystem fs;
+  private FileSystem fs;
   private Trash trash;
   protected CommandFactory commandFactory;
 
@@ -92,14 +92,22 @@ public class FsShell extends Configured implements Tool {
     commandFactory = new CommandFactory();
   }
   
-  protected void init() throws IOException {
-    getConf().setQuietMode(true);
-    if (this.fs == null) {
-     this.fs = FileSystem.get(getConf());
-    }
+  protected FileSystem getFS() throws IOException {
+    if(fs == null)
+      fs = FileSystem.get(getConf());
+    
+    return fs;
+  }
+  
+  protected Trash getTrash() throws IOException {
     if (this.trash == null) {
       this.trash = new Trash(getConf());
     }
+    return this.trash;
+  }
+  
+  protected void init() throws IOException {
+    getConf().setQuietMode(true);
   }
 
   
@@ -510,11 +518,12 @@ public class FsShell extends Configured implements Tool {
       System.out.flush();
 
       boolean printWarning = false;
-      FileStatus status = fs.getFileStatus(f);
+      FileSystem pFS = f.getFileSystem(getConf());
+      FileStatus status = pFS.getFileStatus(f);
       long len = status.getLen();
 
       for(boolean done = false; !done; ) {
-        BlockLocation[] locations = fs.getFileBlockLocations(status, 0, len);
+        BlockLocation[] locations = pFS.getFileBlockLocations(status, 0, len);
         int i = 0;
         for(; i < locations.length && 
           locations[i].getHosts().length == rep; i++)
@@ -1087,7 +1096,8 @@ public class FsShell extends Configured implements Tool {
     //
     if (argv.length > 3) {
       Path dst = new Path(dest);
-      if (!fs.isDirectory(dst)) {
+      FileSystem pFS = dst.getFileSystem(conf);
+      if (!pFS.isDirectory(dst)) {
         throw new IOException("When copying multiple files, " 
                               + "destination " + dest + " should be a directory.");
       }
@@ -1199,15 +1209,15 @@ public class FsShell extends Configured implements Tool {
   }
 
   private void expunge() throws IOException {
-    trash.expunge();
-    trash.checkpoint();
+    getTrash().expunge();
+    getTrash().checkpoint();
   }
 
   /**
    * Returns the Trash object associated with this shell.
    */
-  public Path getCurrentTrashDir() {
-    return trash.getCurrentTrashDir();
+  public Path getCurrentTrashDir() throws IOException {
+    return getTrash().getCurrentTrashDir();
   }
 
   /**
