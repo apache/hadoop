@@ -147,7 +147,7 @@ import com.google.common.collect.Lists;
  * the HMaster. There are many HRegionServers in a single HBase deployment.
  */
 public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
-    Runnable, RegionServerServices, Server {
+    Runnable, RegionServerServices {
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
 
   // Set when a report to the master comes back with a message asking us to
@@ -2803,11 +2803,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @Override
   public CompactionRequestor getCompactionRequester() {
     return this.compactSplitThread;
-  }
-
-  @Override
-  public ZooKeeperWatcher getZooKeeperWatcher() {
-    return this.zooKeeper;
   }
 
   //

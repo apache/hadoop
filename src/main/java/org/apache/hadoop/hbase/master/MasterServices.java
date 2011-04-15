@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
@@ -30,7 +31,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 /**
  * Services Master supplies
  */
-public interface MasterServices {
+public interface MasterServices extends Server {
   /**
    * @return Master's instance of the {@link AssignmentManager}
    */
@@ -58,15 +59,5 @@ public interface MasterServices {
    * @throws TableNotFoundException 
    */
   public void checkTableModifiable(final byte [] tableName) throws IOException;
-
-  /**
-   * @return Implementation of {@link org.apache.hadoop.hbase.catalog.CatalogTracker} or null.
-   */
-  public CatalogTracker getCatalogTracker();
-
-  /*
-   * @return Implementation of {@link ZooKeeperWatcher} or null.
-   */
-  public ZooKeeperWatcher getZooKeeperWatcher();
 
 }

@@ -179,12 +179,37 @@ public class TestOpenRegionHandler {
     }
 
     @Override
-    public ZooKeeperWatcher getZooKeeperWatcher() {
+    public ZooKeeperWatcher getZooKeeper() {
       return null;
     }
     
     public RegionServerAccounting getRegionServerAccounting() {
       return null;
+    }
+
+    @Override
+    public String getServerName() {
+      return null;
+    }
+
+    @Override
+    public Configuration getConfiguration() {
+      return null;
+    }
+
+    @Override
+    public void abort(String why, Throwable e) {
+       //no-op
+    }
+
+    @Override
+    public void stop(String why) {
+      //no-op
+    }
+
+    @Override
+    public boolean isStopped() {
+      return false;
     }
   };
 

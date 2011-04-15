@@ -19,11 +19,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.Server;
+
 /**
  * Interface to Map of online regions.  In the  Map, the key is the region's
  * encoded name and the value is an {@link HRegion} instance.
  */
-interface OnlineRegions {
+interface OnlineRegions extends Server {
   /**
    * Add to online regions.
    * @param r

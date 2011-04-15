@@ -165,6 +165,8 @@ Release 0.91.0 - Unreleased
                filters (Doug Meil)
    HBASE-3785  book.xml - moving WAL into architecture section, plus adding
                more description on what it does (Doug Meil)
+   HBASE-3699  Make RegionServerServices and MasterServices extend Server
+               (Erik Onnen)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
