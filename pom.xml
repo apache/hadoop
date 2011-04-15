@@ -545,7 +545,7 @@
     <slf4j.version>1.5.8</slf4j.version><!-- newer version available -->
     <stax-api.version>1.0.1</stax-api.version>
     <thrift.version>0.5.0</thrift.version><!-- newer version available -->
-    <zookeeper.version>3.3.2</zookeeper.version>
+    <zookeeper.version>3.3.3</zookeeper.version>
 
     <package.prefix>/usr</package.prefix>	           
     <package.conf.dir>/etc/hbase</package.conf.dir>  

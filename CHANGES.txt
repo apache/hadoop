@@ -168,6 +168,7 @@ Release 0.91.0 - Unreleased
                more description on what it does (Doug Meil)
    HBASE-3699  Make RegionServerServices and MasterServices extend Server
                (Erik Onnen)
+   HBASE-3757  Upgrade to ZK 3.3.3
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
