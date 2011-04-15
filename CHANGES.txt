@@ -72,6 +72,7 @@ Release 0.91.0 - Unreleased
    HBASE-3723  Major compact should be done when there is only one storefile
                and some keyvalue is outdated (Zhou Shuaifeng via Stack)
    HBASE-3624  Only one coprocessor of each priority can be loaded for a table
+   HBASE-3598  Broken formatting in LRU stats output (Erik Onnen)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
