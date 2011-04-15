@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+    <chapter xml:id="build"
+      version="5.0" xmlns="http://docbook.org/ns/docbook"
+      xmlns:xlink="http://www.w3.org/1999/xlink"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      xmlns:svg="http://www.w3.org/2000/svg"
+      xmlns:m="http://www.w3.org/1998/Math/MathML"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      xmlns:db="http://docbook.org/ns/docbook">
+    <title>Developers</title>
+    <section xml:id="ides"> 
+        <title>IDEs</title>
+        <section xml:id="eclipse">
+          <title>Eclipse</title>
+          <para>See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3678">HBASE-3678 Add Eclipse-based Apache Formatter to HBase Wiki</link>
+              for an Eclipse formatter to help ensure your code conforms to HBase'y coding conventsion.
+          The issue includes instructions for loading the attached formatter.</para>
+          
+        </section>
+    </section> 
+    <section xml:id="unit.tests"> 
+        <title>Unit Tests</title>
+        <para>In HBase we use <link xlink:href="http://junit.org">JUnit</link> 4.
+            If you need to run miniclusters of HDFS, ZooKeeper, HBase, or MapReduce testing,
+            be sure to checkout the <classname>HBaseTestingUtility</classname>.
+            Alex Baranau of Sematext describes how it can be used in
+            <link xlink:href="http://blog.sematext.com/2010/08/30/hbase-case-study-using-hbasetestingutility-for-local-testing-development/">HBase Case-Study: Using HBaseTestingUtility for Local Testing and Development</link> (2010).
+        </para>
+        <section xml:id="mockito">
+          <title>Mocito</title>
+          <para>Sometimes you don't need a full running server
+              unit testing.  For example, some methods can make do with a
+              a <classname>org.apache.hadoop.hbase.Server</classname> instance
+              or a <classname>org.apache.hadoop.hbase.master.MasterServices</classname>
+              Interface reference rather than a full-blown
+              <classname>org.apache.hadoop.hbase.master.HMaster</classname>.
+              In these cases, you maybe able to get away with a mocked
+              <classname>Server</classname> instance.  For example:
+              <programlisting>
+              </programlisting>
+           </para>
+        </section>
+    </section> 
+          
+    </chapter>
