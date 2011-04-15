@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -73,6 +74,8 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
   boolean hadPostScannerNext = false;
   boolean hadPreScannerClose = false;
   boolean hadPostScannerClose = false;
+  boolean hadPreScannerOpen = false;
+  boolean hadPostScannerOpen = false;
 
   @Override
   public void preOpen(ObserverContext<RegionCoprocessorEnvironment> c) {
@@ -140,6 +143,21 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
     hadPostCompact = true;
   }
 
+  @Override
+  public InternalScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Scan scan,
+      final InternalScanner s) throws IOException {
+    hadPreScannerOpen = true;
+    return null;
+  }
+
+  @Override
+  public InternalScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Scan scan, final InternalScanner s)
+      throws IOException {
+    hadPostScannerOpen = true;
+    return s;
+  }
 
   @Override
   public boolean preScannerNext(final ObserverContext<RegionCoprocessorEnvironment> c,
@@ -371,5 +389,11 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
   }
   public boolean wasScannerCloseCalled() {
     return hadPreScannerClose && hadPostScannerClose;
+  }
+  public boolean wasScannerOpenCalled() {
+    return hadPreScannerOpen && hadPostScannerOpen;
+  }
+  public boolean hadDeleted() {
+    return hadPreDeleted && hadPostDeleted;
   }
 }

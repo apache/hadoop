@@ -1882,7 +1882,18 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     requestCount.incrementAndGet();
     try {
       HRegion r = getRegion(regionName);
-      return addScanner(r.getScanner(scan));
+      r.prepareScanner(scan);
+      InternalScanner s = null;
+      if (r.getCoprocessorHost() != null) {
+        s = r.getCoprocessorHost().preScannerOpen(scan);
+      }
+      if (s == null) {
+        s = r.getScanner(scan);
+      }
+      if (r.getCoprocessorHost() != null) {
+        s = r.getCoprocessorHost().postScannerOpen(scan, s);
+      }
+      return addScanner(s);
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t, "Failed openScanner"));
     }

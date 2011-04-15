@@ -1199,18 +1199,24 @@ public class HRegion implements HeapSize { // , Writable{
    return getScanner(scan, null);
   }
 
+  void prepareScanner(Scan scan) throws IOException {
+    if(!scan.hasFamilies()) {
+      // Adding all families to scanner
+      for(byte[] family: regionInfo.getTableDesc().getFamiliesKeys()){
+        scan.addFamily(family);
+      }
+    }
+  }
+
   protected InternalScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners) throws IOException {
     startRegionOperation();
     this.readRequestsCount.increment();
     try {
       // Verify families are all valid
+      prepareScanner(scan);
       if(scan.hasFamilies()) {
         for(byte [] family : scan.getFamilyMap().keySet()) {
           checkFamily(family);
-        }
-      } else { // Adding all families to scanner
-        for(byte[] family: regionInfo.getTableDesc().getFamiliesKeys()){
-          scan.addFamily(family);
         }
       }
       return instantiateInternalScanner(scan, additionalScanners);
@@ -1222,17 +1228,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   protected InternalScanner instantiateInternalScanner(Scan scan,
       List<KeyValueScanner> additionalScanners) throws IOException {
-    InternalScanner s = null;
-    if (coprocessorHost != null) {
-      s = coprocessorHost.preScannerOpen(scan);
-    }
-    if (s == null) {
-      s = new RegionScanner(scan, additionalScanners);
-    }
-    if (coprocessorHost != null) {
-      s = coprocessorHost.postScannerOpen(scan, s);
-    }
-    return s;
+    return new RegionScanner(scan, additionalScanners);
   }
 
   /*

@@ -206,6 +206,50 @@ public class TestRegionObserverInterface {
     util.deleteTable(tableName);
   }
 
+  @Test
+  // HBase-3758
+  public void testHBase3758() throws IOException {
+    byte[] tableName = Bytes.toBytes("testHBase3758");
+    util.createTable(tableName, new byte[][] {A, B, C});
+
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[] {"hadDeleted", "wasScannerOpenCalled"},
+        tableName,
+        new Boolean[] {false, false}
+    );
+
+    HTable table = new HTable(util.getConfiguration(), tableName);
+    Put put = new Put(ROW);
+    put.add(A, A, A);
+    table.put(put);
+
+    Delete delete = new Delete(ROW);
+    table.delete(delete);
+
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[] {"hadDeleted", "wasScannerOpenCalled"},
+        tableName,
+        new Boolean[] {true, false}
+    );
+
+    Scan s = new Scan();
+    ResultScanner scanner = table.getScanner(s);
+    try {
+      for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
+      }
+    } finally {
+      scanner.close();
+    }
+
+    // now scanner hooks should be invoked.
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[] {"wasScannerOpenCalled"},
+        tableName,
+        new Boolean[] {true}
+    );
+    util.deleteTable(tableName);
+  }
+
   // check each region whether the coprocessor upcalls are called or not.
   private void verifyMethodResult(Class c, String methodName[], byte[] tableName,
                                   Object value[]) throws IOException {

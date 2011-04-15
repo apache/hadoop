@@ -73,6 +73,8 @@ Release 0.91.0 - Unreleased
                and some keyvalue is outdated (Zhou Shuaifeng via Stack)
    HBASE-3624  Only one coprocessor of each priority can be loaded for a table
    HBASE-3598  Broken formatting in LRU stats output (Erik Onnen)
+   HBASE-3758  Delete triggers pre/postScannerOpen upcalls of RegionObserver
+               (Mingjie Lai via garyh)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
