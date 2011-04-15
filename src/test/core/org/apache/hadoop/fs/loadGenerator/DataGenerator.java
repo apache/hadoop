@@ -140,7 +140,8 @@ public class DataGenerator extends Configured implements Tool {
    * a length of <code>fileSize</code>. The file is filled with character 'a'.
    */
   private void genFile(Path file, long fileSize) throws IOException {
-    FSDataOutputStream out = fc.create(file, EnumSet.of(CreateFlag.OVERWRITE),
+    FSDataOutputStream out = fc.create(file,
+        EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE),
         CreateOpts.createParent(), CreateOpts.bufferSize(4096),
         CreateOpts.repFac((short) 3));
     for(long i=0; i<fileSize; i++) {

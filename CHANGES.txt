@@ -1,4 +1,4 @@
-Hadoop Change Log
+Hn jaadoop Change Log
 
 Trunk (unreleased changes)
 
@@ -138,6 +138,10 @@ Trunk (unreleased changes)
     transition of Command base class improvement.  (Daryn Sharp via szetszwo)
 
     HADOOP-7207. fs member of FSShell is not really needed (boryas)
+
+    HADOOP-7223. FileContext createFlag combinations are not clearly defined.
+    (suresh)
+
 
 Release 0.22.0 - Unreleased
 

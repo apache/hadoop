@@ -584,7 +584,8 @@ public class LoadGenerator extends Configured implements Tool {
    */
   private void genFile(Path file, long fileSize) throws IOException {
     long startTime = System.currentTimeMillis();
-    FSDataOutputStream out = fc.create(file, EnumSet.of(CreateFlag.OVERWRITE),
+    FSDataOutputStream out = fc.create(file,
+        EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE),
         CreateOpts.createParent(), CreateOpts.bufferSize(4096),
         CreateOpts.repFac((short) 3));
     executionTime[CREATE] += (System.currentTimeMillis()-startTime);
