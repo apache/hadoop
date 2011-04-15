@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -50,6 +51,7 @@ import org.apache.hadoop.ipc.RpcServerException;
 import org.apache.hadoop.ipc.UnexpectedServerException;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
 /**
@@ -196,12 +198,20 @@ public final class FileContext {
   private Path workingDir;          // Fully qualified
   private FsPermission umask;
   private final Configuration conf;
+  private final UserGroupInformation ugi;
 
   private FileContext(final AbstractFileSystem defFs,
     final FsPermission theUmask, final Configuration aConf) {
     defaultFS = defFs;
     umask = FsPermission.getUMask(aConf);
     conf = aConf;
+    try {
+      ugi = UserGroupInformation.getCurrentUser();
+    } catch (IOException e) {
+      LOG.error("Exception in getCurrentUser: ",e);
+      throw new RuntimeException("Failed to get the current user " +
+      		"while creating a FileContext", e);
+    }
     /*
      * Init the wd.
      * WorkingDir is implemented at the FileContext layer 
@@ -276,9 +286,11 @@ public final class FileContext {
    * 
    * @throws UnsupportedFileSystemException If the file system for
    *           <code>absOrFqPath</code> is not supported.
+   * @throws IOExcepton If the file system for <code>absOrFqPath</code> could
+   *         not be instantiated.
    */
   private AbstractFileSystem getFSofPath(final Path absOrFqPath)
-      throws UnsupportedFileSystemException {
+      throws UnsupportedFileSystemException, IOException {
     checkNotSchemeWithRelative(absOrFqPath);
     if (!absOrFqPath.isAbsolute() && absOrFqPath.toUri().getScheme() == null) {
       throw new HadoopIllegalArgumentException(
@@ -290,10 +302,25 @@ public final class FileContext {
       defaultFS.checkPath(absOrFqPath);
       return defaultFS;
     } catch (Exception e) { // it is different FileSystem
-      return AbstractFileSystem.get(absOrFqPath.toUri(), conf);
+      return getAbstractFileSystem(ugi, absOrFqPath.toUri(), conf);
     }
   }
   
+  private static AbstractFileSystem getAbstractFileSystem(
+      UserGroupInformation user, final URI uri, final Configuration conf)
+      throws UnsupportedFileSystemException, IOException {
+    try {
+      return user.doAs(new PrivilegedExceptionAction<AbstractFileSystem>() {
+        public AbstractFileSystem run() throws UnsupportedFileSystemException {
+          return AbstractFileSystem.get(uri, conf);
+        }
+      });
+    } catch (InterruptedException ex) {
+      LOG.error(ex);
+      throw new IOException("Failed to get the AbstractFileSystem for path: "
+          + uri, ex);
+    }
+  }
   
   /**
    * Protected Static Factory methods for getting a FileContexts
@@ -390,10 +417,23 @@ public final class FileContext {
    * @return new FileContext for specified uri
    * @throws UnsupportedFileSystemException If the file system with specified is
    *           not supported
+   * @throws RuntimeException If the file system specified is supported but
+   *         could not be instantiated, or if login fails.
    */
   public static FileContext getFileContext(final URI defaultFsUri,
       final Configuration aConf) throws UnsupportedFileSystemException {
-    return getFileContext(AbstractFileSystem.get(defaultFsUri,  aConf), aConf);
+    UserGroupInformation currentUser = null;
+    AbstractFileSystem defaultAfs = null;
+    try {
+      currentUser = UserGroupInformation.getCurrentUser();
+      defaultAfs = getAbstractFileSystem(currentUser, defaultFsUri, aConf);
+    } catch (UnsupportedFileSystemException ex) {
+      throw ex;
+    } catch (IOException ex) {
+      LOG.error(ex);
+      throw new RuntimeException(ex);
+    }
+    return getFileContext(defaultAfs, aConf);
   }
 
   /**
@@ -475,6 +515,14 @@ public final class FileContext {
    */
   public Path getWorkingDirectory() {
     return workingDir;
+  }
+  
+  /**
+   * Gets the ugi in the file-context
+   * @return UserGroupInformation
+   */
+  public UserGroupInformation getUgi() {
+    return ugi;
   }
   
   /**

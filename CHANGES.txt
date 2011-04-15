@@ -20,6 +20,8 @@ Trunk (unreleased changes)
 
     HADOOP-6994. Api to get delegation token in AbstractFileSystem. (jitendra)
 
+    HADOOP-7171. Support UGI in FileContext API. (jitendra)
+
   IMPROVEMENTS
 
     HADOOP-7042. Updates to test-patch.sh to include failed test names and
