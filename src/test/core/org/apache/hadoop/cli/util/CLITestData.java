@@ -26,8 +26,8 @@ import java.util.ArrayList;
  */
 public class CLITestData {
   private String testDesc = null;
-  private ArrayList<TestCmd> testCommands = null;
-  private ArrayList<TestCmd> cleanupCommands = null;
+  private ArrayList<CLICommand> testCommands = null;
+  private ArrayList<CLICommand> cleanupCommands = null;
   private ArrayList<ComparatorData> comparatorData = null;
   private boolean testResult = false;
   
@@ -35,35 +35,6 @@ public class CLITestData {
 
   }
 
-  /**
-   * Class to define Test Command. includes type of the command and command itself
-   * Valid types FS, DFSADMIN, MRADMIN and ARCHIVE.
-   */
-  static public class TestCmd {
-    public enum CommandType {
-        FS,
-        DFSADMIN,
-        MRADMIN,
-        ARCHIVE
-    }
-    private final CommandType type;
-    private final String cmd;
-
-    public TestCmd(String str, CommandType type) {
-      cmd = str;
-      this.type = type;
-    }
-    public CommandType getType() {
-      return type;
-    }
-    public String getCmd() {
-      return cmd;
-    }
-    public String toString() {
-      return cmd;
-    }
-  }
-  
   /**
    * @return the testDesc
    */
@@ -81,14 +52,14 @@ public class CLITestData {
   /**
    * @return the testCommands
    */
-  public ArrayList<TestCmd> getTestCommands() {
+  public ArrayList<CLICommand> getTestCommands() {
     return testCommands;
   }
 
   /**
    * @param testCommands the testCommands to set
    */
-  public void setTestCommands(ArrayList<TestCmd> testCommands) {
+  public void setTestCommands(ArrayList<CLICommand> testCommands) {
     this.testCommands = testCommands;
   }
 
@@ -123,14 +94,14 @@ public class CLITestData {
   /**
    * @return the cleanupCommands
    */
-  public ArrayList<TestCmd> getCleanupCommands() {
+  public ArrayList<CLICommand> getCleanupCommands() {
     return cleanupCommands;
   }
 
   /**
    * @param cleanupCommands the cleanupCommands to set
    */
-  public void setCleanupCommands(ArrayList<TestCmd> cleanupCommands) {
+  public void setCleanupCommands(ArrayList<CLICommand> cleanupCommands) {
     this.cleanupCommands = cleanupCommands;
   }
 }

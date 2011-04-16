@@ -20,16 +20,12 @@ package org.apache.hadoop.cli;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.cli.util.CLITestData;
-import org.apache.hadoop.cli.util.CLITestData.TestCmd;
-import org.apache.hadoop.cli.util.CLITestData.TestCmd.CommandType;
-import org.apache.hadoop.cli.util.CommandExecutor;
+import org.apache.hadoop.cli.util.*;
+import org.apache.hadoop.cli.util.CLITestCmd;
+import org.apache.hadoop.cli.util.CLICommand;
 import org.apache.hadoop.cli.util.CommandExecutor.Result;
-import org.apache.hadoop.cli.util.ComparatorBase;
-import org.apache.hadoop.cli.util.ComparatorData;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.util.StringUtils;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -72,7 +68,6 @@ public class CLITestHelper {
   protected Configuration conf = null;
   protected String clitestDataDir = null;
   protected String username = null;
-  
   /**
    * Read the test config file - testConfig.xml
    */
@@ -83,7 +78,7 @@ public class CLITestHelper {
       testConfigFile = TEST_CACHE_DATA_DIR + File.separator + testConfigFile;
       try {
         SAXParser p = (SAXParserFactory.newInstance()).newSAXParser();
-        p.parse(testConfigFile, new TestConfigFileParser());
+        p.parse(testConfigFile, getConfigParser());
         success = true;
       } catch (Exception e) {
         LOG.info("File: " + testConfigFile + " not found");
@@ -92,7 +87,19 @@ public class CLITestHelper {
       assertTrue("Error reading test config file", success);
     }
   }
-  
+
+  /**
+   * Method decides what is a proper configuration file parser for this type
+   * of CLI tests.
+   * Ancestors need to override the implementation if a parser with additional
+   * features is needed. Also, such ancestor has to provide its own
+   * TestConfigParser implementation
+   * @return an instance of TestConfigFileParser class
+   */
+  protected TestConfigFileParser getConfigParser () {
+    return new TestConfigFileParser();
+  }
+
   protected String getTestFile() {
     return "";
   }
@@ -151,15 +158,15 @@ public class CLITestHelper {
         LOG.info("           Test Description: [" + td.getTestDesc() + "]");
         LOG.info("");
 
-        ArrayList<TestCmd> testCommands = td.getTestCommands();
-        for (TestCmd cmd : testCommands) {
+        ArrayList<CLICommand> testCommands = td.getTestCommands();
+        for (CLICommand cmd : testCommands) {
           LOG.info("              Test Commands: [" + 
                    expandCommand(cmd.getCmd()) + "]");
         }
 
         LOG.info("");
-        ArrayList<TestCmd> cleanupCommands = td.getCleanupCommands();
-        for (TestCmd cmd : cleanupCommands) {
+        ArrayList<CLICommand> cleanupCommands = td.getCleanupCommands();
+        for (CLICommand cmd : cleanupCommands) {
           LOG.info("           Cleanup Commands: [" +
                    expandCommand(cmd.getCmd()) + "]");
         }
@@ -303,12 +310,12 @@ public class CLITestHelper {
     // Run the tests defined in the testConf.xml config file.
     for (int index = 0; index < testsFromConfigFile.size(); index++) {
       
-      CLITestData testdata = (CLITestData) testsFromConfigFile.get(index);
+      CLITestData testdata = testsFromConfigFile.get(index);
    
       // Execute the test commands
-      ArrayList<TestCmd> testCommands = testdata.getTestCommands();
+      ArrayList<CLICommand> testCommands = testdata.getTestCommands();
       Result cmdResult = null;
-      for (TestCmd cmd : testCommands) {
+      for (CLICommand cmd : testCommands) {
       try {
         cmdResult = execute(cmd);
       } catch (Exception e) {
@@ -336,8 +343,8 @@ public class CLITestHelper {
       testdata.setTestResult(overallTCResult);
       
       // Execute the cleanup commands
-      ArrayList<TestCmd> cleanupCommands = testdata.getCleanupCommands();
-      for (TestCmd cmd : cleanupCommands) {
+      ArrayList<CLICommand> cleanupCommands = testdata.getCleanupCommands();
+      for (CLICommand cmd : cleanupCommands) {
       try { 
         execute(cmd);
       } catch (Exception e) {
@@ -346,9 +353,12 @@ public class CLITestHelper {
       }
     }
   }
-  
-  protected CommandExecutor.Result execute(TestCmd cmd) throws Exception {
-    throw new Exception("Unknow type of Test command:"+ cmd.getType());
+
+  /**
+   * this method has to be overridden by an ancestor
+   */
+  protected CommandExecutor.Result execute(CLICommand cmd) throws Exception {
+    throw new Exception("Unknown type of test command:"+ cmd.getType());
   }
   
   /*
@@ -357,8 +367,8 @@ public class CLITestHelper {
   class TestConfigFileParser extends DefaultHandler {
     String charString = null;
     CLITestData td = null;
-    ArrayList<TestCmd> testCommands = null;
-    ArrayList<TestCmd> cleanupCommands = null;
+    ArrayList<CLICommand> testCommands = null;
+    ArrayList<CLICommand> cleanupCommands = null;
     
     @Override
     public void startDocument() throws SAXException {
@@ -373,9 +383,9 @@ public class CLITestHelper {
       if (qName.equals("test")) {
         td = new CLITestData();
       } else if (qName.equals("test-commands")) {
-        testCommands = new ArrayList<TestCmd>();
+        testCommands = new ArrayList<CLICommand>();
       } else if (qName.equals("cleanup-commands")) {
-        cleanupCommands = new ArrayList<TestCmd>();
+        cleanupCommands = new ArrayList<CLICommand>();
       } else if (qName.equals("comparators")) {
         testComparators = new ArrayList<ComparatorData>();
       } else if (qName.equals("comparator")) {
@@ -385,9 +395,8 @@ public class CLITestHelper {
     }
     
     @Override
-    public void endElement(String uri, 
-    		String localName, 
-    		String qName) throws SAXException {
+    public void endElement(String uri, String localName,String qName)
+        throws SAXException {
       if (qName.equals("description")) {
         td.setTestDesc(charString);
       } else if (qName.equals("test-commands")) {
@@ -398,27 +407,9 @@ public class CLITestHelper {
         cleanupCommands = null;
       } else if (qName.equals("command")) {
         if (testCommands != null) {
-          testCommands.add(new TestCmd(charString, CommandType.FS));
+          testCommands.add(new CLITestCmd(charString, new CLICommandFS()));
         } else if (cleanupCommands != null) {
-          cleanupCommands.add(new TestCmd(charString, CommandType.FS));
-        }
-      } else if (qName.equals("dfs-admin-command")) {
-        if (testCommands != null) {
-          testCommands.add(new TestCmd(charString, CommandType.DFSADMIN));
-        } else if (cleanupCommands != null) {
-          cleanupCommands.add(new TestCmd(charString, CommandType.DFSADMIN));
-        } 
-      } else if (qName.equals("mr-admin-command")) {
-        if (testCommands != null) {
-          testCommands.add(new TestCmd(charString, CommandType.MRADMIN));
-        } else if (cleanupCommands != null) {
-          cleanupCommands.add(new TestCmd(charString, CommandType.MRADMIN));
-        } 
-      } else if (qName.equals("archive-command")) {
-        if (testCommands != null) {
-          testCommands.add(new TestCmd(charString, CommandType.ARCHIVE));
-        } else if (cleanupCommands != null) {
-          cleanupCommands.add(new TestCmd(charString, CommandType.ARCHIVE));
+          cleanupCommands.add(new CLITestCmd(charString, new CLICommandFS()));
         }
       } else if (qName.equals("comparators")) {
         td.setComparatorData(testComparators);

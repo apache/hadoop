@@ -18,8 +18,7 @@
 
 package org.apache.hadoop.cli;
 
-import org.apache.hadoop.cli.util.CLITestData;
-import org.apache.hadoop.cli.util.CmdFactory;
+import org.apache.hadoop.cli.util.CLICommand;
 import org.apache.hadoop.cli.util.CommandExecutor;
 import org.junit.After;
 import org.junit.Before;
@@ -42,8 +41,9 @@ public class TestCLI extends CLITestHelper {
   }
 
   @Override
-  protected CommandExecutor.Result execute(CLITestData.TestCmd cmd) throws Exception {
-    return CmdFactory.getCommandExecutor(cmd, "").executeCommand(cmd.getCmd());
+  protected CommandExecutor.Result execute(CLICommand cmd) throws Exception {
+    return cmd.getExecutor("").executeCommand(cmd.getCmd());
+
   }
   
   @Override

@@ -90,6 +90,9 @@ Trunk (unreleased changes)
 
     HADOOP-7224. Add CommandFactory to shell.  (Daryn Sharp via szetszwo)
 
+    HADOOP-7014. Generalize CLITest structure and interfaces to facilitate
+    upstream adoption (e.g. for web testing). (cos)
+
   OPTIMIZATIONS
 
   BUG FIXES
