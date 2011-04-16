@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 The Apache Software Foundation
+ * Copyright 2011 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,10 +19,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.util.List;
@@ -83,6 +80,8 @@ public class TestServerCustomProtocol {
     public String hello(String name) {
       if (name == null) {
         return "Who are you?";
+      } else if ("nobody".equals(name)) {
+        return null;
       }
       return "Hello, "+name;
     }
@@ -154,6 +153,8 @@ public class TestServerCustomProtocol {
     assertEquals("Invalid custom protocol response", "Hello, George", result);
     result = pinger.hello(null);
     assertEquals("Should handle NULL parameter", "Who are you?", result);
+    result = pinger.hello("nobody");
+    assertNull(result);
     int cnt = pinger.getPingCount();
     assertTrue("Count should be incremented", cnt > 0);
     int newcnt = pinger.incrementCount(5);
@@ -297,6 +298,23 @@ public class TestServerCustomProtocol {
     verifyRegionResults(table, results, "Who are you?", ROW_C);
   }
 
+  @Test
+  public void testNullReturn() throws Throwable {
+    HTable table = new HTable(util.getConfiguration(), TEST_TABLE);
+
+    Map<byte[],String> results = table.coprocessorExec(PingProtocol.class,
+        ROW_A, ROW_C,
+        new Batch.Call<PingProtocol,String>(){
+          public String call(PingProtocol instance) {
+            return instance.hello("nobody");
+          }
+        });
+
+    verifyRegionResults(table, results, null, ROW_A);
+    verifyRegionResults(table, results, null, ROW_B);
+    verifyRegionResults(table, results, null, ROW_C);
+  }
+
   private void verifyRegionResults(HTable table,
       Map<byte[],String> results, byte[] row) throws Exception {
     verifyRegionResults(table, results, "pong", row);
@@ -307,9 +325,9 @@ public class TestServerCustomProtocol {
   throws Exception {
     HRegionLocation loc = table.getRegionLocation(row);
     byte[] region = loc.getRegionInfo().getRegionName();
-    assertNotNull("Results should contain region " +
+    assertTrue("Results should contain region " +
         Bytes.toStringBinary(region)+" for row '"+Bytes.toStringBinary(row)+"'",
-        results.get(region));
+        results.containsKey(region));
     assertEquals("Invalid result for row '"+Bytes.toStringBinary(row)+"'",
         expected, results.get(region));
   }
