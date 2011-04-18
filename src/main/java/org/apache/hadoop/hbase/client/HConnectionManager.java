@@ -822,14 +822,6 @@ public class HConnectionManager {
 
       HRegionLocation rl = tableLocations.get(row);
       if (rl != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Cache hit for row <" +
-            Bytes.toStringBinary(row) +
-            "> in tableName " + Bytes.toString(tableName) +
-            ": location server " + rl.getServerAddress() +
-            ", location region name " +
-            rl.getRegionInfo().getRegionNameAsString());
-        }
         return rl;
       }
 
