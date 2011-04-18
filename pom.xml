@@ -525,7 +525,7 @@
     <commons-lang.version>2.5</commons-lang.version>
     <commons-logging.version>1.1.1</commons-logging.version>
     <commons-math.version>2.1</commons-math.version>
-    <guava.version>r06</guava.version>
+    <guava.version>r09</guava.version>
     <!--The below was made by patching branch-0.20-append
     at revision 1034499 with this hdfs-895 patch:
     https://issues.apache.org/jira/secure/attachment/12459473/hdfs-895-branch-20-append.txt
