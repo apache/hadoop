@@ -258,6 +258,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   // Cluster Status Tracker
   private ClusterStatusTracker clusterStatusTracker;
 
+  // Log Splitting Worker
+  private SplitLogWorker splitLogWorker;
+
   // A sleeper that sleeps for msgInterval.
   private final Sleeper sleeper;
 
@@ -377,7 +380,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           qosMap.put(m.getName(), p.priority());
         }
       }
-      
+
       annotatedQos = qosMap;
     }
 
@@ -397,7 +400,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
       Invocation inv = (Invocation) from;
       String methodName = inv.getMethodName();
-      
+
       Integer priorityByAnnotation = annotatedQos.get(methodName);
       if (priorityByAnnotation != null) {
         return priorityByAnnotation;
@@ -510,6 +513,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.catalogTracker = new CatalogTracker(this.zooKeeper, this.connection,
       this, this.conf.getInt("hbase.regionserver.catalog.timeout", Integer.MAX_VALUE));
     catalogTracker.start();
+
+    // Create the log splitting worker and start it
+    this.splitLogWorker = new SplitLogWorker(this.zooKeeper,
+        this.getConfiguration(), this.getServerName());
+    splitLogWorker.start();
   }
 
   /**
@@ -636,6 +644,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     this.leases.closeAfterLeasesExpire();
     this.server.stop();
+    if (this.splitLogWorker != null) {
+      splitLogWorker.stop();
+    }
     if (this.infoServer != null) {
       LOG.info("Stopping infoServer");
       try {
@@ -2815,6 +2826,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public CompactionRequestor getCompactionRequester() {
     return this.compactSplitThread;
   }
+
+  public ZooKeeperWatcher getZooKeeperWatcher() {
+    return this.zooKeeper;
+  }
+
 
   //
   // Main program and support routines

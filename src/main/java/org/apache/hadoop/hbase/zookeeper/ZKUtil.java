@@ -575,7 +575,7 @@ public class ZKUtil {
    *
    * @param zkw zk reference
    * @param znode path of node
-   * @param stat node status to set if node exists
+   * @param stat node status to get if node exists
    * @return data of the specified znode, or null if node does not exist
    * @throws KeeperException if unexpected zookeeper exception
    */
@@ -583,7 +583,7 @@ public class ZKUtil {
       Stat stat)
   throws KeeperException {
     try {
-      byte [] data = zkw.getZooKeeper().getData(znode, zkw, stat);
+      byte [] data = zkw.getZooKeeper().getData(znode, null, stat);
       logRetrievedMsg(zkw, znode, data, false);
       return data;
     } catch (KeeperException.NoNodeException e) {
@@ -879,8 +879,7 @@ public class ZKUtil {
    */
   public static void asyncCreate(ZooKeeperWatcher zkw,
       String znode, byte [] data, final AsyncCallback.StringCallback cb,
-      final Object ctx)
-  throws KeeperException, KeeperException.NodeExistsException {
+      final Object ctx) {
     zkw.getZooKeeper().create(znode, data, Ids.OPEN_ACL_UNSAFE,
        CreateMode.PERSISTENT, cb, ctx);
   }

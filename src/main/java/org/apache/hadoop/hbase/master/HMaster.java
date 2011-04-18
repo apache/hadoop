@@ -301,6 +301,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       if (this.catalogTracker != null) this.catalogTracker.stop();
       if (this.serverManager != null) this.serverManager.stop();
       if (this.assignmentManager != null) this.assignmentManager.stop();
+      if (this.fileSystemManager != null) this.fileSystemManager.stop();
       HConnectionManager.deleteConnection(this.conf, true);
       this.zooKeeper.close();
     }

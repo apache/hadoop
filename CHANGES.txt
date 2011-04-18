@@ -200,6 +200,8 @@ Release 0.91.0 - Unreleased
    HBASE-3606  Create an package integration project (Eric Yang via Ryan)
    HBASE-3488  Add CellCounter to count multiple versions of rows
                (Subbu M. Iyer via Stack)
+   HBASE-1364  [performance] Distributed splitting of regionserver commit logs
+               (Prakash Khemani)
 
 Release 0.90.3 - Unreleased
 
