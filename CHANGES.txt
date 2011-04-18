@@ -93,6 +93,9 @@ Trunk (unreleased changes)
     HADOOP-7014. Generalize CLITest structure and interfaces to facilitate
     upstream adoption (e.g. for web testing). (cos)
 
+    HADOOP-7230. Move "fs -help" shell command tests from HDFS to COMMOM; see
+    also HDFS-1844.  (Daryn Sharp via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
