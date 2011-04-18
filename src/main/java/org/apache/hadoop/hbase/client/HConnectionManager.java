@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ClusterId;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKTable;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
@@ -1445,6 +1446,17 @@ public class HConnectionManager {
       if (t != null) LOG.fatal(msg, t);
       else LOG.fatal(msg);
       this.closed = true;
+    }
+
+    public int getCurrentNrHRS() throws IOException {
+      try {
+        // We go to zk rather than to master to get count of regions to avoid
+        // HTable having a Master dependency.  See HBase-2828
+        return ZKUtil.getNumberOfChildren(this.zooKeeper,
+            this.zooKeeper.rsZNode);
+      } catch (KeeperException ke) {
+        throw new IOException("Unexpected ZooKeeper exception", ke);
+      }
     }
   }
 }

@@ -351,7 +351,8 @@ public class RegionSplitter {
     HTable table = new HTable(conf, tableName);
 
     // max outstanding splits. default == 50% of servers
-    final int MAX_OUTSTANDING = Math.max(table.getCurrentNrHRS() / 2, minOS);
+    final int MAX_OUTSTANDING =
+        Math.max(table.getConnection().getCurrentNrHRS() / 2, minOS);
 
     Path hbDir = new Path(conf.get(HConstants.HBASE_DIR));
     Path tableDir = HTableDescriptor.getTableDir(hbDir, table.getTableName());

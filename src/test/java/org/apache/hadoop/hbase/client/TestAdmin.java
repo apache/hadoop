@@ -311,7 +311,7 @@ public class TestAdmin {
   }
 
   protected void verifyRoundRobinDistribution(HTable ht, int expectedRegions) throws IOException {
-    int numRS = ht.getCurrentNrHRS();
+    int numRS = ht.getConnection().getCurrentNrHRS();
     Map<HRegionInfo,HServerAddress> regions = ht.getRegionsInfo();
     Map<HServerAddress, List<HRegionInfo>> server2Regions = new HashMap<HServerAddress, List<HRegionInfo>>();
     for (Map.Entry<HRegionInfo,HServerAddress> entry : regions.entrySet()) {

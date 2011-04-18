@@ -338,4 +338,11 @@ public interface HConnection extends Abortable {
    */
   public void prewarmRegionCache(final byte[] tableName,
       final Map<HRegionInfo, HServerAddress> regions);
+
+  /**
+   * Scan zookeeper to get the number of region servers
+   * @return the number of region servers that are currently running
+   * @throws IOException if a remote or network exception occurs
+   */
+  public int getCurrentNrHRS() throws IOException;
 }
