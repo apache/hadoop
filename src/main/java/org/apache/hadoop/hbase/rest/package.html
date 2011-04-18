@@ -1,0 +1,1444 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+
+<!--
+   Copyright 2009 The Apache Software Foundation
+
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<head />
+<body bgcolor="white">
+<h1>HBase REST</h1>
+This package provides a RESTful Web service front end for HBase.
+<p>
+
+<h2>Table Of Contents</h2>
+<ol>
+<li><a href="#deployment">Deployment</a></li>
+  <ol type="a">
+  <li><a href="#deployment_daemon">Daemon</a></li>
+  <li><a href="#deployment_servlet">Servlet</a></li>
+  </ol>
+<li><a href="#rest">Representational State Transfer</a></li>
+<li><a href="#identifiers">Resource Identifiers</a></li>
+<li><a href="#operations">Operations</a></li>
+  <ol type="a">
+  <li><a href="#operation_version">Query Software Version</a></li>
+  <li><a href="#operation_storage_cluster_version">Query Storage Cluster Version</a></li>
+  <li><a href="#operation_storage_cluster_status">Query Storage Cluster Status</a></li>
+  <li><a href="#operation_query_tables">Query Table List</a></li>
+  <li><a href="#operation_query_schema">Query Table Schema</a></li>
+  <li><a href="#operation_create_schema">Create Table Or Update Table Schema</a></li>
+  <li><a href="#operation_table_metadata">Query Table Metadata</a></li>
+  <li><a href="#operation_delete_table">Delete Table</a></li>
+  <li><a href="#operation_cell_query_single">Cell Query (Single Value)</a></li>
+  <li><a href="#operation_cell_query_multiple">Cell or Row Query (Multiple Values)</a></li>
+  <li><a href="#operation_cell_store_single">Cell Store (Single)</a></li>
+  <li><a href="#operation_cell_store_multiple">Cell Store (Multiple)</a></li>
+  <li><a href="#operation_delete">Row, Column, or Cell Delete</a></li>
+  <li><a href="#operation_scanner_create">Scanner Creation</a></li>
+  <li><a href="#operation_scanner_next">Scanner Get Next</a></li>
+  <li><a href="#operation_scanner_delete">Scanner Deletion</a></li>
+  </ol>
+  <li><a href="#xmlschema">XML Schema</a></li>
+  <li><a href="#pbufschema">Protobufs Schema</a></li>
+</ol>
+
+<p>
+<a name="deployment">
+<h2>Deployment</h2>
+</a>
+<p>
+
+<p>
+<a name="deployment_daemon">
+<h3>Daemon</h3>
+</a>
+<p>
+HBase REST can run as a daemon which starts an embedded Jetty servlet container
+and deploys the servlet into it.
+<p>
+<ol>
+<li>Start the embedded Jetty servlet container:
+  <ul>
+  <li>In the foreground:
+  <blockquote>
+  <tt>
+  % ./bin/hbase rest start -p &lt;<i>port</i>&gt;
+  </tt>
+  </blockquote>
+  <p>
+  where &lt;<i>port</i>&gt; is optional, and is the port the connector should
+  listen on. (Default is 8080.) 
+  </p>
+  </li>
+  </ul>
+</li>
+</ol>
+
+<p>
+<a name="rest">
+<h2>Representational State Transfer</h2>
+</a>
+<p>
+
+The terms "representational state transfer" and "REST" were introduced in 2000
+in the 
+<a href="http://www.ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm">
+doctoral dissertation of Roy Fielding</a>, one of the principal authors of the
+Hypertext Transfer Protocol (HTTP) specification. 
+<p>
+A GET to an identifier requests a copy of the information in the supplied
+content type.
+<p>
+A PUT to an identifier replaces the information. The supplied content type
+determines how it is to be interpreted.
+<p>
+POST adds information.
+<p>
+DELETE eliminates information.
+<p>
+<center>
+<table width="90%">
+<tr><td><b>Database Operations</b></td>
+  <td><b>REST/HTTP Equivalents</b></td>
+  </tr>
+<tr><td colspan="2">&nbsp;</td></tr>
+<tr><td>CREATE</td><td>PUT</td></tr>
+<tr><td>READ</td><td>GET</td></tr>
+<tr><td>UPDATE</td><td>POST (update) or PUT (replace)</td></tr>
+<tr><td>DELETE</td><td>DELETE</td></tr>
+</table>
+</center>
+
+<p>
+<a name="identifiers">
+<h2>Resource Identifiers</h2>
+</a>
+<p>
+<a href="http://www.rfc-editor.org/rfc/rfc3968.txt">RFC 3968</a> defines URL 
+syntax:
+<p>
+<pre>
+scheme://user:pass@example.net:8080/path/to/file;type=foo?name=val#frag
+\_____/  \_______/\___________/\__/\______/\____/\______/\________/\___/
+   |         |          |       |     |      |       |       |       |
+ scheme   userinfo  hostname  port  path  filename param   query fragment
+         \________________________/
+                  authority
+</pre>
+<p>
+HBase REST exposes HBase tables, rows, cells, and metadata as URL specified
+resources.
+<p>
+<b>NOTE:</b> The characters <tt>/</tt>, <tt>:</tt>, and <tt>,</tt> are reserved
+within row keys, column names, and column qualifiers. Clients must escape them
+somehow, perhaps by encoding them as hex escapes or by using www-url-encoding. For
+example, the key:
+<p>
+<pre>
+    http://www.google.com/
+</pre>
+<p>
+should first be encoded as:
+<p>
+<pre>
+    http%3A%2F%2Fwww.google.com%2F
+</pre>
+<p>
+to produce a path like:
+<pre>
+    /SomeTable/http%3A%2F%2Fwww.google.com%2F/someColumn:qualifier
+</pre>
+<p>
+<h3>Addressing for cell or row query (GET)</h3>
+<p>
+<pre>
+    path := '/' &lt;table&gt;
+            '/' &lt;row&gt;
+            ( '/' ( &lt;column&gt; ( ':' &lt;qualifier&gt; )?
+                    ( ',' &lt;column&gt; ( ':' &lt;qualifier&gt; )? )+ )?
+                ( '/' ( &lt;start-timestamp&gt; ',' )? &lt;end-timestamp&gt; )? )?
+    query := ( '?' 'v' '=' &lt;num-versions&gt; )?
+</pre>
+<p>
+
+<h3>Addressing for single value store (PUT)</h3>
+<p>
+Address with table, row, column (and optional qualifier), and optional timestamp.
+<p>
+<pre>
+    path := '/' &lt;table&gt; '/' &lt;row&gt; '/' &lt;column&gt; ( ':' &lt;qualifier&gt; )?
+              ( '/' &lt;timestamp&gt; )?
+</pre>
+<p>
+
+<h3>Addressing for multiple (batched) value store (PUT)</h3>
+<p>
+<pre>
+    path := '/' &lt;table&gt; '/' &lt;false-row-key&gt;
+</pre>
+<p>
+
+<h3>Addressing for row, column, or cell DELETE</h3>
+<p>
+<pre>
+    path := '/' &lt;table&gt; 
+            '/' &lt;row&gt;
+            ( '/' &lt;column&gt; ( ':' &lt;qualifier&gt; )?
+              ( '/' &lt;timestamp&gt; )? )?
+</pre>
+<p>
+
+<h3>Addressing for table creation or schema update (PUT or POST), schema query
+(GET), or delete (DELETE)</h3>
+<p>
+<pre>
+    path := '/' &lt;table&gt; / 'schema'
+</pre>
+<p>
+
+<h3>Addressing for scanner creation (POST)</h3>
+<p>
+<pre>
+    path := '/' &lt;table&gt; '/' 'scanner'
+</pre>
+<p>
+
+<h3>Addressing for scanner next item (GET)</h3>
+<p>
+<pre>
+    path := '/' &lt;table&gt; '/' 'scanner' '/' &lt;scanner-id&gt;
+</pre>
+<p>
+
+<h3>Addressing for scanner deletion (DELETE)</h3>
+<p>
+<pre>
+    path := '/' &lt;table&gt; '/' '%scanner' '/' &lt;scanner-id&gt;
+</pre>
+<p>
+
+<p>
+<a name="operations">
+<h2>Operations</h2>
+</a>
+<p>
+
+<a name="operation_version">
+<h3>Query Software Version</h3>
+</a>
+<p>
+<pre>
+GET /version
+</pre>
+<p>
+Returns the software version.
+Set Accept header to <tt>text/plain</tt> for plain text output.
+Set Accept header to <tt>text/xml</tt> for XML reply.
+Set Accept header to <tt>application/json</tt> for JSON reply.
+Set Accept header to <tt>application/x-protobuf</tt> for protobufs.
+<p>
+If not successful, returns appropriate HTTP error status code.
+If successful, returns the software version.
+<p>
+Examples:
+<p>
+<blockquote>
+<tt>
+% curl http://localhost:8000/version<br>
+<br>
+HTTP/1.1 200 OK<br>
+Content-Length: 149<br>
+Cache-Control: no-cache<br>
+Content-Type: text/plain<br>
+<br>
+Stargate 0.0.1 [JVM: Sun Microsystems Inc. 1.6.0_13-11.3-b02] [OS: Linux 2.6.<br>
+18-128.1.6.el5.centos.plusxen amd64] [Jetty: 6.1.14] [Jersey: 1.1.0-ea]<br>
+<br>
+% curl -H "Accept: text/xml" http://localhost:8000/version<br>
+<br>
+HTTP/1.1 200 OK<br>
+Cache-Control: no-cache<br>
+Content-Type: text/xml<br>
+Content-Length: 212<br>
+<br>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;<br>
+&lt;Version Stargate="0.0.1" OS="Linux 2.6.18-128.1.6.el5.centos.plusxen amd64"<br>
+ JVM="Sun Microsystems Inc. 1.6.0_13-11.3-b02" Jetty="6.1.14" Jersey="1.1.0-e<br>
+a"/&gt;<br>
+<br>
+% curl -H "Accept: application/json" http://localhost:8000/version<br>
+<br>
+HTTP/1.1 200 OK<br>
+Cache-Control: no-cache<br>
+Content-Type: application/json<br>
+Transfer-Encoding: chunked<br>
+<br>
+{"@Stargate":"0.0.1","@OS":"Linux 2.6.18-128.1.6.el5.centos.plusxen amd64","@<br>
+JVM":"Sun Microsystems Inc. 1.6.0_13-11.3-b02","@Jetty":"6.1.14","@Jersey":"1<br>
+.1.0-ea"}<br>
+<br>
+% curl -H "Accept: application/x-protobuf" http://localhost:8000/version<br>
+<br>
+HTTP/1.1 200 OK<br>
+Content-Length: 113<br>
+Cache-Control: no-cache<br>
+Content-Type: application/x-protobuf<br>
+<br>
+000000 0a 05 30 2e 30 2e 31 12 27 53 75 6e 20 4d 69 63<br>
+000010 72 6f 73 79 73 74 65 6d 73 20 49 6e 63 2e 20 31<br>
+000020 2e 36 2e 30 5f 31 33 2d 31 31 2e 33 2d 62 30 32<br>
+000030 1a 2d 4c 69 6e 75 78 20 32 2e 36 2e 31 38 2d 31<br>
+000040 32 38 2e 31 2e 36 2e 65 6c 35 2e 63 65 6e 74 6f<br>
+000050 73 2e 70 6c 75 73 78 65 6e 20 61 6d 64 36 34 22<br>
+000060 06 36 2e 31 2e 31 34 2a 08 31 2e 31 2e 30 2d 65<br>
+000070 61<br>
+</tt>
+</blockquote>
+<p>
+
+<a name="operation_storage_cluster_version">
+<h3>Query Storage Cluster Version</h3>
+</a>
+<p>
+<pre>
+GET /version/cluster
+</pre>
+<p>
+Returns version information regarding the HBase cluster backing the Stargate instance.
+<p>
+Examples:
+<p>
+<blockquote>
+<tt>
+% curl http://localhost:8000/version/cluster<br>
+<br>
+HTTP/1.1 200 OK<br>
+Content-Length: 6<br>
+Cache-Control: no-cache<br>
+Content-Type: text/plain<br>
+<br>
+0.20.0<br>
+<br>
+% curl -H "Accept: text/xml" http://localhost:8000/version/cluster<br>
+<br>
+HTTP/1.1 200 OK<br>
+Cache-Control: no-cache<br>
+Content-Type: text/xml<br>
+Content-Length: 94<br>
+<br>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;<br>
+&lt;ClusterVersion&gt;0.20.0&lt;/ClusterVersion&gt;<br>
+<br>
+% curl -H "Accept: application/json" http://localhost:8000/version/cluster<br>
+<br>
+HTTP/1.1 200 OK<br>
+Cache-Control: no-cache<br>
+Content-Type: application/json<br>
+Transfer-Encoding: chunked<br>
+<br>
+"0.20.0"<br>
+</tt>
+</blockquote>
+<p>
+
+<a name="operation_storage_cluster_status">
+<h3>Query Storage Cluster Status</h3>
+</a>
+<p>
+<pre>
+GET /status/cluster
+</pre>
+<p>
+Returns detailed status on the HBase cluster backing the Stargate instance.
+<p>
+Examples:
+<p>
+<blockquote>
+<tt>
+% curl http://localhost:8000/status/cluster<br>
+</tt>
+<pre>
+HTTP/1.1 200 OK
+Content-Length: 839
+Cache-Control: no-cache
+Content-Type: text/plain
+
+1 live servers, 0 dead servers, 13.0000 average load
+
+1 live servers
+    test:37154 1244960965781
+        requests=1, regions=13
+
+        urls,http|www.legacy.com|80|site=Legacy|aamsz=300x250||position=1|prod
+          =1,1244851990859
+        urls,http|weather.boston.com|80|LYNX.js,1244851990859
+        .META.,,1
+        content,601292a839b95e50200d8f8767859864,1244869158156
+        content,9d7f3aeb2a5c1e2b45d690a91de3f23c,1244879698031
+        content,7f6d48830ef51d635e9a5b672e79a083,1244879698031
+        content,3ef16d776603bf9b9e775c9ceb64860f,1244869158156
+        urls,,1244851989250
+        urls,http|groups.google.com|80|groups|img|card_left.gif,1244851989250
+        content,deafed2f90f718d72caaf87bd6c27d04,1244870320343
+        content,bcf91ecf78ea72a33faccfb8e6b5d900,1244870320343
+        -ROOT-,,0
+        content,,1244851999187
+</pre>
+<tt>
+% curl -H "Accept: text/xml" http://localhost:8000/status/cluster<br>
+<br>
+HTTP/1.1 200 OK<br>
+Cache-Control: no-cache<br>
+Content-Type: text/xml<br>
+Content-Length: 1301<br>
+<br>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;<br>
+&lt;ClusterStatus requests="1" regions="13" averageLoad="13.0"&gt;&lt;DeadNodes/&gt;&lt;LiveN<br>
+odes&gt;&lt;Node startCode="1244960965781" requests="1" name="test:37154"&gt;&lt;Region na<br>
+me="dXJscyxodHRwfHd3dy5sZWdhY3kuY29tfDgwfHNpdGU9TGVnYWN5fGFhbXN6PTMwMHgyNTB8YX<br>
+JlYT1DSlDQaElDQUdPVFJJQlVORS4yMXx6b25lPUhvbWV8cG9zaXRpb249MXxwcm9kPTEsMTI0NDg1<br>
+MTk5MDg1OQ=="/&gt;&lt;Region name="dXJscyxodHRwfHdlYXRoZXIuYm9zdG9uLmNvbXw4MHxMWU5YL<br>
+mpzLDEyNDQ4NTE5OTA4NTk="/&gt;&lt;Region name="Lk1FVEEuLCwx"/&gt;&lt;Region name="Y29udGVud<br>
+Cw2MDEyOTJhODM5Yjk1ZTUwMjAwZDhmODc2Nzg1OTg2NCwxMjQ0ODY5MTU4MTU2"/&gt;&lt;Region name<br>
+="Y29udGVudCw5ZDdmM2FlYjJhNWMxZTJiNDVkNjkwYTkxZGUzZjIzYywxMjQ0ODc5Njk4MDMx"/&gt;&lt;<br>
+Region name="Y29udGVudCw3ZjZkNDg4MzBlZjUxZDYzNWU5YTViNjcyZTc5YTA4MywxMjQ0ODc5N<br>
+jk4MDMx"/&gt;&lt;Region name="Y29udGVudCwzZWYxNmQ3NzY2MDNiZjliOWU3NzVjOWNlYjY0ODYwZi<br>
+wxMjQ0ODY5MTU4MTU2"/&gt;&lt;Region name="dXJscywsMTI0NDg1MTk4OTI1MA=="/&gt;&lt;Region name<br>
+="dXJscyxodHRwfGdyb3Vwcy5nb29nbGUuY29tfDgwfGdyb3Vwc3xpbWd8Y2FyZF9sZWZ0LmdpZiwx<br>
+MjQ0ODUxOTg5MjUw"/&gt;&lt;Region name="Y29udGVudCxkZWFmZWQyZjkwZjcxOGQ3MmNhYWY4N2JkN<br>
+mMyN2QwNCwxMjQ0ODcwMzIwMzQz"/&gt;&lt;Region name="Y29udGVudCxiY2Y5MWVjZjc4ZWE3MmEzM2<br>
+ZhY2NmYjhlNmI1ZDkwMCwxMjQ0ODcwMzIwMzQz"/&gt;&lt;Region name="LVJPT1QtLCww"/&gt;&lt;Region<br>
+name="Y29udGVudCwsMTI0NDg1MTk5OTE4Nw=="/&gt;&lt;/Node&gt;&lt;/LiveNodes&gt;&lt;/ClusterStatus&gt;<br>
+<br>
+% curl -H "Accept: application/json" http://localhost:8000/status/cluster<br>
+<br>
+HTTP/1.1 200 OK<br>
+Cache-Control: no-cache<br>
+Content-Type: application/json<br>
+Transfer-Encoding: chunked<br>
+<br>
+{"@requests":"1","@regions":"13","@averageLoad":"13.0","DeadNodes":[],"LiveNod<br>
+es":{"Node":{"@startCode":"1244960965781","@requests":"1","@name":"test:37154"<br>
+,"Region":[{"@name":"dXJscyxodHRwfHd3dLmpzy5sZWdhY3kuY29tfDgwfHNpdGU9TGVnYWN5f<br>
+GFhbXN6PTMwMHgyNTB8YXJlYT1DSElDQUdPVFJJQlVORS4yMXx6b25lPUhvbWV8cG9zaXRpb249MXx<br>
+wcm9kPTEsMTI0NDg1MTk5MDg1OQ=="},{"@name":"dXJscyxodHRwfHdlYXRoZXIuYm9zdG9uLmNv<br>
+bXw4MHxMWU5YLmpzLDEyNDQ4NTE5OTA4NTk="},{"@name":"Lk1FVEEuLCwx"},{"@name":"Y29u<br>
+dGVudCw2MDEyOTJhODM5Yjk1ZTUwMjAwZDhmODc2Nzg1OTg2NCwxMjQ0ODY5MTU4MTU2"},{"@name<br>
+":"Y29udGVudCw5ZDdmM2FlYjJhNWMxZTJiNDVkNjkwYTkxZGUzZjIzYywxMjQ0ODc5Njk4MDMx"},<br>
+{"@name":"Y29udGVudCw3ZjZkNDg4MzBlZjUxZDYzNWU5YTViNjcyZTc5YTA4MywxMjQ0ODc5Njk4<br>
+MDMx"},{"@name":"Y29udGVudCwzZWYxNmQ3NzY2MDNiZjliOWU3NzVjOWNlYjY0ODYwZiwxMjQ0O<br>
+DY5MTU4MTU2"},{"@name":"dXJscywsMTI0NDg1MTk4OTI1MA=="},{"@name":"dXJscyxodHRwf<br>
+Gdyb3Vwcy5nb29nbGUuY29tfDgwfGdyb3Vwc3xpbWd8Y2FyZF9sZWZ0LmdpZiwxMjQ0ODUxOTg5MjU<br>
+w"},{"@name":"Y29udGVudCxkZWFmZWQyZjkwZjcxOGQ3MmNhYWY4N2JkNmMyN2QwNCwxMjQ0ODcw<br>
+MzIwMzQz"},{"@name":"Y29udGVudCxiY2Y5MWVjZjc4ZWE3MmEzM2ZhY2NmYjhlNmI1ZDkwMCwxM<br>
+jQ0ODcwMzIwMzQz"},{"@name":"LVJPT1QtLCww"},{"@name":"Y29udGVudCwsMTI0NDg1MTk5O<br>
+TE4Nw=="}]}}}<br>
+</tt>
+</blockquote>
+<p>
+
+<a name="operation_query_tables">
+<h3>Query Table List</h3>
+</a>
+<p>
+<pre>
+GET /
+</pre>
+<p>
+Retrieves the list of available tables.
+Set Accept header to <tt>text/plain</tt> for plain text output.
+Set Accept header to <tt>text/xml</tt> for XML reply.
+Set Accept header to <tt>application/json</tt> for JSON reply.
+Set Accept header to <tt>application/x-protobuf</tt> for protobufs.
+If not successful, returns appropriate HTTP error status code.
+If successful, returns the table list in the requested encoding.
+<p>
+Examples:
+<p>
+<blockquote>
+<tt>
+% curl http://localhost:8000/<br>
+<br>
+HTTP/1.1 200 OK<br>
+Content-Length: 13<br>
+Cache-Control: no-cache<br>
+Content-Type: text/plain<br>
+<br>
+content<br>
+urls<br>
+<br>
+% curl -H "Accept: text/xml" http://localhost:8000/<br>
+<br>
+HTTP/1.1 200 OK<br>
+Cache-Control: no-cache<br>
+Content-Type: text/xml<br>
+Content-Length: 121<br>
+<br>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;<br>
+&lt;TableList&gt;&lt;table name="content"/&gt;&lt;table name="urls"/&gt;&lt;/TableList&gt;<br>
+<br>
+% curl -H "Accept: application/json" http://localhost:8000/<br>
+<br>
+HTTP/1.1 200 OK<br>
+Cache-Control: no-cache<br>
+Content-Type: application/json<br>
+Transfer-Encoding: chunked<br>
+<br>
+{"table":[{"name":"content"},{"name":"urls"}]}<br>
+<br>
+% curl -H "Accept: application/x-protobuf" http://localhost:8000/<br>
+<br>
+HTTP/1.1 200 OK<br>
+Content-Length: 15<br>
+Cache-Control: no-cache<br>
+Content-Type: application/x-protobuf<br>
+<br>
+000000 0a 07 63 6f 6e 74 65 6e 74 0a 04 75 72 6c 73<br>
+</tt>
+</blockquote>
+<p>
+
+<a name="operation_query_schema">
+<h3>Query Table Schema</h3>
+</a>
+<p>
+<pre>
+GET /&lt;table&gt;/schema
+</pre>
+<p>
+Retrieves table schema.
+Set Accept header to <tt>text/plain</tt> for plain text output.
+Set Accept header to <tt>text/xml</tt> for XML reply.
+Set Accept header to <tt>application/json</tt> for JSON reply.
+Set Accept header to <tt>application/x-protobuf</tt> for protobufs.
+If not successful, returns appropriate HTTP error status code.
+If successful, returns the table schema in the requested encoding.
+<p>
+Examples:
+<p>
+<blockquote>
+<tt>
+% curl http://localhost:8000/content/schema<br>
+<br>
+HTTP/1.1 200 OK<br>
+Content-Length: 639<br>
+Cache-Control: no-cache<br>
+Content-Type: text/plain<br>
+<br>
+{ NAME=> 'content', IS_META => 'false', IS_ROOT => 'false', COLUMNS => [ { NA<br>
+ME => 'content', BLOCKSIZE => '65536', BLOOMFILTER => 'false', BLOCKCACHE => <br>
+'false', COMPRESSION => 'GZ', LENGTH => '2147483647', VERSIONS => '1', TTL =><br>
+'-1', IN_MEMORY => 'false' }, { NAME => 'info', BLOCKSIZE => '65536', BLOOMFI<br>
+LTER => 'false', BLOCKCACHE => 'false', COMPRESSION => 'NONE', LENGTH => '214<br>
+7483647', VERSIONS => '1', TTL => '-1', IN_MEMORY => 'false' }, { NAME => 'ur<br>
+l', BLOCKSIZE => '65536', BLOOMFILTER => 'false', BLOCKCACHE => 'false', COMP<br>
+RESSION => 'NONE',  LENGTH => '2147483647', VERSIONS => '1', TTL => '-1', IN_<br>
+MEMORY => 'false' } ] }<br>
+<br>
+% curl -H "Accept: text/xml" http://localhost:8000/content/schema<br>
+<br>
+HTTP/1.1 200 OK<br>
+Cache-Control: no-cache<br>
+Content-Type: text/xml<br>
+Content-Length: 618<br>
+<br>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;<br>
+&lt;TableSchema name="content" IS_META="false" IS_ROOT="false"&gt;&lt;ColumnSchema nam<br>
+e="content" BLOCKSIZE="65536" BLOOMFILTER="false" BLOCKCACHE="false" COMPRESS<br>
+ION="GZ" LENGTH="2147483647" VERSIONS="1" TTL="-1" IN_MEMORY="false"/&gt;&lt;Column<br>
+Schema name="info" BLOCKSIZE="65536" BLOOMFILTER="false" BLOCKCACHE="false" C<br>
+OMPRESSION="NONE" LENGTH="2147483647" VERSIONS="1" TTL="-1" IN_MEMORY="false"<br>
+/&gt;&lt;ColumnSchema name="url" BLOCKSIZE="65536" BLOOMFILTER="false"BLOCKCACHE="f<br>
+alse" COMPRESSION="NONE" LENGTH="2147483647" VERSIONS="1" TTL="-1" IN_MEMORY=<br>
+"false"/&gt;&lt;/TableSchema&gt;<br>
+<br>
+% curl -H "Accept: application/json" http://localhost:8000/content/schema<br>
+<br>
+HTTP/1.1 200 OK<br>
+Cache-Control: no-cache<br>
+Content-Type: application/json<br>
+Transfer-Encoding: chunked<br>
+<br>
+{"@name":"content","@IS_META":"false","@IS_ROOT":"false","ColumnSchema":[{"@n<br>
+ame":"content","@BLOCKSIZE":"65536","@BLOOMFILTER":"false","@BLOCKCACHE":"fal<br>
+se","@COMPRESSION":"GZ","@LENGTH":"2147483647","@VERSIONS":"1","@TTL":"-1","@<br>
+IN_MEMORY":"false"},{"@name":"info","@BLOCKSIZE":"65536","@BLOOMFILTER":"fals<br>
+e","@BLOCKCACHE":"false","@COMPRESSION":"NONE","@LENGTH":"2147483647","@VERSI<br>
+ONS":"1","@TTL":"-1","@IN_MEMORY":"false"},{"@name":"url","@BLOCKSIZE":"65536<br>
+","@BLOOMFILTER":"false","@BLOCKCACHE":"false","@COMPRESSION":"NONE","@LENGTH<br>
+":"2147483647","@VERSIONS":"1","@TTL":"-1","@IN_MEMORY":"false"}]}<br>
+<br>
+% curl -H "Accept: application/x-protobuf" http://localhost:8000/content/schema<br>
+<br>
+HTTP/1.1 200 OK<br>
+Content-Length: 563<br>
+Cache-Control: no-cache<br>
+Content-Type: application/x-protobuf<br>
+<br>
+000000 0a 07 63 6f 6e 74 65 6e 74 12 10 0a 07 49 53 5f<br>
+000010 4d 45 54 41 12 05 66 61 6c 73 65 12 10 0a 07 49<br>
+000020 53 5f 52 4f 4f 54 12 05 66 61 6c 73 65 1a a7 01<br>
+000030 12 12 0a 09 42 4c 4f 43 4b 53 49 5a 45 12 05 36<br>
+[...]<br>
+000230 4f 4e 45<br>
+</tt>
+</blockquote>
+<p>
+
+<a name="operation_create_schema">
+<h3>Create Table Or Update Table Schema</h3>
+</a>
+<p>
+<pre>
+PUT /&lt;table&gt;/schema
+
+POST /&lt;table&gt;/schema
+</pre>
+<p>
+Uploads table schema. 
+PUT or POST creates table as necessary. 
+PUT fully replaces schema. 
+POST modifies schema (add or modify column family).
+Supply the full table schema for PUT or a well formed schema fragment for POST
+in the desired encoding.
+Set Content-Type header to <tt>text/xml</tt> if the desired encoding is XML.
+Set Content-Type header to <tt>application/json</tt> if the desired encoding
+is JSON.
+Set Content-Type header to <tt>application/x-protobuf</tt> if the desired
+encoding is protobufs.
+If not successful, returns appropriate HTTP error status code.
+If successful, returns HTTP 200 status.
+<p>
+
+<a name="operation_table_metadata">
+<h3>Query Table Metadata</h3>
+</a>
+<p>
+<pre>
+GET /&lt;table&gt;/regions
+</pre>
+<p>
+Retrieves table region metadata.
+Set Accept header to <tt>text/plain</tt> for plain text output.
+Set Accept header to <tt>text/xml</tt> for XML reply.
+Set Accept header to <tt>application/json</tt> for JSON reply.
+Set Accept header to <tt>application/x-protobuf</tt> for protobufs.
+If not successful, returns appropriate HTTP error status code.
+If successful, returns the table region metadata in the requested encoding.
+<p>
+Examples:
+<p>
+<blockquote>
+<tt>
+% curl -H "Accept: text/xml" http://localhost:8000/content/regions<br>
+<br>
+HTTP/1.1 200 OK<br>
+Cache-Control: no-cache<br>
+Content-Type: text/xml<br>
+Content-Length: 1555<br>
+<br>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;<br>
+&lt;TableInfo name="content"&gt;&lt;Region location="test:51025" endKey="M2VmMTZkNzc2Nj<br>
+AzYmY5YjllNzc1YzljZWI2NDg2MGY=" startKey="" id="1244851999187" name="content,,<br>
+1244851999187"/&gt;&lt;Region location="test:51025" endKey="NjAxMjkyYTgzOWI5NWU1MDIw<br>
+MGQ4Zjg3Njc4NTk4NjQ=" startKey="M2VmMTZkNzc2NjAzYmY5YjllNzc1YzljZWI2NDg2MGY=" <br>
+id="1244869158156" name="content,3ef16d776603bf9b9e775c9ceb64860f,124486915815<br>
+6"/&gt;&lt;Region location="test:51025" endKey="N2Y2ZDQ4ODMwZWY1MWQ2MzVlOWE1YjY3MmU3<br>
+OWEwODM=" startKey="NjAxMjkyYTgzOWI5NWU1MDIwMGQ4Zjg3Njc4NTk4NjQ=" id="12448691<br>
+58156" name="content,601292a839b95e50200d8f8767859864,1244869158156"/&gt;&lt;Region<br>
+location="test:51025" endKey="OWQ3ZjNhZWIyYTVjMWUyYjQ1ZDY5MGE5MWRlM2YyM2M=" st<br>
+artKey="N2Y2ZDQ4ODMwZWY1MWQ2MzVlOWE1YjY3MmU3OWEwODM=" id="1244879698031" name=<br>
+"content,7f6d48830ef51d635e9a5b672e79a083,1244879698031"/&gt;&lt;Region location="te<br>
+st:51025" endKey="YmNmOTFlY2Y3OGVhNzJhMzNmYWNjZmI4ZTZiNWQ5MDA=" startKey="OWQ3<br>
+ZjNhZWIyYTVjMWUyYjQ1ZDY5MGE5MWRlM2YyM2M=" id="1244879698031" name="content,9d7<br>
+f3aeb2a5c1e2b45d690a91de3f23c,1244879698031"/&gt;&lt;Region location="test:51025" en<br>
+dKey="ZGVhZmVkMmY5MGY3MThkNzJjYWFmODdiZDZjMjdkMDQ=" startKey="YmNmOTFlY2Y3OGVh<br>
+NzJhMzNmYWNjZmI4ZTZiNWQ5MDA=" id="1244870320343" name="content,bcf91ecf78ea72a<br>
+33faccfb8e6b5d900,1244870320343"/&gt;&lt;Region location="test:51025" endKey="" star<br>
+tKey="ZGVhZmVkMmY5MGY3MThkNzJjYWFmODdiZDZjMjdkMDQ=" id="1244870320343" name="c<br>
+ontent,deafed2f90f718d72caaf87bd6c27d04,1244870320343"/&gt;&lt;/TableInfo&gt;<br>
+<br>
+% curl -H "Accept: application/json" http://localhost:8000/content/regions<br>
+<br>
+HTTP/1.1 200 OK<br>
+Cache-Control: no-cache<br>
+Content-Type: application/json<br>
+Transfer-Encoding: chunked<br>
+<br>
+{"@name":"content","Region":[{"@location":"test:51025","@endKey":"M2VmMTZkNzc2<br>
+NjAzYmY5YjllNzc1YzljZWI2NDg2MGY=","@startKey":"","@id":"1244851999187","@name"<br>
+:"content,,1244851999187"},{"@location":"test:51025","@endKey":"NjAxMjkyYTgzOW<br>
+I5NWU1MDIwMGQ4Zjg3Njc4NTk4NjQ=","@startKey":"M2VmMTZkNzc2NjAzYmY5YjllNzc1YzljZ<br>
+WI2NDg2MGY=","@id":"1244869158156","@name":"content,3ef16d776603bf9b9e775c9ceb<br>
+64860f,1244869158156"},{"@location":"test:51025","@endKey":"N2Y2ZDQ4ODMwZWY1MW<br>
+Q2MzVlOWE1YjY3MmU3OWEwODM=","@startKey":"NjAxMjkyYTgzOWI5NWU1MDIwMGQ4Zjg3Njc4N<br>
+Tk4NjQ=","@id":"1244869158156","@name":"content,601292a839b95e50200d8f87678598<br>
+64,1244869158156"},{"@location":"test:51025","@endKey":"OWQ3ZjNhZWIyYTVjMWUyYj<br>
+Q1ZDY5MGE5MWRlM2YyM2M=","@startKey":"N2Y2ZDQ4ODMwZWY1MWQ2MzVlOWE1YjY3MmU3OWEwO<br>
+DM=","@id":"1244879698031","@name":"content,7f6d48830ef51d635e9a5b672e79a083,1<br>
+244879698031"},{"@location":"test:51025","@endKey":"YmNmOTFlY2Y3OGVhNzJhMzNmYW<br>
+NjZmI4ZTZiNWQ5MDA=","@startKey":"OWQ3ZjNhZWIyYTVjMWUyYjQ1ZDY5MGE5MWRlM2YyM2M="<br>
+,"@id":"1244879698031","@name":"content,9d7f3aeb2a5c1e2b45d690a91de3f23c,12448<br>
+79698031"},{"@location":"test:51025","@endKey":"ZGVhZmVkMmY5MGY3MThkNzJjYWFmOD<br>
+diZDZjMjdkMDQ=","@startKey":"YmNmOTFlY2Y3OGVhNzJhMzNmYWNjZmI4ZTZiNWQ5MDA=","@i<br>
+d":"1244870320343","@name":"content,bcf91ecf78ea72a33faccfb8e6b5d900,124487032<br>
+0343"},{"@location":"test:51025","@endKey":"","@startKey":"ZGVhZmVkMmY5MGY3MTh<br>
+kNzJjYWFmODdiZDZjMjdkMDQ=","@id":"1244870320343","@name":"content,deafed2f90f7<br>
+18d72caaf87bd6c27d04,1244870320343"}]}<br>
+<br>
+% curl -H "Accept: application/x-protobuf" http://localhost:8000/content/regions<br>
+<br>
+HTTP/1.1 200 OK<br>
+Content-Length: 961<br>
+Cache-Control: no-cache<br>
+Content-Type: application/x-protobuf<br>
+<br>
+000000 0a 07 63 6f 6e 74 65 6e 74 12 53 0a 16 63 6f 6e<br>
+000010 74 65 6e 74 2c 2c 31 32 34 34 38 35 31 39 39 39<br>
+000020 31 38 37 12 00 1a 20 33 65 66 31 36 64 37 37 36<br>
+000030 36 30 33 62 66 39 62 39 65 37 37 35 63 39 63 65<br>
+[...]<br>
+0003c0 35<br>
+</tt>
+</blockquote>
+<p>
+
+<a name="operation_delete_table">
+<h3>Delete Table</h3>
+</a>
+<p>
+<pre>
+DELETE /&lt;table&gt;/schema
+</pre>
+<p>
+Deletes a table.
+If not successful, returns appropriate HTTP error status code.
+If successful, returns HTTP 200 status.
+<p>
+NOTE: <tt>DELETE /&lt;table&gt;</tt> will not work
+<p>
+Examples:
+<p>
+<blockquote>
+<tt>
+% telnet localhost 8000<br>
+DELETE http://localhost:8000/test/schema HTTP/1.0<br>
+<br>
+HTTP/1.1 200 OK<br>
+Content-Length: 0<br>
+</tt>
+</blockquote>
+<p>
+
+<a name="operation_cell_query_single">
+<h3>Cell Query (Single Value)</h3>
+</a>
+<p>
+<pre>
+GET /&lt;table&gt;/&lt;row&gt;/
+    &lt;column&gt; ( : &lt;qualifier&gt; )?
+  ( / &lt;timestamp&gt; )?
+</pre>
+<p>
+Retrieves one cell, with optional specification of timestamp.
+Set Accept header to <tt>text/xml</tt> for XML reply.
+Set Accept header to <tt>application/x-protobuf</tt> for protobufs.
+Set Accept header to <tt>application/octet-stream</tt> for binary.
+If not successful, returns appropriate HTTP error status code.
+If successful, returns HTTP 200 status and cell data in the response body in
+the requested encoding. If the encoding is binary, returns row, column, and
+timestamp in X headers: <tt>X-Row</tt>, <tt>X-Column</tt>, and 
+<tt>X-Timestamp</tt>, respectively. Depending on the precision of the resource
+specification, some of the X-headers may be elided as redundant.
+<p>
+Examples:
+<p>
+<blockquote>
+<tt>
+% curl -H "Accept: text/xml" http://localhost:8000/content/00012614f7d43df6418523445a6787d6/content:raw<br>
+<br>
+HTTP/1.1 200 OK<br>
+Cache-Control: max-age=14400<br>
+Content-Type: text/xml<br>
+Content-Length: 521<br>
+<br>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;<br>
+&lt;CellSet&gt;&lt;Row key="MDAwMTI2MTRmN2Q0M2RmNjQxODUyMzQ0NWE2Nzg3ZDY="&gt;&lt;Cell timesta<br>
+mp="1244880122250" column="Y29udGVudDpyYXc="&gt;PCFET0NUWVBFIEhUTUwgUFVCTElDICItL<br>
+y9JRVRGLy9EVEQgSFRNTCAyLjAvL0VOIj4KPGh0bWw+PGhlYWQ+Cjx0aXRsZT4zMDEgTW92ZWQgUGV<br>
+ybWFuZW50bHk8L3RpdGxlPgo8L2hlYWQ+PGJvZHk+CjxoMT5Nb3ZlZCBQZXJtYW5lbnRseTwvaDE+C<br>
+jxwPlRoZSBkb2N1bWVudCBoYXMgbW92ZWQgPGEgaHJlZj0iaHR0cDovL3R3aXR0ZXIuY29tL2R1bmN<br>
+hbnJpbGV5Ij5oZXJlPC9hPi48L3A+CjwvYm9keT48L2h0bWw+Cg==&lt;/Cell&gt;&lt;/Row&gt;&lt;/CellSet&gt;<br>
+<br>
+% curl -H "Accept: application/json" http://localhost:8000/content/00012614f7d43df6418523445a6787d6/content:raw<br>
+<br>
+HTTP/1.1 200 OK<br>
+Cache-Control: max-age=14400<br>
+Content-Type: application/json<br>
+Transfer-Encoding: chunked<br>
+<br>
+{"Row":{"@key":"MDAwMTI2MTRmN2Q0M2RmNjQxODUyMzQ0NWE2Nzg3ZDY=","Cell":{"@timest<br>
+amp":"1244880122250","@column":"Y29udGVudDpyYXc=","$":"PCFET0NUWVBFIEhUTUwgUFV<br>
+CTElDICItLy9JRVRGLy9EVEQgSFRNTCAyLjAvL0VOIj4KPGh0bWw+PGhlYWQ+Cjx0aXRsZT4zMDEgT<br>
+W92ZWQgUGVybWFuZW50bHk8L3RpdGxlPgo8L2hlYWQ+PGJvZHk+CjxoMT5Nb3ZlZCBQZXJtYW5lbnR<br>
+seTwvaDE+CjxwPlRoZSBkb2N1bWVudCBoYXMgbW92ZWQgPGEgaHJlZj0iaHR0cDovL3R3aXR0ZXIuY<br>
+29tL2R1bmNhbnJpbGV5Ij5oZXJlPC9hPi48L3A+CjwvYm9keT48L2h0bWw+Cg=="}}}<br>
+<br>
+% curl -H "Accept: application/x-protobuf" http://localhost:8000/content/00012614f7d43df6418523445a6787d6/content:raw<br>
+<br>
+HTTP/1.1 200 OK<br>
+Content-Length: 301<br>
+Cache-Control: max-age=14400<br>
+Content-Type: application/x-protobuf<br>
+<br>
+000000 0a aa 02 0a 20 30 30 30 31 32 36 31 34 66 37 64<br>
+000010 34 33 64 66 36 34 31 38 35 32 33 34 34 35 61 36<br>
+000020 37 38 37 64 36 12 85 02 12 0b 63 6f 6e 74 65 6e<br>
+000030 74 3a 72 61 77 18 8a e3 8c c5 9d 24 22 ee 01 3c<br>
+[...]<br>
+000120 62 6f 64 79 3e 3c 2f 68 74 6d 6c 3e 0a<br>
+<br>
+% curl -H "Accept: application/octet-stream" http://localhost:8000/content/00012614f7d43df6418523445a6787d6/content:raw<br>
+<br>
+HTTP/1.1 200 OK<br>
+Content-Length: 238<br>
+Cache-Control: max-age=14400<br>
+X-Timestamp: 1244880122250<br>
+Content-Type: application/octet-stream<br>
+<br>
+[...]<br>
+</tt>
+</blockquote>
+<p>
+
+<a name="operation_cell_query_multiple">
+<h3>Cell or Row Query (Multiple Values)</h3>
+</a>
+<p>
+<pre>
+GET /&lt;table&gt;/&lt;row&gt;
+  ( / ( &lt;column&gt; ( : &lt;qualifier&gt; )?
+      ( , &lt;column&gt; ( : &lt;qualifier&gt; )? )+ )?
+    ( / ( &lt;start-timestamp&gt; ',' )? &lt;end-timestamp&gt; )? )?
+  ( ?v= &lt;num-versions&gt; )?
+</pre>
+<p>
+Retrieves one or more cells from a full row, or one or more specified columns
+in the row, with optional filtering via timestamp, and an optional restriction
+on the maximum number of versions to return.
+Set Accept header to <tt>text/xml</tt> for XML reply.
+Set Accept header to <tt>application/json</tt> for JSON reply.
+Set Accept header to <tt>application/x-protobuf</tt> for protobufs.
+Set Accept header to <tt>application/octet-stream</tt> for binary.
+If not successful, returns appropriate HTTP error status code.
+If successful, returns row results in the requested encoding. 
+<p>
+NOTE: If binary encoding is requested, only one cell can be returned, the 
+first to match the resource specification. The row, column, and timestamp
+associated with the cell will be transmitted in X headers: <tt>X-Row</tt>,
+<tt>X-Column</tt>, and <tt>X-Timestamp</tt>, respectively. Depending on the
+precision of the resource specification, some of the X-headers may be elided
+as redundant.
+<p>
+<b>Suffix Globbing</b>
+<p>
+Multiple value queries of a row can optionally append a suffix glob on the row
+key. This is a restricted form of scanner which will return all values in all
+rows that have keys which contain the supplied key on their left hand side,
+for example:
+<p>
+<pre>
+    org.someorg.*
+        -> org.someorg.blog
+        -> org.someorg.home
+        -> org.someorg.www
+</pre>
+<p>
+Examples:
+<p>
+<blockquote>
+<tt>
+% curl -H "Accept: text/xml" http://localhost:8000/urls/https|ad.doubleclick.net|*<br>
+<br>
+HTTP/1.1 200 OK<br>
+Cache-Control: max-age=14400<br>
+Content-Type: text/xml<br>
+Transfer-Encoding: chunked<br>
+<br>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;<br>
+&lt;CellSet&gt;&lt;Row key="aHR0cHx3d3cudGVsZWdyYXBoLmNvLnVrfDgwfG5ld3N8d29ybGRuZXdzfG5<br>
+vcnRoYW1lcmljYXx1c2F8NTQ5MTI4NHxBcm5vbGQtU2Nod2FyemVuZWdnZXItdW52ZWlscy1wYXBlc<br>
+mxlc3MtY2xhc3Nyb29tcy1wbGFuLmh0bWw="&gt;&lt;Cell timestamp="1244701257843" column="a<br>
+W5mbzpjcmF3bGVyLTEyNDQ3MDEyNTc4NDM="&gt;eyJpcCI6IjIwOC41MS4xMzcuOSIsIm1pbWV0eXBlI<br>
+joidGV4dC9odG1sO2NoYXJzZXQ9SVNPLT<br>
+[...]<br>
+&lt;/Cell&gt;&lt;Cell timestamp="1244701513390" column="aW5mbzp1cmw="&gt;aHR0cDovL3d3dy50Z<br>
+WxlZ3JhcGguY28udWs6ODAvdGVsZWdyYXBoL3RlbXBsYXRlL3ZlcjEtMC90ZW1wbGF0ZXMvZnJhZ21<br>
+lbnRzL2NvbW1vbi90bWdsQnJhbmRDU1MuanNw&lt;/Cell&gt;&lt;/Row&gt;&lt;/CellSet&gt;<br>
+<br>
+% curl -H "Accept: text/xml" http://localhost:8000/content/00012614f7d43df6418523445a6787d6<br>
+<br>
+HTTP/1.1 200 OK<br>
+Cache-Control: max-age=14400<br>
+Content-Type: text/xml<br>
+Content-Length: 1177<br>
+<br>
+&lt;CellSet&gt;&lt;Row key="MDAwMTI2MTRmN2Q0M2RmNjQxODUyMzQ0NWE2Nzg3ZDY="&gt;&lt;Cell timesta<br>
+mp="1244880122250" column="Y29udGVudDpyYXc=">PCFET0NUWVBFIEhUTUwgUFVCTElDICItL<br>
+y9JRVRGLy9EVEQgSFRNTCAyLjAvL0VOIj4KPGh0bWw+PGhlYWQ+Cjx0aXRsZT4zMDEgTW92ZWQgUGV<br>
+ybWFuZW50bHk8L3RpdGxlPgo8L2hlYWQ+PGJvZHk+CjxoMT5Nb3ZlZCBQZXJtYW5lbnRseTwvaDE+C<br>
+jxwPlRoZSBkb2N1bWVudCBoYXMgbW92ZWQgPGEgaHJlZj0iaHR0cDovL3R3aXR0ZXIuY29tL2R1bmN<br>
+hbnJpbGV5Ij5oZXJlPC9hPi48L3A+CjwvYm9keT48L2h0bWw+Cg==&lt;/Cell&gt;&lt;Cell timestamp="1<br>
+244880122250" column="aW5mbzpjcmF3bGVyLWh0dHB8d3d3LnR3aXR0ZXIuY29tfDgwfGR1bmNh<br>
+bnJpbGV5LTEyNDQ4ODAxMjIyNTA=">eyJpcCI6IjE2OC4xNDMuMTYyLjY4IiwibWltZXR5cGUiOiJ0<br>
+ZXh0L2h0bWw7IGNoYXJzZXQ9aXNvLTg4NTktMSIsInZpYSI6Imh0dHA6Ly93d3cuaW5xdWlzaXRyLm<br>
+NvbTo4MC8yNTkyNy90b3NoMC1hbmQtdGhlLWRlbWktbW9vcmUtbnNmdy1waWMvIn0=&lt;/Cell&gt;&lt;Cell<br>
+timestamp="1244880122250" column="aW5mbzpsZW5ndGg=">MjM4&lt;/Cell&gt;&lt;Cell timestamp<br>
+="1244880122250" column="aW5mbzptaW1ldHlwZQ=="&gt;dGV4dC9odG1sOyBjaGFyc2V0PWlzby0<br>
+4ODU5LTE=&lt;/Cell&gt;&lt;Cell timestamp="1244880122250" column="dXJsOmh0dHB8d3d3LnR3aX<br>
+R0ZXIuY29tfDgwfGR1bmNhbnJpbGV5"&gt;aHR0cDovL3d3dy50d2l0dGVyLmNvbTo4MC9kdW5jYW5yaW<br>
+xleQ==&lt;/Cell&gt;&lt;/Row&gt;&lt/CellSet&gt;<br>
+<br>
+% curl -H "Accept: application/json" http://localhost:8000/content/00012614f7d43df6418523445a6787d6<br>
+<br>
+HTTP/1.1 200 OK<br>
+Cache-Control: max-age=14400<br>
+Content-Type: application/json<br>
+Transfer-Encoding: chunked<br>
+<br>
+{"Row":{"@key":"MDAwMTI2MTRmN2Q0M2RmNjQxODUyMzQ0NWE2Nzg3ZDY=","Cell":[{"@times<br>
+tamp":"1244880122250","@column":"Y29udGVudDpyYXc=","$":"PCFET0NUWVBFIEhUTUwgUF<br>
+VCTElDICItLy9JRVRGLy9EVEQgSFRNTCAyLjAvL0VOIj4KPGh0bWw+PGhlYWQ+Cjx0aXRsZT4zMDEg<br>
+TW92ZWQgUGVybWFuZW50bHk8L3RpdGxlPgo8L2hlYWQ+PGJvZHk+CjxoMT5Nb3ZlZCBQZXJtYW5lbn<br>
+RseTwvaDE+CjxwPlRoZSBkb2N1bWVudCBoYXMgbW92ZWQgPGEgaHJlZj0iaHR0cDovL3R3aXR0ZXIu<br>
+Y29tL2R1bmNhbnJpbGV5Ij5oZXJlPC9hPi48L3A+CjwvYm9keT48L2h0bWw+Cg=="},{"@timestam<br>
+p":"1244880122250","@column":"aW5mbzpjcmF3bGVyLWh0dHB8d3d3LnR3aXR0ZXIuY29tfDgw<br>
+fGR1bmNhbnJpbGV5LTEyNDQ4ODAxMjIyNTA=","$":"eyJpcCI6IjE2OC4xNDMuMTYyLjY4IiwibWl<br>
+tZXR5cGUiOiJ0ZXh0L2h0bWw7IGNoYXJzZXQ9aXNvLTg4NTktMSIsInZpYSI6Imh0dHA6Ly93d3cua<br>
+W5xdWlzaXRyLmNvbTo4MC8yNTkyNy90b3NoMC1hbmQtdGhlLWRlbWktbW9vcmUtbnNmdy1waWMvIn0<br>
+="},{"@timestamp":"1244880122250","@column":"aW5mbzpsZW5ndGg=","$":"MjM4"},{"@<br>
+timestamp":"1244880122250","@column":"aW5mbzptaW1ldHlwZQ==","$":"dGV4dC9odG1sO<br>
+yBjaGFyc2V0PWlzby04ODU5LTE="},{"@timestamp":"1244880122250","@column":"dXJsOmh<br>
+0dHB8d3d3LnR3aXR0ZXIuY29tfDgwfGR1bmNhbnJpbGV5","$":"aHR0cDovL3d3dy50d2l0dGVyLm<br>
+NvbTo4MC9kdW5jYW5yaWxleQ=="}]}}<br>
+</tt>
+<p>
+NOTE: The cell value is given in JSON encoding as the value associated with the key "$".
+<p>
+<tt>
+% curl -H "Accept: application/x-protobuf" http://localhost:8000/content/00012614f7d43df6418523445a6787d6<br>
+<br>
+HTTP/1.1 200 OK<br>
+Content-Length: 692<br>
+Cache-Control: max-age=14400<br>
+Content-Type: application/x-protobuf<br>
+<br>
+000000 0a b1 05 0a 20 30 30 30 31 32 36 31 34 66 37 64<br> 
+000010 34 33 64 66 36 34 31 38 35 32 33 34 34 35 61 36<br>
+000020 37 38 37 64 36 12 85 02 12 0b 63 6f 6e 74 65 6e<br>
+000030 74 3a 72 61 77 18 8a e3 8c c5 9d 24 22 ee 01 3c<br>
+[...]<br>
+0002b0 69 6c 65 79<br>
+</tt>
+</blockquote>
+<p>
+
+<a name="operation_cell_store_single">
+<h3>Cell Store (Single)</h3>
+</a>
+<p>
+<pre>
+PUT /&lt;table&gt;/&lt;row&gt;/&lt;column&gt;( : &lt;qualifier&gt; )? ( / &lt;timestamp&gt; )?
+
+POST /&lt;table&gt;/&lt;row&gt;/&lt;column&gt;( : &lt;qualifier&gt; )? ( / &lt;timestamp&gt; )?
+</pre>
+<p>
+Stores cell data into the specified location.
+If not successful, returns appropriate HTTP error status code.
+If successful, returns HTTP 200 status.
+Set Content-Type header to <tt>text/xml</tt> for XML encoding.
+Set Content-Type header to <tt>application/x-protobuf</tt> for protobufs encoding.
+Set Content-Type header to <tt>application/octet-stream</tt> for binary encoding.
+When using binary encoding, optionally, set X-Timestamp header to the desired
+timestamp.
+<p>
+PUT and POST operations are equivalent here: Specified addresses without
+existing data will create new values. Specified addresses with existing data 
+will create new versions, overwriting an existing version if all of { row,
+column:qualifer, timestamp } match that of the existing value.
+<p>
+See "Cell Query (Single Value)" section for encoding examples.
+<p>
+Examples:
+<p>
+<blockquote>
+<tt>
+% curl -H "Content-Type: text/xml" --data '[...]' http://localhost:8000/test/testrow/test:testcolumn<br>
+<br>
+HTTP/1.1 200 OK<br>
+Content-Length: 0<br>
+</tt>
+</blockquote>
+<p>
+
+<a name="operation_cell_store_multiple">
+<h3>Cell Store (Multiple)</h3>
+</a>
+<p>
+<pre>
+PUT /&lt;table&gt;/&lt;false-row-key&gt;
+
+POST /&lt;table&gt;/&lt;false-row-key&gt;
+</pre>
+<p>
+Use a false row key. Row, column, and timestamp values in supplied cells
+override the specifications of the same on the path, allowing for posting of
+multiple values to a table in batch. If not successful, returns appropriate
+HTTP error status code. If successful, returns HTTP 200 status.
+Set Content-Type to <tt>text/xml</tt> for XML encoding.
+Set Content-Type header to <tt>application/x-protobuf</tt> for protobufs encoding.
+Supply commit data in the PUT or POST body. 
+<p>
+PUT and POST operations are equivalent here: Specified addresses without
+existing data will create new values. Specified addresses with existing data 
+will create new versions, overwriting an existing version if all of { row,
+column:qualifer, timestamp } match that of the existing value.
+<p>
+See "Cell or Row Query (Multiple Values)" for encoding examples.
+<p>
+
+<a name="operation_delete">
+<h3>Row, Column, or Cell Delete</h3>
+</a>
+<p>
+<pre>
+DELETE /&lt;table>/&lt;row&gt;
+  ( / ( &lt;column&gt; ( : &lt;qualifier&gt; )? 
+    ( / &lt;timestamp&gt; )? )?
+</pre>
+<p>
+Deletes an entire row, a entire column family, or specific cell(s), depending
+on how specific the data address. If not successful, returns appropriate HTTP
+error status code. If successful, returns HTTP 200 status.
+<p>
+NOTE: <tt>DELETE /&lt;table&gt;</tt> will not work.
+Use <tt>DELETE /&lt;table&gt;/schema</tt> instead.
+<p>
+
+<a name="operation_scanner_create">
+<h3>Scanner Creation</h3>
+</a>
+<p>
+<pre>
+PUT /&lt;table&gt;/scanner
+
+POST /&lt;table&gt;/scanner
+</pre>
+<p>
+Allocates a new table scanner.
+If not successful, returns appropriate HTTP error status code.
+If successful, returns HTTP 201 status (created) and the URI which should be
+used to address the scanner, e.g.
+<p>
+<blockquote><tt>/&lt;table&gt;/scanner/112876541342014107c0fa92</tt></blockquote>
+<p>
+Set Content-Type to <tt>text/xml</tt> if supplying an XML scanner specification.
+Set Content-Type to <tt>application/protobuf</tt> if supplying a protobufs
+encoded specification.
+<p>
+Examples:
+<p>
+<blockquote>
+<tt>
+% curl -H "Content-Type: text/xml" -d '&lt;Scanner batch="1"/&gt;' http://localhost:8000/content/scanner<br>
+<br>
+HTTP/1.1 201 Created<br>
+Location: http://localhost:8000/content/scanner/12447063229213b1937<br>
+Content-Length: 0<br>
+</tt>
+</blockquote>
+<p>
+
+<a name="operation_scanner_next">
+<h3>Scanner Get Next</h3>
+</a>
+<p>
+<pre>
+GET /&lt;table&gt;/scanner/&lt;scanner-id&gt;
+</pre>
+<p>
+Returns the values of the next cells found by the scanner, up to the configured batch amount.
+Set Accept header to <tt>text/xml</tt> for XML encoding.
+Set Accept header to <tt>application/x-protobuf</tt> for protobufs encoding.
+Set Accept header to <tt>application/octet-stream</tt> for binary encoding.
+If not successful, returns appropriate HTTP error status code.
+If result is successful but the scanner is exhausted, returns HTTP 204 status (no content).
+Otherwise, returns HTTP 200 status and row and cell data in the response body.
+See examples from the "Cell or Row Query (Multiple Values)" section.
+<p>
+NOTE: The binary encoding option returns only one cell regardless of the 
+batching parameter supplied during scanner creation. The row, column, and
+timestamp associated with the cell are transmitted as X-headers: 
+<tt>X-Row</tt>, <tt>X-Column</tt>, and <tt>X-Timestamp</tt> respectively.
+<p>
+Examples:
+<p>
+<blockquote>
+<tt>
+% curl -H "Content-Type: text/xml" http://localhost:8000/content/scanner/12447063229213b1937<br>
+<br>
+HTTP/1.1 200 OK<br>
+Cache-Control: no-cache<br>
+Content-Type: text/xml<br>
+Content-Length: 589<br>
+<br>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;<br>
+&lt;CellSet&gt;&lt;Row key="MDAyMDFjMTAwNjk4ZGNkYjU5MDQxNTVkZGQ3OGRlZTk="&gt;&lt;Cell timesta<br>
+mp="1244701281234" column="Y29udGVudDpyYXc="&gt;PCFET0NUWVBFIEhUTUwgUFVCTElDICItL<br>
+y9JRVRGLy9EVEQgSFRNTCAyLjAvL0VOIj4KPGh0bWw+PGhlYWQ+Cjx0aXRsZT40MDQgTm90IEZvdW5<br>
+kPC90aXRsZT4KPC9oZWFkPjxib2R5Pgo8aDE+Tm90IEZvdW5kPC9oMT4KPHA+VGhlIHJlcXVlc3RlZ<br>
+CBVUkwgL3JvYm90cy50eHQgd2FzIG5vdCBmb3VuZCBvbiB0aGlzIHNlcnZlci48L3A+Cjxocj4KPGF<br>
+kZHJlc3M+QXBhY2hlLzIuMi4zIChSZWQgSGF0KSBTZXJ2ZXIgYXQgd3gubWduZXR3b3JrLmNvbSBQb<br>
+3J0IDgwPC9hZGRyZXNzPgo8L2JvZHk+PC9odG1sPgo=&lt;/Cell&gt;&lt;/Row&gt;&lt;/CellSet&gt;<br>
+<br>
+% curl -H "Content-Type: application/json" http://localhost:8000/content/scanner/12447063229213b1937<br>
+<br>
+HTTP/1.1 200 OK<br>
+Cache-Control: no-cache<br>
+Content-Type: application/json<br>
+Transfer-Encoding: chunked<br>
+<br>
+{"Row":{"@key":"MDAyMDFjMTAwNjk4ZGNkYjU5MDQxNTVkZGQ3OGRlZTk=","Cell":{"@timest<br>
+amp":"1244701281234","@column":"aW5mbzpjcmF3bGVyLWh0dHB8d3gubWduZXR3b3JrLmNvbX<br>
+w4MHxyb2JvdHMudHh0LTEyNDQ3MDEyODEyMzQ=","$":"eyJpcCI6IjE5OS4xOTMuMTAuMTAxIiwib<br>
+WltZXR5cGUiOiJ0ZXh0L2h0bWw7IGNoYXJzZXQ9aXNvLTg4NTktMSIsInZpYSI6Imh0dHA6Ly93eC5<br>
+tZ25ldHdvcmsuY29tOjgwL2pzL2N1cnJlbnRzaGFuZGxlci5qcyJ9"}}}<br>
+<br>
+% curl -H "Content-Type: application/x-protobuf" http://localhost:8000/content/scanner/12447063229213b1937<br>
+<br>
+HTTP/1.1 200 OK<br>
+Content-Length: 63<br>
+Cache-Control: no-cache<br>
+Content-Type: application/x-protobuf<br>
+<br>
+000000 0a 3d 0a 20 30 30 32 30 31 63 31 30 30 36 39 38<br>
+000010 64 63 64 62 35 39 30 34 31 35 35 64 64 64 37 38<br>
+000020 64 65 65 39 12 19 12 0b 69 6e 66 6f 3a 6c 65 6e<br>
+000030 67 74 68 18 d2 97 e9 ef 9c 24 22 03 32 39 30<br>
+<br>
+% curl -H "Content-Type: application/octet-stream" http://localhost:8000/content/scanner/12447063229213b1937<br>
+<br>
+HTTP/1.1 200 OK<br>
+Content-Length: 37<br>
+Cache-Control: no-cache<br>
+X-Column: dXJsOmh0dHB8d3gubWduZXR3b3JrLmNvbXw4MHxyb2JvdHMudHh0<br>
+X-Row: MDAyMDFjMTAwNjk4ZGNkYjU5MDQxNTVkZGQ3OGRlZTk=<br>
+X-Timestamp: 1244701281234<br>
+Content-Type: application/octet-stream<br>
+<br>
+000000 68 74 74 70 3a 2f 2f 77 78 2e 6d 67 6e 65 74 77<br>
+000010 6f 72 6b 2e 63 6f 6d 3a 38 30 2f 72 6f 62 6f 74<br>
+000020 73 2e 74 78 74<br>
+</tt>
+</blockquote>
+<p>
+
+<a name="operation_scanner_delete">
+<h3>Scanner Deletion</h3>
+</a>
+<p>
+<pre>
+DELETE /&lt;table&gt;/scanner/&lt;scanner-id&gt;
+</pre>
+<p>
+Deletes resources associated with the scanner. This is an optional action. 
+Scanners will expire after some globally configurable interval has elapsed
+with no activity on the scanner. If not successful, returns appropriate HTTP
+error status code. If successful, returns HTTP status 200.
+<p>
+Examples:
+<p>
+<blockquote>
+<tt>
+% telnet localhost 8000<br>
+DELETE http://localhost:8000/content/scanner/12447063229213b1937 HTTP/1.0<br>
+<br>
+HTTP/1.1 200 OK<br>
+Content-Length: 0<br>
+</tt>
+</blockquote>
+<p>
+
+<p>
+<a name="xmlschema">
+<h2>XML Schema</h2>
+</a>
+<p>
+<pre>
+&lt;schema targetNamespace="StargateSchema" elementFormDefault="qualified" 
+xmlns="http://www.w3.org/2001/XMLSchema" xmlns:tns="StargateSchema"&gt;
+
+    &lt;element name="CellSet" type="tns:CellSet"&gt;&lt;/element&gt;
+    
+    &lt;complexType name="CellSet"&gt;
+      &lt;sequence&gt;
+        &lt;element name="row" type="tns:Row" maxOccurs="unbounded" minOccurs="1"&gt;&lt;/element&gt;
+      &lt;/sequence&gt;
+    &lt;/complexType&gt;
+
+    &lt;complexType name="Row"&gt;
+      &lt;sequence&gt;
+        &lt;element name="key" type="base64Binary"&gt;&lt;/element&gt;
+        &lt;element name="cell" type="tns:Cell" maxOccurs="unbounded" minOccurs="1"&gt;&lt;/element&gt;
+      &lt;/sequence&gt;
+    &lt;/complexType&gt;
+
+    &lt;complexType name="Cell"&gt;
+      &lt;sequence&gt;
+        &lt;element name="value" maxOccurs="1" minOccurs="1"&gt;&lt;simpleType&gt;&lt;restriction base="base64Binary"&gt;&lt;/restriction&gt;&lt;/simpleType&gt;&lt;/element&gt;
+      &lt;/sequence&gt;
+      &lt;attribute name="column" type="base64Binary" /&gt;
+      &lt;attribute name="timestamp" type="int" /&gt;
+    &lt;/complexType&gt;
+
+    &lt;element name="Version" type="tns:Version"&gt;&lt;/element&gt;
+    
+    &lt;complexType name="Version"&gt;
+      &lt;attribute name="Stargate" type="string"&gt;&lt;/attribute&gt;
+      &lt;attribute name="JVM" type="string"&gt;&lt;/attribute&gt;
+      &lt;attribute name="OS" type="string"&gt;&lt;/attribute&gt;
+      &lt;attribute name="Server" type="string"&gt;&lt;/attribute&gt;
+      &lt;attribute name="Jersey" type="string"&gt;&lt;/attribute&gt;
+    &lt;/complexType&gt;
+
+
+    &lt;element name="TableList" type="tns:TableList"&gt;&lt;/element&gt;
+    
+    &lt;complexType name="TableList"&gt;
+      &lt;sequence&gt;
+        &lt;element name="table" type="tns:Table" maxOccurs="unbounded" minOccurs="1"&gt;&lt;/element&gt;
+      &lt;/sequence&gt;
+    &lt;/complexType&gt;
+
+    &lt;complexType name="Table"&gt;
+      &lt;sequence&gt;
+        &lt;element name="name" type="string"&gt;&lt;/element&gt;
+      &lt;/sequence&gt;
+    &lt;/complexType&gt;
+
+    &lt;element name="TableInfo" type="tns:TableInfo"&gt;&lt;/element&gt;
+    
+    &lt;complexType name="TableInfo"&gt;
+      &lt;sequence&gt;
+        &lt;element name="region" type="tns:TableRegion" maxOccurs="unbounded" minOccurs="1"&gt;&lt;/element&gt;
+      &lt;/sequence&gt;
+      &lt;attribute name="name" type="string"&gt;&lt;/attribute&gt;
+    &lt;/complexType&gt;
+
+    &lt;complexType name="TableRegion"&gt;
+      &lt;attribute name="name" type="string"&gt;&lt;/attribute&gt;
+      &lt;attribute name="id" type="int"&gt;&lt;/attribute&gt;
+      &lt;attribute name="startKey" type="base64Binary"&gt;&lt;/attribute&gt;
+      &lt;attribute name="endKey" type="base64Binary"&gt;&lt;/attribute&gt;
+      &lt;attribute name="location" type="string"&gt;&lt;/attribute&gt;
+    &lt;/complexType&gt;
+
+    &lt;element name="TableSchema" type="tns:TableSchema"&gt;&lt;/element&gt;
+    
+    &lt;complexType name="TableSchema"&gt;
+      &lt;sequence&gt;
+        &lt;element name="column" type="tns:ColumnSchema" maxOccurs="unbounded" minOccurs="1"&gt;&lt;/element&gt;
+      &lt;/sequence&gt;
+      &lt;attribute name="name" type="string"&gt;&lt;/attribute&gt;
+      &lt;anyAttribute&gt;&lt;/anyAttribute&gt;
+    &lt;/complexType&gt;
+
+    &lt;complexType name="ColumnSchema"&gt;
+      &lt;attribute name="name" type="string"&gt;&lt;/attribute&gt;
+      &lt;anyAttribute&gt;&lt;/anyAttribute&gt;
+    &lt;/complexType&gt;
+
+    &lt;element name="Scanner" type="tns:Scanner"&gt;&lt;/element&gt;
+    
+    &lt;complexType name="Scanner"&gt;
+      &lt;attribute name="startRow" type="base64Binary"&gt;&lt;/attribute&gt;
+      &lt;attribute name="endRow" type="base64Binary"&gt;&lt;/attribute&gt;
+      &lt;attribute name="columns" type="base64Binary"&gt;&lt;/attribute&gt;
+      &lt;attribute name="batch" type="int"&gt;&lt;/attribute&gt;
+      &lt;attribute name="startTime" type="int"&gt;&lt;/attribute&gt;
+      &lt;attribute name="endTime" type="int"&gt;&lt;/attribute&gt;
+    &lt;/complexType&gt;
+
+    &lt;element name="StorageClusterVersion"
+      type="tns:StorageClusterVersion"&gt;
+    &lt;/element&gt;
+    
+    &lt;complexType name="StorageClusterVersion"&gt;
+      &lt;attribute name="version" type="string"&gt;&lt;/attribute&gt;
+    &lt;/complexType&gt;
+
+    &lt;element name="StorageClusterStatus"
+      type="tns:StorageClusterStatus"&gt;
+    &lt;/element&gt;
+    
+    &lt;complexType name="StorageClusterStatus"&gt;
+      &lt;sequence&gt;
+        &lt;element name="liveNode" type="tns:Node"
+          maxOccurs="unbounded" minOccurs="0"&gt;
+        &lt;/element&gt;
+        &lt;element name="deadNode" type="string" maxOccurs="unbounded"
+          minOccurs="0"&gt;
+        &lt;/element&gt;
+      &lt;/sequence&gt;
+      &lt;attribute name="regions" type="int"&gt;&lt;/attribute&gt;
+      &lt;attribute name="requests" type="int"&gt;&lt;/attribute&gt;
+      &lt;attribute name="averageLoad" type="float"&gt;&lt;/attribute&gt;
+    &lt;/complexType&gt;
+
+    &lt;complexType name="Node"&gt;
+      &lt;sequence&gt;
+        &lt;element name="region" type="tns:Region" maxOccurs="unbounded" minOccurs="0"&gt;&lt;/element&gt;
+      &lt;/sequence&gt;
+      &lt;attribute name="name" type="string"&gt;&lt;/attribute&gt;
+      &lt;attribute name="startCode" type="int"&gt;&lt;/attribute&gt;
+      &lt;attribute name="requests" type="int"&gt;&lt;/attribute&gt;
+      &lt;attribute name="heapSizeMB" type="int"&gt;&lt;/attribute&gt;
+      &lt;attribute name="maxHeapSizeMB" type="int"&gt;&lt;/attribute&gt;
+    &lt;/complexType&gt;
+
+    &lt;complexType name="Region"&gt;
+      &lt;attribute name="name" type="base64Binary"&gt;&lt;/attribute&gt;
+      &lt;attribute name="stores" type="int"&gt;&lt;/attribute&gt;
+      &lt;attribute name="storefiles" type="int"&gt;&lt;/attribute&gt;
+      &lt;attribute name="storefileSizeMB" type="int"&gt;&lt;/attribute&gt;
+      &lt;attribute name="memstoreSizeMB" type="int"&gt;&lt;/attribute&gt;
+      &lt;attribute name="storefileIndexSizeMB" type="int"&gt;&lt;/attribute&gt;
+    &lt;/complexType&gt;
+&lt;/schema&gt;
+</pre>
+
+<p>
+<a name="pbufschema">
+<h2>Protobufs Schema</h2>
+</a>
+<p>
+<pre>
+message Version {
+  optional string stargateVersion = 1;
+  optional string jvmVersion = 2;
+  optional string osVersion = 3;
+  optional string serverVersion = 4;
+  optional string jerseyVersion = 5;
+}
+
+message StorageClusterStatus {
+  message Region {
+    required bytes name = 1;
+    optional int32 stores = 2;
+    optional int32 storefiles = 3;
+    optional int32 storefileSizeMB = 4;
+    optional int32 memstoreSizeMB = 5;
+    optional int32 storefileIndexSizeMB = 6;
+  }
+  message Node {
+    required string name = 1;    // name:port
+    optional int64 startCode = 2;
+    optional int32 requests = 3;
+    optional int32 heapSizeMB = 4;
+    optional int32 maxHeapSizeMB = 5;
+    repeated Region regions = 6;
+  }
+  // node status
+  repeated Node liveNodes = 1;
+  repeated string deadNodes = 2;
+  // summary statistics
+  optional int32 regions = 3; 
+  optional int32 requests = 4; 
+  optional double averageLoad = 5;
+}
+
+message TableList {
+  repeated string name = 1;
+}
+
+message TableInfo {
+  required string name = 1;
+  message Region {
+    required string name = 1;
+    optional bytes startKey = 2;
+    optional bytes endKey = 3;
+    optional int64 id = 4;
+    optional string location = 5;
+  }
+  repeated Region regions = 2;
+}
+
+message TableSchema {
+  optional string name = 1;
+  message Attribute {
+    required string name = 1;
+    required string value = 2;
+  }  
+  repeated Attribute attrs = 2;
+  repeated ColumnSchema columns = 3;
+  // optional helpful encodings of commonly used attributes
+  optional bool inMemory = 4;
+  optional bool readOnly = 5;
+}
+
+message ColumnSchema {
+  optional string name = 1;
+  message Attribute {
+    required string name = 1;
+    required string value = 2;
+  }
+  repeated Attribute attrs = 2;
+  // optional helpful encodings of commonly used attributes
+  optional int32 ttl = 3;
+  optional int32 maxVersions = 4;
+  optional string compression = 5;
+}
+
+message Cell {
+  optional bytes row = 1;       // unused if Cell is in a CellSet
+  optional bytes column = 2;
+  optional int64 timestamp = 3;
+  optional bytes data = 4;
+}
+
+message CellSet {
+  message Row {
+    required bytes key = 1;
+    repeated Cell values = 2;
+  }
+  repeated Row rows = 1;
+}
+
+message Scanner {
+  optional bytes startRow = 1;
+  optional bytes endRow = 2;
+  repeated bytes columns = 3;
+  optional int32 batch = 4;
+  optional int64 startTime = 5;
+  optional int64 endTime = 6;
+}
+</pre>
+
+</body>
+</html>
