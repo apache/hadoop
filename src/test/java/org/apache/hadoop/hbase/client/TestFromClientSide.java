@@ -34,9 +34,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.UUID;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -512,7 +515,7 @@ public class TestFromClientSide {
     assertEquals(count, 10);
     scanner.close();
   }
-  
+
   /**
    * Test simple table and non-existent row cases.
    */
@@ -3970,5 +3973,65 @@ public class TestFromClientSide {
       assertIncrementKey(kvs[i], ROWS[0], FAMILY, QUALIFIERS[i], 2*(i+1));
     }
   }
+
+  /**
+   * This test demonstrates how we use ThreadPoolExecutor.
+   * It needs to show that we only use as many threads in the pool as we have
+   * region servers. To do this, instead of doing real requests, we use a
+   * SynchronousQueue where each put must wait for a take (and vice versa)
+   * so that way we have full control of the number of active threads.
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  @Test
+  public void testPoolBehavior() throws IOException, InterruptedException {
+    byte[] someBytes = Bytes.toBytes("pool");
+    HTable table = TEST_UTIL.createTable(someBytes, someBytes);
+    ThreadPoolExecutor pool = (ThreadPoolExecutor)table.getPool();
+
+    // Make sure that the TPE stars with a core pool size of one and 0
+    // initialized worker threads
+    assertEquals(1, pool.getCorePoolSize());
+    assertEquals(0, pool.getPoolSize());
+
+    // Build a SynchronousQueue that we use for thread coordination
+    final SynchronousQueue<Object> queue = new SynchronousQueue<Object>();
+    List<Thread> threads = new ArrayList<Thread>(5);
+    for (int i = 0; i < 5; i++) {
+      threads.add(new Thread() {
+        public void run() {
+          try {
+            // The thread blocks here until we decide to let it go
+            queue.take();
+          } catch (InterruptedException ie) { }
+        }
+      });
+    }
+    // First, add two threads and make sure the pool size follows
+    pool.submit(threads.get(0));
+    assertEquals(1, pool.getPoolSize());
+    pool.submit(threads.get(1));
+    assertEquals(2, pool.getPoolSize());
+
+    // Next, terminate those threads and then make sure the pool is still the
+    // same size
+    queue.put(new Object());
+    threads.get(0).join();
+    queue.put(new Object());
+    threads.get(1).join();
+    assertEquals(2, pool.getPoolSize());
+
+    // Now let's simulate adding a RS meaning that we'll go up to three
+    // concurrent threads. The pool should not grow larger than three.
+    pool.submit(threads.get(2));
+    pool.submit(threads.get(3));
+    pool.submit(threads.get(4));
+    assertEquals(3, pool.getPoolSize());
+    queue.put(new Object());
+    queue.put(new Object());
+    queue.put(new Object());
+  }
+
+
 }
 
