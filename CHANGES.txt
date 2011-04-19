@@ -150,6 +150,7 @@ Trunk (unreleased changes)
     HADOOP-7223. FileContext createFlag combinations are not clearly defined.
     (suresh)
 
+    HADOOP-7231. Fix synopsis for -count. (Daryn Sharp via eli).
 
 Release 0.22.0 - Unreleased
 
