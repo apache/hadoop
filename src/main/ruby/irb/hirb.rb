@@ -17,10 +17,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-require 'rbconfig'
+#require 'rbconfig'
 
 module IRB
-  WINDOZE = Config::CONFIG['host_os'] =~ /mswin|mingw/
+  # WINDOZE = Config::CONFIG['host_os'] =~ /mswin|mingw/
   # Map the '/dev/null' according to the runing platform
   # Under Windows platform the 'dev/null' is not fully compliant with unix,
   # and the 'NUL' object need to be use instead.
@@ -38,7 +38,7 @@ module IRB
       # no error (though we're not blanking STDERR)
       begin
         devnull = "/dev/null"
-        devnull = "NUL" if WINDOZE 
+        #devnull = "NUL" if WINDOZE 
         f = File.open(devnull, "w")
         $stdout = f
         super
