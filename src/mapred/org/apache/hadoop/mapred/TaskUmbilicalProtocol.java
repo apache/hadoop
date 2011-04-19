@@ -59,6 +59,7 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
    * Version 16 Added numRequiredSlots to TaskStatus for MAPREDUCE-516
    * Version 17 Change in signature of getTask() for HADOOP-5488
    * Version 18 Added fatalError for child to communicate fatal errors to TT
+   * Version 19 Added jvmContext to most method signatures for MAPREDUCE-2429
    * */
 
   public static final long versionID = 19L;

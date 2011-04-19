@@ -48,6 +48,10 @@ Release 0.20.204.0 - unreleased
 
     MAPREDUCE-2420. JobTracker should be able to renew delegation token 
     over HTTP (boryas)
+
+    MAPREDUCE-2443. Fix TaskAspect for TaskUmbilicalProtocol.ping(..).
+    (Siddharth Seth via szetszwo)
+
   IMPROVEMENTS
 
     HDFS-1541. Not marking datanodes dead when namenode in safemode.

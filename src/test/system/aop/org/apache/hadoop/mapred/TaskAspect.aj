@@ -65,12 +65,12 @@ public privileged aspect TaskAspect {
     return;
   }
   
-  pointcut taskStatusUpdate(TaskReporter reporter, TaskAttemptID id) : 
-    call(public boolean TaskUmbilicalProtocol.ping(TaskAttemptID))
-          && this(reporter) && args(id);
+  pointcut taskStatusUpdate(TaskReporter reporter, TaskAttemptID id, JvmContext context) : 
+    call(public boolean TaskUmbilicalProtocol.ping(TaskAttemptID, JvmContext))
+          && this(reporter) && args(id, context);
   
-  after(TaskReporter reporter, TaskAttemptID id) throws IOException : 
-    taskStatusUpdate(reporter, id)  {
+  after(TaskReporter reporter, TaskAttemptID id, JvmContext context) throws IOException : 
+    taskStatusUpdate(reporter, id, context)  {
     synchronized (waitObject) {
       if(isWaitingForSignal.get()) {
         ControlAction[] actions = daemonProxy.getActions(
