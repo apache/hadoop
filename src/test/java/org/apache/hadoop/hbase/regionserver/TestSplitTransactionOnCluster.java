@@ -150,7 +150,7 @@ public class TestSplitTransactionOnCluster {
   }
 
   /**
-   * Test that intentionally has master fail the processing of the split message.
+   * A test that intentionally has master fail the processing of the split message.
    * Tests that the regionserver split ephemeral node gets cleaned up if it
    * crashes and that after we process server shutdown, the daughters are up on
    * line.
@@ -200,7 +200,9 @@ public class TestSplitTransactionOnCluster {
       RegionTransitionData rtd =
         ZKAssign.getData(t.getConnection().getZooKeeperWatcher(),
           hri.getEncodedName());
-      assertTrue(rtd.getEventType().equals(EventType.RS_ZK_REGION_SPLIT));
+      // State could be SPLIT or SPLITTING.
+      assertTrue(rtd.getEventType().equals(EventType.RS_ZK_REGION_SPLIT) ||
+        rtd.getEventType().equals(EventType.RS_ZK_REGION_SPLITTING));
       // Now crash the server
       cluster.abortRegionServer(tableRegionIndex);
       while(server.getOnlineRegions().size() > 0) {
