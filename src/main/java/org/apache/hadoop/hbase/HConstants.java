@@ -134,6 +134,12 @@ public final class HConstants {
   /** Parameter name for HBase instance root directory */
   public static final String HBASE_DIR = "hbase.rootdir";
 
+  /** Parameter name for HBase client IPC pool type */
+  public static final String HBASE_CLIENT_IPC_POOL_TYPE = "hbase.client.ipc.pool.type";
+
+  /** Parameter name for HBase client IPC pool size */
+  public static final String HBASE_CLIENT_IPC_POOL_SIZE = "hbase.client.ipc.pool.size";
+
   /** Used to construct the name of the log directory for a region server
    * Use '.' as a special character to seperate the log files from table data */
   public static final String HREGION_LOGDIR_NAME = ".logs";

@@ -20,22 +20,6 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ipc.VersionedProtocol;
-import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.ReflectionUtils;
-
-import javax.net.SocketFactory;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -50,9 +34,30 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+
+import javax.net.SocketFactory;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.PoolMap;
+import org.apache.hadoop.hbase.util.PoolMap.PoolType;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -67,8 +72,7 @@ public class HBaseClient {
 
   private static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.HBaseClient");
-  protected final Hashtable<ConnectionId, Connection> connections =
-    new Hashtable<ConnectionId, Connection>();
+  protected final Map<ConnectionId, Connection> connections;
 
   protected final Class<? extends Writable> valueClass;   // class of call values
   protected int counter;                            // counter for call ids
@@ -689,6 +693,8 @@ public class HBaseClient {
     this.conf = conf;
     this.socketFactory = factory;
     this.clusterId = conf.get(HConstants.CLUSTER_ID, "default");
+    this.connections = new PoolMap<ConnectionId, Connection>(
+        getPoolType(conf), getPoolSize(conf));
   }
 
   /**
@@ -698,6 +704,30 @@ public class HBaseClient {
    */
   public HBaseClient(Class<? extends Writable> valueClass, Configuration conf) {
     this(valueClass, conf, NetUtils.getDefaultSocketFactory(conf));
+  }
+
+  /**
+   * Return the pool type specified in the configuration, if it roughly equals either
+   * the name of {@link PoolType#Reusable} or {@link PoolType#ThreadLocal}, otherwise
+   * default to the former type.
+   *
+   * @param config configuration
+   * @return either a {@link PoolType#Reusable} or {@link PoolType#ThreadLocal}
+   */
+  private static PoolType getPoolType(Configuration config) {
+    return PoolType.valueOf(config.get(HConstants.HBASE_CLIENT_IPC_POOL_TYPE),
+        PoolType.RoundRobin, PoolType.ThreadLocal);
+  }
+
+  /**
+   * Return the pool size specified in the configuration, otherwise the maximum allowable 
+   * size (which for all intents and purposes represents an unbounded pool).
+   *
+   * @param config
+   * @return the maximum pool size
+   */
+  private static int getPoolSize(Configuration config) {
+    return config.getInt(HConstants.HBASE_CLIENT_IPC_POOL_SIZE, 1);
   }
 
   /** Return the socket factory of this client

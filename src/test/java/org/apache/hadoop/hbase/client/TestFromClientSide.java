@@ -38,6 +38,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -4032,6 +4035,116 @@ public class TestFromClientSide {
     queue.put(new Object());
   }
 
+  @Test
+  public void testClientPoolRoundRobin() throws IOException {
+    final byte[] tableName = Bytes.toBytes("testClientPoolRoundRobin");
 
+    int poolSize = 3;
+    int numVersions = poolSize * 2;
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.set(HConstants.HBASE_CLIENT_IPC_POOL_TYPE, "round-robin");
+    conf.setInt(HConstants.HBASE_CLIENT_IPC_POOL_SIZE, poolSize);
+
+    HTable table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY },
+        conf, Integer.MAX_VALUE);
+    table.setAutoFlush(true);
+    Put put = new Put(ROW);
+    put.add(FAMILY, QUALIFIER, VALUE);
+
+    Get get = new Get(ROW);
+    get.addColumn(FAMILY, QUALIFIER);
+    get.setMaxVersions();
+
+    for (int versions = 1; versions <= numVersions; versions++) {
+      table.put(put);
+
+      Result result = table.get(get);
+      NavigableMap<Long, byte[]> navigableMap = result.getMap().get(FAMILY)
+          .get(QUALIFIER);
+
+      assertEquals("The number of versions of '" + FAMILY + ":" + QUALIFIER
+          + " did not match " + versions, versions, navigableMap.size());
+      for (Map.Entry<Long, byte[]> entry : navigableMap.entrySet()) {
+        assertTrue("The value at time " + entry.getKey()
+            + " did not match what was put",
+            Bytes.equals(VALUE, entry.getValue()));
+      }
+    }
+  }
+
+  @Test
+  public void testClientPoolThreadLocal() throws IOException {
+    final byte[] tableName = Bytes.toBytes("testClientPoolThreadLocal");
+
+    int poolSize = Integer.MAX_VALUE;
+    int numVersions = 3;
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.set(HConstants.HBASE_CLIENT_IPC_POOL_TYPE, "thread-local");
+    conf.setInt(HConstants.HBASE_CLIENT_IPC_POOL_SIZE, poolSize);
+
+    final HTable table = TEST_UTIL.createTable(tableName,
+        new byte[][] { FAMILY }, conf);
+    table.setAutoFlush(true);
+    final Put put = new Put(ROW);
+    put.add(FAMILY, QUALIFIER, VALUE);
+
+    final Get get = new Get(ROW);
+    get.addColumn(FAMILY, QUALIFIER);
+    get.setMaxVersions();
+
+    for (int versions = 1; versions <= numVersions; versions++) {
+      table.put(put);
+
+      Result result = table.get(get);
+      NavigableMap<Long, byte[]> navigableMap = result.getMap().get(FAMILY)
+          .get(QUALIFIER);
+
+      assertEquals("The number of versions of '" + FAMILY + ":" + QUALIFIER
+          + " did not match " + versions, versions, navigableMap.size());
+      for (Map.Entry<Long, byte[]> entry : navigableMap.entrySet()) {
+        assertTrue("The value at time " + entry.getKey()
+            + " did not match what was put",
+            Bytes.equals(VALUE, entry.getValue()));
+      }
+    }
+
+    final Object waitLock = new Object();
+
+    ExecutorService executorService = Executors.newFixedThreadPool(numVersions);
+    for (int versions = numVersions; versions < numVersions * 2; versions++) {
+      final int versionsCopy = versions;
+      executorService.submit(new Callable<Void>() {
+        @Override
+        public Void call() {
+          try {
+            table.put(put);
+
+            Result result = table.get(get);
+            NavigableMap<Long, byte[]> navigableMap = result.getMap()
+                .get(FAMILY).get(QUALIFIER);
+
+            assertEquals("The number of versions of '" + FAMILY + ":"
+                + QUALIFIER + " did not match " + versionsCopy, versionsCopy,
+                navigableMap.size());
+            for (Map.Entry<Long, byte[]> entry : navigableMap.entrySet()) {
+              assertTrue("The value at time " + entry.getKey()
+                  + " did not match what was put",
+                  Bytes.equals(VALUE, entry.getValue()));
+            }
+            synchronized (waitLock) {
+              waitLock.wait();
+            }
+          } catch (Exception e) {
+          }
+
+          return null;
+        }
+      });
+    }
+    synchronized (waitLock) {
+      waitLock.notifyAll();
+    }
+    executorService.shutdownNow();
+  }
 }
 
