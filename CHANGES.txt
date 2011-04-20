@@ -258,6 +258,16 @@ Trunk (unreleased changes)
     HDFS-1813. Federation: Authentication using BlockToken in RPC to datanode 
                fails. (jitendra)
 
+    HDFS_1630. Support fsedits checksum. (hairong)
+
+    HDFS-1606. Provide a stronger data guarantee in the write pipeline by
+    adding a new datanode when an existing datanode failed.  (szetszwo)
+
+    HDFS-1442. Api to get delegation token in Hdfs class. (jitendra)
+
+    HDFS-1070. Speedup namenode image loading and saving by storing only
+    local file names. (hairong)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
@@ -326,6 +336,25 @@ Trunk (unreleased changes)
 
     HDFS-1767. Namenode ignores non-initial block report from datanodes
     when in safemode during startup. (Matt Foley via suresh)
+
+    HDFS-1817. Move pipeline_Fi_[39-51] from TestFiDataTransferProtocol
+    to TestFiPipelineClose.  (szetszwo)
+
+    HDFS-1760. In FSDirectory.getFullPathName(..), it is better to return "/"
+    for root directory instead of an empty string.  (Daryn Sharp via szetszwo)
+
+    HDFS-1833. Reduce repeated string constructions and unnecessary fields,
+    and fix comments in BlockReceiver.PacketResponder.  (szetszwo)
+
+    HDFS-1486. Generalize CLITest structure and interfaces to faciliate
+    upstream adoption (e.g. for web testing). (cos)
+
+    HDFS-1844. Move "fs -help" shell command tests from HDFS to COMMOM; see
+    also HADOOP-7230.  (Daryn Sharp via szetszwo)
+
+    HDFS-1840. In DFSClient, terminate the lease renewing thread when all files
+    being written are closed for a grace period, and start a new thread when
+    new files are opened for write.  (szetszwo)
 
   OPTIMIZATIONS
 
@@ -396,6 +425,18 @@ Trunk (unreleased changes)
 
     HDFS-1543. Reduce dev. cycle time by moving system testing artifacts from
     default build and push to maven for HDFS (Luke Lu via cos)
+
+    HDFS-1818. TestHDFSCLI is failing on trunk after HADOOP-7202.
+    (Aaron T. Myers via todd)
+
+    HDFS-1828. TestBlocksWithNotEnoughRacks intermittently fails assert.
+    (Matt Foley via eli)
+
+    HDFS-1824. delay instantiation of file system object until it is
+     needed (linked to HADOOP-7207) (boryas)
+
+    HDFS-1831. Fix append bug in FileContext and implement CreateFlag
+    check (related to HADOOP-7223). (suresh)
 
 Release 0.22.0 - Unreleased
 
@@ -853,8 +894,19 @@ Release 0.21.1 - Unreleased
 
     HDFS-1781. Fix the path for jsvc in bin/hdfs.  (John George via szetszwo)
 
-    HDFS-1782. Fix an NPE in RFSNamesystem.startFileInternal(..).
+    HDFS-1782. Fix an NPE in FSNamesystem.startFileInternal(..).
     (John George via szetszwo)
+
+    HDFS-1821. Fix username resolution in NameNode.createSymlink(..) and
+    FSDirectory.addSymlink(..).  (John George via szetszwo)
+
+    HDFS-1806. TestBlockReport.blockReport_08() and _09() are timing-dependent
+    and likely to fail on fast servers. (Matt Foley via eli)
+
+    HDFS-1845. Symlink comes up as directory after namenode restart.
+    (John George via eli)
+
+    HDFS-1666. Disable failing hdfsproxy test TestAuthorizationFilter (todd)
 
 Release 0.21.1 - Unreleased
 

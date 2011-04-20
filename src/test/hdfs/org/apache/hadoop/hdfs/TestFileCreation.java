@@ -630,7 +630,8 @@ public class TestFileCreation extends junit.framework.TestCase {
           expectedException != null
               && expectedException instanceof FileNotFoundException);
 
-      EnumSet<CreateFlag> overwriteFlag = EnumSet.of(CreateFlag.OVERWRITE);
+      EnumSet<CreateFlag> overwriteFlag = 
+        EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE);
       // Overwrite a file in root dir, should succeed
       out = createNonRecursive(fs, path, 1, overwriteFlag);
       out.close();

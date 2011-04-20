@@ -25,6 +25,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
+import java.util.NoSuchElementException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -37,8 +39,13 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.util.Progressable;
 
 @InterfaceAudience.Private
@@ -249,7 +256,7 @@ public class Hdfs extends AbstractFileSystem {
       if (hasNext()) {
         return thisListing.getPartialListing()[i++];
       }
-      throw new java.util.NoSuchElementException("No more entry in " + src);
+      throw new NoSuchElementException("No more entry in " + src);
     }
   }
 
@@ -383,5 +390,44 @@ public class Hdfs extends AbstractFileSystem {
   @Override
   public Path getLinkTarget(Path p) throws IOException { 
     return new Path(dfs.getLinkTarget(getUriPath(p)));
+  }
+  
+  @Override //AbstractFileSystem
+  public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
+    Token<DelegationTokenIdentifier> result = dfs
+        .getDelegationToken(renewer == null ? null : new Text(renewer));
+    result.setService(new Text(this.getCanonicalServiceName()));
+    List<Token<?>> tokenList = new ArrayList<Token<?>>();
+    tokenList.add(result);
+    return tokenList;
+  }
+
+  /**
+   * Renew an existing delegation token.
+   * 
+   * @param token delegation token obtained earlier
+   * @return the new expiration time
+   * @throws InvalidToken
+   * @throws IOException
+   */
+  @SuppressWarnings("unchecked")
+  public long renewDelegationToken(
+      Token<? extends AbstractDelegationTokenIdentifier> token)
+      throws InvalidToken, IOException {
+    return dfs.renewDelegationToken((Token<DelegationTokenIdentifier>) token);
+  }
+
+  /**
+   * Cancel an existing delegation token.
+   * 
+   * @param token delegation token
+   * @throws InvalidToken
+   * @throws IOException
+   */
+  @SuppressWarnings("unchecked")
+  public void cancelDelegationToken(
+      Token<? extends AbstractDelegationTokenIdentifier> token)
+      throws InvalidToken, IOException {
+    dfs.cancelDelegationToken((Token<DelegationTokenIdentifier>) token);
   }
 }

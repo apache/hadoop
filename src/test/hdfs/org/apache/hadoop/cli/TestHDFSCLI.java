@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.cli;
 
-import org.apache.hadoop.cli.util.CLITestData.TestCmd;
+import org.apache.hadoop.cli.util.CLICommand;
 import org.apache.hadoop.cli.util.CommandExecutor.Result;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -31,7 +31,7 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Test;
 
-public class TestHDFSCLI extends CLITestHelper {
+public class TestHDFSCLI extends CLITestHelperDFS {
 
   protected MiniDFSCluster dfsCluster = null;
   protected DistributedFileSystem dfs = null;
@@ -85,13 +85,13 @@ public class TestHDFSCLI extends CLITestHelper {
   protected String expandCommand(final String cmd) {
     String expCmd = cmd;
     expCmd = expCmd.replaceAll("NAMENODE", namenode);
-    expCmd = super.expandCommand(cmd);
+    expCmd = super.expandCommand(expCmd);
     return expCmd;
   }
   
   @Override
-  protected Result execute(TestCmd cmd) throws Exception {
-    return CmdFactoryDFS.getCommandExecutor(cmd, namenode).executeCommand(cmd.getCmd());
+  protected Result execute(CLICommand cmd) throws Exception {
+    return cmd.getExecutor(namenode).executeCommand(cmd.getCmd());
   }
 
   @Test

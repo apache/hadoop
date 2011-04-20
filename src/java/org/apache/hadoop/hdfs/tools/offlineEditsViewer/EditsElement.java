@@ -80,5 +80,6 @@ public enum EditsElement {
     KEY_ID,
     KEY_EXPIRY_DATE,
     KEY_LENGTH,
-    KEY_BLOB
+    KEY_BLOB,
+    CHECKSUM
 }

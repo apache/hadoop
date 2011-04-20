@@ -72,6 +72,8 @@ public class NameNodeMetrics implements Updater {
                           new MetricsTimeVaryingInt("FileInfoOps", registry);
     public MetricsTimeVaryingInt numAddBlockOps = 
                           new MetricsTimeVaryingInt("AddBlockOps", registry);
+    public final MetricsTimeVaryingInt numGetAdditionalDatanodeOps
+        = new MetricsTimeVaryingInt("GetAdditionalDatanodeOps", registry);
     public MetricsTimeVaryingInt numcreateSymlinkOps = 
                           new MetricsTimeVaryingInt("CreateSymlinkOps", registry);
     public MetricsTimeVaryingInt numgetLinkTargetOps = 

@@ -45,6 +45,7 @@ import javax.net.SocketFactory;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -128,15 +129,16 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   private volatile long serverDefaultsLastUpdate;
   static Random r = new Random();
   final String clientName;
-  final LeaseChecker leasechecker = new LeaseChecker();
   Configuration conf;
   long defaultBlockSize;
   private short defaultReplication;
   SocketFactory socketFactory;
   int socketTimeout;
   final int writePacketSize;
+  final DataTransferProtocol.ReplaceDatanodeOnFailure dtpReplaceDatanodeOnFailure;
   final FileSystem.Statistics stats;
   final int hdfsTimeout;    // timeout value for a DFS operation.
+  final LeaseChecker leasechecker;
 
   /**
    * The locking hierarchy is to first acquire lock on DFSClient object, followed by 
@@ -248,8 +250,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     this.writePacketSize = 
       conf.getInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 
                   DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
+    this.dtpReplaceDatanodeOnFailure = DataTransferProtocol.ReplaceDatanodeOnFailure.get(conf);
+
     // The hdfsTimeout is currently the same as the ipc timeout 
     this.hdfsTimeout = Client.getTimeout(conf);
+    this.leasechecker = new LeaseChecker(hdfsTimeout);
 
     this.ugi = UserGroupInformation.getCurrentUser();
     
@@ -570,8 +575,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                              int buffersize)
       throws IOException {
     return create(src, FsPermission.getDefault(),
-        overwrite ? EnumSet.of(CreateFlag.OVERWRITE) : EnumSet.of(CreateFlag.CREATE), 
-        replication, blockSize, progress, buffersize);
+        overwrite ? EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
+            : EnumSet.of(CreateFlag.CREATE), replication, blockSize, progress,
+        buffersize);
   }
 
   /**
@@ -637,9 +643,29 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   }
   
   /**
+   * Append to an existing file if {@link CreateFlag#APPEND} is present
+   */
+  private OutputStream primitiveAppend(String src, EnumSet<CreateFlag> flag,
+      int buffersize, Progressable progress) throws IOException {
+    if (flag.contains(CreateFlag.APPEND)) {
+      HdfsFileStatus stat = getFileInfo(src);
+      if (stat == null) { // No file to append to
+        // New file needs to be created if create option is present
+        if (!flag.contains(CreateFlag.CREATE)) {
+          throw new FileNotFoundException("failed to append to non-existent file "
+              + src + " on client " + clientName);
+        }
+        return null;
+      }
+      return callAppend(stat, src, buffersize, progress);
+    }
+    return null;
+  }
+  
+  /**
    * Same as {{@link #create(String, FsPermission, EnumSet, short, long,
    *  Progressable, int)} except that the permission
-   *   is absolute (ie has already been masked with umask.
+   *  is absolute (ie has already been masked with umask.
    */
   public OutputStream primitiveCreate(String src, 
                              FsPermission absPermission,
@@ -652,9 +678,13 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                              int bytesPerChecksum)
       throws IOException, UnresolvedLinkException {
     checkOpen();
-    OutputStream result = new DFSOutputStream(this, src, absPermission,
-        flag, createParent, replication, blockSize, progress, buffersize,
-        bytesPerChecksum);
+    CreateFlag.validate(flag);
+    OutputStream result = primitiveAppend(src, flag, buffersize, progress);
+    if (result == null) {
+      result = new DFSOutputStream(this, src, absPermission,
+          flag, createParent, replication, blockSize, progress, buffersize,
+          bytesPerChecksum);
+    }
     leasechecker.put(src, result);
     return result;
   }
@@ -696,6 +726,25 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     }
   }
 
+  /** Method to get stream returned by append call */
+  private OutputStream callAppend(HdfsFileStatus stat, String src,
+      int buffersize, Progressable progress) throws IOException {
+    LocatedBlock lastBlock = null;
+    try {
+      lastBlock = namenode.append(src, clientName);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class,
+                                     SafeModeException.class,
+                                     DSQuotaExceededException.class,
+                                     UnsupportedOperationException.class,
+                                     UnresolvedPathException.class);
+    }
+    return new DFSOutputStream(this, src, buffersize, progress,
+        lastBlock, stat, conf.getInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 
+                                     DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT));
+  }
+  
   /**
    * Append to an existing HDFS file.  
    * 
@@ -709,22 +758,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   OutputStream append(String src, int buffersize, Progressable progress)
       throws IOException {
     checkOpen();
-    HdfsFileStatus stat = null;
-    LocatedBlock lastBlock = null;
-    try {
-      stat = getFileInfo(src);
-      lastBlock = namenode.append(src, clientName);
-    } catch(RemoteException re) {
-      throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class,
-                                     SafeModeException.class,
-                                     DSQuotaExceededException.class,
-                                     UnsupportedOperationException.class,
-                                     UnresolvedPathException.class);
-    }
-    OutputStream result = new DFSOutputStream(this, src, buffersize, progress,
-        lastBlock, stat, conf.getInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 
-                                     DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT));
+    HdfsFileStatus stat = getFileInfo(src);
+    OutputStream result = callAppend(stat, src, buffersize, progress);
     leasechecker.put(src, result);
     return result;
   }
@@ -1325,38 +1360,106 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     }
   }
 
-  boolean isLeaseCheckerStarted() {
-    return leasechecker.daemon != null;
-  }
-
   /** Lease management*/
-  class LeaseChecker implements Runnable {
+  class LeaseChecker {
+    static final long LEASE_RENEWER_GRACE_DEFAULT = 60*1000L;
+    static final long LEASE_RENEWER_SLEEP_DEFAULT = 1000L;
     /** A map from src -> DFSOutputStream of files that are currently being
      * written by this client.
      */
     private final SortedMap<String, OutputStream> pendingCreates
         = new TreeMap<String, OutputStream>();
+    /** The time in milliseconds that the map became empty. */
+    private long emptyTime = Long.MAX_VALUE;
+    /** A fixed lease renewal time period in milliseconds */
+    private final long renewal;
 
+    /** A daemon for renewing lease */
     private Daemon daemon = null;
-    
+    /** Only the daemon with currentId should run. */
+    private int currentId = 0;
+
+    /** 
+     * A period in milliseconds that the lease renewer thread should run
+     * after the map became empty.
+     * If the map is empty for a time period longer than the grace period,
+     * the renewer should terminate.  
+     */
+    private long gracePeriod;
+    /**
+     * The time period in milliseconds
+     * that the renewer sleeps for each iteration. 
+     */
+    private volatile long sleepPeriod;
+
+    private LeaseChecker(final long timeout) {
+      this.renewal = (timeout > 0 && timeout < LEASE_SOFTLIMIT_PERIOD)? 
+          timeout/2: LEASE_SOFTLIMIT_PERIOD/2;
+      setGraceSleepPeriod(LEASE_RENEWER_GRACE_DEFAULT);
+    }
+
+    /** Set the grace period and adjust the sleep period accordingly. */
+    void setGraceSleepPeriod(final long gracePeriod) {
+      if (gracePeriod < 100L) {
+        throw new HadoopIllegalArgumentException(gracePeriod
+            + " = gracePeriod < 100ms is too small.");
+      }
+      synchronized(this) {
+        this.gracePeriod = gracePeriod;
+      }
+      final long half = gracePeriod/2;
+      this.sleepPeriod = half < LEASE_RENEWER_SLEEP_DEFAULT?
+          half: LEASE_RENEWER_SLEEP_DEFAULT;
+    }
+
+    /** Is the daemon running? */
+    synchronized boolean isRunning() {
+      return daemon != null && daemon.isAlive();
+    }
+
+    /** Is the empty period longer than the grace period? */  
+    private synchronized boolean isRenewerExpired() {
+      return emptyTime != Long.MAX_VALUE
+          && System.currentTimeMillis() - emptyTime > gracePeriod;
+    }
+
     synchronized void put(String src, OutputStream out) {
       if (clientRunning) {
-        if (daemon == null) {
-          daemon = new Daemon(this);
+        if (daemon == null || isRenewerExpired()) {
+          //start a new deamon with a new id.
+          final int id = ++currentId;
+          daemon = new Daemon(new Runnable() {
+            @Override
+            public void run() {
+              try {
+                LeaseChecker.this.run(id);
+              } catch(InterruptedException e) {
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug(LeaseChecker.this.getClass().getSimpleName()
+                      + " is interrupted.", e);
+                }
+              }
+            }
+          });
           daemon.start();
         }
         pendingCreates.put(src, out);
+        emptyTime = Long.MAX_VALUE;
       }
     }
     
     synchronized void remove(String src) {
       pendingCreates.remove(src);
+      if (pendingCreates.isEmpty() && emptyTime == Long.MAX_VALUE) {
+        //discover the first time that the map is empty.
+        emptyTime = System.currentTimeMillis();
+      }
     }
     
     void interruptAndJoin() throws InterruptedException {
       Daemon daemonCopy = null;
       synchronized (this) {
-        if (daemon != null) {
+        if (isRunning()) {
           daemon.interrupt();
           daemonCopy = daemon;
         }
@@ -1423,37 +1526,30 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      * Periodically check in with the namenode and renew all the leases
      * when the lease period is half over.
      */
-    public void run() {
-      long lastRenewed = 0;
-      int renewal = (int)(LEASE_SOFTLIMIT_PERIOD / 2);
-      if (hdfsTimeout > 0) {
-        renewal = Math.min(renewal, hdfsTimeout/2);
-      }
-      while (clientRunning && !Thread.interrupted()) {
-        if (System.currentTimeMillis() - lastRenewed > renewal) {
+    private void run(final int id) throws InterruptedException {
+      for(long lastRenewed = System.currentTimeMillis();
+          clientRunning && !Thread.interrupted();
+          Thread.sleep(sleepPeriod)) {
+        if (System.currentTimeMillis() - lastRenewed >= renewal) {
           try {
             renew();
             lastRenewed = System.currentTimeMillis();
           } catch (SocketTimeoutException ie) {
-            LOG.warn("Problem renewing lease for " + clientName +
-                     " for a period of " + (hdfsTimeout/1000) +
-                     " seconds. Shutting down HDFS client...", ie);
+            LOG.warn("Failed to renew lease for " + clientName + " for "
+                + (renewal/1000) + " seconds.  Aborting ...", ie);
             abort();
             break;
           } catch (IOException ie) {
-            LOG.warn("Problem renewing lease for " + clientName +
-                     " for a period of " + (hdfsTimeout/1000) +
-                     " seconds. Will retry shortly...", ie);
+            LOG.warn("Failed to renew lease for " + clientName + " for "
+                + (renewal/1000) + " seconds.  Will retry shortly ...", ie);
           }
         }
 
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException ie) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(this + " is interrupted.", ie);
+        synchronized(this) {
+          if (id != currentId || isRenewerExpired()) {
+            //no longer the current daemon or expired
+            return;
           }
-          return;
         }
       }
     }

@@ -33,9 +33,8 @@ import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.cli.CmdFactoryDFS;
-import org.apache.hadoop.cli.util.CLITestData;
-import org.apache.hadoop.cli.util.CommandExecutor;
+import org.apache.hadoop.cli.CLITestCmdDFS;
+import org.apache.hadoop.cli.util.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -350,10 +349,9 @@ public class TestStorageRestore extends TestCase {
 
       String cmd = "-fs NAMENODE -restoreFailedStorage false";
       String namenode = config.get(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "file:///");
-      CommandExecutor executor = 
-        CmdFactoryDFS.getCommandExecutor(
-          new CLITestData.TestCmd(cmd, CLITestData.TestCmd.CommandType.DFSADMIN),
-          namenode);
+      CommandExecutor executor =
+          new CLITestCmdDFS(cmd, new CLICommandDFSAdmin()).getExecutor(namenode);
+
       executor.executeCommand(cmd);
       restore = fsi.getStorage().getRestoreFailedStorage();
       assertFalse("After set true call restore is " + restore, restore);

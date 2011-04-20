@@ -22,18 +22,13 @@ import java.io.IOException;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fi.DataTransferTestUtil;
-import org.apache.hadoop.fi.FiTestUtil;
-import org.apache.hadoop.fi.DataTransferTestUtil.DataNodeAction;
 import org.apache.hadoop.fi.DataTransferTestUtil.DataTransferTest;
-import org.apache.hadoop.fi.DataTransferTestUtil.DatanodeMarkingAction;
 import org.apache.hadoop.fi.DataTransferTestUtil.DoosAction;
-import org.apache.hadoop.fi.DataTransferTestUtil.IoeAction;
 import org.apache.hadoop.fi.DataTransferTestUtil.OomAction;
 import org.apache.hadoop.fi.DataTransferTestUtil.SleepAction;
 import org.apache.hadoop.fi.DataTransferTestUtil.VerificationAction;
+import org.apache.hadoop.fi.FiTestUtil;
 import org.apache.hadoop.fi.FiTestUtil.Action;
-import org.apache.hadoop.fi.FiTestUtil.ConstraintSatisfactionAction;
-import org.apache.hadoop.fi.FiTestUtil.MarkerConstraint;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -41,7 +36,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -63,6 +60,10 @@ public class TestFiDataTransferProtocol {
         REPLICATION, BLOCKSIZE);
   }
 
+  {
+    ((Log4JLogger)DataTransferProtocol.LOG).getLogger().setLevel(Level.ALL);
+  }
+
   /**
    * 1. create files with dfs
    * 2. write 1 byte
@@ -70,9 +71,9 @@ public class TestFiDataTransferProtocol {
    * 4. open the same file
    * 5. read the 1 byte and compare results
    */
-  private static void write1byte(String methodName) throws IOException {
-    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(REPLICATION).format(true).build();
+  static void write1byte(String methodName) throws IOException {
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf
+        ).numDataNodes(REPLICATION + 1).build();
     final FileSystem dfs = cluster.getFileSystem();
     try {
       final Path p = new Path("/" + methodName + "/foo");
@@ -304,185 +305,5 @@ public class TestFiDataTransferProtocol {
   public void pipeline_Fi_16() throws IOException {
     final String methodName = FiTestUtil.getMethodName();
     runCallWritePacketToDisk(methodName, 2, new DoosAction(methodName, 2));
-  }
-
-  private static void runPipelineCloseTest(String methodName,
-      Action<DatanodeID, IOException> a) throws IOException {
-    FiTestUtil.LOG.info("Running " + methodName + " ...");
-    final DataTransferTest t = (DataTransferTest) DataTransferTestUtil
-        .initTest();
-    t.fiPipelineClose.set(a);
-    write1byte(methodName);
-  }
-
-  private static void run41_43(String name, int i) throws IOException {
-    runPipelineCloseTest(name, new SleepAction(name, i, 3000));
-  }
-
-  private static void runPipelineCloseAck(String name, int i, DataNodeAction a
-      ) throws IOException {
-    FiTestUtil.LOG.info("Running " + name + " ...");
-    final DataTransferTest t = (DataTransferTest)DataTransferTestUtil.initTest();
-    final MarkerConstraint marker = new MarkerConstraint(name);
-    t.fiPipelineClose.set(new DatanodeMarkingAction(name, i, marker));
-    t.fiPipelineAck.set(new ConstraintSatisfactionAction<DatanodeID, IOException>(a, marker));
-    write1byte(name);
-  }
-
-  private static void run39_40(String name, int i) throws IOException {
-    runPipelineCloseAck(name, i, new SleepAction(name, i, 0));
-  }
-
-  /**
-   * Pipeline close:
-   * DN1 never responses after received close ack DN2.
-   * Client gets an IOException and determine DN1 bad.
-   */
-  @Test
-  public void pipeline_Fi_39() throws IOException {
-    run39_40(FiTestUtil.getMethodName(), 1);
-  }
-
-  /**
-   * Pipeline close:
-   * DN0 never responses after received close ack DN1.
-   * Client gets an IOException and determine DN0 bad.
-   */
-  @Test
-  public void pipeline_Fi_40() throws IOException {
-    run39_40(FiTestUtil.getMethodName(), 0);
-  }
-  
-  /**
-   * Pipeline close with DN0 very slow but it won't lead to timeout.
-   * Client finishes close successfully.
-   */
-  @Test
-  public void pipeline_Fi_41() throws IOException {
-    run41_43(FiTestUtil.getMethodName(), 0);
-  }
-
-  /**
-   * Pipeline close with DN1 very slow but it won't lead to timeout.
-   * Client finishes close successfully.
-   */
-  @Test
-  public void pipeline_Fi_42() throws IOException {
-    run41_43(FiTestUtil.getMethodName(), 1);
-  }
-
-  /**
-   * Pipeline close with DN2 very slow but it won't lead to timeout.
-   * Client finishes close successfully.
-   */
-  @Test
-  public void pipeline_Fi_43() throws IOException {
-    run41_43(FiTestUtil.getMethodName(), 2);
-  }
-
-  /**
-   * Pipeline close:
-   * DN0 throws an OutOfMemoryException
-   * right after it received a close request from client.
-   * Client gets an IOException and determine DN0 bad.
-   */
-  @Test
-  public void pipeline_Fi_44() throws IOException {
-    final String methodName = FiTestUtil.getMethodName();
-    runPipelineCloseTest(methodName, new OomAction(methodName, 0));
-  }
-
-  /**
-   * Pipeline close:
-   * DN1 throws an OutOfMemoryException
-   * right after it received a close request from client.
-   * Client gets an IOException and determine DN1 bad.
-   */
-  @Test
-  public void pipeline_Fi_45() throws IOException {
-    final String methodName = FiTestUtil.getMethodName();
-    runPipelineCloseTest(methodName, new OomAction(methodName, 1));
-  }
-
-  /**
-   * Pipeline close:
-   * DN2 throws an OutOfMemoryException
-   * right after it received a close request from client.
-   * Client gets an IOException and determine DN2 bad.
-   */
-  @Test
-  public void pipeline_Fi_46() throws IOException {
-    final String methodName = FiTestUtil.getMethodName();
-    runPipelineCloseTest(methodName, new OomAction(methodName, 2));
-  }
-
-  private static void run47_48(String name, int i) throws IOException {
-    runPipelineCloseAck(name, i, new OomAction(name, i));
-  }
-
-  /**
-   * Pipeline close:
-   * DN1 throws an OutOfMemoryException right after
-   * it received a close ack from DN2.
-   * Client gets an IOException and determine DN1 bad.
-   */
-  @Test
-  public void pipeline_Fi_47() throws IOException {
-    run47_48(FiTestUtil.getMethodName(), 1);
-  }
-
-  /**
-   * Pipeline close:
-   * DN0 throws an OutOfMemoryException right after
-   * it received a close ack from DN1.
-   * Client gets an IOException and determine DN0 bad.
-   */
-  @Test
-  public void pipeline_Fi_48() throws IOException {
-    run47_48(FiTestUtil.getMethodName(), 0);
-  }
-
-  private static void runBlockFileCloseTest(String methodName,
-      Action<DatanodeID, IOException> a) throws IOException {
-    FiTestUtil.LOG.info("Running " + methodName + " ...");
-    final DataTransferTest t = (DataTransferTest) DataTransferTestUtil
-        .initTest();
-    t.fiBlockFileClose.set(a);
-    write1byte(methodName);
-  }
-
-  private static void run49_51(String name, int i) throws IOException {
-    runBlockFileCloseTest(name, new IoeAction(name, i, "DISK ERROR"));
-  }
-
-  /**
-   * Pipeline close:
-   * DN0 throws a disk error exception when it is closing the block file.
-   * Client gets an IOException and determine DN0 bad.
-   */
-  @Test
-  public void pipeline_Fi_49() throws IOException {
-    run49_51(FiTestUtil.getMethodName(), 0);
-  }
-
-
-  /**
-   * Pipeline close:
-   * DN1 throws a disk error exception when it is closing the block file.
-   * Client gets an IOException and determine DN1 bad.
-   */
-  @Test
-  public void pipeline_Fi_50() throws IOException {
-    run49_51(FiTestUtil.getMethodName(), 1);
-  }
-
-  /**
-   * Pipeline close:
-   * DN2 throws a disk error exception when it is closing the block file.
-   * Client gets an IOException and determine DN2 bad.
-   */
-  @Test
-  public void pipeline_Fi_51() throws IOException {
-    run49_51(FiTestUtil.getMethodName(), 2);
   }
 }

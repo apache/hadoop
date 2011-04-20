@@ -30,6 +30,7 @@ import java.security.DigestInputStream;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.util.Arrays;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -179,7 +180,11 @@ class FSImageFormat {
 
         // load all inodes
         LOG.info("Number of files = " + numFiles);
-        loadFullNameINodes(numFiles, in);
+        if (imgVersion <= -30) {
+          loadLocalNameINodes(numFiles, in);
+        } else {
+          loadFullNameINodes(numFiles, in);
+        }
 
         // load datanode info
         this.loadDatanodes(in);
@@ -214,6 +219,64 @@ class FSImageFormat {
     fsDir.rootDir.setModificationTime(root.getModificationTime());
     fsDir.rootDir.setPermissionStatus(root.getPermissionStatus());    
   }
+
+  /** 
+   * load fsimage files assuming only local names are stored
+   *   
+   * @param numFiles number of files expected to be read
+   * @param in image input stream
+   * @throws IOException
+   */  
+   private void loadLocalNameINodes(long numFiles, DataInputStream in) 
+   throws IOException {
+     assert imgVersion <= -30; // -30: store only local name in image
+     assert numFiles > 0;
+
+     // load root
+     if( in.readShort() != 0) {
+       throw new IOException("First node is not root");
+     }   
+     INode root = loadINode(in);
+     // update the root's attributes
+     updateRootAttr(root);
+     numFiles--;
+
+     // load rest of the nodes directory by directory
+     while (numFiles > 0) {
+       numFiles -= loadDirectory(in);
+     }
+     if (numFiles != 0) {
+       throw new IOException("Read unexpect number of files: " + -numFiles);
+     }
+   }
+   
+   /**
+    * Load all children of a directory
+    * 
+    * @param in
+    * @return number of child inodes read
+    * @throws IOException
+    */
+   private int loadDirectory(DataInputStream in) throws IOException {
+     String parentPath = FSImageSerialization.readString(in);
+     FSDirectory fsDir = namesystem.dir;
+     INode parent = fsDir.rootDir.getNode(parentPath, true);
+     if (parent == null || !parent.isDirectory()) {
+       throw new IOException("Path " + parentPath + "is not a directory.");
+     }
+
+     int numChildren = in.readInt();
+     for(int i=0; i<numChildren; i++) {
+       // load single inode
+       byte[] localName = new byte[in.readShort()];
+       in.readFully(localName); // read local name
+       INode newNode = loadINode(in); // read rest of inode
+
+       // add to parent
+       namesystem.dir.addToParent(localName, (INodeDirectory)parent, newNode, false);
+     }
+     return numChildren;
+   }
 
   /**
    * load fsimage files assuming full path names are stored
@@ -485,9 +548,10 @@ class FSImageFormat {
         byte[] byteStore = new byte[4*FSConstants.MAX_PATH_LENGTH];
         ByteBuffer strbuf = ByteBuffer.wrap(byteStore);
         // save the root
-        FSImageSerialization.saveINode2Image(strbuf, fsDir.rootDir, out);
+        FSImageSerialization.saveINode2Image(fsDir.rootDir, out);
         // save the rest of the nodes
-        saveImage(strbuf, 0, fsDir.rootDir, out);
+        saveImage(strbuf, fsDir.rootDir, out);
+        // save files under construction
         sourceNamesystem.saveFilesUnderConstruction(out);
         sourceNamesystem.saveSecretManagerState(out);
         strbuf = null;
@@ -511,28 +575,33 @@ class FSImageFormat {
      * This is a recursive procedure, which first saves all children of
      * a current directory and then moves inside the sub-directories.
      */
-    private static void saveImage(ByteBuffer parentPrefix,
-                                  int prefixLength,
+    private static void saveImage(ByteBuffer currentDirName,
                                   INodeDirectory current,
                                   DataOutputStream out) throws IOException {
-      int newPrefixLength = prefixLength;
-      if (current.getChildrenRaw() == null)
+      List<INode> children = current.getChildrenRaw();
+      if (children == null || children.isEmpty())
         return;
-      for(INode child : current.getChildren()) {
-        // print all children first
-        parentPrefix.position(prefixLength);
-        parentPrefix.put(PATH_SEPARATOR).put(child.getLocalNameBytes());
-        FSImageSerialization.saveINode2Image(parentPrefix, child, out);
+      // print prefix (parent directory name)
+      int prefixLen = currentDirName.position();
+      if (prefixLen == 0) {  // root
+        out.writeShort(PATH_SEPARATOR.length);
+        out.write(PATH_SEPARATOR);
+      } else {  // non-root directories
+        out.writeShort(prefixLen);
+        out.write(currentDirName.array(), 0, prefixLen);
       }
-      for(INode child : current.getChildren()) {
+      out.writeInt(children.size());
+      for(INode child : children) {
+        // print all children first
+        FSImageSerialization.saveINode2Image(child, out);
+      }
+      for(INode child : children) {
         if(!child.isDirectory())
           continue;
-        parentPrefix.position(prefixLength);
-        parentPrefix.put(PATH_SEPARATOR).put(child.getLocalNameBytes());
-        newPrefixLength = parentPrefix.position();
-        saveImage(parentPrefix, newPrefixLength, (INodeDirectory)child, out);
+        currentDirName.put(PATH_SEPARATOR).put(child.getLocalNameBytes());
+        saveImage(currentDirName, (INodeDirectory)child, out);
+        currentDirName.position(prefixLen);
       }
-      parentPrefix.position(prefixLength);
     }
   }
 }

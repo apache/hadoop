@@ -20,12 +20,15 @@ package org.apache.hadoop.hdfs.server.namenode;
 import junit.framework.TestCase;
 import java.io.*;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.*;
 
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -301,6 +304,39 @@ public class TestEditLog extends TestCase {
       threadB.shutdown();
       if(fileSys != null) fileSys.close();
       if(cluster != null) cluster.shutdown();
+    }
+  }
+  
+  public void testEditChecksum() throws Exception {
+    // start a cluster 
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+    FileSystem fileSys = null;
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).build();
+    cluster.waitActive();
+    fileSys = cluster.getFileSystem();
+    final FSNamesystem namesystem = cluster.getNamesystem();
+
+    FSImage fsimage = namesystem.getFSImage();
+    final FSEditLog editLog = fsimage.getEditLog();
+    fileSys.mkdirs(new Path("/tmp"));
+    File editFile = editLog.getFsEditName();
+    editLog.close();
+    cluster.shutdown();
+      long fileLen = editFile.length();
+    System.out.println("File name: " + editFile + " len: " + fileLen);
+    RandomAccessFile rwf = new RandomAccessFile(editFile, "rw");
+    rwf.seek(fileLen-4); // seek to checksum bytes
+    int b = rwf.readInt();
+    rwf.seek(fileLen-4);
+    rwf.writeInt(b+1);
+    rwf.close();
+    
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).format(false).build();
+      fail("should not be able to start");
+    } catch (ChecksumException e) {
+      // expected
     }
   }
 }

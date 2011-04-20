@@ -26,6 +26,7 @@ import java.util.Map;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
@@ -202,19 +203,12 @@ public class TestLeaseRecovery2 {
         try {
           dfs2.create(filepath, false, BUF_SIZE, REPLICATION_NUM, BLOCK_SIZE);
           fail("Creation of an existing file should never succeed.");
+        } catch (FileAlreadyExistsException ex) {
+          done = true;
+        } catch (AlreadyBeingCreatedException ex) {
+          AppendTestUtil.LOG.info("GOOD! got " + ex.getMessage());
         } catch (IOException ioe) {
-          final String message = ioe.getMessage();
-          if (message.contains("file exists")) {
-            AppendTestUtil.LOG.info("done", ioe);
-            done = true;
-          }
-          else if (message.contains(
-              AlreadyBeingCreatedException.class.getSimpleName())) {
-            AppendTestUtil.LOG.info("GOOD! got " + message);
-          }
-          else {
-            AppendTestUtil.LOG.warn("UNEXPECTED IOException", ioe);
-          }
+          AppendTestUtil.LOG.warn("UNEXPECTED IOException", ioe);
         }
 
         if (!done) {

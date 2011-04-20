@@ -31,8 +31,10 @@ import java.net.Socket;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
@@ -96,9 +98,6 @@ import org.apache.hadoop.util.StringUtils;
  * starts sending packets from the dataQueue.
 ****************************************************************/
 class DFSOutputStream extends FSOutputSummer implements Syncable {
-  /**
-   * 
-   */
   private final DFSClient dfsClient;
   private Configuration conf;
   private static final int MAX_PACKETS = 80; // each packet 64K, total 5MB
@@ -295,10 +294,18 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
     private BlockConstructionStage stage;  // block construction stage
     private long bytesSent = 0; // number of bytes that've been sent
 
+    /** Nodes have been used in the pipeline before and have failed. */
+    private final List<DatanodeInfo> failed = new ArrayList<DatanodeInfo>();
+    /** Has the current block been hflushed? */
+    private boolean isHflushed = false;
+    /** Append on an existing block? */
+    private final boolean isAppend;
+
     /**
      * Default construction for file create
      */
     private DataStreamer() {
+      isAppend = false;
       stage = BlockConstructionStage.PIPELINE_SETUP_CREATE;
     }
     
@@ -311,6 +318,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
      */
     private DataStreamer(LocatedBlock lastBlock, HdfsFileStatus stat,
         int bytesPerChecksum) throws IOException {
+      isAppend = true;
       stage = BlockConstructionStage.PIPELINE_SETUP_APPEND;
       block = lastBlock.getBlock();
       bytesSent = block.getNumBytes();
@@ -750,6 +758,105 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       return doSleep;
     }
 
+    private void setHflush() {
+      isHflushed = true;
+    }
+
+    private int findNewDatanode(final DatanodeInfo[] original
+        ) throws IOException {
+      if (nodes.length != original.length + 1) {
+        throw new IOException("Failed to add a datanode:"
+            + " nodes.length != original.length + 1, nodes="
+            + Arrays.asList(nodes) + ", original=" + Arrays.asList(original));
+      }
+      for(int i = 0; i < nodes.length; i++) {
+        int j = 0;
+        for(; j < original.length && !nodes[i].equals(original[j]); j++);
+        if (j == original.length) {
+          return i;
+        }
+      }
+      throw new IOException("Failed: new datanode not found: nodes="
+          + Arrays.asList(nodes) + ", original=" + Arrays.asList(original));
+    }
+
+    private void addDatanode2ExistingPipeline() throws IOException {
+      if (DataTransferProtocol.LOG.isDebugEnabled()) {
+        DataTransferProtocol.LOG.debug("lastAckedSeqno = " + lastAckedSeqno);
+      }
+      /*
+       * Is data transfer necessary?  We have the following cases.
+       * 
+       * Case 1: Failure in Pipeline Setup
+       * - Append
+       *    + Transfer the stored replica, which may be a RBW or a finalized.
+       * - Create
+       *    + If no data, then no transfer is required.
+       *    + If there are data written, transfer RBW. This case may happens 
+       *      when there are streaming failure earlier in this pipeline.
+       *
+       * Case 2: Failure in Streaming
+       * - Append/Create:
+       *    + transfer RBW
+       * 
+       * Case 3: Failure in Close
+       * - Append/Create:
+       *    + no transfer, let NameNode replicates the block.
+       */
+      if (!isAppend && lastAckedSeqno < 0
+          && stage == BlockConstructionStage.PIPELINE_SETUP_CREATE) {
+        //no data have been written
+        return;
+      } else if (stage == BlockConstructionStage.PIPELINE_CLOSE
+          || stage == BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
+        //pipeline is closing
+        return;
+      }
+
+      //get a new datanode
+      final DatanodeInfo[] original = nodes;
+      final LocatedBlock lb = dfsClient.namenode.getAdditionalDatanode(
+          src, block, nodes, failed.toArray(new DatanodeInfo[failed.size()]),
+          1, dfsClient.clientName);
+      nodes = lb.getLocations();
+
+      //find the new datanode
+      final int d = findNewDatanode(original);
+
+      //transfer replica
+      final DatanodeInfo src = d == 0? nodes[1]: nodes[d - 1];
+      final DatanodeInfo[] targets = {nodes[d]};
+      transfer(src, targets, lb.getBlockToken());
+    }
+
+    private void transfer(final DatanodeInfo src, final DatanodeInfo[] targets,
+        final Token<BlockTokenIdentifier> blockToken) throws IOException {
+      //transfer replica to the new datanode
+      Socket sock = null;
+      DataOutputStream out = null;
+      DataInputStream in = null;
+      try {
+        sock = createSocketForPipeline(src, 2, dfsClient);
+        final long writeTimeout = dfsClient.getDatanodeWriteTimeout(2);
+        out = new DataOutputStream(new BufferedOutputStream(
+            NetUtils.getOutputStream(sock, writeTimeout),
+            DataNode.SMALL_BUFFER_SIZE));
+
+        //send the TRANSFER_BLOCK request
+        DataTransferProtocol.Sender.opTransferBlock(out, block,
+            dfsClient.clientName, targets, blockToken);
+
+        //ack
+        in = new DataInputStream(NetUtils.getInputStream(sock));
+        if (SUCCESS != DataTransferProtocol.Status.read(in)) {
+          throw new IOException("Failed to add a datanode");
+        }
+      } finally {
+        IOUtils.closeStream(in);
+        IOUtils.closeStream(out);
+        IOUtils.closeSocket(sock);
+      }
+    }
 
     /**
      * Open a DataOutputStream to a DataNode pipeline so that 
@@ -793,6 +900,8 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
           DFSClient.LOG.warn("Error Recovery for block " + block +
               " in pipeline " + pipelineMsg + 
               ": bad datanode " + nodes[errorIndex].getName());
+          failed.add(nodes[errorIndex]);
+
           DatanodeInfo[] newnodes = new DatanodeInfo[nodes.length-1];
           System.arraycopy(nodes, 0, newnodes, 0, errorIndex);
           System.arraycopy(nodes, errorIndex+1, newnodes, errorIndex,
@@ -801,6 +910,12 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
           hasError = false;
           lastException = null;
           errorIndex = -1;
+        }
+
+        // Check if replace-datanode policy is satisfied.
+        if (dfsClient.dtpReplaceDatanodeOnFailure.satisfy(blockReplication,
+            nodes, isAppend, isHflushed)) {
+          addDatanode2ExistingPipeline();
         }
 
         // get a new generation stamp and an access token
@@ -888,7 +1003,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
 
       boolean result = false;
       try {
-        s = createSocketForPipeline(nodes, dfsClient);
+        s = createSocketForPipeline(nodes[0], nodes.length, dfsClient);
         long writeTimeout = dfsClient.getDatanodeWriteTimeout(nodes.length);
 
         //
@@ -1026,18 +1141,19 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
 
   /**
    * Create a socket for a write pipeline
-   * @param datanodes the datanodes on the pipeline 
+   * @param first the first datanode 
+   * @param length the pipeline length
    * @param client
    * @return the socket connected to the first datanode
    */
-  static Socket createSocketForPipeline(final DatanodeInfo[] datanodes,
-      final DFSClient client) throws IOException {
+  static Socket createSocketForPipeline(final DatanodeInfo first,
+      final int length, final DFSClient client) throws IOException {
     if(DFSClient.LOG.isDebugEnabled()) {
-      DFSClient.LOG.debug("Connecting to datanode " + datanodes[0].getName());
+      DFSClient.LOG.debug("Connecting to datanode " + first.getName());
     }
-    final InetSocketAddress isa = NetUtils.createSocketAddr(datanodes[0].getName());
+    final InetSocketAddress isa = NetUtils.createSocketAddr(first.getName());
     final Socket sock = client.socketFactory.createSocket();
-    final int timeout = client.getDatanodeReadTimeout(datanodes.length);
+    final int timeout = client.getDatanodeReadTimeout(length);
     NetUtils.connect(sock, isa, timeout);
     sock.setSoTimeout(timeout);
     sock.setSendBufferSize(DFSClient.DEFAULT_DATA_SOCKET_SIZE);
@@ -1363,6 +1479,12 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
           throw ioe;
         }
       }
+
+      synchronized(this) {
+        if (streamer != null) {
+          streamer.setHflush();
+        }
+      }
     } catch (InterruptedIOException interrupt) {
       // This kind of error doesn't mean that the stream itself is broken - just the
       // flushing thread got interrupted. So, we shouldn't close down the writer,
@@ -1577,7 +1699,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
   /**
    * Returns the access token currently used by streamer, for testing only
    */
-  Token<BlockTokenIdentifier> getBlockToken() {
+  synchronized Token<BlockTokenIdentifier> getBlockToken() {
     return streamer.getBlockToken();
   }
 

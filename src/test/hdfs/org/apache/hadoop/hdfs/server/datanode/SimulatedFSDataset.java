@@ -497,6 +497,16 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     return null;
   }
 
+  @Override 
+  public synchronized String getReplicaString(String bpid, long blockId) {
+    Replica r = null;
+    final Map<Block, BInfo> map = blockMap.get(bpid);
+    if (map != null) {
+      r = map.get(new Block(blockId));
+    }
+    return r == null? "null": r.toString();
+  }
+
   @Override // FSDatasetInterface
   public Block getStoredBlock(String bpid, long blkid) throws IOException {
     final Map<Block, BInfo> map = blockMap.get(bpid);

@@ -45,6 +45,11 @@ import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 privileged public aspect BlockReceiverAspects {
   public static final Log LOG = LogFactory.getLog(BlockReceiverAspects.class);
 
+  BlockReceiver BlockReceiver.PacketResponder.getReceiver(){
+    LOG.info("FI: getReceiver() " + getClass().getName());
+    return BlockReceiver.this;
+  }
+
   pointcut callReceivePacket(BlockReceiver blockreceiver) :
     call(* receivePacket(..)) && target(blockreceiver);
 	
@@ -82,7 +87,7 @@ privileged public aspect BlockReceiverAspects {
 
   after(BlockReceiver.PacketResponder responder)
       throws IOException: afterDownstreamStatusRead(responder) {
-    final DataNode d = responder.receiver.getDataNode();
+    final DataNode d = responder.getReceiver().getDataNode();
     DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
     if (dtTest != null)
       dtTest.fiAfterDownstreamStatusRead.run(d.getDatanodeId());

@@ -27,7 +27,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.tools.offlineImageViewer.ImageVisitor.ImageElement;
 import org.apache.hadoop.io.Text;
@@ -121,7 +120,7 @@ class ImageLoaderCurrent implements ImageLoader {
   protected final DateFormat dateFormat = 
                                       new SimpleDateFormat("yyyy-MM-dd HH:mm");
   private static int [] versions = 
-    {-16, -17, -18, -19, -20, -21, -22, -23, -24, -25, -26, -27};
+    {-16, -17, -18, -19, -20, -21, -22, -23, -24, -25, -26, -27, -28, -30, -31};
   private int imageVersion = 0;
 
   /* (non-Javadoc)
@@ -334,34 +333,105 @@ class ImageLoaderCurrent implements ImageLoader {
       long numInodes, boolean skipBlocks) throws IOException {
     v.visitEnclosingElement(ImageElement.INODES,
         ImageElement.NUM_INODES, numInodes);
-
-    for(long i = 0; i < numInodes; i++) {
-      v.visitEnclosingElement(ImageElement.INODE);
-      v.visit(ImageElement.INODE_PATH, FSImageSerialization.readString(in));
-      v.visit(ImageElement.REPLICATION, in.readShort());
-      v.visit(ImageElement.MODIFICATION_TIME, formatDate(in.readLong()));
-      if(imageVersion <= -17) // added in version -17
-        v.visit(ImageElement.ACCESS_TIME, formatDate(in.readLong()));
-      v.visit(ImageElement.BLOCK_SIZE, in.readLong());
-      int numBlocks = in.readInt();
-
-      processBlocks(in, v, numBlocks, skipBlocks);
-
-      // File or directory
-      if (numBlocks > 0 || numBlocks == -1) {
-        v.visit(ImageElement.NS_QUOTA, numBlocks == -1 ? in.readLong() : -1);
-        if(imageVersion <= -18) // added in version -18
-          v.visit(ImageElement.DS_QUOTA, numBlocks == -1 ? in.readLong() : -1);
-      }
-      if (imageVersion <= -23 && numBlocks == -2) {
-        v.visit(ImageElement.SYMLINK, Text.readString(in));
-      }
-
-      processPermission(in, v);
-      v.leaveEnclosingElement(); // INode
+    
+    if (imageVersion <= -30) { // local file name
+      processLocalNameINodes(in, v, numInodes, skipBlocks);
+    } else { // full path name
+      processFullNameINodes(in, v, numInodes, skipBlocks);
     }
+
     
     v.leaveEnclosingElement(); // INodes
+  }
+  
+  /**
+   * Process image with full path name
+   * 
+   * @param in image stream
+   * @param v visitor
+   * @param numInodes number of indoes to read
+   * @param skipBlocks skip blocks or not
+   * @throws IOException if there is any error occurs
+   */
+  private void processLocalNameINodes(DataInputStream in, ImageVisitor v,
+      long numInodes, boolean skipBlocks) throws IOException {
+    // process root
+    processINode(in, v, skipBlocks, "");
+    numInodes--;
+    while (numInodes > 0) {
+      numInodes -= processDirectory(in, v, skipBlocks);
+    }
+  }
+  
+  private int processDirectory(DataInputStream in, ImageVisitor v,
+     boolean skipBlocks) throws IOException {
+    String parentName = FSImageSerialization.readString(in);
+    int numChildren = in.readInt();
+    for (int i=0; i<numChildren; i++) {
+      processINode(in, v, skipBlocks, parentName);
+    }
+    return numChildren;
+  }
+  
+   /**
+    * Process image with full path name
+    * 
+    * @param in image stream
+    * @param v visitor
+    * @param numInodes number of indoes to read
+    * @param skipBlocks skip blocks or not
+    * @throws IOException if there is any error occurs
+    */
+   private void processFullNameINodes(DataInputStream in, ImageVisitor v,
+       long numInodes, boolean skipBlocks) throws IOException {
+     for(long i = 0; i < numInodes; i++) {
+       processINode(in, v, skipBlocks, null);
+     }
+   }
+   
+   /**
+    * Process an INode
+    * 
+    * @param in image stream
+    * @param v visitor
+    * @param skipBlocks skip blocks or not
+    * @param parentName the name of its parent node
+    * @return the number of Children
+    * @throws IOException
+    */
+  private void processINode(DataInputStream in, ImageVisitor v,
+      boolean skipBlocks, String parentName) throws IOException {
+    v.visitEnclosingElement(ImageElement.INODE);
+    String pathName = FSImageSerialization.readString(in);
+    if (parentName != null) {  // local name
+      pathName = "/" + pathName;
+      if (!"/".equals(parentName)) { // children of non-root directory
+        pathName = parentName + pathName;
+      }
+    }
+
+    v.visit(ImageElement.INODE_PATH, pathName);
+    v.visit(ImageElement.REPLICATION, in.readShort());
+    v.visit(ImageElement.MODIFICATION_TIME, formatDate(in.readLong()));
+    if(imageVersion <= -17) // added in version -17
+      v.visit(ImageElement.ACCESS_TIME, formatDate(in.readLong()));
+    v.visit(ImageElement.BLOCK_SIZE, in.readLong());
+    int numBlocks = in.readInt();
+
+    processBlocks(in, v, numBlocks, skipBlocks);
+
+    // File or directory
+    if (numBlocks > 0 || numBlocks == -1) {
+      v.visit(ImageElement.NS_QUOTA, numBlocks == -1 ? in.readLong() : -1);
+      if(imageVersion <= -18) // added in version -18
+        v.visit(ImageElement.DS_QUOTA, numBlocks == -1 ? in.readLong() : -1);
+    }
+    if (imageVersion <= -23 && numBlocks == -2) {
+      v.visit(ImageElement.SYMLINK, Text.readString(in));
+    }
+
+    processPermission(in, v);
+    v.leaveEnclosingElement(); // INode
   }
 
   /**

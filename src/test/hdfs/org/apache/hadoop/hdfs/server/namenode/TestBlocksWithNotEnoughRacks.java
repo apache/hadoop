@@ -77,7 +77,7 @@ public class TestBlocksWithNotEnoughRacks extends TestCase {
       String newRacks[] = {"/rack2"} ;
       cluster.startDataNodes(conf, 1, true, null, newRacks);
 
-      while ( (numRacks < 2) || (curReplicas < REPLICATION_FACTOR) ||
+      while ( (numRacks < 2) || (curReplicas != REPLICATION_FACTOR) ||
               (neededReplicationSize > 0) ) {
         LOG.info("Waiting for replication");
         Thread.sleep(600);

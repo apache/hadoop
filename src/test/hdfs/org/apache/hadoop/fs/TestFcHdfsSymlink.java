@@ -241,5 +241,17 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
     } catch (IOException x) {
       // Expected
     }
-  } 
+  }
+
+  @Test
+  /** Test symlink owner */
+  public void testLinkOwner() throws IOException {
+    Path file = new Path(testBaseDir1(), "file");
+    Path link = new Path(testBaseDir1(), "symlinkToFile");
+    createAndWriteFile(file);
+    fc.createSymlink(file, link, false);
+    FileStatus stat_file = fc.getFileStatus(file);
+    FileStatus stat_link = fc.getFileStatus(link);
+    assertEquals(stat_link.getOwner(), stat_file.getOwner());
+  }
 }

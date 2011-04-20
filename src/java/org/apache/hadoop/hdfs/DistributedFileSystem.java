@@ -24,6 +24,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -242,9 +243,9 @@ public class DistributedFileSystem extends FileSystem {
     Progressable progress) throws IOException {
     statistics.incrementWriteOps(1);
     return new FSDataOutputStream(dfs.create(getPathName(f), permission,
-        overwrite ? EnumSet.of(CreateFlag.OVERWRITE) : EnumSet.of(CreateFlag.CREATE),
-        replication, blockSize, progress, bufferSize),
-        statistics);
+        overwrite ? EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
+            : EnumSet.of(CreateFlag.CREATE), replication, blockSize, progress,
+        bufferSize), statistics);
   }
   
   @SuppressWarnings("deprecation")
@@ -266,6 +267,9 @@ public class DistributedFileSystem extends FileSystem {
       EnumSet<CreateFlag> flag, int bufferSize, short replication,
       long blockSize, Progressable progress) throws IOException {
     statistics.incrementWriteOps(1);
+    if (flag.contains(CreateFlag.OVERWRITE)) {
+      flag.add(CreateFlag.CREATE);
+    }
     return new FSDataOutputStream(dfs.create(getPathName(f), permission, flag,
         false, replication, blockSize, progress, bufferSize), statistics);
   }
@@ -809,6 +813,14 @@ public class DistributedFileSystem extends FileSystem {
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
     return dfs.getDelegationToken(renewer);
+  }
+  
+  @Override // FileSystem
+  public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
+    List<Token<?>> tokenList = new ArrayList<Token<?>>();
+    Token<DelegationTokenIdentifier> token = this.getDelegationToken(renewer);
+    tokenList.add(token);
+    return tokenList;
   }
 
   /**

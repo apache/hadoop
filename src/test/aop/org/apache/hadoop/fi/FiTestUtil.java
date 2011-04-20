@@ -73,14 +73,17 @@ public class FiTestUtil {
 
   /**
    * Sleep.
-   * If there is an InterruptedException, re-throw it as a RuntimeException.
+   * @return true if sleep exits normally; false if InterruptedException.
    */
-  public static void sleep(long ms) {
+  public static boolean sleep(long ms) {
+    LOG.info("Sleep " + ms + " ms");
     try {
       Thread.sleep(ms);
     } catch (InterruptedException e) {
-      throw new RuntimeException(e);
+      LOG.info("Sleep is interrupted", e);
+      return false;
     }
+    return true;
   }
 
   /**

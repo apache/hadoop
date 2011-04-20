@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.zip.CheckedInputStream;
+import java.util.zip.Checksum;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
@@ -226,8 +229,15 @@ public class BackupImage extends FSImage {
           // update NameSpace in memory
           backupInputStream.setBytes(data);
           FSEditLogLoader logLoader = new FSEditLogLoader(namesystem);
-          logLoader.loadEditRecords(storage.getLayoutVersion(),
-                    backupInputStream.getDataInputStream(), true);
+          int logVersion = storage.getLayoutVersion();
+          BufferedInputStream bin = new BufferedInputStream(backupInputStream);
+          DataInputStream in = new DataInputStream(bin);
+          Checksum checksum = null;
+          if (logVersion <= -28) { // support fsedits checksum
+            checksum = FSEditLog.getChecksum();
+            in = new DataInputStream(new CheckedInputStream(bin, checksum));
+          }
+          logLoader.loadEditRecords(logVersion, in, checksum, true);
           getFSNamesystem().dir.updateCountForINodeWithQuota(); // inefficient!
           break;
         case INPROGRESS:
@@ -346,14 +356,21 @@ public class BackupImage extends FSImage {
     if(jSpoolFile.exists()) {
       // load edits.new
       EditLogFileInputStream edits = new EditLogFileInputStream(jSpoolFile);
-      DataInputStream in = edits.getDataInputStream();
+      BufferedInputStream bin = new BufferedInputStream(edits);
+      DataInputStream in = new DataInputStream(bin);
       FSEditLogLoader logLoader = new FSEditLogLoader(namesystem);
-      numEdits += logLoader.loadFSEdits(in, false);
+      int logVersion = logLoader.readLogVersion(in);
+      Checksum checksum = null;
+      if (logVersion <= -28) { // support fsedits checksum
+        checksum = FSEditLog.getChecksum();
+        in = new DataInputStream(new CheckedInputStream(bin, checksum));
+      }
+      numEdits += logLoader.loadEditRecords(logVersion, in, checksum, false);
 
       // first time reached the end of spool
       jsState = JSpoolState.WAIT;
-      numEdits += logLoader.loadEditRecords(storage.getLayoutVersion(),
-                                            in, true);
+      numEdits += logLoader.loadEditRecords(logVersion,
+                                            in, checksum, true);
       getFSNamesystem().dir.updateCountForINodeWithQuota();
       edits.close();
     }

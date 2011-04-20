@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.security.PrivilegedExceptionAction;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
@@ -71,7 +70,7 @@ public class TestReadWhileWriting {
       final int half = BLOCK_SIZE/2;
 
       //a. On Machine M1, Create file. Write half block of data.
-      //   Invoke (DFSOutputStream).fsync() on the dfs file handle.
+      //   Invoke DFSOutputStream.hflush() on the dfs file handle.
       //   Do not close file yet.
       {
         final FSDataOutputStream out = fs.create(p, true,

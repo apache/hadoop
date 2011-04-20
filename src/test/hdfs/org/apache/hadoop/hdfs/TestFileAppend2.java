@@ -59,7 +59,7 @@ public class TestFileAppend2 extends TestCase {
 
   private byte[] fileContents = null;
 
-  int numDatanodes = 5;
+  int numDatanodes = 6;
   int numberOfFiles = 50;
   int numThreads = 10;
   int numAppendsPerThread = 20;
@@ -350,7 +350,7 @@ public class TestFileAppend2 extends TestCase {
       // Insert them into a linked list.
       //
       for (int i = 0; i < numberOfFiles; i++) {
-        short replication = (short)(AppendTestUtil.nextInt(numDatanodes) + 1);
+        final int replication = AppendTestUtil.nextInt(numDatanodes - 2) + 1;
         Path testFile = new Path("/" + i + ".dat");
         FSDataOutputStream stm =
             AppendTestUtil.createFile(fs, testFile, replication);

@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.shell.Count;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset;
+import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
@@ -1285,5 +1286,19 @@ public class TestDFSShell extends TestCase {
     }
     System.out.println("results:\n" + results);
     return results;
+  }
+  
+  /**
+   * default setting is file:// which is not a DFS
+   * so DFSAdmin should throw and catch InvalidArgumentException
+   * and return -1 exit code.
+   * @throws Exception
+   */
+  public void testInvalidShell() throws Exception {
+    Configuration conf = new Configuration(); // default FS (non-DFS)
+    DFSAdmin admin = new DFSAdmin();
+    admin.setConf(conf);
+    int res = admin.run(new String[] {"-refreshNodes"});
+    assertEquals("expected to fail -1", res , -1);
   }
 }

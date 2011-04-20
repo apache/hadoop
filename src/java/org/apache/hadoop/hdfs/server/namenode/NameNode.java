@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -846,6 +845,33 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     return locatedBlock;
   }
 
+  @Override
+  public LocatedBlock getAdditionalDatanode(final String src, final ExtendedBlock blk,
+      final DatanodeInfo[] existings, final DatanodeInfo[] excludes,
+      final int numAdditionalNodes, final String clientName
+      ) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("getAdditionalDatanode: src=" + src
+          + ", blk=" + blk
+          + ", existings=" + Arrays.asList(existings)
+          + ", excludes=" + Arrays.asList(excludes)
+          + ", numAdditionalNodes=" + numAdditionalNodes
+          + ", clientName=" + clientName);
+    }
+
+    myMetrics.numGetAdditionalDatanodeOps.inc();
+
+    HashMap<Node, Node> excludeSet = null;
+    if (excludes != null) {
+      excludeSet = new HashMap<Node, Node>(excludes.length);
+      for (Node node : excludes) {
+        excludeSet.put(node, node);
+      }
+    }
+    return namesystem.getAdditionalDatanode(src, blk,
+        existings, excludeSet, numAdditionalNodes, clientName);
+  }
+
   /**
    * The client needs to give up on the block.
    */
@@ -1202,7 +1228,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     }
     final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     namesystem.createSymlink(target, link,
-      new PermissionStatus(ugi.getUserName(), null, dirPerms), createParent);
+      new PermissionStatus(ugi.getShortUserName(), null, dirPerms), createParent);
   }
 
   /** @inheritDoc */

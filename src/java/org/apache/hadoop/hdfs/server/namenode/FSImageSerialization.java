@@ -145,12 +145,11 @@ public class FSImageSerialization {
   /*
    * Save one inode's attributes to the image.
    */
-  static void saveINode2Image(ByteBuffer name,
-                              INode node,
+  static void saveINode2Image(INode node,
                               DataOutputStream out) throws IOException {
-    int nameLen = name.position();
-    out.writeShort(nameLen);
-    out.write(name.array(), name.arrayOffset(), nameLen);
+    byte[] name = node.getLocalNameBytes();
+    out.writeShort(name.length);
+    out.write(name);
     FsPermission filePerm = TL_DATA.get().FILE_PERM;
     if (node.isDirectory()) {
       out.writeShort(0);  // replication

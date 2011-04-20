@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.*;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 
@@ -120,4 +121,33 @@ public class TestINodeFile {
                                   0L, 0L, preferredBlockSize);
   }
 
+  @Test
+  public void testGetFullPathName() {
+    PermissionStatus perms = new PermissionStatus(
+      userName, null, FsPermission.getDefault());
+
+    replication = 3;
+    preferredBlockSize = 128*1024*1024;
+    INodeFile inf = new INodeFile(perms, null, replication,
+                                  0L, 0L, preferredBlockSize);
+    inf.setLocalName("f");
+
+    INodeDirectory root = new INodeDirectory(INodeDirectory.ROOT_NAME, perms);
+    INodeDirectory dir = new INodeDirectory("d", perms);
+
+    assertEquals("f", inf.getFullPathName());
+    assertEquals("", inf.getLocalParentDir());
+
+    dir.addChild(inf, false, false);
+    assertEquals("d"+Path.SEPARATOR+"f", inf.getFullPathName());
+    assertEquals("d", inf.getLocalParentDir());
+    
+    root.addChild(dir, false, false);
+    assertEquals(Path.SEPARATOR+"d"+Path.SEPARATOR+"f", inf.getFullPathName());
+    assertEquals(Path.SEPARATOR+"d", dir.getFullPathName());
+
+    assertEquals(Path.SEPARATOR, root.getFullPathName());
+    assertEquals(Path.SEPARATOR, root.getLocalParentDir());
+    
+  }
 }

@@ -511,11 +511,11 @@ public class TestBlockReport {
     long start = System.currentTimeMillis();
     int count = 0;
     while (r == null) {
-      waitTil(50);
+      waitTil(5);
       r = ((FSDataset) cluster.getDataNodes().get(DN_N1).getFSDataset()).
         fetchReplicaInfo(bpid, bl.getBlockId());
       long waiting_period = System.currentTimeMillis() - start;
-      if (count++ % 10 == 0)
+      if (count++ % 100 == 0)
         if(LOG.isDebugEnabled()) {
           LOG.debug("Has been waiting for " + waiting_period + " ms.");
         }
@@ -530,7 +530,7 @@ public class TestBlockReport {
     }
     start = System.currentTimeMillis();
     while (state != HdfsConstants.ReplicaState.TEMPORARY) {
-      waitTil(100);
+      waitTil(5);
       state = r.getState();
       if(LOG.isDebugEnabled()) {
         LOG.debug("Keep waiting for " + bl.getBlockName() +

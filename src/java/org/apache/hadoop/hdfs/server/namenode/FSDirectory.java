@@ -1285,9 +1285,10 @@ class FSDirectory implements Closeable {
    * Check whether the path specifies a directory
    */
   boolean isDir(String src) throws UnresolvedLinkException {
+    src = normalizePath(src);
     readLock();
     try {
-      INode node = rootDir.getNode(normalizePath(src), false);
+      INode node = rootDir.getNode(src, false);
       return node != null && node.isDirectory();
     } finally {
       readUnlock();
@@ -1385,6 +1386,12 @@ class FSDirectory implements Closeable {
   /** Return the name of the path represented by inodes at [0, pos] */
   private static String getFullPathName(INode[] inodes, int pos) {
     StringBuilder fullPathName = new StringBuilder();
+    if (inodes[0].isRoot()) {
+      if (pos == 0) return Path.SEPARATOR;
+    } else {
+      fullPathName.append(inodes[0].getLocalName());
+    }
+    
     for (int i=1; i<=pos; i++) {
       fullPathName.append(Path.SEPARATOR_CHAR).append(inodes[i].getLocalName());
     }
@@ -2018,7 +2025,7 @@ class FSDirectory implements Closeable {
         return null;
       }
     }
-    final String userName = UserGroupInformation.getCurrentUser().getUserName();
+    final String userName = dirPerms.getUserName();
     INodeSymlink newNode = unprotectedSymlink(path, target, modTime, modTime,
       new PermissionStatus(userName, null, FsPermission.getDefault()));         
     if (newNode == null) {

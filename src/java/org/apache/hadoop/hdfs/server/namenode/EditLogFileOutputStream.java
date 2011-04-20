@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.zip.Checksum;
 
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -84,10 +85,18 @@ class EditLogFileOutputStream extends EditLogOutputStream {
   /** {@inheritDoc} */
   @Override
   void write(byte op, Writable... writables) throws IOException {
+    int start = bufCurrent.getLength();
     write(op);
     for (Writable w : writables) {
       w.write(bufCurrent);
     }
+    // write transaction checksum
+    int end = bufCurrent.getLength();
+    Checksum checksum = FSEditLog.getChecksum();
+    checksum.reset();
+    checksum.update(bufCurrent.getData(), start, end-start);
+    int sum = (int)checksum.getValue();
+    bufCurrent.writeInt(sum);
   }
 
   /**

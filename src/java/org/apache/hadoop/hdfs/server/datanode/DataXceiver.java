@@ -154,7 +154,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
         datanode.socketWriteTimeout);
     DataOutputStream out = new DataOutputStream(
                  new BufferedOutputStream(baseStream, SMALL_BUFFER_SIZE));
-    checkAccess(out, block, blockToken,
+    checkAccess(out, true, block, blockToken,
         DataTransferProtocol.Op.READ_BLOCK,
         BlockTokenSecretManager.AccessMode.READ);
   
@@ -258,7 +258,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
         new BufferedOutputStream(
             NetUtils.getOutputStream(s, datanode.socketWriteTimeout),
             SMALL_BUFFER_SIZE));
-    checkAccess(isClient? replyOut: null, block, blockToken,
+    checkAccess(replyOut, isClient, block, blockToken,
         DataTransferProtocol.Op.WRITE_BLOCK,
         BlockTokenSecretManager.AccessMode.WRITE);
 
@@ -365,7 +365,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
       if (blockReceiver != null) {
         String mirrorAddr = (mirrorSock == null) ? null : mirrorNode;
         blockReceiver.receiveBlock(mirrorOut, mirrorIn, replyOut,
-            mirrorAddr, null, targets.length);
+            mirrorAddr, null, targets);
 
         // send close-ack for transfer-RBW/Finalized 
         if (isTransfer) {
@@ -419,13 +419,14 @@ class DataXceiver extends DataTransferProtocol.Receiver
       final ExtendedBlock blk, final String client,
       final DatanodeInfo[] targets,
       final Token<BlockTokenIdentifier> blockToken) throws IOException {
-    final DataOutputStream out = new DataOutputStream(
-        NetUtils.getOutputStream(s, datanode.socketWriteTimeout));
-    checkAccess(out, blk, blockToken,
+    checkAccess(null, true, blk, blockToken,
         DataTransferProtocol.Op.TRANSFER_BLOCK,
         BlockTokenSecretManager.AccessMode.COPY);
 
     updateCurrentThreadName(DataTransferProtocol.Op.TRANSFER_BLOCK + " " + blk);
+
+    final DataOutputStream out = new DataOutputStream(
+        NetUtils.getOutputStream(s, datanode.socketWriteTimeout));
     try {
       datanode.transferReplicaForPipelineRecovery(blk, targets, client);
       SUCCESS.write(out);
@@ -442,7 +443,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
       Token<BlockTokenIdentifier> blockToken) throws IOException {
     final DataOutputStream out = new DataOutputStream(
         NetUtils.getOutputStream(s, datanode.socketWriteTimeout));
-    checkAccess(out, block, blockToken,
+    checkAccess(out, true, block, blockToken,
         DataTransferProtocol.Op.BLOCK_CHECKSUM,
         BlockTokenSecretManager.AccessMode.READ);
     updateCurrentThreadName("Reading metadata for block " + block);
@@ -634,7 +635,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
 
       // receive a block
       blockReceiver.receiveBlock(null, null, null, null, 
-          dataXceiverServer.balanceThrottler, -1);
+          dataXceiverServer.balanceThrottler, null);
                     
       // notify name node
       datanode.notifyNamenodeReceivedBlock(block, sourceID);
@@ -699,7 +700,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
     }
   }
 
-  private void checkAccess(final DataOutputStream out, 
+  private void checkAccess(DataOutputStream out, final boolean reply, 
       final ExtendedBlock blk,
       final Token<BlockTokenIdentifier> t,
       final DataTransferProtocol.Op op,
@@ -709,7 +710,11 @@ class DataXceiver extends DataTransferProtocol.Receiver
         datanode.blockPoolTokenSecretManager.checkAccess(t, null, blk, mode);
       } catch(InvalidToken e) {
         try {
-          if (out != null) {
+          if (reply) {
+            if (out == null) {
+              out = new DataOutputStream(
+                  NetUtils.getOutputStream(s, datanode.socketWriteTimeout));
+            }
             ERROR_ACCESS_TOKEN.write(out);
             if (mode == BlockTokenSecretManager.AccessMode.WRITE) {
               DatanodeRegistration dnR = 

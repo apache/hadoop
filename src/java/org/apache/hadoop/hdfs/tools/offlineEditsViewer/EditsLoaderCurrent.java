@@ -17,26 +17,15 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
-import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.EOFException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
 
 import static org.apache.hadoop.hdfs.tools.offlineEditsViewer.Tokenizer.ByteToken;
-import static org.apache.hadoop.hdfs.tools.offlineEditsViewer.Tokenizer.ShortToken;
 import static org.apache.hadoop.hdfs.tools.offlineEditsViewer.Tokenizer.IntToken;
 import static org.apache.hadoop.hdfs.tools.offlineEditsViewer.Tokenizer.VIntToken;
-import static org.apache.hadoop.hdfs.tools.offlineEditsViewer.Tokenizer.LongToken;
-import static org.apache.hadoop.hdfs.tools.offlineEditsViewer.Tokenizer.VLongToken;
-import static org.apache.hadoop.hdfs.tools.offlineEditsViewer.Tokenizer.StringUTF8Token;
-import static org.apache.hadoop.hdfs.tools.offlineEditsViewer.Tokenizer.StringTextToken;
-import static org.apache.hadoop.hdfs.tools.offlineEditsViewer.Tokenizer.BlobToken;
-import static org.apache.hadoop.hdfs.tools.offlineEditsViewer.Tokenizer.BytesWritableToken;
-import static org.apache.hadoop.hdfs.tools.offlineEditsViewer.Tokenizer.EmptyToken;
 
 /**
  * EditsLoaderCurrent processes Hadoop EditLogs files and walks over
@@ -49,7 +38,7 @@ import static org.apache.hadoop.hdfs.tools.offlineEditsViewer.Tokenizer.EmptyTok
 class EditsLoaderCurrent implements EditsLoader {
 
   private static int [] supportedVersions = {
-    -18, -19, -20, -21, -22, -23, -24, -25, -26, -27 };
+    -18, -19, -20, -21, -22, -23, -24, -25, -26, -27, -28, -30, -31 };
 
   private EditsVisitor v;
   private int editsVersion = 0;
@@ -464,6 +453,10 @@ class EditsLoaderCurrent implements EditsLoader {
         visitOpCode(editsOpCode);
 
         v.leaveEnclosingElement(); // DATA
+        
+        if (editsOpCode != FSEditLogOpCodes.OP_INVALID && editsVersion <= -28) {
+          v.visitInt(EditsElement.CHECKSUM);
+        }
         v.leaveEnclosingElement(); // RECORD
       } while(editsOpCode != FSEditLogOpCodes.OP_INVALID);
 

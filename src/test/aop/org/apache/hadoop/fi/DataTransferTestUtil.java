@@ -343,7 +343,7 @@ public class DataTransferTestUtil {
       if (!test.isSuccess() && p.contains(index, id)) {
         FiTestUtil.LOG.info(toString(id));
         if (maxDuration <= 0) {
-          for(; true; FiTestUtil.sleep(1000)); //sleep forever
+          for(; FiTestUtil.sleep(1000); ); //sleep forever until interrupt
         } else {
           FiTestUtil.sleep(minDuration, maxDuration);
         }
@@ -391,7 +391,7 @@ public class DataTransferTestUtil {
         + minDuration + "," + maxDuration + ")";
         FiTestUtil.LOG.info(s);
         if (maxDuration <= 1) {
-          for(; true; FiTestUtil.sleep(1000)); //sleep forever
+          for(; FiTestUtil.sleep(1000); ); //sleep forever until interrupt
         } else {
           FiTestUtil.sleep(minDuration, maxDuration);
         }

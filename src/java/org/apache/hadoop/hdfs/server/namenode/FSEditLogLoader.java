@@ -17,12 +17,16 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.BufferedInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.IOException;
+import java.util.zip.CheckedInputStream;
+import java.util.zip.Checksum;
 
+import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -54,42 +58,62 @@ public class FSEditLogLoader {
    * along.
    */
   int loadFSEdits(EditLogInputStream edits) throws IOException {
-    DataInputStream in = edits.getDataInputStream();
     long startTime = now();
-    int numEdits = loadFSEdits(in, true);
+    int numEdits = loadFSEdits(edits, true);
     FSImage.LOG.info("Edits file " + edits.getName() 
         + " of size " + edits.length() + " edits # " + numEdits 
         + " loaded in " + (now()-startTime)/1000 + " seconds.");
     return numEdits;
   }
 
-  int loadFSEdits(DataInputStream in, boolean closeOnExit) throws IOException {
+  /**
+   * Read the header of fsedit log
+   * @param in fsedit stream
+   * @return the edit log version number
+   * @throws IOException if error occurs
+   */
+  int readLogVersion(DataInputStream in) throws IOException {
+    int logVersion = 0;
+    // Read log file version. Could be missing. 
+    in.mark(4);
+    // If edits log is greater than 2G, available method will return negative
+    // numbers, so we avoid having to call available
+    boolean available = true;
+    try {
+      logVersion = in.readByte();
+    } catch (EOFException e) {
+      available = false;
+    }
+    if (available) {
+      in.reset();
+      logVersion = in.readInt();
+      if (logVersion < FSConstants.LAYOUT_VERSION) // future version
+        throw new IOException(
+            "Unexpected version of the file system log file: "
+            + logVersion + ". Current version = " 
+            + FSConstants.LAYOUT_VERSION + ".");
+    }
+    assert logVersion <= Storage.LAST_UPGRADABLE_LAYOUT_VERSION :
+      "Unsupported version " + logVersion;
+    return logVersion;
+  }
+  
+  int loadFSEdits(EditLogInputStream edits, boolean closeOnExit) throws IOException {
+    BufferedInputStream bin = new BufferedInputStream(edits);
+    DataInputStream in = new DataInputStream(bin);
+    
     int numEdits = 0;
     int logVersion = 0;
 
     try {
-      // Read log file version. Could be missing. 
-      in.mark(4);
-      // If edits log is greater than 2G, available method will return negative
-      // numbers, so we avoid having to call available
-      boolean available = true;
-      try {
-        logVersion = in.readByte();
-      } catch (EOFException e) {
-        available = false;
+      logVersion = readLogVersion(in);
+      Checksum checksum = null;
+      if (logVersion <= -28) { // support fsedits checksum
+        checksum = FSEditLog.getChecksum();
+        in = new DataInputStream(new CheckedInputStream(bin, checksum));
       }
-      if (available) {
-        in.reset();
-        logVersion = in.readInt();
-        if (logVersion < FSConstants.LAYOUT_VERSION) // future version
-          throw new IOException(
-                          "Unexpected version of the file system log file: "
-                          + logVersion + ". Current version = " 
-                          + FSConstants.LAYOUT_VERSION + ".");
-      }
-      assert logVersion <= Storage.LAST_UPGRADABLE_LAYOUT_VERSION :
-                            "Unsupported version " + logVersion;
-      numEdits = loadEditRecords(logVersion, in, false);
+
+      numEdits = loadEditRecords(logVersion, in, checksum, false);
     } finally {
       if(closeOnExit)
         in.close();
@@ -101,7 +125,7 @@ public class FSEditLogLoader {
 
   @SuppressWarnings("deprecation")
   int loadEditRecords(int logVersion, DataInputStream in,
-      boolean closeOnExit) throws IOException {
+      Checksum checksum, boolean closeOnExit) throws IOException {
     FSDirectory fsDir = fsNamesys.dir;
     int numEdits = 0;
     String clientName = null;
@@ -123,6 +147,9 @@ public class FSEditLogLoader {
         long blockSize = 0;
         FSEditLogOpCodes opCode;
         try {
+          if (checksum != null) {
+            checksum.reset();
+          }
           in.mark(1);
           byte opCodeByte = in.readByte();
           opCode = FSEditLogOpCodes.fromByte(opCodeByte);
@@ -480,6 +507,7 @@ public class FSEditLogLoader {
           throw new IOException("Never seen opCode " + opCode);
         }
         }
+        validateChecksum(in, checksum, numEdits);
       }
     } finally {
       if(closeOnExit)
@@ -505,6 +533,22 @@ public class FSEditLogLoader {
     return numEdits;
   }
 
+  /**
+   * Validate a transaction's checksum
+   */
+  private static void validateChecksum(
+      DataInputStream in, Checksum checksum, int tid)
+  throws IOException {
+    if (checksum != null) {
+      int calculatedChecksum = (int)checksum.getValue();
+      int readChecksum = in.readInt(); // read in checksum
+      if (readChecksum != calculatedChecksum) {
+        throw new ChecksumException(
+            "Transaction " + tid + " is corrupt. Calculated checksum is " +
+            calculatedChecksum + " but read checksum " + readChecksum, tid);
+      }
+    }
+  }
 
   /**
    * A class to read in blocks stored in the old format. The only two

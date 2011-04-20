@@ -25,8 +25,13 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -39,18 +44,18 @@ import org.apache.hadoop.security.token.Token;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public interface DataTransferProtocol {
-  
+  public static final Log LOG = LogFactory.getLog(DataTransferProtocol.class);
   
   /** Version for data transfers between clients and datanodes
    * This should change when serialization of DatanodeInfo, not just
    * when protocol changes. It is not very obvious. 
    */
   /*
-   * Version 22:
+   * Version 23:
    *    Changed the protocol methods to use ExtendedBlock instead
    *    of Block.
    */
-  public static final int DATA_TRANSFER_VERSION = 21;
+  public static final int DATA_TRANSFER_VERSION = 23;
 
   /** Operation */
   public enum Op {
@@ -750,4 +755,93 @@ public interface DataTransferProtocol {
     }
   }
 
+  /**
+   * The setting of replace-datanode-on-failure feature.
+   */
+  public enum ReplaceDatanodeOnFailure {
+    /** The feature is disabled in the entire site. */
+    DISABLE,
+    /** Never add a new datanode. */
+    NEVER,
+    /**
+     * DEFAULT policy:
+     *   Let r be the replication number.
+     *   Let n be the number of existing datanodes.
+     *   Add a new datanode only if r >= 3 and either
+     *   (1) floor(r/2) >= n; or
+     *   (2) r > n and the block is hflushed/appended.
+     */
+    DEFAULT,
+    /** Always add a new datanode when an existing datanode is removed. */
+    ALWAYS;
+
+    /** Check if the feature is enabled. */
+    public void checkEnabled() {
+      if (this == DISABLE) {
+        throw new UnsupportedOperationException(
+            "This feature is disabled.  Please refer to "
+            + DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_ENABLE_KEY
+            + " configuration property.");
+      }
+    }
+
+    /** Is the policy satisfied? */
+    public boolean satisfy(
+        final short replication, final DatanodeInfo[] existings,
+        final boolean isAppend, final boolean isHflushed) {
+      final int n = existings == null? 0: existings.length;
+      if (n == 0 || n >= replication) {
+        //don't need to add datanode for any policy.
+        return false;
+      } else if (this == DISABLE || this == NEVER) {
+        return false;
+      } else if (this == ALWAYS) {
+        return true;
+      } else {
+        //DEFAULT
+        if (replication < 3) {
+          return false;
+        } else {
+          if (n <= (replication/2)) {
+            return true;
+          } else {
+            return isAppend || isHflushed;
+          }
+        }
+      }
+    }
+
+    /** Get the setting from configuration. */
+    public static ReplaceDatanodeOnFailure get(final Configuration conf) {
+      final boolean enabled = conf.getBoolean(
+          DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_ENABLE_KEY,
+          DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_ENABLE_DEFAULT);
+      if (!enabled) {
+        return DISABLE;
+      }
+
+      final String policy = conf.get(
+          DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_POLICY_KEY,
+          DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_POLICY_DEFAULT);
+      for(int i = 1; i < values().length; i++) {
+        final ReplaceDatanodeOnFailure rdof = values()[i];
+        if (rdof.name().equalsIgnoreCase(policy)) {
+          return rdof;
+        }
+      }
+      throw new HadoopIllegalArgumentException("Illegal configuration value for "
+          + DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_POLICY_KEY
+          + ": " + policy);
+    }
+
+    /** Write the setting to configuration. */
+    public void write(final Configuration conf) {
+      conf.setBoolean(
+          DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_ENABLE_KEY,
+          this != DISABLE);
+      conf.set(
+          DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_POLICY_KEY,
+          name());
+    }
+  }
 }

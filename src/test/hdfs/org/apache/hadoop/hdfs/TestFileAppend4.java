@@ -149,7 +149,7 @@ public class TestFileAppend4 {
    */
   @Test(timeout=60000)
   public void testRecoverFinalizedBlock() throws Throwable {
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5).build();
  
     try {
       cluster.waitActive();
@@ -220,7 +220,7 @@ public class TestFileAppend4 {
    */
   @Test(timeout=60000)
   public void testCompleteOtherLeaseHoldersFile() throws Throwable {
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5).build();
  
     try {
       cluster.waitActive();
@@ -296,8 +296,7 @@ public class TestFileAppend4 {
    * Mockito answer helper that triggers one latch as soon as the
    * method is called, then waits on another before continuing.
    */
-  @SuppressWarnings("unchecked")
-  private static class DelayAnswer implements Answer {
+  private static class DelayAnswer implements Answer<Object> {
     private final CountDownLatch fireLatch = new CountDownLatch(1);
     private final CountDownLatch waitLatch = new CountDownLatch(1);
  
