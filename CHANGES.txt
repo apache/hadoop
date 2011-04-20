@@ -438,6 +438,9 @@ Release 0.22.0 - Unreleased
     HADOOP-6898. FileSystem.copyToLocal creates files with 777 permissions.
     (Aaron T. Myers via tomwhite)
 
+    HADOOP-7229. Do not default to an absolute path for kinit in Kerberos
+    auto-renewal thread. (Aaron T. Myers via todd)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
