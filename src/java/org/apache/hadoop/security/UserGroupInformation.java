@@ -560,7 +560,7 @@ public class UserGroupInformation {
           
           public void run() {
             String cmd = conf.get("hadoop.kerberos.kinit.command",
-                                  "/usr/kerberos/bin/kinit");
+                                  "kinit");
             KerberosTicket tgt = getTGT();
             if (tgt == null) {
               return;

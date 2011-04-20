@@ -123,6 +123,16 @@
   </description>
 </property>
 
+<property>
+  <name>hadoop.kerberos.kinit.command</name>
+  <value>kinit</value>
+  <description>Used to periodically renew Kerberos credentials when provided
+  to Hadoop. The default setting assumes that kinit is in the PATH of users
+  running the Hadoop client. Change this to the absolute path to kinit if this
+  is not the case.
+  </description>
+</property>
+
 <!--- logging properties -->
 
 <property>
