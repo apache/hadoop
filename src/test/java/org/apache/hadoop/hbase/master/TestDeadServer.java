@@ -46,13 +46,23 @@ public class TestDeadServer {
     assertFalse(ds.areDeadServersInProgress());
     final String hostname12345 = "127.0.0.2,12345,4";
     ds.add(hostname12345);
-    // hostname123 should now be evicted
-    assertFalse(ds.isDeadServer(hostname123, false));
-    // but others should still be dead
     assertTrue(ds.isDeadServer(hostname1234, false));
     assertTrue(ds.isDeadServer(hostname12345, false));
     assertTrue(ds.areDeadServersInProgress());
     ds.finish(hostname12345);
     assertFalse(ds.areDeadServersInProgress());
+
+    // Already dead =       127.0.0.1,9090,112321
+    // Coming back alive =  127.0.0.1,9090,223341
+
+    final String deadServer = "127.0.0.1,9090,112321";
+    assertFalse(ds.cleanPreviousInstance(deadServer));
+    ds.add(deadServer);
+    assertTrue(ds.isDeadServer(deadServer));
+    final String deadServerHostComingAlive = "127.0.0.1,9090,112321";
+    assertTrue(ds.cleanPreviousInstance(deadServerHostComingAlive));
+    assertFalse(ds.isDeadServer(deadServer));
+    assertFalse(ds.cleanPreviousInstance(deadServerHostComingAlive));
+
   }
 }

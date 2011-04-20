@@ -42,9 +42,6 @@ public class DeadServer implements Set<String> {
    */
   private final Set<String> deadServers = new HashSet<String>();
 
-  /** Linked list of dead servers used to bound size of dead server set */
-  private final List<String> deadServerList = new LinkedList<String>();
-
   /** Maximum number of dead servers to keep track of */
   private final int maxDeadServers;
 
@@ -63,6 +60,27 @@ public class DeadServer implements Set<String> {
    */
   public boolean isDeadServer(final String serverName) {
     return isDeadServer(serverName, false);
+  }
+
+  /**
+   * A dead server that comes back alive has a different start code.
+   * @param newServerName Servername as either <code>host:port</code> or
+   * <code>host,port,startcode</code>.
+   * @return true if this server was dead before and coming back alive again
+   */
+  public boolean cleanPreviousInstance(final String newServerName) {
+
+    String serverAddress =
+        HServerInfo.getServerNameLessStartCode(newServerName);
+    for (String serverName: deadServers) {
+      String deadServerAddress =
+          HServerInfo.getServerNameLessStartCode(serverName);
+      if (deadServerAddress.equals(serverAddress)) {
+        remove(serverName);
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -95,11 +113,6 @@ public class DeadServer implements Set<String> {
 
   public synchronized boolean add(String e) {
     this.numProcessing++;
-    // Check to see if we are at capacity for dead servers
-    if (deadServerList.size() == this.maxDeadServers) {
-      deadServers.remove(deadServerList.remove(0));
-    }
-    deadServerList.add(e);
     return deadServers.add(e);
   }
 
@@ -132,7 +145,7 @@ public class DeadServer implements Set<String> {
   }
 
   public synchronized boolean remove(Object o) {
-    throw new UnsupportedOperationException();
+    return this.deadServers.remove(o);
   }
 
   public synchronized boolean containsAll(Collection<?> c) {

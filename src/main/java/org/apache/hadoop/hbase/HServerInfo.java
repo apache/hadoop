@@ -288,4 +288,20 @@ public class HServerInfo extends VersionedWritable
     }
     return false;
   }
+
+  /**
+   * Utility method to excise the start code from a server name
+   * @param inServerName full server name
+   * @return server name less its start code
+   */
+  public static String getServerNameLessStartCode(String inServerName) {
+    if (inServerName != null && inServerName.length() > 0) {
+      int index = inServerName.lastIndexOf(SERVERNAME_SEPARATOR);
+      if (index > 0) {
+        return inServerName.substring(0, index);
+      }
+    }
+    return inServerName;
+  }
+
 }

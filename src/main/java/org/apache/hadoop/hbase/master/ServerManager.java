@@ -183,18 +183,30 @@ public class ServerManager {
   }
 
   /**
-   * If this server is on the dead list, reject it with a LeaseStillHeldException
+   * If this server is on the dead list, reject it with a YouAreDeadException.
+   * If it was dead but came back with a new start code, remove the old entry
+   * from the dead list.
    * @param serverName Server name formatted as host_port_startcode.
    * @param what START or REPORT
-   * @throws LeaseStillHeldException
+   * @throws YouAreDeadException
    */
   private void checkIsDead(final String serverName, final String what)
-  throws YouAreDeadException {
-    if (!this.deadservers.isDeadServer(serverName)) return;
-    String message = "Server " + what + " rejected; currently processing " +
-      serverName + " as dead server";
-    LOG.debug(message);
-    throw new YouAreDeadException(message);
+      throws YouAreDeadException {
+    if (this.deadservers.isDeadServer(serverName)) {
+      // host name, port and start code all match with existing one of the
+      // dead servers. So, this server must be dead.
+      String message = "Server " + what + " rejected; currently processing " +
+          serverName + " as dead server";
+      LOG.debug(message);
+      throw new YouAreDeadException(message);
+    }
+
+    if (this.deadservers.cleanPreviousInstance(serverName)) {
+      // This server has now become alive after we marked it as dead.
+      // We removed it's previous entry from the dead list to reflect it.
+      LOG.debug("Server " + serverName + " came back up, removed it from the" +
+          " dead servers list");
+    }
   }
 
   /**
