@@ -17,13 +17,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-#require 'rbconfig'
+require 'rbconfig'
 
 module IRB
-  # WINDOZE = Config::CONFIG['host_os'] =~ /mswin|mingw/
-  # Map the '/dev/null' according to the runing platform
-  # Under Windows platform the 'dev/null' is not fully compliant with unix,
-  # and the 'NUL' object need to be use instead.
+  WINDOZE = Config::CONFIG['host_os'] =~ /mswin|mingw/
 
   # Subclass of IRB so can intercept methods
   class HIRB < Irb
@@ -37,8 +34,11 @@ module IRB
       # happen is the shell exiting because of failed IRB construction with
       # no error (though we're not blanking STDERR)
       begin
+        # Map the '/dev/null' according to the runing platform
+        # Under Windows platform the 'dev/null' is not fully compliant with unix,
+        # and the 'NUL' object need to be use instead.
         devnull = "/dev/null"
-        #devnull = "NUL" if WINDOZE 
+        devnull = "NUL" if WINDOZE 
         f = File.open(devnull, "w")
         $stdout = f
         super
