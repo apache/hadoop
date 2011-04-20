@@ -162,9 +162,25 @@ public class RowResource extends ResourceBase {
       ((HTable)table).setAutoFlush(false);
       for (RowModel row: rows) {
         byte[] key = row.getKey();
+        if (key == null) {
+          key = rowspec.getRow();
+        }
+        if (key == null) {
+          throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        }
         Put put = new Put(key);
+        int i = 0;
         for (CellModel cell: row.getCells()) {
-          byte [][] parts = KeyValue.parseColumn(cell.getColumn());
+          byte[] col = cell.getColumn();
+          if (col == null) try {
+            col = rowspec.getColumns()[i++];
+          } catch (ArrayIndexOutOfBoundsException e) {
+            col = null;
+          }
+          if (col == null) {
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+          }
+          byte [][] parts = KeyValue.parseColumn(col);
           if (parts.length == 2 && parts[1].length > 0) {
             put.add(parts[0], parts[1], cell.getTimestamp(),
               tableResource.transform(parts[0], parts[1], cell.getValue(),

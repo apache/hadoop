@@ -177,6 +177,7 @@ Release 0.91.0 - Unreleased
    HBASE-3757  Upgrade to ZK 3.3.3
    HBASE-3609  Improve the selection of regions to balance; part 2 (Ted Yu)
    HBASE-2939  Allow Client-Side Connection Pooling (Karthik Sankarachary)
+   HBASE-3798  [REST] Allow representation to elide row key and column key
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
