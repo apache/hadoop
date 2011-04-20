@@ -583,6 +583,18 @@ public class FileUtil {
   }
 
   /**
+   * Class for creating hardlinks.
+   * Supports Unix, Cygwin, WindXP.
+   * @deprecated Use {@link org.apache.hadoop.fs.HardLink}
+   */
+  @Deprecated
+  public static class HardLink extends org.apache.hadoop.fs.HardLink { 
+    // This is a stub to assist with coordinated change between
+    // COMMON and HDFS projects.  It will be removed after the
+    // corresponding change is committed to HDFS.
+  }
+
+  /**
    * Create a soft link between a src and destination
    * only on a local disk. HDFS does not support this
    * @param target the target for symlink 

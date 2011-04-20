@@ -1,5 +1,20 @@
 Hadoop Change Log
 
+Trunk (unreleased changes)
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HADOOP-7133. Batch the calls in DataStorage to FileUtil.createHardLink().
+    (Matt Foley via jghoman)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
