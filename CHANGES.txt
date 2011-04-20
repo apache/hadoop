@@ -78,6 +78,7 @@ Release 0.91.0 - Unreleased
    HBASE-3790  Fix NPE in ExecResult.write() with null return value
    HBASE-3781  hbase shell cannot start "NoMethodError: undefined method
                `close' for nil:NilClass" (Mikael Sitruk)
+   HBASE-3802  Redundant list creation in HRegion
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

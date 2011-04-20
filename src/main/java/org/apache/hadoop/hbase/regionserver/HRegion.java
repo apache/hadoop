@@ -3092,8 +3092,7 @@ public class HRegion implements HeapSize { // , Writable{
         get.addFamily(family);
       }
     }
-    List<KeyValue> results =  new ArrayList<KeyValue>();
-    results = get(get, true);
+    List<KeyValue> results = get(get, true);
     return new Result(results);
   }
 
