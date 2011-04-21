@@ -613,87 +613,6 @@ public class FsShell extends Configured implements Tool {
     }
   }
     
-    
-  /**
-   * Get a listing of all files in that match the file pattern <i>srcf</i>.
-   * @param srcf a file pattern specifying source files
-   * @param recursive if need to list files in subdirs
-   * @throws IOException  
-   * @see org.apache.hadoop.fs.FileSystem#globStatus(Path)
-   */
-  private int ls(String srcf, boolean recursive) throws IOException {
-    Path srcPath = new Path(srcf);
-    FileSystem srcFs = srcPath.getFileSystem(this.getConf());
-    FileStatus[] srcs = srcFs.globStatus(srcPath);
-    if (srcs==null || srcs.length==0) {
-      throw new FileNotFoundException("Cannot access " + srcf + 
-          ": No such file or directory.");
-    }
- 
-    boolean printHeader = (srcs.length == 1) ? true: false;
-    int numOfErrors = 0;
-    for(int i=0; i<srcs.length; i++) {
-      numOfErrors += ls(srcs[i], srcFs, recursive, printHeader);
-    }
-    return numOfErrors == 0 ? 0 : -1;
-  }
-
-  /* list all files under the directory <i>src</i>
-   * ideally we should provide "-l" option, that lists like "ls -l".
-   */
-  private int ls(FileStatus src, FileSystem srcFs, boolean recursive,
-      boolean printHeader) throws IOException {
-    final String cmd = recursive? "lsr": "ls";
-    final FileStatus[] items = shellListStatus(cmd, srcFs, src);
-    if (items == null) {
-      return 1;
-    } else {
-      int numOfErrors = 0;
-      if (!recursive && printHeader) {
-        if (items.length != 0) {
-          System.out.println("Found " + items.length + " items");
-        }
-      }
-      
-      int maxReplication = 3, maxLen = 10, maxOwner = 0,maxGroup = 0;
-
-      for(int i = 0; i < items.length; i++) {
-        FileStatus stat = items[i];
-        int replication = String.valueOf(stat.getReplication()).length();
-        int len = String.valueOf(stat.getLen()).length();
-        int owner = String.valueOf(stat.getOwner()).length();
-        int group = String.valueOf(stat.getGroup()).length();
-        
-        if (replication > maxReplication) maxReplication = replication;
-        if (len > maxLen) maxLen = len;
-        if (owner > maxOwner)  maxOwner = owner;
-        if (group > maxGroup)  maxGroup = group;
-      }
-      
-      for (int i = 0; i < items.length; i++) {
-        FileStatus stat = items[i];
-        Path cur = stat.getPath();
-        String mdate = dateForm.format(new Date(stat.getModificationTime()));
-        
-        System.out.print((stat.isDirectory() ? "d" : "-") + 
-          stat.getPermission() + " ");
-        System.out.printf("%"+ maxReplication + 
-          "s ", (stat.isFile() ? stat.getReplication() : "-"));
-        if (maxOwner > 0)
-          System.out.printf("%-"+ maxOwner + "s ", stat.getOwner());
-        if (maxGroup > 0)
-          System.out.printf("%-"+ maxGroup + "s ", stat.getGroup());
-        System.out.printf("%"+ maxLen + "d ", stat.getLen());
-        System.out.print(mdate + " ");
-        System.out.println(cur.toUri().getPath());
-        if (recursive && stat.isDirectory()) {
-          numOfErrors += ls(stat,srcFs, recursive, printHeader);
-        }
-      }
-      return numOfErrors;
-    }
-  }
-
    /**
    * Show the size of a partition in the filesystem that contains
    * the specified <i>path</i>.
@@ -1400,7 +1319,7 @@ public class FsShell extends Configured implements Tool {
     String summary = "hadoop fs is the command to execute fs commands. " +
       "The full syntax is: \n\n" +
       "hadoop fs [-fs <local | file system URI>] [-conf <configuration file>]\n\t" +
-      "[-D <property=value>] [-ls <path>] [-lsr <path>] [-df [<path>]] [-du [-s] [-h] <path>]\n\t" +
+      "[-D <property=value>] [-df [<path>]] [-du [-s] [-h] <path>]\n\t" +
       "[-dus <path>] [-mv <src> <dst>] [-cp <src> <dst>] [-rm [-skipTrash] <src>]\n\t" + 
       "[-rmr [-skipTrash] <src>] [-put <localsrc> ... <dst>] [-copyFromLocal <localsrc> ... <dst>]\n\t" +
       "[-moveFromLocal <localsrc> ... <dst>] [" + 
@@ -1428,21 +1347,6 @@ public class FsShell extends Configured implements Tool {
       "\t\tcontact. This argument is optional but if used must appear\n" +
       "\t\tappear first on the command line.  Exactly one additional\n" +
       "\t\targument must be specified. \n";
-
-        
-    String ls = "-ls <path>: \tList the contents that match the specified file pattern. If\n" + 
-      "\t\tpath is not specified, the contents of /user/<currentUser>\n" +
-      "\t\twill be listed. Directory entries are of the form \n" +
-      "\t\t\tdirName (full path) <dir> \n" +
-      "\t\tand file entries are of the form \n" + 
-      "\t\t\tfileName(full path) <r n> size \n" +
-      "\t\twhere n is the number of replicas specified for the file \n" + 
-      "\t\tand size is the size of the file, in bytes.\n";
-
-    String lsr = "-lsr <path>: \tRecursively list the contents that match the specified\n" +
-      "\t\tfile pattern.  Behaves very similarly to hadoop fs -ls,\n" + 
-      "\t\texcept that the data is shown for all the entries in the\n" +
-      "\t\tsubtree.\n";
 
     String df = "-df [<path>]: \tShows the capacity, free and used space of the filesystem.\n"+
       "\t\tIf the filesystem has multiple partitions, and no path to a particular partition\n"+
@@ -1573,17 +1477,13 @@ public class FsShell extends Configured implements Tool {
 
     Command instance = commandFactory.getInstance("-" + cmd);
     if (instance != null) {
-      System.out.println(instance.getDescription());
+      printHelp(instance);
     } else if ("fs".equals(cmd)) {
       System.out.println(fs);
     } else if ("conf".equals(cmd)) {
       System.out.println(conf);
     } else if ("D".equals(cmd)) {
       System.out.println(D);
-    } else if ("ls".equals(cmd)) {
-      System.out.println(ls);
-    } else if ("lsr".equals(cmd)) {
-      System.out.println(lsr);
     } else if ("df".equals(cmd)) {
       System.out.println(df);
     } else if ("du".equals(cmd)) {
@@ -1644,13 +1544,11 @@ public class FsShell extends Configured implements Tool {
       System.out.println(summary);
       for (String thisCmdName : commandFactory.getNames()) {
         instance = commandFactory.getInstance(thisCmdName);
-        System.out.println(instance.getUsage());
+        System.out.println("\t[" + instance.getUsage() + "]");
       }
       System.out.println("\t[-help [cmd]]\n");
       
       System.out.println(fs);
-      System.out.println(ls);
-      System.out.println(lsr);
       System.out.println(df);
       System.out.println(du);
       System.out.println(dus);
@@ -1678,14 +1576,29 @@ public class FsShell extends Configured implements Tool {
       System.out.println(chgrp);
 
       for (String thisCmdName : commandFactory.getNames()) {
-        instance = commandFactory.getInstance(thisCmdName);
-        System.out.println(instance.getDescription());
+        printHelp(commandFactory.getInstance(thisCmdName));
       }
 
       System.out.println(help);
     }        
   }
 
+  // TODO: will eventually auto-wrap the text, but this matches the expected
+  // output for the hdfs tests...
+  private void printHelp(Command instance) {
+    boolean firstLine = true;
+    for (String line : instance.getDescription().split("\n")) {
+      String prefix;
+      if (firstLine) {
+        prefix = instance.getUsage() + ":\t";
+        firstLine = false;
+      } else {
+        prefix = "\t\t";
+      }
+      System.out.println(prefix + line);
+    }    
+  }
+  
   /**
    * Apply operation specified by 'cmd' on all parameters
    * starting from argv[startindex].
@@ -1720,10 +1633,6 @@ public class FsShell extends Configured implements Tool {
           delete(argv[i], true, rmSkipTrash);
         } else if ("-df".equals(cmd)) {
           df(argv[i]);
-        } else if ("-ls".equals(cmd)) {
-          exitCode = ls(argv[i], false);
-        } else if ("-lsr".equals(cmd)) {
-          exitCode = ls(argv[i], true);
         } else if ("-touchz".equals(cmd)) {
           touchz(argv[i]);
         } else if ("-text".equals(cmd)) {
@@ -1781,8 +1690,7 @@ public class FsShell extends Configured implements Tool {
     } else if ("-D".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
                          " [-D <[property=value>]");
-    } else if ("-ls".equals(cmd) || "-lsr".equals(cmd) ||
-               "-du".equals(cmd) || "-dus".equals(cmd) ||
+    } else if ("-du".equals(cmd) || "-dus".equals(cmd) ||
                "-touchz".equals(cmd) || "-mkdir".equals(cmd) ||
                "-text".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
@@ -1822,8 +1730,6 @@ public class FsShell extends Configured implements Tool {
       System.err.println("Usage: java FsShell [" + TAIL_USAGE + "]");
     } else {
       System.err.println("Usage: java FsShell");
-      System.err.println("           [-ls <path>]");
-      System.err.println("           [-lsr <path>]");
       System.err.println("           [-df [<path>]]");
       System.err.println("           [-du [-s] [-h] <path>]");
       System.err.println("           [-dus <path>]");
@@ -1965,18 +1871,6 @@ public class FsShell extends Configured implements Tool {
                  "-chown".equals(cmd) ||
                  "-chgrp".equals(cmd)) {
         exitCode = FsShellPermissions.changePermissions(cmd, argv, i, this);
-      } else if ("-ls".equals(cmd)) {
-        if (i < argv.length) {
-          exitCode = doall(cmd, argv, i);
-        } else {
-          exitCode = ls(Path.CUR_DIR, false);
-        } 
-      } else if ("-lsr".equals(cmd)) {
-        if (i < argv.length) {
-          exitCode = doall(cmd, argv, i);
-        } else {
-          exitCode = ls(Path.CUR_DIR, true);
-        } 
       } else if ("-mv".equals(cmd)) {
         exitCode = rename(argv, getConf());
       } else if ("-cp".equals(cmd)) {

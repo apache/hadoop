@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.fs.Path;
 
 /**
  * Count the number of directories, files, bytes, quota, and remaining quota.
@@ -43,13 +44,13 @@ public class Count extends FsCommand {
   }
 
   public static final String NAME = "count";
-  public static final String USAGE = "-" + NAME + " [-q] <path> ...";
-  public static final String DESCRIPTION = CommandUtils.formatDescription(USAGE, 
-      "Count the number of directories, files and bytes under the paths",
-      "that match the specified file pattern.  The output columns are:",
-      "DIR_COUNT FILE_COUNT CONTENT_SIZE FILE_NAME or",
-      "QUOTA REMAINING_QUATA SPACE_QUOTA REMAINING_SPACE_QUOTA ",
-      "      DIR_COUNT FILE_COUNT CONTENT_SIZE FILE_NAME");
+  public static final String USAGE = "[-q] <path> ...";
+  public static final String DESCRIPTION = 
+      "Count the number of directories, files and bytes under the paths\n" +
+      "that match the specified file pattern.  The output columns are:\n" +
+      "DIR_COUNT FILE_COUNT CONTENT_SIZE FILE_NAME or\n" +
+      "QUOTA REMAINING_QUATA SPACE_QUOTA REMAINING_SPACE_QUOTA \n" +
+      "      DIR_COUNT FILE_COUNT CONTENT_SIZE FILE_NAME";
   
   private boolean showQuotas;
 
@@ -85,5 +86,11 @@ public class Count extends FsCommand {
   protected void processPath(PathData src) throws IOException {
     ContentSummary summary = src.fs.getContentSummary(src.path);
     out.println(summary.toString(showQuotas) + src.path);
+  }
+
+  // TODO: remove when the error is commonized...
+  @Override
+  protected String getFnfText(Path path) {
+    return "Can not find listing for " + path;
   }
 }

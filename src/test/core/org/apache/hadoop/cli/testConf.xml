@@ -54,7 +54,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-ls &lt;path&gt;:( |\t)*List the contents that match the specified file pattern. If( )*</expected-output>
+          <expected-output>^-ls \[&lt;path&gt; \.\.\.\]:( |\t)*List the contents that match the specified file pattern. If( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -101,7 +101,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-lsr &lt;path&gt;:( |\t)*Recursively list the contents that match the specified( )*</expected-output>
+          <expected-output>^-lsr \[&lt;path&gt; \.\.\.\]:( |\t)*Recursively list the contents that match the specified( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -222,7 +222,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-count \[-q\] &lt;path&gt; \.\.\.: Count the number of directories, files and bytes under the paths( )*</expected-output>
+          <expected-output>^-count \[-q\] &lt;path&gt; \.\.\.:( |\t)*Count the number of directories, files and bytes under the paths( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
