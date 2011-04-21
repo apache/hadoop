@@ -241,7 +241,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
       }
 
       currentVersion = stat.getVersion();
-      if (ownTask() == false) {
+      if (ownTask(true) == false) {
         tot_wkr_failed_to_grab_task_lost_race.incrementAndGet();
         return;
       }
@@ -262,7 +262,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
 
         @Override
         public boolean progress() {
-          if (ownTask() == false) {
+          if (ownTask(false) == false) {
             LOG.warn("Failed to heartbeat the task" + currentTask);
             return false;
           }
@@ -321,23 +321,29 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
    * <p>
    * @return true if task path is successfully locked
    */
-  private boolean ownTask() {
+  private boolean ownTask(boolean isFirstTime) {
     try {
       Stat stat = this.watcher.getZooKeeper().setData(currentTask,
           TaskState.TASK_OWNED.get(serverName), currentVersion);
       if (stat == null) {
+        LOG.warn("zk.setData() returned null for path " + currentTask);
+        tot_wkr_task_heartbeat_failed.incrementAndGet();
         return (false);
       }
       currentVersion = stat.getVersion();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug ("hearbeat for path " + currentTask +
-            " successful, version = " + currentVersion);
-      }
       tot_wkr_task_heartbeat.incrementAndGet();
       return (true);
     } catch (KeeperException e) {
-      // either Bad Version or Node has been removed
-      LOG.warn("failed to assert ownership for " + currentTask, e);
+      if (!isFirstTime) {
+        if (e.code().equals(KeeperException.Code.NONODE)) {
+          LOG.warn("NONODE failed to assert ownership for " + currentTask, e);
+        } else if (e.code().equals(KeeperException.Code.BADVERSION)) {
+          LOG.warn("BADVERSION failed to assert ownership for " +
+              currentTask, e);
+        } else {
+          LOG.warn("failed to assert ownership for " + currentTask, e);
+        }
+      }
     } catch (InterruptedException e1) {
       LOG.warn("Interrupted while trying to assert ownership of " +
           currentTask + " " + StringUtils.stringifyException(e1));

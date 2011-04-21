@@ -1102,7 +1102,6 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   boolean setOfflineInZooKeeper(final RegionState state) {
     if (!state.isClosed() && !state.isOffline()) {
-        new RuntimeException("Unexpected state trying to OFFLINE; " + state);
       this.master.abort("Unexpected state trying to OFFLINE; " + state,
         new IllegalStateException());
       return false;

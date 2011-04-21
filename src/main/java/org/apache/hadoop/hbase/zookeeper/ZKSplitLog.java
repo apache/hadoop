@@ -56,7 +56,8 @@ public class ZKSplitLog {
    * @param zkw zk reference
    * @param filename log file name (only the basename)
    */
-  public static String getNodeName(ZooKeeperWatcher zkw, String filename) {
+  public static String getEncodedNodeName(ZooKeeperWatcher zkw,
+      String filename) {
       return ZKUtil.joinZNode(zkw.splitLogZNode, encode(filename));
   }
 
@@ -83,7 +84,7 @@ public class ZKSplitLog {
   }
 
   public static String getRescanNode(ZooKeeperWatcher zkw) {
-    return getNodeName(zkw, "RESCAN");
+    return ZKUtil.joinZNode(zkw.splitLogZNode, "RESCAN");
   }
 
   public static boolean isRescanNode(ZooKeeperWatcher zkw, String path) {

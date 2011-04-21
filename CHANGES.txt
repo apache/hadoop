@@ -79,7 +79,11 @@ Release 0.91.0 - Unreleased
    HBASE-3781  hbase shell cannot start "NoMethodError: undefined method
                `close' for nil:NilClass" (Mikael Sitruk)
    HBASE-3802  Redundant list creation in HRegion
+   HBASE-3788  Two error handlings in AssignmentManager.setOfflineInZooKeeper()
+               (Ted Yu)
    HBASE-3800  HMaster is not able to start due to AlreadyCreatedException
+   HBASE-3806  distributed log splitting double escapes task names
+               (Prakash Khemani)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

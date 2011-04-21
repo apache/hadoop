@@ -135,7 +135,8 @@ public class TestSplitLogManager {
     int num = 0;
     List<String> nodes = ZKUtil.listChildrenNoWatch(zkw, zkw.splitLogZNode);
     for (String node : nodes) {
-      if (ZKSplitLog.isRescanNode(zkw, ZKSplitLog.getNodeName(zkw, node))) {
+      if (ZKSplitLog.isRescanNode(zkw,
+          ZKUtil.joinZNode(zkw.splitLogZNode, node))) {
         num++;
       }
     }
@@ -145,8 +146,9 @@ public class TestSplitLogManager {
   private void setRescanNodeDone(int count) throws KeeperException {
     List<String> nodes = ZKUtil.listChildrenNoWatch(zkw, zkw.splitLogZNode);
     for (String node : nodes) {
-      if (ZKSplitLog.isRescanNode(zkw, ZKSplitLog.getNodeName(zkw, node))) {
-        ZKUtil.setData(zkw, ZKSplitLog.getNodeName(zkw, node),
+      String nodepath = ZKUtil.joinZNode(zkw.splitLogZNode, node);
+      if (ZKSplitLog.isRescanNode(zkw, nodepath)) {
+        ZKUtil.setData(zkw, nodepath,
             TaskState.TASK_DONE.get("some-worker"));
         count--;
       }
@@ -156,12 +158,12 @@ public class TestSplitLogManager {
 
   private String submitTaskAndWait(TaskBatch batch, String name)
   throws KeeperException, InterruptedException {
-    String tasknode = ZKSplitLog.getNodeName(zkw, "foo");
+    String tasknode = ZKSplitLog.getEncodedNodeName(zkw, name);
     NodeCreationListener listener = new NodeCreationListener(zkw, tasknode);
     zkw.registerListener(listener);
     ZKUtil.watchAndCheckExists(zkw, tasknode);
 
-    slm.installTask("foo", batch);
+    slm.installTask(name, batch);
     assertEquals(1, batch.installed);
     assertTrue(slm.findOrCreateOrphanTask(tasknode).batch == batch);
     assertEquals(1L, tot_mgr_node_create_queued.get());
@@ -184,7 +186,7 @@ public class TestSplitLogManager {
     slm.finishInitialization();
     TaskBatch batch = new TaskBatch();
 
-    String tasknode = submitTaskAndWait(batch, "foo");
+    String tasknode = submitTaskAndWait(batch, "foo/1");
 
     byte[] data = ZKUtil.getData(zkw, tasknode);
     LOG.info("Task node created " + new String(data));
@@ -195,7 +197,7 @@ public class TestSplitLogManager {
   public void testOrphanTaskAcquisition() throws Exception {
     LOG.info("TestOrphanTaskAcquisition");
 
-    String tasknode = ZKSplitLog.getNodeName(zkw, "orphan");
+    String tasknode = ZKSplitLog.getEncodedNodeName(zkw, "orphan/test/slash");
     zkw.getZooKeeper().create(tasknode,
         TaskState.TASK_OWNED.get("dummy-worker"), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
@@ -227,7 +229,7 @@ public class TestSplitLogManager {
   public void testUnassignedOrphan() throws Exception {
     LOG.info("TestUnassignedOrphan - an unassigned task is resubmitted at" +
         " startup");
-    String tasknode = ZKSplitLog.getNodeName(zkw, "orphan");
+    String tasknode = ZKSplitLog.getEncodedNodeName(zkw, "orphan/test/slash");
     //create an unassigned orphan task
     zkw.getZooKeeper().create(tasknode,
         TaskState.TASK_UNASSIGNED.get("dummy-worker"), Ids.OPEN_ACL_UNSAFE,
@@ -268,7 +270,7 @@ public class TestSplitLogManager {
     slm.finishInitialization();
     TaskBatch batch = new TaskBatch();
 
-    String tasknode = submitTaskAndWait(batch, "foo");
+    String tasknode = submitTaskAndWait(batch, "foo/1");
     int version = ZKUtil.checkExists(zkw, tasknode);
 
     ZKUtil.setData(zkw, tasknode, TaskState.TASK_OWNED.get("worker1"));
@@ -301,7 +303,7 @@ public class TestSplitLogManager {
     slm.finishInitialization();
     TaskBatch batch = new TaskBatch();
 
-    String tasknode = submitTaskAndWait(batch, "foo");
+    String tasknode = submitTaskAndWait(batch, "foo/1");
     int version = ZKUtil.checkExists(zkw, tasknode);
 
     ZKUtil.setData(zkw, tasknode, TaskState.TASK_OWNED.get("worker1"));
@@ -329,7 +331,7 @@ public class TestSplitLogManager {
     slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
     slm.finishInitialization();
     TaskBatch batch = new TaskBatch();
-    String tasknode = submitTaskAndWait(batch, "foo");
+    String tasknode = submitTaskAndWait(batch, "foo/1");
     ZKUtil.setData(zkw, tasknode, TaskState.TASK_DONE.get("worker"));
     synchronized (batch) {
       while (batch.installed != batch.done) {
@@ -349,7 +351,7 @@ public class TestSplitLogManager {
     slm.finishInitialization();
     TaskBatch batch = new TaskBatch();
 
-    String tasknode = submitTaskAndWait(batch, "foo");
+    String tasknode = submitTaskAndWait(batch, "foo/1");
     ZKUtil.setData(zkw, tasknode, TaskState.TASK_ERR.get("worker"));
     synchronized (batch) {
       while (batch.installed != batch.error) {
@@ -368,7 +370,7 @@ public class TestSplitLogManager {
     slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
     slm.finishInitialization();
     TaskBatch batch = new TaskBatch();
-    String tasknode = submitTaskAndWait(batch, "foo");
+    String tasknode = submitTaskAndWait(batch, "foo/1");
     ZKUtil.setData(zkw, tasknode, TaskState.TASK_RESIGNED.get("worker"));
     int version = ZKUtil.checkExists(zkw, tasknode);
 
@@ -388,7 +390,7 @@ public class TestSplitLogManager {
         " resubmit");
 
     // create an orphan task in OWNED state
-    String tasknode1 = ZKSplitLog.getNodeName(zkw, "orphan");
+    String tasknode1 = ZKSplitLog.getEncodedNodeName(zkw, "orphan/1");
     zkw.getZooKeeper().create(tasknode1,
         TaskState.TASK_OWNED.get("dummy-worker"), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
@@ -406,7 +408,7 @@ public class TestSplitLogManager {
 
     // submit another task which will stay in unassigned mode
     TaskBatch batch = new TaskBatch();
-    submitTaskAndWait(batch, "foo");
+    submitTaskAndWait(batch, "foo/1");
 
     // keep updating the orphan owned node every to/2 seconds
     for (int i = 0; i < (3 * to)/100; i++) {

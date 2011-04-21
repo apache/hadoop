@@ -229,7 +229,7 @@ public class SplitLogManager extends ZooKeeperListener {
 
   boolean installTask(String taskname, TaskBatch batch) {
     tot_mgr_log_split_start.incrementAndGet();
-    String path = ZKSplitLog.getNodeName(watcher, taskname);
+    String path = ZKSplitLog.getEncodedNodeName(watcher, taskname);
     Task oldtask = createTaskIfAbsent(path, batch);
     if (oldtask == null) {
       // publish the task in zk
@@ -605,11 +605,19 @@ public class SplitLogManager extends ZooKeeperListener {
           " " + StringUtils.stringifyException(e));
       return;
     }
-    LOG.info("found " + orphans.size() + " orphan tasks");
+    int rescan_nodes = 0;
     for (String path : orphans) {
-      LOG.info("found orphan task " + path);
-      getDataSetWatch(ZKSplitLog.getNodeName(watcher, path), zkretries);
+      String nodepath = ZKUtil.joinZNode(watcher.splitLogZNode, path);
+      if (ZKSplitLog.isRescanNode(watcher, nodepath)) {
+        rescan_nodes++;
+        LOG.debug("found orphan rescan node " + path);
+      } else {
+        LOG.info("found orphan task " + path);
+      }
+      getDataSetWatch(nodepath, zkretries);
     }
+    LOG.info("found " + (orphans.size() - rescan_nodes) + " orphan tasks and " +
+        rescan_nodes + " rescan nodes");
   }
 
   /**
@@ -757,9 +765,9 @@ public class SplitLogManager extends ZooKeeperListener {
           LOG.debug("found pre-existing znode " + path);
           tot_mgr_node_already_exists.incrementAndGet();
         } else {
-          LOG.warn("create rc =" + KeeperException.Code.get(rc) + " for " +
-              path);
           Long retry_count = (Long)ctx;
+          LOG.warn("create rc =" + KeeperException.Code.get(rc) + " for " +
+              path + " retry=" + retry_count);
           if (retry_count == 0) {
             tot_mgr_node_create_err.incrementAndGet();
             createNodeFailure(path);
@@ -786,8 +794,9 @@ public class SplitLogManager extends ZooKeeperListener {
         Stat stat) {
       tot_mgr_get_data_result.incrementAndGet();
       if (rc != 0) {
-        LOG.warn("getdata rc = " + KeeperException.Code.get(rc) + " "+ path);
         Long retry_count = (Long) ctx;
+        LOG.warn("getdata rc = " + KeeperException.Code.get(rc) + " " +
+            path + " retry=" + retry_count);
         if (retry_count == 0) {
           tot_mgr_get_data_err.incrementAndGet();
           getDataSetWatchFailure(path);
@@ -815,8 +824,9 @@ public class SplitLogManager extends ZooKeeperListener {
       if (rc != 0) {
         if (rc != KeeperException.Code.NONODE.intValue()) {
           tot_mgr_node_delete_err.incrementAndGet();
-          LOG.warn("delete rc=" + KeeperException.Code.get(rc) + " for " + path);
           Long retry_count = (Long) ctx;
+          LOG.warn("delete rc=" + KeeperException.Code.get(rc) + " for " +
+              path + " retry=" + retry_count);
           if (retry_count == 0) {
             LOG.warn("delete failed " + path);
             deleteNodeFailure(path);
@@ -849,8 +859,9 @@ public class SplitLogManager extends ZooKeeperListener {
     @Override
     public void processResult(int rc, String path, Object ctx, String name) {
       if (rc != 0) {
-        LOG.warn("rc =" + KeeperException.Code.get(rc) + " for "+ path);
         Long retry_count = (Long)ctx;
+        LOG.warn("rc=" + KeeperException.Code.get(rc) + " for "+ path +
+            " retry=" + retry_count);
         if (retry_count == 0) {
           createRescanFailure();
         } else {
