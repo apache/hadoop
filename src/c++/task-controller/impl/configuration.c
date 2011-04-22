@@ -241,8 +241,9 @@ void read_config(const char* file_name) {
 /*
  * function used to get a configuration value.
  * The function for the first time populates the configuration details into
- * array, next time onwards used the populated array.
+ * array, next time onwards uses the populated array.
  *
+ * Memory returned here should be freed using free.
  */
 char * get_value(const char* key) {
   int count;
@@ -259,8 +260,15 @@ char * get_value(const char* key) {
  * Value delimiter is assumed to be a comma.
  */
 char ** get_values(const char * key) {
-  char ** toPass = NULL;
   char *value = get_value(key);
+  return extract_values(value);
+}
+
+/**
+ * Extracts array of values from the comma separated list of values.
+ */
+char ** extract_values(char * value) {
+  char ** toPass = NULL;
   char *tempTok = NULL;
   char *tempstr = NULL;
   int size = 0;
@@ -286,9 +294,13 @@ char ** get_values(const char * key) {
   return toPass;
 }
 
-// free an entry set of values
+/**
+ * Free an entry set of values.
+ */
 void free_values(char** values) {
   if (*values != NULL) {
+    // the values were tokenized from the same malloc, so freeing the first
+    // frees the entire block.
     free(*values);
   }
   if (values != NULL) {

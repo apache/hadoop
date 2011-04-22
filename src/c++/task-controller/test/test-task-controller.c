@@ -637,7 +637,7 @@ void test_run_task() {
 	   strerror(errno));
     exit(1);
   } else if (child == 0) {
-    if (run_task_as_user(username, "job_4", "task_1", 
+    if (run_task_as_user(username, "", "job_4", "task_1", 
                          task_dir, script_name) != 0) {
       printf("FAIL: failed in child\n");
       exit(42);

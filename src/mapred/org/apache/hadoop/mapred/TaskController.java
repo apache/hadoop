@@ -17,14 +17,11 @@
 */
 package org.apache.hadoop.mapred;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,10 +31,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.mapreduce.JobID;
-import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapred.TaskTracker.LocalStorage;
 import org.apache.hadoop.util.ProcessTree.Signal;
-import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 /**
  * Controls initialization, finalization and clean up of tasks, and
@@ -64,6 +59,11 @@ public abstract class TaskController implements Configurable {
   
   protected LocalDirAllocator allocator;
 
+  /**
+   * LocalStorage of TaskTracker
+   */
+  protected LocalStorage localStorage;
+
   final public static FsPermission TASK_LAUNCH_SCRIPT_PERMISSION =
   FsPermission.createImmutable((short) 0700); // rwx--------
   
@@ -78,8 +78,10 @@ public abstract class TaskController implements Configurable {
   /**
    * Does initialization and setup.
    * @param allocator the local dir allocator to use
+   * @param l TaskTracker's LocalStorage object
    */
-  public abstract void setup(LocalDirAllocator allocator) throws IOException;
+  public abstract void setup(LocalDirAllocator allocator,
+      LocalStorage l) throws IOException;
   
   /**
    * Create all of the directories necessary for the job to start and download

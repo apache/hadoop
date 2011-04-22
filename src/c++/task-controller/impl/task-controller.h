@@ -74,19 +74,20 @@ int check_taskcontroller_permissions(char *executable_file);
 int delete_log_directory(const char *log_dir);
 
 // initialize the job directory
-int initialize_job(const char *user, const char *jobid,
+int initialize_job(const char *user, const char * good_local_dirs, const char *jobid,
                    const char *credentials, 
                    const char *job_xml, char* const* args);
 
 // run the task as the user
-int run_task_as_user(const char * user, const char *jobid, const char *taskid,
+int run_task_as_user(const char * user, const char * good_local_dirs,
+                     const char *jobid, const char *taskid,
                      const char *work_dir, const char *script_name);
 
 // send a signal as the user
 int signal_user_task(const char *user, int pid, int sig);
 
 // delete a directory (or file) recursively as the user.
-int delete_as_user(const char *user,
+int delete_as_user(const char *user, const char * good_local_dirs,
                    const char *dir_to_be_deleted);
 
 // run a command as the user
@@ -140,7 +141,7 @@ int mkdirs(const char* path, mode_t perm);
 /**
  * Function to initialize the user directories of a user.
  */
-int initialize_user(const char *user);
+int initialize_user(const char *user, const char * good_local_dirs);
 
 /**
  * Create a top level directory for the user.

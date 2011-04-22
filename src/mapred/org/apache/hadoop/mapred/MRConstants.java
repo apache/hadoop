@@ -29,6 +29,12 @@ interface MRConstants {
   
   public static final long COUNTER_UPDATE_INTERVAL = 60 * 1000;
 
+  /**
+   * How often TaskTracker needs to check the health of its disks, if not
+   * configured using mapred.disk.healthChecker.interval
+   */
+  public static final long DEFAULT_DISK_HEALTH_CHECK_INTERVAL = 60 * 1000;
+
   //
   // Result codes
   //

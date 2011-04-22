@@ -35,10 +35,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.TaskDistributedCacheManager.CacheFile;
 import org.apache.hadoop.mapred.DefaultTaskController;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.JobLocalizer;
 import org.apache.hadoop.mapred.TaskController;
 import org.apache.hadoop.mapred.TaskTracker;
+import org.apache.hadoop.mapred.TaskTracker.LocalStorage;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileStatus;
@@ -111,7 +113,8 @@ public class TestTrackerDistributedCacheManager extends TestCase {
         taskControllerClass, conf);
 
     // setup permissions for mapred local dir
-    taskController.setup(localDirAllocator);
+    taskController.setup(localDirAllocator,
+        new LocalStorage(conf.getStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY)));
 
     // Create the temporary cache files to be used in the tests.
     firstCacheFile = new Path(TEST_ROOT_DIR, "firstcachefile");
@@ -126,7 +129,8 @@ public class TestTrackerDistributedCacheManager extends TestCase {
   
   protected void refreshConf(Configuration conf) throws IOException {
     taskController.setConf(conf);
-    taskController.setup(localDirAllocator);
+    taskController.setup(localDirAllocator,
+        new LocalStorage(conf.getStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY)));
   }
 
   /**

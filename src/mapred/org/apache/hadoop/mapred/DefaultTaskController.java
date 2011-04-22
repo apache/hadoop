@@ -22,7 +22,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -32,9 +31,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.server.tasktracker.JVMInfo;
 import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
+import org.apache.hadoop.mapred.TaskTracker.LocalStorage;
 import org.apache.hadoop.util.ProcessTree.Signal;
 import org.apache.hadoop.util.ProcessTree;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 import org.apache.commons.logging.Log;
@@ -249,8 +248,9 @@ public class DefaultTaskController extends TaskController {
   }
 
   @Override
-  public void setup(LocalDirAllocator allocator) {
+  public void setup(LocalDirAllocator allocator, LocalStorage l) {
     this.allocator = allocator;
+    this.localStorage = l;
   }
   
 }

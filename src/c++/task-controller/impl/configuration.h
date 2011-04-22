@@ -34,6 +34,9 @@ char *get_value(const char* key);
 //comma seperated strings.
 char ** get_values(const char* key);
 
+// Extracts array of values from the comma separated list of values.
+char ** extract_values(char * value);
+
 // free the memory returned by get_values
 void free_values(char** values);
 

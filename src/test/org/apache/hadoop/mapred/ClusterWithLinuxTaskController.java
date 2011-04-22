@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.mapred.TaskTracker.LocalStorage;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import junit.framework.TestCase;
@@ -75,14 +76,15 @@ public class ClusterWithLinuxTaskController extends TestCase {
         + "/task-controller";
 
     @Override
-    public void setup(LocalDirAllocator allocator) throws IOException {
+    public void setup(LocalDirAllocator allocator, LocalStorage l)
+        throws IOException {
       // get the current ugi and set the task controller group owner
       getConf().set(TT_GROUP, taskTrackerSpecialGroup);
 
       // write configuration file
       configurationFile = createTaskControllerConf(System
           .getProperty(TASKCONTROLLER_PATH), getConf());
-      super.setup(allocator);
+      super.setup(allocator, l);
     }
 
     protected String getTaskControllerExecutablePath() {
@@ -209,8 +211,8 @@ public class ClusterWithLinuxTaskController extends TestCase {
     PrintWriter writer =
         new PrintWriter(new FileOutputStream(configurationFile));
 
-    writer.println(String.format("mapred.local.dir=%s", conf.
-        get(JobConf.MAPRED_LOCAL_DIR_PROPERTY)));
+    //writer.println(String.format("mapred.local.dir=%s", conf.
+    //    get(JobConf.MAPRED_LOCAL_DIR_PROPERTY)));
 
     writer
         .println(String.format("hadoop.log.dir=%s", TaskLog.getBaseLogDir()));

@@ -42,8 +42,6 @@
 
 #define TT_LOCAL_TASK_DIR_PATTERN    "%s/taskTracker/%s/jobcache/%s/%s"
 
-#define TT_SYS_DIR_KEY "mapred.local.dir"
-
 #define TT_LOG_DIR_KEY "hadoop.log.dir"
 
 #define JOB_FILENAME "job.xml"
@@ -210,6 +208,14 @@ int change_user(uid_t user, gid_t group) {
 }
 
 /**
+ * Get the array of mapred local dirs from the given comma separated list of
+ * paths. Memory allocated using strdup here is freed up in free_values().
+ */
+char ** get_mapred_local_dirs(const char * good_local_dirs) {
+  return extract_values(strdup(good_local_dirs));
+}
+
+/**
  * Utility function to concatenate argB to argA using the concat_pattern.
  */
 char *concatenate(char *concat_pattern, char *return_path_name, 
@@ -353,8 +359,8 @@ int mkdirs(const char* path, mode_t perm) {
  * Function to prepare the attempt directories for the task JVM.
  * It creates the task work and log directories.
  */
-static int create_attempt_directories(const char* user, const char *job_id, 
-					const char *task_id) {
+static int create_attempt_directories(const char* user,
+    const char * good_local_dirs, const char *job_id, const char *task_id) {
   // create dirs as 0750
   const mode_t perms = S_IRWXU | S_IRGRP | S_IXGRP;
   if (job_id == NULL || task_id == NULL || user == NULL) {
@@ -364,11 +370,11 @@ static int create_attempt_directories(const char* user, const char *job_id,
   }
   int result = 0;
 
-  char **local_dir = get_values(TT_SYS_DIR_KEY);
+  char **local_dir = get_mapred_local_dirs(good_local_dirs);
 
   if (local_dir == NULL) {
-    fprintf(LOGFILE, "%s is not configured.\n", TT_SYS_DIR_KEY);
-    return -1;
+    fprintf(LOGFILE, "Good mapred local directories could not be obtained.\n");
+    return INVALID_TT_ROOT;
   }
 
   char **local_dir_ptr;
@@ -635,10 +641,10 @@ static int copy_file(int input, const char* in_filename,
 /**
  * Function to initialize the user directories of a user.
  */
-int initialize_user(const char *user) {
-  char **local_dir = get_values(TT_SYS_DIR_KEY);
+int initialize_user(const char *user, const char * good_local_dirs) {
+  char **local_dir = get_mapred_local_dirs(good_local_dirs);
   if (local_dir == NULL) {
-    fprintf(LOGFILE, "%s is not configured.\n", TT_SYS_DIR_KEY);
+    fprintf(LOGFILE, "Good mapred local directories could ot be obtained.\n");
     return INVALID_TT_ROOT;
   }
 
@@ -664,16 +670,16 @@ int initialize_user(const char *user) {
 /**
  * Function to prepare the job directories for the task JVM.
  */
-int initialize_job(const char *user, const char *jobid, 
-		   const char* credentials, const char* job_xml,
-                   char* const* args) {
+int initialize_job(const char *user, const char * good_local_dirs,
+    const char *jobid, const char* credentials, const char* job_xml,
+    char* const* args) {
   if (jobid == NULL || user == NULL) {
     fprintf(LOGFILE, "Either jobid is null or the user passed is null.\n");
     return INVALID_ARGUMENT_NUMBER;
   }
 
   // create the user directory
-  int result = initialize_user(user);
+  int result = initialize_user(user, good_local_dirs);
   if (result != 0) {
     return result;
   }
@@ -707,10 +713,10 @@ int initialize_job(const char *user, const char *jobid,
 
   // 750
   mode_t permissions = S_IRWXU | S_IRGRP | S_IXGRP;
-  char **tt_roots = get_values(TT_SYS_DIR_KEY);
+  char **tt_roots = get_mapred_local_dirs(good_local_dirs);
 
   if (tt_roots == NULL) {
-    return INVALID_CONFIG_FILE;
+    return INVALID_TT_ROOT;
   }
 
   char **tt_root;
@@ -771,12 +777,12 @@ int initialize_job(const char *user, const char *jobid,
  * 4) Does an execlp on the same in order to replace the current image with
  *    task image.
  */
-int run_task_as_user(const char *user, const char *job_id, 
-                     const char *task_id, const char *work_dir,
-                     const char *script_name) {
+int run_task_as_user(const char *user, const char * good_local_dirs,
+                     const char *job_id, const char *task_id,
+                     const char *work_dir, const char *script_name) {
   int exit_code = -1;
   char *task_script_path = NULL;
-  if (create_attempt_directories(user, job_id, task_id) != 0) {
+  if (create_attempt_directories(user, good_local_dirs, job_id, task_id) != 0) {
     goto cleanup;
   }
   int task_file_source = open_file_as_task_tracker(script_name);
@@ -1002,15 +1008,15 @@ static int delete_path(const char *full_path,
  * user: the user doing the delete
  * subdir: the subdir to delete
  */
-int delete_as_user(const char *user,
+int delete_as_user(const char *user, const char * good_local_dirs,
                    const char *subdir) {
   int ret = 0;
 
-  char** tt_roots = get_values(TT_SYS_DIR_KEY);
+  char** tt_roots = get_mapred_local_dirs(good_local_dirs);
   char** ptr;
   if (tt_roots == NULL || *tt_roots == NULL) {
-    fprintf(LOGFILE, "No %s defined in the configuration\n", TT_SYS_DIR_KEY);
-    return INVALID_CONFIG_FILE;
+    fprintf(LOGFILE, "Good mapred local directories could ot be obtained.\n");
+    return INVALID_TT_ROOT;
   }
 
   // do the delete

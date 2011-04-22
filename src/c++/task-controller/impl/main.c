@@ -35,7 +35,9 @@
 
 void display_usage(FILE *stream) {
   fprintf(stream,
-      "Usage: task-controller user command command-args\n");
+   "Usage: task-controller user good-local-dirs command command-args\n");
+  fprintf(stream, " where good-local-dirs is a comma separated list of " \
+          "good mapred local directories.\n");
   fprintf(stream, "Commands:\n");
   fprintf(stream, "   initialize job:       %2d jobid credentials cmd args\n",
 	  INITIALIZE_JOB);
@@ -53,13 +55,14 @@ void display_usage(FILE *stream) {
 
 int main(int argc, char **argv) {
   //Minimum number of arguments required to run the task-controller
-  if (argc < 4) {
+  if (argc < 5) {
     display_usage(stdout);
     return INVALID_ARGUMENT_NUMBER;
   }
 
   LOGFILE = stdout;
   int command;
+  const char * good_local_dirs = NULL;
   const char * job_id = NULL;
   const char * task_id = NULL;
   const char * cred_file = NULL;
@@ -124,41 +127,46 @@ int main(int argc, char **argv) {
   }
 
   optind = optind + 1;
+  good_local_dirs = argv[optind];
+  if (good_local_dirs == NULL) {
+    return INVALID_TT_ROOT;
+  }
+
+  optind = optind + 1;
   command = atoi(argv[optind++]);
 
   fprintf(LOGFILE, "main : command provided %d\n",command);
   fprintf(LOGFILE, "main : user is %s\n", user_detail->pw_name);
+  fprintf(LOGFILE, "Good mapred-local-dirs are %s\n", good_local_dirs);
 
   switch (command) {
   case INITIALIZE_JOB:
-    if (argc < 7) {
-      fprintf(LOGFILE, "Too few arguments (%d vs 7) for initialize job\n",
-	      argc);
+    if (argc < 8) {
+      fprintf(LOGFILE, "Too few arguments (%d vs 8) for initialize job\n",
+              argc);
       return INVALID_ARGUMENT_NUMBER;
     }
     job_id = argv[optind++];
     cred_file = argv[optind++];
     job_xml = argv[optind++];
-    exit_code = initialize_job(user_detail->pw_name, job_id, cred_file,
-                               job_xml, argv + optind);
+    exit_code = initialize_job(user_detail->pw_name, good_local_dirs, job_id,
+                               cred_file, job_xml, argv + optind);
     break;
   case LAUNCH_TASK_JVM:
-    if (argc < 7) {
-      fprintf(LOGFILE, "Too few arguments (%d vs 7) for launch task\n",
-	      argc);
+    if (argc < 8) {
+      fprintf(LOGFILE, "Too few arguments (%d vs 8) for launch task\n", argc);
       return INVALID_ARGUMENT_NUMBER;
     }
     job_id = argv[optind++];
     task_id = argv[optind++];
     current_dir = argv[optind++];
     script_file = argv[optind++];
-    exit_code = run_task_as_user(user_detail->pw_name, job_id, task_id, 
-                                 current_dir, script_file);
+    exit_code = run_task_as_user(user_detail->pw_name, good_local_dirs, job_id,
+                                 task_id, current_dir, script_file);
     break;
   case SIGNAL_TASK:
-    if (argc < 5) {
-      fprintf(LOGFILE, "Too few arguments (%d vs 5) for signal task\n",
-	      argc);
+    if (argc < 6) {
+      fprintf(LOGFILE, "Too few arguments (%d vs 6) for signal task\n", argc);
       return INVALID_ARGUMENT_NUMBER;
     } else {
       char* end_ptr = NULL;
@@ -179,7 +187,8 @@ int main(int argc, char **argv) {
     break;
   case DELETE_AS_USER:
     dir_to_be_deleted = argv[optind++];
-    exit_code= delete_as_user(user_detail->pw_name, dir_to_be_deleted);
+    exit_code= delete_as_user(user_detail->pw_name, good_local_dirs,
+                              dir_to_be_deleted);
     break;
   case DELETE_LOG_AS_USER:
     dir_to_be_deleted = argv[optind++];

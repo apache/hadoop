@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JvmManager.JvmEnv;
 import org.apache.hadoop.mapred.QueueManager.QueueACL;
+import org.apache.hadoop.mapred.TaskTracker.LocalStorage;
 import org.apache.hadoop.mapred.TaskTracker.RunningJob;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 import org.apache.hadoop.mapred.UtilsForTests.InlineCleanupQueue;
@@ -187,7 +188,8 @@ public class TestTaskTrackerLocalization extends TestCase {
     // setup task controller
     taskController = getTaskController();
     taskController.setConf(trackerFConf);
-    taskController.setup(lDirAlloc);
+    taskController.setup(lDirAlloc,
+                         new LocalStorage(trackerFConf.getLocalDirs()));
     tracker.setTaskController(taskController);
     tracker.setLocalizer(new Localizer(tracker.getLocalFileSystem(),localDirs));
   }
