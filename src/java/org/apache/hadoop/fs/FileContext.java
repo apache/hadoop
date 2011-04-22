@@ -208,9 +208,9 @@ public final class FileContext {
     try {
       ugi = UserGroupInformation.getCurrentUser();
     } catch (IOException e) {
-      LOG.error("Exception in getCurrentUser: "+e);
+      LOG.error("Exception in getCurrentUser: ",e);
       throw new RuntimeException("Failed to get the current user " +
-      		"while creating a FileContext");
+      		"while creating a FileContext", e);
     }
     /*
      * Init the wd.
@@ -286,9 +286,11 @@ public final class FileContext {
    * 
    * @throws UnsupportedFileSystemException If the file system for
    *           <code>absOrFqPath</code> is not supported.
+   * @throws IOExcepton If the file system for <code>absOrFqPath</code> could
+   *         not be instantiated.
    */
   private AbstractFileSystem getFSofPath(final Path absOrFqPath)
-      throws UnsupportedFileSystemException {
+      throws UnsupportedFileSystemException, IOException {
     checkNotSchemeWithRelative(absOrFqPath);
     if (!absOrFqPath.isAbsolute() && absOrFqPath.toUri().getScheme() == null) {
       throw new HadoopIllegalArgumentException(
@@ -300,28 +302,25 @@ public final class FileContext {
       defaultFS.checkPath(absOrFqPath);
       return defaultFS;
     } catch (Exception e) { // it is different FileSystem
-      try {
-        return ugi.doAs(new PrivilegedExceptionAction<AbstractFileSystem>() {
-
-          public AbstractFileSystem run() throws UnsupportedFileSystemException {
-            return AbstractFileSystem.get(absOrFqPath.toUri(), conf);
-          }
-
-        });
-      } catch (InterruptedException ex) {
-        LOG.error(ex);
-        throw new RuntimeException(
-            "Failed to get the AbstractFileSystem for path: " + absOrFqPath);
-      } catch (UnsupportedFileSystemException ex) {
-        throw ex;
-      } catch (IOException ex) {
-        LOG.error("IOException in doAs: " + ex);
-        throw new RuntimeException(
-            "Failed to get the AbstractFileSystem for path: " + absOrFqPath);
-      }
+      return getAbstractFileSystem(ugi, absOrFqPath.toUri(), conf);
     }
   }
   
+  private static AbstractFileSystem getAbstractFileSystem(
+      UserGroupInformation user, final URI uri, final Configuration conf)
+      throws UnsupportedFileSystemException, IOException {
+    try {
+      return user.doAs(new PrivilegedExceptionAction<AbstractFileSystem>() {
+        public AbstractFileSystem run() throws UnsupportedFileSystemException {
+          return AbstractFileSystem.get(uri, conf);
+        }
+      });
+    } catch (InterruptedException ex) {
+      LOG.error(ex);
+      throw new IOException("Failed to get the AbstractFileSystem for path: "
+          + uri, ex);
+    }
+  }
   
   /**
    * Protected Static Factory methods for getting a FileContexts
@@ -418,10 +417,23 @@ public final class FileContext {
    * @return new FileContext for specified uri
    * @throws UnsupportedFileSystemException If the file system with specified is
    *           not supported
+   * @throws RuntimeException If the file system specified is supported but
+   *         could not be instantiated, or if login fails.
    */
   public static FileContext getFileContext(final URI defaultFsUri,
       final Configuration aConf) throws UnsupportedFileSystemException {
-    return getFileContext(AbstractFileSystem.get(defaultFsUri,  aConf), aConf);
+    UserGroupInformation currentUser = null;
+    AbstractFileSystem defaultAfs = null;
+    try {
+      currentUser = UserGroupInformation.getCurrentUser();
+      defaultAfs = getAbstractFileSystem(currentUser, defaultFsUri, aConf);
+    } catch (UnsupportedFileSystemException ex) {
+      throw ex;
+    } catch (IOException ex) {
+      LOG.error(ex);
+      throw new RuntimeException(ex);
+    }
+    return getFileContext(defaultAfs, aConf);
   }
 
   /**

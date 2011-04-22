@@ -8,6 +8,8 @@ Trunk (unreleased changes)
 
     HADOOP-6994. Api to get delegation token in AbstractFileSystem. (jitendra)
 
+    HADOOP-7171. Support UGI in FileContext API. (jitendra)
+
   IMPROVEMENTS
 
     HADOOP-7133. Batch the calls in DataStorage to FileUtil.createHardLink().
