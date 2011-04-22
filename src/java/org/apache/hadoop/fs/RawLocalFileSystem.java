@@ -262,28 +262,6 @@ public class RawLocalFileSystem extends FileSystem {
     return out;
   }
   
-
-  @Override
-  protected FSDataOutputStream primitiveCreate(Path f,
-      FsPermission absolutePermission, EnumSet<CreateFlag> flag,
-      int bufferSize, short replication, long blockSize, Progressable progress,
-      int bytesPerChecksum) throws IOException {
-    
-    if(flag.contains(CreateFlag.APPEND)){
-      if (!exists(f)){
-        if(flag.contains(CreateFlag.CREATE)) {
-          return create(f, false, bufferSize, replication, blockSize, null);
-        }
-      }
-      return append(f, bufferSize, null);
-    }
- 
-    FSDataOutputStream out = create(f, flag.contains(CreateFlag.OVERWRITE),
-                                 bufferSize, replication, blockSize, progress);
-    setPermission(f, absolutePermission);
-    return out;
-  }
-
   public boolean rename(Path src, Path dst) throws IOException {
     if (pathToFile(src).renameTo(pathToFile(dst))) {
       return true;

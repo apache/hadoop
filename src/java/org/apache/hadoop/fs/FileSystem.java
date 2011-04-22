@@ -728,24 +728,21 @@ public abstract class FileSystem extends Configured implements Closeable {
      FsPermission absolutePermission, EnumSet<CreateFlag> flag, int bufferSize,
      short replication, long blockSize, Progressable progress,
      int bytesPerChecksum) throws IOException {
+
+    boolean pathExists = exists(f);
+    CreateFlag.validate(f, pathExists, flag);
     
     // Default impl  assumes that permissions do not matter and 
     // nor does the bytesPerChecksum  hence
     // calling the regular create is good enough.
     // FSs that implement permissions should override this.
 
-    if (exists(f)) {
-      if (flag.contains(CreateFlag.APPEND)) {
-        return append(f, bufferSize, progress);
-      } else if (!flag.contains(CreateFlag.OVERWRITE)) {
-        throw new IOException("File already exists: " + f);
-      }
-    } else {
-      if (flag.contains(CreateFlag.APPEND) && !flag.contains(CreateFlag.CREATE))
-        throw new IOException("File already exists: " + f.toString());
+    if (pathExists && flag.contains(CreateFlag.APPEND)) {
+      return append(f, bufferSize, progress);
     }
     
-    return this.create(f, absolutePermission, flag.contains(CreateFlag.OVERWRITE), bufferSize, replication,
+    return this.create(f, absolutePermission,
+        flag.contains(CreateFlag.OVERWRITE), bufferSize, replication,
         blockSize, progress);
   }
   

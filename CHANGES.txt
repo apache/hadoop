@@ -1,4 +1,4 @@
-Hadoop Change Log
+Hn jaadoop Change Log
 
 Trunk (unreleased changes)
 
@@ -21,6 +21,10 @@ Trunk (unreleased changes)
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-7223. FileContext createFlag combinations are not clearly defined.
+    (suresh)
+
 
 Release 0.22.0 - Unreleased
 

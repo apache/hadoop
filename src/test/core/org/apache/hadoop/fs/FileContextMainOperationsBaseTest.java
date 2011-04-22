@@ -21,8 +21,8 @@ package org.apache.hadoop.fs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.EnumSet;
-import java.util.Iterator;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -33,6 +33,7 @@ import org.junit.Test;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
+import static org.apache.hadoop.fs.CreateFlag.*;
 
 /**
  * <p>
@@ -160,7 +161,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     
     // Now open a file relative to the wd we just set above.
     Path absolutePath = new Path(absoluteDir, "foo");
-    fc.create(absolutePath, EnumSet.of(CreateFlag.CREATE)).close();
+    fc.create(absolutePath, EnumSet.of(CREATE)).close();
     fc.open(new Path("foo")).close();
     
     
@@ -650,7 +651,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     
     fc.mkdir(path.getParent(), FsPermission.getDefault(), true);
 
-    FSDataOutputStream out = fc.create(path, EnumSet.of(CreateFlag.CREATE),
+    FSDataOutputStream out = fc.create(path, EnumSet.of(CREATE),
         CreateOpts.repFac((short) 1), CreateOpts
             .blockSize(getDefaultBlockSize()));
     out.write(data, 0, len);
@@ -675,31 +676,93 @@ public abstract class FileContextMainOperationsBaseTest  {
 
   }
   
+  @Test(expected=HadoopIllegalArgumentException.class)
+  public void testNullCreateFlag() throws IOException {
+    Path p = getTestRootPath(fc, "test/file");
+    fc.create(p, null);
+    Assert.fail("Excepted exception not thrown");
+  }
+  
+  @Test(expected=HadoopIllegalArgumentException.class)
+  public void testEmptyCreateFlag() throws IOException {
+    Path p = getTestRootPath(fc, "test/file");
+    fc.create(p, EnumSet.noneOf(CreateFlag.class));
+    Assert.fail("Excepted exception not thrown");
+  }
+  
+  @Test(expected=FileAlreadyExistsException.class)
+  public void testCreateFlagCreateExistingFile() throws IOException {
+    Path p = getTestRootPath(fc, "test/testCreateFlagCreateExistingFile");
+    createFile(p);
+    fc.create(p, EnumSet.of(CREATE));
+    Assert.fail("Excepted exception not thrown");
+  }
+  
+  @Test(expected=FileNotFoundException.class)
+  public void testCreateFlagOverwriteNonExistingFile() throws IOException {
+    Path p = getTestRootPath(fc, "test/testCreateFlagOverwriteNonExistingFile");
+    fc.create(p, EnumSet.of(OVERWRITE));
+    Assert.fail("Excepted exception not thrown");
+  }
+  
   @Test
-  public void testOverwrite() throws IOException {
-    Path path = getTestRootPath(fc, "test/hadoop/file");
-    
-    fc.mkdir(path.getParent(), FsPermission.getDefault(), true);
-
-    createFile(path);
-    
-    Assert.assertTrue("Exists", exists(fc, path));
-    Assert.assertEquals("Length", data.length, fc.getFileStatus(path).getLen());
-    
-    try {
-      fc.create(path, EnumSet.of(CreateFlag.CREATE));
-      Assert.fail("Should throw IOException.");
-    } catch (IOException e) {
-      // Expected
-    }
-    
-    FSDataOutputStream out = fc.create(path,EnumSet.of(CreateFlag.OVERWRITE));
+  public void testCreateFlagOverwriteExistingFile() throws IOException {
+    Path p = getTestRootPath(fc, "test/testCreateFlagOverwriteExistingFile");
+    createFile(p);
+    FSDataOutputStream out = fc.create(p, EnumSet.of(OVERWRITE));
+    writeData(fc, p, out, data, data.length);
+  }
+  
+  @Test(expected=FileNotFoundException.class)
+  public void testCreateFlagAppendNonExistingFile() throws IOException {
+    Path p = getTestRootPath(fc, "test/testCreateFlagAppendNonExistingFile");
+    fc.create(p, EnumSet.of(APPEND));
+    Assert.fail("Excepted exception not thrown");
+  }
+  
+  @Test
+  public void testCreateFlagAppendExistingFile() throws IOException {
+    Path p = getTestRootPath(fc, "test/testCreateFlagAppendExistingFile");
+    createFile(p);
+    FSDataOutputStream out = fc.create(p, EnumSet.of(APPEND));
+    writeData(fc, p, out, data, 2 * data.length);
+  }
+  
+  @Test
+  public void testCreateFlagCreateAppendNonExistingFile() throws IOException {
+    Path p = getTestRootPath(fc, "test/testCreateFlagCreateAppendNonExistingFile");
+    FSDataOutputStream out = fc.create(p, EnumSet.of(CREATE, APPEND));
+    writeData(fc, p, out, data, data.length);
+  }
+  
+  @Test
+  public void testCreateFlagCreateAppendExistingFile() throws IOException {
+    Path p = getTestRootPath(fc, "test/testCreateFlagCreateAppendExistingFile");
+    createFile(p);
+    FSDataOutputStream out = fc.create(p, EnumSet.of(CREATE, APPEND));
+    writeData(fc, p, out, data, 2*data.length);
+  }
+  
+  @Test(expected=HadoopIllegalArgumentException.class)
+  public void testCreateFlagAppendOverwrite() throws IOException {
+    Path p = getTestRootPath(fc, "test/nonExistent");
+    fc.create(p, EnumSet.of(APPEND, OVERWRITE));
+    Assert.fail("Excepted exception not thrown");
+  }
+  
+  @Test(expected=HadoopIllegalArgumentException.class)
+  public void testCreateFlagAppendCreateOverwrite() throws IOException {
+    Path p = getTestRootPath(fc, "test/nonExistent");
+    fc.create(p, EnumSet.of(CREATE, APPEND, OVERWRITE));
+    Assert.fail("Excepted exception not thrown");
+  }
+  
+  private static void writeData(FileContext fc, Path p, FSDataOutputStream out,
+      byte[] data, long expectedLen) throws IOException {
     out.write(data, 0, data.length);
     out.close();
-    
-    Assert.assertTrue("Exists", exists(fc, path));
-    Assert.assertEquals("Length", data.length, fc.getFileStatus(path).getLen());
-    
+    Assert.assertTrue("Exists", exists(fc, p));
+    Assert.assertEquals("Length", expectedLen, fc.getFileStatus(p).getLen());
   }
   
   @Test
@@ -1063,7 +1126,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     //streams should have no effect. 
     Path src = getTestRootPath(fc, "test/hadoop/file");
     Progressable prog = new TestProgress();
-    FSDataOutputStream out = fc.create(src, EnumSet.of(CreateFlag.CREATE),
+    FSDataOutputStream out = fc.create(src, EnumSet.of(CREATE),
             Options.CreateOpts.createParent(),
             Options.CreateOpts.Progress.progress(prog));
     
@@ -1098,7 +1161,7 @@ public abstract class FileContextMainOperationsBaseTest  {
   }
   
   protected void createFile(Path path) throws IOException {
-    FSDataOutputStream out = fc.create(path, EnumSet.of(CreateFlag.CREATE),
+    FSDataOutputStream out = fc.create(path, EnumSet.of(CREATE),
         Options.CreateOpts.createParent());
     out.write(data, 0, data.length);
     out.close();
