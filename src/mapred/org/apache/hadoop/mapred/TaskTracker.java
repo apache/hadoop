@@ -3116,6 +3116,10 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   }
   
   private void validateJVM(TaskInProgress tip, JvmContext jvmContext, TaskAttemptID taskid) throws IOException {
+    if (jvmContext == null) {
+      LOG.warn("Null jvmContext. Cannot verify Jvm. validateJvm throwing exception");
+      throw new IOException("JvmValidate Failed. JvmContext is null - cannot validate JVM");
+    }
     if (!jvmManager.validateTipToJvm(tip, jvmContext.jvmId)) {
       throw new IOException("JvmValidate Failed. Ignoring request from task: " + taskid + ", with JvmId: " + jvmContext.jvmId);
     }

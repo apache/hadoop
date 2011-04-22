@@ -195,6 +195,7 @@ class Child {
         }
         idleLoopCount = 0;
         task = myTask.getTask();
+        task.setJvmContext(jvmContext);
         taskid = task.getTaskID();
 
         // Create the JobConf and determine if this job gets segmented task logs
@@ -251,7 +252,6 @@ class Child {
         
         // Create a final reference to the task for the doAs block
         final Task taskFinal = task;
-        taskFinal.setJvmContext(jvmContext);
         childUGI.doAs(new PrivilegedExceptionAction<Object>() {
           @Override
           public Object run() throws Exception {

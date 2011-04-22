@@ -84,7 +84,7 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
    * @return True if the task is known
    */
   boolean statusUpdate(TaskAttemptID taskId, TaskStatus taskStatus,
-      JvmContext context) throws IOException, InterruptedException;
+      JvmContext jvmContext) throws IOException, InterruptedException;
   
   /** Report error messages back to parent.  Calls should be sparing, since all
    *  such messages are held in the job tracker.
