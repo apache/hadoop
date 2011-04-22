@@ -24,9 +24,11 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <limits.h>
 
 #define TEST_ROOT "/tmp/test-task-controller"
 #define DONT_TOUCH_FILE "dont-touch-me"
@@ -185,6 +187,78 @@ void test_get_task_log_dir() {
   free(logdir);
 }
 
+void create_userlogs_dir() {
+  char** tt_roots = get_values("mapred.local.dir");
+  char** tt_root;
+  for(tt_root=tt_roots; *tt_root != NULL; ++tt_root) {
+    char buffer[100000];
+    sprintf(buffer, "%s/userlogs", *tt_root);
+    if (mkdir(buffer, 0755) != 0) {
+      printf("FAIL: Can't create directory %s - %s\n", buffer,
+             strerror(errno));
+      exit(1);
+    }
+  }
+  free_values(tt_roots);
+}
+
+void test_create_log_directory() {
+  printf("\nTesting test_create_log_directory\n");
+  create_userlogs_dir();
+  char *job_log_dir = get_job_log_directory("job_7");
+  if (job_log_dir == NULL) {
+    exit(1);
+  }
+  if (create_directory_for_user(job_log_dir) != 0) {
+    exit(1);
+  }
+  free(job_log_dir);
+  char* good_local_dirs = get_value("mapred.local.dir");
+  if (good_local_dirs == NULL) {
+    fprintf(LOGFILE, "Mapred local directories could not be obtained.\n");
+    exit(1);
+  }
+  create_attempt_directories(username, good_local_dirs, "job_7", "task_1");
+
+  //check if symlink got created
+  struct stat file;
+  int status;
+  char actualpath [PATH_MAX+1];
+  char *res;
+  char *filepath = TEST_ROOT "/logs/userlogs/job_7/task_1";
+
+  status = lstat(filepath, &file);
+  if (!S_ISLNK(file.st_mode)) {
+    fprintf(LOGFILE, "Symlink creation failed\n");
+    exit(1);
+  }
+
+  //Check if symlink path exists
+  res = realpath(filepath, actualpath);
+  if(!res) {
+    fprintf(LOGFILE, "Failed to get target for the symlink\n");
+    exit(1);
+  }
+
+  char local_job_dir[PATH_MAX+1];
+  int i;
+  bool found = false;
+  for(i=1; i<5; i++) {
+     sprintf(local_job_dir, TEST_ROOT "/local-%d/userlogs/job_7/task_1", i);
+     if (strcmp(local_job_dir, actualpath) == 0) {
+       found = true;
+       break;
+     }
+  }
+  
+  if(!found) {
+    printf("FAIL: symlink path and target path mismatch\n");
+    exit(1);
+  }
+
+  free(good_local_dirs);
+}
+
 void test_check_user() {
   printf("\nTesting test_check_user\n");
   struct passwd *user = check_user(username);
@@ -220,8 +294,9 @@ void test_check_configuration_permissions() {
 }
 
 void test_delete_task() {
-  if (initialize_user(username)) {
-    printf("FAIL: failed to initialized user %s\n", username);
+  char* local_dirs = get_value("mapred.local.dir");
+  if (initialize_user(username, local_dirs)) {
+    printf("FAIL: failed to initialize user %s\n", username);
     exit(1);
   }
   char* job_dir = get_job_directory(TEST_ROOT "/local-2", username, "job_1");
@@ -254,7 +329,7 @@ void test_delete_task() {
   run(buffer);
 
   // delete task directory
-  int ret = delete_as_user(username, "jobcache/job_1/task_1");
+  int ret = delete_as_user(username, local_dirs, "jobcache/job_1/task_1");
   if (ret != 0) {
     printf("FAIL: return code from delete_as_user is %d\n", ret);
     exit(1);
@@ -282,9 +357,11 @@ void test_delete_task() {
   free(job_dir);
   free(task_dir);
   free(dont_touch);
+  free(local_dirs);
 }
 
 void test_delete_job() {
+  char* local_dirs = get_value("mapred.local.dir");
   char* job_dir = get_job_directory(TEST_ROOT "/local-2", username, "job_2");
   char* dont_touch = get_job_directory(TEST_ROOT "/local-2", username, 
                                        DONT_TOUCH_FILE);
@@ -315,7 +392,7 @@ void test_delete_job() {
   run(buffer);
 
   // delete task directory
-  int ret = delete_as_user(username, "jobcache/job_2");
+  int ret = delete_as_user(username, local_dirs, "jobcache/job_2");
   if (ret != 0) {
     printf("FAIL: return code from delete_as_user is %d\n", ret);
     exit(1);
@@ -339,11 +416,13 @@ void test_delete_job() {
   free(job_dir);
   free(task_dir);
   free(dont_touch);
+  free(local_dirs);
 }
 
 
 void test_delete_user() {
   printf("\nTesting delete_user\n");
+  char* local_dirs = get_value("mapred.local.dir");
   char* job_dir = get_job_directory(TEST_ROOT "/local-1", username, "job_3");
   if (mkdirs(job_dir, 0700) != 0) {
     exit(1);
@@ -354,7 +433,7 @@ void test_delete_user() {
     printf("FAIL: directory missing before test\n");
     exit(1);
   }
-  if (delete_as_user(username, "") != 0) {
+  if (delete_as_user(username, local_dirs, "") != 0) {
     exit(1);
   }
   if (access(buffer, R_OK) == 0) {
@@ -366,10 +445,12 @@ void test_delete_user() {
     exit(1);
   }
   free(job_dir);
+  free(local_dirs);
 }
 
 void test_delete_log_directory() {
   printf("\nTesting delete_log_directory\n");
+  char* local_dirs = get_value("mapred.local.dir");
   char *job_log_dir = get_job_log_directory("job_1");
   if (job_log_dir == NULL) {
     exit(1);
@@ -389,7 +470,7 @@ void test_delete_log_directory() {
     printf("FAIL: can't access task directory - %s\n", strerror(errno));
     exit(1);
   }
-  if (delete_log_directory("job_1/task_2") != 0) {
+  if (delete_log_directory("job_1/task_2", local_dirs) != 0) {
     printf("FAIL: can't delete task directory\n");
     exit(1);
   }
@@ -401,7 +482,7 @@ void test_delete_log_directory() {
     printf("FAIL: job directory not deleted - %s\n", strerror(errno));
     exit(1);
   }
-  if (delete_log_directory("job_1") != 0) {
+  if (delete_log_directory("job_1", local_dirs) != 0) {
     printf("FAIL: can't delete task directory\n");
     exit(1);
   }
@@ -409,7 +490,25 @@ void test_delete_log_directory() {
     printf("FAIL: job directory not deleted\n");
     exit(1);
   }
+  if (delete_log_directory("job_7", local_dirs) != 0) {
+    printf("FAIL: can't delete job directory\n");
+    exit(1);
+  }
+  if (access(TEST_ROOT "/logs/userlogs/job_7", R_OK) == 0) {
+    printf("FAIL: job log directory not deleted\n");
+    exit(1);
+  }
+  char local_job_dir[PATH_MAX+1];
+  int i;
+  for(i=1; i<5; i++) {
+     sprintf(local_job_dir, TEST_ROOT "/local-%d/userlogs/job_7", i);
+     if (access(local_job_dir, R_OK) == 0) {
+       printf("FAIL: job log directory in mapred local not deleted\n");
+       exit(1);
+     }
+  }
   free(task_log_dir);
+  free(local_dirs);
 }
 
 void run_test_in_child(const char* test_name, void (*func)()) {
@@ -558,7 +657,8 @@ void test_init_job() {
     exit(1);
   } else if (child == 0) {
     char *final_pgm[] = {"touch", "my-touch-file", 0};
-    if (initialize_job(username, "job_4", TEST_ROOT "/creds.txt", 
+    char* local_dirs = get_value("mapred.local.dir");
+    if (initialize_job(username, local_dirs, "job_4", TEST_ROOT "/creds.txt", 
                        TEST_ROOT "/job.xml", final_pgm) != 0) {
       printf("FAIL: failed in child\n");
       exit(42);
@@ -631,13 +731,14 @@ void test_run_task() {
   fflush(stderr);
   char* task_dir = get_attempt_work_directory(TEST_ROOT "/local-1", 
 					      username, "job_4", "task_1");
+  char* local_dirs = get_value("mapred.local.dir");
   pid_t child = fork();
   if (child == -1) {
     printf("FAIL: failed to fork process for init_job - %s\n", 
 	   strerror(errno));
     exit(1);
   } else if (child == 0) {
-    if (run_task_as_user(username, "", "job_4", "task_1", 
+    if (run_task_as_user(username, local_dirs, "job_4", "task_1", 
                          task_dir, script_name) != 0) {
       printf("FAIL: failed in child\n");
       exit(42);
@@ -735,6 +836,8 @@ int main(int argc, char **argv) {
   test_delete_user();
 
   test_check_user();
+
+  test_create_log_directory();
 
   test_delete_log_directory();
 

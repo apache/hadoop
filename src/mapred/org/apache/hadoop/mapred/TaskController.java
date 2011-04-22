@@ -71,6 +71,10 @@ public abstract class TaskController implements Configurable {
     return conf;
   }
 
+  public LocalStorage getLocalStorage() {
+	  return localStorage;
+  }
+  
   public void setConf(Configuration conf) {
     this.conf = conf;
   }
@@ -143,6 +147,17 @@ public abstract class TaskController implements Configurable {
    */
   public abstract void deleteAsUser(String user, 
                                     String subDir) throws IOException;
+
+  /**
+   * Creates task log dir
+   * @param taskID ID of the task
+   * @param isCleanup If the task is cleanup task or not
+   * @throws IOException
+   */
+  public void createLogDir(TaskAttemptID taskID, 
+			boolean isCleanup) throws IOException {
+	  
+  }
   
   /**
    * Delete the user's files under the userlogs directory.

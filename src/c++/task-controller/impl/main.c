@@ -192,7 +192,7 @@ int main(int argc, char **argv) {
     break;
   case DELETE_LOG_AS_USER:
     dir_to_be_deleted = argv[optind++];
-    exit_code= delete_log_directory(dir_to_be_deleted);
+    exit_code= delete_log_directory(dir_to_be_deleted, good_local_dirs);
     break;
   case RUN_COMMAND_AS_USER:
     exit_code = run_command_as_user(user_detail->pw_name, argv + optind);

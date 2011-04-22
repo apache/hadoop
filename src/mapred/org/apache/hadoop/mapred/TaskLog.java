@@ -33,6 +33,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,8 +44,10 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.SecureIOUtils;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
 import org.apache.hadoop.util.ProcessTree;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
@@ -75,7 +78,103 @@ public class TaskLog {
       LOG_DIR.mkdirs();
     }
   }
+  
+  static AtomicInteger rotor = new AtomicInteger(0);
 
+  /**
+   * Create log directory for the given attempt. This involves creating the
+   * following and setting proper permissions for the new directories
+   * <br>{hadoop.log.dir}/userlogs/<jobid>
+   * <br>{hadoop.log.dir}/userlogs/<jobid>/<attempt-id-as-symlink>
+   * <br>{one of the mapred-local-dirs}/userlogs/<jobid>
+   * <br>{one of the mapred-local-dirs}/userlogs/<jobid>/<attempt-id>
+   *
+   * @param taskID attempt-id for which log dir is to be created
+   * @param isCleanup Is this attempt a cleanup attempt ?
+   * @param localDirs mapred local directories
+   * @return true if attempt log directory creation is succeeded
+   * @throws IOException
+   */
+  public static boolean createTaskAttemptLogDir(TaskAttemptID taskID,
+      boolean isCleanup, String[] localDirs) throws IOException{
+    String cleanupSuffix = isCleanup ? ".cleanup" : "";
+    String strAttemptLogDir = getTaskAttemptLogDir(taskID, 
+        cleanupSuffix, localDirs);
+    File attemptLogDir = new File(strAttemptLogDir);
+    boolean isSucceeded = attemptLogDir.mkdirs();
+    if(isSucceeded) {
+      String strLinkAttemptLogDir = getJobDir(
+          taskID.getJobID()).getAbsolutePath() + File.separatorChar + 
+          taskID.toString() + cleanupSuffix;
+      if (FileUtil.symLink(strAttemptLogDir, strLinkAttemptLogDir) != 0) {
+        LOG.warn("Creation of symlink to attempt log dir failed.");
+        isSucceeded = false;
+      }
+
+      File linkAttemptLogDir = new File(strLinkAttemptLogDir);
+      // Set permissions for job dir in userlogs
+      if (!Localizer.PermissionsHandler.setPermissions(
+          linkAttemptLogDir.getParentFile(),
+          Localizer.PermissionsHandler.sevenZeroZero)) {
+        LOG.warn("Setting permissions to "
+                 + linkAttemptLogDir.getParentFile() + " failed.");
+        isSucceeded = false;
+      }
+      //Set permissions for target attempt log dir 
+      if (!Localizer.PermissionsHandler.setPermissions(attemptLogDir,
+          Localizer.PermissionsHandler.sevenZeroZero)) {
+        LOG.warn("Setting permissions to the real attempt log dir "
+                 + attemptLogDir + " failed.");
+        isSucceeded = false;
+      }
+      //Set permissions for target job log dir
+      if (!Localizer.PermissionsHandler.setPermissions(
+          attemptLogDir.getParentFile(),
+          Localizer.PermissionsHandler.sevenZeroZero)) {
+        LOG.warn("Setting permissions to the real job log dir "
+                 + attemptLogDir.getParentFile() + " failed.");
+        isSucceeded = false;
+      }
+    }
+    return isSucceeded;
+  }
+
+  /**
+   * Get one of the mapred local directory in a round-robin-way.
+   * @param localDirs mapred local directories
+   * @return the next chosen mapred local directory
+   * @throws IOException
+   */
+  private static String getNextLocalDir(String[] localDirs) throws IOException{
+    if(localDirs.length == 0) {
+      throw new IOException ("Not enough mapred.local.dirs ("
+                             + localDirs.length + ")");
+    }
+    return localDirs[Math.abs(rotor.getAndIncrement()) % localDirs.length];  
+  }
+
+  /**
+   * Get attempt log directory path for the given attempt-id under randomly
+   * selected mapred local directory.
+   * @param taskID attempt-id for which log dir path is needed
+   * @param cleanupSuffix ".cleanup" if this attempt is a cleanup attempt 
+   * @param localDirs mapred local directories
+   * @return target task attempt log directory
+   * @throws IOException
+   */
+  public static String getTaskAttemptLogDir(TaskAttemptID taskID, 
+      String cleanupSuffix, String[] localDirs) throws IOException {
+    StringBuilder taskLogDirLocation = new StringBuilder();
+    taskLogDirLocation.append(getNextLocalDir(localDirs));
+    taskLogDirLocation.append(File.separatorChar);
+    taskLogDirLocation.append(USERLOGS_DIR_NAME);
+    taskLogDirLocation.append(File.separatorChar);
+    taskLogDirLocation.append(taskID.getJobID().toString());
+    taskLogDirLocation.append(File.separatorChar);
+    taskLogDirLocation.append(taskID.toString()+cleanupSuffix);
+    return taskLogDirLocation.toString();
+  }
+  
   public static File getTaskLogFile(TaskAttemptID taskid, boolean isCleanup,
       LogName filter) {
     return new File(getAttemptDir(taskid, isCleanup), filter.toString());

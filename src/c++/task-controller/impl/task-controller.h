@@ -71,7 +71,7 @@ int check_taskcontroller_permissions(char *executable_file);
 /**
  * delete a given log directory as a user
  */
-int delete_log_directory(const char *log_dir);
+int delete_log_directory(const char *log_dir, const char * good_local_dirs);
 
 // initialize the job directory
 int initialize_job(const char *user, const char * good_local_dirs, const char *jobid,
@@ -153,3 +153,9 @@ int initialize_user(const char *user, const char * good_local_dirs);
 int create_directory_for_user(const char* path);
 
 int change_user(uid_t user, gid_t group);
+
+/**
+ * Create task attempt related directories as user.
+ */
+int create_attempt_directories(const char* user,
+	const char * good_local_dirs, const char *job_id, const char *task_id);

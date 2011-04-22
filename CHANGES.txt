@@ -61,14 +61,17 @@ Release 0.20.204.0 - unreleased
 
   IMPROVEMENTS
 
+    MAPREDUCE-2415. Distribute the user task logs on to multiple disks.
+    (Bharath Mundlapudi via omalley)
+
+    MAPREDUCE-2413. TaskTracker should handle disk failures by reinitializing 
+    itself. (Ravi Gummadi and Jagane Sundar via omalley)
+
     HDFS-1541. Not marking datanodes dead when namenode in safemode.
     (hairong)
 
     HDFS-1767. Namenode ignores non-initial block report from datanodes
     when in safemode during startup. (Matt Foley via suresh)
-
-    MAPREDUCE-2413. TaskTracker should handle disk failures by reinitializing 
-    itself. (Ravi Gummadi and Jagane Sundar via omalley)
 
 Release 0.20.203.0 - unreleased
 

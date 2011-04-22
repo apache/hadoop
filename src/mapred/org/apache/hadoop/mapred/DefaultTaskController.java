@@ -65,6 +65,17 @@ public class DefaultTaskController extends TaskController {
     }
   }
 
+  @Override
+  public void createLogDir(TaskAttemptID taskID, 
+		  			boolean isCleanup) throws IOException {
+	boolean b = TaskLog.createTaskAttemptLogDir(taskID, isCleanup, 
+	    		 		localStorage.getGoodLocalDirs());
+	if (!b) {
+	    LOG.warn("Creation of attempt log dir for " + taskID
+	                 + " failed. Ignoring");
+	}
+  }
+  
   /**
    * Create all of the directories for the task and launches the child jvm.
    * @param user the user name
@@ -80,9 +91,8 @@ public class DefaultTaskController extends TaskController {
                                   File currentWorkDirectory,
                                   String stdout,
                                   String stderr) throws IOException {
-    
     ShellCommandExecutor shExec = null;
-    try {
+    try {    	            
       FileSystem localFs = FileSystem.getLocal(getConf());
       
       //create the attempt dirs
@@ -232,7 +242,24 @@ public class DefaultTaskController extends TaskController {
   public void deleteLogAsUser(String user, 
                               String subDir) throws IOException {
     Path dir = new Path(TaskLog.getUserLogDir().getAbsolutePath(), subDir);
-    fs.delete(dir, true);
+    //Delete the subDir in <hadoop.log.dir>/userlogs
+    File subDirPath = new File(dir.toString());
+    FileUtil.fullyDelete( subDirPath );
+    
+    //Delete the subDir in all good <mapred.local.dirs>/userlogs 
+    String [] localDirs = localStorage.getGoodLocalDirs();
+    for(String localdir : localDirs) {
+    	String dirPath = localdir + File.separatorChar + 
+    					TaskLog.USERLOGS_DIR_NAME + File.separatorChar +
+    					subDir;
+    	try {
+    		FileUtil.fullyDelete( new File(dirPath) );
+        } catch(Exception e){
+        	//Skip bad dir for later deletion
+            LOG.warn("Could not delete dir: " + dirPath + 
+                " , Reason : " + e.getMessage());
+        }
+    }
   }
   
   @Override

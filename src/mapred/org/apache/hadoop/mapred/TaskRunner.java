@@ -313,15 +313,7 @@ abstract class TaskRunner extends Thread {
         TaskLog.LogName.STDOUT);
     logFiles[1] = TaskLog.getTaskLogFile(taskid, isCleanup,
         TaskLog.LogName.STDERR);
-    File logDir = logFiles[0].getParentFile();
-    boolean b = logDir.mkdirs();
-    if (!b) {
-      LOG.warn("mkdirs failed. Ignoring");
-    } else {
-      Localizer.PermissionsHandler.setPermissions(logDir,
-          Localizer.PermissionsHandler.sevenZeroZero);
-    }
-
+    getTracker().getTaskController().createLogDir(taskid, isCleanup);
     return logFiles;
   }
 

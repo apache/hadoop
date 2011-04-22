@@ -745,7 +745,13 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     for (String s : localStorage.getGoodLocalDirs()) {
       localFs.mkdirs(new Path(s, TT_LOG_TMP_DIR), pub);
     }
-
+    // Create userlogs directory under all good mapred-local-dirs
+    for (String s : localStorage.getGoodLocalDirs()) {
+      Path userLogsDir = new Path(s, TaskLog.USERLOGS_DIR_NAME);
+      if (!localFs.exists(userLogsDir)) {
+        localFs.mkdirs(userLogsDir, pub);
+      }
+    }
     // Clear out state tables
     this.tasks.clear();
     this.runningTasks = new LinkedHashMap<TaskAttemptID, TaskInProgress>();
@@ -905,7 +911,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
    * startup, to remove any leftovers from previous run.
    */
   public void cleanupStorage() throws IOException {
-    this.fConf.deleteLocalFiles();
+    this.fConf.deleteLocalFiles(SUBDIR);
+    this.fConf.deleteLocalFiles(TT_PRIVATE_DIR);
+    this.fConf.deleteLocalFiles(TT_LOG_TMP_DIR);
   }
 
   // Object on wait which MapEventsFetcherThread is going to wait.
@@ -1396,6 +1404,14 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     fConf = conf;
   }
 
+  void setLocalStorage(LocalStorage in) {
+	localStorage = in;  
+  }
+	  
+  void setLocalDirAllocator(LocalDirAllocator in) {
+	localDirAllocator = in;  
+  }
+  
   /**
    * Start with the local machine name, and the default JobTracker
    */

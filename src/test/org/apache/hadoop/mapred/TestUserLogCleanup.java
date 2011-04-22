@@ -23,11 +23,14 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.LocalDirAllocator;
+import org.apache.hadoop.mapred.TaskTracker.LocalStorage;
 import org.apache.hadoop.mapred.UtilsForTests.FakeClock;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
 import org.apache.hadoop.mapreduce.server.tasktracker.userlogs.*;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.junit.Assert.*;
 
@@ -48,15 +51,18 @@ public class TestUserLogCleanup {
   private JobID jobid4 = new JobID(jtid, 4);
   private File foo = new File(TaskLog.getUserLogDir(), "foo");
   private File bar = new File(TaskLog.getUserLogDir(), "bar");
+  private static String TEST_ROOT_DIR = 
+	  				System.getProperty("test.build.data", "/tmp");
 
-  public TestUserLogCleanup() throws IOException {
-    Configuration conf = new Configuration();
+  public TestUserLogCleanup() throws IOException, InterruptedException {
+    JobConf conf= new JobConf();
     startTT(conf);
   }
 
   @After
   public void tearDown() throws IOException {
     FileUtil.fullyDelete(TaskLog.getUserLogDir());
+    FileUtil.fullyDelete(new File(TEST_ROOT_DIR));
   }
 
   private File localizeJob(JobID jobid) throws IOException {
@@ -77,14 +83,26 @@ public class TestUserLogCleanup {
     userLogManager.addLogEvent(jce);
   }
 
-  private void startTT(Configuration conf) throws IOException {
+  private void startTT(JobConf conf) throws IOException, InterruptedException {
     myClock = new FakeClock(); // clock is reset.
+    String localdirs = TEST_ROOT_DIR + "/userlogs/local/0," + 
+    					TEST_ROOT_DIR + "/userlogs/local/1";
+    conf.set(JobConf.MAPRED_LOCAL_DIR_PROPERTY, localdirs);
     tt = new TaskTracker();
     tt.setConf(new JobConf(conf));
+    LocalDirAllocator localDirAllocator = 
+    					new LocalDirAllocator("mapred.local.dir");
+    tt.setLocalDirAllocator(localDirAllocator);
+    LocalStorage localStorage = new LocalStorage(conf.getLocalDirs());
+    localStorage.checkLocalDirs();
+    tt.setLocalStorage(localStorage);
     localizer = new Localizer(FileSystem.get(conf), conf
         .getStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY));
     tt.setLocalizer(localizer);
     userLogManager = new UtilsForTests.InLineUserLogManager(conf);
+    TaskController taskController = userLogManager.getTaskController();
+    taskController.setup(localDirAllocator, localStorage);
+    tt.setTaskController(taskController);
     userLogCleaner = userLogManager.getUserLogCleaner();
     userLogCleaner.setClock(myClock);
     tt.setUserLogManager(userLogManager);
@@ -92,13 +110,13 @@ public class TestUserLogCleanup {
   }
 
   private void ttReinited() throws IOException {
-    Configuration conf = new Configuration();
+    JobConf conf=new JobConf();
     conf.setInt(JobContext.USER_LOG_RETAIN_HOURS, 3);
     userLogManager.clearOldUserLogs(conf);
   }
 
-  private void ttRestarted() throws IOException {
-    Configuration conf = new Configuration();
+  private void ttRestarted() throws IOException, InterruptedException {
+    JobConf conf=new JobConf();
     conf.setInt(JobContext.USER_LOG_RETAIN_HOURS, 3);
     startTT(conf);
   }
@@ -228,9 +246,11 @@ public class TestUserLogCleanup {
    * restart.
    * 
    * @throws IOException
+ * @throws InterruptedException 
    */
   @Test
-  public void testUserLogCleanupAfterRestart() throws IOException {
+  public void testUserLogCleanupAfterRestart() 
+  					throws IOException, InterruptedException {
     File jobUserlog1 = localizeJob(jobid1);
     File jobUserlog2 = localizeJob(jobid2);
     File jobUserlog3 = localizeJob(jobid3);
