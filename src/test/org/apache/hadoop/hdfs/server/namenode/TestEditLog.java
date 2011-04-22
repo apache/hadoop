@@ -21,16 +21,13 @@ import junit.framework.TestCase;
 import java.io.*;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.permission.*;
 
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.io.ArrayWritable;
-import org.apache.hadoop.io.UTF8;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog.EditLogFileInputStream;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
@@ -156,4 +153,10 @@ public class TestEditLog extends TestCase {
 
     }
   }
+ 
+ public void test203LayoutVersion() {
+   for (int lv : Storage.LAYOUT_VERSIONS_203) {
+     assertTrue(Storage.is203LayoutVersion(lv));
+   }
+ }
 }

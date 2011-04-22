@@ -55,6 +55,10 @@ Release 0.20.204.0 - unreleased
     MAPREDUCE-2443. Fix TaskAspect for TaskUmbilicalProtocol.ping(..).
     (Siddharth Seth via szetszwo)
 
+    HDFS-1842. Handle editlog opcode conflict with 0.20.203 during upgrade,
+    by throwing an error to indicate the editlog needs to be empty.
+    (suresh)
+
   IMPROVEMENTS
 
     HDFS-1541. Not marking datanodes dead when namenode in safemode.

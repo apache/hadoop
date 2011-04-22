@@ -73,6 +73,9 @@ public abstract class Storage extends StorageInfo {
    * any upgrade code that uses this constant should also be removed. */
   public static final int PRE_GENERATIONSTAMP_LAYOUT_VERSION = -13;
   
+  /** Layout versions of 203 release */
+  public static final int[] LAYOUT_VERSIONS_203 = {-19, -31};
+  
   private   static final String STORAGE_FILE_LOCK     = "in_use.lock";
   protected static final String STORAGE_FILE_VERSION  = "VERSION";
   public static final String STORAGE_DIR_CURRENT   = "current";
@@ -848,5 +851,14 @@ public abstract class Storage extends StorageInfo {
     org.apache.hadoop.io.UTF8.writeString(file, "");
     file.writeBytes(messageForPreUpgradeVersion);
     file.getFD().sync();
+  }
+  
+  public static boolean is203LayoutVersion(int layoutVersion) {
+    for (int lv : LAYOUT_VERSIONS_203) {
+      if (lv == layoutVersion) {
+        return true;
+      }
+    }
+    return false;
   }
 }

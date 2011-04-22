@@ -70,10 +70,10 @@ public class FSEditLog {
   private static final byte OP_CLEAR_NS_QUOTA = 12; // clear namespace quota
   private static final byte OP_TIMES = 13; // sets mod & access time on a file
   private static final byte OP_SET_QUOTA = 14; // sets name and disk quotas.
-  private static final byte OP_GET_DELEGATION_TOKEN = 15; //new delegation token
-  private static final byte OP_RENEW_DELEGATION_TOKEN = 16; //renew delegation token
-  private static final byte OP_CANCEL_DELEGATION_TOKEN = 17; //cancel delegation token
-  private static final byte OP_UPDATE_MASTER_KEY = 18; //update master key
+  private static final byte OP_GET_DELEGATION_TOKEN = 18; //new delegation token
+  private static final byte OP_RENEW_DELEGATION_TOKEN = 19; //renew delegation token
+  private static final byte OP_CANCEL_DELEGATION_TOKEN = 20; //cancel delegation token
+  private static final byte OP_UPDATE_MASTER_KEY = 21; //update master key
 
   private static int sizeFlushBuffer = 512*1024;
 
@@ -832,6 +832,21 @@ public class FSEditLog {
         }
         }
       }
+    } catch (IOException ex) {
+      // Failed to load 0.20.203 version edits during upgrade. This version has
+      // conflicting opcodes with the later releases. The editlog must be 
+      // emptied by restarting the namenode, before proceeding with the upgrade.
+      if (Storage.is203LayoutVersion(logVersion) &&
+          logVersion != FSConstants.LAYOUT_VERSION) {
+        String msg = "During upgrade, failed to load the editlog version " + 
+        logVersion + " from release 0.20.203. Please go back to the old " + 
+        " release and restart the namenode. This empties the editlog " +
+        " and saves the namespace. Resume the upgrade after this step.";
+        throw new IOException(msg, ex);
+      } else {
+        throw ex;
+      }
+      
     } finally {
       in.close();
     }
