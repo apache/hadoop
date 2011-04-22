@@ -25,6 +25,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.StringTokenizer;
@@ -42,6 +43,8 @@ import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 
 /**
@@ -874,4 +877,40 @@ public abstract class AbstractFileSystem {
    */
   public abstract void setVerifyChecksum(final boolean verifyChecksum)
       throws AccessControlException, IOException;
+  
+  /**
+   * Get a canonical name for this file system.
+   * @return a URI string that uniquely identifies this file system
+   */
+  public String getCanonicalServiceName() {
+    return SecurityUtil.buildDTServiceName(getUri(), getUriDefaultPort());
+  }
+  
+  /**
+   * Get one or more delegation tokens associated with the filesystem. Normally
+   * a file system returns a single delegation token. A file system that manages
+   * multiple file systems underneath, could return set of delegation tokens for
+   * all the file systems it manages
+   * 
+   * @param renewer the account name that is allowed to renew the token.
+   * @return List of delegation tokens.
+   * @throws IOException
+   */
+  @InterfaceAudience.LimitedPrivate( { "HDFS", "MapReduce" })
+  public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
+    return null;
+  }
+  
+  @Override //Object
+  public int hashCode() {
+    return myUri.hashCode();
+  }
+  
+  @Override //Object
+  public boolean equals(Object other) {
+    if (other == null || !(other instanceof AbstractFileSystem)) {
+      return false;
+    }
+    return myUri.equals(((AbstractFileSystem) other).myUri);
+  }
 }

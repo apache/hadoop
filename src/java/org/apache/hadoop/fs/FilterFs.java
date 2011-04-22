@@ -21,12 +21,14 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.EnumSet;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 
 /**
@@ -251,5 +253,15 @@ public abstract class FilterFs extends AbstractFileSystem {
   @Override
   public Path getLinkTarget(final Path f) throws IOException {
     return myFs.getLinkTarget(f);
+  }
+  
+  @Override // AbstractFileSystem
+  public String getCanonicalServiceName() {
+    return myFs.getCanonicalServiceName();
+  }
+  
+  @Override // AbstractFileSystem
+  public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
+    return myFs.getDelegationTokens(renewer);
   }
 }

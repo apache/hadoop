@@ -6,6 +6,8 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    HADOOP-6994. Api to get delegation token in AbstractFileSystem. (jitendra)
+
   IMPROVEMENTS
 
     HADOOP-7133. Batch the calls in DataStorage to FileUtil.createHardLink().
