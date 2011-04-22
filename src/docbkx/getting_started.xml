@@ -12,9 +12,9 @@
   <section>
     <title>Introduction</title>
 
-    <para><link linkend="quickstart">Quick Start</link> will get you up and
+    <para><xref linkend="quickstart" /> will get you up and
     running on a single-node instance of HBase using the local filesystem. The
-    <link linkend="notsoquick">Not-so-quick Start Guide</link> describes setup
+    <xref linkend="notsoquick" /> describes setup
     of HBase in distributed mode running on top of HDFS.</para>
   </section>
 
@@ -23,7 +23,7 @@
 
     <para>This guide describes setup of a standalone HBase instance that uses
     the local filesystem. It leads you through creating a table, inserting
-    rows via the <link linkend="shell">HBase Shell</link>, and then cleaning
+    rows via the HBase <command>shell</command>, and then cleaning
     up and shutting down your standalone HBase instance. The below exercise
     should take no more than ten minutes (not including download time).</para>
 
@@ -97,8 +97,7 @@ starting Master, logging to logs/hbase-user-master-example.org.out</programlisti
     <section xml:id="shell_exercises">
       <title>Shell Exercises</title>
 
-      <para>Connect to your running HBase via the <link linkend="shell">HBase
-      Shell</link>.</para>
+      <para>Connect to your running HBase via the <command>shell</command>.</para>
 
       <para><programlisting>$ ./bin/hbase shell
 HBase Shell; enter 'help&lt;RETURN&gt;' for list of supported commands.
@@ -114,8 +113,7 @@ hbase(main):001:0&gt; </programlisting></para>
       HBase shell; in particular note how table names, rows, and columns,
       etc., must be quoted.</para>
 
-      <para>Create a table named <varname>test</varname> with a single <link
-      linkend="columnfamily">column family</link> named <varname>cf</varname>.
+  <para>Create a table named <varname>test</varname> with a single column family named <varname>cf</varname>.
       Verify its creation by listing all tables and then insert some
       values.</para>
 
@@ -133,8 +131,7 @@ hbase(main):006:0&gt; put 'test', 'row3', 'cf:c', 'value3'
 
       <para>Above we inserted 3 values, one at a time. The first insert is at
       <varname>row1</varname>, column <varname>cf:a</varname> with a value of
-      <varname>value1</varname>. Columns in HBase are comprised of a <link
-      linkend="columnfamily">column family</link> prefix --
+      <varname>value1</varname>. Columns in HBase are comprised of a column family prefix --
       <varname>cf</varname> in this example -- followed by a colon and then a
       column qualifier suffix (<varname>a</varname> in this case).</para>
 
@@ -182,8 +179,7 @@ stopping hbase...............</programlisting></para>
       <title>Where to go next</title>
 
       <para>The above described standalone setup is good for testing and
-      experiments only. Move on to the next section, the <link
-      linkend="notsoquick">Not-so-quick Start Guide</link> where we'll go into
+          experiments only. Next move on to <xref linkend="notsoquick" /> where we'll go into
       depth on the different HBase run modes, requirements and critical
       configurations needed setting up a distributed HBase deploy.</para>
     </section>
@@ -437,9 +433,7 @@ stopping hbase...............</programlisting></para>
     <section xml:id="standalone_dist">
       <title>HBase run modes: Standalone and Distributed</title>
 
-      <para>HBase has two run modes: <link
-      linkend="standalone">standalone</link> and <link
-      linkend="distributed">distributed</link>. Out of the box, HBase runs in
+      <para>HBase has two run modes: <xref linkend="standalone" /> and <xref linkend="distributed" />. Out of the box, HBase runs in
       standalone mode. To set up a distributed deploy, you will need to
       configure HBase by editing files in the HBase <filename>conf</filename>
       directory.</para>
@@ -456,7 +450,7 @@ stopping hbase...............</programlisting></para>
         <title>Standalone HBase</title>
 
         <para>This is the default mode. Standalone mode is what is described
-        in the <link linkend="quickstart">quickstart</link> section. In
+            in the <xref linkend="quickstart" /> section. In
         standalone mode, HBase does not use HDFS -- it uses the local
         filesystem instead -- and it runs all HBase daemons and a local
         zookeeper all up in the same JVM. Zookeeper binds to a well known port
@@ -485,8 +479,7 @@ stopping hbase...............</programlisting></para>
         verification and exploration of your install, whether a
         <emphasis>pseudo-distributed</emphasis> or
         <emphasis>fully-distributed</emphasis> configuration is described in a
-        section that follows, <link linkend="confirm">Running and Confirming
-        your Installation</link>. The same verification script applies to both
+        section that follows, <xref linkend="confirm" />. The same verification script applies to both
         deploy types.</para>
 
         <section xml:id="pseudo">
@@ -499,10 +492,8 @@ stopping hbase...............</programlisting></para>
 
           <para>Once you have confirmed your HDFS setup, edit
           <filename>conf/hbase-site.xml</filename>. This is the file into
-          which you add local customizations and overrides for <link
-          linkend="hbase_default_configurations">Default HBase
-          Configurations</link> and <link linkend="hdfs_client_conf">HDFS
-          Client Configurations</link>. Point HBase at the running Hadoop HDFS
+          which you add local customizations and overrides for
+          <xreg linkend="hbase_default_configurations" /> and <xref linkend="hdfs_client_conf" />. Point HBase at the running Hadoop HDFS
           instance by setting the <varname>hbase.rootdir</varname> property.
           This property points HBase at the Hadoop filesystem instance to use.
           For example, adding the properties below to your
@@ -543,8 +534,7 @@ stopping hbase...............</programlisting></para>
             want to connect from a remote location.</para>
           </note>
 
-          <para>Now skip to <link linkend="confirm">Running and Confirming
-          your Installation</link> for how to start and verify your
+          <para>Now skip to <xref linkend="confirm" /> for how to start and verify your
           pseudo-distributed install. <footnote>
               <para>See <link
               xlink:href="http://hbase.apache.org/pseudo-distributed.html">Pseudo-distributed
@@ -594,8 +584,7 @@ stopping hbase...............</programlisting></para>
 
             <para>In addition, a fully-distributed mode requires that you
             modify <filename>conf/regionservers</filename>. The
-            <filename><link
-            linkend="regionservrers">regionservers</link></filename> file
+            <xref linkend="regionservers" /> file
             lists all hosts that you would have running
             <application>HRegionServer</application>s, one host per line (This
             file in HBase is like the Hadoop <filename>slaves</filename>
@@ -634,9 +623,7 @@ stopping hbase...............</programlisting></para>
             by setting the
             <varname>hbase.zookeeper.property.clientPort</varname> property.
             For all default values used by HBase, including ZooKeeper
-            configuration, see the section <link
-            linkend="hbase_default_configurations">Default HBase
-            Configurations</link>. Look for the
+            configuration, see <xref linkend="hbase_default_configurations" />. Look for the
             <varname>hbase.zookeeper.property</varname> prefix <footnote>
                 <para>For the full list of ZooKeeper configurations, see
                 ZooKeeper's <filename>zoo.cfg</filename>. HBase does not ship
@@ -835,8 +822,7 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
 
          
 
-        <para>Once HBase has started, see the <link
-        linkend="shell_exercises">Shell Exercises</link> section for how to
+    <para>Once HBase has started, see the <xref linkend="shell_exercises" /> for how to
         create tables, add data, scan your insertions, and finally disable and
         drop your tables.</para>
 

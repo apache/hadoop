@@ -23,4 +23,25 @@
   hope to fill in the holes with time. Feel free to add to this book by adding
   a patch to an issue up in the HBase <link
   xlink:href="https://issues.apache.org/jira/browse/HBASE">JIRA</link>.</para>
+
+  <note xml:id="headsup">
+      <title>Heads-up</title>
+      <para>
+          If this is your first foray into the wonderful world of
+          Distributed Computing, then you are in for
+          some interesting times.  First off, distributed systems are
+          hard; making a distributed system hum requires a disparate
+          skillset that needs span systems (hardware and software) and
+          networking.  Your cluster' operation can hiccup because of any
+          of a myriad set of reasons from bugs in HBase itself through misconfigurations
+          -- misconfiguration of HBase but also operating system misconfigurations --
+          through to hardware problems whether it be a bug in your network card
+          drivers or an underprovisioned RAM bus (to mention two recent
+          examples of hardware issues that manifested as "HBase is slow").
+          You will also need to do a recalibration if up to this your
+          computing has been bound to a single box.  Here is one good
+          starting point:
+          <link xlink:href="http://en.wikipedia.org/wiki/Fallacies_of_Distributed_Computing">Fallacies of Distributed Computing</link>.
+      </para>
+  </note>
 </preface>

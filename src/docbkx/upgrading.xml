@@ -9,8 +9,7 @@
       xmlns:db="http://docbook.org/ns/docbook">
     <title>Upgrading</title>
     <para>
-    Review the <link linkend="requirements">requirements</link>
-    section above, in particular the section on Hadoop version.
+        Review <xref linkend="requirements" />, in particular the section on Hadoop version.
     </para>
     <section xml:id="upgrade0.90">
     <title>Upgrading to HBase 0.90.x from 0.20.x or 0.89.x</title>
@@ -30,7 +29,7 @@
              HBase jar and read from there.  If you would like to review
              the content of this file, see it in the src tree at
              <filename>src/main/resources/hbase-default.xml</filename> or
-             see <link linkend="hbase_default_configurations">Default HBase Configurations</link>.
+             see <xref linkend="hbase_default_configurations" />.
           </para>
           <para>
             Finally, if upgrading from 0.20.x, check your 

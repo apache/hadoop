@@ -15,6 +15,20 @@
   factors involved; RAM, compression, JVM settings, etc. Afterward, come back
   here for more pointers.</para>
 
+  <note xml:id="rpc.logging"><title>Enabling RPC-level logging</title>
+  <para>Enabling the RPC-level logging on a regionserver can often given
+      insight on timings at the server.  Once enabled, the amount of log
+      spewed is voluminous.  It is not recommended that you leave this
+      logging on for more than short bursts of time.  To enable RPC-level
+      logging, browse to the regionserver UI and click on 
+      <emphasis>Log Level</emphasis>.  Set the log level to DEBUG for the package
+      <classname>org.apache.hadoop.ipc</classname> (Thats right, for
+      hadoop.ipc, NOT, hbase.ipc).  Then tail the regionservers log.
+      Analyze.</para>
+  <para>To disable, set the logging level back to WARN level.
+  </para>
+  </note>
+
   <section xml:id="jvm">
     <title>Java</title>
 
@@ -46,16 +60,14 @@
   <section xml:id="perf.configurations">
     <title>Configurations</title>
 
-    <para>See the section on <link
-    linkend="recommended_configurations">recommended
-    configurations</link>.</para>
+    <para>See <xref linkend="recommended_configurations" />.</para>
 
     <section xml:id="perf.number.of.regions">
       <title>Number of Regions</title>
 
-      <para>The number of regions for an HBase table is driven by the <link
-      linkend="bigger.regions">filesize</link>. Also, see the architecture
-      section on <link linkend="arch.regions.size">region size</link></para>
+      <para>The number of regions for an HBase table is driven by the <xref
+              linkend="bigger.regions" />. Also, see the architecture
+          section on <xref linkend="arch.regions.size" /></para>
     </section>
 
     <section xml:id="perf.compactions.and.splits">
@@ -68,18 +80,28 @@
 
     <section xml:id="perf.compression">
       <title>Compression</title>
-
-      <para>Production systems should use compression such as <link
-      linkend="lzo">LZO</link> compression with their column family
+      <para>Production systems should use compression such as <xref linkend="lzo" /> compression with their column family
       definitions.</para>
     </section>
+
+    <section xml:id="perf.handlers">
+        <title><varname>hbase.regionserver.handler.count</varname></title>
+        <para>This setting is in essence sets how many requests are
+            concurrently being processed inside the regionserver at any
+            one time.  If set too high, then throughput may suffer as
+            the concurrent requests contend; if set too low, requests will
+            be stuck waiting to get into the machine.  You can get a
+            sense of whether you have too little or too many handlers by
+            <xref linkend="rpc.logging" />
+            on an individual regionserver then tailing its logs.</para>
+    </section>
+
   </section>
 
   <section xml:id="perf.number.of.cfs">
     <title>Number of Column Families</title>
 
-    <para>See the section on <link linkend="number.of.cfs">Number of Column
-    Families</link>.</para>
+    <para>See <xref linkend="number.of.cfs" />.</para>
   </section>
 
   <section xml:id="perf.one.region">

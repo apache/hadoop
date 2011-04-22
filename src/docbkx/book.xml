@@ -148,7 +148,7 @@ throws InterruptedException, IOException {
   <title>
       Schema Creation
   </title>
-      <para>HBase schemas can be created or updated through the <link linkend="shell">HBase shell</link>
+  <para>HBase schemas can be created or updated with <xref linkend="shell" />
       or by using <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html">HBaseAdmin</link> in the Java API.
       </para>
   </section>   
@@ -197,7 +197,7 @@ throws InterruptedException, IOException {
           the case described by Marc Limotte at the tail of
           <link xlink:url="https://issues.apache.org/jira/browse/HBASE-3551?page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel&amp;focusedCommentId=13005272#comment-13005272">HBASE-3551</link>
           (recommended!).
-          Therein, the indices that are kept on HBase storefiles (<link linkend="hfile">HFile</link>s)
+          Therein, the indices that are kept on HBase storefiles (<xref linkend="hfile" />)
                   to facilitate random access may end up occupyng large chunks of the HBase
                   allotted RAM because the cell value coordinates are large.
                   Mark in the above cited comment suggests upping the block size so
@@ -213,7 +213,7 @@ throws InterruptedException, IOException {
   <para>The number of row versions to store is configured per column
       family via <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link>.
       The default is 3.
-      This is an important parameter because as described in the <link linkend="datamodel">Data Model</link>
+      This is an important parameter because as described in <xref linkend="datamodel" />
       section HBase does <emphasis>not</emphasis> overwrite row values, but rather
       stores different values per row by time (and qualifier).  Excess versions are removed during major
       compactions.  The number of versions may need to be increased or decreased depending on application needs.
@@ -248,7 +248,7 @@ throws InterruptedException, IOException {
           <para>Size of the compaction queue.  This is the number of stores in the region that have been targeted for compaction.</para>
 		  </section>
           <section xml:id="hbase.regionserver.fsReadLatency_avg_time"><title><varname>hbase.regionserver.fsReadLatency_avg_time</varname></title>
-          <para>Filesystem read latency (ms)</para>
+          <para>Filesystem read latency (ms).  This is the average time to read from HDFS.</para>
 		  </section>
           <section xml:id="hbase.regionserver.fsReadLatency_num_ops"><title><varname>hbase.regionserver.fsReadLatency_num_ops</varname></title>
           <para>TODO</para>
@@ -294,11 +294,10 @@ throws InterruptedException, IOException {
 
   <chapter xml:id="datamodel">
     <title>Data Model</title>
-  <para>In short, applications store data into HBase <link linkend="table">tables</link>.
-      Tables are made of <link linkend="row">rows</link> and <emphasis>columns</emphasis>.
-      All columns in HBase belong to a particular
-      <link linkend="columnfamily">column family</link>.
-      Table <link linkend="cell">cells</link> -- the intersection of row and column
+    <para>In short, applications store data into an HBase table.
+        Tables are made of rows and columns.
+      All columns in HBase belong to a particular column family.
+      Table cells -- the intersection of row and column
       coordinates -- are versioned.
       A cell’s content is an uninterpreted array of bytes.
   </para>
@@ -709,7 +708,7 @@ throws InterruptedException, IOException {
     <para>Administrative functions are handled through <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html">HBaseAdmin</link>
     </para>
 	   <section xml:id="client.connections"><title>Connections</title>
-         <para>For connection configuration information, see the <link linkend="client_dependencies">configuration</link> section. 
+           <para>For connection configuration information, see <xref linkend="client_dependencies" />. 
          </para>
          <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>
 instances are not thread-safe.  When creating HTable instances, it is advisable to use the same <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HBaseConfiguration">HBaseConfiguration</link>
@@ -728,7 +727,8 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
           </para>
    	  </section>
 	   <section xml:id="client.writebuffer"><title>WriteBuffer and Batch Methods</title>
-           <para>If <link linkend="perf.hbase.client.autoflush">autoflush</link> is turned off on <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>,
+           <para>If <xref linkend="perf.hbase.client.autoflush" /> is turned off on
+               <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>,
                <classname>Put</classname>s are sent to region servers when the writebuffer
                is filled.  The writebuffer is 2MB by default.  Before an HTable instance is
                discarded, either <methodname>close()</methodname> or
@@ -813,7 +813,7 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
         participate. The RegionServer splits a region, offlines the split
         region and then adds the daughter regions to META, opens daughters on
         the parent's hosting RegionServer and then reports the split to the
-        Master. See <link linkend="disable.splitting">Managed Splitting</link> for how to manually manage
+        Master. See <xref linkend="disable.splitting" /> for how to manually manage
         splits (and for why you might do this)</para>
       </section>
 
@@ -872,7 +872,7 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
          For a description of how a minor compaction picks files to compact, see the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/regionserver/Store.html#836">ascii diagram in the Store source code.</link>
          </para>
          <para>After a major compaction runs there will be a single storefile per store, and this will help performance usually.  Caution:  major compactions rewrite all of the stores data and on a loaded system, this may not be tenable;
-          major compactions will usually have to be <link linkend="disable.splitting">managed</link> on large systems.
+             major compactions will usually have to be <xref linkend="disable.splitting" /> on large systems.
         </para>
       </section>
 
@@ -888,7 +888,7 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
          <title>Purpose</title>
 
         <para>Each RegionServer adds updates (Puts, Deletes) to its write-ahead log (WAL)
-        first, and then to the <link linkend="store.memstore">MemStore</link> for the affected <link linkend="store">Store</link>.  
+            first, and then to the <xref linkend="store.memstore"/> for the affected <xref linkend="store" />.  
         This ensures that HBase has durable writes. Without WAL, there is the possibility of data loss in the case of a RegionServer failure 
         before each MemStore is flushed and new StoreFiles are written.  <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/wal/HLog.html">HLog</link> 
         is the HBase WAL implementation, and there is one HLog instance per RegionServer.
@@ -1090,7 +1090,7 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
         </para>
     </section>
     <section><title>HFile Tool</title>
-        <para>See <link linkend="hfile_tool" >HFile Tool</link>.</para>
+        <para>See <xref linkend="hfile_tool" />.</para>
     </section>
     <section xml:id="wal_tools">
       <title>WAL Tools</title>
@@ -1113,10 +1113,31 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
       </section>
     </section>
     <section xml:id="compression.tool"><title>Compression Tool</title>
-        <para>See <link linkend="compression.tool" >Compression Tool</link>.</para>
+        <para>See <xref linkend="compression.tool" />.</para>
     </section>
     <section xml:id="decommission"><title>Node Decommission</title>
-        <para>Since HBase 0.90.2, you can have a node gradually shed its load and then shutdown using the
+        <para>You can stop an individual regionserver by running the following
+            script in the HBase directory on the particular  node:
+            <programlisting>$ ./bin/hbase-daemon.sh stop regionserver</programlisting>
+            The regionserver will first close all regions and then shut itself down.
+            On shutdown, the regionserver's ephemeral node in ZooKeeper will expire.
+            The master will notice the regionserver gone and will treat it as
+            a 'crashed' server; it will reassign the nodes the regionserver was carrying.
+            <note><title>Disable the Load Balancer before Decommissioning a node</title>
+             <para>If the load balancer runs while a node is shutting down, then
+                 there could be contention between the Load Balancer and the
+                 Master's recovery of the just decommissioned regionserver.
+                 Avoid any problems by disabling the balancer first.
+                 See <xref linkend="lb" /> below.
+             </para>
+            </note>
+        </para>
+        <para>
+        A downside to the above stop of a regionserver is that regions could be offline for
+        a good period of time.  Regions are closed in order.  If many regions on the server, the
+        first region to close may not be back online until all regions close and after the master
+        notices the regionserver's znode gone.  In HBase 0.90.2, we added facility for having
+        a node gradually shed its load and then shutdown itself down.  HBase 0.90.2 added the
             <filename>graceful_stop.sh</filename> script.  Here is its usage:
             <programlisting>$ ./bin/graceful_stop.sh 
 Usage: graceful_stop.sh [--config &amp;conf-dir>] [--restart] [--reload] [--thrift] [--rest] &amp;hostname>
@@ -1152,7 +1173,7 @@ Usage: graceful_stop.sh [--config &amp;conf-dir>] [--restart] [--reload] [--thri
             RegionServer gone but all regions will have already been redeployed
             and because the RegionServer went down cleanly, there will be no
             WAL logs to split.
-            <note><title>Load Balancer</title>
+            <note xml:id="lb"><title>Load Balancer</title>
             <para> 
                 It is assumed that the Region Load Balancer is disabled while the
                 <command>graceful_stop</command> script runs (otherwise the balancer
@@ -1270,7 +1291,7 @@ false
     LZO
     </title>
     <para>
-    See <link linkend="lzo">LZO Compression</link> above.
+        See <xref linkend="lzo" /> above.
     </para>
     </section>
 
@@ -1285,7 +1306,7 @@ false
     available on the CLASSPATH; in this case it will use native
     compressors instead (If the native libs are NOT present,
     you will see lots of <emphasis>Got brand-new compressor</emphasis>
-    reports in your logs; see <link linkend="brand.new.compressor">FAQ</link>).
+    reports in your logs; see <xref linkend="brand.new.compressor" />).
     </para>
     </section>
   </appendix>
@@ -1309,7 +1330,7 @@ false
             <answer>
                 <para>
                     Not really.  SQL-ish support for HBase via <link xlink:href="http://hive.apache.org/">Hive</link> is in development, however Hive is based on MapReduce which is not generally suitable for low-latency requests.
-                    See the <link linkend="datamodel">Data Model</link> section for examples on the HBase client.
+                    See the <xref linkend="datamodel" /> section for examples on the HBase client.
                 </para>
             </answer>
         </qandaentry>
@@ -1320,7 +1341,7 @@ false
                     <link xlink:href="http://hadoop.apache.org/hdfs/">HDFS</link> is a distributed file system that is well suited for the storage of large files.  It's documentation 
                     states that it is not, however, a general purpose file system, and does not provide fast individual record lookups in files. 
                     HBase, on the other hand, is built on top of HDFS and provides fast record lookups (and updates) for large tables.  This can sometimes be a point of conceptual confusion.
-                    See the <link linkend="datamodel">Data Model</link> and <link linkend="architecture">Architecture</link> sections for more information on how HBase achieves its goals.
+                    See the <xref linkend="datamodel" /> and <xref linkend="architecture" /> sections for more information on how HBase achieves its goals.
                 </para>
             </answer>
         </qandaentry>
@@ -1406,6 +1427,7 @@ When I build, why do I always get <code>Unable to find resource 'VM_global_libra
 
   <appendix>
       <title xml:id="ycsb"><link xlink:href="https://github.com/brianfrankcooper/YCSB/">YCSB: The Yahoo! Cloud Serving Benchmark</link> and HBase</title>
+      <para>TODO: Describe how YCSB is poor for putting up a decent cluster load.</para>
       <para>TODO: Describe setup of YCSB for HBase</para>
       <para>Ted Dunning redid YCSB so its mavenized and added facility for verifying workloads.  See <link xlink:href="https://github.com/tdunning/YCSB">Ted Dunning's YCSB</link>.</para>
 

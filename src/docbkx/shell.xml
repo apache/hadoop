@@ -24,7 +24,7 @@
             arguments are entered into the
             HBase shell; in particular note how table names, rows, and
             columns, etc., must be quoted.</para>
-            <para>See <link linkend="shell_exercises">Shell Exercises</link>
+        <para>See <xref linkend="shell_exercises" />
             for example basic shell operation.</para>
 
     <section xml:id="scripting"><title>Scripting</title>
