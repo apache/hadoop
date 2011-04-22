@@ -30,7 +30,7 @@ import org.apache.commons.logging.LogFactory;
  * Each time its value is set, it is published only *once* at the next update
  * call.
  *
- * @deprecated in favor of {@link org.apache.hadoop.metrics2.lib.MutableGaugeInt}.
+ * @deprecated in favor of {@link org.apache.hadoop.metrics2.lib.MetricMutableGaugeInt}.
  */
 @Deprecated
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})

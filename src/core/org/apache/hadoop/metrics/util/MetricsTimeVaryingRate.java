@@ -32,7 +32,7 @@ import org.apache.commons.logging.LogFactory;
  * This class also keeps track of the min and max rates along with 
  * a method to reset the min-max.
  *
- * @deprecated in favor of {@link org.apache.hadoop.metrics2.lib.MutableRate}.
+ * @deprecated in favor of {@link org.apache.hadoop.metrics2.lib.MetricMutableGauge}.
  */
 @Deprecated
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
