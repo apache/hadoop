@@ -60,6 +60,8 @@ Release 0.20.203.0 - unreleased
     HDFS-1842. Change the layout version to -31 to disallow upgrade from
     and to 0.21 release. (suresh)
 
+    HADOOP-7232. Fix Javadoc warnings. (omalley)
+
 Release 0.20.202.0 - unreleased
 
     MAPREDUCE-2355. Add a configuration knob 
