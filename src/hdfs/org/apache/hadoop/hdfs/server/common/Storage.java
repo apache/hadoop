@@ -73,6 +73,9 @@ public abstract class Storage extends StorageInfo {
    * any upgrade code that uses this constant should also be removed. */
   public static final int PRE_GENERATIONSTAMP_LAYOUT_VERSION = -13;
   
+  /** Layout version of 21 release */
+  public static final int LAYOUT_VERSION_21 = -24;
+  
   private   static final String STORAGE_FILE_LOCK     = "in_use.lock";
   protected static final String STORAGE_FILE_VERSION  = "VERSION";
   public static final String STORAGE_DIR_CURRENT   = "current";
@@ -688,8 +691,7 @@ public abstract class Storage extends StorageInfo {
    * 
    * @param oldVersion
    */
-  protected static void checkVersionUpgradable(int oldVersion) 
-                                     throws IOException {
+  public static void checkVersionUpgradable(int oldVersion) throws IOException {
     if (oldVersion > LAST_UPGRADABLE_LAYOUT_VERSION) {
       String msg = "*********** Upgrade is not supported from this older" +
                    " version of storage to the current version." + 
@@ -703,7 +705,16 @@ public abstract class Storage extends StorageInfo {
       LOG.error(msg);
       throw new IOException(msg); 
     }
-    
+    if (oldVersion == LAYOUT_VERSION_21) {
+      String msg = "*********** Upgrade is not supported from this " +
+                   " version of storage to the current version." + 
+                   " Please upgrade to release 0.22 " +
+                   " or a later version and then upgrade to current" +
+                   " version. Old layout version is " + oldVersion +
+                   ". ************";
+      LOG.error(msg);
+      throw new IOException(msg); 
+    }
   }
   
   /**

@@ -23,6 +23,7 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 
@@ -238,6 +239,21 @@ public class TestDFSUpgrade extends TestCase {
     } // end numDir loop
   }
  
+  public void testCheckVersionUpgradable() throws Exception {
+    // Except for 0.21 layout version all previous layout versions 
+    // should be upgradable.
+    for (int i = Storage.LAST_UPGRADABLE_LAYOUT_VERSION; 
+         i < FSConstants.LAYOUT_VERSION; i++) {
+      if (i == Storage.LAYOUT_VERSION_21) {
+        try {
+          Storage.checkVersionUpgradable(i);
+          fail("Expected IOException is not thrown");
+        } catch (IOException expected) { }
+      }
+      Storage.checkVersionUpgradable(i);
+    }
+  }
+  
   protected void tearDown() throws Exception {
     LOG.info("Shutting down MiniDFSCluster");
     if (cluster != null) cluster.shutdown();

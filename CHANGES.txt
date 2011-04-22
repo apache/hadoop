@@ -57,6 +57,9 @@ Release 0.20.203.0 - unreleased
     HADOOP-7215. RPC clients must use network interface corresponding to 
     the host in the client's kerberos principal key. (suresh)
 
+    HDFS-1842. Change the layout version to -31 to disallow upgrade from
+    and to 0.21 release. (suresh)
+
 Release 0.20.202.0 - unreleased
 
     MAPREDUCE-2355. Add a configuration knob 
