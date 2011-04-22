@@ -21,11 +21,11 @@
       spewed is voluminous.  It is not recommended that you leave this
       logging on for more than short bursts of time.  To enable RPC-level
       logging, browse to the regionserver UI and click on 
-      <emphasis>Log Level</emphasis>.  Set the log level to DEBUG for the package
+      <emphasis>Log Level</emphasis>.  Set the log level to <varname>DEBUG</varname> for the package
       <classname>org.apache.hadoop.ipc</classname> (Thats right, for
       hadoop.ipc, NOT, hbase.ipc).  Then tail the regionservers log.
       Analyze.</para>
-  <para>To disable, set the logging level back to WARN level.
+  <para>To disable, set the logging level back to <varname>INFO</varname> level.
   </para>
   </note>
 
