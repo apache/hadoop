@@ -269,16 +269,18 @@ public class HadoopArchives implements Tool {
         }
         else {
           Path parent = p.getParent();
-          if (allpaths.containsKey(parent.toString())) {
-            HashSet<String> children = allpaths.get(parent.toString());
-            children.add(p.getName());
+          if (null != parent) {
+            if (allpaths.containsKey(parent.toString())) {
+              HashSet<String> children = allpaths.get(parent.toString());
+              children.add(p.getName());
+            } 
+            else {
+              HashSet<String> children = new HashSet<String>();
+              children.add(p.getName());
+              allpaths.put(parent.toString(), children);
+            }
+            parents.add(parent);
           }
-          else {
-            HashSet<String> children = new HashSet<String>();
-            children.add(p.getName());
-            allpaths.put(parent.toString(), children);
-          }
-          parents.add(parent);
         }
       }
       justDirs = parents;

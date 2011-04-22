@@ -6,6 +6,8 @@ Release 0.20.4 - Unreleased
 
   BUG FIXES
 
+    MAPREDUCE-2317. Fix a NPE in HadoopArchives.  (Devaraj K via szetszwo)
+
   IMPROVEMENTS
 
 Release 0.20.3 - 2011-1-5
