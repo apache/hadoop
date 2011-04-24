@@ -1,0 +1,419 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<chapter version="5.0" xml:id="trouble"
+         xmlns="http://docbook.org/ns/docbook"
+         xmlns:xlink="http://www.w3.org/1999/xlink"
+         xmlns:xi="http://www.w3.org/2001/XInclude"
+         xmlns:svg="http://www.w3.org/2000/svg"
+         xmlns:m="http://www.w3.org/1998/Math/MathML"
+         xmlns:html="http://www.w3.org/1999/xhtml"
+         xmlns:db="http://docbook.org/ns/docbook">
+  <title>Troubleshooting and Debugging HBase</title>
+    <section xml:id="trouble.general">
+      <title>General Guidelines</title>
+      <para>
+          Always start with the master log (TODO: Which lines?).
+          Normally it’s just printing the same lines over and over again.
+          If not, then there’s an issue.
+          Google or <link xlink:href="http://search-hadoop.com">search-hadoop.com</link>
+          should return some hits for those exceptions you’re seeing.
+      </para>
+      <para>
+          An error rarely comes alone in HBase, usually when something gets screwed up what will
+          follow may be hundreds of exceptions and stack traces coming from all over the place.
+          The best way to approach this type of problem is to walk the log up to where it all
+          began, for example one trick with RegionServers is that they will print some
+          metrics when aborting so grepping for <emphasis>Dump</emphasis>
+          should get you around the start of the problem.
+      </para>
+      <para>
+          RegionServer suicides are “normal”, as this is what they do when something goes wrong.
+          For example, if ulimit and xcievers (the two most important initial settings, see <xref linkend="ulimit" />)
+          aren’t changed, it will make it impossible at some point for datanodes to create new threads
+          that from the HBase point of view is seen as if HDFS was gone. Think about what would happen if your
+          MySQL database was suddenly unable to access files on your local file system, well it’s the same with
+          HBase and HDFS. Another very common reason to see RegionServers committing seppuku is when they enter
+          prolonged garbage collection pauses that last longer than the default ZooKeeper session timeout.
+          For more information on GC pauses, see the
+          <link xlink:href="http://www.cloudera.com/blog/2011/02/avoiding-full-gcs-in-hbase-with-memstore-local-allocation-buffers-part-1/">3 part blog post</link>  by Todd Lipcon
+          and <xref linkend="gcpause" /> above. 
+      </para>
+    </section>
+    <section xml:id="trouble.log">
+      <title>Logs</title>
+      <para>
+      The key process logs are as follows...   (replace &lt;user&gt; with the user that started the service, and &lt;hostname&gt; for the machine name)
+      </para>
+      <para>
+      NameNode:  <filename>$HADOOP_HOME/logs/hadoop-&lt;user&gt;-namenode-&lt;hostname&gt;.log</filename>
+      </para>
+      <para>
+      DataNode:  <filename>$HADOOP_HOME/logs/hadoop-&lt;user&gt;-datanode-&lt;hostname&gt;.log</filename>
+      </para>
+      <para>
+      JobTracker:  <filename>$HADOOP_HOME/logs/hadoop-&lt;user&gt;-jobtracker-&lt;hostname&gt;.log</filename>
+      </para>
+      <para>
+      TaskTracker:  <filename>$HADOOP_HOME/logs/hadoop-&lt;user&gt;-jobtracker-&lt;hostname&gt;.log</filename>
+      </para>
+      <para>
+      HMaster:  <filename>$HBASE_HOME/logs/hbase-&lt;user&gt;-master-&lt;hostname&gt;.log</filename>
+      </para>
+      <para>
+      RegionServer:  <filename>$HBASE_HOME/logs/hbase-&lt;user&gt;-regionserver-&lt;hostname&gt;.log</filename>
+      </para>
+      <para>
+      ZooKeeper:  <filename>TODO</filename>
+      </para>
+      <section xml:id="trouble.log.locations">
+        <title>Log Locations</title>
+        <para>For stand-alone deployments the logs are obviously going to be on a single machine, however this is a development configuration only.
+        Production deployments need to run on a cluster.</para>
+        <section xml:id="trouble.log.locations.namenode">
+          <title>NameNode</title>
+          <para>The NameNode log is on the NameNode server.  The HBase Master is typically run on the NameNode server, and well as ZooKeeper.</para>
+          <para>For smaller clusters the JobTracker is typically run on the NameNode server as well.</para>
+         </section>        
+        <section xml:id="trouble.log.locations.datanode">
+          <title>DataNode</title>
+          <para>Each DataNode server will have a DataNode log for HDFS, as well as a RegionServer log for HBase.</para>
+          <para>Additionally, each DataNode server will also have a TaskTracker log for MapReduce task execution.</para>
+         </section>        
+      </section>      
+
+    </section>
+    <section xml:id="trouble.tools">
+      <title>Tools</title>
+      <section xml:id="trouble.tools.searchhadoop">
+        <title>search-hadoop.com</title>
+        <para>
+        <link xlink:href="http://search-hadoop.com">search-hadoop.com</link> indexes all the mailing lists and <link xlink:href="https://issues.apache.org/jira/browse/HBASE">JIRA</link>, it’s really helpful when looking for Hadoop/HBase-specific issues.
+        </para>
+      </section>
+      <section xml:id="trouble.tools.tail">
+        <title>tail</title>
+        <para>
+        <code>tail</code> is the command line tool that lets you look at the end of a file. Add the “-f” option and it will refresh when new data is available. It’s useful when you are wondering what’s happening, for example, when a cluster is taking a long time to shutdown or startup as you can just fire a new terminal and tail the master log (and maybe a few RegionServers).
+        </para>
+      </section>
+      <section xml:id="trouble.tools.top">
+        <title>top</title>
+        <para>         
+        <code>top</code> is probably one of the most important tool when first trying to see what’s running on a machine and how the resources are consumed. Here’s an example from production system:
+        <programlisting>
+top - 14:46:59 up 39 days, 11:55,  1 user,  load average: 3.75, 3.57, 3.84
+Tasks: 309 total,   1 running, 308 sleeping,   0 stopped,   0 zombie
+Cpu(s):  4.5%us,  1.6%sy,  0.0%ni, 91.7%id,  1.4%wa,  0.1%hi,  0.6%si,  0.0%st
+Mem:  24414432k total, 24296956k used,   117476k free,     7196k buffers
+Swap: 16008732k total,	14348k used, 15994384k free, 11106908k cached
+ 
+  PID USER  	PR  NI  VIRT  RES  SHR S %CPU %MEM	TIME+  COMMAND                                                                                                                                                                      
+15558 hadoop	18  -2 3292m 2.4g 3556 S   79 10.4   6523:52 java                                                                                                                                                                          
+13268 hadoop	18  -2 8967m 8.2g 4104 S   21 35.1   5170:30 java                                                                                                                                                                          
+ 8895 hadoop	18  -2 1581m 497m 3420 S   11  2.1   4002:32 java
+…
+        </programlisting>
+        </para>
+        <para>
+        Here we can see that the system load average during the last five minutes is 3.75, which very roughly means that on average 3.75 threads were waiting for CPU time during these 5 minutes.  In general, the “perfect” utilization equals to the number of cores, under that number the machine is under utilized and over that the machine is over utilized.  This is an important concept, see this article to understand it more: <link xlink:href="http://www.linuxjournal.com/article/9001">http://www.linuxjournal.com/article/9001</link>.
+        </para>
+        <para>
+        Apart from load, we can see that the system is using almost all its available RAM but most of it is used for the OS cache (which is good). The swap only has a few KBs in it and this is wanted, high numbers would indicate swapping activity which is the nemesis of performance of Java systems. Another way to detect swapping is when the load average goes through the roof (although this could also be caused by things like a dying disk, among others).
+        </para>
+        <para>
+        The list of processes isn’t super useful by default, all we know is that 3 java processes are using about 111% of the CPUs. To know which is which, simply type “c” and each line will be expanded. Typing “1” will give you the detail of how each CPU is used instead of the average for all of them like shown here.
+        </para>
+      </section>
+      <section xml:id="trouble.tools.jps">
+        <title>jps</title>
+        <para>
+        <code>jps</code> is shipped with every JDK and gives the java process ids for the current user (if root, then it gives the ids for all users). Example:
+        <programlisting>
+hadoop@sv4borg12:~$ jps
+1322 TaskTracker
+17789 HRegionServer
+27862 Child
+1158 DataNode
+25115 HQuorumPeer
+2950 Jps
+19750 ThriftServer
+18776 jmx
+        </programlisting>
+        In order, we see a:
+        <itemizedlist>
+          <listitem>Hadoop TaskTracker, manages the local Childs</listitem>
+          <listitem>HBase RegionServer, serves regions</listitem>
+          <listitem>Child, its MapReduce task, cannot tell which type exactly</listitem>
+          <listitem>Hadoop TaskTracker, manages the local Childs</listitem>
+          <listitem>Hadoop DataNode, serves blocks</listitem>
+          <listitem>HQuorumPeer, a zookeeper ensemble member</listitem>
+          <listitem>Jps, well… it’s the current process</listitem>
+          <listitem>ThriftServer, it’s a special one will be running only if thrift was started</listitem>
+          <listitem>jmx, this is a local process that’s part of our monitoring platform ( poorly named maybe). You probably don’t have that.</listitem>
+        </itemizedlist>
+        </para>
+        <para>
+      You can then do stuff like checking out the full command line that started the process:
+        <programlisting>
+hadoop@sv4borg12:~$ ps aux | grep HRegionServer
+hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/jdk1.6.0_14/bin/java -Xmx8000m -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -XX:+UseConcMarkSweepGC -XX:NewSize=64m -XX:MaxNewSize=64m -XX:CMSInitiatingOccupancyFraction=88 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:/export1/hadoop/logs/gc-hbase.log -Dcom.sun.management.jmxremote.port=10102 -Dcom.sun.management.jmxremote.authenticate=true -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.password.file=/home/hadoop/hbase/conf/jmxremote.password -Dcom.sun.management.jmxremote -Dhbase.log.dir=/export1/hadoop/logs -Dhbase.log.file=hbase-hadoop-regionserver-sv4borg12.log -Dhbase.home.dir=/home/hadoop/hbase -Dhbase.id.str=hadoop -Dhbase.root.logger=INFO,DRFA -Djava.library.path=/home/hadoop/hbase/lib/native/Linux-amd64-64 -classpath /home/hadoop/hbase/bin/../conf:[many jars]:/home/hadoop/hadoop/conf org.apache.hadoop.hbase.regionserver.HRegionServer start
+        </programlisting>      
+        </para>
+      </section>
+      <section xml:id="trouble.tools.jstack">
+        <title>jstack</title>
+        <para>
+        <code>jstack</code> is one of the most important tools when trying to figure out what a java process is doing apart from looking at the logs. It has to be used in conjunction with jps in order to give it a process id. It shows a list of threads, each one has a name, and they appear in the order that they were created (so the top ones are the most recent threads). Here’s a few example:
+        </para>
+        <para>
+        The main thread of a RegionServer that’s waiting for something to do from the master:
+        <programlisting>
+      "regionserver60020" prio=10 tid=0x0000000040ab4000 nid=0x45cf waiting on condition [0x00007f16b6a96000..0x00007f16b6a96a70]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+        	at sun.misc.Unsafe.park(Native Method)
+        	- parking to wait for  &lt;0x00007f16cd5c2f30&gt; (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+        	at java.util.concurrent.locks.LockSupport.parkNanos(LockSupport.java:198)
+        	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.awaitNanos(AbstractQueuedSynchronizer.java:1963)
+        	at java.util.concurrent.LinkedBlockingQueue.poll(LinkedBlockingQueue.java:395)
+        	at org.apache.hadoop.hbase.regionserver.HRegionServer.run(HRegionServer.java:647)
+        	at java.lang.Thread.run(Thread.java:619)
+ 
+        	The MemStore flusher thread that is currently flushing to a file:
+"regionserver60020.cacheFlusher" daemon prio=10 tid=0x0000000040f4e000 nid=0x45eb in Object.wait() [0x00007f16b5b86000..0x00007f16b5b87af0]
+   java.lang.Thread.State: WAITING (on object monitor)
+        	at java.lang.Object.wait(Native Method)
+        	at java.lang.Object.wait(Object.java:485)
+        	at org.apache.hadoop.ipc.Client.call(Client.java:803)
+        	- locked &lt;0x00007f16cb14b3a8&gt; (a org.apache.hadoop.ipc.Client$Call)
+        	at org.apache.hadoop.ipc.RPC$Invoker.invoke(RPC.java:221)
+        	at $Proxy1.complete(Unknown Source)
+        	at sun.reflect.GeneratedMethodAccessor38.invoke(Unknown Source)
+        	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:25)
+        	at java.lang.reflect.Method.invoke(Method.java:597)
+        	at org.apache.hadoop.io.retry.RetryInvocationHandler.invokeMethod(RetryInvocationHandler.java:82)
+        	at org.apache.hadoop.io.retry.RetryInvocationHandler.invoke(RetryInvocationHandler.java:59)
+        	at $Proxy1.complete(Unknown Source)
+        	at org.apache.hadoop.hdfs.DFSClient$DFSOutputStream.closeInternal(DFSClient.java:3390)
+        	- locked &lt;0x00007f16cb14b470&gt; (a org.apache.hadoop.hdfs.DFSClient$DFSOutputStream)
+        	at org.apache.hadoop.hdfs.DFSClient$DFSOutputStream.close(DFSClient.java:3304)
+        	at org.apache.hadoop.fs.FSDataOutputStream$PositionCache.close(FSDataOutputStream.java:61)
+        	at org.apache.hadoop.fs.FSDataOutputStream.close(FSDataOutputStream.java:86)
+        	at org.apache.hadoop.hbase.io.hfile.HFile$Writer.close(HFile.java:650)
+        	at org.apache.hadoop.hbase.regionserver.StoreFile$Writer.close(StoreFile.java:853)
+        	at org.apache.hadoop.hbase.regionserver.Store.internalFlushCache(Store.java:467)
+        	- locked &lt;0x00007f16d00e6f08&gt; (a java.lang.Object)
+        	at org.apache.hadoop.hbase.regionserver.Store.flushCache(Store.java:427)
+        	at org.apache.hadoop.hbase.regionserver.Store.access$100(Store.java:80)
+        	at org.apache.hadoop.hbase.regionserver.Store$StoreFlusherImpl.flushCache(Store.java:1359)
+        	at org.apache.hadoop.hbase.regionserver.HRegion.internalFlushcache(HRegion.java:907)
+        	at org.apache.hadoop.hbase.regionserver.HRegion.internalFlushcache(HRegion.java:834)
+        	at org.apache.hadoop.hbase.regionserver.HRegion.flushcache(HRegion.java:786)
+        	at org.apache.hadoop.hbase.regionserver.MemStoreFlusher.flushRegion(MemStoreFlusher.java:250)
+        	at org.apache.hadoop.hbase.regionserver.MemStoreFlusher.flushRegion(MemStoreFlusher.java:224)
+        	at org.apache.hadoop.hbase.regionserver.MemStoreFlusher.run(MemStoreFlusher.java:146)
+        </programlisting>
+        </para>
+        <para>
+        	A handler thread that’s waiting for stuff to do (like put, delete, scan, etc):
+        <programlisting>
+"IPC Server handler 16 on 60020" daemon prio=10 tid=0x00007f16b011d800 nid=0x4a5e waiting on condition [0x00007f16afefd000..0x00007f16afefd9f0]
+   java.lang.Thread.State: WAITING (parking)
+        	at sun.misc.Unsafe.park(Native Method)
+        	- parking to wait for  &lt;0x00007f16cd3f8dd8&gt; (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+        	at java.util.concurrent.locks.LockSupport.park(LockSupport.java:158)
+        	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1925)
+        	at java.util.concurrent.LinkedBlockingQueue.take(LinkedBlockingQueue.java:358)
+        	at org.apache.hadoop.hbase.ipc.HBaseServer$Handler.run(HBaseServer.java:1013)
+        </programlisting>
+        </para>
+        <para>
+              	And one that’s busy doing an increment of a counter (it’s in the phase where it’s trying to create a scanner in order to read the last value):
+        <programlisting>
+"IPC Server handler 66 on 60020" daemon prio=10 tid=0x00007f16b006e800 nid=0x4a90 runnable [0x00007f16acb77000..0x00007f16acb77cf0]
+   java.lang.Thread.State: RUNNABLE
+        	at org.apache.hadoop.hbase.regionserver.KeyValueHeap.&lt;init&gt;(KeyValueHeap.java:56)
+        	at org.apache.hadoop.hbase.regionserver.StoreScanner.&lt;init&gt;(StoreScanner.java:79)
+        	at org.apache.hadoop.hbase.regionserver.Store.getScanner(Store.java:1202)
+        	at org.apache.hadoop.hbase.regionserver.HRegion$RegionScanner.&lt;init&gt;(HRegion.java:2209)
+        	at org.apache.hadoop.hbase.regionserver.HRegion.instantiateInternalScanner(HRegion.java:1063)
+        	at org.apache.hadoop.hbase.regionserver.HRegion.getScanner(HRegion.java:1055)
+        	at org.apache.hadoop.hbase.regionserver.HRegion.getScanner(HRegion.java:1039)
+        	at org.apache.hadoop.hbase.regionserver.HRegion.getLastIncrement(HRegion.java:2875)
+        	at org.apache.hadoop.hbase.regionserver.HRegion.incrementColumnValue(HRegion.java:2978)
+        	at org.apache.hadoop.hbase.regionserver.HRegionServer.incrementColumnValue(HRegionServer.java:2433)
+        	at sun.reflect.GeneratedMethodAccessor20.invoke(Unknown Source)
+        	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:25)
+        	at java.lang.reflect.Method.invoke(Method.java:597)
+        	at org.apache.hadoop.hbase.ipc.HBaseRPC$Server.call(HBaseRPC.java:560)
+        	at org.apache.hadoop.hbase.ipc.HBaseServer$Handler.run(HBaseServer.java:1027)
+        </programlisting>
+        </para>
+        <para>
+        	A thread that receives data from HDFS:
+        <programlisting>        	
+"IPC Client (47) connection to sv4borg9/10.4.24.40:9000 from hadoop" daemon prio=10 tid=0x00007f16a02d0000 nid=0x4fa3 runnable [0x00007f16b517d000..0x00007f16b517dbf0]
+   java.lang.Thread.State: RUNNABLE
+        	at sun.nio.ch.EPollArrayWrapper.epollWait(Native Method)
+        	at sun.nio.ch.EPollArrayWrapper.poll(EPollArrayWrapper.java:215)
+        	at sun.nio.ch.EPollSelectorImpl.doSelect(EPollSelectorImpl.java:65)
+        	at sun.nio.ch.SelectorImpl.lockAndDoSelect(SelectorImpl.java:69)
+        	- locked &lt;0x00007f17d5b68c00&gt; (a sun.nio.ch.Util$1)
+        	- locked &lt;0x00007f17d5b68be8&gt; (a java.util.Collections$UnmodifiableSet)
+        	- locked &lt;0x00007f1877959b50&gt; (a sun.nio.ch.EPollSelectorImpl)
+        	at sun.nio.ch.SelectorImpl.select(SelectorImpl.java:80)
+        	at org.apache.hadoop.net.SocketIOWithTimeout$SelectorPool.select(SocketIOWithTimeout.java:332)
+        	at org.apache.hadoop.net.SocketIOWithTimeout.doIO(SocketIOWithTimeout.java:157)
+        	at org.apache.hadoop.net.SocketInputStream.read(SocketInputStream.java:155)
+        	at org.apache.hadoop.net.SocketInputStream.read(SocketInputStream.java:128)
+        	at java.io.FilterInputStream.read(FilterInputStream.java:116)
+        	at org.apache.hadoop.ipc.Client$Connection$PingInputStream.read(Client.java:304)
+        	at java.io.BufferedInputStream.fill(BufferedInputStream.java:218)
+        	at java.io.BufferedInputStream.read(BufferedInputStream.java:237)
+        	- locked &lt;0x00007f1808539178&gt; (a java.io.BufferedInputStream)
+        	at java.io.DataInputStream.readInt(DataInputStream.java:370)
+        	at org.apache.hadoop.ipc.Client$Connection.receiveResponse(Client.java:569)
+        	at org.apache.hadoop.ipc.Client$Connection.run(Client.java:477)
+          </programlisting>
+          </para>
+          <para>
+           	And here is a master trying to recover a lease after a region server died:
+          <programlisting>
+"LeaseChecker" daemon prio=10 tid=0x00000000407ef800 nid=0x76cd waiting on condition [0x00007f6d0eae2000..0x00007f6d0eae2a70]
+--
+   java.lang.Thread.State: WAITING (on object monitor)
+        	at java.lang.Object.wait(Native Method)
+        	at java.lang.Object.wait(Object.java:485)
+        	at org.apache.hadoop.ipc.Client.call(Client.java:726)
+        	- locked &lt;0x00007f6d1cd28f80&gt; (a org.apache.hadoop.ipc.Client$Call)
+        	at org.apache.hadoop.ipc.RPC$Invoker.invoke(RPC.java:220)
+        	at $Proxy1.recoverBlock(Unknown Source)
+        	at org.apache.hadoop.hdfs.DFSClient$DFSOutputStream.processDatanodeError(DFSClient.java:2636)
+        	at org.apache.hadoop.hdfs.DFSClient$DFSOutputStream.&lt;init&gt;(DFSClient.java:2832)
+        	at org.apache.hadoop.hdfs.DFSClient.append(DFSClient.java:529)
+        	at org.apache.hadoop.hdfs.DistributedFileSystem.append(DistributedFileSystem.java:186)
+        	at org.apache.hadoop.fs.FileSystem.append(FileSystem.java:530)
+        	at org.apache.hadoop.hbase.util.FSUtils.recoverFileLease(FSUtils.java:619)
+        	at org.apache.hadoop.hbase.regionserver.wal.HLog.splitLog(HLog.java:1322)
+        	at org.apache.hadoop.hbase.regionserver.wal.HLog.splitLog(HLog.java:1210)
+        	at org.apache.hadoop.hbase.master.HMaster.splitLogAfterStartup(HMaster.java:648)
+        	at org.apache.hadoop.hbase.master.HMaster.joinCluster(HMaster.java:572)
+        	at org.apache.hadoop.hbase.master.HMaster.run(HMaster.java:503)
+          </programlisting>
+          </para>
+        </section>
+        <section xml:id="trouble.tools.opentsdb">
+          <title>OpenTSDB</title>
+          <para>
+          <link xlink:href="http://opentsdb.net">OpenTSDB</link> is an excellent alternative to Ganglia as it uses HBase to store all the time series and doesn’t have to downsample. Monitoring your own HBase cluster that hosts OpenTSDB is a good exercise.
+          </para>
+          <para>
+          Here’s an example of a cluster that’s suffering from hundreds of compactions launched almost all around the same time, which severely affects the IO performance:  (TODO:  insert graph plotting compactionQueueSize)
+          </para>
+          <para>
+          It’s a good practice to build dashboards with all the important graphs per machine and per cluster so that debugging issues can be done with a single quick look. For example, at StumbleUpon there’s one dashboard per cluster with the most important metrics from both the OS and HBase. You can then go down at the machine level and get even more detailed metrics.
+          </para>
+       </section>
+       <section xml:id="trouble.tools.clustersshtop">
+        <title>clusterssh+top</title>
+         <para> 
+          clusterssh+top, it’s like a poor man’s monitoring system and it can be quite useful when you have only a few machines as it’s very easy to setup. Starting clusterssh will give you one terminal per machine and another terminal in which whatever you type will be retyped in every window. This means that you can type “top” once and it will start it for all of your machines at the same time giving you full view of the current state of your cluster. You can also tail all the logs at the same time, edit files, etc.      
+          </para>
+       </section>
+    </section>
+
+    <section xml:id="trouble.client">
+      <title>Client</title>
+       <section xml:id="trouble.client.scantimeout">
+            <title>ScannerTimeoutException</title>
+            <para>This is thrown if the time between RPC calls from the client to RegionServer exceeds the scan timeout.  
+            For example, if Scan.setCaching is set to 500, then there will be an RPC call to fetch the next batch of rows every 500 <code>.next()</code> calls on the ResultScanner
+            because data is being transferred in blocks of 500 rows to the client.  Reducing the setCaching value may be an option, but setting this value too low makes for inefficient
+            processing on numbers of rows.
+            </para>
+       </section>    
+
+    </section>    
+    <section xml:id="trouble.rs">
+      <title>RegionServer</title>
+      <section xml:id="trouble.rs.startup">
+        <title>Startup Errors</title>
+          <section xml:id="trouble.rs.startup.compression">
+            <title>Compression Link Errors</title>
+            <para>
+            Since compression algorithms such as LZO need to be installed and configured on each cluster this is a frequent source of startup error.  If you see messages like this...
+            <programlisting>
+11/02/20 01:32:15 ERROR lzo.GPLNativeCodeLoader: Could not load native gpl library
+java.lang.UnsatisfiedLinkError: no gplcompression in java.library.path
+        at java.lang.ClassLoader.loadLibrary(ClassLoader.java:1734)
+        at java.lang.Runtime.loadLibrary0(Runtime.java:823)
+        at java.lang.System.loadLibrary(System.java:1028)
+            </programlisting>
+            .. then there is a path issue with the compression libraries.  See the Configuration section on <link linkend="lzo">LZO compression configuration</link>.
+            </para>
+          </section> 
+      </section>    
+      <section xml:id="trouble.rs.runtime">
+        <title>Runtime Errors</title>
+        
+        <section xml:id="trouble.rs.runtime.filehandles">
+           <title>java.io.IOException...(Too many open files)</title>
+           <para>
+           See the Getting Started section on <link linkend="ulimit">ulimit and nproc configuration</link>.
+           </para>
+        </section>
+        <section xml:id="trouble.rs.runtime.xceivers">
+           <title>xceiverCount 258 exceeds the limit of concurrent xcievers 256</title>
+           <para>
+           This typically shows up in the DataNode logs.
+           </para>
+           <para>
+           See the Getting Started section on <link linkend="dfs.datanode.max.xcievers">xceivers configuration</link>.
+           </para>
+        </section>
+        <section xml:id="trouble.rs.runtime.oom-nt">
+           <title>System instability, and the presence of "java.lang.OutOfMemoryError: unable to create new native thread in exceptions" HDFS datanode logs or that of any system daemon</title>
+           <para>
+           See the Getting Started section on <link linkend="ulimit">ulimit and nproc configuration</link>.
+           </para>
+        </section>
+        <section xml:id="trouble.rs.runtime.gc">
+           <title>DFS instability and/or RegionServer lease timeouts</title>
+           <para>
+           If you see warning messages like this...
+           <programlisting>
+2009-02-24 10:01:33,516 WARN org.apache.hadoop.hbase.util.Sleeper: We slept xxx ms, ten times longer than scheduled: 10000
+2009-02-24 10:01:33,516 WARN org.apache.hadoop.hbase.util.Sleeper: We slept xxx ms, ten times longer than scheduled: 15000
+2009-02-24 10:01:36,472 WARN org.apache.hadoop.hbase.regionserver.HRegionServer: unable to report to master for xxx milliseconds - retrying      
+           </programlisting>
+           ... or see full GC compactions then you may be experiencing full GC's.
+           </para>
+        </section>
+        <section xml:id="trouble.rs.runtime.nolivenodes">
+           <title>"No live nodes contain current block" and/or YouAreDeadException</title>
+           <para>
+           These errors can happen either when running out of OS file handles or in periods of severe network problems where the nodes are unreachable.
+           </para>
+           <para>
+           See the Getting Started section on <link linkend="ulimit">ulimit and nproc configuration</link> and check your network.
+           </para>
+        </section>
+
+      </section>    
+      <section xml:id="trouble.rs.shutdown">
+        <title>Shutdown Errors</title>
+
+      </section>    
+
+    </section>    
+    <section xml:id="trouble.master">
+      <title>Master</title>
+      <section xml:id="trouble.master.startup">
+        <title>Startup Errors</title>
+
+      </section>    
+      <section xml:id="trouble.master.startup">
+        <title>Shutdown Errors</title>
+
+      </section>    
+
+    </section>    
+  </chapter>

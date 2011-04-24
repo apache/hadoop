@@ -1069,6 +1069,8 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
     </section>
   </chapter>
 
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="troubleshooting.xml" />
+
   <appendix xml:id="tools">
     <title >Tools</title>
 
