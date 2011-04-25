@@ -185,13 +185,10 @@ public interface HTableInterface {
    * <p>
    * If {@link #isAutoFlush isAutoFlush} is false, the update is buffered
    * until the internal buffer is full.
-   * @param puts The list of mutations to apply.  The list gets modified by this
-   * method (in particular it gets re-ordered, so the order in which the elements
-   * are inserted in the list gives no guarantee as to the order in which the
-   * {@link Put}s are executed).
-   * @throws IOException if a remote or network exception occurs. In that case
-   * the {@code puts} argument will contain the {@link Put} instances that
-   * have not be successfully applied.
+   * @param puts The list of mutations to apply. The batch put is done by
+   * aggregating the iteration of the Puts over the write buffer
+   * at the client-side for a single RPC call.
+   * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
    */
   void put(List<Put> puts) throws IOException;

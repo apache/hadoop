@@ -239,6 +239,8 @@ Release 0.90.3 - Unreleased
                (Harsh J Chouraria)
    HBASE-3817  HBase Shell has an issue accepting FILTER for the 'scan' command.
                (Harsh J Chouraria)
+   HBASE-3634  Fix JavaDoc for put(List<Put> puts) in HTableInterface
+               (Harsh J Chouraria)
 
   IMPROVEMENTS
    HBASE-3747  ReplicationSource should differanciate remote and local exceptions
