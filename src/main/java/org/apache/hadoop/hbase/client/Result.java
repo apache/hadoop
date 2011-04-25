@@ -290,7 +290,7 @@ public class Result implements Writable, WritableWithSize {
    * Map of families to all versions of its qualifiers and values.
    * <p>
    * Returns a three level Map of the form:
-   * <code>Map<family,Map&lt;qualifier,Map&lt;timestamp,value>>></code>
+   * <code>Map&amp;family,Map&lt;qualifier,Map&lt;timestamp,value>>></code>
    * <p>
    * Note: All other map returning methods make use of this map internally.
    * @return map from families to qualifiers to versions
@@ -335,7 +335,7 @@ public class Result implements Writable, WritableWithSize {
   /**
    * Map of families to their most recent qualifiers and values.
    * <p>
-   * Returns a two level Map of the form: <code>Map<family,Map&lt;qualifier,value>></code>
+   * Returns a two level Map of the form: <code>Map&amp;family,Map&lt;qualifier,value>></code>
    * <p>
    * The most recent version of each qualifier will be used.
    * @return map from families to qualifiers and value
