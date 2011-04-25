@@ -47,7 +47,7 @@ public class TestCoprocessorInterface extends HBaseTestCase {
   private static final HBaseTestingUtility TEST_UTIL =
     new HBaseTestingUtility();
 
-  public static class CoprocessorImpl extends BaseRegionObserverCoprocessor {
+  public static class CoprocessorImpl extends BaseRegionObserver {
 
     private boolean startCalled;
     private boolean stopCalled;

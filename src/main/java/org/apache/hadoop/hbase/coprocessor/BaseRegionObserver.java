@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 The Apache Software Foundation
+ * Copyright 2011 The Apache Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,11 +37,11 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import java.io.IOException;
 
 /**
- * An abstract class that implements Coprocessor and RegionObserver.
- * By extending it, you can create you own region observer without
- * overriding all abstract methods of Coprocessor and RegionObserver.
+ * An abstract class that implements RegionObserver.
+ * By extending it, you can create your own region observer without
+ * overriding all abstract methods of RegionObserver.
  */
-public abstract class BaseRegionObserverCoprocessor implements RegionObserver {
+public abstract class BaseRegionObserver implements RegionObserver {
   @Override
   public void start(CoprocessorEnvironment e) { }
 

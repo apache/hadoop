@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * A sample region observer that tests the RegionObserver interface.
  * It works with TestRegionObserverInterface to provide the test case.
  */
-public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
+public class SimpleRegionObserver extends BaseRegionObserver {
   static final Log LOG = LogFactory.getLog(TestRegionObserverInterface.class);
 
   boolean beforeDelete = true;

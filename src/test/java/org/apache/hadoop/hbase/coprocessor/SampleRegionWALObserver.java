@@ -33,15 +33,14 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
 /**
- * Class for testing WAL coprocessor extension. WAL write monitor is defined
- * in LogObserver while WAL Restore is in RegionObserver.
+ * Class for testing WALObserver coprocessor.
  *
- * It will monitor a WAL writing and Restore, modify passed-in WALEdit, i.e,
- * ignore specified columns when writing, and add a KeyValue. On the other
- * hand, it checks whether the ignored column is still in WAL when Restoreed
+ * It will monitor WAL writing and restoring, and modify passed-in WALEdit, i.e,
+ * ignore specified columns when writing, or add a KeyValue. On the other
+ * side, it checks whether the ignored column is still in WAL when Restoreed
  * at region reconstruct.
  */
-public class SampleRegionWALObserver extends BaseRegionObserverCoprocessor
+public class SampleRegionWALObserver extends BaseRegionObserver
 implements WALObserver {
 
   private static final Log LOG = LogFactory.getLog(SampleRegionWALObserver.class);

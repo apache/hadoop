@@ -46,25 +46,25 @@ public interface RegionObserver extends Coprocessor {
    * Called before the region is reported as open to the master.
    * @param c the environment provided by the region server
    */
-  public void preOpen(final ObserverContext<RegionCoprocessorEnvironment> c);
+  void preOpen(final ObserverContext<RegionCoprocessorEnvironment> c);
 
   /**
    * Called after the region is reported as open to the master.
    * @param c the environment provided by the region server
    */
-  public void postOpen(final ObserverContext<RegionCoprocessorEnvironment> c);
+  void postOpen(final ObserverContext<RegionCoprocessorEnvironment> c);
 
   /**
    * Called before the memstore is flushed to disk.
    * @param c the environment provided by the region server
    */
-  public void preFlush(final ObserverContext<RegionCoprocessorEnvironment> c);
+  void preFlush(final ObserverContext<RegionCoprocessorEnvironment> c);
 
   /**
    * Called after the memstore is flushed to disk.
    * @param c the environment provided by the region server
    */
-  public void postFlush(final ObserverContext<RegionCoprocessorEnvironment> c);
+  void postFlush(final ObserverContext<RegionCoprocessorEnvironment> c);
 
   /**
    * Called before compaction.
@@ -72,7 +72,7 @@ public interface RegionObserver extends Coprocessor {
    * @param willSplit true if compaction will result in a split, false
    * otherwise
    */
-  public void preCompact(final ObserverContext<RegionCoprocessorEnvironment> c,
+  void preCompact(final ObserverContext<RegionCoprocessorEnvironment> c,
     final boolean willSplit);
 
   /**
@@ -81,7 +81,7 @@ public interface RegionObserver extends Coprocessor {
    * @param willSplit true if compaction will result in a split, false
    * otherwise
    */
-  public void postCompact(final ObserverContext<RegionCoprocessorEnvironment> c,
+  void postCompact(final ObserverContext<RegionCoprocessorEnvironment> c,
     final boolean willSplit);
 
   /**
@@ -89,7 +89,7 @@ public interface RegionObserver extends Coprocessor {
    * @param c the environment provided by the region server
    * (e.getRegion() returns the parent region)
    */
-  public void preSplit(final ObserverContext<RegionCoprocessorEnvironment> c);
+  void preSplit(final ObserverContext<RegionCoprocessorEnvironment> c);
 
   /**
    * Called after the region is split.
@@ -98,7 +98,7 @@ public interface RegionObserver extends Coprocessor {
    * @param l the left daughter region
    * @param r the right daughter region
    */
-  public void postSplit(final ObserverContext<RegionCoprocessorEnvironment> c, final HRegion l,
+  void postSplit(final ObserverContext<RegionCoprocessorEnvironment> c, final HRegion l,
     final HRegion r);
 
   /**
@@ -106,7 +106,7 @@ public interface RegionObserver extends Coprocessor {
    * @param c the environment provided by the region server
    * @param abortRequested true if the region server is aborting
    */
-  public void preClose(final ObserverContext<RegionCoprocessorEnvironment> c,
+  void preClose(final ObserverContext<RegionCoprocessorEnvironment> c,
       boolean abortRequested);
 
   /**
@@ -114,7 +114,7 @@ public interface RegionObserver extends Coprocessor {
    * @param c the environment provided by the region server
    * @param abortRequested true if the region server is aborting
    */
-  public void postClose(final ObserverContext<RegionCoprocessorEnvironment> c,
+  void postClose(final ObserverContext<RegionCoprocessorEnvironment> c,
       boolean abortRequested);
 
   /**
@@ -132,7 +132,7 @@ public interface RegionObserver extends Coprocessor {
    * is not bypassed.
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void preGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> c,
+  void preGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final Result result)
     throws IOException;
 
@@ -147,7 +147,7 @@ public interface RegionObserver extends Coprocessor {
    * @param result the result to return to the client, modify as necessary
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void postGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> c,
+  void postGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final Result result)
     throws IOException;
 
@@ -165,7 +165,7 @@ public interface RegionObserver extends Coprocessor {
    * is not bypassed.
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void preGet(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
+  void preGet(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
       final List<KeyValue> result)
     throws IOException;
 
@@ -179,7 +179,7 @@ public interface RegionObserver extends Coprocessor {
    * @param result the result to return to the client, modify as necessary
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void postGet(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
+  void postGet(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
       final List<KeyValue> result)
     throws IOException;
 
@@ -196,7 +196,7 @@ public interface RegionObserver extends Coprocessor {
    * @return the value to return to the client if bypassing default processing
    * @throws IOException if an error occurred on the coprocessor
    */
-  public boolean preExists(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
+  boolean preExists(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
       final boolean exists)
     throws IOException;
 
@@ -211,7 +211,7 @@ public interface RegionObserver extends Coprocessor {
    * @return the result to return to the client
    * @throws IOException if an error occurred on the coprocessor
    */
-  public boolean postExists(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
+  boolean postExists(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
       final boolean exists)
     throws IOException;
 
@@ -227,7 +227,7 @@ public interface RegionObserver extends Coprocessor {
    * @param writeToWAL true if the change should be written to the WAL
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, final Map<byte[],
+  void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, final Map<byte[],
       List<KeyValue>> familyMap, final boolean writeToWAL)
     throws IOException;
 
@@ -241,7 +241,7 @@ public interface RegionObserver extends Coprocessor {
    * @param writeToWAL true if the change should be written to the WAL
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c, final Map<byte[],
+  void postPut(final ObserverContext<RegionCoprocessorEnvironment> c, final Map<byte[],
       List<KeyValue>> familyMap, final boolean writeToWAL)
     throws IOException;
 
@@ -257,7 +257,7 @@ public interface RegionObserver extends Coprocessor {
    * @param writeToWAL true if the change should be written to the WAL
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> c, final Map<byte[],
+  void preDelete(final ObserverContext<RegionCoprocessorEnvironment> c, final Map<byte[],
       List<KeyValue>> familyMap, final boolean writeToWAL)
     throws IOException;
 
@@ -271,7 +271,7 @@ public interface RegionObserver extends Coprocessor {
    * @param writeToWAL true if the change should be written to the WAL
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void postDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
+  void postDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Map<byte[], List<KeyValue>> familyMap, final boolean writeToWAL)
     throws IOException;
 
@@ -294,7 +294,7 @@ public interface RegionObserver extends Coprocessor {
    * processing
    * @throws IOException if an error occurred on the coprocessor
    */
-  public boolean preCheckAndPut(final ObserverContext<RegionCoprocessorEnvironment> c,
+  boolean preCheckAndPut(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final WritableByteArrayComparable comparator,
       final Put put, final boolean result)
@@ -316,7 +316,7 @@ public interface RegionObserver extends Coprocessor {
    * @return the possibly transformed return value to return to client
    * @throws IOException if an error occurred on the coprocessor
    */
-  public boolean postCheckAndPut(final ObserverContext<RegionCoprocessorEnvironment> c,
+  boolean postCheckAndPut(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final WritableByteArrayComparable comparator,
       final Put put, final boolean result)
@@ -340,7 +340,7 @@ public interface RegionObserver extends Coprocessor {
    * @return the value to return to client if bypassing default processing
    * @throws IOException if an error occurred on the coprocessor
    */
-  public boolean preCheckAndDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
+  boolean preCheckAndDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final WritableByteArrayComparable comparator,
       final Delete delete, final boolean result)
@@ -362,7 +362,7 @@ public interface RegionObserver extends Coprocessor {
    * @return the possibly transformed returned value to return to client
    * @throws IOException if an error occurred on the coprocessor
    */
-  public boolean postCheckAndDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
+  boolean postCheckAndDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final WritableByteArrayComparable comparator,
       final Delete delete, final boolean result)
@@ -384,7 +384,7 @@ public interface RegionObserver extends Coprocessor {
    * @return value to return to the client if bypassing default processing
    * @throws IOException if an error occurred on the coprocessor
    */
-  public long preIncrementColumnValue(final ObserverContext<RegionCoprocessorEnvironment> c,
+  long preIncrementColumnValue(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final long amount, final boolean writeToWAL)
     throws IOException;
@@ -404,7 +404,7 @@ public interface RegionObserver extends Coprocessor {
    * @return the result to return to the client
    * @throws IOException if an error occurred on the coprocessor
    */
-  public long postIncrementColumnValue(final ObserverContext<RegionCoprocessorEnvironment> c,
+  long postIncrementColumnValue(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final long amount, final boolean writeToWAL, final long result)
     throws IOException;
@@ -423,7 +423,7 @@ public interface RegionObserver extends Coprocessor {
    * is not bypassed.
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void preIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
+  void preIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Increment increment, final Result result)
     throws IOException;
 
@@ -437,7 +437,7 @@ public interface RegionObserver extends Coprocessor {
    * @param result the result returned by increment, can be modified
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void postIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
+  void postIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Increment increment, final Result result)
     throws IOException;
 
@@ -455,7 +455,7 @@ public interface RegionObserver extends Coprocessor {
    * overriding default behavior, null otherwise
    * @throws IOException if an error occurred on the coprocessor
    */
-  public InternalScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
+  InternalScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Scan scan, final InternalScanner s)
     throws IOException;
 
@@ -470,7 +470,7 @@ public interface RegionObserver extends Coprocessor {
    * @return the scanner instance to use
    * @throws IOException if an error occurred on the coprocessor
    */
-  public InternalScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
+  InternalScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Scan scan, final InternalScanner s)
     throws IOException;
 
@@ -491,7 +491,7 @@ public interface RegionObserver extends Coprocessor {
    * @return 'has more' indication that should be sent to client
    * @throws IOException if an error occurred on the coprocessor
    */
-  public boolean preScannerNext(final ObserverContext<RegionCoprocessorEnvironment> c,
+  boolean preScannerNext(final ObserverContext<RegionCoprocessorEnvironment> c,
       final InternalScanner s, final List<Result> result,
       final int limit, final boolean hasNext)
     throws IOException;
@@ -509,7 +509,7 @@ public interface RegionObserver extends Coprocessor {
    * @return 'has more' indication that should be sent to client
    * @throws IOException if an error occurred on the coprocessor
    */
-  public boolean postScannerNext(final ObserverContext<RegionCoprocessorEnvironment> c,
+  boolean postScannerNext(final ObserverContext<RegionCoprocessorEnvironment> c,
       final InternalScanner s, final List<Result> result, final int limit,
       final boolean hasNext)
     throws IOException;
@@ -525,7 +525,7 @@ public interface RegionObserver extends Coprocessor {
    * @param s the scanner
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void preScannerClose(final ObserverContext<RegionCoprocessorEnvironment> c,
+  void preScannerClose(final ObserverContext<RegionCoprocessorEnvironment> c,
       final InternalScanner s)
     throws IOException;
 
@@ -538,7 +538,7 @@ public interface RegionObserver extends Coprocessor {
    * @param s the scanner
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void postScannerClose(final ObserverContext<RegionCoprocessorEnvironment> c,
+  void postScannerClose(final ObserverContext<RegionCoprocessorEnvironment> c,
       final InternalScanner s)
     throws IOException;
 
