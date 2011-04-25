@@ -86,6 +86,8 @@ Release 0.91.0 - Unreleased
                (Prakash Khemani)
    HBASE-3539  Improve shell help to reflect all possible options
                (Harsh J Chouraria)
+   HBASE-3817  HBase Shell has an issue accepting FILTER for the 'scan' command.
+               (Harsh J Chouraria)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

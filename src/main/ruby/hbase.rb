@@ -50,6 +50,7 @@ module HBaseConstants
   REPLICATION_SCOPE = "REPLICATION_SCOPE"
   INTERVAL = 'INTERVAL'
   CACHE = 'CACHE'
+  FILTER = 'FILTER'
 
   # Load constants from hbase java API
   def self.promote_constants(constants)
