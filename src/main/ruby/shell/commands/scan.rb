@@ -24,15 +24,19 @@ module Shell
       def help
         return <<-EOF
 Scan a table; pass table name and optionally a dictionary of scanner
-specifications.  Scanner specifications may include one or more of
-the following: LIMIT, STARTROW, STOPROW, TIMESTAMP, or COLUMNS.  If
-no columns are specified, all columns will be scanned.  To scan all
-members of a column family, leave the qualifier empty as in
-'col_family:'.  Examples:
+specifications.  Scanner specifications may include one or more of:
+TIMERANGE, FILTER, LIMIT, STARTROW, STOPROW, TIMESTAMP, MAXLENGTH,
+or COLUMNS. If no columns are specified, all columns will be scanned.
+To scan all members of a column family, leave the qualifier empty as in
+'col_family:'.
+
+Some examples:
 
   hbase> scan '.META.'
   hbase> scan '.META.', {COLUMNS => 'info:regioninfo'}
   hbase> scan 't1', {COLUMNS => ['c1', 'c2'], LIMIT => 10, STARTROW => 'xyz'}
+  hbase> scan 't1', {FILTER => org.apache.hadoop.hbase.filter.ColumnPaginationFilter.new(1, 0)}
+  hbase> scan 't1', {COLUMNS => 'c1', TIMERANGE => [1303668804, 1303668904]}
 
 For experts, there is an additional option -- CACHE_BLOCKS -- which
 switches block caching for the scanner on (true) or off (false).  By

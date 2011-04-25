@@ -84,6 +84,8 @@ Release 0.91.0 - Unreleased
    HBASE-3800  HMaster is not able to start due to AlreadyCreatedException
    HBASE-3806  distributed log splitting double escapes task names
                (Prakash Khemani)
+   HBASE-3539  Improve shell help to reflect all possible options
+               (Harsh J Chouraria)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
