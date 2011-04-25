@@ -221,6 +221,7 @@ module Hbase
         columns = args["COLUMNS"] || args["COLUMN"] || get_all_columns
         cache = args["CACHE_BLOCKS"] || true
         versions = args["VERSIONS"] || 1
+        timerange = args[TIMERANGE]
 
         # Normalize column names
         columns = [columns] if columns.class == String
@@ -239,6 +240,7 @@ module Hbase
         scan.setTimeStamp(timestamp) if timestamp
         scan.setCacheBlocks(cache)
         scan.setMaxVersions(versions) if versions > 1
+        scan.setTimeRange(timerange[0], timerange[1]) if timerange
       else
         scan = org.apache.hadoop.hbase.client.Scan.new
       end

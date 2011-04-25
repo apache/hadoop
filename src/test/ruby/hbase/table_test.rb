@@ -369,6 +369,14 @@ module Hbase
       assert_not_nil(res['2']['x:b'])
     end
 
+    define_test "scan should support TIMERANGE parameter" do
+      res = @test_table.scan TIMERANGE => [0, 1]
+      assert_not_nil(res)
+      assert_kind_of(Hash, res)
+      assert_nil(res['1'])
+      assert_nil(res['2'])
+    end
+
     define_test "scan should support COLUMNS parameter with an array of columns" do
       res = @test_table.scan COLUMNS => [ 'x:a', 'x:b' ]
       assert_not_nil(res)
