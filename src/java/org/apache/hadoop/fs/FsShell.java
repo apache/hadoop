@@ -1503,7 +1503,7 @@ public class FsShell extends Configured implements Tool {
 
     String tail = TAIL_USAGE
       + ":  Show the last 1KB of the file. \n"
-      + "\t\tThe -f option shows apended data as the file grows. \n";
+      + "\t\tThe -f option shows appended data as the file grows. \n";
 
     String chmod = FsShellPermissions.CHMOD_USAGE + "\n" +
       "\t\tChanges permissions of a file.\n" +
