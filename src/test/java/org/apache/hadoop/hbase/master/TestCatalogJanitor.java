@@ -85,7 +85,7 @@ public class TestCatalogJanitor {
 
     @Override
     public String getServerName() {
-      return null;
+      return "mockserver.example.org,1234,-1L";
     }
 
     @Override
