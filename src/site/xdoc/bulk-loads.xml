@@ -117,7 +117,11 @@ Other options that may be specified with -D include:
         The <code>completebulkload</code> tool simply takes the same output path where
         <code>importtsv</code> put its results, and the table name. For example:
       </p>
-      <code>$ hadoop jar hbase-VERSION.jar completebulkload /user/todd/myoutput mytable</code>
+      <code>$ hadoop jar hbase-VERSION.jar completebulkload [-c /path/to/hbase/config/hbase-site.xml] /user/todd/myoutput mytable</code>
+      <p>The <code>-c config-file</code> option can be used to specify a file containing the
+          appropriate hbase parameters (e.g., hbase-site.xml) if not supplied already on
+          the CLASSPATH (In addition, the CLASSPATH must contain the directory that has
+          the zookeeper configuration file if zookeeper is NOT managed by HBase).
       <p>
         This tool will run quickly, after which point the new data will be visible in
         the cluster.
