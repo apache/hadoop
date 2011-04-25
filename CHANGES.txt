@@ -84,10 +84,6 @@ Release 0.91.0 - Unreleased
    HBASE-3800  HMaster is not able to start due to AlreadyCreatedException
    HBASE-3806  distributed log splitting double escapes task names
                (Prakash Khemani)
-   HBASE-3539  Improve shell help to reflect all possible options
-               (Harsh J Chouraria)
-   HBASE-3817  HBase Shell has an issue accepting FILTER for the 'scan' command.
-               (Harsh J Chouraria)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
@@ -187,7 +183,6 @@ Release 0.91.0 - Unreleased
    HBASE-3609  Improve the selection of regions to balance; part 2 (Ted Yu)
    HBASE-2939  Allow Client-Side Connection Pooling (Karthik Sankarachary)
    HBASE-3798  [REST] Allow representation to elide row key and column key
-   HBASE-2470  Add Scan.setTimeRange() support in Shell (Harsh J Chouraria)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
@@ -240,6 +235,10 @@ Release 0.90.3 - Unreleased
    HBASE-3708  createAndFailSilent is not so silent; leaves lots of logging
                in ensemble logs (Dmitriy Ryaboy)
    HBASE-3783  hbase-0.90.2.jar exists in hbase root and in 'lib/'
+   HBASE-3539  Improve shell help to reflect all possible options
+               (Harsh J Chouraria)
+   HBASE-3817  HBase Shell has an issue accepting FILTER for the 'scan' command.
+               (Harsh J Chouraria)
 
   IMPROVEMENTS
    HBASE-3747  ReplicationSource should differanciate remote and local exceptions
@@ -247,6 +246,7 @@ Release 0.90.3 - Unreleased
    HBASE-3767  Improve how HTable handles threads used for multi actions
    HBASE-3795  Remove the "Cache hit for row" message
    HBASE-3580  Remove RS from DeadServer when new instance checks in
+   HBASE-2470  Add Scan.setTimeRange() support in Shell (Harsh J Chouraria)
 
   TASKS
    HBASE-3748  Add rolling of thrift/rest daemons to graceful_stop.sh script
