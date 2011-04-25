@@ -610,7 +610,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*The -f option shows apended data as the file grows.( )*</expected-output>
+          <expected-output>^( |\t)*The -f option shows appended data as the file grows.( )*</expected-output>
         </comparator>
       </comparators>
     </test>
