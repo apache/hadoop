@@ -185,6 +185,7 @@ Release 0.91.0 - Unreleased
    HBASE-3798  [REST] Allow representation to elide row key and column key
    HBASE-3812  Tidy up naming consistency and documentation in coprocessor
                framework (Mingjie Lai)
+   HBASE-1512  Support aggregate functions (Himanshu Vashishtha)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
