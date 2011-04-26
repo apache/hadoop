@@ -333,7 +333,7 @@ public class HLogSplitter {
 
     boolean progress_failed = false;
 
-    boolean skipErrors = conf.getBoolean("hbase.hlog.split.skip.errors", false);
+    boolean skipErrors = conf.getBoolean("hbase.hlog.split.skip.errors", true);
     int interval = conf.getInt("hbase.splitlog.report.interval.loglines", 1024);
     // How often to send a progress report (default 1/2 master timeout)
     int period = conf.getInt("hbase.splitlog.report.period",
@@ -685,8 +685,11 @@ public class HLogSplitter {
     } catch (IOException e) {
       // If the IOE resulted from bad file format,
       // then this problem is idempotent and retrying won't help
-      if (e.getCause() instanceof ParseException) {
-        LOG.warn("ParseException from hlog " + path + ".  continuing");
+      if (e.getCause() != null &&
+          (e.getCause() instanceof ParseException ||
+           e.getCause() instanceof org.apache.hadoop.fs.ChecksumException) {
+        LOG.warn("Parse exception " + e.getCause().toString() + " from hlog "
+           + path + ".  continuing");
         return null;
       }
       if (!skipErrors) {
