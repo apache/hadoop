@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -115,7 +116,7 @@ public class TestRpcMetrics {
 
   @Test
   public void testCustomMetrics() throws Exception {
-
+    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.port", 0);
     TestRegionServer rs = new TestRegionServer(TEST_UTIL.getConfiguration());
     rs.incTest(5);
 
