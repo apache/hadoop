@@ -256,6 +256,7 @@ Release 0.90.3 - Unreleased
    HBASE-3795  Remove the "Cache hit for row" message
    HBASE-3580  Remove RS from DeadServer when new instance checks in
    HBASE-2470  Add Scan.setTimeRange() support in Shell (Harsh J Chouraria)
+   HBASE-3805  Log RegionState that are processed too late in the master
 
   TASKS
    HBASE-3748  Add rolling of thrift/rest daemons to graceful_stop.sh script

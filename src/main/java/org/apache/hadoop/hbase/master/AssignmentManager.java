@@ -368,8 +368,13 @@ public class AssignmentManager extends ZooKeeperListener {
       }
       String encodedName = HRegionInfo.encodeRegionName(data.getRegionName());
       String prettyPrintedRegionName = HRegionInfo.prettyPrint(encodedName);
+      // Printing if the event was created a long time ago helps debugging
+      boolean lateEvent = data.getStamp() <
+          (System.currentTimeMillis() - 15000);
       LOG.debug("Handling transition=" + data.getEventType() +
-        ", server=" + data.getServerName() + ", region=" + prettyPrintedRegionName);
+        ", server=" + data.getServerName() + ", region=" +
+          prettyPrintedRegionName +
+          (lateEvent? ", which is more than 15 seconds late" : ""));
       RegionState regionState = regionsInTransition.get(encodedName);
       switch (data.getEventType()) {
         case M_ZK_REGION_OFFLINE:
