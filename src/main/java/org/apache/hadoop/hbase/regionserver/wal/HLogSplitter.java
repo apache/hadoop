@@ -687,7 +687,7 @@ public class HLogSplitter {
       // then this problem is idempotent and retrying won't help
       if (e.getCause() != null &&
           (e.getCause() instanceof ParseException ||
-           e.getCause() instanceof org.apache.hadoop.fs.ChecksumException) {
+           e.getCause() instanceof org.apache.hadoop.fs.ChecksumException)) {
         LOG.warn("Parse exception " + e.getCause().toString() + " from hlog "
            + path + ".  continuing");
         return null;
