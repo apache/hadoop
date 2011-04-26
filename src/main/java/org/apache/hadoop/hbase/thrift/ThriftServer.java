@@ -944,12 +944,22 @@ public class ThriftServer {
       TNonblockingServerTransport serverTransport = new TNonblockingServerSocket(listenPort);
       TFramedTransport.Factory transportFactory = new TFramedTransport.Factory();
 
-      if (cmd.hasOption("nonblocking")) {
+     if (cmd.hasOption("nonblocking")) {
+        TNonblockingServer.Args serverArgs = new TNonblockingServer.Args(serverTransport);
+        serverArgs.processor(processor);
+        serverArgs.transportFactory(transportFactory);
+        serverArgs.protocolFactory(protocolFactory);
+
         LOG.info("starting HBase Nonblocking Thrift server on " + Integer.toString(listenPort));
-        server = new TNonblockingServer(processor, serverTransport, transportFactory, protocolFactory);
+        server = new TNonblockingServer(serverArgs);
       } else {
+        THsHaServer.Args serverArgs = new THsHaServer.Args(serverTransport);
+        serverArgs.processor(processor);
+        serverArgs.transportFactory(transportFactory);
+        serverArgs.protocolFactory(protocolFactory);
+
         LOG.info("starting HBase HsHA Thrift server on " + Integer.toString(listenPort));
-        server = new THsHaServer(processor, serverTransport, transportFactory, protocolFactory);
+        server = new THsHaServer(serverArgs);
       }
     } else {
       // Get IP address to bind to
@@ -975,8 +985,13 @@ public class ThriftServer {
         transportFactory = new TTransportFactory();
       }
 
+      TThreadPoolServer.Args serverArgs = new TThreadPoolServer.Args(serverTransport);
+      serverArgs.processor(processor);
+      serverArgs.protocolFactory(protocolFactory);
+      serverArgs.transportFactory(transportFactory);
+
       LOG.info("starting HBase ThreadPool Thrift server on " + listenAddress + ":" + Integer.toString(listenPort));
-      server = new TThreadPoolServer(processor, serverTransport, transportFactory, protocolFactory);
+      server = new TThreadPoolServer(serverArgs);
     }
 
     server.serve();

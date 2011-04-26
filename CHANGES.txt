@@ -8,6 +8,7 @@ Release 0.91.0 - Unreleased
                ClusterStatus serialization)
    HBASE-3762  HTableFactory.releaseHTableInterface() should throw IOException
                instead of wrapping in RuntimeException (Ted Yu via garyh)
+   HBASE-3629  Update our thrift to 0.6 (Moaz Reyad)
 
   BUG FIXES
    HBASE-3280  YouAreDeadException being swallowed in HRS getMaster
