@@ -112,7 +112,7 @@ import org.apache.zookeeper.KeeperException;
  */
 @SuppressWarnings("serial")
 public class HConnectionManager {
-  static final int MAX_CACHED_HBASE_INSTANCES = 31;
+  static final int MAX_CACHED_HBASE_INSTANCES = 2001;
 
   // A LRU Map of Configuration hashcode -> TableServers. We set instances to 31.
   // The zk default max connections to the ensemble from the one client is 30 so
