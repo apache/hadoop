@@ -72,7 +72,7 @@ public class ExecResult implements Writable {
   public void write(DataOutput out) throws IOException {
     Bytes.writeByteArray(out, regionName);
     HbaseObjectWritable.writeObject(out, value,
-        value != null ? value.getClass() : valueType, null);
+        value != null ? value.getClass() : Writable.class, null);
     Class<?> alternativeSerializationClass;
     if(value instanceof Writable){
       alternativeSerializationClass = Writable.class;

@@ -108,11 +108,13 @@ public class AggregationClient {
   }
 
   private void validateParameters(Scan scan) throws IOException {
-    if (scan == null || 
-        (Bytes.equals(scan.getStartRow(), scan.getStopRow()) && !Bytes
-                      .equals(scan.getStartRow(), HConstants.EMPTY_START_ROW))){
-      throw new IOException("Agg client Exception: Startrow should be smaller than Stoprow");
-    }else if(scan.getFamilyMap().size() != 1) {
+    if (scan == null
+        || (Bytes.equals(scan.getStartRow(), scan.getStopRow()) && !Bytes
+            .equals(scan.getStartRow(), HConstants.EMPTY_START_ROW))
+        || Bytes.compareTo(scan.getStartRow(), scan.getStopRow()) > 0) {
+      throw new IOException(
+          "Agg client Exception: Startrow should be smaller than Stoprow");
+    } else if (scan.getFamilyMap().size() != 1) {
       throw new IOException("There must be only one family.");
     }
   }
