@@ -19,7 +19,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.*;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.resetCounters;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_wkr_failed_to_grab_task_lost_race;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_wkr_failed_to_grab_task_owned;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_wkr_preempt_task;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_wkr_task_acquired;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_wkr_task_acquired_rescan;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -39,9 +44,7 @@ import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 
@@ -58,6 +61,12 @@ public class TestSplitLogWorker {
 
   private void waitForCounter(AtomicLong ctr, long oldval, long newval,
       long timems) {
+    assertTrue("ctr=" + ctr.get() + ", oldval=" + oldval + ", newval=" + newval,
+      waitForCounterBoolean(ctr, oldval, newval, timems));
+  }
+
+  private boolean waitForCounterBoolean(AtomicLong ctr, long oldval, long newval,
+      long timems) {
     assert ctr.get() == oldval;
     long curt = System.currentTimeMillis();
     long endt = curt + timems;
@@ -70,19 +79,10 @@ public class TestSplitLogWorker {
         curt = System.currentTimeMillis();
       } else {
         assertEquals(newval, ctr.get());
-        return;
+        return true;
       }
     }
-    assertTrue("ctr=" + ctr.get() + ", oldval=" + oldval + ", newval=" + newval,
-      false);
-  }
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
+    return false;
   }
 
   @Before
@@ -170,14 +170,21 @@ public class TestSplitLogWorker {
         "svr2", neverEndingTask);
     slw1.start();
     slw2.start();
-    waitForCounter(tot_wkr_task_acquired, 0, 1, 1000);
-    waitForCounter(tot_wkr_failed_to_grab_task_lost_race, 0, 1, 1000);
-    assertTrue(TaskState.TASK_OWNED.equals(ZKUtil.getData(zkw,
+    try {
+      waitForCounter(tot_wkr_task_acquired, 0, 1, 1000);
+      boolean first =
+        waitForCounterBoolean(tot_wkr_failed_to_grab_task_owned, 0, 1, 1000);
+      boolean second =
+        waitForCounterBoolean(tot_wkr_failed_to_grab_task_lost_race, 0, 1, 100);
+      assertTrue(first || second);
+      assertTrue(TaskState.TASK_OWNED.equals(ZKUtil.getData(zkw,
         ZKSplitLog.getEncodedNodeName(zkw, "trft")), "svr1") ||
         TaskState.TASK_OWNED.equals(ZKUtil.getData(zkw,
             ZKSplitLog.getEncodedNodeName(zkw, "trft")), "svr2"));
-    stopSplitLogWorker(slw1);
-    stopSplitLogWorker(slw2);
+    } finally {
+      stopSplitLogWorker(slw1);
+      stopSplitLogWorker(slw2);
+    }
   }
 
   @Test

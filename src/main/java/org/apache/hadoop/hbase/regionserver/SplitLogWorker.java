@@ -136,7 +136,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
 
   @Override
   public void run() {
-    LOG.info("SplitLogWorker starting");
+    LOG.info("SplitLogWorker " + this.serverName + " starting");
     this.watcher.registerListener(this);
     int res;
     // wait for master to create the splitLogZnode
@@ -163,7 +163,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
 
     taskLoop();
 
-    LOG.info("SplitLogWorker exiting");
+    LOG.info("SplitLogWorker " + this.serverName + " exiting");
   }
 
   /**
