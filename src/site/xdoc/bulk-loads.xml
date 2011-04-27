@@ -122,6 +122,7 @@ Other options that may be specified with -D include:
           appropriate hbase parameters (e.g., hbase-site.xml) if not supplied already on
           the CLASSPATH (In addition, the CLASSPATH must contain the directory that has
           the zookeeper configuration file if zookeeper is NOT managed by HBase).
+      </p>
       <p>
         This tool will run quickly, after which point the new data will be visible in
         the cluster.
