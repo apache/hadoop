@@ -142,13 +142,13 @@
       
         <p>The CapacityScheduler is available as a JAR file in the Hadoop
         tarball under the <em>contrib/capacity-scheduler</em> directory. The name of 
-        the JAR file would be on the lines of hadoop-*-capacity-scheduler.jar.</p>
+        the JAR file would be on the lines of hadoop-capacity-scheduler-*.jar.</p>
         <p>You can also build the Scheduler from source by executing
         <em>ant package</em>, in which case it would be available under
         <em>build/contrib/capacity-scheduler</em>.</p>
         <p>To run the CapacityScheduler in your Hadoop installation, you need 
         to put it on the <em>CLASSPATH</em>. The easiest way is to copy the 
-        <code>hadoop-*-capacity-scheduler.jar</code> from 
+        <code>hadoop-capacity-scheduler-*.jar</code> from 
         to <code>HADOOP_HOME/lib</code>. Alternatively, you can modify 
         <em>HADOOP_CLASSPATH</em> to include this jar, in 
         <code>conf/hadoop-env.sh</code>.</p>

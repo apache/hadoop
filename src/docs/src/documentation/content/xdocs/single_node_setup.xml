@@ -146,7 +146,7 @@
         <code>$ mkdir input</code><br/>
         <code>$ cp conf/*.xml input</code><br/>
         <code>
-          $ bin/hadoop jar hadoop-*-examples.jar grep input output 'dfs[a-z.]+'
+          $ bin/hadoop jar hadoop-examples-*.jar grep input output 'dfs[a-z.]+'
         </code><br/>
         <code>$ cat output/*</code>
       </p>
@@ -252,7 +252,7 @@
         <p>
           Run some of the examples provided:<br/>
           <code>
-            $ bin/hadoop jar hadoop-*-examples.jar grep input output 'dfs[a-z.]+'
+            $ bin/hadoop jar hadoop-examples-*.jar grep input output 'dfs[a-z.]+'
           </code>
         </p>
         
