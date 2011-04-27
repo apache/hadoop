@@ -2,6 +2,9 @@ Hadoop Change Log
 
 Release 0.20.203.0 - unreleased
 
+    HADOOP-7246. Update the log4j configuration to match the EventCounter
+    package. (Luke Lu via omalley)
+
     HADOOP-7143. Restore HadoopArchives. (Joep Rottinghuis via omalley)
 
     MAPREDUCE-2316. Updated CapacityScheduler documentation. (acmurthy) 
