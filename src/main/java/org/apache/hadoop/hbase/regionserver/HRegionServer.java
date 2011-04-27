@@ -43,6 +43,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -176,6 +177,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   private FileSystem fs;
   private Path rootDir;
   private final Random rand = new Random();
+
+  private final Set<byte[]> regionsInTransitionInRS =
+      new ConcurrentSkipListSet<byte[]>(Bytes.BYTES_COMPARATOR);
 
   /**
    * Map of regions currently being served by this region server. Key is the
@@ -2256,7 +2260,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @Override
   @QosPriority(priority=HIGH_QOS)
   public void openRegion(HRegionInfo region)
-  throws RegionServerStoppedException {
+  throws IOException {
+    if (this.regionsInTransitionInRS.contains(region.getEncodedNameAsBytes())) {
+      throw new RegionAlreadyInTransitionException("open", region.getEncodedName());
+    }
     LOG.info("Received request to open region: " +
       region.getRegionNameAsString());
     if (this.stopped) throw new RegionServerStoppedException();
@@ -2272,7 +2279,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @Override
   @QosPriority(priority=HIGH_QOS)
   public void openRegions(List<HRegionInfo> regions)
-  throws RegionServerStoppedException {
+  throws IOException {
     LOG.info("Received request to open " + regions.size() + " region(s)");
     for (HRegionInfo region: regions) openRegion(region);
   }
@@ -2280,14 +2287,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @Override
   @QosPriority(priority=HIGH_QOS)
   public boolean closeRegion(HRegionInfo region)
-  throws NotServingRegionException {
+  throws IOException {
     return closeRegion(region, true);
   }
 
   @Override
   @QosPriority(priority=HIGH_QOS)
   public boolean closeRegion(HRegionInfo region, final boolean zk)
-  throws NotServingRegionException {
+  throws IOException {
     LOG.info("Received close region: " + region.getRegionNameAsString());
     boolean hasit = this.onlineRegions.containsKey(region.getEncodedName());
     if (!hasit) {
@@ -2295,6 +2302,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         region.getEncodedName());
       throw new NotServingRegionException("Received close for "
         + region.getRegionNameAsString() + " but we are not serving it");
+    }
+    if (this.regionsInTransitionInRS.contains(region.getEncodedNameAsBytes())) {
+      throw new RegionAlreadyInTransitionException("close", region.getEncodedName());
     }
     return closeRegion(region, false, zk);
   }
@@ -2309,6 +2319,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   protected boolean closeRegion(HRegionInfo region, final boolean abort,
       final boolean zk) {
+    if (this.regionsInTransitionInRS.contains(region.getEncodedNameAsBytes())) {
+      LOG.warn("Received close for region we are already opening or closing; " +
+          region.getEncodedName());
+      return false;
+    }
     CloseRegionHandler crh = null;
     if (region.isRootRegion()) {
       crh = new CloseRootHandler(this, this, region, abort, zk);
@@ -2831,6 +2846,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return this.zooKeeper;
   }
 
+
+  public Set<byte[]> getRegionsInTransitionInRS() {
+    return this.regionsInTransitionInRS;
+  }
 
   //
   // Main program and support routines

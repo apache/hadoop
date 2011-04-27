@@ -171,7 +171,7 @@ public class MiniHBaseCluster {
 
     @Override
     public boolean closeRegion(HRegionInfo region)
-        throws NotServingRegionException {
+        throws IOException {
       if (TEST_SKIP_CLOSE) return true;
       return super.closeRegion(region);
     }

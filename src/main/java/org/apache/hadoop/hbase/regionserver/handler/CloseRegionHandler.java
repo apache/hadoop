@@ -95,45 +95,51 @@ public class CloseRegionHandler extends EventHandler {
 
   @Override
   public void process() {
-    String name = regionInfo.getRegionNameAsString();
-    LOG.debug("Processing close of " + name);
-    String encodedRegionName = regionInfo.getEncodedName();
-    // Check that this region is being served here
-    HRegion region = this.rsServices.getFromOnlineRegions(encodedRegionName);
-    if (region == null) {
-      LOG.warn("Received CLOSE for region " + name + " but currently not serving");
-      return;
-    }
-
-    int expectedVersion = FAILED;
-    if (this.zk) {
-      expectedVersion = setClosingState();
-      if (expectedVersion == FAILED) return;
-    }
-
-    // Close the region
     try {
-      // TODO: If we need to keep updating CLOSING stamp to prevent against
-      // a timeout if this is long-running, need to spin up a thread?
-      if (region.close(abort) == null) {
-        // This region got closed.  Most likely due to a split. So instead
-        // of doing the setClosedState() below, let's just ignore and continue.
-        // The split message will clean up the master state.
-        LOG.warn("Can't close region: was already closed during close(): " +
-          regionInfo.getRegionNameAsString());
+      String name = regionInfo.getRegionNameAsString();
+      LOG.debug("Processing close of " + name);
+      String encodedRegionName = regionInfo.getEncodedName();
+      // Check that this region is being served here
+      HRegion region = this.rsServices.getFromOnlineRegions(encodedRegionName);
+      if (region == null) {
+        LOG.warn("Received CLOSE for region " + name +
+            " but currently not serving");
         return;
       }
-    } catch (IOException e) {
-      LOG.error("Unrecoverable exception while closing region " +
-        regionInfo.getRegionNameAsString() + ", still finishing close", e);
+
+      int expectedVersion = FAILED;
+      if (this.zk) {
+        expectedVersion = setClosingState();
+        if (expectedVersion == FAILED) return;
+      }
+
+      // Close the region
+      try {
+        // TODO: If we need to keep updating CLOSING stamp to prevent against
+        // a timeout if this is long-running, need to spin up a thread?
+        if (region.close(abort) == null) {
+          // This region got closed.  Most likely due to a split. So instead
+          // of doing the setClosedState() below, let's just ignore cont
+          // The split message will clean up the master state.
+          LOG.warn("Can't close region: was already closed during close(): " +
+            regionInfo.getRegionNameAsString());
+          return;
+        }
+      } catch (IOException e) {
+        LOG.error("Unrecoverable exception while closing region " +
+          regionInfo.getRegionNameAsString() + ", still finishing close", e);
+      }
+
+      this.rsServices.removeFromOnlineRegions(regionInfo.getEncodedName());
+
+      if (this.zk) setClosedState(expectedVersion, region);
+
+      // Done!  Region is closed on this RS
+      LOG.debug("Closed region " + region.getRegionNameAsString());
+    } finally {
+      this.rsServices.getRegionsInTransitionInRS().
+          remove(this.regionInfo.getEncodedNameAsBytes());
     }
-
-    this.rsServices.removeFromOnlineRegions(regionInfo.getEncodedName());
-
-    if (this.zk) setClosedState(expectedVersion, region);
-
-    // Done!  Region is closed on this RS
-    LOG.debug("Closed region " + region.getRegionNameAsString());
   }
 
   /**

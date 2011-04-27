@@ -69,50 +69,56 @@ public class OpenRegionHandler extends EventHandler {
 
   @Override
   public void process() throws IOException {
-    final String name = regionInfo.getRegionNameAsString();
-    LOG.debug("Processing open of " + name);
-    if (this.server.isStopped() || this.rsServices.isStopping()) {
-      LOG.info("Server stopping or stopped, skipping open of " + name);
-      return;
-    }
-    final String encodedName = regionInfo.getEncodedName();
+    try {
+      final String name = regionInfo.getRegionNameAsString();
+      LOG.debug("Processing open of " + name);
+      if (this.server.isStopped() || this.rsServices.isStopping()) {
+        LOG.info("Server stopping or stopped, skipping open of " + name);
+        return;
+      }
+      final String encodedName = regionInfo.getEncodedName();
 
-    // Check that this region is not already online
-    HRegion region = this.rsServices.getFromOnlineRegions(encodedName);
-    if (region != null) {
-      LOG.warn("Attempted open of " + name +
-        " but already online on this server");
-      return;
-    }
+      // Check that this region is not already online
+      HRegion region = this.rsServices.getFromOnlineRegions(encodedName);
+      if (region != null) {
+        LOG.warn("Attempted open of " + name +
+          " but already online on this server");
+        return;
+      }
 
-    // If fails, just return.  Someone stole the region from under us.
-    // Calling transitionZookeeperOfflineToOpening initalizes this.version.
-    if (!transitionZookeeperOfflineToOpening(encodedName)) {
-      LOG.warn("Region was hijacked? It no longer exists, encodedName=" +
-        encodedName);
-      return;
-    }
+      // If fails, just return.  Someone stole the region from under us.
+      // Calling transitionZookeeperOfflineToOpening initalizes this.version.
+      if (!transitionZookeeperOfflineToOpening(encodedName)) {
+        LOG.warn("Region was hijacked? It no longer exists, encodedName=" +
+          encodedName);
+        return;
+      }
 
-    // Open region.  After a successful open, failures in subsequent processing
-    // needs to do a close as part of cleanup.
-    region = openRegion();
-    if (region == null) return;
-    boolean failed = true;
-    if (tickleOpening("post_region_open")) {
-      if (updateMeta(region)) failed = false;
-    }
-    if (failed || this.server.isStopped() || this.rsServices.isStopping()) {
-      cleanupFailedOpen(region);
-      return;
-    }
+      // Open region.  After a successful open, failures in subsequent
+      // processing needs to do a close as part of cleanup.
+      region = openRegion();
+      if (region == null) return;
+      boolean failed = true;
+      if (tickleOpening("post_region_open")) {
+        if (updateMeta(region)) failed = false;
+      }
+      if (failed || this.server.isStopped() ||
+          this.rsServices.isStopping()) {
+        cleanupFailedOpen(region);
+        return;
+      }
 
-    if (!transitionToOpened(region)) {
-      cleanupFailedOpen(region);
-      return;
-    }
+      if (!transitionToOpened(region)) {
+        cleanupFailedOpen(region);
+        return;
+      }
 
-    // Done!  Successful region open
-    LOG.debug("Opened " + name);
+      // Done!  Successful region open
+      LOG.debug("Opened " + name);
+    } finally {
+      this.rsServices.getRegionsInTransitionInRS().
+          remove(this.regionInfo.getEncodedNameAsBytes());
+    }
   }
 
   /**
