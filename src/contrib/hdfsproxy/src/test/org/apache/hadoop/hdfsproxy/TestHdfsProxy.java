@@ -26,6 +26,7 @@ import java.util.Random;
 
 import junit.framework.TestCase;
 
+import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.log4j.Level;
@@ -46,13 +47,8 @@ import org.apache.hadoop.security.authorize.ProxyUsers;
  * A JUnit test for HdfsProxy
  */
 public class TestHdfsProxy extends TestCase {
-  {
-    ((Log4JLogger) LogFactory.getLog("org.apache.hadoop.hdfs.StateChange"))
-        .getLogger().setLevel(Level.OFF);
-    ((Log4JLogger) DataNode.LOG).getLogger().setLevel(Level.OFF);
-    ((Log4JLogger) FSNamesystem.LOG).getLogger().setLevel(Level.OFF);
-  }
 
+  static final Log LOG = LogFactory.getLog(TestHdfsProxy.class);
   static final URI LOCAL_FS = URI.create("file:///");
 
   private static final int NFILES = 10;
@@ -221,12 +217,13 @@ public class TestHdfsProxy extends TestCase {
       final FileSystem localfs = FileSystem.get(LOCAL_FS, dfsConf);
       final FileSystem hdfs = cluster.getFileSystem();
       final Configuration proxyConf = new Configuration(false);
-      proxyConf.set("hdfsproxy.dfs.namenode.address", hdfs.getUri().getHost() + ":"
-          + hdfs.getUri().getPort());
+      proxyConf.set("hdfsproxy.dfs.namenode.address", hdfs.getUri().getHost() +
+          ":" + hdfs.getUri().getPort());
       proxyConf.set("hdfsproxy.https.address", "localhost:0");
       final String namenode = hdfs.getUri().toString();
       if (namenode.startsWith("hdfs://")) {
         MyFile[] files = createFiles(LOCAL_FS, TEST_ROOT_DIR + "/srcdat");
+
         hdfs.copyFromLocalFile
 	    (new Path("file:///" + TEST_ROOT_DIR + "/srcdat"),
              new Path(namenode + "/destdat" ));
@@ -240,7 +237,8 @@ public class TestHdfsProxy extends TestCase {
         final String realProxyAddr = proxyAddr.getHostName() + ":"
             + proxy.getPort();
         final Path proxyUrl = new Path("hftp://" + realProxyAddr);
-	final FileSystem hftp = proxyUrl.getFileSystem(dfsConf);
+        final FileSystem hftp = proxyUrl.getFileSystem(dfsConf);
+
         FileUtil.copy(hftp, new Path(proxyUrl, "/destdat"),
                       hdfs, new Path(namenode + "/copied1"),
                       false, true, proxyConf);
@@ -260,13 +258,21 @@ public class TestHdfsProxy extends TestCase {
         deldir(localfs, TEST_ROOT_DIR + "/srcdat");
         deldir(localfs, TEST_ROOT_DIR + "/copied2");
       }
-    } finally {
       if (cluster != null) {
         cluster.shutdown();
       }
       if (proxy != null) {
         proxy.stop();
       }
+    } catch (Exception t) {
+      LOG.fatal("caught exception in test", t);
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      if (proxy != null) {
+        proxy.stop();
+      }
+      throw t;
     }
   }
 }

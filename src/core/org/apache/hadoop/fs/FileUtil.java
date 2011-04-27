@@ -22,17 +22,20 @@ import java.io.*;
 import java.util.Enumeration;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
-import org.mortbay.log.Log;
 
 /**
  * A collection of file-processing util methods
  */
 public class FileUtil {
+  private static final Log LOG = LogFactory.getLog(FileUtil.class);
+
   /**
    * convert an array of FileStatus to an array of Path
    * 
@@ -596,9 +599,9 @@ public class FileUtil {
     try {
       shExec.execute();
     }catch(IOException e) {
-      if(Log.isDebugEnabled()) {
-        Log.debug("Error while changing permission : " + filename 
-            +" Exception: " + StringUtils.stringifyException(e));
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Error while changing permission : " + filename 
+                  +" Exception: " + StringUtils.stringifyException(e));
       }
     }
     return shExec.getExitCode();
