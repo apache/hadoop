@@ -131,8 +131,8 @@ public class TestZooKeeper {
     testSanity();
   }
 
-  //@Test
-  public void disabledTestMasterSessionExpired() throws Exception {
+  @Test
+  public void testMasterSessionExpired() throws Exception {
     LOG.info("Starting testMasterSessionExpired");
     TEST_UTIL.expireMasterSession();
     testSanity();

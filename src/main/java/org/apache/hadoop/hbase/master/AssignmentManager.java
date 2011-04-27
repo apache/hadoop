@@ -222,6 +222,10 @@ public class AssignmentManager extends ZooKeeperListener {
     // Process list of dead servers
     processDeadServers(deadServers);
     // Check existing regions in transition
+    processRegionsInTransition();
+  }
+
+  public void processRegionsInTransition() throws KeeperException, IOException {
     List<String> nodes = ZKUtil.listChildrenAndWatchForNewChildren(watcher,
         watcher.assignmentZNode);
     if (nodes.isEmpty()) {

@@ -276,10 +276,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
        * now wait until it dies to try and become the next active master.  If we
        * do not succeed on our first attempt, this is no longer a cluster startup.
        */
-      this.activeMasterManager = new ActiveMasterManager(zooKeeper, address, this);
-      this.zooKeeper.registerListener(activeMasterManager);
-      stallIfBackupMaster(this.conf, this.activeMasterManager);
-      this.activeMasterManager.blockUntilBecomingActiveMaster();
+      becomeActiveMaster();
+
       // We are either the active master or we were asked to shutdown
       if (!this.stopped) {
         finishInitialization();
@@ -306,6 +304,52 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       this.zooKeeper.close();
     }
     LOG.info("HMaster main thread exiting");
+  }
+
+  /**
+   * Try becoming active master.
+   * @return True if we could successfully become the active master.
+   * @throws InterruptedException
+   */
+  private boolean becomeActiveMaster() throws InterruptedException {
+    this.activeMasterManager = new ActiveMasterManager(zooKeeper, address,
+        this);
+    this.zooKeeper.registerListener(activeMasterManager);
+    stallIfBackupMaster(this.conf, this.activeMasterManager);
+    return this.activeMasterManager.blockUntilBecomingActiveMaster();
+  }
+
+  /**
+   * Initilize all ZK based system trackers.
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  private void initializeZKBasedSystemTrackers() throws IOException,
+      InterruptedException, KeeperException {
+    this.catalogTracker = new CatalogTracker(this.zooKeeper, this.connection,
+        this, conf.getInt("hbase.master.catalog.timeout", Integer.MAX_VALUE));
+    this.catalogTracker.start();
+
+    this.assignmentManager = new AssignmentManager(this, serverManager,
+        this.catalogTracker, this.executorService);
+    this.balancer = new LoadBalancer(conf);
+    zooKeeper.registerListenerFirst(assignmentManager);
+
+    this.regionServerTracker = new RegionServerTracker(zooKeeper, this,
+        this.serverManager);
+    this.regionServerTracker.start();
+
+    // Set the cluster as up.  If new RSs, they'll be waiting on this before
+    // going ahead with their startup.
+    this.clusterStatusTracker = new ClusterStatusTracker(getZooKeeper(), this);
+    this.clusterStatusTracker.start();
+    boolean wasUp = this.clusterStatusTracker.isClusterUp();
+    if (!wasUp) this.clusterStatusTracker.setClusterUp();
+
+    LOG.info("Server active/primary master; " + this.address +
+        ", sessionid=0x" +
+        Long.toHexString(this.zooKeeper.getZooKeeper().getSessionId()) +
+        ", cluster-up flag was=" + wasUp);
   }
 
   private void loop() {
@@ -357,30 +401,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
     this.serverManager = new ServerManager(this, this, metrics);
 
-    this.catalogTracker = new CatalogTracker(this.zooKeeper, this.connection,
-      this, conf.getInt("hbase.master.catalog.timeout", Integer.MAX_VALUE));
-    this.catalogTracker.start();
-
-    this.assignmentManager = new AssignmentManager(this, serverManager,
-      this.catalogTracker, this.executorService);
-    this.balancer = new LoadBalancer(conf);
-    zooKeeper.registerListenerFirst(assignmentManager);
-
-    this.regionServerTracker = new RegionServerTracker(zooKeeper, this,
-      this.serverManager);
-    this.regionServerTracker.start();
-
-    // Set the cluster as up.  If new RSs, they'll be waiting on this before
-    // going ahead with their startup.
-    this.clusterStatusTracker = new ClusterStatusTracker(getZooKeeper(), this);
-    this.clusterStatusTracker.start();
-    boolean wasUp = this.clusterStatusTracker.isClusterUp();
-    if (!wasUp) this.clusterStatusTracker.setClusterUp();
-
-    LOG.info("Server active/primary master; " + this.address +
-      ", sessionid=0x" +
-      Long.toHexString(this.zooKeeper.getZooKeeper().getSessionId()) +
-      ", cluster-up flag was=" + wasUp);
+    initializeZKBasedSystemTrackers();
 
     // initialize master side coprocessors before we start handling requests
     this.cpHost = new MasterCoprocessorHost(this, this.conf);
@@ -1089,10 +1110,67 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
   @Override
   public void abort(final String msg, final Throwable t) {
-    if (t != null) LOG.fatal(msg, t);
-    else LOG.fatal(msg);
-    this.abort = true;
-    stop("Aborting");
+    if (abortNow(msg, t)) {
+      if (t != null) LOG.fatal(msg, t);
+      else LOG.fatal(msg);
+      this.abort = true;
+      stop("Aborting");
+    }
+  }
+
+  /**
+   * We do the following.
+   * 1. Create a new ZK session. (since our current one is expired)
+   * 2. Try to become a primary master again
+   * 3. Initialize all ZK based system trackers.
+   * 4. Assign root and meta. (they are already assigned, but we need to update our
+   * internal memory state to reflect it)
+   * 5. Process any RIT if any during the process of our recovery.
+   *
+   * @return True if we could successfully recover from ZK session expiry.
+   * @throws InterruptedException
+   * @throws IOException
+   */
+  private boolean tryRecoveringExpiredZKSession() throws InterruptedException,
+      IOException, KeeperException {
+    this.zooKeeper = new ZooKeeperWatcher(conf, MASTER + ":"
+        + address.getPort(), this);
+
+    if (!becomeActiveMaster()) {
+      return false;
+    }
+    initializeZKBasedSystemTrackers();
+    // Update in-memory structures to reflect our earlier Root/Meta assignment.
+    assignRootAndMeta();
+    // process RIT if any
+    this.assignmentManager.processRegionsInTransition();
+    return true;
+  }
+
+  /**
+   * Check to see if the current trigger for abort is due to ZooKeeper session
+   * expiry, and If yes, whether we can recover from ZK session expiry.
+   *
+   * @param msg Original abort message
+   * @param t   The cause for current abort request
+   * @return true if we should proceed with abort operation, false other wise.
+   */
+  private boolean abortNow(final String msg, final Throwable t) {
+    if (!this.isActiveMaster) {
+      return true;
+    }
+    if (t != null && t instanceof KeeperException.SessionExpiredException) {
+      try {
+        LOG.info("Primary Master trying to recover from ZooKeeper session " +
+            "expiry.");
+        return !tryRecoveringExpiredZKSession();
+      } catch (Throwable newT) {
+        LOG.error("Primary master encountered unexpected exception while " +
+            "trying to recover from ZooKeeper session" +
+            " expiry. Proceeding with server abort.", newT);
+      }
+    }
+    return true;
   }
 
   @Override
