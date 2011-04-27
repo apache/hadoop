@@ -606,7 +606,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-tail \[-f\] &lt;file&gt;:  Show the last 1KB of the file.( )*</expected-output>
+          <expected-output>^-tail \[-f\] &lt;file&gt;:( |\t)+Show the last 1KB of the file.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>

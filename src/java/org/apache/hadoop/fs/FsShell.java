@@ -76,7 +76,6 @@ public class FsShell extends Configured implements Tool {
   static final String GET_SHORT_USAGE = "-get [-ignoreCrc] [-crc] <src> <localdst>";
   static final String COPYTOLOCAL_SHORT_USAGE = GET_SHORT_USAGE.replace(
       "-get", "-copyToLocal");
-  static final String TAIL_USAGE="-tail [-f] <file>";
   static final String DU_USAGE="-du [-s] [-h] <paths...>";
 
   /**
@@ -1140,57 +1139,6 @@ public class FsShell extends Configured implements Tool {
   }
 
   /**
-   * Parse the incoming command string
-   * @param cmd
-   * @param pos ignore anything before this pos in cmd
-   * @throws IOException 
-   */
-  private void tail(String[] cmd, int pos) throws IOException {
-    CommandFormat c = new CommandFormat("tail", 1, 1, "f");
-    String src = null;
-    Path path = null;
-
-    try {
-      List<String> parameters = c.parse(cmd, pos);
-      src = parameters.get(0);
-    } catch(IllegalArgumentException iae) {
-      System.err.println("Usage: java FsShell " + TAIL_USAGE);
-      throw iae;
-    }
-    boolean foption = c.getOpt("f") ? true: false;
-    path = new Path(src);
-    FileSystem srcFs = path.getFileSystem(getConf());
-    FileStatus fileStatus = srcFs.getFileStatus(path);
-    if (fileStatus.isDirectory()) {
-      throw new IOException("Source must be a file.");
-    }
-
-    long fileSize = fileStatus.getLen();
-    long offset = (fileSize > 1024) ? fileSize - 1024: 0;
-
-    while (true) {
-      FSDataInputStream in = srcFs.open(path);
-      try {
-        in.seek(offset);
-        IOUtils.copyBytes(in, System.out, 1024);
-        offset = in.getPos();
-      } finally {
-        in.close();
-      }
-      if (!foption) {
-        break;
-      }
-      fileSize = srcFs.getFileStatus(path).getLen();
-      offset = (fileSize > offset) ? offset: fileSize;
-      try {
-        Thread.sleep(5000);
-      } catch (InterruptedException e) {
-        break;
-      }
-    }
-  }
-
-  /**
    * This class runs a command on a given FileStatus. This can be used for
    * running various commands like chmod, chown etc.
    */
@@ -1328,7 +1276,7 @@ public class FsShell extends Configured implements Tool {
       "[" + COPYTOLOCAL_SHORT_USAGE + "] [-moveToLocal <src> <localdst>]\n\t" +
       "[-mkdir <path>] [-report] [" + SETREP_SHORT_USAGE + "]\n\t" +
       "[-touchz <path>] [-test -[ezd] <path>] [-stat [format] <path>]\n\t" +
-      "[-tail [-f] <path>] [-text <path>]\n\t" +
+      "[-text <path>]\n\t" +
       "[" + FsShellPermissions.CHMOD_USAGE + "]\n\t" +
       "[" + FsShellPermissions.CHOWN_USAGE + "]\n\t" +
       "[" + FsShellPermissions.CHGRP_USAGE + "]";
@@ -1434,10 +1382,6 @@ public class FsShell extends Configured implements Tool {
       "\t\tin the specified format. Format accepts filesize in blocks (%b), filename (%n),\n" +
       "\t\tblock size (%o), replication (%r), modification date (%y, %Y)\n";
 
-    String tail = TAIL_USAGE
-      + ":  Show the last 1KB of the file. \n"
-      + "\t\tThe -f option shows appended data as the file grows. \n";
-
     String chmod = FsShellPermissions.CHMOD_USAGE + "\n" +
       "\t\tChanges permissions of a file.\n" +
       "\t\tThis works similar to shell's chmod with a few exceptions.\n\n" +
@@ -1530,8 +1474,6 @@ public class FsShell extends Configured implements Tool {
       System.out.println(text);
     } else if ("stat".equals(cmd)) {
       System.out.println(stat);
-    } else if ("tail".equals(cmd)) {
-      System.out.println(tail);
     } else if ("chmod".equals(cmd)) {
       System.out.println(chmod);
     } else if ("chown".equals(cmd)) {
@@ -1566,7 +1508,6 @@ public class FsShell extends Configured implements Tool {
       System.out.println(moveToLocal);
       System.out.println(mkdir);
       System.out.println(setrep);
-      System.out.println(tail);
       System.out.println(touchz);
       System.out.println(test);
       System.out.println(text);
@@ -1726,8 +1667,6 @@ public class FsShell extends Configured implements Tool {
     } else if ("-stat".equals(cmd)) {
       System.err.println("Usage: java FsShell" +
                          " [-stat [format] <path>]");
-    } else if ("-tail".equals(cmd)) {
-      System.err.println("Usage: java FsShell [" + TAIL_USAGE + "]");
     } else {
       System.err.println("Usage: java FsShell");
       System.err.println("           [-df [<path>]]");
@@ -1752,7 +1691,6 @@ public class FsShell extends Configured implements Tool {
       System.err.println("           [-touchz <path>]");
       System.err.println("           [-test -[ezd] <path>]");
       System.err.println("           [-stat [format] <path>]");
-      System.err.println("           [" + TAIL_USAGE + "]");
       System.err.println("           [" + FsShellPermissions.CHMOD_USAGE + "]");      
       System.err.println("           [" + FsShellPermissions.CHOWN_USAGE + "]");
       System.err.println("           [" + FsShellPermissions.CHGRP_USAGE + "]");
@@ -1909,8 +1847,6 @@ public class FsShell extends Configured implements Tool {
         } else {
           printHelp("");
         }
-      } else if ("-tail".equals(cmd)) {
-        tail(argv, i);           
       } else {
         exitCode = -1;
         System.err.println(cmd.substring(1) + ": Unknown command");
