@@ -44,7 +44,7 @@ import org.apache.hadoop.util.ToolRunner;
  * Any output from the reduce is problem report.
  * <p>
  * To run the program: 
- * <b>bin/hadoop jar hadoop-*-examples.jar teravalidate out-dir report-dir</b>
+ * <b>bin/hadoop jar hadoop-examples-*.jar teravalidate out-dir report-dir</b>
  * <p>
  * If there is any output, something is wrong and the output of the reduce
  * will have the problem report.

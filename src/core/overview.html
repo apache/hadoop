@@ -114,7 +114,7 @@ be demonstrated as follows:</p>
 <tt>
 mkdir input<br>
 cp conf/*.xml input<br>
-bin/hadoop jar hadoop-*-examples.jar grep input output 'dfs[a-z.]+'<br>
+bin/hadoop jar hadoop-examples-*.jar grep input output 'dfs[a-z.]+'<br>
 cat output/*
 </tt>
 <p>This will display counts for each match of the <a
@@ -217,7 +217,7 @@ command, run on the master node:</p>
 examine it:</p>
 
 <tt>
-bin/hadoop jar hadoop-*-examples.jar grep input output 'dfs[a-z.]+'<br>
+bin/hadoop jar hadoop-examples-*.jar grep input output 'dfs[a-z.]+'<br>
 bin/hadoop fs -get output output
 cat output/*
 </tt>

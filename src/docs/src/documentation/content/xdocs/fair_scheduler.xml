@@ -93,7 +93,7 @@
       <p>
         To run the fair scheduler in your Hadoop installation, you need to put
         it on the CLASSPATH. The easiest way is to copy the 
-        <em>hadoop-*-fairscheduler.jar</em> from
+        <em>hadoop-fairscheduler-*.jar</em> from
         <em>HADOOP_HOME/contrib/fairscheduler</em> to <em>HADOOP_HOME/lib</em>.
         Alternatively you can modify <em>HADOOP_CLASSPATH</em> to include this jar, in
         <em>HADOOP_CONF_DIR/hadoop-env.sh</em>
@@ -101,7 +101,7 @@
       <p>
         In order to compile fair scheduler, from sources execute <em> ant 
         package</em> in source folder and copy the 
-        <em>build/contrib/fair-scheduler/hadoop-*-fairscheduler.jar</em> 
+        <em>build/contrib/fair-scheduler/hadoop-fairscheduler-*.jar</em> 
         to <em>HADOOP_HOME/lib</em>
       </p>
       <p>

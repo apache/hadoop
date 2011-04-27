@@ -34,7 +34,7 @@ import org.apache.hadoop.mapred.lib.aggregate.ValueAggregatorJob;
  * text input files, breaks each line into words and counts them. The output is
  * a locally sorted list of words and the count of how often they occurred.
  * 
- * To run: bin/hadoop jar hadoop-*-examples.jar aggregatewordcount <i>in-dir</i>
+ * To run: bin/hadoop jar hadoop-examples-*.jar aggregatewordcount <i>in-dir</i>
  * <i>out-dir</i> <i>numOfReducers</i> textinputformat
  * 
  */
