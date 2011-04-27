@@ -4,6 +4,8 @@ Release 0.20.204.0 - unreleased
 
   BUG FIXES
 
+    MAPREDUCE-2316. Updated CapacityScheduler documentation. (acmurthy) 
+
     MAPREDUCE-2447. Fix Child.java to set Task.jvmContext sooner to avoid
     corner cases in error handling. (Siddharth Seth via acmurthy) 
 
