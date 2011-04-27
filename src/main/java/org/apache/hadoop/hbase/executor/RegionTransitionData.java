@@ -23,6 +23,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
@@ -42,7 +43,7 @@ public class RegionTransitionData implements Writable {
   private byte [] regionName;
 
   /** Server event originated from.  Optional. */
-  private String serverName;
+  private ServerName origin;
 
   /** Time the event was created.  Required but automatically set. */
   private long stamp;
@@ -89,11 +90,11 @@ public class RegionTransitionData implements Writable {
    *
    * @param eventType type of event
    * @param regionName name of region as per <code>HRegionInfo#getRegionName()</code>
-   * @param serverName name of server setting data
+   * @param origin Originating {@link ServerName}
    */
   public RegionTransitionData(EventType eventType, byte [] regionName,
-      String serverName) {
-    this(eventType, regionName, serverName, null);
+      final ServerName origin) {
+    this(eventType, regionName, origin, null);
   }
 
   /**
@@ -107,16 +108,16 @@ public class RegionTransitionData implements Writable {
    *
    * @param eventType type of event
    * @param regionName name of region as per <code>HRegionInfo#getRegionName()</code>
-   * @param serverName name of server setting data
+   * @param origin Originating {@link ServerName}
    * @param payload Payload examples include the daughters involved in a
    * {@link EventType#RS_ZK_REGION_SPLIT}. Can be null
    */
   public RegionTransitionData(EventType eventType, byte [] regionName,
-      String serverName, final byte [] payload) {
+      final ServerName serverName, final byte [] payload) {
     this.eventType = eventType;
     this.stamp = System.currentTimeMillis();
     this.regionName = regionName;
-    this.serverName = serverName;
+    this.origin = serverName;
     this.payload = payload;
   }
 
@@ -155,8 +156,8 @@ public class RegionTransitionData implements Writable {
    *
    * @return server name of originating regionserver, or null if from master
    */
-  public String getServerName() {
-    return serverName;
+  public ServerName getOrigin() {
+    return origin;
   }
 
   /**
@@ -185,10 +186,8 @@ public class RegionTransitionData implements Writable {
     regionName = Bytes.readByteArray(in);
     // remaining fields are optional so prefixed with boolean
     // the name of the regionserver sending the data
-    if(in.readBoolean()) {
-      serverName = in.readUTF();
-    } else {
-      serverName = null;
+    if (in.readBoolean()) {
+      this.origin = new ServerName(in.readUTF());
     }
     if (in.readBoolean()) {
       this.payload = Bytes.readByteArray(in);
@@ -201,9 +200,9 @@ public class RegionTransitionData implements Writable {
     out.writeLong(System.currentTimeMillis());
     Bytes.writeByteArray(out, regionName);
     // remaining fields are optional so prefixed with boolean
-    out.writeBoolean(serverName != null);
-    if(serverName != null) {
-      out.writeUTF(serverName);
+    out.writeBoolean(this.origin != null);
+    if(this.origin != null) {
+      out.writeUTF(this.origin.toString());
     }
     out.writeBoolean(this.payload != null);
     if (this.payload != null) {
@@ -244,7 +243,7 @@ public class RegionTransitionData implements Writable {
 
   @Override
   public String toString() {
-    return "region=" + Bytes.toString(regionName) + ", server=" + serverName +
+    return "region=" + Bytes.toString(regionName) + ", origin=" + this.origin +
       ", state=" + eventType;
   }
 }

@@ -44,11 +44,7 @@ public interface Server extends Abortable, Stoppable {
   public CatalogTracker getCatalogTracker();
 
   /**
-   * Gets the unique server name for this server.
-   * If a RegionServer, it returns a concatenation of hostname, port and
-   * startcode formatted as <code>&lt;hostname> ',' &lt;port> ',' &lt;startcode></code>.
-   * If the master, it returns <code>&lt;hostname> ':' &lt;port>'.
-   * @return unique server name
+   * @return The unique server name for this server.
    */
-  public String getServerName();
+  public ServerName getServerName();
 }

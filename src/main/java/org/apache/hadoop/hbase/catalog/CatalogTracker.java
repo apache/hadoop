@@ -30,9 +30,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -63,12 +63,11 @@ public class CatalogTracker {
   private final MetaNodeTracker metaNodeTracker;
   private final AtomicBoolean metaAvailable = new AtomicBoolean(false);
   /**
-   * Do not clear this address once set.  Let it be cleared by
-   * {@link #setMetaLocation(HServerAddress)} only.  Its needed when we do
+   * Do not clear this address once set.  Its needed when we do
    * server shutdown processing -- we need to know who had .META. last.  If you
    * want to know if the address is good, rely on {@link #metaAvailable} value.
    */
-  private HServerAddress metaLocation;
+  private ServerName metaLocation;
   private final int defaultTimeout;
   private boolean stopped = false;
 
@@ -155,17 +154,18 @@ public class CatalogTracker {
   /**
    * Gets the current location for <code>-ROOT-</code> or null if location is
    * not currently available.
-   * @return location of root, null if not available
+   * @return server name
    * @throws InterruptedException 
    */
-  public HServerAddress getRootLocation() throws InterruptedException {
+  public ServerName getRootLocation() throws InterruptedException {
     return this.rootRegionTracker.getRootRegionLocation();
   }
 
   /**
-   * @return Location of meta or null if not yet available.
+   * @return Location of server hosting meta region formatted as per
+   * {@link ServerName}, or null if none available
    */
-  public HServerAddress getMetaLocation() {
+  public ServerName getMetaLocation() {
     return this.metaLocation;
   }
 
@@ -184,18 +184,19 @@ public class CatalogTracker {
    * for up to the specified timeout if not immediately available.  Returns null
    * if the timeout elapses before root is available.
    * @param timeout maximum time to wait for root availability, in milliseconds
-   * @return location of root
+   * @return Location of server hosting root region,
+   * or null if none available
    * @throws InterruptedException if interrupted while waiting
    * @throws NotAllMetaRegionsOnlineException if root not available before
    *                                          timeout
    */
-  HServerAddress waitForRoot(final long timeout)
+  ServerName waitForRoot(final long timeout)
   throws InterruptedException, NotAllMetaRegionsOnlineException {
-    HServerAddress address = rootRegionTracker.waitRootRegionLocation(timeout);
-    if (address == null) {
+    ServerName sn = rootRegionTracker.waitRootRegionLocation(timeout);
+    if (sn == null) {
       throw new NotAllMetaRegionsOnlineException("Timed out; " + timeout + "ms");
     }
-    return address;
+    return sn;
   }
 
   /**
@@ -238,11 +239,11 @@ public class CatalogTracker {
    */
   private HRegionInterface getRootServerConnection()
   throws IOException, InterruptedException {
-    HServerAddress address = this.rootRegionTracker.getRootRegionLocation();
-    if (address == null) {
+    ServerName sn = this.rootRegionTracker.getRootRegionLocation();
+    if (sn == null) {
       return null;
     }
-    return getCachedConnection(address);
+    return getCachedConnection(sn);
   }
 
   /**
@@ -278,7 +279,7 @@ public class CatalogTracker {
       if (rootConnection == null) {
         return null;
       }
-      HServerAddress newLocation = MetaReader.readMetaLocation(rootConnection);
+      ServerName newLocation = MetaReader.readMetaLocation(rootConnection);
       if (newLocation == null) {
         return null;
       }
@@ -317,7 +318,7 @@ public class CatalogTracker {
    * @throws NotAllMetaRegionsOnlineException if meta not available before
    *                                          timeout
    */
-  public HServerAddress waitForMeta(long timeout)
+  public ServerName waitForMeta(long timeout)
   throws InterruptedException, IOException, NotAllMetaRegionsOnlineException {
     long stop = System.currentTimeMillis() + timeout;
     synchronized (metaAvailable) {
@@ -372,18 +373,18 @@ public class CatalogTracker {
     this.metaAvailable.set(false);
   }
 
-  private void setMetaLocation(HServerAddress metaLocation) {
+  private void setMetaLocation(final ServerName metaLocation) {
     metaAvailable.set(true);
     this.metaLocation = metaLocation;
     // no synchronization because these are private and already under lock
-    metaAvailable.notifyAll();
+    this.metaAvailable.notifyAll();
   }
 
-  private HRegionInterface getCachedConnection(HServerAddress address)
+  private HRegionInterface getCachedConnection(ServerName sn)
   throws IOException {
     HRegionInterface protocol = null;
     try {
-      protocol = connection.getHRegionConnection(address, false);
+      protocol = connection.getHRegionConnection(sn.getHostname(), sn.getPort());
     } catch (RetriesExhaustedException e) {
       if (e.getCause() != null && e.getCause() instanceof ConnectException) {
         // Catch this; presume it means the cached connection has gone bad.
@@ -392,10 +393,10 @@ public class CatalogTracker {
       }
     } catch (SocketTimeoutException e) {
       // Return 'protocol' == null.
-      LOG.debug("Timed out connecting to " + address);
+      LOG.debug("Timed out connecting to " + sn);
     } catch (SocketException e) {
       // Return 'protocol' == null.
-      LOG.debug("Exception connecting to " + address);
+      LOG.debug("Exception connecting to " + sn);
     } catch (IOException ioe) {
       Throwable cause = ioe.getCause();
       if (cause != null && cause instanceof EOFException) {
@@ -412,7 +413,7 @@ public class CatalogTracker {
   }
 
   private boolean verifyRegionLocation(HRegionInterface metaServer,
-      final HServerAddress address,
+      final ServerName address,
       byte [] regionName)
   throws IOException {
     if (metaServer == null) {
@@ -469,7 +470,8 @@ public class CatalogTracker {
       throw e;
     }
     return (connection == null)? false:
-      verifyRegionLocation(connection,this.rootRegionTracker.getRootRegionLocation(),
+      verifyRegionLocation(connection,
+        this.rootRegionTracker.getRootRegionLocation(),
         HRegionInfo.ROOT_REGIONINFO.getRegionName());
   }
 

@@ -23,8 +23,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -48,13 +49,17 @@ class ActiveMasterManager extends ZooKeeperListener {
 
   final AtomicBoolean clusterHasActiveMaster = new AtomicBoolean(false);
 
-  private final HServerAddress address;
+  private final ServerName sn;
   private final Server master;
 
-  ActiveMasterManager(ZooKeeperWatcher watcher, HServerAddress address,
-      Server master) {
+  /**
+   * @param watcher
+   * @param sn ServerName
+   * @param master In an instance of a Master.
+   */
+  ActiveMasterManager(ZooKeeperWatcher watcher, ServerName sn, Server master) {
     super(watcher);
-    this.address = address;
+    this.sn = sn;
     this.master = master;
   }
 
@@ -122,11 +127,11 @@ class ActiveMasterManager extends ZooKeeperListener {
     boolean cleanSetOfActiveMaster = true;
     // Try to become the active master, watch if there is another master
     try {
-      if (ZKUtil.setAddressAndWatch(this.watcher,
-          this.watcher.masterAddressZNode, this.address)) {
+      if (ZKUtil.createEphemeralNodeAndWatch(this.watcher,
+          this.watcher.masterAddressZNode, Bytes.toBytes(this.sn.toString()))) {
         // We are the master, return
         this.clusterHasActiveMaster.set(true);
-        LOG.info("Master=" + this.address);
+        LOG.info("Master=" + this.sn);
         return cleanSetOfActiveMaster;
       }
       cleanSetOfActiveMaster = false;
@@ -134,9 +139,10 @@ class ActiveMasterManager extends ZooKeeperListener {
       // There is another active master running elsewhere or this is a restart
       // and the master ephemeral node has not expired yet.
       this.clusterHasActiveMaster.set(true);
-      HServerAddress currentMaster =
-        ZKUtil.getDataAsAddress(this.watcher, this.watcher.masterAddressZNode);
-      if (currentMaster != null && currentMaster.equals(this.address)) {
+      byte [] bytes =
+        ZKUtil.getDataAndWatch(this.watcher, this.watcher.masterAddressZNode);
+      ServerName currentMaster = new ServerName(Bytes.toString(bytes));
+      if (currentMaster != null && currentMaster.equals(this.sn)) {
         LOG.info("Current master has this master's address, " + currentMaster +
           "; master was restarted?  Waiting on znode to expire...");
         // Hurry along the expiration of the znode.
@@ -177,11 +183,11 @@ class ActiveMasterManager extends ZooKeeperListener {
   public void stop() {
     try {
       // If our address is in ZK, delete it on our way out
-      HServerAddress zkAddress =
-        ZKUtil.getDataAsAddress(watcher, watcher.masterAddressZNode);
+      byte [] bytes =
+        ZKUtil.getDataAndWatch(watcher, watcher.masterAddressZNode);
       // TODO: redo this to make it atomic (only added for tests)
-      if(zkAddress != null &&
-          zkAddress.equals(address)) {
+      ServerName master = new ServerName(Bytes.toString(bytes));
+      if(master != null &&  master.equals(this.sn)) {
         ZKUtil.deleteNode(watcher, watcher.masterAddressZNode);
       }
     } catch (KeeperException e) {

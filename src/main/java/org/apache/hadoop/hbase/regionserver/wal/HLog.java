@@ -40,7 +40,6 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
@@ -57,8 +56,8 @@ import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -145,9 +144,6 @@ public class HLog implements Syncable {
   private int initialReplication;    // initial replication factor of SequenceFile.writer
   private Method getNumCurrentReplicas; // refers to DFSOutputStream.getNumCurrentReplicas
   final static Object [] NO_ARGS = new Object []{};
-
-  // used to indirectly tell syncFs to force the sync
-  private boolean forceSync = false;
 
   public interface Reader {
     void init(FileSystem fs, Path path, Configuration c) throws IOException;
@@ -1279,36 +1275,10 @@ public class HLog implements Syncable {
   /**
    * Construct the HLog directory name
    *
-   * @param info HServerInfo for server
+   * @param serverName Server name formatted as described in {@link ServerName}
    * @return the HLog directory name
    */
-  public static String getHLogDirectoryName(HServerInfo info) {
-    return getHLogDirectoryName(info.getServerName());
-  }
-
-  /**
-   * Construct the HLog directory name
-   *
-   * @param serverAddress
-   * @param startCode
-   * @return the HLog directory name
-   */
-  public static String getHLogDirectoryName(String serverAddress,
-      long startCode) {
-    if (serverAddress == null || serverAddress.length() == 0) {
-      return null;
-    }
-    return getHLogDirectoryName(
-        HServerInfo.getServerName(serverAddress, startCode));
-  }
-
-  /**
-   * Construct the HLog directory name
-   *
-   * @param serverName
-   * @return the HLog directory name
-   */
-  public static String getHLogDirectoryName(String serverName) {
+  public static String getHLogDirectoryName(final String serverName) {
     StringBuilder dirName = new StringBuilder(HConstants.HREGION_LOGDIR_NAME);
     dirName.append("/");
     dirName.append(serverName);

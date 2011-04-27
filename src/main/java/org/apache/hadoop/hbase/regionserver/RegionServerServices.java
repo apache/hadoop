@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.ipc.HBaseRpcMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -51,12 +50,6 @@ public interface RegionServerServices extends OnlineRegions {
    */
   public FlushRequester getFlushRequester();
 
-  /**
-   * Return data structure that has Server address and startcode.
-   * @return The HServerInfo for this RegionServer.
-   */
-  public HServerInfo getServerInfo();
-  
   /**
    * @return the RegionServerAccounting for this Region Server
    */

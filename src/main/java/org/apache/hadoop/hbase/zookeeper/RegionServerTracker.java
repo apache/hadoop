@@ -19,14 +19,18 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.NavigableSet;
+import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil.NodeAndData;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -41,7 +45,7 @@ import org.apache.zookeeper.KeeperException;
  */
 public class RegionServerTracker extends ZooKeeperListener {
   private static final Log LOG = LogFactory.getLog(RegionServerTracker.class);
-
+  private NavigableSet<ServerName> regionServers = new TreeSet<ServerName>();
   private ServerManager serverManager;
   private Abortable abortable;
 
@@ -58,32 +62,56 @@ public class RegionServerTracker extends ZooKeeperListener {
    * <p>All RSs will be tracked after this method is called.
    *
    * @throws KeeperException
+   * @throws IOException
    */
-  public void start() throws KeeperException {
+  public void start() throws KeeperException, IOException {
     watcher.registerListener(this);
-    ZKUtil.watchAndGetNewChildren(watcher, watcher.rsZNode);
+    List<NodeAndData> servers =
+      ZKUtil.watchAndGetNewChildren(watcher, watcher.rsZNode);
+    add(servers);
+  }
+
+  private void add(final List<NodeAndData> servers) throws IOException {
+    synchronized(this.regionServers) {
+      this.regionServers.clear();
+      for (NodeAndData n: servers) {
+        ServerName sn = new ServerName(ZKUtil.getNodeName(n.getNode()));
+        this.regionServers.add(sn);
+      }
+    }
+  }
+
+  private void remove(final ServerName sn) {
+    synchronized(this.regionServers) {
+      this.regionServers.remove(sn);
+    }
   }
 
   @Override
   public void nodeDeleted(String path) {
-    if(path.startsWith(watcher.rsZNode)) {
+    if (path.startsWith(watcher.rsZNode)) {
       String serverName = ZKUtil.getNodeName(path);
       LOG.info("RegionServer ephemeral node deleted, processing expiration [" +
-          serverName + "]");
-      HServerInfo hsi = serverManager.getServerInfo(serverName);
-      if(hsi == null) {
-        LOG.info("No HServerInfo found for " + serverName);
+        serverName + "]");
+      ServerName sn = new ServerName(serverName);
+      if (!serverManager.isServerOnline(sn)) {
+        LOG.info(serverName.toString() + " is not online");
         return;
       }
-      serverManager.expireServer(hsi);
+      remove(sn);
+      this.serverManager.expireServer(sn);
     }
   }
 
   @Override
   public void nodeChildrenChanged(String path) {
-    if(path.equals(watcher.rsZNode)) {
+    if (path.equals(watcher.rsZNode)) {
       try {
-        ZKUtil.watchAndGetNewChildren(watcher, watcher.rsZNode);
+        List<NodeAndData> servers =
+          ZKUtil.watchAndGetNewChildren(watcher, watcher.rsZNode);
+        add(servers);
+      } catch (IOException e) {
+        abortable.abort("Unexpected zk exception getting RS nodes", e);
       } catch (KeeperException e) {
         abortable.abort("Unexpected zk exception getting RS nodes", e);
       }
@@ -92,10 +120,12 @@ public class RegionServerTracker extends ZooKeeperListener {
 
   /**
    * Gets the online servers.
-   * @return list of online servers from zk
+   * @return list of online servers
    * @throws KeeperException
    */
-  public List<HServerAddress> getOnlineServers() throws KeeperException {
-    return ZKUtil.listChildrenAndGetAsAddresses(watcher, watcher.rsZNode);
+  public List<ServerName> getOnlineServers() {
+    synchronized (this.regionServers) {
+      return new ArrayList<ServerName>(this.regionServers);
+    }
   }
 }

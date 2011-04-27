@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -47,13 +48,13 @@ public class HBaseFsckRepair {
    * @throws InterruptedException
    */
   public static void fixDupeAssignment(Configuration conf, HRegionInfo region,
-      List<HServerAddress> servers)
+      List<ServerName> servers)
   throws IOException, KeeperException, InterruptedException {
 
     HRegionInfo actualRegion = new HRegionInfo(region);
 
     // Close region on the servers silently
-    for(HServerAddress server : servers) {
+    for(ServerName server : servers) {
       closeRegionSilentlyAndWait(conf, server, actualRegion);
     }
 
@@ -82,14 +83,14 @@ public class HBaseFsckRepair {
   throws ZooKeeperConnectionException, KeeperException, IOException {
     ZKAssign.createOrForceNodeOffline(
         HConnectionManager.getConnection(conf).getZooKeeperWatcher(),
-        region, HConstants.HBCK_CODE_NAME);
+        region, HConstants.HBCK_CODE_SERVERNAME);
   }
 
   private static void closeRegionSilentlyAndWait(Configuration conf,
-      HServerAddress server, HRegionInfo region)
+      ServerName server, HRegionInfo region)
   throws IOException, InterruptedException {
     HRegionInterface rs =
-      HConnectionManager.getConnection(conf).getHRegionConnection(server);
+      HConnectionManager.getConnection(conf).getHRegionConnection(new HServerAddress(server.getHostname(), server.getPort()));
     rs.closeRegion(region, false);
     long timeout = conf.getLong("hbase.hbck.close.timeout", 120000);
     long expiration = timeout + System.currentTimeMillis();

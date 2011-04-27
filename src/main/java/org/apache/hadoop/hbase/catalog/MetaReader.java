@@ -30,11 +30,10 @@ import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -125,10 +124,11 @@ public class MetaReader {
    * to META.  If the region does not have an assignment it will have a null
    * value in the map.
    *
-   * @return map of regions to their currently assigned server
+   * @return map of regions to their currently assigned server where server is
+   * a String of &lt;host> ':' &lt;port>
    * @throws IOException
    */
-  public static Map<HRegionInfo,HServerAddress> fullScan(
+  public static Map<HRegionInfo, ServerName> fullScan(
       CatalogTracker catalogTracker)
   throws IOException {
     return fullScan(catalogTracker, new TreeSet<String>());
@@ -147,7 +147,7 @@ public class MetaReader {
    * @return map of regions to their currently assigned server
    * @throws IOException
    */
-  public static Map<HRegionInfo,HServerAddress> fullScan(
+  public static Map<HRegionInfo, ServerName> fullScan(
       CatalogTracker catalogTracker, final Set<String> disabledTables)
   throws IOException {
     return fullScan(catalogTracker, disabledTables, false);
@@ -168,17 +168,17 @@ public class MetaReader {
    * @return map of regions to their currently assigned server
    * @throws IOException
    */
-  public static Map<HRegionInfo,HServerAddress> fullScan(
+  public static Map<HRegionInfo, ServerName> fullScan(
       CatalogTracker catalogTracker, final Set<String> disabledTables,
       final boolean excludeOfflinedSplitParents)
   throws IOException {
-    final Map<HRegionInfo,HServerAddress> regions =
-      new TreeMap<HRegionInfo,HServerAddress>();
+    final Map<HRegionInfo, ServerName> regions =
+      new TreeMap<HRegionInfo, ServerName>();
     Visitor v = new Visitor() {
       @Override
       public boolean visit(Result r) throws IOException {
         if (r ==  null || r.isEmpty()) return true;
-        Pair<HRegionInfo,HServerAddress> region = metaRowToRegionPair(r);
+        Pair<HRegionInfo, ServerName> region = metaRowToRegionPair(r);
         if (region == null) return true;
         HRegionInfo hri = region.getFirst();
         if (disabledTables.contains(
@@ -199,8 +199,6 @@ public class MetaReader {
    * Returns a map of every region to it's currently assigned server, according
    * to META.  If the region does not have an assignment it will have a null
    * value in the map.
-   * <p>
-   * Returns HServerInfo which includes server startcode.
    *
    * @return map of regions to their currently assigned server
    * @throws IOException
@@ -273,10 +271,10 @@ public class MetaReader {
   /**
    * Reads the location of META from ROOT.
    * @param metaServer connection to server hosting ROOT
-   * @return location of META in ROOT, null if not available
+   * @return location of META in ROOT where location, or null if not available
    * @throws IOException
    */
-  public static HServerAddress readMetaLocation(HRegionInterface metaServer)
+  public static ServerName readMetaLocation(HRegionInterface metaServer)
   throws IOException {
     return readLocation(metaServer, CatalogTracker.ROOT_REGION,
         CatalogTracker.META_REGION);
@@ -286,10 +284,10 @@ public class MetaReader {
    * Reads the location of the specified region from META.
    * @param catalogTracker
    * @param regionName region to read location of
-   * @return location of region in META, null if not available
+   * @return location of META in ROOT where location is, or null if not available
    * @throws IOException
    */
-  public static HServerAddress readRegionLocation(CatalogTracker catalogTracker,
+  public static ServerName readRegionLocation(CatalogTracker catalogTracker,
       byte [] regionName)
   throws IOException {
     if (isMetaRegion(regionName)) throw new IllegalArgumentException("See readMetaLocation");
@@ -297,14 +295,17 @@ public class MetaReader {
         CatalogTracker.META_REGION, regionName);
   }
 
-  private static HServerAddress readLocation(HRegionInterface metaServer,
+  private static ServerName readLocation(HRegionInterface metaServer,
       byte [] catalogRegionName, byte [] regionName)
   throws IOException {
     Result r = null;
     try {
       r = metaServer.get(catalogRegionName,
-        new Get(regionName).addColumn(HConstants.CATALOG_FAMILY,
-        HConstants.SERVER_QUALIFIER));
+        new Get(regionName).
+        addColumn(HConstants.CATALOG_FAMILY,
+          HConstants.SERVER_QUALIFIER).
+        addColumn(HConstants.CATALOG_FAMILY,
+          HConstants.STARTCODE_QUALIFIER));
     } catch (java.net.SocketTimeoutException e) {
       // Treat this exception + message as unavailable catalog table. Catch it
       // and fall through to return a null
@@ -334,78 +335,57 @@ public class MetaReader {
     if (r == null || r.isEmpty()) {
       return null;
     }
-    byte [] value = r.getValue(HConstants.CATALOG_FAMILY,
-      HConstants.SERVER_QUALIFIER);
-    return new HServerAddress(Bytes.toString(value));
+    return getServerNameFromResult(r);
   }
 
   /**
    * Gets the region info and assignment for the specified region from META.
    * @param catalogTracker
    * @param regionName
-   * @return region info and assignment from META, null if not available
+   * @return location of META in ROOT where location is
+   * a String of &lt;host> ':' &lt;port>, or null if not available
    * @throws IOException
    */
-  public static Pair<HRegionInfo, HServerAddress> getRegion(
+  public static Pair<HRegionInfo, ServerName> getRegion(
       CatalogTracker catalogTracker, byte [] regionName)
   throws IOException {
     Get get = new Get(regionName);
     get.addFamily(HConstants.CATALOG_FAMILY);
     byte [] meta = getCatalogRegionNameForRegion(regionName);
     Result r = catalogTracker.waitForMetaServerConnectionDefault().get(meta, get);
-    if(r == null || r.isEmpty()) {
-      return null;
-    }
-    return metaRowToRegionPair(r);
+    return (r == null || r.isEmpty())? null: metaRowToRegionPair(r);
   }
 
   /**
    * @param data A .META. table row.
-   * @return A pair of the regioninfo and the server address from <code>data</code>
-   * or null for server address if no address set in .META. or null for a result
-   * if no HRegionInfo found.
-   * @throws IOException
-   */
-  public static Pair<HRegionInfo, HServerAddress> metaRowToRegionPair(
-      Result data) throws IOException {
-    byte [] bytes =
-      data.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    if (bytes == null) return null;
-    HRegionInfo info = Writables.getHRegionInfo(bytes);
-    final byte[] value = data.getValue(HConstants.CATALOG_FAMILY,
-      HConstants.SERVER_QUALIFIER);
-    if (value != null && value.length > 0) {
-      HServerAddress server = new HServerAddress(Bytes.toString(value));
-      return new Pair<HRegionInfo,HServerAddress>(info, server);
-    } else {
-      return new Pair<HRegionInfo, HServerAddress>(info, null);
-    }
-  }
-
-  /**
-   * @param data A .META. table row.
-   * @return A pair of the regioninfo and the server info from <code>data</code>
+   * @return A pair of the regioninfo and the ServerName
    * (or null for server address if no address set in .META.).
    * @throws IOException
    */
-  public static Pair<HRegionInfo, HServerInfo> metaRowToRegionPairWithInfo(
-      Result data) throws IOException {
+  public static Pair<HRegionInfo, ServerName> metaRowToRegionPair(Result data)
+  throws IOException {
     byte [] bytes = data.getValue(HConstants.CATALOG_FAMILY,
       HConstants.REGIONINFO_QUALIFIER);
     if (bytes == null) return null;
     HRegionInfo info = Writables.getHRegionInfo(bytes);
-    final byte[] value = data.getValue(HConstants.CATALOG_FAMILY,
+    ServerName sn = getServerNameFromResult(data);
+    // sn can be null in case where no server inof.
+    return new Pair<HRegionInfo, ServerName>(info, sn);
+  }
+
+  /**
+   * @param data Result to interrogate.
+   * @return A ServerName instance or null if necessary fields not found or empty.
+   */
+  private static ServerName getServerNameFromResult(final Result data) {
+    byte[] value = data.getValue(HConstants.CATALOG_FAMILY,
       HConstants.SERVER_QUALIFIER);
-    if (value != null && value.length > 0) {
-      final long startCode = Bytes.toLong(data.getValue(HConstants.CATALOG_FAMILY,
-          HConstants.STARTCODE_QUALIFIER));
-      HServerAddress server = new HServerAddress(Bytes.toString(value));
-      HServerInfo hsi = new HServerInfo(server, startCode, 0,
-          server.getHostname());
-      return new Pair<HRegionInfo,HServerInfo>(info, hsi);
-    } else {
-      return new Pair<HRegionInfo, HServerInfo>(info, null);
-    }
+    if (value == null || value.length == 0) return null;
+    String hostAndPort = Bytes.toString(value);
+    value = data.getValue(HConstants.CATALOG_FAMILY,
+      HConstants.STARTCODE_QUALIFIER);
+    if (value == null || value.length == 0) return null;
+    return new ServerName(hostAndPort, Bytes.toLong(value));
   }
 
   /**
@@ -528,26 +508,27 @@ public class MetaReader {
   /**
    * @param catalogTracker
    * @param tableName
-   * @return Return list of regioninfos and server addresses.
+   * @return Return list of regioninfos and server.
    * @throws IOException
    * @throws InterruptedException
    */
-  public static List<Pair<HRegionInfo, HServerAddress>>
+  public static List<Pair<HRegionInfo, ServerName>>
   getTableRegionsAndLocations(CatalogTracker catalogTracker, String tableName)
   throws IOException, InterruptedException {
     byte [] tableNameBytes = Bytes.toBytes(tableName);
     if (Bytes.equals(tableNameBytes, HConstants.ROOT_TABLE_NAME)) {
       // If root, do a bit of special handling.
-      HServerAddress hsa = catalogTracker.getRootLocation();
-      List<Pair<HRegionInfo, HServerAddress>> list =
-        new ArrayList<Pair<HRegionInfo, HServerAddress>>();
-      list.add(new Pair<HRegionInfo, HServerAddress>(HRegionInfo.ROOT_REGIONINFO, hsa));
+      ServerName serverName = catalogTracker.getRootLocation();
+      List<Pair<HRegionInfo, ServerName>> list =
+        new ArrayList<Pair<HRegionInfo, ServerName>>();
+      list.add(new Pair<HRegionInfo, ServerName>(HRegionInfo.ROOT_REGIONINFO,
+        serverName));
       return list;
     }
     HRegionInterface metaServer =
       getCatalogRegionInterface(catalogTracker, tableNameBytes);
-    List<Pair<HRegionInfo, HServerAddress>> regions =
-      new ArrayList<Pair<HRegionInfo, HServerAddress>>();
+    List<Pair<HRegionInfo, ServerName>> regions =
+      new ArrayList<Pair<HRegionInfo, ServerName>>();
     Scan scan = getScanForTableName(tableNameBytes);
     scan.addFamily(HConstants.CATALOG_FAMILY);
     long scannerid =
@@ -556,7 +537,7 @@ public class MetaReader {
       Result data;
       while((data = metaServer.next(scannerid)) != null) {
         if (data != null && data.size() > 0) {
-          Pair<HRegionInfo, HServerAddress> region = metaRowToRegionPair(data);
+          Pair<HRegionInfo, ServerName> region = metaRowToRegionPair(data);
           if (region == null) continue;
           regions.add(region);
         }
@@ -575,7 +556,7 @@ public class MetaReader {
    * @throws IOException
    */
   public static NavigableMap<HRegionInfo, Result>
-  getServerUserRegions(CatalogTracker catalogTracker, final HServerInfo hsi)
+  getServerUserRegions(CatalogTracker catalogTracker, final ServerName serverName)
   throws IOException {
     HRegionInterface metaServer =
       catalogTracker.waitForMetaServerConnectionDefault();
@@ -588,10 +569,9 @@ public class MetaReader {
       Result result;
       while((result = metaServer.next(scannerid)) != null) {
         if (result != null && result.size() > 0) {
-          Pair<HRegionInfo, HServerInfo> pair =
-            metaRowToRegionPairWithInfo(result);
+          Pair<HRegionInfo, ServerName> pair = metaRowToRegionPair(result);
           if (pair == null) continue;
-          if (pair.getSecond() == null || !pair.getSecond().equals(hsi)) {
+          if (pair.getSecond() == null || !serverName.equals(pair.getSecond())) {
             continue;
           }
           hris.put(pair.getFirst(), result);

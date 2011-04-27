@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -202,7 +203,7 @@ public class ReplicationSource extends Thread
    */
   private void chooseSinks() throws KeeperException {
     this.currentPeers.clear();
-    List<HServerAddress> addresses =
+    List<ServerName> addresses =
         this.zkHelper.getSlavesAddresses(peerClusterId);
     Set<HServerAddress> setOfAddr = new HashSet<HServerAddress>();
     int nbPeers = (int) (Math.ceil(addresses.size() * ratio));
@@ -212,7 +213,8 @@ public class ReplicationSource extends Thread
       HServerAddress address;
       // Make sure we get one address that we don't already have
       do {
-        address = addresses.get(this.random.nextInt(addresses.size()));
+        ServerName sn = addresses.get(this.random.nextInt(addresses.size()));
+        address = new HServerAddress(sn.getHostname(), sn.getPort());
       } while (setOfAddr.contains(address));
       LOG.info("Choosing peer " + address);
       setOfAddr.add(address);

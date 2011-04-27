@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.ipc.RemoteException;
@@ -371,7 +373,7 @@ public class HBaseAdmin implements Abortable {
     }
     // Wait until all regions deleted
     HRegionInterface server =
-      connection.getHRegionConnection(firstMetaServer.getServerAddress());
+      connection.getHRegionConnection(firstMetaServer.getHostname(), firstMetaServer.getPort());
     for (int tries = 0; tries < (this.numRetries * this.retryLongerMultiplier); tries++) {
       long scannerId = -1L;
       try {
@@ -762,18 +764,15 @@ public class HBaseAdmin implements Abortable {
     CatalogTracker ct = getCatalogTracker();
     try {
       if (hostAndPort != null) {
-        HServerAddress hsa = new HServerAddress(hostAndPort);
-        Pair<HRegionInfo, HServerAddress> pair =
-          MetaReader.getRegion(ct, regionname);
+        Pair<HRegionInfo, ServerName> pair = MetaReader.getRegion(ct, regionname);
         if (pair == null || pair.getSecond() == null) {
           LOG.info("No server in .META. for " +
             Bytes.toString(regionname) + "; pair=" + pair);
         } else {
-          closeRegion(hsa, pair.getFirst());
+          closeRegion(pair.getSecond(), pair.getFirst());
         }
       } else {
-        Pair<HRegionInfo, HServerAddress> pair =
-          MetaReader.getRegion(ct, regionname);
+        Pair<HRegionInfo, ServerName> pair = MetaReader.getRegion(ct, regionname);
         if (pair == null || pair.getSecond() == null) {
           LOG.info("No server in .META. for " +
             Bytes.toString(regionname) + "; pair=" + pair);
@@ -786,9 +785,10 @@ public class HBaseAdmin implements Abortable {
     }
   }
 
-  private void closeRegion(final HServerAddress hsa, final HRegionInfo hri)
+  private void closeRegion(final ServerName sn, final HRegionInfo hri)
   throws IOException {
-    HRegionInterface rs = this.connection.getHRegionConnection(hsa);
+    HRegionInterface rs =
+      this.connection.getHRegionConnection(sn.getHostname(), sn.getPort());
     // Close the region without updating zk state.
     rs.closeRegion(hri, false);
   }
@@ -820,7 +820,7 @@ public class HBaseAdmin implements Abortable {
     CatalogTracker ct = getCatalogTracker();
     try {
       if (isRegionName) {
-        Pair<HRegionInfo, HServerAddress> pair =
+        Pair<HRegionInfo, ServerName> pair =
           MetaReader.getRegion(ct, tableNameOrRegionName);
         if (pair == null || pair.getSecond() == null) {
           LOG.info("No server in .META. for " +
@@ -829,10 +829,10 @@ public class HBaseAdmin implements Abortable {
           flush(pair.getSecond(), pair.getFirst());
         }
       } else {
-        List<Pair<HRegionInfo, HServerAddress>> pairs =
+        List<Pair<HRegionInfo, ServerName>> pairs =
           MetaReader.getTableRegionsAndLocations(ct,
               Bytes.toString(tableNameOrRegionName));
-        for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
+        for (Pair<HRegionInfo, ServerName> pair: pairs) {
           if (pair.getFirst().isOffline()) continue;
           if (pair.getSecond() == null) continue;
           try {
@@ -850,9 +850,10 @@ public class HBaseAdmin implements Abortable {
     }
   }
 
-  private void flush(final HServerAddress hsa, final HRegionInfo hri)
+  private void flush(final ServerName sn, final HRegionInfo hri)
   throws IOException {
-    HRegionInterface rs = this.connection.getHRegionConnection(hsa);
+    HRegionInterface rs =
+      this.connection.getHRegionConnection(sn.getHostname(), sn.getPort());
     rs.flushRegion(hri);
   }
 
@@ -922,7 +923,7 @@ public class HBaseAdmin implements Abortable {
     CatalogTracker ct = getCatalogTracker();
     try {
       if (isRegionName(tableNameOrRegionName)) {
-        Pair<HRegionInfo, HServerAddress> pair =
+        Pair<HRegionInfo, ServerName> pair =
           MetaReader.getRegion(ct, tableNameOrRegionName);
         if (pair == null || pair.getSecond() == null) {
           LOG.info("No server in .META. for " +
@@ -931,10 +932,10 @@ public class HBaseAdmin implements Abortable {
           compact(pair.getSecond(), pair.getFirst(), major);
         }
       } else {
-        List<Pair<HRegionInfo, HServerAddress>> pairs =
+        List<Pair<HRegionInfo, ServerName>> pairs =
           MetaReader.getTableRegionsAndLocations(ct,
               Bytes.toString(tableNameOrRegionName));
-        for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
+        for (Pair<HRegionInfo, ServerName> pair: pairs) {
           if (pair.getFirst().isOffline()) continue;
           if (pair.getSecond() == null) continue;
           try {
@@ -953,10 +954,11 @@ public class HBaseAdmin implements Abortable {
     }
   }
 
-  private void compact(final HServerAddress hsa, final HRegionInfo hri,
+  private void compact(final ServerName sn, final HRegionInfo hri,
       final boolean major)
   throws IOException {
-    HRegionInterface rs = this.connection.getHRegionConnection(hsa);
+    HRegionInterface rs =
+      this.connection.getHRegionConnection(sn.getHostname(), sn.getPort());
     rs.compactRegion(hri, major);
   }
 
@@ -969,7 +971,7 @@ public class HBaseAdmin implements Abortable {
    * @param destServerName The servername of the destination regionserver.  If
    * passed the empty byte array we'll assign to a random server.  A server name
    * is made of host, port and startcode.  Here is an example:
-   * <code> host187.example.com,60020,1289493121758</code>.
+   * <code> host187.example.com,60020,1289493121758</code>
    * @throws UnknownRegionException Thrown if we can't find a region named
    * <code>encodedRegionName</code>
    * @throws ZooKeeperConnectionException
@@ -1077,7 +1079,7 @@ public class HBaseAdmin implements Abortable {
     try {
       if (isRegionName(tableNameOrRegionName)) {
         // Its a possible region name.
-        Pair<HRegionInfo, HServerAddress> pair =
+        Pair<HRegionInfo, ServerName> pair =
           MetaReader.getRegion(ct, tableNameOrRegionName);
         if (pair == null || pair.getSecond() == null) {
           LOG.info("No server in .META. for " +
@@ -1086,10 +1088,10 @@ public class HBaseAdmin implements Abortable {
           split(pair.getSecond(), pair.getFirst(), splitPoint);
         }
       } else {
-        List<Pair<HRegionInfo, HServerAddress>> pairs =
+        List<Pair<HRegionInfo, ServerName>> pairs =
           MetaReader.getTableRegionsAndLocations(ct,
               Bytes.toString(tableNameOrRegionName));
-        for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
+        for (Pair<HRegionInfo, ServerName> pair: pairs) {
           // May not be a server for a particular row
           if (pair.getSecond() == null) continue;
           HRegionInfo r = pair.getFirst();
@@ -1106,9 +1108,10 @@ public class HBaseAdmin implements Abortable {
     }
   }
 
-  private void split(final HServerAddress hsa, final HRegionInfo hri,
+  private void split(final ServerName sn, final HRegionInfo hri,
       byte[] splitPoint) throws IOException {
-    HRegionInterface rs = this.connection.getHRegionConnection(hsa);
+    HRegionInterface rs =
+      this.connection.getHRegionConnection(sn.getHostname(), sn.getPort());
     rs.splitRegion(hri, splitPoint);
   }
 
@@ -1179,10 +1182,27 @@ public class HBaseAdmin implements Abortable {
   /**
    * Stop the designated regionserver.
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Use {@link #stopRegionServer(String)}
    */
   public synchronized void stopRegionServer(final HServerAddress hsa)
   throws IOException {
-    HRegionInterface rs = this.connection.getHRegionConnection(hsa);
+    HRegionInterface rs =
+      this.connection.getHRegionConnection(hsa);
+    rs.stop("Called by admin client " + this.connection.toString());
+  }
+
+  /**
+   * Stop the designated regionserver
+   * @param hostnamePort Hostname and port delimited by a <code>:</code> as in
+   * <code>example.org:1234</code>
+   * @throws IOException if a remote or network exception occurs
+   */
+  public synchronized void stopRegionServer(final String hostnamePort)
+  throws IOException {
+    String hostname = Addressing.parseHostname(hostnamePort);
+    int port = Addressing.parsePort(hostnamePort);
+    HRegionInterface rs =
+      this.connection.getHRegionConnection(hostname, port);
     rs.stop("Called by admin client " + this.connection.toString());
   }
 

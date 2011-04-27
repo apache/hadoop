@@ -287,7 +287,7 @@ public class MasterCoprocessorHost
     }
   }
 
-  void preMove(final HRegionInfo region, final HServerInfo srcServer, final HServerInfo destServer)
+  void preMove(final HRegionInfo region, final ServerName srcServer, final ServerName destServer)
       throws UnknownRegionException {
     ObserverContext<MasterCoprocessorEnvironment> ctx = null;
     for (MasterEnvironment env: coprocessors) {
@@ -302,7 +302,7 @@ public class MasterCoprocessorHost
     }
   }
 
-  void postMove(final HRegionInfo region, final HServerInfo srcServer, final HServerInfo destServer)
+  void postMove(final HRegionInfo region, final ServerName srcServer, final ServerName destServer)
       throws UnknownRegionException {
     ObserverContext<MasterCoprocessorEnvironment> ctx = null;
     for (MasterEnvironment env: coprocessors) {

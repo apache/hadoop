@@ -36,9 +36,9 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
@@ -85,7 +85,7 @@ public class TestMasterFailover {
     // verify only one is the active master and we have right number
     int numActive = 0;
     int activeIndex = -1;
-    String activeName = null;
+    ServerName activeName = null;
     for (int i = 0; i < masterThreads.size(); i++) {
       if (masterThreads.get(i).getMaster().isActiveMaster()) {
         numActive++;
@@ -278,8 +278,7 @@ public class TestMasterFailover {
 
     // Let's just assign everything to first RS
     HRegionServer hrs = cluster.getRegionServer(0);
-    String serverName = hrs.getServerName();
-    HServerInfo hsiAlive = hrs.getServerInfo();
+    ServerName serverName = hrs.getServerName();
 
     // we'll need some regions to already be assigned out properly on live RS
     List<HRegionInfo> enabledAndAssignedRegions = new ArrayList<HRegionInfo>();
@@ -292,12 +291,12 @@ public class TestMasterFailover {
     // now actually assign them
     for (HRegionInfo hri : enabledAndAssignedRegions) {
       master.assignmentManager.regionPlans.put(hri.getEncodedName(),
-          new RegionPlan(hri, null, hsiAlive));
+          new RegionPlan(hri, null, serverName));
       master.assignRegion(hri);
     }
     for (HRegionInfo hri : disabledAndAssignedRegions) {
       master.assignmentManager.regionPlans.put(hri.getEncodedName(),
-          new RegionPlan(hri, null, hsiAlive));
+          new RegionPlan(hri, null, serverName));
       master.assignRegion(hri);
     }
 
@@ -583,12 +582,10 @@ public class TestMasterFailover {
 
     // The first RS will stay online
     HRegionServer hrs = cluster.getRegionServer(0);
-    HServerInfo hsiAlive = hrs.getServerInfo();
 
     // The second RS is going to be hard-killed
     HRegionServer hrsDead = cluster.getRegionServer(1);
-    String deadServerName = hrsDead.getServerName();
-    HServerInfo hsiDead = hrsDead.getServerInfo();
+    ServerName deadServerName = hrsDead.getServerName();
 
     // we'll need some regions to already be assigned out properly on live RS
     List<HRegionInfo> enabledAndAssignedRegions = new ArrayList<HRegionInfo>();
@@ -601,12 +598,12 @@ public class TestMasterFailover {
     // now actually assign them
     for (HRegionInfo hri : enabledAndAssignedRegions) {
       master.assignmentManager.regionPlans.put(hri.getEncodedName(),
-          new RegionPlan(hri, null, hsiAlive));
+          new RegionPlan(hri, null, hrs.getServerName()));
       master.assignRegion(hri);
     }
     for (HRegionInfo hri : disabledAndAssignedRegions) {
       master.assignmentManager.regionPlans.put(hri.getEncodedName(),
-          new RegionPlan(hri, null, hsiAlive));
+          new RegionPlan(hri, null, hrs.getServerName()));
       master.assignRegion(hri);
     }
 
@@ -621,12 +618,12 @@ public class TestMasterFailover {
     // set region plan to server to be killed and trigger assign
     for (HRegionInfo hri : enabledAndOnDeadRegions) {
       master.assignmentManager.regionPlans.put(hri.getEncodedName(),
-          new RegionPlan(hri, null, hsiDead));
+          new RegionPlan(hri, null, deadServerName));
       master.assignRegion(hri);
     }
     for (HRegionInfo hri : disabledAndOnDeadRegions) {
       master.assignmentManager.regionPlans.put(hri.getEncodedName(),
-          new RegionPlan(hri, null, hsiDead));
+          new RegionPlan(hri, null, deadServerName));
       master.assignRegion(hri);
     }
 

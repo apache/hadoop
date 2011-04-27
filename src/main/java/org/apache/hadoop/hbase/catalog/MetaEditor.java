@@ -26,8 +26,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -87,18 +87,17 @@ public class MetaEditor {
   }
 
   public static void addDaughter(final CatalogTracker catalogTracker,
-      final HRegionInfo regionInfo, final HServerInfo serverInfo)
+      final HRegionInfo regionInfo, final ServerName sn)
   throws NotAllMetaRegionsOnlineException, IOException {
     HRegionInterface server = catalogTracker.waitForMetaServerConnectionDefault();
     byte [] catalogRegionName = CatalogTracker.META_REGION;
     Put put = new Put(regionInfo.getRegionName());
     addRegionInfo(put, regionInfo);
-    if (serverInfo != null) addLocation(put, serverInfo);
+    if (sn != null) addLocation(put, sn);
     server.put(catalogRegionName, put);
     LOG.info("Added daughter " + regionInfo.getRegionNameAsString() +
       " in region " + Bytes.toString(catalogRegionName) +
-      (serverInfo == null?
-        ", serverInfo=null": ", serverInfo=" + serverInfo.getServerName()));
+      (sn == null? ", serverName=null": ", serverName=" + sn.toString()));
   }
 
   /**
@@ -110,18 +109,18 @@ public class MetaEditor {
    *
    * @param catalogTracker catalog tracker
    * @param regionInfo region to update location of
-   * @param serverInfo server the region is located on
+   * @param sn Server name
    * @throws IOException
    * @throws ConnectException Usually because the regionserver carrying .META.
    * is down.
    * @throws NullPointerException Because no -ROOT- server connection
    */
   public static void updateMetaLocation(CatalogTracker catalogTracker,
-      HRegionInfo regionInfo, HServerInfo serverInfo)
+      HRegionInfo regionInfo, ServerName sn)
   throws IOException, ConnectException {
     HRegionInterface server = catalogTracker.waitForRootServerConnectionDefault();
     if (server == null) throw new IOException("No server for -ROOT-");
-    updateLocation(server, CatalogTracker.ROOT_REGION, regionInfo, serverInfo);
+    updateLocation(server, CatalogTracker.ROOT_REGION, regionInfo, sn);
   }
 
   /**
@@ -133,14 +132,14 @@ public class MetaEditor {
    *
    * @param catalogTracker catalog tracker
    * @param regionInfo region to update location of
-   * @param serverInfo server the region is located on
+   * @param sn Server name
    * @throws IOException
    */
   public static void updateRegionLocation(CatalogTracker catalogTracker,
-      HRegionInfo regionInfo, HServerInfo serverInfo)
+      HRegionInfo regionInfo, ServerName sn)
   throws IOException {
     updateLocation(catalogTracker.waitForMetaServerConnectionDefault(),
-        CatalogTracker.META_REGION, regionInfo, serverInfo);
+        CatalogTracker.META_REGION, regionInfo, sn);
   }
 
   /**
@@ -152,20 +151,19 @@ public class MetaEditor {
    * @param server connection to server hosting catalog region
    * @param catalogRegionName name of catalog region being updated
    * @param regionInfo region to update location of
-   * @param serverInfo server the region is located on
+   * @param sn Server name
    * @throws IOException In particular could throw {@link java.net.ConnectException}
    * if the server is down on other end.
    */
   private static void updateLocation(HRegionInterface server,
-      byte [] catalogRegionName, HRegionInfo regionInfo, HServerInfo serverInfo)
+      byte [] catalogRegionName, HRegionInfo regionInfo, ServerName sn)
   throws IOException {
     Put put = new Put(regionInfo.getRegionName());
-    addLocation(put, serverInfo);
+    addLocation(put, sn);
     server.put(catalogRegionName, put);
     LOG.info("Updated row " + regionInfo.getRegionNameAsString() +
       " in region " + Bytes.toString(catalogRegionName) + " with " +
-      "server=" + serverInfo.getHostnamePort() + ", " +
-      "startcode=" + serverInfo.getStartCode());
+      "serverName=" + sn.toString());
   }
 
   /**
@@ -228,11 +226,11 @@ public class MetaEditor {
     return p;
   }
 
-  private static Put addLocation(final Put p, final HServerInfo hsi) {
+  private static Put addLocation(final Put p, final ServerName sn) {
     p.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-      Bytes.toBytes(hsi.getHostnamePort()));
+      Bytes.toBytes(sn.getHostAndPort()));
     p.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
-      Bytes.toBytes(hsi.getStartCode()));
+      Bytes.toBytes(sn.getStartcode()));
     return p;
   }
 }

@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.catalog;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -53,11 +53,11 @@ public class RootLocationEditor {
    * Sets the location of <code>-ROOT-</code> in ZooKeeper to the
    * specified server address.
    * @param zookeeper zookeeper reference
-   * @param location server address hosting root
+   * @param location The server hosting <code>-ROOT-</code>
    * @throws KeeperException unexpected zookeeper exception
    */
   public static void setRootLocation(ZooKeeperWatcher zookeeper,
-      HServerAddress location)
+      final ServerName location)
   throws KeeperException {
     LOG.info("Setting ROOT region location in ZooKeeper as " + location);
     try {

@@ -292,8 +292,10 @@ public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortabl
 
   /**
    * Method used when a master is taking the place of another failed one.
-   * @return The HSI
+   * @return This servers {@link HServerInfo}; it has RegionServer POV on the
+   * hostname which may not agree w/ how the Master sees this server.
    * @throws IOException e
+   * @deprecated
    */
   public HServerInfo getHServerInfo() throws IOException;
 

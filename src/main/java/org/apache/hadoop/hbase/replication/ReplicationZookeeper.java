@@ -35,14 +35,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -137,7 +136,7 @@ public class ReplicationZookeeper {
     this.peerClusters = new HashMap<String, ReplicationPeer>();
     ZKUtil.createWithParents(this.zookeeper,
         ZKUtil.joinZNode(this.replicationZNode, this.replicationStateNodeName));
-    this.rsServerNameZnode = ZKUtil.joinZNode(rsZNode, server.getServerName());
+    this.rsServerNameZnode = ZKUtil.joinZNode(rsZNode, server.getServerName().toString());
     ZKUtil.createWithParents(this.zookeeper, this.rsServerNameZnode);
     connectExistingPeers();
   }
@@ -204,14 +203,14 @@ public class ReplicationZookeeper {
    * @param peerClusterId (byte) the cluster to interrogate
    * @return addresses of all region servers
    */
-  public List<HServerAddress> getSlavesAddresses(String peerClusterId)
+  public List<ServerName> getSlavesAddresses(String peerClusterId)
       throws KeeperException {
     if (this.peerClusters.size() == 0) {
-      return new ArrayList<HServerAddress>(0);
+      return new ArrayList<ServerName>(0);
     }
     ReplicationPeer peer = this.peerClusters.get(peerClusterId);
     if (peer == null) {
-      return new ArrayList<HServerAddress>(0);
+      return new ArrayList<ServerName>(0);
     }
     peer.setRegionServers(fetchSlavesAddresses(peer.getZkw()));
     return peer.getRegionServers();
@@ -222,14 +221,45 @@ public class ReplicationZookeeper {
    * @param zkw zk connection to use
    * @return list of region server addresses
    */
-  private List<HServerAddress> fetchSlavesAddresses(ZooKeeperWatcher zkw) {
-    List<HServerAddress> rss = null;
+  private List<ServerName> fetchSlavesAddresses(ZooKeeperWatcher zkw) {
+    List<ServerName> rss = null;
     try {
-      rss = ZKUtil.listChildrenAndGetAsAddresses(zkw, zkw.rsZNode);
+      rss = listChildrenAndGetAsServerNames(zkw, zkw.rsZNode);
     } catch (KeeperException e) {
       LOG.warn("Cannot get peer's region server addresses", e);
     }
     return rss;
+  }
+
+  /**
+   * Lists the children of the specified znode, retrieving the data of each
+   * child as a server address.
+   *
+   * Used to list the currently online regionservers and their addresses.
+   *
+   * Sets no watches at all, this method is best effort.
+   *
+   * Returns an empty list if the node has no children.  Returns null if the
+   * parent node itself does not exist.
+   *
+   * @param zkw zookeeper reference
+   * @param znode node to get children of as addresses
+   * @return list of data of children of specified znode, empty if no children,
+   *         null if parent does not exist
+   * @throws KeeperException if unexpected zookeeper exception
+   */
+  public static List<ServerName> listChildrenAndGetAsServerNames(
+      ZooKeeperWatcher zkw, String znode)
+  throws KeeperException {
+    List<String> children = ZKUtil.listChildrenNoWatch(zkw, znode);
+    if(children == null) {
+      return null;
+    }
+    List<ServerName> addresses = new ArrayList<ServerName>(children.size());
+    for (String child : children) {
+      addresses.add(new ServerName(child));
+    }
+    return addresses;
   }
 
   /**

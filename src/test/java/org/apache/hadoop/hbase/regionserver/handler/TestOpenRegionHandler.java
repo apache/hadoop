@@ -31,9 +31,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.ipc.HBaseRpcMetrics;
@@ -72,11 +72,11 @@ public class TestOpenRegionHandler {
    */
   static class MockServer implements Server {
     boolean stopped = false;
-    final static String NAME = "MockServer";
+    final static ServerName NAME = new ServerName("MockServer", 123, -1);
     final ZooKeeperWatcher zk;
 
     MockServer() throws ZooKeeperConnectionException, IOException {
-      this.zk =  new ZooKeeperWatcher(HTU.getConfiguration(), NAME, this);
+      this.zk =  new ZooKeeperWatcher(HTU.getConfiguration(), NAME.toString(), this);
     }
 
     @Override
@@ -113,7 +113,7 @@ public class TestOpenRegionHandler {
     }
 
     @Override
-    public String getServerName() {
+    public ServerName getServerName() {
       return NAME;
     }
   }
@@ -155,12 +155,7 @@ public class TestOpenRegionHandler {
     public HLog getWAL() {
       return null;
     }
-    
-    @Override
-    public HServerInfo getServerInfo() {
-      return null;
-    }
-    
+
     @Override
     public HBaseRpcMetrics getRpcMetrics() {
       return null;
@@ -196,7 +191,7 @@ public class TestOpenRegionHandler {
     }
 
     @Override
-    public String getServerName() {
+    public ServerName getServerName() {
       return null;
     }
 

@@ -20,7 +20,7 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -34,9 +34,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -95,7 +95,7 @@ public class MasterFileSystem {
       conf.getBoolean("hbase.master.distributed.log.splitting", true);
     if (this.distributedLogSplitting) {
       this.splitLogManager = new SplitLogManager(master.getZooKeeper(),
-          master.getConfiguration(), master, master.getServerName());
+          master.getConfiguration(), master, master.getServerName().toString());
       this.splitLogManager.finishInitialization();
     } else {
       this.splitLogManager = null;
@@ -175,9 +175,9 @@ public class MasterFileSystem {
    * Inspect the log directory to recover any log file without
    * an active region server.
    * @param onlineServers Map of online servers keyed by
-   * {@link HServerInfo#getServerName()}
+   * {@link ServerName}
    */
-  void splitLogAfterStartup(final Map<String, HServerInfo> onlineServers) {
+  void splitLogAfterStartup(final Set<ServerName> onlineServers) {
     Path logsDirPath = new Path(this.rootdir, HConstants.HREGION_LOGDIR_NAME);
     try {
       if (!this.fs.exists(logsDirPath)) {
@@ -197,8 +197,8 @@ public class MasterFileSystem {
       return;
     }
     for (FileStatus status : logFolders) {
-      String serverName = status.getPath().getName();
-      if (onlineServers.get(serverName) == null) {
+      ServerName serverName = new ServerName(status.getPath().getName());
+      if (!onlineServers.contains(serverName)) {
         LOG.info("Log folder " + status.getPath() + " doesn't belong " +
           "to a known region server, splitting");
         splitLog(serverName);
@@ -209,9 +209,9 @@ public class MasterFileSystem {
     }
   }
 
-  public void splitLog(final String serverName) {
+  public void splitLog(final ServerName serverName) {
     long splitTime = 0, splitLogSize = 0;
-    Path logDir = new Path(this.rootdir, HLog.getHLogDirectoryName(serverName));
+    Path logDir = new Path(this.rootdir, HLog.getHLogDirectoryName(serverName.toString()));
     if (distributedLogSplitting) {
       splitTime = EnvironmentEdgeManager.currentTimeMillis();
       try {

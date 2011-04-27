@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -116,7 +116,7 @@ public class TestMetaReaderEditor {
     // Test it works getting a region from user table.
     List<HRegionInfo> regions = MetaReader.getTableRegions(ct, nameBytes);
     assertEquals(regionCount, regions.size());
-    Pair<HRegionInfo, HServerAddress> pair =
+    Pair<HRegionInfo, ServerName> pair =
       MetaReader.getRegion(ct, regions.get(0).getRegionName());
     assertEquals(regions.get(0).getEncodedName(),
       pair.getFirst().getEncodedName());

@@ -29,6 +29,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.SynchronousQueue;
@@ -49,12 +50,14 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.ExecRPCInvoker;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
@@ -283,6 +286,7 @@ public class HTable implements HTableInterface {
    * <em>INTERNAL</em> Used by unit tests and tools to do low-level
    * manipulations.
    * @return An HConnection instance.
+   * @deprecated This method will be changed from public to package protected.
    */
   // TODO(tsuna): Remove this.  Unit tests shouldn't require public helpers.
   public HConnection getConnection() {
@@ -378,10 +382,9 @@ public class HTable implements HTableInterface {
 
   /**
    * Gets all the regions and their address for this table.
-   * <p>
-   * This is mainly useful for the MapReduce integration.
    * @return A map of HRegionInfo with it's server address
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Use {@link #getRegionLocations()} or {@link #getStartEndKeys()}
    */
   public Map<HRegionInfo, HServerAddress> getRegionsInfo() throws IOException {
     final Map<HRegionInfo, HServerAddress> regionMap =
@@ -401,8 +404,8 @@ public class HTable implements HTableInterface {
         byte [] value = rowResult.getValue(HConstants.CATALOG_FAMILY,
             HConstants.SERVER_QUALIFIER);
         if (value != null && value.length > 0) {
-          String address = Bytes.toString(value);
-          server = new HServerAddress(address);
+          String hostAndPort = Bytes.toString(value);
+          server = new HServerAddress(Addressing.createInetSocketAddressFromHostAndPortStr(hostAndPort));
         }
 
         if (!(info.isOffline() || info.isSplit())) {
@@ -414,6 +417,17 @@ public class HTable implements HTableInterface {
     };
     MetaScanner.metaScan(configuration, visitor, tableName);
     return regionMap;
+  }
+
+  /**
+   * Gets all the regions and their address for this table.
+   * <p>
+   * This is mainly useful for the MapReduce integration.
+   * @return A map of HRegionInfo with it's server address
+   * @throws IOException if a remote or network exception occurs
+   */
+  public NavigableMap<HRegionInfo, ServerName> getRegionLocations() throws IOException {
+    return MetaScanner.allTableRegions(getConfiguration(), getTableName(), false);
   }
 
   /**

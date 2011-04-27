@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.net.InetAddress;
+
 import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
@@ -26,9 +28,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Test;
@@ -53,7 +54,7 @@ public class TestClockSkewDetection {
       }
 
       @Override
-      public String getServerName() {
+      public ServerName getServerName() {
         return null;
       }
 
@@ -72,22 +73,20 @@ public class TestClockSkewDetection {
 
       @Override
       public void stop(String why) {
-      }}, null, null);
+      }}, null);
 
     LOG.debug("regionServerStartup 1");
-    HServerInfo hsi1 = new HServerInfo(new HServerAddress("example.org:1234"),
-        System.currentTimeMillis(), -1, "example.com");
-    sm.regionServerStartup(hsi1, System.currentTimeMillis());
+    InetAddress ia1 = InetAddress.getLocalHost();
+    sm.regionServerStartup(ia1, 1234, -1, System.currentTimeMillis());
 
     long maxSkew = 30000;
 
     try {
       LOG.debug("regionServerStartup 2");
-      HServerInfo hsi2 = new HServerInfo(new HServerAddress("example.org:1235"),
-        System.currentTimeMillis(), -1, "example.com");
-      sm.regionServerStartup(hsi2, System.currentTimeMillis() - maxSkew * 2);
+      InetAddress ia2 = InetAddress.getLocalHost();
+      sm.regionServerStartup(ia2, 1235, -1, System.currentTimeMillis() - maxSkew * 2);
       Assert.assertTrue("HMaster should have thrown an ClockOutOfSyncException "
-          + "but didn't.", false);
+        + "but didn't.", false);
     } catch(ClockOutOfSyncException e) {
       //we want an exception
       LOG.info("Recieved expected exception: "+e);

@@ -22,8 +22,8 @@ package org.apache.hadoop.hbase.master.handler;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -36,7 +36,7 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
   private static final Log LOG = LogFactory.getLog(OpenedRegionHandler.class);
   private final AssignmentManager assignmentManager;
   private final HRegionInfo regionInfo;
-  private final HServerInfo serverInfo;
+  private final ServerName sn;
   private final OpenedPriority priority;
 
   private enum OpenedPriority {
@@ -55,11 +55,11 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
 
   public OpenedRegionHandler(Server server,
       AssignmentManager assignmentManager, HRegionInfo regionInfo,
-      HServerInfo serverInfo) {
+      ServerName sn) {
     super(server, EventType.RS_ZK_REGION_OPENED);
     this.assignmentManager = assignmentManager;
     this.regionInfo = regionInfo;
-    this.serverInfo = serverInfo;
+    this.sn = sn;
     if(regionInfo.isRootRegion()) {
       priority = OpenedPriority.ROOT;
     } else if(regionInfo.isMetaRegion()) {
@@ -94,7 +94,7 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
     // Code to defend against case where we get SPLIT before region open
     // processing completes; temporary till we make SPLITs go via zk -- 0.92.
     if (this.assignmentManager.isRegionInTransition(regionInfo) != null) {
-      this.assignmentManager.regionOnline(regionInfo, serverInfo);
+      this.assignmentManager.regionOnline(regionInfo, this.sn);
     } else {
       LOG.warn("Skipping the onlining of " + regionInfo.getRegionNameAsString() +
         " because regions is NOT in RIT -- presuming this is because it SPLIT");
@@ -106,7 +106,7 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
       assignmentManager.unassign(regionInfo);
     } else {
       LOG.debug("Opened region " + regionInfo.getRegionNameAsString() +
-          " on " + serverInfo.getServerName());
+          " on " + this.sn.toString());
     }
   }
 }

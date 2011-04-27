@@ -22,10 +22,15 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 
@@ -33,7 +38,6 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.hbase.util.Threads;
 
 /**
  * Test whether region rebalancing works. (HBASE-71)
@@ -93,8 +97,16 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
    * For HBASE-71. Try a few different configurations of starting and stopping
    * region servers to see if the assignment or regions is pretty balanced.
    * @throws IOException
+   * @throws InterruptedException
    */
-  public void testRebalancing() throws IOException {
+  public void testRebalancing() throws IOException, InterruptedException {
+    HConnection connection = HConnectionManager.getConnection(conf);
+    CatalogTracker ct = new CatalogTracker(connection);
+    ct.start();
+    Map<HRegionInfo, ServerName> regions = MetaReader.fullScan(ct);
+    for (Map.Entry<HRegionInfo, ServerName> e: regions.entrySet()) {
+      LOG.info(e);
+    }
     table = new HTable(conf, "test");
     assertEquals("Test table should have 20 regions",
       20, table.getStartKeys().length);
@@ -102,39 +114,34 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     // verify that the region assignments are balanced to start out
     assertRegionsAreBalanced();
 
-    LOG.debug("Adding 2nd region server.");
     // add a region server - total of 2
-    LOG.info("Started=" +
+    LOG.info("Started second server=" +
       cluster.startRegionServer().getRegionServer().getServerName());
     cluster.getMaster().balance();
     assertRegionsAreBalanced();
 
     // add a region server - total of 3
-    LOG.debug("Adding 3rd region server.");
-    LOG.info("Started=" +
+    LOG.info("Started third server=" +
       cluster.startRegionServer().getRegionServer().getServerName());
     cluster.getMaster().balance();
     assertRegionsAreBalanced();
 
     // kill a region server - total of 2
-    LOG.debug("Killing the 3rd region server.");
-    LOG.info("Stopped=" + cluster.stopRegionServer(2, false));
+    LOG.info("Stopped third server=" + cluster.stopRegionServer(2, false));
     cluster.waitOnRegionServer(2);
     cluster.getMaster().balance();
     assertRegionsAreBalanced();
 
     // start two more region servers - total of 4
-    LOG.debug("Adding 3rd region server");
-    LOG.info("Started=" +
+    LOG.info("Readding third server=" +
       cluster.startRegionServer().getRegionServer().getServerName());
-    LOG.debug("Adding 4th region server");
-    LOG.info("Started=" +
+    LOG.info("Added fourth server=" +
       cluster.startRegionServer().getRegionServer().getServerName());
     cluster.getMaster().balance();
     assertRegionsAreBalanced();
 
     for (int i = 0; i < 6; i++){
-      LOG.debug("Adding " + (i + 5) + "th region server");
+      LOG.info("Adding " + (i + 5) + "th region server");
       cluster.startRegionServer();
     }
     cluster.getMaster().balance();
@@ -169,7 +176,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
 
       int regionCount = getRegionCount();
       List<HRegionServer> servers = getOnlineRegionServers();
-      double avg = cluster.getMaster().getServerManager().getAverageLoad();
+      double avg = cluster.getMaster().getAverageLoad();
       int avgLoadPlusSlop = (int)Math.ceil(avg * (1 + slop));
       int avgLoadMinusSlop = (int)Math.floor(avg * (1 - slop)) - 1;
       LOG.debug("There are " + servers.size() + " servers and " + regionCount

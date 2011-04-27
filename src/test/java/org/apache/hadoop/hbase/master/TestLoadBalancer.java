@@ -20,10 +20,11 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -39,9 +40,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
@@ -138,6 +138,38 @@ public class TestLoadBalancer {
       new int [] { 12, 100 },
   };
 
+  @Test
+  public void testRandomizer() {
+    for(int [] mockCluster : clusterStateMocks) {
+      if (mockCluster.length < 5) continue;
+      Map<ServerName, List<HRegionInfo>> servers =
+        mockClusterServers(mockCluster);
+      for (Map.Entry<ServerName, List<HRegionInfo>> e: servers.entrySet()) {
+        List<HRegionInfo> original = e.getValue();
+        if (original.size() < 5) continue;
+        // Try ten times in case random chances upon original order more than
+        // one or two times in a row.
+        boolean same = true;
+        for (int i = 0; i < 10 && same; i++) {
+          List<HRegionInfo> copy = new ArrayList<HRegionInfo>(original);
+          System.out.println("Randomizing before " + copy.size());
+          for (HRegionInfo hri: copy) {
+            System.out.println(hri.getEncodedName());
+          }
+          List<HRegionInfo> randomized = LoadBalancer.randomize(copy);
+          System.out.println("Randomizing after " + randomized.size());
+          for (HRegionInfo hri: randomized) {
+            System.out.println(hri.getEncodedName());
+          }
+          if (original.equals(randomized)) continue;
+          same = false;
+          break;
+        }
+        assertFalse(same);
+      }
+    }
+  }
+
   /**
    * Test the load balancing algorithm.
    *
@@ -150,13 +182,14 @@ public class TestLoadBalancer {
   public void testBalanceCluster() throws Exception {
 
     for(int [] mockCluster : clusterStateMocks) {
-      Map<HServerInfo,List<HRegionInfo>> servers = mockClusterServers(mockCluster);
-      LOG.info("Mock Cluster : " + printMock(servers) + " " + printStats(servers));
+      Map<ServerName, List<HRegionInfo>> servers =  mockClusterServers(mockCluster);
+      List <LoadBalancer.ServerAndLoad> list = convertToList(servers);
+      LOG.info("Mock Cluster : " + printMock(list) + " " + printStats(list));
       List<RegionPlan> plans = loadBalancer.balanceCluster(servers);
-      List<HServerInfo> balancedCluster = reconcile(servers, plans);
+      List<LoadBalancer.ServerAndLoad> balancedCluster = reconcile(list, plans);
       LOG.info("Mock Balance : " + printMock(balancedCluster));
       assertClusterAsBalanced(balancedCluster);
-      for(Map.Entry<HServerInfo, List<HRegionInfo>> entry : servers.entrySet()) {
+      for(Map.Entry<ServerName, List<HRegionInfo>> entry : servers.entrySet()) {
         returnRegions(entry.getValue());
         returnServer(entry.getKey());
       }
@@ -168,13 +201,13 @@ public class TestLoadBalancer {
    * Invariant is that all servers have between floor(avg) and ceiling(avg)
    * number of regions.
    */
-  public void assertClusterAsBalanced(List<HServerInfo> servers) {
+  public void assertClusterAsBalanced(List<LoadBalancer.ServerAndLoad> servers) {
     int numServers = servers.size();
     int numRegions = 0;
     int maxRegions = 0;
     int minRegions = Integer.MAX_VALUE;
-    for(HServerInfo server : servers) {
-      int nr = server.getLoad().getNumberOfRegions();
+    for(LoadBalancer.ServerAndLoad server : servers) {
+      int nr = server.getLoad();
       if(nr > maxRegions) {
         maxRegions = nr;
       }
@@ -190,9 +223,9 @@ public class TestLoadBalancer {
     int min = numRegions / numServers;
     int max = numRegions % numServers == 0 ? min : min + 1;
 
-    for(HServerInfo server : servers) {
-      assertTrue(server.getLoad().getNumberOfRegions() <= max);
-      assertTrue(server.getLoad().getNumberOfRegions() >= min);
+    for(LoadBalancer.ServerAndLoad server : servers) {
+      assertTrue(server.getLoad() <= max);
+      assertTrue(server.getLoad() >= min);
     }
   }
 
@@ -208,12 +241,13 @@ public class TestLoadBalancer {
     for(int [] mock : regionsAndServersMocks) {
       LOG.debug("testImmediateAssignment with " + mock[0] + " regions and " + mock[1] + " servers");
       List<HRegionInfo> regions = randomRegions(mock[0]);
-      List<HServerInfo> servers = randomServers(mock[1], 0);
-      Map<HRegionInfo,HServerInfo> assignments =
-        LoadBalancer.immediateAssignment(regions, servers);
-      assertImmediateAssignment(regions, servers, assignments);
+      List<LoadBalancer.ServerAndLoad> servers = randomServers(mock[1], 0);
+      List<ServerName> list = getListOfServerNames(servers);
+      Map<HRegionInfo,ServerName> assignments =
+        LoadBalancer.immediateAssignment(regions, list);
+      assertImmediateAssignment(regions, list, assignments);
       returnRegions(regions);
-      returnServers(servers);
+      returnServers(list);
     }
   }
 
@@ -224,7 +258,7 @@ public class TestLoadBalancer {
    * @param assignments
    */
   private void assertImmediateAssignment(List<HRegionInfo> regions,
-      List<HServerInfo> servers, Map<HRegionInfo,HServerInfo> assignments) {
+      List<ServerName> servers, Map<HRegionInfo, ServerName> assignments) {
     for(HRegionInfo region : regions) {
       assertTrue(assignments.containsKey(region));
     }
@@ -243,9 +277,10 @@ public class TestLoadBalancer {
     for(int [] mock : regionsAndServersMocks) {
       LOG.debug("testBulkAssignment with " + mock[0] + " regions and " + mock[1] + " servers");
       List<HRegionInfo> regions = randomRegions(mock[0]);
-      List<HServerInfo> servers = randomServers(mock[1], 0);
-      Map<HServerInfo,List<HRegionInfo>> assignments =
-        LoadBalancer.roundRobinAssignment(regions.toArray(new HRegionInfo[regions.size()]), servers);
+      List<LoadBalancer.ServerAndLoad> servers = randomServers(mock[1], 0);
+      List<ServerName> list = getListOfServerNames(servers);
+      Map<ServerName, List<HRegionInfo>> assignments =
+        LoadBalancer.roundRobinAssignment(regions, list);
       float average = (float)regions.size()/servers.size();
       int min = (int)Math.floor(average);
       int max = (int)Math.ceil(average);
@@ -255,7 +290,7 @@ public class TestLoadBalancer {
         }
       }
       returnRegions(regions);
-      returnServers(servers);
+      returnServers(list);
     }
   }
 
@@ -267,31 +302,43 @@ public class TestLoadBalancer {
   @Test
   public void testRetainAssignment() throws Exception {
     // Test simple case where all same servers are there
-    List<HServerInfo> servers = randomServers(10, 10);
+    List<LoadBalancer.ServerAndLoad> servers = randomServers(10, 10);
     List<HRegionInfo> regions = randomRegions(100);
-    Map<HRegionInfo, HServerAddress> existing =
-      new TreeMap<HRegionInfo, HServerAddress>();
-    for (int i=0;i<regions.size();i++) {
-      existing.put(regions.get(i),
-          servers.get(i % servers.size()).getServerAddress());
+    Map<HRegionInfo, ServerName> existing =
+      new TreeMap<HRegionInfo, ServerName>();
+    for (int i = 0; i < regions.size(); i++) {
+      existing.put(regions.get(i), servers.get(i % servers.size()).getServerName());
     }
-    Map<HServerInfo, List<HRegionInfo>> assignment =
-      LoadBalancer.retainAssignment(existing, servers);
-    assertRetainedAssignment(existing, servers, assignment);
+    List<ServerName> listOfServerNames = getListOfServerNames(servers);
+    Map<ServerName, List<HRegionInfo>> assignment =
+      LoadBalancer.retainAssignment(existing, listOfServerNames);
+    assertRetainedAssignment(existing, listOfServerNames, assignment);
 
     // Include two new servers that were not there before
-    List<HServerInfo> servers2 = new ArrayList<HServerInfo>(servers);
+    List<LoadBalancer.ServerAndLoad> servers2 =
+      new ArrayList<LoadBalancer.ServerAndLoad>(servers);
     servers2.add(randomServer(10));
     servers2.add(randomServer(10));
-    assignment = LoadBalancer.retainAssignment(existing, servers2);
-    assertRetainedAssignment(existing, servers2, assignment);
+    listOfServerNames = getListOfServerNames(servers2);
+    assignment = LoadBalancer.retainAssignment(existing, listOfServerNames);
+    assertRetainedAssignment(existing, listOfServerNames, assignment);
 
     // Remove two of the servers that were previously there
-    List<HServerInfo> servers3 = new ArrayList<HServerInfo>(servers);
+    List<LoadBalancer.ServerAndLoad> servers3 =
+      new ArrayList<LoadBalancer.ServerAndLoad>(servers);
     servers3.remove(servers3.size()-1);
     servers3.remove(servers3.size()-2);
-    assignment = LoadBalancer.retainAssignment(existing, servers3);
-    assertRetainedAssignment(existing, servers3, assignment);
+    listOfServerNames = getListOfServerNames(servers2);
+    assignment = LoadBalancer.retainAssignment(existing, listOfServerNames);
+    assertRetainedAssignment(existing, listOfServerNames, assignment);
+  }
+
+  private List<ServerName> getListOfServerNames(final List<LoadBalancer.ServerAndLoad> sals) {
+    List<ServerName> list = new ArrayList<ServerName>();
+    for (LoadBalancer.ServerAndLoad e: sals) {
+      list.add(e.getServerName());
+    }
+    return list;
   }
 
   /**
@@ -308,12 +355,12 @@ public class TestLoadBalancer {
    * @param assignment
    */
   private void assertRetainedAssignment(
-      Map<HRegionInfo, HServerAddress> existing, List<HServerInfo> servers,
-      Map<HServerInfo, List<HRegionInfo>> assignment) {
+      Map<HRegionInfo, ServerName> existing, List<ServerName> servers,
+      Map<ServerName, List<HRegionInfo>> assignment) {
     // Verify condition 1, every region assigned, and to online server
-    Set<HServerInfo> onlineServerSet = new TreeSet<HServerInfo>(servers);
+    Set<ServerName> onlineServerSet = new TreeSet<ServerName>(servers);
     Set<HRegionInfo> assignedRegions = new TreeSet<HRegionInfo>();
-    for (Map.Entry<HServerInfo, List<HRegionInfo>> a : assignment.entrySet()) {
+    for (Map.Entry<ServerName, List<HRegionInfo>> a : assignment.entrySet()) {
       assertTrue("Region assigned to server that was not listed as online",
           onlineServerSet.contains(a.getKey()));
       for (HRegionInfo r : a.getValue()) assignedRegions.add(r);
@@ -321,23 +368,23 @@ public class TestLoadBalancer {
     assertEquals(existing.size(), assignedRegions.size());
 
     // Verify condition 2, if server had existing assignment, must have same
-    Set<HServerAddress> onlineAddresses = new TreeSet<HServerAddress>();
-    for (HServerInfo s : servers) onlineAddresses.add(s.getServerAddress());
-    for (Map.Entry<HServerInfo, List<HRegionInfo>> a : assignment.entrySet()) {
+    Set<ServerName> onlineAddresses = new TreeSet<ServerName>();
+    for (ServerName s : servers) onlineAddresses.add(s);
+    for (Map.Entry<ServerName, List<HRegionInfo>> a : assignment.entrySet()) {
       for (HRegionInfo r : a.getValue()) {
-        HServerAddress address = existing.get(r);
+        ServerName address = existing.get(r);
         if (address != null && onlineAddresses.contains(address)) {
-          assertTrue(a.getKey().getServerAddress().equals(address));
+          assertTrue(a.getKey().equals(address));
         }
       }
     }
   }
 
-  private String printStats(Map<HServerInfo, List<HRegionInfo>> servers) {
+  private String printStats(List<LoadBalancer.ServerAndLoad> servers) {
     int numServers = servers.size();
     int totalRegions = 0;
-    for(HServerInfo server : servers.keySet()) {
-      totalRegions += server.getLoad().getNumberOfRegions();
+    for(LoadBalancer.ServerAndLoad server : servers) {
+      totalRegions += server.getLoad();
     }
     float average = (float)totalRegions / numServers;
     int max = (int)Math.ceil(average);
@@ -345,20 +392,31 @@ public class TestLoadBalancer {
     return "[srvr=" + numServers + " rgns=" + totalRegions + " avg=" + average + " max=" + max + " min=" + min + "]";
   }
 
-  private String printMock(Map<HServerInfo, List<HRegionInfo>> servers) {
-    return printMock(Arrays.asList(servers.keySet().toArray(new HServerInfo[servers.size()])));
+  private List<LoadBalancer.ServerAndLoad> convertToList(final Map<ServerName, List<HRegionInfo>> servers) {
+    List<LoadBalancer.ServerAndLoad> list =
+      new ArrayList<LoadBalancer.ServerAndLoad>(servers.size());
+    for (Map.Entry<ServerName, List<HRegionInfo>> e: servers.entrySet()) {
+      list.add(new LoadBalancer.ServerAndLoad(e.getKey(), e.getValue().size()));
+    }
+    return list;
   }
 
-  private String printMock(List<HServerInfo> balancedCluster) {
-    SortedSet<HServerInfo> sorted = new TreeSet<HServerInfo>(balancedCluster);
-    HServerInfo [] arr = sorted.toArray(new HServerInfo[sorted.size()]);
+  private String printMock(Map<ServerName, List<HRegionInfo>> servers) {
+    return printMock(convertToList(servers));
+  }
+
+  private String printMock(List<LoadBalancer.ServerAndLoad> balancedCluster) {
+    SortedSet<LoadBalancer.ServerAndLoad> sorted =
+      new TreeSet<LoadBalancer.ServerAndLoad>(balancedCluster);
+    LoadBalancer.ServerAndLoad [] arr =
+      sorted.toArray(new LoadBalancer.ServerAndLoad[sorted.size()]);
     StringBuilder sb = new StringBuilder(sorted.size() * 4 + 4);
     sb.append("{ ");
-    for(int i=0;i<arr.length;i++) {
-      if(i != 0) {
+    for(int i = 0; i < arr.length; i++) {
+      if (i != 0) {
         sb.append(" , ");
       }
-      sb.append(arr[i].getLoad().getNumberOfRegions());
+      sb.append(arr[i].getLoad());
     }
     sb.append(" }");
     return sb.toString();
@@ -371,29 +429,42 @@ public class TestLoadBalancer {
    * @param plans
    * @return
    */
-  private List<HServerInfo> reconcile(
-      Map<HServerInfo, List<HRegionInfo>> servers, List<RegionPlan> plans) {
-    if(plans != null) {
-      for(RegionPlan plan : plans) {
-        plan.getSource().getLoad().setNumberOfRegions(
-            plan.getSource().getLoad().getNumberOfRegions() - 1);
-        plan.getDestination().getLoad().setNumberOfRegions(
-            plan.getDestination().getLoad().getNumberOfRegions() + 1);
-      }
+  private List<LoadBalancer.ServerAndLoad> reconcile(List<LoadBalancer.ServerAndLoad> list,
+      List<RegionPlan> plans) {
+    List<LoadBalancer.ServerAndLoad> result =
+      new ArrayList<LoadBalancer.ServerAndLoad>(list.size());
+    if (plans == null) return result;
+    Map<ServerName, LoadBalancer.ServerAndLoad> map =
+      new HashMap<ServerName, LoadBalancer.ServerAndLoad>(list.size());
+    for (RegionPlan plan : plans) {
+      ServerName source = plan.getSource();
+      updateLoad(map, source, -1);
+      ServerName destination = plan.getDestination();
+      updateLoad(map, destination, +1);
     }
-    return Arrays.asList(servers.keySet().toArray(new HServerInfo[servers.size()]));
+    result.clear();
+    result.addAll(map.values());
+    return result;
   }
 
-  private Map<HServerInfo, List<HRegionInfo>> mockClusterServers(
+  private void updateLoad(Map<ServerName, LoadBalancer.ServerAndLoad> map,
+      final ServerName sn, final int diff) {
+    LoadBalancer.ServerAndLoad sal = map.get(sn);
+    if (sal == null) return;
+    sal = new LoadBalancer.ServerAndLoad(sn, sal.getLoad() + diff);
+    map.put(sn, sal);
+  }
+
+  private Map<ServerName, List<HRegionInfo>> mockClusterServers(
       int [] mockCluster) {
     int numServers = mockCluster.length;
-    Map<HServerInfo,List<HRegionInfo>> servers =
-      new TreeMap<HServerInfo,List<HRegionInfo>>();
-    for(int i=0;i<numServers;i++) {
+    Map<ServerName, List<HRegionInfo>> servers =
+      new TreeMap<ServerName, List<HRegionInfo>>();
+    for(int i = 0; i < numServers; i++) {
       int numRegions = mockCluster[i];
-      HServerInfo server = randomServer(numRegions);
+      LoadBalancer.ServerAndLoad sal = randomServer(0);
       List<HRegionInfo> regions = randomRegions(numRegions);
-      servers.put(server, regions);
+      servers.put(sal.getServerName(), regions);
     }
     return servers;
   }
@@ -426,36 +497,34 @@ public class TestLoadBalancer {
     regionQueue.addAll(regions);
   }
 
-  private Queue<HServerInfo> serverQueue = new LinkedList<HServerInfo>();
+  private Queue<ServerName> serverQueue = new LinkedList<ServerName>();
 
-  private HServerInfo randomServer(int numRegions) {
-    if(!serverQueue.isEmpty()) {
-      HServerInfo server = this.serverQueue.poll();
-      server.getLoad().setNumberOfRegions(numRegions);
-      return server;
+  private LoadBalancer.ServerAndLoad randomServer(final int numRegionsPerServer) {
+    if (!this.serverQueue.isEmpty()) {
+      ServerName sn = this.serverQueue.poll();
+      return new LoadBalancer.ServerAndLoad(sn, numRegionsPerServer);
     }
     String host = "127.0.0.1";
     int port = rand.nextInt(60000);
     long startCode = rand.nextLong();
-    HServerInfo hsi =
-      new HServerInfo(new HServerAddress(host, port), startCode, port, host);
-    hsi.getLoad().setNumberOfRegions(numRegions);
-    return hsi;
+    ServerName sn = new ServerName(host, port, startCode);
+    return new LoadBalancer.ServerAndLoad(sn, numRegionsPerServer);
   }
 
-  private List<HServerInfo> randomServers(int numServers, int numRegionsPerServer) {
-    List<HServerInfo> servers = new ArrayList<HServerInfo>(numServers);
-    for(int i=0;i<numServers;i++) {
+  private List<LoadBalancer.ServerAndLoad> randomServers(int numServers, int numRegionsPerServer) {
+    List<LoadBalancer.ServerAndLoad> servers =
+      new ArrayList<LoadBalancer.ServerAndLoad>(numServers);
+    for (int i = 0; i < numServers; i++) {
       servers.add(randomServer(numRegionsPerServer));
     }
     return servers;
   }
 
-  private void returnServer(HServerInfo server) {
+  private void returnServer(ServerName server) {
     serverQueue.add(server);
   }
 
-  private void returnServers(List<HServerInfo> servers) {
-    serverQueue.addAll(servers);
+  private void returnServers(List<ServerName> servers) {
+    this.serverQueue.addAll(servers);
   }
 }

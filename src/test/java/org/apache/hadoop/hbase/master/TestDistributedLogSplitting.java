@@ -19,11 +19,12 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.*;
-
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_wkr_final_transistion_failed;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_wkr_task_acquired;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_wkr_task_err;
+import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.tot_wkr_task_resigned;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -62,8 +63,8 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
-import org.junit.Before;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TestDistributedLogSplitting {
@@ -156,7 +157,7 @@ public class TestDistributedLogSplitting {
     HRegionServer hrs = rsts.get(0).getRegionServer();
     Path rootdir = FSUtils.getRootDir(conf);
     final Path logDir = new Path(rootdir,
-        HLog.getHLogDirectoryName(hrs.getServerName()));
+        HLog.getHLogDirectoryName(hrs.getServerName().toString()));
 
     installTable(new ZooKeeperWatcher(conf, "table-creation", null),
         "table", "family", 40);
@@ -205,7 +206,7 @@ public class TestDistributedLogSplitting {
     HRegionServer hrs = rsts.get(0).getRegionServer();
     Path rootdir = FSUtils.getRootDir(conf);
     final Path logDir = new Path(rootdir,
-        HLog.getHLogDirectoryName(hrs.getServerName()));
+        HLog.getHLogDirectoryName(hrs.getServerName().toString()));
 
     installTable(new ZooKeeperWatcher(conf, "table-creation", null),
         "table", "family", 40);
@@ -253,11 +254,10 @@ public class TestDistributedLogSplitting {
     HRegionServer hrs = rsts.get(0).getRegionServer();
     Path rootdir = FSUtils.getRootDir(conf);
     final Path logDir = new Path(rootdir,
-        HLog.getHLogDirectoryName(hrs.getServerName()));
+        HLog.getHLogDirectoryName(hrs.getServerName().toString()));
 
     installTable(new ZooKeeperWatcher(conf, "table-creation", null),
         "table", "family", 40);
-    byte[] table = Bytes.toBytes("table");
     makeHLog(hrs.getWAL(), hrs.getOnlineRegions(), "table",
         NUM_LOG_LINES, 100);
 
@@ -398,11 +398,6 @@ public class TestDistributedLogSplitting {
   throws KeeperException, InterruptedException {
     ZKAssign.blockUntilNoRIT(zkw);
     master.assignmentManager.waitUntilNoRegionsInTransition(60000);
-  }
-
-  private void blockUntilRIT(ZooKeeperWatcher zkw)
-  throws KeeperException, InterruptedException {
-    ZKAssign.blockUntilRIT(zkw);
   }
 
   private void putData(HRegion region, byte[] startRow, int numRows, byte [] qf,

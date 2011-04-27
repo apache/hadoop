@@ -23,20 +23,17 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericArray;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.util.Utf8;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.hfile.Compression;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.avro.generated.AClusterStatus;
 import org.apache.hadoop.hbase.avro.generated.AColumn;
 import org.apache.hadoop.hbase.avro.generated.AColumnValue;
@@ -54,11 +51,13 @@ import org.apache.hadoop.hbase.avro.generated.AServerAddress;
 import org.apache.hadoop.hbase.avro.generated.AServerInfo;
 import org.apache.hadoop.hbase.avro.generated.AServerLoad;
 import org.apache.hadoop.hbase.avro.generated.ATableDescriptor;
-
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericArray;
-import org.apache.avro.generic.GenericData;
-import org.apache.avro.util.Utf8;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.util.Bytes;
 
 public class AvroUtil {
 
@@ -113,26 +112,26 @@ public class AvroUtil {
     return asl;
   }
 
-  static public AServerInfo hsiToASI(HServerInfo hsi) throws IOException {
+  static public AServerInfo hsiToASI(ServerName sn, HServerLoad hsl) throws IOException {
     AServerInfo asi = new AServerInfo();
-    asi.infoPort = hsi.getInfoPort();
-    asi.load = hslToASL(hsi.getLoad());
-    asi.serverAddress = hsaToASA(hsi.getServerAddress());
-    asi.serverName = new Utf8(hsi.getServerName());
-    asi.startCode = hsi.getStartCode();
+    asi.infoPort = -1;
+    asi.load = hslToASL(hsl);
+    asi.serverAddress = hsaToASA(new HServerAddress(sn.getHostname(), sn.getPort()));
+    asi.serverName = new Utf8(sn.toString());
+    asi.startCode = sn.getStartcode();
     return asi;
   }
 
   static public AClusterStatus csToACS(ClusterStatus cs) throws IOException {
     AClusterStatus acs = new AClusterStatus();
     acs.averageLoad = cs.getAverageLoad();
-    Collection<String> deadServerNames = cs.getDeadServerNames();
+    Collection<ServerName> deadServerNames = cs.getDeadServerNames();
     Schema stringArraySchema = Schema.createArray(Schema.create(Schema.Type.STRING));
     GenericData.Array<CharSequence> adeadServerNames = null;
     if (deadServerNames != null) {
       adeadServerNames = new GenericData.Array<CharSequence>(deadServerNames.size(), stringArraySchema);
-      for (String deadServerName : deadServerNames) {
-	adeadServerNames.add(new Utf8(deadServerName));
+      for (ServerName deadServerName : deadServerNames) {
+	adeadServerNames.add(new Utf8(deadServerName.toString()));
       }
     } else {
       adeadServerNames = new GenericData.Array<CharSequence>(0, stringArraySchema);
@@ -142,19 +141,19 @@ public class AvroUtil {
     acs.hbaseVersion = new Utf8(cs.getHBaseVersion());
     acs.regionsCount = cs.getRegionsCount();
     acs.requestsCount = cs.getRequestsCount();
-    Collection<HServerInfo> hserverInfos = cs.getServerInfo();
+    Collection<ServerName> hserverInfos = cs.getServers();
     Schema s = Schema.createArray(AServerInfo.SCHEMA$);
     GenericData.Array<AServerInfo> aserverInfos = null;
     if (hserverInfos != null) {
       aserverInfos = new GenericData.Array<AServerInfo>(hserverInfos.size(), s);
-      for (HServerInfo hsi : hserverInfos) {
-	aserverInfos.add(hsiToASI(hsi));
+      for (ServerName hsi : hserverInfos) {
+	aserverInfos.add(hsiToASI(hsi, cs.getLoad(hsi)));
       }
     } else {
       aserverInfos = new GenericData.Array<AServerInfo>(0, s);
     }
     acs.serverInfos = aserverInfos;
-    acs.servers = cs.getServers();
+    acs.servers = cs.getServers().size();
     return acs;
   }
 

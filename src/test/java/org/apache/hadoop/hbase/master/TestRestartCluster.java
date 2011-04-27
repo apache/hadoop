@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
@@ -72,11 +73,11 @@ public class TestRestartCluster {
     String unassignedZNode = zooKeeper.assignmentZNode;
     ZKUtil.createAndFailSilent(zooKeeper, unassignedZNode);
 
-    ZKAssign.createNodeOffline(zooKeeper, HRegionInfo.ROOT_REGIONINFO,
-      HMaster.MASTER);
+    ServerName sn = new ServerName(HMaster.MASTER, -1, System.currentTimeMillis());
 
-    ZKAssign.createNodeOffline(zooKeeper, HRegionInfo.FIRST_META_REGIONINFO,
-      HMaster.MASTER);
+    ZKAssign.createNodeOffline(zooKeeper, HRegionInfo.ROOT_REGIONINFO, sn);
+
+    ZKAssign.createNodeOffline(zooKeeper, HRegionInfo.FIRST_META_REGIONINFO, sn);
 
     LOG.debug("Created UNASSIGNED zNode for ROOT and META regions in state " +
         EventType.M_ZK_REGION_OFFLINE);

@@ -7,17 +7,15 @@
   import="org.apache.hadoop.hbase.util.FSUtils"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.HConstants"
+  import="org.apache.hadoop.hbase.ServerName"
   import="org.apache.hadoop.hbase.client.HBaseAdmin"
   import="org.apache.hadoop.hbase.client.HConnectionManager"
-  import="org.apache.hadoop.hbase.HServerInfo"
-  import="org.apache.hadoop.hbase.HServerAddress"
   import="org.apache.hadoop.hbase.HTableDescriptor" %><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
-  HServerAddress rootLocation = master.getCatalogTracker().getRootLocation();
+  ServerName rootLocation = master.getCatalogTracker().getRootLocation();
   boolean metaOnline = master.getCatalogTracker().getMetaLocation() != null;
-  Map<String, HServerInfo> serverToServerInfos =
-    master.getServerManager().getOnlineServers();
+  List<ServerName> servers = master.getServerManager().getOnlineServersList();
   int interval = conf.getInt("hbase.regionserver.msginterval", 1000)/1000;
   if (interval == 0) {
       interval = 1;
@@ -32,12 +30,12 @@
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
-<title>HBase Master: <%= master.getMasterAddress().getHostname()%>:<%= master.getMasterAddress().getPort() %></title>
+<title>HBase Master: <%= master.getServerName().getHostAndPort() %></title>
 <link rel="stylesheet" type="text/css" href="/static/hbase.css" />
 </head>
 <body>
 <a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="HBase Logo" title="HBase Logo" /></a>
-<h1 id="page_title">Master: <%=master.getMasterAddress().getHostname()%>:<%=master.getMasterAddress().getPort()%></h1>
+<h1 id="page_title">Master: <%=master.getServerName().getHostname()%>:<%=master.getServerName().getPort()%></h1>
 <p id="links_menu"><a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a>, <a href="/logLevel">Log Level</a></p>
 
 <!-- Various warnings that cluster admins should be aware of -->
@@ -137,26 +135,27 @@
 <% } %>
 
 <h2>Region Servers</h2>
-<% if (serverToServerInfos != null && serverToServerInfos.size() > 0) { %>
+<% if (servers != null && servers.size() > 0) { %>
 <%   int totalRegions = 0;
      int totalRequests = 0; 
 %>
 
 <table>
-<tr><th rowspan="<%= serverToServerInfos.size() + 1%>"></th><th>Address</th><th>Start Code</th><th>Load</th></tr>
-<%   String[] serverNames = serverToServerInfos.keySet().toArray(new String[serverToServerInfos.size()]);
+<tr><th rowspan="<%= servers.size() + 1%>"></th><th>Address</th><th>Start Code</th><th>Load</th></tr>
+<%   ServerName [] serverNames = servers.toArray(new ServerName[servers.size()]);
      Arrays.sort(serverNames);
-     for (String serverName: serverNames) {
-       HServerInfo hsi = serverToServerInfos.get(serverName);
-       String hostname = hsi.getServerAddress().getHostname() + ":" + hsi.getInfoPort();
+     for (ServerName serverName: serverNames) {
+       // HARDCODED FOR NOW; FIX -- READ FROM ZK
+       String hostname = serverName.getHostname() + ":60020";
        String url = "http://" + hostname + "/";
-       totalRegions += hsi.getLoad().getNumberOfRegions();
-       totalRequests += hsi.getLoad().getNumberOfRequests() / interval;
-       long startCode = hsi.getStartCode();
+       // TODO: FIX
+       totalRegions += 0;
+       totalRequests += 0;
+       long startCode = serverName.getStartcode();
 %>
-<tr><td><a href="<%= url %>"><%= hostname %></a></td><td><%= startCode %></td><td><%= hsi.getLoad().toString(interval) %></td></tr>
+<tr><td><a href="<%= url %>"><%= hostname %></a></td><td><%= startCode %></td><td><%= 0 %></td></tr>
 <%   } %>
-<tr><th>Total: </th><td>servers: <%= serverToServerInfos.size() %></td><td>&nbsp;</td><td>requests=<%= totalRequests %>, regions=<%= totalRegions %></td></tr>
+<tr><th>Total: </th><td>servers: <%= servers.size() %></td><td>&nbsp;</td><td>requests=<%= totalRequests %>, regions=<%= totalRegions %></td></tr>
 </table>
 
 <p>Load is requests per second and count of regions loaded</p>

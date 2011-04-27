@@ -24,8 +24,8 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -38,7 +38,7 @@ public class SplitRegionHandler extends EventHandler implements TotesHRegionInfo
   private static final Log LOG = LogFactory.getLog(SplitRegionHandler.class);
   private final AssignmentManager assignmentManager;
   private final HRegionInfo parent;
-  private final HServerInfo serverInfo;
+  private final ServerName sn;
   private final List<HRegionInfo> daughters;
   /**
    * For testing only!  Set to true to skip handling of split.
@@ -47,11 +47,11 @@ public class SplitRegionHandler extends EventHandler implements TotesHRegionInfo
 
   public SplitRegionHandler(Server server,
       AssignmentManager assignmentManager, HRegionInfo regionInfo,
-      HServerInfo serverInfo, final List<HRegionInfo> daughters) {
+      ServerName sn, final List<HRegionInfo> daughters) {
     super(server, EventType.RS_ZK_REGION_SPLIT);
     this.assignmentManager = assignmentManager;
     this.parent = regionInfo;
-    this.serverInfo = serverInfo;
+    this.sn = sn;
     this.daughters = daughters;
   }
 
@@ -70,7 +70,7 @@ public class SplitRegionHandler extends EventHandler implements TotesHRegionInfo
       LOG.warn("Skipping split message, TEST_SKIP is set");
       return;
     }
-    this.assignmentManager.handleSplitReport(this.serverInfo, this.parent,
+    this.assignmentManager.handleSplitReport(this.sn, this.parent,
       this.daughters.get(0), this.daughters.get(1));
     // Remove region from ZK
     try {

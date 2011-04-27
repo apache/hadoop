@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
@@ -71,7 +72,8 @@ public class TestLogsCleaner {
 
     Path oldLogDir = new Path(HBaseTestingUtility.getTestDir(),
         HConstants.HREGION_OLDLOGDIR_NAME);
-    String fakeMachineName = URLEncoder.encode(server.getServerName(), "UTF8");
+    String fakeMachineName =
+      URLEncoder.encode(server.getServerName().toString(), "UTF8");
 
     FileSystem fs = FileSystem.get(conf);
     LogCleaner cleaner  = new LogCleaner(1000, server, conf, fs, oldLogDir);
@@ -146,8 +148,8 @@ public class TestLogsCleaner {
     }
 
     @Override
-    public String getServerName() {
-      return "regionserver,60020,000000";
+    public ServerName getServerName() {
+      return new ServerName("regionserver,60020,000000");
     }
 
     @Override

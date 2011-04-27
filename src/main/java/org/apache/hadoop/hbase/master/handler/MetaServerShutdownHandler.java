@@ -19,8 +19,8 @@
  */
 package org.apache.hadoop.hbase.master.handler;
 
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.DeadServer;
 import org.apache.hadoop.hbase.master.MasterServices;
 
@@ -34,9 +34,9 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
   
   public MetaServerShutdownHandler(final Server server,
       final MasterServices services,
-      final DeadServer deadServers, final HServerInfo hsi,
+      final DeadServer deadServers, final ServerName serverName,
       final boolean carryingRoot, final boolean carryingMeta) {
-    super(server, services, deadServers, hsi, EventType.M_META_SERVER_SHUTDOWN);
+    super(server, services, deadServers, serverName, EventType.M_META_SERVER_SHUTDOWN);
     this.carryingRoot = carryingRoot;
     this.carryingMeta = carryingMeta;
   }

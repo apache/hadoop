@@ -26,8 +26,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -82,15 +82,15 @@ public class TestHBaseFsck {
       for (JVMClusterUtil.RegionServerThread rs :
           TEST_UTIL.getHBaseCluster().getRegionServerThreads()) {
 
-        HServerInfo hsi = rs.getRegionServer().getServerInfo();
+        ServerName sn = rs.getRegionServer().getServerName();
 
         // When we find a diff RS, change the assignment and break
-        if (startCode != hsi.getStartCode()) {
+        if (startCode != sn.getStartcode()) {
           Put put = new Put(res.getRow());
           put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-              Bytes.toBytes(hsi.getHostnamePort()));
+            Bytes.toBytes(sn.getHostAndPort()));
           put.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
-              Bytes.toBytes(hsi.getStartCode()));
+            Bytes.toBytes(sn.getStartcode()));
           meta.put(put);
           break resforloop;
         }

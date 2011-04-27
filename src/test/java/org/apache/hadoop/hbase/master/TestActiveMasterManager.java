@@ -30,9 +30,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -67,7 +68,7 @@ public class TestActiveMasterManager {
     } catch(KeeperException.NoNodeException nne) {}
 
     // Create the master node with a dummy address
-    HServerAddress master = new HServerAddress("localhost", 1);
+    ServerName master = new ServerName("localhost", 1, System.currentTimeMillis());
     // Should not have a master yet
     DummyMaster dummyMaster = new DummyMaster();
     ActiveMasterManager activeMasterManager = new ActiveMasterManager(zk,
@@ -106,8 +107,10 @@ public class TestActiveMasterManager {
     } catch(KeeperException.NoNodeException nne) {}
 
     // Create the master node with a dummy address
-    HServerAddress firstMasterAddress = new HServerAddress("localhost", 1);
-    HServerAddress secondMasterAddress = new HServerAddress("localhost", 2);
+    ServerName firstMasterAddress =
+      new ServerName("localhost", 1, System.currentTimeMillis());
+    ServerName secondMasterAddress =
+      new ServerName("localhost", 2, System.currentTimeMillis());
 
     // Should not have a master yet
     DummyMaster ms1 = new DummyMaster();
@@ -177,8 +180,10 @@ public class TestActiveMasterManager {
    * @throws KeeperException
    */
   private void assertMaster(ZooKeeperWatcher zk,
-      HServerAddress expectedAddress) throws KeeperException {
-    HServerAddress readAddress = ZKUtil.getDataAsAddress(zk, zk.masterAddressZNode);
+      ServerName expectedAddress)
+  throws KeeperException {
+    ServerName readAddress =
+      new ServerName(Bytes.toString(ZKUtil.getData(zk, zk.masterAddressZNode)));
     assertNotNull(readAddress);
     assertTrue(expectedAddress.equals(readAddress));
   }
@@ -188,8 +193,7 @@ public class TestActiveMasterManager {
     ActiveMasterManager manager;
     boolean isActiveMaster;
 
-    public WaitToBeMasterThread(ZooKeeperWatcher zk,
-        HServerAddress address) {
+    public WaitToBeMasterThread(ZooKeeperWatcher zk, ServerName address) {
       this.manager = new ActiveMasterManager(zk, address,
           new DummyMaster());
       isActiveMaster = false;
@@ -248,7 +252,7 @@ public class TestActiveMasterManager {
     }
 
     @Override
-    public String getServerName() {
+    public ServerName getServerName() {
       return null;
     }
 

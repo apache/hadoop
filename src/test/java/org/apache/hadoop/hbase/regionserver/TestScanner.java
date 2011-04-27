@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.UnknownScannerException;
@@ -263,11 +262,11 @@ public class TestScanner extends HBaseTestCase {
 
       // Store some new information
 
-      HServerAddress address = new HServerAddress("foo.bar.com:1234");
+      String address = "foo.bar.com:1234";
 
       put = new Put(ROW_KEY, System.currentTimeMillis(), null);
       put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-          Bytes.toBytes(address.toString()));
+          Bytes.toBytes(address));
 
 //      put.add(HConstants.COL_STARTCODE, Bytes.toBytes(START_CODE));
 
@@ -301,12 +300,12 @@ public class TestScanner extends HBaseTestCase {
 
       // Now update the information again
 
-      address = new HServerAddress("bar.foo.com:4321");
+      address = "bar.foo.com:4321";
 
       put = new Put(ROW_KEY, System.currentTimeMillis(), null);
 
       put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-          Bytes.toBytes(address.toString()));
+          Bytes.toBytes(address));
       region.put(put);
 
       // Validate again

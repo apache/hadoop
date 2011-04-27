@@ -23,13 +23,20 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 
@@ -225,8 +232,7 @@ public class MetaScanner {
   public static List<HRegionInfo> listAllRegions(Configuration conf, final boolean offlined)
   throws IOException {
     final List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
-    MetaScannerVisitor visitor =
-      new MetaScannerVisitor() {
+    MetaScannerVisitor visitor = new MetaScannerVisitor() {
         @Override
         public boolean processRow(Result result) throws IOException {
           if (result == null || result.isEmpty()) {
@@ -244,6 +250,51 @@ public class MetaScanner {
           regions.add(regionInfo);
           return true;
         }
+    };
+    metaScan(conf, visitor);
+    return regions;
+  }
+
+  /**
+   * Lists all of the table regions currently in META.
+   * @param conf
+   * @param offlined True if we are to include offlined regions, false and we'll
+   * leave out offlined regions from returned list.
+   * @return Map of all user-space regions to servers
+   * @throws IOException
+   */
+  public static NavigableMap<HRegionInfo, ServerName> allTableRegions(Configuration conf, final byte [] tablename, final boolean offlined)
+  throws IOException {
+    final NavigableMap<HRegionInfo, ServerName> regions =
+      new TreeMap<HRegionInfo, ServerName>();
+    MetaScannerVisitor visitor = new MetaScannerVisitor() {
+      @Override
+      public boolean processRow(Result rowResult) throws IOException {
+        HRegionInfo info = Writables.getHRegionInfo(
+            rowResult.getValue(HConstants.CATALOG_FAMILY,
+                HConstants.REGIONINFO_QUALIFIER));
+        if (!(Bytes.equals(info.getTableDesc().getName(), tablename))) {
+          return false;
+        }
+        byte [] value = rowResult.getValue(HConstants.CATALOG_FAMILY,
+          HConstants.SERVER_QUALIFIER);
+        String hostAndPort = null;
+        if (value != null && value.length > 0) {
+          hostAndPort = Bytes.toString(value);
+        }
+        value = rowResult.getValue(HConstants.CATALOG_FAMILY,
+          HConstants.STARTCODE_QUALIFIER);
+        long startcode = -1L;
+        if (value != null && value.length > 0) startcode = Bytes.toLong(value);
+        if (!(info.isOffline() || info.isSplit())) {
+          ServerName sn = null;
+          if (hostAndPort != null && hostAndPort.length() > 0) {
+            sn = new ServerName(hostAndPort, startcode);
+          }
+          regions.put(new UnmodifyableHRegionInfo(info), sn);
+        }
+        return true;
+      }
     };
     metaScan(conf, visitor);
     return regions;

@@ -20,9 +20,8 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -54,31 +53,34 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
 
   /**
    * Gets the root region location, if available.  Null if not.  Does not block.
-   * @return server address for server hosting root region, null if none available
+   * @return server name
    * @throws InterruptedException 
    */
-  public HServerAddress getRootRegionLocation() throws InterruptedException {
-    return dataToHServerAddress(super.getData());
+  public ServerName getRootRegionLocation() throws InterruptedException {
+    byte [] data = super.getData();
+    return data == null? null: new ServerName(dataToString(data));
   }
 
   /**
    * Gets the root region location, if available, and waits for up to the
    * specified timeout if not immediately available.
    * @param timeout maximum time to wait, in millis
-   * @return server address for server hosting root region, null if timed out
+   * @return server name for server hosting root region formatted as per
+   * {@link ServerName}, or null if none available
    * @throws InterruptedException if interrupted while waiting
    */
-  public HServerAddress waitRootRegionLocation(long timeout)
+  public ServerName waitRootRegionLocation(long timeout)
   throws InterruptedException {
-    return dataToHServerAddress(super.blockUntilAvailable(timeout));
+    String str = dataToString(super.blockUntilAvailable(timeout));
+    return str == null? null: new ServerName(str);
   }
 
   /*
    * @param data
    * @return Returns null if <code>data</code> is null else converts passed data
-   * to an HServerAddress instance.
+   * to a String instance.
    */
-  private static HServerAddress dataToHServerAddress(final byte [] data) {
-    return data == null ? null: new HServerAddress(Bytes.toString(data));
+  private static String dataToString(final byte [] data) {
+    return data == null ? null: Bytes.toString(data);
   }
 }

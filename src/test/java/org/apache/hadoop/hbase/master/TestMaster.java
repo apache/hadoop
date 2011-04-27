@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -75,7 +75,7 @@ public class TestMaster {
     TEST_UTIL.loadTable(new HTable(TEST_UTIL.getConfiguration(), TABLENAME),
       FAMILYNAME);
 
-    List<Pair<HRegionInfo, HServerAddress>> tableRegions =
+    List<Pair<HRegionInfo, ServerName>> tableRegions =
       MetaReader.getTableRegionsAndLocations(m.getCatalogTracker(),
           Bytes.toString(TABLENAME));
     LOG.info("Regions after load: " + Joiner.on(',').join(tableRegions));
@@ -106,10 +106,10 @@ public class TestMaster {
       // We have three regions because one is split-in-progress
       assertEquals(3, tableRegions.size());
       LOG.info("Making sure we can call getTableRegionClosest while opening");
-      Pair<HRegionInfo,HServerAddress> pair =
+      Pair<HRegionInfo, ServerName> pair =
         m.getTableRegionForRow(TABLENAME, Bytes.toBytes("cde"));
       LOG.info("Result is: " + pair);
-      Pair<HRegionInfo, HServerAddress> tableRegionFromName =
+      Pair<HRegionInfo, ServerName> tableRegionFromName =
         MetaReader.getRegion(m.getCatalogTracker(),
             pair.getFirst().getRegionName());
       assertEquals(tableRegionFromName.getFirst(), pair.getFirst());

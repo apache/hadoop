@@ -138,23 +138,22 @@ public interface MasterObserver extends Coprocessor {
    * Called prior to moving a given region from one region server to another.
    */
   void preMove(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final HRegionInfo region, final HServerInfo srcServer,
-      final HServerInfo destServer)
+      final HRegionInfo region, final ServerName srcServer, final ServerName destServer)
     throws UnknownRegionException;
 
   /**
    * Called after the region move has been requested.
    */
   void postMove(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final HRegionInfo region, final HServerInfo srcServer,
-      final HServerInfo destServer)
+      final HRegionInfo region, final ServerName srcServer, final ServerName destServer)
     throws UnknownRegionException;
 
   /**
    * Called prior to assigning a specific region.
    */
   void preAssign(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final byte [] regionName, final boolean force) throws IOException;
+      final byte [] regionName, final boolean force)
+  throws IOException;
 
   /**
    * Called after the region assignment has been requested.

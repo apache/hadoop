@@ -6,6 +6,7 @@
   import="org.apache.hadoop.hbase.client.HBaseAdmin"
   import="org.apache.hadoop.hbase.client.HConnectionManager"
   import="org.apache.hadoop.hbase.HRegionInfo"
+  import="org.apache.hadoop.hbase.ServerName"
   import="org.apache.hadoop.hbase.HServerAddress"
   import="org.apache.hadoop.hbase.HServerInfo"
   import="org.apache.hadoop.hbase.HServerLoad"
@@ -22,7 +23,7 @@
   String tableName = request.getParameter("name");
   HTable table = new HTable(conf, tableName);
   String tableHeader = "<h2>Table Regions</h2><table><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Requests</th></tr>";
-  HServerAddress rl = master.getCatalogTracker().getRootLocation();
+  ServerName rl = master.getCatalogTracker().getRootLocation();
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
   Map<String, Integer> frags = null;
   if (showFragmentation) {
@@ -83,8 +84,9 @@
   if(tableName.equals(Bytes.toString(HConstants.ROOT_TABLE_NAME))) {
 %>
 <%= tableHeader %>
+// HARDCODED FOR NOW TODO: FIX GET FROM ZK
 <%
-  int infoPort = master.getServerManager().getHServerInfo(rl).getInfoPort();
+  int infoPort = 60020; // HARDCODED FOR NOW -- TODO FIX
   String url = "http://" + rl.getHostname() + ":" + infoPort + "/";
 %>
 <tr>
@@ -102,9 +104,9 @@
 <%
   // NOTE: Presumes one meta region only.
   HRegionInfo meta = HRegionInfo.FIRST_META_REGIONINFO;
-  HServerAddress metaLocation = master.getCatalogTracker().getMetaLocation();
+  ServerName metaLocation = master.getCatalogTracker().getMetaLocation();
   for (int i = 0; i < 1; i++) {
-    int infoPort = master.getServerManager().getHServerInfo(metaLocation).getInfoPort();
+    int infoPort = 60020; // HARDCODED FOR NOW -- TODO FIX
     String url = "http://" + metaLocation.getHostname() + ":" + infoPort + "/";
 %>
 <tr>
@@ -141,7 +143,7 @@
   if(regions != null && regions.size() > 0) { %>
 <%=     tableHeader %>
 <%
-  for(Map.Entry<HRegionInfo, HServerAddress> hriEntry : regions.entrySet()) {
+  for (Map.Entry<HRegionInfo, HServerAddress> hriEntry : regions.entrySet()) {
     HRegionInfo regionInfo = hriEntry.getKey();
     HServerAddress addr = hriEntry.getValue();
     long req = 0;
@@ -150,16 +152,16 @@
     String urlRegionServer = null;
 
     if (addr != null) {
-      HServerInfo info = master.getServerManager().getHServerInfo(addr);
-      if (info != null) {
-        HServerLoad sl = info.getLoad();
+      HServerLoad sl = master.getServerManager().getLoad(addr);
+      if (sl != null) {
         Map<byte[], RegionLoad> map = sl.getRegionsLoad();
         if (map.containsKey(regionInfo.getRegionName())) {
           req = map.get(regionInfo.getRegionName()).getRequestsCount();
         }
-        infoPort = info.getInfoPort();
+        // This port might be wrong if RS actually ended up using something else.
+        int port = conf.getInt("hbase.regionserver.info.port", 60030);
         urlRegionServer =
-            "http://" + addr.getHostname().toString() + ":" + infoPort + "/";
+            "http://" + addr.getHostname().toString() + ":" + port + "/";
         Integer i = regDistribution.get(urlRegionServer);
         if (null == i) i = new Integer(0);
         regDistribution.put(urlRegionServer, i+1);

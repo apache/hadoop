@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Delete;
@@ -258,7 +259,7 @@ public class TestSplitTransactionOnCluster {
       // Insert into zk a blocking znode, a znode of same name as region
       // so it gets in way of our splitting.
       ZKAssign.createNodeClosing(t.getConnection().getZooKeeperWatcher(),
-        hri, "anyOldServer");
+        hri, new ServerName("any.old.server", 1234, -1));
       // Now try splitting.... should fail.  And each should successfully
       // rollback.
       this.admin.split(hri.getRegionNameAsString());
@@ -455,7 +456,7 @@ public class TestSplitTransactionOnCluster {
       HRegionServer hrs = getOtherRegionServer(cluster, metaRegionServer);
       LOG.info("Moving " + hri.getRegionNameAsString() + " to " +
         hrs.getServerName() + "; metaServerIndex=" + metaServerIndex);
-      admin.move(hri.getEncodedNameAsBytes(), Bytes.toBytes(hrs.getServerName()));
+      admin.move(hri.getEncodedNameAsBytes(), hrs.getServerName().getBytes());
     }
     // Wait till table region is up on the server that is NOT carrying .META..
     while (true) {

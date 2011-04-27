@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -188,8 +189,20 @@ public interface HConnection extends Abortable {
    * @param regionServer - the server to connect to
    * @return proxy for HRegionServer
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Use {@link #getHRegionConnection(InetSocketAddress)}
    */
   public HRegionInterface getHRegionConnection(HServerAddress regionServer)
+  throws IOException;
+
+  /**
+   * Establishes a connection to the region server at the specified address.
+   * @param hostname RegionServer hostname
+   * @param port RegionServer port
+   * @return proxy for HRegionServer
+   * @throws IOException if a remote or network exception occurs
+   *
+   */
+  public HRegionInterface getHRegionConnection(final String hostname, final int port)
   throws IOException;
 
   /**
@@ -198,9 +211,22 @@ public interface HConnection extends Abortable {
    * @param getMaster - do we check if master is alive
    * @return proxy for HRegionServer
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Use {@link #getHRegionConnection(HServerAddress, boolean)}
    */
-  public HRegionInterface getHRegionConnection(
-      HServerAddress regionServer, boolean getMaster)
+  public HRegionInterface getHRegionConnection(HServerAddress regionServer,
+     boolean getMaster)
+  throws IOException;
+
+  /**
+   * Establishes a connection to the region server at the specified address.
+   * @param hostname RegionServer hostname
+   * @param port RegionServer port
+   * @param getMaster - do we check if master is alive
+   * @return proxy for HRegionServer
+   * @throws IOException if a remote or network exception occurs
+   */
+  public HRegionInterface getHRegionConnection(final String hostname,
+     final int port, boolean getMaster)
   throws IOException;
 
   /**
@@ -343,6 +369,7 @@ public interface HConnection extends Abortable {
    * Scan zookeeper to get the number of region servers
    * @return the number of region servers that are currently running
    * @throws IOException if a remote or network exception occurs
+   * @deprecated This method will be changed from public to package protected.
    */
   public int getCurrentNrHRS() throws IOException;
 }

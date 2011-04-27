@@ -29,29 +29,31 @@ import java.util.TreeMap;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.io.VersionedWritable;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
- * This class encapsulates metrics for determining the load on a HRegionServer
+ * This class is used exporting current state of load on a RegionServer.
  */
 public class HServerLoad extends VersionedWritable
-  implements WritableComparable<HServerLoad> {
-  private static final byte VERSION = 0;
+implements WritableComparable<HServerLoad> {
+  private static final byte VERSION = 1;
+  // Empty load instance.
+  public static final HServerLoad EMPTY_HSERVERLOAD = new HServerLoad();
 
-  /** number of regions */
-    // could just use regionLoad.size() but master.RegionManager likes to play
-    // around with this value while passing HServerLoad objects around during
-    // balancer calculations
-  private int numberOfRegions;
-  /** number of requests since last report */
-  private int numberOfRequests;
+  /** Number of requests since last report
+   */
+  // TODO: Instead build this up out of region counters.
+  private int numberOfRequests = 0;
+
   /** the amount of used heap, in MB */
-  private int usedHeapMB;
+  private int usedHeapMB = 0;
+
   /** the maximum allowable size of the heap, in MB */
-  private int maxHeapMB;
+  private int maxHeapMB = 0;
+
   /** per-region load metrics */
-  private Map<byte[], RegionLoad> regionLoad = new TreeMap<byte[], RegionLoad>(Bytes.BYTES_COMPARATOR);
+  private Map<byte[], RegionLoad> regionLoad =
+    new TreeMap<byte[], RegionLoad>(Bytes.BYTES_COMPARATOR);
 
   /** @return the object version number */
   public byte getVersion() {
@@ -61,7 +63,14 @@ public class HServerLoad extends VersionedWritable
   /**
    * Encapsulates per-region loading metrics.
    */
-  public static class RegionLoad implements Writable {
+  public static class RegionLoad extends VersionedWritable {
+    private static final byte VERSION = 0;
+
+    /** @return the object version number */
+    public byte getVersion() {
+      return VERSION;
+    }
+
     /** the region name */
     private byte[] name;
     /** the number of stores for the region */
@@ -236,6 +245,9 @@ public class HServerLoad extends VersionedWritable
 
     // Writable
     public void readFields(DataInput in) throws IOException {
+      super.readFields(in);
+      int version = getVersion();
+      if (version != VERSION) throw new IOException("Version mismatch; " + version);
       int namelen = in.readInt();
       this.name = new byte[namelen];
       in.readFully(this.name);
@@ -249,6 +261,7 @@ public class HServerLoad extends VersionedWritable
     }
 
     public void write(DataOutput out) throws IOException {
+      super.write(out);
       out.writeInt(name.length);
       out.write(name);
       out.writeInt(stores);
@@ -308,10 +321,11 @@ public class HServerLoad extends VersionedWritable
    * @param maxHeapMB
    */
   public HServerLoad(final int numberOfRequests, final int usedHeapMB,
-      final int maxHeapMB) {
+      final int maxHeapMB, final Map<byte[], RegionLoad> regionLoad) {
     this.numberOfRequests = numberOfRequests;
     this.usedHeapMB = usedHeapMB;
     this.maxHeapMB = maxHeapMB;
+    this.regionLoad = regionLoad;
   }
 
   /**
@@ -319,7 +333,7 @@ public class HServerLoad extends VersionedWritable
    * @param hsl the template HServerLoad
    */
   public HServerLoad(final HServerLoad hsl) {
-    this(hsl.numberOfRequests, hsl.usedHeapMB, hsl.maxHeapMB);
+    this(hsl.numberOfRequests, hsl.usedHeapMB, hsl.maxHeapMB, hsl.getRegionsLoad());
     for (Map.Entry<byte[], RegionLoad> e : hsl.regionLoad.entrySet()) {
       this.regionLoad.put(e.getKey(), e.getValue());
     }
@@ -338,7 +352,7 @@ public class HServerLoad extends VersionedWritable
     // int load = numberOfRequests == 0 ? 1 : numberOfRequests;
     // load *= numberOfRegions == 0 ? 1 : numberOfRegions;
     // return load;
-    return numberOfRegions;
+    return this.regionLoad.size();
   }
 
   /**
@@ -356,6 +370,7 @@ public class HServerLoad extends VersionedWritable
    * @return The load as a String
    */
   public String toString(int msgInterval) {
+    int numberOfRegions = this.regionLoad.size();
     StringBuilder sb = new StringBuilder();
     sb = Strings.appendKeyValue(sb, "requests",
       Integer.valueOf(numberOfRequests/msgInterval));
@@ -384,23 +399,13 @@ public class HServerLoad extends VersionedWritable
     return compareTo((HServerLoad)o) == 0;
   }
 
-  /**
-   * @see java.lang.Object#hashCode()
-   */
-  @Override
-  public int hashCode() {
-    int result = Integer.valueOf(numberOfRequests).hashCode();
-    result ^= Integer.valueOf(numberOfRegions).hashCode();
-    return result;
-  }
-
   // Getters
 
   /**
    * @return the numberOfRegions
    */
   public int getNumberOfRegions() {
-    return numberOfRegions;
+    return this.regionLoad.size();
   }
 
   /**
@@ -471,69 +476,16 @@ public class HServerLoad extends VersionedWritable
     return count;
   }
 
-  // Setters
-
-  /**
-   * @param numberOfRegions the number of regions
-   */
-  public void setNumberOfRegions(int numberOfRegions) {
-    this.numberOfRegions = numberOfRegions;
-  }
-
-  /**
-   * @param numberOfRequests the number of requests to set
-   */
-  public void setNumberOfRequests(int numberOfRequests) {
-    this.numberOfRequests = numberOfRequests;
-  }
-
-  /**
-   * @param usedHeapMB the amount of heap in use, in MB
-   */
-  public void setUsedHeapMB(int usedHeapMB) {
-    this.usedHeapMB = usedHeapMB;
-  }
-
-  /**
-   * @param maxHeapMB the maximum allowable heap size, in MB
-   */
-  public void setMaxHeapMB(int maxHeapMB) {
-    this.maxHeapMB = maxHeapMB;
-  }
-
-  /**
-   * @param load Instance of HServerLoad
-   */
-  public void addRegionInfo(final HServerLoad.RegionLoad load) {
-    this.numberOfRegions++;
-    this.regionLoad.put(load.getName(), load);
-  }
-
-  /**
-   * @param name
-   * @param stores
-   * @param storefiles
-   * @param memstoreSizeMB
-   * @param storefileIndexSizeMB
-   * @param requestsCount
-   * @deprecated Use {@link #addRegionInfo(RegionLoad)}
-   */
-  @Deprecated
-  public void addRegionInfo(final byte[] name, final int stores,
-      final int storefiles, final int storefileSizeMB,
-      final int memstoreSizeMB, final int storefileIndexSizeMB,
-      final int readRequestsCount, final int writeRequestsCount) {
-    this.regionLoad.put(name, new HServerLoad.RegionLoad(name, stores, storefiles,
-      storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB, readRequestsCount, writeRequestsCount));
-  }
-
   // Writable
 
   public void readFields(DataInput in) throws IOException {
+    super.readFields(in);
+    int version = getVersion();
+    if (version != VERSION) throw new IOException("Version mismatch; " + version);
     numberOfRequests = in.readInt();
     usedHeapMB = in.readInt();
     maxHeapMB = in.readInt();
-    numberOfRegions = in.readInt();
+    int numberOfRegions = in.readInt();
     for (int i = 0; i < numberOfRegions; i++) {
       RegionLoad rl = new RegionLoad();
       rl.readFields(in);
@@ -542,10 +494,11 @@ public class HServerLoad extends VersionedWritable
   }
 
   public void write(DataOutput out) throws IOException {
+    super.write(out);
     out.writeInt(numberOfRequests);
     out.writeInt(usedHeapMB);
     out.writeInt(maxHeapMB);
-    out.writeInt(numberOfRegions);
+    out.writeInt(this.regionLoad.size());
     for (RegionLoad rl: regionLoad.values())
       rl.write(out);
   }

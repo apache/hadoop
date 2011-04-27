@@ -39,25 +39,28 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.MetaScanner;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -172,21 +175,21 @@ public class HBaseFsck {
     }
 
     // From the master, get a list of all known live region servers
-    Collection<HServerInfo> regionServers = status.getServerInfo();
+    Collection<ServerName> regionServers = status.getServers();
     errors.print("Number of live region servers: " +
                        regionServers.size());
     if (details) {
-      for (HServerInfo rsinfo: regionServers) {
-        errors.print("  " + rsinfo.getServerName());
+      for (ServerName rsinfo: regionServers) {
+        errors.print("  " + rsinfo);
       }
     }
 
     // From the master, get a list of all dead region servers
-    Collection<String> deadRegionServers = status.getDeadServerNames();
+    Collection<ServerName> deadRegionServers = status.getDeadServerNames();
     errors.print("Number of dead region servers: " +
                        deadRegionServers.size());
     if (details) {
-      for (String name: deadRegionServers) {
+      for (ServerName name: deadRegionServers) {
         errors.print("  " + name);
       }
     }
@@ -302,16 +305,41 @@ public class HBaseFsck {
 
     // Check if Root region is valid and existing
     if (rootLocation == null || rootLocation.getRegionInfo() == null ||
-        rootLocation.getServerAddress() == null) {
+        rootLocation.getHostname() == null) {
       errors.reportError("Root Region or some of its attributes is null.");
       return false;
     }
-
-    MetaEntry m = new MetaEntry(rootLocation.getRegionInfo(),
-      rootLocation.getServerAddress(), null, System.currentTimeMillis());
+    ServerName sn;
+    try {
+      sn = getRootRegionServerName();
+    } catch (InterruptedException e) {
+      throw new IOException("Interrupted", e);
+    }
+    MetaEntry m =
+      new MetaEntry(rootLocation.getRegionInfo(), sn, System.currentTimeMillis());
     HbckInfo hbInfo = new HbckInfo(m);
     regionInfo.put(rootLocation.getRegionInfo().getEncodedName(), hbInfo);
     return true;
+  }
+
+  private ServerName getRootRegionServerName()
+  throws IOException, InterruptedException {
+    RootRegionTracker rootRegionTracker =
+      new RootRegionTracker(this.connection.getZooKeeperWatcher(), new Abortable() {
+        @Override
+        public void abort(String why, Throwable e) {
+          LOG.error(why, e);
+          System.exit(1);
+        }
+      });
+    rootRegionTracker.start();
+    ServerName sn = null;
+    try {
+      sn = rootRegionTracker.getRootRegionLocation();
+    } finally {
+      rootRegionTracker.stop();
+    }
+    return sn;
   }
 
   /**
@@ -319,14 +347,13 @@ public class HBaseFsck {
    * @param regionServerList - the list of region servers to connect to
    * @throws IOException if a remote or network exception occurs
    */
-  void processRegionServers(Collection<HServerInfo> regionServerList)
-    throws IOException, InterruptedException {
-
+  void processRegionServers(Collection<ServerName> regionServerList)
+  throws IOException, InterruptedException {
     WorkItemRegion[] work = new WorkItemRegion[regionServerList.size()];
     int num = 0;
 
     // loop to contact each region server in parallel
-    for (HServerInfo rsinfo:regionServerList) {
+    for (ServerName rsinfo: regionServerList) {
       work[num] = new WorkItemRegion(this, rsinfo, errors, connection);
       executor.execute(work[num]);
       num++;
@@ -478,7 +505,7 @@ public class HBaseFsck {
       if (modTInfo == null) {
         modTInfo = new TInfo(tableName);
       }
-      for (HServerAddress server : hbi.deployedOn) {
+      for (ServerName server : hbi.deployedOn) {
         modTInfo.addServer(server);
       }
       modTInfo.addEdge(hbi.metaEntry.getStartKey(), hbi.metaEntry.getEndKey());
@@ -498,19 +525,19 @@ public class HBaseFsck {
   private class TInfo {
     String tableName;
     TreeMap <byte[], byte[]> edges;
-    TreeSet <HServerAddress> deployedOn;
+    TreeSet <ServerName> deployedOn;
 
     TInfo(String name) {
       this.tableName = name;
       edges = new TreeMap <byte[], byte[]> (Bytes.BYTES_COMPARATOR);
-      deployedOn = new TreeSet <HServerAddress>();
+      deployedOn = new TreeSet <ServerName>();
     }
 
     public void addEdge(byte[] fromNode, byte[] toNode) {
       this.edges.put(fromNode, toNode);
     }
 
-    public void addServer(HServerAddress server) {
+    public void addServer(ServerName server) {
       this.deployedOn.add(server);
     }
 
@@ -647,7 +674,7 @@ public class HBaseFsck {
           errors.print("Trying to fix a problem with .META...");
           setShouldRerun();
           // try fix it (treat is a dupe assignment)
-          List <HServerAddress> deployedOn = Lists.newArrayList();
+          List <ServerName> deployedOn = Lists.newArrayList();
           for (HbckInfo mRegion : metaRegions) {
             deployedOn.add(mRegion.metaEntry.regionServer);
           }
@@ -681,35 +708,19 @@ public class HBaseFsck {
 
           // record the latest modification of this META record
           long ts =  Collections.max(result.list(), comp).getTimestamp();
-
-          // record region details
-          byte [] value = result.getValue(HConstants.CATALOG_FAMILY,
-            HConstants.REGIONINFO_QUALIFIER);
-          if (value == null || value.length == 0) {
+          Pair<HRegionInfo, ServerName> pair =
+            MetaReader.metaRowToRegionPair(result);
+          if (pair == null || pair.getFirst() == null) {
             emptyRegionInfoQualifiers.add(result);
             return true;
           }
-          HRegionInfo info = Writables.getHRegionInfo(value);
-          HServerAddress server = null;
-          byte[] startCode = null;
-
-          // record assigned region server
-          value = result.getValue(HConstants.CATALOG_FAMILY,
-                                     HConstants.SERVER_QUALIFIER);
-          if (value != null && value.length > 0) {
-            String address = Bytes.toString(value);
-            server = new HServerAddress(address);
+          ServerName sn = null;
+          if (pair.getSecond() != null) {
+            sn = pair.getSecond();
           }
-
-          // record region's start key
-          value = result.getValue(HConstants.CATALOG_FAMILY,
-                                  HConstants.STARTCODE_QUALIFIER);
-          if (value != null) {
-            startCode = value;
-          }
-          MetaEntry m = new MetaEntry(info, server, startCode, ts);
+          MetaEntry m = new MetaEntry(pair.getFirst(), sn, ts);
           HbckInfo hbInfo = new HbckInfo(m);
-          HbckInfo previous = regionInfo.put(info.getEncodedName(), hbInfo);
+          HbckInfo previous = regionInfo.put(pair.getFirst().getEncodedName(), hbInfo);
           if (previous != null) {
             throw new IOException("Two entries in META are same " + previous);
           }
@@ -740,11 +751,10 @@ public class HBaseFsck {
    * Stores the entries scanned from META
    */
   private static class MetaEntry extends HRegionInfo {
-    HServerAddress regionServer;   // server hosting this region
+    ServerName regionServer;   // server hosting this region
     long modTime;          // timestamp of most recent modification metadata
 
-    public MetaEntry(HRegionInfo rinfo, HServerAddress regionServer,
-                     byte[] startCode, long modTime) {
+    public MetaEntry(HRegionInfo rinfo, ServerName regionServer, long modTime) {
       super(rinfo);
       this.regionServer = regionServer;
       this.modTime = modTime;
@@ -758,13 +768,13 @@ public class HBaseFsck {
     boolean onlyEdits = false;
     MetaEntry metaEntry = null;
     FileStatus foundRegionDir = null;
-    List<HServerAddress> deployedOn = Lists.newArrayList();
+    List<ServerName> deployedOn = Lists.newArrayList();
 
     HbckInfo(MetaEntry metaEntry) {
       this.metaEntry = metaEntry;
     }
 
-    public synchronized void addServer(HServerAddress server) {
+    public synchronized void addServer(ServerName server) {
       this.deployedOn.add(server);
     }
 
@@ -792,7 +802,7 @@ public class HBaseFsck {
       }
       System.out.println("    Number of regions: " + tInfo.getNumRegions());
       System.out.print("    Deployed on: ");
-      for (HServerAddress server : tInfo.deployedOn) {
+      for (ServerName server : tInfo.deployedOn) {
         System.out.print(" " + server.toString());
       }
       System.out.println();
@@ -865,12 +875,12 @@ public class HBaseFsck {
    */
   static class WorkItemRegion implements Runnable {
     private HBaseFsck hbck;
-    private HServerInfo rsinfo;
+    private ServerName rsinfo;
     private ErrorReporter errors;
     private HConnection connection;
     private boolean done;
 
-    WorkItemRegion(HBaseFsck hbck, HServerInfo info, 
+    WorkItemRegion(HBaseFsck hbck, ServerName info,
                    ErrorReporter errors, HConnection connection) {
       this.hbck = hbck;
       this.rsinfo = info;
@@ -888,8 +898,7 @@ public class HBaseFsck {
     public synchronized void run() {
       errors.progress();
       try {
-        HRegionInterface server = connection.getHRegionConnection(
-                                    rsinfo.getServerAddress());
+        HRegionInterface server = connection.getHRegionConnection(new HServerAddress(rsinfo.getHostname(), rsinfo.getPort()));
 
         // list all online regions from this region server
         List<HRegionInfo> regions = server.getOnlineRegions();
@@ -908,7 +917,7 @@ public class HBaseFsck {
         // check to see if the existance of this region matches the region in META
         for (HRegionInfo r:regions) {
           HbckInfo hbi = hbck.getOrCreateInfo(r.getEncodedName());
-          hbi.addServer(rsinfo.getServerAddress());
+          hbi.addServer(rsinfo);
         }
       } catch (IOException e) {          // unable to connect to the region server. 
         errors.reportError("RegionServer: " + rsinfo.getServerName() +

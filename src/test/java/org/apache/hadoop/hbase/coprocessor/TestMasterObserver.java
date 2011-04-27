@@ -20,15 +20,24 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -40,13 +49,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-
-import static org.junit.Assert.*;
 
 /**
  * Tests invocation of the {@link org.apache.hadoop.hbase.coprocessor.MasterObserver}
@@ -217,14 +219,14 @@ public class TestMasterObserver {
 
     @Override
     public void preMove(ObserverContext<MasterCoprocessorEnvironment> env,
-        HRegionInfo region, HServerInfo srcServer, HServerInfo destServer)
+        HRegionInfo region, ServerName srcServer, ServerName destServer)
     throws UnknownRegionException {
       preMoveCalled = true;
     }
 
     @Override
     public void postMove(ObserverContext<MasterCoprocessorEnvironment> env, HRegionInfo region,
-        HServerInfo srcServer, HServerInfo destServer)
+        ServerName srcServer, ServerName destServer)
     throws UnknownRegionException {
       postMoveCalled = true;
     }
@@ -445,15 +447,17 @@ public class TestMasterObserver {
 
     Map<HRegionInfo,HServerAddress> regions = table.getRegionsInfo();
     assertFalse(regions.isEmpty());
-    Map.Entry<HRegionInfo,HServerAddress> firstRegion =
+    Map.Entry<HRegionInfo, HServerAddress> firstRegion =
         regions.entrySet().iterator().next();
 
     // try to force a move
-    Collection<HServerInfo> servers = master.getClusterStatus().getServerInfo();
+    Collection<ServerName> servers = master.getClusterStatus().getServers();
     String destName = null;
-    for (HServerInfo info : servers) {
-      if (!info.getServerAddress().equals(firstRegion.getValue())) {
-        destName = info.getServerName();
+    for (ServerName info : servers) {
+      HServerAddress hsa =
+        new HServerAddress(info.getHostname(), info.getPort());
+      if (!hsa.equals(firstRegion.getValue())) {
+        destName = info.toString();
         break;
       }
     }
@@ -471,7 +475,7 @@ public class TestMasterObserver {
     master.balanceSwitch(false);
     // move half the open regions from RS 0 to RS 1
     HRegionServer rs = cluster.getRegionServer(0);
-    byte[] destRS = Bytes.toBytes(cluster.getRegionServer(1).getServerName());
+    byte[] destRS = Bytes.toBytes(cluster.getRegionServer(1).getServerName().toString());
     List<HRegionInfo> openRegions = rs.getOnlineRegions();
     int moveCnt = openRegions.size()/2;
     for (int i=0; i<moveCnt; i++) {

@@ -22,8 +22,16 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.util.*;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -46,11 +54,17 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterAddressTracker;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.ipc.*;
+import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
+import org.apache.hadoop.hbase.ipc.ExecRPCInvoker;
+import org.apache.hadoop.hbase.ipc.HBaseRPC;
+import org.apache.hadoop.hbase.ipc.HMasterInterface;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
@@ -243,7 +257,8 @@ public class HConnectionManager {
 
     private final Map<String, HRegionInterface> servers =
       new ConcurrentHashMap<String, HRegionInterface>();
-    private final ConcurrentHashMap<String, String> connectionLock = new ConcurrentHashMap<String, String>();
+    private final ConcurrentHashMap<String, String> connectionLock =
+      new ConcurrentHashMap<String, String>();
 
     /**
      * Map of table to table {@link HRegionLocation}s.  The table key is made
@@ -340,7 +355,7 @@ public class HConnectionManager {
         }
       }
 
-      HServerAddress masterLocation = null;
+      ServerName sn = null;
       synchronized (this.masterLock) {
         for (int tries = 0;
           !this.closed &&
@@ -349,8 +364,8 @@ public class HConnectionManager {
         tries++) {
 
           try {
-            masterLocation = masterAddressTracker.getMasterAddress();
-            if(masterLocation == null) {
+            sn = masterAddressTracker.getMasterAddress();
+            if (sn == null) {
               LOG.info("ZooKeeper available but no active master location found");
               throw new MasterNotRunningException();
             }
@@ -358,9 +373,11 @@ public class HConnectionManager {
             if (clusterId.hasId()) {
               conf.set(HConstants.CLUSTER_ID, clusterId.getId());
             }
+            InetSocketAddress isa =
+              new InetSocketAddress(sn.getHostname(), sn.getPort());
             HMasterInterface tryMaster = (HMasterInterface)HBaseRPC.getProxy(
-                HMasterInterface.class, HMasterInterface.VERSION,
-                masterLocation.getInetSocketAddress(), this.conf, this.rpcTimeout);
+                HMasterInterface.class, HMasterInterface.VERSION, isa, this.conf,
+                this.rpcTimeout);
 
             if (tryMaster.isMasterRunning()) {
               this.master = tryMaster;
@@ -391,10 +408,10 @@ public class HConnectionManager {
         this.masterChecked = true;
       }
       if (this.master == null) {
-        if (masterLocation == null) {
+        if (sn == null) {
           throw new MasterNotRunningException();
         }
-        throw new MasterNotRunningException(masterLocation.toString());
+        throw new MasterNotRunningException(sn.toString());
       }
       return this.master;
     }
@@ -577,12 +594,13 @@ public class HConnectionManager {
 
       if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
         try {
-          HServerAddress hsa =
+          ServerName servername =
             this.rootRegionTracker.waitRootRegionLocation(this.rpcTimeout);
           LOG.debug("Lookedup root region location, connection=" + this +
-            "; hsa=" + hsa);
-          if (hsa == null) return null;
-          return new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, hsa);
+            "; serverName=" + ((servername == null)? "": servername.toString()));
+          if (servername == null) return null;
+          return new HRegionLocation(HRegionInfo.ROOT_REGIONINFO,
+            servername.getHostname(), servername.getPort());
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
           return null;
@@ -631,11 +649,14 @@ public class HConnectionManager {
               if (value == null) {
                 return true;  // don't cache it
               }
-              final String serverAddress = Bytes.toString(value);
-
+              final String hostAndPort = Bytes.toString(value);
+              String hostname = Addressing.parseHostname(hostAndPort);
+              int port = Addressing.parsePort(hostAndPort);
+              value = result.getValue(HConstants.CATALOG_FAMILY,
+                  HConstants.STARTCODE_QUALIFIER);
               // instantiate the location
-              HRegionLocation loc = new HRegionLocation(regionInfo,
-                new HServerAddress(serverAddress));
+              HRegionLocation loc =
+                new HRegionLocation(regionInfo, hostname, port);
               // cache this meta entry
               cacheLocation(tableName, loc);
             }
@@ -690,7 +711,7 @@ public class HConnectionManager {
           // If null still, go around again.
           if (metaLocation == null) continue;
           HRegionInterface server =
-            getHRegionConnection(metaLocation.getServerAddress());
+            getHRegionConnection(metaLocation.getHostname(), metaLocation.getPort());
 
           Result regionInfoRow = null;
           // This block guards against two threads trying to load the meta
@@ -725,7 +746,7 @@ public class HConnectionManager {
           if (regionInfoRow == null) {
             throw new TableNotFoundException(Bytes.toString(tableName));
           }
-          byte[] value = regionInfoRow.getValue(HConstants.CATALOG_FAMILY,
+          byte [] value = regionInfoRow.getValue(HConstants.CATALOG_FAMILY,
               HConstants.REGIONINFO_QUALIFIER);
           if (value == null || value.length == 0) {
             throw new IOException("HRegionInfo was null or empty in " +
@@ -746,19 +767,22 @@ public class HConnectionManager {
 
           value = regionInfoRow.getValue(HConstants.CATALOG_FAMILY,
               HConstants.SERVER_QUALIFIER);
-          String serverAddress = "";
-          if(value != null) {
-            serverAddress = Bytes.toString(value);
+          String hostAndPort = "";
+          if (value != null) {
+            hostAndPort = Bytes.toString(value);
           }
-          if (serverAddress.equals("")) {
+          if (hostAndPort.equals("")) {
             throw new NoServerForRegionException("No server address listed " +
               "in " + Bytes.toString(parentTable) + " for region " +
               regionInfo.getRegionNameAsString());
           }
 
-          // instantiate the location
-          location = new HRegionLocation(regionInfo,
-            new HServerAddress(serverAddress));
+          // Instantiate the location
+          String hostname = Addressing.parseHostname(hostAndPort);
+          int port = Addressing.parsePort(hostAndPort);
+          value = regionInfoRow.getValue(HConstants.CATALOG_FAMILY,
+            HConstants.SERVER_QUALIFIER);
+          location = new HRegionLocation(regionInfo, hostname, port);
           cacheLocation(tableName, location);
           return location;
         } catch (TableNotFoundException e) {
@@ -936,14 +960,48 @@ public class HConnectionManager {
       }
     }
 
-    public HRegionInterface getHRegionConnection(
-        HServerAddress regionServer, boolean getMaster)
+    public HRegionInterface getHRegionConnection(HServerAddress hsa)
     throws IOException {
-      if (getMaster) {
-        getMaster();
-      }
+      return getHRegionConnection(hsa, false);
+    }
+
+    @Override
+    public HRegionInterface getHRegionConnection(final String hostname,
+        final int port)
+    throws IOException {
+      return getHRegionConnection(hostname, port, false);
+    }
+
+    public HRegionInterface getHRegionConnection(HServerAddress hsa,
+        boolean master)
+    throws IOException {
+      return getHRegionConnection(null, -1, hsa.getInetSocketAddress(), master);
+    }
+
+    @Override
+    public HRegionInterface getHRegionConnection(final String hostname,
+        final int port, final boolean master)
+    throws IOException {
+      return getHRegionConnection(hostname, port, null, master);
+    }
+
+    /**
+     * Either the passed <code>isa</code> is null or <code>hostname</code>
+     * can be but not both.
+     * @param hostname
+     * @param port
+     * @param isa
+     * @param master
+     * @return Proxy.
+     * @throws IOException
+     */
+    HRegionInterface getHRegionConnection(final String hostname, final int port,
+        final InetSocketAddress isa, final boolean master)
+    throws IOException {
+      if (master) getMaster();
       HRegionInterface server;
-      String rsName = regionServer.toString();
+      String rsName = isa != null?
+          isa.toString(): Addressing.createHostAndPortStr(hostname, port);
       // See if we already have a connection (common case)
       server = this.servers.get(rsName);
       if (server == null) {
@@ -958,12 +1016,15 @@ public class HConnectionManager {
               if (clusterId.hasId()) {
                 conf.set(HConstants.CLUSTER_ID, clusterId.getId());
               }
+              // Only create isa when we need to.
+              InetSocketAddress address = isa != null? isa:
+                new InetSocketAddress(hostname, port);
               // definitely a cache miss. establish an RPC for this RS
               server = (HRegionInterface) HBaseRPC.waitForProxy(
                   serverInterfaceClass, HRegionInterface.VERSION,
-                  regionServer.getInetSocketAddress(), this.conf,
+                  address, this.conf,
                   this.maxRPCAttempts, this.rpcTimeout, this.rpcTimeout);
-              this.servers.put(rsName, server);
+              this.servers.put(address.toString(), server);
             } catch (RemoteException e) {
               LOG.warn("RemoteException connecting to RS", e);
               // Throw what the RemoteException was carrying.
@@ -973,12 +1034,6 @@ public class HConnectionManager {
         }
       }
       return server;
-    }
-
-    public HRegionInterface getHRegionConnection(
-        HServerAddress regionServer)
-    throws IOException {
-      return getHRegionConnection(regionServer, false);
     }
 
     /**
@@ -1065,10 +1120,8 @@ public class HConnectionManager {
       this.closed = true;
     }
 
-    private <R> Callable<MultiResponse> createCallable(
-        final HServerAddress address,
-        final MultiAction<R> multi,
-        final byte [] tableName) {
+    private <R> Callable<MultiResponse> createCallable(final HRegionLocation loc,
+        final MultiAction<R> multi, final byte [] tableName) {
       final HConnection connection = this;
       return new Callable<MultiResponse>() {
        public MultiResponse call() throws IOException {
@@ -1079,7 +1132,8 @@ public class HConnectionManager {
                }
                @Override
                public void instantiateServer(boolean reload) throws IOException {
-                 server = connection.getHRegionConnection(address);
+                 server =
+                   connection.getHRegionConnection(loc.getHostname(), loc.getPort());
                }
              }
          );
@@ -1191,8 +1245,10 @@ public class HConnectionManager {
       }
 
       // Keep track of the most recent servers for any given item for better
-      // exceptional reporting.
-      HServerAddress [] lastServers = new HServerAddress[results.length];
+      // exceptional reporting.  We keep HRegionLocation to save on parsing.
+      // Later below when we use lastServers, we'll pull what we need from
+      // lastServers.
+      HRegionLocation [] lastServers = new HRegionLocation[results.length];
       List<Row> workingList = new ArrayList<Row>(list);
       boolean retry = true;
       // count that helps presize actions array
@@ -1208,43 +1264,41 @@ public class HConnectionManager {
           Thread.sleep(sleepTime);
         }
         // step 1: break up into regionserver-sized chunks and build the data structs
-        Map<HServerAddress, MultiAction<R>> actionsByServer =
-          new HashMap<HServerAddress, MultiAction<R>>();
+        Map<HRegionLocation, MultiAction<R>> actionsByServer =
+          new HashMap<HRegionLocation, MultiAction<R>>();
         for (int i = 0; i < workingList.size(); i++) {
           Row row = workingList.get(i);
           if (row != null) {
             HRegionLocation loc = locateRegion(tableName, row.getRow(), true);
-            HServerAddress address = loc.getServerAddress();
             byte[] regionName = loc.getRegionInfo().getRegionName();
 
-            MultiAction<R> actions = actionsByServer.get(address);
+            MultiAction<R> actions = actionsByServer.get(loc);
             if (actions == null) {
               actions = new MultiAction<R>();
-              actionsByServer.put(address, actions);
+              actionsByServer.put(loc, actions);
             }
 
             Action<R> action = new Action<R>(regionName, row, i);
-            lastServers[i] = address;
+            lastServers[i] = loc;
             actions.add(regionName, action);
           }
         }
 
         // step 2: make the requests
 
-        Map<HServerAddress,Future<MultiResponse>> futures =
-            new HashMap<HServerAddress, Future<MultiResponse>>(
+        Map<HRegionLocation, Future<MultiResponse>> futures =
+            new HashMap<HRegionLocation, Future<MultiResponse>>(
                 actionsByServer.size());
 
-        for (Entry<HServerAddress, MultiAction<R>> e
-             : actionsByServer.entrySet()) {
+        for (Entry<HRegionLocation, MultiAction<R>> e: actionsByServer.entrySet()) {
           futures.put(e.getKey(), pool.submit(createCallable(e.getKey(), e.getValue(), tableName)));
         }
 
         // step 3: collect the failures and successes and prepare for retry
 
-        for (Entry<HServerAddress, Future<MultiResponse>> responsePerServer
+        for (Entry<HRegionLocation, Future<MultiResponse>> responsePerServer
              : futures.entrySet()) {
-          HServerAddress address = responsePerServer.getKey();
+          HRegionLocation loc = responsePerServer.getKey();
 
           try {
             Future<MultiResponse> future = responsePerServer.getValue();
@@ -1252,7 +1306,8 @@ public class HConnectionManager {
 
             if (resp == null) {
               // Entire server failed
-              LOG.debug("Failed all for server: " + address + ", removing from cache");
+              LOG.debug("Failed all for server: " + loc.getHostnamePort() +
+                ", removing from cache");
               continue;
             }
 
@@ -1277,7 +1332,7 @@ public class HConnectionManager {
               }
             }
           } catch (ExecutionException e) {
-            LOG.debug("Failed all from " + address, e);
+            LOG.debug("Failed all from " + loc, e);
           }
         }
 
@@ -1320,13 +1375,13 @@ public class HConnectionManager {
 
       List<Throwable> exceptions = new ArrayList<Throwable>(actionCount);
       List<Row> actions = new ArrayList<Row>(actionCount);
-      List<HServerAddress> addresses = new ArrayList<HServerAddress>(actionCount);
+      List<String> addresses = new ArrayList<String>(actionCount);
 
       for (int i = 0 ; i < results.length; i++) {
         if (results[i] == null || results[i] instanceof Throwable) {
           exceptions.add((Throwable)results[i]);
           actions.add(list.get(i));
-          addresses.add(lastServers[i]);
+          addresses.add(lastServers[i].getHostnamePort());
         }
       }
 
@@ -1418,11 +1473,14 @@ public class HConnectionManager {
       return !regionCachePrefetchDisabledTables.contains(Bytes.mapKey(tableName));
     }
 
-    public void prewarmRegionCache(final byte[] tableName,
-        final Map<HRegionInfo, HServerAddress> regions) {
+    @Override
+    public void prewarmRegionCache(byte[] tableName,
+        Map<HRegionInfo, HServerAddress> regions) {
       for (Map.Entry<HRegionInfo, HServerAddress> e : regions.entrySet()) {
+        HServerAddress hsa = e.getValue();
+        if (hsa == null || hsa.getInetSocketAddress() == null) continue;
         cacheLocation(tableName,
-            new HRegionLocation(e.getKey(), e.getValue()));
+          new HRegionLocation(e.getKey(), hsa.getHostname(), hsa.getPort()));
       }
     }
 

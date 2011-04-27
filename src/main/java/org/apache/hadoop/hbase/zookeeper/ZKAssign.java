@@ -24,6 +24,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.zookeeper.AsyncCallback;
@@ -130,13 +131,13 @@ public class ZKAssign {
    * @throws KeeperException.NodeExistsException if node already exists
    */
   public static void createNodeOffline(ZooKeeperWatcher zkw, HRegionInfo region,
-      String serverName)
+      ServerName serverName)
   throws KeeperException, KeeperException.NodeExistsException {
     createNodeOffline(zkw, region, serverName, EventType.M_ZK_REGION_OFFLINE);
   }
 
   public static void createNodeOffline(ZooKeeperWatcher zkw, HRegionInfo region,
-      String serverName, final EventType event)
+      ServerName serverName, final EventType event)
   throws KeeperException, KeeperException.NodeExistsException {
     LOG.debug(zkw.prefix("Creating unassigned node for " +
       region.getEncodedName() + " in OFFLINE state"));
@@ -165,7 +166,7 @@ public class ZKAssign {
    * @throws KeeperException.NodeExistsException if node already exists
    */
   public static void asyncCreateNodeOffline(ZooKeeperWatcher zkw,
-      HRegionInfo region, String serverName,
+      HRegionInfo region, ServerName serverName,
       final AsyncCallback.StringCallback cb, final Object ctx)
   throws KeeperException {
     LOG.debug(zkw.prefix("Async create of unassigned node for " +
@@ -198,7 +199,7 @@ public class ZKAssign {
    * @throws KeeperException.NoNodeException if node does not exist
    */
   public static void forceNodeOffline(ZooKeeperWatcher zkw, HRegionInfo region,
-      String serverName)
+      ServerName serverName)
   throws KeeperException, KeeperException.NoNodeException {
     LOG.debug(zkw.prefix("Forcing existing unassigned node for " +
       region.getEncodedName() + " to OFFLINE state"));
@@ -231,7 +232,7 @@ public class ZKAssign {
    * @throws KeeperException.NodeExistsException if node already exists
    */
   public static boolean createOrForceNodeOffline(ZooKeeperWatcher zkw,
-      HRegionInfo region, String serverName)
+      HRegionInfo region, ServerName serverName)
   throws KeeperException {
     LOG.debug(zkw.prefix("Creating (or updating) unassigned node for " +
       region.getEncodedName() + " with OFFLINE state"));
@@ -464,7 +465,7 @@ public class ZKAssign {
    * @throws KeeperException.NodeExistsException if node already exists
    */
   public static int createNodeClosing(ZooKeeperWatcher zkw, HRegionInfo region,
-      String serverName)
+      ServerName serverName)
   throws KeeperException, KeeperException.NodeExistsException {
     LOG.debug(zkw.prefix("Creating unassigned node for " +
       region.getEncodedName() + " in a CLOSING state"));
@@ -506,7 +507,7 @@ public class ZKAssign {
    * @throws KeeperException if unexpected zookeeper exception
    */
   public static int transitionNodeClosed(ZooKeeperWatcher zkw,
-      HRegionInfo region, String serverName, int expectedVersion)
+      HRegionInfo region, ServerName serverName, int expectedVersion)
   throws KeeperException {
     return transitionNode(zkw, region, serverName,
         EventType.RS_ZK_REGION_CLOSING,
@@ -540,14 +541,14 @@ public class ZKAssign {
    * @throws KeeperException if unexpected zookeeper exception
    */
   public static int transitionNodeOpening(ZooKeeperWatcher zkw,
-      HRegionInfo region, String serverName)
+      HRegionInfo region, ServerName serverName)
   throws KeeperException {
     return transitionNodeOpening(zkw, region, serverName,
       EventType.M_ZK_REGION_OFFLINE);
   }
 
   public static int transitionNodeOpening(ZooKeeperWatcher zkw,
-      HRegionInfo region, String serverName, final EventType beginState)
+      HRegionInfo region, ServerName serverName, final EventType beginState)
   throws KeeperException {
     return transitionNode(zkw, region, serverName, beginState,
       EventType.RS_ZK_REGION_OPENING, -1);
@@ -580,7 +581,7 @@ public class ZKAssign {
    * @throws KeeperException if unexpected zookeeper exception
    */
   public static int retransitionNodeOpening(ZooKeeperWatcher zkw,
-      HRegionInfo region, String serverName, int expectedVersion)
+      HRegionInfo region, ServerName serverName, int expectedVersion)
   throws KeeperException {
     return transitionNode(zkw, region, serverName,
         EventType.RS_ZK_REGION_OPENING,
@@ -616,7 +617,7 @@ public class ZKAssign {
    * @throws KeeperException if unexpected zookeeper exception
    */
   public static int transitionNodeOpened(ZooKeeperWatcher zkw,
-      HRegionInfo region, String serverName, int expectedVersion)
+      HRegionInfo region, ServerName serverName, int expectedVersion)
   throws KeeperException {
     return transitionNode(zkw, region, serverName,
         EventType.RS_ZK_REGION_OPENING,
@@ -652,7 +653,7 @@ public class ZKAssign {
    * @throws KeeperException if unexpected zookeeper exception
    */
   public static int transitionNode(ZooKeeperWatcher zkw, HRegionInfo region,
-      String serverName, EventType beginState, EventType endState,
+      ServerName serverName, EventType beginState, EventType endState,
       int expectedVersion)
   throws KeeperException {
     return transitionNode(zkw, region, serverName, beginState, endState,
@@ -660,7 +661,7 @@ public class ZKAssign {
   }
 
   public static int transitionNode(ZooKeeperWatcher zkw, HRegionInfo region,
-      String serverName, EventType beginState, EventType endState,
+      ServerName serverName, EventType beginState, EventType endState,
       int expectedVersion, final byte [] payload)
   throws KeeperException {
     String encoded = region.getEncodedName();
@@ -699,7 +700,7 @@ public class ZKAssign {
         "unassigned node for " + encoded +
         " from " + beginState + " to " + endState + " failed, " +
         "the node existed but was in the state " + existingData.getEventType() +
-        " set by the server " + existingData.getServerName()));
+        " set by the server " + serverName));
       return -1;
     }
 

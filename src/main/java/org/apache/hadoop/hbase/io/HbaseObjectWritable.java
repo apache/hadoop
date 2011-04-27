@@ -41,10 +41,10 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
@@ -148,8 +148,14 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     // Hbase types
     addToMap(HColumnDescriptor.class, code++);
     addToMap(HConstants.Modify.class, code++);
-    addToMap(HMsg.class, code++);
-    addToMap(HMsg[].class, code++);
+
+    // We used to have a class named HMsg but its been removed.  Rather than
+    // just axe it, use following random Integer class -- we just chose any
+    // class from java.lang -- instead just so codes that follow stay
+    // in same relative place.
+    addToMap(Integer.class, code++);
+    addToMap(Integer[].class, code++);
+
     addToMap(HRegion.class, code++);
     addToMap(HRegion[].class, code++);
     addToMap(HRegionInfo.class, code++);
@@ -225,6 +231,8 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(CompareOp.class, code++);
 
     addToMap(ColumnRangeFilter.class, code++);
+
+    addToMap(HServerLoad.class, code++);
   }
 
   private Class<?> declaredClass;

@@ -23,10 +23,12 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.net.InetSocketAddress;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.ipc.RemoteException;
@@ -43,12 +45,11 @@ public class TestHMasterRPCException {
 
     HMaster hm = new HMaster(conf);
 
-    HServerAddress hma = hm.getMasterAddress();
+    ServerName sm = hm.getServerName();
+    InetSocketAddress isa = new InetSocketAddress(sm.getHostname(), sm.getPort());
     try {
-      HMasterInterface inf =
-          (HMasterInterface) HBaseRPC.getProxy(
-              HMasterInterface.class,  HMasterInterface.VERSION,
-              hma.getInetSocketAddress(), conf, 100);
+      HMasterInterface inf = (HMasterInterface) HBaseRPC.getProxy(
+        HMasterInterface.class,  HMasterInterface.VERSION, isa, conf, 100);
       inf.isMasterRunning();
       fail();
     } catch (RemoteException ex) {

@@ -23,7 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Test;
 
@@ -53,7 +53,8 @@ public class TestCatalogTrackerOnCluster {
           LOG.error("Abort was called on 'bad root location writer'", e);
         }
     });
-    HServerAddress nonsense = new HServerAddress("example.org:1234");
+    ServerName nonsense =
+      new ServerName("example.org", 1234, System.currentTimeMillis());
     RootLocationEditor.setRootLocation(zookeeper, nonsense);
     // Bring back up the hbase cluster.  See if it can deal with nonsense root
     // location.

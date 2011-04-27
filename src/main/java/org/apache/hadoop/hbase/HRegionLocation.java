@@ -19,24 +19,30 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.net.InetSocketAddress;
+
+import org.apache.hadoop.hbase.util.Addressing;
+
 /**
- * Contains the HRegionInfo for the region and the HServerAddress for the
- * HRegionServer serving the region
+ * Data structure to hold HRegionInfo and the address for the hosting
+ * HRegionServer.  Immutable.
  */
 public class HRegionLocation implements Comparable<HRegionLocation> {
-  // TODO: Is this class necessary?  Why not just have a Pair?
-  private HRegionInfo regionInfo;
-  private HServerAddress serverAddress;
+  private final HRegionInfo regionInfo;
+  private final String hostname;
+  private final int port;
 
   /**
    * Constructor
-   *
    * @param regionInfo the HRegionInfo for the region
-   * @param serverAddress the HServerAddress for the region server
+   * @param hostname Hostname
+   * @param port port
    */
-  public HRegionLocation(HRegionInfo regionInfo, HServerAddress serverAddress) {
+  public HRegionLocation(HRegionInfo regionInfo, final String hostname,
+      final int port) {
     this.regionInfo = regionInfo;
-    this.serverAddress = serverAddress;
+    this.hostname = hostname;
+    this.port = port;
   }
 
   /**
@@ -44,8 +50,8 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
    */
   @Override
   public String toString() {
-    return "address: " + this.serverAddress.toString() + ", regioninfo: " +
-      this.regionInfo.getRegionNameAsString();
+    return "region=" + this.regionInfo.getRegionNameAsString() +
+      ", hostname=" + this.hostname + ", port=" + this.port;
   }
 
   /**
@@ -71,7 +77,8 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   @Override
   public int hashCode() {
     int result = this.regionInfo.hashCode();
-    result ^= this.serverAddress.hashCode();
+    result ^= this.hostname.hashCode();
+    result ^= this.port;
     return result;
   }
 
@@ -80,9 +87,30 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
     return regionInfo;
   }
 
-  /** @return HServerAddress */
+  /** @return HServerAddress
+   * @deprecated Use {@link #getHostnamePort}
+   */
   public HServerAddress getServerAddress(){
-    return serverAddress;
+    return new HServerAddress(this.hostname, this.port);
+  }
+
+  public String getHostname() {
+    return this.hostname;
+  }
+
+  public int getPort() {
+    return this.port;
+  }
+
+  /**
+   * @return String made of hostname and port formatted as per {@link Addressing#createHostAndPortStr(String, int)}
+   */
+  public String getHostnamePort() {
+    return Addressing.createHostAndPortStr(this.hostname, this.port);
+  }
+
+  public InetSocketAddress getInetSocketAddress() {
+    return new InetSocketAddress(this.hostname, this.port);
   }
 
   //
@@ -91,9 +119,9 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
 
   public int compareTo(HRegionLocation o) {
     int result = this.regionInfo.compareTo(o.regionInfo);
-    if(result == 0) {
-      result = this.serverAddress.compareTo(o.serverAddress);
-    }
-    return result;
+    if (result != 0) return result;
+    result = this.hostname.compareTo(o.getHostname());
+    if (result != 0) return result;
+    return this.port - o.getPort();
   }
 }

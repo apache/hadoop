@@ -27,8 +27,8 @@ import java.util.concurrent.Semaphore;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.MasterAddressTracker;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -75,17 +75,17 @@ public class TestMasterAddressManager {
     // Create the master node with a dummy address
     String host = "localhost";
     int port = 1234;
-    HServerAddress dummyAddress = new HServerAddress(host, port);
+    ServerName sn = new ServerName(host, port, System.currentTimeMillis());
     LOG.info("Creating master node");
-    ZKUtil.setAddressAndWatch(zk, zk.masterAddressZNode, dummyAddress);
+    ZKUtil.createEphemeralNodeAndWatch(zk, zk.masterAddressZNode, sn.getBytes());
 
     // Wait for the node to be created
     LOG.info("Waiting for master address manager to be notified");
     listener.waitForCreation();
     LOG.info("Master node created");
     assertTrue(addressManager.hasMaster());
-    HServerAddress pulledAddress = addressManager.getMasterAddress();
-    assertTrue(pulledAddress.equals(dummyAddress));
+    ServerName pulledAddress = addressManager.getMasterAddress();
+    assertTrue(pulledAddress.equals(sn));
 
   }
 

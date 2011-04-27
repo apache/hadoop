@@ -28,8 +28,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
@@ -47,29 +47,29 @@ import org.apache.zookeeper.KeeperException;
 /**
  * Process server shutdown.
  * Server-to-handle must be already in the deadservers lists.  See
- * {@link ServerManager#expireServer(HServerInfo)}.
+ * {@link ServerManager#expireServer(ServerName)}
  */
 public class ServerShutdownHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(ServerShutdownHandler.class);
-  private final HServerInfo hsi;
+  private final ServerName serverName;
   private final Server server;
   private final MasterServices services;
   private final DeadServer deadServers;
 
   public ServerShutdownHandler(final Server server, final MasterServices services,
-      final DeadServer deadServers, final HServerInfo hsi) {
-    this(server, services, deadServers, hsi, EventType.M_SERVER_SHUTDOWN);
+      final DeadServer deadServers, final ServerName serverName) {
+    this(server, services, deadServers, serverName, EventType.M_SERVER_SHUTDOWN);
   }
 
   ServerShutdownHandler(final Server server, final MasterServices services,
-      final DeadServer deadServers, final HServerInfo hsi, EventType type) {
+      final DeadServer deadServers, final ServerName serverName, EventType type) {
     super(server, type);
-    this.hsi = hsi;
+    this.serverName = serverName;
     this.server = server;
     this.services = services;
     this.deadServers = deadServers;
-    if (!this.deadServers.contains(hsi.getServerName())) {
-      LOG.warn(hsi.getServerName() + " is NOT in deadservers; it should be!");
+    if (!this.deadServers.contains(this.serverName)) {
+      LOG.warn(this.serverName + " is NOT in deadservers; it should be!");
     }
   }
 
@@ -89,7 +89,7 @@ public class ServerShutdownHandler extends EventHandler {
 
   @Override
   public void process() throws IOException {
-    final String serverName = this.hsi.getServerName();
+    final ServerName serverName = this.serverName;
 
     LOG.info("Splitting logs for " + serverName);
     this.services.getMasterFileSystem().splitLog(serverName);
@@ -99,7 +99,7 @@ public class ServerShutdownHandler extends EventHandler {
     // OFFLINE? -- and then others after like CLOSING that depend on log
     // splitting.
     List<RegionState> regionsInTransition =
-      this.services.getAssignmentManager().processServerShutdown(this.hsi);
+      this.services.getAssignmentManager().processServerShutdown(this.serverName);
 
     // Assign root and meta if we were carrying them.
     if (isCarryingRoot()) { // -ROOT-
@@ -134,7 +134,7 @@ public class ServerShutdownHandler extends EventHandler {
       try {
         this.server.getCatalogTracker().waitForMeta();
         hris = MetaReader.getServerUserRegions(this.server.getCatalogTracker(),
-            this.hsi);
+          this.serverName);
         break;
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();

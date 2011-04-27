@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -55,13 +56,14 @@ public class ClusterStatus extends VersionedWritable {
    * <dl>
    *   <dt>0</dt> <dd>initial version</dd>
    *   <dt>1</dt> <dd>added cluster ID</dd>
+   *   <dt>2</dt> <dd>Added Map of ServerName to ServerLoad</dd>
    * </dl>
    */
-  private static final byte VERSION = 1;
+  private static final byte VERSION = 2;
 
   private String hbaseVersion;
-  private Collection<HServerInfo> liveServerInfo;
-  private Collection<String> deadServers;
+  private Map<ServerName, HServerLoad> liveServers;
+  private Collection<ServerName> deadServers;
   private Map<String, RegionState> intransition;
   private String clusterId;
 
@@ -72,18 +74,28 @@ public class ClusterStatus extends VersionedWritable {
     super();
   }
 
+  public ClusterStatus(final String hbaseVersion, final String clusterid,
+      final Map<ServerName, HServerLoad> servers,
+      final Collection<ServerName> deadServers, final Map<String, RegionState> rit) {
+    this.hbaseVersion = hbaseVersion;
+    this.liveServers = servers;
+    this.deadServers = deadServers;
+    this.intransition = rit;
+    this.clusterId = clusterid;
+  }
+
   /**
    * @return the names of region servers on the dead list
    */
-  public Collection<String> getDeadServerNames() {
+  public Collection<ServerName> getDeadServerNames() {
     return Collections.unmodifiableCollection(deadServers);
   }
 
   /**
    * @return the number of region servers in the cluster
    */
-  public int getServers() {
-    return liveServerInfo.size();
+  public int getServersSize() {
+    return liveServers.size();
   }
 
   /**
@@ -97,11 +109,8 @@ public class ClusterStatus extends VersionedWritable {
    * @return the average cluster load
    */
   public double getAverageLoad() {
-    int load = 0;
-    for (HServerInfo server: liveServerInfo) {
-      load += server.getLoad().getLoad();
-    }
-    return (double)load / (double)liveServerInfo.size();
+    int load = getRegionsCount();
+    return (double)load / (double)getServersSize();
   }
 
   /**
@@ -109,8 +118,8 @@ public class ClusterStatus extends VersionedWritable {
    */
   public int getRegionsCount() {
     int count = 0;
-    for (HServerInfo server: liveServerInfo) {
-      count += server.getLoad().getNumberOfRegions();
+    for (Map.Entry<ServerName, HServerLoad> e: this.liveServers.entrySet()) {
+      count += e.getValue().getNumberOfRegions();
     }
     return count;
   }
@@ -120,8 +129,8 @@ public class ClusterStatus extends VersionedWritable {
    */
   public int getRequestsCount() {
     int count = 0;
-    for (HServerInfo server: liveServerInfo) {
-      count += server.getLoad().getNumberOfRequests();
+    for (Map.Entry<ServerName, HServerLoad> e: this.liveServers.entrySet()) {
+      count += e.getValue().getNumberOfRequests();
     }
     return count;
   }
@@ -131,13 +140,6 @@ public class ClusterStatus extends VersionedWritable {
    */
   public String getHBaseVersion() {
     return hbaseVersion;
-  }
-
-  /**
-   * @param version the HBase version string
-   */
-  public void setHBaseVersion(String version) {
-    hbaseVersion = version;
   }
 
   /**
@@ -152,7 +154,7 @@ public class ClusterStatus extends VersionedWritable {
     }
     return (getVersion() == ((ClusterStatus)o).getVersion()) &&
       getHBaseVersion().equals(((ClusterStatus)o).getHBaseVersion()) &&
-      liveServerInfo.equals(((ClusterStatus)o).liveServerInfo) &&
+      this.liveServers.equals(((ClusterStatus)o).liveServers) &&
       deadServers.equals(((ClusterStatus)o).deadServers);
   }
 
@@ -160,7 +162,7 @@ public class ClusterStatus extends VersionedWritable {
    * @see java.lang.Object#hashCode()
    */
   public int hashCode() {
-    return VERSION + hbaseVersion.hashCode() + liveServerInfo.hashCode() +
+    return VERSION + hbaseVersion.hashCode() + this.liveServers.hashCode() +
       deadServers.hashCode();
   }
 
@@ -175,41 +177,32 @@ public class ClusterStatus extends VersionedWritable {
 
   /**
    * Returns detailed region server information: A list of
-   * {@link HServerInfo}, containing server load and resource usage
-   * statistics as {@link HServerLoad}, containing per-region
-   * statistics as {@link HServerLoad.RegionLoad}.
+   * {@link ServerName}.
    * @return region server information
+   * @deprecated Use {@link #getServers()}
    */
-  public Collection<HServerInfo> getServerInfo() {
-    return Collections.unmodifiableCollection(liveServerInfo);
+  public Collection<ServerName> getServerInfo() {
+    return getServers();
   }
 
-  //
-  // Setters
-  //
-
-  public void setServerInfo(Collection<HServerInfo> serverInfo) {
-    this.liveServerInfo = serverInfo;
+  public Collection<ServerName> getServers() {
+    return Collections.unmodifiableCollection(this.liveServers.keySet());
   }
 
-  public void setDeadServers(Collection<String> deadServers) {
-    this.deadServers = deadServers;
+  /**
+   * @param sn
+   * @return Server's load or null if not found.
+   */
+  public HServerLoad getLoad(final ServerName sn) {
+    return this.liveServers.get(sn);
   }
 
   public Map<String, RegionState> getRegionsInTransition() {
     return this.intransition;
   }
 
-  public void setRegionsInTransition(final Map<String, RegionState> m) {
-    this.intransition = m;
-  }
-
   public String getClusterId() {
     return clusterId;
-  }
-
-  public void setClusterId(String id) {
-    this.clusterId = id;
   }
 
   //
@@ -219,13 +212,14 @@ public class ClusterStatus extends VersionedWritable {
   public void write(DataOutput out) throws IOException {
     super.write(out);
     out.writeUTF(hbaseVersion);
-    out.writeInt(liveServerInfo.size());
-    for (HServerInfo server: liveServerInfo) {
-      server.write(out);
+    out.writeInt(getServersSize());
+    for (Map.Entry<ServerName, HServerLoad> e: this.liveServers.entrySet()) {
+      out.writeUTF(e.getKey().toString());
+      e.getValue().write(out);
     }
     out.writeInt(deadServers.size());
-    for (String server: deadServers) {
-      out.writeUTF(server);
+    for (ServerName server: deadServers) {
+      out.writeUTF(server.toString());
     }
     out.writeInt(this.intransition.size());
     for (Map.Entry<String, RegionState> e: this.intransition.entrySet()) {
@@ -239,16 +233,17 @@ public class ClusterStatus extends VersionedWritable {
     super.readFields(in);
     hbaseVersion = in.readUTF();
     int count = in.readInt();
-    liveServerInfo = new ArrayList<HServerInfo>(count);
+    this.liveServers = new HashMap<ServerName, HServerLoad>(count);
     for (int i = 0; i < count; i++) {
-      HServerInfo info = new HServerInfo();
-      info.readFields(in);
-      liveServerInfo.add(info);
+      String str = in.readUTF();
+      HServerLoad hsl = new HServerLoad();
+      hsl.readFields(in);
+      this.liveServers.put(new ServerName(str), hsl);
     }
     count = in.readInt();
-    deadServers = new ArrayList<String>(count);
+    deadServers = new ArrayList<ServerName>(count);
     for (int i = 0; i < count; i++) {
-      deadServers.add(in.readUTF());
+      deadServers.add(new ServerName(in.readUTF()));
     }
     count = in.readInt();
     this.intransition = new TreeMap<String, RegionState>();

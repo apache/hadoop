@@ -55,12 +55,11 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
   /**
    * Get the address of the current master if one is available.  Returns null
    * if no current master.
-   *
-   * @return server address of current active master, or null if none available
+   * @return Server name or null if timed out.
    */
-  public HServerAddress getMasterAddress() {
+  public ServerName getMasterAddress() {
     byte [] data = super.getData();
-    return data == null ? null : new HServerAddress(Bytes.toString(data));
+    return data == null ? null : new ServerName(Bytes.toString(data));
   }
 
   /**
@@ -77,12 +76,12 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
    * has passed.
    *
    * @param timeout maximum time to wait for master in millis, 0 for forever
-   * @return server address of current active master, null if timed out
+   * @return String of master host and port or null if timed out.
    * @throws InterruptedException if the thread is interrupted while waiting
    */
-  public synchronized HServerAddress waitForMaster(long timeout)
+  public synchronized ServerName waitForMaster(long timeout)
   throws InterruptedException {
     byte [] data = super.blockUntilAvailable();
-    return data == null ? null : new HServerAddress(Bytes.toString(data));
+    return data == null ? null : new ServerName(Bytes.toString(data));
   }
 }

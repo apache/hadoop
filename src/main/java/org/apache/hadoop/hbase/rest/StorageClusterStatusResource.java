@@ -35,8 +35,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.rest.model.StorageClusterStatusModel;
 
@@ -73,13 +73,13 @@ public class StorageClusterStatusResource extends ResourceBase {
       model.setRegions(status.getRegionsCount());
       model.setRequests(status.getRequestsCount());
       model.setAverageLoad(status.getAverageLoad());
-      for (HServerInfo info: status.getServerInfo()) {
-        HServerLoad load = info.getLoad();
-        StorageClusterStatusModel.Node node = 
+      for (ServerName info: status.getServers()) {
+        HServerLoad load = status.getLoad(info);
+        StorageClusterStatusModel.Node node =
           model.addLiveNode(
-            info.getServerAddress().getHostname() + ":" + 
-            Integer.toString(info.getServerAddress().getPort()),
-            info.getStartCode(), load.getUsedHeapMB(),
+            info.getHostname() + ":" +
+            Integer.toString(info.getPort()),
+            info.getStartcode(), load.getUsedHeapMB(),
             load.getMaxHeapMB());
         node.setRequests(load.getNumberOfRequests());
         for (HServerLoad.RegionLoad region: load.getRegionsLoad().values()) {
@@ -88,8 +88,8 @@ public class StorageClusterStatusResource extends ResourceBase {
             region.getMemStoreSizeMB(), region.getStorefileIndexSizeMB());
         }
       }
-      for (String name: status.getDeadServerNames()) {
-        model.addDeadNode(name);
+      for (ServerName name: status.getDeadServerNames()) {
+        model.addDeadNode(name.toString());
       }
       ResponseBuilder response = Response.ok(model);
       response.cacheControl(cacheControl);

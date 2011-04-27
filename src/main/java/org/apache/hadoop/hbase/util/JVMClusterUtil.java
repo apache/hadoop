@@ -189,7 +189,7 @@ public class JVMClusterUtil {
     while (true) {
       for (JVMClusterUtil.MasterThread t : masters) {
         if (t.master.isActiveMaster()) {
-          return t.master.getMasterAddress().toString();
+          return t.master.getServerName().toString();
         }
       }
       try {

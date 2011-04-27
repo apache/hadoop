@@ -254,11 +254,9 @@ public class LocalHBaseCluster {
     while (regionServerThread.isAlive()) {
       try {
         LOG.info("Waiting on " +
-          regionServerThread.getRegionServer().getHServerInfo().toString());
+          regionServerThread.getRegionServer().toString());
         regionServerThread.join();
       } catch (InterruptedException e) {
-        e.printStackTrace();
-      } catch (IOException e) {
         e.printStackTrace();
       }
     }
@@ -275,11 +273,9 @@ public class LocalHBaseCluster {
     while (rst.isAlive()) {
       try {
         LOG.info("Waiting on " +
-          rst.getRegionServer().getHServerInfo().toString());
+          rst.getRegionServer().toString());
         rst.join();
       } catch (InterruptedException e) {
-        e.printStackTrace();
-      } catch (IOException e) {
         e.printStackTrace();
       }
     }

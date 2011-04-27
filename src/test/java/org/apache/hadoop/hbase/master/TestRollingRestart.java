@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
@@ -155,7 +156,7 @@ public class TestRollingRestart {
     int num = 1;
     int total = regionServers.size();
     for (RegionServerThread rst : regionServers) {
-      String serverName = rst.getRegionServer().getServerName();
+      ServerName serverName = rst.getRegionServer().getServerName();
       log("Stopping region server " + num + " of " + total + " [ " +
           serverName + "]");
       rst.getRegionServer().stop("Stopping RS during rolling restart");
@@ -302,7 +303,7 @@ public class TestRollingRestart {
   }
 
   private void waitForRSShutdownToStartAndFinish(MasterThread activeMaster,
-      String serverName) throws InterruptedException {
+      ServerName serverName) throws InterruptedException {
     ServerManager sm = activeMaster.getMaster().getServerManager();
     // First wait for it to be in dead list
     while (!sm.getDeadServers().contains(serverName)) {

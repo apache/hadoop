@@ -19,25 +19,38 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.WritableComparable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
- * HServerAddress is a "label" for a HBase server made of host and port number.
+ * HServerAddress hosts a {@link InetSocketAddress} and makes it
+ * {@link WritableComparable}.  Resolves on construction AND on
+ * deserialization -- since we're internally creating an InetSocketAddress --
+ * so could end up with different results if the two ends of serialization have
+ * different resolvers. Be careful where you use it.  Should only be used when
+ * you need to pass an InetSocketAddress across an RPC.  Even then its a bad
+ * idea because of the above resolve issue.
+ * @deprecated Use {@link InetSocketAddress} or {@link ServerName} or
+ * a hostname String and port.
  */
 public class HServerAddress implements WritableComparable<HServerAddress> {
-  private InetSocketAddress address;
-  String stringValue;
+  // Hard to deprecate this class. Its in the API as internal class,
+  // in particular as an inner class of HRegionLocation.  Besides, sometimes
+  // we do want to serialize a InetSocketAddress; this class can be used then.
+  private InetSocketAddress address = null;
+  private String cachedToString = "";
 
+  /**
+   * Constructor for deserialization use only.
+   */
   public HServerAddress() {
-    this.address = null;
-    this.stringValue = null;
+    super();
   }
 
   /**
@@ -46,34 +59,20 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
    */
   public HServerAddress(InetSocketAddress address) {
     this.address = address;
-    this.stringValue = address.getAddress().getHostName() + ":" +
-      address.getPort();
     checkBindAddressCanBeResolved();
+    this.cachedToString = createCachedToString();
+  }
+
+  private String createCachedToString() {
+    return this.address.toString();
   }
 
   /**
-   * @param hostAndPort Hostname and port formatted as <code>&lt;hostname> ':' &lt;port></code>
-   */
-  public HServerAddress(String hostAndPort) {
-    int colonIndex = hostAndPort.lastIndexOf(':');
-    if (colonIndex < 0) {
-      throw new IllegalArgumentException("Not a host:port pair: " + hostAndPort);
-    }
-    String host = hostAndPort.substring(0, colonIndex);
-    int port = Integer.parseInt(hostAndPort.substring(colonIndex + 1));
-    this.address = new InetSocketAddress(host, port);
-    this.stringValue = address.getHostName() + ":" + port;
-    checkBindAddressCanBeResolved();
-  }
-
-  /**
-   * @param bindAddress Hostname
+   * @param hostname Hostname
    * @param port Port number
    */
-  public HServerAddress(String bindAddress, int port) {
-    this.address = new InetSocketAddress(bindAddress, port);
-    this.stringValue = address.getHostName() + ":" + port;
-    checkBindAddressCanBeResolved();
+  public HServerAddress(final String hostname, final int port) {
+    this(new InetSocketAddress(hostname, port));
   }
 
   /**
@@ -81,45 +80,48 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
    * @param other HServerAddress to copy from
    */
   public HServerAddress(HServerAddress other) {
-    String bindAddress = other.getBindAddress();
-    int port = other.getPort();
-    this.address = new InetSocketAddress(bindAddress, port);
-    stringValue = other.stringValue;
-    checkBindAddressCanBeResolved();
+    this(new InetSocketAddress(other.getHostname(), other.getPort()));
   }
 
-  /** @return Bind address */
+  /** @return Bind address -- the raw IP, the result of a call to
+   * {@link InetSocketAddress#getAddress()#getHostAddress()} --
+   * or null if cannot resolve */
   public String getBindAddress() {
-    final InetAddress addr = address.getAddress();
-    if (addr != null) {
-      return addr.getHostAddress();
-    } else {
-      LogFactory.getLog(HServerAddress.class).error("Could not resolve the"
-          + " DNS name of " + stringValue);
-      return null;
-    }
+    // This returns null if the address is not resolved.
+    final InetAddress addr = this.address.getAddress();
+    if (addr != null) return addr.getHostAddress();
+    LogFactory.getLog(HServerAddress.class).error("Could not resolve the"
+      + " DNS name of " + this.address.toString());
+    return null;
   }
 
   private void checkBindAddressCanBeResolved() {
     if (getBindAddress() == null) {
       throw new IllegalArgumentException("Could not resolve the"
-          + " DNS name of " + stringValue);
+          + " DNS name of " + this.address.toString());
     }
   }
 
   /** @return Port number */
   public int getPort() {
-    return address.getPort();
+    return this.address.getPort();
   }
 
   /** @return Hostname */
   public String getHostname() {
-    return address.getHostName();
+    return this.address.getHostName();
+  }
+
+  /**
+   * @return Returns <hostname> ':' <port>
+   */
+  public String getHostnameAndPort() {
+    return getHostname() + ":" + getPort();
   }
 
   /** @return The InetSocketAddress */
   public InetSocketAddress getInetSocketAddress() {
-    return address;
+    return this.address;
   }
 
   /**
@@ -127,21 +129,15 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
    */
   @Override
   public String toString() {
-    return stringValue == null ? "" : stringValue;
+    return this.cachedToString;
   }
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null) {
-      return false;
-    }
-    if (getClass() != o.getClass()) {
-      return false;
-    }
-    return compareTo((HServerAddress) o) == 0;
+    if (this == o) return true;
+    if (o == null) return false;
+    if (getClass() != o.getClass()) return false;
+    return compareTo((HServerAddress)o) == 0;
   }
 
   @Override
@@ -158,24 +154,20 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
   public void readFields(DataInput in) throws IOException {
     String hostname = in.readUTF();
     int port = in.readInt();
-
-    if (hostname == null || hostname.length() == 0) {
-      address = null;
-      stringValue = null;
-    } else {
-      address = new InetSocketAddress(hostname, port);
-      stringValue = hostname + ":" + port;
+    if (hostname != null && hostname.length() > 0) {
+      this.address = new InetSocketAddress(hostname, port);
       checkBindAddressCanBeResolved();
+      createCachedToString();
     }
   }
 
   public void write(DataOutput out) throws IOException {
-    if (address == null) {
+    if (this.address == null) {
       out.writeUTF("");
       out.writeInt(0);
     } else {
-      out.writeUTF(address.getAddress().getHostName());
-      out.writeInt(address.getPort());
+      out.writeUTF(this.address.getAddress().getHostName());
+      out.writeInt(this.address.getPort());
     }
   }
 
@@ -187,7 +179,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
     // Addresses as Strings may not compare though address is for the one
     // server with only difference being that one address has hostname
     // resolved whereas other only has IP.
-    if (address.equals(o.address)) return 0;
+    if (this.address.equals(o.address)) return 0;
     return toString().compareTo(o.toString());
   }
 }

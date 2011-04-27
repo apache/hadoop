@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.util.Addressing;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -39,22 +40,23 @@ import java.util.Set;
  * known server addresses via {@link #getNumExceptions()} and
  * {@link #getCause(int)}, {@link #getRow(int)} and {@link #getAddress(int)}.
  */
-public class RetriesExhaustedWithDetailsException extends RetriesExhaustedException {
-
+@SuppressWarnings("serial")
+public class RetriesExhaustedWithDetailsException
+extends RetriesExhaustedException {
   List<Throwable> exceptions;
   List<Row> actions;
-  List<HServerAddress> addresses;
+  List<String> hostnameAndPort;
 
   public RetriesExhaustedWithDetailsException(List<Throwable> exceptions,
                                               List<Row> actions,
-                                              List<HServerAddress> addresses) {
+                                              List<String> hostnameAndPort) {
     super("Failed " + exceptions.size() + " action" +
         pluralize(exceptions) + ": " +
-        getDesc(exceptions,actions,addresses));
+        getDesc(exceptions, actions, hostnameAndPort));
 
     this.exceptions = exceptions;
     this.actions = actions;
-    this.addresses = addresses;
+    this.hostnameAndPort = hostnameAndPort;
   }
 
   public List<Throwable> getCauses() {
@@ -73,8 +75,17 @@ public class RetriesExhaustedWithDetailsException extends RetriesExhaustedExcept
     return actions.get(i);
   }
 
+  /**
+   * @param i
+   * @return
+   * @deprecated
+   */
   public HServerAddress getAddress(int i) {
-    return addresses.get(i);
+    return new HServerAddress(Addressing.createInetSocketAddressFromHostAndPortStr(getHostnamePort(i)));
+  }
+
+  public String getHostnamePort(final int i) {
+    return this.hostnameAndPort.get(i);
   }
 
   public boolean mayHaveClusterIssues() {
@@ -100,12 +111,12 @@ public class RetriesExhaustedWithDetailsException extends RetriesExhaustedExcept
 
   public static String getDesc(List<Throwable> exceptions,
                                List<Row> actions,
-                               List<HServerAddress> addresses) {
+                               List<String> hostnamePort) {
     String s = getDesc(classifyExs(exceptions));
     s += "servers with issues: ";
-    Set<HServerAddress> uniqAddr = new HashSet<HServerAddress>();
-    uniqAddr.addAll(addresses);
-    for(HServerAddress addr : uniqAddr) {
+    Set<String> uniqAddr = new HashSet<String>();
+    uniqAddr.addAll(hostnamePort);
+    for(String addr : uniqAddr) {
       s += addr + ", ";
     }
     return s;

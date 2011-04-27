@@ -23,8 +23,8 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -36,14 +36,13 @@ import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -54,8 +53,8 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.MetaScanner;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
@@ -131,8 +130,12 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
   // RPC server for the HMaster
   private final RpcServer rpcServer;
-  // Address of the HMaster
-  private final HServerAddress address;
+
+  /**
+   * This servers address.
+   */
+  private final InetSocketAddress isa;
+
   // Metrics for the HMaster
   private final MasterMetrics metrics;
   // file system manager for the master FS operations
@@ -172,6 +175,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   private LogCleaner logCleaner;
 
   private MasterCoprocessorHost cpHost;
+  private final ServerName serverName;
 
   /**
    * Initializes the HMaster. The steps are as follows:
@@ -189,43 +193,48 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   throws IOException, KeeperException, InterruptedException {
     this.conf = conf;
 
-    /*
-     * Determine address and initialize RPC server (but do not start).
-     * The RPC server ports can be ephemeral. Create a ZKW instance.
-     */
-    HServerAddress a = new HServerAddress(getMyAddress(this.conf));
-    int numHandlers = conf.getInt("hbase.regionserver.handler.count", 10);
+    // Server to handle client requests.
+    String hostname = DNS.getDefaultHost(
+      conf.get("hbase.master.dns.interface", "default"),
+      conf.get("hbase.master.dns.nameserver", "default"));
+    int port = conf.getInt(HConstants.MASTER_PORT, HConstants.DEFAULT_MASTER_PORT);
+    // Creation of a HSA will force a resolve.
+    InetSocketAddress initialIsa = new InetSocketAddress(hostname, port);
+    if (initialIsa.getAddress() == null) {
+      throw new IllegalArgumentException("Failed resolve of " + this.isa);
+    }
+    int numHandlers = conf.getInt("hbase.master.handler.count",
+      conf.getInt("hbase.regionserver.handler.count", 25));
     this.rpcServer = HBaseRPC.getServer(this,
       new Class<?>[]{HMasterInterface.class, HMasterRegionInterface.class},
-      a.getBindAddress(), a.getPort(),
-      numHandlers,
-      0, // we dont use high priority handlers in master
-      false, conf,
-      0); // this is a DNC w/o high priority handlers
-    this.address = new HServerAddress(rpcServer.getListenerAddress());
+        initialIsa.getHostName(), // BindAddress is IP we got for this server.
+        initialIsa.getPort(),
+        numHandlers,
+        0, // we dont use high priority handlers in master
+        conf.getBoolean("hbase.rpc.verbose", false), conf,
+        0); // this is a DNC w/o high priority handlers
+    // Set our address.
+    this.isa = this.rpcServer.getListenerAddress();
+    this.serverName = new ServerName(this.isa.getHostName(),
+      this.isa.getPort(), System.currentTimeMillis());
 
     // initialize server principal (if using secure Hadoop)
     User.login(conf, "hbase.master.keytab.file",
-        "hbase.master.kerberos.principal", this.address.getHostname());
+      "hbase.master.kerberos.principal", this.isa.getHostName());
 
     // set the thread name now we have an address
-    setName(MASTER + "-" + this.address);
+    setName(MASTER + "-" + this.serverName.toString());
 
     Replication.decorateMasterConfiguration(this.conf);
-
     this.rpcServer.startThreads();
 
     // Hack! Maps DFSClient => Master for logs.  HDFS made this
     // config param for task trackers, but we can piggyback off of it.
     if (this.conf.get("mapred.task.id") == null) {
-      this.conf.set("mapred.task.id", "hb_m_" + this.address.toString() +
-        "_" + System.currentTimeMillis());
+      this.conf.set("mapred.task.id", "hb_m_" + this.serverName.toString());
     }
-
-    this.zooKeeper = new ZooKeeperWatcher(conf, MASTER + ":" +
-        address.getPort(), this);
-
-    this.metrics = new MasterMetrics(getServerName());
+    this.zooKeeper = new ZooKeeperWatcher(conf, MASTER + ":" + isa.getPort(), this);
+    this.metrics = new MasterMetrics(getServerName().toString());
   }
 
   /**
@@ -397,9 +406,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         fileSystemManager.getClusterId());
 
     this.connection = HConnectionManager.getConnection(conf);
-    this.executorService = new ExecutorService(getServerName());
+    this.executorService = new ExecutorService(getServerName().toString());
 
-    this.serverManager = new ServerManager(this, this, metrics);
+    this.serverManager = new ServerManager(this, this);
 
     initializeZKBasedSystemTrackers();
 
@@ -409,29 +418,25 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     // start up all service threads.
     startServiceThreads();
 
-    // Wait for region servers to report in.  Returns count of regions.
-    int regionCount = this.serverManager.waitForRegionServers();
+    // Wait for region servers to report in.
+    this.serverManager.waitForRegionServers();
+    // Check zk for regionservers that are up but didn't register
+    for (ServerName sn: this.regionServerTracker.getOnlineServers()) {
+      if (!this.serverManager.isServerOnline(sn)) {
+        // Not registered; add it.
+        LOG.info("Registering server found up in zk: " + sn);
+        this.serverManager.recordNewServer(sn, HServerLoad.EMPTY_HSERVERLOAD);
+      }
+    }
 
     // TODO: Should do this in background rather than block master startup
     this.fileSystemManager.
-      splitLogAfterStartup(this.serverManager.getOnlineServers());
+      splitLogAfterStartup(this.serverManager.getOnlineServers().keySet());
 
     // Make sure root and meta assigned before proceeding.
     assignRootAndMeta();
-
-    // Is this fresh start with no regions assigned or are we a master joining
-    // an already-running cluster?  If regionsCount == 0, then for sure a
-    // fresh start.  TOOD: Be fancier.  If regionsCount == 2, perhaps the
-    // 2 are .META. and -ROOT- and we should fall into the fresh startup
-    // branch below.  For now, do processFailover.
-    if (regionCount == 0) {
-      LOG.info("Master startup proceeding: cluster startup");
-      this.assignmentManager.cleanoutUnassigned();
-      this.assignmentManager.assignAllUserRegions();
-    } else {
-      LOG.info("Master startup proceeding: master failover");
-      this.assignmentManager.processFailover();
-    }
+    // Fixup assignment manager status
+    this.assignmentManager.joinCluster();
 
     // Start balancer and meta catalog janitor after meta and regions have
     // been assigned.
@@ -466,7 +471,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     } else {
       // Region already assigned.  We didnt' assign it.  Add to in-memory state.
       this.assignmentManager.regionOnline(HRegionInfo.ROOT_REGIONINFO,
-        this.serverManager.getHServerInfo(this.catalogTracker.getRootLocation()));
+        this.catalogTracker.getRootLocation());
     }
     LOG.info("-ROOT- assigned=" + assigned + ", rit=" + rit +
       ", location=" + catalogTracker.getRootLocation());
@@ -484,30 +489,11 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     } else {
       // Region already assigned.  We didnt' assign it.  Add to in-memory state.
       this.assignmentManager.regionOnline(HRegionInfo.FIRST_META_REGIONINFO,
-        this.serverManager.getHServerInfo(this.catalogTracker.getMetaLocation()));
+        this.catalogTracker.getMetaLocation());
     }
     LOG.info(".META. assigned=" + assigned + ", rit=" + rit +
       ", location=" + catalogTracker.getMetaLocation());
     return assigned;
-  }
-
-  /*
-   * @return This masters' address.
-   * @throws UnknownHostException
-   */
-  private static String getMyAddress(final Configuration c)
-  throws UnknownHostException {
-    // Find out our address up in DNS.
-    String s = DNS.getDefaultHost(c.get("hbase.master.dns.interface","default"),
-      c.get("hbase.master.dns.nameserver","default"));
-    s += ":" + c.get(HConstants.MASTER_PORT,
-        Integer.toString(HConstants.DEFAULT_MASTER_PORT));
-    return s;
-  }
-
-  /** @return HServerAddress of the master server */
-  public HServerAddress getMasterAddress() {
-    return this.address;
   }
 
   public long getProtocolVersion(String protocol, long clientVersion) {
@@ -645,25 +631,16 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   }
 
   @Override
-  public MapWritable regionServerStartup(final HServerInfo serverInfo,
-    final long serverCurrentTime)
+  public MapWritable regionServerStartup(final int port,
+    final long serverStartCode, final long serverCurrentTime)
   throws IOException {
-    // Set the ip into the passed in serverInfo.  Its ip is more than likely
-    // not the ip that the master sees here.  See at end of this method where
-    // we pass it back to the regionserver by setting "hbase.regionserver.address"
-    // Everafter, the HSI combination 'server name' is what uniquely identifies
-    // the incoming RegionServer.
-    InetSocketAddress address = new InetSocketAddress(
-        HBaseServer.getRemoteIp().getHostName(),
-        serverInfo.getServerAddress().getPort());
-    serverInfo.setServerAddress(new HServerAddress(address));
-
     // Register with server manager
-    this.serverManager.regionServerStartup(serverInfo, serverCurrentTime);
+    this.serverManager.regionServerStartup(HBaseServer.getRemoteIp(), port,
+      serverStartCode, serverCurrentTime);
     // Send back some config info
     MapWritable mw = createConfigurationSubset();
-     mw.put(new Text("hbase.regionserver.address"),
-         serverInfo.getServerAddress());
+    mw.put(new Text(HConstants.KEY_FOR_HOSTNAME_SEEN_BY_MASTER),
+      new Text(this.serverName.getHostname()));
     return mw;
   }
 
@@ -682,23 +659,13 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   }
 
   @Override
-  public HMsg [] regionServerReport(HServerInfo serverInfo, HMsg msgs[],
-    HRegionInfo[] mostLoadedRegions)
+  public void regionServerReport(byte[] sn, HServerLoad hsl)
   throws IOException {
-    return adornRegionServerAnswer(serverInfo,
-      this.serverManager.regionServerReport(serverInfo, msgs, mostLoadedRegions));
-  }
-
-  /**
-   * Override if you'd add messages to return to regionserver <code>hsi</code>
-   * or to send an exception.
-   * @param msgs Messages to add to
-   * @return Messages to return to
-   * @throws IOException exceptions that were injected for the region servers
-   */
-  protected HMsg [] adornRegionServerAnswer(final HServerInfo hsi,
-      final HMsg [] msgs) throws IOException {
-    return msgs;
+    this.serverManager.regionServerReport(new ServerName(sn), hsl);
+    if (hsl != null && this.metrics != null) {
+      // Up our metrics.
+      this.metrics.incrementRequests(hsl.getNumberOfRequests());
+    }
   }
 
   public boolean isMasterRunning() {
@@ -758,14 +725,13 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         }
       }
 
-      Map<HServerInfo, List<HRegionInfo>> assignments =
+      Map<ServerName, List<HRegionInfo>> assignments =
         this.assignmentManager.getAssignments();
       // Returned Map from AM does not include mention of servers w/o assignments.
-      for (Map.Entry<String, HServerInfo> e:
+      for (Map.Entry<ServerName, HServerLoad> e:
           this.serverManager.getOnlineServers().entrySet()) {
-        HServerInfo hsi = e.getValue();
-        if (!assignments.containsKey(hsi)) {
-          assignments.put(hsi, new ArrayList<HRegionInfo>());
+        if (!assignments.containsKey(e.getKey())) {
+          assignments.put(e.getKey(), new ArrayList<HRegionInfo>());
         }
       }
       List<RegionPlan> plans = this.balancer.balanceCluster(assignments);
@@ -832,12 +798,12 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   @Override
   public void move(final byte[] encodedRegionName, final byte[] destServerName)
   throws UnknownRegionException {
-    Pair<HRegionInfo, HServerInfo> p =
+    Pair<HRegionInfo, ServerName> p =
       this.assignmentManager.getAssignment(encodedRegionName);
     if (p == null)
       throw new UnknownRegionException(Bytes.toString(encodedRegionName));
     HRegionInfo hri = p.getFirst();
-    HServerInfo dest = null;
+    ServerName dest = null;
     if (destServerName == null || destServerName.length == 0) {
       LOG.info("Passed destination servername is null/empty so " +
         "choosing a server at random");
@@ -845,12 +811,12 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       // Unassign will reassign it elsewhere choosing random server.
       this.assignmentManager.unassign(hri);
     } else {
-      dest = this.serverManager.getServerInfo(new String(destServerName));
-
+      dest = new ServerName(Bytes.toString(destServerName));
       if (this.cpHost != null) {
         this.cpHost.preMove(p.getFirst(), p.getSecond(), dest);
       }
       RegionPlan rp = new RegionPlan(p.getFirst(), p.getSecond(), dest);
+      LOG.info("Added move plan " + rp + ", running balancer");
       this.assignmentManager.balance(rp);
       if (this.cpHost != null) {
         this.cpHost.postMove(p.getFirst(), p.getSecond(), dest);
@@ -928,8 +894,13 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     }
 
     // 5. Trigger immediate assignment of the regions in round-robin fashion
-    List<HServerInfo> servers = serverManager.getOnlineServersList();
-    this.assignmentManager.bulkAssignUserRegions(newRegions, servers, sync);
+    List<ServerName> servers = serverManager.getOnlineServersList();
+    try {
+      this.assignmentManager.assignUserRegions(Arrays.asList(newRegions), servers);
+    } catch (InterruptedException ie) {
+      LOG.error("Caught " + ie + " during round-robin assignment");
+      throw new IOException(ie);
+    }
 
     // 6. If sync, wait for assignment of regions
     if (sync) {
@@ -1027,11 +998,11 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
    * is found, but not currently deployed, the second element of the pair
    * may be null.
    */
-  Pair<HRegionInfo,HServerAddress> getTableRegionForRow(
+  Pair<HRegionInfo, ServerName> getTableRegionForRow(
       final byte [] tableName, final byte [] rowKey)
   throws IOException {
-    final AtomicReference<Pair<HRegionInfo, HServerAddress>> result =
-      new AtomicReference<Pair<HRegionInfo, HServerAddress>>(null);
+    final AtomicReference<Pair<HRegionInfo, ServerName>> result =
+      new AtomicReference<Pair<HRegionInfo, ServerName>>(null);
 
     MetaScannerVisitor visitor =
       new MetaScannerVisitor() {
@@ -1040,13 +1011,11 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
           if (data == null || data.size() <= 0) {
             return true;
           }
-          Pair<HRegionInfo, HServerAddress> pair =
-            MetaReader.metaRowToRegionPair(data);
+          Pair<HRegionInfo, ServerName> pair = MetaReader.metaRowToRegionPair(data);
           if (pair == null) {
             return false;
           }
-          if (!Bytes.equals(pair.getFirst().getTableDesc().getName(),
-                tableName)) {
+          if (!Bytes.equals(pair.getFirst().getTableDesc().getName(), tableName)) {
             return false;
           }
           result.set(pair);
@@ -1095,13 +1064,11 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
    * @return cluster status
    */
   public ClusterStatus getClusterStatus() {
-    ClusterStatus status = new ClusterStatus();
-    status.setHBaseVersion(VersionInfo.getVersion());
-    status.setServerInfo(serverManager.getOnlineServers().values());
-    status.setDeadServers(serverManager.getDeadServers());
-    status.setRegionsInTransition(assignmentManager.getRegionsInTransition());
-    status.setClusterId(fileSystemManager.getClusterId());
-    return status;
+    return new ClusterStatus(VersionInfo.getVersion(),
+      this.fileSystemManager.getClusterId(),
+      this.serverManager.getOnlineServers(),
+      this.serverManager.getDeadServers(),
+      this.assignmentManager.getRegionsInTransition());
   }
 
   public String getClusterId() {
@@ -1183,8 +1150,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   }
 
   @Override
-  public String getServerName() {
-    return address.toString();
+  public ServerName getServerName() {
+    return this.serverName;
   }
 
   @Override
@@ -1274,7 +1241,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         return;
       }
     }
-    Pair<HRegionInfo, HServerAddress> pair =
+    Pair<HRegionInfo, ServerName> pair =
       MetaReader.getRegion(this.catalogTracker, regionName);
     if (pair == null) throw new UnknownRegionException(Bytes.toString(regionName));
     assignRegion(pair.getFirst());
@@ -1295,7 +1262,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         return;
       }
     }
-    Pair<HRegionInfo, HServerAddress> pair =
+    Pair<HRegionInfo, ServerName> pair =
       MetaReader.getRegion(this.catalogTracker, regionName);
     if (pair == null) throw new UnknownRegionException(Bytes.toString(regionName));
     HRegionInfo hri = pair.getFirst();
@@ -1304,6 +1271,16 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     if (cpHost != null) {
       cpHost.postUnassign(hri, force);
     }
+  }
+
+  /**
+   * Compute the average load across all region servers.
+   * Currently, this uses a very naive computation - just uses the number of
+   * regions being served, ignoring stats about number of requests.
+   * @return the average load
+   */
+  public double getAverageLoad() {
+    return this.assignmentManager.getAverageLoad();
   }
 
   /**
@@ -1330,7 +1307,6 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
           e.getCause().getMessage(): ""), e);
     }
   }
-
 
   /**
    * @see org.apache.hadoop.hbase.master.HMasterCommandLine

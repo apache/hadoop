@@ -58,12 +58,12 @@ import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -235,7 +235,7 @@ public class HRegion implements HeapSize { // , Writable{
   final long memstoreFlushSize;
   private volatile long lastFlushTime;
   final RegionServerServices rsServices;
-  private List<Pair<Long,Long>> recentFlushes = new ArrayList<Pair<Long,Long>>();
+  private List<Pair<Long, Long>> recentFlushes = new ArrayList<Pair<Long,Long>>();
   private final long blockingMemStoreSize;
   final long threadWakeFrequency;
   // Used to guard closes

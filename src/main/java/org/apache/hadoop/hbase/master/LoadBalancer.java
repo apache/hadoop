@@ -27,6 +27,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Random;
 import java.util.TreeMap;
@@ -40,8 +41,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.ServerName;
 
 import com.google.common.collect.MinMaxPriorityQueue;
 
@@ -102,6 +102,27 @@ public class LoadBalancer {
     }
   }
   static RegionPlanComparator rpComparator = new RegionPlanComparator();
+
+  /**
+   * Data structure that holds servername and 'load'.
+   */
+  static class ServerAndLoad implements Comparable<ServerAndLoad> {
+    private final ServerName sn;
+    private final int load;
+    ServerAndLoad(final ServerName sn, final int load) {
+      this.sn = sn;
+      this.load = load;
+    }
+
+    ServerName getServerName() {return this.sn;}
+    int getLoad() {return this.load;}
+
+    @Override
+    public int compareTo(ServerAndLoad other) {
+      int diff = this.load - other.load;
+      return diff != 0? diff: this.sn.compareTo(other.getServerName());
+    }
+  }
 
   /**
    * Generate a global load balancing plan according to the specified map of
@@ -189,28 +210,25 @@ public class LoadBalancer {
    *         or null if cluster is already balanced
    */
   public List<RegionPlan> balanceCluster(
-      Map<HServerInfo,List<HRegionInfo>> clusterState) {
+      Map<ServerName, List<HRegionInfo>> clusterState) {
     boolean emptyRegionServerPresent = false;
     long startTime = System.currentTimeMillis();
 
-    // Make a map sorted by load and count regions
-    TreeMap<HServerInfo,List<HRegionInfo>> serversByLoad =
-      new TreeMap<HServerInfo,List<HRegionInfo>>(
-          new HServerInfo.LoadComparator());
     int numServers = clusterState.size();
     if (numServers == 0) {
       LOG.debug("numServers=0 so skipping load balancing");
       return null;
     }
+    NavigableMap<ServerAndLoad, List<HRegionInfo>> serversByLoad =
+      new TreeMap<ServerAndLoad, List<HRegionInfo>>();
     int numRegions = 0;
     // Iterate so we can count regions as we build the map
-    for(Map.Entry<HServerInfo, List<HRegionInfo>> server:
-        clusterState.entrySet()) {
-      int sz = server.getValue().size();
+    for (Map.Entry<ServerName, List<HRegionInfo>> server: clusterState.entrySet()) {
+      List<HRegionInfo> regions = server.getValue();
+      int sz = regions.size();
       if (sz == 0) emptyRegionServerPresent = true;
-      server.getKey().getLoad().setNumberOfRegions(sz);
-      numRegions += server.getKey().getLoad().getNumberOfRegions();
-      serversByLoad.put(server.getKey(), server.getValue());
+      numRegions += sz;
+      serversByLoad.put(new ServerAndLoad(server.getKey(), sz), regions);
     }
 
     // Check if we even need to do any load balancing
@@ -218,13 +236,14 @@ public class LoadBalancer {
     // HBASE-3681 check sloppiness first
     int floor = (int) Math.floor(average * (1 - slop));
     int ceiling = (int) Math.ceil(average * (1 + slop));
-    if(serversByLoad.lastKey().getLoad().getNumberOfRegions() <= ceiling &&
-       serversByLoad.firstKey().getLoad().getNumberOfRegions() >= floor) {
+    if (serversByLoad.lastKey().getLoad() <= ceiling &&
+       serversByLoad.firstKey().getLoad() >= floor) {
       // Skipped because no server outside (min,max) range
-      LOG.info("Skipping load balancing.  servers=" + numServers + " " +
-          "regions=" + numRegions + " average=" + average + " " +
-          "mostloaded=" + serversByLoad.lastKey().getLoad().getNumberOfRegions() +
-          " leastloaded=" + serversByLoad.firstKey().getLoad().getNumberOfRegions());
+      LOG.info("Skipping load balancing because balanced cluster; " +
+        "servers=" + numServers + " " +
+        "regions=" + numRegions + " average=" + average + " " +
+        "mostloaded=" + serversByLoad.lastKey().getLoad() +
+        " leastloaded=" + serversByLoad.lastKey().getLoad());
       return null;
     }
     int min = numRegions / numServers;
@@ -232,21 +251,22 @@ public class LoadBalancer {
 
     // Balance the cluster
     // TODO: Look at data block locality or a more complex load to do this
-    MinMaxPriorityQueue<RegionPlan> regionsToMove = MinMaxPriorityQueue.orderedBy(rpComparator).create();
+    MinMaxPriorityQueue<RegionPlan> regionsToMove =
+      MinMaxPriorityQueue.orderedBy(rpComparator).create();
     List<RegionPlan> regionsToReturn = new ArrayList<RegionPlan>();
 
     // Walk down most loaded, pruning each to the max
     int serversOverloaded = 0;
-    // flag used to fetch regions from head and tail of list, alternately 
+    // flag used to fetch regions from head and tail of list, alternately
     boolean fetchFromTail = false;
-    Map<HServerInfo,BalanceInfo> serverBalanceInfo =
-      new TreeMap<HServerInfo,BalanceInfo>();
-    for(Map.Entry<HServerInfo, List<HRegionInfo>> server :
-      serversByLoad.descendingMap().entrySet()) {
-      HServerInfo serverInfo = server.getKey();
-      int regionCount = serverInfo.getLoad().getNumberOfRegions();
-      if(regionCount <= max) {
-        serverBalanceInfo.put(serverInfo, new BalanceInfo(0, 0));
+    Map<ServerName, BalanceInfo> serverBalanceInfo =
+      new TreeMap<ServerName, BalanceInfo>();
+    for (Map.Entry<ServerAndLoad, List<HRegionInfo>> server:
+        serversByLoad.descendingMap().entrySet()) {
+      ServerAndLoad sal = server.getKey();
+      int regionCount = sal.getLoad();
+      if (regionCount <= max) {
+        serverBalanceInfo.put(sal.getServerName(), new BalanceInfo(0, 0));
         break;
       }
       serversOverloaded++;
@@ -257,14 +277,14 @@ public class LoadBalancer {
       Collections.sort(regions, riComparator);
       int numTaken = 0;
       for (int i = 0; i <= numToOffload; ) {
-        HRegionInfo hri = regions.get(i);	// fetch from head
+        HRegionInfo hri = regions.get(i); // fetch from head
         if (fetchFromTail) {
-        	hri = regions.get(regions.size() - 1 - i);
+          hri = regions.get(regions.size() - 1 - i);
         }
         i++;
         // Don't rebalance meta regions.
         if (hri.isMetaRegion()) continue;
-        regionsToMove.add(new RegionPlan(hri, serverInfo, null));
+        regionsToMove.add(new RegionPlan(hri, sal.getServerName(), null));
         numTaken++;
         if (numTaken >= numToOffload) break;
         // fetch in alternate order if there is new region server
@@ -272,48 +292,44 @@ public class LoadBalancer {
           fetchFromTail = !fetchFromTail;
         }
       }
-      serverBalanceInfo.put(serverInfo,
-          new BalanceInfo(numToOffload, (-1)*numTaken));
+      serverBalanceInfo.put(sal.getServerName(),
+        new BalanceInfo(numToOffload, (-1)*numTaken));
     }
     int totalNumMoved = regionsToMove.size();
-    
+
     // Walk down least loaded, filling each to the min
     int neededRegions = 0; // number of regions needed to bring all up to min
     fetchFromTail = false;
-    RegionPlan rp = null;
-    Map<HServerInfo, Integer> underloadedServers = new HashMap<HServerInfo, Integer>();
-    for(Map.Entry<HServerInfo, List<HRegionInfo>> server :
-      serversByLoad.entrySet()) {
-      int regionCount = server.getKey().getLoad().getNumberOfRegions();
-      if(regionCount >= min) {
+
+    Map<ServerName, Integer> underloadedServers = new HashMap<ServerName, Integer>();
+    for (Map.Entry<ServerAndLoad, List<HRegionInfo>> server:
+        serversByLoad.entrySet()) {
+      int regionCount = server.getKey().getLoad();
+      if (regionCount >= min) {
         break;
       }
-      underloadedServers.put(server.getKey(), min - regionCount);
+      underloadedServers.put(server.getKey().getServerName(), min - regionCount);
     }
     // number of servers that get new regions
     int serversUnderloaded = underloadedServers.size();
     int incr = 1;
-    List<HServerInfo> serverInfos = Arrays.asList(underloadedServers.keySet().
-        toArray(new HServerInfo[serversUnderloaded]));
-    Collections.shuffle(serverInfos, RANDOM);
+    List<ServerName> sns =
+      Arrays.asList(underloadedServers.keySet().toArray(new ServerName[serversUnderloaded]));
+    Collections.shuffle(sns, RANDOM);
     while (regionsToMove.size() > 0) {
       int cnt = 0;
       int i = incr > 0 ? 0 : underloadedServers.size()-1;
       for (; i >= 0 && i < underloadedServers.size(); i += incr) {
-        if (0 == regionsToMove.size()) break;
-        HServerInfo si = serverInfos.get(i);
+        if (regionsToMove.isEmpty()) break;
+        ServerName si = sns.get(i);
         int numToTake = underloadedServers.get(si);
         if (numToTake == 0) continue;
-        
-        if (!fetchFromTail) rp = regionsToMove.remove();
-        else rp = regionsToMove.removeLast();
-        rp.setDestination(si);
-        regionsToReturn.add(rp);
-        
+
+        addRegionPlan(regionsToMove, fetchFromTail, si, regionsToReturn);
         if (emptyRegionServerPresent) {
           fetchFromTail = !fetchFromTail;
         }
-        
+
         underloadedServers.put(si, numToTake-1);
         cnt++;
         BalanceInfo bi = serverBalanceInfo.get(si);
@@ -325,17 +341,16 @@ public class LoadBalancer {
       }
       if (cnt == 0) break;
       // iterates underloadedServers in the other direction
-      LOG.info("First pass inner loop assigned " + cnt + " regions");
       incr = -incr;
     }
     for (Integer i : underloadedServers.values()) {
       // If we still want to take some, increment needed
-        neededRegions += i;
+      neededRegions += i;
     }
 
     // If none needed to fill all to min and none left to drain all to max,
     // we are done
-    if(neededRegions == 0 && 0 == regionsToMove.size()) {
+    if (neededRegions == 0 && regionsToMove.isEmpty()) {
       long endTime = System.currentTimeMillis();
       LOG.info("Calculated a load balance in " + (endTime-startTime) + "ms. " +
           "Moving " + totalNumMoved + " regions off of " +
@@ -350,17 +365,18 @@ public class LoadBalancer {
     // If we need more to fill min, grab one from each most loaded until enough
     if (neededRegions != 0) {
       // Walk down most loaded, grabbing one from each until we get enough
-      for(Map.Entry<HServerInfo, List<HRegionInfo>> server :
+      for (Map.Entry<ServerAndLoad, List<HRegionInfo>> server :
         serversByLoad.descendingMap().entrySet()) {
-        BalanceInfo balanceInfo = serverBalanceInfo.get(server.getKey());
+        BalanceInfo balanceInfo =
+          serverBalanceInfo.get(server.getKey().getServerName());
         int idx =
           balanceInfo == null ? 0 : balanceInfo.getNextRegionForUnload();
         if (idx >= server.getValue().size()) break;
         HRegionInfo region = server.getValue().get(idx);
         if (region.isMetaRegion()) continue; // Don't move meta regions.
-        regionsToMove.add(new RegionPlan(region, server.getKey(), null));
+        regionsToMove.add(new RegionPlan(region, server.getKey().getServerName(), null));
         totalNumMoved++;
-        if(--neededRegions == 0) {
+        if (--neededRegions == 0) {
           // No more regions needed, done shedding
           break;
         }
@@ -371,11 +387,11 @@ public class LoadBalancer {
     // Assign each underloaded up to the min, then if leftovers, assign to max
 
     // Walk down least loaded, assigning to each to fill up to min
-    for(Map.Entry<HServerInfo, List<HRegionInfo>> server :
-      serversByLoad.entrySet()) {
-      int regionCount = server.getKey().getLoad().getNumberOfRegions();
+    for (Map.Entry<ServerAndLoad, List<HRegionInfo>> server :
+        serversByLoad.entrySet()) {
+      int regionCount = server.getKey().getLoad();
       if (regionCount >= min) break;
-      BalanceInfo balanceInfo = serverBalanceInfo.get(server.getKey());
+      BalanceInfo balanceInfo = serverBalanceInfo.get(server.getKey().getServerName());
       if(balanceInfo != null) {
         regionCount += balanceInfo.getNumRegionsAdded();
       }
@@ -385,11 +401,8 @@ public class LoadBalancer {
       int numToTake = min - regionCount;
       int numTaken = 0;
       while(numTaken < numToTake && 0 < regionsToMove.size()) {
-        if (!fetchFromTail) rp = regionsToMove.remove();
-        else rp = regionsToMove.removeLast();
-        rp.setDestination(server.getKey());
-        regionsToReturn.add(rp);
-        
+        addRegionPlan(regionsToMove, fetchFromTail,
+          server.getKey().getServerName(), regionsToReturn);
         numTaken++;
         if (emptyRegionServerPresent) {
           fetchFromTail = !fetchFromTail;
@@ -398,21 +411,19 @@ public class LoadBalancer {
     }
 
     // If we still have regions to dish out, assign underloaded to max
-    if(0 < regionsToMove.size()) {
-      for(Map.Entry<HServerInfo, List<HRegionInfo>> server :
+    if (0 < regionsToMove.size()) {
+      for (Map.Entry<ServerAndLoad, List<HRegionInfo>> server :
         serversByLoad.entrySet()) {
-        int regionCount = server.getKey().getLoad().getNumberOfRegions();
+        int regionCount = server.getKey().getLoad();
         if(regionCount >= max) {
           break;
         }
-        if (!fetchFromTail) rp = regionsToMove.remove();
-        else rp = regionsToMove.removeLast();
-        rp.setDestination(server.getKey());
-        regionsToReturn.add(rp);
+        addRegionPlan(regionsToMove, fetchFromTail,
+          server.getKey().getServerName(), regionsToReturn);
         if (emptyRegionServerPresent) {
           fetchFromTail = !fetchFromTail;
         }
-        if(0 == regionsToMove.size()) {
+        if (regionsToMove.isEmpty()) {
           break;
         }
       }
@@ -420,15 +431,15 @@ public class LoadBalancer {
 
     long endTime = System.currentTimeMillis();
 
-    if (0 != regionsToMove.size() || neededRegions != 0) {
+    if (!regionsToMove.isEmpty() || neededRegions != 0) {
       // Emit data so can diagnose how balancer went astray.
       LOG.warn("regionsToMove=" + totalNumMoved +
-      ", numServers=" + numServers + ", serversOverloaded=" + serversOverloaded +
-      ", serversUnderloaded=" + serversUnderloaded);
+        ", numServers=" + numServers + ", serversOverloaded=" + serversOverloaded +
+        ", serversUnderloaded=" + serversUnderloaded);
       StringBuilder sb = new StringBuilder();
-      for (Map.Entry<HServerInfo, List<HRegionInfo>> e: clusterState.entrySet()) {
+      for (Map.Entry<ServerName, List<HRegionInfo>> e: clusterState.entrySet()) {
         if (sb.length() > 0) sb.append(", ");
-        sb.append(e.getKey().getServerName());
+        sb.append(e.getKey().toString());
         sb.append(" ");
         sb.append(e.getValue().size());
       }
@@ -445,6 +456,18 @@ public class LoadBalancer {
   }
 
   /**
+   * Add a region from the head or tail to the List of regions to return.
+   */
+  void addRegionPlan(final MinMaxPriorityQueue<RegionPlan> regionsToMove,
+      final boolean fetchFromTail, final ServerName sn, List<RegionPlan> regionsToReturn) {
+    RegionPlan rp = null;
+    if (!fetchFromTail) rp = regionsToMove.remove();
+    else rp = regionsToMove.removeLast();
+    rp.setDestination(sn);
+    regionsToReturn.add(rp);
+  }
+
+  /**
    * @param regions
    * @return Randomization of passed <code>regions</code>
    */
@@ -456,11 +479,6 @@ public class LoadBalancer {
   /**
    * Stores additional per-server information about the regions added/removed
    * during the run of the balancing algorithm.
-   *
-   * For servers that receive additional regions, we are not updating the number
-   * of regions in HServerInfo once we decide to reassign regions to a server,
-   * but we need this information later in the algorithm.  This is stored in
-   * <b>numRegionsAdded</b>.
    *
    * For servers that shed regions, we need to track which regions we have
    * already shed.  <b>nextRegionForUnload</b> contains the index in the list
@@ -506,14 +524,14 @@ public class LoadBalancer {
    * @return map of server to the regions it should take, or null if no
    *         assignment is possible (ie. no regions or no servers)
    */
-  public static Map<HServerInfo, List<HRegionInfo>> roundRobinAssignment(
-      HRegionInfo [] regions, List<HServerInfo> servers) {
-    if(regions.length == 0 || servers.size() == 0) {
+  public static Map<ServerName, List<HRegionInfo>> roundRobinAssignment(
+      List<HRegionInfo> regions, List<ServerName> servers) {
+    if (regions.isEmpty() || servers.isEmpty()) {
       return null;
     }
-    Map<HServerInfo,List<HRegionInfo>> assignments =
-      new TreeMap<HServerInfo,List<HRegionInfo>>();
-    int numRegions = regions.length;
+    Map<ServerName, List<HRegionInfo>> assignments =
+      new TreeMap<ServerName,List<HRegionInfo>>();
+    int numRegions = regions.size();
     int numServers = servers.size();
     int max = (int)Math.ceil((float)numRegions/numServers);
     int serverIdx = 0;
@@ -522,10 +540,10 @@ public class LoadBalancer {
     }
     int regionIdx = 0;
     for (int j = 0; j < numServers; j++) {
-      HServerInfo server = servers.get((j+serverIdx) % numServers);
+      ServerName server = servers.get((j + serverIdx) % numServers);
       List<HRegionInfo> serverRegions = new ArrayList<HRegionInfo>(max);
       for (int i=regionIdx; i<numRegions; i += numServers) {
-        serverRegions.add(regions[i % numRegions]);
+        serverRegions.add(regions.get(i % numRegions));
       }
       assignments.put(server, serverRegions);
       regionIdx++;
@@ -549,25 +567,20 @@ public class LoadBalancer {
    * @param servers available servers
    * @return map of servers and regions to be assigned to them
    */
-  public static Map<HServerInfo, List<HRegionInfo>> retainAssignment(
-      Map<HRegionInfo, HServerAddress> regions, List<HServerInfo> servers) {
-    Map<HServerInfo, List<HRegionInfo>> assignments =
-      new TreeMap<HServerInfo, List<HRegionInfo>>();
-    // Build a map of server addresses to server info so we can match things up
-    Map<HServerAddress, HServerInfo> serverMap =
-      new TreeMap<HServerAddress, HServerInfo>();
-    for (HServerInfo server : servers) {
-      serverMap.put(server.getServerAddress(), server);
+  public static Map<ServerName, List<HRegionInfo>> retainAssignment(
+      Map<HRegionInfo, ServerName> regions, List<ServerName> servers) {
+    Map<ServerName, List<HRegionInfo>> assignments =
+      new TreeMap<ServerName, List<HRegionInfo>>();
+    for (ServerName server : servers) {
       assignments.put(server, new ArrayList<HRegionInfo>());
     }
-    for (Map.Entry<HRegionInfo, HServerAddress> region : regions.entrySet()) {
-      HServerAddress hsa = region.getValue();
-      HServerInfo server = hsa == null? null: serverMap.get(hsa);
-      if (server != null) {
-        assignments.get(server).add(region.getKey());
+    for (Map.Entry<HRegionInfo, ServerName> region : regions.entrySet()) {
+      ServerName sn = region.getValue();
+      if (sn != null && servers.contains(sn)) {
+        assignments.get(sn).add(region.getKey());
       } else {
-        assignments.get(servers.get(RANDOM.nextInt(assignments.size()))).add(
-            region.getKey());
+        int size = assignments.size();
+        assignments.get(servers.get(RANDOM.nextInt(size))).add(region.getKey());
       }
     }
     return assignments;
@@ -692,17 +705,17 @@ public class LoadBalancer {
    * @param servers
    * @return map of regions to the server it should be assigned to
    */
-  public static Map<HRegionInfo,HServerInfo> immediateAssignment(
-      List<HRegionInfo> regions, List<HServerInfo> servers) {
-    Map<HRegionInfo,HServerInfo> assignments =
-      new TreeMap<HRegionInfo,HServerInfo>();
+  public static Map<HRegionInfo, ServerName> immediateAssignment(
+      List<HRegionInfo> regions, List<ServerName> servers) {
+    Map<HRegionInfo,ServerName> assignments =
+      new TreeMap<HRegionInfo,ServerName>();
     for(HRegionInfo region : regions) {
       assignments.put(region, servers.get(RANDOM.nextInt(servers.size())));
     }
     return assignments;
   }
 
-  public static HServerInfo randomAssignment(List<HServerInfo> servers) {
+  public static ServerName randomAssignment(List<ServerName> servers) {
     if (servers == null || servers.isEmpty()) {
       LOG.warn("Wanted to do random assignment but no servers to assign to");
       return null;
@@ -722,21 +735,21 @@ public class LoadBalancer {
    */
   public static class RegionPlan implements Comparable<RegionPlan> {
     private final HRegionInfo hri;
-    private final HServerInfo source;
-    private HServerInfo dest;
+    private final ServerName source;
+    private ServerName dest;
 
     /**
      * Instantiate a plan for a region move, moving the specified region from
      * the specified source server to the specified destination server.
      *
      * Destination server can be instantiated as null and later set
-     * with {@link #setDestination(HServerInfo)}.
+     * with {@link #setDestination(ServerName)}.
      *
      * @param hri region to be moved
      * @param source regionserver region should be moved from
      * @param dest regionserver region should be moved to
      */
-    public RegionPlan(final HRegionInfo hri, HServerInfo source, HServerInfo dest) {
+    public RegionPlan(final HRegionInfo hri, ServerName source, ServerName dest) {
       this.hri = hri;
       this.source = source;
       this.dest = dest;
@@ -745,7 +758,7 @@ public class LoadBalancer {
     /**
      * Set the destination server for the plan for this region.
      */
-    public void setDestination(HServerInfo dest) {
+    public void setDestination(ServerName dest) {
       this.dest = dest;
     }
 
@@ -753,7 +766,7 @@ public class LoadBalancer {
      * Get the source server for the plan for this region.
      * @return server info for source
      */
-    public HServerInfo getSource() {
+    public ServerName getSource() {
       return source;
     }
 
@@ -761,7 +774,7 @@ public class LoadBalancer {
      * Get the destination server for the plan for this region.
      * @return server info for destination
      */
-    public HServerInfo getDestination() {
+    public ServerName getDestination() {
       return dest;
     }
 
@@ -789,8 +802,8 @@ public class LoadBalancer {
     @Override
     public String toString() {
       return "hri=" + this.hri.getRegionNameAsString() + ", src=" +
-        (this.source == null? "": this.source.getServerName()) +
-        ", dest=" + (this.dest == null? "": this.dest.getServerName());
+        (this.source == null? "": this.source.toString()) +
+        ", dest=" + (this.dest == null? "": this.dest.toString());
     }
   }
 }

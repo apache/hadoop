@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -84,8 +85,8 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public String getServerName() {
-      return "mockserver.example.org,1234,-1L";
+    public ServerName getServerName() {
+      return new ServerName("mockserver.example.org", 1234, -1L);
     }
 
     @Override
@@ -161,7 +162,7 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public String getServerName() {
+    public ServerName getServerName() {
       return null;
     }
 

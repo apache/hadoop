@@ -23,77 +23,48 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Comparator;
-import java.util.Set;
 
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.io.VersionedWritable;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 
 /**
- * HServerInfo is meta info about an {@link HRegionServer}.  It is the token
- * by which a master distingushes a particular regionserver from the rest.
- * It holds hostname, ports, regionserver startcode, and load.  Each server has
- * a <code>servername</code> where servername is made up of a concatenation of
- * hostname, port, and regionserver startcode.  This servername is used in
- * various places identifying this regionserver.  Its even used as part of
- * a pathname in the filesystem.  As part of the initialization,
- * master will pass the regionserver the address that it knows this regionserver
- * by.  In subsequent communications, the regionserver will pass a HServerInfo
- * with the master-supplied address.
+ * HServerInfo is meta info about an {@link HRegionServer}.  It hosts the
+ * {@link HServerAddress}, its webui port, and its server startcode.  It was
+ * used to pass meta info about a server across an RPC but we've since made
+ * it so regionserver info is up in ZooKeeper and so this class is on its
+ * way out. It used to carry {@link HServerLoad} but as off HBase 0.92.0, the
+ * HServerLoad is passed independent of this class. Also, we now no longer pass
+ * the webui from regionserver to master (TODO: Fix).
+ * @deprecated Use {@link InetSocketAddress} and or {@link ServerName} and or
+ * {@link HServerLoad}
  */
 public class HServerInfo extends VersionedWritable
-  implements WritableComparable<HServerInfo> {
-  private static final byte VERSION = 0;
-  
-  /*
-   * This character is used as separator between server hostname and port and
-   * its startcode. Servername is formatted as
-   * <code>&lt;hostname> '{@ink #SERVERNAME_SEPARATOR"}' &lt;port> '{@ink #SERVERNAME_SEPARATOR"}' &lt;startcode></code>.
-   */
-  private static final String SERVERNAME_SEPARATOR = ",";
-
-  private HServerAddress serverAddress;
+implements WritableComparable<HServerInfo> {
+  private static final byte VERSION = 1;
+  private HServerAddress serverAddress = new HServerAddress();
   private long startCode;
-  private HServerLoad load;
-  private int infoPort;
-  // Servername is made of hostname, port and startcode.
-  private String serverName = null;
-  // Hostname of the regionserver.
-  private String hostname;
-  private String cachedHostnamePort = null;
-
-  /** @return the object version number */
-  public byte getVersion() {
-    return VERSION;
-  }
+  private int webuiport;
 
   public HServerInfo() {
-    this(new HServerAddress(), 0, HConstants.DEFAULT_REGIONSERVER_INFOPORT,
-      "default name");
+    super();
   }
 
   /**
-   * Constructor that creates a HServerInfo with a generated startcode and an
-   * empty load.
-   * @param serverAddress An {@link InetSocketAddress} encased in a {@link Writable}
-   * @param infoPort Port the webui runs on.
-   * @param hostname Server hostname.
+   * Constructor that creates a HServerInfo with a generated startcode
+   * @param serverAddress
+   * @param webuiport Port the webui runs on.
    */
-  public HServerInfo(HServerAddress serverAddress, final int infoPort,
-      final String hostname) {
-    this(serverAddress, System.currentTimeMillis(), infoPort, hostname);
+  public HServerInfo(final HServerAddress serverAddress, final int webuiport) {
+    this(serverAddress, System.currentTimeMillis(), webuiport);
   }
 
   public HServerInfo(HServerAddress serverAddress, long startCode,
-      final int infoPort, String hostname) {
+      final int webuiport) {
     this.serverAddress = serverAddress;
     this.startCode = startCode;
-    this.load = new HServerLoad();
-    this.infoPort = infoPort;
-    this.hostname = hostname;
+    this.webuiport = webuiport;
   }
 
   /**
@@ -103,27 +74,16 @@ public class HServerInfo extends VersionedWritable
   public HServerInfo(HServerInfo other) {
     this.serverAddress = new HServerAddress(other.getServerAddress());
     this.startCode = other.getStartCode();
-    this.load = other.getLoad();
-    this.infoPort = other.getInfoPort();
-    this.hostname = other.hostname;
+    this.webuiport = other.getInfoPort();
   }
 
-  public HServerLoad getLoad() {
-    return load;
-  }
-
-  public void setLoad(HServerLoad load) {
-    this.load = load;
+  /** @return the object version number */
+  public byte getVersion() {
+    return VERSION;
   }
 
   public synchronized HServerAddress getServerAddress() {
     return new HServerAddress(serverAddress);
-  }
-
-  public synchronized void setServerAddress(HServerAddress serverAddress) {
-    this.serverAddress = serverAddress;
-    this.hostname = serverAddress.getHostname();
-    this.serverName = null;
   }
 
   public synchronized long getStartCode() {
@@ -131,78 +91,15 @@ public class HServerInfo extends VersionedWritable
   }
 
   public int getInfoPort() {
-    return this.infoPort;
+    return getWebuiPort();
+  }
+
+  public int getWebuiPort() {
+    return this.webuiport;
   }
 
   public String getHostname() {
-    return this.hostname;
-  }
-
-  /**
-   * @return The hostname and port concatenated with a ':' as separator.
-   */
-  public synchronized String getHostnamePort() {
-    if (this.cachedHostnamePort == null) {
-      this.cachedHostnamePort = getHostnamePort(this.hostname, this.serverAddress.getPort());
-    }
-    return this.cachedHostnamePort;
-  }
-
-  /**
-   * @param hostname
-   * @param port
-   * @return The hostname and port concatenated with a ':' as separator.
-   */
-  public static String getHostnamePort(final String hostname, final int port) {
-    return hostname + ":" + port;
-  }
-
-  /**
-   * Gets the unique server instance name.  Includes the hostname, port, and
-   * start code.
-   * @return Server name made of the concatenation of hostname, port and
-   * startcode formatted as <code>&lt;hostname> ',' &lt;port> ',' &lt;startcode></code>
-   */
-  public synchronized String getServerName() {
-    if (this.serverName == null) {
-      this.serverName = getServerName(this.hostname,
-        this.serverAddress.getPort(), this.startCode);
-    }
-    return this.serverName;
-  }
-
-  public static synchronized String getServerName(final String hostAndPort,
-      final long startcode) {
-    int index = hostAndPort.indexOf(":");
-    if (index <= 0) throw new IllegalArgumentException("Expected <hostname> ':' <port>");
-    return getServerName(hostAndPort.substring(0, index),
-      Integer.parseInt(hostAndPort.substring(index + 1)), startcode);
-  }
-
-  /**
-   * @param address Server address
-   * @param startCode Server startcode
-   * @return Server name made of the concatenation of hostname, port and
-   * startcode formatted as <code>&lt;hostname> ',' &lt;port> ',' &lt;startcode></code>
-   */
-  public static String getServerName(HServerAddress address, long startCode) {
-    return getServerName(address.getHostname(), address.getPort(), startCode);
-  }
-
-  /*
-   * @param hostName
-   * @param port
-   * @param startCode
-   * @return Server name made of the concatenation of hostname, port and
-   * startcode formatted as <code>&lt;hostname> ',' &lt;port> ',' &lt;startcode></code>
-   */
-  public static String getServerName(String hostName, int port, long startCode) {
-    StringBuilder name = new StringBuilder(hostName);
-    name.append(SERVERNAME_SEPARATOR);
-    name.append(port);
-    name.append(SERVERNAME_SEPARATOR);
-    name.append(startCode);
-    return name.toString();
+    return this.serverAddress.getHostname();
   }
 
   /**
@@ -211,97 +108,46 @@ public class HServerInfo extends VersionedWritable
    * @see #getLoad()
    */
   @Override
-  public String toString() {
-    return "serverName=" + getServerName() +
-      ", load=(" + this.load.toString() + ")";
+  public synchronized String toString() {
+    return ServerName.getServerName(this.serverAddress.getHostnameAndPort(),
+      this.startCode);
   }
 
   @Override
   public boolean equals(Object obj) {
-    if (this == obj) {
-      return true;
-    }
-    if (obj == null) {
-      return false;
-    }
-    if (getClass() != obj.getClass()) {
-      return false;
-    }
+    if (this == obj) return true;
+    if (obj == null) return false;
+    if (getClass() != obj.getClass()) return false;
     return compareTo((HServerInfo)obj) == 0;
   }
 
   @Override
   public int hashCode() {
-    return this.getServerName().hashCode();
+    int code = this.serverAddress.hashCode();
+    code ^= this.webuiport;
+    code ^= this.startCode;
+    return code;
   }
 
   public void readFields(DataInput in) throws IOException {
+    super.readFields(in);
     this.serverAddress.readFields(in);
     this.startCode = in.readLong();
-    this.load.readFields(in);
-    this.infoPort = in.readInt();
-    this.hostname = in.readUTF();
+    this.webuiport = in.readInt();
   }
 
   public void write(DataOutput out) throws IOException {
+    super.write(out);
     this.serverAddress.write(out);
     out.writeLong(this.startCode);
-    this.load.write(out);
-    out.writeInt(this.infoPort);
-    out.writeUTF(hostname);
+    out.writeInt(this.webuiport);
   }
 
   public int compareTo(HServerInfo o) {
-    return this.getServerName().compareTo(o.getServerName());
+    int compare = this.serverAddress.compareTo(o.getServerAddress());
+    if (compare != 0) return compare;
+    if (this.webuiport != o.getInfoPort()) return this.webuiport - o.getInfoPort();
+    if (this.startCode != o.getStartCode()) return (int)(this.startCode - o.getStartCode());
+    return 0;
   }
-
-  /**
-   * Orders HServerInfos by load then name.  Natural/ascending order.
-   */
-  public static class LoadComparator implements Comparator<HServerInfo> {
-    @Override
-    public int compare(HServerInfo left, HServerInfo right) {
-      int loadCompare = left.getLoad().compareTo(right.getLoad());
-      return loadCompare != 0 ? loadCompare : left.compareTo(right);
-    }
-  }
-
-  /**
-   * Utility method that does a find of a servername or a hostandport combination
-   * in the passed Set.
-   * @param servers Set of server names
-   * @param serverName Name to look for
-   * @param hostAndPortOnly If <code>serverName</code> is a
-   * <code>hostname ':' port</code>
-   * or <code>hostname , port , startcode</code>.
-   * @return True if <code>serverName</code> found in <code>servers</code>
-   */
-  public static boolean isServer(final Set<String> servers,
-      final String serverName, final boolean hostAndPortOnly) {
-    if (!hostAndPortOnly) return servers.contains(serverName);
-    String serverNameColonReplaced =
-      serverName.replaceFirst(":", SERVERNAME_SEPARATOR);
-    for (String hostPortStartCode: servers) {
-      int index = hostPortStartCode.lastIndexOf(SERVERNAME_SEPARATOR);
-      String hostPortStrippedOfStartCode = hostPortStartCode.substring(0, index);
-      if (hostPortStrippedOfStartCode.equals(serverNameColonReplaced)) return true;
-    }
-    return false;
-  }
-
-  /**
-   * Utility method to excise the start code from a server name
-   * @param inServerName full server name
-   * @return server name less its start code
-   */
-  public static String getServerNameLessStartCode(String inServerName) {
-    if (inServerName != null && inServerName.length() > 0) {
-      int index = inServerName.lastIndexOf(SERVERNAME_SEPARATOR);
-      if (index > 0) {
-        return inServerName.substring(0, index);
-      }
-    }
-    return inServerName;
-  }
-
 }

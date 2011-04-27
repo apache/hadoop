@@ -23,8 +23,6 @@ import java.io.IOException;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,7 +37,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.MapWritable;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * This class creates a single process HBase cluster.
@@ -84,75 +81,6 @@ public class MiniHBaseCluster {
   }
 
   /**
-   * Override Master so can add inject behaviors testing.
-   */
-  public static class MiniHBaseClusterMaster extends HMaster {
-    private final Map<HServerInfo, List<HMsg>> messages =
-      new ConcurrentHashMap<HServerInfo, List<HMsg>>();
-
-    private final Map<HServerInfo, IOException> exceptions =
-      new ConcurrentHashMap<HServerInfo, IOException>();
-
-    public MiniHBaseClusterMaster(final Configuration conf)
-    throws IOException, KeeperException, InterruptedException {
-      super(conf);
-    }
-
-    /**
-     * Add a message to send to a regionserver next time it checks in.
-     * @param hsi RegionServer's HServerInfo.
-     * @param msg Message to add.
-     */
-    void addMessage(final HServerInfo hsi, HMsg msg) {
-      synchronized(this.messages) {
-        List<HMsg> hmsgs = this.messages.get(hsi);
-        if (hmsgs == null) {
-          hmsgs = new ArrayList<HMsg>();
-          this.messages.put(hsi, hmsgs);
-        }
-        hmsgs.add(msg);
-      }
-    }
-
-    void addException(final HServerInfo hsi, final IOException ex) {
-      this.exceptions.put(hsi, ex);
-    }
-
-    /**
-     * This implementation is special, exceptions will be treated first and
-     * message won't be sent back to the region servers even if some are
-     * specified.
-     * @param hsi the rs
-     * @param msgs Messages to add to
-     * @return
-     * @throws IOException will be throw if any added for this region server
-     */
-    @Override
-    protected HMsg[] adornRegionServerAnswer(final HServerInfo hsi,
-        final HMsg[] msgs) throws IOException {
-      IOException ex = this.exceptions.remove(hsi);
-      if (ex != null) {
-        throw ex;
-      }
-      HMsg [] answerMsgs = msgs;
-      synchronized (this.messages) {
-        List<HMsg> hmsgs = this.messages.get(hsi);
-        if (hmsgs != null && !hmsgs.isEmpty()) {
-          int size = answerMsgs.length;
-          HMsg [] newAnswerMsgs = new HMsg[size + hmsgs.size()];
-          System.arraycopy(answerMsgs, 0, newAnswerMsgs, 0, answerMsgs.length);
-          for (int i = 0; i < hmsgs.size(); i++) {
-            newAnswerMsgs[answerMsgs.length + i] = hmsgs.get(i);
-          }
-          answerMsgs = newAnswerMsgs;
-          hmsgs.clear();
-        }
-      }
-      return super.adornRegionServerAnswer(hsi, answerMsgs);
-    }
-  }
-
-  /**
    * Subclass so can get at protected methods (none at moment).  Also, creates
    * a FileSystem instance per instantiation.  Adds a shutdown own FileSystem
    * on the way out. Shuts down own Filesystem only, not All filesystems as
@@ -174,10 +102,6 @@ public class MiniHBaseCluster {
         throws IOException {
       if (TEST_SKIP_CLOSE) return true;
       return super.closeRegion(region);
-    }
-
-    public void setHServerInfo(final HServerInfo hsi) {
-      this.serverInfo = hsi;
     }
 
     /*
@@ -266,8 +190,7 @@ public class MiniHBaseCluster {
     try {
       // start up a LocalHBaseCluster
       hbaseCluster = new LocalHBaseCluster(conf, nMasterNodes, 0,
-          MiniHBaseCluster.MiniHBaseClusterMaster.class,
-          MiniHBaseCluster.MiniHBaseClusterRegionServer.class);
+        HMaster.class, MiniHBaseCluster.MiniHBaseClusterRegionServer.class);
 
       // manually add the regionservers as other users
       for (int i=0; i<nRegionNodes; i++) {
@@ -382,15 +305,6 @@ public class MiniHBaseCluster {
       throw new IOException("Interrupted executing UserGroupInformation.doAs()", ie);
     }
     return t;
-  }
-
-  /**
-   * @return Returns the rpc address actually used by the currently active
-   * master server, because the supplied port is not necessarily the actual port
-   * used.
-   */
-  public HServerAddress getHMasterAddress() {
-    return this.hbaseCluster.getActiveMaster().getMasterAddress();
   }
 
   /**
@@ -604,59 +518,6 @@ public class MiniHBaseCluster {
       count++;
     }
     return index;
-  }
-
-  /**
-   * Add an exception to send when a region server checks back in
-   * @param serverNumber Which server to send it to
-   * @param ex The exception that will be sent
-   * @throws IOException
-   */
-  public void addExceptionToSendRegionServer(final int serverNumber,
-      IOException ex) throws IOException {
-    MiniHBaseClusterRegionServer hrs =
-      (MiniHBaseClusterRegionServer)getRegionServer(serverNumber);
-    addExceptionToSendRegionServer(hrs, ex);
-  }
-
-  /**
-   * Add an exception to send when a region server checks back in
-   * @param hrs Which server to send it to
-   * @param ex The exception that will be sent
-   * @throws IOException
-   */
-  public void addExceptionToSendRegionServer(
-      final MiniHBaseClusterRegionServer hrs, IOException ex)
-      throws IOException {
-    ((MiniHBaseClusterMaster)getMaster()).addException(hrs.getHServerInfo(),ex);
-  }
-
-  /**
-   * Add a message to include in the responses send a regionserver when it
-   * checks back in.
-   * @param serverNumber Which server to send it to.
-   * @param msg The MESSAGE
-   * @throws IOException
-   */
-  public void addMessageToSendRegionServer(final int serverNumber,
-    final HMsg msg)
-  throws IOException {
-    MiniHBaseClusterRegionServer hrs =
-      (MiniHBaseClusterRegionServer)getRegionServer(serverNumber);
-    addMessageToSendRegionServer(hrs, msg);
-  }
-
-  /**
-   * Add a message to include in the responses send a regionserver when it
-   * checks back in.
-   * @param hrs Which region server.
-   * @param msg The MESSAGE
-   * @throws IOException
-   */
-  public void addMessageToSendRegionServer(final MiniHBaseClusterRegionServer hrs,
-    final HMsg msg)
-  throws IOException {
-    ((MiniHBaseClusterMaster)getMaster()).addMessage(hrs.getHServerInfo(), msg);
   }
 
   /**
