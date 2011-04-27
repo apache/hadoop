@@ -2,10 +2,10 @@ Hadoop Change Log
 
 Release 0.20.203.0 - unreleased
 
+    MAPREDUCE-2316. Updated CapacityScheduler documentation. (acmurthy) 
+
     HADOOP-7243. Fix contrib unit tests missing dependencies. (omalley)
 
-    MAPREDUCE-2355. Add a dampner to out-of-band heartbeats. (acmurthy) 
- 
     HADOOP-7190. Add metrics v1 back for backwards compatibility. (omalley)
 
     MAPREDUCE-2360. Remove stripping of scheme, authority from submit dir in 
