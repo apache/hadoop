@@ -2,6 +2,8 @@ Hadoop Change Log
 
 Release 0.20.203.0 - unreleased
 
+    HADOOP-7243. Fix contrib unit tests missing dependencies. (omalley)
+
     MAPREDUCE-2355. Add a dampner to out-of-band heartbeats. (acmurthy) 
  
     HADOOP-7190. Add metrics v1 back for backwards compatibility. (omalley)

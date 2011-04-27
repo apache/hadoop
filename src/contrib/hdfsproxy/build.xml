@@ -80,7 +80,8 @@
     </and>
   </condition>
 
-  <property name="ivy.settings.file" location="${hadoop.root}/ivy/ivysettings.xml"/>
+  <property name="ivy.settings.file" 
+            location="${hadoop.root}/ivy/ivysettings.xml"/>
 
   <target name="ivy-init" depends="ivy-init-antlib">
     <ivy:settings id="${ant.project.name}.ivy.settings"/>
@@ -239,7 +240,8 @@
     <copy file="${proxy.conf.dir}/tomcat-web.xml" todir="${src.test.resources}"/>
     <copy file="${proxy.conf.dir}/tomcat-forward-web.xml" todir="${src.test.resources}"/>
 
-    <junit fork="yes" printsummary="yes" errorProperty="tests.failed" failureProperty="tests.failed">
+    <junit fork="yes" printsummary="yes" errorProperty="tests.failed" 
+           failureProperty="tests.failed" showoutput="${test.output}">
       <classpath refid="test.classpath"/>
       <sysproperty key="test.build.data" value="${build.test}/data"/>
       <sysproperty key="build.test" value="${build.test}"/>
