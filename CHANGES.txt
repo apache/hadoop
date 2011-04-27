@@ -1,4 +1,4 @@
-Hn jaadoop Change Log
+Hadoop Change Log
 
 Trunk (unreleased changes)
 
