@@ -243,7 +243,8 @@ public class AssignmentManager extends ZooKeeperListener {
     processRegionsInTransition();
   }
 
-  public void processRegionsInTransition() throws KeeperException, IOException {
+  public void processRegionsInTransition()
+  throws KeeperException, IOException, InterruptedException {
     List<String> nodes = ZKUtil.listChildrenAndWatchForNewChildren(watcher,
       watcher.assignmentZNode);
     // Run through all regions.  If they are not assigned and not in RIT, then
@@ -265,7 +266,6 @@ public class AssignmentManager extends ZooKeeperListener {
     // If we found user regions out on cluster, its a failover.
     if (userRegionsOutOnCluster) {
       LOG.info("Found regions out on cluster or in RIT; failover");
-      processDeadServers(deadServers);
       if (!nodes.isEmpty()) {
         for (String encodedRegionName: nodes) {
           processRegionInTransition(encodedRegionName, null);
@@ -417,7 +417,7 @@ public class AssignmentManager extends ZooKeeperListener {
       boolean lateEvent = data.getStamp() <
           (System.currentTimeMillis() - 15000);
       LOG.debug("Handling transition=" + data.getEventType() +
-        ", server=" + data.getServerName() + ", region=" +
+        ", server=" + data.getOrigin() + ", region=" +
           prettyPrintedRegionName +
           (lateEvent? ", which is more than 15 seconds late" : ""));
       RegionState regionState = regionsInTransition.get(encodedName);

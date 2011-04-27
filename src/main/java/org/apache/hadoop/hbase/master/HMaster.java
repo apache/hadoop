@@ -86,7 +86,6 @@ import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
@@ -321,7 +320,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
    * @throws InterruptedException
    */
   private boolean becomeActiveMaster() throws InterruptedException {
-    this.activeMasterManager = new ActiveMasterManager(zooKeeper, address,
+    // TODO: This is wrong!!!! Should have new servername if we restart ourselves,
+    // if we come back to life.
+    this.activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName,
         this);
     this.zooKeeper.registerListener(activeMasterManager);
     stallIfBackupMaster(this.conf, this.activeMasterManager);
@@ -355,7 +356,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     boolean wasUp = this.clusterStatusTracker.isClusterUp();
     if (!wasUp) this.clusterStatusTracker.setClusterUp();
 
-    LOG.info("Server active/primary master; " + this.address +
+    LOG.info("Server active/primary master; " + this.serverName +
         ", sessionid=0x" +
         Long.toHexString(this.zooKeeper.getZooKeeper().getSessionId()) +
         ", cluster-up flag was=" + wasUp);
@@ -1101,7 +1102,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   private boolean tryRecoveringExpiredZKSession() throws InterruptedException,
       IOException, KeeperException {
     this.zooKeeper = new ZooKeeperWatcher(conf, MASTER + ":"
-        + address.getPort(), this);
+        + this.serverName.getPort(), this);
 
     if (!becomeActiveMaster()) {
       return false;

@@ -275,7 +275,7 @@ public class TestZKBasedOpenCloseRegion {
 
     // now ask the master to move the region to hr1, will fail
     TEST_UTIL.getHBaseAdmin().move(hri.getEncodedNameAsBytes(),
-        Bytes.toBytes(hr1.getServerName()));
+        Bytes.toBytes(hr1.getServerName().toString()));
 
     while (!reopenEventProcessed.get()) {
       Threads.sleep(100);
@@ -290,7 +290,7 @@ public class TestZKBasedOpenCloseRegion {
 
     // move the region again, but this time it will work
     TEST_UTIL.getHBaseAdmin().move(hri.getEncodedNameAsBytes(),
-        Bytes.toBytes(hr1.getServerName()));
+        Bytes.toBytes(hr1.getServerName().toString()));
 
     while (!reopenEventProcessed.get()) {
       Threads.sleep(100);

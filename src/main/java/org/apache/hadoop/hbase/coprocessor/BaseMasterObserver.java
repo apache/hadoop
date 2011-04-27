@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.UnknownRegionException;
@@ -110,18 +111,6 @@ public class BaseMasterObserver implements MasterObserver {
   }
 
   @Override
-  public void preMove(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HRegionInfo region, HServerInfo srcServer, HServerInfo destServer)
-  throws UnknownRegionException {
-  }
-
-  @Override
-  public void postMove(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HRegionInfo region, HServerInfo srcServer, HServerInfo destServer)
-  throws UnknownRegionException {
-  }
-
-  @Override
   public void preAssign(ObserverContext<MasterCoprocessorEnvironment> ctx,
       byte[] regionName, boolean force) throws IOException {
   }
@@ -178,5 +167,17 @@ public class BaseMasterObserver implements MasterObserver {
 
   @Override
   public void stop(CoprocessorEnvironment ctx) throws IOException {
+  }
+
+  @Override
+  public void preMove(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      HRegionInfo region, ServerName srcServer, ServerName destServer)
+  throws UnknownRegionException {
+  }
+
+  @Override
+  public void postMove(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      HRegionInfo region, ServerName srcServer, ServerName destServer)
+  throws UnknownRegionException {
   }
 }
