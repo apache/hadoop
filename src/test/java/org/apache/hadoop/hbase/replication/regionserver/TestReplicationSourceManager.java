@@ -79,8 +79,6 @@ public class TestReplicationSourceManager {
 
   private static final byte[] f1 = Bytes.toBytes("f1");
 
-  private static final byte[] f2 = Bytes.toBytes("f2");
-
   private static final byte[] test = Bytes.toBytes("test");
 
   private static FileSystem fs;
@@ -225,7 +223,7 @@ public class TestReplicationSourceManager {
 
     @Override
     public ServerName getServerName() {
-      return null;  //To change body of implemented methods use File | Settings | File Templates.
+      return new ServerName("hostname.example.org", 1234, -1L);
     }
 
     @Override
