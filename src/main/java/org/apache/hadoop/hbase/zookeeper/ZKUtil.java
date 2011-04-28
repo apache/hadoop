@@ -1018,7 +1018,7 @@ public class ZKUtil {
     LOG.debug(zkw.prefix("Retrieved " + ((data == null)? 0: data.length) +
       " byte(s) of data from znode " + znode +
       (watcherSet? " and set watcher; ": "; data=") +
-      (data == null? "null": (
+      (data == null? "null": data.length == 0? "empty": (
           znode.startsWith(zkw.assignmentZNode) ?
               RegionTransitionData.fromBytes(data).toString()
               : StringUtils.abbreviate(Bytes.toString(data), 32)))));

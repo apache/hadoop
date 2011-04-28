@@ -63,7 +63,7 @@ import org.mockito.Mockito;
 public class TestCatalogTracker {
   private static final Log LOG = LogFactory.getLog(TestCatalogTracker.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static final ServerName HSA =
+  private static final ServerName SN =
     new ServerName("example.org", 1234, System.currentTimeMillis());
   private ZooKeeperWatcher watcher;
   private Abortable abortable;
@@ -247,8 +247,8 @@ public class TestCatalogTracker {
   }
 
   private ServerName setRootLocation() throws KeeperException {
-    RootLocationEditor.setRootLocation(this.watcher, HSA);
-    return HSA;
+    RootLocationEditor.setRootLocation(this.watcher, SN);
+    return SN;
   }
 
   /**
@@ -266,8 +266,8 @@ public class TestCatalogTracker {
     HRegionInterface  mockHRI = Mockito.mock(HRegionInterface.class);
     // Make the HRI return an answer no matter how Get is called.  Same for
     // getHRegionInfo.  Thats enough for this test.
-    Mockito.when(connection.getHRegionConnection((HServerAddress)Mockito.any(), Mockito.anyBoolean())).
-      thenReturn(mockHRI);
+    Mockito.when(connection.getHRegionConnection((String)Mockito.any(),
+      Matchers.anyInt())).thenReturn(mockHRI);
 
     final CatalogTracker ct = constructAndStartCatalogTracker(connection);
     ServerName hsa = ct.getMetaLocation();
@@ -289,7 +289,7 @@ public class TestCatalogTracker {
     List<KeyValue> kvs = new ArrayList<KeyValue>();
     kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY,
       HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-      Bytes.toBytes(HSA.toString())));
+      Bytes.toBytes(SN.toString())));
     final Result result = new Result(kvs);
     Mockito.when(mockHRI.get((byte [])Mockito.any(), (Get)Mockito.any())).
       thenReturn(result);
@@ -300,12 +300,12 @@ public class TestCatalogTracker {
     // been assigned.
     String node = ct.getMetaNodeTracker().getNode();
     ZKUtil.createAndFailSilent(this.watcher, node);
-    MetaEditor.updateMetaLocation(ct, HRegionInfo.FIRST_META_REGIONINFO, HSA);
+    MetaEditor.updateMetaLocation(ct, HRegionInfo.FIRST_META_REGIONINFO, SN);
     ZKUtil.deleteNode(this.watcher, node);
     // Join the thread... should exit shortly.
     t.join();
     // Now meta is available.
-    Assert.assertTrue(ct.getMetaLocation().equals(HSA));
+    Assert.assertTrue(ct.getMetaLocation().equals(SN));
   }
 
   private void startWaitAliveThenWaitItLives(final Thread t, final int ms) {
