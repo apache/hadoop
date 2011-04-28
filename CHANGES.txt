@@ -447,6 +447,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7172. SecureIO should not check owner on non-secure
     clusters that have no native support. (todd via eli)
 
+    HADOOP-7184. Remove deprecated config local.cache.size from
+    core-default.xml (todd)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
