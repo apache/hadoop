@@ -211,11 +211,21 @@ public class ServerName implements Comparable<ServerName> {
   public static ServerName findServerWithSameHostnamePort(final Collection<ServerName> names,
       final ServerName serverName) {
     for (ServerName sn: names) {
-      if (sn.getHostname().equals(serverName.getHostname()) &&
-          sn.getPort() == serverName.getPort()) {
-        return sn;
-      }
+      if (isSameHostnameAndPort(serverName, sn)) return sn;
     }
     return null;
+  }
+
+  /**
+   * @param left
+   * @param rigth
+   * @return True if <code>other</code> has same hostname and port.
+   */
+  public static boolean isSameHostnameAndPort(final ServerName left,
+      final ServerName right) {
+    if (left == null) return false;
+    if (right == null) return false;
+    return left.getHostname().equals(right.getHostname()) &&
+      left.getPort() == right.getPort();
   }
 }

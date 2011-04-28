@@ -104,9 +104,10 @@ public class ServerManager {
    * @param port The remote port
    * @param serverStartcode
    * @param serverCurrentTime The current time of the region server in ms
+   * @return The ServerName we know this server as.
    * @throws IOException
    */
-  void regionServerStartup(final InetAddress ia, final int port,
+  ServerName regionServerStartup(final InetAddress ia, final int port,
     final long serverStartcode, long serverCurrentTime)
   throws IOException {
     // Test for case where we get a region startup message from a regionserver
@@ -121,6 +122,7 @@ public class ServerManager {
     checkIsDead(sn, "STARTUP");
     checkAlreadySameHostPort(sn);
     recordNewServer(sn, HServerLoad.EMPTY_HSERVERLOAD);
+    return sn;
   }
 
   void regionServerReport(ServerName sn, HServerLoad hsl)

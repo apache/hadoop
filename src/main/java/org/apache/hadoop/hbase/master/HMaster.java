@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -636,12 +637,13 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     final long serverStartCode, final long serverCurrentTime)
   throws IOException {
     // Register with server manager
-    this.serverManager.regionServerStartup(HBaseServer.getRemoteIp(), port,
+    InetAddress ia = HBaseServer.getRemoteIp();
+    ServerName rs = this.serverManager.regionServerStartup(ia, port,
       serverStartCode, serverCurrentTime);
     // Send back some config info
     MapWritable mw = createConfigurationSubset();
     mw.put(new Text(HConstants.KEY_FOR_HOSTNAME_SEEN_BY_MASTER),
-      new Text(this.serverName.getHostname()));
+      new Text(rs.getHostname()));
     return mw;
   }
 
@@ -660,7 +662,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   }
 
   @Override
-  public void regionServerReport(byte[] sn, HServerLoad hsl)
+  public void regionServerReport(final byte [] sn, final HServerLoad hsl)
   throws IOException {
     this.serverManager.regionServerReport(new ServerName(sn), hsl);
     if (hsl != null && this.metrics != null) {

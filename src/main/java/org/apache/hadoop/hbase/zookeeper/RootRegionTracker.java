@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.zookeeper;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -57,8 +58,7 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
    * @throws InterruptedException 
    */
   public ServerName getRootRegionLocation() throws InterruptedException {
-    byte [] data = super.getData();
-    return data == null? null: new ServerName(dataToString(data));
+    return dataToServerName(super.getData());
   }
 
   /**
@@ -71,16 +71,28 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
    */
   public ServerName waitRootRegionLocation(long timeout)
   throws InterruptedException {
-    String str = dataToString(super.blockUntilAvailable(timeout));
-    return str == null? null: new ServerName(str);
+    return dataToServerName(super.blockUntilAvailable(timeout));
   }
 
   /*
    * @param data
    * @return Returns null if <code>data</code> is null else converts passed data
-   * to a String instance.
+   * to a ServerName instance.
    */
-  private static String dataToString(final byte [] data) {
-    return data == null ? null: Bytes.toString(data);
+  private static ServerName dataToServerName(final byte [] data) {
+    // The str returned could be old style -- pre hbase-1502 -- which was
+    // hostname and port seperated by a colon rather than hostname, port and
+    // startcode delimited by a ','.
+    if (data == null || data.length <= 0) return null;
+    String str = Bytes.toString(data);
+    int index = str.indexOf(ServerName.SERVERNAME_SEPARATOR);
+    if (index != -1) {
+      // Presume its ServerName.toString() format.
+      return new ServerName(str);
+    }
+    // Presume it a hostname:port format.
+    String hostname = Addressing.parseHostname(str);
+    int port = Addressing.parsePort(str);
+    return new ServerName(hostname, port, -1L);
   }
 }

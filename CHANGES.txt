@@ -89,6 +89,8 @@ Release 0.91.0 - Unreleased
    HBASE-3819  TestSplitLogWorker has too many SLWs running -- makes for
                contention and occasional failures
    HBASE-3210  HBASE-1921 for the new master
+   HBASE-3827  hbase-1502, removing heartbeats, broke master joining a running
+               cluster and was returning master hostname for rs to use
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
