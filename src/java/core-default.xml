@@ -389,14 +389,6 @@
 </property>
 
 <property>
-  <name>local.cache.size</name>
-  <value>10737418240</value>
-  <description>The limit on the size of cache you want to keep, set by default
-  to 10GB. This will act as a soft limit on the cache directory for out of band data.
-  </description>
-</property>
-            
-<property>
   <name>io.seqfile.compress.blocksize</name>
   <value>1000000</value>
   <description>The minimum block size for compression in block compressed 
