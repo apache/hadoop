@@ -19,18 +19,23 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.net.InetSocketAddress;
-
 import org.apache.hadoop.hbase.util.Addressing;
 
 /**
  * Data structure to hold HRegionInfo and the address for the hosting
- * HRegionServer.  Immutable.
+ * HRegionServer.  Immutable.  Comparable, but we compare the 'location' only:
+ * i.e. the hostname and port, and *not* the regioninfo.  This means two
+ * instances are the same if they refer to the same 'location' (the same
+ * hostname and port), though they may be carrying different regions.
  */
 public class HRegionLocation implements Comparable<HRegionLocation> {
   private final HRegionInfo regionInfo;
   private final String hostname;
   private final int port;
+  // Cache of the 'toString' result.
+  private String cachedString = null;
+  // Cache of the hostname + port
+  private String cachedHostnamePort;
 
   /**
    * Constructor
@@ -49,9 +54,12 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
    * @see java.lang.Object#toString()
    */
   @Override
-  public String toString() {
-    return "region=" + this.regionInfo.getRegionNameAsString() +
+  public synchronized String toString() {
+    if (this.cachedString == null) {
+      this.cachedString = "region=" + this.regionInfo.getRegionNameAsString() +
       ", hostname=" + this.hostname + ", port=" + this.port;
+    }
+    return this.cachedString;
   }
 
   /**
@@ -76,8 +84,7 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
    */
   @Override
   public int hashCode() {
-    int result = this.regionInfo.hashCode();
-    result ^= this.hostname.hashCode();
+    int result = this.hostname.hashCode();
     result ^= this.port;
     return result;
   }
@@ -105,12 +112,12 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   /**
    * @return String made of hostname and port formatted as per {@link Addressing#createHostAndPortStr(String, int)}
    */
-  public String getHostnamePort() {
-    return Addressing.createHostAndPortStr(this.hostname, this.port);
-  }
-
-  public InetSocketAddress getInetSocketAddress() {
-    return new InetSocketAddress(this.hostname, this.port);
+  public synchronized String getHostnamePort() {
+    if (this.cachedHostnamePort == null) {
+      this.cachedHostnamePort =
+        Addressing.createHostAndPortStr(this.hostname, this.port);
+    }
+    return this.cachedHostnamePort;
   }
 
   //
@@ -118,9 +125,7 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   //
 
   public int compareTo(HRegionLocation o) {
-    int result = this.regionInfo.compareTo(o.regionInfo);
-    if (result != 0) return result;
-    result = this.hostname.compareTo(o.getHostname());
+    int result = this.hostname.compareTo(o.getHostname());
     if (result != 0) return result;
     return this.port - o.getPort();
   }
