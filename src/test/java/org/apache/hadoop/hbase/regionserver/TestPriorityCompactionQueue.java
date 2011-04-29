@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -61,6 +63,10 @@ public class TestPriorityCompactionQueue {
       return "[DummyHRegion " + name + "]";
     }
 
+    public byte[] getRegionName() {
+      return Bytes.toBytes(name);
+    }
+
     public String getRegionNameAsString() {
       return name;
     }
@@ -68,7 +74,7 @@ public class TestPriorityCompactionQueue {
 
   protected void getAndCheckRegion(PriorityCompactionQueue pq,
       HRegion checkRegion) {
-    HRegion r = pq.remove();
+    HRegion r = pq.remove().getHRegion();
     if (r != checkRegion) {
       Assert.assertTrue("Didn't get expected " + checkRegion + " got " + r, r
           .equals(checkRegion));
@@ -76,7 +82,7 @@ public class TestPriorityCompactionQueue {
   }
 
   protected void addRegion(PriorityCompactionQueue pq, HRegion r, int p) {
-    pq.add(r, p);
+    pq.add(new CompactionRequest(r, null, p));
     try {
       // Sleep 1 millisecond so 2 things are not put in the queue within the
       // same millisecond. The queue breaks ties arbitrarily between two

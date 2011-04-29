@@ -788,6 +788,20 @@ public class HRegion implements HeapSize { // , Writable{
     return compactStores();
   }
 
+  /**
+   * Compact all the stores and return the split key of the first store that needs
+   * to be split.
+   */
+  public byte[] compactStores() throws IOException {
+    byte[] splitRow = null;
+    for(Store s : getStores().values()) {
+      if(splitRow == null) {
+        splitRow = compactStore(s);
+      }
+    }
+    return splitRow;
+  }
+
   /*
    * Called by compaction thread and after region is opened to compact the
    * HStores if necessary.
@@ -802,7 +816,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @return split row if split is needed
    * @throws IOException e
    */
-  public byte [] compactStores() throws IOException {
+  public byte [] compactStore(Store store) throws IOException {
     if (this.closing.get()) {
       LOG.debug("Skipping compaction on " + this + " because closing");
       return null;
@@ -836,16 +850,12 @@ public class HRegion implements HeapSize { // , Writable{
         long startTime = EnvironmentEdgeManager.currentTimeMillis();
         doRegionCompactionPrep();
         long lastCompactSize = 0;
-        long maxSize = -1;
         boolean completed = false;
         try {
-          for (Store store: stores.values()) {
-            final Store.StoreSize ss = store.compact();
-            lastCompactSize += store.getLastCompactSize();
-            if (ss != null && ss.getSize() > maxSize) {
-              maxSize = ss.getSize();
-              splitRow = ss.getSplitRow();
-            }
+          final Store.StoreSize ss = store.compact();
+          lastCompactSize += store.getLastCompactSize();
+          if (ss != null) {
+            splitRow = ss.getSplitRow();
           }
           completed = true;
         } catch (InterruptedIOException iioe) {
@@ -2224,6 +2234,10 @@ public class HRegion implements HeapSize { // , Writable{
     return this.stores.get(column);
   }
 
+  public Map<byte[], Store> getStores() {
+    return this.stores;
+  }
+
   //////////////////////////////////////////////////////////////////////////////
   // Support code
   //////////////////////////////////////////////////////////////////////////////
@@ -2403,12 +2417,12 @@ public class HRegion implements HeapSize { // , Writable{
     if (!(o instanceof HRegion)) {
       return false;
     }
-    return Bytes.equals(this.regionInfo.getRegionName(), ((HRegion)o).regionInfo.getRegionName());
+    return Bytes.equals(this.getRegionName(), ((HRegion) o).getRegionName());
   }
 
   @Override
   public int hashCode() {
-    return Bytes.hashCode(this.regionInfo.getRegionName());
+    return Bytes.hashCode(this.getRegionName());
   }
 
   @Override

@@ -1479,7 +1479,7 @@ public class Store implements HeapSize {
   /**
    * @return The priority that this store should have in the compaction queue
    */
-  int getCompactPriority() {
+  public int getCompactPriority() {
     return this.blockingStoreFileCount - this.storefiles.size();
   }
 
