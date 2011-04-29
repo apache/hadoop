@@ -67,7 +67,6 @@ public class TestSplitLogWorker {
 
   private boolean waitForCounterBoolean(AtomicLong ctr, long oldval, long newval,
       long timems) {
-    assert ctr.get() == oldval;
     long curt = System.currentTimeMillis();
     long endt = curt + timems;
     while (curt < endt) {
@@ -128,6 +127,7 @@ public class TestSplitLogWorker {
   @Test
   public void testAcquireTaskAtStartup() throws Exception {
     LOG.info("testAcquireTaskAtStartup");
+    ZKSplitLog.Counters.resetCounters();
 
     zkw.getZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, "tatas"),
         TaskState.TASK_UNASSIGNED.get("mgr"), Ids.OPEN_ACL_UNSAFE,
@@ -159,6 +159,7 @@ public class TestSplitLogWorker {
   @Test
   public void testRaceForTask() throws Exception {
     LOG.info("testRaceForTask");
+    ZKSplitLog.Counters.resetCounters();
 
     zkw.getZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, "trft"),
         TaskState.TASK_UNASSIGNED.get("manager"), Ids.OPEN_ACL_UNSAFE,
@@ -172,11 +173,10 @@ public class TestSplitLogWorker {
     slw2.start();
     try {
       waitForCounter(tot_wkr_task_acquired, 0, 1, 1000);
-      boolean first =
-        waitForCounterBoolean(tot_wkr_failed_to_grab_task_owned, 0, 1, 1000);
-      boolean second =
-        waitForCounterBoolean(tot_wkr_failed_to_grab_task_lost_race, 0, 1, 100);
-      assertTrue(first || second);
+      // Assert that either the tot_wkr_failed_to_grab_task_owned count was set of if
+      // not it, that we fell through to the next counter in line and it was set.
+      assertTrue(waitForCounterBoolean(tot_wkr_failed_to_grab_task_owned, 0, 1, 1000) ||
+        tot_wkr_failed_to_grab_task_lost_race.get() == 1);
       assertTrue(TaskState.TASK_OWNED.equals(ZKUtil.getData(zkw,
         ZKSplitLog.getEncodedNodeName(zkw, "trft")), "svr1") ||
         TaskState.TASK_OWNED.equals(ZKUtil.getData(zkw,
@@ -190,6 +190,7 @@ public class TestSplitLogWorker {
   @Test
   public void testPreemptTask() throws Exception {
     LOG.info("testPreemptTask");
+    ZKSplitLog.Counters.resetCounters();
 
     SplitLogWorker slw = new SplitLogWorker(zkw, TEST_UTIL.getConfiguration(),
         "tpt_svr", neverEndingTask);
@@ -219,6 +220,7 @@ public class TestSplitLogWorker {
   @Test
   public void testMultipleTasks() throws Exception {
     LOG.info("testMultipleTasks");
+    ZKSplitLog.Counters.resetCounters();
     SplitLogWorker slw = new SplitLogWorker(zkw, TEST_UTIL.getConfiguration(),
         "tmt_svr", neverEndingTask);
     slw.start();
@@ -255,6 +257,7 @@ public class TestSplitLogWorker {
   @Test
   public void testRescan() throws Exception {
     LOG.info("testRescan");
+    ZKSplitLog.Counters.resetCounters();
     slw = new SplitLogWorker(zkw, TEST_UTIL.getConfiguration(),
         "svr", neverEndingTask);
     slw.start();
