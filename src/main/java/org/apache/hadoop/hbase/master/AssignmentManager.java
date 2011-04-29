@@ -226,13 +226,6 @@ public class AssignmentManager extends ZooKeeperListener {
     // TODO: Regions that have a null location and are not in regionsInTransitions
     // need to be handled.
 
-    // Add -ROOT- and .META. on regions map.  They must be deployed if we got
-    // this far.
-    ServerName sn = this.catalogTracker.getMetaLocation();
-    regionOnline(HRegionInfo.FIRST_META_REGIONINFO, sn);
-    sn = this.catalogTracker.getRootLocation();
-    regionOnline(HRegionInfo.ROOT_REGIONINFO, sn);
-
     // Scan META to build list of existing regions, servers, and assignment
     // Returns servers who have not checked in (assumed dead) and their regions
     Map<ServerName,List<Pair<HRegionInfo,Result>>> deadServers =
@@ -243,28 +236,29 @@ public class AssignmentManager extends ZooKeeperListener {
     processRegionsInTransition();
   }
 
-  public void processRegionsInTransition()
+  void processRegionsInTransition()
   throws KeeperException, IOException, InterruptedException {
     List<String> nodes = ZKUtil.listChildrenAndWatchForNewChildren(watcher,
       watcher.assignmentZNode);
     // Run through all regions.  If they are not assigned and not in RIT, then
     // its a clean cluster startup, else its a failover.
-    boolean userRegionsOutOnCluster = false;
+    boolean regionsToProcess = false;
     for (Map.Entry<HRegionInfo, ServerName> e: this.regions.entrySet()) {
       if (!e.getKey().isMetaRegion() && e.getValue() != null) {
         LOG.debug("Found " + e + " out on cluster");
-        userRegionsOutOnCluster = true;
+        regionsToProcess = true;
         break;
       }
       if (nodes.contains(e.getKey().getEncodedName())) {
         LOG.debug("Found " + e + " in RITs");
-        userRegionsOutOnCluster = true;
+        // Could be a meta region.
+        regionsToProcess = true;
         break;
       }
     }
 
     // If we found user regions out on cluster, its a failover.
-    if (userRegionsOutOnCluster) {
+    if (regionsToProcess) {
       LOG.info("Found regions out on cluster or in RIT; failover");
       if (!nodes.isEmpty()) {
         for (String encodedRegionName: nodes) {

@@ -141,8 +141,8 @@ class WritableRpcEngine implements RpcEngine {
                     protocol, ticket, rpcTimeout);
       if (logDebug) {
         // FIGURE HOW TO TURN THIS OFF!
-        // long callTime = System.currentTimeMillis() - startTime;
-        // LOG.debug("Call: " + method.getName() + " " + callTime);
+        long callTime = System.currentTimeMillis() - startTime;
+        LOG.debug("Call: " + method.getName() + " " + callTime);
       }
       return value.get();
     }

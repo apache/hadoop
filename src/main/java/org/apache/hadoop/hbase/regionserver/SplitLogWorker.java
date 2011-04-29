@@ -198,8 +198,8 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
           try {
             taskReadyLock.wait();
           } catch (InterruptedException e) {
-            LOG.warn("SplitLogWorker interurrpted while waiting for task," +
-                " exiting", e);
+            LOG.info("SplitLogWorker interrupted while waiting for task," +
+              " exiting: " + e.toString());
             assert exitWorker == true;
             return;
           }
