@@ -599,11 +599,17 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
 
     try {
-      // Try and register with the Master; tell it we are here.
-      while (!this.stopped) {
-        if (tryReportForDuty()) break;
-        LOG.warn("No response on reportForDuty. Sleeping and then retrying.");
-        this.sleeper.sleep();
+      // Try and register with the Master; tell it we are here.  Break if
+      // server is stopped or the clusterup flag is down of hdfs went wacky.
+      while (keepLooping()) {
+        MapWritable w = reportForDuty();
+        if (w == null) {
+          LOG.warn("reportForDuty failed; sleeping and then retrying.");
+          this.sleeper.sleep();
+        } else {
+          handleReportForDutyResponse(w);
+          break;
+        }
       }
 
       // We registered with the Master.  Go into run mode.
@@ -617,8 +623,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             stop("Exiting; cluster shutdown set and not carrying any regions");
           } else if (!this.stopping) {
             this.stopping = true;
+            LOG.info("Closing user regions");
             closeUserRegions(this.abortRequested);
           } else if (this.stopping && LOG.isDebugEnabled()) {
+            LOG.info("Only meta regions remain open");
             if (!onlyMetaRegionsRemaining) {
               onlyMetaRegionsRemaining = isOnlyMetaRegionsRemaining();
             }
@@ -730,22 +738,19 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     HServerLoad hsl = buildServerLoad();
     // Why we do this?
     this.requestCount.set(0);
-    while (!this.stopped) {
-      try {
-        this.hbaseMaster.regionServerReport(this.serverNameFromMasterPOV.getBytes(), hsl);
-        break;
-      } catch (IOException ioe) {
-        if (ioe instanceof RemoteException) {
-          ioe = ((RemoteException)ioe).unwrapRemoteException();
-        }
-        if (ioe instanceof YouAreDeadException) {
-          // This will be caught and handled as a fatal error in run()
-          throw ioe;
-        }
-        // Couldn't connect to the master, get location from zk and reconnect
-        // Method blocks until new master is found or we are stopped
-        getMaster();
+    try {
+      this.hbaseMaster.regionServerReport(this.serverNameFromMasterPOV.getBytes(), hsl);
+    } catch (IOException ioe) {
+      if (ioe instanceof RemoteException) {
+        ioe = ((RemoteException)ioe).unwrapRemoteException();
       }
+      if (ioe instanceof YouAreDeadException) {
+        // This will be caught and handled as a fatal error in run()
+        throw ioe;
+      }
+      // Couldn't connect to the master, get location from zk and reconnect
+      // Method blocks until new master is found or we are stopped
+      getMaster();
     }
   }
 
@@ -1431,7 +1436,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     Threads.shutdown(this.cacheFlusher);
     Threads.shutdown(this.compactSplitThread);
     Threads.shutdown(this.hlogRoller);
-    this.service.shutdown();
+    if (this.service != null) this.service.shutdown();
     if (this.replicationHandler != null) {
       this.replicationHandler.join();
     }
@@ -1448,16 +1453,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   private ServerName getMaster() {
     ServerName masterServerName = null;
     while ((masterServerName = this.masterAddressManager.getMasterAddress()) == null) {
-      if (stopped) {
-        return null;
-      }
-      LOG.debug("No master found, will retry");
+      if (!keepLooping()) return null;
+      LOG.debug("No master found; retry");
       sleeper.sleep();
     }
     InetSocketAddress isa =
       new InetSocketAddress(masterServerName.getHostname(), masterServerName.getPort());
     HMasterRegionInterface master = null;
-    while (!stopped && master == null) {
+    while (keepLooping() && master == null) {
       LOG.info("Attempting connect to Master server at " +
         this.masterAddressManager.getMasterAddress());
       try {
@@ -1484,16 +1487,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   /**
-   * @return True if successfully invoked {@link #reportForDuty()}
-   * @throws IOException
+   * @return True if we should break loop because cluster is going down or
+   * this server has been stopped or hdfs has gone bad.
    */
-  private boolean tryReportForDuty() throws IOException {
-    MapWritable w = reportForDuty();
-    if (w != null) {
-      handleReportForDutyResponse(w);
-      return true;
-    }
-    return false;
+  private boolean keepLooping() {
+    return !this.stopped && isClusterUp();
   }
 
   /*
@@ -1504,36 +1502,27 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * @throws IOException
    */
   private MapWritable reportForDuty() throws IOException {
-    ServerName masterServerName = null;
-    while (!stopped && (masterServerName = getMaster()) == null) {
-      LOG.warn("Unable to get master for initialization -- sleeping");
-      sleeper.sleep();
-    }
     MapWritable result = null;
-    long lastMsg = 0;
-    while (!stopped) {
-      try {
-        this.requestCount.set(0);
-        LOG.info("Telling master at " + masterServerName + " that we are up " +
-          "with port=" + this.isa.getPort() + ", startcode=" + this.startcode);
-        lastMsg = EnvironmentEdgeManager.currentTimeMillis();
-        int port = this.isa.getPort();
-        result = this.hbaseMaster.regionServerStartup(port, this.startcode, lastMsg);
-        break;
-      } catch (RemoteException e) {
-        IOException ioe = e.unwrapRemoteException();
-        if (ioe instanceof ClockOutOfSyncException) {
-          LOG.fatal("Master rejected startup because clock is out of sync",
-              ioe);
-          // Re-throw IOE will cause RS to abort
-          throw ioe;
-        } else {
-          LOG.warn("remote error telling master we are up", e);
-        }
-      } catch (IOException e) {
-        LOG.warn("error telling master we are up", e);
+    ServerName masterServerName = getMaster();
+    if (masterServerName == null) return result;
+    try {
+      this.requestCount.set(0);
+      LOG.info("Telling master at " + masterServerName + " that we are up " +
+        "with port=" + this.isa.getPort() + ", startcode=" + this.startcode);
+      long now = EnvironmentEdgeManager.currentTimeMillis();
+      int port = this.isa.getPort();
+      result = this.hbaseMaster.regionServerStartup(port, this.startcode, now);
+    } catch (RemoteException e) {
+      IOException ioe = e.unwrapRemoteException();
+      if (ioe instanceof ClockOutOfSyncException) {
+        LOG.fatal("Master rejected startup because clock is out of sync", ioe);
+        // Re-throw IOE will cause RS to abort
+        throw ioe;
+      } else {
+        LOG.warn("remote error telling master we are up", e);
       }
-      sleeper.sleep(lastMsg);
+    } catch (IOException e) {
+      LOG.warn("error telling master we are up", e);
     }
     return result;
   }
