@@ -110,21 +110,6 @@ public class TestMetricsConfig {
   }
 
   /**
-   * Should throw if missing config files
-   */
-  @Test public void testMissingFiles() {
-    try {
-      MetricsConfig.create("JobTracker");
-    }
-    catch (MetricsConfigException e) {
-      assertTrue("expected the 'cannot locate configuration' exception",
-                 e.getMessage().startsWith("Cannot locate configuration"));
-      return;
-    }
-    fail("should've thrown");
-  }
-
-  /**
    * Test the config file load order
    * @throws Exception
    */
