@@ -289,7 +289,10 @@ public class TestCatalogTracker {
     List<KeyValue> kvs = new ArrayList<KeyValue>();
     kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY,
       HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-      Bytes.toBytes(SN.toString())));
+      Bytes.toBytes(SN.getHostAndPort())));
+    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY,
+      HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
+      Bytes.toBytes(SN.getStartcode())));
     final Result result = new Result(kvs);
     Mockito.when(mockHRI.get((byte [])Mockito.any(), (Get)Mockito.any())).
       thenReturn(result);
