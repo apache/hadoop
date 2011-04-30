@@ -16,14 +16,14 @@
   here for more pointers.</para>
 
   <note xml:id="rpc.logging"><title>Enabling RPC-level logging</title>
-  <para>Enabling the RPC-level logging on a regionserver can often given
+  <para>Enabling the RPC-level logging on a RegionServer can often given
       insight on timings at the server.  Once enabled, the amount of log
       spewed is voluminous.  It is not recommended that you leave this
       logging on for more than short bursts of time.  To enable RPC-level
-      logging, browse to the regionserver UI and click on 
+      logging, browse to the RegionServer UI and click on 
       <emphasis>Log Level</emphasis>.  Set the log level to <varname>DEBUG</varname> for the package
       <classname>org.apache.hadoop.ipc</classname> (Thats right, for
-      hadoop.ipc, NOT, hbase.ipc).  Then tail the regionservers log.
+      hadoop.ipc, NOT, hbase.ipc).  Then tail the RegionServers log.
       Analyze.</para>
   <para>To disable, set the logging level back to <varname>INFO</varname> level.
   </para>
@@ -87,13 +87,13 @@
     <section xml:id="perf.handlers">
         <title><varname>hbase.regionserver.handler.count</varname></title>
         <para>This setting is in essence sets how many requests are
-            concurrently being processed inside the regionserver at any
+            concurrently being processed inside the RegionServer at any
             one time.  If set too high, then throughput may suffer as
             the concurrent requests contend; if set too low, requests will
             be stuck waiting to get into the machine.  You can get a
             sense of whether you have too little or too many handlers by
             <xref linkend="rpc.logging" />
-            on an individual regionserver then tailing its logs.</para>
+            on an individual RegionServer then tailing its logs.</para>
     </section>
 
   </section>
@@ -167,7 +167,7 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
       to false on your <link
       xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>
       instance. Otherwise, the Puts will be sent one at a time to the
-      regionserver. Puts added via <code> htable.add(Put)</code> and <code> htable.add( &lt;List&gt; Put)</code>
+      RegionServer. Puts added via <code> htable.add(Put)</code> and <code> htable.add( &lt;List&gt; Put)</code>
       wind up in the same write buffer. If <code>autoFlush = false</code>,
       these messages are not sent until the write-buffer is filled. To
       explicitly flush the messages, call <methodname>flushCommits</methodname>.
@@ -187,7 +187,7 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
       processed. Setting this value to 500, for example, will transfer 500
       rows at a time to the client to be processed. There is a cost/benefit to
       have the cache value be large because it costs more in memory for both
-      client and regionserver, so bigger isn't always better.</para>
+      client and RegionServer, so bigger isn't always better.</para>
     </section>
 
     <section xml:id="perf.hbase.client.scannerclose">
@@ -197,7 +197,7 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
       <emphasis>avoiding</emphasis> performance problems. If you forget to
       close <link
       xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/ResultScanner.html">ResultScanners</link>
-      you can cause problems on the regionservers. Always have ResultScanner
+      you can cause problems on the RegionServers. Always have ResultScanner
       processing enclosed in try/catch blocks... <programlisting>
 Scan scan = new Scan();
 // set attrs...
@@ -216,7 +216,7 @@ htable.close();</programlisting></para>
 
       <para><link
       xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scan</link>
-      instances can be set to use the block cache in the region server via the
+      instances can be set to use the block cache in the RegionServer via the
       <methodname>setCacheBlocks</methodname> method. For input Scans to MapReduce jobs, this should be
       <varname>false</varname>. For frequently accessed rows, it is advisable to use the block
       cache.</para>
@@ -228,7 +228,7 @@ htable.close();</programlisting></para>
             <varname>MUST_PASS_ALL</varname> operator to the scanner using <methodname>setFilter</methodname>. The filter list
             should include both a <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FirstKeyOnlyFilter.html">FirstKeyOnlyFilter</link>
             and a <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/KeyOnlyFilter.html">KeyOnlyFilter</link>.
-            Using this filter combination will result in a worst case scenario of a region server reading a single value from disk
+            Using this filter combination will result in a worst case scenario of a RegionServer reading a single value from disk
             and minimal network traffic to the client for a single row.
       </para>
     </section>

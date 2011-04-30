@@ -231,7 +231,7 @@ throws InterruptedException, IOException {
   </para>
   </section>
    <section xml:id="rs_metrics">
-   <title>Region Server Metrics</title>
+   <title>RegionServer Metrics</title>
           <section xml:id="hbase.regionserver.blockCacheCount"><title><varname>hbase.regionserver.blockCacheCount</varname></title>
           <para>Block cache item count in memory.  This is the number of blocks of storefiles (HFiles) in the cache.</para>
 		  </section>
@@ -266,22 +266,22 @@ throws InterruptedException, IOException {
           <para>TODO</para>
 		  </section>
           <section xml:id="hbase.regionserver.memstoreSizeMB"><title><varname>hbase.regionserver.memstoreSizeMB</varname></title>
-          <para>Sum of all the memstore sizes in this regionserver (MB)</para>
+          <para>Sum of all the memstore sizes in this RegionServer (MB)</para>
 		  </section>
           <section xml:id="hbase.regionserver.regions"><title><varname>hbase.regionserver.regions</varname></title>
-          <para>Number of regions served by the regionserver</para>
+          <para>Number of regions served by the RegionServer</para>
 		  </section>
           <section xml:id="hbase.regionserver.requests"><title><varname>hbase.regionserver.requests</varname></title>
-          <para>Total number of read and write requests.  Requests correspond to regionserver RPC calls, thus a single Get will result in 1 request, but a Scan with caching set to 1000 will result in 1 request for each 'next' call (i.e., not each row).  A bulk-load request will constitute 1 request per HFile.</para>
+          <para>Total number of read and write requests.  Requests correspond to RegionServer RPC calls, thus a single Get will result in 1 request, but a Scan with caching set to 1000 will result in 1 request for each 'next' call (i.e., not each row).  A bulk-load request will constitute 1 request per HFile.</para>
 		  </section>
           <section xml:id="hbase.regionserver.storeFileIndexSizeMB"><title><varname>hbase.regionserver.storeFileIndexSizeMB</varname></title>
-          <para>Sum of all the storefile index sizes in this regionserver (MB)</para>
+          <para>Sum of all the storefile index sizes in this RegionServer (MB)</para>
 		  </section>
           <section xml:id="hbase.regionserver.stores"><title><varname>hbase.regionserver.stores</varname></title>
-          <para>Number of stores open on the regionserver.  A store corresponds to a column family.  For example, if a table (which contains the column family) has 3 regions on a regionserver, there will be 3 stores open for that column family. </para>
+          <para>Number of stores open on the RegionServer.  A store corresponds to a column family.  For example, if a table (which contains the column family) has 3 regions on a RegionServer, there will be 3 stores open for that column family. </para>
 		  </section>
           <section xml:id="hbase.regionserver.storeFiles"><title><varname>hbase.regionserver.storeFiles</varname></title>
-          <para>Number of store filles open on the regionserver.  A store may have more than one storefile (HFile).</para>
+          <para>Number of store filles open on the RegionServer.  A store may have more than one storefile (HFile).</para>
 		  </section>
    </section>
   </chapter>
@@ -712,7 +712,7 @@ throws InterruptedException, IOException {
          </para>
          <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>
 instances are not thread-safe.  When creating HTable instances, it is advisable to use the same <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HBaseConfiguration">HBaseConfiguration</link>
-instance.  This will ensure sharing of zookeeper and socket instances to the region servers
+instance.  This will ensure sharing of ZooKeeper and socket instances to the RegionServers
 which is usually what you want.  For example, this is preferred:
 		<programlisting>HBaseConfiguration conf = HBaseConfiguration.create();
 HTable table1 = new HTable(conf, "myTable");
@@ -729,7 +729,7 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
 	   <section xml:id="client.writebuffer"><title>WriteBuffer and Batch Methods</title>
            <para>If <xref linkend="perf.hbase.client.autoflush" /> is turned off on
                <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>,
-               <classname>Put</classname>s are sent to region servers when the writebuffer
+               <classname>Put</classname>s are sent to RegionServers when the writebuffer
                is filled.  The writebuffer is 2MB by default.  Before an HTable instance is
                discarded, either <methodname>close()</methodname> or
                <methodname>flushCommits()</methodname> should be invoked so Puts
@@ -742,7 +742,7 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
 	   </section>
 	   <section xml:id="client.filter"><title>Filters</title>
            <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html">Get</link> and <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scan</link> instances can be
-           optionally configured with <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/Filter.html">filters</link> which are applied on the region server. 
+           optionally configured with <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/Filter.html">filters</link> which are applied on the RegionServer. 
     	   </para>
 		</section>
 	</section>
@@ -796,7 +796,7 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
 
         <listitem>
           <para>There is not much memory footprint difference between 1 region
-          and 10 in terms of indexes, etc, held by the regionserver.</para>
+          and 10 in terms of indexes, etc, held by the RegionServer.</para>
         </listitem>
       </itemizedlist>
 
@@ -1118,27 +1118,27 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
         <para>See <xref linkend="compression.tool" />.</para>
     </section>
     <section xml:id="decommission"><title>Node Decommission</title>
-        <para>You can stop an individual regionserver by running the following
+        <para>You can stop an individual RegionServer by running the following
             script in the HBase directory on the particular  node:
             <programlisting>$ ./bin/hbase-daemon.sh stop regionserver</programlisting>
-            The regionserver will first close all regions and then shut itself down.
-            On shutdown, the regionserver's ephemeral node in ZooKeeper will expire.
-            The master will notice the regionserver gone and will treat it as
-            a 'crashed' server; it will reassign the nodes the regionserver was carrying.
+            The RegionServer will first close all regions and then shut itself down.
+            On shutdown, the RegionServer's ephemeral node in ZooKeeper will expire.
+            The master will notice the RegionServer gone and will treat it as
+            a 'crashed' server; it will reassign the nodes the RegionServer was carrying.
             <note><title>Disable the Load Balancer before Decommissioning a node</title>
              <para>If the load balancer runs while a node is shutting down, then
                  there could be contention between the Load Balancer and the
-                 Master's recovery of the just decommissioned regionserver.
+                 Master's recovery of the just decommissioned RegionServer.
                  Avoid any problems by disabling the balancer first.
                  See <xref linkend="lb" /> below.
              </para>
             </note>
         </para>
         <para>
-        A downside to the above stop of a regionserver is that regions could be offline for
+        A downside to the above stop of a RegionServer is that regions could be offline for
         a good period of time.  Regions are closed in order.  If many regions on the server, the
         first region to close may not be back online until all regions close and after the master
-        notices the regionserver's znode gone.  In HBase 0.90.2, we added facility for having
+        notices the RegionServer's znode gone.  In HBase 0.90.2, we added facility for having
         a node gradually shed its load and then shutdown itself down.  HBase 0.90.2 added the
             <filename>graceful_stop.sh</filename> script.  Here is its usage:
             <programlisting>$ ./bin/graceful_stop.sh 
@@ -1151,14 +1151,14 @@ Usage: graceful_stop.sh [--config &amp;conf-dir>] [--restart] [--reload] [--thri
  hostname    Hostname of server we are to stop</programlisting>
         </para>
         <para>
-            To decommission a loaded regionserver, run the following:
+            To decommission a loaded RegionServer, run the following:
             <programlisting>$ ./bin/graceful_stop.sh HOSTNAME</programlisting>
             where <varname>HOSTNAME</varname> is the host carrying the RegionServer
             you would decommission.  
             <note><title>On <varname>HOSTNAME</varname></title>
                 <para>The <varname>HOSTNAME</varname> passed to <filename>graceful_stop.sh</filename>
-            must match the hostname that hbase is using to identify regionservers.
-            Check the list of regionservers in the master UI for how HBase is
+            must match the hostname that hbase is using to identify RegionServers.
+            Check the list of RegionServers in the master UI for how HBase is
             referring to servers. Its usually hostname but can also be FQDN.
             Whatever HBase is using, this is what you should pass the
             <filename>graceful_stop.sh</filename> decommission
@@ -1167,7 +1167,7 @@ Usage: graceful_stop.sh [--config &amp;conf-dir>] [--restart] [--reload] [--thri
             currently running; the graceful unloading of regions will not run.
             </para>
         </note> The <filename>graceful_stop.sh</filename> script will move the regions off the
-            decommissioned regionserver one at a time to minimize region churn.
+            decommissioned RegionServer one at a time to minimize region churn.
             It will verify the region deployed in the new location before it
             will moves the next region and so on until the decommissioned server
             is carrying zero regions.  At this point, the <filename>graceful_stop.sh</filename>
@@ -1201,7 +1201,7 @@ false
             <programlisting>$ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --reload --debug $i; done &amp;> /tmp/log.txt &amp;
             </programlisting>
             Tail the output of <filename>/tmp/log.txt</filename> to follow the scripts
-            progress. The above does regionservers only.  Be sure to disable the
+            progress. The above does RegionServers only.  Be sure to disable the
             load balancer before doing the above.  You'd need to do the master
             update separately.  Do it before you run the above script.
             Here is a pseudo-script for how you might craft a rolling restart script:
@@ -1227,10 +1227,10 @@ false
                     </para>
                 </listitem>
                 <listitem>
-                     <para>Run the <filename>graceful_stop.sh</filename> script per regionserver.  For example:
+                     <para>Run the <filename>graceful_stop.sh</filename> script per RegionServer.  For example:
             <programlisting>$ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --reload --debug $i; done &amp;> /tmp/log.txt &amp;
             </programlisting>
-                     If you are running thrift or rest servers on the regionserver, pass --thrift or --rest options (See usage
+                     If you are running thrift or rest servers on the RegionServer, pass --thrift or --rest options (See usage
                      for <filename>graceful_stop.sh</filename> script).
                  </para>
                 </listitem>

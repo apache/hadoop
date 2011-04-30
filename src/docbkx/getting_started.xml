@@ -453,7 +453,7 @@ stopping hbase...............</programlisting></para>
             in the <xref linkend="quickstart" /> section. In
         standalone mode, HBase does not use HDFS -- it uses the local
         filesystem instead -- and it runs all HBase daemons and a local
-        zookeeper all up in the same JVM. Zookeeper binds to a well known port
+        ZooKeeper all up in the same JVM. Zookeeper binds to a well known port
         so clients may talk to HBase.</para>
       </section>
 
@@ -508,7 +508,7 @@ stopping hbase...............</programlisting></para>
   &lt;property&gt;
     &lt;name&gt;hbase.rootdir&lt;/name&gt;
     &lt;value&gt;hdfs://localhost:9000/hbase&lt;/value&gt;
-    &lt;description&gt;The directory shared by region servers.
+    &lt;description&gt;The directory shared by RegionServers.
     &lt;/description&gt;
   &lt;/property&gt;
   &lt;property&gt;
@@ -539,7 +539,7 @@ stopping hbase...............</programlisting></para>
               <para>See <link
               xlink:href="http://hbase.apache.org/pseudo-distributed.html">Pseudo-distributed
               mode extras</link> for notes on how to start extra Masters and
-              regionservers when running pseudo-distributed.</para>
+              RegionServers when running pseudo-distributed.</para>
             </footnote></para>
         </section>
 
@@ -564,7 +564,7 @@ stopping hbase...............</programlisting></para>
   &lt;property&gt;
     &lt;name&gt;hbase.rootdir&lt;/name&gt;
     &lt;value&gt;hdfs://namenode.example.org:9000/hbase&lt;/value&gt;
-    &lt;description&gt;The directory shared by region servers.
+    &lt;description&gt;The directory shared by RegionServers.
     &lt;/description&gt;
   &lt;/property&gt;
   &lt;property&gt;
@@ -873,7 +873,7 @@ stopping hbase...............</programlisting> Shutdown can take a moment to
   &lt;property&gt;
     &lt;name&gt;hbase.zookeeper.quorum&lt;/name&gt;
     &lt;value&gt;example1,example2,example3&lt;/value&gt;
-    &lt;description&gt;The directory shared by region servers.
+    &lt;description&gt;The directory shared by RegionServers.
     &lt;/description&gt;
   &lt;/property&gt;
   &lt;property&gt;
@@ -886,7 +886,7 @@ stopping hbase...............</programlisting> Shutdown can take a moment to
   &lt;property&gt;
     &lt;name&gt;hbase.rootdir&lt;/name&gt;
     &lt;value&gt;hdfs://example0:9000/hbase&lt;/value&gt;
-    &lt;description&gt;The directory shared by region servers.
+    &lt;description&gt;The directory shared by RegionServers.
     &lt;/description&gt;
   &lt;/property&gt;
   &lt;property&gt;
@@ -905,8 +905,8 @@ stopping hbase...............</programlisting> Shutdown can take a moment to
         <section xml:id="regionservers">
           <title><filename>regionservers</filename></title>
 
-          <para>In this file you list the nodes that will run regionservers.
-          In our case we run regionservers on all but the head node
+          <para>In this file you list the nodes that will run RegionServers.
+          In our case we run RegionServers on all but the head node
           <varname>example1</varname> which is carrying the HBase Master and
           the HDFS namenode</para>
 

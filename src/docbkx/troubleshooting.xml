@@ -28,7 +28,7 @@
       <para>
           RegionServer suicides are “normal”, as this is what they do when something goes wrong.
           For example, if ulimit and xcievers (the two most important initial settings, see <xref linkend="ulimit" />)
-          aren’t changed, it will make it impossible at some point for datanodes to create new threads
+          aren’t changed, it will make it impossible at some point for DataNodes to create new threads
           that from the HBase point of view is seen as if HDFS was gone. Think about what would happen if your
           MySQL database was suddenly unable to access files on your local file system, well it’s the same with
           HBase and HDFS. Another very common reason to see RegionServers committing seppuku is when they enter
@@ -145,7 +145,7 @@ hadoop@sv4borg12:~$ jps
           <listitem>Child, its MapReduce task, cannot tell which type exactly</listitem>
           <listitem>Hadoop TaskTracker, manages the local Childs</listitem>
           <listitem>Hadoop DataNode, serves blocks</listitem>
-          <listitem>HQuorumPeer, a zookeeper ensemble member</listitem>
+          <listitem>HQuorumPeer, a ZooKeeper ensemble member</listitem>
           <listitem>Jps, well… it’s the current process</listitem>
           <listitem>ThriftServer, it’s a special one will be running only if thrift was started</listitem>
           <listitem>jmx, this is a local process that’s part of our monitoring platform ( poorly named maybe). You probably don’t have that.</listitem>
@@ -275,7 +275,7 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
           </programlisting>
           </para>
           <para>
-           	And here is a master trying to recover a lease after a region server died:
+           	And here is a master trying to recover a lease after a RegionServer died:
           <programlisting>
 "LeaseChecker" daemon prio=10 tid=0x00000000407ef800 nid=0x76cd waiting on condition [0x00007f6d0eae2000..0x00007f6d0eae2a70]
 --
@@ -370,7 +370,7 @@ java.lang.UnsatisfiedLinkError: no gplcompression in java.library.path
            </para>
         </section>
         <section xml:id="trouble.rs.runtime.oom-nt">
-           <title>System instability, and the presence of "java.lang.OutOfMemoryError: unable to create new native thread in exceptions" HDFS datanode logs or that of any system daemon</title>
+           <title>System instability, and the presence of "java.lang.OutOfMemoryError: unable to create new native thread in exceptions" HDFS DataNode logs or that of any system daemon</title>
            <para>
            See the Getting Started section on <link linkend="ulimit">ulimit and nproc configuration</link>.
            </para>
