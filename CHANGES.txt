@@ -102,9 +102,6 @@ Trunk (unreleased changes)
     HADOOP-7235. Refactor the tail command to conform to new FsCommand class.
     (Daryn Sharp via szetszwo)
 
-    HADOOP-7227. Remove protocol version check at proxy creation in Hadoop
-    RPC. (jitendra)
-
   OPTIMIZATIONS
 
   BUG FIXES
