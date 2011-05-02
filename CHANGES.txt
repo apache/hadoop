@@ -1700,6 +1700,9 @@ Release 0.20.2 - Unreleased
     MAPREDUCE-1163. Remove unused, hard-coded paths from libhdfs. (Allen
     Wittenauer via cdouglas)
 
+    HADOOP-6315. Avoid incorrect use of BuiltInflater/BuiltInDeflater in
+    GzipCodec. (Aaron Kimball via cdouglas)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
