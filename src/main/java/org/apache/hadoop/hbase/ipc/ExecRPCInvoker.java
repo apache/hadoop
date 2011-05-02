@@ -37,7 +37,9 @@ import java.lang.reflect.Method;
  * {@link org.apache.hadoop.hbase.client.ServerCallable} instance).
  */
 public class ExecRPCInvoker implements InvocationHandler {
-  private static final Log LOG = LogFactory.getLog(ExecRPCInvoker.class);
+  // LOG is NOT in hbase subpackage intentionally so that the default HBase
+  // DEBUG log level does NOT emit RPC-level logging. 
+  private static final Log LOG = LogFactory.getLog("org.apache.hadoop.ipc.ExecRPCInvoker");
 
   private Configuration conf;
   private final HConnection connection;

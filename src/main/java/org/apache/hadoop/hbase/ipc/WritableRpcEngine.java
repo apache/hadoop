@@ -44,7 +44,9 @@ import org.apache.hadoop.conf.*;
 
 /** An RpcEngine implementation for Writable data. */
 class WritableRpcEngine implements RpcEngine {
-  private static final Log LOG = LogFactory.getLog(HBaseRPC.class);
+  // LOG is NOT in hbase subpackage intentionally so that the default HBase
+  // DEBUG log level does NOT emit RPC-level logging. 
+  private static final Log LOG = LogFactory.getLog("org.apache.hadoop.ipc.RPCEngine");
 
   /* Cache a client using its socket factory as the hash key */
   static private class ClientCache {
