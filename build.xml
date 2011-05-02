@@ -1768,6 +1768,7 @@
   <target name="create-c++-utils-makefile" depends="check-c++-makefiles" 
                                            if="need.c++.utils.makefile">
     <mkdir dir="${build.c++.utils}"/>
+    <chmod file="${c++.utils.src}/configure" perm="ugo+x"/>
     <exec executable="${c++.utils.src}/configure" dir="${build.c++.utils}"
           failonerror="yes">
       <arg value="--prefix=${install.c++}"/>
@@ -1785,6 +1786,7 @@
   <target name="create-c++-pipes-makefile" depends="check-c++-makefiles" 
                                            if="need.c++.pipes.makefile">
     <mkdir dir="${build.c++.pipes}"/>
+    <chmod file="${c++.pipes.src}/configure" perm="ugo+x"/>
     <exec executable="${c++.pipes.src}/configure" dir="${build.c++.pipes}"
           failonerror="yes">
       <arg value="--prefix=${install.c++}"/>
@@ -1807,6 +1809,7 @@
           depends="check-c++-makefiles" 
           if="need.c++.examples.pipes.makefile">
     <mkdir dir="${build.c++.examples.pipes}"/>
+    <chmod file="${c++.examples.pipes.src}/configure" perm="ugo+x"/>
     <exec executable="${c++.examples.pipes.src}/configure" 
           dir="${build.c++.examples.pipes}"
           failonerror="yes">
