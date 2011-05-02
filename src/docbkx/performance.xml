@@ -86,14 +86,46 @@
 
     <section xml:id="perf.handlers">
         <title><varname>hbase.regionserver.handler.count</varname></title>
-        <para>This setting is in essence sets how many requests are
+        <para>See <xref linkend="hbase.regionserver.handler.count"/>. 
+            This setting in essence sets how many requests are
             concurrently being processed inside the RegionServer at any
             one time.  If set too high, then throughput may suffer as
             the concurrent requests contend; if set too low, requests will
             be stuck waiting to get into the machine.  You can get a
             sense of whether you have too little or too many handlers by
             <xref linkend="rpc.logging" />
-            on an individual RegionServer then tailing its logs.</para>
+            on an individual RegionServer then tailing its logs (Queued requests
+            consume memory).</para>
+    </section>
+    <section xml:id="perf.hfile.block.cache.size">
+        <title><varname>hfile.block.cache.size</varname></title>
+        <para>See <xref linkend="hfile.block.cache.size"/>. 
+        A memory setting for the RegionServer process.
+        </para>
+    </section>    
+    <section xml:id="perf.rs.memstore.upperlimit">
+        <title><varname>hbase.regionserver.global.memstore.upperLimit</varname></title>
+        <para>See <xref linkend="hbase.regionserver.global.memstore.upperLimit"/>.  
+        This memory setting is often adjusted for the RegionServer process depending on needs.
+        </para>
+    </section>    
+    <section xml:id="perf.rs.memstore.lowerlimit">
+        <title><varname>hbase.regionserver.global.memstore.lowerLimit</varname></title>
+        <para>See <xref linkend="hbase.regionserver.global.memstore.lowerLimit"/>.  
+        This memory setting is often adjusted for the RegionServer process depending on needs.
+        </para>
+    </section>
+    <section xml:id="perf.hstore.blockingstorefiles">
+        <title><varname>hbase.hstore.blockingStoreFiles</varname></title>
+        <para>See <xref linkend="hbase.hstore.blockingStoreFiles"/>.  
+        If there is blocking in the RegionServer logs, increasing this can help.
+        </para>
+    </section>
+    <section xml:id="perf.hregion.memstore.block.multiplier">
+        <title><varname>hbase.hregion.memstore.block.multiplier</varname></title>
+        <para>See <xref linkend="hbase.hregion.memstore.block.multiplier"/>.  
+        If there is enough RAM, increasing this can help.  
+        </para>
     </section>
 
   </section>
