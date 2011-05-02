@@ -1754,6 +1754,9 @@ Release 0.20.2 - Unreleased
     HDFS-185. Disallow chown, chgrp, chmod, setQuota, and setSpaceQuota when
     name-node is in safemode. (Ravi Phulari via shv)
 
+    HDFS-579. Fix DfsTask to follow the semantics of 0.19, regarding non-zero
+    return values as failures. (Christian Kunz via cdouglas)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
