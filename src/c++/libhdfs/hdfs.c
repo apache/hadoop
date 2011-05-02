@@ -2022,11 +2022,17 @@ hdfsFileInfo *hdfsGetPathInfo(hdfsFS fs, const char* path)
 
 void hdfsFreeFileInfo(hdfsFileInfo *hdfsFileInfo, int numEntries)
 {
-    //Free the mName
+    //Free the mName, mOwner, and mGroup
     int i;
     for (i=0; i < numEntries; ++i) {
         if (hdfsFileInfo[i].mName) {
             free(hdfsFileInfo[i].mName);
+        }
+        if (hdfsFileInfo[i].mOwner) {
+            free(hdfsFileInfo[i].mOwner);
+        }
+        if (hdfsFileInfo[i].mGroup) {
+            free(hdfsFileInfo[i].mGroup);
         }
     }
 

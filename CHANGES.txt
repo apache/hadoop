@@ -1688,6 +1688,9 @@ Release 0.20.2 - Unreleased
     HDFS-579. Fix DfsTask to follow the semantics of 0.19, regarding non-zero
     return values as failures. (Christian Kunz via cdouglas)
 
+    HDFS-596. Fix memory leak in hdfsFreeFileInfo() for libhdfs.
+    (Zhang Bingjun via dhruba)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
