@@ -1763,6 +1763,9 @@ Release 0.20.2 - Unreleased
     MAPREDUCE-1070. Prevent a deadlock in the fair scheduler servlet.
     (Todd Lipcon via cdouglas)
 
+    MAPREDUCE-1163. Remove unused, hard-coded paths from libhdfs. (Allen
+    Wittenauer via cdouglas)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
