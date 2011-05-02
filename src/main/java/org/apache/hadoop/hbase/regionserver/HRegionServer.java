@@ -537,11 +537,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.catalogTracker = new CatalogTracker(this.zooKeeper, this.connection,
       this, this.conf.getInt("hbase.regionserver.catalog.timeout", Integer.MAX_VALUE));
     catalogTracker.start();
-
-    // Create the log splitting worker and start it
-    this.splitLogWorker = new SplitLogWorker(this.zooKeeper,
-        this.getConfiguration(), this.getServerName().toString());
-    splitLogWorker.start();
   }
 
   /**
@@ -1274,6 +1269,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // Start Server.  This service is like leases in that it internally runs
     // a thread.
     this.rpcServer.start();
+
+    // Create the log splitting worker and start it
+    this.splitLogWorker = new SplitLogWorker(this.zooKeeper,
+        this.getConfiguration(), this.getServerName().toString());
+    splitLogWorker.start();
   }
 
   /**

@@ -92,6 +92,7 @@ Release 0.91.0 - Unreleased
    HBASE-3827  hbase-1502, removing heartbeats, broke master joining a running
                cluster and was returning master hostname for rs to use
    HBASE-3829  TestMasterFailover failures in jenkins
+   HBASE-3843  splitLogWorker starts too early (Prakash Khemani)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
