@@ -196,6 +196,8 @@ Release 0.91.0 - Unreleased
                framework (Mingjie Lai)
    HBASE-1512  Support aggregate functions (Himanshu Vashishtha)
    HBASE-3796  Per-Store Enties in Compaction Queue
+   HBASE-3670  Fix error handling in get(List<Get> gets)
+               (Harsh J Chouraria)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
