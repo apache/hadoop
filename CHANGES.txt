@@ -1783,6 +1783,9 @@ Release 0.20.2 - Unreleased
     HADOOP-6315. Avoid incorrect use of BuiltInflater/BuiltInDeflater in
     GzipCodec. (Aaron Kimball via cdouglas)
 
+    HADOOP-6269. Fix threading issue with defaultResource in Configuration.
+    (Sreekanth Ramakrishnan via cdouglas)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
