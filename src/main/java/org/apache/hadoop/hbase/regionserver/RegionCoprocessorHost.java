@@ -920,11 +920,12 @@ public class RegionCoprocessorHost
         ctx = ObserverContext.createAndPrepare(env, ctx);
         ((RegionObserver)env.getInstance()).preWALRestore(ctx, info, logKey,
             logEdit);
+        bypass |= ctx.shouldBypass();
+        if (ctx.shouldComplete()) {
+          break;
+        }
       }
-      bypass |= ctx.shouldBypass();
-      if (ctx.shouldComplete()) {
-        break;
-      }
+     
     }
     return bypass;
   }
@@ -943,10 +944,11 @@ public class RegionCoprocessorHost
         ctx = ObserverContext.createAndPrepare(env, ctx);
         ((RegionObserver)env.getInstance()).postWALRestore(ctx, info,
             logKey, logEdit);
+        if (ctx.shouldComplete()) {
+          break;
+        }
       }
-      if (ctx.shouldComplete()) {
-        break;
-      }
+      
     }
   }
 }

@@ -93,6 +93,8 @@ Release 0.91.0 - Unreleased
                cluster and was returning master hostname for rs to use
    HBASE-3829  TestMasterFailover failures in jenkins
    HBASE-3843  splitLogWorker starts too early (Prakash Khemani)
+   HBASE-3838  RegionCoprocesorHost.preWALRestore throws npe in case there is
+               no RegionObserver registered (Himanshu Vashishtha)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
