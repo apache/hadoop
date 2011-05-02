@@ -189,6 +189,16 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
       have the cache value be large because it costs more in memory for both
       client and RegionServer, so bigger isn't always better.</para>
     </section>
+    <section xml:id="perf.hbase.client.selection">
+      <title>Scan Attribute Selection</title>
+
+      <para>Whenever a Scan is used to process large numbers of rows (and especially when used
+      as a MapReduce source), be aware of which attributes are selected.   If <code>scan.addFamily</code> is called
+      then <emphasis>all</emphasis> of the attributes in the specified ColumnFamily will be returned to the client.
+      If only a small number of the available attributes are to be processed, then only those attributes should be specified
+      in the input scan because attribute over-selection is a non-trivial performance penalty over large datasets.
+      </para>
+    </section>
 
     <section xml:id="perf.hbase.client.scannerclose">
       <title>Close ResultScanners</title>
