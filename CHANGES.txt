@@ -1691,6 +1691,9 @@ Release 0.20.2 - Unreleased
     HDFS-596. Fix memory leak in hdfsFreeFileInfo() for libhdfs.
     (Zhang Bingjun via dhruba)
 
+    MAPREDUCE-1070. Prevent a deadlock in the fair scheduler servlet.
+    (Todd Lipcon via cdouglas)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
