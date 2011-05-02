@@ -1107,10 +1107,17 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       }
     }
 
-    synchronized void close() {
-      while (!pendingCreates.isEmpty()) {
-        String src = pendingCreates.firstKey();
-        OutputStream out = pendingCreates.remove(src);
+    void close() {
+      while (true) {
+        String src;
+        OutputStream out;
+        synchronized (this) {
+          if (pendingCreates.isEmpty()) {
+            return;
+          }
+          src = pendingCreates.firstKey();
+          out = pendingCreates.remove(src);
+        }
         if (out != null) {
           try {
             out.close();
@@ -3338,8 +3345,13 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      */
     @Override
     public void close() throws IOException {
-      if(closed)
-        return;
+      if (closed) {
+        IOException e = lastException;
+        if (e == null)
+          return;
+        else
+          throw e;
+      }
       closeInternal();
       leasechecker.remove(src);
       
