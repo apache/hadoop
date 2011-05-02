@@ -290,8 +290,7 @@ public class TestRPC extends TestCase {
     // Check rpcMetrics 
     server.rpcMetrics.doUpdates(new NullContext());
     
-    // Number 4 includes getProtocolVersion()
-    assertEquals(4, server.rpcMetrics.rpcProcessingTime.getPreviousIntervalNumOps());
+    assertEquals(3, server.rpcMetrics.rpcProcessingTime.getPreviousIntervalNumOps());
     assertTrue(server.rpcMetrics.sentBytes.getPreviousIntervalValue() > 0);
     assertTrue(server.rpcMetrics.receivedBytes.getPreviousIntervalValue() > 0);
     
@@ -376,8 +375,9 @@ public class TestRPC extends TestCase {
   
   public void testStandaloneClient() throws IOException {
     try {
-      RPC.waitForProxy(TestProtocol.class,
+      TestProtocol proxy = RPC.waitForProxy(TestProtocol.class,
         TestProtocol.versionID, new InetSocketAddress(ADDRESS, 20), conf, 15000L);
+      proxy.echo("");
       fail("We should not have reached here");
     } catch (ConnectException ioe) {
       //this is what we expected
@@ -502,6 +502,7 @@ public class TestRPC extends TestCase {
     try {
       proxy = (TestProtocol) RPC.getProxy(TestProtocol.class,
           TestProtocol.versionID, addr, conf);
+      proxy.echo("");
     } catch (RemoteException e) {
       LOG.info("LOGGING MESSAGE: " + e.getLocalizedMessage());
       assertTrue(e.unwrapRemoteException() instanceof AccessControlException);
@@ -527,6 +528,7 @@ public class TestRPC extends TestCase {
     try {
       proxy = (TestProtocol) RPC.getProxy(TestProtocol.class,
           TestProtocol.versionID, mulitServerAddr, conf);
+      proxy.echo("");
     } catch (RemoteException e) {
       LOG.info("LOGGING MESSAGE: " + e.getLocalizedMessage());
       assertTrue(e.unwrapRemoteException() instanceof AccessControlException);
