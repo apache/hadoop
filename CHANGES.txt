@@ -1694,6 +1694,9 @@ Release 0.20.2 - Unreleased
     MAPREDUCE-1070. Prevent a deadlock in the fair scheduler servlet.
     (Todd Lipcon via cdouglas)
 
+    HADOOP-5623. Ensure streaming status messages aren't overwritten. (Rick 
+    Cox & Ravi Gummadi via tomwhite)
+    
     MAPREDUCE-1163. Remove unused, hard-coded paths from libhdfs. (Allen
     Wittenauer via cdouglas)
 

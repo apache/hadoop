@@ -385,7 +385,11 @@ public abstract class PipeMapRed {
           if (now-lastStdoutReport > reporterOutDelay_) {
             lastStdoutReport = now;
             String hline = "Records R/W=" + numRecRead_ + "/" + numRecWritten_;
-            reporter.setStatus(hline);
+            if (!processProvidedStatus_) {
+              reporter.setStatus(hline);
+            } else {
+              reporter.progress();
+            }
             logprintln(hline);
             logflush();
           }
@@ -446,6 +450,7 @@ public abstract class PipeMapRed {
             if (matchesCounter(lineStr)) {
               incrCounter(lineStr);
             } else if (matchesStatus(lineStr)) {
+              processProvidedStatus_ = true;
               setStatus(lineStr);
             } else {
               LOG.warn("Cannot parse reporter line: " + lineStr);
@@ -671,4 +676,5 @@ public abstract class PipeMapRed {
   String LOGNAME;
   PrintStream log_;
 
+  volatile boolean processProvidedStatus_ = false;
 }
