@@ -147,7 +147,7 @@
      Arrays.sort(serverNames);
      for (ServerName serverName: serverNames) {
        // HARDCODED FOR NOW; FIX -- READ FROM ZK
-       String hostname = serverName.getHostname() + ":60020";
+       String hostname = serverName.getHostname() + ":60030";
        String url = "http://" + hostname + "/";
        HServerLoad hsl = master.getServerManager().getLoad(serverName);
        String loadStr = hsl == null? "-": hsl.toString();
