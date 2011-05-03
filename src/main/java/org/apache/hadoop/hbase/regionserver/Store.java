@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -448,11 +449,13 @@ public class Store implements HeapSize {
    */
   private StoreFile flushCache(final long logCacheFlushId,
       SortedSet<KeyValue> snapshot,
-      TimeRangeTracker snapshotTimeRangeTracker) throws IOException {
+      TimeRangeTracker snapshotTimeRangeTracker,
+      MonitoredTask status) throws IOException {
     // If an exception happens flushing, we let it out without clearing
     // the memstore snapshot.  The old snapshot will be returned when we say
     // 'snapshot', the next time flush comes around.
-    return internalFlushCache(snapshot, logCacheFlushId, snapshotTimeRangeTracker);
+    return internalFlushCache(
+        snapshot, logCacheFlushId, snapshotTimeRangeTracker, status);
   }
 
   /*
@@ -463,7 +466,8 @@ public class Store implements HeapSize {
    */
   private StoreFile internalFlushCache(final SortedSet<KeyValue> set,
       final long logCacheFlushId,
-      TimeRangeTracker snapshotTimeRangeTracker)
+      TimeRangeTracker snapshotTimeRangeTracker,
+      MonitoredTask status)
       throws IOException {
     StoreFile.Writer writer = null;
     long flushed = 0;
@@ -476,6 +480,7 @@ public class Store implements HeapSize {
     // flush to list of store files.  Add cleanup of anything put on filesystem
     // if we fail.
     synchronized (flushLock) {
+      status.setStatus("Flushing " + this + ": creating writer");
       // A. Write the map out to the disk
       writer = createWriterInTmp(set.size());
       writer.setTimeRangeTracker(snapshotTimeRangeTracker);
@@ -491,18 +496,23 @@ public class Store implements HeapSize {
       } finally {
         // Write out the log sequence number that corresponds to this output
         // hfile.  The hfile is current up to and including logCacheFlushId.
+        status.setStatus("Flushing " + this + ": appending metadata");
         writer.appendMetadata(logCacheFlushId, false);
+        status.setStatus("Flushing " + this + ": closing flushed file");
         writer.close();
       }
     }
 
     // Write-out finished successfully, move into the right spot
     Path dstPath = StoreFile.getUniqueFile(fs, homedir);
-    LOG.info("Renaming flushed file at " + writer.getPath() + " to " + dstPath);
+    String msg = "Renaming flushed file at " + writer.getPath() + " to " + dstPath;
+    LOG.info(msg);
+    status.setStatus("Flushing " + this + ": " + msg);
     if (!fs.rename(writer.getPath(), dstPath)) {
       LOG.warn("Unable to rename " + writer.getPath() + " to " + dstPath);
     }
 
+    status.setStatus("Flushing " + this + ": reopening flushed file");
     StoreFile sf = new StoreFile(this.fs, dstPath, blockcache,
       this.conf, this.family.getBloomFilterType(), this.inMemory);
     StoreFile.Reader r = sf.createReader();
@@ -1593,8 +1603,9 @@ public class Store implements HeapSize {
     }
 
     @Override
-    public void flushCache() throws IOException {
-      storeFile = Store.this.flushCache(cacheFlushId, snapshot, snapshotTimeRangeTracker);
+    public void flushCache(MonitoredTask status) throws IOException {
+      storeFile = Store.this.flushCache(
+          cacheFlushId, snapshot, snapshotTimeRangeTracker, status);
     }
 
     @Override

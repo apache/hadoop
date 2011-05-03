@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+
 /**
  * A package protected interface for a store flushing.
  * A store flusher carries the state required to prepare/flush/commit the
@@ -45,7 +47,7 @@ interface StoreFlusher {
    *
    * @throws IOException in case the flush fails
    */
-  void flushCache() throws IOException;
+  void flushCache(MonitoredTask status) throws IOException;
 
   /**
    * Commit the flush - add the store file to the store and clear the

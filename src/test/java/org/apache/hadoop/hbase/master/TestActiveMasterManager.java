@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
@@ -41,6 +42,7 @@ import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 /**
  * Test the {@link ActiveMasterManager}.
@@ -77,7 +79,8 @@ public class TestActiveMasterManager {
     assertFalse(activeMasterManager.clusterHasActiveMaster.get());
 
     // First test becoming the active master uninterrupted
-    activeMasterManager.blockUntilBecomingActiveMaster();
+    MonitoredTask status = Mockito.mock(MonitoredTask.class);
+    activeMasterManager.blockUntilBecomingActiveMaster(status);
     assertTrue(activeMasterManager.clusterHasActiveMaster.get());
     assertMaster(zk, master);
 
@@ -87,7 +90,7 @@ public class TestActiveMasterManager {
       master, secondDummyMaster);
     zk.registerListener(secondActiveMasterManager);
     assertFalse(secondActiveMasterManager.clusterHasActiveMaster.get());
-    activeMasterManager.blockUntilBecomingActiveMaster();
+    activeMasterManager.blockUntilBecomingActiveMaster(status);
     assertTrue(activeMasterManager.clusterHasActiveMaster.get());
     assertMaster(zk, master);
   }
@@ -120,7 +123,8 @@ public class TestActiveMasterManager {
     assertFalse(activeMasterManager.clusterHasActiveMaster.get());
 
     // First test becoming the active master uninterrupted
-    activeMasterManager.blockUntilBecomingActiveMaster();
+    activeMasterManager.blockUntilBecomingActiveMaster(
+        Mockito.mock(MonitoredTask.class));
     assertTrue(activeMasterManager.clusterHasActiveMaster.get());
     assertMaster(zk, firstMasterAddress);
 
@@ -201,7 +205,8 @@ public class TestActiveMasterManager {
 
     @Override
     public void run() {
-      manager.blockUntilBecomingActiveMaster();
+      manager.blockUntilBecomingActiveMaster(
+          Mockito.mock(MonitoredTask.class));
       LOG.info("Second master has become the active master!");
       isActiveMaster = true;
     }

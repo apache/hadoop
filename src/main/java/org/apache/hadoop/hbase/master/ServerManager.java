@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.handler.MetaServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 
 /**
  * The ServerManager class manages info about region servers.
@@ -466,7 +467,7 @@ public class ServerManager {
    * Waits for the regionservers to report in.
    * @throws InterruptedException
    */
-  public void waitForRegionServers()
+  public void waitForRegionServers(MonitoredTask status)
   throws InterruptedException {
     long interval = this.master.getConfiguration().
       getLong("hbase.master.wait.on.regionservers.interval", 3000);
@@ -477,11 +478,15 @@ public class ServerManager {
       Thread.sleep(interval);
       count = countOfRegionServers();
       if (count == oldcount && count > 0) break;
+
+      String msg;
       if (count == 0) {
-        LOG.info("Waiting on regionserver(s) to checkin");
+        msg = "Waiting on regionserver(s) to checkin";
       } else {
-        LOG.info("Waiting on regionserver(s) count to settle; currently=" + count);
+        msg = "Waiting on regionserver(s) count to settle; currently=" + count;
       }
+      LOG.info(msg);
+      status.setStatus(msg);
       oldcount = count;
     }
   }

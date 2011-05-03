@@ -83,6 +83,8 @@ import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -349,7 +351,12 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public long initialize(final CancelableProgressable reporter)
   throws IOException {
+  
+    MonitoredTask status = TaskMonitor.get().createStatus(
+        "Initializing region " + this);
+    
     if (coprocessorHost != null) {
+      status.setStatus("Running coprocessor pre-open hook");
       coprocessorHost.preOpen();
     }
     // A region can be reopened if failed a split; reset flags
@@ -357,14 +364,17 @@ public class HRegion implements HeapSize { // , Writable{
     this.closed.set(false);
 
     // Write HRI to a file in case we need to recover .META.
+    status.setStatus("Writing region info on filesystem");
     checkRegioninfoOnFilesystem();
 
     // Remove temporary data left over from old regions
+    status.setStatus("Cleaning up temporary data from old regions");
     cleanupTmpDir();
 
     // Load in all the HStores.  Get maximum seqid.
     long maxSeqId = -1;
     for (HColumnDescriptor c : this.regionInfo.getTableDesc().getFamilies()) {
+      status.setStatus("Instantiating store for column family " + c);
       Store store = instantiateHStore(this.tableDir, c);
       this.stores.put(c.getName(), store);
       long storeSeqId = store.getMaxSequenceId();
@@ -373,8 +383,10 @@ public class HRegion implements HeapSize { // , Writable{
       }
     }
     // Recover any edits if available.
-    maxSeqId = replayRecoveredEditsIfAny(this.regiondir, maxSeqId, reporter);
+    maxSeqId = replayRecoveredEditsIfAny(
+        this.regiondir, maxSeqId, reporter, status);
 
+    status.setStatus("Cleaning up detritus from prior splits");
     // Get rid of any splits or merges that were lost in-progress.  Clean out
     // these directories here on open.  We may be opening a region that was
     // being split but we crashed in the middle of it all.
@@ -390,9 +402,12 @@ public class HRegion implements HeapSize { // , Writable{
     long nextSeqid = maxSeqId + 1;
     LOG.info("Onlined " + this.toString() + "; next sequenceid=" + nextSeqid);
 
+    
     if (coprocessorHost != null) {
+      status.setStatus("Running coprocessor post-open hooks");
       coprocessorHost.postOpen();
     }
+    status.markComplete("Region opened successfully");
     return nextSeqid;
   }
 
@@ -556,12 +571,22 @@ public class HRegion implements HeapSize { // , Writable{
   public List<StoreFile> close(final boolean abort) throws IOException {
     // Only allow one thread to close at a time. Serialize them so dual
     // threads attempting to close will run up against each other.
-    synchronized (closeLock) {
-      return doClose(abort);
+    MonitoredTask status = TaskMonitor.get().createStatus(
+        "Closing region " + this +
+        (abort ? " due to abort" : ""));
+    
+    status.setStatus("Waiting for close lock");
+    try {
+      synchronized (closeLock) {
+        return doClose(abort, status);
+      }
+    } finally {
+      status.cleanup();
     }
   }
 
-  private List<StoreFile> doClose(final boolean abort)
+  private List<StoreFile> doClose(
+      final boolean abort, MonitoredTask status)
   throws IOException {
     if (isClosed()) {
       LOG.warn("Region " + this + " already closed");
@@ -569,9 +594,11 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     if (coprocessorHost != null) {
+      status.setStatus("Running coprocessor pre-close hooks");
       this.coprocessorHost.preClose(abort);
     }
 
+    status.setStatus("Disabling compacts and flushes for region");
     boolean wasFlushing = false;
     synchronized (writestate) {
       // Disable compacting and flushing by background threads for this
@@ -596,20 +623,24 @@ public class HRegion implements HeapSize { // , Writable{
     // that will clear out of the bulk of the memstore before we put up
     // the close flag?
     if (!abort && !wasFlushing && worthPreFlushing()) {
+      status.setStatus("Pre-flushing region before close");
       LOG.info("Running close preflush of " + this.getRegionNameAsString());
-      internalFlushcache();
+      internalFlushcache(status);
     }
+
     this.closing.set(true);
+    status.setStatus("Disabling writes for close");
     lock.writeLock().lock();
     try {
       if (this.isClosed()) {
+        status.abort("Already got closed by another process");
         // SplitTransaction handles the null
         return null;
       }
       LOG.debug("Updates disabled for region " + this);
       // Don't flush the cache if we are aborting
       if (!abort) {
-        internalFlushcache();
+        internalFlushcache(status);
       }
 
       List<StoreFile> result = new ArrayList<StoreFile>();
@@ -619,8 +650,10 @@ public class HRegion implements HeapSize { // , Writable{
       this.closed.set(true);
 
       if (coprocessorHost != null) {
+        status.setStatus("Running coprocessor post-close hooks");
         this.coprocessorHost.postClose(abort);
       }
+      status.markComplete("Closed");
       LOG.info("Closed " + this);
       return result;
     } finally {
@@ -824,6 +857,8 @@ public class HRegion implements HeapSize { // , Writable{
     lock.readLock().lock();
     this.lastCompactInfo = null;
     byte [] splitRow = null;
+    MonitoredTask status = TaskMonitor.get().createStatus(
+        "Compacting stores in " + this);
     try {
       if (this.closed.get()) {
         LOG.debug("Skipping compaction on " + this + " because closed");
@@ -833,6 +868,7 @@ public class HRegion implements HeapSize { // , Writable{
         return splitRow;
       }
       if (coprocessorHost != null) {
+        status.setStatus("Running coprocessor preCompact hooks");
         coprocessorHost.preCompact(false);
       }
       try {
@@ -840,10 +876,12 @@ public class HRegion implements HeapSize { // , Writable{
           if (!writestate.compacting && writestate.writesEnabled) {
             writestate.compacting = true;
           } else {
-            LOG.info("NOT compacting region " + this +
+            String msg = "NOT compacting region " + this +
                 ": compacting=" + writestate.compacting + ", writesEnabled=" +
-                writestate.writesEnabled);
-              return splitRow;
+                writestate.writesEnabled;
+            LOG.info(msg);
+            status.abort(msg);
+            return splitRow;
           }
         }
         LOG.info("Starting compaction on region " + this);
@@ -852,6 +890,7 @@ public class HRegion implements HeapSize { // , Writable{
         long lastCompactSize = 0;
         boolean completed = false;
         try {
+          status.setStatus("Compacting store " + store);
           final Store.StoreSize ss = store.compact();
           lastCompactSize += store.getLastCompactSize();
           if (ss != null) {
@@ -868,6 +907,9 @@ public class HRegion implements HeapSize { // , Writable{
           if (completed) {
             this.lastCompactInfo =
               new Pair<Long,Long>((now - startTime) / 1000, lastCompactSize);
+            status.setStatus("Compaction complete: " +
+                StringUtils.humanReadableInt(lastCompactSize) + " in " +
+                (now - startTime) + "ms");
           }
         }
       } finally {
@@ -877,9 +919,13 @@ public class HRegion implements HeapSize { // , Writable{
         }
       }
       if (coprocessorHost != null) {
+        status.setStatus("Running coprocessor post-compact hooks");
         coprocessorHost.postCompact(splitRow != null);
       }
+      
+      status.markComplete("Compaction complete");
     } finally {
+      status.cleanup();
       lock.readLock().unlock();
     }
     if (splitRow != null) {
@@ -915,13 +961,17 @@ public class HRegion implements HeapSize { // , Writable{
       LOG.debug("Skipping flush on " + this + " because closing");
       return false;
     }
+    MonitoredTask status = TaskMonitor.get().createStatus("Flushing " + this);
+    status.setStatus("Acquiring readlock on region");
     lock.readLock().lock();
     try {
       if (this.closed.get()) {
         LOG.debug("Skipping flush on " + this + " because closed");
+        status.abort("Skipped: closed");
         return false;
       }
       if (coprocessorHost != null) {
+        status.setStatus("Running coprocessor pre-flush hooks");
         coprocessorHost.preFlush();
       }
       try {
@@ -935,13 +985,19 @@ public class HRegion implements HeapSize { // , Writable{
                   writestate.flushing + ", writesEnabled=" +
                   writestate.writesEnabled);
             }
+            status.abort("Not flushing since " +
+                (writestate.flushing ? "already flushing" : "writes not enabled"));
             return false;
           }
         }
-        boolean result = internalFlushcache();
+        boolean result = internalFlushcache(status);
+        
         if (coprocessorHost != null) {
+          status.setStatus("Running post-flush coprocessor hooks");
           coprocessorHost.postFlush();
         }
+
+        status.markComplete("Flush successful");
         return result;
       } finally {
         synchronized (writestate) {
@@ -952,6 +1008,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
     } finally {
       lock.readLock().unlock();
+      status.cleanup();
     }
   }
 
@@ -982,6 +1039,7 @@ public class HRegion implements HeapSize { // , Writable{
    * routes.
    *
    * <p> This method may block for some time.
+   * @param status 
    *
    * @return true if the region needs compacting
    *
@@ -989,19 +1047,21 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws DroppedSnapshotException Thrown when replay of hlog is required
    * because a Snapshot was not properly persisted.
    */
-  protected boolean internalFlushcache() throws IOException {
-    return internalFlushcache(this.log, -1);
+  protected boolean internalFlushcache(MonitoredTask status) throws IOException {
+    return internalFlushcache(this.log, -1, status);
   }
 
   /**
    * @param wal Null if we're NOT to go via hlog/wal.
    * @param myseqid The seqid to use if <code>wal</code> is null writing out
    * flush file.
+   * @param status 
    * @return true if the region needs compacting
    * @throws IOException
    * @see #internalFlushcache()
    */
-  protected boolean internalFlushcache(final HLog wal, final long myseqid)
+  protected boolean internalFlushcache(
+      final HLog wal, final long myseqid, MonitoredTask status)
   throws IOException {
     final long startTime = EnvironmentEdgeManager.currentTimeMillis();
     // Clear flush flag.
@@ -1031,7 +1091,9 @@ public class HRegion implements HeapSize { // , Writable{
     // We have to take a write lock during snapshot, or else a write could
     // end up in both snapshot and memstore (makes it difficult to do atomic
     // rows then)
+    status.setStatus("Obtaining lock to block concurrent updates");
     this.updatesLock.writeLock().lock();
+    status.setStatus("Preparing to flush by snapshotting stores");
     final long currentMemStoreSize = this.memstoreSize.get();
     List<StoreFlusher> storeFlushers = new ArrayList<StoreFlusher>(stores.size());
     try {
@@ -1049,6 +1111,7 @@ public class HRegion implements HeapSize { // , Writable{
     } finally {
       this.updatesLock.writeLock().unlock();
     }
+    status.setStatus("Flushing stores");
 
     LOG.debug("Finished snapshotting, commencing flushing stores");
 
@@ -1063,7 +1126,7 @@ public class HRegion implements HeapSize { // , Writable{
       // just-made new flush store file.
 
       for (StoreFlusher flusher : storeFlushers) {
-        flusher.flushCache();
+        flusher.flushCache(status);
       }
       // Switch snapshot (in memstore) -> new hfile (thus causing
       // all the store scanners to reset/reseek).
@@ -1088,6 +1151,7 @@ public class HRegion implements HeapSize { // , Writable{
       DroppedSnapshotException dse = new DroppedSnapshotException("region: " +
           Bytes.toStringBinary(getRegionName()));
       dse.initCause(t);
+      status.abort("Flush failed: " + StringUtils.stringifyException(t));
       throw dse;
     }
 
@@ -1111,13 +1175,13 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     long time = EnvironmentEdgeManager.currentTimeMillis() - startTime;
-    if (LOG.isDebugEnabled()) {
-      LOG.info("Finished memstore flush of ~" +
+    String msg = "Finished memstore flush of ~" +
         StringUtils.humanReadableInt(currentMemStoreSize) + " for region " +
         this + " in " + time + "ms, sequenceid=" + sequenceId +
         ", compaction requested=" + compactionRequested +
-        ((wal == null)? "; wal=null": ""));
-    }
+        ((wal == null)? "; wal=null": "");
+    LOG.info(msg);
+    status.setStatus(msg);
     this.recentFlushes.add(new Pair<Long,Long>(time/1000,currentMemStoreSize));
 
     return compactionRequested;
@@ -2020,7 +2084,8 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws IOException
    */
   protected long replayRecoveredEditsIfAny(final Path regiondir,
-      final long minSeqId, final CancelableProgressable reporter)
+      final long minSeqId, final CancelableProgressable reporter,
+      final MonitoredTask status)
   throws UnsupportedEncodingException, IOException {
     long seqid = minSeqId;
     NavigableSet<Path> files = HLog.getSplitEditFilesSorted(this.fs, regiondir);
@@ -2046,7 +2111,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
     if (seqid > minSeqId) {
       // Then we added some edits to memory. Flush and cleanup split edit files.
-      internalFlushcache(null, seqid);
+      internalFlushcache(null, seqid, status);
     }
     // Now delete the content of recovered edits.  We're done w/ them.
     for (Path file: files) {
@@ -2071,7 +2136,11 @@ public class HRegion implements HeapSize { // , Writable{
   private long replayRecoveredEdits(final Path edits,
       final long minSeqId, final CancelableProgressable reporter)
     throws IOException {
-    LOG.info("Replaying edits from " + edits + "; minSequenceid=" + minSeqId);
+    String msg = "Replaying edits from " + edits + "; minSequenceid=" + minSeqId;
+    LOG.info(msg);
+    MonitoredTask status = TaskMonitor.get().createStatus(msg);
+    
+    status.setStatus("Opening logs");
     HLog.Reader reader = HLog.getReader(this.fs, edits, conf);
     try {
     long currentEditSeqId = minSeqId;
@@ -2103,10 +2172,14 @@ public class HRegion implements HeapSize { // , Writable{
             intervalEdits = 0;
             long cur = EnvironmentEdgeManager.currentTimeMillis();
             if (lastReport + period <= cur) {
+              status.setStatus("Replaying edits..." +
+                  " skipped=" + skippedEdits +
+                  " edits=" + editsCount);
               // Timeout reached
               if(!reporter.progress()) {
-                String msg = "Progressable reporter failed, stopping replay";
+                msg = "Progressable reporter failed, stopping replay";
                 LOG.warn(msg);
+                status.abort(msg);
                 throw new IOException(msg);
               }
               lastReport = cur;
@@ -2117,6 +2190,7 @@ public class HRegion implements HeapSize { // , Writable{
         // Start coprocessor replay here. The coprocessor is for each WALEdit
         // instead of a KeyValue.
         if (coprocessorHost != null) {
+          status.setStatus("Running pre-WAL-restore hook in coprocessors");
           if (coprocessorHost.preWALRestore(this.getRegionInfo(), key, val)) {
             // if bypass this log entry, ignore it ...
             continue;
@@ -2158,7 +2232,7 @@ public class HRegion implements HeapSize { // , Writable{
           flush = restoreEdit(store, kv);
           editsCount++;
         }
-        if (flush) internalFlushcache(null, currentEditSeqId);
+        if (flush) internalFlushcache(null, currentEditSeqId, status);
 
         if (coprocessorHost != null) {
           coprocessorHost.postWALRestore(this.getRegionInfo(), key, val);
@@ -2166,30 +2240,39 @@ public class HRegion implements HeapSize { // , Writable{
       }
     } catch (EOFException eof) {
       Path p = HLog.moveAsideBadEditsFile(fs, edits);
-      LOG.warn("Encountered EOF. Most likely due to Master failure during " +
+      msg = "Encountered EOF. Most likely due to Master failure during " +
           "log spliting, so we have this data in another edit.  " +
-          "Continuing, but renaming " + edits + " as " + p, eof);
+          "Continuing, but renaming " + edits + " as " + p;
+      LOG.warn(msg, eof);
+      status.abort(msg);
     } catch (IOException ioe) {
       // If the IOE resulted from bad file format,
       // then this problem is idempotent and retrying won't help
       if (ioe.getCause() instanceof ParseException) {
         Path p = HLog.moveAsideBadEditsFile(fs, edits);
-        LOG.warn("File corruption encountered!  " +
-            "Continuing, but renaming " + edits + " as " + p, ioe);
+        msg = "File corruption encountered!  " +
+            "Continuing, but renaming " + edits + " as " + p;
+        LOG.warn(msg, ioe);
+        status.setStatus(msg);
       } else {
+        status.abort(StringUtils.stringifyException(ioe));
         // other IO errors may be transient (bad network connection,
         // checksum exception on one datanode, etc).  throw & retry
         throw ioe;
       }
     }
+    
+    msg = "Applied " + editsCount + ", skipped " + skippedEdits +
+    ", firstSequenceidInLog=" + firstSeqIdInLog +
+    ", maxSequenceidInLog=" + currentEditSeqId;
+    status.markComplete(msg);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Applied " + editsCount + ", skipped " + skippedEdits +
-          ", firstSequenceidInLog=" + firstSeqIdInLog +
-          ", maxSequenceidInLog=" + currentEditSeqId);
+      LOG.debug(msg);
     }
     return currentEditSeqId;
     } finally {
       reader.close();
+      status.cleanup();
     }
   }
 

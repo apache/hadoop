@@ -35,6 +35,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskFinisher.Status;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.regionserver.wal.OrphanHLogAfterSplitException;
@@ -183,15 +185,22 @@ public class SplitLogManager extends ZooKeeperListener {
       LOG.warn(logDir + " doesn't exist. Nothing to do!");
       return 0;
     }
+    
+    MonitoredTask status = TaskMonitor.get().createStatus(
+          "Doing distributed log split in " + logDir);
+
+    status.setStatus("Checking directory contents...");
     FileStatus[] logfiles = fs.listStatus(logDir); // TODO filter filenames?
     if (logfiles == null || logfiles.length == 0) {
       LOG.info(logDir + " is empty dir, no logs to split");
       return 0;
     }
+    
+    status.setStatus("Scheduling batch of logs to split");
     tot_mgr_log_split_batch_start.incrementAndGet();
     LOG.info("started splitting logs in " + logDir);
     long t = EnvironmentEdgeManager.currentTimeMillis();
-    long totalSize = 0;
+    long totalSize = 0;    
     TaskBatch batch = new TaskBatch();
     for (FileStatus lf : logfiles) {
       // TODO If the log file is still being written to - which is most likely
@@ -205,7 +214,7 @@ public class SplitLogManager extends ZooKeeperListener {
             + lf.getPath());
       }
     }
-    waitTasks(batch);
+    waitTasks(batch, status);
     if (batch.done != batch.installed) {
       stopTrackingTasks(batch);
       tot_mgr_log_split_batch_err.incrementAndGet();
@@ -214,6 +223,8 @@ public class SplitLogManager extends ZooKeeperListener {
       throw new IOException("error or interrupt while splitting logs in "
           + logDir + " Task = " + batch);
     }
+    
+    status.setStatus("Checking for orphaned logs in log directory...");
     if (anyNewLogFiles(logDir, logfiles)) {
       tot_mgr_new_unexpected_hlogs.incrementAndGet();
       LOG.warn("new hlogs were produced while logs in " + logDir +
@@ -221,12 +232,18 @@ public class SplitLogManager extends ZooKeeperListener {
       throw new OrphanHLogAfterSplitException();
     }
     tot_mgr_log_split_batch_success.incrementAndGet();
+    
+    status.setStatus("Cleaning up log directory...");
     if (!fs.delete(logDir, true)) {
       throw new IOException("Unable to delete src dir: " + logDir);
     }
-    LOG.info("finished splitting (more than or equal to) " + totalSize +
+
+    String msg = "finished splitting (more than or equal to) " + totalSize +
         " bytes in " + batch.installed + " log files in " + logDir + " in " +
-        (EnvironmentEdgeManager.currentTimeMillis() - t) + "ms");
+        (EnvironmentEdgeManager.currentTimeMillis() - t) + "ms";
+    status.markComplete(msg);
+    LOG.info(msg);
+    
     return totalSize;
   }
 
@@ -244,10 +261,14 @@ public class SplitLogManager extends ZooKeeperListener {
     return false;
   }
 
-  private void waitTasks(TaskBatch batch) {
+  private void waitTasks(TaskBatch batch, MonitoredTask status) {
     synchronized (batch) {
       while ((batch.done + batch.error) != batch.installed) {
         try {
+          status.setStatus("Waiting for distributed tasks to finish. "
+              + " scheduled=" + batch.installed
+              + " done=" + batch.done
+              + " error=" + batch.error);
           batch.wait(100);
           if (stopper.isStopped()) {
             LOG.warn("Stopped while waiting for log splits to be completed");

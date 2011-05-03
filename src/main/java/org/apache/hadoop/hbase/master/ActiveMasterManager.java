@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
@@ -119,17 +120,20 @@ class ActiveMasterManager extends ZooKeeperListener {
    *
    * This also makes sure that we are watching the master znode so will be
    * notified if another master dies.
+   * @param startupStatus 
    * @return True if no issue becoming active master else false if another
    * master was running or if some other problem (zookeeper, stop flag has been
    * set on this Master)
    */
-  boolean blockUntilBecomingActiveMaster() {
+  boolean blockUntilBecomingActiveMaster(MonitoredTask startupStatus) {
+    startupStatus.setStatus("Trying to register in ZK as active master");
     boolean cleanSetOfActiveMaster = true;
     // Try to become the active master, watch if there is another master
     try {
       if (ZKUtil.createEphemeralNodeAndWatch(this.watcher,
           this.watcher.masterAddressZNode, Bytes.toBytes(this.sn.toString()))) {
         // We are the master, return
+        startupStatus.setStatus("Successfully registered as active master.");
         this.clusterHasActiveMaster.set(true);
         LOG.info("Master=" + this.sn);
         return cleanSetOfActiveMaster;
@@ -143,13 +147,17 @@ class ActiveMasterManager extends ZooKeeperListener {
         ZKUtil.getDataAndWatch(this.watcher, this.watcher.masterAddressZNode);
       ServerName currentMaster = new ServerName(Bytes.toString(bytes));
       if (ServerName.isSameHostnameAndPort(currentMaster, this.sn)) {
-        LOG.info("Current master has this master's address, " + currentMaster +
+        String msg = ("Current master has this master's address, " + currentMaster +
           "; master was restarted?  Waiting on znode to expire...");
+        LOG.info(msg);
+        startupStatus.setStatus(msg);
         // Hurry along the expiration of the znode.
         ZKUtil.deleteNode(this.watcher, this.watcher.masterAddressZNode);
       } else {
-        LOG.info("Another master is the active master, " + currentMaster +
-          "; waiting to become the next active master");
+        String msg = "Another master is the active master, " + currentMaster +
+        "; waiting to become the next active master";
+        LOG.info(msg);
+        startupStatus.setStatus(msg);
       }
     } catch (KeeperException ke) {
       master.abort("Received an unexpected KeeperException, aborting", ke);
@@ -168,7 +176,7 @@ class ActiveMasterManager extends ZooKeeperListener {
         return cleanSetOfActiveMaster;
       }
       // Try to become active master again now that there is no active master
-      blockUntilBecomingActiveMaster();
+      blockUntilBecomingActiveMaster(startupStatus);
     }
     return cleanSetOfActiveMaster;
   }

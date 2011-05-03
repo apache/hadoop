@@ -71,6 +71,8 @@ import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
@@ -271,6 +273,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
    */
   @Override
   public void run() {
+    MonitoredTask startupStatus =
+      TaskMonitor.get().createStatus("Master startup");
+    startupStatus.setDescription("Master startup");
     try {
       /*
        * Block on becoming the active master.
@@ -282,16 +287,18 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
        * now wait until it dies to try and become the next active master.  If we
        * do not succeed on our first attempt, this is no longer a cluster startup.
        */
-      becomeActiveMaster();
+      becomeActiveMaster(startupStatus);
 
       // We are either the active master or we were asked to shutdown
       if (!this.stopped) {
-        finishInitialization();
+        finishInitialization(startupStatus);
         loop();
       }
     } catch (Throwable t) {
       abort("Unhandled exception. Starting shutdown.", t);
     } finally {
+      startupStatus.cleanup();
+      
       stopChores();
       // Wait for all the remaining region servers to report in IFF we were
       // running a cluster shutdown AND we were NOT aborting.
@@ -313,17 +320,19 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
   /**
    * Try becoming active master.
+   * @param startupStatus 
    * @return True if we could successfully become the active master.
    * @throws InterruptedException
    */
-  private boolean becomeActiveMaster() throws InterruptedException {
+  private boolean becomeActiveMaster(MonitoredTask startupStatus)
+  throws InterruptedException {
     // TODO: This is wrong!!!! Should have new servername if we restart ourselves,
     // if we come back to life.
     this.activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName,
         this);
     this.zooKeeper.registerListener(activeMasterManager);
     stallIfBackupMaster(this.conf, this.activeMasterManager);
-    return this.activeMasterManager.blockUntilBecomingActiveMaster();
+    return this.activeMasterManager.blockUntilBecomingActiveMaster(startupStatus);
   }
 
   /**
@@ -386,7 +395,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
    * @throws InterruptedException
    * @throws KeeperException
    */
-  private void finishInitialization()
+  private void finishInitialization(MonitoredTask status)
   throws IOException, InterruptedException, KeeperException {
 
     isActiveMaster = true;
@@ -397,9 +406,12 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
      * below after we determine if cluster startup or failover.
      */
 
+    status.setStatus("Initializing Master file system");
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
     this.fileSystemManager = new MasterFileSystem(this, metrics);
+
     // publish cluster ID
+    status.setStatus("Publishing Cluster ID in ZooKeeper");
     ClusterId.setClusterId(this.zooKeeper,
         fileSystemManager.getClusterId());
 
@@ -407,16 +419,19 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
     this.serverManager = new ServerManager(this, this);
 
+    status.setStatus("Initializing ZK system trackers");
     initializeZKBasedSystemTrackers();
 
     // initialize master side coprocessors before we start handling requests
+    status.setStatus("Initializing master coprocessors");
     this.cpHost = new MasterCoprocessorHost(this, this.conf);
 
     // start up all service threads.
+    status.setStatus("Initializing master service threads");
     startServiceThreads();
 
     // Wait for region servers to report in.
-    this.serverManager.waitForRegionServers();
+    this.serverManager.waitForRegionServers(status);
     // Check zk for regionservers that are up but didn't register
     for (ServerName sn: this.regionServerTracker.getOnlineServers()) {
       if (!this.serverManager.isServerOnline(sn)) {
@@ -427,20 +442,25 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     }
 
     // TODO: Should do this in background rather than block master startup
+    status.setStatus("Splitting logs after master startup");
     this.fileSystemManager.
       splitLogAfterStartup(this.serverManager.getOnlineServers().keySet());
 
     // Make sure root and meta assigned before proceeding.
-    assignRootAndMeta();
+    assignRootAndMeta(status);
+    
     // Fixup assignment manager status
+    status.setStatus("Starting assignment manager");
     this.assignmentManager.joinCluster();
 
     // Start balancer and meta catalog janitor after meta and regions have
     // been assigned.
+    status.setStatus("Starting balancer and catalog janitor");
     this.balancerChore = getAndStartBalancerChore(this);
     this.catalogJanitorChore =
       Threads.setDaemonThreadRunning(new CatalogJanitor(this, this));
 
+    status.markComplete("Initialization successful");
     LOG.info("Master has completed initialization");
     initialized = true;
   }
@@ -453,12 +473,13 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
    * @throws KeeperException
    * @return Count of regions we assigned.
    */
-  int assignRootAndMeta()
+  int assignRootAndMeta(MonitoredTask status)
   throws InterruptedException, IOException, KeeperException {
     int assigned = 0;
     long timeout = this.conf.getLong("hbase.catalog.verification.timeout", 1000);
 
     // Work on ROOT region.  Is it in zk in transition?
+    status.setStatus("Assigning ROOT region");
     boolean rit = this.assignmentManager.
       processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.ROOT_REGIONINFO);
     if (!catalogTracker.verifyRootRegionLocation(timeout)) {
@@ -474,6 +495,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       ", location=" + catalogTracker.getRootLocation());
 
     // Work on meta region
+    status.setStatus("Assigning META region");
     rit = this.assignmentManager.
       processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.FIRST_META_REGIONINFO);
     if (!this.catalogTracker.verifyMetaRegionLocation(timeout)) {
@@ -490,6 +512,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     }
     LOG.info(".META. assigned=" + assigned + ", rit=" + rit +
       ", location=" + catalogTracker.getMetaLocation());
+    status.setStatus("META and ROOT assigned.");
     return assigned;
   }
 
@@ -1101,15 +1124,21 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     this.zooKeeper = new ZooKeeperWatcher(conf, MASTER + ":"
         + this.serverName.getPort(), this);
 
-    if (!becomeActiveMaster()) {
-      return false;
+    MonitoredTask status = 
+      TaskMonitor.get().createStatus("Recovering expired ZK session");
+    try {
+      if (!becomeActiveMaster(status)) {
+        return false;
+      }
+      initializeZKBasedSystemTrackers();
+      // Update in-memory structures to reflect our earlier Root/Meta assignment.
+      assignRootAndMeta(status);
+      // process RIT if any
+      this.assignmentManager.processRegionsInTransition();
+      return true;
+    } finally {
+      status.cleanup();
     }
-    initializeZKBasedSystemTrackers();
-    // Update in-memory structures to reflect our earlier Root/Meta assignment.
-    assignRootAndMeta();
-    // process RIT if any
-    this.assignmentManager.processRegionsInTransition();
-    return true;
   }
 
   /**
