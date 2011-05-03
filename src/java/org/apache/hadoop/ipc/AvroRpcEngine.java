@@ -61,6 +61,8 @@ public class AvroRpcEngine implements RpcEngine {
 
   /** Tunnel an Avro RPC request and response through Hadoop's RPC. */
   private static interface TunnelProtocol extends VersionedProtocol {
+    //WritableRpcEngine expects a versionID in every protocol.
+    public static final long versionID = 0L;
     /** All Avro methods and responses go through this. */
     BufferListWritable call(BufferListWritable request) throws IOException;
   }
@@ -147,7 +149,7 @@ public class AvroRpcEngine implements RpcEngine {
          protocol.getClassLoader(),
          new Class[] { protocol },
          new Invoker(protocol, addr, ticket, conf, factory, rpcTimeout)),
-       null);
+       false);
   }
 
   /** Stop this proxy. */

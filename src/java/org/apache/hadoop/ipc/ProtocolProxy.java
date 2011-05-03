@@ -19,6 +19,7 @@
 package org.apache.hadoop.ipc;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashSet;
 
@@ -34,24 +35,55 @@ public class ProtocolProxy<T> {
   private Class<T> protocol;
   private T proxy;
   private HashSet<Integer> serverMethods = null;
+  final private boolean supportServerMethodCheck;
+  private boolean serverMethodsFetched = false;
   
   /**
    * Constructor
    * 
    * @param protocol protocol class
    * @param proxy its proxy
-   * @param serverMethods a list of hash codes of the methods that it supports
-   * @throws ClassNotFoundException 
+   * @param supportServerMethodCheck If false proxy will never fetch server
+   *        methods and isMethodSupported will always return true. If true,
+   *        server methods will be fetched for the first call to 
+   *        isMethodSupported. 
    */
-  public ProtocolProxy(Class<T> protocol, T proxy, int[] serverMethods) {
+  public ProtocolProxy(Class<T> protocol, T proxy,
+      boolean supportServerMethodCheck) {
     this.protocol = protocol;
     this.proxy = proxy;
-    if (serverMethods != null) {
-      this.serverMethods = new HashSet<Integer>(serverMethods.length);
-      for (int method : serverMethods) {
-        this.serverMethods.add(Integer.valueOf(method));
+    this.supportServerMethodCheck = supportServerMethodCheck;
+  }
+  
+  private void fetchServerMethods(Method method) throws IOException {
+    long clientVersion;
+    try {
+      Field versionField = method.getDeclaringClass().getField("versionID");
+      versionField.setAccessible(true);
+      clientVersion = versionField.getLong(method.getDeclaringClass());
+    } catch (NoSuchFieldException ex) {
+      throw new RuntimeException(ex);
+    } catch (IllegalAccessException ex) {
+      throw new RuntimeException(ex);
+    }
+    int clientMethodsHash = ProtocolSignature.getFingerprint(method
+        .getDeclaringClass().getMethods());
+    ProtocolSignature serverInfo = ((VersionedProtocol) proxy)
+        .getProtocolSignature(protocol.getName(), clientVersion,
+            clientMethodsHash);
+    long serverVersion = serverInfo.getVersion();
+    if (serverVersion != clientVersion) {
+      throw new RPC.VersionMismatch(protocol.getName(), clientVersion,
+          serverVersion);
+    }
+    int[] serverMethodsCodes = serverInfo.getMethods();
+    if (serverMethodsCodes != null) {
+      serverMethods = new HashSet<Integer>(serverMethodsCodes.length);
+      for (int m : serverMethodsCodes) {
+        this.serverMethods.add(Integer.valueOf(m));
       }
     }
+    serverMethodsFetched = true;
   }
 
   /*
@@ -68,10 +100,10 @@ public class ProtocolProxy<T> {
    * @param parameterTypes a method's parameter types
    * @return true if the method is supported by the server
    */
-  public boolean isMethodSupported(String methodName,
+  public synchronized boolean isMethodSupported(String methodName,
                                    Class<?>... parameterTypes)
   throws IOException {
-    if (serverMethods == null) { // client & server have the same protocol
+    if (!supportServerMethodCheck) {
       return true;
     }
     Method method;
@@ -81,6 +113,12 @@ public class ProtocolProxy<T> {
       throw new IOException(e);
     } catch (NoSuchMethodException e) {
       throw new IOException(e);
+    }
+    if (!serverMethodsFetched) {
+      fetchServerMethods(method);
+    }
+    if (serverMethods == null) { // client & server have the same protocol
+      return true;
     }
     return serverMethods.contains(
         Integer.valueOf(ProtocolSignature.getFingerprint(method)));

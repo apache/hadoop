@@ -105,6 +105,9 @@ Trunk (unreleased changes)
     HADOOP-7179. Federation: Improve HDFS startup scripts. (Erik Steffl
     and Tanping Wang via suresh)
 
+    HADOOP-7227. Remove protocol version check at proxy creation in Hadoop
+    RPC. (jitendra)
+
   OPTIMIZATIONS
 
   BUG FIXES

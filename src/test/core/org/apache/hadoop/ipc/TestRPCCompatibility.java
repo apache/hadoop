@@ -18,19 +18,21 @@
 
 package org.apache.hadoop.ipc;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 
-import org.apache.commons.logging.*;
+import junit.framework.Assert;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
-
 import org.junit.After;
-
 import org.junit.Test;
 
 /** Unit test for supporting method-name based compatible RPCs. */
@@ -246,5 +248,27 @@ public class TestRPCCompatibility {
     int hash1 = ProtocolSignature.getFingerprint(new Method[] {intMethod, strMethod});
     int hash2 = ProtocolSignature.getFingerprint(new Method[] {strMethod, intMethod});
     assertEquals(hash1, hash2);
+  }
+  
+  public interface TestProtocol4 extends TestProtocol2 {
+    public static final long versionID = 1L;
+    int echo(int value)  throws IOException;
+  }
+  
+  @Test
+  public void testVersionMismatch() throws IOException {
+    server = RPC.getServer(TestProtocol2.class, new TestImpl0(), ADDRESS, 0, 2,
+        false, conf, null);
+    server.start();
+    addr = NetUtils.getConnectAddress(server);
+
+    TestProtocol4 proxy = RPC.getProxy(TestProtocol4.class,
+        TestProtocol4.versionID, addr, conf);
+    try {
+      proxy.echo(21);
+      fail("The call must throw VersionMismatch exception");
+    } catch (IOException ex) {
+      Assert.assertTrue(ex.getMessage().contains("VersionMismatch"));
+    }
   }
 }
