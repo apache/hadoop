@@ -808,13 +808,13 @@ public class TestMasterFailover {
     region = enabledRegions.remove(0);
     regionsThatShouldBeOnline.add(region);
     master.assignmentManager.regionsInTransition.put(region.getEncodedName(),
-        new RegionState(region, RegionState.State.PENDING_OPEN, 0));
+        new RegionState(region, RegionState.State.PENDING_OPEN, 0, null));
     ZKAssign.createNodeOffline(zkw, region, master.getServerName());
     // PENDING_OPEN and disabled
     region = disabledRegions.remove(0);
     regionsThatShouldBeOffline.add(region);
     master.assignmentManager.regionsInTransition.put(region.getEncodedName(),
-        new RegionState(region, RegionState.State.PENDING_OPEN, 0));
+        new RegionState(region, RegionState.State.PENDING_OPEN, 0, null));
     ZKAssign.createNodeOffline(zkw, region, master.getServerName());
     // This test is bad.  It puts up a PENDING_CLOSE but doesn't say what
     // server we were PENDING_CLOSE against -- i.e. an entry in

@@ -97,6 +97,9 @@ org.apache.hadoop.hbase.HTableDescriptor;
 <%if (servers != null) %>
 <& regionServers &>
 </%if>
+
+<& AssignmentManagerStatusTmpl; assignmentManager=master.getAssignmentManager()&>
+
 </body>
 </html>
 

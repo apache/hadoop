@@ -236,6 +236,7 @@ Release 0.91.0 - Unreleased
                (Prakash Khemani)
    HBASE-3836  Add facility to track currently progressing actions and
                workflows. (todd)
+   HBASE-3837  Show regions in transition on the master web page (todd)
 
 Release 0.90.3 - Unreleased
 

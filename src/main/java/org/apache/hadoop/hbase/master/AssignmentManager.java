@@ -332,20 +332,23 @@ public class AssignmentManager extends ZooKeeperListener {
         // Just insert region into RIT.
         // If this never updates the timeout will trigger new assignment
         regionsInTransition.put(encodedRegionName, new RegionState(
-            regionInfo, RegionState.State.CLOSING, data.getStamp()));
+            regionInfo, RegionState.State.CLOSING,
+            data.getStamp(), data.getOrigin()));
         break;
 
       case RS_ZK_REGION_CLOSED:
         // Region is closed, insert into RIT and handle it
         regionsInTransition.put(encodedRegionName, new RegionState(
-            regionInfo, RegionState.State.CLOSED, data.getStamp()));
+            regionInfo, RegionState.State.CLOSED,
+            data.getStamp(), data.getOrigin()));
         new ClosedRegionHandler(master, this, regionInfo).process();
         break;
 
       case M_ZK_REGION_OFFLINE:
         // Region is offline, insert into RIT and handle it like a closed
         regionsInTransition.put(encodedRegionName, new RegionState(
-            regionInfo, RegionState.State.OFFLINE, data.getStamp()));
+            regionInfo, RegionState.State.OFFLINE,
+            data.getStamp(), data.getOrigin()));
         new ClosedRegionHandler(master, this, regionInfo).process();
         break;
 
@@ -353,13 +356,15 @@ public class AssignmentManager extends ZooKeeperListener {
         // Just insert region into RIT
         // If this never updates the timeout will trigger new assignment
         regionsInTransition.put(encodedRegionName, new RegionState(
-            regionInfo, RegionState.State.OPENING, data.getStamp()));
+            regionInfo, RegionState.State.OPENING,
+            data.getStamp(), data.getOrigin()));
         break;
 
       case RS_ZK_REGION_OPENED:
         // Region is opened, insert into RIT and handle it
         regionsInTransition.put(encodedRegionName, new RegionState(
-            regionInfo, RegionState.State.OPENING, data.getStamp()));
+            regionInfo, RegionState.State.OPENING,
+            data.getStamp(), data.getOrigin()));
         ServerName sn =
           data.getOrigin() == null? null: data.getOrigin();
         // hsi could be null if this server is no longer online.  If
@@ -422,7 +427,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
         case RS_ZK_REGION_SPLITTING:
           if (!isInStateForSplitting(regionState)) break;
-          addSplittingToRIT(sn.toString(), encodedName);
+          addSplittingToRIT(sn, encodedName);
           break;
 
         case RS_ZK_REGION_SPLIT:
@@ -433,7 +438,7 @@ public class AssignmentManager extends ZooKeeperListener {
             LOG.info("Received SPLIT for region " + prettyPrintedRegionName +
               " from server " + sn +
               " but region was not first in SPLITTING state; continuing");
-            addSplittingToRIT(sn.toString(), encodedName);
+            addSplittingToRIT(sn, encodedName);
           }
           // Check it has daughters.
           byte [] payload = data.getPayload();
@@ -468,7 +473,8 @@ public class AssignmentManager extends ZooKeeperListener {
             return;
           }
           // Transition to CLOSING (or update stamp if already CLOSING)
-          regionState.update(RegionState.State.CLOSING, data.getStamp());
+          regionState.update(RegionState.State.CLOSING,
+              data.getStamp(), data.getOrigin());
           break;
 
         case RS_ZK_REGION_CLOSED:
@@ -484,7 +490,8 @@ public class AssignmentManager extends ZooKeeperListener {
           // Handle CLOSED by assigning elsewhere or stopping if a disable
           // If we got here all is good.  Need to update RegionState -- else
           // what follows will fail because not in expected state.
-          regionState.update(RegionState.State.CLOSED, data.getStamp());
+          regionState.update(RegionState.State.CLOSED,
+              data.getStamp(), data.getOrigin());
           this.executorService.submit(new ClosedRegionHandler(master,
             this, regionState.getRegion()));
           break;
@@ -502,7 +509,8 @@ public class AssignmentManager extends ZooKeeperListener {
             return;
           }
           // Transition to OPENING (or update stamp if already OPENING)
-          regionState.update(RegionState.State.OPENING, data.getStamp());
+          regionState.update(RegionState.State.OPENING,
+              data.getStamp(), data.getOrigin());
           break;
 
         case RS_ZK_REGION_OPENED:
@@ -517,7 +525,8 @@ public class AssignmentManager extends ZooKeeperListener {
             return;
           }
           // Handle OPENED by removing from transition and deleted zk node
-          regionState.update(RegionState.State.OPEN, data.getStamp());
+          regionState.update(RegionState.State.OPEN,
+              data.getStamp(), data.getOrigin());
           this.executorService.submit(
             new OpenedRegionHandler(master, this, regionState.getRegion(),
               data.getOrigin()));
@@ -564,12 +573,13 @@ public class AssignmentManager extends ZooKeeperListener {
    * @return The SPLITTING RegionState we added to RIT for the passed region
    * <code>encodedName</code>
    */
-  private RegionState addSplittingToRIT(final String serverName,
+  private RegionState addSplittingToRIT(final ServerName serverName,
       final String encodedName) {
     RegionState regionState = null;
     synchronized (this.regions) {
       regionState = findHRegionInfoThenAddToRIT(serverName, encodedName);
-      regionState.update(RegionState.State.SPLITTING);
+      regionState.update(RegionState.State.SPLITTING,
+          System.currentTimeMillis(), serverName);
     }
     return regionState;
   }
@@ -580,7 +590,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param encodedName
    * @return The instance of RegionState that was added to RIT or null if error.
    */
-  private RegionState findHRegionInfoThenAddToRIT(final String serverName,
+  private RegionState findHRegionInfoThenAddToRIT(final ServerName serverName,
       final String encodedName) {
     HRegionInfo hri = findHRegionInfo(serverName, encodedName);
     if (hri == null) {
@@ -598,9 +608,8 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param encodedName
    * @return Found HRegionInfo or null.
    */
-  private HRegionInfo findHRegionInfo(final String serverName,
+  private HRegionInfo findHRegionInfo(final ServerName sn,
       final String encodedName) {
-    ServerName sn = new ServerName(serverName);
     if (!this.serverManager.isServerOnline(sn)) return null;
     List<HRegionInfo> hris = this.servers.get(sn);
     HRegionInfo foundHri = null;
@@ -824,7 +833,7 @@ public class AssignmentManager extends ZooKeeperListener {
       }
       if (rs == null) continue;
       synchronized (rs) {
-        rs.update(rs.getState());
+        rs.updateTimestampToNow();
       }
     }
   }
@@ -1028,7 +1037,7 @@ public class AssignmentManager extends ZooKeeperListener {
       // Async exists to set a watcher so we'll get triggered when
       // unassigned node changes.
       this.zkw.getZooKeeper().exists(path, this.zkw,
-        new ExistsUnassignedAsyncCallback(this.counter), ctx);
+        new ExistsUnassignedAsyncCallback(this.counter, destination), ctx);
     }
   }
 
@@ -1039,9 +1048,11 @@ public class AssignmentManager extends ZooKeeperListener {
   static class ExistsUnassignedAsyncCallback implements AsyncCallback.StatCallback {
     private final Log LOG = LogFactory.getLog(ExistsUnassignedAsyncCallback.class);
     private final AtomicInteger counter;
+    private ServerName destination;
 
-    ExistsUnassignedAsyncCallback(final AtomicInteger counter) {
+    ExistsUnassignedAsyncCallback(final AtomicInteger counter, ServerName destination) {
       this.counter = counter;
+      this.destination = destination;
     }
 
     @Override
@@ -1059,7 +1070,7 @@ public class AssignmentManager extends ZooKeeperListener {
       // yet sent out the actual open but putting this state change after the
       // call to open risks our writing PENDING_OPEN after state has been moved
       // to OPENING by the regionserver.
-      state.update(RegionState.State.PENDING_OPEN);
+      state.update(RegionState.State.PENDING_OPEN, System.currentTimeMillis(), destination);
       this.counter.addAndGet(1);
     }
   }
@@ -1113,7 +1124,8 @@ public class AssignmentManager extends ZooKeeperListener {
         LOG.debug("Assigning region " + state.getRegion().getRegionNameAsString() +
           " to " + plan.getDestination().toString());
         // Transition RegionState to PENDING_OPEN
-        state.update(RegionState.State.PENDING_OPEN);
+        state.update(RegionState.State.PENDING_OPEN, System.currentTimeMillis(),
+            plan.getDestination());
         // Send OPEN RPC. This can fail if the server on other end is is not up.
         serverManager.sendRegionOpen(plan.getDestination(), state.getRegion());
         break;
@@ -2151,26 +2163,34 @@ public class AssignmentManager extends ZooKeeperListener {
 
     private State state;
     private long stamp;
+    private ServerName serverName;
 
     public RegionState() {}
 
     RegionState(HRegionInfo region, State state) {
-      this(region, state, System.currentTimeMillis());
+      this(region, state, System.currentTimeMillis(), null);
     }
 
-    RegionState(HRegionInfo region, State state, long stamp) {
+    RegionState(HRegionInfo region, State state, long stamp, ServerName serverName) {
       this.region = region;
       this.state = state;
       this.stamp = stamp;
+      this.serverName = serverName;
     }
 
-    public void update(State state, long stamp) {
+    public void update(State state, long stamp, ServerName serverName) {
       this.state = state;
       this.stamp = stamp;
+      this.serverName = serverName;
     }
 
     public void update(State state) {
       this.state = state;
+      this.stamp = System.currentTimeMillis();
+      this.serverName = null;
+    }
+
+    public void updateTimestampToNow() {
       this.stamp = System.currentTimeMillis();
     }
 
@@ -2224,8 +2244,10 @@ public class AssignmentManager extends ZooKeeperListener {
 
     @Override
     public String toString() {
-      return region.getRegionNameAsString() + " state=" + state +
-        ", ts=" + stamp;
+      return region.getRegionNameAsString()
+        + " state=" + state
+        + ", ts=" + stamp
+        + ", server=" + serverName;
     }
 
     @Override
