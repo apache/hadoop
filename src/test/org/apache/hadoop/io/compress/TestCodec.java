@@ -480,27 +480,26 @@ public class TestCodec extends TestCase {
     // java.util.zip.GZIPOutputStream.
     CompressionCodecFactory ccf = new CompressionCodecFactory(conf);
     CompressionCodec codec = ccf.getCodec(new Path("foo.gz"));
-    assertTrue("Codec for .gz file is not GzipCodec", codec instanceof GzipCodec);
+    assertTrue("Codec for .gz file is not GzipCodec", 
+               codec instanceof GzipCodec);
     Decompressor codecDecompressor = codec.createDecompressor();
-    if (null != codecDecompressor) {
-      fail("Got non-null codecDecompressor: " + codecDecompressor);
+    if (null == codecDecompressor) {
+      fail("Got null codecDecompressor");
     }
 
     // Asking the CodecPool for a decompressor for GzipCodec
     // should return null as well.
     Decompressor poolDecompressor = CodecPool.getDecompressor(codec);
-    if (null != poolDecompressor) {
-      fail("Got non-null poolDecompressor: " + poolDecompressor);
+    if (null == poolDecompressor) {
+      fail("Got null poolDecompressor: " + poolDecompressor);
     }
-
     // If we then ensure that the pool is populated...
     CodecPool.returnDecompressor(zlibDecompressor);
-
-    // Asking the pool another time should still not bind this to GzipCodec.
-    poolDecompressor = CodecPool.getDecompressor(codec);
-    if (null != poolDecompressor) {
-      fail("Second time, got non-null poolDecompressor: "
-          + poolDecompressor);
+    // return the decompressor
+    CodecPool.returnDecompressor(poolDecompressor);
+    Decompressor poolDecompressor2 = CodecPool.getDecompressor(codec);
+    if (poolDecompressor == poolDecompressor2) {
+      fail("Reused gzip decompressor in pool");
     }
   }
 

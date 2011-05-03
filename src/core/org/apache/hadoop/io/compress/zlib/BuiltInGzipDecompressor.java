@@ -24,6 +24,7 @@ import java.util.zip.Inflater;
 import java.util.zip.CRC32;
 
 import org.apache.hadoop.io.compress.Decompressor;
+import org.apache.hadoop.io.compress.DoNotPool;
 
 /**
  * A {@link Decompressor} based on the popular gzip compressed file format.
@@ -108,6 +109,7 @@ public class BuiltInGzipDecompressor implements Decompressor {
   /**
    * Creates a new (pure Java) gzip decompressor.
    */
+  @DoNotPool
   public BuiltInGzipDecompressor() {
     state = GzipStateLabel.HEADER_BASIC;
     crc.reset();
