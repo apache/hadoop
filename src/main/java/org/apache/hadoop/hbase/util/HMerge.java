@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -103,10 +104,14 @@ class HMerge {
   throws IOException {
     boolean masterIsRunning = false;
     if (testMasterRunning) {
-      HConnection connection = HConnectionManager.getConnection(conf);
-      masterIsRunning = connection.isMasterRunning();
+      masterIsRunning = HConnectionManager
+          .execute(new HConnectable<Boolean>(conf) {
+            @Override
+            public Boolean connect(HConnection connection) throws IOException {
+              return connection.isMasterRunning();
+            }
+          });
     }
-    HConnectionManager.deleteConnection(conf, true);
     if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
       if (masterIsRunning) {
         throw new IllegalStateException(

@@ -112,8 +112,7 @@ public class TestMergeTable {
       LOG.info("Starting mini hbase cluster");
       UTIL.startMiniHBaseCluster(1, 1);
       Configuration c = new Configuration(UTIL.getConfiguration());
-      HConnection connection = HConnectionManager.getConnection(c);
-      CatalogTracker ct = new CatalogTracker(connection);
+      CatalogTracker ct = new CatalogTracker(c);
       ct.start();
       List<HRegionInfo> originalTableRegions =
         MetaReader.getTableRegions(ct, desc.getName());

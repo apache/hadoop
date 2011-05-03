@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
@@ -140,8 +139,6 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   private final MasterMetrics metrics;
   // file system manager for the master FS operations
   private MasterFileSystem fileSystemManager;
-
-  private HConnection connection;
 
   // server manager to deal with region server info
   private ServerManager serverManager;
@@ -309,7 +306,6 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       if (this.serverManager != null) this.serverManager.stop();
       if (this.assignmentManager != null) this.assignmentManager.stop();
       if (this.fileSystemManager != null) this.fileSystemManager.stop();
-      HConnectionManager.deleteConnection(this.conf, true);
       this.zooKeeper.close();
     }
     LOG.info("HMaster main thread exiting");
@@ -337,7 +333,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
    */
   private void initializeZKBasedSystemTrackers() throws IOException,
       InterruptedException, KeeperException {
-    this.catalogTracker = new CatalogTracker(this.zooKeeper, this.connection,
+    this.catalogTracker = new CatalogTracker(this.zooKeeper, this.conf,
         this, conf.getInt("hbase.master.catalog.timeout", Integer.MAX_VALUE));
     this.catalogTracker.start();
 
@@ -407,7 +403,6 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     ClusterId.setClusterId(this.zooKeeper,
         fileSystemManager.getClusterId());
 
-    this.connection = HConnectionManager.getConnection(conf);
     this.executorService = new ExecutorService(getServerName().toString());
 
     this.serverManager = new ServerManager(this, this);

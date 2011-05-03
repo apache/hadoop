@@ -104,13 +104,7 @@ implements Configurable {
     @Override
     public void close(TaskAttemptContext context)
     throws IOException {
-      table.flushCommits();
-      // The following call will shutdown all connections to the cluster from
-      // this JVM.  It will close out our zk session otherwise zk wil log
-      // expired sessions rather than closed ones.  If any other HTable instance
-      // running in this JVM, this next call will cause it damage.  Presumption
-      // is that the above this.table is only instance.
-      HConnectionManager.deleteAllConnections(true);
+      table.close();
     }
 
     /**

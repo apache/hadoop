@@ -154,6 +154,7 @@ public class ReplicationLogCleaner implements LogCleanerDelegate, Abortable {
       LOG.info("Stopping " + this.zkHelper.getZookeeperWatcher());
       this.zkHelper.getZookeeperWatcher().close();
     }
+    // Not sure why we're deleting a connection that we never acquired or used
     HConnectionManager.deleteConnection(this.conf, true);
   }
 

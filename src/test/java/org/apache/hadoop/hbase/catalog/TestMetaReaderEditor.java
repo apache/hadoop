@@ -70,8 +70,7 @@ public class TestMetaReaderEditor {
   @Before public void setup() throws IOException, InterruptedException {
     Configuration c = new Configuration(UTIL.getConfiguration());
     zkw = new ZooKeeperWatcher(c, "TestMetaReaderEditor", ABORTABLE);
-    HConnection connection = HConnectionManager.getConnection(c);
-    ct = new CatalogTracker(zkw, connection, ABORTABLE);
+    ct = new CatalogTracker(zkw, c, ABORTABLE);
     ct.start();
   }
 

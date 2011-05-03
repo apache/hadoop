@@ -19,12 +19,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +47,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -76,6 +79,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
+
+import com.google.common.collect.ImmutableMap;
 
 /**
  * A non-instantiable class that manages {@link HConnection}s.
@@ -126,19 +131,28 @@ import org.apache.zookeeper.KeeperException;
  */
 @SuppressWarnings("serial")
 public class HConnectionManager {
-  static final int MAX_CACHED_HBASE_INSTANCES = 2001;
+  // A LRU Map of HConnectionKey -> HConnection (TableServer).
+  private static final Map<HConnectionKey, HConnectionImplementation> HBASE_INSTANCES;
 
-  // A LRU Map of Configuration hashcode -> TableServers. We set instances to 31.
-  // The zk default max connections to the ensemble from the one client is 30 so
-  // should run into zk issues before hit this value of 31.
-  private static final Map<Configuration, HConnectionImplementation> HBASE_INSTANCES =
-    new LinkedHashMap<Configuration, HConnectionImplementation>
-      ((int) (MAX_CACHED_HBASE_INSTANCES/0.75F)+1, 0.75F, true) {
-      @Override
-      protected boolean removeEldestEntry(Map.Entry<Configuration, HConnectionImplementation> eldest) {
-        return size() > MAX_CACHED_HBASE_INSTANCES;
-      }
-  };
+  public static final int MAX_CACHED_HBASE_INSTANCES;
+
+  static {
+    // We set instances to one more than the value specified for {@link
+    // HConstants#ZOOKEEPER_MAX_CLIENT_CNXNS}. By default, the zk default max
+    // connections to the ensemble from the one client is 30, so in that case we
+    // should run into zk issues before the LRU hit this value of 31.
+    MAX_CACHED_HBASE_INSTANCES = HBaseConfiguration.create().getInt(
+        HConstants.ZOOKEEPER_MAX_CLIENT_CNXNS,
+        HConstants.DEFAULT_ZOOKEPER_MAX_CLIENT_CNXNS) + 1;
+    HBASE_INSTANCES = new LinkedHashMap<HConnectionKey, HConnectionImplementation>(
+        (int) (MAX_CACHED_HBASE_INSTANCES / 0.75F) + 1, 0.75F, true) {
+       @Override
+      protected boolean removeEldestEntry(
+          Map.Entry<HConnectionKey, HConnectionImplementation> eldest) {
+         return size() > MAX_CACHED_HBASE_INSTANCES;
+       }
+    };
+  }
 
   /*
    * Non-instantiable.
@@ -158,33 +172,34 @@ public class HConnectionManager {
    */
   public static HConnection getConnection(Configuration conf)
   throws ZooKeeperConnectionException {
-    HConnectionImplementation connection;
+    HConnectionKey connectionKey = new HConnectionKey(conf);
     synchronized (HBASE_INSTANCES) {
-      connection = HBASE_INSTANCES.get(conf);
+      HConnectionImplementation connection = HBASE_INSTANCES.get(connectionKey);
       if (connection == null) {
         connection = new HConnectionImplementation(conf);
-        HBASE_INSTANCES.put(conf, connection);
+        HBASE_INSTANCES.put(connectionKey, connection);
       }
+      connection.incCount();
+      return connection;
     }
-    return connection;
   }
 
   /**
    * Delete connection information for the instance specified by configuration.
-   * This will close connection to the zookeeper ensemble and let go of all
-   * resources.
-   * @param conf configuration whose identity is used to find {@link HConnection}
-   * instance.
-   * @param stopProxy Shuts down all the proxy's put up to cluster members
-   * including to cluster HMaster.  Calls {@link HBaseRPC#stopProxy(org.apache.hadoop.ipc.VersionedProtocol)}.
+   * If there are no more references to it, this will then close connection to
+   * the zookeeper ensemble and let go of all resources.
+   *
+   * @param conf
+   *          configuration whose identity is used to find {@link HConnection}
+   *          instance.
+   * @param stopProxy
+   *          Shuts down all the proxy's put up to cluster members including to
+   *          cluster HMaster. Calls
+   *          {@link HBaseRPC#stopProxy(org.apache.hadoop.ipc.VersionedProtocol)}
+   *          .
    */
   public static void deleteConnection(Configuration conf, boolean stopProxy) {
-    synchronized (HBASE_INSTANCES) {
-      HConnectionImplementation t = HBASE_INSTANCES.remove(conf);
-      if (t != null) {
-        t.close(stopProxy);
-      }
-    }
+    deleteConnection(new HConnectionKey(conf), stopProxy);
   }
 
   /**
@@ -194,9 +209,38 @@ public class HConnectionManager {
    */
   public static void deleteAllConnections(boolean stopProxy) {
     synchronized (HBASE_INSTANCES) {
-      for (HConnectionImplementation t : HBASE_INSTANCES.values()) {
-        if (t != null) {
-          t.close(stopProxy);
+      Set<HConnectionKey> connectionKeys = new HashSet<HConnectionKey>();
+      connectionKeys.addAll(HBASE_INSTANCES.keySet());
+      for (HConnectionKey connectionKey : connectionKeys) {
+        deleteConnection(connectionKey, stopProxy);
+      }
+      HBASE_INSTANCES.clear();
+    }
+  }
+
+  private static void deleteConnection(HConnection connection, boolean stopProxy) {
+    synchronized (HBASE_INSTANCES) {
+      for (Entry<HConnectionKey, HConnectionImplementation> connectionEntry : HBASE_INSTANCES
+          .entrySet()) {
+        if (connectionEntry.getValue() == connection) {
+          deleteConnection(connectionEntry.getKey(), stopProxy);
+          break;
+        }
+      }
+    }
+  }
+
+  private static void deleteConnection(HConnectionKey connectionKey, boolean stopProxy) {
+    synchronized (HBASE_INSTANCES) {
+      HConnectionImplementation connection = HBASE_INSTANCES
+          .get(connectionKey);
+      if (connection != null) {
+        connection.decCount();
+        if (connection.isZeroReference()) {
+          HBASE_INSTANCES.remove(connectionKey);
+          connection.close(stopProxy);
+        } else if (stopProxy) {
+          connection.stopProxyOnClose(stopProxy);
         }
       }
     }
@@ -209,10 +253,15 @@ public class HConnectionManager {
    * @throws ZooKeeperConnectionException
    */
   static int getCachedRegionCount(Configuration conf,
-      byte[] tableName)
-  throws ZooKeeperConnectionException {
-    HConnectionImplementation connection = (HConnectionImplementation)getConnection(conf);
-    return connection.getNumberOfCachedRegionLocations(tableName);
+      final byte[] tableName)
+  throws IOException {
+    return execute(new HConnectable<Integer>(conf) {
+      @Override
+      public Integer connect(HConnection connection) {
+        return ((HConnectionImplementation) connection)
+            .getNumberOfCachedRegionLocations(tableName);
+      }
+    });
   }
 
   /**
@@ -222,13 +271,156 @@ public class HConnectionManager {
    * @throws ZooKeeperConnectionException
    */
   static boolean isRegionCached(Configuration conf,
-      byte[] tableName, byte[] row) throws ZooKeeperConnectionException {
-    HConnectionImplementation connection = (HConnectionImplementation)getConnection(conf);
-    return connection.isRegionCached(tableName, row);
+      final byte[] tableName, final byte[] row) throws IOException {
+    return execute(new HConnectable<Boolean>(conf) {
+      @Override
+      public Boolean connect(HConnection connection) {
+        return ((HConnectionImplementation) connection).isRegionCached(tableName, row);
+      }
+    });
+  }
+
+  /**
+   * This class makes it convenient for one to execute a command in the context
+   * of a {@link HConnection} instance based on the given {@link Configuration}.
+   *
+   * <p>
+   * If you find yourself wanting to use a {@link Connection} for a relatively
+   * short duration of time, and do not want to deal with the hassle of creating
+   * and cleaning up that resource, then you should consider using this
+   * convenience class.
+   *
+   * @param <T>
+   *          the return type of the {@link HConnectable#connect(HConnection)}
+   *          method.
+   */
+  public static abstract class HConnectable<T> {
+    public Configuration conf;
+
+    public HConnectable(Configuration conf) {
+      this.conf = conf;
+    }
+
+    public abstract T connect(HConnection connection) throws IOException;
+  }
+
+  /**
+   * This convenience method invokes the given {@link HConnectable#connect}
+   * implementation using a {@link HConnection} instance that lasts just for the
+   * duration of that invocation.
+   *
+   * @param <T> the return type of the connect method
+   * @param connectable the {@link HConnectable} instance
+   * @return the value returned by the connect method
+   * @throws IOException
+   */
+  public static <T> T execute(HConnectable<T> connectable) throws IOException {
+    if (connectable == null || connectable.conf == null) {
+      return null;
+    }
+    Configuration conf = connectable.conf;
+    HConnection connection = HConnectionManager.getConnection(conf);
+    boolean connectSucceeded = false;
+    try {
+      T returnValue = connectable.connect(connection);
+      connectSucceeded = true;
+      return returnValue;
+    } finally {
+      try {
+        connection.close();
+      } catch (Exception e) {
+        if (connectSucceeded) {
+          throw new IOException("The connection to " + connection
+              + " could not be deleted.", e);
+        }
+      }
+    }
+  }
+
+  /**
+   * Denotes a unique key to a {@link HConnection} instance.
+   *
+   * In essence, this class captures the properties in {@link Configuration}
+   * that may be used in the process of establishing a connection. In light of
+   * that, if any new such properties are introduced into the mix, they must be
+   * added to the {@link HConnectionKey#properties} list.
+   *
+   */
+  static class HConnectionKey {
+    public static String[] CONNECTION_PROPERTIES = new String[] {
+        HConstants.ZOOKEEPER_QUORUM, HConstants.ZOOKEEPER_ZNODE_PARENT,
+        HConstants.ZOOKEEPER_CLIENT_PORT,
+        HConstants.ZOOKEEPER_RECOVERABLE_WAITTIME,
+        HConstants.HBASE_CLIENT_PAUSE, HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+        HConstants.HBASE_CLIENT_RPC_MAXATTEMPTS,
+        HConstants.HBASE_RPC_TIMEOUT_KEY,
+        HConstants.HBASE_CLIENT_PREFETCH_LIMIT,
+        HConstants.HBASE_META_SCANNER_CACHING,
+        HConstants.HBASE_CLIENT_INSTANCE_ID };
+
+    private Map<String, String> properties;
+
+    public HConnectionKey(Configuration conf) {
+      ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
+      if (conf != null) {
+        for (String property : CONNECTION_PROPERTIES) {
+          String value = conf.get(property);
+          if (value != null) {
+            builder.put(property, value);
+          }
+        }
+      }
+      this.properties = builder.build();
+    }
+
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      for (String property : CONNECTION_PROPERTIES) {
+        String value = properties.get(property);
+        if (value != null) {
+          result = prime * result + value.hashCode();
+        }
+      }
+
+      return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj)
+        return true;
+      if (obj == null)
+        return false;
+      if (getClass() != obj.getClass())
+        return false;
+      HConnectionKey that = (HConnectionKey) obj;
+      if (this.properties == null) {
+        if (that.properties != null) {
+          return false;
+        }
+      } else {
+        if (that.properties == null) {
+          return false;
+        }
+        for (String property : CONNECTION_PROPERTIES) {
+          String thisValue = this.properties.get(property);
+          String thatValue = that.properties.get(property);
+          if (thisValue == thatValue) {
+            continue;
+          }
+          if (thisValue == null || !thisValue.equals(thatValue)) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
   }
 
   /* Encapsulates connection to zookeeper and regionservers.*/
-  static class HConnectionImplementation implements HConnection {
+  static class HConnectionImplementation implements HConnection, Closeable {
     static final Log LOG = LogFactory.getLog(HConnectionImplementation.class);
     private final Class<? extends HRegionInterface> serverInterfaceClass;
     private final long pause;
@@ -273,6 +465,10 @@ public class HConnectionManager {
     private final Set<Integer> regionCachePrefetchDisabledTables =
       new CopyOnWriteArraySet<Integer>();
 
+    private boolean stopProxy;
+    private int refCount;
+
+
     /**
      * constructor
      * @param conf Configuration object
@@ -292,15 +488,19 @@ public class HConnectionManager {
             "Unable to find region server interface " + serverClassName, e);
       }
 
-      this.pause = conf.getLong("hbase.client.pause", 1000);
-      this.numRetries = conf.getInt("hbase.client.retries.number", 10);
-      this.maxRPCAttempts = conf.getInt("hbase.client.rpc.maxattempts", 1);
+      this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
+          HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+      this.numRetries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+          HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+      this.maxRPCAttempts = conf.getInt(
+          HConstants.HBASE_CLIENT_RPC_MAXATTEMPTS,
+          HConstants.DEFAULT_HBASE_CLIENT_RPC_MAXATTEMPTS);
       this.rpcTimeout = conf.getInt(
           HConstants.HBASE_RPC_TIMEOUT_KEY,
           HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
-
-      this.prefetchRegionLimit = conf.getInt("hbase.client.prefetch.limit",
-          10);
+      this.prefetchRegionLimit = conf.getInt(
+          HConstants.HBASE_CLIENT_PREFETCH_LIMIT,
+          HConstants.DEFAULT_HBASE_CLIENT_PREFETCH_LIMIT);
 
       setupZookeeperTrackers();
 
@@ -1098,28 +1298,6 @@ public class HConnectionManager {
       }
     }
 
-    void close(boolean stopProxy) {
-      if (master != null) {
-        if (stopProxy) {
-          HBaseRPC.stopProxy(master);
-        }
-        master = null;
-        masterChecked = false;
-      }
-      if (stopProxy) {
-        for (HRegionInterface i: servers.values()) {
-          HBaseRPC.stopProxy(i);
-        }
-      }
-      if (this.zooKeeper != null) {
-        LOG.info("Closed zookeeper sessionid=0x" +
-          Long.toHexString(this.zooKeeper.getZooKeeper().getSessionId()));
-        this.zooKeeper.close();
-        this.zooKeeper = null;
-      }
-      this.closed = true;
-    }
-
     private <R> Callable<MultiResponse> createCallable(final HRegionLocation loc,
         final MultiAction<R> multi, final byte [] tableName) {
       final HConnection connection = this;
@@ -1515,6 +1693,86 @@ public class HConnectionManager {
       } catch (KeeperException ke) {
         throw new IOException("Unexpected ZooKeeper exception", ke);
       }
+    }
+
+    public void stopProxyOnClose(boolean stopProxy) {
+      this.stopProxy = stopProxy;
+    }
+
+    /**
+     * Increment this client's reference count.
+     */
+    void incCount() {
+      ++refCount;
+    }
+
+    /**
+     * Decrement this client's reference count.
+     */
+    void decCount() {
+      if (refCount > 0) {
+        --refCount;
+      }
+    }
+
+    /**
+     * Return if this client has no reference
+     *
+     * @return true if this client has no reference; false otherwise
+     */
+    boolean isZeroReference() {
+      return refCount == 0;
+    }
+
+    void close(boolean stopProxy) {
+      if (this.closed) {
+        return;
+      }
+      if (master != null) {
+        if (stopProxy) {
+          HBaseRPC.stopProxy(master);
+        }
+        master = null;
+        masterChecked = false;
+      }
+      if (stopProxy) {
+        for (HRegionInterface i : servers.values()) {
+          HBaseRPC.stopProxy(i);
+        }
+      }
+      this.servers.clear();
+      if (this.zooKeeper != null) {
+        LOG.info("Closed zookeeper sessionid=0x"
+            + Long.toHexString(this.zooKeeper.getZooKeeper().getSessionId()));
+        this.zooKeeper.close();
+        this.zooKeeper = null;
+      }
+      this.closed = true;
+    }
+
+    public void close() {
+      HConnectionManager.deleteConnection(this, stopProxy);
+      LOG.debug("The connection to " + this.zooKeeper + " has been closed.");
+    }
+
+    /**
+     * Close the connection for good, regardless of what the current value of
+     * {@link #refCount} is. Ideally, {@link refCount} should be zero at this
+     * point, which would be the case if all of its consumers close the
+     * connection. However, on the off chance that someone is unable to close
+     * the connection, perhaps because it bailed out prematurely, the method
+     * below will ensure that this {@link Connection} instance is cleaned up.
+     * Caveat: The JVM may take an unknown amount of time to call finalize on an
+     * unreachable object, so our hope is that every consumer cleans up after
+     * itself, like any good citizen.
+     */
+    @Override
+    protected void finalize() throws Throwable {
+      // Pretend as if we are about to release the last remaining reference
+      refCount = 1;
+      close();
+      LOG.debug("The connection to " + this.zooKeeper
+          + " was closed by the finalize method.");
     }
   }
 }

@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -62,10 +63,10 @@ import org.apache.hadoop.util.StringUtils;
  * <p>Currently HBaseAdmin instances are not expected to be long-lived.  For
  * example, an HBaseAdmin instance will not ride over a Master restart.
  */
-public class HBaseAdmin implements Abortable {
+public class HBaseAdmin implements Abortable, Closeable {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
 //  private final HConnection connection;
-  final HConnection connection;
+  private final HConnection connection;
   private volatile Configuration conf;
   private final long pause;
   private final int numRetries;
@@ -102,9 +103,7 @@ public class HBaseAdmin implements Abortable {
   throws ZooKeeperConnectionException, IOException {
     CatalogTracker ct = null;
     try {
-      HConnection connection =
-        HConnectionManager.getConnection(this.conf);
-      ct = new CatalogTracker(connection);
+      ct = new CatalogTracker(this.conf);
       ct.start();
     } catch (InterruptedException e) {
       // Let it out as an IOE for now until we redo all so tolerate IEs
@@ -1239,5 +1238,11 @@ public class HBaseAdmin implements Abortable {
     Configuration copyOfConf = HBaseConfiguration.create(conf);
     copyOfConf.setInt("hbase.client.retries.number", 1);
     new HBaseAdmin(copyOfConf);
+  }
+
+  public void close() throws IOException {
+    if (this.connection != null) {
+      this.connection.close();
+    }
   }
 }

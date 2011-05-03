@@ -73,7 +73,7 @@ public class TestClockSkewDetection {
 
       @Override
       public void stop(String why) {
-      }}, null);
+      }}, null, false);
 
     LOG.debug("regionServerStartup 1");
     InetAddress ia1 = InetAddress.getLocalHost();

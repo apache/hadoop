@@ -93,13 +93,28 @@ public final class HConstants {
   /** Name of ZooKeeper config file in conf/ directory. */
   public static final String ZOOKEEPER_CONFIG_NAME = "zoo.cfg";
 
-  /** default client port that the zookeeper listens on */
+  /** Parameter name for the client port that the zookeeper listens on */
+  public static final String ZOOKEEPER_CLIENT_PORT = "hbase.zookeeper.property.clientPort";
+
+  /** Default client port that the zookeeper listens on */
   public static final int DEFAULT_ZOOKEPER_CLIENT_PORT = 2181;
+
+  /** Parameter name for the wait time for the recoverable zookeeper */
+  public static final String ZOOKEEPER_RECOVERABLE_WAITTIME = "hbase.zookeeper.recoverable.waittime";
+
+  /** Default wait time for the recoverable zookeeper */
+  public static final long DEFAULT_ZOOKEPER_RECOVERABLE_WAITIME = 10000;
 
   /** Parameter name for the root dir in ZK for this cluster */
   public static final String ZOOKEEPER_ZNODE_PARENT = "zookeeper.znode.parent";
 
   public static final String DEFAULT_ZOOKEEPER_ZNODE_PARENT = "/hbase";
+
+  /** Parameter name for the limit on concurrent client-side zookeeper connections */
+  public static final String ZOOKEEPER_MAX_CLIENT_CNXNS = "hbase.zookeeper.property.maxClientCnxns";
+
+  /** Default limit on concurrent client-side zookeeper connections */
+  public static final int DEFAULT_ZOOKEPER_MAX_CLIENT_CNXNS = 30;
 
   /** Parameter name for port region server listens on. */
   public static final String REGIONSERVER_PORT = "hbase.regionserver.port";
@@ -343,6 +358,74 @@ public final class HConstants {
    */
   public static long DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE = Long.MAX_VALUE;
 
+  /**
+   * Parameter name for client pause value, used mostly as value to wait
+   * before running a retry of a failed get, region lookup, etc.
+   */
+  public static String HBASE_CLIENT_PAUSE = "hbase.client.pause";
+
+  /**
+   * Default value of {@link #HBASE_CLIENT_PAUSE}.
+   */
+  public static long DEFAULT_HBASE_CLIENT_PAUSE = 1000;
+
+  /**
+   * Parameter name for maximum retries, used as maximum for all retryable
+   * operations such as fetching of the root region from root region server,
+   * getting a cell's value, starting a row update, etc.
+   */
+  public static String HBASE_CLIENT_RETRIES_NUMBER = "hbase.client.retries.number";
+
+  /**
+   * Default value of {@link #HBASE_CLIENT_RETRIES_NUMBER}.
+   */
+  public static int DEFAULT_HBASE_CLIENT_RETRIES_NUMBER = 10;
+
+  /**
+   * Parameter name for maximum attempts, used to limit the number of times the
+   * client will try to obtain the proxy for a given region server.
+   */
+  public static String HBASE_CLIENT_RPC_MAXATTEMPTS = "hbase.client.rpc.maxattempts";
+
+  /**
+   * Default value of {@link #HBASE_CLIENT_RPC_MAXATTEMPTS}.
+   */
+  public static int DEFAULT_HBASE_CLIENT_RPC_MAXATTEMPTS = 1;
+
+  /**
+   * Parameter name for client prefetch limit, used as the maximum number of regions
+   * info that will be prefetched.
+   */
+  public static String HBASE_CLIENT_PREFETCH_LIMIT = "hbase.client.prefetch.limit";
+
+  /**
+   * Default value of {@link #HBASE_CLIENT_PREFETCH_LIMIT}.
+   */
+  public static int DEFAULT_HBASE_CLIENT_PREFETCH_LIMIT = 10;
+
+  /**
+   * Parameter name for number of rows that will be fetched when calling next on
+   * a scanner if it is not served from memory. Higher caching values will
+   * enable faster scanners but will eat up more memory and some calls of next
+   * may take longer and longer times when the cache is empty.
+   */
+  public static String HBASE_META_SCANNER_CACHING = "hbase.meta.scanner.caching";
+
+  /**
+   * Default value of {@link #HBASE_META_SCANNER_CACHING}.
+   */
+  public static int DEFAULT_HBASE_META_SCANNER_CACHING = 100;
+
+  /**
+   * Parameter name for unique identifier for this {@link Configuration}
+   * instance. If there are two or more {@link Configuration} instances that,
+   * for all intents and purposes, are the same except for their instance ids,
+   * then they will not be able to share the same {@link Connection} instance.
+   * On the other hand, even if the instance ids are the same, it could result
+   * in non-shared {@link Connection} instances if some of the other connection
+   * parameters differ.
+   */
+  public static String HBASE_CLIENT_INSTANCE_ID = "hbase.client.instance.id";
 
   /**
    * HRegion server lease period in milliseconds. Clients must report in within this period
@@ -351,12 +434,11 @@ public final class HConstants {
   public static String HBASE_REGIONSERVER_LEASE_PERIOD_KEY =
     "hbase.regionserver.lease.period";
 
-
   /**
    * Default value of {@link #HBASE_REGIONSERVER_LEASE_PERIOD_KEY}.
    */
   public static long DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD = 60000;
-  
+
   /**
    * timeout for each RPC
    */

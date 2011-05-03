@@ -78,8 +78,6 @@ import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.MultiAction;
 import org.apache.hadoop.hbase.client.MultiPut;
@@ -169,7 +167,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   protected final Configuration conf;
 
-  private final HConnection connection;
   protected final AtomicBoolean haveRootRegion = new AtomicBoolean(false);
   private FileSystem fs;
   private Path rootDir;
@@ -305,7 +302,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   throws IOException, InterruptedException {
     this.fsOk = true;
     this.conf = conf;
-    this.connection = HConnectionManager.getConnection(conf);
     this.isOnline = false;
     checkCodecs(this.conf);
 
@@ -534,7 +530,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     blockAndCheckIfStopped(this.clusterStatusTracker);
 
     // Create the catalog tracker and start it;
-    this.catalogTracker = new CatalogTracker(this.zooKeeper, this.connection,
+    this.catalogTracker = new CatalogTracker(this.zooKeeper, this.conf,
       this, this.conf.getInt("hbase.regionserver.catalog.timeout", Integer.MAX_VALUE));
     catalogTracker.start();
   }
@@ -707,7 +703,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     } catch (KeeperException e) {
       LOG.warn("Failed deleting my ephemeral node", e);
     }
-    HConnectionManager.deleteConnection(conf, true);
     this.zooKeeper.close();
     if (!killed) {
       join();

@@ -96,6 +96,7 @@ Release 0.91.0 - Unreleased
    HBASE-3838  RegionCoprocesorHost.preWALRestore throws npe in case there is
                no RegionObserver registered (Himanshu Vashishtha)
    HBASE-3847  Turn off DEBUG logging of RPCs in WriteableRPCEngine on TRUNK
+   HBASE-3777  Redefine Identity Of HBase Configuration (Karthick Sankarachary)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

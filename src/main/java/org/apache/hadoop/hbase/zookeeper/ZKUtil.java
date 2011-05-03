@@ -154,7 +154,7 @@ public class ZKUtil {
         "[\\t\\n\\x0B\\f\\r]", ""));
     StringBuilder builder = new StringBuilder(ensemble);
     builder.append(":");
-    builder.append(conf.get("hbase.zookeeper.property.clientPort"));
+    builder.append(conf.get(HConstants.ZOOKEEPER_CLIENT_PORT));
     builder.append(":");
     builder.append(conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
     if (name != null && !name.isEmpty()) {

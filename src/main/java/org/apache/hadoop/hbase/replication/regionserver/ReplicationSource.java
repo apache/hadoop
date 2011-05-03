@@ -343,6 +343,13 @@ public class ReplicationSource extends Thread
       shipEdits();
 
     }
+    if (this.conn != null) {
+      try {
+        this.conn.close();
+      } catch (IOException e) {
+        LOG.debug("Attempt to close connection failed", e);
+      }
+    }
     LOG.debug("Source exiting " + peerClusterId);
   }
 

@@ -129,7 +129,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
       // Apparently this is recoverable.  Retry a while.
       // See http://wiki.apache.org/hadoop/ZooKeeper/ErrorHandling
       // TODO: Generalize out in ZKUtil.
-      long wait = conf.getLong("hbase.zookeeper.recoverable.waittime", 10000);
+      long wait = conf.getLong(HConstants.ZOOKEEPER_RECOVERABLE_WAITTIME,
+          HConstants.DEFAULT_ZOOKEPER_RECOVERABLE_WAITIME);
       long finished = System.currentTimeMillis() + wait;
       KeeperException ke = null;
       do {

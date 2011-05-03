@@ -139,6 +139,7 @@ public class TestTableMapReduce extends MultiRegionTable {
       // verify map-reduce results
       verify(Bytes.toString(table.getTableName()));
     } finally {
+      table.close();
       mrCluster.shutdown();
       if (job != null) {
         FileUtil.fullyDelete(
@@ -170,6 +171,7 @@ public class TestTableMapReduce extends MultiRegionTable {
       }
     }
     assertTrue(verified);
+    table.close();
   }
 
   /**

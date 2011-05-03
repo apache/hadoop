@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.client.replication;
 
+import java.io.Closeable;
 import java.io.IOException;
 
 import org.apache.commons.lang.NotImplementedException;
@@ -63,9 +64,10 @@ import org.apache.zookeeper.KeeperException;
  * <code>replication</code>.
  * </p>
  */
-public class ReplicationAdmin {
+public class ReplicationAdmin implements Closeable {
 
   private final ReplicationZookeeper replicationZk;
+  private final Configuration configuration;
   private final HConnection connection;
 
   /**
@@ -79,6 +81,7 @@ public class ReplicationAdmin {
       throw new RuntimeException("hbase.replication isn't true, please " +
           "enable it in order to use replication");
     }
+    this.configuration = conf;
     this.connection = HConnectionManager.getConnection(conf);
     ZooKeeperWatcher zkw = this.connection.getZooKeeperWatcher();
     try {
@@ -168,5 +171,12 @@ public class ReplicationAdmin {
    */
   ReplicationZookeeper getReplicationZk() {
     return replicationZk;
+  }
+
+  @Override
+  public void close() throws IOException {
+    if (this.connection != null) {
+      this.connection.close();
+    }
   }
 }

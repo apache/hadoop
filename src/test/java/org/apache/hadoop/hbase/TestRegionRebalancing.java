@@ -100,8 +100,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
    * @throws InterruptedException
    */
   public void testRebalancing() throws IOException, InterruptedException {
-    HConnection connection = HConnectionManager.getConnection(conf);
-    CatalogTracker ct = new CatalogTracker(connection);
+    CatalogTracker ct = new CatalogTracker(conf);
     ct.start();
     Map<HRegionInfo, ServerName> regions = MetaReader.fullScan(ct);
     for (Map.Entry<HRegionInfo, ServerName> e: regions.entrySet()) {

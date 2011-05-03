@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -87,12 +88,12 @@ public class VerifyReplication {
      * @throws IOException When something is broken with the data.
      */
     @Override
-    public void map(ImmutableBytesWritable row, Result value,
+    public void map(ImmutableBytesWritable row, final Result value,
                     Context context)
         throws IOException {
       if (replicatedScanner == null) {
         Configuration conf = context.getConfiguration();
-        Scan scan = new Scan();
+        final Scan scan = new Scan();
         scan.setCaching(conf.getInt(TableInputFormat.SCAN_CACHEDROWS, 1));
         long startTime = conf.getLong(NAME + ".startTime", 0);
         long endTime = conf.getLong(NAME + ".endTime", 0);
@@ -107,18 +108,23 @@ public class VerifyReplication {
           scan.setTimeRange(startTime,
               endTime == 0 ? HConstants.LATEST_TIMESTAMP : endTime);
         }
-        try {
-          HConnection conn = HConnectionManager.getConnection(conf);
-          ReplicationZookeeper zk = new ReplicationZookeeper(conn, conf,
-              conn.getZooKeeperWatcher());
-          ReplicationPeer peer = zk.getPeer(conf.get(NAME+".peerId"));
-          HTable replicatedTable = new HTable(peer.getConfiguration(),
-              conf.get(NAME+".tableName"));
-          scan.setStartRow(value.getRow());
-          replicatedScanner = replicatedTable.getScanner(scan);
-        } catch (KeeperException e) {
-          throw new IOException("Got a ZK exception", e);
-        }
+        HConnectionManager.execute(new HConnectable<Void>(conf) {
+          @Override
+          public Void connect(HConnection conn) throws IOException {
+            try {
+              ReplicationZookeeper zk = new ReplicationZookeeper(conn, conf,
+                  conn.getZooKeeperWatcher());
+              ReplicationPeer peer = zk.getPeer(conf.get(NAME+".peerId"));
+              HTable replicatedTable = new HTable(peer.getConfiguration(),
+                  conf.get(NAME+".tableName"));
+              scan.setStartRow(value.getRow());
+              replicatedScanner = replicatedTable.getScanner(scan);
+            } catch (KeeperException e) {
+              throw new IOException("Got a ZK exception", e);
+            }
+            return null;
+          }
+        });
       }
       Result res = replicatedScanner.next();
       try {
@@ -151,20 +157,25 @@ public class VerifyReplication {
     if (!conf.getBoolean(HConstants.REPLICATION_ENABLE_KEY, false)) {
       throw new IOException("Replication needs to be enabled to verify it.");
     }
-    try {
-      HConnection conn = HConnectionManager.getConnection(conf);
-      ReplicationZookeeper zk = new ReplicationZookeeper(conn, conf,
-          conn.getZooKeeperWatcher());
-      // Just verifying it we can connect
-      ReplicationPeer peer = zk.getPeer(peerId);
-      if (peer == null) {
-        throw new IOException("Couldn't get access to the slave cluster," +
-            "please see the log");
+    HConnectionManager.execute(new HConnectable<Void>(conf) {
+      @Override
+      public Void connect(HConnection conn) throws IOException {
+        try {
+          ReplicationZookeeper zk = new ReplicationZookeeper(conn, conf,
+              conn.getZooKeeperWatcher());
+          // Just verifying it we can connect
+          ReplicationPeer peer = zk.getPeer(peerId);
+          if (peer == null) {
+            throw new IOException("Couldn't get access to the slave cluster," +
+                "please see the log");
+          }
+        } catch (KeeperException ex) {
+          throw new IOException("Couldn't get access to the slave cluster" +
+              " because: ", ex);
+        }
+        return null;
       }
-    } catch (KeeperException ex) {
-      throw new IOException("Couldn't get access to the slave cluster" +
-          " because: ", ex);
-    }
+    });
     conf.set(NAME+".peerId", peerId);
     conf.set(NAME+".tableName", tableName);
     conf.setLong(NAME+".startTime", startTime);

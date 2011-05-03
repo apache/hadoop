@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
@@ -120,12 +121,25 @@ public class MetaScanner {
    * @throws IOException e
    */
   public static void metaScan(Configuration configuration,
+      final MetaScannerVisitor visitor, final byte[] tableName,
+      final byte[] row, final int rowLimit, final byte[] metaTableName)
+      throws IOException {
+    HConnectionManager.execute(new HConnectable<Void>(configuration) {
+      @Override
+      public Void connect(HConnection connection) throws IOException {
+        metaScan(conf, connection, visitor, tableName, row, rowLimit,
+            metaTableName);
+        return null;
+      }
+    });
+  }
+
+  private static void metaScan(Configuration configuration, HConnection connection,
       MetaScannerVisitor visitor, byte [] tableName, byte[] row,
       int rowLimit, final byte [] metaTableName)
   throws IOException {
     int rowUpperLimit = rowLimit > 0 ? rowLimit: Integer.MAX_VALUE;
 
-    HConnection connection = HConnectionManager.getConnection(configuration);
     // if row is not null, we want to use the startKey of the row's region as
     // the startRow for the meta scan.
     byte[] startRow;
@@ -165,8 +179,9 @@ public class MetaScanner {
 
     // Scan over each meta region
     ScannerCallable callable;
-    int rows = Math.min(rowLimit,
-        configuration.getInt("hbase.meta.scanner.caching", 100));
+    int rows = Math.min(rowLimit, configuration.getInt(
+        HConstants.HBASE_META_SCANNER_CACHING,
+        HConstants.DEFAULT_HBASE_META_SCANNER_CACHING));
     do {
       final Scan scan = new Scan(startRow).addFamily(HConstants.CATALOG_FAMILY);
       if (LOG.isDebugEnabled()) {

@@ -28,12 +28,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -57,6 +59,7 @@ import org.apache.hadoop.ipc.RemoteException;
  */
 public class CatalogTracker {
   private static final Log LOG = LogFactory.getLog(CatalogTracker.class);
+  private final Configuration conf;
   private final HConnection connection;
   private final ZooKeeperWatcher zookeeper;
   private final RootRegionTracker rootRegionTracker;
@@ -77,15 +80,18 @@ public class CatalogTracker {
     HRegionInfo.FIRST_META_REGIONINFO.getRegionName();
 
   /**
-   * Constructs a catalog tracker.  Find current state of catalog tables and
-   * begin active tracking by executing {@link #start()} post construction.
-   * Does not timeout.
-   * @param connection Server connection; if problem, this connections
-   * {@link HConnection#abort(String, Throwable)} will be called.
-   * @throws IOException 
+   * Constructs a catalog tracker. Find current state of catalog tables and
+   * begin active tracking by executing {@link #start()} post construction. Does
+   * not timeout.
+   *
+   * @param conf
+   *          the {@link Configuration} from which a {@link HConnection} will be
+   *          obtained; if problem, this connections
+   *          {@link HConnection#abort(String, Throwable)} will be called.
+   * @throws IOException
    */
-  public CatalogTracker(final HConnection connection) throws IOException {
-    this(connection.getZooKeeperWatcher(), connection, connection);
+  public CatalogTracker(final Configuration conf) throws IOException {
+    this(null, conf, null);
   }
 
   /**
@@ -97,10 +103,10 @@ public class CatalogTracker {
    * @param abortable if fatal exception
    * @throws IOException 
    */
-  public CatalogTracker(final ZooKeeperWatcher zk, final HConnection connection,
+  public CatalogTracker(final ZooKeeperWatcher zk, final Configuration conf,
       final Abortable abortable)
   throws IOException {
-    this(zk, connection, abortable, 0);
+    this(zk, conf, abortable, 0);
   }
 
   /**
@@ -113,11 +119,21 @@ public class CatalogTracker {
    * ({@link Object#wait(long)} when passed a <code>0</code> waits for ever).
    * @throws IOException 
    */
-  public CatalogTracker(final ZooKeeperWatcher zk, final HConnection connection,
-      final Abortable abortable, final int defaultTimeout)
+  public CatalogTracker(final ZooKeeperWatcher zk, final Configuration conf,
+      Abortable abortable, final int defaultTimeout)
   throws IOException {
-    this.zookeeper = zk;
+    this(zk, conf, HConnectionManager.getConnection(conf), abortable, defaultTimeout);
+  }
+
+  CatalogTracker(final ZooKeeperWatcher zk, final Configuration conf,
+      HConnection connection, Abortable abortable, final int defaultTimeout)
+  throws IOException {
+    this.conf = conf;
     this.connection = connection;
+    this.zookeeper = (zk == null) ? this.connection.getZooKeeperWatcher() : zk;
+    if (abortable == null) {
+      abortable = this.connection;
+    }
     this.rootRegionTracker = new RootRegionTracker(zookeeper, abortable);
     this.metaNodeTracker = new MetaNodeTracker(zookeeper, this, abortable);
     this.defaultTimeout = defaultTimeout;
@@ -141,13 +157,24 @@ public class CatalogTracker {
    * Interrupts any ongoing waits.
    */
   public void stop() {
-    LOG.debug("Stopping catalog tracker " + this);
-    this.stopped = true;
-    this.rootRegionTracker.stop();
-    this.metaNodeTracker.stop();
-    // Call this and it will interrupt any ongoing waits on meta.
-    synchronized (this.metaAvailable) {
-      this.metaAvailable.notifyAll();
+    if (!this.stopped) {
+      LOG.debug("Stopping catalog tracker " + this);
+      this.stopped = true;
+      this.rootRegionTracker.stop();
+      this.metaNodeTracker.stop();
+      try {
+        if (this.connection != null) {
+          this.connection.close();
+        }
+      } catch (IOException e) {
+        // Although the {@link Closeable} interface throws an {@link
+        // IOException}, in reality, the implementation would never do that.
+        LOG.error("Attempt to close catalog tracker's connection failed.", e);
+      }
+      // Call this and it will interrupt any ongoing waits on meta.
+      synchronized (this.metaAvailable) {
+        this.metaAvailable.notifyAll();
+      }
     }
   }
 

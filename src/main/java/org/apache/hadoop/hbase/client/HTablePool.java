@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Queue;
@@ -42,7 +43,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  *
  * <p>Pool will manage its own cluster to the cluster. See {@link HConnectionManager}.
  */
-public class HTablePool {
+public class HTablePool implements Closeable {
   private final Map<String, Queue<HTableInterface>> tables =
     new ConcurrentHashMap<String, Queue<HTableInterface>>();
   private final Configuration config;
@@ -69,7 +70,7 @@ public class HTablePool {
       final HTableInterfaceFactory tableFactory) {
     // Make a new configuration instance so I can safely cleanup when
     // done with the pool.
-    this.config = config == null? new Configuration(): new Configuration(config);
+    this.config = config == null? new Configuration(): config;
     this.maxSize = maxSize;
     this.tableFactory = tableFactory == null? new HTableFactory(): tableFactory;
   }
@@ -147,7 +148,6 @@ public class HTablePool {
         table = queue.poll();
       }
     }
-    HConnectionManager.deleteConnection(this.config, true);
   }
 
   /**
@@ -157,6 +157,17 @@ public class HTablePool {
    */
   public void closeTablePool(final byte[] tableName) throws IOException {
     closeTablePool(Bytes.toString(tableName));
+  }
+
+  /**
+   * Closes all the HTable instances , belonging to all tables in the table pool.
+   * <p>
+   * Note: this is a 'shutdown' of all the table pools.
+   */
+  public void close() throws IOException {
+    for (String tableName : tables.keySet()) {
+      closeTablePool(tableName);
+    }
   }
 
   int getCurrentPoolSize(String tableName) {

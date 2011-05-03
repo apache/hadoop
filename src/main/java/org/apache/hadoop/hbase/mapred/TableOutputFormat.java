@@ -66,7 +66,7 @@ FileOutputFormat<ImmutableBytesWritable, Put> {
 
     public void close(Reporter reporter)
       throws IOException {
-      m_table.flushCommits();
+      m_table.close();
     }
 
     public void write(ImmutableBytesWritable key,

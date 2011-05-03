@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -80,6 +81,7 @@ public class ServerManager {
 
   private final Server master;
   private final MasterServices services;
+  private final HConnection connection;
 
   private final DeadServer deadservers;
 
@@ -89,13 +91,21 @@ public class ServerManager {
    * Constructor.
    * @param master
    * @param services
+   * @throws ZooKeeperConnectionException
    */
-  public ServerManager(final Server master, final MasterServices services) {
+  public ServerManager(final Server master, final MasterServices services)
+      throws ZooKeeperConnectionException {
+    this(master, services, true);
+  }
+
+  ServerManager(final Server master, final MasterServices services,
+      final boolean connect) throws ZooKeeperConnectionException {
     this.master = master;
     this.services = services;
     Configuration c = master.getConfiguration();
     maxSkew = c.getLong("hbase.master.maxclockskew", 30000);
     this.deadservers = new DeadServer();
+    this.connection = connect ? HConnectionManager.getConnection(c) : null;
   }
 
   /**
@@ -443,12 +453,10 @@ public class ServerManager {
    */
   private HRegionInterface getServerConnection(final ServerName sn)
   throws IOException {
-    HConnection connection =
-      HConnectionManager.getConnection(this.master.getConfiguration());
     HRegionInterface hri = this.serverConnections.get(sn.toString());
     if (hri == null) {
       LOG.debug("New connection to " + sn.toString());
-      hri = connection.getHRegionConnection(sn.getHostname(), sn.getPort());
+      hri = this.connection.getHRegionConnection(sn.getHostname(), sn.getPort());
       this.serverConnections.put(sn, hri);
     }
     return hri;
@@ -501,8 +509,15 @@ public class ServerManager {
   }
 
   /**
-   * Stop the ServerManager.  Currently does nothing.
+   * Stop the ServerManager.  Currently closes the connection to the master.
    */
   public void stop() {
+    if (connection != null) {
+      try {
+        connection.close();
+      } catch (IOException e) {
+        LOG.error("Attempt to close connection to master failed", e);
+      }
+    }
   }
 }
