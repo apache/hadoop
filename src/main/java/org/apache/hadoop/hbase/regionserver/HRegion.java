@@ -2158,7 +2158,7 @@ public class HRegion implements HeapSize { // , Writable{
       // How often to send a progress report (default 1/2 master timeout)
       int period = this.conf.getInt("hbase.hstore.report.period",
           this.conf.getInt("hbase.master.assignment.timeoutmonitor.timeout",
-              30000) / 2);
+              180000) / 2);
       long lastReport = EnvironmentEdgeManager.currentTimeMillis();
 
       while ((entry = reader.next()) != null) {

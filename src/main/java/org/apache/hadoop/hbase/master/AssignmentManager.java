@@ -160,7 +160,7 @@ public class AssignmentManager extends ZooKeeperListener {
     this.timeoutMonitor = new TimeoutMonitor(
       conf.getInt("hbase.master.assignment.timeoutmonitor.period", 10000),
       master,
-      conf.getInt("hbase.master.assignment.timeoutmonitor.timeout", 30000));
+      conf.getInt("hbase.master.assignment.timeoutmonitor.timeout", 180000));
     Threads.setDaemonThreadRunning(timeoutMonitor,
       master.getServerName() + ".timeoutMonitor");
     this.zkTable = new ZKTable(this.master.getZooKeeper());

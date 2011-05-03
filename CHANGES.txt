@@ -279,6 +279,7 @@ Release 0.90.3 - Unreleased
 
   TASKS
    HBASE-3748  Add rolling of thrift/rest daemons to graceful_stop.sh script
+   HBASE-3846  Set RIT timeout higher
 
 Release 0.90.2 - 20110408
   
