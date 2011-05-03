@@ -183,9 +183,8 @@ org.apache.hadoop.hbase.HTableDescriptor;
      for (ServerName serverName: serverNames) {
        // TODO: this is incorrect since this conf might differ from RS to RS
        // or be set to 0 to get ephemeral ports
-       int infoPort = conf.getInt("hbase.regionserver.info.port", 60030);
+       int infoPort = master.getConfiguration().getInt("hbase.regionserver.info.port", 60030);
        String hostname = serverName.getHostname() + ":" + infoPort;
-       String hostname = serverName.getHostname() + ":60030";
        String url = "http://" + hostname + "/";
        HServerLoad hsl = master.getServerManager().getLoad(serverName);
        String loadStr = hsl == null? "-": hsl.toString();
