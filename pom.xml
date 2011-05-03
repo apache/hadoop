@@ -511,6 +511,47 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.jamon</groupId>
+        <artifactId>jamon-maven-plugin</artifactId>
+        <version>2.3.4</version>
+        <executions>
+          <execution>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>translate</goal>
+            </goals>
+            <configuration>
+              <templateSourceDir>src/main/jamon</templateSourceDir>
+              <templateOutputDir>target/generated-jamon</templateOutputDir>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-eclipse-plugin</artifactId>
+        <configuration>
+          <additionalProjectnatures>
+            <projectnature>org.jamon.project.jamonnature</projectnature>
+          </additionalProjectnatures>
+          <buildcommands>
+            <buildcommand>org.jamon.project.templateBuilder</buildcommand>
+            <buildcommand>org.eclipse.jdt.core.javabuilder</buildcommand>
+            <buildcommand>org.jamon.project.markerUpdater</buildcommand>
+          </buildcommands>
+          <additionalConfig>
+             <file>
+                 <name>.settings/org.jamon.prefs</name>
+                 <content># now
+    eclipse.preferences.version=1
+    templateSourceDir=src/main/jamon
+    templateOutputDir=target/generated-jamon
+    </content>
+            </file>
+          </additionalConfig>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 
@@ -769,6 +810,12 @@
           <artifactId>servlet-api</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.jamon</groupId>
+      <artifactId>jamon-runtime</artifactId>
+      <version>2.3.1</version>
     </dependency>
 
     <!-- REST dependencies -->

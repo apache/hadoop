@@ -1286,7 +1286,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     while (true) {
       try {
         this.infoServer = new InfoServer("regionserver", addr, port, false);
-        this.infoServer.setAttribute("regionserver", this);
+        this.infoServer.addServlet("status", "/rs-status", RSStatusServlet.class); 
+        this.infoServer.setAttribute(REGIONSERVER, this);
         this.infoServer.start();
         break;
       } catch (BindException e) {

@@ -1,0 +1,201 @@
+<%doc>
+Copyright 2011 The Apache Software Foundation
+
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+</%doc>
+<%args>
+HMaster master;
+HBaseAdmin admin;
+Map<String, Integer> frags = null;
+ServerName rootLocation = null;
+ServerName metaLocation = null;
+List<ServerName> servers = null;
+boolean showAppendWarning = false;
+</%args>
+<%import>
+java.util.*;
+org.apache.hadoop.util.StringUtils;
+org.apache.hadoop.hbase.util.Bytes;
+org.apache.hadoop.hbase.util.JvmVersion;
+org.apache.hadoop.hbase.util.FSUtils;
+org.apache.hadoop.hbase.master.HMaster;
+org.apache.hadoop.hbase.HConstants;
+org.apache.hadoop.hbase.HServerLoad;
+org.apache.hadoop.hbase.ServerName;
+org.apache.hadoop.hbase.client.HBaseAdmin;
+org.apache.hadoop.hbase.client.HConnectionManager;
+org.apache.hadoop.hbase.HTableDescriptor;
+</%import>
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
+<title>HBase Master: <% master.getServerName().getHostAndPort() %></title>
+<link rel="stylesheet" type="text/css" href="/static/hbase.css" />
+</head>
+<body>
+<a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="HBase Logo" title="HBase Logo" /></a>
+<h1 id="page_title">Master: <% master.getServerName().getHostname() %>:<% master.getServerName().getPort() %></h1>
+<p id="links_menu"><a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a>, <a href="/logLevel">Log Level</a></p>
+
+<!-- Various warnings that cluster admins should be aware of -->
+<%if JvmVersion.isBadJvmVersion() %>
+  <div class="warning">
+  Your current JVM version <% System.getProperty("java.version") %> is known to be
+  unstable with HBase. Please see the
+  <a href="http://wiki.apache.org/hadoop/Hbase/Troubleshooting#A18">HBase wiki</a>
+  for details.
+  </div>
+</%if>
+<%if showAppendWarning %> 
+  <div class="warning">
+  You are currently running the HMaster without HDFS append support enabled.
+  This may result in data loss.
+  Please see the <a href="http://wiki.apache.org/hadoop/Hbase/HdfsSyncSupport">HBase wiki</a>
+  for details.
+  </div>
+</%if>
+
+<hr id="head_rule" />
+
+<h2>Master Attributes</h2>
+<table>
+<tr><th>Attribute Name</th><th>Value</th><th>Description</th></tr>
+<tr><td>HBase Version</td><td><% org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, r<% org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td><td>HBase version and svn revision</td></tr>
+<tr><td>HBase Compiled</td><td><% org.apache.hadoop.hbase.util.VersionInfo.getDate() %>, <% org.apache.hadoop.hbase.util.VersionInfo.getUser() %></td><td>When HBase version was compiled and by whom</td></tr>
+<tr><td>Hadoop Version</td><td><% org.apache.hadoop.util.VersionInfo.getVersion() %>, r<% org.apache.hadoop.util.VersionInfo.getRevision() %></td><td>Hadoop version and svn revision</td></tr>
+<tr><td>Hadoop Compiled</td><td><% org.apache.hadoop.util.VersionInfo.getDate() %>, <% org.apache.hadoop.util.VersionInfo.getUser() %></td><td>When Hadoop version was compiled and by whom</td></tr>
+<tr><td>HBase Root Directory</td><td><% FSUtils.getRootDir(master.getConfiguration()).toString() %></td><td>Location of HBase home directory</td></tr>
+<tr><td>HBase Cluster ID</td><td><% master.getClusterId() != null ? master.getClusterId() : "Not set" %><td>Unique identifier generated for each HBase cluster</td></tr>
+<tr><td>Load average</td><td><% StringUtils.limitDecimalTo2(master.getServerManager().getAverageLoad()) %></td><td>Average number of regions per regionserver. Naive computation.</td></tr>
+<%if frags != null %>
+        <tr><td>Fragmentation</td><td><% frags.get("-TOTAL-") != null ? frags.get("-TOTAL-").intValue() + "%" : "n/a" %></td><td>Overall fragmentation of all tables, including .META. and -ROOT-.</td></tr>
+</%if>
+<tr><td>Zookeeper Quorum</td><td><% master.getZooKeeperWatcher().getQuorum() %></td><td>Addresses of all registered ZK servers. For more, see <a href="/zk.jsp">zk dump</a>.</td></tr>
+</table>
+<%if (rootLocation != null) %>
+<& catalogTables &>
+</%if>
+<%if (metaLocation != null) %>
+<& userTables &>
+</%if>
+<%if (servers != null) %>
+<& regionServers &>
+</%if>
+</body>
+</html>
+
+
+<%def catalogTables>
+<h2>Catalog Tables</h2>
+<table>
+<tr>
+    <th>Table</th>
+    <%if (frags != null) %>
+        <th title="Fragmentation - Will be 0% after a major compaction and fluctuate during normal usage.">Frag.</th>
+    </%if>
+    <th>Description</th>
+</tr>
+<tr>
+    <td><a href="table.jsp?name=<% Bytes.toString(HConstants.ROOT_TABLE_NAME) %>"><% Bytes.toString(HConstants.ROOT_TABLE_NAME) %></a></td>
+  <%if (frags != null)%>
+        <td align="center"><% frags.get("-ROOT-") != null ? frags.get("-ROOT-").intValue() + "%" : "n/a" %></td>
+  </%if>
+    <td>The -ROOT- table holds references to all .META. regions.</td>
+</tr>
+  <%if (metaLocation != null) %>
+<tr>
+    <td><a href="table.jsp?name=<% Bytes.toString(HConstants.META_TABLE_NAME) %>"><% Bytes.toString(HConstants.META_TABLE_NAME) %></a></td>
+    <%if (frags != null)%>
+        <td align="center"><% frags.get(".META.") != null ? frags.get(".META.").intValue() + "%" : "n/a" %></td>
+    </%if>
+    <td>The .META. table holds references to all User Table regions</td>
+</tr>
+  
+  </%if>
+</table>
+</%def>
+
+<%def userTables>
+<h2>User Tables</h2>
+<%java>
+   HTableDescriptor[] tables = admin.listTables();
+   HConnectionManager.deleteConnection(admin.getConfiguration(), false);
+</%java>
+<%if (tables != null && tables.length > 0)%>
+<table>
+<tr>
+    <th>Table</th>
+<%if (frags != null) %>
+        <th title="Fragmentation - Will be 0% after a major compaction and fluctuate during normal usage.">Frag.</th>
+</%if>
+    <th>Description</th>
+</tr>
+<%for HTableDescriptor htDesc : tables%>
+<tr>
+    <td><a href=table.jsp?name=<% htDesc.getNameAsString() %>><% htDesc.getNameAsString() %></a> </td>
+    <%if (frags != null) %>
+        <td align="center"><% frags.get(htDesc.getNameAsString()) != null ? frags.get(htDesc.getNameAsString()).intValue() + "%" : "n/a" %></td>
+    </%if>
+    <td><% htDesc.toString() %></td>
+</tr>
+</%for>
+
+<p> <% tables.length %> table(s) in set.</p>
+</table>
+</%if>
+</%def>
+
+<%def regionServers>
+<h2>Region Servers</h2>
+<%if (servers != null && servers.size() > 0)%>
+<%java>
+     int totalRegions = 0;
+     int totalRequests = 0; 
+</%java>
+
+<table>
+<tr><th rowspan="<% servers.size() + 1%>"></th><th>Address</th><th>Start Code</th><th>Load</th></tr>
+<%java>
+   ServerName [] serverNames = servers.toArray(new ServerName[servers.size()]);
+     Arrays.sort(serverNames);
+     for (ServerName serverName: serverNames) {
+       // TODO: this is incorrect since this conf might differ from RS to RS
+       // or be set to 0 to get ephemeral ports
+       int infoPort = conf.getInt("hbase.regionserver.info.port", 60030);
+       String hostname = serverName.getHostname() + ":" + infoPort;
+       String hostname = serverName.getHostname() + ":60030";
+       String url = "http://" + hostname + "/";
+       HServerLoad hsl = master.getServerManager().getLoad(serverName);
+       String loadStr = hsl == null? "-": hsl.toString();
+       if (hsl != null) {
+         totalRegions += hsl.getNumberOfRegions();
+         totalRequests += hsl.getNumberOfRequests();
+       }
+       long startCode = serverName.getStartcode();
+</%java>
+<tr><td><a href="<% url %>"><% hostname %></a></td><td><% startCode %><% serverName %></td><td><% loadStr %></td></tr>
+<%java>
+    }
+</%java>
+<tr><th>Total: </th><td>servers: <% servers.size() %></td><td>&nbsp;</td><td>requests=<% totalRequests %>, regions=<% totalRegions %></td></tr>
+</table>
+
+<p>Load is requests per second and count of regions loaded</p>
+</%if>
+</%def>
