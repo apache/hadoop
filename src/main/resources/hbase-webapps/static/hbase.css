@@ -17,3 +17,11 @@ div.warning {
 td.undeployed-region {
   background-color: #faa;
 }
+
+tr.task-monitor-COMPLETE td {
+  background-color: #afa;
+}
+
+tr.task-monitor-ABORTED td {
+  background-color: #ffa;
+}

@@ -68,6 +68,8 @@ org.apache.hadoop.hbase.HRegionInfo;
 <tr><td>Zookeeper Quorum</td><td><% regionServer.getZooKeeper().getQuorum() %></td><td>Addresses of all registered ZK servers</td></tr>
 </table>
 
+<& ../common/TaskMonitorTmpl &>
+
 <h2>Online Regions</h2>
 <%if (onlineRegions != null && onlineRegions.size() > 0) %>
 <table>

@@ -237,6 +237,8 @@ Release 0.91.0 - Unreleased
    HBASE-3836  Add facility to track currently progressing actions and
                workflows. (todd)
    HBASE-3837  Show regions in transition on the master web page (todd)
+   HBASE-3839  Add monitoring of currently running tasks to the master and
+               RS web UIs
 
 Release 0.90.3 - Unreleased
 

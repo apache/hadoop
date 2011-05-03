@@ -88,6 +88,9 @@ org.apache.hadoop.hbase.HTableDescriptor;
 </%if>
 <tr><td>Zookeeper Quorum</td><td><% master.getZooKeeperWatcher().getQuorum() %></td><td>Addresses of all registered ZK servers. For more, see <a href="/zk.jsp">zk dump</a>.</td></tr>
 </table>
+
+<& ../common/TaskMonitorTmpl &>
+
 <%if (rootLocation != null) %>
 <& catalogTables &>
 </%if>
