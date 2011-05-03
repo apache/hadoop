@@ -1786,8 +1786,8 @@ Release 0.20.2 - Unreleased
     HADOOP-6269. Fix threading issue with defaultResource in Configuration.
     (Sreekanth Ramakrishnan via cdouglas)
 
-    HADOOP-6386. NameNode's HttpServer can't instantiate InetSocketAddress:
-    IllegalArgumentException is thrown. (cos)
+    HADOOP-5759. Fix for  IllegalArgumentException when CombineFileInputFormat
+    is used as job InputFormat. (Amareshwari Sriramadasu via zshao)
 
 Release 0.20.1 - 2009-09-01
 
