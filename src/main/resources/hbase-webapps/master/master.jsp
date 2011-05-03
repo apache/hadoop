@@ -146,8 +146,8 @@
 <%   ServerName [] serverNames = servers.toArray(new ServerName[servers.size()]);
      Arrays.sort(serverNames);
      for (ServerName serverName: serverNames) {
-       // HARDCODED FOR NOW; FIX -- READ FROM ZK
-       String hostname = serverName.getHostname() + ":60030";
+       int infoPort = conf.getInt("hbase.regionserver.info.port", 60030);
+       String hostname = serverName.getHostname() + ":" + infoPort;
        String url = "http://" + hostname + "/";
        HServerLoad hsl = master.getServerManager().getLoad(serverName);
        String loadStr = hsl == null? "-": hsl.toString();
