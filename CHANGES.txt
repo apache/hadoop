@@ -74,6 +74,8 @@ Release 0.20.203.0 - unreleased
 
     HADOOP-7232. Fix Javadoc warnings. (omalley)
 
+    HADOOP-7258. The Gzip codec should not return null decompressors. (omalley)
+
 Release 0.20.202.0 - unreleased
 
     MAPREDUCE-2355. Add a configuration knob 

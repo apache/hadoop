@@ -141,7 +141,7 @@ public class GzipCodec extends DefaultCodec {
   public Class<? extends Decompressor> getDecompressorType() {
     return ZlibFactory.isNativeZlibLoaded(conf)
       ? GzipZlibDecompressor.class
-      : null;
+      : BuiltInGzipDecompressor.class;
   }
 
   public String getDefaultExtension() {
