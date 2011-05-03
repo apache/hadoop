@@ -8,6 +8,7 @@
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.ServerName"
+  import="org.apache.hadoop.hbase.HServerLoad"
   import="org.apache.hadoop.hbase.client.HBaseAdmin"
   import="org.apache.hadoop.hbase.client.HConnectionManager"
   import="org.apache.hadoop.hbase.HTableDescriptor" %><%
@@ -148,12 +149,15 @@
        // HARDCODED FOR NOW; FIX -- READ FROM ZK
        String hostname = serverName.getHostname() + ":60020";
        String url = "http://" + hostname + "/";
-       // TODO: FIX
-       totalRegions += 0;
-       totalRequests += 0;
+       HServerLoad hsl = master.getServerManager().getLoad(serverName);
+       String loadStr = hsl == null? "-": hsl.toString();
+       if (hsl != null) {
+         totalRegions += hsl.getNumberOfRegions();
+         totalRequests += hsl.getNumberOfRequests();
+       }
        long startCode = serverName.getStartcode();
 %>
-<tr><td><a href="<%= url %>"><%= hostname %></a></td><td><%= startCode %></td><td><%= 0 %></td></tr>
+<tr><td><a href="<%= url %>"><%= hostname %></a></td><td><%= startCode %><%= serverName %></td><td><%= loadStr %></td></tr>
 <%   } %>
 <tr><th>Total: </th><td>servers: <%= servers.size() %></td><td>&nbsp;</td><td>requests=<%= totalRequests %>, regions=<%= totalRegions %></td></tr>
 </table>

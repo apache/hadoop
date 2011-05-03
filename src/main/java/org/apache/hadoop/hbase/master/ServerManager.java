@@ -238,7 +238,7 @@ public class ServerManager {
    * @return HServerLoad if serverName is known else null
    */
   public HServerLoad getLoad(final ServerName serverName) {
-    return this.onlineServers.get(serverName.toString());
+    return this.onlineServers.get(serverName);
   }
 
   /**
