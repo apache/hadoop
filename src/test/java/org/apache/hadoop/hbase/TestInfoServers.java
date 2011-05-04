@@ -45,16 +45,35 @@ public class TestInfoServers extends HBaseClusterTestCase {
   /**
    * @throws Exception
    */
-  public void testInfoServersAreUp() throws Exception {
+  public void testInfoServersRedirect() throws Exception {
     // give the cluster time to start up
     new HTable(conf, ".META.");
     int port = cluster.getMaster().getInfoServer().getPort();
     assertHasExpectedContent(new URL("http://localhost:" + port +
-      "/index.html"), "master");
+      "/index.html"), "master-status");
     port = cluster.getRegionServerThreads().get(0).getRegionServer().
       getInfoServer().getPort();
     assertHasExpectedContent(new URL("http://localhost:" + port +
-      "/index.html"), "regionserver");
+      "/index.html"), "rs-status");
+  }
+
+  /**
+   * Test that the status pages in the minicluster load properly.
+   *
+   * This is somewhat a duplicate of TestRSStatusServlet and
+   * TestMasterStatusServlet, but those are true unit tests
+   * whereas this uses a cluster.
+   */
+  public void testInfoServersStatusPages() throws Exception {
+    // give the cluster time to start up
+    new HTable(conf, ".META.");
+    int port = cluster.getMaster().getInfoServer().getPort();
+    assertHasExpectedContent(new URL("http://localhost:" + port +
+      "/master-status"), "META");
+    port = cluster.getRegionServerThreads().get(0).getRegionServer().
+      getInfoServer().getPort();
+    assertHasExpectedContent(new URL("http://localhost:" + port +
+      "/rs-status"), "META");
   }
 
   private void assertHasExpectedContent(final URL u, final String expected)
@@ -62,8 +81,7 @@ public class TestInfoServers extends HBaseClusterTestCase {
     LOG.info("Testing " + u.toString() + " has " + expected);
     java.net.URLConnection c = u.openConnection();
     c.connect();
-    assertTrue(c.getContentLength() > 0);
-    StringBuilder sb = new StringBuilder(c.getContentLength());
+    StringBuilder sb = new StringBuilder();
     BufferedInputStream bis = new BufferedInputStream(c.getInputStream());
     byte [] bytes = new byte[1024];
     for (int read = -1; (read = bis.read(bytes)) != -1;) {
@@ -71,6 +89,9 @@ public class TestInfoServers extends HBaseClusterTestCase {
     }
     bis.close();
     String content = sb.toString();
-    assertTrue(content.contains(expected));
+    if (!content.contains(expected)) {
+      fail("Didn't have expected string '" + expected + "'. Content:\n"
+        + content);
+    }
   }
 }

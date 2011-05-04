@@ -98,6 +98,7 @@ Release 0.91.0 - Unreleased
    HBASE-3847  Turn off DEBUG logging of RPCs in WriteableRPCEngine on TRUNK
    HBASE-3777  Redefine Identity Of HBase Configuration (Karthick Sankarachary)
    HBASE-3849  Fix master ui; hbase-1502 broke requests/second
+   HBASE-3853  Fix TestInfoServers to pass after HBASE-3835 (todd)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
