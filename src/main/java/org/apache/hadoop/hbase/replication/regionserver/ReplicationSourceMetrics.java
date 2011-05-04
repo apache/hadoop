@@ -66,6 +66,11 @@ public class ReplicationSourceMetrics implements Updater {
   public final MetricsIntValue sizeOfLogQueue =
       new MetricsIntValue("sizeOfLogQueue", registry);
 
+  // It's a little dirty to preset the age to now since if we fail
+  // to replicate the very first time then it will show that age instead
+  // of nothing (although that might not be good either).
+  private long lastTimestampForAge = System.currentTimeMillis();
+
   /**
    * Constructor used to register the metrics
    * @param id Name of the source this class is monitoring
@@ -90,7 +95,17 @@ public class ReplicationSourceMetrics implements Updater {
    * @param timestamp write time of the edit
    */
   public void setAgeOfLastShippedOp(long timestamp) {
-    ageOfLastShippedOp.set(System.currentTimeMillis() - timestamp);
+    lastTimestampForAge = timestamp;
+    ageOfLastShippedOp.set(System.currentTimeMillis() - lastTimestampForAge);
+  }
+
+  /**
+   * Convenience method to use the last given timestamp to refresh the age
+   * of the last edit. Used when replication fails and need to keep that
+   * metric accurate.
+   */
+  public void refreshAgeOfLastShippedOp() {
+    setAgeOfLastShippedOp(lastTimestampForAge);
   }
 
   @Override
