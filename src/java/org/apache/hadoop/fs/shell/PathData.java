@@ -23,6 +23,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -35,22 +36,38 @@ import org.apache.hadoop.fs.Path;
 @InterfaceStability.Evolving
 
 public class PathData {
+  protected String string = null;
   public final Path path;
   public FileStatus stat;
   public final FileSystem fs;
   public boolean exists;
 
   /**
-   * Creates an object to wrap the given parameters as fields.
-   * @param theFs the FileSystem
-   * @param thePath a Path
-   * @param theStat the FileStatus (may be null if the path doesn't exist)
+   * Creates an object to wrap the given parameters as fields.  The string
+   * used to create the path will be recorded since the Path object does not
+   * return exactly the same string used to initialize it
+   * @param pathString a string for a path
+   * @param conf the configuration file
+   * @throws IOException if anything goes wrong...
    */
-  public PathData(FileSystem theFs, Path thePath, FileStatus theStat) {
-    path = thePath;
-    stat = theStat;
-    fs = theFs;
-    exists = (stat != null);
+  public PathData(String pathString, Configuration conf) throws IOException {
+    this.string = pathString;
+    this.path = new Path(pathString);
+    this.fs = path.getFileSystem(conf);
+    setStat(getStat(fs, path));
+  }
+  
+  /**
+   * Creates an object to wrap the given parameters as fields. 
+   * @param fs the FileSystem
+   * @param path a Path
+   * @param stat the FileStatus (may be null if the path doesn't exist)
+   */
+  public PathData(FileSystem fs, Path path, FileStatus stat) {
+    this.string = path.toString();
+    this.path = path;
+    this.fs = fs;
+    setStat(stat);
   }
 
   /**
@@ -64,6 +81,23 @@ public class PathData {
     this(fs, path, getStat(fs, path));
   }
 
+  /**
+   * Creates an object to wrap the given parameters as fields.  The string
+   * used to create the path will be recorded since the Path object does not
+   * return exactly the same string used to initialize it.  If the FileStatus
+   * is not null, then its Path will be used to initialized the path, else
+   * the string of the path will be used.
+   * @param fs the FileSystem
+   * @param pathString a String of the path
+   * @param stat the FileStatus (may be null if the path doesn't exist)
+   */
+  public PathData(FileSystem fs, String pathString, FileStatus stat) {
+    this.string = pathString;
+    this.path = (stat != null) ? stat.getPath() : new Path(pathString);
+    this.fs = fs;
+    setStat(stat);
+  }
+
   // need a static method for the ctor above
   private static FileStatus getStat(FileSystem fs, Path path)
   throws IOException {  
@@ -72,6 +106,11 @@ public class PathData {
       status = fs.getFileStatus(path);
     } catch (FileNotFoundException e) {} // ignore FNF
     return status;
+  }
+  
+  private void setStat(FileStatus theStat) {
+    stat = theStat;
+    exists = (stat != null);
   }
 
   /**
@@ -89,7 +128,7 @@ public class PathData {
    * @throws IOException if anything goes wrong...
    */
   public FileStatus refreshStatus() throws IOException {
-    stat = fs.getFileStatus(path);
+    setStat(fs.getFileStatus(path));
     return stat;
   }
   
@@ -113,11 +152,56 @@ public class PathData {
   }
 
   /**
-   * Returns the printable version of the path that is just the
-   * filesystem path instead of the full uri
+   * Expand the given path as a glob pattern.  Non-existent paths do not
+   * throw an exception because creation commands like touch and mkdir need
+   * to create them.  The "stat" field will be null if the path does not
+   * exist.
+   * @param pattern the pattern to expand as a glob
+   * @param conf the hadoop configuration
+   * @return list of {@link PathData} objects.  if the pattern is not a glob,
+   * and does not exist, the list will contain a single PathData with a null
+   * stat 
+   * @throws IOException anything else goes wrong...
+   */
+  public static PathData[] expandAsGlob(String pattern, Configuration conf)
+  throws IOException {
+    Path globPath = new Path(pattern);
+    FileSystem fs = globPath.getFileSystem(conf);    
+    FileStatus[] stats = fs.globStatus(globPath);
+    PathData[] items = null;
+    
+    if (stats == null) {
+      // not a glob & file not found, so add the path with a null stat
+      items = new PathData[]{ new PathData(fs, pattern, null) };
+    } else if (
+        // this is very ugly, but needed to avoid breaking hdfs tests...
+        // if a path has no authority, then the FileStatus from globStatus
+        // will add the "-fs" authority into the path, so we need to sub
+        // it back out to satisfy the tests
+        stats.length == 1
+        &&
+        stats[0].getPath().equals(fs.makeQualified(globPath)))
+    {
+      // if the fq path is identical to the pattern passed, use the pattern
+      // to initialize the string value
+      items = new PathData[]{ new PathData(fs, pattern, stats[0]) };
+    } else {
+      // convert stats to PathData
+      items = new PathData[stats.length];
+      int i=0;
+      for (FileStatus stat : stats) {
+        items[i++] = new PathData(fs, stat);
+      }
+    }
+    return items;
+  }
+
+  /**
+   * Returns the printable version of the path that is either the path
+   * as given on the commandline, or the full path
    * @return String of the path
    */
   public String toString() {
-    return path.toString();
+    return (string != null) ? string : path.toString();
   }
 }

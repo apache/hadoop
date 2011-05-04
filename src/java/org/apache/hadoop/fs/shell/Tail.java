@@ -25,7 +25,6 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 
@@ -60,11 +59,8 @@ class Tail extends FsCommand {
   // TODO: HADOOP-7234 will add glob support; for now, be backwards compat
   @Override
   protected List<PathData> expandArgument(String arg) throws IOException {
-    Path path = new Path(arg);
-    FileSystem fs = path.getFileSystem(getConf());
-    
     List<PathData> items = new LinkedList<PathData>();
-    items.add(new PathData(fs, path));
+    items.add(new PathData(arg, getConf()));
     return items;
   }
       

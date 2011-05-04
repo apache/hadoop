@@ -27,19 +27,48 @@ import static org.junit.Assert.*;
 public class TestPathData {
   protected static Configuration conf;
   protected static FileSystem fs;
+  protected static String dirString;
   protected static Path dir;
-  
+  protected static PathData item;
+
   @BeforeClass
   public static void initialize() throws Exception {
     conf = new Configuration();
     fs = FileSystem.getLocal(conf); 
-    dir = new Path("/tmp");
   }
 
   @Test
-  public void testWithPath() throws Exception {
-    PathData item = new PathData(fs, dir);
+  public void testWithFsAndPath() throws Exception {
+    dirString = "/tmp";
+    dir = new Path(dirString);
+    item = new PathData(fs, dir);
+    checkPathData();
+  }
+
+  @Test
+  public void testWithStringAndConf() throws Exception {
+    dirString = "/tmp";
+    dir = new Path(dirString);
+    item = new PathData(dirString, conf);
+    checkPathData();
+  }
+
+  @Test
+  public void testWithStringAndConfForBuggyPath() throws Exception {
+    dirString = "file:///tmp";
+    dir = new Path(dirString);
+    item = new PathData(dirString, conf);
+    // this may fail some day if Path is fixed to not crunch the uri
+    // if the authority is null, however we need to test that the PathData
+    // toString() returns the given string, while Path toString() does
+    // the crunching
+    assertEquals("file:/tmp", dir.toString());
+    checkPathData();
+  }
+
+  public void checkPathData() throws Exception {
     assertEquals(fs, item.fs);
+    assertEquals(dirString, item.toString());
     assertEquals(dir, item.path);
     assertTrue(item.stat != null);
     assertTrue(item.stat.isDirectory());
