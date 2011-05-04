@@ -2,6 +2,9 @@ Hadoop Change Log
 
 Release 0.20.203.0 - unreleased
 
+    MAPREDUCE-1280. Update Eclipse plugin to the new eclipse.jdt API.
+    (Alex Kozlov via szetszwo)
+
     HADOOP-7259. Contrib modules should include the build.properties from
     the enclosing hadoop directory. (omalley)
 
