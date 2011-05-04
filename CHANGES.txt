@@ -77,6 +77,9 @@ Release 0.20.204.0 - unreleased
 
 Release 0.20.203.0 - unreleased
 
+    HADOOP-7259. Contrib modules should include the build.properties from
+    the enclosing hadoop directory. (omalley)
+
     HADOOP-7253. Update the default configuration to fix security audit log
     and metrics2 property configuration warnings. (omalley)
 
