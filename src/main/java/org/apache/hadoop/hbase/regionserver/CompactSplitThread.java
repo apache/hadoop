@@ -177,7 +177,7 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
         st.rollback(this.server, this.server);
         LOG.info("Successful rollback of failed split of " +
           parent.getRegionNameAsString());
-      } catch (RuntimeException ee) {
+      } catch (Exception ee) {
         // If failed rollback, kill this server to avoid having a hole in table.
         LOG.info("Failed rollback of failed split of " +
           parent.getRegionNameAsString() + " -- aborting server", ee);
