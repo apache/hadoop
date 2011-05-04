@@ -31,6 +31,7 @@ import org.apache.hadoop.io.compress.DoNotPool;
  * http://www.gzip.org/
  *
  */
+@DoNotPool
 public class BuiltInGzipDecompressor implements Decompressor {
   private static final int GZIP_MAGIC_ID = 0x8b1f;  // if read as LE short int
   private static final int GZIP_DEFLATE_METHOD = 8;
@@ -109,7 +110,6 @@ public class BuiltInGzipDecompressor implements Decompressor {
   /**
    * Creates a new (pure Java) gzip decompressor.
    */
-  @DoNotPool
   public BuiltInGzipDecompressor() {
     state = GzipStateLabel.HEADER_BASIC;
     crc.reset();
