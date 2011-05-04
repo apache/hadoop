@@ -1409,6 +1409,18 @@ When I build, why do I always get <code>Unable to find resource 'VM_global_libra
                 </para>
             </answer>
         </qandaentry>
+        <qandaentry>
+            <question><para>
+                    Why do I see double the actual count of regionservers, once by domain name and then by IP?
+            </para></question>
+            <answer>
+                <para>
+                    Fix your DNS.  In versions of HBase before 0.92.x, reverse DNS needs to give same answer
+                    as forward lookup. See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3431">HBASE 3431
+                        Regionserver is not using the name given it by the master; double entry in master listing of servers</link> for gorey details.
+                </para>
+            </answer>
+        </qandaentry>
     </qandadiv>
     <qandadiv><title>How do I...?</title>
         <qandaentry xml:id="secondary.indices">
