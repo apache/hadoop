@@ -89,6 +89,7 @@ public class HBaseTestingUtility {
    */
   private boolean passedZkCluster = false;
   private MiniDFSCluster dfsCluster = null;
+
   private MiniHBaseCluster hbaseCluster = null;
   private MiniMRCluster mrCluster = null;
   // If non-null, then already a cluster running.
@@ -111,6 +112,10 @@ public class HBaseTestingUtility {
 
   public HBaseTestingUtility(Configuration conf) {
     this.conf = conf;
+  }
+
+  public MiniHBaseCluster getHbaseCluster() {
+    return hbaseCluster;
   }
 
   /**
