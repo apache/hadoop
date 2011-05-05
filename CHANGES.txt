@@ -289,6 +289,7 @@ Release 0.90.3 - Unreleased
                 Meta and provide better error reporting (Marc Limotte)
    HBASE-3813  Change RPC callQueue size from 'handlerCount *
                MAX_QUEUE_SIZE_PER_HANDLER;'
+   HBASE-3860  HLog shouldn't create a new HBC when rolling
 
   TASKS
    HBASE-3748  Add rolling of thrift/rest daemons to graceful_stop.sh script
