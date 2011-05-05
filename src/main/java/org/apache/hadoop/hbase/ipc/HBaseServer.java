@@ -89,7 +89,7 @@ public abstract class HBaseServer implements RpcServer {
   /**
    * How many calls/handler are allowed in the queue.
    */
-  private static final int MAX_QUEUE_SIZE_PER_HANDLER = 100;
+  private static final int DEFAULT_MAX_QUEUE_SIZE_PER_HANDLER = 10;
 
   private static final String WARN_RESPONSE_SIZE =
       "hbase.ipc.warn.response.size";
@@ -1174,7 +1174,9 @@ public abstract class HBaseServer implements RpcServer {
     this.handlerCount = handlerCount;
     this.priorityHandlerCount = priorityHandlerCount;
     this.socketSendBufferSize = 0;
-    this.maxQueueSize = handlerCount * MAX_QUEUE_SIZE_PER_HANDLER;
+    this.maxQueueSize =
+      this.conf.getInt("ipc.server.max.queue.size",
+        handlerCount * DEFAULT_MAX_QUEUE_SIZE_PER_HANDLER);
      this.readThreads = conf.getInt(
         "ipc.server.read.threadpool.size",
         10);
