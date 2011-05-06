@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -290,18 +291,19 @@ public abstract class AbstractFileSystem {
               + " is not valid");
     }
     String authority = uri.getAuthority();
-    if (!authorityNeeded) {
-      if (authority != null) {
-        throw new HadoopIllegalArgumentException("Scheme with non-null authority: "
-            + uri);
-      }
-      return new URI(supportedScheme + ":///");
-    }
     if (authority == null) {
-      throw new HadoopIllegalArgumentException("Uri without authority: " + uri);
+       if (authorityNeeded) {
+         throw new HadoopIllegalArgumentException("Uri without authority: " + uri);
+       } else {
+         return new URI(supportedScheme + ":///");
+       }   
     }
+    // authority is non null  - AuthorityNeeded may be true or false.
     int port = uri.getPort();
-    port = port == -1 ? defaultPort : port;
+    port = (port == -1 ? defaultPort : port);
+    if (port == -1) { // no port supplied and default port is not specified
+      return new URI(supportedScheme, authority, "/", null);
+    }
     return new URI(supportedScheme + "://" + uri.getHost() + ":" + port);
   }
   
@@ -431,6 +433,21 @@ public abstract class AbstractFileSystem {
    */
   public abstract FsServerDefaults getServerDefaults() throws IOException; 
 
+  /**
+   * Return the fully-qualified path of path f resolving the path
+   * through any internal symlinks or mount point
+   * @param p path to be resolved
+   * @return fully qualified path 
+   * @throws FileNotFoundException, AccessControlException, IOException
+   *         UnresolvedLinkException if symbolic link on path cannot be resolved
+   *          internally
+   */
+   public Path resolvePath(final Path p) throws FileNotFoundException,
+           UnresolvedLinkException, AccessControlException, IOException {
+     checkPath(p);
+     return getFileStatus(p).getPath(); // default impl is to return the path
+   }
+  
   /**
    * The specification of this method matches that of
    * {@link FileContext#create(Path, EnumSet, Options.CreateOpts...)} except
@@ -905,11 +922,12 @@ public abstract class AbstractFileSystem {
    * 
    * @param renewer the account name that is allowed to renew the token.
    * @return List of delegation tokens.
+   *   If delegation tokens not supported then return a list of size zero.
    * @throws IOException
    */
   @InterfaceAudience.LimitedPrivate( { "HDFS", "MapReduce" })
   public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
-    return null;
+    return new ArrayList<Token<?>>(0);
   }
   
   @Override //Object

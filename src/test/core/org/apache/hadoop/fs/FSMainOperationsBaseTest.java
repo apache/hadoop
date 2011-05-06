@@ -90,7 +90,6 @@ public abstract class FSMainOperationsBaseTest  {
   @After
   public void tearDown() throws Exception {
     fSys.delete(new Path(getAbsoluteTestRootPath(fSys), new Path("test")), true);
-    fSys.delete(new Path(LOCAL_FS_ROOT_URI), true);
   }
   
   

@@ -93,7 +93,8 @@ public abstract class FileContextPermissionBase {
       return;
     }
     String filename = "foo";
-    Path f = createFile(fc, filename);
+    Path f = getTestRootPath(fc, filename);
+    createFile(fc, filename);
     doFilePermissionCheck(FileContext.DEFAULT_PERM.applyUMask(fc.getUMask()),
                         fc.getFileStatus(f).getPermission());
   }
@@ -107,7 +108,8 @@ public abstract class FileContextPermissionBase {
     }
 
     String filename = "foo";
-    Path f = createFile(fc, filename);
+    Path f = getTestRootPath(fc, filename);
+    createFile(fc, f);
 
     try {
       // create files and manipulate them.
@@ -131,7 +133,8 @@ public abstract class FileContextPermissionBase {
     }
 
     String filename = "bar";
-    Path f = createFile(fc, filename);
+    Path f = getTestRootPath(fc, filename);
+    createFile(fc, f);
     List<String> groups = null;
     try {
       groups = getGroups();

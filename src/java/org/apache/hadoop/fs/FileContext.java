@@ -43,7 +43,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Options.CreateOpts;
-import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RpcClientException;
@@ -523,6 +522,15 @@ public final class FileContext {
    */
   public UserGroupInformation getUgi() {
     return ugi;
+  }
+  
+  /**
+   * Return the current user's home directory in this file system.
+   * The default implementation returns "/user/$USER/".
+   * @return the home directory
+   */
+  public Path getHomeDirectory() {
+    return defaultFS.getHomeDirectory();
   }
   
   /**

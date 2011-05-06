@@ -98,7 +98,7 @@ public final class FileSystemTestHelper {
   /*
    * Create files with numBlocks blocks each with block size blockSize.
    */
-  public static void createFile(FileSystem fSys, Path path, int numBlocks,
+  public static long createFile(FileSystem fSys, Path path, int numBlocks,
       int blockSize, boolean createParent) throws IOException {
     FSDataOutputStream out = 
       fSys.create(path, false, 4096, fSys.getDefaultReplication(), blockSize );
@@ -106,21 +106,21 @@ public final class FileSystemTestHelper {
     byte[] data = getFileData(numBlocks, blockSize);
     out.write(data, 0, data.length);
     out.close();
+    return data.length;
   }
 
-  public static void createFile(FileSystem fSys, Path path, int numBlocks,
+  public static long createFile(FileSystem fSys, Path path, int numBlocks,
       int blockSize) throws IOException {
-    createFile(fSys, path, numBlocks, blockSize, true);
+      return createFile(fSys, path, numBlocks, blockSize, true);
     }
 
-  public static void createFile(FileSystem fSys, Path path) throws IOException {
-    createFile(fSys, path, DEFAULT_NUM_BLOCKS, DEFAULT_BLOCK_SIZE, true);
+  public static long createFile(FileSystem fSys, Path path) throws IOException {
+    return createFile(fSys, path, DEFAULT_NUM_BLOCKS, DEFAULT_BLOCK_SIZE, true);
   }
 
-  public static Path createFile(FileSystem fSys, String name) throws IOException {
+  public static long createFile(FileSystem fSys, String name) throws IOException {
     Path path = getTestRootPath(fSys, name);
-    createFile(fSys, path);
-    return path;
+    return createFile(fSys, path);
   }
 
   public static boolean exists(FileSystem fSys, Path p) throws IOException {

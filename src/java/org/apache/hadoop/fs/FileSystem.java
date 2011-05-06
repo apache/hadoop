@@ -50,8 +50,6 @@ import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.SecretManager.InvalidToken;
-import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -360,12 +358,14 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
     
   /**
+   * Deprecated  - use @link {@link #getDelegationTokens(String)}
    * Get a new delegation token for this file system.
    * @param renewer the account name that is allowed to renew the token.
    * @return a new delegation token
    * @throws IOException
    */
   @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+  @Deprecated
   public Token<?> getDelegationToken(String renewer) throws IOException {
     return null;
   }
@@ -378,11 +378,12 @@ public abstract class FileSystem extends Configured implements Closeable {
    * 
    * @param renewer the account name that is allowed to renew the token.
    * @return list of new delegation tokens
+   *    If delegation tokens not supported then return a list of size zero.
    * @throws IOException
    */
   @InterfaceAudience.LimitedPrivate( { "HDFS", "MapReduce" })
   public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
-    return null;
+    return new ArrayList<Token<?>>(0);
   }
 
   /** create a file with the provided permission
@@ -535,6 +536,18 @@ public abstract class FileSystem extends Configured implements Closeable {
         getDefaultReplication(), 
         conf.getInt("io.file.buffer.size", 4096));
   }
+  
+  /**
+   * Return the fully-qualified path of path f resolving the path
+   * through any symlinks or mount point
+   * @param p path to be resolved
+   * @return fully qualified path 
+   * @throws FileNotFoundException
+   */
+   public Path resolvePath(final Path p) throws IOException {
+     checkPath(p);
+     return getFileStatus(p).getPath();
+   }
 
   /**
    * Opens an FSDataInputStream at the indicated Path.

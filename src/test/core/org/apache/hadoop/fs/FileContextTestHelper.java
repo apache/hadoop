@@ -92,7 +92,7 @@ public final class FileContextTestHelper {
   /*
    * Create files with numBlocks blocks each with block size blockSize.
    */
-  public static void createFile(FileContext fc, Path path, int numBlocks,
+  public static long createFile(FileContext fc, Path path, int numBlocks,
       CreateOpts... options) throws IOException {
     BlockSize blockSizeOpt = 
       (BlockSize) CreateOpts.getOpt(CreateOpts.BlockSize.class, options);
@@ -103,33 +103,33 @@ public final class FileContextTestHelper {
     byte[] data = getFileData(numBlocks, blockSize);
     out.write(data, 0, data.length);
     out.close();
+    return data.length;
   }
 
-  public static void createFile(FileContext fc, Path path, int numBlocks,
+  public static long  createFile(FileContext fc, Path path, int numBlocks,
       int blockSize) throws IOException {
-    createFile(fc, path, numBlocks, CreateOpts.blockSize(blockSize), 
+    return createFile(fc, path, numBlocks, CreateOpts.blockSize(blockSize), 
         CreateOpts.createParent());
   }
 
-  public static void createFile(FileContext fc, Path path) throws IOException {
-    createFile(fc, path, DEFAULT_NUM_BLOCKS, CreateOpts.createParent());
+  public static long createFile(FileContext fc, Path path) throws IOException {
+    return createFile(fc, path, DEFAULT_NUM_BLOCKS, CreateOpts.createParent());
   }
 
-  public static Path createFile(FileContext fc, String name) throws IOException {
+  public static long createFile(FileContext fc, String name) throws IOException {
     Path path = getTestRootPath(fc, name);
-    createFile(fc, path);
-    return path;
+    return createFile(fc, path);
   }
   
-  public static void createFileNonRecursive(FileContext fc, String name)
+  public static long createFileNonRecursive(FileContext fc, String name)
   throws IOException {
     Path path = getTestRootPath(fc, name);
-    createFileNonRecursive(fc, path);
+    return createFileNonRecursive(fc, path);
   }
 
-  public static void createFileNonRecursive(FileContext fc, Path path)
+  public static long createFileNonRecursive(FileContext fc, Path path)
       throws IOException {
-    createFile(fc, path, DEFAULT_NUM_BLOCKS, CreateOpts.donotCreateParent());
+    return createFile(fc, path, DEFAULT_NUM_BLOCKS, CreateOpts.donotCreateParent());
   }
 
   public static void appendToFile(FileContext fc, Path path, int numBlocks,

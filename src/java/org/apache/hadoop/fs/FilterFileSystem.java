@@ -94,7 +94,11 @@ public class FilterFileSystem extends FileSystem {
     long len) throws IOException {
       return fs.getFileBlockLocations(file, start, len);
   }
-  
+
+  @Override
+  public Path resolvePath(final Path p) throws IOException {
+    return fs.resolvePath(p);
+  }
   /**
    * Opens an FSDataInputStream at the indicated Path.
    * @param f the file name to open
@@ -363,6 +367,7 @@ public class FilterFileSystem extends FileSystem {
   }
 
   @Override
+  @SuppressWarnings("deprecation")
   protected boolean primitiveMkdir(Path f, FsPermission abdolutePermission)
       throws IOException {
     return fs.primitiveMkdir(f, abdolutePermission);
@@ -374,6 +379,7 @@ public class FilterFileSystem extends FileSystem {
   }
   
   @Override // FileSystem
+  @SuppressWarnings("deprecation")
   public Token<?> getDelegationToken(String renewer) throws IOException {
     return fs.getDelegationToken(renewer);
   }
