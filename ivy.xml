@@ -301,5 +301,17 @@
       rev="${jsch.version}"
       conf="common->default">
     </dependency>
-    </dependencies>
+    <dependency org="commons-configuration"
+      name="commons-configuration"
+      rev="${commons-configuration.version}"
+      conf="common->default"/>
+    <dependency org="org.apache.commons"
+      name="commons-math"
+      rev="${commons-math.version}"
+      conf="common->default"/>
+    <dependency org="com.google.guava"
+      name="guava"
+      rev="${guava.version}"
+      conf="common->default"/>
+  </dependencies>
 </ivy-module>

@@ -42,9 +42,11 @@ import org.apache.hadoop.metrics.spi.OutputRecord;
  * myContextName.fileName=/tmp/metrics.log
  * myContextName.period=5
  * </pre>
+ * @deprecated use {@link org.apache.hadoop.metrics2.sink.FileSink} instead.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
+@Deprecated
 public class FileContext extends AbstractMetricsContext {
     
   /* Configuration attribute names */

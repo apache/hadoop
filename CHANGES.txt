@@ -24,6 +24,8 @@ Trunk (unreleased changes)
 
     HADOOP-7257 Client side mount tables (sanjay)
 
+    HADOOP-6919. New metrics2 framework. (Luke Lu via acmurthy) 
+
   IMPROVEMENTS
 
     HADOOP-7042. Updates to test-patch.sh to include failed test names and
