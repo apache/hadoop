@@ -19,27 +19,33 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.*;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
+import java.util.Map;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 public class TestHBaseFsck {
 
@@ -142,8 +148,10 @@ public class TestHBaseFsck {
 
     HTable tbl = TEST_UTIL.createTable(Bytes.toBytes("table2"), FAM);
 
-    HRegionInfo hriOrig = tbl.getRegionsInfo().keySet().iterator().next();
-    HServerAddress rsAddressOrig = tbl.getRegionsInfo().get(hriOrig);
+    Map<HRegionInfo, HServerAddress> hris = tbl.getRegionsInfo();
+    HRegionInfo hriOrig = hris.keySet().iterator().next();
+    Map<HRegionInfo, ServerName> locations = tbl.getRegionLocations();
+    ServerName rsAddressOrig = locations.get(hriOrig);
 
     byte[][] startKeys = new byte[][]{
         HConstants.EMPTY_BYTE_ARRAY,

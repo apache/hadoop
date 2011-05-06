@@ -25,7 +25,6 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -104,8 +103,8 @@ public class HBaseFsckRepair {
     HConnection connection = HConnectionManager.getConnection(conf);
     boolean success = false;
     try {
-      HRegionInterface rs = connection.getHRegionConnection(new HServerAddress(
-          server.getHostname(), server.getPort()));
+      HRegionInterface rs =
+        connection.getHRegionConnection(server.getHostname(), server.getPort());
       rs.closeRegion(region, false);
       long timeout = conf.getLong("hbase.hbck.close.timeout", 120000);
       long expiration = timeout + System.currentTimeMillis();

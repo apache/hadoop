@@ -311,7 +311,7 @@ public class MetaScanner {
         return true;
       }
     };
-    metaScan(conf, visitor);
+    metaScan(conf, visitor, tablename);
     return regions;
   }
 
