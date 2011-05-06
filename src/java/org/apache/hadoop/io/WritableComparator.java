@@ -53,7 +53,6 @@ public class WritableComparator implements RawComparator {
       // if not, use the generic one
       if (comparator == null) {
         comparator = new WritableComparator(c, true);
-        comparators.put(c, comparator);
       }
     }
     return comparator;
@@ -75,7 +74,8 @@ public class WritableComparator implements RawComparator {
   } 
 
   /** Register an optimized comparator for a {@link WritableComparable}
-   * implementation. */
+   * implementation. Comparators registered with this method must be
+   * thread-safe. */
   public static synchronized void define(Class c,
                                          WritableComparator comparator) {
     comparators.put(c, comparator);
