@@ -207,6 +207,8 @@ Release 0.91.0 - Unreleased
                (Harsh J Chouraria)
    HBASE-3835  Switch master and region server pages to Jamon-based templates
    HBASE-3721  Speedup LoadIncrementalHFiles (Ted Yu)
+   HBASE-3855  Performance degradation of memstore because reseek is linear
+               (dhruba borthakur)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
