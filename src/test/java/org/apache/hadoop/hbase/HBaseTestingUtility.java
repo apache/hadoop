@@ -280,7 +280,7 @@ public class HBaseTestingUtility {
     if (this.zkCluster != null) {
       throw new IOException("Cluster already running at " + dir);
     }
-    this.zkCluster = new MiniZooKeeperCluster(this.getConfiguration());
+    this.zkCluster = new MiniZooKeeperCluster();
     int clientPort = this.zkCluster.startup(dir,zooKeeperServerNum);
     this.conf.set("hbase.zookeeper.property.clientPort",
       Integer.toString(clientPort));

@@ -100,8 +100,6 @@ Release 0.91.0 - Unreleased
    HBASE-3849  Fix master ui; hbase-1502 broke requests/second
    HBASE-3853  Fix TestInfoServers to pass after HBASE-3835 (todd)
    HBASE-3862  Race conditions in aggregate calculation (John Heitmann)
-   HBASE-3861  MiniZooKeeperCluster should refer to maxClientCnxns (Eugene
-               Koontz via Andrew Purtell)
    HBASE-3865  Failing TestWALReplay
 
   IMPROVEMENTS

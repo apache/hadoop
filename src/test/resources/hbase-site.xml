@@ -146,14 +146,4 @@
     version is X.X.X-SNAPSHOT"
     </description>
   </property>
-  <property>
-    <name>hbase.zookeeper.property.maxClientCnxns</name>
-    <value>5000</value>
-    <description>Property from ZooKeeper's config zoo.cfg.
-    Limit on number of concurrent connections (at the socket level) that a
-    single client, identified by IP address, may make to a single member of
-    the ZooKeeper ensemble. Set high to avoid zk connection issues running
-    standalone and pseudo-distributed.
-    </description>
-  </property>
 </configuration>
