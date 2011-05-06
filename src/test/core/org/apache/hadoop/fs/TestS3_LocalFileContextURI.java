@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs;
 
-
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_DEFAULT;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Before;
 
@@ -31,8 +31,7 @@ public class TestS3_LocalFileContextURI extends FileContextURIBase {
     fc2 = FileContext.getFileContext(localConf);
 
     Configuration s3conf = new Configuration();
-    s3conf.set(FsConfig.FS_DEFAULT_NAME, s3conf.get("test.fs.s3.name"));
+    s3conf.set(FS_DEFAULT_NAME_DEFAULT, s3conf.get("test.fs.s3.name"));
     fc1 = FileContext.getFileContext(s3conf);
-
   }
 }

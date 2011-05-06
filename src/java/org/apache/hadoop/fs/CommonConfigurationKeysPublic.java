@@ -118,6 +118,11 @@ public class CommonConfigurationKeysPublic {
   /** Default value for IO_SEQFILE_COMPRESS_BLOCKSIZE_KEY */
   public static final int     IO_SEQFILE_COMPRESS_BLOCKSIZE_DEFAULT = 1000000;
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String  IO_FILE_BUFFER_SIZE_KEY =
+    "io.file.buffer.size";
+  /** Default value for IO_FILE_BUFFER_SIZE_KEY */
+  public static final int     IO_FILE_BUFFER_SIZE_DEFAULT = 4096;
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  IO_SKIP_CHECKSUM_ERRORS_KEY =
     "io.skip.checksum.errors";
   /** Default value for IO_SKIP_CHECKSUM_ERRORS_KEY */
