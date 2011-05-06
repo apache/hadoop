@@ -510,6 +510,9 @@ Release 0.21.1 - Unreleased
     HADOOP-7194. Fix resource leak in IOUtils.copyBytes(..).
     (Devaraj K via szetszwo)
 
+    HADOOP-7183. WritableComparator.get should not cache comparator objects.
+    (tomwhite via eli)
+
 Release 0.21.0 - 2010-08-13
 
   INCOMPATIBLE CHANGES
