@@ -9,12 +9,6 @@
          xmlns:db="http://docbook.org/ns/docbook">
   <title>Performance Tuning</title>
 
-  <para>Start with the <link
-  xlink:href="http://wiki.apache.org/hadoop/PerformanceTuning">wiki
-  Performance Tuning</link> page. It has a general discussion of the main
-  factors involved; RAM, compression, JVM settings, etc. Afterward, come back
-  here for more pointers.</para>
-
   <note xml:id="rpc.logging"><title>Enabling RPC-level logging</title>
   <para>Enabling the RPC-level logging on a RegionServer can often given
       insight on timings at the server.  Once enabled, the amount of log
@@ -28,6 +22,22 @@
   <para>To disable, set the logging level back to <varname>INFO</varname> level.
   </para>
   </note>
+
+  <section xml:id="perf.os">
+    <title>Operating System</title>
+        <section xml:id="perf.os.ram">
+          <title>Memory</title>
+          <para>RAM, RAM, RAM.  Don't starve HBase.</para>
+        </section>
+        <section xml:id="perf.os.64">
+          <title>64-bit</title>
+          <para>Use a 64-bit platform (and 64-bit JVM).</para>
+        </section>
+        <section xml:id="perf.os.swap">
+          <title>Swapping</title>
+          <para>Watch out for swapping.  Set swappiness to 0.</para>
+        </section>
+  </section>
 
   <section xml:id="jvm">
     <title>Java</title>
@@ -53,6 +63,8 @@
         0.92.x HBase). See <code>hbase.hregion.memstore.mslab.enabled</code>
         to true in your <classname>Configuration</classname>. See the cited
         slides for background and detail.</para>
+        <para>For more information about GC logs, see <xref linkend="trouble.log.gc" />.
+        </para>
       </section>
     </section>
   </section>
@@ -272,6 +284,19 @@ htable.close();</programlisting></para>
             and a <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/KeyOnlyFilter.html">KeyOnlyFilter</link>.
             Using this filter combination will result in a worst case scenario of a RegionServer reading a single value from disk
             and minimal network traffic to the client for a single row.
+      </para>
+    </section>
+    <section xml:id="perf.hbase.client.putwal">
+      <title>Turn off WAL on Puts</title>
+      <para>A frequently discussed option for increasing throughput on <classname>Put</classname>s is to call <code>writeToWAL(false)</code>.  Turning this off means
+          that the RegionServer will <emphasis>not</emphasis> write the <classname>Put</classname> to the Write Ahead Log,
+          only into the memstore, HOWEVER the consequence is that if there
+          is a RegionServer failure <emphasis>there will be data loss</emphasis>.
+          If <code>writeToWAL(false)</code> is used, do so with extreme caution.  You may find in actuality that
+          it makes little difference if your load is well distributed across the cluster.
+      </para>
+      <para>In general, it is best to use WAL for Puts, and where loading throughput
+          is a concern to use <link linkend="perf.batch.loading">bulk loading</link> techniques instead.  
       </para>
     </section>
   </section>

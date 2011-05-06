@@ -79,7 +79,88 @@
           <para>Additionally, each DataNode server will also have a TaskTracker log for MapReduce task execution.</para>
          </section>        
       </section>      
-
+      <section xml:id="trouble.log.gc">
+        <title>JVM Garbage Collection Logs</title>
+          <para>HBase is memory intensive, and using the default GC you can see long pauses in all threads including the <emphasis>Juliet Pause</emphasis> aka "GC of Death". 
+           To help debug this or confirm this is happening GC logging can be turned on in the Java virtual machine.  
+          </para>
+          <para>
+          To enable, in hbase-env.sh add:
+          <programlisting> 
+export HBASE_OPTS="-XX:+UseConcMarkSweepGC -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:/home/hadoop/hbase/logs/gc-hbase.log"
+          </programlisting>
+           Adjust the log directory to wherever you log.  Note:  The GC log does NOT roll automatically, so you'll have to keep an eye on it so it doesn't fill up the disk. 
+          </para>
+          <para>
+         At this point you should see logs like so:
+          <programlisting>
+64898.952: [GC [1 CMS-initial-mark: 2811538K(3055704K)] 2812179K(3061272K), 0.0007360 secs] [Times: user=0.00 sys=0.00, real=0.00 secs] 
+64898.953: [CMS-concurrent-mark-start]
+64898.971: [GC 64898.971: [ParNew: 5567K->576K(5568K), 0.0101110 secs] 2817105K->2812715K(3061272K), 0.0102200 secs] [Times: user=0.07 sys=0.00, real=0.01 secs] 
+          </programlisting>
+          </para>
+          <para>
+           In this section, the first line indicates a 0.0007360 second pause for the CMS to initially mark. This pauses the entire VM, all threads for that period of time.
+            </para>
+            <para>
+           The third line indicates a "minor GC", which pauses the VM for 0.0101110 seconds - aka 10 milliseconds. It has reduced the "ParNew" from about 5.5m to 576k.
+           Later on in this cycle we see:
+           <programlisting> 
+64901.445: [CMS-concurrent-mark: 1.542/2.492 secs] [Times: user=10.49 sys=0.33, real=2.49 secs] 
+64901.445: [CMS-concurrent-preclean-start]
+64901.453: [GC 64901.453: [ParNew: 5505K->573K(5568K), 0.0062440 secs] 2868746K->2864292K(3061272K), 0.0063360 secs] [Times: user=0.05 sys=0.00, real=0.01 secs] 
+64901.476: [GC 64901.476: [ParNew: 5563K->575K(5568K), 0.0072510 secs] 2869283K->2864837K(3061272K), 0.0073320 secs] [Times: user=0.05 sys=0.01, real=0.01 secs] 
+64901.500: [GC 64901.500: [ParNew: 5517K->573K(5568K), 0.0120390 secs] 2869780K->2865267K(3061272K), 0.0121150 secs] [Times: user=0.09 sys=0.00, real=0.01 secs] 
+64901.529: [GC 64901.529: [ParNew: 5507K->569K(5568K), 0.0086240 secs] 2870200K->2865742K(3061272K), 0.0087180 secs] [Times: user=0.05 sys=0.00, real=0.01 secs] 
+64901.554: [GC 64901.555: [ParNew: 5516K->575K(5568K), 0.0107130 secs] 2870689K->2866291K(3061272K), 0.0107820 secs] [Times: user=0.06 sys=0.00, real=0.01 secs] 
+64901.578: [CMS-concurrent-preclean: 0.070/0.133 secs] [Times: user=0.48 sys=0.01, real=0.14 secs] 
+64901.578: [CMS-concurrent-abortable-preclean-start]
+64901.584: [GC 64901.584: [ParNew: 5504K->571K(5568K), 0.0087270 secs] 2871220K->2866830K(3061272K), 0.0088220 secs] [Times: user=0.05 sys=0.00, real=0.01 secs] 
+64901.609: [GC 64901.609: [ParNew: 5512K->569K(5568K), 0.0063370 secs] 2871771K->2867322K(3061272K), 0.0064230 secs] [Times: user=0.06 sys=0.00, real=0.01 secs] 
+64901.615: [CMS-concurrent-abortable-preclean: 0.007/0.037 secs] [Times: user=0.13 sys=0.00, real=0.03 secs] 
+64901.616: [GC[YG occupancy: 645 K (5568 K)]64901.616: [Rescan (parallel) , 0.0020210 secs]64901.618: [weak refs processing, 0.0027950 secs] [1 CMS-remark: 2866753K(3055704K)] 2867399K(3061272K), 0.0049380 secs] [Times: user=0.00 sys=0.01, real=0.01 secs] 
+64901.621: [CMS-concurrent-sweep-start]
+            </programlisting>
+            </para>
+            <para>
+            The first line indicates that the CMS concurrent mark (finding garbage) has taken 2.4 seconds. But this is a _concurrent_ 2.4 seconds, Java has not been paused at any point in time.
+            </para>
+            <para>
+            There are a few more minor GCs, then there is a pause at the 2nd last line:
+            <programlisting>  
+64901.616: [GC[YG occupancy: 645 K (5568 K)]64901.616: [Rescan (parallel) , 0.0020210 secs]64901.618: [weak refs processing, 0.0027950 secs] [1 CMS-remark: 2866753K(3055704K)] 2867399K(3061272K), 0.0049380 secs] [Times: user=0.00 sys=0.01, real=0.01 secs] 
+            </programlisting>
+            </para>
+            <para>
+            The pause here is 0.0049380 seconds (aka 4.9 milliseconds) to 'remark' the heap.  
+            </para>
+            <para>
+            At this point the sweep starts, and you can watch the heap size go down:
+            <programlisting>
+64901.637: [GC 64901.637: [ParNew: 5501K->569K(5568K), 0.0097350 secs] 2871958K->2867441K(3061272K), 0.0098370 secs] [Times: user=0.05 sys=0.00, real=0.01 secs] 
+...  lines removed ...
+64904.936: [GC 64904.936: [ParNew: 5532K->568K(5568K), 0.0070720 secs] 1365024K->1360689K(3061272K), 0.0071930 secs] [Times: user=0.05 sys=0.00, real=0.01 secs] 
+64904.953: [CMS-concurrent-sweep: 2.030/3.332 secs] [Times: user=9.57 sys=0.26, real=3.33 secs] 
+            </programlisting>
+            At this point, the CMS sweep took 3.332 seconds, and heap went from about ~ 2.8 GB to 1.3 GB (approximate).
+            </para>
+            <para>
+            The key points here is to keep all these pauses low. CMS pauses are always low, but if your ParNew starts growing, you can see minor GC pauses approach 100ms, exceed 100ms and hit as high at 400ms.
+            </para>
+            <para>
+            This can be due to the size of the ParNew, which should be relatively small. If your ParNew is very large after running HBase for a while, in one example a ParNew was about 150MB, then you might have to constrain the size of ParNew (The larger it is, the longer the collections take but if its too small, objects are promoted to old gen too quickly). In the below we constrain new gen size to 64m.
+            </para>
+            <para>
+             Add this to HBASE_OPTS:
+            <programlisting> 
+export HBASE_OPTS="-XX:NewSize=64m -XX:MaxNewSize=64m &lt;cms options from above&gt; &lt;gc logging options from above&gt;"
+            </programlisting>
+            </para>
+            <para>
+            For more information on GC pauses, see the <link xlink:href="http://www.cloudera.com/blog/2011/02/avoiding-full-gcs-in-hbase-with-memstore-local-allocation-buffers-part-1/">3 part blog post</link>  by Todd Lipcon
+            and <xref linkend="gcpause" /> above.
+            </para>                  
+      </section>
     </section>
     <section xml:id="trouble.tools">
       <title>Tools</title>
