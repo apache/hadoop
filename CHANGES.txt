@@ -401,6 +401,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7241. fix typo of command 'hadoop fs -help tail'. 
     (Wei Yongjun via eli)
 
+    HADOOP-7244. Documentation change for updated configuration keys.
+    (tomwhite via eli)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).

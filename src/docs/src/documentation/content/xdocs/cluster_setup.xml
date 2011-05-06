@@ -175,7 +175,7 @@
 		      <th>Notes</th>
 		    </tr>
 		    <tr>
-              <td>fs.default.name</td>
+              <td>fs.defaultFS</td>
               <td>URI of <code>NameNode</code>.</td>
               <td><em>hdfs://hostname/</em></td>
             </tr>
@@ -190,7 +190,7 @@
           <th>Notes</th>
         </tr>
 		    <tr>
-		      <td>dfs.name.dir</td>
+		      <td>dfs.namenode.name.dir</td>
 		      <td>
 		        Path on the local filesystem where the <code>NameNode</code> 
 		        stores the namespace and transactions logs persistently.</td>
@@ -200,7 +200,7 @@
 		      </td>
 		    </tr>
 		    <tr>
-		      <td>dfs.data.dir</td>
+		      <td>dfs.datanode.data.dir</td>
 		      <td>
 		        Comma separated list of paths on the local filesystem of a 
 		        <code>DataNode</code> where it should store its blocks.
@@ -1298,9 +1298,9 @@
       ">resolve</a> in an administrator configured
       module. The API resolves the slave's DNS name (also IP address) to a 
       rack id. What module to use can be configured using the configuration
-      item <code>topology.node.switch.mapping.impl</code>. The default 
+      item <code>net.topology.node.switch.mapping.impl</code>. The default 
       implementation of the same runs a script/command configured using 
-      <code>topology.script.file.name</code>. If topology.script.file.name is
+      <code>net.topology.script.file.name</code>. If topology.script.file.name is
       not set, the rack id <code>/default-rack</code> is returned for any 
       passed IP address. The additional configuration in the Map/Reduce
       part is <code>mapred.cache.task.levels</code> which determines the number

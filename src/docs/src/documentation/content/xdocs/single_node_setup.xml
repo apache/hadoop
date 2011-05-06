@@ -167,7 +167,7 @@
         <source>
 &lt;configuration&gt;
      &lt;property&gt;
-         &lt;name&gt;fs.default.name&lt;/name&gt;
+         &lt;name&gt;fs.defaultFS&lt;/name&gt;
          &lt;value&gt;hdfs://localhost:9000&lt;/value&gt;
      &lt;/property&gt;
 &lt;/configuration&gt;
