@@ -17,6 +17,13 @@
  */
 package org.apache.hadoop.fs;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_HOME_DIR_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_HOME_DIR_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
+
 import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
@@ -37,30 +44,24 @@ final class FsConfig {
   
   
   // The Keys
-  static final String FS_DEFAULT_NAME_KEY = "fs.default.name";
-  static final String FS_HOME_DIR_ROOT_KEY = "fs.homeDir";
   static final String FS_REPLICATION_FACTOR_KEY = "dfs.replication";
   static final String FS_BLOCK_SIZE_KEY = "dfs.block.size";
-  static final String IO_BUFFER_SIZE_KEY ="io.file.buffer.size";
 
 
   // The default values
   // Default values of SERVER_DEFAULT(-1) implies use the ones from
   // the target file system where files are created.
-  static final String FS_DEFAULT_NAME = "file:///";
-  static final String FS_HOME_DIR_ROOT = "/user"; // relative to FS_DEFAULT
   static final short FS_DEFAULT_REPLICATION_FACTOR = 3;
   static final long FS_DEFAULT_BLOCK_SIZE = 32 * 1024 * 1024;
-  static final int IO_BUFFER_SIZE =4096;
   
   
   
   public static String getDefaultFsURI(final Configuration conf) {
-    return conf.get(FS_DEFAULT_NAME_KEY, FS_DEFAULT_NAME);
+    return conf.get(FS_DEFAULT_NAME_KEY, FS_DEFAULT_NAME_DEFAULT);
   }
   
   public static String getHomeDir(final Configuration conf) {
-    return conf.get(FS_HOME_DIR_ROOT_KEY, FS_HOME_DIR_ROOT);
+    return conf.get(FS_HOME_DIR_KEY, FS_HOME_DIR_DEFAULT);
   }
   
   public static short getDefaultReplicationFactor(final Configuration conf) {
@@ -74,7 +75,7 @@ final class FsConfig {
 
   
   public static int getDefaultIOBuffersize(final Configuration conf) {
-    return conf.getInt(IO_BUFFER_SIZE_KEY, IO_BUFFER_SIZE);
+    return conf.getInt(IO_FILE_BUFFER_SIZE_KEY, IO_FILE_BUFFER_SIZE_DEFAULT);
   }
   
   public static Class<?> getImplClass(URI uri, Configuration conf) {
@@ -95,7 +96,7 @@ final class FsConfig {
   }
   
   public static void setHomeDir(final Configuration conf, String path) {
-    conf.set(FS_HOME_DIR_ROOT_KEY, path);
+    conf.set(FS_HOME_DIR_KEY, path);
   }
   
   public static void setDefaultReplicationFactor(final Configuration conf,
@@ -108,6 +109,6 @@ final class FsConfig {
   }
   
   public static void setDefaultIOBuffersize(final Configuration conf, int bs) {
-    conf.setInt(IO_BUFFER_SIZE_KEY, bs);
+    conf.setInt(IO_FILE_BUFFER_SIZE_KEY, bs);
   }
 }

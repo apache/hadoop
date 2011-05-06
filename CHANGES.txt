@@ -622,6 +622,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7184. Remove deprecated config local.cache.size from
     core-default.xml (todd)
 
+    HADOOP-7245. FsConfig should use constants in CommonConfigurationKeys.
+    (tomwhite via eli)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
