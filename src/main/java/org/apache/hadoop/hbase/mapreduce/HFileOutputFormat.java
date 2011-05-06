@@ -82,7 +82,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     // These configs. are from hbase-*.xml
     final long maxsize = conf.getLong("hbase.hregion.max.filesize",
         HConstants.DEFAULT_MAX_FILE_SIZE);
-    final int blocksize = conf.getInt("hfile.min.blocksize.size",
+    final int blocksize = conf.getInt("hbase.mapreduce.hfileoutputformat.blocksize",
         HFile.DEFAULT_BLOCKSIZE);
     // Invented config.  Add to hbase-*.xml if other than default compression.
     final String defaultCompression = conf.get("hfile.compression",
