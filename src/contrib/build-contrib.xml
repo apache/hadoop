@@ -232,7 +232,7 @@
         classpath to use build/contrib/*.jar
       -->
       <sysproperty key="user.dir" value="${build.test}/data"/>
-      
+      <sysproperty key="java.net.preferIPv4Stack" value="true"/>
       <sysproperty key="fs.default.name" value="${fs.default.name}"/>
       <sysproperty key="hadoop.test.localoutputfile" value="${hadoop.test.localoutputfile}"/>
       <sysproperty key="hadoop.log.dir" value="${hadoop.log.dir}"/> 
