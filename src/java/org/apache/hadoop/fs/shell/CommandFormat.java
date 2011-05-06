@@ -32,14 +32,20 @@ public class CommandFormat {
   final String name;
   final int minPar, maxPar;
   final Map<String, Boolean> options = new HashMap<String, Boolean>();
-
+  boolean ignoreUnknownOpts = false;
+  
   /** constructor */
   public CommandFormat(String n, int min, int max, String ... possibleOpt) {
     name = n;
     minPar = min;
     maxPar = max;
-    for(String opt : possibleOpt)
-      options.put(opt, Boolean.FALSE);
+    for (String opt : possibleOpt) {
+      if (opt == null) {
+        ignoreUnknownOpts = true;
+      } else {
+        options.put(opt, Boolean.FALSE);
+      }
+    }
   }
 
   /** Parse parameters starting from the given position
@@ -67,14 +73,14 @@ public class CommandFormat {
       String arg = args.get(pos);
       if (arg.startsWith("-") && arg.length() > 1) {
         String opt = arg.substring(1);
-        if (!options.containsKey(opt)) {
-          throw new UnknownOptionException(arg);
+        if (options.containsKey(opt)) {
+          args.remove(pos);
+          options.put(opt, Boolean.TRUE);
+          continue;
         }
-        args.remove(pos);
-        options.put(opt, Boolean.TRUE);
-      } else {
-        pos++;
+        if (!ignoreUnknownOpts) throw new UnknownOptionException(arg);
       }
+      pos++;
     }
     int psize = args.size();
     if (psize < minPar) {

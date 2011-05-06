@@ -970,114 +970,6 @@ public class FsShell extends Configured implements Tool {
   }
 
   /**
-   * This class runs a command on a given FileStatus. This can be used for
-   * running various commands like chmod, chown etc.
-   */
-  static abstract class CmdHandler {
-    
-    protected int errorCode = 0;
-    protected boolean okToContinue = true;
-    protected String cmdName;
-    
-    int getErrorCode() { return errorCode; }
-    boolean okToContinue() { return okToContinue; }
-    String getName() { return cmdName; }
-    
-    protected CmdHandler(String cmdName) {
-      this.cmdName = cmdName;
-    }
-    
-    public abstract void run(FileStatus file, FileSystem fs) throws IOException;
-  }
-  
-  /** helper returns listStatus() */
-  private static FileStatus[] shellListStatus(String cmd, 
-                                              FileSystem srcFs,
-                                              FileStatus src) {
-    if (src.isFile()) {
-      FileStatus[] files = { src };
-      return files;
-    }
-    Path path = src.getPath();
-    try {
-      FileStatus[] files = srcFs.listStatus(path);
-
-      return files;
-    } catch(FileNotFoundException fnfe) {
-      System.err.println(cmd + ": could not get listing for '" + path + "'");
-    } catch (IOException e) {
-      LOG.debug("Error listing " + path, e);
-      System.err.println(cmd + 
-                         ": could not get get listing for '" + path + "' : " +
-                         e.getMessage().split("\n")[0]);
-    }
-    return null;
-  }
-  
-  
-  /**
-   * Runs the command on a given file with the command handler. 
-   * If recursive is set, command is run recursively.
-   */                                       
-  private static int runCmdHandler(CmdHandler handler, FileStatus stat, 
-                                   FileSystem srcFs, 
-                                   boolean recursive) throws IOException {
-    int errors = 0;
-    handler.run(stat, srcFs);
-    if (recursive && stat.isDirectory() && handler.okToContinue()) {
-      FileStatus[] files = shellListStatus(handler.getName(), srcFs, stat);
-      if (files == null) {
-        return 1;
-      }
-      for(FileStatus file : files ) {
-        errors += runCmdHandler(handler, file, srcFs, recursive);
-      }
-    }
-    return errors;
-  }
-
-  ///top level runCmdHandler
-  int runCmdHandler(CmdHandler handler, String[] args,
-                                   int startIndex, boolean recursive) 
-                                   throws IOException {
-    int errors = 0;
-    
-    for (int i=startIndex; i<args.length; i++) {
-      Path srcPath = new Path(args[i]);
-      FileSystem srcFs = srcPath.getFileSystem(getConf());
-      Path[] paths = FileUtil.stat2Paths(srcFs.globStatus(srcPath), srcPath);
-      // if nothing matches to given glob pattern then increment error count
-      if(paths.length==0) {
-        System.err.println(handler.getName() + 
-            ": could not get status for '" + args[i] + "'");
-        errors++;
-      }
-      for(Path path : paths) {
-        try {
-          FileStatus file = srcFs.getFileStatus(path);
-          if (file == null) {
-            System.err.println(handler.getName() + 
-                               ": could not get status for '" + path + "'");
-            errors++;
-          } else {
-            errors += runCmdHandler(handler, file, srcFs, recursive);
-          }
-        } catch (IOException e) {
-          LOG.debug("Error getting status for " + path, e);
-          String msg = (e.getMessage() != null ? e.getLocalizedMessage() :
-            (e.getCause().getMessage() != null ? 
-                e.getCause().getLocalizedMessage() : "null"));
-          System.err.println(handler.getName() + ": could not get status for '"
-                                        + path + "': " + msg.split("\n")[0]);
-          errors++;
-        }
-      }
-    }
-    
-    return (errors > 0 || handler.getErrorCode() != 0) ? 1 : 0;
-  }
-  
-  /**
    * Return an abbreviated English-language desc of the byte length
    * @deprecated Consider using {@link org.apache.hadoop.util.StringUtils#byteDesc} instead.
    */
@@ -1107,10 +999,7 @@ public class FsShell extends Configured implements Tool {
       "[" + COPYTOLOCAL_SHORT_USAGE + "] [-moveToLocal <src> <localdst>]\n\t" +
       "[-report]\n\t" +
       "[-touchz <path>] [-test -[ezd] <path>] [-stat [format] <path>]\n\t" +
-      "[-text <path>]\n\t" +
-      "[" + FsShellPermissions.CHMOD_USAGE + "]\n\t" +
-      "[" + FsShellPermissions.CHOWN_USAGE + "]\n\t" +
-      "[" + FsShellPermissions.CHGRP_USAGE + "]";
+      "[-text <path>]";
 
     String conf ="-conf <configuration file>:  Specify an application configuration file.";
  
@@ -1205,39 +1094,7 @@ public class FsShell extends Configured implements Tool {
     String stat = "-stat [format] <path>: Print statistics about the file/directory at <path>\n" +
       "\t\tin the specified format. Format accepts filesize in blocks (%b), filename (%n),\n" +
       "\t\tblock size (%o), replication (%r), modification date (%y, %Y)\n";
-
-    String chmod = FsShellPermissions.CHMOD_USAGE + "\n" +
-      "\t\tChanges permissions of a file.\n" +
-      "\t\tThis works similar to shell's chmod with a few exceptions.\n\n" +
-      "\t-R\tmodifies the files recursively. This is the only option\n" +
-      "\t\tcurrently supported.\n\n" +
-      "\tMODE\tMode is same as mode used for chmod shell command.\n" +
-      "\t\tOnly letters recognized are 'rwxXt'. E.g. +t,a+r,g-w,+rwx,o=r\n\n" +
-      "\tOCTALMODE Mode specifed in 3 or 4 digits. If 4 digits, the first may\n" +
-      "\tbe 1 or 0 to turn the sticky bit on or off, respectively.  Unlike " +
-      "\tshell command, it is not possible to specify only part of the mode\n" +
-      "\t\tE.g. 754 is same as u=rwx,g=rx,o=r\n\n" +
-      "\t\tIf none of 'augo' is specified, 'a' is assumed and unlike\n" +
-      "\t\tshell command, no umask is applied.\n";
     
-    String chown = FsShellPermissions.CHOWN_USAGE + "\n" +
-      "\t\tChanges owner and group of a file.\n" +
-      "\t\tThis is similar to shell's chown with a few exceptions.\n\n" +
-      "\t-R\tmodifies the files recursively. This is the only option\n" +
-      "\t\tcurrently supported.\n\n" +
-      "\t\tIf only owner or group is specified then only owner or\n" +
-      "\t\tgroup is modified.\n\n" +
-      "\t\tThe owner and group names may only cosists of digits, alphabet,\n"+
-      "\t\tand any of '-_.@/' i.e. [-_.@/a-zA-Z0-9]. The names are case\n" +
-      "\t\tsensitive.\n\n" +
-      "\t\tWARNING: Avoid using '.' to separate user name and group though\n" +
-      "\t\tLinux allows it. If user names have dots in them and you are\n" +
-      "\t\tusing local file system, you might see surprising results since\n" +
-      "\t\tshell command 'chown' is used for local files.\n";
-    
-    String chgrp = FsShellPermissions.CHGRP_USAGE + "\n" +
-      "\t\tThis is equivalent to -chown ... :GROUP ...\n";
-
     String expunge = "-expunge: Empty the Trash.\n";
     
     String help = "-help [cmd]: \tDisplays help for given command or all commands if none\n" +
@@ -1294,12 +1151,6 @@ public class FsShell extends Configured implements Tool {
       System.out.println(text);
     } else if ("stat".equals(cmd)) {
       System.out.println(stat);
-    } else if ("chmod".equals(cmd)) {
-      System.out.println(chmod);
-    } else if ("chown".equals(cmd)) {
-      System.out.println(chown);
-    } else if ("chgrp".equals(cmd)) {
-      System.out.println(chgrp);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -1330,9 +1181,6 @@ public class FsShell extends Configured implements Tool {
       System.out.println(test);
       System.out.println(text);
       System.out.println(stat);
-      System.out.println(chmod);
-      System.out.println(chown);      
-      System.out.println(chgrp);
 
       for (String thisCmdName : commandFactory.getNames()) {
         printHelp(commandFactory.getInstance(thisCmdName));
@@ -1503,9 +1351,6 @@ public class FsShell extends Configured implements Tool {
       System.err.println("           [-touchz <path>]");
       System.err.println("           [-test -[ezd] <path>]");
       System.err.println("           [-stat [format] <path>]");
-      System.err.println("           [" + FsShellPermissions.CHMOD_USAGE + "]");      
-      System.err.println("           [" + FsShellPermissions.CHOWN_USAGE + "]");
-      System.err.println("           [" + FsShellPermissions.CHGRP_USAGE + "]");
       for (String name : commandFactory.getNames()) {
       	instance = commandFactory.getInstance(name);
         System.err.println("           [" + instance.getUsage() + "]");
@@ -1615,10 +1460,6 @@ public class FsShell extends Configured implements Tool {
         exitCode = doall(cmd, argv, i);
       } else if ("-moveToLocal".equals(cmd)) {
         moveToLocal(argv[i++], new Path(argv[i++]));
-      } else if ("-chmod".equals(cmd) || 
-                 "-chown".equals(cmd) ||
-                 "-chgrp".equals(cmd)) {
-        exitCode = FsShellPermissions.changePermissions(cmd, argv, i, this);
       } else if ("-mv".equals(cmd)) {
         exitCode = rename(argv, getConf());
       } else if ("-cp".equals(cmd)) {

@@ -132,6 +132,9 @@ class Ls extends FsCommand {
     return "Cannot access " + path.toUri() + ": No such file or directory.";
   }
 
+  @Override
+  protected int exitCodeForError() { return -1; }
+
   /**
    * Get a recursive listing of all files in that match the file patterns.
    * Same as "-ls -R"
