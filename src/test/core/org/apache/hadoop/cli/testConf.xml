@@ -430,7 +430,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-getmerge &lt;src&gt; &lt;localdst&gt;:  Get all the files in the directories that( )*</expected-output>
+          <expected-output>^-getmerge &lt;src&gt; &lt;localdst&gt; \[addnl\]:( |\t)*Get all the files in the directories that( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
