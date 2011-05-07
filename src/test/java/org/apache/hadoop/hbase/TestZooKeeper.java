@@ -100,9 +100,13 @@ public class TestZooKeeper {
     HConnection connection = HConnectionManager.getConnection(c);
     ZooKeeperWatcher connectionZK = connection.getZooKeeperWatcher();
     long sessionID = connectionZK.getZooKeeper().getSessionId();
-    byte[] password = connectionZK.getZooKeeper().getSessionPasswd();
+    byte [] password = connectionZK.getZooKeeper().getSessionPasswd();
+
     ZooKeeper zk = new ZooKeeper(quorumServers, sessionTimeout,
         EmptyWatcher.instance, sessionID, password);
+    LOG.info("Session timeout=" + zk.getSessionTimeout() +
+      ", original=" + sessionTimeout +
+      ", id=" + zk.getSessionId());
     zk.close();
 
     Thread.sleep(sessionTimeout * 3L);
@@ -110,11 +114,11 @@ public class TestZooKeeper {
     // provoke session expiration by doing something with ZK
     ZKUtil.dump(connectionZK);
 
-    // Check that the old ZK conenction is closed, means we did expire
+    // Check that the old ZK connection is closed, means we did expire
     System.err.println("ZooKeeper should have timed out");
-    LOG.info("state=" + connectionZK.getZooKeeper().getState());
-    Assert.assertTrue(connectionZK.getZooKeeper().getState().equals(
-        States.CLOSED));
+    String state = connectionZK.getZooKeeper().getState().toString();
+    Assert.assertTrue("State=" + state,
+      connectionZK.getZooKeeper().getState().equals(States.CLOSED));
 
     // Check that the client recovered
     ZooKeeperWatcher newConnectionZK = connection.getZooKeeperWatcher();
