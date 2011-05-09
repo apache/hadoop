@@ -146,7 +146,11 @@ public class PathData {
     FileStatus[] stats = fs.listStatus(path);
     PathData[] items = new PathData[stats.length];
     for (int i=0; i < stats.length; i++) {
-      items[i] = new PathData(fs, stats[i]);
+      // preserve relative paths
+      String basename = stats[i].getPath().getName();
+      String parent = string;
+      if (!parent.endsWith(Path.SEPARATOR)) parent += Path.SEPARATOR;
+      items[i] = new PathData(fs, parent + basename, stats[i]);
     }
     return items;
   }
