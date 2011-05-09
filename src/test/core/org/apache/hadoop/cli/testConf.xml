@@ -454,7 +454,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-cat &lt;src&gt;:( |\t)*Fetch all files that match the file pattern &lt;src&gt;( )*</expected-output>
+          <expected-output>^-cat \[-ignoreCrc\] &lt;src&gt; \.\.\.:( |\t)*Fetch all files that match the file pattern &lt;src&gt;( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
