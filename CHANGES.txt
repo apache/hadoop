@@ -133,6 +133,8 @@ Trunk (unreleased changes)
     HADOOP-7271. Standardize shell command error messages.  (Daryn Sharp
     via szetszwo)
 
+    HADOOP-7272. Remove unnecessary security related info logs. (suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
