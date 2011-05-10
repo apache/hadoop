@@ -188,6 +188,9 @@ Trunk (unreleased changes)
 
     HADOOP-7261. Disable IPV6 for junit tests. (suresh)
 
+    HADOOP-7268. FileContext.getLocalFSFileContext() behavior needs to be fixed
+    w.r.t tokens. (jitendra)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
