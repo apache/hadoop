@@ -32,6 +32,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.shell.PathExceptions.PathNotFoundException;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -199,7 +200,7 @@ abstract public class Command extends Configured {
     PathData[] items = PathData.expandAsGlob(arg, getConf());
     if (items.length == 0) {
       // it's a glob that failed to match
-      throw new FileNotFoundException(getFnfText(new Path(arg)));
+      throw new PathNotFoundException(arg);
     }
     return Arrays.asList(items);
   }
@@ -261,20 +262,7 @@ abstract public class Command extends Configured {
    *  @throws IOException if anything else goes wrong... 
    */
   protected void processNonexistentPath(PathData item) throws IOException {
-    // TODO: this should be more posix-like: ex. "No such file or directory"
-    throw new FileNotFoundException(getFnfText(item.path));
-  }
-
-  /**
-   *  TODO: A crutch until the text is standardized across commands...
-   *  Eventually an exception that takes the path as an argument will
-   *  replace custom text, until then, commands can supply custom text
-   *  for backwards compatibility
-   *  @param path the thing that doesn't exist
-   *  @returns String in printf format
-   */
-  protected String getFnfText(Path path) {
-    return path + ": No such file or directory";
+    throw new PathNotFoundException(item.toString());
   }
 
   /**

@@ -26,7 +26,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FsShell;
-import org.apache.hadoop.fs.Path;
 
 /**
  * Count the number of directories, files, bytes, quota, and remaining quota.
@@ -86,11 +85,5 @@ public class Count extends FsCommand {
   protected void processPath(PathData src) throws IOException {
     ContentSummary summary = src.fs.getContentSummary(src.path);
     out.println(summary.toString(showQuotas) + src.path);
-  }
-
-  // TODO: remove when the error is commonized...
-  @Override
-  protected String getFnfText(Path path) {
-    return "Can not find listing for " + path;
   }
 }

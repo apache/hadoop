@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.shell.PathExceptions.PathIsNotDirectoryException;
 
 /**
  * Encapsulates a Path (path), its FileStatus (stat), and its FileSystem (fs).
@@ -140,7 +141,7 @@ public class PathData {
    */
   public PathData[] getDirectoryContents() throws IOException {
     if (!stat.isDirectory()) {
-      throw new IOException(path + ": Not a directory");
+      throw new PathIsNotDirectoryException(string);
     }
 
     FileStatus[] stats = fs.listStatus(path);
