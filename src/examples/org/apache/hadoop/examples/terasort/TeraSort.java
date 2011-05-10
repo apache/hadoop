@@ -45,7 +45,7 @@ import org.apache.hadoop.util.ToolRunner;
  * finish. 
  * <p>
  * To run the program: 
- * <b>bin/hadoop jar hadoop-*-examples.jar terasort in-dir out-dir</b>
+ * <b>bin/hadoop jar hadoop-examples-*.jar terasort in-dir out-dir</b>
  */
 public class TeraSort extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(TeraSort.class);

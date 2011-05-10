@@ -19,13 +19,22 @@ package org.apache.hadoop.io.compress;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import junit.framework.TestCase;
@@ -45,8 +54,11 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.io.compress.CompressorStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor;
+import org.apache.hadoop.io.compress.zlib.BuiltInZlibDeflater;
+import org.apache.hadoop.io.compress.zlib.BuiltInZlibInflater;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
@@ -447,4 +459,156 @@ public class TestCodec extends TestCase {
     super(name);
   }
 
+  public void testCodecPoolAndGzipDecompressor() {
+    // BuiltInZlibInflater should not be used as the GzipCodec decompressor.
+    // Assert that this is the case.
+
+    // Don't use native libs for this test.
+    Configuration conf = new Configuration();
+    conf.setBoolean("hadoop.native.lib", false);
+    assertFalse("ZlibFactory is using native libs against request",
+        ZlibFactory.isNativeZlibLoaded(conf));
+
+    // This should give us a BuiltInZlibInflater.
+    Decompressor zlibDecompressor = ZlibFactory.getZlibDecompressor(conf);
+    assertNotNull("zlibDecompressor is null!", zlibDecompressor);
+    assertTrue("ZlibFactory returned unexpected inflator",
+        zlibDecompressor instanceof BuiltInZlibInflater);
+
+    // its createOutputStream() just wraps the existing stream in a
+    // java.util.zip.GZIPOutputStream.
+    CompressionCodecFactory ccf = new CompressionCodecFactory(conf);
+    CompressionCodec codec = ccf.getCodec(new Path("foo.gz"));
+    assertTrue("Codec for .gz file is not GzipCodec", 
+               codec instanceof GzipCodec);
+
+    // make sure we don't get a null decompressor
+    Decompressor codecDecompressor = codec.createDecompressor();
+    if (null == codecDecompressor) {
+      fail("Got null codecDecompressor");
+    }
+
+    // Asking the CodecPool for a decompressor for GzipCodec
+    // should not return null
+    Decompressor poolDecompressor = CodecPool.getDecompressor(codec);
+    if (null == poolDecompressor) {
+      fail("Got null poolDecompressor");
+    }
+    // return a couple decompressors
+    CodecPool.returnDecompressor(zlibDecompressor);
+    CodecPool.returnDecompressor(poolDecompressor);
+    Decompressor poolDecompressor2 = CodecPool.getDecompressor(codec);
+    if (poolDecompressor.getClass() == BuiltInGzipDecompressor.class) {
+      if (poolDecompressor == poolDecompressor2) {
+        fail("Reused java gzip decompressor in pool");
+      }
+    } else {
+      if (poolDecompressor != poolDecompressor2) {
+        fail("Did not reuse native gzip decompressor in pool");
+      }
+    }
+  }
+
+  public void testGzipCodecRead() throws IOException {
+    // Create a gzipped file and try to read it back, using a decompressor
+    // from the CodecPool.
+
+    // Don't use native libs for this test.
+    Configuration conf = new Configuration();
+    conf.setBoolean("hadoop.native.lib", false);
+    assertFalse("ZlibFactory is using native libs against request",
+        ZlibFactory.isNativeZlibLoaded(conf));
+
+    // Ensure that the CodecPool has a BuiltInZlibInflater in it.
+    Decompressor zlibDecompressor = ZlibFactory.getZlibDecompressor(conf);
+    assertNotNull("zlibDecompressor is null!", zlibDecompressor);
+    assertTrue("ZlibFactory returned unexpected inflator",
+        zlibDecompressor instanceof BuiltInZlibInflater);
+    CodecPool.returnDecompressor(zlibDecompressor);
+
+    // Now create a GZip text file.
+    String tmpDir = System.getProperty("test.build.data", "/tmp/");
+    Path f = new Path(new Path(tmpDir), "testGzipCodecRead.txt.gz");
+    BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(
+      new GZIPOutputStream(new FileOutputStream(f.toString()))));
+    final String msg = "This is the message in the file!";
+    bw.write(msg);
+    bw.close();
+
+    // Now read it back, using the CodecPool to establish the
+    // decompressor to use.
+    CompressionCodecFactory ccf = new CompressionCodecFactory(conf);
+    CompressionCodec codec = ccf.getCodec(f);
+    Decompressor decompressor = CodecPool.getDecompressor(codec);
+    FileSystem fs = FileSystem.getLocal(conf);
+    InputStream is = fs.open(f);
+    is = codec.createInputStream(is, decompressor);
+    BufferedReader br = new BufferedReader(new InputStreamReader(is));
+    String line = br.readLine();
+    assertEquals("Didn't get the same message back!", msg, line);
+    br.close();
+  }
+
+  private void verifyGzipFile(String filename, String msg) throws IOException {
+    BufferedReader r = new BufferedReader(new InputStreamReader(
+        new GZIPInputStream(new FileInputStream(filename))));
+    try {
+      String line = r.readLine();
+      assertEquals("Got invalid line back from " + filename, msg, line);
+    } finally {
+      r.close();
+      new File(filename).delete();
+    }
+  }
+
+  public void testGzipCodecWrite() throws IOException {
+    // Create a gzipped file using a compressor from the CodecPool,
+    // and try to read it back via the regular GZIPInputStream.
+
+    // Don't use native libs for this test.
+    Configuration conf = new Configuration();
+    conf.setBoolean("hadoop.native.lib", false);
+    assertFalse("ZlibFactory is using native libs against request",
+        ZlibFactory.isNativeZlibLoaded(conf));
+
+    // Ensure that the CodecPool has a BuiltInZlibDeflater in it.
+    Compressor zlibCompressor = ZlibFactory.getZlibCompressor(conf);
+    assertNotNull("zlibCompressor is null!", zlibCompressor);
+    assertTrue("ZlibFactory returned unexpected deflator",
+        zlibCompressor instanceof BuiltInZlibDeflater);
+    CodecPool.returnCompressor(zlibCompressor);
+
+    // Create a GZIP text file via the Compressor interface.
+    CompressionCodecFactory ccf = new CompressionCodecFactory(conf);
+    CompressionCodec codec = ccf.getCodec(new Path("foo.gz"));
+    assertTrue("Codec for .gz file is not GzipCodec", codec instanceof GzipCodec);
+
+    final String msg = "This is the message we are going to compress.";
+    final String tmpDir = System.getProperty("test.build.data", "/tmp/");
+    final String fileName = new Path(new Path(tmpDir),
+        "testGzipCodecWrite.txt.gz").toString();
+
+    BufferedWriter w = null;
+    Compressor gzipCompressor = CodecPool.getCompressor(codec);
+    if (null != gzipCompressor) {
+      // If it gives us back a Compressor, we should be able to use this
+      // to write files we can then read back with Java's gzip tools.
+      OutputStream os = new CompressorStream(new FileOutputStream(fileName),
+          gzipCompressor);
+      w = new BufferedWriter(new OutputStreamWriter(os));
+      w.write(msg);
+      w.close();
+      CodecPool.returnCompressor(gzipCompressor);
+
+      verifyGzipFile(fileName, msg);
+    }
+
+    // Create a gzip text file via codec.getOutputStream().
+    w = new BufferedWriter(new OutputStreamWriter(
+        codec.createOutputStream(new FileOutputStream(fileName))));
+    w.write(msg);
+    w.close();
+
+    verifyGzipFile(fileName, msg);
+  }
 }

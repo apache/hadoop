@@ -32,7 +32,7 @@ import org.apache.hadoop.mapred.lib.aggregate.ValueAggregatorJob;
  * This is an example Aggregated Hadoop Map/Reduce application. Computes the
  * histogram of the words in the input texts.
  * 
- * To run: bin/hadoop jar hadoop-*-examples.jar aggregatewordhist <i>in-dir</i>
+ * To run: bin/hadoop jar hadoop-examples-*.jar aggregatewordhist <i>in-dir</i>
  * <i>out-dir</i> <i>numOfReducers</i> textinputformat
  * 
  */

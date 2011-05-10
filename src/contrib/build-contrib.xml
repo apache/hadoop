@@ -23,13 +23,14 @@
 
   <property name="name" value="${ant.project.name}"/>
   <property name="root" value="${basedir}"/>
+  <property name="hadoop.root" location="${root}/../../../"/>
 
   <!-- Load all the default properties, and any the user wants    -->
   <!-- to contribute (without having to type -D or edit this file -->
   <property file="${user.home}/${name}.build.properties" />
   <property file="${root}/build.properties" />
+  <property file="${hadoop.root}/build.properties" />
 
-  <property name="hadoop.root" location="${root}/../../../"/>
   <property name="src.dir"  location="${root}/src/java"/>
   <property name="src.test" location="${root}/src/test"/>
   <!-- Property added for contrib system tests -->

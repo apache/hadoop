@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -122,7 +124,12 @@ public class FairSchedulerServlet extends HttpServlet {
     }
     // Print out the normal response
     response.setContentType("text/html");
-    PrintWriter out = new PrintWriter(response.getOutputStream());
+
+    // Because the client may read arbitrarily slow, and we hold locks while
+    // the servlet output, we want to write to our own buffer which we know
+    // won't block.
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter out = new PrintWriter(baos);
     String hostname = StringUtils.simpleHostname(
         jobTracker.getJobTrackerMachine());
     out.print("<html><head>");
@@ -137,6 +144,11 @@ public class FairSchedulerServlet extends HttpServlet {
     showAdminForm(out, advancedView);
     out.print("</body></html>\n");
     out.close();
+
+    // Flush our buffer to the real servlet output
+    OutputStream servletOut = response.getOutputStream();
+    baos.writeTo(servletOut);
+    servletOut.close();
   }
 
   /**
@@ -206,51 +218,53 @@ public class FairSchedulerServlet extends HttpServlet {
     out.print("<th>Finished</th><th>Running</th><th>Fair Share</th>" +
         (advancedView ? "<th>Weight</th><th>Deficit</th><th>minReduces</th>" : ""));
     out.print("</tr>\n");
-    Collection<JobInProgress> runningJobs = jobTracker.getRunningJobs();
-    synchronized (scheduler) {
-      for (JobInProgress job: runningJobs) {
-        JobProfile profile = job.getProfile();
-        JobInfo info = scheduler.infos.get(job);
-        if (info == null) { // Job finished, but let's show 0's for info
-          info = new JobInfo();
+    synchronized (jobTracker) {
+      Collection<JobInProgress> runningJobs = jobTracker.getRunningJobs();
+      synchronized (scheduler) {
+        for (JobInProgress job: runningJobs) {
+          JobProfile profile = job.getProfile();
+          JobInfo info = scheduler.infos.get(job);
+          if (info == null) { // Job finished, but let's show 0's for info
+            info = new JobInfo();
+          }
+          out.print("<tr>\n");
+          out.printf("<td>%s</td>\n", DATE_FORMAT.format(
+                       new Date(job.getStartTime())));
+          out.printf("<td><a href=\"jobdetails.jsp?jobid=%s\">%s</a></td>",
+                     profile.getJobID(), profile.getJobID());
+          out.printf("<td>%s</td>\n", profile.getUser());
+          out.printf("<td>%s</td>\n", profile.getJobName());
+          out.printf("<td>%s</td>\n", generateSelect(
+                       scheduler.getPoolManager().getPoolNames(),
+                       scheduler.getPoolManager().getPoolName(job),
+                       "/scheduler?setPool=<CHOICE>&jobid=" + profile.getJobID() +
+                       (advancedView ? "&advanced" : "")));
+          out.printf("<td>%s</td>\n", generateSelect(
+                       Arrays.asList(new String[]
+                         {"VERY_LOW", "LOW", "NORMAL", "HIGH", "VERY_HIGH"}),
+                       job.getPriority().toString(),
+                       "/scheduler?setPriority=<CHOICE>&jobid=" + profile.getJobID() +
+                       (advancedView ? "&advanced" : "")));
+          out.printf("<td>%d / %d</td><td>%d</td><td>%8.1f</td>\n",
+                     job.finishedMaps(), job.desiredMaps(), info.runningMaps,
+                     info.mapFairShare);
+          if (advancedView) {
+            out.printf("<td>%8.1f</td>\n", info.mapWeight);
+            out.printf("<td>%s</td>\n", info.neededMaps > 0 ?
+                       (info.mapDeficit / 1000) + "s" : "--");
+            out.printf("<td>%d</td>\n", info.minMaps);
+          }
+          out.printf("<td>%d / %d</td><td>%d</td><td>%8.1f</td>\n",
+                     job.finishedReduces(), job.desiredReduces(), info.runningReduces,
+                     info.reduceFairShare);
+          if (advancedView) {
+            out.printf("<td>%8.1f</td>\n", info.reduceWeight);
+            out.printf("<td>%s</td>\n", info.neededReduces > 0 ?
+                       (info.reduceDeficit / 1000) + "s" : "--");
+            out.printf("<td>%d</td>\n", info.minReduces);
+          }
+          out.print("</tr>\n");
         }
-        out.print("<tr>\n");
-        out.printf("<td>%s</td>\n", DATE_FORMAT.format(
-            new Date(job.getStartTime())));
-        out.printf("<td><a href=\"jobdetails.jsp?jobid=%s\">%s</a></td>",
-            profile.getJobID(), profile.getJobID());
-        out.printf("<td>%s</td>\n", profile.getUser());
-        out.printf("<td>%s</td>\n", profile.getJobName());
-        out.printf("<td>%s</td>\n", generateSelect(
-            scheduler.getPoolManager().getPoolNames(),
-            scheduler.getPoolManager().getPoolName(job),
-            "/scheduler?setPool=<CHOICE>&jobid=" + profile.getJobID() +
-            (advancedView ? "&advanced" : "")));
-        out.printf("<td>%s</td>\n", generateSelect(
-            Arrays.asList(new String[]
-                {"VERY_LOW", "LOW", "NORMAL", "HIGH", "VERY_HIGH"}),
-            job.getPriority().toString(),
-            "/scheduler?setPriority=<CHOICE>&jobid=" + profile.getJobID() +
-            (advancedView ? "&advanced" : "")));
-        out.printf("<td>%d / %d</td><td>%d</td><td>%8.1f</td>\n",
-            job.finishedMaps(), job.desiredMaps(), info.runningMaps,
-            info.mapFairShare);
-        if (advancedView) {
-          out.printf("<td>%8.1f</td>\n", info.mapWeight);
-          out.printf("<td>%s</td>\n", info.neededMaps > 0 ?
-              (info.mapDeficit / 1000) + "s" : "--");
-          out.printf("<td>%d</td>\n", info.minMaps);
-        }
-        out.printf("<td>%d / %d</td><td>%d</td><td>%8.1f</td>\n",
-            job.finishedReduces(), job.desiredReduces(), info.runningReduces,
-            info.reduceFairShare);
-        if (advancedView) {
-          out.printf("<td>%8.1f</td>\n", info.reduceWeight);
-          out.printf("<td>%s</td>\n", info.neededReduces > 0 ?
-              (info.reduceDeficit / 1000) + "s" : "--");
-          out.printf("<td>%d</td>\n", info.minReduces);
-        }
-        out.print("</tr>\n");
       }
     }
     out.print("</table>\n");
