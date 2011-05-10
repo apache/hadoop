@@ -918,16 +918,18 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         if (LOG.isDebugEnabled()) {
           LOG.debug("Adding/overwriting reason for " + shade +
               "listed tracker : " + hostName + " Reason for " + shade +
-              "listing is : " + rfb);
+              "listing is : " + rfb + " Reason details : " + reason);
         }
         if (!fi.getReasonForBlacklisting(gray).contains(rfb)) {
           LOG.info("Adding new reason for " + shade + "listed tracker : " +
-              hostName + " Reason for " + shade + "listing is : " + rfb);
+              hostName + " Reason for " + shade + "listing is : " + rfb 
+              + " Reason details : " + reason);
         }
         fi.addBlacklistedReason(rfb, reason, gray);
       } else {
         LOG.info("Adding new " + shade + "listed tracker : " + hostName 
-            + " Reason for " + shade + "listing is : " + rfb);
+            + " Reason for " + shade + "listing is : " + rfb 
+            + " Reason details : " + reason);
         if (gray) {
           incrGraylistedTrackers(getNumTaskTrackersOnHost(hostName));
         } else {
