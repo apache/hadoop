@@ -314,11 +314,12 @@ public class RegionServerMetrics implements Updater {
   }
 
   /**
-   * @param compact history in <time, size>
+   * @param time time that compaction took
+   * @param size bytesize of storefiles in the compaction
    */
-  public synchronized void addCompaction(final Pair<Long,Long> compact) {
-     this.compactionTime.inc(compact.getFirst());
-     this.compactionSize.inc(compact.getSecond());
+  public synchronized void addCompaction(long time, long size) {
+    this.compactionTime.inc(time);
+    this.compactionSize.inc(size);
   }
 
   /**

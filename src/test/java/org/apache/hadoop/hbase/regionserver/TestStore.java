@@ -156,7 +156,7 @@ public class TestStore extends TestCase {
     assertEquals(lowestTimeStampFromStore,lowestTimeStampFromFS);
     
     // after compact; check the lowest time stamp
-    store.compact();
+    store.compact(store.requestCompaction());
     lowestTimeStampFromStore = Store.getLowestTimestamp(store.getStorefiles());
     lowestTimeStampFromFS = getLowestTimeStampFromFS(fs,store.getStorefiles());
     assertEquals(lowestTimeStampFromStore,lowestTimeStampFromFS); 
@@ -688,7 +688,9 @@ public class TestStore extends TestCase {
    */
   public void testSplitWithEmptyColFam() throws IOException {
     init(this.getName());
-    assertNull(store.checkSplit(false));
-    assertNull(store.checkSplit(true));
+    assertNull(store.checkSplit());
+    store.getHRegion().forceSplit(null);
+    assertNull(store.checkSplit());
+    store.getHRegion().clearSplit_TESTS_ONLY();
   }
 }

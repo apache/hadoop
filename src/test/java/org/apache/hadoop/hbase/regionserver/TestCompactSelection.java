@@ -158,7 +158,9 @@ public class TestCompactSelection extends TestCase {
   void compactEquals(List<StoreFile> candidates, boolean forcemajor, 
       long ... expected)
   throws IOException {
-    List<StoreFile> actual = store.compactSelection(candidates, forcemajor);
+    store.forceMajor = forcemajor;
+    List<StoreFile> actual = store.compactSelection(candidates);
+    store.forceMajor = false;
     assertEquals(Arrays.toString(expected), Arrays.toString(getSizes(actual)));
   }
 
@@ -187,7 +189,7 @@ public class TestCompactSelection extends TestCase {
      */
     // don't exceed max file compact threshold
     assertEquals(maxFiles,
-        store.compactSelection(sfCreate(7,6,5,4,3,2,1), false).size());
+        store.compactSelection(sfCreate(7,6,5,4,3,2,1)).size());
 
     /* MAJOR COMPACTION */
     // if a major compaction has been forced, then compact everything
@@ -197,8 +199,11 @@ public class TestCompactSelection extends TestCase {
     // even if one of those files is too big
     compactEquals(sfCreate(tooBig, 12,12), true, tooBig, 12, 12);
     // don't exceed max file compact threshold, even with major compaction
+    store.forceMajor = true;
     assertEquals(maxFiles,
-        store.compactSelection(sfCreate(7,6,5,4,3,2,1), true).size());
+        store.compactSelection(sfCreate(7,6,5,4,3,2,1)).size());
+    store.forceMajor = false;
+
     // if we exceed maxCompactSize, downgrade to minor
     // if not, it creates a 'snowball effect' when files >> maxCompactSize:
     // the last file in compaction is the aggregate of all previous compactions
@@ -217,7 +222,7 @@ public class TestCompactSelection extends TestCase {
     compactEquals(sfCreate(true, tooBig, 12,12), tooBig, 12, 12);
     // reference files should obey max file compact to avoid OOM
     assertEquals(maxFiles,
-        store.compactSelection(sfCreate(true, 7,6,5,4,3,2,1), false).size());
+        store.compactSelection(sfCreate(true, 7,6,5,4,3,2,1)).size());
 
     // empty case
     compactEquals(new ArrayList<StoreFile>() /* empty */);

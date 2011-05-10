@@ -85,6 +85,7 @@ import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -101,6 +102,7 @@ import org.apache.hadoop.util.StringUtils;
 
 import org.cliffc.high_scale_lib.Counter;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ClassToInstanceMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MutableClassToInstanceMap;
@@ -206,8 +208,8 @@ public class HRegion implements HeapSize { // , Writable{
     volatile boolean flushing = false;
     // Set when a flush has been requested.
     volatile boolean flushRequested = false;
-    // Set while a compaction is running.
-    volatile boolean compacting = false;
+    // Number of compactions running.
+    volatile int compacting = 0;
     // Gets set in close. If set, cannot compact or flush again.
     volatile boolean writesEnabled = true;
     // Set if region is read-only
@@ -395,7 +397,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     this.writestate.setReadOnly(this.regionInfo.getTableDesc().isReadOnly());
 
-    this.writestate.compacting = false;
+    this.writestate.compacting = 0;
     this.lastFlushTime = EnvironmentEdgeManager.currentTimeMillis();
     // Use maximum of log sequenceid or that which was found in stores
     // (particularly if no recovered edits, seqid will be -1).
@@ -606,12 +608,10 @@ public class HRegion implements HeapSize { // , Writable{
       writestate.writesEnabled = false;
       wasFlushing = writestate.flushing;
       LOG.debug("Closing " + this + ": disabling compactions & flushes");
-      while (writestate.compacting || writestate.flushing) {
-        LOG.debug("waiting for" +
-          (writestate.compacting ? " compaction" : "") +
-          (writestate.flushing ?
-            (writestate.compacting ? "," : "") + " cache flush" :
-              "") + " to complete for region " + this);
+      while (writestate.compacting > 0 || writestate.flushing) {
+        LOG.debug("waiting for " + writestate.compacting + " compactions" +
+            (writestate.flushing ? " & cache flush" : "") +
+            " to complete for region " + this);
         try {
           writestate.wait();
         } catch (InterruptedException iex) {
@@ -734,11 +734,6 @@ public class HRegion implements HeapSize { // , Writable{
     return this.fs;
   }
 
-  /** @return info about the last compaction <time, size> */
-  public Pair<Long,Long> getLastCompactInfo() {
-    return this.lastCompactInfo;
-  }
-
   /** @return the last time the region was flushed */
   public long getLastFlushTime() {
     return this.lastFlushTime;
@@ -794,9 +789,9 @@ public class HRegion implements HeapSize { // , Writable{
     return new Path(getRegionDir(), ".tmp");
   }
 
-  void setForceMajorCompaction(final boolean b) {
+  void triggerMajorCompaction() {
     for (Store h: stores.values()) {
-      h.setForceMajorCompaction(b);
+      h.triggerMajorCompaction();
     }
   }
 
@@ -817,7 +812,9 @@ public class HRegion implements HeapSize { // , Writable{
    */
   byte [] compactStores(final boolean majorCompaction)
   throws IOException {
-    this.setForceMajorCompaction(majorCompaction);
+    if (majorCompaction) {
+      this.triggerMajorCompaction();
+    }
     return compactStores();
   }
 
@@ -826,13 +823,21 @@ public class HRegion implements HeapSize { // , Writable{
    * to be split.
    */
   public byte[] compactStores() throws IOException {
-    byte[] splitRow = null;
     for(Store s : getStores().values()) {
-      if(splitRow == null) {
-        splitRow = compactStore(s);
+      CompactionRequest cr = s.requestCompaction();
+      if(cr != null) {
+        try {
+          compact(cr);
+        } finally {
+          s.finishRequest(cr);
+        }
+      }
+      byte[] splitRow = s.checkSplit();
+      if (splitRow != null) {
+        return splitRow;
       }
     }
-    return splitRow;
+    return null;
   }
 
   /*
@@ -846,93 +851,76 @@ public class HRegion implements HeapSize { // , Writable{
    * conflicts with a region split, and that cannot happen because the region
    * server does them sequentially and not in parallel.
    *
-   * @return split row if split is needed
+   * @param cr Compaction details, obtained by requestCompaction()
+   * @return whether the compaction completed
    * @throws IOException e
    */
-  public byte [] compactStore(Store store) throws IOException {
-    if (this.closing.get()) {
-      LOG.debug("Skipping compaction on " + this + " because closing");
-      return null;
+  public boolean compact(CompactionRequest cr)
+  throws IOException {
+    if (cr == null) {
+      return false;
     }
+    if (this.closing.get() || this.closed.get()) {
+      LOG.debug("Skipping compaction on " + this + " because closing/closed");
+      return false;
+    }
+    Preconditions.checkArgument(cr.getHRegion().equals(this));
     lock.readLock().lock();
-    this.lastCompactInfo = null;
-    byte [] splitRow = null;
     MonitoredTask status = TaskMonitor.get().createStatus(
-        "Compacting stores in " + this);
+        "Compacting " + cr.getStore() + " in " + this);
     try {
       if (this.closed.get()) {
         LOG.debug("Skipping compaction on " + this + " because closed");
-        return null;
-      }
-      if (this.closed.get()) {
-        return splitRow;
+        return false;
       }
       if (coprocessorHost != null) {
         status.setStatus("Running coprocessor preCompact hooks");
         coprocessorHost.preCompact(false);
       }
+      boolean decr = true;
       try {
         synchronized (writestate) {
-          if (!writestate.compacting && writestate.writesEnabled) {
-            writestate.compacting = true;
+          if (writestate.writesEnabled) {
+            ++writestate.compacting;
           } else {
-            String msg = "NOT compacting region " + this +
-                ": compacting=" + writestate.compacting + ", writesEnabled=" +
-                writestate.writesEnabled;
+            String msg = "NOT compacting region " + this + ". Writes disabled.";
             LOG.info(msg);
             status.abort(msg);
-            return splitRow;
+            decr = false;
+            return false;
           }
         }
         LOG.info("Starting compaction on region " + this);
-        long startTime = EnvironmentEdgeManager.currentTimeMillis();
         doRegionCompactionPrep();
-        long lastCompactSize = 0;
-        boolean completed = false;
         try {
-          status.setStatus("Compacting store " + store);
-          final Store.StoreSize ss = store.compact();
-          lastCompactSize += store.getLastCompactSize();
-          if (ss != null) {
-            splitRow = ss.getSplitRow();
-          }
-          completed = true;
+          status.setStatus("Compacting store " + cr.getStore());
+          cr.getStore().compact(cr);
         } catch (InterruptedIOException iioe) {
-          LOG.info("compaction interrupted by user: ", iioe);
-        } finally {
-          long now = EnvironmentEdgeManager.currentTimeMillis();
-          LOG.info(((completed) ? "completed" : "aborted")
-              + " compaction on region " + this
-              + " after " + StringUtils.formatTimeDiff(now, startTime));
-          if (completed) {
-            this.lastCompactInfo =
-              new Pair<Long,Long>((now - startTime) / 1000, lastCompactSize);
-            status.setStatus("Compaction complete: " +
-                StringUtils.humanReadableInt(lastCompactSize) + " in " +
-                (now - startTime) + "ms");
-          }
+          String msg = "compaction interrupted by user";
+          LOG.info(msg, iioe);
+          status.abort(msg);
+          return false;
         }
       } finally {
-        synchronized (writestate) {
-          writestate.compacting = false;
-          writestate.notifyAll();
+        if (decr) {
+          synchronized (writestate) {
+            --writestate.compacting;
+            if (writestate.compacting <= 0) {
+              writestate.notifyAll();
+            }
+          }
         }
       }
       if (coprocessorHost != null) {
         status.setStatus("Running coprocessor post-compact hooks");
-        coprocessorHost.postCompact(splitRow != null);
+        coprocessorHost.postCompact(false);
       }
-      
       status.markComplete("Compaction complete");
+      return true;
     } finally {
       status.cleanup();
       lock.readLock().unlock();
     }
-    if (splitRow != null) {
-      assert splitPoint == null || Bytes.equals(splitRow, splitPoint);
-      this.splitPoint = null; // clear the split point (if set)
-    }
-    return splitRow;
   }
 
   /**
@@ -3708,6 +3696,10 @@ public class HRegion implements HeapSize { // , Writable{
     }
   }
 
+  void clearSplit_TESTS_ONLY() {
+    this.splitRequest = false;
+  }
+
   /**
    * Give the region a chance to prepare before it is split.
    */
@@ -3731,9 +3723,9 @@ public class HRegion implements HeapSize { // , Writable{
    * store files
    * @return true if any store has too many store files
    */
-  public boolean hasTooManyStoreFiles() {
+  public boolean needsCompaction() {
     for(Store store : stores.values()) {
-      if(store.hasTooManyStoreFiles()) {
+      if(store.needsCompaction()) {
         return true;
       }
     }

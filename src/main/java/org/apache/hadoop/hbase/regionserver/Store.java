@@ -24,8 +24,10 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -48,16 +50,20 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 /**
  * A Store holds a column family in a Region.  Its a memstore and a set of zero
@@ -102,7 +108,7 @@ public class Store implements HeapSize {
   // With float, java will downcast your long to float for comparisons (bad)
   private double compactRatio;
   private long lastCompactSize = 0;
-  private volatile boolean forceMajor = false;
+  volatile boolean forceMajor = false;
   /* how many bytes to write between status checks */
   static int closeCheckInterval = 0;
   private final long desiredMaxFileSize;
@@ -119,12 +125,12 @@ public class Store implements HeapSize {
    */
   private ImmutableList<StoreFile> storefiles = null;
 
+  List<StoreFile> filesCompacting = Lists.newArrayList();
 
   // All access must be synchronized.
   private final CopyOnWriteArraySet<ChangedReadersObserver> changedReaderObservers =
     new CopyOnWriteArraySet<ChangedReadersObserver>();
 
-  private final Object compactLock = new Object();
   private final int blocksize;
   private final boolean blockcache;
   /** Compression algorithm for flush files and minor compaction */
@@ -569,7 +575,7 @@ public class Store implements HeapSize {
       // Tell listeners of the change in readers.
       notifyChangedReadersObservers();
 
-      return this.storefiles.size() >= this.minFilesToCompact;
+      return needsCompaction();
     } finally {
       this.lock.writeLock().unlock();
     }
@@ -620,97 +626,106 @@ public class Store implements HeapSize {
    * <p>We don't want to hold the structureLock for the whole time, as a compact()
    * can be lengthy and we want to allow cache-flushes during this period.
    *
-   * @return row to split around if a split is needed, null otherwise
+   * @param CompactionRequest
+   *          compaction details obtained from requestCompaction()
    * @throws IOException
    */
-  StoreSize compact() throws IOException {
-    boolean forceSplit = this.region.shouldForceSplit();
-    synchronized (compactLock) {
-      this.lastCompactSize = 0; // reset first in case compaction is aborted
+  void compact(CompactionRequest cr) throws IOException {
+    if (cr == null || cr.getFiles().isEmpty()) {
+      return;
+    }
+    Preconditions.checkArgument(cr.getStore().toString()
+        .equals(this.toString()));
 
-      // sanity checks
-      for (StoreFile sf : this.storefiles) {
-        if (sf.getPath() == null || sf.getReader() == null) {
-          boolean np = sf.getPath() == null;
-          LOG.debug("StoreFile " + sf + " has null " + (np ? "Path":"Reader"));
-          return null;
-        }
-      }
+    List<StoreFile> filesToCompact = cr.getFiles();
 
-      // if the user wants to force a split, skip compaction unless necessary
-      boolean references = hasReferences(this.storefiles);
-      if (forceSplit && !this.forceMajor && !references) {
-        return checkSplit(forceSplit);
-      }
+    synchronized (filesCompacting) {
+      // sanity check: we're compacting files that this store knows about
+      // TODO: change this to LOG.error() after more debugging
+      Preconditions.checkArgument(filesCompacting.containsAll(filesToCompact));
+    }
 
-      Collection<StoreFile> filesToCompact
-        = compactSelection(this.storefiles, this.forceMajor);
+    // Max-sequenceID is the last key in the files we're compacting
+    long maxId = StoreFile.getMaxSequenceIdInList(filesToCompact);
 
-      // empty == do not compact
-      if (filesToCompact.isEmpty()) {
-        // but do see if we need to split before returning
-        return checkSplit(forceSplit);
-      }
+    // Ready to go. Have list of files to compact.
+    LOG.info("Starting compaction of " + filesToCompact.size() + " file(s) in "
+        + this.storeNameStr + " of "
+        + this.region.getRegionInfo().getRegionNameAsString()
+        + " into " + region.getTmpDir() + ", seqid=" + maxId + ", totalSize="
+        + StringUtils.humanReadableInt(cr.getSize()));
 
-      // sum size of all files included in compaction
-      long totalSize = 0;
-      for (StoreFile sf : filesToCompact) {
-        totalSize += sf.getReader().length();
-      }
-      this.lastCompactSize = totalSize;
-
-      // major compaction iff all StoreFiles are included
-      boolean majorcompaction
-        = (filesToCompact.size() == this.storefiles.size());
-      if (majorcompaction) {
-        this.forceMajor = false;
-      }
-
-      // Max-sequenceID is the last key in the files we're compacting
-      long maxId = StoreFile.getMaxSequenceIdInList(filesToCompact);
-
-      // Ready to go.  Have list of files to compact.
-      LOG.info("Started compaction of " + filesToCompact.size() + " file(s) in cf=" +
-          this.storeNameStr +
-        (hasReferences(filesToCompact)? ", hasReferences=true,": " ") + " into " +
-          region.getTmpDir() + ", seqid=" + maxId +
-          ", totalSize=" + StringUtils.humanReadableInt(totalSize));
-      StoreFile.Writer writer
-        = compactStore(filesToCompact, majorcompaction, maxId);
+    StoreFile sf = null;
+    try {
+      StoreFile.Writer writer = compactStore(filesToCompact, cr.isMajor(),
+          maxId);
       // Move the compaction into place.
-      StoreFile sf = completeCompaction(filesToCompact, writer);
-      if (LOG.isInfoEnabled()) {
-        LOG.info("Completed" + (majorcompaction? " major ": " ") +
-          "compaction of " + filesToCompact.size() +
-          " file(s), new file=" + (sf == null? "none": sf.toString()) +
-          ", size=" + (sf == null? "none": StringUtils.humanReadableInt(sf.getReader().length())) +
-          "; total size for store is " + StringUtils.humanReadableInt(storeSize));
+      sf = completeCompaction(filesToCompact, writer);
+    } finally {
+      synchronized (filesCompacting) {
+        filesCompacting.removeAll(filesToCompact);
       }
     }
-    return checkSplit(forceSplit);
+
+    LOG.info("Completed" + (cr.isMajor() ? " major " : " ") + "compaction of "
+        + filesToCompact.size() + " file(s) in " + this.storeNameStr + " of "
+        + this.region.getRegionInfo().getRegionNameAsString()
+        + "; new storefile name=" + (sf == null ? "none" : sf.toString())
+        + ", size=" + (sf == null ? "none" :
+          StringUtils.humanReadableInt(sf.getReader().length()))
+        + "; total size for store is "
+        + StringUtils.humanReadableInt(storeSize));
   }
 
   /*
    * Compact the most recent N files. Essentially a hook for testing.
    */
   protected void compactRecent(int N) throws IOException {
-    synchronized(compactLock) {
-      List<StoreFile> filesToCompact = this.storefiles;
-      int count = filesToCompact.size();
-      if (N > count) {
-        throw new RuntimeException("Not enough files");
+    List<StoreFile> filesToCompact;
+    long maxId;
+    boolean isMajor;
+
+    this.lock.readLock().lock();
+    try {
+      synchronized (filesCompacting) {
+        filesToCompact = Lists.newArrayList(storefiles);
+        if (!filesCompacting.isEmpty()) {
+          // exclude all files older than the newest file we're currently
+          // compacting. this allows us to preserve contiguity (HBASE-2856)
+          StoreFile last = filesCompacting.get(filesCompacting.size() - 1);
+          int idx = filesToCompact.indexOf(last);
+          Preconditions.checkArgument(idx != -1);
+          filesToCompact = filesToCompact.subList(idx+1, filesToCompact.size());
+        }
+        int count = filesToCompact.size();
+        if (N > count) {
+          throw new RuntimeException("Not enough files");
+        }
+
+        filesToCompact = filesToCompact.subList(count - N, count);
+        maxId = StoreFile.getMaxSequenceIdInList(filesToCompact);
+        isMajor = (filesToCompact.size() == storefiles.size());
+        filesCompacting.addAll(filesToCompact);
+        Collections.sort(filesCompacting, StoreFile.Comparators.FLUSH_TIME);
       }
+    } finally {
+      this.lock.readLock().unlock();
+    }
 
-      filesToCompact = new ArrayList<StoreFile>(filesToCompact.subList(count-N, count));
-      long maxId = StoreFile.getMaxSequenceIdInList(filesToCompact);
-      boolean majorcompaction = (N == count);
-
-      // Ready to go.  Have list of files to compact.
-      StoreFile.Writer writer
-        = compactStore(filesToCompact, majorcompaction, maxId);
+    try {
+      // Ready to go. Have list of files to compact.
+      StoreFile.Writer writer = compactStore(filesToCompact, isMajor, maxId);
       // Move the compaction into place.
       StoreFile sf = completeCompaction(filesToCompact, writer);
+    } finally {
+      synchronized (filesCompacting) {
+        filesCompacting.removeAll(filesToCompact);
+      }
     }
+  }
+
+  boolean hasReferences() {
+    return hasReferences(this.storefiles);
   }
 
   /*
@@ -835,6 +850,69 @@ public class Store implements HeapSize {
     return ret;
   }
 
+  public CompactionRequest requestCompaction() {
+    // don't even select for compaction if writes are disabled
+    if (!this.region.areWritesEnabled()) {
+      return null;
+    }
+
+    CompactionRequest ret = null;
+    this.lock.readLock().lock();
+    try {
+      synchronized (filesCompacting) {
+        // candidates = all storefiles not already in compaction queue
+        List<StoreFile> candidates = Lists.newArrayList(storefiles);
+        if (!filesCompacting.isEmpty()) {
+          // exclude all files older than the newest file we're currently
+          // compacting. this allows us to preserve contiguity (HBASE-2856)
+          StoreFile last = filesCompacting.get(filesCompacting.size() - 1);
+          int idx = candidates.indexOf(last);
+          Preconditions.checkArgument(idx != -1);
+          candidates = candidates.subList(idx + 1, candidates.size());
+        }
+        List<StoreFile> filesToCompact = compactSelection(candidates);
+
+        // no files to compact
+        if (filesToCompact.isEmpty()) {
+          return null;
+        }
+
+        // basic sanity check: do not try to compact the same StoreFile twice.
+        if (!Collections.disjoint(filesCompacting, filesToCompact)) {
+          // TODO: change this from an IAE to LOG.error after sufficient testing
+          Preconditions.checkArgument(false, "%s overlaps with %s",
+              filesToCompact, filesCompacting);
+        }
+        filesCompacting.addAll(filesToCompact);
+        Collections.sort(filesCompacting, StoreFile.Comparators.FLUSH_TIME);
+
+        // major compaction iff all StoreFiles are included
+        boolean isMajor = (filesToCompact.size() == this.storefiles.size());
+        if (isMajor) {
+          // since we're enqueuing a major, update the compaction wait interval
+          this.forceMajor = false;
+          this.majorCompactionTime = getNextMajorCompactTime();
+        }
+
+        // everything went better than expected. create a compaction request
+        int pri = getCompactPriority();
+        ret = new CompactionRequest(region, this, filesToCompact, isMajor, pri);
+      }
+    } catch (IOException ex) {
+      LOG.error("Compaction Request failed for region " + region + ", store "
+          + this, RemoteExceptionHandler.checkIOException(ex));
+    } finally {
+      this.lock.readLock().unlock();
+    }
+    return ret;
+  }
+
+  public void finishRequest(CompactionRequest cr) {
+    synchronized (filesCompacting) {
+      filesCompacting.removeAll(cr.getFiles());
+    }
+  }
+
   /**
    * Algorithm to choose which files to compact
    *
@@ -851,12 +929,13 @@ public class Store implements HeapSize {
    *    max files to compact at once (avoids OOM)
    *
    * @param candidates candidate files, ordered from oldest to newest
-   * @param majorcompaction whether to force a major compaction
    * @return subset copy of candidate list that meets compaction criteria
    * @throws IOException
    */
-  List<StoreFile> compactSelection(List<StoreFile> candidates,
-      boolean forcemajor) throws IOException {
+  List<StoreFile> compactSelection(List<StoreFile> candidates)
+      throws IOException {
+    // ASSUMPTION!!! filesCompacting is locked when calling this function
+
     /* normal skew:
      *
      *         older ----> newer
@@ -870,6 +949,7 @@ public class Store implements HeapSize {
      */
     List<StoreFile> filesToCompact = new ArrayList<StoreFile>(candidates);
 
+    boolean forcemajor = this.forceMajor && filesCompacting.isEmpty();
     if (!forcemajor) {
       // do not compact old files above a configurable threshold
       // save all references. we MUST compact them
@@ -888,9 +968,6 @@ public class Store implements HeapSize {
     // major compact on user action or age (caveat: we have too many files)
     boolean majorcompaction = (forcemajor || isMajorCompaction(filesToCompact))
       && filesToCompact.size() < this.maxFilesToCompact;
-    if (majorcompaction) {
-      this.majorCompactionTime = getNextMajorCompactTime();
-    }
 
     if (!majorcompaction && !hasReferences(filesToCompact)) {
       // we're doing a minor compaction, let's see what files are applicable
@@ -1054,9 +1131,6 @@ public class Store implements HeapSize {
   }
 
   /*
-   * It's assumed that the compactLock  will be acquired prior to calling this
-   * method!  Otherwise, it is not thread-safe!
-   *
    * <p>It works by processing a compaction that's been written to disk.
    *
    * <p>It is usually invoked at the end of a compaction, but might also be
@@ -1097,18 +1171,13 @@ public class Store implements HeapSize {
     this.lock.writeLock().lock();
     try {
       try {
-        // 2. Unloading
-        // 3. Loading the new TreeMap.
         // Change this.storefiles so it reflects new state but do not
         // delete old store files until we have sent out notification of
         // change in case old files are still being accessed by outstanding
         // scanners.
-        ArrayList<StoreFile> newStoreFiles = new ArrayList<StoreFile>();
-        for (StoreFile sf : storefiles) {
-          if (!compactedFiles.contains(sf)) {
-            newStoreFiles.add(sf);
-          }
-        }
+        ArrayList<StoreFile> newStoreFiles = Lists.newArrayList(storefiles);
+        newStoreFiles.removeAll(compactedFiles);
+        filesCompacting.removeAll(compactedFiles); // safe bc: lock.writeLock()
 
         // If a StoreFile result, move it into place.  May be null.
         if (result != null) {
@@ -1318,13 +1387,13 @@ public class Store implements HeapSize {
   }
 
   /**
-   * Determines if HStore can be split
-   * @param force Whether to force a split or not.
-   * @return a StoreSize if store can be split, null otherwise.
+   * Determines if Store should be split
+   * @return byte[] if store should be split, null otherwise.
    */
-  StoreSize checkSplit(final boolean force) {
+  byte[] checkSplit() {
     this.lock.readLock().lock();
     try {
+      boolean force = this.region.shouldForceSplit();
       // sanity checks
       if (this.storefiles.isEmpty()) {
         return null;
@@ -1369,7 +1438,7 @@ public class Store implements HeapSize {
       }
       // if the user explicit set a split point, use that
       if (this.region.getSplitPoint() != null) {
-        return new StoreSize(maxSize, this.region.getSplitPoint());
+        return this.region.getSplitPoint();
       }
       StoreFile.Reader r = largestSf.getReader();
       if (r == null) {
@@ -1396,7 +1465,7 @@ public class Store implements HeapSize {
           }
           return null;
         }
-        return new StoreSize(maxSize, mk.getRow());
+        return mk.getRow();
       }
     } catch(IOException e) {
       LOG.warn("Failed getting store size for " + this.storeNameStr, e);
@@ -1416,8 +1485,8 @@ public class Store implements HeapSize {
     return storeSize;
   }
 
-  void setForceMajorCompaction(final boolean b) {
-    this.forceMajor = b;
+  void triggerMajorCompaction() {
+    this.forceMajor = true;
   }
 
   boolean getForceMajorCompaction() {
@@ -1491,28 +1560,6 @@ public class Store implements HeapSize {
    */
   public int getCompactPriority() {
     return this.blockingStoreFileCount - this.storefiles.size();
-  }
-
-  /**
-   * Datastructure that holds size and row to split a file around.
-   * TODO: Take a KeyValue rather than row.
-   */
-  static class StoreSize {
-    private final long size;
-    private final byte [] row;
-
-    StoreSize(long size, byte [] row) {
-      this.size = size;
-      this.row = row;
-    }
-    /* @return the size */
-    long getSize() {
-      return size;
-    }
-
-    byte [] getSplitRow() {
-      return this.row;
-    }
   }
 
   HRegion getHRegion() {
@@ -1624,8 +1671,8 @@ public class Store implements HeapSize {
    * @return true if number of store files is greater than
    *  the number defined in minFilesToCompact
    */
-  public boolean hasTooManyStoreFiles() {
-    return this.storefiles.size() > this.minFilesToCompact;
+  public boolean needsCompaction() {
+    return (storefiles.size() - filesCompacting.size()) > minFilesToCompact;
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(

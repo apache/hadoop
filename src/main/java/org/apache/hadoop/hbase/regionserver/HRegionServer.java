@@ -1046,14 +1046,18 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     @Override
     protected void chore() {
       for (HRegion r : this.instance.onlineRegions.values()) {
-        try {
-          if (r != null && r.isMajorCompaction()) {
-            // Queue a compaction. Will recognize if major is needed.
-            this.instance.compactSplitThread.requestCompaction(r, getName()
-              + " requests major compaction");
+        if (r == null)
+          continue;
+        for (Store s : r.getStores().values()) {
+          try {
+            if (s.isMajorCompaction()) {
+              // Queue a compaction. Will recognize if major is needed.
+              this.instance.compactSplitThread.requestCompaction(r, s,
+                  getName() + " requests major compaction");
+            }
+          } catch (IOException e) {
+            LOG.warn("Failed major compaction check on " + r, e);
           }
-        } catch (IOException e) {
-          LOG.warn("Failed major compaction check on " + r, e);
         }
       }
     }
@@ -1346,10 +1350,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       final boolean daughter)
   throws KeeperException, IOException {
     // Do checks to see if we need to compact (references or too many files)
-    if (r.hasReferences() || r.hasTooManyStoreFiles()) {
-      getCompactionRequester().requestCompaction(r,
-        r.hasReferences()? "Region has references on open" :
-          "Region has too many store files");
+    for (Store s : r.getStores().values()) {
+      if (s.hasReferences() || s.needsCompaction()) {
+        getCompactionRequester().requestCompaction(r, s, "Opening Region");
+      }
     }
 
     // Add to online regions if all above was successful.
@@ -2346,7 +2350,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public void compactRegion(HRegionInfo regionInfo, boolean major)
       throws NotServingRegionException, IOException {
     HRegion region = getRegion(regionInfo.getRegionName());
-    compactSplitThread.requestCompaction(region, major, "User-triggered "
+    if (major) {
+      region.triggerMajorCompaction();
+    }
+    compactSplitThread.requestCompaction(region, "User-triggered "
         + (major ? "major " : "") + "compaction",
         CompactSplitThread.PRIORITY_USER);
   }

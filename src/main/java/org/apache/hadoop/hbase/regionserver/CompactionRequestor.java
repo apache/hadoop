@@ -28,8 +28,25 @@ public interface CompactionRequestor {
 
   /**
    * @param r Region to compact
+   * @param s Store within region to compact
+   * @param why Why compaction was requested -- used in debug messages
+   */
+  public void requestCompaction(final HRegion r, final Store s, final String why);
+
+  /**
+   * @param r Region to compact
    * @param why Why compaction was requested -- used in debug messages
    * @param pri Priority of this compaction. minHeap. <=0 is critical
    */
   public void requestCompaction(final HRegion r, final String why, int pri);
+
+  /**
+   * @param r Region to compact
+   * @param s Store within region to compact
+   * @param why Why compaction was requested -- used in debug messages
+   * @param pri Priority of this compaction. minHeap. <=0 is critical
+   */
+  public void requestCompaction(final HRegion r, final Store s,
+      final String why, int pri);
+
 }

@@ -20,11 +20,13 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.util.Date;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 
   /**
    * This class represents a compaction request and holds the region, priority,
@@ -34,30 +36,37 @@ import org.apache.hadoop.hbase.regionserver.Store;
     static final Log LOG = LogFactory.getLog(CompactionRequest.class);
     private final HRegion r;
     private final Store s;
+    private final List<StoreFile> files;
+    private final long totalSize;
+    private final boolean isMajor;
     private int p;
     private final Date date;
 
     public CompactionRequest(HRegion r, Store s) {
-      this(r, s, s.getCompactPriority());
+      this(r, s, null, false, s.getCompactPriority());
     }
 
     public CompactionRequest(HRegion r, Store s, int p) {
-      this(r, s, p, null);
+      this(r, s, null, false, p);
     }
 
-    public CompactionRequest(HRegion r, Store s, int p, Date d) {
+    public CompactionRequest(HRegion r, Store s,
+        List<StoreFile> files, boolean isMajor, int p) {
       if (r == null) {
         throw new NullPointerException("HRegion cannot be null");
       }
 
-      if (d == null) {
-        d = new Date();
-      }
-
       this.r = r;
       this.s = s;
+      this.files = files;
+      long sz = 0;
+      for (StoreFile sf : files) {
+        sz += sf.getReader().length();
+      }
+      this.totalSize = sz;
+      this.isMajor = isMajor;
       this.p = p;
-      this.date = d;
+      this.date = new Date();
     }
 
     /**
@@ -89,8 +98,8 @@ import org.apache.hadoop.hbase.regionserver.Store;
         return compareVal;
       }
 
-      //break the tie arbitrarily
-      return -1;
+      // break the tie based on hash code
+      return this.hashCode() - request.hashCode();
     }
 
     /** Gets the HRegion for the request */
@@ -101,6 +110,20 @@ import org.apache.hadoop.hbase.regionserver.Store;
     /** Gets the Store for the request */
     public Store getStore() {
       return s;
+    }
+
+    /** Gets the StoreFiles for the request */
+    public List<StoreFile> getFiles() {
+      return files;
+    }
+
+    /** Gets the total size of all StoreFiles in compaction */
+    public long getSize() {
+      return totalSize;
+    }
+
+    public boolean isMajor() {
+      return this.isMajor;
     }
 
     /** Gets the priority for the request */
@@ -115,8 +138,8 @@ import org.apache.hadoop.hbase.regionserver.Store;
 
     public String toString() {
       return "regionName=" + r.getRegionNameAsString() +
-        ((s == null) ? ""
-                     : "storeName = " + new String(s.getFamily().getName())) +
+        ", storeName=" + new String(s.getFamily().getName()) +
+        ", fileCount=" + files.size() +
         ", priority=" + p + ", date=" + date;
     }
   }
