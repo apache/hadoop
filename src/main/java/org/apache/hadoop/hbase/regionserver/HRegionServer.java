@@ -226,7 +226,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   private RegionServerMetrics metrics;
 
   // Compactions
-  CompactSplitThread compactSplitThread;
+  public CompactSplitThread compactSplitThread;
 
   // Cache flushing
   MemStoreFlusher cacheFlusher;
@@ -1017,7 +1017,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    *
    * @return false if file system is not available
    */
-  protected boolean checkFileSystem() {
+  public boolean checkFileSystem() {
     if (this.fsOk && this.fs != null) {
       try {
         FSUtils.checkFileSystemAvailable(this.fs);
@@ -1247,8 +1247,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     Threads.setDaemonThreadRunning(this.hlogRoller, n + ".logRoller", handler);
     Threads.setDaemonThreadRunning(this.cacheFlusher, n + ".cacheFlusher",
       handler);
-    Threads.setDaemonThreadRunning(this.compactSplitThread, n + ".compactor",
-      handler);
     Threads.setDaemonThreadRunning(this.majorCompactionChecker, n +
       ".majorCompactionChecker", handler);
 
@@ -1316,7 +1314,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       return false;
     }
     // Verify that all threads are alive
-    if (!(leases.isAlive() && compactSplitThread.isAlive()
+    if (!(leases.isAlive()
         && cacheFlusher.isAlive() && hlogRoller.isAlive()
         && this.majorCompactionChecker.isAlive())) {
       stop("One or more threads are no longer alive -- stop");
@@ -1434,8 +1432,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   protected void join() {
     Threads.shutdown(this.majorCompactionChecker);
     Threads.shutdown(this.cacheFlusher);
-    Threads.shutdown(this.compactSplitThread);
     Threads.shutdown(this.hlogRoller);
+    if (this.compactSplitThread != null) {
+      this.compactSplitThread.join();
+    }
     if (this.service != null) this.service.shutdown();
     if (this.replicationHandler != null) {
       this.replicationHandler.join();
@@ -2338,11 +2338,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     HRegion region = getRegion(regionInfo.getRegionName());
     region.flushcache();
     region.forceSplit(splitPoint);
-    // force a compaction, split will be side-effect
-    // TODO: flush/compact/split refactor will make it trivial to do this
-    // sync/async (and won't require us to do a compaction to split!)
-    compactSplitThread.requestCompaction(region, "User-triggered split",
-        CompactSplitThread.PRIORITY_USER);
+    compactSplitThread.requestSplit(region, region.checkSplit());
   }
 
   @Override

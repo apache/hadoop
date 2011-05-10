@@ -19,34 +19,32 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
-import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.util.StringUtils;
+
+import com.google.common.base.Preconditions;
 
 /**
  * Compact region on request and then run split if appropriate
  */
-public class CompactSplitThread extends Thread implements CompactionRequestor {
+public class CompactSplitThread implements CompactionRequestor {
   static final Log LOG = LogFactory.getLog(CompactSplitThread.class);
-  private final long frequency;
-  private final ReentrantLock lock = new ReentrantLock();
 
   private final HRegionServer server;
   private final Configuration conf;
 
-  protected final BlockingQueue<CompactionRequest> compactionQueue =
-    new PriorityBlockingQueue<CompactionRequest>();
+  private final ThreadPoolExecutor largeCompactions;
+  private final ThreadPoolExecutor smallCompactions;
+  private final ThreadPoolExecutor splits;
+  private final long throttleSize;
 
   /* The default priority for user-specified compaction requests.
    * The user gets top priority unless we have blocking compactions. (Pri <= 0)
@@ -62,85 +60,71 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
   private int regionSplitLimit;
 
   /** @param server */
-  public CompactSplitThread(HRegionServer server) {
+  CompactSplitThread(HRegionServer server) {
     super();
     this.server = server;
     this.conf = server.getConfiguration();
     this.regionSplitLimit = conf.getInt("hbase.regionserver.regionSplitLimit",
         Integer.MAX_VALUE);
-    this.frequency =
-      conf.getLong("hbase.regionserver.thread.splitcompactcheckfrequency",
-      20 * 1000);
+
+    int largeThreads = Math.max(1, conf.getInt(
+        "hbase.regionserver.thread.compaction.large", 1));
+    int smallThreads = conf.getInt(
+        "hbase.regionserver.thread.compaction.small", 0);
+    throttleSize = conf.getLong(
+        "hbase.regionserver.thread.compaction.throttle", 0);
+    int splitThreads = conf.getInt("hbase.regionserver.thread.split", 1);
+
+    // if we have throttle threads, make sure the user also specified size
+    Preconditions.checkArgument(smallThreads == 0 || throttleSize > 0);
+
+    this.largeCompactions = new ThreadPoolExecutor(largeThreads, largeThreads,
+        60, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>());
+    this.largeCompactions
+        .setRejectedExecutionHandler(new CompactionRequest.Rejection());
+    if (smallThreads <= 0) {
+      this.smallCompactions = null;
+    } else {
+      this.smallCompactions = new ThreadPoolExecutor(smallThreads, smallThreads,
+          60, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>());
+      this.smallCompactions
+          .setRejectedExecutionHandler(new CompactionRequest.Rejection());
+    }
+    this.splits = (ThreadPoolExecutor) Executors
+        .newFixedThreadPool(splitThreads);
   }
 
   @Override
-  public void run() {
-    while (!this.server.isStopped()) {
-      CompactionRequest compactionRequest = null;
-      HRegion r = null;
-      boolean completed = false;
-      try {
-        compactionRequest = compactionQueue.poll(this.frequency, TimeUnit.MILLISECONDS);
-        if (compactionRequest != null) {
-          r = compactionRequest.getHRegion();
-          lock.lock();
-          try {
-            // look for a split first
-            if(!this.server.isStopped()) {
-              // don't split regions that are blocking
-              if (shouldSplitRegion() && r.getCompactPriority() >= PRIORITY_USER) {
-                byte[] midkey = compactionRequest.getStore().checkSplit();
-                if (midkey != null) {
-                  split(r, midkey);
-                  continue;
-                }
-              }
-            }
+  public String toString() {
+    return "compaction_queue="
+        + (smallCompactions != null ? "("
+            + largeCompactions.getQueue().size() + ":"
+            + smallCompactions.getQueue().size() + ")"
+            : largeCompactions.getQueue().size())
+        + ", split_queue=" + splits.getQueue().size();
+  }
 
-            // now test for compaction
-            if(!this.server.isStopped()) {
-              long startTime = EnvironmentEdgeManager.currentTimeMillis();
-              completed = r.compact(compactionRequest);
-              long now = EnvironmentEdgeManager.currentTimeMillis();
-              LOG.info(((completed) ? "completed" : "aborted")
-                  + " compaction: " + compactionRequest + ", duration="
-                  + StringUtils.formatTimeDiff(now, startTime));
-              if (completed) { // compaction aborted?
-                this.server.getMetrics().
-                  addCompaction(now - startTime, compactionRequest.getSize());
-              }
-            }
-          } finally {
-            lock.unlock();
-          }
-        }
-      } catch (InterruptedException ex) {
-        continue;
-      } catch (IOException ex) {
-        LOG.error("Compaction/Split failed " + compactionRequest,
-          RemoteExceptionHandler.checkIOException(ex));
-        if (!server.checkFileSystem()) {
-          break;
-        }
-      } catch (Exception ex) {
-        LOG.error("Compaction failed " + compactionRequest, ex);
-        if (!server.checkFileSystem()) {
-          break;
-        }
-      } finally {
-        if (compactionRequest != null) {
-          Store s = compactionRequest.getStore();
-          s.finishRequest(compactionRequest);
-          // degenerate case: blocked regions require recursive enqueues
-          if (s.getCompactPriority() < PRIORITY_USER && completed) {
-            requestCompaction(r, s, "Recursive enqueue");
-          }
-        }
-        compactionRequest = null;
+  public synchronized boolean requestSplit(final HRegion r) {
+    // don't split regions that are blocking
+    if (shouldSplitRegion() && r.getCompactPriority() >= PRIORITY_USER) {
+      byte[] midKey = r.checkSplit();
+      if (midKey != null) {
+        requestSplit(r, midKey);
+        return true;
       }
     }
-    compactionQueue.clear();
-    LOG.info(getName() + " exiting");
+    return false;
+  }
+
+  public synchronized void requestSplit(final HRegion r, byte[] midKey) {
+    try {
+      this.splits.execute(new SplitRequest(r, midKey, this.server));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Split requested for " + r + ".  " + this);
+      }
+    } catch (RejectedExecutionException ree) {
+      LOG.info("Could not execute split for " + r, ree);
+    }
   }
 
   public synchronized void requestCompaction(final HRegion r,
@@ -164,7 +148,7 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
 
   /**
    * @param r HRegion store belongs to
-   * @param force Whether next compaction should be major
+   * @param s Store to request compaction on
    * @param why Why compaction requested -- used in debug messages
    * @param priority override the default priority (NO_PRIORITY == decide)
    */
@@ -175,64 +159,55 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
     }
     CompactionRequest cr = s.requestCompaction();
     if (cr != null) {
+      cr.setServer(server);
       if (priority != NO_PRIORITY) {
         cr.setPriority(priority);
       }
-      boolean addedToQueue = compactionQueue.add(cr);
-      if (!addedToQueue) {
-        LOG.error("Could not add request to compaction queue: " + cr);
-        s.finishRequest(cr);
-      } else if (LOG.isDebugEnabled()) {
-        LOG.debug("Compaction requested: " + cr
+      ThreadPoolExecutor pool = largeCompactions;
+      if (smallCompactions != null && throttleSize > cr.getSize()) {
+        // smallCompactions is like the 10 items or less line at Walmart
+        pool = smallCompactions;
+      }
+      pool.execute(cr);
+      if (LOG.isDebugEnabled()) {
+        String type = "";
+        if (smallCompactions != null) {
+          type = (pool == smallCompactions) ? "Small " : "Large ";
+        }
+        LOG.debug(type + "Compaction requested: " + cr
             + (why != null && !why.isEmpty() ? "; Because: " + why : "")
-            + "; Priority: " + priority + "; Compaction queue size: "
-            + compactionQueue.size());
+            + "; " + this);
       }
     }
-  }
-
-  private void split(final HRegion parent, final byte [] midKey)
-  throws IOException {
-    final long startTime = System.currentTimeMillis();
-    SplitTransaction st = new SplitTransaction(parent, midKey);
-    // If prepare does not return true, for some reason -- logged inside in
-    // the prepare call -- we are not ready to split just now.  Just return.
-    if (!st.prepare()) return;
-    try {
-      st.execute(this.server, this.server);
-    } catch (Exception e) {
-      try {
-        LOG.info("Running rollback of failed split of " +
-          parent.getRegionNameAsString() + "; " + e.getMessage());
-        st.rollback(this.server, this.server);
-        LOG.info("Successful rollback of failed split of " +
-          parent.getRegionNameAsString());
-      } catch (Exception ee) {
-        // If failed rollback, kill this server to avoid having a hole in table.
-        LOG.info("Failed rollback of failed split of " +
-          parent.getRegionNameAsString() + " -- aborting server", ee);
-        this.server.abort("Failed split");
-      }
-      return;
-    }
-
-    LOG.info("Region split, META updated, and report to master. Parent=" +
-      parent.getRegionInfo().getRegionNameAsString() + ", new regions: " +
-      st.getFirstDaughter().getRegionNameAsString() + ", " +
-      st.getSecondDaughter().getRegionNameAsString() + ". Split took " +
-      StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
   }
 
   /**
    * Only interrupt once it's done with a run through the work loop.
    */
   void interruptIfNecessary() {
-    if (lock.tryLock()) {
+    splits.shutdown();
+    largeCompactions.shutdown();
+    if (smallCompactions != null)
+      smallCompactions.shutdown();
+  }
+
+  private void waitFor(ThreadPoolExecutor t, String name) {
+    boolean done = false;
+    while (!done) {
       try {
-        this.interrupt();
-      } finally {
-        lock.unlock();
+        done = t.awaitTermination(60, TimeUnit.SECONDS);
+        LOG.debug("Waiting for " + name + " to finish...");
+      } catch (InterruptedException ie) {
+        LOG.debug("Interrupted waiting for " + name + " to finish...");
       }
+    }
+  }
+
+  void join() {
+    waitFor(splits, "Split Thread");
+    waitFor(largeCompactions, "Large Compaction Thread");
+    if (smallCompactions != null) {
+      waitFor(smallCompactions, "Small Compaction Thread");
     }
   }
 
@@ -243,7 +218,10 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
    * @return The current size of the regions queue.
    */
   public int getCompactionQueueSize() {
-    return compactionQueue.size();
+    int size = largeCompactions.getQueue().size();
+    if (smallCompactions != null)
+      size += smallCompactions.getQueue().size();
+    return size;
   }
 
   private boolean shouldSplitRegion() {

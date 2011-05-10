@@ -890,7 +890,8 @@ public class HRegion implements HeapSize { // , Writable{
             return false;
           }
         }
-        LOG.info("Starting compaction on region " + this);
+        LOG.info("Starting compaction on " + cr.getStore() + " in region "
+            + this);
         doRegionCompactionPrep();
         try {
           status.setStatus("Compacting store " + cr.getStore());
@@ -3705,6 +3706,20 @@ public class HRegion implements HeapSize { // , Writable{
    */
   protected void prepareToSplit() {
     // nothing
+  }
+
+  byte[] checkSplit() {
+    if (this.splitPoint != null) {
+      return this.splitPoint;
+    }
+    byte[] splitPoint = null;
+    for (Store s : stores.values()) {
+      splitPoint = s.checkSplit();
+      if (splitPoint != null) {
+        return splitPoint;
+      }
+    }
+    return null;
   }
 
   /**
