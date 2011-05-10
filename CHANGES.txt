@@ -26,6 +26,10 @@ Trunk (unreleased changes)
 
     HADOOP-6919. New metrics2 framework. (Luke Lu via acmurthy) 
 
+    HADOOP-6920. Metrics instrumentation to move new metrics2 framework.
+    (Luke Lu via suresh)
+
+
   IMPROVEMENTS
 
     HADOOP-7042. Updates to test-patch.sh to include failed test names and

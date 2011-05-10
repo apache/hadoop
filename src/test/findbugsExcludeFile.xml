@@ -259,4 +259,15 @@
 	  The switch condition fall through is intentional and for performance
 	  purposes.
     -->
+
+    <Match>
+      <Class name="org.apache.hadoop.log.EventCounter"/>
+      <!-- backward compatibility -->
+      <Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS"/>
+    </Match>
+    <Match>
+      <Class name="org.apache.hadoop.metrics.jvm.EventCounter"/>
+      <!-- backward compatibility -->
+      <Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS"/>
+    </Match>
  </FindBugsFilter>

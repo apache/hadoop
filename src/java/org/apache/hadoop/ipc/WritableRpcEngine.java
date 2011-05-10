@@ -41,7 +41,6 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
 /** An RpcEngine implementation for Writable data. */
 @InterfaceStability.Evolving
@@ -390,9 +389,8 @@ public class WritableRpcEngine implements RpcEngine {
         Invocation call = (Invocation)param;
         if (verbose) log("Call: " + call);
 
-        Method method =
-          protocol.getMethod(call.getMethodName(),
-                                   call.getParameterClasses());
+        Method method = protocol.getMethod(call.getMethodName(),
+                                           call.getParameterClasses());
         method.setAccessible(true);
 
         // Verify rpc version
@@ -429,24 +427,10 @@ public class WritableRpcEngine implements RpcEngine {
                     " queueTime= " + qTime +
                     " procesingTime= " + processingTime);
         }
-        rpcMetrics.rpcQueueTime.inc(qTime);
-        rpcMetrics.rpcProcessingTime.inc(processingTime);
-
-        MetricsTimeVaryingRate m =
-         (MetricsTimeVaryingRate) rpcDetailedMetrics.registry.get(call.getMethodName());
-      	if (m == null) {
-      	  try {
-      	    m = new MetricsTimeVaryingRate(call.getMethodName(),
-      	                                        rpcDetailedMetrics.registry);
-      	  } catch (IllegalArgumentException iae) {
-      	    // the metrics has been registered; re-fetch the handle
-      	    LOG.info("Error register " + call.getMethodName(), iae);
-      	    m = (MetricsTimeVaryingRate) rpcDetailedMetrics.registry.get(
-      	        call.getMethodName());
-      	  }
-      	}
-        m.inc(processingTime);
-
+        rpcMetrics.addRpcQueueTime(qTime);
+        rpcMetrics.addRpcProcessingTime(processingTime);
+        rpcDetailedMetrics.addProcessingTime(call.getMethodName(),
+                                             processingTime);
         if (verbose) log("Return: "+value);
 
         return new ObjectWritable(method.getReturnType(), value);

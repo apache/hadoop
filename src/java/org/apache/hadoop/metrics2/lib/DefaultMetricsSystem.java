@@ -121,8 +121,9 @@ public enum DefaultMetricsSystem {
     if (sourceNames.map.containsKey(name)) {
       if (dupOK) {
         return name;
+      } else if (!miniClusterMode) {
+        throw new MetricsException("Metrics source "+ name +" already exists!");
       }
-      throw new MetricsException("Metrics source "+ name +" already exists!");
     }
     return sourceNames.uniqueName(name);
   }

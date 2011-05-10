@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.util;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopVersionAnnotation;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -29,6 +31,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class VersionInfo {
+  private static final Log LOG = LogFactory.getLog(VersionInfo.class);
+
   private static Package myPackage;
   private static HadoopVersionAnnotation version;
   
@@ -112,6 +116,7 @@ public class VersionInfo {
   }
   
   public static void main(String[] args) {
+    LOG.debug("version: "+ version);
     System.out.println("Hadoop " + getVersion());
     System.out.println("Subversion " + getUrl() + " -r " + getRevision());
     System.out.println("Compiled by " + getUser() + " on " + getDate());
