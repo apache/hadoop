@@ -45,6 +45,7 @@ abstract public class FsCommand extends Command {
   public static void registerCommands(CommandFactory factory) {
     factory.registerCommands(Copy.class);
     factory.registerCommands(Count.class);
+    factory.registerCommands(Delete.class);
     factory.registerCommands(Display.class);
     factory.registerCommands(FsShellPermissions.class);
     factory.registerCommands(Ls.class);

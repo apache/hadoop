@@ -141,11 +141,14 @@ Trunk (unreleased changes)
 
     HADOOP-7272. Remove unnecessary security related info logs. (suresh)
 
-    HADOOP-7275. Refactor the stat commands to conform to new FsCommand
+    HADOOP-7275. Refactor the stat command to conform to new FsCommand
     class.  (Daryn Sharp via szetszwo)
 
-    HADOOP-7237. Refactor the touchz commands to conform to new FsCommand
+    HADOOP-7237. Refactor the touchz command to conform to new FsCommand
     class.  (Daryn Sharp via szetszwo)
+
+    HADOOP-7267. Refactor the rm/rmr/expunge commands to conform to new
+    FsCommand class.  (Daryn Sharp via szetszwo)
 
   OPTIMIZATIONS
 
