@@ -443,6 +443,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7244. Documentation change for updated configuration keys.
     (tomwhite via eli)
 
+    HADOOP-7189. Add ability to enable 'debug' property in JAAS configuration.
+    (Ted Yu via todd)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
