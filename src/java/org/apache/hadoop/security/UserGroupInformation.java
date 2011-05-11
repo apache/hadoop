@@ -362,15 +362,24 @@ public class UserGroupInformation {
       "hadoop-user-kerberos";
     private static final String KEYTAB_KERBEROS_CONFIG_NAME = 
       "hadoop-keytab-kerberos";
+
+    private static final Map<String, String> BASIC_JAAS_OPTIONS =
+      new HashMap<String,String>();
+    static {
+      String jaasEnvVar = System.getenv("HADOOP_JAAS_DEBUG");
+      if (jaasEnvVar != null && "true".equalsIgnoreCase(jaasEnvVar)) {
+        BASIC_JAAS_OPTIONS.put("debug", "true");
+      }
+    }
     
     private static final AppConfigurationEntry OS_SPECIFIC_LOGIN =
       new AppConfigurationEntry(OS_LOGIN_MODULE_NAME,
                                 LoginModuleControlFlag.REQUIRED,
-                                new HashMap<String,String>());
+                                BASIC_JAAS_OPTIONS);
     private static final AppConfigurationEntry HADOOP_LOGIN =
       new AppConfigurationEntry(HadoopLoginModule.class.getName(),
                                 LoginModuleControlFlag.REQUIRED,
-                                new HashMap<String,String>());
+                                BASIC_JAAS_OPTIONS);
     private static final Map<String,String> USER_KERBEROS_OPTIONS = 
       new HashMap<String,String>();
     static {
@@ -381,6 +390,7 @@ public class UserGroupInformation {
       if (ticketCache != null) {
         USER_KERBEROS_OPTIONS.put("ticketCache", ticketCache);
       }
+      USER_KERBEROS_OPTIONS.putAll(BASIC_JAAS_OPTIONS);
     }
     private static final AppConfigurationEntry USER_KERBEROS_LOGIN =
       new AppConfigurationEntry(Krb5LoginModule.class.getName(),
@@ -393,6 +403,7 @@ public class UserGroupInformation {
       KEYTAB_KERBEROS_OPTIONS.put("useKeyTab", "true");
       KEYTAB_KERBEROS_OPTIONS.put("storeKey", "true");
       KEYTAB_KERBEROS_OPTIONS.put("refreshKrb5Config", "true");
+      KEYTAB_KERBEROS_OPTIONS.putAll(BASIC_JAAS_OPTIONS);      
     }
     private static final AppConfigurationEntry KEYTAB_KERBEROS_LOGIN =
       new AppConfigurationEntry(Krb5LoginModule.class.getName(),
