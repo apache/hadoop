@@ -583,7 +583,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-stat \[format\] &lt;path&gt;: Print statistics about the file/directory at &lt;path&gt;( )*</expected-output>
+          <expected-output>^-stat \[format\] &lt;path&gt; \.\.\.:( |\t)*Print statistics about the file/directory at &lt;path&gt;( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
