@@ -250,6 +250,17 @@
 
   <property name="clover.jar" location="${clover.home}/lib/clover.jar"/>
   <available property="clover.present" file="${clover.jar}" />
+	
+  <!-- Eclipse properties -->
+  <property name="build.dir.eclipse" value="build/eclipse"/>
+  <property name="build.dir.eclipse-main-classes" value="${build.dir.eclipse}/classes-main"/>
+  <property name="build.dir.eclipse-test-classes" value="${build.dir.eclipse}/classes-test"/>
+  <property name="build.dir.eclipse-test-generated-classes" value="${build.dir.eclipse}/classes-test-generated"/>
+  <property name="build.dir.eclipse-example-classes" value="${build.dir.eclipse}/classes-example"/>
+  <property name="build.dir.eclipse-tools-classes" value="${build.dir.eclipse}/classes-tools"/>
+  <property name="build.dir.eclipse-contrib-classes" value="${build.dir.eclipse}/classes-contrib"/>
+  <property name="build.dir.eclipse-test-resources" value="${build.dir.eclipse}/test-resources/"/>
+  <property name="build.dir.eclipse-test-resources-webapps" value="${build.dir.eclipse}/test-resources/webapps"/>
 
   <!-- check if clover reports should be generated -->
   <condition property="clover.enabled">
@@ -274,6 +285,13 @@
     <path refid="ivy-common.classpath"/>
   </path>
 
+  <path id="test.lib.classpath">
+    <fileset dir="${test.lib.dir}">
+      <include name="**/*.jar"/>
+      <exclude name="**/excluded/"/>
+    </fileset>
+  </path>
+
   <!-- the unit test classpath: uses test.src.dir for configuration -->
   <path id="test.classpath">
     <pathelement location="${test.build.extraconf}"/>
@@ -283,10 +301,7 @@
     <pathelement location="${build.examples}"/>
     <pathelement location="${build.tools}"/>
     <pathelement path="${clover.jar}"/>
-    <fileset dir="${test.lib.dir}">
-      <include name="**/*.jar"/>
-      <exclude name="**/excluded/"/>
-    </fileset>
+    <path refid="test.lib.classpath"/>
     <path refid="classpath"/>
   </path>
 
@@ -426,6 +441,9 @@
   </target>
 
   <target name="compile-mapred-classes" depends="compile-core-classes,compile-hdfs-classes">
+    <taskdef classname="org.apache.jasper.JspC" name="jsp-compile" >
+       <classpath refid="classpath"/>
+    </taskdef>
     <jsp-compile
      uriroot="${src.webapps}/task"
      outputdir="${build.src}"
@@ -1956,19 +1974,100 @@
   </exec>
 </target>
 	
-  <target name="eclipse-files" depends="init"
-          description="Generate files for Eclipse">
-    <pathconvert property="eclipse.project">
-      <path path="${basedir}"/>
-      <regexpmapper from="^.*/([^/]+)$$" to="\1" handledirsep="yes"/>
-    </pathconvert>
+  <condition property="ant-eclipse.jar.exists">
+    <available file="${build.dir}/lib/ant-eclipse-1.0-jvm1.2.jar"/>
+  </condition>
+
+  <target name="ant-eclipse-download" unless="ant-eclipse.jar.exists"
+          description="Downloads the ant-eclipse binary.">
+    <get src="http://downloads.sourceforge.net/project/ant-eclipse/ant-eclipse/1.0/ant-eclipse-1.0.bin.tar.bz2"
+         dest="${build.dir}/ant-eclipse-1.0.bin.tar.bz2" usetimestamp="false" />
+
+    <untar src="${build.dir}/ant-eclipse-1.0.bin.tar.bz2"
+           dest="${build.dir}" compression="bzip2">
+      <patternset>
+        <include name="lib/ant-eclipse-1.0-jvm1.2.jar"/>
+      </patternset>
+    </untar>
+    <delete file="${build.dir}/ant-eclipse-1.0.bin.tar.bz2" />
+  </target>
+
+  <target name="eclipse" 
+          depends="init,ant-eclipse-download,ivy-retrieve-common,ivy-retrieve-test,compile-core-test"
+          description="Create eclipse project files">
+	     <pathconvert property="eclipse.project">
+	       <path path="${basedir}"/>
+	       <regexpmapper from="^.*/([^/]+)$$" to="\1" handledirsep="yes"/>
+	     </pathconvert>
+    <taskdef name="eclipse"
+             classname="prantl.ant.eclipse.EclipseTask"
+             classpath="${build.dir}/lib/ant-eclipse-1.0-jvm1.2.jar" />
+    <eclipse updatealways="true">
+      <project name="${eclipse.project}" />
+      <classpath>
+        <source path="${src.dir}/core"
+                output="${build.dir.eclipse-main-classes}" />
+        <source path="${src.dir}/hdfs"
+                output="${build.dir.eclipse-main-classes}" />
+        <source path="${src.dir}/mapred"
+                output="${build.dir.eclipse-main-classes}" />
+        <source path="${test.src.dir}/"
+                output="${build.dir.eclipse-test-classes}" 
+                excluding="aop/|mapred/|system/|bin/|ddl/|lib/|tools/"/>
+        <source path="${test.src.dir}/aop"
+                output="${build.dir.eclipse-test-classes}" />
+        <source path="${test.generated.dir}"
+                output="${build.dir.eclipse-test-generated-classes}" />
+        <source path="${tools.src}"
+                output="${build.dir.eclipse-tools-classes}" />
+        <source path="${examples.dir}"
+                output="${build.dir.eclipse-example-classes}" />
+        <source path="${contrib.dir}/data_join/src/examples"
+                output="${build.dir.eclipse-contrib-classes}/data_join/examples" />
+        <source path="${contrib.dir}/data_join/src/test"
+                output="${build.dir.eclipse-contrib-classes}/data_join/test" />
+        <source path="${contrib.dir}/data_join/src/java"
+                output="${build.dir.eclipse-contrib-classes}/data_join/java" />
+        <source path="${contrib.dir}/streaming/src/java"
+                output="${build.dir.eclipse-contrib-classes}/streaming/main" />
+        <source path="${contrib.dir}/streaming/src/test"
+                output="${build.dir.eclipse-contrib-classes}/streaming/test" 
+                excluding="system/"/>
+        <source path="${contrib.dir}/vaidya/src/java"
+                output="${build.dir.eclipse-contrib-classes}/vaidya/main" />
+        <source path="${contrib.dir}/fairscheduler/src/java"
+                output="${build.dir.eclipse-contrib-classes}/fairscheduler/main" />
+        <source path="${contrib.dir}/fairscheduler/src/test"
+                output="${build.dir.eclipse-contrib-classes}/fairscheduler/test" />
+        <source path="${contrib.dir}/gridmix/src/java"
+                output="${build.dir.eclipse-contrib-classes}/gridmix/main" />
+        <source path="${contrib.dir}/gridmix/src/test"
+                output="${build.dir.eclipse-contrib-classes}/gridmix/test"
+                excluding="system/"/>
+       <source path="${contrib.dir}/capacity-scheduler/src/java"
+                output="${build.dir.eclipse-contrib-classes}/capacity-scheduler/main" />
+        <source path="${contrib.dir}/capacity-scheduler/src/test"
+                output="${build.dir.eclipse-contrib-classes}/capacity-scheduler/test" />
+        <output path="${build.dir.eclipse-main-classes}" />
+        <library pathref="classpath" exported="false" />
+        <library pathref="test.lib.classpath" exported="false" />
+        <variable path="ANT_HOME/lib/ant.jar" exported="false" />
+        <library path="${conf.dir}" exported="false" />
+        <library path="${build.dir.eclipse-test-resources}" exported="false" />
+      </classpath>
+    </eclipse>
     <copy todir="." overwrite="true">
       <fileset dir=".eclipse.templates">
-      	<exclude name="**/README.txt"/>
+        <exclude name="**/README.txt"/>
       </fileset>
       <filterset>
         <filter token="PROJECT" value="${eclipse.project}"/>
       </filterset>
+    </copy>
+    <!-- copy all of the jsp and static files -->
+    <copy todir="${build.dir.eclipse-test-resources-webapps}">
+      <fileset dir="${build.webapps}">
+      </fileset>
     </copy>
   </target>
 
@@ -2078,7 +2177,7 @@
     description="Retrieve Ivy-managed artifacts for the test configurations">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
       pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"/>
-    <ivy:cachepath pathid="test.classpath" conf="test"/>
+    <ivy:cachepath pathid="ivy-test.classpath" conf="test"/>
   </target>
 
   <target name="ivy-retrieve-common" depends="ivy-resolve-common"

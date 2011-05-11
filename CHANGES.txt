@@ -13,6 +13,9 @@ Release 0.20.205.0 - unreleased
     failed fetch notifications in the JobTracker log.
     (Jeffrey Naisbitt via cdouglas)
 
+    HADOOP-7248. Update eclipse target to generate .classpath from ivy config.
+    (Thomas Graves and Tom White via cdouglas)
+
 Release 0.20.204.0 - unreleased
 
   BUG FIXES
