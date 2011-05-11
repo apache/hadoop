@@ -70,7 +70,7 @@ Release 0.20.204.0 - unreleased
     HDFS-1767. Namenode ignores non-initial block report from datanodes
     when in safemode during startup. (Matt Foley via suresh)
 
-Release 0.20.203.0 - unreleased
+Release 0.20.203.0 - 2011-5-11
 
     MAPREDUCE-1280. Update Eclipse plugin to the new eclipse.jdt API.
     (Alex Kozlov via szetszwo)
@@ -1735,7 +1735,7 @@ Release 0.20.3 - Unreleased
     HDFS-955. New implementation of saveNamespace() to avoid loss of edits 
     when name-node fails during saving. (shv)
 
-Release 0.20.2 - Unreleased
+Release 0.20.2 - 2010-2-16
 
   BUG FIXES
 
