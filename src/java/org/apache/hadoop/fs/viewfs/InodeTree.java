@@ -21,7 +21,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -59,6 +61,19 @@ abstract class InodeTree<T> {
   static final Path SlashPath = new Path("/");
   
   final INodeDir<T> root; // the root of the mount table
+  
+  List<MountPoint<T>> mountPoints = new ArrayList<MountPoint<T>>();
+  
+  
+  static class MountPoint<T> {
+    String src;
+    INodeLink<T> target;
+    MountPoint(String srcPath, INodeLink<T> mountLink) {
+      src = srcPath;
+      target = mountLink;
+    }
+
+  }
   
   /**
    * Breaks file path into component names.
@@ -173,13 +188,15 @@ abstract class InodeTree<T> {
      */
     Path getTargetLink() {
       // is merge link - use "," as separator between the merged URIs
-      String result = targetDirLinkList[0].toString();
-      for (int i=1; i < targetDirLinkList.length; ++i) {
-        result += "," + targetDirLinkList[0].toString();  
+      //String result = targetDirLinkList[0].toString();
+      StringBuilder result = new StringBuilder(targetDirLinkList[0].toString());
+      for (int i=1; i < targetDirLinkList.length; ++i) { 
+        result.append(',').append(targetDirLinkList[i].toString());
       }
-      return new Path(result);
+      return new Path(result.toString());
     }
   }
+
 
   private void createLink(final String src, final String target,
       final boolean isLinkMerge, final UserGroupInformation aUgi)
@@ -218,11 +235,11 @@ abstract class InodeTree<T> {
     String iPath = srcPaths[i];// last component
     if (curInode.resolveInternal(iPath) != null) {
       //  directory/link already exists
-      String path = srcPaths[0];
+      StringBuilder strB = new StringBuilder(srcPaths[0]);
       for (int j = 1; j <= i; ++j) {
-        path += "/" + srcPaths[j];
+        strB.append('/').append(srcPaths[j]);
       }
-      throw new FileAlreadyExistsException("Path " + path +
+      throw new FileAlreadyExistsException("Path " + strB +
             " already exists as dir; cannot create link here");
     }
     
@@ -242,7 +259,8 @@ abstract class InodeTree<T> {
       newLink = new INodeLink<T>(fullPath, aUgi,
           getTargetFileSystem(new URI(target)), new URI(target));
     }
-    curInode.addLink(iPath, newLink); 
+    curInode.addLink(iPath, newLink);
+    mountPoints.add(new MountPoint<T>(src, newLink));
   }
   
   /**
@@ -273,18 +291,19 @@ abstract class InodeTree<T> {
    * @throws FileAlreadyExistsException
    * @throws IOException
    */
-  protected InodeTree(final Configuration config, String viewName)
+  protected InodeTree(final Configuration config, final String viewName)
       throws UnsupportedFileSystemException, URISyntaxException,
     FileAlreadyExistsException, IOException { 
-    if (viewName == null) {
-      viewName = Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE;
+    String vName = viewName;
+    if (vName == null) {
+      vName = Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE;
     }
     root = new INodeDir<T>("/", UserGroupInformation.getCurrentUser());
     root.InodeDirFs = getTargetFileSystem(root);
     root.isRoot = true;
     
     final String mtPrefix = Constants.CONFIG_VIEWFS_PREFIX + "." + 
-                            viewName + ".";
+                            vName + ".";
     final String linkPrefix = Constants.CONFIG_VIEWFS_LINK + ".";
     final String linkMergePrefix = Constants.CONFIG_VIEWFS_LINK_MERGE + ".";
     boolean gotMountTableEntry = false;
@@ -307,11 +326,12 @@ abstract class InodeTree<T> {
         }
         final String target = si.getValue(); // link or merge link
         createLink(src, target, isMergeLink, ugi); 
-      }  
+      }
     }
     if (!gotMountTableEntry) {
       throw new IOException(
-          "ViewFs: Cannot initialize: Empty Mount table in config");
+          "ViewFs: Cannot initialize: Empty Mount table in config for " + 
+             vName == null ? "viewfs:///" : ("viewfs://" + vName + "/"));
     }
   }
 
@@ -370,11 +390,11 @@ abstract class InodeTree<T> {
     for (i = 1; i < path.length - (resolveLastComponent ? 0 : 1); i++) {
       INode<T> nextInode = curInode.resolveInternal(path[i]);
       if (nextInode == null) {
-        String failedAt = path[0];
+        StringBuilder failedAt = new StringBuilder(path[0]);
         for ( int j = 1; j <=i; ++j) {
-          failedAt += "/" + path[j];
+          failedAt.append('/').append(path[j]);
         }
-        throw (new FileNotFoundException(failedAt));      
+        throw (new FileNotFoundException(failedAt.toString()));      
       }
 
       if (nextInode instanceof INodeLink) {
@@ -383,11 +403,11 @@ abstract class InodeTree<T> {
         if (i >= path.length-1) {
           remainingPath = SlashPath;
         } else {
-          String remainingPathStr = "/" + path[i+1];
+          StringBuilder remainingPathStr = new StringBuilder("/" + path[i+1]);
           for (int j = i+2; j< path.length; ++j) {
-            remainingPathStr += "/" + path[j];
+            remainingPathStr.append('/').append(path[j]);
           }
-          remainingPath = new Path(remainingPathStr);
+          remainingPath = new Path(remainingPathStr.toString());
         }
         final ResolveResult<T> res = 
           new ResolveResult<T>(ResultKind.isExternalDir,
@@ -407,15 +427,19 @@ abstract class InodeTree<T> {
       // for internal dirs rem-path does not start with / since the lookup
       // that follows will do a children.get(remaningPath) and will have to
       // strip-out the initial /
-      String remainingPathStr =  "/" + path[i];
+      StringBuilder remainingPathStr = new StringBuilder("/" + path[i]);
       for (int j = i+1; j< path.length; ++j) {
-        remainingPathStr += "/" + path[j];
+        remainingPathStr.append('/').append(path[j]);
       }
-      remainingPath = new Path(remainingPathStr);
+      remainingPath = new Path(remainingPathStr.toString());
     }
     final ResolveResult<T> res = 
        new ResolveResult<T>(ResultKind.isInternalDir,
            curInode.InodeDirFs, curInode.fullPath, remainingPath); 
     return res;
+  }
+  
+  List<MountPoint<T>> getMountPoints() { 
+    return mountPoints;
   }
 }

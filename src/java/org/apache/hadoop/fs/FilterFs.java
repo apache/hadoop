@@ -138,6 +138,13 @@ public abstract class FilterFs extends AbstractFileSystem {
   public FsServerDefaults getServerDefaults() throws IOException {
     return myFs.getServerDefaults();
   }
+  
+
+  @Override
+  public Path resolvePath(final Path p) throws FileNotFoundException,
+        UnresolvedLinkException, AccessControlException, IOException {
+    return myFs.resolvePath(p);
+  }
 
   @Override
   public int getUriDefaultPort() {

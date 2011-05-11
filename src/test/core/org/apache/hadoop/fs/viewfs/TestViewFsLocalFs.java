@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
-
 import org.apache.hadoop.fs.FileContext;
+
 
 import org.junit.After;
 import org.junit.Before;
 
 
 public class TestViewFsLocalFs extends ViewFsBaseTest {
-
 
   @Before
   public void setUp() throws Exception {
@@ -39,5 +38,4 @@ public class TestViewFsLocalFs extends ViewFsBaseTest {
   public void tearDown() throws Exception {
     super.tearDown();
   }
- 
 }

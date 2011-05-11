@@ -23,7 +23,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map.Entry;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -51,10 +53,11 @@ import org.apache.hadoop.fs.viewfs.InodeTree.INode;
 import org.apache.hadoop.fs.viewfs.InodeTree.INodeLink;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 
+
 /**
- * 
  * ViewFs (extends the AbstractFileSystem interface) implements a client-side
  * mount table. The viewFs file system is implemented completely in memory on
  * the client side. The client-side mount table allows a client to provide a 
@@ -71,89 +74,8 @@ import org.apache.hadoop.util.Progressable;
  * ViewFs is specified with the following URI: <b>viewfs:///</b> 
  * <p>
  * To use viewfs one would typically set the default file system in the
- * config  (i.e. fs.defaultFS = viewfs:///) along with the
- * mount table config variables as described below. 
- * 
- * <p>
- * <b> ** Config variables to specify the mount table entries ** </b>
- * <p>
- * 
- * The file system is initialized from the standard Hadoop config through
- * config variables.
- * See {@link FsConstants} for URI and Scheme constants; 
- * See {@link Constants} for config var constants; 
- * see {@link ConfigUtil} for convenient lib.
- * 
- * <p>
- * All the mount table config entries for view fs are prefixed by 
- * <b>fs.viewFs.</b>
- * For example the above example can be specfied with the following
- *  config variables:
- *  <ul>
- *  <li> fs.viewFs.defaultMT.link./user=hdfs://nnContainingUserDir/user
- *  <li> fs.viewFs.defaultMT.link./project/foo=hdfs://nnProject1/projects/foo
- *  <li> fs.viewFs.defaultMT.link./project/bar=hdfs://nnProject2/projects/bar
- *  <li> fs.viewFs.defaultMT.link./tmp=hdfs://nnTmp/privateTmpForUserXXX
- *  </ul>
- *  
- * The default mount table (when no authority is specified) is 
- * from config variables prefixed by <b>fs.viewFs.defaultMT </b>
- * The authority component of a URI can be used to specify a different mount
- * table. For example,
- * <ul>
- * <li>  viewfs://sanjayMountable/
- * </ul>
- * is initialized from the fs.viewFs.sanjayMountable.* config variables.
- * 
- *  <p> 
- *  <b> **** Merge Mounts **** </b>(NOTE: merge mounts are not implemented yet.)
- *  <p>
- *  
- *   One can also use "MergeMounts" to merge several directories (this is
- *   sometimes  called union-mounts or junction-mounts in the literature.
- *   For example of the home directories are stored on say two file systems
- *   (because they do not fit on one) then one could specify a mount
- *   entry such as following merges two dirs:
- *   <ul>
- *   <li> /user -> hdfs://nnUser1/user,hdfs://nnUser2/user
- *   </ul>
-
- *  Such a mergeLink can be specifed with the following config var where ","
- *  is used as the seperater for each of links to be merged:
- *  <ul>
- *  <li> fs.viewFs.defaultMT.linkMerge./user=
- *            hdfs://nnUser1/user,hdfs://nnUser1/user
- *  </ul>
- *   A special case of the merge mount is where mount table's root is merged
- *   with the root (slash) of another file system:
- *   <ul>
- *   <li>    fs.viewFs.defaultMT.linkMergeSlash=hdfs://nn99/
- *   </ul>
- *   In this cases the root of the mount table is merged with the root of
- *            <b>hdfs://nn99/ </b> 
- * 
- */
-/**
- * ViewFs (extends the AbstractFileSystem interface) implements a client-side
- * mount table. The viewFs file system is implemented completely in memory on
- * the client side. The client-side mount table allows a client to provide a 
- * customized view of a file system namespace that is composed from 
- * one or more individual file systems (a localFs or Hdfs, S3fs, etc).
- * For example one could have a mount table that provides links such as
- * <ul>
- * <li>  /user          -> hdfs://nnContainingUserDir/user
- * <li>  /project/foo   -> hdfs://nnProject1/projects/foo
- * <li>  /project/bar   -> hdfs://nnProject2/projects/bar
- * <li>  /tmp           -> hdfs://nnTmp/privateTmpForUserXXX
- * </ul> 
- * 
- * ViewFileSystem is specified with the following URI: <b>viewfs:///</b> 
- * <p>
- * To use viewfs one would typically set the default file system in the
  * config  (i.e. fs.default.name< = viewfs:///) along with the
  * mount table config variables as described below. 
- * If your core-site.xml does not have the following config value please add it
- * to your config: fs.viewfs.impl = org.apache.hadoop.fs.viewfs.ViewFileSystem
  * 
  * <p>
  * <b> ** Config variables to specify the mount table entries ** </b>
@@ -182,13 +104,13 @@ import org.apache.hadoop.util.Progressable;
  *  </ul>
  *  
  * The default mount table (when no authority is specified) is 
- * from config variables prefixed by <b>fs.viewFs.defaultMT </b>
+ * from config variables prefixed by <b>fs.viewFs.mounttable.default </b>
  * The authority component of a URI can be used to specify a different mount
  * table. For example,
  * <ul>
  * <li>  viewfs://sanjayMountable/
  * </ul>
- * is initialized from the fs.viewFs.sanjayMountable.* config variables.
+ * is initialized from fs.viewFs.mounttable.sanjayMountable.* config variables.
  * 
  *  <p> 
  *  <b> **** Merge Mounts **** </b>(NOTE: merge mounts are not implemented yet.)
@@ -202,7 +124,6 @@ import org.apache.hadoop.util.Progressable;
  *   <ul>
  *   <li> /user -> hdfs://nnUser1/user,hdfs://nnUser2/user
  *   </ul>
-
  *  Such a mergeLink can be specified with the following config var where ","
  *  is used as the separator for each of links to be merged:
  *  <ul>
@@ -226,8 +147,33 @@ public class ViewFs extends AbstractFileSystem {
   final Configuration config;
   InodeTree<AbstractFileSystem> fsState;  // the fs state; ie the mount table
   
-  static final AccessControlException READONLY_MOUNTABLE =
-    new AccessControlException("InternalDir of ViewFs is readonly");
+  static AccessControlException readOnlyMountTable(final String operation,
+      final String p) {
+    return new AccessControlException( 
+        "InternalDir of ViewFileSystem is readonly; operation=" + operation + 
+        "Path=" + p);
+  }
+  static AccessControlException readOnlyMountTable(final String operation,
+      final Path p) {
+    return readOnlyMountTable(operation, p.toString());
+  }
+  
+  
+  static public class MountPoint {
+    private Path src;       // the src of the mount
+    private URI[] targets; //  target of the mount; Multiple targets imply mergeMount
+    MountPoint(Path srcPath, URI[] targetURIs) {
+      src = srcPath;
+      targets = targetURIs;
+    }
+    Path getSrc() {
+      return src;
+    }
+    URI[] getTargets() {
+      return targets;
+    }
+  }
+  
   public ViewFs(final Configuration conf) throws IOException,
       URISyntaxException {
     this(FsConstants.VIEWFS_URI, conf);
@@ -289,6 +235,18 @@ public class ViewFs extends AbstractFileSystem {
   }
  
   @Override
+  public Path resolvePath(final Path f) throws FileNotFoundException,
+          AccessControlException, UnresolvedLinkException, IOException {
+    final InodeTree.ResolveResult<AbstractFileSystem> res;
+      res = fsState.resolve(getUriPath(f), true);
+    if (res.isInternalDir()) {
+      return f;
+    }
+    return res.targetFileSystem.resolvePath(res.remainingPath);
+
+  }
+  
+  @Override
   public FSDataOutputStream createInternal(final Path f,
       final EnumSet<CreateFlag> flag, final FsPermission absolutePermission,
       final int bufferSize, final short replication, final long blockSize,
@@ -302,7 +260,7 @@ public class ViewFs extends AbstractFileSystem {
       res = fsState.resolve(getUriPath(f), false);
     } catch (FileNotFoundException e) {
       if (createParent) {
-        throw READONLY_MOUNTABLE;
+        throw readOnlyMountTable("create", f);
       } else {
         throw e;
       }
@@ -526,7 +484,7 @@ public class ViewFs extends AbstractFileSystem {
       res = fsState.resolve(getUriPath(link), false);
     } catch (FileNotFoundException e) {
       if (createParent) {
-        throw READONLY_MOUNTABLE;
+        throw readOnlyMountTable("createSymlink", link);
       } else {
         throw e;
       }
@@ -587,6 +545,39 @@ public class ViewFs extends AbstractFileSystem {
     // points to many file systems. Noop for ViewFs. 
   }
   
+  public MountPoint[] getMountPoints() {
+    List<InodeTree.MountPoint<AbstractFileSystem>> mountPoints = 
+                  fsState.getMountPoints();
+    
+    MountPoint[] result = new MountPoint[mountPoints.size()];
+    for ( int i = 0; i < mountPoints.size(); ++i ) {
+      result[i] = new MountPoint(new Path(mountPoints.get(i).src), 
+                              mountPoints.get(i).target.targetDirLinkList);
+    }
+    return result;
+  }
+  
+  @Override
+  public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
+    List<InodeTree.MountPoint<AbstractFileSystem>> mountPoints = 
+                fsState.getMountPoints();
+    int initialListSize  = 0;
+    for (InodeTree.MountPoint<AbstractFileSystem> im : mountPoints) {
+      initialListSize += im.target.targetDirLinkList.length; 
+    }
+    List<Token<?>> result = new ArrayList<Token<?>>(initialListSize);
+    for ( int i = 0; i < mountPoints.size(); ++i ) {
+      List<Token<?>> tokens = 
+        mountPoints.get(i).target.targetFileSystem.getDelegationTokens(renewer);
+      if (tokens != null) {
+        result.addAll(tokens);
+      }
+    }
+    return result;
+  }
+
+  
+  
   /*
    * An instance of this class represents an internal dir of the viewFs 
    * ie internal dir of the mount table.
@@ -631,14 +622,14 @@ public class ViewFs extends AbstractFileSystem {
         FileAlreadyExistsException, FileNotFoundException,
         ParentNotDirectoryException, UnsupportedFileSystemException,
         UnresolvedLinkException, IOException {
-      throw READONLY_MOUNTABLE;
+      throw readOnlyMountTable("create", f);
     }
 
     @Override
     public boolean delete(final Path f, final boolean recursive)
         throws AccessControlException, IOException {
       checkPathIsSlash(f);
-      throw READONLY_MOUNTABLE;
+      throw readOnlyMountTable("delete", f);
     }
 
     @Override
@@ -746,7 +737,7 @@ public class ViewFs extends AbstractFileSystem {
       if (theInternalDir.isRoot & dir == null) {
         throw new FileAlreadyExistsException("/ already exits");
       }
-      throw READONLY_MOUNTABLE;
+      throw readOnlyMountTable("mkdir", dir);
     }
 
     @Override
@@ -761,7 +752,7 @@ public class ViewFs extends AbstractFileSystem {
         throws AccessControlException, IOException {
       checkPathIsSlash(src);
       checkPathIsSlash(dst);
-      throw READONLY_MOUNTABLE;     
+      throw readOnlyMountTable("rename", src);     
     }
 
     @Override
@@ -772,7 +763,7 @@ public class ViewFs extends AbstractFileSystem {
     @Override
     public void createSymlink(final Path target, final Path link,
         final boolean createParent) throws AccessControlException {
-      throw READONLY_MOUNTABLE;    
+      throw readOnlyMountTable("createSymlink", link);    
     }
 
     @Override
@@ -785,34 +776,34 @@ public class ViewFs extends AbstractFileSystem {
     public void setOwner(final Path f, final String username,
         final String groupname) throws AccessControlException, IOException {
       checkPathIsSlash(f);
-      throw READONLY_MOUNTABLE;
+      throw readOnlyMountTable("setOwner", f);
     }
 
     @Override
     public void setPermission(final Path f, final FsPermission permission)
         throws AccessControlException, IOException {
       checkPathIsSlash(f);
-      throw READONLY_MOUNTABLE;    
+      throw readOnlyMountTable("setPermission", f);    
     }
 
     @Override
     public boolean setReplication(final Path f, final short replication)
         throws AccessControlException, IOException {
       checkPathIsSlash(f);
-      throw READONLY_MOUNTABLE;
+      throw readOnlyMountTable("setReplication", f);
     }
 
     @Override
     public void setTimes(final Path f, final long mtime, final long atime)
         throws AccessControlException, IOException {
       checkPathIsSlash(f);
-      throw READONLY_MOUNTABLE;    
+      throw readOnlyMountTable("setTimes", f);    
     }
 
     @Override
     public void setVerifyChecksum(final boolean verifyChecksum)
         throws AccessControlException {
-      throw READONLY_MOUNTABLE;   
+      throw readOnlyMountTable("setVerifyChecksum", "");   
     }
   }
 }

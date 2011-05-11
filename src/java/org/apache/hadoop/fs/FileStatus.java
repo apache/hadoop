@@ -255,18 +255,18 @@ public class FileStatus implements Writable, Comparable {
   //////////////////////////////////////////////////
   public void write(DataOutput out) throws IOException {
     Text.writeString(out, getPath().toString());
-    out.writeLong(length);
-    out.writeBoolean(isdir);
-    out.writeShort(block_replication);
-    out.writeLong(blocksize);
-    out.writeLong(modification_time);
-    out.writeLong(access_time);
-    permission.write(out);
-    Text.writeString(out, owner);
-    Text.writeString(out, group);
+    out.writeLong(getLen());
+    out.writeBoolean(isDirectory());
+    out.writeShort(getReplication());
+    out.writeLong(getBlockSize());
+    out.writeLong(getModificationTime());
+    out.writeLong(getAccessTime());
+    getPermission().write(out);
+    Text.writeString(out, getOwner());
+    Text.writeString(out, getGroup());
     out.writeBoolean(isSymlink());
     if (isSymlink()) {
-      Text.writeString(out, symlink.toString());
+      Text.writeString(out, getSymlink().toString());
     }
   }
 

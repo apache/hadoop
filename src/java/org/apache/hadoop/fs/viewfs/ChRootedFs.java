@@ -16,10 +16,12 @@
  * limitations under the License.
  */
 package org.apache.hadoop.fs.viewfs;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.EnumSet;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -35,6 +37,7 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 
 /**
@@ -141,6 +144,13 @@ class ChRootedFs extends AbstractFileSystem {
      * Only reasonable choice for initialWd for chrooted fds is null 
      */
     return null;
+  }
+  
+  
+  public Path getResolvedQualifiedPath(final Path f)
+      throws FileNotFoundException {
+    return myFs.makeQualified(
+        new Path(chRootPathPartString + f.toUri().toString()));
   }
   
   @Override
@@ -287,5 +297,11 @@ class ChRootedFs extends AbstractFileSystem {
   @Override
   public Path getLinkTarget(final Path f) throws IOException {
     return myFs.getLinkTarget(fullPath(f));
+  }
+  
+  
+  @Override
+  public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
+    return myFs.getDelegationTokens(renewer);
   }
 }

@@ -10,6 +10,8 @@ Trunk (unreleased changes)
 
     HADOOP-7171. Support UGI in FileContext API. (jitendra)
 
+    HADOOP-7257 Client side mount tables (sanjay)
+
   IMPROVEMENTS
 
     HADOOP-7133. Batch the calls in DataStorage to FileUtil.createHardLink().

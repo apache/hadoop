@@ -23,6 +23,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.StringTokenizer;
 import java.util.Map.Entry;
 
@@ -45,6 +47,7 @@ import org.apache.hadoop.fs.viewfs.InodeTree.INode;
 import org.apache.hadoop.fs.viewfs.InodeTree.INodeLink;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 
 /**
@@ -55,8 +58,31 @@ import org.apache.hadoop.util.Progressable;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving /*Evolving for a release,to be changed to Stable */
 public class ViewFileSystem extends FileSystem {
-  static final AccessControlException READONLY_MOUNTABLE =
-    new AccessControlException( "InternalDir of ViewFileSystem is readonly");
+  static AccessControlException readOnlyMountTable(final String operation,
+      final String p) {
+    return new AccessControlException( 
+        "InternalDir of ViewFileSystem is readonly; operation=" + operation + 
+        "Path=" + p);
+  }
+  static AccessControlException readOnlyMountTable(final String operation,
+      final Path p) {
+    return readOnlyMountTable(operation, p.toString());
+  }
+  
+  static public class MountPoint {
+    private Path src;       // the src of the mount
+    private URI[] targets; //  target of the mount; Multiple targets imply mergeMount
+    MountPoint(Path srcPath, URI[] targetURIs) {
+      src = srcPath;
+      targets = targetURIs;
+    }
+    Path getSrc() {
+      return src;
+    }
+    URI[] getTargets() {
+      return targets;
+    }
+  }
   
   final long creationTime; // of the the mount table
   final UserGroupInformation ugi; // the user/group of user who created mtable
@@ -197,23 +223,14 @@ public class ViewFileSystem extends FileSystem {
     return myUri;
   }
   
-  /**
-   * Return the fully-qualified path of path f - ie follow the path
-   * through the mount point.
-   * @param f path
-   * @return resolved fully-qualified path
-   * @throws FileNotFoundException
-   */
-  public Path getResolvedQualifiedPath(final Path f)
-      throws FileNotFoundException {
+  @Override
+  public Path resolvePath(final Path f) throws FileNotFoundException {
     final InodeTree.ResolveResult<FileSystem> res;
       res = fsState.resolve(getUriPath(f), true);
     if (res.isInternalDir()) {
       return f;
     }
-    final ChRootedFileSystem targetFs = 
-      (ChRootedFileSystem) res.targetFileSystem;
-    return targetFs.getResolvedQualifiedPath(res.remainingPath);
+    return res.targetFileSystem.resolvePath(res.remainingPath);
   }
   
   @Override
@@ -243,7 +260,7 @@ public class ViewFileSystem extends FileSystem {
     try {
       res = fsState.resolve(getUriPath(f), false);
     } catch (FileNotFoundException e) {
-        throw READONLY_MOUNTABLE;
+        throw readOnlyMountTable("create", f);
     }
     assert(res.remainingPath != null);
     return res.targetFileSystem.create(res.remainingPath, permission,
@@ -259,12 +276,13 @@ public class ViewFileSystem extends FileSystem {
       fsState.resolve(getUriPath(f), true);
     // If internal dir or target is a mount link (ie remainingPath is Slash)
     if (res.isInternalDir() || res.remainingPath == InodeTree.SlashPath) {
-      throw READONLY_MOUNTABLE;
+      throw readOnlyMountTable("delete", f);
     }
     return res.targetFileSystem.delete(res.remainingPath, recursive);
   }
   
   @Override
+  @SuppressWarnings("deprecation")
   public boolean delete(final Path f)
       throws AccessControlException, FileNotFoundException,
       IOException {
@@ -358,14 +376,13 @@ public class ViewFileSystem extends FileSystem {
       fsState.resolve(getUriPath(src), false); 
   
     if (resSrc.isInternalDir()) {
-      throw READONLY_MOUNTABLE;
+      throw readOnlyMountTable("rename", src);
     }
       
     InodeTree.ResolveResult<FileSystem> resDst = 
       fsState.resolve(getUriPath(dst), false);
     if (resDst.isInternalDir()) {
-      throw new AccessControlException(
-          "Cannot Rename within internal dirs of mount table: it is readOnly");
+          throw readOnlyMountTable("rename", dst);
     }
     /**
     // Alternate 1: renames within same file system - valid but we disallow
@@ -433,6 +450,38 @@ public class ViewFileSystem extends FileSystem {
     // points to many file systems. Noop for ViewFileSystem.
   }
   
+  public MountPoint[] getMountPoints() {
+    List<InodeTree.MountPoint<FileSystem>> mountPoints = 
+                  fsState.getMountPoints();
+    
+    MountPoint[] result = new MountPoint[mountPoints.size()];
+    for ( int i = 0; i < mountPoints.size(); ++i ) {
+      result[i] = new MountPoint(new Path(mountPoints.get(i).src), 
+                              mountPoints.get(i).target.targetDirLinkList);
+    }
+    return result;
+  }
+  
+ 
+  @Override
+  public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
+    List<InodeTree.MountPoint<FileSystem>> mountPoints = 
+                fsState.getMountPoints();
+    int initialListSize  = 0;
+    for (InodeTree.MountPoint<FileSystem> im : mountPoints) {
+      initialListSize += im.target.targetDirLinkList.length; 
+    }
+    List<Token<?>> result = new ArrayList<Token<?>>(initialListSize);
+    for ( int i = 0; i < mountPoints.size(); ++i ) {
+      List<Token<?>> tokens = 
+        mountPoints.get(i).target.targetFileSystem.getDelegationTokens(renewer);
+      if (tokens != null) {
+        result.addAll(tokens);
+      }
+    }
+    return result;
+  }
+  
   /*
    * An instance of this class represents an internal dir of the viewFs 
    * that is internal dir of the mount table.
@@ -491,7 +540,7 @@ public class ViewFileSystem extends FileSystem {
     @Override
     public FSDataOutputStream append(final Path f, final int bufferSize,
         final Progressable progress) throws IOException {
-      throw READONLY_MOUNTABLE;
+      throw readOnlyMountTable("append", f);
     }
 
     @Override
@@ -499,17 +548,18 @@ public class ViewFileSystem extends FileSystem {
         final FsPermission permission, final boolean overwrite,
         final int bufferSize, final short replication, final long blockSize,
         final Progressable progress) throws AccessControlException {
-      throw READONLY_MOUNTABLE;
+      throw readOnlyMountTable("create", f);
     }
 
     @Override
     public boolean delete(final Path f, final boolean recursive)
         throws AccessControlException, IOException {
       checkPathIsSlash(f);
-      throw READONLY_MOUNTABLE;
+      throw readOnlyMountTable("delete", f);
     }
     
     @Override
+    @SuppressWarnings("deprecation")
     public boolean delete(final Path f)
         throws AccessControlException, IOException {
       return delete(f, true);
@@ -576,7 +626,11 @@ public class ViewFileSystem extends FileSystem {
       if (theInternalDir.isRoot & dir == null) {
         throw new FileAlreadyExistsException("/ already exits");
       }
-      throw READONLY_MOUNTABLE;
+      // Note dir starts with /
+      if (theInternalDir.children.containsKey(dir.toString().substring(1))) {
+        return true; // this is the stupid semantics of FileSystem
+      }
+      throw readOnlyMountTable("mkdirs",  dir);
     }
 
     @Override
@@ -591,35 +645,35 @@ public class ViewFileSystem extends FileSystem {
         IOException {
       checkPathIsSlash(src);
       checkPathIsSlash(dst);
-      throw READONLY_MOUNTABLE;     
+      throw readOnlyMountTable("rename", src);     
     }
 
     @Override
     public void setOwner(Path f, String username, String groupname)
         throws AccessControlException, IOException {
       checkPathIsSlash(f);
-      throw READONLY_MOUNTABLE;
+      throw readOnlyMountTable("setOwner", f);
     }
 
     @Override
     public void setPermission(Path f, FsPermission permission)
         throws AccessControlException, IOException {
       checkPathIsSlash(f);
-      throw READONLY_MOUNTABLE;    
+      throw readOnlyMountTable("setPermission", f);    
     }
 
     @Override
     public boolean setReplication(Path f, short replication)
         throws AccessControlException, IOException {
       checkPathIsSlash(f);
-      throw READONLY_MOUNTABLE;
+      throw readOnlyMountTable("setReplication", f);
     }
 
     @Override
     public void setTimes(Path f, long mtime, long atime)
         throws AccessControlException, IOException {
       checkPathIsSlash(f);
-      throw READONLY_MOUNTABLE;    
+      throw readOnlyMountTable("setTimes", f);    
     }
 
     @Override

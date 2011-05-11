@@ -20,6 +20,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -34,6 +35,7 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 
 /**
@@ -114,7 +116,7 @@ class ChRootedFileSystem extends FileSystem {
           chRootPathPart.toString().substring(1));
 
     workingDir = getHomeDirectory();
-    // We don't use the wd of the myFs bu set it to root.
+    // We don't use the wd of the myFs,  (lets set it to root anyway)
     myFs.setWorkingDirectory(chRootPathPart);
   }
   
@@ -210,6 +212,7 @@ class ChRootedFileSystem extends FileSystem {
   
 
   @Override
+  @SuppressWarnings("deprecation")
   public boolean delete(Path f) throws IOException {
    return delete(f, true);
   }
@@ -302,5 +305,10 @@ class ChRootedFileSystem extends FileSystem {
   @Override
   public void setVerifyChecksum(final boolean verifyChecksum)  {
     myFs.setVerifyChecksum(verifyChecksum);
+  }
+  
+  @Override
+  public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
+    return myFs.getDelegationTokens(renewer);
   }
 }

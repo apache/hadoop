@@ -360,6 +360,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
     
   /**
+   * Deprecated  - use @link {@link #getDelegationTokens(String)}
    * Get a new delegation token for this file system.
    * @param renewer the account name that is allowed to renew the token.
    * @return a new delegation token
@@ -535,7 +536,7 @@ public abstract class FileSystem extends Configured implements Closeable {
         getDefaultReplication(), 
         conf.getInt("io.file.buffer.size", 4096));
   }
-
+  
   /**
    * Return the fully-qualified path of path f resolving the path
    * through any symlinks or mount point
