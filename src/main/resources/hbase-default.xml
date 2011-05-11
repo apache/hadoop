@@ -510,10 +510,10 @@
     <value>180000</value>
     <description>ZooKeeper session timeout.
       HBase passes this to the zk quorum as suggested maximum time for a
-      session.  See http://hadoop.apache.org/zookeeper/docs/current/zookeeperProgrammers.html#ch_zkSessions
+      session (This setting becomes zookeeper's 'maxSessionTimeout').  See
+      http://hadoop.apache.org/zookeeper/docs/current/zookeeperProgrammers.html#ch_zkSessions
       "The client sends a requested timeout, the server responds with the
-      timeout that it can give the client. "
-      In milliseconds.
+      timeout that it can give the client. " In milliseconds.
     </description>
   </property>
   <property>
