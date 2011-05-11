@@ -29,6 +29,8 @@ Trunk (unreleased changes)
     HADOOP-6920. Metrics instrumentation to move new metrics2 framework.
     (Luke Lu via suresh)
 
+    HADOOP-7214. Add Common functionality necessary to provide an equivalent
+    of /usr/bin/groups for Hadoop. (Aaron T. Myers via todd)
 
   IMPROVEMENTS
 
