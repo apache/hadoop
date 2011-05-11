@@ -28,6 +28,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 
 import com.google.common.base.Preconditions;
@@ -70,9 +72,19 @@ public class CompactSplitThread implements CompactionRequestor {
     int largeThreads = Math.max(1, conf.getInt(
         "hbase.regionserver.thread.compaction.large", 1));
     int smallThreads = conf.getInt(
-        "hbase.regionserver.thread.compaction.small", 0);
-    throttleSize = conf.getLong(
-        "hbase.regionserver.thread.compaction.throttle", 0);
+        "hbase.regionserver.thread.compaction.small", 1);
+    if (conf.get("hbase.regionserver.thread.compaction.throttle") != null) {
+      throttleSize = conf.getLong(
+          "hbase.regionserver.thread.compaction.throttle", 0);
+    } else {
+      // we have a complicated default. see HBASE-3877
+      long flushSize = conf.getLong("hbase.hregion.memstore.flush.size",
+          HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE);
+      long splitSize = conf.getLong("hbase.hregion.max.filesize",
+          HConstants.DEFAULT_MAX_FILE_SIZE);
+      throttleSize = Math.min(flushSize * 2, splitSize / 2);
+    }
+
     int splitThreads = conf.getInt("hbase.regionserver.thread.split", 1);
 
     // if we have throttle threads, make sure the user also specified size

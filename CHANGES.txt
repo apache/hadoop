@@ -214,6 +214,7 @@ Release 0.91.0 - Unreleased
                (dhruba borthakur)
    HBASE-3797  StoreFile Level Compaction Locking
    HBASE-1476  Multithreaded Compactions
+   HBASE-3877  Determine Proper Defaults for Compaction ThreadPools
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
