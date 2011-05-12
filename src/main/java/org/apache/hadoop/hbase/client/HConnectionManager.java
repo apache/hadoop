@@ -30,6 +30,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
@@ -1059,8 +1060,12 @@ public class HConnectionManager {
       // we need to examine the cached location to verify that it is
       // a match by end key as well.
       if (!matchingRegions.isEmpty()) {
-        HRegionLocation possibleRegion =
-          matchingRegions.get(matchingRegions.lastKey());
+        HRegionLocation possibleRegion = null;
+        try {
+          possibleRegion = matchingRegions.get(matchingRegions.lastKey());          
+        } catch (NoSuchElementException nsee) {
+          LOG.warn("checkReferences() might have removed the key", nsee);
+        }
 
         // there is a possibility that the reference was garbage collected
         // in the instant since we checked isEmpty().
