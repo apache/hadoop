@@ -277,11 +277,15 @@
   <!-- the normal classpath -->
   <path id="classpath">
     <pathelement location="${build.classes}"/>
+    <path refid="src.lib.classpath"/>
+    <pathelement location="${conf.dir}"/>
+  </path>
+
+  <path id="src.lib.classpath">
     <fileset dir="${lib.dir}">
       <include name="**/*.jar" />
       <exclude name="**/excluded/" />
     </fileset>
-    <pathelement location="${conf.dir}"/>
     <path refid="ivy-common.classpath"/>
   </path>
 
@@ -2049,7 +2053,7 @@
         <source path="${contrib.dir}/capacity-scheduler/src/test"
                 output="${build.dir.eclipse-contrib-classes}/capacity-scheduler/test" />
         <output path="${build.dir.eclipse-main-classes}" />
-        <library pathref="classpath" exported="false" />
+        <library pathref="src.lib.classpath" exported="false" />
         <library pathref="test.lib.classpath" exported="false" />
         <variable path="ANT_HOME/lib/ant.jar" exported="false" />
         <library path="${conf.dir}" exported="false" />

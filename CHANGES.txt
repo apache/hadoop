@@ -16,6 +16,9 @@ Release 0.20.205.0 - unreleased
     HADOOP-7248. Update eclipse target to generate .classpath from ivy config.
     (Thomas Graves and Tom White via cdouglas)
 
+    HADOOP-7277. Add generation of run configurations to eclipse target.
+    (Jeffrey Naisbitt and Philip Zeyliger via cdouglas)
+
 Release 0.20.204.0 - unreleased
 
   BUG FIXES
