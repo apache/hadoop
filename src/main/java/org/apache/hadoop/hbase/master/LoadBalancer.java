@@ -243,7 +243,7 @@ public class LoadBalancer {
         "servers=" + numServers + " " +
         "regions=" + numRegions + " average=" + average + " " +
         "mostloaded=" + serversByLoad.lastKey().getLoad() +
-        " leastloaded=" + serversByLoad.lastKey().getLoad());
+        " leastloaded=" + serversByLoad.firstKey().getLoad());
       return null;
     }
     int min = numRegions / numServers;
