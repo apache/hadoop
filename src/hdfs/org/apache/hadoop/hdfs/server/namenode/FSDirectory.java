@@ -663,19 +663,9 @@ class FSDirectory implements FSConstants, Closeable {
   /**
    * Replaces the specified inode with the specified one.
    */
-  void replaceNode(String path, INodeFile oldnode, INodeFile newnode) 
-                                                   throws IOException {
-    replaceNode(path, oldnode, newnode, true);
-  }
-  
-  /**
-   * @see #replaceNode(String, INodeFile, INodeFile)
-   */
-  private void replaceNode(String path, INodeFile oldnode, INodeFile newnode,
-                           boolean updateDiskspace) throws IOException {    
+  void replaceNode(String path, INodeFile oldnode, INodeFile newnode)
+      throws IOException {
     synchronized (rootDir) {
-      long dsOld = oldnode.diskspaceConsumed();
-      
       //
       // Remove the node from the namespace 
       //
@@ -692,18 +682,6 @@ class FSDirectory implements FSConstants, Closeable {
       
       rootDir.addNode(path, newnode); 
 
-      //check if disk space needs to be updated.
-      long dsNew = 0;
-      if (updateDiskspace && (dsNew = newnode.diskspaceConsumed()) != dsOld) {
-        try {
-          updateSpaceConsumed(path, 0, dsNew-dsOld);
-        } catch (QuotaExceededException e) {
-          // undo
-          replaceNode(path, newnode, oldnode, false);
-          throw e;
-        }
-      }
-      
       int index = 0;
       for (Block b : newnode.getBlocks()) {
         BlockInfo info = namesystem.blocksMap.addINode(b, newnode);

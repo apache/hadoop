@@ -1,5 +1,9 @@
 Hadoop Change Log
 
+Release 0.20.205.0 - unreleased
+
+  BUG FIXES
+
 Release 0.20.204.0 - unreleased
 
   BUG FIXES
@@ -55,6 +59,8 @@ Release 0.20.204.0 - unreleased
     HDFS-1842. Handle editlog opcode conflict with 0.20.203 during upgrade,
     by throwing an error to indicate the editlog needs to be empty.
     (suresh)
+
+    HDFS-1377. Quota bug for partial blocks allows quotas to be violated. (eli)
 
   IMPROVEMENTS
 
