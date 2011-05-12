@@ -85,7 +85,7 @@
            To help debug this or confirm this is happening GC logging can be turned on in the Java virtual machine.  
           </para>
           <para>
-          To enable, in hbase-env.sh add:
+          To enable, in <filename>hbase-env.sh</filename> add:
           <programlisting> 
 export HBASE_OPTS="-XX:+UseConcMarkSweepGC -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:/home/hadoop/hbase/logs/gc-hbase.log"
           </programlisting>
@@ -406,9 +406,16 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
        <section xml:id="trouble.client.scantimeout">
             <title>ScannerTimeoutException</title>
             <para>This is thrown if the time between RPC calls from the client to RegionServer exceeds the scan timeout.  
-            For example, if Scan.setCaching is set to 500, then there will be an RPC call to fetch the next batch of rows every 500 <code>.next()</code> calls on the ResultScanner
+            For example, if <code>Scan.setCaching</code> is set to 500, then there will be an RPC call to fetch the next batch of rows every 500 <code>.next()</code> calls on the ResultScanner
             because data is being transferred in blocks of 500 rows to the client.  Reducing the setCaching value may be an option, but setting this value too low makes for inefficient
             processing on numbers of rows.
+            </para>
+       </section>    
+       <section xml:id="trouble.client.scarylogs">
+            <title>Shell or client application throws lots of scary exceptions during normal operation</title>
+            <para>Since 0.20.0 the default log level for <code>org.apache.hadoop.hbase.*</code>is DEBUG. </para>
+            <para>
+            On your clients, edit <filename>$HBASE_HOME/conf/log4j.properties</filename> and change this: <code>log4j.logger.org.apache.hadoop.hbase=DEBUG</code> to this: <code>log4j.logger.org.apache.hadoop.hbase=INFO</code>, or even <code>log4j.logger.org.apache.hadoop.hbase=WARN</code>. 
             </para>
        </section>    
 
@@ -417,6 +424,29 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
       <title>RegionServer</title>
       <section xml:id="trouble.rs.startup">
         <title>Startup Errors</title>
+          <section xml:id="trouble.rs.startup.master-no-region">
+            <title>Master Starts, But RegionServers Do Not</title>
+            <para>The Master believes the RegionServers have the IP of 127.0.0.1 - which is localhost and resolves to the master's own localhost.
+            </para>
+            <para>The RegionServers are erroneously informing the Master that their IP addresses are 127.0.0.1. 
+            </para>
+            <para>Modify <filename>/etc/hosts</filename> on the region servers, from...  
+            <programlisting>
+# Do not remove the following line, or various programs
+# that require network functionality will fail.
+127.0.0.1               fully.qualified.regionservername regionservername  localhost.localdomain localhost
+::1             localhost6.localdomain6 localhost6
+            </programlisting>
+            ... to (removing the master node's name from localhost)...
+            <programlisting>
+# Do not remove the following line, or various programs
+# that require network functionality will fail.
+127.0.0.1               localhost.localdomain localhost
+::1             localhost6.localdomain6 localhost6
+            </programlisting>
+            </para>
+          </section>
+          
           <section xml:id="trouble.rs.startup.compression">
             <title>Compression Link Errors</title>
             <para>
@@ -453,7 +483,8 @@ java.lang.UnsatisfiedLinkError: no gplcompression in java.library.path
         <section xml:id="trouble.rs.runtime.oom-nt">
            <title>System instability, and the presence of "java.lang.OutOfMemoryError: unable to create new native thread in exceptions" HDFS DataNode logs or that of any system daemon</title>
            <para>
-           See the Getting Started section on <link linkend="ulimit">ulimit and nproc configuration</link>.
+           See the Getting Started section on <link linkend="ulimit">ulimit and nproc configuration</link>.  The default on recent Linux
+           distributions is 1024 - which is far too low for HBase.
            </para>
         </section>
         <section xml:id="trouble.rs.runtime.gc">
@@ -477,6 +508,60 @@ java.lang.UnsatisfiedLinkError: no gplcompression in java.library.path
            See the Getting Started section on <link linkend="ulimit">ulimit and nproc configuration</link> and check your network.
            </para>
         </section>
+        <section xml:id="trouble.rs.runtime.zkexpired">
+           <title>ZooKeeper SessionExpired events</title>
+           <para>Master or RegionServers shutting down with messages like those in the logs: </para>
+           <programlisting>
+WARN org.apache.zookeeper.ClientCnxn: Exception
+closing session 0x278bd16a96000f to sun.nio.ch.SelectionKeyImpl@355811ec
+java.io.IOException: TIMED OUT
+       at org.apache.zookeeper.ClientCnxn$SendThread.run(ClientCnxn.java:906)
+WARN org.apache.hadoop.hbase.util.Sleeper: We slept 79410ms, ten times longer than scheduled: 5000
+INFO org.apache.zookeeper.ClientCnxn: Attempting connection to server hostname/IP:PORT
+INFO org.apache.zookeeper.ClientCnxn: Priming connection to java.nio.channels.SocketChannel[connected local=/IP:PORT remote=hostname/IP:PORT]
+INFO org.apache.zookeeper.ClientCnxn: Server connection successful
+WARN org.apache.zookeeper.ClientCnxn: Exception closing session 0x278bd16a96000d to sun.nio.ch.SelectionKeyImpl@3544d65e
+java.io.IOException: Session Expired
+       at org.apache.zookeeper.ClientCnxn$SendThread.readConnectResult(ClientCnxn.java:589)
+       at org.apache.zookeeper.ClientCnxn$SendThread.doIO(ClientCnxn.java:709)
+       at org.apache.zookeeper.ClientCnxn$SendThread.run(ClientCnxn.java:945)
+ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expired           
+           </programlisting>
+           <para>
+           The JVM is doing a long running garbage collecting which is pausing every threads (aka "stop the world").
+           Since the RegionServer's local ZooKeeper client cannot send heartbeats, the session times out.
+           By design, we shut down any node that isn't able to contact the ZooKeeper ensemble after getting a timeout so that it stops serving data that may already be assigned elsewhere.  
+           </para>
+           <para>
+            <itemizedlist>
+              <listitem>Make sure you give plenty of RAM (in <filename>hbase-env.sh</filename>), the default of 1GB won't be able to sustain long running imports.</listitem>
+              <listitem>Make sure you don't swap, the JVM never behaves well under swapping.</listitem>
+              <listitem>Make sure you are not CPU starving the RegionServer thread. For example, if you are running a MapReduce job using 6 CPU-intensive tasks on a machine with 4 cores, you are probably starving the RegionServer enough to create longer garbage collection pauses.</listitem>
+              <listitem>Increase the ZooKeeper session timeout</listitem>
+           </itemizedlist>
+           If you wish to increase the session timeout, add the following to your <filename>hbase-site.xml</filename> to increase the timeout from the default of 60 seconds to 120 seconds. 
+           <programlisting>
+&lt;property&gt;
+    &lt;name&gt;zookeeper.session.timeout&lt;/name&gt;
+    &lt;value&gt;1200000&lt;/value&gt;
+&lt;/property&gt;
+&lt;property&gt;
+    &lt;name&gt;hbase.zookeeper.property.tickTime&lt;/name&gt;
+    &lt;value&gt;6000&lt;/value&gt;
+&lt;/property&gt;
+            </programlisting>
+           </para>
+           <para>
+           Be aware that setting a higher timeout means that the regions served by a failed RegionServer will take at least
+           that amount of time to be transfered to another RegionServer. For a production system serving live requests, we would instead 
+           recommend setting it lower than 1 minute and over-provision your cluster in order the lower the memory load on each machines (hence having 
+           less garbage to collect per machine).
+           </para>
+           <para>
+           If this is happening during an upload which only happens once (like initially loading all your data into HBase), consider bulk loading.
+           </para>
+           See <xref linkend="trouble.zookeeper.general"/> for other general information about ZooKeeper troubleshooting.
+        </section>
 
       </section>    
       <section xml:id="trouble.rs.shutdown">
@@ -485,16 +570,74 @@ java.lang.UnsatisfiedLinkError: no gplcompression in java.library.path
       </section>    
 
     </section>    
+
     <section xml:id="trouble.master">
       <title>Master</title>
       <section xml:id="trouble.master.startup">
         <title>Startup Errors</title>
-
+          <section xml:id="trouble.master.startup.migration">
+             <title>Master says that you need to run the hbase migrations script</title>
+             <para>Upon running that, the hbase migrations script says no files in root directory.</para>
+             <para>HBase expects the root directory to either not exist, or to have already been initialized by hbase running a previous time. If you create a new directory for HBase using Hadoop DFS, this error will occur. 
+             Make sure the HBase root directory does not currently exist or has been initialized by a previous run of HBase. Sure fire solution is to just use Hadoop dfs to delete the HBase root and let HBase create and initialize the directory itself. 
+             </para>          
+          </section>
+          
       </section>    
-      <section xml:id="trouble.master.startup">
+      <section xml:id="trouble.master.shutdown">
         <title>Shutdown Errors</title>
 
       </section>    
 
     </section>    
+
+    <section xml:id="trouble.zookeeper">
+      <title>ZooKeeper</title>
+      <section xml:id="trouble.zookeeper.startup">
+        <title>Startup Errors</title>
+          <section xml:id="trouble.zookeeper.startup.address">
+             <title>Could not find my address: xyz in list of ZooKeeper quorum servers</title>
+             <para>A ZooKeeper server wasn't able to start, throws that error. xyz is the name of your server.</para>
+             <para>This is a name lookup problem. HBase tries to start a ZooKeeper server on some machine but that machine isn't able to find itself in the <varname>hbase.zookeeper.quorum</varname> configuration.  
+             </para>          
+             <para>Use the hostname presented in the error message instead of the value you used. If you have a DNS server, you can set <varname>hbase.zookeeper.dns.interface</varname> and <varname>hbase.zookeeper.dns.nameserver</varname> in <filename>hbase-site.xml</filename> to make sure it resolves to the correct FQDN.   
+             </para>          
+          </section>
+          
+      </section>    
+      <section xml:id="trouble.zookeeper.general">
+          <title>ZooKeeper, The Cluster Canary</title>
+          <para>ZooKeeper is the cluster's "canary in the mineshaft". It'll be the first to notice issues if any so making sure its happy is the short-cut to a humming cluster.
+          </para> 
+          <para>
+          See the <link xlink:href="http://wiki.apache.org/hadoop/ZooKeeper/Troubleshooting">ZooKeeper Operating Environment Troubleshooting</link> page. It has suggestions and tools for checking disk and networking performance; i.e. the operating environment your ZooKeeper and HBase are running in.
+          </para>
+      </section>  
+
+    </section>    
+
+    <section xml:id="trouble.ec2">
+       <title>Amazon EC2</title>      
+          <section xml:id="trouble.ec2.zookeeper">
+             <title>ZooKeeper does not seem to work on Amazon EC2</title>
+             <para>HBase does not start when deployed as Amazon EC2 instances.  Exceptions like the below appear in the Master and/or RegionServer logs: </para>
+             <programlisting>
+  2009-10-19 11:52:27,030 INFO org.apache.zookeeper.ClientCnxn: Attempting
+  connection to server ec2-174-129-15-236.compute-1.amazonaws.com/10.244.9.171:2181
+  2009-10-19 11:52:27,032 WARN org.apache.zookeeper.ClientCnxn: Exception
+  closing session 0x0 to sun.nio.ch.SelectionKeyImpl@656dc861
+  java.net.ConnectException: Connection refused
+             </programlisting>
+             <para>
+             Security group policy is blocking the ZooKeeper port on a public address. 
+             Use the internal EC2 host names when configuring the ZooKeeper quorum peer list. 
+             </para>
+          </section>
+          <section xml:id="trouble.ec2.instability">
+             <title>Instability on Amazon EC2</title>
+             <para>Questions on HBase and Amazon EC2 come up frequently on the HBase dist-list. Search for old threads using <link xlink:href="http://search-hadoop.com/">Search Hadoop</link>
+             </para>
+          </section>
+    </section>
+    
   </chapter>

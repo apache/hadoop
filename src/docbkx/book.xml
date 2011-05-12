@@ -1321,8 +1321,7 @@ false
                 <question><para>Are there other HBase FAQs?</para></question>
             <answer>
                 <para>
-              See the FAQ that is up on the wiki, <link xlink:href="http://wiki.apache.org/hadoop/Hbase/FAQ">HBase Wiki FAQ</link>
-              as well as the <link xlink:href="http://wiki.apache.org/hadoop/Hbase/Troubleshooting">Troubleshooting</link> page.
+              See the FAQ that is up on the wiki, <link xlink:href="http://wiki.apache.org/hadoop/Hbase/FAQ">HBase Wiki FAQ</link>.
                 </para>
             </answer>
         </qandaentry>
