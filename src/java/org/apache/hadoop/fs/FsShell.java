@@ -433,32 +433,6 @@ public class FsShell extends Configured implements Tool {
   }
 
   /**
-   * Check file types.
-   */
-  int test(String argv[], int i) throws IOException {
-    if (!argv[i].startsWith("-") || argv[i].length() > 2)
-      throw new IOException("Not a flag: " + argv[i]);
-    char flag = argv[i].toCharArray()[1];
-    PathData item = new PathData(argv[++i], getConf());
-    
-    if ((flag != 'e') && !item.exists) { 
-      // TODO: it's backwards compat, but why is this throwing an exception?
-      // it's not like the shell test cmd
-      throw new PathNotFoundException(item.toString());
-    }
-    switch(flag) {
-      case 'e':
-        return item.exists ? 0 : 1;
-      case 'z':
-        return (item.stat.getLen() == 0) ? 0 : 1;
-      case 'd':
-        return item.stat.isDirectory() ? 0 : 1;
-      default:
-        throw new IOException("Unknown flag: " + flag);
-    }
-  }
-
-  /**
    * Move files that match the file pattern <i>srcf</i>
    * to a destination file.
    * When moving mutiple files, the destination must be a directory. 
@@ -671,8 +645,7 @@ public class FsShell extends Configured implements Tool {
       "[-moveFromLocal <localsrc> ... <dst>] [" + 
       GET_SHORT_USAGE + "\n\t" +
       "[" + COPYTOLOCAL_SHORT_USAGE + "] [-moveToLocal <src> <localdst>]\n\t" +
-      "[-report]\n\t" +
-      "[-test -[ezd] <path>]";
+      "[-report]";
 
     String conf ="-conf <configuration file>:  Specify an application configuration file.";
  
@@ -735,9 +708,6 @@ public class FsShell extends Configured implements Tool {
 
     String moveToLocal = "-moveToLocal <src> <localdst>:  Not implemented yet \n";
         
-    String test = "-test -[ezd] <path>: If file { exists, has zero length, is a directory\n" +
-      "\t\tthen return 0, else return 1.\n";
-
     String help = "-help [cmd]: \tDisplays help for given command or all commands if none\n" +
       "\t\tis specified.\n";
 
@@ -774,8 +744,6 @@ public class FsShell extends Configured implements Tool {
       System.out.println(moveToLocal);
     } else if ("get".equals(cmd)) {
       System.out.println(get);
-    } else if ("test".equals(cmd)) {
-      System.out.println(test);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -798,7 +766,6 @@ public class FsShell extends Configured implements Tool {
       System.out.println(get);
       System.out.println(copyToLocal);
       System.out.println(moveToLocal);
-      System.out.println(test);
 
       for (String thisCmdName : commandFactory.getNames()) {
         printHelp(commandFactory.getInstance(thisCmdName));
@@ -891,9 +858,6 @@ public class FsShell extends Configured implements Tool {
     } else if ("-moveToLocal".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
                          " [" + cmd + " [-crc] <src> <localdst>]");
-    } else if ("-test".equals(cmd)) {
-      System.err.println("Usage: java FsShell" +
-                         " [-test -[ezd] <path>]");
     } else {
       System.err.println("Usage: java FsShell");
       System.err.println("           [-df [<path>]]");
@@ -907,7 +871,6 @@ public class FsShell extends Configured implements Tool {
       System.err.println("           [" + GET_SHORT_USAGE + "]");
       System.err.println("           [" + COPYTOLOCAL_SHORT_USAGE + "]");
       System.err.println("           [-moveToLocal [-crc] <src> <localdst>]");
-      System.err.println("           [-test -[ezd] <path>]");
       for (String name : commandFactory.getNames()) {
       	instance = commandFactory.getInstance(name);
         System.err.println("           [" + instance.getUsage() + "]");
@@ -939,7 +902,7 @@ public class FsShell extends Configured implements Tool {
     //
     // verify that we have enough command line parameters
     //
-    if ("-put".equals(cmd) || "-test".equals(cmd) ||
+    if ("-put".equals(cmd) ||
         "-copyFromLocal".equals(cmd) || "-moveFromLocal".equals(cmd)) {
       if (argv.length < 3) {
         printUsage(cmd);
@@ -1014,8 +977,6 @@ public class FsShell extends Configured implements Tool {
         du(argv, i);
       } else if ("-dus".equals(cmd)) {
         dus(argv, i);
-      } else if ("-test".equals(cmd)) {
-        exitCode = test(argv, i);
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);
@@ -1082,30 +1043,7 @@ public class FsShell extends Configured implements Tool {
     }
     System.exit(res);
   }
-
-  /**
-   * Accumulate exceptions if there is any.  Throw them at last.
-   */
-  private abstract class DelayedExceptionThrowing {
-    abstract void process(Path p, FileSystem srcFs) throws IOException;
-
-    final void globAndProcess(Path srcPattern, FileSystem srcFs
-        ) throws IOException {
-      List<IOException> exceptions = new ArrayList<IOException>();
-      for(Path p : FileUtil.stat2Paths(srcFs.globStatus(srcPattern), 
-                                       srcPattern))
-        try { process(p, srcFs); } 
-        catch(IOException ioe) { exceptions.add(ioe); }
-    
-      if (!exceptions.isEmpty())
-        if (exceptions.size() == 1)
-          throw exceptions.get(0);
-        else 
-          throw new IOException("Multiple IOExceptions: " + exceptions);
-    }
-  }
-
-
+  
   /**
    * Utility class for a line of du output
    */

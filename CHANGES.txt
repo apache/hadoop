@@ -150,6 +150,9 @@ Trunk (unreleased changes)
     HADOOP-7267. Refactor the rm/rmr/expunge commands to conform to new
     FsCommand class.  (Daryn Sharp via szetszwo)
 
+    HADOOP-7285. Refactor the test command to conform to new FsCommand
+    class. (Daryn Sharp via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
