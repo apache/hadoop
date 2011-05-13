@@ -215,6 +215,8 @@ Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-7137. Remove hod contrib. (nigel via eli)
+
   NEW FEATURES
 
     HADOOP-6791.  Refresh for proxy superuser config

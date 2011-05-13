@@ -39,7 +39,6 @@
 
   <property name="lib.dir" value="${basedir}/lib"/>
   <property name="conf.dir" value="${basedir}/conf"/>
-  <property name="contrib.dir" value="${basedir}/src/contrib"/>
   <property name="docs.src" value="${basedir}/src/docs"/>
   <property name="src.docs.cn" value="${basedir}/src/docs/cn"/>
   <property name="changes.src" value="${docs.src}/changes"/>
@@ -272,7 +271,6 @@
     <tempfile property="touch.temp.file" destDir="${java.io.tmpdir}"/>
     <touch millis="0" file="${touch.temp.file}">
       <fileset dir="${conf.dir}" includes="**/*.template"/>
-      <fileset dir="${contrib.dir}" includes="**/*.template"/>
     </touch>
     <delete file="${touch.temp.file}"/>
     <!-- copy all of the jsp and static files -->
@@ -291,11 +289,6 @@
     <mkdir dir="${test.conf.dir}"/>
     <copy todir="${test.conf.dir}" verbose="true">
       <fileset dir="${conf.dir}" includes="**/*.template"/>
-      <mapper type="glob" from="*.template" to="*"/>
-    </copy>
-
-    <copy todir="${contrib.dir}" verbose="true">
-      <fileset dir="${contrib.dir}" includes="**/*.template"/>
       <mapper type="glob" from="*.template" to="*"/>
     </copy>
 
@@ -467,14 +460,7 @@
   	description="Compile core only">
   </target>
 
-  <target name="compile-contrib" depends="compile-core">
-     <subant target="compile">
-        <property name="version" value="${version}"/>
-        <fileset file="${contrib.dir}/build.xml"/>
-     </subant>  	
-  </target>
-  
-  <target name="compile" depends="compile-core, compile-contrib" description="Compile core, contrib">
+  <target name="compile" depends="compile-core" description="Compile core">
   </target>
 
   <!-- ================================================================== -->
@@ -821,14 +807,6 @@
     <fail unless="continueOnFailure">Tests failed!</fail>
   </target>
 
-  <target name="test-contrib" depends="compile, compile-core-test" description="Run contrib unit tests">
-    <subant target="test">
-       <property name="version" value="${version}"/>
-       <property name="clover.jar" value="${clover.jar}"/>
-       <fileset file="${contrib.dir}/build.xml"/>
-    </subant> 
-  </target>
-
   <target name="test-core" description="Run core unit tests">
     <delete file="${test.build.dir}/testsfailed"/> 
     <property name="continueOnFailure" value="true"/> 
@@ -838,11 +816,7 @@
     <fail if="testsfailed">Tests failed!</fail> 
   </target>
 
-  <target name="test" depends="jar-test,test-core" description="Run all unit tests">
-    <subant target="test-contrib">	 
-      <fileset dir="." includes="build.xml"/>
-    </subant>
-  </target>
+  <target name="test" depends="jar-test,test-core" description="Run all unit tests"/>
 
   <!-- Run all unit tests, not just Test*, and use non-test configuration. -->
   <target name="test-cluster" description="Run all unit tests, not just Test*, and use non-test configuration.">
@@ -980,9 +954,6 @@
 
         <classpath >
           <path refid="classpath" />
-          <fileset dir="src/contrib/">
-            <include name="*/lib/*.jar" />
-          </fileset>
           <path refid="javadoc-classpath"/>
           <pathelement path="${java.class.path}"/>
           <pathelement location="${build.tools}"/>
@@ -1023,9 +994,6 @@
 
         <classpath >
           <path refid="classpath" />
-          <fileset dir="src/contrib/">
-            <include name="*/lib/*.jar" />
-          </fileset>
           <path refid="javadoc-classpath"/>
           <pathelement path="${java.class.path}"/>
           <pathelement location="${build.tools}"/>
@@ -1105,7 +1073,6 @@
 	  description="Build distribution">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
-    <mkdir dir="${dist.dir}/contrib"/>
     <mkdir dir="${dist.dir}/bin"/>
     <mkdir dir="${dist.dir}/docs"/>
     <mkdir dir="${dist.dir}/docs/api"/>
@@ -1127,14 +1094,6 @@
 	  <env key="DIST_LIB_DIR" value="${dist.dir}/lib/native"/>
 	  <arg line="${native.src.dir}/packageNativeHadoop.sh"/>
     </exec>
-
-    <subant target="package">
-      <!--Pass down the version in case its needed again and the target
-      distribution directory so contribs know where to install to.-->
-      <property name="version" value="${version}"/>
-      <property name="dist.dir" value="${dist.dir}"/>
-      <fileset file="${contrib.dir}/build.xml"/>
-    </subant>  	
 
     <copy todir="${dist.dir}/webapps">
       <fileset dir="${build.webapps}"/>
@@ -1178,9 +1137,6 @@
     <chmod perm="ugo+x" file="${dist.dir}/src/native/configure"/>
     <chmod perm="ugo+x" type="file" parallel="false">
         <fileset dir="${dist.dir}/bin"/>
-        <fileset dir="${dist.dir}/src/contrib/">
-          <include name="*/bin/*" />
-        </fileset>
     </chmod>
 
   </target>
@@ -1193,13 +1149,11 @@
       <param.listofitems>
         <tarfileset dir="${build.dir}" mode="664">
           <exclude name="${final.name}/bin/*" />
-          <exclude name="${final.name}/contrib/*/bin/*" />
           <exclude name="${final.name}/src/native/configure" />
           <include name="${final.name}/**" />
         </tarfileset>
         <tarfileset dir="${build.dir}" mode="755">
           <include name="${final.name}/bin/*" />
-          <include name="${final.name}/contrib/*/bin/*" />
           <include name="${final.name}/src/native/configure" />
         </tarfileset>
       </param.listofitems>
@@ -1210,7 +1164,6 @@
 		description="assembles artifacts for binary target">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
-    <mkdir dir="${dist.dir}/contrib"/>
     <mkdir dir="${dist.dir}/bin"/>
 
     <copy todir="${dist.dir}/lib" includeEmptyDirs="false" flatten="true">
@@ -1229,14 +1182,6 @@
 	  <env key="DIST_LIB_DIR" value="${dist.dir}/lib/native"/>
 	  <arg line="${native.src.dir}/packageNativeHadoop.sh"/>
     </exec>
-
-    <subant target="package">
-      <!--Pass down the version in case its needed again and the target
-      distribution directory so contribs know where to install to.-->
-      <property name="version" value="${version}"/>
-      <property name="dist.dir" value="${dist.dir}"/>
-      <fileset file="${contrib.dir}/build.xml"/>
-    </subant>  	
 
     <copy todir="${dist.dir}"> 
       <fileset file="${build.dir}/${final.name}.jar"/>
@@ -1473,7 +1418,7 @@
   <!-- ================================================================== -->
   <!-- Clean.  Delete the build files, and their directories              -->
   <!-- ================================================================== -->
-  <target name="clean" depends="clean-contrib, clean-sign, clean-fi" description="Clean.  Delete the build files, and their directories">
+  <target name="clean" depends="clean-sign, clean-fi" description="Clean.  Delete the build files, and their directories">
     <delete dir="${build.dir}"/>
     <delete file="${basedir}/ivy/hadoop-common.xml"/>
     <delete file="${basedir}/ivy/hadoop-common-pom.xml"/>
@@ -1495,16 +1440,6 @@
     <delete file="${ivy.jar}"/>
   </target>
 
-  <!-- ================================================================== -->
-  <!-- Clean contrib target. For now, must be called explicitly           -->
-  <!-- Using subant instead of ant as a workaround for 30569              -->
-  <!-- ================================================================== -->
-  <target name="clean-contrib">
-     <subant target="clean">        
-        <fileset file="src/contrib/build.xml"/>
-     </subant>  	
-  </target>
-	
  <target name="clover" depends="clover.setup, clover.info" description="Instrument the Unit tests using Clover. 
      To use, specify -Dclover.home=&lt;base of clover installation&gt; -Drun.clover=true on the command line."/>
 
