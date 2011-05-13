@@ -69,6 +69,8 @@ fi
 hostname=$1
 filename="/tmp/$hostname"
 # Run the region mover script.
+echo "Disabling balancer!"
+echo 'balance_switch false' | "$bin"/hbase shell
 echo "Unloading $hostname region(s)"
 HBASE_NOEXEC=true "$bin"/hbase org.jruby.Main "$bin"/region_mover.rb --file=$filename $debug unload $hostname
 echo "Unloaded $hostname region(s)"
