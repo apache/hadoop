@@ -464,6 +464,8 @@ Release 0.22.0 - Unreleased
     HADOOP-7068. Ivy resolve force mode should be turned off by default.
     (Luke Lu via tomwhite)
 
+    HADOOP-7291. Update Hudson job not to run test-contrib. (nigel via eli)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

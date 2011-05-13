@@ -1497,7 +1497,6 @@
     <arg value="${findbugs.home}"/>
     <arg value="${forrest.home}"/>
     <arg value="${eclipse.home}"/>
-    <arg value="${python.home}"/>
     <arg value="${basedir}"/>
     <arg value="${jira.passwd}"/>
     <arg value="${curl.cmd}"/>
