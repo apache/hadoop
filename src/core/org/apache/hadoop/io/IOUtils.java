@@ -112,7 +112,7 @@ public class IOUtils {
     while ( toRead > 0 ) {
       int ret = in.read( buf, off, toRead );
       if ( ret < 0 ) {
-        throw new IOException( "Premeture EOF from inputStream");
+        throw new IOException( "Premature EOF from inputStream");
       }
       toRead -= ret;
       off += ret;
@@ -129,7 +129,7 @@ public class IOUtils {
     while ( len > 0 ) {
       long ret = in.skip( len );
       if ( ret < 0 ) {
-        throw new IOException( "Premeture EOF from inputStream");
+        throw new IOException( "Premature EOF from inputStream");
       }
       len -= ret;
     }
