@@ -214,6 +214,8 @@ Trunk (unreleased changes)
     HADOOP-7268. FileContext.getLocalFSFileContext() behavior needs to be fixed
     w.r.t tokens. (jitendra)
 
+    HADOOP-7290. Unit test failure in TestUserGroupInformation.testGetServerSideGroups. (Trevor Robison via eli)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

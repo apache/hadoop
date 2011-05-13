@@ -24,9 +24,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import javax.security.auth.Subject;
 import javax.security.auth.login.AppConfigurationEntry;
@@ -81,7 +81,7 @@ public class TestUserGroupInformation {
     String line = br.readLine();
     System.out.println(userName + ":" + line);
    
-    List<String> groups = new ArrayList<String> ();    
+    Set<String> groups = new LinkedHashSet<String> ();    
     for(String s: line.split("[\\s]")) {
       groups.add(s);
     }
@@ -91,7 +91,7 @@ public class TestUserGroupInformation {
     String[] gi = login.getGroupNames();
     assertEquals(groups.size(), gi.length);
     for(int i=0; i < gi.length; i++) {
-      assertEquals(groups.get(i), gi[i]);
+      assertTrue(groups.contains(gi[i]));
     }
     
     final UserGroupInformation fakeUser = 
