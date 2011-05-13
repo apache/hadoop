@@ -143,9 +143,10 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     Configuration hc = initSplit();
     HRegion region = initHRegion(tableName, getName(), hc,
       CoprocessorImpl.class, families);
-
-    addContent(region, fam3);
-    region.flushcache();
+    for (int i = 0; i < 3; i++) {
+      addContent(region, fam3);
+      region.flushcache();
+    }
     byte [] splitRow = region.compactStores();
     assertNotNull(splitRow);
     HRegion [] regions = split(region, splitRow);
@@ -154,9 +155,8 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     }
     region.close();
     region.getLog().closeAndDelete();
-
-    Coprocessor c = region.getCoprocessorHost()
-      .findCoprocessor(CoprocessorImpl.class.getName());
+    Coprocessor c = region.getCoprocessorHost().
+      findCoprocessor(CoprocessorImpl.class.getName());
     assertTrue("Coprocessor not started", ((CoprocessorImpl)c).wasStarted());
     assertTrue("Coprocessor not stopped", ((CoprocessorImpl)c).wasStopped());
     assertTrue(((CoprocessorImpl)c).wasOpened());

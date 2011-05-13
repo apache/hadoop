@@ -103,6 +103,8 @@ Release 0.91.0 - Unreleased
    HBASE-3865  Failing TestWALReplay
    HBASE-3864  Rename of hfile.min.blocksize.size in HBASE-2899 reverted in
                HBASE-1861 (Aaron T. Myers)
+   HBASE-3876  TestCoprocessorInterface.testCoprocessorInterface broke on
+               jenkins and local
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
