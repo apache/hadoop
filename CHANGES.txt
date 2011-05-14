@@ -260,6 +260,10 @@ Release 0.90.4 - Unreleased
    HBASE-3878 Hbase client throws NoSuchElementException (Ted Yu)
    HBASE-3881 Add disable balancer in graceful_stop.sh script
 
+  IMPROVEMENT
+   HBASE-3882 hbase-config.sh needs to be updated so it can auto-detects the
+              sun jre provided by RHEL6 (Roman Shaposhnik)
+
 Release 0.90.3 - Unreleased
 
   BUG FIXES
