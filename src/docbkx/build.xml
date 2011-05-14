@@ -8,6 +8,8 @@
       xmlns:html="http://www.w3.org/1999/xhtml"
       xmlns:db="http://docbook.org/ns/docbook">
     <title>Building HBase</title>
+    <para>This chapter will be of interest only to those building HBase from source.
+    </para>
     <section xml:id="mvn_repo">
         <title>Adding an HBase release to Apache's Maven Repository</title>
         <para>Follow the instructions at

@@ -7,7 +7,9 @@
       xmlns:m="http://www.w3.org/1998/Math/MathML"
       xmlns:html="http://www.w3.org/1999/xhtml"
       xmlns:db="http://docbook.org/ns/docbook">
-    <title>Developers</title>
+    <title>Developing HBase</title>
+    <para>This chapter will be of interest only to those developing HBase (i.e., as opposed to using it).
+    </para>
     <section xml:id="ides"> 
         <title>IDEs</title>
         <section xml:id="eclipse">
