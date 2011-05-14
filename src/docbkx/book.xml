@@ -67,8 +67,6 @@
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="upgrading.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="configuration.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="shell.xml" />
-  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="build.xml" />
-  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="developer.xml" />
 
 
 
@@ -1070,6 +1068,8 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
   </chapter>
 
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="troubleshooting.xml" />
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="build.xml" />
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="developer.xml" />
 
   <appendix xml:id="tools">
     <title >Tools</title>
