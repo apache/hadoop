@@ -482,16 +482,29 @@
 		<section>
 			<title> stat </title>
 			<p>
-				<code>Usage: hdfs dfs -stat URI [URI &#x2026;]</code>
+				<code>Usage: hdfs dfs -stat [format] URI [URI &#x2026;]</code>
 			</p>
-			<p>
-	   Returns the stat information on the path.
-	   </p>
+			<p>Print statistics about the file/directory matching the given URI pattern in the specified format.</p>
+			<p>Format accepts:</p>
+			  <ul>
+			    <li>filesize in blocks (%b)</li>
+			    <li>filename (%n)</li>
+		      <li>block size (%o)</li>
+		      <li>replication (%r)</li>
+		      <li>modification date, formatted as Y-M-D H:M:S (%y)</li>
+		      <li>modification date, in epoch seconds (%Y)</li>
+        </ul>
 			<p>Example:</p>
 			<ul>
+        <li>
+          <code> hdfs dfs -stat path </code>
+        </li>
 				<li>
-					<code> hdfs dfs -stat path </code>
+					<code> hdfs dfs -stat %y path </code>
 				</li>
+        <li>
+          <code> hdfs dfs -stat '%b %r' path </code>
+        </li>
 			</ul>
 			<p>Exit Code:<br/>
 	   <code> Returns 0 on success and -1 on error.</code></p>
