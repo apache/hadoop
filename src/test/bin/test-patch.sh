@@ -26,8 +26,8 @@ parseArgs() {
     HUDSON)
       ### Set HUDSON to true to indicate that this script is being run by Hudson
       HUDSON=true
-      if [[ $# != 16 ]] ; then
-        echo "ERROR: usage $0 HUDSON <PATCH_DIR> <SUPPORT_DIR> <PS_CMD> <WGET_CMD> <JIRACLI> <SVN_CMD> <GREP_CMD> <PATCH_CMD> <FINDBUGS_HOME> <FORREST_HOME> <ECLIPSE_HOME> <WORKSPACE_BASEDIR> <JIRA_PASSWD> <CURL_CMD> <DEFECT> "
+      if [[ $# != 17 ]] ; then
+        echo "ERROR: usage $0 HUDSON <PATCH_DIR> <SUPPORT_DIR> <PS_CMD> <WGET_CMD> <JIRACLI> <SVN_CMD> <GREP_CMD> <PATCH_CMD> <FINDBUGS_HOME> <FORREST_HOME> <ECLIPSE_HOME> <PYTHON_HOME> <WORKSPACE_BASEDIR> <JIRA_PASSWD> <CURL_CMD> <DEFECT> "
         cleanupAndExit 0
       fi
       PATCH_DIR=$2
@@ -41,10 +41,11 @@ parseArgs() {
       FINDBUGS_HOME=${10}
       FORREST_HOME=${11}
       ECLIPSE_HOME=${12}
-      BASEDIR=${13}
-      JIRA_PASSWD=${14}
-      CURL=${15}
-      defect=${16}
+      PYTHON_HOME=${13}
+      BASEDIR=${14}
+      JIRA_PASSWD=${15}
+      CURL=${16}
+      defect=${17}
 		
       ### Retrieve the defect number
       if [ -z "$defect" ] ; then
@@ -57,6 +58,7 @@ parseArgs() {
       fi
 
       ECLIPSE_PROPERTY="-Declipse.home=$ECLIPSE_HOME"
+      PYTHON_PROPERTY="-Dpython.home=$PYTHON_HOME"
       ;;
     DEVELOPER)
       ### Set HUDSON to false to indicate that this script is being run by a developer
@@ -524,16 +526,11 @@ runContribTests () {
   echo ""
   echo ""
 
-  if [[ `$GREP -c 'test-contrib' build.xml` == 0 ]] ; then
-    echo "No contrib tests in this project."
-    return 0
-  fi
-
   ### Kill any rogue build processes from the last attempt
   $PS auxwww | $GREP HadoopPatchProcess | /usr/bin/nawk '{print $2}' | /usr/bin/xargs -t -I {} /bin/kill -9 {} > /dev/null
 
-  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" $ECLIPSE_PROPERTY -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=no test-contrib"
-  $ANT_HOME/bin/ant -Dversion="${VERSION}" $ECLIPSE_PROPERTY -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=no test-contrib
+  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" $ECLIPSE_PROPERTY $PYTHON_PROPERTY -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=no test-contrib"
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" $ECLIPSE_PROPERTY $PYTHON_PROPERTY -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=no test-contrib
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
@@ -641,8 +638,6 @@ cleanupAndExit () {
 ###############################################################################
 ###############################################################################
 ###############################################################################
-
-runContribTests
 
 JIRA_COMMENT=""
 JIRA_COMMENT_FOOTER="Console output: $BUILD_URL/console
