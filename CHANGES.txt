@@ -156,6 +156,8 @@ Trunk (unreleased changes)
     HADOOP-7289. In ivy.xml, test conf should not extend common conf.
     (Eric Yang via szetszwo)
 
+    HADOOP-7291. Update Hudson job not to run test-contrib. (Nigel Daley via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
