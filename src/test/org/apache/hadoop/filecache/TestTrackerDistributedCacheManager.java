@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.login.LoginException;
 
@@ -564,10 +565,13 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     Configuration conf2 = new Configuration(conf);
     conf2.set("mapred.local.dir", ROOT_MAPRED_LOCAL_DIR.toString());
     conf2.setLong("local.cache.size", LOCAL_CACHE_LIMIT);
+    conf2.setLong("mapreduce.tasktracker.distributedcache.checkperiod", 200); // 200 ms
     
     refreshConf(conf2);
     TrackerDistributedCacheManager manager = 
         new TrackerDistributedCacheManager(conf2, taskController);
+    manager.startCleanupThread();
+    try {
     FileSystem localfs = FileSystem.getLocal(conf2);
     long now = System.currentTimeMillis();
     String userName = getJobOwnerName();
@@ -601,9 +605,9 @@ public class TestTrackerDistributedCacheManager extends TestCase {
         fs.getFileStatus(secondCacheFilePublic), false, 
         fs.getFileStatus(secondCacheFilePublic).getModificationTime(), true,
         cfile2);
-    assertFalse("DistributedCache failed deleting old" + 
-        " cache when the cache store is full.",
-        localfs.exists(firstLocalCache));
+    checkCacheDeletion(localfs, firstLocalCache,
+        "DistributedCache failed deleting old" +
+        " cache when the cache store is full");
 
     // find the root directory of distributed caches
     Path firstCursor = firstLocalCache;
@@ -633,8 +637,12 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     conf2.setLong("local.cache.size", LOCAL_CACHE_LIMIT * 10);
     conf2.setLong("mapreduce.tasktracker.local.cache.numberdirectories",
         LOCAL_CACHE_SUBDIR_LIMIT);
+    manager.stopCleanupThread();
+    
     manager = 
       new TrackerDistributedCacheManager(conf2, taskController);
+    manager.startCleanupThread();
+    
     // Now we test the number of sub directories limit
     // Create the temporary cache files to be used in the tests.
     Path thirdCacheFile = new Path(TEST_ROOT_DIR, "thirdcachefile");
@@ -678,9 +686,9 @@ public class TestTrackerDistributedCacheManager extends TestCase {
         TaskTracker.getPrivateDistributedCacheDir(userName),
         fs.getFileStatus(fourthCacheFile), false, 
         fs.getFileStatus(fourthCacheFile).getModificationTime(), false, cfile4);
-    assertFalse("DistributedCache failed deleting old" + 
-        " cache when the cache exceeds the number of sub directories limit.",
-        localfs.exists(thirdLocalCache));
+    checkCacheDeletion(localfs, thirdLocalCache,
+        "DistributedCache failed deleting old" +
+        " cache when the cache exceeds the number of sub directories limit.");
 
     assertFalse
       ("DistributedCache did not delete the gensym'ed distcache "
@@ -691,8 +699,30 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     // Clean up the files created in this test
     new File(thirdCacheFile.toString()).delete();
     new File(fourthCacheFile.toString()).delete();
+    } finally {
+      manager.stopCleanupThread();
+    }
   }
   
+  /**
+   * Periodically checks if a file is there, return if the file is no longer
+   * there. Fails the test if a files is there for 30 seconds.
+   */
+  private void checkCacheDeletion(FileSystem fs, Path cache, String msg)
+  throws Exception {
+    // Check every 100ms to see if the cache is deleted
+    boolean cacheExists = true;
+    for (int i = 0; i < 300; i++) {
+      if (!fs.exists(cache)) {
+        cacheExists = false;
+        break;
+      }
+      TimeUnit.MILLISECONDS.sleep(100L);
+    }
+    // If the cache is still there after 5 minutes, test fails.
+    assertFalse(msg, cacheExists);
+  }
+
   public void testFileSystemOtherThanDefault() throws Exception {
     if (!canRun()) {
       return;
