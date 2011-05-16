@@ -240,6 +240,8 @@ Release 0.22.0 - Unreleased
     HADOOP-7192. Update fs -stat docs to reflect the format features. (Harsh
     J Chouraria via todd)
 
+    HADOOP-7291. Update Hudson job not to run test-contrib. (Nigel Daley via eli)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).

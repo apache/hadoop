@@ -638,8 +638,6 @@ cleanupAndExit () {
 ###############################################################################
 ###############################################################################
 
-runContribTests
-
 JIRA_COMMENT=""
 JIRA_COMMENT_FOOTER="Console output: $BUILD_URL/console
 
