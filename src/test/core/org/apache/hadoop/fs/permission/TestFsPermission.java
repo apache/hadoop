@@ -66,6 +66,8 @@ public class TestFsPermission extends TestCase {
           for(FsAction o : FsAction.values()) {
             FsPermission f = new FsPermission(u, g, o, sb);
             assertEquals(s, f.toShort());
+            FsPermission f2 = new FsPermission(f);
+            assertEquals(s, f2.toShort());
             s++;
           }
         }

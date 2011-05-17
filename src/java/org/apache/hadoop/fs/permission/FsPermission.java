@@ -96,6 +96,7 @@ public class FsPermission implements Writable {
     this.useraction = other.useraction;
     this.groupaction = other.groupaction;
     this.otheraction = other.otheraction;
+    this.stickyBit = other.stickyBit;
   }
   
   /**

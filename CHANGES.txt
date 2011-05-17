@@ -471,6 +471,9 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7291. Update Hudson job not to run test-contrib. (nigel via eli)
 
+    HADOOP-7296. The FsPermission(FsPermission) constructor does not use the
+    sticky bit. (Siddharth Seth via tomwhite)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
