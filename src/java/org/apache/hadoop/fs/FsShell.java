@@ -38,7 +38,6 @@ import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFactory;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.fs.shell.FsCommand;
-import org.apache.hadoop.fs.shell.PathData;
 import org.apache.hadoop.fs.shell.PathExceptions.PathNotFoundException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RPC;
@@ -64,7 +63,6 @@ public class FsShell extends Configured implements Tool {
   static final String GET_SHORT_USAGE = "-get [-ignoreCrc] [-crc] <src> <localdst>";
   static final String COPYTOLOCAL_SHORT_USAGE = GET_SHORT_USAGE.replace(
       "-get", "-copyToLocal");
-  static final String DU_USAGE="-du [-s] [-h] <paths...>";
 
   /**
    */
@@ -310,128 +308,6 @@ public class FsShell extends Configured implements Tool {
     System.err.println("Option '-moveToLocal' is not implemented yet.");
   }
     
-   /**
-   * Show the size of a partition in the filesystem that contains
-   * the specified <i>path</i>.
-   * @param path a path specifying the source partition. null means /.
-   * @throws IOException  
-   */
-  void df(String path) throws IOException {
-    if (path == null) path = "/";
-    final Path srcPath = new Path(path);
-    final FileSystem srcFs = srcPath.getFileSystem(getConf());
-    if (! srcFs.exists(srcPath)) {
-      throw new PathNotFoundException(path);
-    }
-    final FsStatus stats = srcFs.getStatus(srcPath);
-    final int PercentUsed = (int)(100.0f *  (float)stats.getUsed() / (float)stats.getCapacity());
-    System.out.println("Filesystem\t\tSize\tUsed\tAvail\tUse%");
-    System.out.printf("%s\t\t%d\t%d\t%d\t%d%%\n",
-      path, 
-      stats.getCapacity(), stats.getUsed(), stats.getRemaining(),
-      PercentUsed);
-  }
-
-  /**
-   * Show the size of all files that match the file pattern <i>src</i>
-   * @param cmd
-   * @param pos ignore anything before this pos in cmd
-   * @throws IOException  
-   * @see org.apache.hadoop.fs.FileSystem#globStatus(Path)
-   */
-  void du(String[] cmd, int pos) throws IOException {
-    CommandFormat c = new CommandFormat(
-      "du", 0, Integer.MAX_VALUE, "h", "s");
-    List<String> params;
-    try {
-      params = c.parse(cmd, pos);
-    } catch (IllegalArgumentException iae) {
-      System.err.println("Usage: java FsShell " + DU_USAGE);
-      throw iae;
-    }
-    boolean humanReadable = c.getOpt("h");
-    boolean summary = c.getOpt("s");
-
-    // Default to cwd
-    if (params.isEmpty()) {
-      params.add(".");
-    }
-
-    List<UsagePair> usages = new ArrayList<UsagePair>();
-
-    for (String src : params) {
-      Path srcPath = new Path(src);
-      FileSystem srcFs = srcPath.getFileSystem(getConf());
-      FileStatus globStatus[] = srcFs.globStatus(srcPath);
-      FileStatus statusToPrint[];
-
-      if (summary) {
-        statusToPrint = globStatus;
-      } else {
-        Path statPaths[] = FileUtil.stat2Paths(globStatus, srcPath);
-        try {
-          statusToPrint = srcFs.listStatus(statPaths);
-        } catch(FileNotFoundException fnfe) {
-          statusToPrint = null;
-        }
-      }
-      if ((statusToPrint == null) || ((statusToPrint.length == 0) &&
-                                      (!srcFs.exists(srcPath)))){
-        throw new PathNotFoundException(src);
-      }
-
-      if (!summary) {
-        System.out.println("Found " + statusToPrint.length + " items");
-      }
-
-      for (FileStatus stat : statusToPrint) {
-        long length;
-        if (summary || stat.isDirectory()) {
-          length = srcFs.getContentSummary(stat.getPath()).getLength();
-        } else {
-          length = stat.getLen();
-        }
-
-        usages.add(new UsagePair(String.valueOf(stat.getPath()), length));
-      }
-    }
-    printUsageSummary(usages, humanReadable);
-  }
-    
-  /**
-   * Show the summary disk usage of each dir/file 
-   * that matches the file pattern <i>src</i>
-   * @param cmd
-   * @param pos ignore anything before this pos in cmd
-   * @throws IOException  
-   * @see org.apache.hadoop.fs.FileSystem#globStatus(Path)
-   */
-  void dus(String[] cmd, int pos) throws IOException {
-    String newcmd[] = new String[cmd.length + 1];
-    System.arraycopy(cmd, 0, newcmd, 0, cmd.length);
-    newcmd[cmd.length] = "-s";
-    du(newcmd, pos);
-  }
-
-  private void printUsageSummary(List<UsagePair> usages,
-                                 boolean humanReadable) {
-    int maxColumnWidth = 0;
-    for (UsagePair usage : usages) {
-      String toPrint = humanReadable ?
-        StringUtils.humanReadableInt(usage.bytes) : String.valueOf(usage.bytes);
-      if (toPrint.length() > maxColumnWidth) {
-        maxColumnWidth = toPrint.length();
-      }
-    }
-
-    for (UsagePair usage : usages) {
-      String toPrint = humanReadable ?
-        StringUtils.humanReadableInt(usage.bytes) : String.valueOf(usage.bytes);
-      System.out.printf("%-"+ (maxColumnWidth + BORDER) +"s", toPrint);
-      System.out.println(usage.path);
-    }
-  }
-
   /**
    * Move files that match the file pattern <i>srcf</i>
    * to a destination file.
@@ -639,8 +515,8 @@ public class FsShell extends Configured implements Tool {
     String summary = "hadoop fs is the command to execute fs commands. " +
       "The full syntax is: \n\n" +
       "hadoop fs [-fs <local | file system URI>] [-conf <configuration file>]\n\t" +
-      "[-D <property=value>] [-df [<path>]] [-du [-s] [-h] <path>]\n\t" +
-      "[-dus <path>] [-mv <src> <dst>] [-cp <src> <dst>]\n\t" + 
+      "[-D <property=value>]\n\t" +
+      "[-mv <src> <dst>] [-cp <src> <dst>]\n\t" + 
       "[-put <localsrc> ... <dst>] [-copyFromLocal <localsrc> ... <dst>]\n\t" +
       "[-moveFromLocal <localsrc> ... <dst>] [" + 
       GET_SHORT_USAGE + "\n\t" +
@@ -662,25 +538,6 @@ public class FsShell extends Configured implements Tool {
       "\t\tappear first on the command line.  Exactly one additional\n" +
       "\t\targument must be specified. \n";
 
-    String df = "-df [<path>]: \tShows the capacity, free and used space of the filesystem.\n"+
-      "\t\tIf the filesystem has multiple partitions, and no path to a particular partition\n"+
-      "\t\tis specified, then the status of the root partitions will be shown.\n";
-
-    String du = "-du [-s] [-h] <path>: \tShow the amount of space, in bytes, used by the files that \n" +
-      "\t\tmatch the specified file pattern. The following flags are optional:\n" +
-      "\t\t  -s   Rather than showing the size of each individual file that\n" +
-      "\t\t       matches the pattern, shows the total (summary) size.\n" +
-      "\t\t  -h   Formats the sizes of files in a human-readable fashion\n" +
-      "\t\t       rather than a number of bytes.\n" +
-      "\n" + 
-      "\t\tNote that, even without the -s option, this only shows size summaries\n" +
-      "\t\tone level deep into a directory.\n" +
-      "\t\tThe output is in the form \n" + 
-      "\t\t\tsize\tname(full path)\n"; 
-
-    String dus = "-dus <path>: \tShow the amount of space, in bytes, used by the files that \n" +
-      "\t\tmatch the specified file pattern. This is equivalent to -du -s above.\n";
-    
     String mv = "-mv <src> <dst>:   Move files that match the specified file pattern <src>\n" +
       "\t\tto a destination <dst>.  When moving multiple files, the \n" +
       "\t\tdestination must be a directory. \n";
@@ -720,12 +577,6 @@ public class FsShell extends Configured implements Tool {
       System.out.println(conf);
     } else if ("D".equals(cmd)) {
       System.out.println(D);
-    } else if ("df".equals(cmd)) {
-      System.out.println(df);
-    } else if ("du".equals(cmd)) {
-      System.out.println(du);
-    } else if ("dus".equals(cmd)) {
-      System.out.println(dus);
     } else if ("mv".equals(cmd)) {
       System.out.println(mv);
     } else if ("cp".equals(cmd)) {
@@ -750,14 +601,13 @@ public class FsShell extends Configured implements Tool {
       System.out.println(summary);
       for (String thisCmdName : commandFactory.getNames()) {
         instance = commandFactory.getInstance(thisCmdName);
-        System.out.println("\t[" + instance.getUsage() + "]");
+        if (!instance.isDeprecated()) {
+          System.out.println("\t[" + instance.getUsage() + "]");
+        }
       }
       System.out.println("\t[-help [cmd]]\n");
       
       System.out.println(fs);
-      System.out.println(df);
-      System.out.println(du);
-      System.out.println(dus);
       System.out.println(mv);
       System.out.println(cp);
       System.out.println(put);
@@ -768,9 +618,11 @@ public class FsShell extends Configured implements Tool {
       System.out.println(moveToLocal);
 
       for (String thisCmdName : commandFactory.getNames()) {
-        printHelp(commandFactory.getInstance(thisCmdName));
+        instance = commandFactory.getInstance(thisCmdName);
+        if (!instance.isDeprecated()) {
+          printHelp(instance);
+        }
       }
-
       System.out.println(help);
     }        
   }
@@ -792,34 +644,6 @@ public class FsShell extends Configured implements Tool {
   }
   
   /**
-   * Apply operation specified by 'cmd' on all parameters
-   * starting from argv[startindex].
-   */
-  private int doall(String cmd, String argv[], int startindex) {
-    int exitCode = 0;
-    int i = startindex;
-    
-    //
-    // for each source file, issue the command
-    //
-    for (; i < argv.length; i++) {
-      try {
-        //
-        // issue the command to the fs
-        //
-        if ("-df".equals(cmd)) {
-          df(argv[i]);
-        }
-      } catch (IOException e) {
-        LOG.debug("Error", e);
-        exitCode = -1;
-        displayError(cmd, e);
-      }
-    }
-    return exitCode;
-  }
-
-  /**
    * Displays format of commands.
    * 
    */
@@ -838,12 +662,6 @@ public class FsShell extends Configured implements Tool {
     } else if ("-D".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
                          " [-D <[property=value>]");
-    } else if ("-du".equals(cmd) || "-dus".equals(cmd)) {
-      System.err.println("Usage: java FsShell" + 
-                         " [" + cmd + " <path>]");
-    } else if ("-df".equals(cmd) ) {
-      System.err.println("Usage: java FsShell" +
-                         " [" + cmd + " [<path>]]");
     } else if ("-mv".equals(cmd) || "-cp".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
                          " [" + cmd + " <src> <dst>]");
@@ -860,9 +678,6 @@ public class FsShell extends Configured implements Tool {
                          " [" + cmd + " [-crc] <src> <localdst>]");
     } else {
       System.err.println("Usage: java FsShell");
-      System.err.println("           [-df [<path>]]");
-      System.err.println("           [-du [-s] [-h] <path>]");
-      System.err.println("           [-dus <path>]");
       System.err.println("           [-mv <src> <dst>]");
       System.err.println("           [-cp <src> <dst>]");
       System.err.println("           [-put <localsrc> ... <dst>]");
@@ -872,8 +687,10 @@ public class FsShell extends Configured implements Tool {
       System.err.println("           [" + COPYTOLOCAL_SHORT_USAGE + "]");
       System.err.println("           [-moveToLocal [-crc] <src> <localdst>]");
       for (String name : commandFactory.getNames()) {
-      	instance = commandFactory.getInstance(name);
-        System.err.println("           [" + instance.getUsage() + "]");
+        instance = commandFactory.getInstance(name);
+        if (!instance.isDeprecated()) {
+          System.err.println("           [" + instance.getUsage() + "]");
+        }
       }
       System.err.println("           [-help [cmd]]");
       System.err.println();
@@ -967,16 +784,6 @@ public class FsShell extends Configured implements Tool {
         exitCode = rename(argv, getConf());
       } else if ("-cp".equals(cmd)) {
         exitCode = copy(argv, getConf());
-      } else if ("-df".equals(cmd)) {
-        if (argv.length-1 > 0) {
-          exitCode = doall(cmd, argv, i);
-        } else {
-          df(null);
-        }
-      } else if ("-du".equals(cmd)) {
-        du(argv, i);
-      } else if ("-dus".equals(cmd)) {
-        dus(argv, i);
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);
@@ -1042,18 +849,5 @@ public class FsShell extends Configured implements Tool {
       shell.close();
     }
     System.exit(res);
-  }
-  
-  /**
-   * Utility class for a line of du output
-   */
-  private static class UsagePair {
-    public String path;
-    public long bytes;
-
-    public UsagePair(String path, long bytes) {
-      this.path = path;
-      this.bytes = bytes;
-    }
   }
 }

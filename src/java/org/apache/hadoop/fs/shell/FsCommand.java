@@ -48,6 +48,7 @@ abstract public class FsCommand extends Command {
     factory.registerCommands(Delete.class);
     factory.registerCommands(Display.class);
     factory.registerCommands(FsShellPermissions.class);
+    factory.registerCommands(FsUsage.class);
     factory.registerCommands(Ls.class);
     factory.registerCommands(Mkdir.class);
     factory.registerCommands(SetReplication.class);

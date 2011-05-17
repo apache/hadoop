@@ -139,6 +139,10 @@ abstract public class Command extends Configured {
   public int run(String...argv) {
     LinkedList<String> args = new LinkedList<String>(Arrays.asList(argv));
     try {
+      if (isDeprecated()) {
+        displayWarning(
+            "DEPRECATED: Please use '"+ getReplacementCommand() + "' instead.");
+      }
       processOptions(args);
       processArguments(expandArguments(args));
     } catch (IOException e) {
@@ -358,7 +362,7 @@ abstract public class Command extends Configured {
    */
   public String getUsage() {
     String cmd = "-" + getCommandName();
-    String usage = getCommandField("USAGE");
+    String usage = isDeprecated() ? "" : getCommandField("USAGE");
     return usage.isEmpty() ? cmd : cmd + " " + usage; 
   }
 
@@ -367,7 +371,25 @@ abstract public class Command extends Configured {
    * @return text of the usage
    */
   public String getDescription() {
-    return getCommandField("DESCRIPTION");
+    return isDeprecated()
+      ? "(DEPRECATED) Same as '" + getReplacementCommand() + "'"
+      : getCommandField("DESCRIPTION");
+  }
+
+  /**
+   * Is the command deprecated?
+   * @return boolean
+   */
+  public final boolean isDeprecated() {
+    return (getReplacementCommand() != null);
+  }
+  
+  /**
+   * The replacement for a deprecated command
+   * @return null if not deprecated, else alternative command
+   */
+  public String getReplacementCommand() {
+    return null;
   }
 
   /**

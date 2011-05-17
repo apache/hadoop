@@ -43,12 +43,13 @@ class Delete extends FsCommand {
   /** remove non-directory paths */
   public static class Rm extends FsCommand {
     public static final String NAME = "rm";
-    public static final String USAGE = "[-skipTrash] <src> ...";
+    public static final String USAGE = "[-r|-R] [-skipTrash] <src> ...";
     public static final String DESCRIPTION =
       "Delete all files that match the specified file pattern.\n" +
       "Equivalent to the Unix command \"rm <src>\"\n" +
       "-skipTrash option bypasses trash, if enabled, and immediately\n" +
-      "deletes <src>";
+      "deletes <src>\n" +
+      "  -[rR]  Recursively deletes directories";
 
     private boolean skipTrash = false;
     private boolean deleteDirs = false;
@@ -56,9 +57,9 @@ class Delete extends FsCommand {
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
       CommandFormat cf = new CommandFormat(
-          null, 1, Integer.MAX_VALUE, "R", "skipTrash");
+          null, 1, Integer.MAX_VALUE, "r", "R", "skipTrash");
       cf.parse(args);
-      deleteDirs = cf.getOpt("R");
+      deleteDirs = cf.getOpt("r") || cf.getOpt("R");
       skipTrash = cf.getOpt("skipTrash");
     }
     
@@ -95,16 +96,15 @@ class Delete extends FsCommand {
   /** remove any path */
   static class Rmr extends Rm {
     public static final String NAME = "rmr";
-    public static final String USAGE = Rm.USAGE;
-    public static final String DESCRIPTION =
-      "Remove all directories which match the specified file\n" +
-      "pattern. Equivalent to the Unix command \"rm -rf <src>\"\n" +
-      "-skipTrash option bypasses trash, if enabled, and immediately\n" +
-      "deletes <src>";
     
     protected void processOptions(LinkedList<String> args) throws IOException {
-      args.addFirst("-R");
+      args.addFirst("-r");
       super.processOptions(args);
+    }
+
+    @Override
+    public String getReplacementCommand() {
+      return "rm -r";
     }
   }
   

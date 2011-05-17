@@ -158,6 +158,9 @@ Trunk (unreleased changes)
 
     HADOOP-7291. Update Hudson job not to run test-contrib. (Nigel Daley via eli)
 
+    HADOOP-7286. Refactor the du/dus/df commands to conform to new FsCommand
+    class. (Daryn Sharp via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
