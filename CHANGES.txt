@@ -226,6 +226,9 @@ Trunk (unreleased changes)
 
     HADOOP-7292. Fix racy test case TestSinkQueue. (Luke Lu via todd)
 
+    HADOOP-7282. ipc.Server.getRemoteIp() may return null.  (John George
+    via szetszwo)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
