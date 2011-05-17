@@ -224,6 +224,8 @@ Trunk (unreleased changes)
 
     HADOOP-7290. Unit test failure in TestUserGroupInformation.testGetServerSideGroups. (Trevor Robison via eli)
 
+    HADOOP-7292. Fix racy test case TestSinkQueue. (Luke Lu via todd)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
