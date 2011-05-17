@@ -693,6 +693,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7068. Ivy resolve force mode should be turned off by default.
     (Luke Lu via tomwhite)
 
+    HADOOP-7296. The FsPermission(FsPermission) constructor does not use the
+    sticky bit. (Siddharth Seth via tomwhite)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
