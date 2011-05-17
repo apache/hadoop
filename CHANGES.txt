@@ -106,6 +106,8 @@ Release 0.20.3 - 2011-1-5
 
     HADOOP-6882. Update the version of Jetty to 6.1.26. (omalley)
 
+    HDFS-1836. Thousand of CLOSE_WAIT socket. (todd via eli)
+
 Release 0.20.2 - 2010-2-19
 
   NEW FEATURES
