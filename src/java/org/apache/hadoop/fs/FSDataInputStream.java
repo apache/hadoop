@@ -64,4 +64,9 @@ public class FSDataInputStream extends DataInputStream
   public boolean seekToNewSource(long targetPos) throws IOException {
     return ((Seekable)in).seekToNewSource(targetPos); 
   }
+  
+  // Returns the underlying input stream. This is used by unit tests.
+  public InputStream getWrappedStream() {
+    return in;
+  }
 }

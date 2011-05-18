@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 
 
 
@@ -1043,6 +1044,16 @@ public abstract class FSMainOperationsBaseTest  {
     out.close();
   }
 
+  
+  @Test
+  public void testGetWrappedInputStream() throws IOException {
+    Path src = getTestRootPath(fSys, "test/hadoop/file");
+    createFile(src);
+    FSDataInputStream in = fSys.open(src);
+    InputStream is = in.getWrappedStream();
+    in.close();
+    Assert.assertNotNull(is);  
+  }
   
   protected void createFile(Path path) throws IOException {
     FileSystemTestHelper.createFile(fSys, path);
