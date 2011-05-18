@@ -1033,7 +1033,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   public Collection<String> getTrimmedStringCollection(String name) {
     String valueString = get(name);
     if (null == valueString) {
-      Collection<String> empty = Collections.emptyList();
+      Collection<String> empty = new ArrayList<String>();
       return empty;
     }
     return StringUtils.getTrimmedStringCollection(valueString);
