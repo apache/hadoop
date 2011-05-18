@@ -143,7 +143,7 @@ case $startStop in
     echo "`ulimit -a`" >> $loglog 2>&1
     nohup nice -n $HBASE_NICENESS "$HBASE_HOME"/bin/hbase \
         --config "${HBASE_CONF_DIR}" \
-        $command $startStop "$@" > "$logout" 2>&1 < /dev/null &
+        $command "$@" $startStop > "$logout" 2>&1 < /dev/null &
     echo $! > $pid
     sleep 1; head "$logout"
     ;;

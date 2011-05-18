@@ -259,6 +259,7 @@ Release 0.90.4 - Unreleased
    HBASE-3878 Hbase client throws NoSuchElementException (Ted Yu)
    HBASE-3878 Hbase client throws NoSuchElementException (Ted Yu)
    HBASE-3881 Add disable balancer in graceful_stop.sh script
+   HBASE-3895 Fix order of parameters after HBASE-1511
 
   IMPROVEMENT
    HBASE-3882 hbase-config.sh needs to be updated so it can auto-detects the
