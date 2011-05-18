@@ -96,7 +96,7 @@ public class FilterFileSystem extends FileSystem {
   }
 
   @Override
-  public Path resolvePath(final Path p) throws FileNotFoundException {
+  public Path resolvePath(final Path p) throws IOException {
     return fs.resolvePath(p);
   }
 
@@ -371,6 +371,7 @@ public class FilterFileSystem extends FileSystem {
   }
   
   @Override // FileSystem
+  @SuppressWarnings("deprecation")
   public Token<?> getDelegationToken(String renewer) throws IOException {
     return fs.getDelegationToken(renewer);
   }

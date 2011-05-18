@@ -224,7 +224,8 @@ public class ViewFileSystem extends FileSystem {
   }
   
   @Override
-  public Path resolvePath(final Path f) throws FileNotFoundException {
+  public Path resolvePath(final Path f)
+      throws IOException {
     final InodeTree.ResolveResult<FileSystem> res;
       res = fsState.resolve(getUriPath(f), true);
     if (res.isInternalDir()) {

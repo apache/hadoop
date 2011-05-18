@@ -254,6 +254,13 @@
 </property>
 
 <property>
+  <name>fs.viewfs.impl</name>
+  <value>org.apache.hadoop.fs.viewfs.ViewFileSystem</value>
+  <description>The FileSystem for view file system for viewfs: uris
+  (ie client side mount table:).</description>
+</property>
+
+<property>
   <name>fs.AbstractFileSystem.file.impl</name>
   <value>org.apache.hadoop.fs.local.LocalFs</value>
   <description>The AbstractFileSystem for file: uris.</description>
@@ -266,6 +273,13 @@
   <description>The AbstractFileSystem for hdfs: uris.</description>
 </property>
 
+
+<property>
+  <name>fs.AbstractFileSystem.viewfs.impl</name>
+  <value>org.apache.hadoop.fs.viewfs.ViewFs</value>
+  <description>The AbstractFileSystem for view file system for viewfs: uris
+  (ie client side mount table:).</description>
+</property>
 
 <property>
   <name>fs.AbstractFileSystem.viewfs.impl</name>

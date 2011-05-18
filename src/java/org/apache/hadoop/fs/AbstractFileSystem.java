@@ -910,11 +910,12 @@ public abstract class AbstractFileSystem {
    * 
    * @param renewer the account name that is allowed to renew the token.
    * @return List of delegation tokens.
+   *   If delegation tokens not supported then return a list of size zero.
    * @throws IOException
    */
   @InterfaceAudience.LimitedPrivate( { "HDFS", "MapReduce" })
   public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
-    return null;
+    return new ArrayList<Token<?>>(0);
   }
   
   @Override //Object
