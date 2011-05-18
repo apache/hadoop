@@ -748,8 +748,70 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
     <section xml:id="daemons">
      <title>Daemons</title>
      <section xml:id="master"><title>Master</title>
+       <para><code>HMaster</code> is the implementation of the Master Server.  The Master server
+       is responsible for monitoring all RegionServer instances in the cluster, and is
+       the interface for all metadata changes.
+       </para>
+       <section xml:id="master.startup"><title>Startup Behavior</title>
+         <para>If run in a multi-Master environment, all Masters compete to run the cluster.  If the active
+         Master loses it's lease in ZooKeeper (or the Master shuts down), then then the remaining Masters jostle to 
+         take over the Master role.
+         </para>
+       </section>
+       <section xml:id="master.api"><title>Interface</title>
+         <para>The methods exposed by <code>HMasterInterface</code> are primarily metadata-oriented methods:
+         <itemizedlist>
+            <listitem>Table (createTable, modifyTable, removeTable, enable, disable)
+            </listitem>
+            <listitem>ColumnFamily (addColumn, modifyColumn, removeColumn) 
+            </listitem>
+            <listitem>Region (move, assign, unassign)
+            </listitem>
+         </itemizedlist>
+         For example, when the <code>HBaseAdmin</code> method <code>disableTable</code> is invoked, it is serviced by the Master server. 
+         </para>
+       </section>
+       <section xml:id="master.processes"><title>Processes</title>
+         <para>The Master runs several background threads:
+           <itemizedlist>
+             <listitem><code>LoadBalancer</code> periodically reassign regions in the cluster.
+             </listitem>
+             <listitem><code>CatalogJanitor</code> periodically checks and cleans up the .META. table. 
+             </listitem>
+           </itemizedlist>
+         </para>
+       </section>
+
      </section>
      <section xml:id="regionserver.arch"><title>RegionServer</title>
+       <para><code>HRegionServer</code> is the RegionServer implementation.  It is responsible for serving and managing regions.  
+       </para>
+       <section xml:id="regionserver.arch.api"><title>Interface</title>
+         <para>The methods exposed by <code>HRegionRegionInterface</code> contain both data-oriented and region-maintenance methods:
+         <itemizedlist>
+            <listitem>Data (get, put, delete, next, etc.)
+            </listitem>
+            <listitem>Region (splitRegion, compactRegion, etc.)  
+            </listitem>
+         </itemizedlist>
+         For example, when the <code>HBaseAdmin</code> method <code>majorCompact</code> is invoked on a table, the client is actually iterating through
+         all regions for the specified table and requesting a major compaction directly to each region. 
+         </para>
+       </section>
+       <section xml:id="regionserver.arch.processes"><title>Processes</title>
+         <para>The RegionServer runs a variety of background threads:</para>
+         <itemizedlist>
+            <listitem><code>CompactSplitThread</code> checks for splits and handle minor compactions.
+            </listitem>
+            <listitem><code>MajorCompactionChecker</code> checks for major compactions.
+            </listitem>
+            <listitem><code>MemStoreFlusher</code> periodically flushes in-memory writes in the MemStore to StoreFiles.
+            </listitem>
+            <listitem><code>LogRoller</code> periodically checks the RegionServer's HLog.
+            </listitem>
+         </itemizedlist>        
+       </section>
+
      </section>
     </section>
 
