@@ -44,7 +44,6 @@ See http://forrest.apache.org/docs/linking.html for more info.
 		<SLA					 	label="Service Level Authorization" 	href="service_level_auth.html"/>
 		<native_lib    				label="Native Libraries" 					href="native_libraries.html" />
                 <superusers                      label="Superusers Acting On Behalf Of Other Users"     href="Superusers.html"/>
-		<hod_scheduler 			label="Hadoop On Demand"            href="hod_scheduler.html"/>
    </docs>
 
    <docs label="Miscellaneous"> 
@@ -88,20 +87,6 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <bzip      href="http://www.bzip.org/" />
     <cygwin    href="http://www.cygwin.com/" />
     <osx       href="http://www.apple.com/macosx" />
-    
-    <hod href="">
-      <cluster-resources href="http://www.clusterresources.com" />
-      <torque href="http://www.clusterresources.com/pages/products/torque-resource-manager.php" />
-      <torque-download href="http://www.clusterresources.com/downloads/torque/" />
-      <torque-docs href="http://www.clusterresources.com/pages/resources/documentation.php" />
-      <torque-wiki href="http://www.clusterresources.com/wiki/doku.php?id=torque:torque_wiki" />
-      <torque-mailing-list href="http://www.clusterresources.com/pages/resources/mailing-lists.php" />
-      <torque-basic-config href="http://www.clusterresources.com/wiki/doku.php?id=torque:1.2_basic_configuration" />
-      <torque-advanced-config href="http://www.clusterresources.com/wiki/doku.php?id=torque:1.3_advanced_configuration" />
-      <maui href="http://www.clusterresources.com/pages/products/maui-cluster-scheduler.php"/>
-      <python href="http://www.python.org" />
-      <twisted-python href="http://twistedmatrix.com/trac/" />
-    </hod>
     
     <relnotes href="releasenotes.html" />
     <changes href="changes.html" />
