@@ -24,6 +24,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -447,6 +448,40 @@ public class TestConfiguration extends TestCase {
     Class<?>[] classes2 = conf.getClasses("test.classes2", defaultClasses);
     assertArrayEquals(expectedNames, extractClassNames(classes1));
     assertArrayEquals(expectedNames, extractClassNames(classes2));
+  }
+  
+  public void testGetStringCollection() throws IOException {
+    Configuration c = new Configuration();
+    c.set("x", " a, b\n,\nc ");
+    Collection<String> strs = c.getTrimmedStringCollection("x");
+    assertEquals(3, strs.size());
+    assertArrayEquals(new String[]{ "a", "b", "c" },
+                      strs.toArray(new String[0]));
+
+    // Check that the result is mutable
+    strs.add("z");
+
+    // Make sure same is true for missing config
+    strs = c.getStringCollection("does-not-exist");
+    assertEquals(0, strs.size());
+    strs.add("z");
+  }
+
+  public void testGetTrimmedStringCollection() throws IOException {
+    Configuration c = new Configuration();
+    c.set("x", "a, b, c");
+    Collection<String> strs = c.getStringCollection("x");
+    assertEquals(3, strs.size());
+    assertArrayEquals(new String[]{ "a", " b", " c" },
+                      strs.toArray(new String[0]));
+
+    // Check that the result is mutable
+    strs.add("z");
+
+    // Make sure same is true for missing config
+    strs = c.getStringCollection("does-not-exist");
+    assertEquals(0, strs.size());
+    strs.add("z");
   }
 
   private static String[] extractClassNames(Class<?>[] classes) {

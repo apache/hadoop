@@ -329,7 +329,8 @@ public class StringUtils {
    * @return a <code>Collection</code> of <code>String</code> values
    */
   public static Collection<String> getTrimmedStringCollection(String str){
-    return Arrays.asList(getTrimmedStrings(str));
+    return new ArrayList<String>(
+      Arrays.asList(getTrimmedStrings(str)));
   }
   
   /**
