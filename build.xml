@@ -1571,6 +1571,7 @@
         <library pathref="ivy-test.classpath" exported="false" />
         <variable path="ANT_HOME/lib/ant.jar" exported="false" />
         <library path="${conf.dir}" exported="false" />
+        <library path="${java.home}/../lib/tools.jar" exported="false" />
       </classpath>
     </eclipse>
   </target>
