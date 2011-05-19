@@ -139,6 +139,26 @@ public class FSUtils {
   }
 
   /**
+   * Check whether dfs is in safemode. 
+   * @param conf 
+   * @return true if dfs is in safemode.
+   * @throws IOException
+   */
+  public static void checkDfsSafeMode(final Configuration conf) 
+  throws IOException {
+    boolean isInSafeMode = false;
+    FileSystem fs = FileSystem.get(conf);
+    if (fs instanceof DistributedFileSystem) {
+      DistributedFileSystem dfs = (DistributedFileSystem)fs;
+      // Check whether dfs is on safemode.
+      isInSafeMode = dfs.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_GET);
+    }
+    if (isInSafeMode) {
+      throw new IOException("File system is in safemode, it can't be written now");
+    }
+  }
+  
+  /**
    * Verifies current version of file system
    *
    * @param fs filesystem object

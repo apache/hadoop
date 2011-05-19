@@ -266,6 +266,8 @@ Release 0.90.4 - Unreleased
                region assignment
    HBASE-3902  Add Bytes.toBigDecimal and Bytes.toBytes(BigDecimal)
                (Vaibhav Puranik)
+   HBASE-3820  Splitlog() executed while the namenode was in safemode may
+               cause data-loss (Jieshan Bean)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the

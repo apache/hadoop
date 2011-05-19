@@ -35,6 +35,7 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.math.BigDecimal;
 
 /**
  * Utility class that handles byte arrays, conversions to/from other types,

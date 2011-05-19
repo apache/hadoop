@@ -147,6 +147,7 @@ public class MasterFileSystem {
     if (this.fsOk) {
       try {
         FSUtils.checkFileSystemAvailable(this.fs);
+        FSUtils.checkDfsSafeMode(this.conf);
       } catch (IOException e) {
         master.abort("Shutting down HBase cluster: file system not available", e);
         this.fsOk = false;
@@ -235,6 +236,9 @@ public class MasterFileSystem {
         HLogSplitter splitter = HLogSplitter.createLogSplitter(
             conf, rootdir, logDir, oldLogDir, this.fs);
         try {
+          // If FS is in safe mode, just wait till out of it.
+          FSUtils.waitOnSafeMode(conf,
+            conf.getInt(HConstants.THREAD_WAKE_FREQUENCY, 1000));  
           splitter.splitLog();
         } catch (OrphanHLogAfterSplitException e) {
           LOG.warn("Retrying splitting because of:", e);
