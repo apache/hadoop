@@ -382,7 +382,11 @@ public class TestSplitTransactionOnCluster {
       assertTrue(daughters.size() >= 2);
       // Now split one of the daughters.
       regionCount = server.getOnlineRegions().size();
-      split(daughters.get(0).getRegionInfo(), server, regionCount);
+      HRegionInfo daughter = daughters.get(0).getRegionInfo();
+      // Compact first to ensure we have cleaned up references -- else the split
+      // will fail.
+      this.admin.compact(daughter.getRegionName());
+      split(daughter, server, regionCount);
       // Get list of daughters
       daughters = cluster.getRegions(tableName);
       // Now crash the server

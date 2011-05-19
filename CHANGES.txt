@@ -106,6 +106,7 @@ Release 0.91.0 - Unreleased
    HBASE-3876  TestCoprocessorInterface.testCoprocessorInterface broke on
                jenkins and local
    HBASE-3897  Docs (notsoquick guide) suggest invalid XML (Philip Zeyliger)
+   HBASE-3898  TestSplitTransactionOnCluster broke in TRUNK
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
