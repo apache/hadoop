@@ -156,6 +156,8 @@ public class SplitTransaction {
    */
   public boolean prepare() {
     if (this.parent.isClosed() || this.parent.isClosing()) return false;
+    // Split key can be false if this region is unsplittable; i.e. has refs.
+    if (this.splitrow == null) return false;
     HRegionInfo hri = this.parent.getRegionInfo();
     parent.prepareToSplit();
     // Check splitrow.

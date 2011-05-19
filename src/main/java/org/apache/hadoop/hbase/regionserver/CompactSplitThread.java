@@ -129,6 +129,11 @@ public class CompactSplitThread implements CompactionRequestor {
   }
 
   public synchronized void requestSplit(final HRegion r, byte[] midKey) {
+    if (midKey == null) {
+      LOG.debug("Region " + r.getRegionNameAsString() +
+        " not splittable because midkey=null");
+      return;
+    }
     try {
       this.splits.execute(new SplitRequest(r, midKey, this.server));
       if (LOG.isDebugEnabled()) {
