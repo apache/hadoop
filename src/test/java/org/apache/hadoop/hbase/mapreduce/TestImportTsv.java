@@ -107,11 +107,11 @@ public class TestImportTsv {
           parsed.getColumnLength(i)));
     }
     if (!Iterables.elementsEqual(parsedCols, expected)) {
-      fail("Expected: " + Joiner.on(",").join(expected) + "\n" + 
+      fail("Expected: " + Joiner.on(",").join(expected) + "\n" +
           "Got:" + Joiner.on(",").join(parsedCols));
     }
   }
-  
+
   private void assertBytesEquals(byte[] a, byte[] b) {
     assertEquals(Bytes.toStringBinary(a), Bytes.toStringBinary(b));
   }
@@ -153,7 +153,7 @@ public class TestImportTsv {
     String TABLE_NAME = "TestTable";
     String FAMILY = "FAM";
     String INPUT_FILE = "InputFile.esv";
-    
+
     // Prepare the arguments required for the test.
     String[] args = new String[] {
         "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B",
@@ -161,6 +161,29 @@ public class TestImportTsv {
         TABLE_NAME,
         INPUT_FILE
     };
+
+    doMROnTableTest(INPUT_FILE, FAMILY, TABLE_NAME, args, 1);
+  }
+
+  @Test
+  public void testMROnTableWithCustomMapper()
+  throws Exception {
+    String TABLE_NAME = "TestTable";
+    String FAMILY = "FAM";
+    String INPUT_FILE = "InputFile2.esv";
+
+    // Prepare the arguments required for the test.
+    String[] args = new String[] {
+        "-D" + ImportTsv.MAPPER_CONF_KEY + "=org.apache.hadoop.hbase.mapreduce.TsvImporterCustomTestMapper",
+        TABLE_NAME,
+        INPUT_FILE
+    };
+
+    doMROnTableTest(INPUT_FILE, FAMILY, TABLE_NAME, args, 3);
+  }
+
+  private void doMROnTableTest(String inputFile, String family, String tableName,
+                               String[] args, int valueMultiplier) throws Exception {
 
     // Cluster
     HBaseTestingUtility htu1 = new HBaseTestingUtility();
@@ -172,15 +195,15 @@ public class TestImportTsv {
     args = opts.getRemainingArgs();
 
     try {
-      
+
       FileSystem fs = FileSystem.get(conf);
-      FSDataOutputStream op = fs.create(new Path(INPUT_FILE), true);
+      FSDataOutputStream op = fs.create(new Path(inputFile), true);
       String line = "KEY\u001bVALUE1\u001bVALUE2\n";
       op.write(line.getBytes(HConstants.UTF8_ENCODING));
       op.close();
 
-      final byte[] FAM = Bytes.toBytes(FAMILY);
-      final byte[] TAB = Bytes.toBytes(TABLE_NAME);
+      final byte[] FAM = Bytes.toBytes(family);
+      final byte[] TAB = Bytes.toBytes(tableName);
       final byte[] QA = Bytes.toBytes("A");
       final byte[] QB = Bytes.toBytes("B");
 
@@ -210,9 +233,9 @@ public class TestImportTsv {
             assertEquals(toU8Str(kvs.get(1).getRow()),
                 toU8Str(Bytes.toBytes("KEY")));
             assertEquals(toU8Str(kvs.get(0).getValue()),
-                toU8Str(Bytes.toBytes("VALUE1")));
+                toU8Str(Bytes.toBytes("VALUE" + valueMultiplier)));
             assertEquals(toU8Str(kvs.get(1).getValue()),
-                toU8Str(Bytes.toBytes("VALUE2")));
+                toU8Str(Bytes.toBytes("VALUE" + 2*valueMultiplier)));
             // Only one result set is expected, so let it loop.
           }
           verified = true;

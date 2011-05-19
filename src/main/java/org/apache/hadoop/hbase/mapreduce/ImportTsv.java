@@ -28,17 +28,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.BadTsvLineException;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -59,12 +53,14 @@ import com.google.common.collect.Lists;
 public class ImportTsv {
   final static String NAME = "importtsv";
 
+  final static String MAPPER_CONF_KEY = "importtsv.mapper.class";
   final static String SKIP_LINES_CONF_KEY = "importtsv.skip.bad.lines";
   final static String BULK_OUTPUT_CONF_KEY = "importtsv.bulk.output";
   final static String COLUMNS_CONF_KEY = "importtsv.columns";
   final static String SEPARATOR_CONF_KEY = "importtsv.separator";
   final static String TIMESTAMP_CONF_KEY = "importtsv.timestamp";
   final static String DEFAULT_SEPARATOR = "\t";
+  final static Class DEFAULT_MAPPER = TsvImporterMapper.class;
 
   static class TsvParser {
     /**
@@ -76,7 +72,7 @@ public class ImportTsv {
     private final byte separatorByte;
 
     private int rowKeyColumnIndex;
-    
+
     public static String ROWKEY_COLUMN_SPEC="HBASE_ROW_KEY";
 
     /**
@@ -93,7 +89,7 @@ public class ImportTsv {
       // Configure columns
       ArrayList<String> columnStrings = Lists.newArrayList(
         Splitter.on(',').trimResults().split(columnsSpecification));
-      
+
       families = new byte[columnStrings.size()][];
       qualifiers = new byte[columnStrings.size()][];
 
@@ -113,7 +109,7 @@ public class ImportTsv {
         }
       }
     }
-    
+
     public int getRowKeyColumnIndex() {
       return rowKeyColumnIndex;
     }
@@ -123,7 +119,7 @@ public class ImportTsv {
     public byte[] getQualifier(int idx) {
       return qualifiers[idx];
     }
-    
+
     public ParsedLine parse(byte[] lineBytes, int length)
     throws BadTsvLineException {
       // Enumerate separator offsets
@@ -146,16 +142,16 @@ public class ImportTsv {
       }
       return new ParsedLine(tabOffsets, lineBytes);
     }
-    
+
     class ParsedLine {
       private final ArrayList<Integer> tabOffsets;
       private byte[] lineBytes;
-      
+
       ParsedLine(ArrayList<Integer> tabOffsets, byte[] lineBytes) {
         this.tabOffsets = tabOffsets;
         this.lineBytes = lineBytes;
       }
-      
+
       public int getRowKeyOffset() {
         return getColumnOffset(rowKeyColumnIndex);
       }
@@ -167,7 +163,7 @@ public class ImportTsv {
           return tabOffsets.get(idx - 1) + 1;
         else
           return 0;
-      }      
+      }
       public int getColumnLength(int idx) {
         return tabOffsets.get(idx) - getColumnOffset(idx);
       }
@@ -178,109 +174,12 @@ public class ImportTsv {
         return lineBytes;
       }
     }
-    
+
     public static class BadTsvLineException extends Exception {
       public BadTsvLineException(String err) {
         super(err);
       }
       private static final long serialVersionUID = 1L;
-    }
-  }
-  
-  /**
-   * Write table content out to files in hdfs.
-   */
-  static class TsvImporter
-  extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
-  {
-    
-    /** Timestamp for all inserted rows */
-    private long ts;
-
-    /** Should skip bad lines */
-    private boolean skipBadLines;
-    private Counter badLineCount;
-
-    private TsvParser parser;
-
-    @Override
-    protected void setup(Context context) {
-      Configuration conf = context.getConfiguration();
-
-      // If a custom separator has been used,
-      // decode it back from Base64 encoding.
-      String separator = conf.get(SEPARATOR_CONF_KEY);
-      if (separator == null) {
-        separator = DEFAULT_SEPARATOR;
-      } else {
-        separator = new String(Base64.decode(separator));
-      }
-
-      parser = new TsvParser(conf.get(COLUMNS_CONF_KEY),
-                             separator);
-      if (parser.getRowKeyColumnIndex() == -1) {
-        throw new RuntimeException("No row key column specified");
-      }
-      ts = conf.getLong(TIMESTAMP_CONF_KEY, System.currentTimeMillis());
-
-      skipBadLines = context.getConfiguration().getBoolean(
-        SKIP_LINES_CONF_KEY, true);
-      badLineCount = context.getCounter("ImportTsv", "Bad Lines");
-    }
-
-    /**
-     * Convert a line of TSV text into an HBase table row.
-     */
-    @Override
-    public void map(LongWritable offset, Text value,
-      Context context)
-    throws IOException {
-      byte[] lineBytes = value.getBytes();
-
-      try {
-        TsvParser.ParsedLine parsed = parser.parse(
-            lineBytes, value.getLength());
-        ImmutableBytesWritable rowKey =
-          new ImmutableBytesWritable(lineBytes,
-              parsed.getRowKeyOffset(),
-              parsed.getRowKeyLength());
-
-        Put put = new Put(rowKey.copyBytes());
-        for (int i = 0; i < parsed.getColumnCount(); i++) {
-          if (i == parser.getRowKeyColumnIndex()) continue;
-          KeyValue kv = new KeyValue(
-              lineBytes, parsed.getRowKeyOffset(), parsed.getRowKeyLength(),
-              parser.getFamily(i), 0, parser.getFamily(i).length,
-              parser.getQualifier(i), 0, parser.getQualifier(i).length,
-              ts,
-              KeyValue.Type.Put,
-              lineBytes, parsed.getColumnOffset(i), parsed.getColumnLength(i));
-          put.add(kv);
-        }
-        context.write(rowKey, put);
-      } catch (BadTsvLineException badLine) {
-        if (skipBadLines) {
-          System.err.println(
-              "Bad line at offset: " + offset.get() + ":\n" +
-              badLine.getMessage());
-          badLineCount.increment(1);
-          return;
-        } else {
-          throw new IOException(badLine);
-        }
-      } catch (IllegalArgumentException e) {
-        if (skipBadLines) {
-          System.err.println(
-              "Bad line at offset: " + offset.get() + ":\n" +
-              e.getMessage());
-          badLineCount.increment(1);
-          return;
-        } else {
-          throw new IOException(e);
-        }
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
     }
   }
 
@@ -293,7 +192,7 @@ public class ImportTsv {
    * @throws IOException When setting up the job fails.
    */
   public static Job createSubmittableJob(Configuration conf, String[] args)
-  throws IOException {
+  throws IOException, ClassNotFoundException {
 
     // Support non-XML supported characters
     // by re-encoding the passed separator as a Base64 string.
@@ -303,13 +202,18 @@ public class ImportTsv {
       Base64.encodeBytes(actualSeparator.getBytes())));
     }
 
+    // See if a non-default Mapper was set
+    String mapperClassName = conf.get(MAPPER_CONF_KEY);
+    Class mapperClass = mapperClassName != null ?
+        Class.forName(mapperClassName) : DEFAULT_MAPPER;
+
     String tableName = args[0];
     Path inputDir = new Path(args[1]);
     Job job = new Job(conf, NAME + "_" + tableName);
-    job.setJarByClass(TsvImporter.class);
+    job.setJarByClass(mapperClass);
     FileInputFormat.setInputPaths(job, inputDir);
     job.setInputFormatClass(TextInputFormat.class);
-    job.setMapperClass(TsvImporter.class);
+    job.setMapperClass(mapperClass);
 
     String hfileOutPath = conf.get(BULK_OUTPUT_CONF_KEY);
     if (hfileOutPath != null) {
@@ -326,9 +230,9 @@ public class ImportTsv {
       TableMapReduceUtil.initTableReducerJob(tableName, null, job);
       job.setNumReduceTasks(0);
     }
-    
+
     TableMapReduceUtil.addDependencyJars(job);
-    TableMapReduceUtil.addDependencyJars(job.getConfiguration(), 
+    TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
         com.google.common.base.Function.class /* Guava used by TsvParser */);
     return job;
   }
@@ -358,7 +262,8 @@ public class ImportTsv {
       "Other options that may be specified with -D include:\n" +
       "  -D" + SKIP_LINES_CONF_KEY + "=false - fail if encountering an invalid line\n" +
       "  '-D" + SEPARATOR_CONF_KEY + "=|' - eg separate on pipes instead of tabs\n" +
-      "  -D" + TIMESTAMP_CONF_KEY + "=currentTimeAsLong - use the specified timestamp for the import\n";
+      "  -D" + TIMESTAMP_CONF_KEY + "=currentTimeAsLong - use the specified timestamp for the import\n" +
+      "  -D" + MAPPER_CONF_KEY + "=my.Mapper - A user-defined Mapper to use instead of " + DEFAULT_MAPPER.getName() + "\n";
 
     System.err.println(usage);
   }
