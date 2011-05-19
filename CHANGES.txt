@@ -32,6 +32,9 @@ Trunk (unreleased changes)
     HADOOP-7214. Add Common functionality necessary to provide an equivalent
     of /usr/bin/groups for Hadoop. (Aaron T. Myers via todd)
 
+    HADOOP-6832. Add an authentication plugin using a configurable static user
+    for the web UI. (Owen O'Malley and Todd Lipcon via cdouglas)
+
   IMPROVEMENTS
 
     HADOOP-7042. Updates to test-patch.sh to include failed test names and
