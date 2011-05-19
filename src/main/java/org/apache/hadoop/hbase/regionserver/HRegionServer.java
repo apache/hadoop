@@ -133,6 +133,7 @@ import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -232,9 +233,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   MemStoreFlusher cacheFlusher;
 
   /*
-   * Check for major compactions.
+   * Check for compactions requests.
    */
-  Chore majorCompactionChecker;
+  Chore compactionChecker;
 
   // HLog and HLog roller. log is protected rather than private to avoid
   // eclipse warning when accessed by inner classes
@@ -565,11 +566,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // Compaction thread
     this.compactSplitThread = new CompactSplitThread(this);
 
-    // Background thread to check for major compactions; needed if region
+    // Background thread to check for compactions; needed if region
     // has not gotten updates in a while. Make it run at a lesser frequency.
     int multiplier = this.conf.getInt(HConstants.THREAD_WAKE_FREQUENCY +
       ".multiplier", 1000);
-    this.majorCompactionChecker = new MajorCompactionChecker(this,
+    this.compactionChecker = new CompactionChecker(this,
       this.threadWakeFrequency * multiplier, this);
 
     this.leases = new Leases((int) conf.getLong(
@@ -671,7 +672,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     if (this.cacheFlusher != null) this.cacheFlusher.interruptIfNecessary();
     if (this.compactSplitThread != null) this.compactSplitThread.interruptIfNecessary();
     if (this.hlogRoller != null) this.hlogRoller.interruptIfNecessary();
-    if (this.majorCompactionChecker != null) this.majorCompactionChecker.interrupt();
+    if (this.compactionChecker != null)
+      this.compactionChecker.interrupt();
 
     if (this.killed) {
       // Just skip out w/o closing regions.  Used when testing.
@@ -1030,17 +1032,16 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   /*
-   * Inner class that runs on a long period checking if regions need major
-   * compaction.
+   * Inner class that runs on a long period checking if regions need compaction.
    */
-  private static class MajorCompactionChecker extends Chore {
+  private static class CompactionChecker extends Chore {
     private final HRegionServer instance;
 
-    MajorCompactionChecker(final HRegionServer h, final int sleepTime,
+    CompactionChecker(final HRegionServer h, final int sleepTime,
         final Stoppable stopper) {
-      super("MajorCompactionChecker", sleepTime, h);
+      super("CompactionChecker", sleepTime, h);
       this.instance = h;
-      LOG.info("Runs every " + sleepTime + "ms");
+      LOG.info("Runs every " + StringUtils.formatTime(sleepTime));
     }
 
     @Override
@@ -1050,7 +1051,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           continue;
         for (Store s : r.getStores().values()) {
           try {
-            if (s.isMajorCompaction()) {
+            if (s.isMajorCompaction() || s.needsCompaction()) {
               // Queue a compaction. Will recognize if major is needed.
               this.instance.compactSplitThread.requestCompaction(r, s,
                   getName() + " requests major compaction");
@@ -1247,8 +1248,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     Threads.setDaemonThreadRunning(this.hlogRoller, n + ".logRoller", handler);
     Threads.setDaemonThreadRunning(this.cacheFlusher, n + ".cacheFlusher",
       handler);
-    Threads.setDaemonThreadRunning(this.majorCompactionChecker, n +
-      ".majorCompactionChecker", handler);
+    Threads.setDaemonThreadRunning(this.compactionChecker, n +
+      ".compactionChecker", handler);
 
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
     // an unhandled exception, it will just exit.
@@ -1316,7 +1317,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // Verify that all threads are alive
     if (!(leases.isAlive()
         && cacheFlusher.isAlive() && hlogRoller.isAlive()
-        && this.majorCompactionChecker.isAlive())) {
+        && this.compactionChecker.isAlive())) {
       stop("One or more threads are no longer alive -- stop");
       return false;
     }
@@ -1430,7 +1431,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * have already been called.
    */
   protected void join() {
-    Threads.shutdown(this.majorCompactionChecker);
+    Threads.shutdown(this.compactionChecker);
     Threads.shutdown(this.cacheFlusher);
     Threads.shutdown(this.hlogRoller);
     if (this.compactSplitThread != null) {

@@ -107,6 +107,8 @@ Release 0.91.0 - Unreleased
                jenkins and local
    HBASE-3897  Docs (notsoquick guide) suggest invalid XML (Philip Zeyliger)
    HBASE-3898  TestSplitTransactionOnCluster broke in TRUNK
+   HBASE-3826  Minor compaction needs to check if still over
+               compactionThreshold after compacting (Nicolas Spiegelberg)  
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
