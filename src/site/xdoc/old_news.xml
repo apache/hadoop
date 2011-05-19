@@ -28,6 +28,11 @@
   </properties>
   <body>
   <section name="Old News">
+            <p>December 13th, <a href="http://www.meetup.com/hackathon/calendar/15597555/">HBase Hackathon: Coprocessor Edition</a></p>
+      <p>November 19th, <a href="http://huguk.org/">Hadoop HUG in London</a> is all about HBase</p>
+      <p>November 15-19th, <a href="http://www.devoxx.com/display/Devoxx2K10/Home">Devoxx</a> features HBase Training and multiple HBase presentations</p>
+      <p>October 12th, HBase-related presentations by core contributors and users at <a href="http://www.cloudera.com/company/press-center/hadoop-world-nyc/">Hadoop World 2010</a></p>
+      <p>October 11th, <a href="http://www.meetup.com/hbaseusergroup/calendar/14606174/">HUG-NYC: HBase User Group NYC Edition</a> (Night before Hadoop World)</p>
       <p>June 30th, <a href="http://www.meetup.com/hbaseusergroup/calendar/13562846/">HBase Contributor Workshop</a> (Day after Hadoop Summit)</p>
       <p>May 10th, 2010: HBase graduates from Hadoop sub-project to Apache Top Level Project </p>
       <p>Signup for <a href="http://www.meetup.com/hbaseusergroup/calendar/12689490/">HBase User Group Meeting, HUG10</a> hosted by Trend Micro, April 19th, 2010</p>
