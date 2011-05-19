@@ -100,12 +100,17 @@ column name HBASE_ROW_KEY is used to designate that this column should be used
 as the row key for each imported record. You must specify exactly one column
 to be the row key.
 
-In order to prepare data for a bulk data load, pass the option:
+By default importtsv will load data directly into HBase. To instead generate
+HFiles of data to prepare for a bulk data load, pass the option:
   -Dimporttsv.bulk.output=/path/for/output
 
 Other options that may be specified with -D include:
   -Dimporttsv.skip.bad.lines=false - fail if encountering an invalid line
   -Dimporttsv.timestamp=currentTimeAsLong - use the specified timestamp for the import
+  '-Dimporttsv.separator=|' - eg separate on pipes instead of tabs
+  -Dimporttsv.timestamp=currentTimeAsLong - use the specified timestamp for the import
+  -Dimporttsv.mapper.class=my.Mapper - A user-defined Mapper to use instead of TsvImporterMapper
+
 </pre></code>
     </section>
     <section name="Importing the prepared data using the completebulkload tool">

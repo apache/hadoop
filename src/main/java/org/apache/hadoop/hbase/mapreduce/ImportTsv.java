@@ -256,7 +256,8 @@ public class ImportTsv {
       "as the row key for each imported record. You must specify exactly one column\n" +
       "to be the row key.\n" +
       "\n" +
-      "In order to prepare data for a bulk data load, pass the option:\n" +
+      "By default importtsv will load data directly into HBase. To instead generate\n" +
+      "HFiles of data to prepare for a bulk data load, pass the option:\n" +
       "  -D" + BULK_OUTPUT_CONF_KEY + "=/path/for/output\n" +
       "\n" +
       "Other options that may be specified with -D include:\n" +
