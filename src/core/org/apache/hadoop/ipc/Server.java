@@ -1037,12 +1037,16 @@ public abstract class Server {
               null);
         }
         if (saslServer.isComplete()) {
-          LOG.info("SASL server context established. Negotiated QoP is "
-              + saslServer.getNegotiatedProperty(Sasl.QOP));
+          if (LOG.isDebugEnabled()) {
+            LOG.info("SASL server context established. Negotiated QoP is "
+                + saslServer.getNegotiatedProperty(Sasl.QOP));
+          }
           String qop = (String) saslServer.getNegotiatedProperty(Sasl.QOP);
           useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
           user = getAuthorizedUgi(saslServer.getAuthorizationID());
-          LOG.info("SASL server successfully authenticated client: " + user);
+          if (LOG.isDebugEnabled()) {
+            LOG.info("SASL server successfully authenticated client: " + user);
+          }
           rpcMetrics.incrAuthenticationSuccesses();
           AUDITLOG.info(AUTH_SUCCESSFULL_FOR + user);
           saslContextEstablished = true;
