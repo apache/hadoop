@@ -113,4 +113,12 @@ public class TestSecurityUtil {
     }
     assertTrue("Exception for empty keytabfile name was expected", gotException);
   }
+  
+  @Test
+  public void testGetHostFromPrincipal() {
+    assertEquals("host", 
+        SecurityUtil.getHostFromPrincipal("service/host@realm"));
+    assertEquals(null,
+        SecurityUtil.getHostFromPrincipal("service@realm"));
+  }
 }

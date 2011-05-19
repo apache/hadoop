@@ -28,6 +28,10 @@ Trunk (unreleased changes)
     (suresh)
 
 
+    HADOOP-7215. RPC clients must use network interface corresponding to 
+    the host in the client's kerberos principal key. (suresh)
+
+>>>>>>> .r1087843
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

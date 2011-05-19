@@ -22,8 +22,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.net.SocketException;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.net.ConnectException;
@@ -250,7 +252,7 @@ public class NetUtils {
    * case, the timeout argument is ignored and the timeout set with 
    * {@link Socket#setSoTimeout(int)} applies for reads.<br><br>
    *
-   * Any socket created using socket factories returned by {@link #NetUtils},
+   * Any socket created using socket factories returned by {@link NetUtils},
    * must use this interface instead of {@link Socket#getInputStream()}.
    *     
    * @see #getInputStream(Socket, long)
@@ -272,7 +274,7 @@ public class NetUtils {
    * case, the timeout argument is ignored and the timeout set with 
    * {@link Socket#setSoTimeout(int)} applies for reads.<br><br>
    * 
-   * Any socket created using socket factories returned by {@link #NetUtils},
+   * Any socket created using socket factories returned by {@link NetUtils},
    * must use this interface instead of {@link Socket#getInputStream()}.
    *     
    * @see Socket#getChannel()
@@ -301,7 +303,7 @@ public class NetUtils {
    * case, the timeout argument is ignored and the write will wait until 
    * data is available.<br><br>
    * 
-   * Any socket created using socket factories returned by {@link #NetUtils},
+   * Any socket created using socket factories returned by {@link NetUtils},
    * must use this interface instead of {@link Socket#getOutputStream()}.
    * 
    * @see #getOutputStream(Socket, long)
@@ -323,7 +325,7 @@ public class NetUtils {
    * case, the timeout argument is ignored and the write will wait until 
    * data is available.<br><br>
    * 
-   * Any socket created using socket factories returned by {@link #NetUtils},
+   * Any socket created using socket factories returned by {@link NetUtils},
    * must use this interface instead of {@link Socket#getOutputStream()}.
    * 
    * @see Socket#getChannel()
@@ -426,6 +428,9 @@ public class NetUtils {
     return hostNames;
   }
 
+  private static final Pattern ipPattern = // Pattern for matching hostname to ip:port
+    Pattern.compile("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}:?\\d*");
+  
   /**
    * Attempt to obtain the host name of a name specified by ip address.  
    * Check that the node name is an ip addr and if so, attempt to determine
@@ -434,8 +439,6 @@ public class NetUtils {
    * 
    * @return Host name or null
    */
-  private static final Pattern ipPattern = // Pattern for matching hostname to ip:port
-    Pattern.compile("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}:?\\d*");
   public static String getHostNameOfIP(String ip) {
     // If name is not an ip addr, don't bother looking it up
     if(!ipPattern.matcher(ip).matches())
@@ -459,5 +462,28 @@ public class NetUtils {
   public static String getHostname() {
     try {return "" + InetAddress.getLocalHost();}
     catch(UnknownHostException uhe) {return "" + uhe;}
+  }
+  
+  /**
+   * Checks if {@code host} is a local host name and return {@link InetAddress}
+   * corresponding to that address.
+   * 
+   * @param host the specified host
+   * @return a valid local {@link InetAddress} or null
+   * @throws SocketException if an I/O error occurs
+   */
+  public static InetAddress getLocalInetAddress(String host)
+      throws SocketException {
+    if (host == null) {
+      return null;
+    }
+    InetAddress addr = null;
+    try {
+      addr = InetAddress.getByName(host);
+      if (NetworkInterface.getByInetAddress(addr) == null) {
+        addr = null; // Not a local address
+      }
+    } catch (UnknownHostException ignore) { }
+    return addr;
   }
 }

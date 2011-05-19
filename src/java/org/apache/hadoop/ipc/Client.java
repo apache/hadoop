@@ -18,8 +18,11 @@
 
 package org.apache.hadoop.ipc;
 
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.Socket;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.net.ConnectException;
@@ -420,6 +423,27 @@ public class Client {
         try {
           this.socket = socketFactory.createSocket();
           this.socket.setTcpNoDelay(tcpNoDelay);
+          
+          /*
+           * Bind the socket to the host specified in the principal name of the
+           * client, to ensure Server matching address of the client connection
+           * to host name in principal passed.
+           */
+          if (UserGroupInformation.isSecurityEnabled()) {
+            KerberosInfo krbInfo = 
+              remoteId.getProtocol().getAnnotation(KerberosInfo.class);
+            if (krbInfo != null && krbInfo.clientPrincipal() != null) {
+              String host = 
+                SecurityUtil.getHostFromPrincipal(remoteId.getTicket().getUserName());
+              
+              // If host name is a valid local address then bind socket to it
+              InetAddress localAddr = NetUtils.getLocalInetAddress(host);
+              if (localAddr != null) {
+                this.socket.bind(new InetSocketAddress(localAddr, 0));
+              }
+            }
+          }
+          
           // connection time out is 20s
           NetUtils.connect(this.socket, remoteId.getAddress(), 20000);
           if (rpcTimeout > 0) {
