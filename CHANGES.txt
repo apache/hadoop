@@ -264,12 +264,14 @@ Release 0.90.4 - Unreleased
    HBASE-3895  Fix order of parameters after HBASE-1511
    HBASE-3874  ServerShutdownHandler fails on NPE if a plan has a random
                region assignment
+   HBASE-3902  Add Bytes.toBigDecimal and Bytes.toBytes(BigDecimal)
+               (Vaibhav Puranik)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the
                sun jre provided by RHEL6 (Roman Shaposhnik)
 
-Release 0.90.3 - Unreleased
+Release 0.90.3 - May 19th, 2011
 
   BUG FIXES
    HBASE-3746  Clean up CompressionTest to not directly reference

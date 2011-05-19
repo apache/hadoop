@@ -765,6 +765,81 @@ public class Bytes {
   }
 
   /**
+   * Convert a BigDecimal value to a byte array
+   *
+   * @param val
+   * @return the byte array
+   */
+  public static byte[] toBytes(BigDecimal val) {
+    byte[] valueBytes = val.unscaledValue().toByteArray();
+    byte[] result = new byte[valueBytes.length + SIZEOF_INT];
+    int offset = putInt(result, 0, val.scale());
+    putBytes(result, offset, valueBytes, 0, valueBytes.length);
+    return result;
+  }
+
+
+  /**
+   * Converts a byte array to a BigDecimal
+   *
+   * @param bytes
+   * @return the char value
+   */
+  public static BigDecimal toBigDecimal(byte[] bytes) {
+    return toBigDecimal(bytes, 0, bytes.length);
+  }
+
+  /**
+   * Converts a byte array to a BigDecimal value
+   *
+   * @param bytes
+   * @param offset
+   * @return the char value
+   */
+  public static BigDecimal toBigDecimal(byte[] bytes, int offset) {
+    return toBigDecimal(bytes, offset, bytes.length);
+  }
+
+  /**
+   * Converts a byte array to a BigDecimal value
+   *
+   * @param bytes
+   * @param offset
+   * @param length
+   * @return the char value
+   */
+  public static BigDecimal toBigDecimal(byte[] bytes, int offset, final int length) {
+    if (bytes == null || length < SIZEOF_INT + 1 ||
+      (offset + length > bytes.length)) {
+      return null;
+    }
+
+    int scale = toInt(bytes, 0);
+    byte[] tcBytes = new byte[length - SIZEOF_INT];
+    System.arraycopy(bytes, SIZEOF_INT, tcBytes, 0, length - SIZEOF_INT);
+    return new BigDecimal(new BigInteger(tcBytes), scale);
+  }
+
+  /**
+   * Put a BigDecimal value out to the specified byte array position.
+   *
+   * @param bytes  the byte array
+   * @param offset position in the array
+   * @param val    BigDecimal to write out
+   * @return incremented offset
+   */
+  public static int putBigDecimal(byte[] bytes, int offset, BigDecimal val) {
+    if (bytes == null) {
+      return offset;
+    }
+
+    byte[] valueBytes = val.unscaledValue().toByteArray();
+    byte[] result = new byte[valueBytes.length + SIZEOF_INT];
+    offset = putInt(result, offset, val.scale());
+    return putBytes(result, offset, valueBytes, 0, valueBytes.length);
+  }
+  
+  /**
    * @param vint Integer to make a vint of.
    * @return Vint as bytes array.
    */
