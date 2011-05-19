@@ -514,7 +514,7 @@ stopping hbase...............</programlisting></para>
   &lt;property&gt;
     &lt;name&gt;dfs.replication&lt;/name&gt;
     &lt;value&gt;1&lt;/value&gt;
-    &lt;description&gt;The replication count for HLog &amp; HFile storage. Should not be greater than HDFS datanode count.
+    &lt;description&gt;The replication count for HLog and HFile storage. Should not be greater than HDFS datanode count.
     &lt;/description&gt;
   &lt;/property&gt;
   ...

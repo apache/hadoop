@@ -105,6 +105,7 @@ Release 0.91.0 - Unreleased
                HBASE-1861 (Aaron T. Myers)
    HBASE-3876  TestCoprocessorInterface.testCoprocessorInterface broke on
                jenkins and local
+   HBASE-3897  Docs (notsoquick guide) suggest invalid XML (Philip Zeyliger)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
