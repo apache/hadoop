@@ -1783,8 +1783,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             refetchToken--;
             fetchBlockAt(target);
           } else {
-            LOG.info("Failed to connect to " + targetAddr
-                + ", add to deadNodes and continue", ex);
+            LOG.warn("Failed to connect to " + targetAddr
+                + ", add to deadNodes and continue" + ex);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Connection failure", ex);
+            }
             // Put chosen node into dead list, continue
             addToDeadNodes(chosenNode);
           }
@@ -2016,8 +2019,10 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             continue;
           } else {
             LOG.warn("Failed to connect to " + targetAddr + " for file " + src
-                + " for block " + block.getBlock() + ":"
-                + StringUtils.stringifyException(e));
+                + " for block " + block.getBlock() + ":" + e);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Connection failure ", e);
+            }
           }
         } finally {
           IOUtils.closeStream(reader);

@@ -26,6 +26,10 @@ Release 0.20.205.0 - unreleased
 
     HADOOP-7272. Remove unnecessary security related info logs. (suresh)
 
+    HDFS-1906. Remove logging exception stack trace in client logs when one of
+    the datanode targets to read from is not reachable. (suresh)
+
+
 Release 0.20.204.0 - unreleased
 
   BUG FIXES
