@@ -129,7 +129,7 @@ public class TestHFilePerformance extends TestCase {
    * @param fileType "HFile" or "SequenceFile"
    * @param keyLength
    * @param valueLength
-   * @param codecName "none", "lzo", "gz"
+   * @param codecName "none", "lzo", "gz", "snappy"
    * @param rows number of rows to be written.
    * @param writeMethod used for HFile only.
    * @param minBlockSize used for HFile only.

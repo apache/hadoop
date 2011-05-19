@@ -1373,6 +1373,45 @@ false
     reports in your logs; see <xref linkend="brand.new.compressor" />).
     </para>
     </section>
+    <section xml:id="snappy.compression">
+    <title>
+    SNAPPY
+    </title>
+    <para>
+        To set snappy compression on a column family, do as following:
+        <orderedlist>
+            <listitem>
+                <para>
+                 Install hadoop-snappy using these instructions: http://code.google.com/p/hadoop-snappy/
+                </para>
+            </listitem>
+            <listitem>
+                <para>
+                    You need to ensure the hadoop-snappy libs (incl. the native libs) are in the HBase classpath. One way to do this is
+                    to just symlink the libs from <filename>HADOOP_HOME/lib</filename> to <filename>HBASE_HOME/lib</filename>.
+                    This needs to be done on all HBase nodes, as with LZO.
+                </para>
+            </listitem>
+            <listitem>
+                <para>
+        Use CompressionTest to verify snappy support is enabled and the libs can be loaded:
+        <programlisting>$ hbase org.apache.hadoop.hbase.util.CompressionTest hdfs://host/path/to/hbase snappy</programlisting>
+                </para>
+            </listitem>
+            <listitem>
+                <para>
+        Create a column family with snappy compression and verify it in the hbase shell:
+        <programlisting>$ hbase> create 't1', { NAME => 'cf1', COMPRESSION => 'snappy' }
+hbase> describe 't1'</programlisting>
+        In the output of the "describe" command, you need to ensure it lists "COMPRESSION => 'snappy'"
+                </para>
+            </listitem>
+
+        </orderedlist>
+
+    </para>
+    </section>
+
   </appendix>
 
   <appendix xml:id="faq">

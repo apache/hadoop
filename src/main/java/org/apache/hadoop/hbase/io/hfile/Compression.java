@@ -140,6 +140,25 @@ public final class Compression {
 
         return downStream;
       }
+    },
+    SNAPPY("snappy") {
+        // Use base type to avoid compile-time dependencies.
+        private transient CompressionCodec snappyCodec;
+
+        @Override
+        CompressionCodec getCodec(Configuration conf) {
+          if (snappyCodec == null) {
+            try {
+              Class<?> externalCodec =
+                  ClassLoader.getSystemClassLoader().loadClass("org.apache.hadoop.io.compress.SnappyCodec");
+              snappyCodec = (CompressionCodec) ReflectionUtils.newInstance(externalCodec, 
+                  conf);
+            } catch (ClassNotFoundException e) {
+              throw new RuntimeException(e);
+            }
+          }
+          return snappyCodec;
+        }
     };
 
     private final Configuration conf;

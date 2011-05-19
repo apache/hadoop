@@ -438,6 +438,9 @@ public class TestHFileOutputFormat  {
       familyToCompression.put("Family1!@#!@#&", Compression.Algorithm.LZO);
     }
     if (numCfs-- > 0) {
+      familyToCompression.put("Family2=asdads&!AASD", Compression.Algorithm.SNAPPY);
+    }
+    if (numCfs-- > 0) {
       familyToCompression.put("Family2=asdads&!AASD", Compression.Algorithm.GZ);
     }
     if (numCfs-- > 0) {

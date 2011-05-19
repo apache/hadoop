@@ -94,7 +94,7 @@ public class CompressionTest {
 
   public static void usage() {
     System.err.println(
-      "Usage: CompressionTest <path> none|gz|lzo\n" +
+      "Usage: CompressionTest <path> none|gz|lzo|snappy\n" +
       "\n" +
       "For example:\n" +
       "  hbase " + CompressionTest.class + " file:///tmp/testfile gz\n");

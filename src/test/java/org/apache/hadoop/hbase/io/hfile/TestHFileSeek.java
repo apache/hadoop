@@ -281,7 +281,7 @@ public class TestHFileSeek extends TestCase {
 
     private Options buildOptions() {
       Option compress =
-          OptionBuilder.withLongOpt("compress").withArgName("[none|lzo|gz]")
+          OptionBuilder.withLongOpt("compress").withArgName("[none|lzo|gz|snappy]")
               .hasArg().withDescription("compression scheme").create('c');
 
       Option fileSize =
@@ -446,7 +446,7 @@ public class TestHFileSeek extends TestCase {
 
     private void validateOptions() throws ParseException {
       if (!compress.equals("none") && !compress.equals("lzo")
-          && !compress.equals("gz")) {
+          && !compress.equals("gz") && !compress.equals("snappy")) {
         throw new ParseException("Unknown compression scheme: " + compress);
       }
 
