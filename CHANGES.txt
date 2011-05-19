@@ -256,14 +256,15 @@ Release 0.91.0 - Unreleased
 Release 0.90.4 - Unreleased
 
   BUG FIXES
-   HBASE-3878 Hbase client throws NoSuchElementException (Ted Yu)
-   HBASE-3878 Hbase client throws NoSuchElementException (Ted Yu)
-   HBASE-3881 Add disable balancer in graceful_stop.sh script
-   HBASE-3895 Fix order of parameters after HBASE-1511
+   HBASE-3878  Hbase client throws NoSuchElementException (Ted Yu)
+   HBASE-3881  Add disable balancer in graceful_stop.sh script
+   HBASE-3895  Fix order of parameters after HBASE-1511
+   HBASE-3874  ServerShutdownHandler fails on NPE if a plan has a random
+               region assignment
 
   IMPROVEMENT
-   HBASE-3882 hbase-config.sh needs to be updated so it can auto-detects the
-              sun jre provided by RHEL6 (Roman Shaposhnik)
+   HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the
+               sun jre provided by RHEL6 (Roman Shaposhnik)
 
 Release 0.90.3 - Unreleased
 
