@@ -276,11 +276,11 @@ Secondary NameNode的检查点进程启动，是由两个配置参数控制的�
 </p>
    <ul>
       <li>
-        <code>fs.checkpoint.period</code>，指定连续两次检查点的最大时间间隔，
+        <code>dfs.namenode.checkpoint.period</code>，指定连续两次检查点的最大时间间隔，
         默认值是1小时。
       </li>
       <li>
-        <code>fs.checkpoint.size</code>定义了edits日志文件的最大值，一旦超过这个值会导致强制执行检查点（即使没到检查点的最大时间间隔）。默认值是64MB。
+        <code>dfs.namenode.checkpoint.size</code>定义了edits日志文件的最大值，一旦超过这个值会导致强制执行检查点（即使没到检查点的最大时间间隔）。默认值是64MB。
       </li>
    </ul>
    <p>
@@ -296,17 +296,17 @@ Secondary NameNode的检查点进程启动，是由两个配置参数控制的�
         在配置参数<code>dfs.name.dir</code>指定的位置建立一个空文件夹；
       </li>
       <li>
-        把检查点目录的位置赋值给配置参数<code>fs.checkpoint.dir</code>；
+        把检查点目录的位置赋值给配置参数<code>dfs.namenode.checkpoint.dir</code>；
       </li>
       <li>
         启动NameNode，并加上<code>-importCheckpoint</code>。 
       </li>
    </ul>
    <p>
-     NameNode会从<code>fs.checkpoint.dir</code>目录读取检查点，
+     NameNode会从<code>dfs.namenode.checkpoint.dir</code>目录读取检查点，
      并把它保存在<code>dfs.name.dir</code>目录下。
      如果<code>dfs.name.dir</code>目录下有合法的镜像文件，NameNode会启动失败。
-     NameNode会检查<code>fs.checkpoint.dir</code>目录下镜像文件的一致性，但是不会去改动它。
+     NameNode会检查<code>dfs.namenode.checkpoint.dir</code>目录下镜像文件的一致性，但是不会去改动它。
    </p>
    <p>
      命令的使用方法请参考<a href="commands_manual.html#secondarynamenode"><code>secondarynamenode</code> 命令</a>.
@@ -320,11 +320,11 @@ Secondary NameNode的检查点进程启动，是由两个配置参数控制的�
 +   </p>
 +   <ul>
 +      <li>
-+        <code>fs.checkpoint.period</code>, set to 1 hour by default, specifies
++        <code>dfs.namenode.checkpoint.period</code>, set to 1 hour by default, specifies
 +        the maximum delay between two consecutive checkpoints, and
 +      </li>
 +      <li>
-+        <code>fs.checkpoint.size</code>, set to 64MB by default, defines the
++        <code>dfs.namenode.checkpoint.size</code>, set to 64MB by default, defines the
 +        size of the edits log file that forces an urgent checkpoint even if
 +        the maximum checkpoint delay is not reached.
 +      </li>
@@ -347,7 +347,7 @@ Secondary NameNode的检查点进程启动，是由两个配置参数控制的�
 +      </li>
 +      <li>
 +        Specify the location of the checkpoint directory in the
-+        configuration variable <code>fs.checkpoint.dir</code>;
++        configuration variable <code>dfs.namenode.checkpoint.dir</code>;
 +      </li>
 +      <li>
 +        and start the NameNode with <code>-importCheckpoint</code> option.
@@ -355,11 +355,11 @@ Secondary NameNode的检查点进程启动，是由两个配置参数控制的�
 +   </ul>
 +   <p>
 +     The NameNode will upload the checkpoint from the
-+     <code>fs.checkpoint.dir</code> directory and then save it to the NameNode
++     <code>dfs.namenode.checkpoint.dir</code> directory and then save it to the NameNode
 +     directory(s) set in <code>dfs.name.dir</code>.
 +     The NameNode will fail if a legal image is contained in
 +     <code>dfs.name.dir</code>.
-+     The NameNode verifies that the image in <code>fs.checkpoint.dir</code> is
++     The NameNode verifies that the image in <code>dfs.namenode.checkpoint.dir</code> is
 +     consistent, but does not modify it in any way.
 +   </p>
 +   <p>
