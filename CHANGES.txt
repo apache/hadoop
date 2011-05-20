@@ -20,6 +20,8 @@ Trunk (unreleased changes)
     HADOOP-7054 Change NN LoadGenerator to use FileContext APIs
 	(Sanjay Radia)
 
+    HADOOP-7175. Add isEnabled() to Trash.  (Daryn Sharp via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
