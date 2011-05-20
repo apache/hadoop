@@ -217,6 +217,15 @@ throws InterruptedException, IOException {
       compactions.  The number of versions may need to be increased or decreased depending on application needs.
   </para>
   </section>
+  <section xml:id="changing.rowkeys">
+  <title>
+  Immutability of Rowkeys
+  </title>
+  <para>Rowkeys cannot be changed.  The only way they can be "changed" in a table is if the row is deleted and then re-inserted.
+  This is a fairly common question on the HBase dist-list so it pays to get the rowkeys right the first time (and/or before you've 
+  inserted a lot of data).
+  </para>
+  </section>
 
   </chapter>
 
@@ -1443,6 +1452,14 @@ hbase> describe 't1'</programlisting>
                     states that it is not, however, a general purpose file system, and does not provide fast individual record lookups in files. 
                     HBase, on the other hand, is built on top of HDFS and provides fast record lookups (and updates) for large tables.  This can sometimes be a point of conceptual confusion.
                     See the <xref linkend="datamodel" /> and <xref linkend="architecture" /> sections for more information on how HBase achieves its goals.
+                </para>
+            </answer>
+        </qandaentry>
+        <qandaentry xml:id="faq.changing.rowkeys">
+            <question><para>Can I change a table's rowkeys?</para></question>
+            <answer>
+                <para>
+                    No.  See <xref linkend="changing.rowkeys" />.
                 </para>
             </answer>
         </qandaentry>
