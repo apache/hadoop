@@ -242,6 +242,9 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7291. Update Hudson job not to run test-contrib. (Nigel Daley via eli)
 
+    HADOOP-7302. webinterface.private.actions should be renamed and moved to
+    the MapReduce project. (Ari Rabkin via todd)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
