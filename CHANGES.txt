@@ -109,6 +109,8 @@ Release 0.91.0 - Unreleased
    HBASE-3898  TestSplitTransactionOnCluster broke in TRUNK
    HBASE-3826  Minor compaction needs to check if still over
                compactionThreshold after compacting (Nicolas Spiegelberg)  
+   HBASE-3905  HBaseAdmin.createTableAsync() should check for invalid split
+               keys (Ted Yu)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
