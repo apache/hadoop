@@ -887,21 +887,25 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
 
     private void incrBlacklistedTrackers(int count) {
+      LOG.info("Incrementing blacklisted trackers by " + count);
       numBlacklistedTrackers += count;
       getInstrumentation().addBlackListedTrackers(count);
     }
 
     private void decrBlacklistedTrackers(int count) {
+      LOG.info("Decrementing blacklisted trackers by " + count);
       numBlacklistedTrackers -= count;
       getInstrumentation().decBlackListedTrackers(count);
     }
 
     private void incrGraylistedTrackers(int count) {
+      LOG.info("Incrementing graylisted trackers by " + count);
       numGraylistedTrackers += count;
       getInstrumentation().addGrayListedTrackers(count);
     }
 
     private void decrGraylistedTrackers(int count) {
+      LOG.info("Decrementing graylisted trackers by " + count);
       numGraylistedTrackers -= count;
       getInstrumentation().decGrayListedTrackers(count);
     }
@@ -988,13 +992,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       if (listed && rfbSet.contains(rfb)) {
         if (fi.removeBlacklistedReason(rfb, gray)) {
           if (fi.getReasonForBlacklisting(gray).isEmpty()) {
+            LOG.info("Un" + (gray? "gray" : "black") + "listing tracker : " +
+                     hostName);
             if (gray) {
               decrGraylistedTrackers(getNumTaskTrackersOnHost(hostName));
             } else {
               addHostCapacity(hostName);
             }
-            LOG.info("Un" + (gray? "gray" : "black") + "listing tracker : " +
-                     hostName);
             fi.unBlacklist(gray);
             // We have unblack/graylisted tracker, so tracker should definitely
             // be healthy. Check fault count; if zero, don't keep it in memory.
@@ -1034,11 +1038,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         if (fi != null) {
           // a tracker can be both blacklisted and graylisted, so check both
           if (fi.isGraylisted()) {
-            LOG.info("Removing " + hostName + " from graylist");
+            LOG.info("Marking " + hostName + " healthy from graylist");
             decrGraylistedTrackers(getNumTaskTrackersOnHost(hostName));
           }
           if (fi.isBlacklisted()) {
-            LOG.info("Removing " + hostName + " from blacklist");
+            LOG.info("Marking " + hostName + " healthy from blacklist");
             addHostCapacity(hostName);
           }
           // no need for fi.unBlacklist() for either one:  fi is already gone
@@ -4889,15 +4893,18 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   // Remove a tracker from the system
   private void removeTracker(TaskTracker tracker) {
     String trackerName = tracker.getTrackerName();
+    String hostName = JobInProgress.convertTrackerNameToHostName(trackerName);
     // Remove completely after marking the tasks as 'KILLED'
     lostTaskTracker(tracker);
     // tracker is lost; if it is blacklisted and/or graylisted, remove
     // it from the relevant count(s) of trackers in the cluster
     if (isBlacklisted(trackerName)) {
-     faultyTrackers.decrBlacklistedTrackers(1);
+      LOG.info("Removing " + hostName + " from blacklist");
+      faultyTrackers.decrBlacklistedTrackers(1);
     }
     if (isGraylisted(trackerName)) {
-     faultyTrackers.decrGraylistedTrackers(1);
+      LOG.info("Removing " + hostName + " from graylist");
+      faultyTrackers.decrGraylistedTrackers(1);
     }
     updateTaskTrackerStatus(trackerName, null);
     statistics.taskTrackerRemoved(trackerName);
