@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.master.handler.SplitRegionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
@@ -386,6 +387,16 @@ public class TestSplitTransactionOnCluster {
       // Compact first to ensure we have cleaned up references -- else the split
       // will fail.
       this.admin.compact(daughter.getRegionName());
+      daughters = cluster.getRegions(tableName);
+      HRegion daughterRegion = null;
+      for (HRegion r: daughters) {
+        if (r.getRegionInfo().equals(daughter)) daughterRegion = r;
+      }
+      assertTrue(daughterRegion != null);
+      while (true) {
+        if (!daughterRegion.hasReferences()) break;
+        Threads.sleep(100);
+      }
       split(daughter, server, regionCount);
       // Get list of daughters
       daughters = cluster.getRegions(tableName);
