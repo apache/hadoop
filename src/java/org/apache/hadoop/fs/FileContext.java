@@ -169,7 +169,6 @@ public final class FileContext {
   
   public static final Log LOG = LogFactory.getLog(FileContext.class);
   public static final FsPermission DEFAULT_PERM = FsPermission.getDefault();
-  volatile private static FileContext localFsSingleton = null;
   
   /**
    * List of files that should be deleted on JVM shutdown.
@@ -388,10 +387,7 @@ public final class FileContext {
    */
   public static FileContext getLocalFSFileContext()
       throws UnsupportedFileSystemException {
-    if (localFsSingleton == null) {
-      localFsSingleton = getFileContext(FsConstants.LOCAL_FS_URI); 
-    }
-    return localFsSingleton;
+    return getFileContext(FsConstants.LOCAL_FS_URI);
   }
 
   /**

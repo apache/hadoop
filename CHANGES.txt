@@ -27,11 +27,12 @@ Trunk (unreleased changes)
     HADOOP-7223. FileContext createFlag combinations are not clearly defined.
     (suresh)
 
-
     HADOOP-7215. RPC clients must use network interface corresponding to 
     the host in the client's kerberos principal key. (suresh)
 
->>>>>>> .r1087843
+    HADOOP-7268. FileContext.getLocalFSFileContext() behavior needs to be 
+    fixed w.r.t tokens. (jitendra)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

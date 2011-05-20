@@ -21,7 +21,9 @@ package org.apache.hadoop.fs;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Test;
 
 public class TestLocalFSFileContextMainOperations extends FileContextMainOperationsBaseTest {
 
@@ -36,5 +38,11 @@ public class TestLocalFSFileContextMainOperations extends FileContextMainOperati
     if (wd == null)
       wd = FileSystem.getLocal(new Configuration()).getWorkingDirectory();
     return wd;
+  }
+  
+  @Test
+  public void testFileContextNoCache() throws UnsupportedFileSystemException {
+    FileContext fc1 = FileContext.getLocalFSFileContext();
+    Assert.assertTrue(fc1 != fc);
   }
 }
