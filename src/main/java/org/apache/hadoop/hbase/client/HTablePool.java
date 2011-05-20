@@ -21,14 +21,13 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Map;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.PoolMap;
+import org.apache.hadoop.hbase.util.PoolMap.PoolType;
 
 /**
  * A simple pool of HTable instances.<p>
@@ -44,10 +43,10 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <p>Pool will manage its own cluster to the cluster. See {@link HConnectionManager}.
  */
 public class HTablePool implements Closeable {
-  private final Map<String, Queue<HTableInterface>> tables =
-    new ConcurrentHashMap<String, Queue<HTableInterface>>();
-  private final Configuration config;
+  private final PoolMap<String, HTableInterface> tables;
   private final int maxSize;
+  private final PoolType poolType;
+  private final Configuration config;
   private final HTableInterfaceFactory tableFactory;
 
   /**
@@ -63,16 +62,82 @@ public class HTablePool implements Closeable {
    * @param maxSize maximum number of references to keep for each table
    */
   public HTablePool(final Configuration config, final int maxSize) {
-    this(config, maxSize, null);
+    this(config, maxSize, null, null);
   }
 
+  /**
+   * Constructor to set maximum versions and use the specified configuration and
+   * table factory.
+   *
+   * @param config
+   *          configuration
+   * @param maxSize
+   *          maximum number of references to keep for each table
+   * @param tableFactory
+   *          table factory
+   */
   public HTablePool(final Configuration config, final int maxSize,
       final HTableInterfaceFactory tableFactory) {
+    this(config, maxSize, null, PoolType.Reusable);
+  }
+
+  /**
+   * Constructor to set maximum versions and use the specified configuration and
+   * pool type.
+   *
+   * @param config
+   *          configuration
+   * @param maxSize
+   *          maximum number of references to keep for each table
+   * @param tableFactory
+   *          table factory
+   * @param poolType
+   *          pool type which is one of {@link PoolType#Reusable} or
+   *          {@link PoolType#ThreadLocal}
+   */
+  public HTablePool(final Configuration config, final int maxSize,
+      final PoolType poolType) {
+    this(config, maxSize, null, poolType);
+  }
+
+  /**
+   * Constructor to set maximum versions and use the specified configuration,
+   * table factory and pool type. The HTablePool supports the
+   * {@link PoolType#Reusable} and {@link PoolType#ThreadLocal}. If the pool
+   * type is null or not one of those two values, then it will default to
+   * {@link PoolType#Reusable}.
+   *
+   * @param config
+   *          configuration
+   * @param maxSize
+   *          maximum number of references to keep for each table
+   * @param tableFactory
+   *          table factory
+   * @param poolType
+   *          pool type which is one of {@link PoolType#Reusable} or
+   *          {@link PoolType#ThreadLocal}
+   */
+  public HTablePool(final Configuration config, final int maxSize,
+      final HTableInterfaceFactory tableFactory, PoolType poolType) {
     // Make a new configuration instance so I can safely cleanup when
     // done with the pool.
     this.config = config == null? new Configuration(): config;
     this.maxSize = maxSize;
     this.tableFactory = tableFactory == null? new HTableFactory(): tableFactory;
+    if (poolType == null) {
+      this.poolType = PoolType.Reusable;
+    } else {
+      switch (poolType) {
+      case Reusable:
+      case ThreadLocal:
+        this.poolType = poolType;
+        break;
+      default:
+        this.poolType = PoolType.Reusable;
+        break;
+      }
+    }
+    this.tables = new PoolMap<String, HTableInterface>(this.poolType, this.maxSize);
   }
 
   /**
@@ -84,15 +149,9 @@ public class HTablePool implements Closeable {
    * @throws RuntimeException if there is a problem instantiating the HTable
    */
   public HTableInterface getTable(String tableName) {
-    Queue<HTableInterface> queue = tables.get(tableName);
-    if(queue == null) {
-      queue = new ConcurrentLinkedQueue<HTableInterface>();
-      tables.put(tableName, queue);
-      return createHTable(tableName);
-    }
-    HTableInterface table = queue.poll();
+    HTableInterface table = tables.get(tableName);
     if(table == null) {
-      return createHTable(tableName);
+      table = createHTable(tableName);
     }
     return table;
   }
@@ -117,13 +176,13 @@ public class HTablePool implements Closeable {
    * @param table table
    */
   public void putTable(HTableInterface table) throws IOException {
-    Queue<HTableInterface> queue = tables.get(Bytes.toString(table.getTableName()));
-    if(queue.size() >= maxSize) {
+    String tableName = Bytes.toString(table.getTableName());
+    if(tables.size(tableName) >= maxSize) {
       // release table instance since we're not reusing it
       this.tableFactory.releaseHTableInterface(table);
       return;
     }
-    queue.add(table);
+    tables.put(tableName, table);
   }
 
   protected HTableInterface createHTable(String tableName) {
@@ -140,14 +199,13 @@ public class HTablePool implements Closeable {
    * @param tableName
    */
   public void closeTablePool(final String tableName) throws IOException {
-    Queue<HTableInterface> queue = tables.get(tableName);
-    if (queue != null) {
-      HTableInterface table = queue.poll();
-      while (table != null) {
+    Collection<HTableInterface> tables = this.tables.values(tableName);
+    if (tables != null) {
+      for (HTableInterface table : tables) {
         this.tableFactory.releaseHTableInterface(table);
-        table = queue.poll();
       }
     }
+    this.tables.remove(tableName);
   }
 
   /**
@@ -171,7 +229,6 @@ public class HTablePool implements Closeable {
   }
 
   int getCurrentPoolSize(String tableName) {
-    Queue<HTableInterface> queue = tables.get(tableName);
-    return queue.size();
+    return tables.size(tableName);
   }
 }

@@ -222,6 +222,8 @@ Release 0.91.0 - Unreleased
    HBASE-1476  Multithreaded Compactions
    HBASE-3877  Determine Proper Defaults for Compaction ThreadPools
    HBASE-3880  Make mapper function in ImportTSV plug-able (Bill Graham)
+   HBASE-2938  HBASE-2938 Add Thread-Local Behavior To HTable Pool
+               (Karthick Sankarachary)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

@@ -21,13 +21,15 @@ package org.apache.hadoop.hbase.util;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -53,8 +55,7 @@ public class PoolMap<K, V> implements Map<K, V> {
 
   private int poolMaxSize;
 
-  private Map<K, Pool<V>> pools = Collections
-      .synchronizedMap(new HashMap<K, Pool<V>>());
+  private Map<K, Pool<V>> pools = new ConcurrentHashMap<K, Pool<V>>();
 
   public PoolMap(PoolType poolType, int poolMaxSize) {
     this.poolType = poolType;
@@ -101,6 +102,19 @@ public class PoolMap<K, V> implements Map<K, V> {
     }
     return values;
   }
+
+  public Collection<V> values(K key) {
+    Collection<V> values = new ArrayList<V>();
+    Pool<V> pool = pools.get(key);
+    if (pool != null) {
+      Collection<V> poolValues = pool.values();
+      if (poolValues != null) {
+        values.addAll(poolValues);
+      }
+    }
+    return values;
+  }
+
 
   @Override
   public boolean isEmpty() {
@@ -270,7 +284,7 @@ public class PoolMap<K, V> implements Map<K, V> {
    *          the type of the resource
    */
   @SuppressWarnings("serial")
-  public class ReusablePool<R> extends LinkedList<R> implements Pool<R> {
+  public class ReusablePool<R> extends ConcurrentLinkedQueue<R> implements Pool<R> {
     private int maxSize;
 
     public ReusablePool(int maxSize) {
@@ -314,7 +328,7 @@ public class PoolMap<K, V> implements Map<K, V> {
    *
    */
   @SuppressWarnings("serial")
-  class RoundRobinPool<R> extends ArrayList<R> implements Pool<R> {
+  class RoundRobinPool<R> extends CopyOnWriteArrayList<R> implements Pool<R> {
     private int maxSize;
     private int nextResource = 0;
 
