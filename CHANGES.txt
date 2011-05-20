@@ -420,6 +420,9 @@ Release 0.21.1 - Unreleased
     HADOOP-7053. wrong FSNamesystem Audit logging setting in 
     conf/log4j.properties. (Jingguo Yao via eli)
 
+    HADOOP-7162. Rmove a duplicated call FileSystem.listStatus(..) in FsShell.
+    (Alexey Diomin via szetszwo)
+
 Release 0.21.0 - 2010-08-13
 
   INCOMPATIBLE CHANGES
