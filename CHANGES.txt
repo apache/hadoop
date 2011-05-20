@@ -170,6 +170,9 @@ Trunk (unreleased changes)
     HADOOP-7306. Start metrics system even if config files are missing
     (Luke Lu via todd)
 
+    HADOOP-7302. webinterface.private.actions should be renamed and moved to
+    the MapReduce project. (Ari Rabkin via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
