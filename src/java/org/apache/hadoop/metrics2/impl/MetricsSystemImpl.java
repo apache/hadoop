@@ -154,7 +154,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
       case NORMAL:
         try { start(); }
         catch (MetricsConfigException e) {
-          // Usually because hadoop-metrics2.properties is missing
+          // Configuration errors (e.g., typos) should not be fatal.
           // We can always start the metrics system later via JMX.
           LOG.warn("Metrics system not started: "+ e.getMessage());
           LOG.debug("Stacktrace: ", e);
@@ -532,7 +532,10 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   @Override
   public synchronized boolean shutdown() {
     LOG.debug("refCount="+ refCount);
-    if (refCount <= 0) LOG.debug("Redundant shutdown", new Throwable());
+    if (refCount <= 0) {
+      LOG.debug("Redundant shutdown", new Throwable());
+      return true; // already shutdown
+    }
     if (--refCount > 0) return false;
     if (monitoring) {
       try { stop(); }

@@ -167,6 +167,9 @@ Trunk (unreleased changes)
     HADOOP-7301. FSDataInputStream should expose a getWrappedStream method.
     (Jonathan Hsieh via eli)
 
+    HADOOP-7306. Start metrics system even if config files are missing
+    (Luke Lu via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES

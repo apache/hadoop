@@ -109,18 +109,11 @@ public class TestMetricsConfig {
   }
 
   /**
-   * Should throw if missing config files
+   * Should not throw if missing config files
    */
   @Test public void testMissingFiles() {
-    try {
-      MetricsConfig.create("JobTracker", "non-existent.properties");
-    }
-    catch (MetricsConfigException e) {
-      assertTrue("expected the 'cannot locate configuration' exception",
-                 e.getMessage().startsWith("Cannot locate configuration"));
-      return;
-    }
-    fail("should've thrown");
+    MetricsConfig config = MetricsConfig.create("JobTracker", "non-existent.properties");
+    assertTrue(config.isEmpty());
   }
 
   /**
