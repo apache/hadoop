@@ -54,6 +54,6 @@ public class TestCompressionTest {
     assertFalse(CompressionTest.testCompression("LZO"));
     assertTrue(CompressionTest.testCompression("NONE"));
     assertTrue(CompressionTest.testCompression("GZ"));
-    assertTrue(CompressionTest.testCompression("SNAPPY"));
+    assertFalse(CompressionTest.testCompression("SNAPPY"));
   }
 }
