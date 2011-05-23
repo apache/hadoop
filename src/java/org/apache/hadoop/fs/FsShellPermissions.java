@@ -103,14 +103,8 @@ class FsShellPermissions {
     protected String owner = null;
     protected String group = null;
 
-    protected ChownHandler(String cmd) { //for chgrp
-      super(cmd);
-    }
-
-    ChownHandler(String cmd, String ownerStr) throws IOException {
-      super(cmd);
-      if(!cmd.equals("chown"))
-        return;
+    ChownHandler(String ownerStr) throws IOException {
+      super("chown");
       Matcher matcher = chownPattern.matcher(ownerStr);
       if (!matcher.matches()) {
         throw new IOException("'" + ownerStr + "' does not match " +
@@ -150,7 +144,8 @@ class FsShellPermissions {
 
   /*========== chgrp ==========*/    
   
-  private static class ChgrpHandler extends ChownHandler {
+  private static class ChgrpHandler extends CmdHandler {
+    protected String group = null;
     ChgrpHandler(String groupStr) throws IOException {
       super("chgrp");
 
@@ -161,6 +156,25 @@ class FsShellPermissions {
       }
       group = matcher.group(1);
     }
+    
+    @Override
+    public void run(FileStatus file, FileSystem srcFs) throws IOException {
+
+      String newGroup = (group.equals(file.getGroup())) ?
+                        null : group;
+
+      if (newGroup != null) {
+        try {
+          srcFs.setOwner(file.getPath(), null, newGroup);
+        } catch (IOException e) {
+          LOG.debug("Error changing ownership of " + file.getPath(), e);
+          System.err.println(getName() + ": changing ownership of '" + 
+                             file.getPath() + "':" + e.getMessage());
+
+        }
+      }
+    }
+    
   }
 
   static int changePermissions(String cmd, 

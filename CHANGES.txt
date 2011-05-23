@@ -73,6 +73,9 @@ Trunk (unreleased changes)
     HADOOP-7204. remove local unused fs variable from CmdHandler 
     and FsShellPermissions.changePermissions (boryas)
 
+    HADOOP-7210. Chown command is not working from FSShell
+    (Uma Maheswara Rao G via todd)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
