@@ -43,7 +43,7 @@ public class Count extends FsCommand {
   }
 
   public static final String NAME = "count";
-  public static final String USAGE = "-" + NAME + "[-q] <path>";
+  public static final String USAGE = "-" + NAME + " [-q] <path> ...";
   public static final String DESCRIPTION = CommandUtils.formatDescription(USAGE, 
       "Count the number of directories, files and bytes under the paths",
       "that match the specified file pattern.  The output columns are:",
