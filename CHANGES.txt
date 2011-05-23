@@ -720,6 +720,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7318. MD5Hash factory should reset the digester it returns.
     (todd via eli)
 
+    HADOOP-7287. Configuration deprecation mechanism doesn't work properly for
+    GenericOptionsParser and Tools. (Aaron T. Myers via todd)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
