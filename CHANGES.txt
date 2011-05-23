@@ -41,6 +41,9 @@ Trunk (unreleased changes)
     HADOOP-7236. Refactor the mkdir command to conform to new FsCommand class.
     (Daryn Sharp via szetszwo)
 
+    HADOOP-7250. Refactor the setrep command to conform to new FsCommand class.
+    (Daryn Sharp via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

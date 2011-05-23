@@ -518,7 +518,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-setrep \[-R\] \[-w\] &lt;rep&gt; &lt;path/file&gt;:( )*Set the replication level of a file.( )*</expected-output>
+          <expected-output>^-setrep \[-R\] \[-w\] &lt;rep&gt; &lt;path/file&gt; \.\.\.:( |\t)*Set the replication level of a file.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
