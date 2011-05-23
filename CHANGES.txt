@@ -435,6 +435,9 @@ Release 0.21.1 - Unreleased
     HADOOP-7193. Correct the "fs -touchz" command help message.
     (Uma Maheswara Rao G via szetszwo)
 
+    HADOOP-7174. Null is displayed in the "fs -copyToLocal" command.
+    (Uma Maheswara Rao G via szetszwo)
+
 Release 0.21.0 - 2010-08-13
 
   INCOMPATIBLE CHANGES
