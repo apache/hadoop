@@ -356,8 +356,12 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     Map<byte [], NavigableSet<byte []>> families = scan.getFamilyMap();
     if (families != null) {
       for (Map.Entry<byte [], NavigableSet<byte []>> entry : families.entrySet()) {
-        for (byte[] qualifier : entry.getValue()) {
-          model.addColumn(Bytes.add(entry.getKey(), COLUMN_DIVIDER, qualifier));
+        if (entry.getValue() != null) {
+          for (byte[] qualifier: entry.getValue()) {
+            model.addColumn(Bytes.add(entry.getKey(), COLUMN_DIVIDER, qualifier));
+          }
+        } else {
+          model.addColumn(entry.getKey());
         }
       }
     }
