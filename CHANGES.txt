@@ -27,6 +27,8 @@ Trunk (unreleased changes)
 
     HADOOP-7202. Improve shell Command base class.  (Daryn Sharp via szetszwo)
 
+    HADOOP-7224. Add CommandFactory to shell.  (Daryn Sharp via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

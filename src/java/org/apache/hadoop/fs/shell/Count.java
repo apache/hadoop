@@ -34,6 +34,14 @@ import org.apache.hadoop.fs.FsShell;
 @InterfaceStability.Evolving
 
 public class Count extends FsCommand {
+  /**
+   * Register the names for the count command
+   * @param factory the command factory that will instantiate this class
+   */
+  public static void registerCommands(CommandFactory factory) {
+    factory.addClass(Count.class, "-count");
+  }
+
   public static final String NAME = "count";
   public static final String USAGE = "-" + NAME + "[-q] <path>";
   public static final String DESCRIPTION = CommandUtils.formatDescription(USAGE, 
