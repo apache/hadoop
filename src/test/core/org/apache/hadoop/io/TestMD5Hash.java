@@ -20,6 +20,9 @@ package org.apache.hadoop.io;
 
 import org.apache.hadoop.io.TestWritable;
 import junit.framework.TestCase;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.util.Random;
 
@@ -109,7 +112,38 @@ public class TestMD5Hash extends TestCase {
     t2.start();
     t1.join();
     t2.join();
-    
   }
-	
+
+  public void testFactoryReturnsClearedHashes() throws IOException {
+    // A stream that will throw an IOE after reading some bytes
+    ByteArrayInputStream failingStream = new ByteArrayInputStream(
+        "xxxx".getBytes()) {
+      @Override
+      public synchronized int read(byte[] b) throws IOException {
+        int ret = super.read(b);
+        if (ret <= 0) {
+          throw new IOException("Injected fault");
+        }
+        return ret;
+      }
+    };
+    final String TEST_STRING = "hello";
+
+    // Calculate the correct digest for the test string
+    MD5Hash expectedHash = MD5Hash.digest(TEST_STRING);
+
+    // Hashing again should give the same result
+    assertEquals(expectedHash, MD5Hash.digest(TEST_STRING));
+
+    // Try to hash a stream which will fail halfway through
+    try {
+      MD5Hash.digest(failingStream);
+      fail("didnt throw!");
+    } catch (Exception e) {
+      // expected
+    }
+
+    // Make sure we get the same result
+    assertEquals(expectedHash, MD5Hash.digest(TEST_STRING));
+  }
 }

@@ -98,7 +98,9 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
    * Create a thread local MD5 digester
    */
   public static MessageDigest getDigester() {
-    return DIGESTER_FACTORY.get();
+    MessageDigest digester = DIGESTER_FACTORY.get();
+    digester.reset();
+    return digester;
   }
 
   /** Construct a hash value for the content from the InputStream. */

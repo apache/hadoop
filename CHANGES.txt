@@ -717,6 +717,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7305. Eclipse project classpath should include tools.jar from JDK.
     (Niels Basjes via todd)
 
+    HADOOP-7318. MD5Hash factory should reset the digester it returns.
+    (todd via eli)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
