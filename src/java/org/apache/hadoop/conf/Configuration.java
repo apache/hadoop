@@ -247,8 +247,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * and custom message(if any provided).
    */
   private static Map<String, DeprecatedKeyInfo> deprecatedKeyMap = 
-    new HashMap<String, DeprecatedKeyInfo>();
+      new HashMap<String, DeprecatedKeyInfo>();
   
+  /**
+   * Stores a mapping from superseding keys to the keys which they deprecate.
+   */
+  private static Map<String, String> reverseDeprecatedKeyMap =
+      new HashMap<String, String>();
+
   /**
    * Adds the deprecated key to the deprecation map.
    * It does not override any existing entries in the deprecation map.
@@ -269,6 +275,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       DeprecatedKeyInfo newKeyInfo;
       newKeyInfo = new DeprecatedKeyInfo(newKeys, customMessage);
       deprecatedKeyMap.put(key, newKeyInfo);
+      for (String newKey : newKeys) {
+        reverseDeprecatedKeyMap.put(newKey, key);
+      }
     }
   }
 
@@ -301,7 +310,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /**
    * Checks for the presence of the property <code>name</code> in the
    * deprecation map. Returns the first of the list of new keys if present
-   * in the deprecation map or the <code>name</code> itself.
+   * in the deprecation map or the <code>name</code> itself. If the property
+   * is not presently set but the property map contains an entry for the
+   * deprecated key, the value of the deprecated key is set as the value for
+   * the provided property name.
+   *
    * @param name the property name
    * @return the first property in the list of properties mapping
    *         the <code>name</code> or the <code>name</code> itself.
@@ -317,6 +330,17 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           name = newKey;
           break;
         }
+      }
+    }
+    String deprecatedKey = reverseDeprecatedKeyMap.get(name);
+    if (deprecatedKey != null && !getOverlay().containsKey(name) &&
+        getOverlay().containsKey(deprecatedKey)) {
+      getProps().setProperty(name, getOverlay().getProperty(deprecatedKey));
+      getOverlay().setProperty(name, getOverlay().getProperty(deprecatedKey));
+      
+      DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(deprecatedKey);
+      if (!keyInfo.accessed) {
+        LOG.warn(keyInfo.getWarningMessage(deprecatedKey));
       }
     }
     return name;

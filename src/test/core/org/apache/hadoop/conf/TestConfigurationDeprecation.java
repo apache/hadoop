@@ -42,6 +42,10 @@ public class TestConfigurationDeprecation {
   final static String CONFIG3 = 
     new File("./test-config3.xml").getAbsolutePath();
   BufferedWriter out;
+  
+  static {
+    Configuration.addDefaultResource("test-fake-default.xml");
+  }
 
   @Before
   public void setUp() throws Exception {
@@ -248,5 +252,22 @@ public class TestConfigurationDeprecation {
     assertEquals("h", conf.get("H"));
     assertNull(conf.get("I"));
     assertNull(conf.get("J"));
+  }
+
+  @Test
+  public void testSetBeforeAndGetAfterDeprecation() {
+    Configuration conf = new Configuration();
+    conf.set("oldkey", "hello");
+    Configuration.addDeprecation("oldkey", new String[]{"newkey"});
+    assertEquals("hello", conf.get("newkey"));
+  }
+  
+  @Test
+  public void testSetBeforeAndGetAfterDeprecationAndDefaults() {
+    Configuration conf = new Configuration();
+    conf.set("tests.fake-default.old-key", "hello");
+    Configuration.addDeprecation("tests.fake-default.old-key",
+        new String[]{ "tests.fake-default.new-key" });
+    assertEquals("hello", conf.get("tests.fake-default.new-key"));
   }
 }
