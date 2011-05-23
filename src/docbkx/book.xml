@@ -1404,7 +1404,7 @@ false
     SNAPPY
     </title>
     <para>
-        To set snappy compression on a column family, do as following:
+        To set SNAPPY compression on a column family, do as following:
         <orderedlist>
             <listitem>
                 <para>
@@ -1427,9 +1427,9 @@ false
             <listitem>
                 <para>
         Create a column family with snappy compression and verify it in the hbase shell:
-        <programlisting>$ hbase> create 't1', { NAME => 'cf1', COMPRESSION => 'snappy' }
+        <programlisting>$ hbase> create 't1', { NAME => 'cf1', COMPRESSION => 'SNAPPY' }
 hbase> describe 't1'</programlisting>
-        In the output of the "describe" command, you need to ensure it lists "COMPRESSION => 'snappy'"
+        In the output of the "describe" command, you need to ensure it lists "COMPRESSION => 'SNAPPY'"
                 </para>
             </listitem>
 
