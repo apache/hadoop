@@ -22,6 +22,9 @@ Trunk (unreleased changes)
 
     HADOOP-7175. Add isEnabled() to Trash.  (Daryn Sharp via szetszwo)
 
+    HADOOP-7180. Better support on CommandFormat on the API and exceptions.
+    (Daryn Sharp via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
