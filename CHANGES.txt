@@ -32,6 +32,9 @@ Trunk (unreleased changes)
     HADOOP-7230. Move "fs -help" shell command tests from HDFS to COMMOM; see
     also HDFS-1844.  (Daryn Sharp via szetszwo)
 
+    HADOOP-7233. Refactor ls to conform to new FsCommand class.  (Daryn Sharp
+    via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

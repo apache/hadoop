@@ -79,6 +79,14 @@ abstract public class Command extends Configured {
     name = cmdName;
   }
   
+  protected void setRecursive(boolean flag) {
+    recursive = flag;
+  }
+  
+  protected boolean isRecursive() {
+    return recursive;
+  }
+
   /** 
    * Execute the command on the input path
    * 
@@ -138,7 +146,8 @@ abstract public class Command extends Configured {
       displayError(e);
     }
     
-    return (numErrors == 0) ? exitCode : 1;
+    // TODO: -1 should be reserved for syntax error, 1 should be failure
+    return (numErrors == 0) ? exitCode : -1;
   }
 
   /**
@@ -244,7 +253,18 @@ abstract public class Command extends Configured {
   protected void processNonexistentPathArgument(PathData item)
   throws IOException {
     // TODO: this should be more posix-like: ex. "No such file or directory"
-    throw new FileNotFoundException("Can not find listing for " + item);
+    throw new FileNotFoundException(getFnfText(item.path));
+  }
+
+  /**
+   *  TODO: A crutch until the text is standardized across commands...
+   *  Eventually an exception that takes the path as an argument will
+   *  replace custom text
+   *  @param path the thing that doesn't exist
+   *  @returns String in printf format
+   */
+  protected String getFnfText(Path path) {
+    throw new RuntimeException(path + ": No such file or directory");
   }
 
   /**
@@ -309,7 +329,7 @@ abstract public class Command extends Configured {
     
     if (stats != null && stats.length == 0) { // glob failed to match
       // TODO: this should be more posix-like: ex. "No such file or directory"
-      throw new FileNotFoundException("Can not find listing for " + pattern);
+      throw new FileNotFoundException(getFnfText(path));
     }
     
     List<PathData> items = new LinkedList<PathData>();
@@ -371,7 +391,9 @@ abstract public class Command extends Configured {
    * @return "name options"
    */
   public String getUsage() {
-    return getCommandField("USAGE");
+    String cmd = "-" + getCommandName();
+    String usage = getCommandField("USAGE");
+    return usage.isEmpty() ? cmd : cmd + " " + usage; 
   }
 
   /**
