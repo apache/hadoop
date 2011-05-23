@@ -503,7 +503,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-mkdir &lt;path&gt;:( |\t)*Create a directory in specified location.( )*</expected-output>
+          <expected-output>^-mkdir &lt;path&gt; \.\.\.:( |\t)*Create a directory in specified location.( )*</expected-output>
         </comparator>
       </comparators>
     </test>

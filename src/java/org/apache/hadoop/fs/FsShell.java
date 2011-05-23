@@ -732,30 +732,6 @@ public class FsShell extends Configured implements Tool {
   }
 
   /**
-   * Create the given dir
-   */
-  void mkdir(String src) throws IOException {
-    Path f = new Path(src);
-    FileSystem srcFs = f.getFileSystem(getConf());
-    FileStatus fstatus = null;
-    try {
-      fstatus = srcFs.getFileStatus(f);
-      if (fstatus.isDirectory()) {
-        throw new IOException("cannot create directory " 
-            + src + ": File exists");
-      }
-      else {
-        throw new IOException(src + " exists but " +
-            "is not a directory");
-      }
-    } catch(FileNotFoundException e) {
-        if (!srcFs.mkdirs(f)) {
-          throw new IOException("failed to create " + src);
-        }
-    }
-  }
-
-  /**
    * (Re)create zero-length file at the specified path.
    * This will be replaced by a more UNIX-like touch when files may be
    * modified.
@@ -1261,7 +1237,7 @@ public class FsShell extends Configured implements Tool {
       GET_SHORT_USAGE + "\n\t" +
       "[-getmerge <src> <localdst> [addnl]] [-cat <src>]\n\t" +
       "[" + COPYTOLOCAL_SHORT_USAGE + "] [-moveToLocal <src> <localdst>]\n\t" +
-      "[-mkdir <path>] [-report] [" + SETREP_SHORT_USAGE + "]\n\t" +
+      "[-report] [" + SETREP_SHORT_USAGE + "]\n\t" +
       "[-touchz <path>] [-test -[ezd] <path>] [-stat [format] <path>]\n\t" +
       "[-text <path>]\n\t" +
       "[" + FsShellPermissions.CHMOD_USAGE + "]\n\t" +
@@ -1351,8 +1327,6 @@ public class FsShell extends Configured implements Tool {
 
     String moveToLocal = "-moveToLocal <src> <localdst>:  Not implemented yet \n";
         
-    String mkdir = "-mkdir <path>: \tCreate a directory in specified location. \n";
-
     String setrep = SETREP_SHORT_USAGE
       + ":  Set the replication level of a file. \n"
       + "\t\tThe -R flag requests a recursive change of replication level \n"
@@ -1427,8 +1401,6 @@ public class FsShell extends Configured implements Tool {
       System.out.println(expunge);
     } else if ("rmr".equals(cmd)) {
       System.out.println(rmr);
-    } else if ("mkdir".equals(cmd)) {
-      System.out.println(mkdir);
     } else if ("mv".equals(cmd)) {
       System.out.println(mv);
     } else if ("cp".equals(cmd)) {
@@ -1493,7 +1465,6 @@ public class FsShell extends Configured implements Tool {
       System.out.println(cat);
       System.out.println(copyToLocal);
       System.out.println(moveToLocal);
-      System.out.println(mkdir);
       System.out.println(setrep);
       System.out.println(touchz);
       System.out.println(test);
@@ -1553,8 +1524,6 @@ public class FsShell extends Configured implements Tool {
         //
         if ("-cat".equals(cmd)) {
           cat(argv[i], true);
-        } else if ("-mkdir".equals(cmd)) {
-          mkdir(argv[i]);
         } else if ("-rm".equals(cmd)) {
           delete(argv[i], false, rmSkipTrash);
         } else if ("-rmr".equals(cmd)) {
@@ -1617,7 +1586,7 @@ public class FsShell extends Configured implements Tool {
       System.err.println("Usage: java FsShell" + 
                          " [-D <[property=value>]");
     } else if ("-du".equals(cmd) || "-dus".equals(cmd) ||
-               "-touchz".equals(cmd) || "-mkdir".equals(cmd) ||
+               "-touchz".equals(cmd) ||
                "-text".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
                          " [" + cmd + " <path>]");
@@ -1671,7 +1640,6 @@ public class FsShell extends Configured implements Tool {
       System.err.println("           [-text <src>]");
       System.err.println("           [" + COPYTOLOCAL_SHORT_USAGE + "]");
       System.err.println("           [-moveToLocal [-crc] <src> <localdst>]");
-      System.err.println("           [-mkdir <path>]");
       System.err.println("           [" + SETREP_SHORT_USAGE + "]");
       System.err.println("           [-touchz <path>]");
       System.err.println("           [-test -[ezd] <path>]");
@@ -1728,7 +1696,7 @@ public class FsShell extends Configured implements Tool {
         return exitCode;
       }
     } else if ("-rm".equals(cmd) || "-rmr".equals(cmd) ||
-               "-cat".equals(cmd) || "-mkdir".equals(cmd) ||
+               "-cat".equals(cmd) ||
                "-touchz".equals(cmd) || "-stat".equals(cmd) ||
                "-text".equals(cmd)) {
       if (argv.length < 2) {
@@ -1812,8 +1780,6 @@ public class FsShell extends Configured implements Tool {
         du(argv, i);
       } else if ("-dus".equals(cmd)) {
         dus(argv, i);
-      } else if ("-mkdir".equals(cmd)) {
-        exitCode = doall(cmd, argv, i);
       } else if ("-touchz".equals(cmd)) {
         exitCode = doall(cmd, argv, i);
       } else if ("-test".equals(cmd)) {

@@ -31,8 +31,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
 
@@ -104,8 +102,8 @@ abstract public class Command extends Configured {
     int exitCode = 0;
     for (String src : args) {
       try {
-        List<PathData> srcs = expandGlob(src);
-        for(PathData s : srcs) {
+        PathData[] srcs = PathData.expandAsGlob(src, getConf());
+        for (PathData s : srcs) {
           run(s.path);
         }
       } catch (IOException e) {
@@ -128,7 +126,7 @@ abstract public class Command extends Configured {
    *         \-> {@link #processPathArgument(PathData)}
    *             \-> {@link #processPaths(PathData, PathData...)}
    *                 \-> {@link #processPath(PathData)}*
-   *         \-> {@link #processNonexistentPathArgument(PathData)}
+   *         \-> {@link #processNonexistentPath(PathData)}
    * </pre>
    * Most commands will chose to implement just
    * {@link #processOptions(LinkedList)} and {@link #processPath(PathData)}
@@ -191,7 +189,12 @@ abstract public class Command extends Configured {
    * @throws IOException if anything goes wrong...
    */
   protected List<PathData> expandArgument(String arg) throws IOException {
-    return expandGlob(arg);
+    PathData[] items = PathData.expandAsGlob(arg, getConf());
+    if (items.length == 0) {
+      // it's a glob that failed to match
+      throw new FileNotFoundException(getFnfText(new Path(arg)));
+    }
+    return Arrays.asList(items);
   }
 
   /**
@@ -216,7 +219,7 @@ abstract public class Command extends Configured {
   /**
    * Processes a {@link PathData} item, calling
    * {@link #processPathArgument(PathData)} or
-   * {@link #processNonexistentPathArgument(PathData)} on each item.
+   * {@link #processNonexistentPath(PathData)} on each item.
    * @param arg {@link PathData} item to process
    * @throws IOException if anything goes wrong...
    */
@@ -224,7 +227,7 @@ abstract public class Command extends Configured {
     if (item.exists) {
       processPathArgument(item);
     } else {
-      processNonexistentPathArgument(item);
+      processNonexistentPath(item);
     }
   }
 
@@ -250,8 +253,7 @@ abstract public class Command extends Configured {
    *  @throws FileNotFoundException if arg is a path and it doesn't exist
    *  @throws IOException if anything else goes wrong... 
    */
-  protected void processNonexistentPathArgument(PathData item)
-  throws IOException {
+  protected void processNonexistentPath(PathData item) throws IOException {
     // TODO: this should be more posix-like: ex. "No such file or directory"
     throw new FileNotFoundException(getFnfText(item.path));
   }
@@ -311,38 +313,6 @@ abstract public class Command extends Configured {
    */
   protected void recursePath(PathData item) throws IOException {
     processPaths(item, item.getDirectoryContents());
-  }
- 
-  /**
-   * Expand the given path as a glob pattern.  Non-existent paths do not 
-   * throw an exception because creation commands like touch and mkdir need
-   * to create them.  The "stat" field will be null if the path does not
-   * exist.
-   * @param pattern the glob to expand
-   * @return list of {@link PathData} objects
-   * @throws FileNotFoundException the path is a glob with no matches
-   * @throws IOException anything else goes wrong...
-   */
-  protected List<PathData> expandGlob(String pattern) throws IOException {
-    Path path = new Path(pattern);
-    FileSystem fs = path.getFileSystem(getConf());
-    FileStatus[] stats = fs.globStatus(path);
-    
-    if (stats != null && stats.length == 0) { // glob failed to match
-      // TODO: this should be more posix-like: ex. "No such file or directory"
-      throw new FileNotFoundException(getFnfText(path));
-    }
-    
-    List<PathData> items = new LinkedList<PathData>();
-    if (stats == null) { // not a glob & file not found, so null stat block
-      items.add(new PathData(fs, path, null));
-    } else {
-      // convert all the stats to PathData objs
-      for (FileStatus stat : stats) {
-        items.add(new PathData(fs, stat));
-      }
-    }
-    return items;
   }
 
   /**

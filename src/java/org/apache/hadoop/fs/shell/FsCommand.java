@@ -44,6 +44,7 @@ abstract public class FsCommand extends Command {
   public static void registerCommands(CommandFactory factory) {
     factory.registerCommands(Count.class);
     factory.registerCommands(Ls.class);
+    factory.registerCommands(Mkdir.class);
     factory.registerCommands(Tail.class);
   }
 
