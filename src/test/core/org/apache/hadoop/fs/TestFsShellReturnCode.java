@@ -271,6 +271,54 @@ public class TestFsShellReturnCode {
     }
   }
   
+  @Test
+  public void testInvalidDefautlFS() throws Exception {
+    // if default fs doesn't exist or is invalid, but the path provided in 
+    // arguments is valid - fsshell should work
+    FsShell shell = new FsShell();
+    Configuration conf = new Configuration();
+    FsConfig.setDefaultFS(conf, "hhhh://doesnotexist/");
+    shell.setConf(conf);
+    String [] args = new String[2];
+    args[0] = "-ls";
+    args[1] = "file:///"; // this is valid, so command should run
+    int res = shell.run(args);
+    System.out.println("res =" + res);
+    shell.setConf(conf);
+    final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    final PrintStream out = new PrintStream(bytes);
+    final PrintStream oldErr = System.err;
+    System.setErr(out);
+    final String results;
+    try {
+      int run = shell.run(args);
+      results = bytes.toString();
+      LOG.info("result=" + results);
+      assertTrue("Return code should be 0", run == 0);
+    } finally {
+      IOUtils.closeStream(out);
+      System.setErr(oldErr);
+    }
+    
+  }
   
-  
+  static class LocalFileSystemExtn extends RawLocalFileSystem {
+
+    private String username;
+    private String groupname;
+
+    @Override
+    public void setOwner(Path p, String username, String groupname)
+        throws IOException {
+      this.username = username;
+      this.groupname = groupname;
+
+    }
+
+    @Override
+    public FileStatus getFileStatus(Path f) throws IOException {
+      return new FileStatus();
+    }
+  }
+ 
 }

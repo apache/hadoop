@@ -48,6 +48,8 @@ Trunk (unreleased changes)
     HADOOP-7216. Add FsCommand.runAll() with deprecated annotation for the
     transition of Command base class improvement.  (Daryn Sharp via szetszwo)
 
+    HADOOP-7207. fs member of FSShell is not really needed (boryas)
+
     HADOOP-7231. Fix synopsis for -count. (Daryn Sharp via eli).
 
 Release 0.22.0 - Unreleased
