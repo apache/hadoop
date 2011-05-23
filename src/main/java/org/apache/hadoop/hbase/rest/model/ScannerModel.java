@@ -26,6 +26,8 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.NavigableSet;
 
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
@@ -341,6 +343,8 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     return writer.toString();
   }
 
+  private static final byte[] COLUMN_DIVIDER = Bytes.toBytes(":");
+
   /**
    * @param scan the scan specification
    * @throws Exception 
@@ -349,10 +353,12 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     ScannerModel model = new ScannerModel();
     model.setStartRow(scan.getStartRow());
     model.setEndRow(scan.getStopRow());
-    byte[][] families = scan.getFamilies();
+    Map<byte [], NavigableSet<byte []>> families = scan.getFamilyMap();
     if (families != null) {
-      for (byte[] column: families) {
-        model.addColumn(column);
+      for (Map.Entry<byte [], NavigableSet<byte []>> entry : families.entrySet()) {
+        for (byte[] qualifier : entry.getValue()) {
+          model.addColumn(Bytes.add(entry.getKey(), COLUMN_DIVIDER, qualifier));
+        }
       }
     }
     model.setStartTime(scan.getTimeRange().getMin());
