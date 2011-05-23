@@ -23,7 +23,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.TimeZone;
 import java.util.zip.GZIPInputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -42,9 +47,9 @@ import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.util.StringUtils;
 
 /** Provide command line access to a FileSystem. */
 @InterfaceAudience.Private
@@ -366,7 +371,7 @@ public class FsShell extends Configured implements Tool {
 
   private class TextRecordInputStream extends InputStream {
     SequenceFile.Reader r;
-    WritableComparable key;
+    WritableComparable<?> key;
     Writable val;
 
     DataInputBuffer inbuf;
@@ -1678,8 +1683,6 @@ public class FsShell extends Configured implements Tool {
           delete(argv[i], true, rmSkipTrash);
         } else if ("-df".equals(cmd)) {
           df(argv[i]);
-        } else if (Count.matches(cmd)) {
-          new Count(argv, i, getConf()).runAll();
         } else if ("-ls".equals(cmd)) {
           exitCode = ls(argv[i], false);
         } else if ("-lsr".equals(cmd)) {
@@ -1744,7 +1747,7 @@ public class FsShell extends Configured implements Tool {
     } else if ("-df".equals(cmd) ) {
       System.err.println("Usage: java FsShell" +
                          " [" + cmd + " [<path>]]");
-    } else if (Count.matches(cmd)) {
+    } else if ("-count".equals(cmd)) {
       System.err.println(prefix + " [" + Count.USAGE + "]");
     } else if ("-rm".equals(cmd) || "-rmr".equals(cmd)) {
       System.err.println("Usage: java FsShell [" + cmd + 
@@ -1931,8 +1934,14 @@ public class FsShell extends Configured implements Tool {
         du(argv, i);
       } else if ("-dus".equals(cmd)) {
         dus(argv, i);
-      } else if (Count.matches(cmd)) {
-        exitCode = new Count(argv, i, getConf()).runAll();
+      } else if ("-count".equals(cmd)) {
+        // TODO: next two lines are a temporary crutch until this entire
+        // block is overhauled
+        LinkedList<String> args = new LinkedList<String>(Arrays.asList(argv));
+        String cmdName = args.removeFirst();
+        Count runner = ReflectionUtils.newInstance(Count.class, getConf());
+        runner.setCommandName(cmdName); // TODO: will change with factory
+        exitCode = runner.run(args);
       } else if ("-mkdir".equals(cmd)) {
         exitCode = doall(cmd, argv, i);
       } else if ("-touchz".equals(cmd)) {
