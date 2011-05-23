@@ -21,6 +21,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -124,11 +125,12 @@ abstract public class Command extends Configured {
    * Most commands will chose to implement just
    * {@link #processOptions(LinkedList)} and {@link #processPath(PathData)}
    * 
-   * @param args the list of command line arguments
+   * @param argv the list of command line arguments
    * @return the exit code for the command
    * @throws IllegalArgumentException if called with invalid arguments
    */
-  public int run(LinkedList<String> args) {
+  public int run(String...argv) {
+    LinkedList<String> args = new LinkedList<String>(Arrays.asList(argv));
     try {
       processOptions(args);
       processArguments(expandArguments(args));

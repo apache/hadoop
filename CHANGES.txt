@@ -40,6 +40,9 @@ Trunk (unreleased changes)
     HADOOP-7268. FileContext.getLocalFSFileContext() behavior needs to be 
     fixed w.r.t tokens. (jitendra)
 
+    HADOOP-7216. Add FsCommand.runAll() with deprecated annotation for the
+    transition of Command base class improvement.  (Daryn Sharp via szetszwo)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
