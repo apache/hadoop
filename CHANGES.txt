@@ -277,6 +277,7 @@ Release 0.90.4 - Unreleased
                cause data-loss (Jieshan Bean)
    HBASE-3905  HBaseAdmin.createTableAsync() should check for invalid split
                keys (Ted Yu)
+   HBASE-3908  TableSplit not implementing "hashCode" problem (Daniel Iancu)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the

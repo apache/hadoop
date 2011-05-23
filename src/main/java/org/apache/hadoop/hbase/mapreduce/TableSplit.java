@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -183,4 +184,13 @@ implements Writable, Comparable<TableSplit> {
       Bytes.equals(endRow, ((TableSplit)o).endRow) &&
       regionLocation.equals(((TableSplit)o).regionLocation);
   }
+
+    @Override
+    public int hashCode() {
+        int result = tableName != null ? Arrays.hashCode(tableName) : 0;
+        result = 31 * result + (startRow != null ? Arrays.hashCode(startRow) : 0);
+        result = 31 * result + (endRow != null ? Arrays.hashCode(endRow) : 0);
+        result = 31 * result + (regionLocation != null ? regionLocation.hashCode() : 0);
+        return result;
+    }
 }
