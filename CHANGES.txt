@@ -70,6 +70,9 @@ Trunk (unreleased changes)
     HADOOP-6920, HADOOP-7292, HADOOP-7306. Porting bugfixes portion of the 
     three patches to yahoo-merge branch.
 
+    HADOOP-7204. remove local unused fs variable from CmdHandler 
+    and FsShellPermissions.changePermissions (boryas)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
