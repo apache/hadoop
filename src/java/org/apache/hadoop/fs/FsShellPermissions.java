@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FsShell.CmdHandler;
@@ -35,6 +36,8 @@ import org.apache.hadoop.fs.permission.ChmodParser;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 class FsShellPermissions {
+
+  static Log LOG = FsShell.LOG;
   
   /*========== chmod ==========*/
 
@@ -75,6 +78,7 @@ class FsShellPermissions {
           srcFs.setPermission(file.getPath(), 
                                 new FsPermission((short)newperms));
         } catch (IOException e) {
+          LOG.debug("Error changing permissions of " + file.getPath(), e);
           System.err.println(getName() + ": changing permissions of '" + 
                              file.getPath() + "':" + e.getMessage());
         }
@@ -133,6 +137,7 @@ class FsShellPermissions {
         try {
           srcFs.setOwner(file.getPath(), newOwner, newGroup);
         } catch (IOException e) {
+          LOG.debug("Error changing ownership of " + file.getPath(), e);
           System.err.println(getName() + ": changing ownership of '" + 
                              file.getPath() + "':" + e.getMessage());
 

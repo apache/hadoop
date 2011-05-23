@@ -44,6 +44,9 @@ Trunk (unreleased changes)
     HADOOP-7250. Refactor the setrep command to conform to new FsCommand class.
     (Daryn Sharp via szetszwo)
 
+    HADOOP-7114. FsShell should dump all exceptions at DEBUG level.
+    (todd via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
