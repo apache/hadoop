@@ -114,6 +114,17 @@ public class GangliaContext extends AbstractMetricsContext {
     }
   }
 
+    /**
+   * method to close the datagram socket
+   */
+  @Override
+  public void close() {
+    super.close();
+    if (datagramSocket != null) {
+      datagramSocket.close();
+    }
+  }
+  
   @InterfaceAudience.Private
   public void emitRecord(String contextName, String recordName,
     OutputRecord outRec) 
