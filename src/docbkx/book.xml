@@ -226,6 +226,19 @@ throws InterruptedException, IOException {
   inserted a lot of data).
   </para>
   </section>
+  <section xml:id="supported.datatypes">
+  <title>
+  Supported Datatypes
+  </title>
+  <para>HBase supports a "bytes-in/bytes-out" interface via <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html">Put</link> and
+  <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Result.html">Result</link>, so anything that can be
+  converted to an array of bytes can be stored as a value.  Input could be strings, numbers, complex objects, or even images as long as they can rendered as bytes.  
+  </para>
+  <para>There are practical limits to the size of values (e.g., storing 10-50MB objects in HBase would probably be too much to ask);
+  search the mailling list for conversations on this topic. All rows in HBase conform to the <xref linkend="datamodel">datamodel</xref>, and 
+  that includes versioning.  Take that into consideration when making your design, as well as block size for the ColumnFamily.  
+  </para>
+  </section>
 
   </chapter>
 
@@ -1548,6 +1561,16 @@ When I build, why do I always get <code>Unable to find resource 'VM_global_libra
                 <para>
                 For a useful introduction to the issues involved maintaining a secondary Index in a store like HBase,
                 see the David Butler message in this thread, <link xlink:href="http://search-hadoop.com/m/nvbiBp2TDP/Stargate%252Bhbase&amp;subj=Stargate+hbase">HBase, mail # user - Stargate+hbase</link>
+                </para>
+            </answer>
+        </qandaentry>
+        <qandaentry>
+            <question><para>
+                    Store (fill in the blank) in HBase?
+            </para></question>
+            <answer>
+                <para>
+                See <xref linkend="supported.datatypes" />.
                 </para>
             </answer>
         </qandaentry>
