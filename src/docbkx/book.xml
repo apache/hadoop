@@ -753,8 +753,12 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
                is filled.  The writebuffer is 2MB by default.  Before an HTable instance is
                discarded, either <methodname>close()</methodname> or
                <methodname>flushCommits()</methodname> should be invoked so Puts
-               will not be lost. 
-	   </para> 
+               will not be lost.   
+	      </para> 
+	      <para>Note: <code>htable.delete(Delete);</code> does not go in the writebuffer!  This only applies to Puts.   
+	      </para>
+	      <para>For additional information on write durability, review the <link xlink:href="acid-semantics.html">ACID semantics</link> page.
+	      </para>
        <para>For fine-grained control of batching of
            <classname>Put</classname>s or <classname>Delete</classname>s,
            see the <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#batch%28java.util.List%29">batch</link> methods on HTable.

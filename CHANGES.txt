@@ -110,6 +110,8 @@ Release 0.91.0 - Unreleased
    HBASE-3826  Minor compaction needs to check if still over
                compactionThreshold after compacting (Nicolas Spiegelberg)  
    HBASE-3912  [Stargate] Columns not handle by Scan
+   HBASE-3903  A successful write to client write-buffer may be lost or not
+               visible (Doug Meil)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
