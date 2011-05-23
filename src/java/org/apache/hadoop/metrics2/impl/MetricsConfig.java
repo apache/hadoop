@@ -50,7 +50,6 @@ import org.apache.hadoop.metrics2.filter.GlobFilter;
  * Metrics configuration for MetricsSystemImpl
  */
 class MetricsConfig extends SubsetConfiguration {
-
   static final Log LOG = LogFactory.getLog(MetricsConfig.class);
 
   static final String DEFAULT_FILE_NAME = "hadoop-metrics2.properties";
@@ -123,8 +122,10 @@ class MetricsConfig extends SubsetConfiguration {
         throw new MetricsConfigException(e);
       }
     }
-    throw new MetricsConfigException("Cannot locate configuration: tried "+
-                                     Joiner.on(",").join(fileNames));
+    LOG.warn("Cannot locate configuration: tried "+
+             Joiner.on(",").join(fileNames));
+    // default to an empty configuration
+    return new MetricsConfig(new PropertiesConfiguration(), prefix);
   }
 
   @Override
@@ -159,6 +160,7 @@ class MetricsConfig extends SubsetConfiguration {
   Iterable<String> keys() {
     return new Iterable<String>() {
       @SuppressWarnings("unchecked")
+      @Override
       public Iterator<String> iterator() {
         return (Iterator<String>) getKeys();
       }

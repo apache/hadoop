@@ -32,7 +32,6 @@ import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public enum DefaultMetricsSystem {
-
   INSTANCE; // the singleton
 
   private MetricsSystem impl = new MetricsSystemImpl();
@@ -103,8 +102,8 @@ public enum DefaultMetricsSystem {
   }
 
   @InterfaceAudience.Private
-  public static String sourceName(String name) {
-    return INSTANCE.newSourceName(name);
+  public static String sourceName(String name, boolean dupOK) {
+    return INSTANCE.newSourceName(name, dupOK);
   }
 
   synchronized ObjectName newObjectName(String name) {
@@ -118,9 +117,13 @@ public enum DefaultMetricsSystem {
     }
   }
 
-  synchronized String newSourceName(String name) {
-    if (sourceNames.map.containsKey(name) && !miniClusterMode) {
-      throw new MetricsException(name +" already exists!");
+  synchronized String newSourceName(String name, boolean dupOK) {
+    if (sourceNames.map.containsKey(name)) {
+      if (dupOK) {
+        return name;
+      } else if (!miniClusterMode) {
+        throw new MetricsException("Metrics source "+ name +" already exists!");
+      }
     }
     return sourceNames.uniqueName(name);
   }

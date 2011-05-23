@@ -34,9 +34,12 @@ import com.google.common.collect.Iterables;
 import org.apache.commons.configuration.SubsetConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.metrics2.MetricsException;
 import static org.apache.hadoop.test.MoreAsserts.*;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsSink;
+import org.apache.hadoop.metrics2.MetricsSource;
+import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.annotation.*;
 import static org.apache.hadoop.metrics2.lib.Interns.*;
@@ -100,6 +103,28 @@ public class TestMetricsSystemImpl {
     checkMetricsRecords(mr1);
     assertEquals("output", mr1, mr2);
   }
+
+  @Test public void testRegisterDups() {
+    MetricsSystem ms = new MetricsSystemImpl();
+    TestSource ts1 = new TestSource("ts1");
+    TestSource ts2 = new TestSource("ts2");
+    ms.register("ts1", "", ts1);
+    MetricsSource s1 = ms.getSource("ts1");
+    assertNotNull(s1);
+    // should work when metrics system is not started
+    ms.register("ts1", "", ts2);
+    MetricsSource s2 = ms.getSource("ts1");
+    assertNotNull(s2);
+    assertNotSame(s1, s2);
+  }
+
+  @Test(expected=MetricsException.class) public void testRegisterDupError() {
+    MetricsSystem ms = new MetricsSystemImpl("test");
+    TestSource ts = new TestSource("ts");
+    ms.register(ts);
+    ms.register(ts);
+  }
+
 
   private void checkMetricsRecords(List<MetricsRecord> recs) {
     LOG.debug(recs);

@@ -154,7 +154,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
       case NORMAL:
         try { start(); }
         catch (MetricsConfigException e) {
-          // Usually because hadoop-metrics2.properties is missing
+          // Configuration errors (e.g., typos) should not be fatal.
           // We can always start the metrics system later via JMX.
           LOG.warn("Metrics system not started: "+ e.getMessage());
           LOG.debug("Stacktrace: ", e);
@@ -213,8 +213,8 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     MetricsInfo si = sb.info();
     String name2 = name == null ? si.name() : name;
     final String finalDesc = desc == null ? si.description() : desc;
-    final String finalName = DefaultMetricsSystem.sourceName(name2);
-    checkArgument(!allSources.containsKey(finalName));
+    final String finalName = // be friendly to non-metrics tests
+        DefaultMetricsSystem.sourceName(name2, !monitoring);
     allSources.put(finalName, s);
     LOG.debug(finalName +", "+ finalDesc);
     if (monitoring) {
@@ -281,6 +281,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     callbacks.add((Callback) Proxy.newProxyInstance(
         callback.getClass().getClassLoader(), new Class<?>[] { Callback.class },
         new InvocationHandler() {
+          @Override
           public Object invoke(Object proxy, Method method, Object[] args)
               throws Throwable {
             try {
@@ -531,7 +532,10 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   @Override
   public synchronized boolean shutdown() {
     LOG.debug("refCount="+ refCount);
-    if (refCount <= 0) LOG.debug("Redundant shutdown", new Throwable());
+    if (refCount <= 0) {
+      LOG.debug("Redundant shutdown", new Throwable());
+      return true; // already shutdown
+    }
     if (--refCount > 0) return false;
     if (monitoring) {
       try { stop(); }
