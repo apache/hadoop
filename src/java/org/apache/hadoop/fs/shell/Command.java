@@ -259,12 +259,13 @@ abstract public class Command extends Configured {
   /**
    *  TODO: A crutch until the text is standardized across commands...
    *  Eventually an exception that takes the path as an argument will
-   *  replace custom text
+   *  replace custom text, until then, commands can supply custom text
+   *  for backwards compatibility
    *  @param path the thing that doesn't exist
    *  @returns String in printf format
    */
   protected String getFnfText(Path path) {
-    throw new RuntimeException(path + ": No such file or directory");
+    return path + ": No such file or directory";
   }
 
   /**
