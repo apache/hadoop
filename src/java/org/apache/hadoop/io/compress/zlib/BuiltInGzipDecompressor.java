@@ -24,12 +24,14 @@ import java.util.zip.Inflater;
 
 import org.apache.hadoop.util.PureJavaCrc32;
 import org.apache.hadoop.io.compress.Decompressor;
+import org.apache.hadoop.io.compress.DoNotPool;
 
 /**
  * A {@link Decompressor} based on the popular gzip compressed file format.
  * http://www.gzip.org/
  *
  */
+@DoNotPool
 public class BuiltInGzipDecompressor implements Decompressor {
   private static final int GZIP_MAGIC_ID = 0x8b1f;  // if read as LE short int
   private static final int GZIP_DEFLATE_METHOD = 8;

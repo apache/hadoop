@@ -2388,6 +2388,12 @@ Release 0.20.3 - Unreleased
 
     HADOOP-7072. Remove java5 dependencies from build. (cos)
 
+Release 0.20.203.0 - 2011-5-11
+
+  BUG FIXES
+
+    HADOOP-7258. The Gzip codec should not return null decompressors. (omalley)
+
 Release 0.20.2 - 2010-2-16
 
   NEW FEATURES
