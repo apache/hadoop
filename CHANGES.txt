@@ -62,6 +62,9 @@ Trunk (unreleased changes)
     HADOOP-7271. Standardize shell command error messages.  (Daryn Sharp
     via szetszwo)
 
+    HADOOP-7275. Refactor the stat commands to conform to new FsCommand
+    class.  (Daryn Sharp via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -50,6 +50,7 @@ abstract public class FsCommand extends Command {
     factory.registerCommands(Ls.class);
     factory.registerCommands(Mkdir.class);
     factory.registerCommands(SetReplication.class);
+    factory.registerCommands(Stat.class);
     factory.registerCommands(Tail.class);
   }
 

@@ -25,9 +25,7 @@ import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
-import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -61,12 +59,8 @@ public class FsShell extends Configured implements Tool {
 
   public static final SimpleDateFormat dateForm = 
     new SimpleDateFormat("yyyy-MM-dd HH:mm");
-  protected static final SimpleDateFormat modifFmt =
-    new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
   static final int BORDER = 2;
-  static {
-    modifFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
-  }
+
   static final String GET_SHORT_USAGE = "-get [-ignoreCrc] [-crc] <src> <localdst>";
   static final String COPYTOLOCAL_SHORT_USAGE = GET_SHORT_USAGE.replace(
       "-get", "-copyToLocal");
@@ -485,62 +479,6 @@ public class FsShell extends Configured implements Tool {
   }
 
   /**
-   * Print statistics about path in specified format.
-   * Format sequences:
-   *   %b: Size of file in blocks
-   *   %n: Filename
-   *   %o: Block size
-   *   %r: replication
-   *   %y: UTC date as &quot;yyyy-MM-dd HH:mm:ss&quot;
-   *   %Y: Milliseconds since January 1, 1970 UTC
-   */
-  void stat(char[] fmt, String src) throws IOException {
-    Path srcPath = new Path(src);
-    FileSystem srcFs = srcPath.getFileSystem(getConf());
-    FileStatus glob[] = srcFs.globStatus(srcPath);
-    if (null == glob)
-      throw new PathNotFoundException(src);
-    for (FileStatus f : glob) {
-      StringBuilder buf = new StringBuilder();
-      for (int i = 0; i < fmt.length; ++i) {
-        if (fmt[i] != '%') {
-          buf.append(fmt[i]);
-        } else {
-          if (i + 1 == fmt.length) break;
-          switch(fmt[++i]) {
-            case 'b':
-              buf.append(f.getLen());
-              break;
-            case 'F':
-              buf.append(f.isDirectory() ? "directory" 
-                                         : (f.isFile() ? "regular file" : "symlink"));
-              break;
-            case 'n':
-              buf.append(f.getPath().getName());
-              break;
-            case 'o':
-              buf.append(f.getBlockSize());
-              break;
-            case 'r':
-              buf.append(f.getReplication());
-              break;
-            case 'y':
-              buf.append(modifFmt.format(new Date(f.getModificationTime())));
-              break;
-            case 'Y':
-              buf.append(f.getModificationTime());
-              break;
-            default:
-              buf.append(fmt[i]);
-              break;
-          }
-        }
-      }
-      System.out.println(buf.toString());
-    }
-  }
-
-  /**
    * Move files that match the file pattern <i>srcf</i>
    * to a destination file.
    * When moving mutiple files, the destination must be a directory. 
@@ -825,7 +763,7 @@ public class FsShell extends Configured implements Tool {
       GET_SHORT_USAGE + "\n\t" +
       "[" + COPYTOLOCAL_SHORT_USAGE + "] [-moveToLocal <src> <localdst>]\n\t" +
       "[-report]\n\t" +
-      "[-touchz <path>] [-test -[ezd] <path>] [-stat [format] <path>]";
+      "[-touchz <path>] [-test -[ezd] <path>]";
 
     String conf ="-conf <configuration file>:  Specify an application configuration file.";
  
@@ -905,10 +843,6 @@ public class FsShell extends Configured implements Tool {
     String test = "-test -[ezd] <path>: If file { exists, has zero length, is a directory\n" +
       "\t\tthen return 0, else return 1.\n";
 
-    String stat = "-stat [format] <path>: Print statistics about the file/directory at <path>\n" +
-      "\t\tin the specified format. Format accepts filesize in blocks (%b), filename (%n),\n" +
-      "\t\tblock size (%o), replication (%r), modification date (%y, %Y)\n";
-    
     String expunge = "-expunge: Empty the Trash.\n";
     
     String help = "-help [cmd]: \tDisplays help for given command or all commands if none\n" +
@@ -957,8 +891,6 @@ public class FsShell extends Configured implements Tool {
       System.out.println(touchz);
     } else if ("test".equals(cmd)) {
       System.out.println(test);
-    } else if ("stat".equals(cmd)) {
-      System.out.println(stat);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -985,7 +917,6 @@ public class FsShell extends Configured implements Tool {
       System.out.println(moveToLocal);
       System.out.println(touchz);
       System.out.println(test);
-      System.out.println(stat);
 
       for (String thisCmdName : commandFactory.getNames()) {
         printHelp(commandFactory.getInstance(thisCmdName));
@@ -1099,9 +1030,6 @@ public class FsShell extends Configured implements Tool {
     } else if ("-test".equals(cmd)) {
       System.err.println("Usage: java FsShell" +
                          " [-test -[ezd] <path>]");
-    } else if ("-stat".equals(cmd)) {
-      System.err.println("Usage: java FsShell" +
-                         " [-stat [format] <path>]");
     } else {
       System.err.println("Usage: java FsShell");
       System.err.println("           [-df [<path>]]");
@@ -1120,7 +1048,6 @@ public class FsShell extends Configured implements Tool {
       System.err.println("           [-moveToLocal [-crc] <src> <localdst>]");
       System.err.println("           [-touchz <path>]");
       System.err.println("           [-test -[ezd] <path>]");
-      System.err.println("           [-stat [format] <path>]");
       for (String name : commandFactory.getNames()) {
       	instance = commandFactory.getInstance(name);
         System.err.println("           [" + instance.getUsage() + "]");
@@ -1170,7 +1097,7 @@ public class FsShell extends Configured implements Tool {
         return exitCode;
       }
     } else if ("-rm".equals(cmd) || "-rmr".equals(cmd) ||
-               "-touchz".equals(cmd) || "-stat".equals(cmd)) {
+               "-touchz".equals(cmd)) {
       if (argv.length < 2) {
         printUsage(cmd);
         return exitCode;
@@ -1243,12 +1170,6 @@ public class FsShell extends Configured implements Tool {
         exitCode = doall(cmd, argv, i);
       } else if ("-test".equals(cmd)) {
         exitCode = test(argv, i);
-      } else if ("-stat".equals(cmd)) {
-        if (i + 1 < argv.length) {
-          stat(argv[i++].toCharArray(), argv[i++]);
-        } else {
-          stat("%y".toCharArray(), argv[i]);
-        }
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);
