@@ -299,7 +299,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-rm \[-skipTrash\] &lt;src&gt;:( |\t)*Delete all files that match the specified file pattern.( )*</expected-output>
+          <expected-output>^-rm \[-skipTrash\] &lt;src&gt; \.\.\.:( |\t)*Delete all files that match the specified file pattern.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -326,7 +326,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-rmr \[-skipTrash\] &lt;src&gt;:( |\t)*Remove all directories which match the specified file( )*</expected-output>
+          <expected-output>^-rmr \[-skipTrash\] &lt;src&gt; \.\.\.:( |\t)*Remove all directories which match the specified file( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>

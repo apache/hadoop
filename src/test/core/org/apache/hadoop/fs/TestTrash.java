@@ -280,7 +280,7 @@ public class TestTrash extends TestCase {
         System.err.println("Exception raised from Trash.run " +
                            e.getLocalizedMessage());
       }
-      assertTrue(val == -1);
+      assertEquals("exit code", 1, val);
       assertTrue(fs.exists(trashRoot));
     }
     

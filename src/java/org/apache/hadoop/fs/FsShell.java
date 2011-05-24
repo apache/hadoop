@@ -637,77 +637,6 @@ public class FsShell extends Configured implements Tool {
   }
 
   /**
-   * Delete all files that match the file pattern <i>srcf</i>.
-   * @param srcf a file pattern specifying source files
-   * @param recursive if need to delete subdirs
-   * @param skipTrash Should we skip the trash, if it's enabled?
-   * @throws IOException  
-   * @see org.apache.hadoop.fs.FileSystem#globStatus(Path)
-   */
-  void delete(String srcf, final boolean recursive, final boolean skipTrash) 
-                                                            throws IOException {
-    //rm behavior in Linux
-    //  [~/1207]$ ls ?.txt
-    //  x.txt  z.txt
-    //  [~/1207]$ rm x.txt y.txt z.txt 
-    //  rm: cannot remove `y.txt': No such file or directory
-
-    Path srcPattern = new Path(srcf);
-    new DelayedExceptionThrowing() {
-      @Override
-      void process(Path p, FileSystem srcFs) throws IOException {
-        delete(p, srcFs, recursive, skipTrash);
-      }
-    }.globAndProcess(srcPattern, srcPattern.getFileSystem(getConf()));
-  }
-    
-  /* delete a file */
-  private void delete(Path src, FileSystem srcFs, boolean recursive, 
-                      boolean skipTrash) throws IOException {
-    FileStatus fs = null;
-    try {
-      fs = srcFs.getFileStatus(src);
-    } catch (FileNotFoundException fnfe) {
-      // Have to re-throw so that console output is as expected
-      throw new PathNotFoundException(src.toString());
-    }
-    
-    if (fs.isDirectory() && !recursive) {
-      throw new IOException("Cannot remove directory \"" + src +
-                            "\", use -rmr instead");
-    }
-    
-    if(!skipTrash) {
-      try {
-        if (Trash.moveToAppropriateTrash(srcFs, src, getConf())) {
-          System.out.println("Moved to trash: " + src);
-          return;
-        }
-      } catch (IOException e) {
-        LOG.debug("Error with trash", e);
-        Exception cause = (Exception) e.getCause();
-        String msg = "";
-        if(cause != null) {
-          msg = cause.getLocalizedMessage();
-        }
-        System.err.println("Problem with Trash." + msg +". Consider using -skipTrash option");        
-        throw e;
-      }
-    }
-    
-    if (srcFs.delete(src, true)) {
-      System.out.println("Deleted " + src);
-    } else {
-      throw new IOException("Delete failed " + src);
-    }
-  }
-
-  private void expunge() throws IOException {
-    getTrash().expunge();
-    getTrash().checkpoint();
-  }
-
-  /**
    * Returns the Trash object associated with this shell.
    */
   public Path getCurrentTrashDir() throws IOException {
@@ -736,8 +665,8 @@ public class FsShell extends Configured implements Tool {
       "The full syntax is: \n\n" +
       "hadoop fs [-fs <local | file system URI>] [-conf <configuration file>]\n\t" +
       "[-D <property=value>] [-df [<path>]] [-du [-s] [-h] <path>]\n\t" +
-      "[-dus <path>] [-mv <src> <dst>] [-cp <src> <dst>] [-rm [-skipTrash] <src>]\n\t" + 
-      "[-rmr [-skipTrash] <src>] [-put <localsrc> ... <dst>] [-copyFromLocal <localsrc> ... <dst>]\n\t" +
+      "[-dus <path>] [-mv <src> <dst>] [-cp <src> <dst>]\n\t" + 
+      "[-put <localsrc> ... <dst>] [-copyFromLocal <localsrc> ... <dst>]\n\t" +
       "[-moveFromLocal <localsrc> ... <dst>] [" + 
       GET_SHORT_USAGE + "\n\t" +
       "[" + COPYTOLOCAL_SHORT_USAGE + "] [-moveToLocal <src> <localdst>]\n\t" +
@@ -786,16 +715,6 @@ public class FsShell extends Configured implements Tool {
       "\t\tdestination.  When copying multiple files, the destination\n" +
       "\t\tmust be a directory. \n";
 
-    String rm = "-rm [-skipTrash] <src>: \tDelete all files that match the specified file pattern.\n" +
-      "\t\tEquivalent to the Unix command \"rm <src>\"\n" +
-      "\t\t-skipTrash option bypasses trash, if enabled, and immediately\n" +
-      "deletes <src>";
-
-    String rmr = "-rmr [-skipTrash] <src>: \tRemove all directories which match the specified file \n" +
-      "\t\tpattern. Equivalent to the Unix command \"rm -rf <src>\"\n" +
-      "\t\t-skipTrash option bypasses trash, if enabled, and immediately\n" +
-      "deletes <src>";
-
     String put = "-put <localsrc> ... <dst>: \tCopy files " + 
     "from the local file system \n\t\tinto fs. \n";
 
@@ -818,8 +737,6 @@ public class FsShell extends Configured implements Tool {
     String test = "-test -[ezd] <path>: If file { exists, has zero length, is a directory\n" +
       "\t\tthen return 0, else return 1.\n";
 
-    String expunge = "-expunge: Empty the Trash.\n";
-    
     String help = "-help [cmd]: \tDisplays help for given command or all commands if none\n" +
       "\t\tis specified.\n";
 
@@ -838,12 +755,6 @@ public class FsShell extends Configured implements Tool {
       System.out.println(du);
     } else if ("dus".equals(cmd)) {
       System.out.println(dus);
-    } else if ("rm".equals(cmd)) {
-      System.out.println(rm);
-    } else if ("expunge".equals(cmd)) {
-      System.out.println(expunge);
-    } else if ("rmr".equals(cmd)) {
-      System.out.println(rmr);
     } else if ("mv".equals(cmd)) {
       System.out.println(mv);
     } else if ("cp".equals(cmd)) {
@@ -880,8 +791,6 @@ public class FsShell extends Configured implements Tool {
       System.out.println(dus);
       System.out.println(mv);
       System.out.println(cp);
-      System.out.println(rm);
-      System.out.println(rmr);
       System.out.println(put);
       System.out.println(copyFromLocal);
       System.out.println(moveFromLocal);
@@ -921,14 +830,6 @@ public class FsShell extends Configured implements Tool {
   private int doall(String cmd, String argv[], int startindex) {
     int exitCode = 0;
     int i = startindex;
-    boolean rmSkipTrash = false;
-    
-    // Check for -skipTrash option in rm/rmr
-    if(("-rm".equals(cmd) || "-rmr".equals(cmd)) 
-        && "-skipTrash".equals(argv[i])) {
-      rmSkipTrash = true;
-      i++;
-    }
     
     //
     // for each source file, issue the command
@@ -938,11 +839,7 @@ public class FsShell extends Configured implements Tool {
         //
         // issue the command to the fs
         //
-        if ("-rm".equals(cmd)) {
-          delete(argv[i], false, rmSkipTrash);
-        } else if ("-rmr".equals(cmd)) {
-          delete(argv[i], true, rmSkipTrash);
-        } else if ("-df".equals(cmd)) {
+        if ("-df".equals(cmd)) {
           df(argv[i]);
         }
       } catch (IOException e) {
@@ -979,9 +876,6 @@ public class FsShell extends Configured implements Tool {
     } else if ("-df".equals(cmd) ) {
       System.err.println("Usage: java FsShell" +
                          " [" + cmd + " [<path>]]");
-    } else if ("-rm".equals(cmd) || "-rmr".equals(cmd)) {
-      System.err.println("Usage: java FsShell [" + cmd + 
-                           " [-skipTrash] <src>]");
     } else if ("-mv".equals(cmd) || "-cp".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
                          " [" + cmd + " <src> <dst>]");
@@ -1006,9 +900,6 @@ public class FsShell extends Configured implements Tool {
       System.err.println("           [-dus <path>]");
       System.err.println("           [-mv <src> <dst>]");
       System.err.println("           [-cp <src> <dst>]");
-      System.err.println("           [-rm [-skipTrash] <path>]");
-      System.err.println("           [-rmr [-skipTrash] <path>]");
-      System.err.println("           [-expunge]");
       System.err.println("           [-put <localsrc> ... <dst>]");
       System.err.println("           [-copyFromLocal <localsrc> ... <dst>]");
       System.err.println("           [-moveFromLocal <localsrc> ... <dst>]");
@@ -1064,11 +955,6 @@ public class FsShell extends Configured implements Tool {
         printUsage(cmd);
         return exitCode;
       }
-    } else if ("-rm".equals(cmd) || "-rmr".equals(cmd)) {
-      if (argv.length < 2) {
-        printUsage(cmd);
-        return exitCode;
-      }
     }
     // initialize FsShell
     try {
@@ -1117,12 +1003,6 @@ public class FsShell extends Configured implements Tool {
         exitCode = rename(argv, getConf());
       } else if ("-cp".equals(cmd)) {
         exitCode = copy(argv, getConf());
-      } else if ("-rm".equals(cmd)) {
-        exitCode = doall(cmd, argv, i);
-      } else if ("-rmr".equals(cmd)) {
-        exitCode = doall(cmd, argv, i);
-      } else if ("-expunge".equals(cmd)) {
-        expunge();
       } else if ("-df".equals(cmd)) {
         if (argv.length-1 > 0) {
           exitCode = doall(cmd, argv, i);
