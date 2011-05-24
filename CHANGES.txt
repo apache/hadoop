@@ -50,6 +50,9 @@ Trunk (unreleased changes)
     HADOOP-7249. Refactor the chmod/chown/chgrp command to conform to new
     FsCommand class.  (Daryn Sharp via szetszwo)
 
+    HADOOP-7251. Refactor the getmerge command to conform to new FsCommand
+    class.  (Daryn Sharp via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

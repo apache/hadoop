@@ -308,49 +308,6 @@ public class FsShell extends Configured implements Tool {
   }
 
   /**
-   * Get all the files in the directories that match the source file 
-   * pattern and merge and sort them to only one file on local fs 
-   * srcf is kept.
-   * @param srcf a file pattern specifying source files
-   * @param dstf a destination local file/directory 
-   * @exception IOException  
-   * @see org.apache.hadoop.fs.FileSystem.globStatus 
-   */
-  void copyMergeToLocal(String srcf, Path dst) throws IOException {
-    copyMergeToLocal(srcf, dst, false);
-  }    
-    
-
-  /**
-   * Get all the files in the directories that match the source file pattern
-   * and merge and sort them to only one file on local fs 
-   * srcf is kept.
-   * 
-   * Also adds a string between the files (useful for adding \n
-   * to a text file)
-   * @param srcf a file pattern specifying source files
-   * @param dstf a destination local file/directory
-   * @param endline if an end of line character is added to a text file 
-   * @throws IOException on error
-   * @see org.apache.hadoop.fs.FileSystem.globStatus 
-   */
-  void copyMergeToLocal(String srcf, Path dst, boolean endline) throws IOException {
-    Path srcPath = new Path(srcf);
-    FileSystem srcFs = srcPath.getFileSystem(getConf());
-    Path [] srcs = FileUtil.stat2Paths(srcFs.globStatus(srcPath), 
-                                       srcPath);
-    for(int i=0; i<srcs.length; i++) {
-      if (endline) {
-        FileUtil.copyMerge(srcFs, srcs[i], 
-                           FileSystem.getLocal(getConf()), dst, false, getConf(), "\n");
-      } else {
-        FileUtil.copyMerge(srcFs, srcs[i], 
-                           FileSystem.getLocal(getConf()), dst, false, getConf(), null);
-      }
-    }
-  }      
-
-  /**
    * Obtain the indicated file and copy to the local name.
    * srcf is removed.
    */
@@ -994,7 +951,7 @@ public class FsShell extends Configured implements Tool {
       "[-rmr [-skipTrash] <src>] [-put <localsrc> ... <dst>] [-copyFromLocal <localsrc> ... <dst>]\n\t" +
       "[-moveFromLocal <localsrc> ... <dst>] [" + 
       GET_SHORT_USAGE + "\n\t" +
-      "[-getmerge <src> <localdst> [addnl]] [-cat <src>]\n\t" +
+      "[-cat <src>]\n\t" +
       "[" + COPYTOLOCAL_SHORT_USAGE + "] [-moveToLocal <src> <localdst>]\n\t" +
       "[-report]\n\t" +
       "[-touchz <path>] [-test -[ezd] <path>] [-stat [format] <path>]\n\t" +
@@ -1066,10 +1023,6 @@ public class FsShell extends Configured implements Tool {
       "\t\tto the local name.  <src> is kept.  When copying mutiple, \n" +
       "\t\tfiles, the destination must be a directory. \n";
 
-    String getmerge = "-getmerge <src> <localdst>:  Get all the files in the directories that \n" +
-      "\t\tmatch the source file pattern and merge and sort them to only\n" +
-      "\t\tone file on local fs. <src> is kept.\n";
-
     String cat = "-cat <src>: \tFetch all files that match the file pattern <src> \n" +
       "\t\tand display their content on stdout.\n";
 
@@ -1132,8 +1085,6 @@ public class FsShell extends Configured implements Tool {
       System.out.println(moveFromLocal);
     } else if ("get".equals(cmd)) {
       System.out.println(get);
-    } else if ("getmerge".equals(cmd)) {
-      System.out.println(getmerge);
     } else if ("copyToLocal".equals(cmd)) {
       System.out.println(copyToLocal);
     } else if ("moveToLocal".equals(cmd)) {
@@ -1172,7 +1123,6 @@ public class FsShell extends Configured implements Tool {
       System.out.println(copyFromLocal);
       System.out.println(moveFromLocal);
       System.out.println(get);
-      System.out.println(getmerge);
       System.out.println(cat);
       System.out.println(copyToLocal);
       System.out.println(moveToLocal);
@@ -1342,7 +1292,6 @@ public class FsShell extends Configured implements Tool {
       System.err.println("           [-copyFromLocal <localsrc> ... <dst>]");
       System.err.println("           [-moveFromLocal <localsrc> ... <dst>]");
       System.err.println("           [" + GET_SHORT_USAGE + "]");
-      System.err.println("           [-getmerge <src> <localdst> [addnl]]");
       System.err.println("           [-cat <src>]");
       System.err.println("           [-text <src>]");
       System.err.println("           [" + COPYTOLOCAL_SHORT_USAGE + "]");
@@ -1448,11 +1397,6 @@ public class FsShell extends Configured implements Tool {
         moveFromLocal(srcs, argv[i++]);
       } else if ("-get".equals(cmd) || "-copyToLocal".equals(cmd)) {
         copyToLocal(argv, i);
-      } else if ("-getmerge".equals(cmd)) {
-        if (argv.length>i+2)
-          copyMergeToLocal(argv[i++], new Path(argv[i++]), Boolean.parseBoolean(argv[i++]));
-        else
-          copyMergeToLocal(argv[i++], new Path(argv[i++]));
       } else if ("-cat".equals(cmd)) {
         exitCode = doall(cmd, argv, i);
       } else if ("-text".equals(cmd)) {
