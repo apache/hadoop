@@ -432,27 +432,6 @@ public class FsShell extends Configured implements Tool {
   }
 
   /**
-   * (Re)create zero-length file at the specified path.
-   * This will be replaced by a more UNIX-like touch when files may be
-   * modified.
-   */
-  void touchz(String src) throws IOException {
-    Path f = new Path(src);
-    FileSystem srcFs = f.getFileSystem(getConf());
-    FileStatus st;
-    if (srcFs.exists(f)) {
-      st = srcFs.getFileStatus(f);
-      if (st.isDirectory()) {
-        // TODO: handle this
-        throw new IOException(src + " is a directory");
-      } else if (st.getLen() != 0)
-        throw new IOException(src + " must be a zero-length file");
-    }
-    FSDataOutputStream out = srcFs.create(f);
-    out.close();
-  }
-
-  /**
    * Check file types.
    */
   int test(String argv[], int i) throws IOException {
@@ -763,7 +742,7 @@ public class FsShell extends Configured implements Tool {
       GET_SHORT_USAGE + "\n\t" +
       "[" + COPYTOLOCAL_SHORT_USAGE + "] [-moveToLocal <src> <localdst>]\n\t" +
       "[-report]\n\t" +
-      "[-touchz <path>] [-test -[ezd] <path>]";
+      "[-test -[ezd] <path>]";
 
     String conf ="-conf <configuration file>:  Specify an application configuration file.";
  
@@ -836,10 +815,6 @@ public class FsShell extends Configured implements Tool {
 
     String moveToLocal = "-moveToLocal <src> <localdst>:  Not implemented yet \n";
         
-    String touchz = "-touchz <path>: Creates a file of zero length\n"
-	+ "\t\t at <path> with current time as the timestamp of that <path>.\n"
-	+ "\t\t An error is returned if the file exists with non-zero length\n";
-
     String test = "-test -[ezd] <path>: If file { exists, has zero length, is a directory\n" +
       "\t\tthen return 0, else return 1.\n";
 
@@ -887,8 +862,6 @@ public class FsShell extends Configured implements Tool {
       System.out.println(moveToLocal);
     } else if ("get".equals(cmd)) {
       System.out.println(get);
-    } else if ("touchz".equals(cmd)) {
-      System.out.println(touchz);
     } else if ("test".equals(cmd)) {
       System.out.println(test);
     } else if ("help".equals(cmd)) {
@@ -915,7 +888,6 @@ public class FsShell extends Configured implements Tool {
       System.out.println(get);
       System.out.println(copyToLocal);
       System.out.println(moveToLocal);
-      System.out.println(touchz);
       System.out.println(test);
 
       for (String thisCmdName : commandFactory.getNames()) {
@@ -972,8 +944,6 @@ public class FsShell extends Configured implements Tool {
           delete(argv[i], true, rmSkipTrash);
         } else if ("-df".equals(cmd)) {
           df(argv[i]);
-        } else if ("-touchz".equals(cmd)) {
-          touchz(argv[i]);
         }
       } catch (IOException e) {
         LOG.debug("Error", e);
@@ -1003,8 +973,7 @@ public class FsShell extends Configured implements Tool {
     } else if ("-D".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
                          " [-D <[property=value>]");
-    } else if ("-du".equals(cmd) || "-dus".equals(cmd) ||
-               "-touchz".equals(cmd)) {
+    } else if ("-du".equals(cmd) || "-dus".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
                          " [" + cmd + " <path>]");
     } else if ("-df".equals(cmd) ) {
@@ -1046,7 +1015,6 @@ public class FsShell extends Configured implements Tool {
       System.err.println("           [" + GET_SHORT_USAGE + "]");
       System.err.println("           [" + COPYTOLOCAL_SHORT_USAGE + "]");
       System.err.println("           [-moveToLocal [-crc] <src> <localdst>]");
-      System.err.println("           [-touchz <path>]");
       System.err.println("           [-test -[ezd] <path>]");
       for (String name : commandFactory.getNames()) {
       	instance = commandFactory.getInstance(name);
@@ -1096,8 +1064,7 @@ public class FsShell extends Configured implements Tool {
         printUsage(cmd);
         return exitCode;
       }
-    } else if ("-rm".equals(cmd) || "-rmr".equals(cmd) ||
-               "-touchz".equals(cmd)) {
+    } else if ("-rm".equals(cmd) || "-rmr".equals(cmd)) {
       if (argv.length < 2) {
         printUsage(cmd);
         return exitCode;
@@ -1166,8 +1133,6 @@ public class FsShell extends Configured implements Tool {
         du(argv, i);
       } else if ("-dus".equals(cmd)) {
         dus(argv, i);
-      } else if ("-touchz".equals(cmd)) {
-        exitCode = doall(cmd, argv, i);
       } else if ("-test".equals(cmd)) {
         exitCode = test(argv, i);
       } else if ("-help".equals(cmd)) {
