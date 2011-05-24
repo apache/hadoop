@@ -54,6 +54,26 @@ public class TestPathData {
   }
 
   @Test
+  public void testUnqualifiedUriContents() throws Exception {
+    dirString = "/tmp";
+    item = new PathData(dirString, conf);
+    PathData[] items = item.getDirectoryContents();
+    for (PathData item : items) {
+      assertTrue(item.toString().startsWith(dirString));
+    }
+  }
+
+  @Test
+  public void testQualifiedUriContents() throws Exception {
+    dirString = "file:/tmp";
+    item = new PathData(dirString, conf);
+    PathData[] items = item.getDirectoryContents();
+    for (PathData item : items) {
+      assertTrue(item.toString().startsWith(dirString));
+    }
+  }
+
+  @Test
   public void testWithStringAndConfForBuggyPath() throws Exception {
     dirString = "file:///tmp";
     dir = new Path(dirString);
