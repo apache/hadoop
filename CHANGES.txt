@@ -285,6 +285,8 @@ Release 0.90.4 - Unreleased
    HBASE-3908  TableSplit not implementing "hashCode" problem (Daniel Iancu)
    HBASE-3915  Binary row keys in hbck and other miscellaneous binary key
                display issues
+   HBASE-3914  ROOT region appeared in two regionserver's onlineRegions at
+               the same time (Jieshan Bean)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the

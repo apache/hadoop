@@ -74,6 +74,26 @@ public class ServerShutdownHandler extends EventHandler {
   }
 
   /**
+   * Before assign the ROOT region, ensure it haven't 
+   *  been assigned by other place
+   * <p>
+   * Under some scenarios, the ROOT region can be opened twice, so it seemed online
+   * in two regionserver at the same time.
+   * If the ROOT region has been assigned, so the operation can be canceled. 
+   * @throws InterruptedException
+   * @throws IOException
+   * @throws KeeperException
+   */
+  private void verifyAndAssignRoot() 
+  throws InterruptedException, IOException, KeeperException {
+    long timeout = this.server.getConfiguration().
+      getLong("hbase.catalog.verification.timeout", 1000);
+    if (!this.server.getCatalogTracker().verifyRootRegionLocation(timeout)) {
+      this.services.getAssignmentManager().assignRoot();     
+    }
+  }
+  
+  /**
    * @return True if the server we are processing was carrying <code>-ROOT-</code>
    */
   boolean isCarryingRoot() {
@@ -104,10 +124,14 @@ public class ServerShutdownHandler extends EventHandler {
     // Assign root and meta if we were carrying them.
     if (isCarryingRoot()) { // -ROOT-
       try {
-        this.services.getAssignmentManager().assignRoot();
+        verifyAndAssignRoot();
       } catch (KeeperException e) {
         this.server.abort("In server shutdown processing, assigning root", e);
         throw new IOException("Aborting", e);
+      } catch (InterruptedException e1) {
+        LOG.warn("Interrupted while verifying root region's location", e1);
+        Thread.currentThread().interrupt();
+        throw new IOException(e1);  
       }
     }
 
