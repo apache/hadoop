@@ -56,6 +56,9 @@ Trunk (unreleased changes)
     HADOOP-7265. Keep track of relative paths in PathData.  (Daryn Sharp
     via szetszwo)
 
+    HADOOP-7238. Refactor the cat and text commands to conform to new FsCommand
+    class.  (Daryn Sharp via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
