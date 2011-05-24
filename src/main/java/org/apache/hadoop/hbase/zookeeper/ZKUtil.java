@@ -1021,6 +1021,6 @@ public class ZKUtil {
       (data == null? "null": data.length == 0? "empty": (
           znode.startsWith(zkw.assignmentZNode) ?
               RegionTransitionData.fromBytes(data).toString()
-              : StringUtils.abbreviate(Bytes.toString(data), 32)))));
+              : StringUtils.abbreviate(Bytes.toStringBinary(data), 32)))));
   }
 }

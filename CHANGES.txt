@@ -283,6 +283,8 @@ Release 0.90.4 - Unreleased
    HBASE-3905  HBaseAdmin.createTableAsync() should check for invalid split
                keys (Ted Yu)
    HBASE-3908  TableSplit not implementing "hashCode" problem (Daniel Iancu)
+   HBASE-3915  Binary row keys in hbck and other miscellaneous binary key
+               display issues
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the

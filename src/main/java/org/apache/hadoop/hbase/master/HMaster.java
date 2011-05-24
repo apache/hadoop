@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.Result;
@@ -915,13 +914,17 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       region.getLog().closeAndDelete();
     }
 
-    // 5. Trigger immediate assignment of the regions in round-robin fashion
-    List<ServerName> servers = serverManager.getOnlineServersList();
-    try {
-      this.assignmentManager.assignUserRegions(Arrays.asList(newRegions), servers);
-    } catch (InterruptedException ie) {
-      LOG.error("Caught " + ie + " during round-robin assignment");
-      throw new IOException(ie);
+    if (newRegions.length == 1) {
+      this.assignmentManager.assign(newRegions[0], true);
+    } else {
+      // 5. Trigger immediate assignment of the regions in round-robin fashion
+      List<ServerName> servers = serverManager.getOnlineServersList();
+      try {
+        this.assignmentManager.assignUserRegions(Arrays.asList(newRegions), servers);
+      } catch (InterruptedException ie) {
+        LOG.error("Caught " + ie + " during round-robin assignment");
+        throw new IOException(ie);
+      }
     }
 
     // 6. If sync, wait for assignment of regions

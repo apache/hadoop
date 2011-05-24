@@ -243,7 +243,7 @@ public class RegionTransitionData implements Writable {
 
   @Override
   public String toString() {
-    return "region=" + Bytes.toString(regionName) + ", origin=" + this.origin +
+    return "region=" + Bytes.toStringBinary(regionName) + ", origin=" + this.origin +
       ", state=" + eventType;
   }
 }

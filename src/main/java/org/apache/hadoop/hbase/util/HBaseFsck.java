@@ -422,12 +422,8 @@ public class HBaseFsck {
     if (inMeta && inHdfs && isDeployed && deploymentMatchesMeta && shouldBeDeployed) {
       return;
     } else if (inMeta && !isDeployed && splitParent) {
-      // Offline regions shouldn't cause complaints
-      LOG.debug("Region " + descriptiveName + " offline, split, parent, ignoring.");
       return;
     } else if (inMeta && !shouldBeDeployed && !isDeployed) {
-      // offline regions shouldn't cause complaints
-      LOG.debug("Region " + descriptiveName + " offline, ignoring.");
       return;
     } else if (recentlyModified) {
       LOG.warn("Region " + descriptiveName + " was recently modified -- skipping");
@@ -444,7 +440,7 @@ public class HBaseFsck {
     } else if (!inMeta && inHdfs && !isDeployed) {
       errors.reportError(ERROR_CODE.NOT_IN_META_OR_DEPLOYED, "Region "
           + descriptiveName + " on HDFS, but not listed in META " +
-          "or deployed on any region server.");
+          "or deployed on any region server");
     } else if (!inMeta && inHdfs && isDeployed) {
       errors.reportError(ERROR_CODE.NOT_IN_META, "Region " + descriptiveName
           + " not in META, but deployed on " + Joiner.on(", ").join(hbi.deployedOn));
@@ -584,6 +580,7 @@ public class HBaseFsck {
     public boolean checkRegionChain() {
       Collections.sort(regions);
       HbckInfo last = null;
+      int originalErrorsCount = errors.getErrorList().size();
 
       for (HbckInfo r : regions) {
         if (last == null) {
@@ -607,8 +604,8 @@ public class HBaseFsck {
               errors.reportError(ERROR_CODE.REGION_CYCLE,
                   String.format("The endkey for this region comes before the "
                       + "startkey, startkey=%s, endkey=%s",
-                      Bytes.toString(r.metaEntry.getStartKey()),
-                      Bytes.toString(r.metaEntry.getEndKey())),
+                      Bytes.toStringBinary(r.metaEntry.getStartKey()),
+                      Bytes.toStringBinary(r.metaEntry.getEndKey())),
                   this, r, last);
             }
           }
@@ -617,7 +614,7 @@ public class HBaseFsck {
           if (Bytes.equals(r.metaEntry.getStartKey(), last.metaEntry.getStartKey())) {
             errors.reportError(ERROR_CODE.DUPE_STARTKEYS,
                 "Two regions have the same startkey: "
-                    + Bytes.toString(r.metaEntry.getStartKey()),
+                    + Bytes.toStringBinary(r.metaEntry.getStartKey()),
                 this, r, last);
           } else {
             // Check that the startkey is the same as the previous end key
@@ -641,7 +638,7 @@ public class HBaseFsck {
         last = r;
       }
 
-      return errors.getErrorList().size() == 0;
+      return errors.getErrorList().size() == originalErrorsCount;
     }
 
   }
