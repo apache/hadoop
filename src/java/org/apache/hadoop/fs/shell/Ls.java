@@ -126,12 +126,6 @@ class Ls extends FsCommand {
     return Math.max(n, (value != null) ? String.valueOf(value).length() : 0);
   }
 
-  // TODO: remove when the error is commonized...
-  @Override
-  protected String getFnfText(Path path) {
-    return "Cannot access " + path.toUri() + ": No such file or directory.";
-  }
-
   @Override
   protected int exitCodeForError() { return -1; }
 

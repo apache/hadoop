@@ -25,7 +25,7 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.shell.PathExceptions.PathIsDirectoryException;
 import org.apache.hadoop.io.IOUtils;
 
 /**
@@ -67,7 +67,7 @@ class Tail extends FsCommand {
   @Override
   protected void processPath(PathData item) throws IOException {
     if (item.stat.isDirectory()) {
-      throw new IOException("Source must be a file.");
+      throw new PathIsDirectoryException(item.toString());
     }
 
     long offset = dumpFromOffset(item, startingOffset);
@@ -99,10 +99,5 @@ class Tail extends FsCommand {
       in.close();
     }
     return offset;
-  }
-  
-  @Override
-  protected String getFnfText(Path path) {
-    return "File does not exist: " + path;
   }
 }

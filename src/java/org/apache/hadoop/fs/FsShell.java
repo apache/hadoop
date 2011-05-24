@@ -28,6 +28,8 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,6 +40,8 @@ import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFactory;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.fs.shell.FsCommand;
+import org.apache.hadoop.fs.shell.PathData;
+import org.apache.hadoop.fs.shell.PathExceptions.PathNotFoundException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -207,7 +211,7 @@ public class FsShell extends Configured implements Tool {
       }
       FileStatus[] srcs = srcFS.globStatus(srcpath);
       if (null == srcs) {
-	throw new IOException(srcpath + ": No such file or directory");
+        throw new PathNotFoundException(srcstr);
       }
       boolean dstIsDir = dst.isDirectory(); 
       if (srcs.length > 1 && !dstIsDir) {
@@ -322,7 +326,7 @@ public class FsShell extends Configured implements Tool {
     final Path srcPath = new Path(path);
     final FileSystem srcFs = srcPath.getFileSystem(getConf());
     if (! srcFs.exists(srcPath)) {
-      throw new FileNotFoundException("Cannot access "+srcPath.toString());
+      throw new PathNotFoundException(path);
     }
     final FsStatus stats = srcFs.getStatus(srcPath);
     final int PercentUsed = (int)(100.0f *  (float)stats.getUsed() / (float)stats.getCapacity());
@@ -378,8 +382,7 @@ public class FsShell extends Configured implements Tool {
       }
       if ((statusToPrint == null) || ((statusToPrint.length == 0) &&
                                       (!srcFs.exists(srcPath)))){
-        throw new FileNotFoundException("Cannot access " + src
-                                        + ": No such file or directory.");
+        throw new PathNotFoundException(src);
       }
 
       if (!summary) {
@@ -462,15 +465,20 @@ public class FsShell extends Configured implements Tool {
     if (!argv[i].startsWith("-") || argv[i].length() > 2)
       throw new IOException("Not a flag: " + argv[i]);
     char flag = argv[i].toCharArray()[1];
-    Path f = new Path(argv[++i]);
-    FileSystem srcFs = f.getFileSystem(getConf());
+    PathData item = new PathData(argv[++i], getConf());
+    
+    if ((flag != 'e') && !item.exists) { 
+      // TODO: it's backwards compat, but why is this throwing an exception?
+      // it's not like the shell test cmd
+      throw new PathNotFoundException(item.toString());
+    }
     switch(flag) {
       case 'e':
-        return srcFs.exists(f) ? 0 : 1;
+        return item.exists ? 0 : 1;
       case 'z':
-        return srcFs.getFileStatus(f).getLen() == 0 ? 0 : 1;
+        return (item.stat.getLen() == 0) ? 0 : 1;
       case 'd':
-        return srcFs.getFileStatus(f).isDirectory() ? 0 : 1;
+        return item.stat.isDirectory() ? 0 : 1;
       default:
         throw new IOException("Unknown flag: " + flag);
     }
@@ -491,7 +499,7 @@ public class FsShell extends Configured implements Tool {
     FileSystem srcFs = srcPath.getFileSystem(getConf());
     FileStatus glob[] = srcFs.globStatus(srcPath);
     if (null == glob)
-      throw new IOException("cannot stat `" + src + "': No such file or directory");
+      throw new PathNotFoundException(src);
     for (FileStatus f : glob) {
       StringBuilder buf = new StringBuilder();
       for (int i = 0; i < fmt.length; ++i) {
@@ -564,8 +572,7 @@ public class FsShell extends Configured implements Tool {
         try {
           srcFstatus = fs.getFileStatus(srcs[i]);
         } catch(FileNotFoundException e) {
-          throw new FileNotFoundException(srcs[i] + 
-          ": No such file or directory");
+          throw new PathNotFoundException(srcs[i].toString());
         }
         try {
           dstFstatus = fs.getFileStatus(dst);
@@ -636,10 +643,9 @@ public class FsShell extends Configured implements Tool {
         LOG.debug("Error renaming " + argv[i], e);
         //
         // IO exception encountered locally.
-        //
+        // 
         exitCode = -1;
-        System.err.println(cmd.substring(1) + ": " +
-                           e.getLocalizedMessage());
+        displayError(cmd, e);
       }
     }
     return exitCode;
@@ -704,30 +710,10 @@ public class FsShell extends Configured implements Tool {
         // issue the copy to the fs
         //
         copy(argv[i], dest, conf);
-      } catch (RemoteException e) {
-        LOG.debug("Error copying " + argv[i], e);
-        //
-        // This is a error returned by hadoop server. Print
-        // out the first line of the error mesage.
-        //
-        exitCode = -1;
-        try {
-          String[] content;
-          content = e.getLocalizedMessage().split("\n");
-          System.err.println(cmd.substring(1) + ": " +
-                             content[0]);
-        } catch (Exception ex) {
-          System.err.println(cmd.substring(1) + ": " +
-                             ex.getLocalizedMessage());
-        }
       } catch (IOException e) {
         LOG.debug("Error copying " + argv[i], e);
-        //
-        // IO exception encountered locally.
-        //
         exitCode = -1;
-        System.err.println(cmd.substring(1) + ": " +
-                           e.getLocalizedMessage());
+        displayError(cmd, e);
       }
     }
     return exitCode;
@@ -766,8 +752,7 @@ public class FsShell extends Configured implements Tool {
       fs = srcFs.getFileStatus(src);
     } catch (FileNotFoundException fnfe) {
       // Have to re-throw so that console output is as expected
-      throw new FileNotFoundException("cannot remove "
-          + src + ": No such file or directory.");
+      throw new PathNotFoundException(src.toString());
     }
     
     if (fs.isDirectory() && !recursive) {
@@ -1059,34 +1044,10 @@ public class FsShell extends Configured implements Tool {
         } else if ("-touchz".equals(cmd)) {
           touchz(argv[i]);
         }
-      } catch (RemoteException e) {
-        LOG.debug("Error", e);
-        //
-        // This is a error returned by hadoop server. Print
-        // out the first line of the error message.
-        //
-        exitCode = -1;
-        try {
-          String[] content;
-          content = e.getLocalizedMessage().split("\n");
-          System.err.println(cmd.substring(1) + ": " +
-                             content[0]);
-        } catch (Exception ex) {
-          System.err.println(cmd.substring(1) + ": " +
-                             ex.getLocalizedMessage());
-        }
       } catch (IOException e) {
         LOG.debug("Error", e);
-        //
-        // IO exception encountered locally.
-        //
         exitCode = -1;
-        String content = e.getLocalizedMessage();
-        if (content != null) {
-          content = content.split("\n")[0];
-        }
-        System.err.println(cmd.substring(1) + ": " +
-                          content);
+        displayError(cmd, e);
       }
     }
     return exitCode;
@@ -1304,38 +1265,36 @@ public class FsShell extends Configured implements Tool {
       exitCode = -1;
       System.err.println(cmd.substring(1) + ": " + arge.getLocalizedMessage());
       printUsage(cmd);
-    } catch (RemoteException e) {
-      LOG.debug("Error", e);
-      //
-      // This is a error returned by hadoop server. Print
-      // out the first line of the error mesage, ignore the stack trace.
-      exitCode = -1;
-      try {
-        String[] content;
-        content = e.getLocalizedMessage().split("\n");
-        System.err.println(cmd.substring(1) + ": " + 
-                           content[0]);
-      } catch (Exception ex) {
-        System.err.println(cmd.substring(1) + ": " + 
-                           ex.getLocalizedMessage());  
-      }
-    } catch (IOException e) {
-      LOG.debug("Error", e);
-      //
-      // IO exception encountered locally.
-      // 
-      exitCode = -1;
-      System.err.println(cmd.substring(1) + ": " + 
-                         e.getLocalizedMessage());  
     } catch (Exception re) {
       LOG.debug("Error", re);
       exitCode = -1;
-      System.err.println(cmd.substring(1) + ": " + re.getLocalizedMessage());  
+      displayError(cmd, re);
     } finally {
     }
     return exitCode;
   }
 
+  // TODO: this is a quick workaround to accelerate the integration of
+  // redesigned commands.  this will be removed this once all commands are
+  // converted.  this change will avoid having to change the hdfs tests
+  // every time a command is converted to use path-based exceptions
+  private static Pattern[] fnfPatterns = {
+    Pattern.compile("File (.*) does not exist\\."),
+    Pattern.compile("File does not exist: (.*)"),
+    Pattern.compile("`(.*)': specified destination directory doest not exist")
+  };
+  private void displayError(String cmd, Exception e) {
+    String message = e.getLocalizedMessage().split("\n")[0];
+    for (Pattern pattern : fnfPatterns) {
+      Matcher matcher = pattern.matcher(message);
+      if (matcher.matches()) {
+        message = new PathNotFoundException(matcher.group(1)).getMessage();
+        break;
+      }
+    }
+    System.err.println(cmd.substring(1) + ": " + message);  
+  }
+  
   public void close() throws IOException {
     if (fs != null) {
       fs.close();

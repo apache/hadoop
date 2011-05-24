@@ -287,7 +287,7 @@ public class TestFsShellReturnCode {
       results = bytes.toString();
       assertTrue("Return code should be -1", run == -1);
       assertTrue(" Null is coming when source path is invalid. ",!results.contains("get: null"));
-      assertTrue(" Not displaying the intended message ",results.contains("get: "+args[1]+": No such file or directory"));
+      assertTrue(" Not displaying the intended message ",results.contains("get: `"+args[1]+"': No such file or directory"));
     } finally {
       IOUtils.closeStream(out);
       System.setErr(oldErr);

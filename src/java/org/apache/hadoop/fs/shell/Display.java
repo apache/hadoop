@@ -27,8 +27,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.shell.PathExceptions.PathIsDirectoryException;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
@@ -49,20 +49,6 @@ class Display extends FsCommand {
   public static void registerCommands(CommandFactory factory) {
     factory.addClass(Cat.class, "-cat");
     factory.addClass(Text.class, "-text");
-  }
-
-  @Override
-  protected String getFnfText(Path path) {
-    // TODO: this is a pretty inconsistent way to output the path...!!
-    //       but, it's backwards compatible
-    try {
-      FileSystem fs = path.getFileSystem(getConf());
-      path = fs.makeQualified(path);
-    } catch (IOException e) {
-      // shouldn't happen, so just use path as-is
-      displayWarning("can't fully qualify "+path);
-    }
-    return "File does not exist: " + path.toUri().getPath();
   }
 
   /**
@@ -87,6 +73,10 @@ class Display extends FsCommand {
 
     @Override
     protected void processPath(PathData item) throws IOException {
+      if (item.stat.isDirectory()) {
+        throw new PathIsDirectoryException(item.toString());
+      }
+      
       item.fs.setVerifyChecksum(verifyChecksum);
       printToStdout(getInputStream(item));
     }

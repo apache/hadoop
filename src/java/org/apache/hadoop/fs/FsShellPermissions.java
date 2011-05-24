@@ -53,12 +53,6 @@ public class FsShellPermissions extends FsCommand {
     factory.addClass(Chgrp.class, "-chgrp");
   }
 
-  @Override
-  protected String getFnfText(Path path) {
-    // TODO: printing the path twice is silly for backwards compatibility
-    return "could not get status for '"+path+"': File does not exist: "+path;   
-  }
-
   /**
    * The pattern is almost as flexible as mode allowed by chmod shell command.
    * The main restriction is that we recognize only rwxXt. To reduce errors we

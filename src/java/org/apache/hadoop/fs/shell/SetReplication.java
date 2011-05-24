@@ -25,7 +25,7 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.BlockLocation;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.shell.PathExceptions.PathIOException;
 
 /**
  * Modifies the replication factor
@@ -76,7 +76,9 @@ public class SetReplication extends FsCommand {
 
   @Override
   protected void processPath(PathData item) throws IOException {
-    if (item.stat.isSymlink()) throw new IOException("Symlinks unsupported");
+    if (item.stat.isSymlink()) {
+      throw new PathIOException(item.toString(), "Symlinks unsupported");
+    }
     
     if (item.stat.isFile()) {
       if (!item.fs.setReplication(item.path, newRep)) {
@@ -123,10 +125,5 @@ public class SetReplication extends FsCommand {
       }
       out.println(" done");
     }
-  }
-
-  @Override
-  protected String getFnfText(Path path) {
-    return "File does not exist: " + path;
   }
 }

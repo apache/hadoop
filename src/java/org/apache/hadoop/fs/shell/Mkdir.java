@@ -23,6 +23,9 @@ import java.util.LinkedList;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.shell.PathExceptions.PathExistsException;
+import org.apache.hadoop.fs.shell.PathExceptions.PathIOException;
+import org.apache.hadoop.fs.shell.PathExceptions.PathIsNotDirectoryException;
 
 /**
  * Create the given dir
@@ -49,16 +52,16 @@ class Mkdir extends FsCommand {
   @Override
   protected void processPath(PathData item) throws IOException {
     if (item.stat.isDirectory()) {
-      throw new IOException("cannot create directory " + item + ": File exists");
+      throw new PathExistsException(item.toString());
     } else {
-      throw new IOException(item + " exists but is not a directory");
+      throw new PathIsNotDirectoryException(item.toString());
     }
   }
 
   @Override
   protected void processNonexistentPath(PathData item) throws IOException {
     if (!item.fs.mkdirs(item.path)) {
-      throw new IOException("failed to create " + item);
+      throw new PathIOException(item.toString());
     }
   }
 }
