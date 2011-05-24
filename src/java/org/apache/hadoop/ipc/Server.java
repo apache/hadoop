@@ -152,7 +152,7 @@ public abstract class Server {
   public static InetAddress getRemoteIp() {
     Call call = CurCall.get();
     if (call != null) {
-      return call.connection.socket.getInetAddress();
+      return call.connection.getHostInetAddress();
     }
     return null;
   }
@@ -162,6 +162,13 @@ public abstract class Server {
   public static String getRemoteAddress() {
     InetAddress addr = getRemoteIp();
     return (addr == null) ? null : addr.getHostAddress();
+  }
+
+ 
+  /** Return true if the invocation was through an RPC.
+   */
+  public static boolean isRpcInvocation() {
+    return CurCall.get() != null;
   }
 
   private String bindAddress; 
