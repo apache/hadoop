@@ -144,10 +144,17 @@ abstract public class Command extends Configured {
       displayError(e);
     }
     
-    // TODO: -1 should be reserved for syntax error, 1 should be failure
-    return (numErrors == 0) ? exitCode : -1;
+    return (numErrors == 0) ? exitCode : exitCodeForError();
   }
 
+  /**
+   * The exit code to be returned if any errors occur during execution.
+   * This method is needed to account for the inconsistency in the exit
+   * codes returned by various commands.
+   * @return a non-zero exit code
+   */
+  protected int exitCodeForError() { return 1; }
+  
   /**
    * Must be implemented by commands to process the command line flags and
    * check the bounds of the remaining arguments.  If an

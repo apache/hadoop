@@ -625,11 +625,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-chmod \[-R\] &lt;MODE\[,MODE\]... \| OCTALMODE&gt; PATH...( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^( |\t)*Changes permissions of a file.( )*</expected-output>
+          <expected-output>^-chmod \[-R\] &lt;MODE\[,MODE\]... \| OCTALMODE&gt; PATH...:( |\t)*Changes permissions of a file.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -684,11 +680,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-chown \[-R\] \[OWNER\]\[:\[GROUP\]\] PATH...( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^( |\t)*Changes owner and group of a file.( )*</expected-output>
+          <expected-output>^-chown \[-R\] \[OWNER\]\[:\[GROUP\]\] PATH...:( |\t)*Changes owner and group of a file.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -751,11 +743,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-chgrp \[-R\] GROUP PATH...( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^( |\t)*This is equivalent to -chown ... :GROUP ...( )*</expected-output>
+          <expected-output>^-chgrp \[-R\] GROUP PATH...:( |\t)*This is equivalent to -chown ... :GROUP ...( )*</expected-output>
         </comparator>
       </comparators>
     </test>

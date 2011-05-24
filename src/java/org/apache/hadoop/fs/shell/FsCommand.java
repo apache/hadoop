@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FsShellPermissions;
 import org.apache.hadoop.fs.Path;
 
 /**
@@ -43,6 +44,7 @@ abstract public class FsCommand extends Command {
    */
   public static void registerCommands(CommandFactory factory) {
     factory.registerCommands(Count.class);
+    factory.registerCommands(FsShellPermissions.class);
     factory.registerCommands(Ls.class);
     factory.registerCommands(Mkdir.class);
     factory.registerCommands(SetReplication.class);
