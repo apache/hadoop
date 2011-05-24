@@ -53,7 +53,7 @@
     <conf name="common" extends="runtime,mandatory,httpclient,ftp,jetty,jdiff"
                         description="common artifacts"/>
     <!--Testing pulls in everything-->
-    <conf name="test" extends="master,common" description="the classpath needed to run tests"/>
+   <conf name="test" extends="master" description="the classpath needed to run tests"/>
 
     <!--Private configurations. -->
 
@@ -205,7 +205,7 @@
     <dependency org="org.slf4j"
       name="slf4j-api"
       rev="${slf4j-api.version}"
-      conf="common->master"/>
+      conf="common->default"/>
     <dependency org="org.eclipse.jdt"
       name="core"
       rev="${core.version}"

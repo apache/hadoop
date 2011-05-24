@@ -211,10 +211,10 @@
     <pathelement location="${build.examples}"/>
     <pathelement location="${build.tools}"/>
     <pathelement path="${clover.jar}"/>
+    <path refid="ivy-common.classpath"/>
     <path refid="ivy-test.classpath"/>
     <pathelement location="${build.classes}"/>
     <pathelement location="${test.conf.dir}"/>
-    <path refid="ivy-common.classpath"/>
   </path>
 <!--
   <path id="test.hdfs.classpath">
