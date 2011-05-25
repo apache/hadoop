@@ -37,8 +37,7 @@ public class TestFSMainOperationsLocalFileSystem extends FSMainOperationsBaseTes
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
     fcTarget = FileSystem.getLocal(conf);
-    fSys = ViewFileSystemTestSetup.setupForViewFs(
-        ViewFileSystemTestSetup.configWithViewfsScheme(), fcTarget);
+    fSys = ViewFileSystemTestSetup.setupForViewFs(fcTarget);
     super.setUp();
   }
   
