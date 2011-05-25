@@ -77,11 +77,12 @@ public class PoolMap<K, V> implements Map<K, V> {
     return pool != null ? pool.put(value) : null;
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public V remove(Object key) {
     Pool<V> pool = pools.remove(key);
     if (pool != null) {
-      pool.clear();
+      remove((K) key, pool.get());
     }
     return null;
   }

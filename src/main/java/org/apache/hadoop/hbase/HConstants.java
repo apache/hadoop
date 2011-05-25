@@ -155,6 +155,12 @@ public final class HConstants {
   /** Parameter name for HBase client IPC pool size */
   public static final String HBASE_CLIENT_IPC_POOL_SIZE = "hbase.client.ipc.pool.size";
 
+  /** Parameter name for HBase client operation timeout, which overrides RPC timeout */
+  public static final String HBASE_CLIENT_OPERATION_TIMEOUT = "hbase.client.operation.timeout";
+
+  /** Default HBase client operation timeout, which is tantamount to a blocking call */
+  public static final int DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT = Integer.MAX_VALUE;
+
   /** Used to construct the name of the log directory for a region server
    * Use '.' as a special character to seperate the log files from table data */
   public static final String HREGION_LOGDIR_NAME = ".logs";

@@ -231,6 +231,7 @@ Release 0.91.0 - Unreleased
    HBASE-3811  Allow adding attributes to Scan (Alex Baranau)
    HBASE-3841  HTable and HTableInterface docs are inconsistent with
                one another (Harsh J Chouraria)
+   HBASE-2937  Facilitate Timeouts In HBase Client (Karthick Sankarachary)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.VersionedProtocol;
@@ -86,6 +87,14 @@ public class HBaseRPC {
   // track what RpcEngine is used by a proxy class, for stopProxy()
   private static final Map<Class,RpcEngine> PROXY_ENGINES
     = new HashMap<Class,RpcEngine>();
+
+  // thread-specific RPC timeout, which may override that of RpcEngine
+  private static ThreadLocal<Integer> rpcTimeout = new ThreadLocal<Integer>() {
+    @Override
+      protected Integer initialValue() {
+        return HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT;
+      }
+    };
 
   // set a protocol to use a non-default RpcEngine
   static void setProtocolEngine(Configuration conf,
@@ -285,7 +294,7 @@ public class HBaseRPC {
   throws IOException {
     VersionedProtocol proxy =
         getProtocolEngine(protocol,conf)
-            .getProxy(protocol, clientVersion, addr, ticket, conf, factory, rpcTimeout);
+            .getProxy(protocol, clientVersion, addr, ticket, conf, factory, Math.min(rpcTimeout, HBaseRPC.getRpcTimeout()));
     long serverVersion = proxy.getProtocolVersion(protocol.getName(),
                                                   clientVersion);
     if (serverVersion == clientVersion) {
@@ -378,5 +387,17 @@ public class HBaseRPC {
     throws IOException {
     return getProtocolEngine(protocol, conf)
         .getServer(protocol, instance, ifaces, bindAddress, port, numHandlers, metaHandlerCount, verbose, conf, highPriorityLevel);
+  }
+
+  public static void setRpcTimeout(int rpcTimeout) {
+    HBaseRPC.rpcTimeout.set(rpcTimeout);
+  }
+
+  public static int getRpcTimeout() {
+    return HBaseRPC.rpcTimeout.get();
+  }
+
+  public static void resetRpcTimeout() {
+    HBaseRPC.rpcTimeout.remove();
   }
 }

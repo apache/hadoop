@@ -1269,14 +1269,18 @@ public class HConnectionManager {
       for(int tries = 0; tries < numRetries; tries++) {
         try {
           callable.instantiateServer(tries != 0);
+          callable.beforeCall();
           return callable.call();
         } catch (Throwable t) {
+          callable.shouldRetry(t);
           t = translateException(t);
           exceptions.add(t);
           if (tries == numRetries - 1) {
             throw new RetriesExhaustedException(callable.getServerName(),
                 callable.getRegionName(), callable.getRow(), tries, exceptions);
           }
+        } finally {
+          callable.afterCall();
         }
         try {
           Thread.sleep(getPauseTime(tries));
@@ -1292,6 +1296,7 @@ public class HConnectionManager {
         throws IOException, RuntimeException {
       try {
         callable.instantiateServer(false);
+        callable.beforeCall();
         return callable.call();
       } catch (Throwable t) {
         Throwable t2 = translateException(t);
@@ -1300,6 +1305,8 @@ public class HConnectionManager {
         } else {
           throw new RuntimeException(t2);
         }
+      } finally {
+        callable.afterCall();
       }
     }
 

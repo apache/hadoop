@@ -36,6 +36,7 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -72,7 +73,7 @@ public class HBaseClient {
 
   private static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.HBaseClient");
-  protected final Map<ConnectionId, Connection> connections;
+  protected final PoolMap<ConnectionId, Connection> connections;
 
   protected final Class<? extends Writable> valueClass;   // class of call values
   protected int counter;                            // counter for call ids
@@ -560,8 +561,24 @@ public class HBaseClient {
         } else {
           Writable value = ReflectionUtils.newInstance(valueClass, conf);
           value.readFields(in);                 // read value
-          call.setValue(value);
+          // it's possible that this call may have been cleaned up due to a RPC
+          // timeout, so check if it still exists before setting the value.
+          if (call != null) {
+            call.setValue(value);
+          }
           calls.remove(id);
+        }
+      } catch (SocketTimeoutException ste) {
+        if (remoteId.rpcTimeout > 0) {
+          // Clean up open calls but don't treat this as a fatal condition,
+          // since we expect certain responses to not make it by the specified
+          // {@link ConnectionId#rpcTimeout}.
+          closeException = ste;
+          cleanupCalls();
+        } else {
+          // Since the server did not respond within the default ping interval
+          // time, treat this as a fatal condition and close this connection
+          markClosed(ste);
         }
       } catch (IOException e) {
         markClosed(e);
@@ -585,9 +602,7 @@ public class HBaseClient {
       // release the resources
       // first thing to do;take the connection out of the connection list
       synchronized (connections) {
-        if (connections.get(remoteId) == this) {
-          connections.remove(remoteId);
-        }
+        connections.remove(remoteId, this);
       }
 
       // close the streams and therefore the socket
@@ -624,6 +639,10 @@ public class HBaseClient {
       while (itor.hasNext()) {
         Call c = itor.next().getValue();
         c.setException(closeException); // local exception
+        // Notify the open calls, so they are aware of what just happened
+        synchronized (c) {
+          c.notifyAll();
+        }
         itor.remove();
       }
     }
