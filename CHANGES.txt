@@ -229,6 +229,8 @@ Release 0.91.0 - Unreleased
    HBASE-2938  HBASE-2938 Add Thread-Local Behavior To HTable Pool
                (Karthick Sankarachary)
    HBASE-3811  Allow adding attributes to Scan (Alex Baranau)
+   HBASE-3841  HTable and HTableInterface docs are inconsistent with
+               one another (Harsh J Chouraria)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
