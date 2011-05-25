@@ -98,8 +98,6 @@ public class TestHLog  {
   public static void setUpBeforeClass() throws Exception {
     // Make block sizes small.
     TEST_UTIL.getConfiguration().setInt("dfs.blocksize", 1024 * 1024);
-    TEST_UTIL.getConfiguration().setInt(
-        "hbase.regionserver.flushlogentries", 1);
     // needed for testAppendClose()
     TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
     // quicker heartbeat interval for faster DN death notification

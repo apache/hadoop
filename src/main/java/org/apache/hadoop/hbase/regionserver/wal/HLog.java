@@ -125,7 +125,6 @@ public class HLog implements Syncable {
     new CopyOnWriteArrayList<WALObserver>();
   private final long optionalFlushInterval;
   private final long blocksize;
-  private final int flushlogentries;
   private final String prefix;
   private final Path oldLogDir;
   private boolean logRollRequested;
@@ -336,8 +335,6 @@ public class HLog implements Syncable {
         registerWALActionsListener(i);
       }
     }
-    this.flushlogentries =
-      conf.getInt("hbase.regionserver.flushlogentries", 1);
     this.blocksize = conf.getLong("hbase.regionserver.hlog.blocksize",
       this.fs.getDefaultBlockSize());
     // Roll at 95% of block size.
@@ -363,7 +360,6 @@ public class HLog implements Syncable {
       StringUtils.byteDesc(this.blocksize) +
       ", rollsize=" + StringUtils.byteDesc(this.logrollsize) +
       ", enabled=" + this.enabled +
-      ", flushlogentries=" + this.flushlogentries +
       ", optionallogflushinternal=" + this.optionalFlushInterval + "ms");
     // If prefix is null||empty then just name it hlog
     this.prefix = prefix == null || prefix.isEmpty() ?
@@ -945,8 +941,6 @@ public class HLog implements Syncable {
 
     private final long optionalFlushInterval;
 
-    private boolean syncerShuttingDown = false;
-
     LogSyncer(long optionalFlushInterval) {
       this.optionalFlushInterval = optionalFlushInterval;
     }
@@ -967,12 +961,12 @@ public class HLog implements Syncable {
       } catch (InterruptedException e) {
         LOG.debug(getName() + " interrupted while waiting for sync requests");
       } finally {
-        syncerShuttingDown = true;
         LOG.info(getName() + " exiting");
       }
     }
   }
 
+  @Override
   public void sync() throws IOException {
     synchronized (this.updateLock) {
       if (this.closed) {

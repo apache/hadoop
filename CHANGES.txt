@@ -292,6 +292,8 @@ Release 0.90.4 - Unreleased
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the
                sun jre provided by RHEL6 (Roman Shaposhnik)
+   HBASE-3920  HLog hbase.regionserver.flushlogentries no longer supported
+               (Dave Latham)
 
 Release 0.90.3 - May 19th, 2011
 

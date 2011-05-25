@@ -177,13 +177,6 @@
     </description>
   </property>
   <property>
-    <name>hbase.regionserver.flushlogentries</name>
-    <value>1</value>
-    <description>Sync the HLog to HDFS when it has accumulated this many
-    entries. Default 1. Value is checked on every HLog.hflush
-    </description>
-  </property>
-  <property>
     <name>hbase.regionserver.optionallogflushinterval</name>
     <value>1000</value>
     <description>Sync the HLog to the HDFS after this interval if it has not

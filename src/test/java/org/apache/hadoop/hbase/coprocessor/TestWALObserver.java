@@ -97,7 +97,6 @@ public class TestWALObserver {
         SampleRegionWALObserver.class.getName());
     conf.setBoolean("dfs.support.append", true);
     conf.setInt("dfs.client.block.recovery.retries", 2);
-    conf.setInt("hbase.regionserver.flushlogentries", 1);
 
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.setNameNodeNameSystemLeasePeriod(100, 10000);

@@ -77,7 +77,6 @@ public class TestWALReplay {
     conf.setBoolean("dfs.support.append", true);
     // The below config supported by 0.20-append and CDH3b2
     conf.setInt("dfs.client.block.recovery.retries", 2);
-    conf.setInt("hbase.regionserver.flushlogentries", 1);
     TEST_UTIL.startMiniDFSCluster(3);
     TEST_UTIL.setNameNodeNameSystemLeasePeriod(100, 10000);
     Path hbaseRootDir =
