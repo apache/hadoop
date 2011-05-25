@@ -12,6 +12,9 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    HADOOP-7322. Adding a util method in FileUtil for directory listing,
+    avoid NPEs on File.listFiles() (Bharath Mundlapudi via mattf)
+
     HADOOP-7023. Add listCorruptFileBlocks to Filesysem. (Patrick Kling
     via hairong)
 
