@@ -93,8 +93,8 @@ public class TrackerDistributedCacheManager {
   
   private static final Random random = new Random();
   
-  BaseDirManager baseDirManager = new BaseDirManager();
-  CleanupThread cleanupThread;
+  protected BaseDirManager baseDirManager = new BaseDirManager();
+  protected CleanupThread cleanupThread;
 
   public TrackerDistributedCacheManager(Configuration conf,
                                         TaskController controller
@@ -874,7 +874,7 @@ public class TrackerDistributedCacheManager {
   /**
    * A thread to check and cleanup the unused files periodically
    */
-  private class CleanupThread extends Thread {
+  protected class CleanupThread extends Thread {
     // How often do we check if we need to clean up cache files?
     private long cleanUpCheckPeriod = 60000L; // 1 minute
     public CleanupThread(Configuration conf) {
@@ -882,6 +882,7 @@ public class TrackerDistributedCacheManager {
         conf.getLong("mapreduce.tasktracker.distributedcache.checkperiod",
             cleanUpCheckPeriod);
     }
+
     private volatile boolean running = true;
     
     public void stopRunning() {
@@ -894,11 +895,25 @@ public class TrackerDistributedCacheManager {
         try {
           Thread.sleep(cleanUpCheckPeriod);
           baseDirManager.checkAndCleanup();
-        } catch (Exception e) {
+        } catch (IOException e) {
           LOG.error("Exception in DistributedCache CleanupThread.", e);
-          // This thread should keep running and never crash.
+        } catch(InterruptedException e) {
+          LOG.info("Cleanup...",e); 
+          //To force us to exit cleanly
+          running = false;
+        } catch (Throwable t) {
+          exitTaskTracker(t);
         }
       }
+    }
+    
+    /**
+     * Exit the task tracker because of a fatal error.
+     */
+    protected void exitTaskTracker(Throwable t) {
+      LOG.fatal("Distributed Cache cleanup thread received runtime exception." +
+      		" Exiting the TaskTracker", t);
+      Runtime.getRuntime().exit(-1);
     }
   }
 
@@ -906,7 +921,7 @@ public class TrackerDistributedCacheManager {
    * This class holds properties of each base directories and is responsible
    * for clean up unused cache files in base directories.
    */
-  private class BaseDirManager {
+  protected class BaseDirManager {
 
     // For holding the properties of each cache directory
     private class CacheDir {
