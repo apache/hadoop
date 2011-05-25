@@ -564,7 +564,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-test -\[ezd\] &lt;path&gt;: If file \{ exists, has zero length, is a directory( )*</expected-output>
+          <expected-output>^-test -\[ezd\] &lt;path&gt;:\s+If file exists, has zero length, is a directory( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
