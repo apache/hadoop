@@ -187,10 +187,11 @@ throws InterruptedException, IOException {
   </section>
   <section xml:id="keysize">
       <title>Try to minimize row and column sizes</title>
+      <subtitle>Or why are my storefile indices large?</subtitle>
       <para>In HBase, values are always freighted with their coordinates; as a
           cell value passes through the system, it'll be accompanied by its
           row, column name, and timestamp.  Always.  If your rows and column names
-          are large, especially compared o the size of the cell value, then
+          are large, especially compared to the size of the cell value, then
           you may run up against some interesting scenarios.  One such is
           the case described by Marc Limotte at the tail of
           <link xlink:url="https://issues.apache.org/jira/browse/HBASE-3551?page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel&amp;focusedCommentId=13005272#comment-13005272">HBASE-3551</link>
@@ -202,6 +203,9 @@ throws InterruptedException, IOException {
                   entries in the store file index happen at a larger interval or
                   modify the table schema so it makes for smaller rows and column
                   names.
+                  Compression will also make for larger indices.  See
+                  the thread <link xref:href="http://search-hadoop.com/m/hemBv1LiN4Q1/a+question+storefileIndexSize&amp;subj=a+question+storefileIndexSize">a question storefileIndexSize</link>
+                  up on the user mailing list.
       `</para>
   </section>
   <section xml:id="schema.versions">
