@@ -55,12 +55,14 @@ class FsUsage extends FsCommand {
   /** Show the size of a partition in the filesystem */
   public static class Df extends FsUsage {
     public static final String NAME = "df";
-    public static final String USAGE = "[<path> ...]";
+    public static final String USAGE = "[-h] [<path> ...]";
     public static final String DESCRIPTION =
       "Shows the capacity, free and used space of the filesystem.\n"+
       "If the filesystem has multiple partitions, and no path to a\n" +
       "particular partition is specified, then the status of the root\n" +
-      "partitions will be shown.";
+      "partitions will be shown.\n" +
+      "  -h   Formats the sizes of files in a human-readable fashion\n" +
+      "       rather than a number of bytes.\n\n";
     
     @Override
     protected void processOptions(LinkedList<String> args)

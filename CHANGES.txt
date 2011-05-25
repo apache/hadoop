@@ -173,6 +173,9 @@ Trunk (unreleased changes)
     HADOOP-7302. webinterface.private.actions should be renamed and moved to
     the MapReduce project. (Ari Rabkin via todd)
 
+    HADOOP-7329. Improve help message for "df" to include "-h" flag.
+    (Xie Xianshan via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
