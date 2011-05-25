@@ -20,7 +20,9 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.LinkedList;
-import java.util.concurrent.atomic.AtomicLong;
+
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 
 /**
  * Manages the read/write consistency within memstore. This provides
@@ -158,4 +160,10 @@ public class ReadWriteConsistencyControl {
       return this.writeNumber;
     }
   }
+  
+  public static final long FIXED_SIZE = ClassSize.align(
+      ClassSize.OBJECT + 
+      2 * Bytes.SIZEOF_LONG + 
+      2 * ClassSize.REFERENCE);
+  
 }
