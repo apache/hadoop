@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 
@@ -287,5 +288,21 @@ public class TestChRootedFileSystem {
     Assert.assertEquals(absoluteDir, fSys.getWorkingDirectory());
 
   }
- 
+  
+  /*
+   * Test resolvePath(p) 
+   */
+  
+  @Test
+  public void testResolvePath() throws IOException {
+    Assert.assertEquals(chrootedTo, fSys.resolvePath(new Path("/"))); 
+    FileSystemTestHelper.createFile(fSys, "/foo");
+    Assert.assertEquals(new Path(chrootedTo, "foo"),
+        fSys.resolvePath(new Path("/foo"))); 
+  }
+
+  @Test(expected=FileNotFoundException.class) 
+  public void testResolvePathNonExisting() throws IOException {
+      fSys.resolvePath(new Path("/nonExisting"));
+  }
 }

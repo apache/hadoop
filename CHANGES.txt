@@ -247,6 +247,8 @@ Trunk (unreleased changes)
     HADOOP-7282. ipc.Server.getRemoteIp() may return null.  (John George
     via szetszwo)
 
+    HADOOP-7284 Trash and shell's rm does not work for viewfs (Sanjay Radia)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

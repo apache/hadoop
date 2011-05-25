@@ -86,8 +86,7 @@ class Delete extends FsCommand {
     private boolean moveToTrash(PathData item) throws IOException {
       boolean success = false;
       if (!skipTrash) {
-        Trash trash = new Trash(item.fs, getConf());
-        success = (trash.isEnabled() && trash.moveToTrash(item.path));
+        success = Trash.moveToAppropriateTrash(item.fs, item.path, getConf());
       }
       return success;
     }

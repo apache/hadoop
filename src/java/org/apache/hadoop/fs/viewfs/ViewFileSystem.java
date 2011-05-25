@@ -157,8 +157,6 @@ public class ViewFileSystem extends FileSystem {
     final String authority = theUri.getAuthority();
     try {
       myUri = new URI(FsConstants.VIEWFS_SCHEME, authority, "/", null, null);
-      workingDir =
-        this.makeQualified(new Path("/user/" + ugi.getShortUserName()));
       fsState = new InodeTree<FileSystem>(conf, authority) {
 
         @Override
@@ -184,6 +182,7 @@ public class ViewFileSystem extends FileSystem {
           // return MergeFs.createMergeFs(mergeFsURIList, config);
         }
       };
+      workingDir = this.getHomeDirectory();
     } catch (URISyntaxException e) {
       throw new IOException("URISyntax exception: " + theUri);
     }
@@ -232,6 +231,28 @@ public class ViewFileSystem extends FileSystem {
       return f;
     }
     return res.targetFileSystem.resolvePath(res.remainingPath);
+  }
+  
+  Path homeDir = null;
+  @Override
+  public Path getHomeDirectory() {
+    String base = "/user/";;
+    if (homeDir == null) {
+      // We deal with whether or not home dir should be /user (hdfs) or /Users (if run on local file system on mac
+      try {
+        if (this.exists(new Path("/user/"))) {
+          base = "/user/";
+        } else if (this.exists(new Path("/Users"))) {
+          base = "/Users/";  
+        } else if (this.exists(new Path("/homes"))) {
+          base = "/homes/";  
+        }
+      } catch (IOException e) {
+          // ignore - - the default of /user is good enough
+      }
+      homeDir = this.makeQualified(new Path(base + ugi.getShortUserName()));
+    }
+    return homeDir;
   }
   
   @Override
