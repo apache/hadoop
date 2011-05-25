@@ -414,7 +414,7 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("row=");
-    sb.append(Bytes.toString(this.row));
+    sb.append(Bytes.toStringBinary(this.row));
     sb.append(", families={");
     boolean moreThanOne = false;
     for(Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {

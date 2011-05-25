@@ -822,7 +822,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     Pair<HRegionInfo, ServerName> p =
       this.assignmentManager.getAssignment(encodedRegionName);
     if (p == null)
-      throw new UnknownRegionException(Bytes.toString(encodedRegionName));
+      throw new UnknownRegionException(Bytes.toStringBinary(encodedRegionName));
     HRegionInfo hri = p.getFirst();
     ServerName dest = null;
     if (destServerName == null || destServerName.length == 0) {
@@ -917,14 +917,14 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     if (newRegions.length == 1) {
       this.assignmentManager.assign(newRegions[0], true);
     } else {
-      // 5. Trigger immediate assignment of the regions in round-robin fashion
-      List<ServerName> servers = serverManager.getOnlineServersList();
-      try {
-        this.assignmentManager.assignUserRegions(Arrays.asList(newRegions), servers);
-      } catch (InterruptedException ie) {
-        LOG.error("Caught " + ie + " during round-robin assignment");
-        throw new IOException(ie);
-      }
+    // 5. Trigger immediate assignment of the regions in round-robin fashion
+    List<ServerName> servers = serverManager.getOnlineServersList();
+    try {
+      this.assignmentManager.assignUserRegions(Arrays.asList(newRegions), servers);
+    } catch (InterruptedException ie) {
+      LOG.error("Caught " + ie + " during round-robin assignment");
+      throw new IOException(ie);
+    }
     }
 
     // 6. If sync, wait for assignment of regions
@@ -1295,7 +1295,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     }
     Pair<HRegionInfo, ServerName> pair =
       MetaReader.getRegion(this.catalogTracker, regionName);
-    if (pair == null) throw new UnknownRegionException(Bytes.toString(regionName));
+    if (pair == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
     HRegionInfo hri = pair.getFirst();
     if (force) this.assignmentManager.clearRegionFromTransition(hri);
     this.assignmentManager.unassign(hri, force);

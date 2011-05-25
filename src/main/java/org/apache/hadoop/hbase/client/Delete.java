@@ -290,7 +290,7 @@ public class Delete implements Writable, Row, Comparable<Row> {
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("row=");
-    sb.append(Bytes.toString(this.row));
+    sb.append(Bytes.toStringBinary(this.row));
     sb.append(", ts=");
     sb.append(this.ts);
     sb.append(", families={");

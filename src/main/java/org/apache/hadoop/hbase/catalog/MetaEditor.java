@@ -162,7 +162,7 @@ public class MetaEditor {
     addLocation(put, sn);
     server.put(catalogRegionName, put);
     LOG.info("Updated row " + regionInfo.getRegionNameAsString() +
-      " in region " + Bytes.toString(catalogRegionName) + " with " +
+      " in region " + Bytes.toStringBinary(catalogRegionName) + " with " +
       "serverName=" + sn.toString());
   }
 
@@ -199,7 +199,7 @@ public class MetaEditor {
     catalogTracker.waitForMetaServerConnectionDefault().
       delete(CatalogTracker.META_REGION, delete);
     LOG.info("Deleted daughter reference " + daughter.getRegionNameAsString() +
-      ", qualifier=" + Bytes.toString(qualifier) + ", from parent " +
+      ", qualifier=" + Bytes.toStringBinary(qualifier) + ", from parent " +
       parent.getRegionNameAsString());
   }
 

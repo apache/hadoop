@@ -101,7 +101,7 @@ implements Configurable {
     if (this.lastReduces != reduces) {
       this.splits = Bytes.split(this.startkey, this.endkey, reduces - 1);
       for (int i = 0; i < splits.length; i++) {
-        LOG.info(Bytes.toString(splits[i]));
+        LOG.info(Bytes.toStringBinary(splits[i]));
       }
     }
     int pos = Bytes.binarySearch(this.splits, key.get(), key.getOffset(),

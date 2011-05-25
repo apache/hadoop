@@ -306,7 +306,7 @@ public class Get implements Writable, Row, Comparable<Row> {
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("row=");
-    sb.append(Bytes.toString(this.row));
+    sb.append(Bytes.toStringBinary(this.row));
     sb.append(", maxVersions=");
     sb.append("").append(this.maxVersions);
     sb.append(", cacheBlocks=");
@@ -342,7 +342,7 @@ public class Get implements Writable, Row, Comparable<Row> {
           } else {
             moreThanOneB = true;
           }
-          sb.append(Bytes.toString(column));
+          sb.append(Bytes.toStringBinary(column));
         }
         sb.append("}");
       }

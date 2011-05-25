@@ -225,7 +225,7 @@ public class MetaUtils {
           info = Writables.getHRegionInfoOrNull(kv.getValue());
           if (info == null) {
             LOG.warn("Region info is null for row " +
-              Bytes.toString(kv.getRow()) + " in table " +
+              Bytes.toStringBinary(kv.getRow()) + " in table " +
               r.getTableDesc().getNameAsString());
           }
           continue;

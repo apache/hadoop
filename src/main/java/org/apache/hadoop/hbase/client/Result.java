@@ -664,7 +664,7 @@ public class Result implements Writable, WritableWithSize {
       throws Exception {
     if (res2 == null) {
       throw new Exception("There wasn't enough rows, we stopped at "
-          + Bytes.toString(res1.getRow()));
+          + Bytes.toStringBinary(res1.getRow()));
     }
     if (res1.size() != res2.size()) {
       throw new Exception("This row doesn't have the same number of KVs: "

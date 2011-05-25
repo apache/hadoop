@@ -294,6 +294,7 @@ Release 0.90.4 - Unreleased
                sun jre provided by RHEL6 (Roman Shaposhnik)
    HBASE-3920  HLog hbase.regionserver.flushlogentries no longer supported
                (Dave Latham)
+   HBASE-3919  More places output binary data to text (Dave Latham)
 
 Release 0.90.3 - May 19th, 2011
 

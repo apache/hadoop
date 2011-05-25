@@ -404,7 +404,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
       return false;
     } catch (IOException ex) {
       LOG.error("Cache flush failed" +
-        (region != null ? (" for region " + Bytes.toString(region.getRegionName())) : ""),
+        (region != null ? (" for region " + Bytes.toStringBinary(region.getRegionName())) : ""),
         RemoteExceptionHandler.checkIOException(ex));
       if (!server.checkFileSystem()) {
         return false;
@@ -533,7 +533,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
 
     @Override
     public String toString() {
-      return "[flush region " + Bytes.toString(region.getRegionName()) + "]";
+      return "[flush region " + Bytes.toStringBinary(region.getRegionName()) + "]";
     }
   }
 }

@@ -3054,8 +3054,8 @@ public class HRegion implements HeapSize { // , Writable{
 
     LOG.info("starting merge of regions: " + a + " and " + b +
       " into new region " + newRegionInfo.toString() +
-        " with start key <" + Bytes.toString(startKey) + "> and end key <" +
-        Bytes.toString(endKey) + ">");
+        " with start key <" + Bytes.toStringBinary(startKey) + "> and end key <" +
+        Bytes.toStringBinary(endKey) + ">");
 
     // Move HStoreFiles under new region directory
     Map<byte [], List<StoreFile>> byFamily =
@@ -3494,7 +3494,7 @@ public class HRegion implements HeapSize { // , Writable{
   throws NoSuchColumnFamilyException {
     if(!regionInfo.getTableDesc().hasFamily(family)) {
       throw new NoSuchColumnFamilyException("Column family " +
-          Bytes.toString(family) + " does not exist in region " + this
+          Bytes.toStringBinary(family) + " does not exist in region " + this
             + " in table " + regionInfo.getTableDesc());
     }
   }

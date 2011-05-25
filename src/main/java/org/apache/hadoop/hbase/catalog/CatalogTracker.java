@@ -470,7 +470,7 @@ public class CatalogTracker {
         throw e;
       }
     }
-    LOG.info("Failed verification of " + Bytes.toString(regionName) +
+    LOG.info("Failed verification of " + Bytes.toStringBinary(regionName) +
       " at address=" + address + "; " + t);
     return false;
   }

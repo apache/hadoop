@@ -155,13 +155,13 @@ public class MetaScanner {
           HConstants.CATALOG_FAMILY);
       if (startRowResult == null) {
         throw new TableNotFoundException("Cannot find row in .META. for table: "
-            + Bytes.toString(tableName) + ", row=" + Bytes.toString(searchRow));
+            + Bytes.toString(tableName) + ", row=" + Bytes.toStringBinary(searchRow));
       }
       byte[] value = startRowResult.getValue(HConstants.CATALOG_FAMILY,
           HConstants.REGIONINFO_QUALIFIER);
       if (value == null || value.length == 0) {
         throw new IOException("HRegionInfo was null or empty in Meta for " +
-          Bytes.toString(tableName) + ", row=" + Bytes.toString(searchRow));
+          Bytes.toString(tableName) + ", row=" + Bytes.toStringBinary(searchRow));
       }
       HRegionInfo regionInfo = Writables.getHRegionInfo(value);
 
@@ -186,7 +186,7 @@ public class MetaScanner {
       final Scan scan = new Scan(startRow).addFamily(HConstants.CATALOG_FAMILY);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Scanning " + Bytes.toString(metaTableName) +
-          " starting at row=" + Bytes.toString(startRow) + " for max=" +
+          " starting at row=" + Bytes.toStringBinary(startRow) + " for max=" +
           rowUpperLimit + " rows");
       }
       callable = new ScannerCallable(connection, metaTableName, scan);

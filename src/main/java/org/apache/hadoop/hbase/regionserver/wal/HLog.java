@@ -625,7 +625,7 @@ public class HLog implements Syncable {
         LOG.debug("Found " + logsToRemove + " hlogs to remove" +
           " out of total " + this.outputfiles.size() + ";" +
           " oldest outstanding sequenceid is " + oldestOutstandingSeqNum +
-          " from region " + Bytes.toString(oldestRegion));
+          " from region " + Bytes.toStringBinary(oldestRegion));
       }
       for (Long seq : sequenceNumbers) {
         archiveLogFile(this.outputfiles.remove(seq), seq);

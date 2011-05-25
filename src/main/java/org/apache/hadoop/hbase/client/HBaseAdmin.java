@@ -766,7 +766,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         Pair<HRegionInfo, ServerName> pair = MetaReader.getRegion(ct, regionname);
         if (pair == null || pair.getSecond() == null) {
           LOG.info("No server in .META. for " +
-            Bytes.toString(regionname) + "; pair=" + pair);
+            Bytes.toStringBinary(regionname) + "; pair=" + pair);
         } else {
           closeRegion(pair.getSecond(), pair.getFirst());
         }
@@ -774,7 +774,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         Pair<HRegionInfo, ServerName> pair = MetaReader.getRegion(ct, regionname);
         if (pair == null || pair.getSecond() == null) {
           LOG.info("No server in .META. for " +
-            Bytes.toString(regionname) + "; pair=" + pair);
+            Bytes.toStringBinary(regionname) + "; pair=" + pair);
         } else {
           closeRegion(pair.getSecond(), pair.getFirst());
         }
@@ -823,7 +823,7 @@ public class HBaseAdmin implements Abortable, Closeable {
           MetaReader.getRegion(ct, tableNameOrRegionName);
         if (pair == null || pair.getSecond() == null) {
           LOG.info("No server in .META. for " +
-            Bytes.toString(tableNameOrRegionName) + "; pair=" + pair);
+            Bytes.toStringBinary(tableNameOrRegionName) + "; pair=" + pair);
         } else {
           flush(pair.getSecond(), pair.getFirst());
         }
@@ -926,7 +926,7 @@ public class HBaseAdmin implements Abortable, Closeable {
           MetaReader.getRegion(ct, tableNameOrRegionName);
         if (pair == null || pair.getSecond() == null) {
           LOG.info("No server in .META. for " +
-            Bytes.toString(tableNameOrRegionName) + "; pair=" + pair);
+            Bytes.toStringBinary(tableNameOrRegionName) + "; pair=" + pair);
         } else {
           compact(pair.getSecond(), pair.getFirst(), major);
         }
@@ -1082,7 +1082,7 @@ public class HBaseAdmin implements Abortable, Closeable {
           MetaReader.getRegion(ct, tableNameOrRegionName);
         if (pair == null || pair.getSecond() == null) {
           LOG.info("No server in .META. for " +
-            Bytes.toString(tableNameOrRegionName) + "; pair=" + pair);
+            Bytes.toStringBinary(tableNameOrRegionName) + "; pair=" + pair);
         } else {
           split(pair.getSecond(), pair.getFirst(), splitPoint);
         }

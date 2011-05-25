@@ -225,7 +225,7 @@ public class Increment implements Writable {
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("row=");
-    sb.append(Bytes.toString(this.row));
+    sb.append(Bytes.toStringBinary(this.row));
     if(this.familyMap.size() == 0) {
       sb.append(", no columns set to be incremented");
       return sb.toString();
@@ -254,7 +254,7 @@ public class Increment implements Writable {
           } else {
             moreThanOneB = true;
           }
-          sb.append(Bytes.toString(column.getKey()) + "+=" + column.getValue());
+          sb.append(Bytes.toStringBinary(column.getKey()) + "+=" + column.getValue());
         }
         sb.append("}");
       }

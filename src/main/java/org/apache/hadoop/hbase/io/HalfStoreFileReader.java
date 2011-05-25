@@ -258,7 +258,7 @@ public class HalfStoreFileReader extends StoreFile.Reader {
         return Bytes.toBytes(scanner.getKey());
       }
     } catch (IOException e) {
-      LOG.warn("Failed seekBefore " + Bytes.toString(this.splitkey), e);
+      LOG.warn("Failed seekBefore " + Bytes.toStringBinary(this.splitkey), e);
     }
     return null;
   }
