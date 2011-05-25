@@ -41,7 +41,7 @@ class Ls extends FsCommand {
   }
   
   public static final String NAME = "ls";
-  public static final String USAGE = "[<path> ...]";
+  public static final String USAGE = "[-R] [<path> ...]";
   public static final String DESCRIPTION =
     "List the contents that match the specified file pattern. If\n" + 
     "path is not specified, the contents of /user/<currentUser>\n" +
@@ -50,7 +50,8 @@ class Ls extends FsCommand {
     "and file entries are of the form \n" + 
     "\tfileName(full path) <r n> size \n" +
     "where n is the number of replicas specified for the file \n" + 
-    "and size is the size of the file, in bytes.";
+    "and size is the size of the file, in bytes.\n" +
+    "  -R  Recursively list the contents of directories";
 
   protected static final SimpleDateFormat dateFormat = 
     new SimpleDateFormat("yyyy-MM-dd HH:mm");
@@ -135,18 +136,17 @@ class Ls extends FsCommand {
    */
   public static class Lsr extends Ls {
     public static final String NAME = "lsr";
-    public static final String USAGE = Ls.USAGE;
-    public static final String DESCRIPTION =
-      "Recursively list the contents that match the specified\n" +
-      "file pattern.  Behaves very similarly to hadoop fs -ls,\n" + 
-      "except that the data is shown for all the entries in the\n" +
-      "subtree.";
 
     @Override
     protected void processOptions(LinkedList<String> args)
     throws IOException {
       args.addFirst("-R");
       super.processOptions(args);
+    }
+    
+    @Override
+    public String getReplacementCommand() {
+      return "ls -R";
     }
   }
 }

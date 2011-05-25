@@ -77,6 +77,9 @@ Trunk (unreleased changes)
     HADOOP-7289. In ivy.xml, test conf should not extend common conf.
     (Eric Yang via szetszwo)
 
+    HADOOP-7286. Refactor the du/dus/df commands to conform to new FsCommand
+    class. (Daryn Sharp via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES

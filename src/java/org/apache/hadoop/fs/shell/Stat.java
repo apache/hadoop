@@ -93,7 +93,7 @@ class Stat extends FsCommand {
                 : (stat.isFile() ? "regular file" : "symlink"));
             break;
           case 'n':
-            buf.append(item);
+            buf.append(item.path.getName());
             break;
           case 'o':
             buf.append(stat.getBlockSize());
