@@ -43,7 +43,7 @@ abstract public class FsCommand extends Command {
    * @param factory where to register the class
    */
   public static void registerCommands(CommandFactory factory) {
-    factory.registerCommands(Copy.class);
+    factory.registerCommands(CopyCommands.class);
     factory.registerCommands(Count.class);
     factory.registerCommands(Delete.class);
     factory.registerCommands(Display.class);
@@ -51,6 +51,7 @@ abstract public class FsCommand extends Command {
     factory.registerCommands(FsUsage.class);
     factory.registerCommands(Ls.class);
     factory.registerCommands(Mkdir.class);
+    factory.registerCommands(MoveCommands.class);
     factory.registerCommands(SetReplication.class);
     factory.registerCommands(Stat.class);
     factory.registerCommands(Tail.class);

@@ -40,7 +40,9 @@ public class PathExceptions {
     // NOTE: this really should be a Path, but a Path is buggy and won't
     // return the exact string used to construct the path, and it mangles
     // uris with no authority
+    private String operation;
     private String path;
+    private String targetPath;
 
     /**
      * Constructor a generic I/O error exception
@@ -74,17 +76,53 @@ public class PathExceptions {
       this.path = path;
     }
 
+    /** Format:
+     * cmd: {operation} `path' {to `target'}: error string
+     */
     @Override
     public String getMessage() {
-      String message = "`" + path + "': " + super.getMessage();
-      if (getCause() != null) {
-        message += ": " + getCause().getMessage();
+      StringBuilder message = new StringBuilder();
+      if (operation != null) {
+        message.append(operation + " ");
       }
-      return message;
+      message.append(formatPath(path));
+      if (targetPath != null) {
+        message.append(" to " + formatPath(targetPath));
+      }
+      message.append(": " + super.getMessage());
+      if (getCause() != null) {
+        message.append(": " + getCause().getMessage());
+      }
+      return message.toString();
     }
 
     /** @return Path that generated the exception */
     public Path getPath()  { return new Path(path); }
+
+    /** @return Path if the operation involved copying or moving, else null */
+    public Path getTargetPath() {
+      return (targetPath != null) ? new Path(targetPath) : null;
+    }    
+    
+    /**
+     * Optional operation that will preface the path
+     * @param operation a string
+     */
+    public void setOperation(String operation) {
+      this.operation = operation;
+    }
+    
+    /**
+     * Optional path if the exception involved two paths, ex. a copy operation
+     * @param targetPath the of the operation
+     */
+    public void setTargetPath(String targetPath) {
+      this.targetPath = targetPath;
+    }
+    
+    private String formatPath(String path) {
+      return "`" + path + "'";
+    }
   }
 
   /** ENOENT */
@@ -142,6 +180,15 @@ public class PathExceptions {
     /** @param path for the exception */
     public PathPermissionException(String path) {
       super(path, "Operation not permitted");
+    }
+  }
+  
+  /** ENOTSUP */
+  public static class PathOperationException extends PathExistsException {
+    static final long serialVersionUID = 0L;
+    /** @param path for the exception */
+    public PathOperationException(String path) {
+      super(path, "Operation not supported");
     }
   }
 }
