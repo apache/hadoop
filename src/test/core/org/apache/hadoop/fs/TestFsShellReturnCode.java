@@ -51,7 +51,7 @@ public class TestFsShellReturnCode {
   
   @BeforeClass
   public static void setup() throws IOException {
-    conf.setClass("fs.file.impl", LocalFileSystemExtn.class, RawLocalFileSystem.class);
+    conf.setClass("fs.file.impl", LocalFileSystemExtn.class, LocalFileSystem.class);
     fileSys = FileSystem.get(conf);
     fsShell = new FsShell(conf);
   }
@@ -286,7 +286,7 @@ public class TestFsShellReturnCode {
       assertTrue("file exists", !fileSys.exists(new Path(args[1])));
       int run = shell.run(args);
       results = bytes.toString();
-      assertTrue("Return code should be -1", run == -1);
+      assertEquals("Return code should be 1", 1, run);
       assertTrue(" Null is coming when source path is invalid. ",!results.contains("get: null"));
       assertTrue(" Not displaying the intended message ",results.contains("get: `"+args[1]+"': No such file or directory"));
     } finally {
@@ -326,7 +326,13 @@ public class TestFsShellReturnCode {
     
   }
   
-  static class LocalFileSystemExtn extends RawLocalFileSystem {
+  static class LocalFileSystemExtn extends LocalFileSystem {
+    public LocalFileSystemExtn() {
+      super(new RawLocalFileSystemExtn());
+    }
+  }
+
+  static class RawLocalFileSystemExtn extends RawLocalFileSystem {
     protected static HashMap<String,String> owners = new HashMap<String,String>();
     protected static HashMap<String,String> groups = new HashMap<String,String>();
 

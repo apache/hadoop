@@ -127,9 +127,6 @@ class Ls extends FsCommand {
     return Math.max(n, (value != null) ? String.valueOf(value).length() : 0);
   }
 
-  @Override
-  protected int exitCodeForError() { return -1; }
-
   /**
    * Get a recursive listing of all files in that match the file patterns.
    * Same as "-ls -R"

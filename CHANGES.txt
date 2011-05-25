@@ -176,6 +176,9 @@ Trunk (unreleased changes)
     HADOOP-7329. Improve help message for "df" to include "-h" flag.
     (Xie Xianshan via todd)
 
+    HADOOP-7320. Refactor the copy and move commands to conform to new
+    FsCommand class. (Daryn Sharp via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES

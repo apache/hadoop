@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.shell;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
@@ -58,6 +59,21 @@ public class PathData {
     setStat(getStat(fs, path));
   }
   
+  /**
+   * Creates an object to wrap the given parameters as fields.  The string
+   * used to create the path will be recorded since the Path object does not
+   * return exactly the same string used to initialize it
+   * @param localPath a local File
+   * @param conf the configuration file
+   * @throws IOException if anything goes wrong...
+   */
+  public PathData(File localPath, Configuration conf) throws IOException {
+    this.string = localPath.toString();
+    this.path = new Path(this.string);
+    this.fs = FileSystem.getLocal(conf);
+    setStat(getStat(fs, path));
+  }
+
   /**
    * Creates an object to wrap the given parameters as fields. 
    * @param fs the FileSystem
@@ -154,6 +170,19 @@ public class PathData {
       items[i] = new PathData(fs, parent + basename, stats[i]);
     }
     return items;
+  }
+
+  /**
+   * Creates a new object for a child entry in this directory
+   * @param child the basename will be appended to this object's path
+   * @return PathData for the child
+   * @throws IOException if this object does not exist or is not a directory
+   */
+  public PathData getPathDataForChild(PathData child) throws IOException {
+    if (!stat.isDirectory()) {
+      throw new PathIsNotDirectoryException(string);
+    }
+    return new PathData(fs, new Path(path, child.path.getName()));
   }
 
   /**

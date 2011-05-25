@@ -117,11 +117,11 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-get( )*\[-ignoreCrc\]( )*\[-crc\]( )*&lt;src&gt; &lt;localdst&gt;:( |\t)*Copy files that match the file pattern &lt;src&gt;( )*</expected-output>
+          <expected-output>^-get( )*\[-ignoreCrc\]( )*\[-crc\]( )*&lt;src&gt; \.\.\. &lt;localdst&gt;:( |\t)*Copy files that match the file pattern &lt;src&gt;( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*to the local name.( )*&lt;src&gt; is kept.( )*When copying mutiple,( )*</expected-output>
+          <expected-output>^( |\t)*to the local name.( )*&lt;src&gt; is kept.( )*When copying multiple,( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -237,7 +237,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-mv &lt;src&gt; &lt;dst&gt;:( |\t)*Move files that match the specified file pattern &lt;src&gt;( )*</expected-output>
+          <expected-output>^-mv &lt;src&gt; \.\.\. &lt;dst&gt;:( |\t)*Move files that match the specified file pattern &lt;src&gt;( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -260,7 +260,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-cp &lt;src&gt; &lt;dst&gt;:( |\t)*Copy files that match the file pattern &lt;src&gt; to a( )*</expected-output>
+          <expected-output>^-cp &lt;src&gt; \.\.\. &lt;dst&gt;:( |\t)*Copy files that match the file pattern &lt;src&gt; to a( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -325,7 +325,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-put &lt;localsrc&gt; ... &lt;dst&gt;:( |\t)*Copy files from the local file system( )*</expected-output>
+          <expected-output>^-put &lt;localsrc&gt; \.\.\. &lt;dst&gt;:\s+Copy files from the local file system</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -344,7 +344,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-copyFromLocal &lt;localsrc&gt; ... &lt;dst&gt;:( )*Identical to the -put command.( )*</expected-output>
+          <expected-output>^-copyFromLocal &lt;localsrc&gt; \.\.\. &lt;dst&gt;:\s+Identical to the -put command\.</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -359,11 +359,11 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-moveFromLocal &lt;localsrc&gt; ... &lt;dst&gt;: Same as -put, except that the source is( )*</expected-output>
+          <expected-output>^-moveFromLocal &lt;localsrc&gt; \.\.\. &lt;dst&gt;:\s+Same as -put, except that the source is</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*deleted after it's copied.( )*</expected-output>
+          <expected-output>^( |\t)*deleted after it's copied.</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -379,11 +379,11 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-get( )*\[-ignoreCrc\]( )*\[-crc\]( )*&lt;src&gt; &lt;localdst&gt;:( |\t)*Copy files that match the file pattern &lt;src&gt;( )*</expected-output>
+          <expected-output>^-get( )*\[-ignoreCrc\]( )*\[-crc\]( )*&lt;src&gt; \.\.\. &lt;localdst&gt;:( |\t)*Copy files that match the file pattern &lt;src&gt;( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*to the local name.( )*&lt;src&gt; is kept.( )*When copying mutiple,( )*</expected-output>
+          <expected-output>^( |\t)*to the local name.( )*&lt;src&gt; is kept.( )*When copying multiple,( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -445,7 +445,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-copyToLocal \[-ignoreCrc\] \[-crc\] &lt;src&gt; &lt;localdst&gt;:( )*Identical to the -get command.( )*</expected-output>
+          <expected-output>^-copyToLocal \[-ignoreCrc\] \[-crc\] &lt;src&gt; \.\.\. &lt;localdst&gt;:\s+Identical to the -get command.</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -460,7 +460,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-moveToLocal &lt;src&gt; &lt;localdst&gt;:( )*Not implemented yet( )*</expected-output>
+          <expected-output>^-moveToLocal &lt;src&gt; &lt;localdst&gt;:\s+Not implemented yet</expected-output>
         </comparator>
       </comparators>
     </test>
