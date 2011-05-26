@@ -204,7 +204,7 @@ throws InterruptedException, IOException {
                   modify the table schema so it makes for smaller rows and column
                   names.
                   Compression will also make for larger indices.  See
-                  the thread <link xref:href="http://search-hadoop.com/m/hemBv1LiN4Q1/a+question+storefileIndexSize&amp;subj=a+question+storefileIndexSize">a question storefileIndexSize</link>
+                  the thread <link xlink:href="http://search-hadoop.com/m/hemBv1LiN4Q1/a+question+storefileIndexSize&amp;subj=a+question+storefileIndexSize">a question storefileIndexSize</link>
                   up on the user mailing list.
       `</para>
   </section>
