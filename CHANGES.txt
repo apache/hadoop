@@ -1,5 +1,10 @@
 Hadoop Change Log
 
+Release 0.20.203.1 - Unreleased
+
+    HADOOP-7330. Fix MetricsSourceAdapter to use the value instead of the 
+    object. (Luke Lu via omalley)
+
 Release 0.20.203.0 - 2011-5-11
 
     MAPREDUCE-1280. Update Eclipse plugin to the new eclipse.jdt API.
