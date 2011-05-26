@@ -102,7 +102,7 @@ class MetricsSourceAdapter implements DynamicMBean {
     if (LOG.isDebugEnabled()) {
       LOG.debug(attribute +": "+ a.getName() +"="+ a.getValue());
     }
-    return a;
+    return a.getValue();
   }
 
   public void setAttribute(Attribute attribute)
