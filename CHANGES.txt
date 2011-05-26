@@ -182,6 +182,9 @@ Trunk (unreleased changes)
     HADOOP-7320. Refactor the copy and move commands to conform to new
     FsCommand class. (Daryn Sharp via todd)
 
+    HADOOP-7312. Update value of hadoop.common.configuration.version.
+    (Harsh J Chouraria via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
