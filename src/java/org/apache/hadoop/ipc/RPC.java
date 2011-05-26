@@ -61,7 +61,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  * the protocol instance is transmitted.
  */
 public class RPC {
-  private static final Log LOG = LogFactory.getLog(RPC.class);
+  static final Log LOG = LogFactory.getLog(RPC.class);
 
   private RPC() {}                                  // no public ctor
 
@@ -156,18 +156,48 @@ public class RPC {
       return serverVersion;
     }
   }
-  
-  public static Object waitForProxy(
-      Class<?> protocol,
+
+  /**
+   * Get a proxy connection to a remote server
+   * 
+   * @param protocol protocol class
+   * @param clientVersion client version
+   * @param addr remote address
+   * @param conf configuration to use
+   * @return the proxy
+   * @throws IOException if the far end through a RemoteException
+   */
+  public static <T> T waitForProxy(
+      Class<T> protocol,
       long clientVersion,
       InetSocketAddress addr,
       Configuration conf
       ) throws IOException {
-    return waitForProxy(protocol, clientVersion, addr, conf, Long.MAX_VALUE);
+    return waitForProtocolProxy(protocol, clientVersion, addr, conf).getProxy();
+  }
+
+  /**
+   * Get a protocol proxy that contains a proxy connection to a remote server
+   * and a set of methods that are supported by the server
+   * 
+   * @param protocol protocol class
+   * @param clientVersion client version
+   * @param addr remote address
+   * @param conf configuration to use
+   * @return the protocol proxy
+   * @throws IOException if the far end through a RemoteException
+   */
+  public static <T> ProtocolProxy<T> waitForProtocolProxy(Class<T> protocol,
+                             long clientVersion,
+                             InetSocketAddress addr,
+                             Configuration conf) throws IOException {
+    return waitForProtocolProxy(
+        protocol, clientVersion, addr, conf, Long.MAX_VALUE);
   }
 
   /**
    * Get a proxy connection to a remote server
+   * 
    * @param protocol protocol class
    * @param clientVersion client version
    * @param addr remote address
@@ -176,23 +206,68 @@ public class RPC {
    * @return the proxy
    * @throws IOException if the far end through a RemoteException
    */
-  public static Object waitForProxy(Class<?> protocol, long clientVersion,
+  public static <T> T waitForProxy(Class<T> protocol, long clientVersion,
                              InetSocketAddress addr, Configuration conf,
                              long connTimeout) throws IOException { 
-    return waitForProxy(protocol, clientVersion, addr, conf, 0, connTimeout);
+    return waitForProtocolProxy(protocol, clientVersion, addr,
+        conf, connTimeout).getProxy();
   }
-    /**
-     * Get a proxy connection to a remote server
-     * @param protocol protocol class
-     * @param clientVersion client version
-     * @param addr remote address
-     * @param conf configuration to use
-     * @param rpcTimeout timeout for each RPC
-     * @param timeout time in milliseconds before giving up
-     * @return the proxy
-     * @throws IOException if the far end through a RemoteException
-     */
-    public static Object waitForProxy(Class<?> protocol, long clientVersion,
+
+  /**
+   * Get a protocol proxy that contains a proxy connection to a remote server
+   * and a set of methods that are supported by the server
+   * 
+   * @param protocol protocol class
+   * @param clientVersion client version
+   * @param addr remote address
+   * @param conf configuration to use
+   * @param connTimeout time in milliseconds before giving up
+   * @return the protocol proxy
+   * @throws IOException if the far end through a RemoteException
+   */
+  public static <T> ProtocolProxy<T> waitForProtocolProxy(Class<T> protocol,
+                             long clientVersion,
+                             InetSocketAddress addr, Configuration conf,
+                             long connTimeout) throws IOException { 
+    return waitForProtocolProxy(protocol, clientVersion, addr, conf, 0, connTimeout);
+  }
+  
+  /**
+   * Get a proxy connection to a remote server
+   * 
+   * @param protocol protocol class
+   * @param clientVersion client version
+   * @param addr remote address
+   * @param conf configuration to use
+   * @param rpcTimeout timeout for each RPC
+   * @param timeout time in milliseconds before giving up
+   * @return the proxy
+   * @throws IOException if the far end through a RemoteException
+   */
+  public static <T> T waitForProxy(Class<T> protocol,
+                             long clientVersion,
+                             InetSocketAddress addr, Configuration conf,
+                             int rpcTimeout,
+                             long timeout) throws IOException {
+    return waitForProtocolProxy(protocol, clientVersion, addr,
+        conf, rpcTimeout, timeout).getProxy();
+  }
+
+  /**
+   * Get a protocol proxy that contains a proxy connection to a remote server
+   * and a set of methods that are supported by the server
+   * 
+   * @param protocol protocol class
+   * @param clientVersion client version
+   * @param addr remote address
+   * @param conf configuration to use
+   * @param rpcTimeout timeout for each RPC
+   * @param timeout time in milliseconds before giving up
+   * @return the proxy
+   * @throws IOException if the far end through a RemoteException
+   */
+  public static <T> ProtocolProxy<T> waitForProtocolProxy(Class<T> protocol,
+                               long clientVersion,
                                InetSocketAddress addr, Configuration conf,
                                int rpcTimeout,
                                long timeout) throws IOException { 
@@ -200,7 +275,7 @@ public class RPC {
     IOException ioe;
     while (true) {
       try {
-        return getProxy(protocol, clientVersion, addr, 
+        return getProtocolProxy(protocol, clientVersion, addr, 
             UserGroupInformation.getCurrentUser(), conf, NetUtils
             .getDefaultSocketFactory(conf), rpcTimeout);
       } catch(ConnectException se) {  // namenode has not been started
@@ -228,27 +303,76 @@ public class RPC {
   }
 
   /** Construct a client-side proxy object that implements the named protocol,
-   * talking to a server at the named address. */
-  public static Object getProxy(Class<?> protocol, long clientVersion,
+   * talking to a server at the named address. 
+   * @param <T>*/
+  public static <T> T getProxy(Class<T> protocol,
+                                long clientVersion,
+                                InetSocketAddress addr, Configuration conf,
+                                SocketFactory factory) throws IOException {
+    return getProtocolProxy(
+        protocol, clientVersion, addr, conf, factory).getProxy();
+  }
+
+  /**
+   * Get a protocol proxy that contains a proxy connection to a remote server
+   * and a set of methods that are supported by the server
+   * 
+   * @param protocol protocol class
+   * @param clientVersion client version
+   * @param addr remote address
+   * @param conf configuration to use
+   * @param factory socket factory
+   * @return the protocol proxy
+   * @throws IOException if the far end through a RemoteException
+   */
+  public static <T> ProtocolProxy<T> getProtocolProxy(Class<T> protocol,
+                                long clientVersion,
                                 InetSocketAddress addr, Configuration conf,
                                 SocketFactory factory) throws IOException {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    return getProxy(protocol, clientVersion, addr, ugi, conf, factory);
+    return getProtocolProxy(protocol, clientVersion, addr, ugi, conf, factory);
   }
   
   /** Construct a client-side proxy object that implements the named protocol,
-   * talking to a server at the named address. */
-  public static Object getProxy(Class<?> protocol, long clientVersion,
+   * talking to a server at the named address. 
+   * @param <T>*/
+  public static <T> T getProxy(Class<T> protocol,
+                                long clientVersion,
                                 InetSocketAddress addr,
                                 UserGroupInformation ticket,
                                 Configuration conf,
                                 SocketFactory factory) throws IOException {
-    return getProxy(protocol, clientVersion, addr, ticket, conf, factory, 0);
+    return getProtocolProxy(
+        protocol, clientVersion, addr, ticket, conf, factory).getProxy();
+  }
+
+  /**
+   * Get a protocol proxy that contains a proxy connection to a remote server
+   * and a set of methods that are supported by the server
+   * 
+   * @param protocol protocol class
+   * @param clientVersion client version
+   * @param addr remote address
+   * @param ticket user group information
+   * @param conf configuration to use
+   * @param factory socket factory
+   * @return the protocol proxy
+   * @throws IOException if the far end through a RemoteException
+   */
+  public static <T> ProtocolProxy<T> getProtocolProxy(Class<T> protocol,
+                                long clientVersion,
+                                InetSocketAddress addr,
+                                UserGroupInformation ticket,
+                                Configuration conf,
+                                SocketFactory factory) throws IOException {
+    return getProtocolProxy(
+        protocol, clientVersion, addr, ticket, conf, factory, 0);
   }
   
   /**
    * Construct a client-side proxy that implements the named protocol,
    * talking to a server at the named address.
+   * @param <T>
    * 
    * @param protocol protocol
    * @param clientVersion client's version
@@ -260,7 +384,33 @@ public class RPC {
    * @return the proxy
    * @throws IOException if any error occurs
    */
-  public static Object getProxy(Class<?> protocol, long clientVersion,
+  public static <T> T getProxy(Class<T> protocol,
+                                long clientVersion,
+                                InetSocketAddress addr,
+                                UserGroupInformation ticket,
+                                Configuration conf,
+                                SocketFactory factory,
+                                int rpcTimeout) throws IOException {
+    return getProtocolProxy(protocol, clientVersion, addr, ticket,
+             conf, factory, rpcTimeout).getProxy();
+  }
+  
+  /**
+   * Get a protocol proxy that contains a proxy connection to a remote server
+   * and a set of methods that are supported by the server
+   * 
+   * @param protocol protocol
+   * @param clientVersion client's version
+   * @param addr server address
+   * @param ticket security ticket
+   * @param conf configuration
+   * @param factory socket factory
+   * @param rpcTimeout max time for each rpc; 0 means no timeout
+   * @return the proxy
+   * @throws IOException if any error occurs
+   */
+   public static <T> ProtocolProxy<T> getProtocolProxy(Class<T> protocol,
+                                long clientVersion,
                                 InetSocketAddress addr,
                                 UserGroupInformation ticket,
                                 Configuration conf,
@@ -273,21 +423,42 @@ public class RPC {
         clientVersion, addr, ticket, conf, factory, rpcTimeout);
   }
 
+   /**
+    * Construct a client-side proxy object with the default SocketFactory
+    * @param <T>
+    * 
+    * @param protocol
+    * @param clientVersion
+    * @param addr
+    * @param conf
+    * @return a proxy instance
+    * @throws IOException
+    */
+   public static <T> T getProxy(Class<T> protocol,
+                                 long clientVersion,
+                                 InetSocketAddress addr, Configuration conf)
+     throws IOException {
+
+     return getProtocolProxy(protocol, clientVersion, addr, conf).getProxy();
+   }
+
   /**
-   * Construct a client-side proxy object with the default SocketFactory
+   * Get a protocol proxy that contains a proxy connection to a remote server
+   * and a set of methods that are supported by the server
    * 
    * @param protocol
    * @param clientVersion
    * @param addr
    * @param conf
-   * @return a proxy instance
+   * @return a protocol proxy
    * @throws IOException
    */
-  public static Object getProxy(Class<?> protocol, long clientVersion,
+  public static <T> ProtocolProxy<T> getProtocolProxy(Class<T> protocol,
+                                long clientVersion,
                                 InetSocketAddress addr, Configuration conf)
     throws IOException {
 
-    return getProxy(protocol, clientVersion, addr, conf, NetUtils
+    return getProtocolProxy(protocol, clientVersion, addr, conf, NetUtils
         .getDefaultSocketFactory(conf));
   }
 

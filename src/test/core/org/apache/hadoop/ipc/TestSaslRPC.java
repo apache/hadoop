@@ -374,17 +374,20 @@ public class TestSaslRPC {
     try {
       proxy1 = (TestSaslProtocol) RPC.getProxy(TestSaslProtocol.class,
           TestSaslProtocol.versionID, addr, newConf);
+      proxy1.getAuthMethod();
       Client client = WritableRpcEngine.getClient(conf);
       Set<ConnectionId> conns = client.getConnectionIds();
       assertEquals("number of connections in cache is wrong", 1, conns.size());
       // same conf, connection should be re-used
       proxy2 = (TestSaslProtocol) RPC.getProxy(TestSaslProtocol.class,
           TestSaslProtocol.versionID, addr, newConf);
+      proxy2.getAuthMethod();
       assertEquals("number of connections in cache is wrong", 1, conns.size());
       // different conf, new connection should be set up
       newConf.set(SERVER_PRINCIPAL_KEY, SERVER_PRINCIPAL_2);
       proxy3 = (TestSaslProtocol) RPC.getProxy(TestSaslProtocol.class,
           TestSaslProtocol.versionID, addr, newConf);
+      proxy3.getAuthMethod();
       ConnectionId[] connsArray = conns.toArray(new ConnectionId[0]);
       assertEquals("number of connections in cache is wrong", 2,
           connsArray.length);

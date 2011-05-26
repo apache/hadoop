@@ -61,6 +61,8 @@ public class AvroRpcEngine implements RpcEngine {
 
   /** Tunnel an Avro RPC request and response through Hadoop's RPC. */
   private static interface TunnelProtocol extends VersionedProtocol {
+    //WritableRpcEngine expects a versionID in every protocol.
+    public static final long versionID = 0L;
     /** All Avro methods and responses go through this. */
     BufferListWritable call(BufferListWritable request) throws IOException;
   }
@@ -107,10 +109,9 @@ public class AvroRpcEngine implements RpcEngine {
                              Configuration conf, SocketFactory factory,
                              int rpcTimeout)
       throws IOException {
-      this.tunnel =
-        (TunnelProtocol)ENGINE.getProxy(TunnelProtocol.class, VERSION,
+      this.tunnel = ENGINE.getProxy(TunnelProtocol.class, VERSION,
                                         addr, ticket, conf, factory,
-                                        rpcTimeout);
+                                        rpcTimeout).getProxy();
       this.remote = addr;
     }
 
@@ -135,16 +136,20 @@ public class AvroRpcEngine implements RpcEngine {
   }
 
   /** Construct a client-side proxy object that implements the named protocol,
-   * talking to a server at the named address. */
-  public Object getProxy(Class<?> protocol, long clientVersion,
+   * talking to a server at the named address. 
+   * @param <T>*/
+  @SuppressWarnings("unchecked")
+  public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
                          InetSocketAddress addr, UserGroupInformation ticket,
                          Configuration conf, SocketFactory factory,
                          int rpcTimeout)
     throws IOException {
-    return Proxy.newProxyInstance
-      (protocol.getClassLoader(),
-       new Class[] { protocol },
-       new Invoker(protocol, addr, ticket, conf, factory, rpcTimeout));
+    return new ProtocolProxy<T>(protocol,
+       (T)Proxy.newProxyInstance(
+         protocol.getClassLoader(),
+         new Class[] { protocol },
+         new Invoker(protocol, addr, ticket, conf, factory, rpcTimeout)),
+       false);
   }
 
   /** Stop this proxy. */
@@ -191,9 +196,17 @@ public class AvroRpcEngine implements RpcEngine {
       responder = createResponder(iface, impl);
     }
 
+    @Override
     public long getProtocolVersion(String protocol, long version)
-      throws IOException {
+    throws IOException {
       return VERSION;
+    }
+
+    @Override
+    public ProtocolSignature getProtocolSignature(
+        String protocol, long version, int clientMethodsHashCode)
+      throws IOException {
+      return new ProtocolSignature(VERSION, null);
     }
 
     public BufferListWritable call(final BufferListWritable request)

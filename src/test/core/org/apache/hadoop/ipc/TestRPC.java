@@ -77,6 +77,11 @@ public class TestRPC extends TestCase {
       return TestProtocol.versionID;
     }
     
+    public ProtocolSignature getProtocolSignature(String protocol, long clientVersion,
+        int hashcode) {
+      return new ProtocolSignature(TestProtocol.versionID, null);
+    }
+    
     public void ping() {}
 
     public synchronized void slowPing(boolean shouldSlow) {
@@ -253,11 +258,10 @@ public class TestRPC extends TestCase {
     // Check rpcMetrics 
     MetricsRecordBuilder rb = getMetrics(server.rpcMetrics.name());
     
-    // Number 4 includes getProtocolVersion()
-    assertCounter("RpcProcessingTimeNumOps", 4L, rb);
+    assertCounter("RpcProcessingTimeNumOps", 3L, rb);
     assertCounterGt("SentBytes", 0L, rb);
     assertCounterGt("ReceivedBytes", 0L, rb);
-    
+
     // Number of calls to echo method should be 2
     rb = getMetrics(server.rpcDetailedMetrics.name());
     assertCounter("EchoNumOps", 2L, rb);
@@ -335,8 +339,9 @@ public class TestRPC extends TestCase {
   
   public void testStandaloneClient() throws IOException {
     try {
-      RPC.waitForProxy(TestProtocol.class,
+      TestProtocol proxy = RPC.waitForProxy(TestProtocol.class,
         TestProtocol.versionID, new InetSocketAddress(ADDRESS, 20), conf, 15000L);
+      proxy.echo("");
       fail("We should not have reached here");
     } catch (ConnectException ioe) {
       //this is what we expected
@@ -454,6 +459,7 @@ public class TestRPC extends TestCase {
     try {
       proxy = (TestProtocol) RPC.getProxy(TestProtocol.class,
           TestProtocol.versionID, addr, conf);
+      proxy.echo("");
     } catch (RemoteException e) {
       LOG.info("LOGGING MESSAGE: " + e.getLocalizedMessage());
       assertTrue(e.unwrapRemoteException() instanceof AccessControlException);
@@ -479,6 +485,7 @@ public class TestRPC extends TestCase {
     try {
       proxy = (TestProtocol) RPC.getProxy(TestProtocol.class,
           TestProtocol.versionID, mulitServerAddr, conf);
+      proxy.echo("");
     } catch (RemoteException e) {
       LOG.info("LOGGING MESSAGE: " + e.getLocalizedMessage());
       assertTrue(e.unwrapRemoteException() instanceof AccessControlException);

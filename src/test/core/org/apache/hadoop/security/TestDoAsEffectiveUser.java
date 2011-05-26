@@ -30,6 +30,7 @@ import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.VersionedProtocol;
@@ -134,8 +135,13 @@ public class TestDoAsEffectiveUser {
 
     public long getProtocolVersion(String protocol, long clientVersion)
         throws IOException {
-      // TODO Auto-generated method stub
       return TestProtocol.versionID;
+    }
+
+    @Override
+    public ProtocolSignature getProtocolSignature(String protocol,
+        long clientVersion, int clientMethodsHash) throws IOException {
+      return new ProtocolSignature(TestProtocol.versionID, null);
     }
   }
 
@@ -161,7 +167,7 @@ public class TestDoAsEffectiveUser {
       String retVal = proxyUserUgi
           .doAs(new PrivilegedExceptionAction<String>() {
             public String run() throws IOException {
-              proxy = (TestProtocol) RPC.getProxy(TestProtocol.class,
+              proxy = RPC.getProxy(TestProtocol.class,
                   TestProtocol.versionID, addr, conf);
               String ret = proxy.aMethod();
               return ret;
@@ -203,7 +209,7 @@ public class TestDoAsEffectiveUser {
       String retVal = proxyUserUgi
           .doAs(new PrivilegedExceptionAction<String>() {
             public String run() throws IOException {
-              proxy = (TestProtocol) RPC.getProxy(TestProtocol.class,
+              proxy = RPC.getProxy(TestProtocol.class,
                   TestProtocol.versionID, addr, conf);
               String ret = proxy.aMethod();
               return ret;
@@ -250,7 +256,7 @@ public class TestDoAsEffectiveUser {
       String retVal = proxyUserUgi
           .doAs(new PrivilegedExceptionAction<String>() {
             public String run() throws IOException {
-              proxy = (TestProtocol) RPC.getProxy(TestProtocol.class,
+              proxy = RPC.getProxy(TestProtocol.class,
                   TestProtocol.versionID, addr, conf);
               String ret = proxy.aMethod();
               return ret;
@@ -289,7 +295,7 @@ public class TestDoAsEffectiveUser {
       String retVal = proxyUserUgi
           .doAs(new PrivilegedExceptionAction<String>() {
             public String run() throws IOException {
-              proxy = (TestProtocol) RPC.getProxy(TestProtocol.class,
+              proxy = RPC.getProxy(TestProtocol.class,
                   TestProtocol.versionID, addr, conf);
               String ret = proxy.aMethod();
               return ret;
@@ -368,7 +374,7 @@ public class TestDoAsEffectiveUser {
       String retVal = proxyUserUgi
           .doAs(new PrivilegedExceptionAction<String>() {
             public String run() throws IOException {
-              proxy = (TestProtocol) RPC.getProxy(TestProtocol.class,
+              proxy = RPC.getProxy(TestProtocol.class,
                   TestProtocol.versionID, addr, conf);
               String ret = proxy.aMethod();
               return ret;
@@ -424,7 +430,7 @@ public class TestDoAsEffectiveUser {
       @Override
       public String run() throws Exception {
         try {
-          proxy = (TestProtocol) RPC.getProxy(TestProtocol.class,
+          proxy = RPC.getProxy(TestProtocol.class,
               TestProtocol.versionID, addr, conf);
           String ret = proxy.aMethod();
           return ret;
@@ -477,7 +483,7 @@ public class TestDoAsEffectiveUser {
       @Override
       public String run() throws Exception {
         try {
-          proxy = (TestProtocol) RPC.getProxy(TestProtocol.class,
+          proxy = RPC.getProxy(TestProtocol.class,
               TestProtocol.versionID, addr, newConf);
           String ret = proxy.aMethod();
           return ret;

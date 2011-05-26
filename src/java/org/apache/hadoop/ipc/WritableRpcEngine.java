@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ipc;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Method;
 import java.lang.reflect.Array;
@@ -45,6 +46,10 @@ import org.apache.hadoop.conf.*;
 @InterfaceStability.Evolving
 public class WritableRpcEngine implements RpcEngine {
   private static final Log LOG = LogFactory.getLog(RPC.class);
+  
+  //writableRpcVersion should be updated if there is a change
+  //in format of the rpc messages.
+  public static long writableRpcVersion = 1L;
 
   /** A method invocation, including the method name and its parameters.*/
   private static class Invocation implements Writable, Configurable {
@@ -52,6 +57,12 @@ public class WritableRpcEngine implements RpcEngine {
     private Class<?>[] parameterClasses;
     private Object[] parameters;
     private Configuration conf;
+    private long clientVersion;
+    private int clientMethodsHash;
+    
+    //This could be different from static writableRpcVersion when received
+    //at server, if client is using a different version.
+    private long rpcVersion;
 
     public Invocation() {}
 
@@ -59,6 +70,24 @@ public class WritableRpcEngine implements RpcEngine {
       this.methodName = method.getName();
       this.parameterClasses = method.getParameterTypes();
       this.parameters = parameters;
+      rpcVersion = writableRpcVersion;
+      if (method.getDeclaringClass().equals(VersionedProtocol.class)) {
+        //VersionedProtocol is exempted from version check.
+        clientVersion = 0;
+        clientMethodsHash = 0;
+      } else {
+        try {
+          Field versionField = method.getDeclaringClass().getField("versionID");
+          versionField.setAccessible(true);
+          this.clientVersion = versionField.getLong(method.getDeclaringClass());
+        } catch (NoSuchFieldException ex) {
+          throw new RuntimeException(ex);
+        } catch (IllegalAccessException ex) {
+          throw new RuntimeException(ex);
+        }
+        this.clientMethodsHash = ProtocolSignature.getFingerprint(method
+            .getDeclaringClass().getMethods());
+      }
     }
 
     /** The name of the method invoked. */
@@ -69,9 +98,28 @@ public class WritableRpcEngine implements RpcEngine {
 
     /** The parameter instances. */
     public Object[] getParameters() { return parameters; }
+    
+    private long getProtocolVersion() {
+      return clientVersion;
+    }
+
+    private int getClientMethodsHash() {
+      return clientMethodsHash;
+    }
+    
+    /**
+     * Returns the rpc version used by the client.
+     * @return rpcVersion
+     */
+    public long getRpcVersion() {
+      return rpcVersion;
+    }
 
     public void readFields(DataInput in) throws IOException {
+      rpcVersion = in.readLong();
       methodName = UTF8.readString(in);
+      clientVersion = in.readLong();
+      clientMethodsHash = in.readInt();
       parameters = new Object[in.readInt()];
       parameterClasses = new Class[parameters.length];
       ObjectWritable objectWritable = new ObjectWritable();
@@ -82,7 +130,10 @@ public class WritableRpcEngine implements RpcEngine {
     }
 
     public void write(DataOutput out) throws IOException {
+      out.writeLong(rpcVersion);
       UTF8.writeString(out, methodName);
+      out.writeLong(clientVersion);
+      out.writeInt(clientMethodsHash);
       out.writeInt(parameterClasses.length);
       for (int i = 0; i < parameterClasses.length; i++) {
         ObjectWritable.writeObject(out, parameters[i], parameterClasses[i],
@@ -100,6 +151,9 @@ public class WritableRpcEngine implements RpcEngine {
         buffer.append(parameters[i]);
       }
       buffer.append(")");
+      buffer.append(", rpc version="+rpcVersion);
+      buffer.append(", client version="+clientVersion);
+      buffer.append(", methodsFingerPrint="+clientMethodsHash);
       return buffer.toString();
     }
 
@@ -219,25 +273,20 @@ public class WritableRpcEngine implements RpcEngine {
   }
   
   /** Construct a client-side proxy object that implements the named protocol,
-   * talking to a server at the named address. */
-  public Object getProxy(Class<?> protocol, long clientVersion,
+   * talking to a server at the named address. 
+   * @param <T>*/
+  @Override
+  @SuppressWarnings("unchecked")
+  public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
                          InetSocketAddress addr, UserGroupInformation ticket,
                          Configuration conf, SocketFactory factory,
                          int rpcTimeout)
     throws IOException {    
 
-    Object proxy = Proxy.newProxyInstance
-      (protocol.getClassLoader(), new Class[] { protocol },
-       new Invoker(protocol, addr, ticket, conf, factory, rpcTimeout));
-    if (proxy instanceof VersionedProtocol) {
-      long serverVersion = ((VersionedProtocol)proxy)
-        .getProtocolVersion(protocol.getName(), clientVersion);
-      if (serverVersion != clientVersion) {
-        throw new RPC.VersionMismatch(protocol.getName(), clientVersion, 
-                                      serverVersion);
-      }
-    }
-    return proxy;
+    T proxy = (T) Proxy.newProxyInstance(protocol.getClassLoader(),
+        new Class[] { protocol }, new Invoker(protocol, addr, ticket, conf,
+            factory, rpcTimeout));
+    return new ProtocolProxy<T>(protocol, proxy, true);
   }
 
   /**
@@ -341,6 +390,31 @@ public class WritableRpcEngine implements RpcEngine {
         Method method = protocol.getMethod(call.getMethodName(),
                                            call.getParameterClasses());
         method.setAccessible(true);
+
+        // Verify rpc version
+        if (call.getRpcVersion() != writableRpcVersion) {
+          // Client is using a different version of WritableRpc
+          throw new IOException(
+              "WritableRpc version mismatch, client side version="
+                  + call.getRpcVersion() + ", server side version="
+                  + writableRpcVersion);
+        }
+        
+        //Verify protocol version.
+        //Bypass the version check for VersionedProtocol
+        if (!method.getDeclaringClass().equals(VersionedProtocol.class)) {
+          long clientVersion = call.getProtocolVersion();
+          ProtocolSignature serverInfo = ((VersionedProtocol) instance)
+              .getProtocolSignature(protocol.getCanonicalName(), call
+                  .getProtocolVersion(), call.getClientMethodsHash());
+          long serverVersion = serverInfo.getVersion();
+          if (serverVersion != clientVersion) {
+            LOG.warn("Version mismatch: client version=" + clientVersion
+                + ", server version=" + serverVersion);
+            throw new RPC.VersionMismatch(protocol.getName(), clientVersion,
+                serverVersion);
+          }
+        }
 
         long startTime = System.currentTimeMillis();
         Object value = method.invoke(instance, call.getParameters());
