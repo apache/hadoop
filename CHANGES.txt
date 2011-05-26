@@ -245,6 +245,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7302. webinterface.private.actions should be renamed and moved to
     the MapReduce project. (Ari Rabkin via todd)
 
+    HADOOP-7312. Update value of hadoop.common.configuration.version.
+    (Harsh J Chouraria via todd)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).

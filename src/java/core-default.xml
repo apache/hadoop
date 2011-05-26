@@ -27,7 +27,7 @@
 
 <property>
   <name>hadoop.common.configuration.version</name>
-  <value>0.21.0</value>
+  <value>0.22.0</value>
   <description>version of this configuration file</description>
 </property>
 
