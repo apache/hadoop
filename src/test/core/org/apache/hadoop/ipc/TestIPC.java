@@ -27,6 +27,7 @@ import org.apache.hadoop.net.NetUtils;
 
 import java.util.Random;
 import java.io.DataInput;
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
@@ -36,6 +37,7 @@ import junit.framework.TestCase;
 import static org.mockito.Mockito.*;
 
 import org.apache.hadoop.conf.Configuration;
+import org.junit.Assume;
 
 /** Unit tests for IPC. */
 public class TestIPC extends TestCase {
@@ -54,6 +56,9 @@ public class TestIPC extends TestCase {
   private static final Random RANDOM = new Random();
 
   private static final String ADDRESS = "0.0.0.0";
+
+  /** Directory where we can count open file descriptors on Linux */
+  private static final File FD_DIR = new File("/proc/self/fd");
 
   private static class TestServer extends Server {
     private boolean sleep;
@@ -354,6 +359,29 @@ public class TestIPC extends TestCase {
         addr, null, null, 3*PING_INTERVAL+MIN_SLEEP_TIME, conf);
   }
   
+  /**
+   * Check that file descriptors aren't leaked by starting
+   * and stopping IPC servers.
+   */
+  public void testSocketLeak() throws Exception {
+    Assume.assumeTrue(FD_DIR.exists()); // only run on Linux
+
+    long startFds = countOpenFileDescriptors();
+    for (int i = 0; i < 50; i++) {
+      Server server = new TestServer(1, true);
+      server.start();
+      server.stop();
+    }
+    long endFds = countOpenFileDescriptors();
+    
+    assertTrue("Leaked " + (endFds - startFds) + " file descriptors",
+        endFds - startFds < 20);
+  }
+  
+  private long countOpenFileDescriptors() {
+    return FD_DIR.list().length;
+  }
+
   public static void main(String[] args) throws Exception {
 
     //new TestIPC("test").testSerial(5, false, 2, 10, 1000);

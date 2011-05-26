@@ -489,6 +489,8 @@ Release 0.22.0 - Unreleased
     HADOOP-7287. Configuration deprecation mechanism doesn't work properly for
     GenericOptionsParser and Tools. (Aaron T. Myers via todd)
 
+    HADOOP-7146. RPC server leaks file descriptors (todd)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
