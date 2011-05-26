@@ -26,12 +26,15 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -45,7 +48,7 @@ import java.util.TreeMap;
  * {@link #add(byte[], byte[], long, byte[]) add} if setting the timestamp.
  */
 public class Put implements HeapSize, Writable, Row, Comparable<Row> {
-  private static final byte PUT_VERSION = (byte)1;
+  private static final byte PUT_VERSION = (byte)2;
 
   private byte [] row = null;
   private long timestamp = HConstants.LATEST_TIMESTAMP;
@@ -54,6 +57,9 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
 
   private Map<byte [], List<KeyValue>> familyMap =
     new TreeMap<byte [], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
+
+  // a opaque blob that can be passed into a Put. 
+  private Map<String, byte[]> attributes;
 
   private static final long OVERHEAD = ClassSize.align(
       ClassSize.OBJECT + ClassSize.REFERENCE +
@@ -408,6 +414,56 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   }
 
   /**
+   * Sets arbitrary put's attribute.
+   * In case value = null attribute is removed from the attributes map.
+   * @param name attribute name
+   * @param value attribute value
+   */
+  public void setAttribute(String name, byte[] value) {
+    if (attributes == null && value == null) {
+      return;
+    }
+
+    if (attributes == null) {
+      attributes = new HashMap<String, byte[]>();
+    }
+
+    if (value == null) {
+      attributes.remove(name);
+      if (attributes.isEmpty()) {
+        this.attributes = null;
+      }
+    } else {
+      attributes.put(name, value);
+    }
+  }
+
+  /**
+   * Gets put's attribute
+   * @param name attribute name
+   * @return attribute value if attribute is set, <tt>null</tt> otherwise
+   */
+  public byte[] getAttribute(String name) {
+    if (attributes == null) {
+      return null;
+    }
+
+    return attributes.get(name);
+  }
+
+  /**
+   * Gets all scan's attributes
+   * @return unmodifiable map of all attributes
+   */
+  public Map<String, byte[]> getAttributesMap() {
+    if (attributes == null) {
+      return Collections.emptyMap();
+    }
+    return Collections.unmodifiableMap(attributes);
+  }
+
+
+  /**
    * @return String
    */
   @Override
@@ -502,6 +558,17 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
       }
       this.familyMap.put(family, keys);
     }
+    if (version > 1) {
+      int numAttributes = in.readInt();
+      if (numAttributes > 0) {
+        this.attributes = new HashMap<String, byte[]>();
+        for(int i=0; i<numAttributes; i++) {
+          String name = WritableUtils.readString(in);
+          byte[] value = Bytes.readByteArray(in);
+          this.attributes.put(name, value);
+        }
+      }
+    }
   }
 
   public void write(final DataOutput out)
@@ -524,6 +591,15 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
       for(KeyValue kv : keys) {
         out.writeInt(kv.getLength());
         out.write(kv.getBuffer(), kv.getOffset(), kv.getLength());
+      }
+    }
+    if (this.attributes == null) {
+      out.writeInt(0);
+    } else {
+      out.writeInt(this.attributes.size());
+      for (Map.Entry<String, byte[]> attr : this.attributes.entrySet()) {
+        WritableUtils.writeString(out, attr.getKey());
+        Bytes.writeByteArray(out, attr.getValue());
       }
     }
   }
