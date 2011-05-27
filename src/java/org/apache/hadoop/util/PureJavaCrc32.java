@@ -57,23 +57,27 @@ public class PureJavaCrc32 implements Checksum {
 
   /** {@inheritDoc} */
   public void update(byte[] b, int off, int len) {
+    int localCrc = crc;
     while(len > 7) {
-      int c0 = b[off++] ^ crc;
-      int c1 = b[off++] ^ (crc >>>= 8);
-      int c2 = b[off++] ^ (crc >>>= 8);
-      int c3 = b[off++] ^ (crc >>>= 8);
-      crc = (T8_7[c0 & 0xff] ^ T8_6[c1 & 0xff])
+      int c0 = b[off++] ^ localCrc;
+      int c1 = b[off++] ^ (localCrc >>>= 8);
+      int c2 = b[off++] ^ (localCrc >>>= 8);
+      int c3 = b[off++] ^ (localCrc >>>= 8);
+      localCrc = (T8_7[c0 & 0xff] ^ T8_6[c1 & 0xff])
           ^ (T8_5[c2 & 0xff] ^ T8_4[c3 & 0xff]);
 
-      crc ^= (T8_3[b[off++] & 0xff] ^ T8_2[b[off++] & 0xff])
+      localCrc ^= (T8_3[b[off++] & 0xff] ^ T8_2[b[off++] & 0xff])
            ^ (T8_1[b[off++] & 0xff] ^ T8_0[b[off++] & 0xff]);
 
       len -= 8;
     }
     while(len > 0) {
-      crc = (crc >>> 8) ^ T8_0[(crc ^ b[off++]) & 0xff];
+      localCrc = (localCrc >>> 8) ^ T8_0[(localCrc ^ b[off++]) & 0xff];
       len--;
     }
+    
+    // Publish crc out to object
+    crc = localCrc;
   }
 
   /** {@inheritDoc} */
