@@ -70,7 +70,7 @@
     <conf name="lucene" visibility="private"/>
     <conf name="jdiff" visibility="private" extends="log4j,s3-client,jetty,server"/>
     <conf name="checkstyle" visibility="private"/>
-
+    <conf name="packaging" visibility="private"/>
   </configurations>
 
   <publications>
@@ -290,6 +290,11 @@
       name="aspectjtools"
       rev="${aspectj.version}"
       conf="common->default">
+    </dependency>
+    <dependency org="org.vafer" 
+      name="jdeb" 
+      rev="${jdeb.version}"
+      conf="common->master">
     </dependency>
  </dependencies>
 </ivy-module>

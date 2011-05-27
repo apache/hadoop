@@ -21,7 +21,7 @@
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/hadoop-config.sh
+. "$bin"/../libexec/hadoop-config.sh
 
 # start dfs daemons
 "$bin"/start-dfs.sh --config $HADOOP_CONF_DIR

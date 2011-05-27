@@ -32,6 +32,7 @@
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.final.name" value="${name}-test-${version}"/>
   <property name="year" value="2009"/>
+  <property name="package.release" value="1"/>
   
   <property name="core.final.name" value="${name}-core-${version}"/>
   <property name="test.final.name" value="${name}-test-${version}"/>
@@ -60,6 +61,11 @@
   <property name="c++.libhdfs.src" value="${c++.src}/libhdfs"/>
   <property name="librecordio.src" value="${c++.src}/librecordio"/>
   <property name="tools.src" value="${basedir}/src/tools"/>
+
+  <property name="package.prefix" value="/usr"/>
+  <property name="package.conf.dir" value="/etc/hadoop"/>
+  <property name="package.log.dir" value="/var/log/hadoop"/>
+  <property name="package.pid.dir" value="/var/run/hadoop"/>
 
   <property name="xercescroot" value=""/> 
   <property name="build.dir" value="${basedir}/build"/>
@@ -163,7 +169,7 @@
   <property name="make.cmd" value="make"/>
 
   <property name="jsvc.build.dir" value="${build.dir}/jsvc" />
-  <property name="jsvc.install.dir" value="${dist.dir}/bin" /> 
+  <property name="jsvc.install.dir" value="${dist.dir}/libexec" /> 
   <property name="jsvc.location" value="http://archive.apache.org/dist/commons/daemon/binaries/1.0.2/linux/commons-daemon-1.0.2-bin-linux-i386.tar.gz" />
   <property name="jsvc.dest.name" value="jsvc.tar.gz" />
 
@@ -182,6 +188,9 @@
   <property name="hadoop.conf.dir" value="/etc/hadoop"/>
 
   <!-- end of task-controller properties -->
+
+  <property name="package.buildroot" value="/tmp/hadoop_package_build_${user.name}"/>
+  <property name="package.build.dir" value="/tmp/hadoop_package_build_${user.name}/BUILD"/>
 
   <!-- IVY properteis set here -->
   <property name="ivy.dir" location="ivy" />
@@ -1375,11 +1384,13 @@
 	  description="Build distribution">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
+    <mkdir dir="${dist.dir}/libexec"/>
     <mkdir dir="${dist.dir}/contrib"/>
     <mkdir dir="${dist.dir}/bin"/>
     <mkdir dir="${dist.dir}/docs"/>
     <mkdir dir="${dist.dir}/docs/api"/>
     <mkdir dir="${dist.dir}/docs/jdiff"/>
+    <mkdir dir="${dist.dir}/sbin"/>
 
     <copy todir="${dist.dir}/lib" includeEmptyDirs="false" flatten="true">
       <fileset dir="${common.ivy.lib.dir}"/>
@@ -1418,6 +1429,12 @@
       <fileset dir="bin"/>
     </copy>
 
+    <copy todir="${dist.dir}/libexec">
+      <fileset dir="bin">
+        <include name="hadoop-config.sh"/>
+      </fileset>
+    </copy>
+
     <copy todir="${dist.dir}/conf">
       <fileset dir="${conf.dir}" excludes="**/*.template"/>
     </copy>
@@ -1438,6 +1455,12 @@
       </fileset>
     </copy>
 
+    <copy todir="${dist.dir}/sbin">
+      <fileset dir="${basedir}/src/packages">
+        <include name="*.sh" />
+      </fileset>
+    </copy>
+
     <copy todir="${dist.dir}/src" includeEmptyDirs="true">
       <fileset dir="src" excludes="**/*.template **/docs/build/**/*"/>
     </copy>
@@ -1450,6 +1473,7 @@
 
     <chmod perm="ugo+x" type="file" parallel="false">
         <fileset dir="${dist.dir}/bin"/>
+        <fileset dir="${dist.dir}/sbin"/>
         <fileset dir="${dist.dir}/src/contrib/">
           <include name="*/bin/*" />
         </fileset>
@@ -1487,71 +1511,109 @@
   <target name="bin-package" depends="compile, jar, examples, tools-jar, jar-test, ant-tasks, package-librecordio, jsvc" 
 		description="assembles artifacts for binary target">
     <mkdir dir="${dist.dir}"/>
-    <mkdir dir="${dist.dir}/lib"/>
-    <mkdir dir="${dist.dir}/contrib"/>
     <mkdir dir="${dist.dir}/bin"/>
+    <mkdir dir="${dist.dir}/etc/hadoop"/>
+    <mkdir dir="${dist.dir}/lib"/>
+    <mkdir dir="${dist.dir}/libexec"/>
+    <mkdir dir="${dist.dir}/sbin"/>
+    <mkdir dir="${dist.dir}/share/${name}/contrib"/>
+    <mkdir dir="${dist.dir}/share/${name}/webapps"/>
+    <mkdir dir="${dist.dir}/share/${name}/templates/conf"/>
 
-    <copy todir="${dist.dir}/lib" includeEmptyDirs="false" flatten="true">
+    <copy todir="${dist.dir}/share/${name}/templates/conf" includeEmptyDirs="false">
+      <fileset dir="${basedir}/src/packages/templates/conf">
+        <include name="*"/>
+      </fileset>
+    </copy>
+
+    <copy todir="${dist.dir}/share/${name}/lib" includeEmptyDirs="false" flatten="true">
       <fileset dir="${common.ivy.lib.dir}"/>
     </copy>
 
-    <copy todir="${dist.dir}/lib" includeEmptyDirs="false">
+    <copy todir="${dist.dir}/share/${name}/lib" includeEmptyDirs="false">
       <fileset dir="lib">
         <exclude name="**/native/**"/>
       </fileset>
     </copy>
 
-  	<exec dir="${dist.dir}" executable="sh" failonerror="true">
-	  <env key="BASE_NATIVE_LIB_DIR" value="${lib.dir}/native"/>
-	  <env key="BUILD_NATIVE_DIR" value="${build.dir}/native"/>
-	  <env key="DIST_LIB_DIR" value="${dist.dir}/lib/native"/>
-	  <arg line="${native.src.dir}/packageNativeHadoop.sh"/>
+    <exec dir="${dist.dir}" executable="sh" failonerror="true">
+      <env key="BASE_NATIVE_LIB_DIR" value="${lib.dir}/native"/>
+      <env key="BUILD_NATIVE_DIR" value="${build.dir}/native"/>
+      <env key="DIST_LIB_DIR" value="${dist.dir}/native"/>
+      <arg line="${native.src.dir}/packageNativeHadoop.sh"/>
     </exec>
+
+    <move todir="${dist.dir}/lib" flatten="true">
+      <fileset dir="${dist.dir}/native">
+        <include name="*/*"/>
+      </fileset>
+    </move>
+    <delete dir="${dist.dir}/native"/>
 
     <subant target="package">
       <!--Pass down the version in case its needed again and the target
       distribution directory so contribs know where to install to.-->
       <property name="version" value="${version}"/>
-      <property name="dist.dir" value="${dist.dir}"/>
+      <property name="dist.dir" value="${dist.dir}/share/${name}"/>
       <fileset file="${contrib.dir}/build.xml"/>
     </subant>  	
 
-    <copy todir="${dist.dir}/webapps">
+    <copy todir="${dist.dir}/share/${name}/webapps">
       <fileset dir="${build.webapps}"/>
     </copy>
 
-    <copy todir="${dist.dir}"> 
+    <copy todir="${dist.dir}/share/${name}"> 
       <fileset file="${build.dir}/${name}-*-${version}.jar"/>
     </copy>
     
-    <copy todir="${dist.dir}/bin">
-      <fileset dir="bin"/>
+    <copy file="bin/hadoop" todir="${dist.dir}/bin"/>
+
+    <copy todir="${dist.dir}/sbin">
+      <fileset dir="bin">
+        <include name="*"/>
+        <exclude name="hadoop"/>
+        <exclude name="hadoop-config.sh"/>
+      </fileset>
     </copy>
 
-    <copy todir="${dist.dir}/conf">
+    <copy todir="${dist.dir}/libexec">
+      <fileset dir="bin">
+        <include name="hadoop-config.sh"/>
+      </fileset>
+    </copy>
+
+    <copy todir="${dist.dir}/etc/hadoop">
       <fileset dir="${conf.dir}" excludes="**/*.template"/>
     </copy>
 
-    <copy file="ivy.xml" tofile="${dist.dir}/ivy.xml"/>
-
-    <copy todir="${dist.dir}/ivy">
-      <fileset dir="ivy"/>
-    </copy>
-
-    <copy todir="${dist.dir}">
+    <copy todir="${dist.dir}/share/doc/${name}">
       <fileset dir=".">
         <include name="*.txt" />
       </fileset>
     </copy>
   	
-    <copy todir="${dist.dir}/c++" includeEmptyDirs="false">
-      <fileset dir="${build.dir}/c++"/>
+    <copy todir="${dist.dir}/sbin">
+      <fileset dir="${basedir}/src/packages">
+        <include name="*.sh" />
+      </fileset>
     </copy>
 
-    <copy todir="${dist.dir}/" file="build.xml"/>
+    <copy todir="${dist.dir}/include/${name}" includeEmptyDirs="false" flatten="true">
+      <fileset dir="${build.dir}/c++">
+        <include name="**/include/${name}/*"/>
+      </fileset>
+    </copy>
+
+    <copy todir="${dist.dir}/lib" includeEmptyDirs="false" flatten="true">
+      <fileset dir="${build.dir}/c++">
+        <include name="**/lib/*"/>
+      </fileset>
+    </copy>
 
     <chmod perm="ugo+x" type="file" parallel="false">
         <fileset dir="${dist.dir}/bin"/>
+        <fileset dir="${dist.dir}/libexec"/>
+        <fileset dir="${dist.dir}/sbin"/>
     </chmod>
   </target>
 
@@ -1597,6 +1659,121 @@
     </macro_tar>
   </target>
 
+  <target name="rpm" depends="binary" description="Make rpm package">
+    <mkdir dir="${package.buildroot}/BUILD" />
+    <mkdir dir="${package.buildroot}/RPMS" />
+    <mkdir dir="${package.buildroot}/SRPMS" />
+    <mkdir dir="${package.buildroot}/SOURCES" />
+    <mkdir dir="${package.buildroot}/SPECS" />
+    <macro_tar param.destfile="${package.buildroot}/SOURCES/${final.name}-script.tar.gz">
+      <param.listofitems>
+        <tarfileset dir="${basedir}/src/packages/rpm/init.d" mode="755">
+          <include name="*" />
+        </tarfileset>
+      </param.listofitems>
+    </macro_tar>
+    <copy todir="${package.buildroot}/SOURCES">
+      <fileset dir="${build.dir}">
+        <include name="${final.name}-bin.tar.gz" />
+      </fileset>
+    </copy>
+    <copy file="${src.dir}/packages/rpm/spec/hadoop.spec" todir="${package.buildroot}/SPECS">
+      <filterchain>
+        <replacetokens>
+          <token key="final.name" value="${final.name}" />
+          <token key="version" value="${hadoop.version}" />
+          <token key="package.release" value="${package.release}" />
+          <token key="package.build.dir" value="${package.build.dir}" />
+          <token key="package.prefix" value="${package.prefix}" />
+          <token key="package.conf.dir" value="${package.conf.dir}" />
+          <token key="package.log.dir" value="${package.log.dir}" />
+          <token key="package.pid.dir" value="${package.pid.dir}" />
+        </replacetokens>
+      </filterchain>
+    </copy>
+    <rpm specFile="hadoop.spec" command="-bb --target ${os.arch}" topDir="${package.buildroot}" cleanBuildDir="true" failOnError="true"/>
+    <copy todir="${build.dir}/" flatten="true">
+      <fileset dir="${package.buildroot}/RPMS">
+        <include name="**/${name}*.rpm" />
+      </fileset>
+      <fileset dir="${package.buildroot}/SRPMS">
+        <include name="**/${name}*.rpm" />
+      </fileset>
+    </copy>
+    <delete dir="${package.buildroot}" quiet="true" verbose="false"/>
+  </target>
+
+  <target name="deb" depends="ant-tasks, binary" description="Make deb package">
+    <taskdef name="deb"
+           classname="org.vafer.jdeb.ant.DebAntTask">
+      <classpath refid="classpath" />
+    </taskdef>
+
+    <mkdir dir="${package.build.dir}/hadoop.control" />
+    <mkdir dir="${package.buildroot}/${package.prefix}/share/hadoop" />
+    <copy todir="${package.buildroot}/${package.prefix}">
+      <fileset dir="${build.dir}/${final.name}">
+        <include name="**" />
+      </fileset>
+    </copy>
+    <copy todir="${package.build.dir}/hadoop.control">
+      <fileset dir="${src.dir}/packages/deb/hadoop.control">
+        <exclude name="control" />
+      </fileset>
+    </copy>
+    <copy file="${src.dir}/packages/deb/hadoop.control/control" todir="${package.build.dir}/hadoop.control">
+      <filterchain>
+        <replacetokens>
+          <token key="final.name" value="${final.name}" />
+          <token key="version" value="${hadoop.version}" />
+          <token key="package.release" value="${package.release}" />
+          <token key="package.build.dir" value="${package.build.dir}" />
+          <token key="package.prefix" value="${package.prefix}" />
+          <token key="package.conf.dir" value="${package.conf.dir}" />
+          <token key="package.log.dir" value="${package.log.dir}" />
+          <token key="package.pid.dir" value="${package.pid.dir}" />
+        </replacetokens>
+      </filterchain>
+    </copy>
+    <deb destfile="${package.buildroot}/${name}_${hadoop.version}-${package.release}_${os.arch}.deb" control="${package.build.dir}/hadoop.control">
+      <tarfileset dir="${build.dir}/${final.name}" filemode="644" prefix="${package.prefix}">
+        <exclude name="bin/*" />
+        <exclude name="sbin/*" />
+        <exclude name="libexec/*" />
+        <exclude name="contrib/*/bin/*" />
+        <exclude name="src/contrib/ec2/bin/*" />
+        <exclude name="src/contrib/ec2/bin/image/*" />
+        <exclude name="etc" />
+        <exclude name="etc/**" />
+        <include name="**" />
+      </tarfileset>
+      <tarfileset dir="${build.dir}/${final.name}" filemode="755" prefix="${package.prefix}">
+        <include name="bin/*" />
+        <include name="sbin/*" />
+        <include name="libexec/*" />
+        <include name="contrib/*/bin/*" />
+        <include name="src/contrib/ec2/bin/*" />
+        <include name="src/contrib/ec2/bin/image/*" />
+      </tarfileset>
+      <tarfileset dir="${build.dir}/${final.name}/etc/hadoop" filemode="644" prefix="${package.conf.dir}">
+        <exclude name="core-site.xml" />
+        <exclude name="hdfs-site.xml" />
+        <exclude name="mapred-site.xml" />
+        <include name="**" />
+      </tarfileset>
+      <tarfileset dir="${basedir}/src/packages/deb/init.d" filemode="755" prefix="/etc/init.d">
+        <include name="**" />
+      </tarfileset>
+    </deb>
+
+    <copy todir="${build.dir}/" flatten="true">
+      <fileset dir="${package.buildroot}">
+        <include name="**/${name}*.deb" />
+      </fileset>
+    </copy>
+    <delete dir="${package.buildroot}" quiet="true" verbose="false"/>
+  </target>
+
   <!-- ================================================================== -->
   <!-- Perform audit activities for the release                           -->
   <!-- ================================================================== -->
@@ -1615,6 +1792,7 @@
     <delete dir="${build.dir}"/>
     <delete dir="${docs.src}/build"/>
     <delete dir="${src.docs.cn}/build"/>
+    <delete dir="${package.buildroot}"/>
     <delete file="${basedir}/ivy/hadoop-core-pom.xml"/>
     <delete file="${basedir}/ivy/hadoop-test-pom.xml"/>
     <delete file="${basedir}/ivy/hadoop-examples-pom.xml"/>
@@ -1690,8 +1868,8 @@
   </target>
 
   <target name="package-librecordio" depends="compile-librecordio" if="librecordio">
-    <mkdir dir="${dist.dir}/librecordio"/> 
-    <copy todir="${dist.dir}/librecordio">
+    <mkdir dir="${dist.dir}/lib/librecordio"/> 
+    <copy todir="${dist.dir}/lib/librecordio">
        <fileset dir="${build.librecordio}" casesensitive="yes" followsymlinks="false">
           <exclude name="**/tests/**"/>
           <exclude name="*.so"/> 
@@ -1699,7 +1877,7 @@
        </fileset>
     </copy>
     <chmod perm="ugo+x" type="file">
-       <fileset dir="${dist.dir}/librecordio"/>
+       <fileset dir="${dist.dir}/lib/librecordio"/>
     </chmod>
   </target>
  

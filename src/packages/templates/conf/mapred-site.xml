@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- Put site-specific property overrides in this file. -->
+
+<configuration>
+  <property>
+    <name>mapred.job.tracker</name>
+    <value>${HADOOP_JT_HOST}</value>
+  </property>
+
+  <property>
+    <name>mapred.system.dir</name>
+    <value>/user/mapred/system</value>
+  </property>
+
+  <property>
+    <name>mapred.local.dir</name>
+    <value>${HADOOP_MAPRED_DIR}</value>
+  </property>
+
+  <property>
+    <name>hadoop.tmp.dir</name>
+    <value>/tmp</value>
+  </property>
+
+  <property>
+    <name>mapred.jobtracker.taskScheduler</name>
+    <value>${HADOOP_TASK_SCHEDULER}</value>
+  </property>
+</configuration>

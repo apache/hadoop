@@ -50,7 +50,12 @@
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/hadoop-config.sh
+if [ "$HADOOP_HOME" != "" ]; then
+  echo "Warning: \$HADOOP_HOME is deprecated."
+  echo
+fi
+
+. "$bin"/../libexec/hadoop-config.sh
 
 cygwin=false
 case "`uname`" in
@@ -308,6 +313,10 @@ if [ -d "${HADOOP_HOME}/build/native" -o -d "${HADOOP_HOME}/lib/native" ]; then
     fi
   fi
 fi
+if [ -e "${HADOOP_PREFIX}/lib/libhadoop.a" ]; then
+  JAVA_LIBRARY_PATH=${HADOOP_PREFIX}/lib
+fi
+
 
 # cygwin path translation
 if $cygwin; then
@@ -319,6 +328,13 @@ HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.file=$HADOOP_LOGFILE"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.home.dir=$HADOOP_HOME"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.id.str=$HADOOP_IDENT_STRING"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.root.logger=${HADOOP_ROOT_LOGGER:-INFO,console}"
+
+if [ $COMMAND = "namenode" ]; then
+  HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,DRFAS}"
+else
+  HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,NullAppender}"
+fi
+
 if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
   HADOOP_OPTS="$HADOOP_OPTS -Djava.library.path=$JAVA_LIBRARY_PATH"
 fi  
@@ -332,14 +348,14 @@ if [ "$starting_secure_dn" = "true" ]; then
    HADOOP_SECURE_DN_PID="$HADOOP_PID_DIR/hadoop_secure_dn.pid"
   fi
 
-  exec "$HADOOP_HOME/bin/jsvc" -Dproc_$COMMAND -outfile "$HADOOP_LOG_DIR/jsvc.out" \
-                                               -errfile "$HADOOP_LOG_DIR/jsvc.err" \
-                                               -pidfile "$HADOOP_SECURE_DN_PID" \
-                                               -nodetach \
-                                               -user "$HADOOP_SECURE_DN_USER" \
-                                               -cp "$CLASSPATH" \
-                                               $JAVA_HEAP_MAX $HADOOP_OPTS \
-                                               org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter "$@"
+  exec "$HADOOP_HOME/libexec/jsvc" -Dproc_$COMMAND -outfile "$HADOOP_LOG_DIR/jsvc.out" \
+                                                   -errfile "$HADOOP_LOG_DIR/jsvc.err" \
+                                                   -pidfile "$HADOOP_SECURE_DN_PID" \
+                                                   -nodetach \
+                                                   -user "$HADOOP_SECURE_DN_USER" \
+                                                   -cp "$CLASSPATH" \
+                                                   $JAVA_HEAP_MAX $HADOOP_OPTS \
+                                                   org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter "$@"
 else
   # run it
   exec "$JAVA" -Dproc_$COMMAND $JAVA_HEAP_MAX $HADOOP_OPTS -classpath "$CLASSPATH" $CLASS "$@"

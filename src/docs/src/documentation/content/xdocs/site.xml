@@ -59,7 +59,8 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <hdfs_libhdfs       label="C API libhdfs" href="libhdfs.html" />
   </docs>
   
-  <docs label="Common"> 
+  <docs label="Common">
+    <deployment label="Deployment Layout" href="deployment_layout.html" />
     <fsshell       label="File System Shell" href="file_system_shell.html" />
     <SLA      label="Service Level Authorization" href="service_level_auth.html"/>
     <native_lib   label="Native Libraries" href="native_libraries.html" />

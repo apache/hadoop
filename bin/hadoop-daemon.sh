@@ -20,7 +20,7 @@
 #
 # Environment Variables
 #
-#   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_HOME}/conf.
+#   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_PREFIX}/conf.
 #   HADOOP_LOG_DIR   Where log files are stored.  PWD by default.
 #   HADOOP_MASTER    host:path where hadoop code should be rsync'd from
 #   HADOOP_PID_DIR   The pid files are stored. /tmp by default.
@@ -39,7 +39,7 @@ fi
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/hadoop-config.sh
+. "$bin"/../libexec/hadoop-config.sh
 
 # get arguments
 startStop=$1
@@ -121,8 +121,8 @@ case $startStop in
 
     hadoop_rotate_log $log
     echo starting $command, logging to $log
-    cd "$HADOOP_HOME"
-    nohup nice -n $HADOOP_NICENESS "$HADOOP_HOME"/bin/hadoop --config $HADOOP_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
+    cd "$HADOOP_PREFIX"
+    nohup nice -n $HADOOP_NICENESS "$HADOOP_PREFIX"/bin/hadoop --config $HADOOP_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
     echo $! > $pid
     sleep 1; head "$log"
     ;;
