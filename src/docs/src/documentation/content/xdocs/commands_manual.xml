@@ -40,7 +40,7 @@
 			
 			           <tr>
 			          	<td><code>--config confdir</code></td>
-			            <td>Overwrites the default Configuration directory. Default is ${HADOOP_HOME}/conf.</td>
+			            <td>Overwrites the default Configuration directory. Default is ${HADOOP_PREFIX}/conf.</td>
 			           </tr>
 			           <tr>
 			          	<td><code>GENERIC_OPTIONS</code></td>

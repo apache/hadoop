@@ -55,6 +55,9 @@
     <!--Testing pulls in everything-->
    <conf name="test" extends="master" description="the classpath needed to run tests"/>
 
+    <!--Packaging pulls in everything-->
+   <conf name="package" extends="master" description="the classpath needed for packaging"/>
+
     <!--Private configurations. -->
 
     <conf name="javadoc" visibility="private" description="artiracts required while performing doc generation"
@@ -300,6 +303,13 @@
       name="jsch"
       rev="${jsch.version}"
       conf="common->default">
+    </dependency>
+    <!--Configuration: package -->
+    <!--artifacts needed for packaging -->
+    <dependency org="org.vafer" 
+      name="jdeb" 
+      rev="${jdeb.version}"
+      conf="package->master">
     </dependency>
     <dependency org="commons-configuration"
       name="commons-configuration"

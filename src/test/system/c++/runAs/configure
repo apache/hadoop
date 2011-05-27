@@ -3349,11 +3349,11 @@ fi
 done
 
 
-#check for HADOOP_HOME
+#check for HADOOP_PREFIX
 if test "$with_home" != ""
 then
 cat >>confdefs.h <<_ACEOF
-#define HADOOP_HOME "$with_home"
+#define HADOOP_PREFIX "$with_home"
 _ACEOF
 
 fi

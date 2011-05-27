@@ -39,7 +39,7 @@
 			
 			           <tr>
 			          	<td><code>--config confdir</code></td>
-			            <td>覆盖缺省配置目录。缺省是${HADOOP_HOME}/conf。</td>
+			            <td>覆盖缺省配置目录。缺省是${HADOOP_PREFIX}/conf。</td>
 			           </tr>
 			           <tr>
 			          	<td><code>GENERIC_OPTIONS</code></td>

@@ -29,6 +29,6 @@ fi
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin"; pwd`
 
-. $bin/hadoop-config.sh
+. $bin/../libexec/hadoop-config.sh
 
-exec "$bin/slaves.sh" --config $HADOOP_CONF_DIR cd "$HADOOP_HOME" \; "$bin/hadoop-daemon.sh" --config $HADOOP_CONF_DIR "$@"
+exec "$bin/slaves.sh" --config $HADOOP_CONF_DIR cd "$HADOOP_PREFIX" \; "$bin/hadoop-daemon.sh" --config $HADOOP_CONF_DIR "$@"

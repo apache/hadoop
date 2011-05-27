@@ -36,7 +36,7 @@ Hadoop streaming是Hadoop的一个工具，
     这些特殊的map/reduce作业是由一些可执行文件或脚本文件充当mapper或者reducer。例如： 
 </p>
 <source>
-$HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
+$HADOOP_PREFIX/bin/hadoop  jar $HADOOP_PREFIX/hadoop-streaming.jar \
     -input myInputDirs \
     -output myOutputDir \
     -mapper /bin/cat \
@@ -68,7 +68,7 @@ Reducer任务运行时，它把输入切分成行并把每一行提供给可执�
 用户也可以使用java类作为mapper或者reducer。上面的例子与这里的代码等价：
 </p>
 <source>
-$HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
+$HADOOP_PREFIX/bin/hadoop  jar $HADOOP_PREFIX/hadoop-streaming.jar \
     -input myInputDirs \
     -output myOutputDir \
     -mapper org.apache.hadoop.mapred.lib.IdentityMapper \
@@ -88,7 +88,7 @@ $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
 如果在集群上还没有，则需要用-file选项让framework把可执行文件作为作业的一部分，一起打包提交。例如：
 </p>
 <source>
-$HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
+$HADOOP_PREFIX/bin/hadoop  jar $HADOOP_PREFIX/hadoop-streaming.jar \
     -input myInputDirs \
     -output myOutputDir \
     -mapper myPythonScript.py \
@@ -103,7 +103,7 @@ $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
 除了可执行文件外，其他mapper或reducer需要用到的辅助文件（比如字典，配置文件等）也可以用这种方式打包上传。例如：
 </p>
 <source>
-$HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
+$HADOOP_PREFIX/bin/hadoop  jar $HADOOP_PREFIX/hadoop-streaming.jar \
     -input myInputDirs \
     -output myOutputDir \
     -mapper myPythonScript.py \
@@ -173,7 +173,7 @@ $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
 下面是使用-cacheArchive选项的另一个例子。其中，input.txt文件有两行内容，分别是两个文件的名字：testlink/cache.txt和testlink/cache2.txt。“testlink”是指向档案目录（jar文件解压后的目录）的符号链接，这个目录下有“cache.txt”和“cache2.txt”两个文件。
 </p>
 <source>
-$HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
+$HADOOP_PREFIX/bin/hadoop  jar $HADOOP_PREFIX/hadoop-streaming.jar \
                   -input "/user/me/samples/cachefile/input.txt"  \
                   -mapper "xargs cat"  \
                   -reducer "cat"  \
@@ -220,7 +220,7 @@ This is just the second cache string
 用户可以使用“-jobconf  &lt;n&gt;=&lt;v&gt;”增加一些配置变量。例如：
 </p>
 <source>
-$HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
+$HADOOP_PREFIX/bin/hadoop  jar $HADOOP_PREFIX/hadoop-streaming.jar \
     -input myInputDirs \
     -output myOutputDir \
     -mapper org.apache.hadoop.mapred.lib.IdentityMapper\
@@ -254,7 +254,7 @@ Streaming 作业的其他选项如下表：
 <tr><td> -verbose </td><td> 可选 </td><td> 详细输出 </td></tr>
 </table>
 <p>
-使用-cluster &lt;name&gt;实现“本地”Hadoop和一个或多个远程Hadoop集群间切换。默认情况下，使用hadoop-default.xml和hadoop-site.xml；当使用-cluster &lt;name&gt;选项时，会使用$HADOOP_HOME/conf/hadoop-&lt;name&gt;.xml。
+使用-cluster &lt;name&gt;实现“本地”Hadoop和一个或多个远程Hadoop集群间切换。默认情况下，使用hadoop-default.xml和hadoop-site.xml；当使用-cluster &lt;name&gt;选项时，会使用$HADOOP_PREFIX/conf/hadoop-&lt;name&gt;.xml。
 </p>
 <p>
 下面的选项改变temp目录：
@@ -295,7 +295,7 @@ Streaming 作业的其他选项如下表：
 </p>
 
 <source>
-$HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
+$HADOOP_PREFIX/bin/hadoop  jar $HADOOP_PREFIX/hadoop-streaming.jar \
     -input myInputDirs \
     -output myOutputDir \
     -mapper org.apache.hadoop.mapred.lib.IdentityMapper \
@@ -320,7 +320,7 @@ Hadoop有一个工具类org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner，
 切分是基于key值的前缀，而不是整个key。例如：
 </p>
 <source>
-$HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
+$HADOOP_PREFIX/bin/hadoop  jar $HADOOP_PREFIX/hadoop-streaming.jar \
     -input myInputDirs \
     -output myOutputDir \
     -mapper org.apache.hadoop.mapred.lib.IdentityMapper \
@@ -390,7 +390,7 @@ combiner/reducer利用适当的聚合器聚合这些可聚合项。
 </p><p>
 要使用Aggregate，只需指定“-reducer aggregate”：</p>
 <source>
-$HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
+$HADOOP_PREFIX/bin/hadoop  jar $HADOOP_PREFIX/hadoop-streaming.jar \
     -input myInputDirs \
     -output myOutputDir \
     -mapper myAggregatorForKeyCount.py \
@@ -434,7 +434,7 @@ Hadoop的工具类org.apache.hadoop.mapred.lib.FieldSelectionMapReduce帮助用�
 同样，工具类中的reduce函数也把输入的key/value对看作字段的列表，用户可以选取任意一段作为reduce输出的key或value。例如： 
 </p>
 <source>
-$HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
+$HADOOP_PREFIX/bin/hadoop  jar $HADOOP_PREFIX/hadoop-streaming.jar \
     -input myInputDirs \
     -output myOutputDir \
     -mapper org.apache.hadoop.mapred.lib.FieldSelectionMapReduce\
@@ -523,7 +523,7 @@ bruce   70
 charlie 80
 dan     75
 
-$ c2='cut -f2'; $HADOOP_HOME/bin/hadoop jar $HADOOP_HOME/hadoop-streaming.jar \
+$ c2='cut -f2'; $HADOOP_PREFIX/bin/hadoop jar $HADOOP_PREFIX/hadoop-streaming.jar \
     -input /user/me/samples/student_marks 
     -mapper \"$c2\" -reducer 'cat'  
     -output /user/me/samples/student_out 

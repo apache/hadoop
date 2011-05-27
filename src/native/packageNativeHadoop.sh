@@ -35,14 +35,14 @@ if [ -d $BASE_NATIVE_LIB_DIR ]
 then
   for platform in `ls $BASE_NATIVE_LIB_DIR`
   do
-    if [ ! -d $DIST_LIB_DIR/$platform ]
+    if [ ! -d $DIST_LIB_DIR ]
     then
-      mkdir -p $DIST_LIB_DIR/$platform
-      echo "Created $DIST_LIB_DIR/$platform"
+      mkdir -p $DIST_LIB_DIR
+      echo "Created $DIST_LIB_DIR"
     fi
-    echo "Copying libraries in $BASE_NATIVE_LIB_DIR/$platform to $DIST_LIB_DIR/$platform/"
-    cd $BASE_NATIVE_LIB_DIR/$platform/
-    $TAR . | (cd $DIST_LIB_DIR/$platform/; $UNTAR)
+    echo "Copying libraries in $BASE_NATIVE_LIB_DIR/$platform to $DIST_LIB_DIR/"
+    cd $BASE_NATIVE_LIB_DIR/
+    $TAR . | (cd $DIST_LIB_DIR/; $UNTAR)
   done
 fi
 
@@ -51,14 +51,14 @@ if [ -d $BUILD_NATIVE_DIR ]
 then 
   for platform in `ls $BUILD_NATIVE_DIR`
   do
-    if [ ! -d $DIST_LIB_DIR/$platform ]
+    if [ ! -d $DIST_LIB_DIR ]
     then
-      mkdir -p $DIST_LIB_DIR/$platform
-      echo "Created $DIST_LIB_DIR/$platform"
+      mkdir -p $DIST_LIB_DIR
+      echo "Created $DIST_LIB_DIR"
     fi
-    echo "Copying libraries in $BUILD_NATIVE_DIR/$platform/lib to $DIST_LIB_DIR/$platform/"
+    echo "Copying libraries in $BUILD_NATIVE_DIR/$platform/lib to $DIST_LIB_DIR/"
     cd $BUILD_NATIVE_DIR/$platform/lib
-    $TAR . | (cd $DIST_LIB_DIR/$platform/; $UNTAR)
+    $TAR . | (cd $DIST_LIB_DIR/; $UNTAR)
   done  
 fi
 

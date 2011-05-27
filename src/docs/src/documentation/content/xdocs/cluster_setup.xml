@@ -64,8 +64,8 @@
       <code>TaskTracker</code>. These are the <em>slaves</em>.</p>
       
       <p>The root of the distribution is referred to as 
-      <code>HADOOP_HOME</code>. All machines in the cluster usually have the same 
-      <code>HADOOP_HOME</code> path.</p>
+      <code>HADOOP_PREFIX</code>. All machines in the cluster usually have the same 
+      <code>HADOOP_PREFIX</code> path.</p>
     </section>
     
     <section>
@@ -1084,7 +1084,7 @@
             on the cluster nodes where a configuration file for the setuid
             executable would be located. The executable would be built to
             <em>build.dir/dist.dir/bin</em> and should be installed to 
-            <em>$HADOOP_HOME/bin</em>.
+            <em>$HADOOP_PREFIX/bin</em>.
             </p>
             
             <p>
@@ -1274,7 +1274,7 @@
       
       <p>Once all the necessary configuration is complete, distribute the files
       to the <code>HADOOP_CONF_DIR</code> directory on all the machines, 
-      typically <code>${HADOOP_HOME}/conf</code>.</p>
+      typically <code>${HADOOP_PREFIX}/conf</code>.</p>
     </section>
     <section>
       <title>Cluster Restartability</title>

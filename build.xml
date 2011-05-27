@@ -26,12 +26,15 @@
   <property file="${user.home}/build.properties" />
   <property file="${basedir}/build.properties" />
  
-  <property name="Name" value="Hadoop-common"/>
-  <property name="name" value="hadoop-common"/>
-  <property name="version" value="0.23.0-SNAPSHOT"/>
+  <property name="module" value="common"/>
+  <property name="Name" value="Hadoop-${module}"/>
+  <property name="name" value="hadoop-${module}"/>
+  <property name="_version" value="0.23.0"/>
+  <property name="version" value="${_version}-SNAPSHOT"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.final.name" value="${name}-test-${version}"/>
   <property name="year" value="2009"/>
+  <property name="package.release" value="1"/>
 
   <property name="src.dir" value="${basedir}/src"/>  	
   <property name="java.src.dir" value="${src.dir}/java"/>
@@ -196,7 +199,18 @@
      <equals arg1="${repo}" arg2="staging"/>
   </condition>
 
-<!-- the normal classpath -->
+  <!-- packaging properties -->
+  <property name="package.prefix" value="/usr"/>
+  <property name="package.conf.dir" value="/etc/hadoop"/>
+  <property name="package.log.dir" value="/var/log/hadoop"/>
+  <property name="package.pid.dir" value="/var/run/hadoop"/>
+  <property name="package.var.dir" value="/var/lib/hadoop"/>
+  <property name="package.share.dir" value="/share/hadoop/${module}"/>
+  <!-- Use fixed path to build rpm for avoiding rpmbuild conflict with dash path names -->
+  <property name="package.buildroot" value="/tmp/hadoop_package_build_${user.name}"/>
+  <property name="package.build.dir" value="/tmp/hadoop_package_build_${user.name}/BUILD"/>
+
+  <!-- the normal classpath -->
   <path id="classpath">
     <pathelement location="${build.classes}"/>
     <pathelement location="${conf.dir}"/>
@@ -1073,6 +1087,7 @@
 	  description="Build distribution">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
+    <mkdir dir="${dist.dir}/libexec"/>
     <mkdir dir="${dist.dir}/bin"/>
     <mkdir dir="${dist.dir}/docs"/>
     <mkdir dir="${dist.dir}/docs/api"/>
@@ -1122,6 +1137,12 @@
       <fileset dir="ivy"/>
     </copy>
 
+    <copy todir="${dist.dir}/libexec">
+      <fileset dir="bin">
+        <include name="hadoop-config.sh"/>
+      </fileset>
+    </copy>
+
     <copy todir="${dist.dir}">
       <fileset dir=".">
         <include name="*.txt" />
@@ -1160,17 +1181,24 @@
     </macro_tar>
   </target>
 
-  <target name="bin-package" depends="compile, jar, jar-test" 
+  <target name="bin-package" depends="compile, jar, jar-test, javadoc" 
 		description="assembles artifacts for binary target">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
+    <mkdir dir="${dist.dir}/${package.share.dir}/contrib"/>
+    <mkdir dir="${dist.dir}/${package.share.dir}/templates"/>
+    <mkdir dir="${dist.dir}/${package.share.dir}/webapps"/>
     <mkdir dir="${dist.dir}/bin"/>
+    <mkdir dir="${dist.dir}/libexec"/>
+    <mkdir dir="${dist.dir}/sbin"/>
+    <mkdir dir="${dist.dir}/var/log"/>
+    <mkdir dir="${dist.dir}/var/run"/>
 
-    <copy todir="${dist.dir}/lib" includeEmptyDirs="false" flatten="true">
+    <copy todir="${dist.dir}/${package.share.dir}/lib" includeEmptyDirs="false" flatten="true">
       <fileset dir="${common.ivy.lib.dir}"/>
     </copy>
 
-    <copy todir="${dist.dir}/lib" includeEmptyDirs="false">
+    <copy todir="${dist.dir}/${package.share.dir}" includeEmptyDirs="false">
       <fileset dir="lib">
         <exclude name="**/native/**"/>
       </fileset>
@@ -1179,38 +1207,57 @@
   	<exec dir="${dist.dir}" executable="sh" failonerror="true">
 	  <env key="BASE_NATIVE_LIB_DIR" value="${lib.dir}/native"/>
 	  <env key="BUILD_NATIVE_DIR" value="${build.dir}/native"/>
-	  <env key="DIST_LIB_DIR" value="${dist.dir}/lib/native"/>
+	  <env key="DIST_LIB_DIR" value="${dist.dir}/lib"/>
 	  <arg line="${native.src.dir}/packageNativeHadoop.sh"/>
     </exec>
 
-    <copy todir="${dist.dir}"> 
-      <fileset file="${build.dir}/${final.name}.jar"/>
+    <copy todir="${dist.dir}/${package.share.dir}"> 
+      <fileset file="${build.dir}/*.jar"/>
     </copy>
     
     <copy todir="${dist.dir}/bin">
-      <fileset dir="bin"/>
+      <fileset dir="bin">
+        <include name="hadoop"/>
+      </fileset>
     </copy>
 
-    <copy todir="${dist.dir}/conf">
+    <copy todir="${dist.dir}/libexec">
+      <fileset dir="bin">
+        <include name="hadoop-config.sh"/>
+      </fileset>
+    </copy>
+
+    <copy todir="${dist.dir}/sbin">
+      <fileset dir="bin">
+        <include name="hadoop-daemon.sh"/>
+        <include name="hadoop-daemons.sh"/>
+        <include name="slaves.sh"/>
+        <include name="start-all.sh"/>
+        <include name="stop-all.sh"/>
+      </fileset>
+      <fileset dir="${basedir}/src/packages">
+        <include name="*.sh" />
+      </fileset>
+    </copy>
+
+    <copy todir="${dist.dir}/etc/hadoop">
       <fileset dir="${conf.dir}" excludes="**/*.template"/>
+      <fileset dir="${conf.dir}" includes="hadoop-env.sh.template"/>
     </copy>
 
-    <copy file="ivy.xml" tofile="${dist.dir}/ivy.xml"/>
-
-    <copy todir="${dist.dir}/ivy">
-      <fileset dir="ivy"/>
+    <copy todir="${dist.dir}/${package.share.dir}/templates">
+      <fileset dir="${basedir}/src/packages/templates/conf" includes="*"/>
     </copy>
 
-    <copy todir="${dist.dir}">
+    <copy todir="${dist.dir}/share/doc/hadoop/${module}">
       <fileset dir=".">
         <include name="*.txt" />
       </fileset>
     </copy>
 
-    <copy todir="${dist.dir}/" file="build.xml"/>
-
     <chmod perm="ugo+x" type="file" parallel="false">
         <fileset dir="${dist.dir}/bin"/>
+        <fileset dir="${dist.dir}/sbin"/>
     </chmod>
   </target>
 
@@ -1219,15 +1266,122 @@
       <param.listofitems>
         <tarfileset dir="${build.dir}" mode="664">
           <exclude name="${final.name}/bin/*" />
+          <exclude name="${final.name}/libexec/*" />
+          <exclude name="${final.name}/sbin/*" />
           <exclude name="${final.name}/src/**" />
           <exclude name="${final.name}/docs/**" />
           <include name="${final.name}/**" />
         </tarfileset>
         <tarfileset dir="${build.dir}" mode="755">
           <include name="${final.name}/bin/*" />
+          <include name="${final.name}/libexec/*" />
+          <include name="${final.name}/sbin/*" />
         </tarfileset>
       </param.listofitems>
     </macro_tar>
+  </target>
+
+  <target name="rpm" depends="binary" description="Make rpm package">
+    <mkdir dir="${package.buildroot}/BUILD" />
+    <mkdir dir="${package.buildroot}/RPMS" />
+    <mkdir dir="${package.buildroot}/SRPMS" />
+    <mkdir dir="${package.buildroot}/SOURCES" />
+    <mkdir dir="${package.buildroot}/SPECS" />
+    <copy todir="${package.buildroot}/SOURCES">
+      <fileset dir="${build.dir}">
+        <include name="${final.name}-bin.tar.gz" />
+      </fileset>
+    </copy>
+    <copy file="${src.dir}/packages/rpm/spec/hadoop.spec" todir="${package.buildroot}/SPECS">
+      <filterchain>
+        <replacetokens>
+          <token key="final.name" value="${final.name}" />
+          <token key="version" value="${_version}" />
+          <token key="package.release" value="${package.release}" />
+          <token key="package.build.dir" value="${package.build.dir}" />
+          <token key="package.prefix" value="${package.prefix}" />
+          <token key="package.conf.dir" value="${package.conf.dir}" />
+          <token key="package.log.dir" value="${package.log.dir}" />
+          <token key="package.pid.dir" value="${package.pid.dir}" />
+          <token key="package.var.dir" value="${package.var.dir}" />
+        </replacetokens>
+      </filterchain>
+    </copy>
+    <rpm specFile="hadoop.spec" command="-bb --target ${os.arch}" topDir="${package.buildroot}" cleanBuildDir="true" failOnError="true"/>
+    <copy todir="${build.dir}/" flatten="true">
+      <fileset dir="${package.buildroot}/RPMS">
+        <include name="**/*.rpm" />
+      </fileset>
+    </copy>
+    <delete dir="${package.buildroot}" quiet="true" verbose="false"/>
+  </target>
+
+  <target name="deb" depends="ivy-retrieve-package, binary" description="Make deb package">
+    <taskdef name="deb"
+           classname="org.vafer.jdeb.ant.DebAntTask">
+      <classpath refid="ivy-package.classpath" />
+    </taskdef>
+
+    <mkdir dir="${package.build.dir}/hadoop.control" />
+    <mkdir dir="${package.buildroot}/${package.prefix}" />
+    <copy todir="${package.buildroot}/${package.prefix}">
+      <fileset dir="${build.dir}/${final.name}">
+        <include name="**" />
+      </fileset>
+    </copy>
+    <copy todir="${package.build.dir}/hadoop.control">
+      <fileset dir="${src.dir}/packages/deb/hadoop.control">
+        <exclude name="control" />
+      </fileset>
+    </copy>
+    <copy file="${src.dir}/packages/deb/hadoop.control/control" todir="${package.build.dir}/hadoop.control">
+      <filterchain>
+        <replacetokens>
+          <token key="final.name" value="${final.name}" />
+          <token key="version" value="${_version}" />
+          <token key="package.release" value="${package.release}" />
+          <token key="package.build.dir" value="${package.build.dir}" />
+          <token key="package.prefix" value="${package.prefix}" />
+          <token key="package.conf.dir" value="${package.conf.dir}" />
+          <token key="package.log.dir" value="${package.log.dir}" />
+          <token key="package.pid.dir" value="${package.pid.dir}" />
+        </replacetokens>
+      </filterchain>
+    </copy>
+    <deb destfile="${package.buildroot}/${name}_${_version}-${package.release}_${os.arch}.deb" control="${package.build.dir}/hadoop.control">
+      <tarfileset dir="${build.dir}/${final.name}" filemode="644" prefix="${package.prefix}">
+        <exclude name="bin" />
+        <exclude name="etc" />
+        <exclude name="libexec" />
+        <exclude name="etc/**" />
+        <exclude name="sbin" />
+        <include name="**" />
+      </tarfileset>
+      <tarfileset dir="${build.dir}/${final.name}/bin" filemode="755" prefix="${package.prefix}/bin">
+        <include name="*" />
+      </tarfileset>
+      <tarfileset dir="${build.dir}/${final.name}/libexec" filemode="755" prefix="${package.prefix}/libexec">
+        <include name="*" />
+      </tarfileset>
+      <tarfileset dir="${build.dir}/${final.name}/sbin" filemode="755" prefix="${package.prefix}/sbin">
+        <include name="*" />
+      </tarfileset>
+      <tarfileset dir="${src.dir}/packages" filemode="755" prefix="${package.prefix}/sbin">
+        <include name="*.sh" />
+      </tarfileset>
+      <tarfileset dir="${build.dir}/${final.name}/etc/hadoop" filemode="644" prefix="${package.conf.dir}">
+        <exclude name="core-site.xml" />
+        <exclude name="hdfs-site.xml" />
+        <exclude name="mapred-site.xml" />
+        <include name="**" /> 
+      </tarfileset>
+    </deb>
+    <copy todir="${build.dir}/" flatten="true">
+      <fileset dir="${package.buildroot}">
+        <include name="**/hadoop*.deb" />
+      </fileset>
+    </copy>
+    <delete dir="${package.buildroot}" quiet="true" verbose="false"/>
   </target>
   
   <target name="ant-task-download" description="To download mvn-ant-task" unless="offline">
@@ -1420,6 +1574,7 @@
   <!-- ================================================================== -->
   <target name="clean" depends="clean-sign, clean-fi" description="Clean.  Delete the build files, and their directories">
     <delete dir="${build.dir}"/>
+    <delete dir="${package.buildroot}"/>
     <delete file="${basedir}/ivy/hadoop-common.xml"/>
     <delete file="${basedir}/ivy/hadoop-common-pom.xml"/>
     <delete file="${basedir}/ivy/hadoop-common-test.xml"/>
@@ -1653,6 +1808,11 @@
     	log="${ivyresolvelog}"/>
   </target>
 
+  <target name="ivy-resolve-package" depends="ivy-init">
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="package"
+    	log="${ivyresolvelog}"/>
+  </target>
+
   <target name="ivy-resolve-jdiff" depends="ivy-init">
     <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="jdiff"
     	log="${ivyresolvelog}"/>
@@ -1708,6 +1868,14 @@
       pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"
     		log="${ivyretrievelog}"/>
     <ivy:cachepath pathid="ivy-common.classpath" conf="common"/>
+  </target>
+
+  <target name="ivy-retrieve-package" depends="ivy-resolve-package"
+    description="Retrieve Ivy-managed artifacts for the package configurations">
+    <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"
+    		log="${ivyretrievelog}"/>
+    <ivy:cachepath pathid="ivy-package.classpath" conf="package"/>
   </target>
 
   <target name="ivy-retrieve-releaseaudit" depends="ivy-resolve-releaseaudit"

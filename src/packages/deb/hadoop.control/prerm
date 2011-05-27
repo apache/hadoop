@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -15,22 +15,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-# Start all hadoop daemons.  Run this on master node.
-
-echo "This script is Deprecated. Instead use start-dfs.sh and start-mapred.sh"
-
-bin=`dirname "${BASH_SOURCE-$0}"`
-bin=`cd "$bin"; pwd`
-
-. "$bin"/../libexec/hadoop-config.sh
-
-# start hdfs daemons if hdfs is present
-if [ -f "${HADOOP_HDFS_HOME}"/bin/start-dfs.sh ]; then
-  "${HADOOP_HDFS_HOME}"/bin/start-dfs.sh --config $HADOOP_CONF_DIR
-fi
-
-# start mapred daemons if mapred is present
-if [ -f "${HADOOP_MAPRED_HOME}"/bin/start-mapred.sh ]; then
-  "${HADOOP_MAPRED_HOME}"/bin/start-mapred.sh --config $HADOOP_CONF_DIR
-fi
+bash /usr/sbin/update-hadoop-env.sh \
+  --prefix=/usr \
+  --bin-dir=/usr/bin \
+  --sbin-dir=/usr/sbin \
+  --conf-dir=/etc/hadoop \
+  --log-dir=/var/log/hadoop \
+  --pid-dir=/var/run/hadoop \
+  --uninstal

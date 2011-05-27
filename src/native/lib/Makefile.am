@@ -22,7 +22,7 @@
 
 #
 # Notes: 
-# 1. This makefile is designed to do the actual builds in $(HADOOP_HOME)/build/native/${os.name}-${os.arch}/lib 
+# 1. This makefile is designed to do the actual builds in $(HADOOP_PREFIX)/build/native/${os.name}-${os.arch}/lib 
 # 2. This makefile depends on the following environment variables to function correctly:
 #    * HADOOP_NATIVE_SRCDIR 
 #    * JAVA_HOME

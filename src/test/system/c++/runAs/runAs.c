@@ -86,7 +86,7 @@ int process_cluster_command(char * user,  char * node , char *command) {
   }
   len = STRLEN + strlen(command);
   finalcommandstr = (char *) malloc((len + 1) * sizeof(char));
-  snprintf(finalcommandstr, len, SCRIPT_DIR_PATTERN, HADOOP_HOME,
+  snprintf(finalcommandstr, len, SCRIPT_DIR_PATTERN, HADOOP_PREFIX,
       command);
   finalcommandstr[len + 1] = '\0';
   errorcode = switchuser(user);

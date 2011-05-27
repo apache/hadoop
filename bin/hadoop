@@ -17,10 +17,11 @@
 
 # This script runs the hadoop core commands. 
 
-bin=`dirname "$0"`
+bin=`which $0`
+bin=`dirname ${bin}`
 bin=`cd "$bin"; pwd`
  
-. "$bin"/hadoop-config.sh
+. "$bin"/../libexec/hadoop-config.sh
 
 function print_usage(){
   echo "Usage: hadoop [--config confdir] COMMAND"
@@ -54,8 +55,8 @@ case $COMMAND in
     #try to locate hdfs and if present, delegate to it.  
     if [ -f "${HADOOP_HDFS_HOME}"/bin/hdfs ]; then
       exec "${HADOOP_HDFS_HOME}"/bin/hdfs $*
-    elif [ -f "${HADOOP_HOME}"/bin/hdfs ]; then
-      exec "${HADOOP_HOME}"/bin/hdfs $*
+    elif [ -f "${HADOOP_PREFIX}"/bin/hdfs ]; then
+      exec "${HADOOP_PREFIX}"/bin/hdfs $*
     else
       echo "HDFS not found."
       exit
@@ -70,8 +71,8 @@ case $COMMAND in
     #try to locate mapred and if present, delegate to it.
     if [ -f "${HADOOP_MAPRED_HOME}"/bin/mapred ]; then
       exec "${HADOOP_MAPRED_HOME}"/bin/mapred $*
-    elif [ -f "${HADOOP_HOME}"/bin/mapred ]; then
-      exec "${HADOOP_HOME}"/bin/mapred $* 
+    elif [ -f "${HADOOP_PREFIX}"/bin/mapred ]; then
+      exec "${HADOOP_PREFIX}"/bin/mapred $* 
     else
       echo "MAPRED not found."
       exit

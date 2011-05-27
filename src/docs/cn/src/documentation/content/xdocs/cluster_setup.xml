@@ -55,7 +55,7 @@
       <p>通常，集群里的一台机器被指定为 
 	 <code>NameNode</code>，另一台不同的机器被指定为<code>JobTracker</code>。这些机器是<em>masters</em>。余下的机器即作为<code>DataNode</code><em>也</em>作为<code>TaskTracker</code>。这些机器是<em>slaves</em>。</p>
       
-      <p>我们用<code>HADOOP_HOME</code>指代安装的根路径。通常，集群里的所有机器的<code>HADOOP_HOME</code>路径相同。</p>
+      <p>我们用<code>HADOOP_PREFIX</code>指代安装的根路径。通常，集群里的所有机器的<code>HADOOP_PREFIX</code>路径相同。</p>
     </section>
     
     <section>
@@ -335,7 +335,7 @@
         </section>
       </section>
 
-      <p>一但全部必要的配置完成，将这些文件分发到所有机器的<code>HADOOP_CONF_DIR</code>路径下，通常是<code>${HADOOP_HOME}/conf</code>。</p>
+      <p>一但全部必要的配置完成，将这些文件分发到所有机器的<code>HADOOP_CONF_DIR</code>路径下，通常是<code>${HADOOP_PREFIX}/conf</code>。</p>
     </section>
     
     <section>

@@ -59,7 +59,7 @@ public abstract class HadoopDaemonRemoteCluster
   public static final String CONF_HADOOPNEWCONFDIR =
     "test.system.hdrc.hadoopnewconfdir";
   /**
-   * Key used to configure the HADOOP_HOME to be used by the
+   * Key used to configure the HADOOP_PREFIX to be used by the
    * HadoopDaemonRemoteCluster.
    */
   public final static String CONF_HADOOPHOME =
@@ -188,7 +188,7 @@ public abstract class HadoopDaemonRemoteCluster
     if (hadoopHome == null || hadoopConfDir == null || hadoopHome.isEmpty()
         || hadoopConfDir.isEmpty()) {
       LOG.error("No configuration "
-          + "for the HADOOP_HOME and HADOOP_CONF_DIR passed");
+          + "for the HADOOP_PREFIX and HADOOP_CONF_DIR passed");
       throw new IllegalArgumentException(
           "No Configuration passed for hadoop home " +
           "and hadoop conf directories");

@@ -511,11 +511,11 @@
       <section>
         <title>用法</title>
         
-        <p>假设环境变量<code>HADOOP_HOME</code>对应安装时的根目录，<code>HADOOP_VERSION</code>对应Hadoop的当前安装版本，编译<code>WordCount.java</code>来创建jar包，可如下操作：</p>
+        <p>假设环境变量<code>HADOOP_PREFIX</code>对应安装时的根目录，<code>HADOOP_VERSION</code>对应Hadoop的当前安装版本，编译<code>WordCount.java</code>来创建jar包，可如下操作：</p>
         <p>
           <code>$ mkdir wordcount_classes</code><br/>
           <code>
-            $ javac -classpath ${HADOOP_HOME}/hadoop-${HADOOP_VERSION}-core.jar 
+            $ javac -classpath ${HADOOP_PREFIX}/hadoop-${HADOOP_VERSION}-core.jar 
               -d wordcount_classes WordCount.java
           </code><br/>
           <code>$ jar -cvf /usr/joe/wordcount.jar -C wordcount_classes/ .</code> 

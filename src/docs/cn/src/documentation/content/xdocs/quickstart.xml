@@ -192,7 +192,7 @@
 
         <p>Hadoop守护进程的日志写入到 
         <code>${HADOOP_LOG_DIR}</code> 目录 (默认是 
-        <code>${HADOOP_HOME}/logs</code>).</p>
+        <code>${HADOOP_PREFIX}/logs</code>).</p>
 
         <p>浏览NameNode和JobTracker的网络接口，它们的地址默认为：</p>
         <ul>

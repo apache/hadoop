@@ -20,7 +20,7 @@
 #
 # Environment Variables
 #
-#   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_HOME}/conf.
+#   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_PREFIX}/conf.
 #   HADOOP_LOG_DIR   Where log files are stored.  PWD by default.
 #   HADOOP_MASTER    host:path where hadoop code should be rsync'd from
 #   HADOOP_PID_DIR   The pid files are stored. /tmp by default.
@@ -39,12 +39,12 @@ fi
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/hadoop-config.sh
+. "$bin"/../libexec/hadoop-config.sh
 
 # get arguments
 
 #default value
-hadoopScript="$HADOOP_HOME"/bin/hadoop
+hadoopScript="$HADOOP_PREFIX"/bin/hadoop
 if [ "--script" = "$1" ]
   then
     shift
@@ -91,7 +91,7 @@ fi
 
 # get log directory
 if [ "$HADOOP_LOG_DIR" = "" ]; then
-  export HADOOP_LOG_DIR="$HADOOP_HOME/logs"
+  export HADOOP_LOG_DIR="$HADOOP_PREFIX/logs"
 fi
 mkdir -p "$HADOOP_LOG_DIR"
 chown $HADOOP_IDENT_STRING $HADOOP_LOG_DIR
@@ -127,12 +127,12 @@ case $startStop in
 
     if [ "$HADOOP_MASTER" != "" ]; then
       echo rsync from $HADOOP_MASTER
-      rsync -a -e ssh --delete --exclude=.svn --exclude='logs/*' --exclude='contrib/hod/logs/*' $HADOOP_MASTER/ "$HADOOP_HOME"
+      rsync -a -e ssh --delete --exclude=.svn --exclude='logs/*' --exclude='contrib/hod/logs/*' $HADOOP_MASTER/ "$HADOOP_PREFIX"
     fi
 
     hadoop_rotate_log $log
     echo starting $command, logging to $log
-    cd "$HADOOP_HOME"
+    cd "$HADOOP_PREFIX"
     nohup nice -n $HADOOP_NICENESS $hadoopScript --config $HADOOP_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
     echo $! > $pid
     sleep 1; head "$log"

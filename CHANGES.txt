@@ -2402,6 +2402,15 @@ Release 0.20.3 - Unreleased
 
     HADOOP-7072. Remove java5 dependencies from build. (cos)
 
+Release 0.20.204.0 - Unreleased
+
+  NEW FEATURES
+
+    HADOOP-6255. Create RPM and Debian packages for common. Changes deployment
+    layout to be consistent across the binary tgz, rpm, and deb. Adds setup
+    scripts for easy one node cluster configuration and user creation.
+    (Eric Yang via omalley)
+
 Release 0.20.203.0 - 2011-5-11
 
   BUG FIXES

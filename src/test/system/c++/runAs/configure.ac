@@ -40,10 +40,10 @@ AC_PROG_CC
 AC_HEADER_STDC
 AC_CHECK_HEADERS([stdlib.h string.h unistd.h fcntl.h])
 
-#check for HADOOP_HOME
+#check for HADOOP_PREFIX
 if test "$with_home" != ""
 then
-AC_DEFINE_UNQUOTED(HADOOP_HOME,"$with_home")
+AC_DEFINE_UNQUOTED(HADOOP_PREFIX,"$with_home")
 fi
 
 # Checks for typedefs, structures, and compiler characteristics.

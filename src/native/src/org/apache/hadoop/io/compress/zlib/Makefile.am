@@ -22,7 +22,7 @@
 
 #
 # Notes: 
-# 1. This makefile is designed to do the actual builds in $(HADOOP_HOME)/build/native/${os.name}-${os.arch}/$(subdir) .
+# 1. This makefile is designed to do the actual builds in $(HADOOP_PREFIX)/build/native/${os.name}-${os.arch}/$(subdir) .
 # 2. This makefile depends on the following environment variables to function correctly:
 #    * HADOOP_NATIVE_SRCDIR 
 #    * JAVA_HOME
@@ -31,7 +31,7 @@
 #    * PLATFORM
 #    All these are setup by build.xml and/or the top-level makefile.
 # 3. The creation of requisite jni headers/stubs are also done by build.xml and they are
-#    assumed to be in $(HADOOP_HOME)/build/native/src/org/apache/hadoop/io/compress/zlib.
+#    assumed to be in $(HADOOP_PREFIX)/build/native/src/org/apache/hadoop/io/compress/zlib.
 #
 
 # The 'vpath directive' to locate the actual source files 

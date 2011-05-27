@@ -22,7 +22,7 @@
 #
 #   HADOOP_SLAVES    File naming remote hosts.
 #     Default is ${HADOOP_CONF_DIR}/slaves.
-#   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_HOME}/conf.
+#   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_PREFIX}/conf.
 #   HADOOP_SLAVE_SLEEP Seconds to sleep between spawning remote commands.
 #   HADOOP_SSH_OPTS Options passed to ssh when running remote commands.
 ##
@@ -38,7 +38,7 @@ fi
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/hadoop-config.sh
+. "$bin"/../libexec/hadoop-config.sh
 
 if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
   . "${HADOOP_CONF_DIR}/hadoop-env.sh"

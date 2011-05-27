@@ -39,6 +39,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
   </docs>	
 		
  <docs label="Guides">
+		<deployment					label="Deployment Layout" href="deployment_layout.html" />
 		<commands_manual 				label="Hadoop Commands"  href="commands_manual.html" />
 		<fsshell				        label="File System Shell"               href="file_system_shell.html" />
 		<SLA					 	label="Service Level Authorization" 	href="service_level_auth.html"/>

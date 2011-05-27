@@ -128,7 +128,7 @@
   <ul>
    <li>${JAVA_HOME}：Hadoop的Java的安装位置。Hadoop支持Sun JDK 1.5.x及以上版本。</li>
    <li>${CLUSTER_NAME}：集群名称，由'node property'指定，在资源管理器配置中曾提到过。</li>
-   <li>${HADOOP_HOME}：Hadoop在计算节点和提交节点上的安装位置。</li>
+   <li>${HADOOP_PREFIX}：Hadoop在计算节点和提交节点上的安装位置。</li>
    <li>${RM_QUEUE}：在资源管理器配置中设置的作业提交队列。</li>
    <li>${RM_HOME}：资源管理器在计算节点和提交节点的安装位置。</li>
     </ul>

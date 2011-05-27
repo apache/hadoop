@@ -229,7 +229,7 @@
 
         <p>The hadoop daemon log output is written to the 
         <code>${HADOOP_LOG_DIR}</code> directory (defaults to 
-        <code>${HADOOP_HOME}/logs</code>).</p>
+        <code>${HADOOP_PREFIX}/logs</code>).</p>
 
         <p>Browse the web interface for the NameNode and the JobTracker; by
         default they are available at:</p>

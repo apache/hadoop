@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -14,23 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-# Start all hadoop daemons.  Run this on master node.
-
-echo "This script is Deprecated. Instead use start-dfs.sh and start-mapred.sh"
-
-bin=`dirname "${BASH_SOURCE-$0}"`
-bin=`cd "$bin"; pwd`
-
-. "$bin"/../libexec/hadoop-config.sh
-
-# start hdfs daemons if hdfs is present
-if [ -f "${HADOOP_HDFS_HOME}"/bin/start-dfs.sh ]; then
-  "${HADOOP_HDFS_HOME}"/bin/start-dfs.sh --config $HADOOP_CONF_DIR
-fi
-
-# start mapred daemons if mapred is present
-if [ -f "${HADOOP_MAPRED_HOME}"/bin/start-mapred.sh ]; then
-  "${HADOOP_MAPRED_HOME}"/bin/start-mapred.sh --config $HADOOP_CONF_DIR
-fi
+Package: hadoop-common
+Version: @version@
+Section: misc
+Priority: optional
+Provides: hadoop-common
+Architecture: all
+Depends: openjdk-6-jre-headless
+Maintainer: Apache Software Foundation <general@hadoop.apache.org>
+Description: The Apache Hadoop project develops open-source software for reliable, scalable, distributed computing.
+Distribution: development
