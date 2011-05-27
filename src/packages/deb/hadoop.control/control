@@ -1,0 +1,9 @@
+Package: hadoop
+Version: @version@
+Section: misc
+Priority: optional
+Provides: hadoop
+Architecture: all
+Maintainer: Apache Software Foundation <general@hadoop.apache.org>
+Description: The Apache Hadoop project develops open-source software for reliable, scalable, distributed computing.
+Distribution: development

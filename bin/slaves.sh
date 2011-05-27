@@ -38,7 +38,7 @@ fi
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/hadoop-config.sh
+. "$bin"/../libexec/hadoop-config.sh
 
 # If the slaves file is specified in the command line,
 # then it takes precedence over the definition in 

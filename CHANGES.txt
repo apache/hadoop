@@ -40,6 +40,13 @@ Release 0.20.205.0 - unreleased
 
 Release 0.20.204.0 - unreleased
 
+  NEW FEATURES
+
+    HADOOP-6255. Create RPM and Debian packages for common. Changes deployment
+    layout to be consistent across the binary tgz, rpm, and deb. Adds setup
+    scripts for easy one node cluster configuration and user creation.
+    (Eric Yang via omalley)
+
   BUG FIXES
 
     MAPREDUCE-2316. Updated CapacityScheduler documentation. (acmurthy) 

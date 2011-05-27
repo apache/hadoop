@@ -19,16 +19,10 @@
 
 # resolve links - $0 may be a softlink
 
-this="$0"
-while [ -h "$this" ]; do
-  ls=`ls -ld "$this"`
-  link=`expr "$ls" : '.*-> \(.*\)$'`
-  if expr "$link" : '.*/.*' > /dev/null; then
-    this="$link"
-  else
-    this=`dirname "$this"`/"$link"
-  fi
-done
+this="${BASH_SOURCE-$0}"
+common_bin=$(cd -P -- "$(dirname -- "$this")" && pwd -P)
+script="$(basename -- "$this")"
+this="$common_bin/$script"
 
 # convert relative path to absolute path
 bin=`dirname "$this"`
@@ -37,7 +31,8 @@ bin=`cd "$bin"; pwd`
 this="$bin/$script"
 
 # the root of the Hadoop installation
-export HADOOP_HOME=`dirname "$this"`/..
+export HADOOP_PREFIX=`dirname "$this"`/..
+export HADOOP_HOME=${HADOOP_PREFIX}/share/hadoop
 
 #check to see if the conf dir is given as an optional argument
 if [ $# -gt 1 ]
@@ -52,7 +47,12 @@ then
 fi
  
 # Allow alternate conf dir location.
-HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_HOME/conf}"
+if [ -e "${HADOOP_PREFIX}/conf/hadoop-env.sh" ]; then
+  DEFAULT_CONF_DIR="conf"
+else
+  DEFAULT_CONF_DIR="etc/hadoop"
+fi
+HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_PREFIX/$DEFAULT_CONF_DIR}"
 
 #check to see it is specified whether to use the slaves or the
 # masters file

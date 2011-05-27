@@ -21,7 +21,7 @@
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/hadoop-config.sh
+. "$bin"/../libexec/hadoop-config.sh
 
 # start mapred daemons
 # start jobtracker first to minimize connection errors at startup

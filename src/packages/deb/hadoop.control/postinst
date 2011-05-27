@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -15,20 +15,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-# Run a Hadoop command on all slave hosts.
-
-usage="Usage: hadoop-daemons.sh [--config confdir] [--hosts hostlistfile] [start|stop] command args..."
-
-# if no args specified, show usage
-if [ $# -le 1 ]; then
-  echo $usage
-  exit 1
-fi
-
-bin=`dirname "$0"`
-bin=`cd "$bin"; pwd`
-
-. $bin/../libexec/hadoop-config.sh
-
-exec "$bin/slaves.sh" --config $HADOOP_CONF_DIR cd "$HADOOP_HOME" \; "$bin/hadoop-daemon.sh" --config $HADOOP_CONF_DIR "$@"
+bash /usr/sbin/update-hadoop-env.sh \
+  --prefix=/usr \
+  --bin-dir=/usr/bin \
+  --sbin-dir=/usr/sbin \
+  --conf-dir=/etc/hadoop \
+  --log-dir=/var/log/hadoop \
+  --pid-dir=/var/run/hadoop
