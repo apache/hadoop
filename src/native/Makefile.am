@@ -36,8 +36,12 @@ AM_CPPFLAGS = @JNI_CPPFLAGS@ -I$(HADOOP_NATIVE_SRCDIR)/src \
               -Isrc/org/apache/hadoop/io/compress/zlib \
               -Isrc/org/apache/hadoop/security \
               -Isrc/org/apache/hadoop/io/nativeio/
-AM_LDFLAGS = @JNI_LDFLAGS@ -m$(JVM_DATA_MODEL)
-AM_CFLAGS = -g -Wall -fPIC -O2 -m$(JVM_DATA_MODEL)
+AM_LDFLAGS = @JNI_LDFLAGS@
+AM_CFLAGS = -g -Wall -fPIC -O2
+if SPECIFY_DATA_MODEL
+AM_LDFLAGS += -m$(JVM_DATA_MODEL)
+AM_CFLAGS += -m$(JVM_DATA_MODEL)
+endif
 
 lib_LTLIBRARIES = libhadoop.la
 libhadoop_la_SOURCES = src/org/apache/hadoop/io/compress/zlib/ZlibCompressor.c \

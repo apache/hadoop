@@ -740,6 +740,9 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7146. RPC server leaks file descriptors (todd)
 
+    HADOOP-7276. Hadoop native builds fail on ARM due to -m32 (Trevor Robinson
+    via eli)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

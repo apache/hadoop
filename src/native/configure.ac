@@ -100,6 +100,8 @@ AC_CHECK_FUNCS([memset])
 # Check for nonstandard STRERROR_R
 AC_FUNC_STRERROR_R
 
+AM_CONDITIONAL([SPECIFY_DATA_MODEL], [case $host_cpu in arm*) false;; *) true;; esac])
+
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
 

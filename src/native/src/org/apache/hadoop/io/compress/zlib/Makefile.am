@@ -39,7 +39,10 @@ vpath %.c $(HADOOP_NATIVE_SRCDIR)/$(subdir)
 
 AM_CPPFLAGS = @JNI_CPPFLAGS@ -I$(HADOOP_NATIVE_SRCDIR)/src
 AM_LDFLAGS = @JNI_LDFLAGS@
-AM_CFLAGS = -g -Wall -fPIC -O2 -m$(JVM_DATA_MODEL)
+AM_CFLAGS = -g -Wall -fPIC -O2
+if SPECIFY_DATA_MODEL
+AM_CFLAGS += -m$(JVM_DATA_MODEL)
+endif
 
 noinst_LTLIBRARIES = libnativezlib.la
 libnativezlib_la_SOURCES = ZlibCompressor.c ZlibDecompressor.c
