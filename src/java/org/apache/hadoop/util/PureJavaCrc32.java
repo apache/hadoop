@@ -34,13 +34,14 @@ import org.apache.hadoop.classification.InterfaceStability;
  *
  * @see java.util.zip.CRC32
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class PureJavaCrc32 implements Checksum {
 
   /** the current CRC value, bit-flipped */
   private int crc;
 
+  /** Create a new PureJavaCrc32 object. */
   public PureJavaCrc32() {
     reset();
   }

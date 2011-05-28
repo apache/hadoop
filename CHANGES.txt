@@ -185,6 +185,8 @@ Trunk (unreleased changes)
     HADOOP-7312. Update value of hadoop.common.configuration.version.
     (Harsh J Chouraria via todd)
 
+    HADOOP-7337. Change PureJavaCrc32 annotations to public stable.  (szetszwo)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
