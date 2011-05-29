@@ -62,7 +62,7 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   private Map<String, byte[]> attributes;
 
   private static final long OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + ClassSize.REFERENCE +
+      ClassSize.OBJECT + 2 * ClassSize.REFERENCE +
       2 * Bytes.SIZEOF_LONG + Bytes.SIZEOF_BOOLEAN +
       ClassSize.REFERENCE + ClassSize.TREEMAP);
 
@@ -525,6 +525,13 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
 
       for(KeyValue kv : entry.getValue()) {
         heapsize += kv.heapSize();
+      }
+    }
+    if (attributes != null) {
+      heapsize += ClassSize.align(this.attributes.size() * ClassSize.MAP_ENTRY);
+      for(Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
+        heapsize += ClassSize.align(ClassSize.STRING + entry.getKey().length);
+        heapsize += ClassSize.align(ClassSize.ARRAY + entry.getValue().size());
       }
     }
     return ClassSize.align((int)heapsize);
