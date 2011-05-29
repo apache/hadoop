@@ -529,9 +529,9 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
     }
     if (attributes != null) {
       heapsize += ClassSize.align(this.attributes.size() * ClassSize.MAP_ENTRY);
-      for(Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
-        heapsize += ClassSize.align(ClassSize.STRING + entry.getKey().length);
-        heapsize += ClassSize.align(ClassSize.ARRAY + entry.getValue().size());
+      for(Map.Entry<String, byte[]> entry : this.attributes.entrySet()) {
+        heapsize += ClassSize.align(ClassSize.STRING + entry.getKey().length());
+        heapsize += ClassSize.align(ClassSize.ARRAY + entry.getValue().length);
       }
     }
     return ClassSize.align((int)heapsize);
