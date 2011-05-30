@@ -233,6 +233,7 @@ Release 0.91.0 - Unreleased
                one another (Harsh J Chouraria)
    HBASE-2937  Facilitate Timeouts In HBase Client (Karthick Sankarachary)
    HBASE-3921  Allow adding arbitrary blobs to Put (dhruba borthakur)
+   HBASE-3931  Allow adding attributes to Get
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
