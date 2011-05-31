@@ -95,7 +95,7 @@ public class EnableTableHandler extends EventHandler {
         break;
       }
       LOG.info("Table has " + countOfRegionsInTable + " regions of which " +
-        regions.size() + " are online.");
+        regions.size() + " are offline.");
       BulkEnabler bd = new BulkEnabler(this.server, regions,
         countOfRegionsInTable);
       try {
