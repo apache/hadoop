@@ -261,6 +261,9 @@ Trunk (unreleased changes)
     HADOOP-7208. Fix implementation of equals() and hashCode() in
     StandardSocketFactory. (Uma Maheswara Rao G via todd)
 
+    HADOOP-7336. TestFileContextResolveAfs will fail with default 
+    test.build.data property. (jitendra)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
