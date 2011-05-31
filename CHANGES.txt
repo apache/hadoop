@@ -113,8 +113,6 @@ Release 0.91.0 - Unreleased
    HBASE-3903  A successful write to client write-buffer may be lost or not
                visible (Doug Meil)
    HBASE-3894  Thread contention over row locks set monitor (Dave Latham)
-   HBASE-3934  MemStoreFlusher.getMemStoreLimit() doesn't honor defaultLimit
-               (Ted Yu)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
@@ -296,6 +294,8 @@ Release 0.90.4 - Unreleased
                display issues
    HBASE-3914  ROOT region appeared in two regionserver's onlineRegions at
                the same time (Jieshan Bean)
+   HBASE-3934  MemStoreFlusher.getMemStoreLimit() doesn't honor defaultLimit
+               (Ted Yu)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the
