@@ -115,6 +115,9 @@ Trunk (unreleased changes)
     HADOOP-7282. ipc.Server.getRemoteIp() may return null.  (John George
     via szetszwo)
 
+    HADOOP-7336. TestFileContextResolveAfs will fail with default 
+    test.build.data property. (jitendra)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

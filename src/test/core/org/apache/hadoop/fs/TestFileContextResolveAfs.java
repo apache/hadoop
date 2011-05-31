@@ -33,7 +33,7 @@ import org.junit.Test;
 public class TestFileContextResolveAfs {
   
   private static String TEST_ROOT_DIR_LOCAL
-    = System.getProperty("test.build.data","build/test/data/work-dir/localfs");
+    = System.getProperty("test.build.data","/tmp");
   
   private FileContext fc;
   private FileSystem localFs;
@@ -48,8 +48,8 @@ public class TestFileContextResolveAfs {
     Configuration conf = new Configuration();
     localFs = FileSystem.get(conf);
     
-    Path localPath = new Path(TEST_ROOT_DIR_LOCAL + "/file1");
-    Path linkPath = new Path("file:///" + TEST_ROOT_DIR_LOCAL + "/file2");
+    Path localPath = new Path(TEST_ROOT_DIR_LOCAL + "/TestFileContextResolveAfs1");
+    Path linkPath = new Path("file://" + TEST_ROOT_DIR_LOCAL + "/TestFileContextResolveAfs2");
     localFs.mkdirs(new Path(TEST_ROOT_DIR_LOCAL));
     localFs.create(localPath);
     
