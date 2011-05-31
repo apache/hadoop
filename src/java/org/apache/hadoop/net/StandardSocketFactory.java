@@ -112,16 +112,13 @@ public class StandardSocketFactory extends SocketFactory {
       return true;
     if (obj == null)
       return false;
-    if (!(obj instanceof StandardSocketFactory))
-      return false;
-    return true;
+    return obj.getClass().equals(this.getClass());
   }
 
   /* @inheritDoc */
   @Override
   public int hashCode() {
-    // Dummy hash code (to make find bugs happy)
-    return 47;
-  } 
-  
+    return this.getClass().hashCode();
+  }
+
 }

@@ -258,6 +258,9 @@ Trunk (unreleased changes)
     HADOOP-7282. ipc.Server.getRemoteIp() may return null.  (John George
     via szetszwo)
 
+    HADOOP-7208. Fix implementation of equals() and hashCode() in
+    StandardSocketFactory. (Uma Maheswara Rao G via todd)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
