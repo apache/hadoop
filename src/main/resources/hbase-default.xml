@@ -210,12 +210,6 @@
     <description>The HLog file writer implementation.</description>
   </property>
   <property>
-    <name>hbase.regionserver.thread.splitcompactcheckfrequency</name>
-    <value>20000</value>
-    <description>How often a region server runs the split/compaction check.
-    </description>
-  </property>
-  <property>
     <name>hbase.regionserver.nbreservationblocks</name>
     <value>4</value>
     <description>The number of resevoir blocks of memory release on
