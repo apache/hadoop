@@ -1249,19 +1249,17 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @return Ordered list of {@link HRegionInfo}.   * 
    * @throws IOException
    */  
-  public List<HRegionInfo> getTableRegions(final byte[] tableName) throws IOException
-  {
-      CatalogTracker ct = getCatalogTracker();
-      List<HRegionInfo> Regions;
-      try {
-          Regions = MetaReader.getTableRegions(ct, tableName, true);
-        } finally {
-          cleanupCatalogTracker(ct);
-        }
-      
-      return Regions;	  
+  public List<HRegionInfo> getTableRegions(final byte[] tableName)
+  throws IOException {
+    CatalogTracker ct = getCatalogTracker();
+    List<HRegionInfo> Regions;
+    try {
+      Regions = MetaReader.getTableRegions(ct, tableName, true);
+    } finally {
+      cleanupCatalogTracker(ct);
+    }
+    return Regions;	  
   }
-  
   
   public void close() throws IOException {
     if (this.connection != null) {
