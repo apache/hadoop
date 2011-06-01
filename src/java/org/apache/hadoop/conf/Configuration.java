@@ -635,11 +635,21 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
   
   /**
+   * Unset a previously set property.
+   */
+  public synchronized void unset(String name) {
+    name = handleDeprecation(name);
+
+    getOverlay().remove(name);
+    getProps().remove(name);
+  }
+
+  /**
    * Sets a property if it is currently unset.
    * @param name the property name
    * @param value the new value
    */
-  public void setIfUnset(String name, String value) {
+  public synchronized void setIfUnset(String name, String value) {
     if (get(name) == null) {
       set(name, value);
     }
