@@ -751,6 +751,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7276. Hadoop native builds fail on ARM due to -m32 (Trevor Robinson
     via eli)
 
+    HADOOP-7121. Exceptions while serializing IPC call responses are not
+    handled well. (todd)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

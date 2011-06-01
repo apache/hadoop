@@ -913,9 +913,9 @@ public abstract class Server {
     public UserGroupInformation attemptingUser = null; // user name before auth
 
     // Fake 'call' for failed authorization response
-    private static final int AUTHROIZATION_FAILED_CALLID = -1;
+    private static final int AUTHORIZATION_FAILED_CALLID = -1;
     private final Call authFailedCall = 
-      new Call(AUTHROIZATION_FAILED_CALLID, null, this);
+      new Call(AUTHORIZATION_FAILED_CALLID, null, this);
     private ByteArrayOutputStream authFailedResponse = new ByteArrayOutputStream();
     // Fake 'call' for SASL context setup
     private static final int SASL_CALLID = -33;
@@ -1355,9 +1355,22 @@ public abstract class Server {
         
       if (LOG.isDebugEnabled())
         LOG.debug(" got #" + id);
+      Writable param;
+      try {
+        param = ReflectionUtils.newInstance(paramClass, conf);//read param
+        param.readFields(dis);
+      } catch (Throwable t) {
+        LOG.warn("Unable to read call parameters for client " +
+                 getHostAddress(), t);
+        final Call readParamsFailedCall = new Call(id, null, this);
+        ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
 
-      Writable param = ReflectionUtils.newInstance(paramClass, conf);//read param
-      param.readFields(dis);        
+        setupResponse(responseBuffer, readParamsFailedCall, Status.FATAL, null,
+            t.getClass().getName(),
+            "IPC server unable to read call parameters: " + t.getMessage());
+        responder.doRespond(readParamsFailedCall);
+        return;
+      }
         
       Call call = new Call(id, param, this);
       callQueue.put(call);              // queue the call; maybe blocked here
@@ -1591,7 +1604,18 @@ public abstract class Server {
     out.writeInt(status.state);           // write status
 
     if (status == Status.SUCCESS) {
-      rv.write(out);
+      try {
+        rv.write(out);
+      } catch (Throwable t) {
+        LOG.warn("Error serializing call response for call " + call, t);
+        // Call back to same function - this is OK since the
+        // buffer is reset at the top, and since status is changed
+        // to ERROR it won't infinite loop.
+        setupResponse(response, call, Status.ERROR,
+            null, t.getClass().getName(),
+            StringUtils.stringifyException(t));
+        return;
+      }
     } else {
       WritableUtils.writeString(out, errorClass);
       WritableUtils.writeString(out, error);
