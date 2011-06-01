@@ -18,7 +18,7 @@ Trunk (unreleased changes)
     (Matt Foley via jghoman)
 
     HADOOP-7054 Change NN LoadGenerator to use FileContext APIs
-	(Sanjay Radia)
+	  (Sanjay Radia)
 
     HADOOP-7175. Add isEnabled() to Trash.  (Daryn Sharp via szetszwo)
 
@@ -82,6 +82,9 @@ Trunk (unreleased changes)
 
     HADOOP-7320. Refactor the copy and move commands to conform to new
     FsCommand class. (Daryn Sharp via todd)
+
+    HADOOP-7001.  Configuration changes can occur via the Reconfigurable
+    interface. (Patrick Kline via dhruba)
 
   OPTIMIZATIONS
 
