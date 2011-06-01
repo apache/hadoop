@@ -90,6 +90,7 @@ public class ViewFileSystem extends FileSystem {
   private Path workingDir;
   Configuration config;
   InodeTree<FileSystem> fsState;  // the fs state; ie the mount table
+  Path homeDir = null;
   
   /**
    * Prohibits names which contain a ".", "..", ":" or "/" 
@@ -157,8 +158,6 @@ public class ViewFileSystem extends FileSystem {
     final String authority = theUri.getAuthority();
     try {
       myUri = new URI(FsConstants.VIEWFS_SCHEME, authority, "/", null, null);
-      workingDir =
-        this.makeQualified(new Path("/user/" + ugi.getShortUserName()));
       fsState = new InodeTree<FileSystem>(conf, authority) {
 
         @Override
@@ -184,6 +183,7 @@ public class ViewFileSystem extends FileSystem {
           // return MergeFs.createMergeFs(mergeFsURIList, config);
         }
       };
+      workingDir = this.getHomeDirectory();
     } catch (URISyntaxException e) {
       throw new IOException("URISyntax exception: " + theUri);
     }
@@ -232,6 +232,19 @@ public class ViewFileSystem extends FileSystem {
       return f;
     }
     return res.targetFileSystem.resolvePath(res.remainingPath);
+  }
+  
+  @Override
+  public Path getHomeDirectory() {
+    if (homeDir == null) {
+      String base = fsState.getHomeDirPrefixValue();
+      if (base == null) {
+        base = "/user";
+      }
+      homeDir = 
+        this.makeQualified(new Path(base + "/" + ugi.getShortUserName()));
+    }
+    return homeDir;
   }
   
   @Override

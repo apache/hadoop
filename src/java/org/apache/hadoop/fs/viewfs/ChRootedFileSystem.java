@@ -116,8 +116,7 @@ class ChRootedFileSystem extends FileSystem {
           chRootPathPart.toString().substring(1));
 
     workingDir = getHomeDirectory();
-    // We don't use the wd of the myFs,  (lets set it to root anyway)
-    myFs.setWorkingDirectory(chRootPathPart);
+    // We don't use the wd of the myFs
   }
   
   /** 

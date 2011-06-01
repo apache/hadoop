@@ -146,6 +146,7 @@ public class ViewFs extends AbstractFileSystem {
   final UserGroupInformation ugi; // the user/group of user who created mtable
   final Configuration config;
   InodeTree<AbstractFileSystem> fsState;  // the fs state; ie the mount table
+  Path homeDir = null;
   
   static AccessControlException readOnlyMountTable(final String operation,
       final String p) {
@@ -234,6 +235,19 @@ public class ViewFs extends AbstractFileSystem {
     return -1;
   }
  
+  @Override
+  public Path getHomeDirectory() {
+    if (homeDir == null) {
+      String base = fsState.getHomeDirPrefixValue();
+      if (base == null) {
+        base = "/user";
+      }
+      homeDir = 
+        this.makeQualified(new Path(base + "/" + ugi.getShortUserName()));
+    }
+    return homeDir;
+  }
+  
   @Override
   public Path resolvePath(final Path f) throws FileNotFoundException,
           AccessControlException, UnresolvedLinkException, IOException {

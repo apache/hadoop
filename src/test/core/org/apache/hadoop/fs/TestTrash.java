@@ -24,7 +24,6 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -57,10 +56,10 @@ public class TestTrash extends TestCase {
   }
 
   // check that the specified file is in Trash
-  protected static void checkTrash(FileSystem fs, Path trashRoot,
+  protected static void checkTrash(FileSystem trashFs, Path trashRoot,
       Path path) throws IOException {
     Path p = new Path(trashRoot+"/"+ path.toUri().getPath());
-    assertTrue(fs.exists(p));
+    assertTrue("Could not find file in trash: "+ p , trashFs.exists(p));
   }
   
   // counts how many instances of the file are in the Trash
@@ -89,11 +88,33 @@ public class TestTrash extends TestCase {
     Path p = new Path(trashRoot+"/"+ new Path(pathname).getName());
     assertTrue(!fs.exists(p));
   }
-
+  
+  /**
+   * Test trash for the shell's delete command for the file system fs
+   * @param fs
+   * @param base - the base path where files are created
+   * @throws IOException
+   */
   protected static void trashShell(final FileSystem fs, final Path base)
-      throws IOException {
+  throws IOException {
     Configuration conf = new Configuration();
-    conf.set("fs.default.name", fs.getUri().toString());
+    conf.set("fs.defaultFS", fs.getUri().toString());
+    trashShell(conf, base, null, null);
+  }
+
+  /**
+   * 
+   * Test trash for the shell's delete command for the default file system
+   * specified in the paramter conf
+   * @param conf 
+   * @param base - the base path where files are created
+   * @param trashRoot - the expected place where the trashbin resides
+   * @throws IOException
+   */
+  public static void trashShell(final Configuration conf, final Path base,
+      FileSystem trashRootFs, Path trashRoot)
+      throws IOException {
+    FileSystem fs = FileSystem.get(conf);
 
     conf.set(FS_TRASH_INTERVAL_KEY, "0"); // disabled
     assertFalse(new Trash(conf).isEnabled());
@@ -103,7 +124,12 @@ public class TestTrash extends TestCase {
 
     FsShell shell = new FsShell();
     shell.setConf(conf);
-    Path trashRoot = null;
+    if (trashRoot == null) {
+      trashRoot = shell.getCurrentTrashDir();
+    }
+    if (trashRootFs == null) {
+      trashRootFs = fs;
+    }
 
     // First create a new directory with mkdirs
     Path myPath = new Path(base, "test/mkdirs");
@@ -143,8 +169,8 @@ public class TestTrash extends TestCase {
       }
       assertTrue(val == 0);
 
-      trashRoot = shell.getCurrentTrashDir();
-      checkTrash(fs, trashRoot, myFile);
+ 
+      checkTrash(trashRootFs, trashRoot, fs.makeQualified(myFile));
     }
 
     // Verify that we can recreate the file
@@ -206,7 +232,7 @@ public class TestTrash extends TestCase {
     {
         Path toErase = new Path(trashRoot, "toErase");
         int retVal = -1;
-        writeFile(fs, toErase);
+        writeFile(trashRootFs, toErase);
         try {
           retVal = shell.run(new String[] {"-rm", toErase.toString()});
         } catch (Exception e) {
@@ -214,8 +240,8 @@ public class TestTrash extends TestCase {
                              e.getLocalizedMessage());
         }
         assertTrue(retVal == 0);
-        checkNotInTrash (fs, trashRoot, toErase.toString());
-        checkNotInTrash (fs, trashRoot, toErase.toString()+".1");
+        checkNotInTrash (trashRootFs, trashRoot, toErase.toString());
+        checkNotInTrash (trashRootFs, trashRoot, toErase.toString()+".1");
     }
 
     // simulate Trash removal
@@ -233,7 +259,7 @@ public class TestTrash extends TestCase {
     }
 
     // verify that after expunging the Trash, it really goes away
-    checkNotInTrash(fs, trashRoot, new Path(base, "test/mkdirs/myFile").toString());
+    checkNotInTrash(trashRootFs, trashRoot, new Path(base, "test/mkdirs/myFile").toString());
 
     // recreate directory and file
     mkdir(fs, myPath);
@@ -252,7 +278,7 @@ public class TestTrash extends TestCase {
                            e.getLocalizedMessage());
       }
       assertTrue(val == 0);
-      checkTrash(fs, trashRoot, myFile);
+      checkTrash(trashRootFs, trashRoot, myFile);
 
       args = new String[2];
       args[0] = "-rmr";
@@ -265,7 +291,7 @@ public class TestTrash extends TestCase {
                            e.getLocalizedMessage());
       }
       assertTrue(val == 0);
-      checkTrash(fs, trashRoot, myPath);
+      checkTrash(trashRootFs, trashRoot, myPath);
     }
 
     // attempt to remove parent of trash
@@ -281,7 +307,7 @@ public class TestTrash extends TestCase {
                            e.getLocalizedMessage());
       }
       assertEquals("exit code", 1, val);
-      assertTrue(fs.exists(trashRoot));
+      assertTrue(trashRootFs.exists(trashRoot));
     }
     
     // Verify skip trash option really works
@@ -299,7 +325,8 @@ public class TestTrash extends TestCase {
       int val = -1;
       try {
         // Clear out trash
-        assertEquals(0, shell.run(new String [] { "-expunge" } ));
+        assertEquals("-expunge failed", 
+            0, shell.run(new String [] { "-expunge" } ));
         
         val = shell.run(args);
         
@@ -307,7 +334,10 @@ public class TestTrash extends TestCase {
         System.err.println("Exception raised from Trash.run " +
             e.getLocalizedMessage());
       }
-      assertFalse(fs.exists(trashRoot)); // No new Current should be created
+      assertFalse("Expected TrashRoot (" + trashRoot + 
+          ") to exist in file system:"
+          + trashRootFs.getUri(), 
+          trashRootFs.exists(trashRoot)); // No new Current should be created
       assertFalse(fs.exists(myFile));
       assertTrue(val == 0);
     }
@@ -335,7 +365,7 @@ public class TestTrash extends TestCase {
             e.getLocalizedMessage());
       }
 
-      assertFalse(fs.exists(trashRoot)); // No new Current should be created
+      assertFalse(trashRootFs.exists(trashRoot)); // No new Current should be created
       assertFalse(fs.exists(myPath));
       assertFalse(fs.exists(myFile));
       assertTrue(val == 0);
@@ -420,7 +450,7 @@ public class TestTrash extends TestCase {
   public void testNonDefaultFS() throws IOException {
     Configuration conf = new Configuration();
     conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
-    conf.set("fs.default.name", "invalid://host/bar/foo");
+    conf.set("fs.defaultFS", "invalid://host/bar/foo");
     trashNonDefaultFS(conf);
   }
   
@@ -438,7 +468,7 @@ public class TestTrash extends TestCase {
     emptierThread.start();
 
     FileSystem fs = FileSystem.getLocal(conf);
-    conf.set("fs.default.name", fs.getUri().toString());
+    conf.set("fs.defaultFS", fs.getUri().toString());
     FsShell shell = new FsShell();
     shell.setConf(conf);
     shell.init();
@@ -521,7 +551,7 @@ public class TestTrash extends TestCase {
     conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
     FileSystem fs = FileSystem.getLocal(conf);
     
-    conf.set("fs.default.name", fs.getUri().toString());
+    conf.set("fs.defaultFS", fs.getUri().toString());
     conf.set(FS_TRASH_INTERVAL_KEY, "10"); //minutes..
     FsShell shell = new FsShell();
     shell.setConf(conf);

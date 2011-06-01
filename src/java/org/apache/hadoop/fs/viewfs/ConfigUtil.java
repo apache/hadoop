@@ -67,4 +67,51 @@ public class ConfigUtil {
     addLink( conf, Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE, 
         src, target);   
   }
+  
+  /**
+   * Add config variable for homedir for default mount table
+   * @param conf - add to this conf
+   * @param homedir - the home dir path starting with slash
+   */
+  public static void setHomeDirConf(final Configuration conf,
+      final String homedir) {
+    setHomeDirConf(  conf,
+        Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE,   homedir);
+  }
+  
+  /**
+   * Add config variable for homedir the specified mount table
+   * @param conf - add to this conf
+   * @param homedir - the home dir path starting with slash
+   */
+  public static void setHomeDirConf(final Configuration conf,
+              final String mountTableName, final String homedir) {
+    if (!homedir.startsWith("/")) {
+      throw new IllegalArgumentException("Home dir should start with /:"
+          + homedir);
+    }
+    conf.set(getConfigViewFsPrefix(mountTableName) + "." +
+        Constants.CONFIG_VIEWFS_HOMEDIR, homedir);
+  }
+  
+  /**
+   * Get the value of the home dir conf value for default mount table
+   * @param conf - from this conf
+   * @return home dir value, null if variable is not in conf
+   */
+  public static String getHomeDirValue(final Configuration conf) {
+    return getHomeDirValue(conf, Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE);
+  }
+  
+  /**
+   * Get the value of the home dir conf value for specfied mount table
+   * @param conf - from this conf
+   * @param mountTableName - the mount table
+   * @return home dir value, null if variable is not in conf
+   */
+  public static String getHomeDirValue(final Configuration conf, 
+      final String mountTableName) {
+    return conf.get(getConfigViewFsPrefix(mountTableName) + "." +
+        Constants.CONFIG_VIEWFS_HOMEDIR);
+  }
 }
