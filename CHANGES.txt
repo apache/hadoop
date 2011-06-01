@@ -51,9 +51,6 @@ Release 0.22.0 - Unreleased
 
   IMPROVEMENTS
 
-    HADOOP-7001.  Configuration changes can occur via the Reconfigurable
-    interface. (Patrick Kline via dhruba)
-
     HADOOP-6644. util.Shell getGROUPS_FOR_USER_COMMAND method name 
     - should use common naming convention (boryas)
 
