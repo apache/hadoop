@@ -66,6 +66,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
     doTestTableMutations();
     doTestTableTimestampsAndColumns();
     doTestTableScanners();
+    doTestGetTableRegions();
   }
 
   /**
@@ -98,7 +99,8 @@ public class TestThriftServer extends HBaseClusterTestCase {
     handler.disableTable(tableAname);*/
     handler.deleteTable(tableAname);
   }
-
+  
+    
   /**
    * Tests adding a series of Mutations and BatchMutations, including a
    * delete mutation.  Also tests data retrieval, and getting back multiple
@@ -310,6 +312,27 @@ public class TestThriftServer extends HBaseClusterTestCase {
     handler.deleteTable(tableAname);
   }
 
+  
+  /**
+   * For HBASE-2556
+   * Tests for GetTableRegions
+   *
+   * @throws Exception
+   */
+  public void doTestGetTableRegions() throws Exception {
+    ThriftServer.HBaseHandler handler = new ThriftServer.HBaseHandler(this.conf);
+
+    handler.createTable(tableAname, getColumnDescriptors());
+    int RegionCount = handler.getTableRegions(tableAname).size();
+    assertEquals("empty table should have only 1 region, " +
+            "but found " + RegionCount, RegionCount, 1);
+    handler.disableTable(tableAname);    
+    handler.deleteTable(tableAname);
+    RegionCount = handler.getTableRegions(tableAname).size();
+    assertEquals("non-existing table should have 0 region, " +
+            "but found " + RegionCount, RegionCount, 0);    
+  } 
+  
   /**
    *
    * @return a List of ColumnDescriptors for use in creating a table.  Has one

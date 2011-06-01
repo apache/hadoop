@@ -236,6 +236,8 @@ Release 0.91.0 - Unreleased
    HBASE-3931  Allow adding attributes to Get
    HBASE-3942  The thrift scannerOpen functions should support row caching
                (Adam Worthington)
+   HBASE-2556  Add convenience method to HBaseAdmin to get a collection of
+               HRegionInfo objects for each table (Ming Ma)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

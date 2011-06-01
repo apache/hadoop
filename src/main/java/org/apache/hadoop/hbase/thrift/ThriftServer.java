@@ -270,11 +270,10 @@ public class ThriftServer {
     public List<TRegionInfo> getTableRegions(ByteBuffer tableName)
     throws IOError {
       try{
-        HTable table = getTable(tableName);
-        Map<HRegionInfo, HServerAddress> regionsInfo = table.getRegionsInfo();
+        List<HRegionInfo> HRegions = this.admin.getTableRegions(tableName.array());
         List<TRegionInfo> regions = new ArrayList<TRegionInfo>();
 
-        for (HRegionInfo regionInfo : regionsInfo.keySet()){
+        for (HRegionInfo regionInfo : HRegions){
           TRegionInfo region = new TRegionInfo();
           region.startKey = ByteBuffer.wrap(regionInfo.getStartKey());
           region.endKey = ByteBuffer.wrap(regionInfo.getEndKey());

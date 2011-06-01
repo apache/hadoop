@@ -830,4 +830,35 @@ public class TestAdmin {
       this.admin.deleteTable(tableName);
     }
   }
+  
+
+  /**
+   * For HBASE-2556
+   * @throws IOException
+   */  
+  @Test
+  public void testGetTableRegions() throws IOException {
+
+    byte[] tableName = Bytes.toBytes("testGetTableRegions");
+
+    int expectedRegions = 10;
+
+    // Use 80 bit numbers to make sure we aren't limited
+    byte [] startKey = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+    byte [] endKey =   { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 };
+
+
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+    admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    admin.createTable(desc, startKey, endKey, expectedRegions);
+
+    List<HRegionInfo> RegionInfos = admin.getTableRegions(tableName);
+    
+    assertEquals("Tried to create " + expectedRegions + " regions " +
+        "but only found " + RegionInfos.size(),
+        expectedRegions, RegionInfos.size());
+    
+ }
+  
 }

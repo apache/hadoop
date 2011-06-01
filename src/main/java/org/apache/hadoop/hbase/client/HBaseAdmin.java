@@ -21,8 +21,10 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
+import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -1240,6 +1242,27 @@ public class HBaseAdmin implements Abortable, Closeable {
     new HBaseAdmin(copyOfConf);
   }
 
+  /**
+   * get the regions of a given table.
+   *
+   * @param tableName the name of the table
+   * @return Ordered list of {@link HRegionInfo}.   * 
+   * @throws IOException
+   */  
+  public List<HRegionInfo> getTableRegions(final byte[] tableName) throws IOException
+  {
+      CatalogTracker ct = getCatalogTracker();
+      List<HRegionInfo> Regions;
+      try {
+          Regions = MetaReader.getTableRegions(ct, tableName, true);
+        } finally {
+          cleanupCatalogTracker(ct);
+        }
+      
+      return Regions;	  
+  }
+  
+  
   public void close() throws IOException {
     if (this.connection != null) {
       this.connection.close();
