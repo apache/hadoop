@@ -494,6 +494,9 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7146. RPC server leaks file descriptors (todd)
 
+    HADOOP-7121. Exceptions while serializing IPC call responses are not
+    handled well. (todd)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
