@@ -116,6 +116,17 @@ struct TRowResult {
   2:map<Text, TCell> columns
 }
 
+/**
+ * A Scan object is used to specify scanner parameters when opening a scanner.
+ */
+struct TScan {
+  1:optional Text startRow,
+  2:optional Text stopRow,
+  3:optional i64 timestamp,
+  4:optional list<Text> columns,
+  5:optional i32 caching
+}
+
 //
 // Exceptions
 //
@@ -571,6 +582,18 @@ service Hbase {
 
     /** timestamp */
     3:i64 timestamp
+  ) throws (1:IOError io)
+
+  /**
+   * Get a scanner on the current table, using the Scan instance
+   * for the scan parameters.
+   */
+  ScannerID scannerOpenWithScan(
+    /** name of table */
+    1:Text tableName,
+
+    /** Scan instance */
+    2:TScan scan
   ) throws (1:IOError io)
 
   /** 

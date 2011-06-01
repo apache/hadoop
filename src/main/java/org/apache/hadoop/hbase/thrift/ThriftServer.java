@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.thrift.generated.Mutation;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
+import org.apache.hadoop.hbase.thrift.generated.TScan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -720,6 +721,39 @@ public class ThriftServer {
     public List<TRowResult> scannerGet(int id) throws IllegalArgument, IOError {
         return scannerGetList(id,1);
     }
+
+    public int scannerOpenWithScan(ByteBuffer tableName, TScan tScan) throws IOError {
+        try {
+          HTable table = getTable(tableName);
+          Scan scan = new Scan();
+          if (tScan.isSetStartRow()) {
+              scan.setStartRow(tScan.getStartRow());
+          }
+          if (tScan.isSetStopRow()) {
+              scan.setStopRow(tScan.getStopRow());
+          }
+          if (tScan.isSetTimestamp()) {
+              scan.setTimeRange(Long.MIN_VALUE, tScan.getTimestamp());              
+          }
+          if (tScan.isSetCaching()) {
+              scan.setCaching(tScan.getCaching());
+          }
+          if(tScan.isSetColumns() && tScan.getColumns().size() != 0) {
+            for(ByteBuffer column : tScan.getColumns()) {
+              byte [][] famQf = KeyValue.parseColumn(getBytes(column));
+              if(famQf.length == 1) {
+                scan.addFamily(famQf[0]);
+              } else {
+                scan.addColumn(famQf[0], famQf[1]);
+              }
+            }
+          }
+          return addScanner(table.getScanner(scan));
+        } catch (IOException e) {
+          throw new IOError(e.getMessage());
+        }
+    }
+
     @Override
     public int scannerOpen(ByteBuffer tableName, ByteBuffer startRow,
             List<ByteBuffer> columns) throws IOError {

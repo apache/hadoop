@@ -234,6 +234,8 @@ Release 0.91.0 - Unreleased
    HBASE-2937  Facilitate Timeouts In HBase Client (Karthick Sankarachary)
    HBASE-3921  Allow adding arbitrary blobs to Put (dhruba borthakur)
    HBASE-3931  Allow adding attributes to Get
+   HBASE-3942  The thrift scannerOpen functions should support row caching
+               (Adam Worthington)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
