@@ -44,6 +44,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.ConfServlet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -85,6 +86,8 @@ import org.mortbay.util.MultiException;
  *   "/static/" -> points to common static files (src/webapps/static)
  *   "/" -> the jsp server code from (src/webapps/<name>)
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce", "HBase"})
+@InterfaceStability.Evolving
 public class HttpServer implements FilterContainer {
   public static final Log LOG = LogFactory.getLog(HttpServer.class);
 

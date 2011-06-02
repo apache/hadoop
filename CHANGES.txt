@@ -248,6 +248,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7312. Update value of hadoop.common.configuration.version.
     (Harsh J Chouraria via todd)
 
+    HADOOP-7355  Add audience and stability annotations to HttpServer class
+    (stack)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
