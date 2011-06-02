@@ -315,6 +315,10 @@ Release 0.22.0 - Unreleased
     HADOOP-7134. configure files that are generated as part of the released
     tarball need to have executable bit set. (Roman Shaposhnik via cos)
 
+    HADOOP-7351  Regression: HttpServer#getWebAppsPath used to be protected
+    so subclasses could supply alternate webapps path but it was made private
+    by HADOOP-6461 (Stack)
+
   IMPROVEMENTS
 
     HADOOP-6644. util.Shell getGROUPS_FOR_USER_COMMAND method name 
