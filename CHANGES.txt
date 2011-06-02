@@ -187,6 +187,9 @@ Trunk (unreleased changes)
 
     HADOOP-7337. Change PureJavaCrc32 annotations to public stable.  (szetszwo)
 
+    HADOOP-7331. Make hadoop-daemon.sh return exit code 1 if daemon processes
+    did not get started. (Tanping Wang via todd)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
