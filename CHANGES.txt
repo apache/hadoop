@@ -497,6 +497,10 @@ Release 0.22.0 - Unreleased
     HADOOP-7121. Exceptions while serializing IPC call responses are not
     handled well. (todd)
 
+    HADOOP-7351  Regression: HttpServer#getWebAppsPath used to be protected
+    so subclasses could supply alternate webapps path but it was made private
+    by HADOOP-6461 (Stack)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

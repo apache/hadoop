@@ -459,7 +459,7 @@ public class HttpServer implements FilterContainer {
    * @return the pathname as a URL
    * @throws FileNotFoundException if 'webapps' directory cannot be found on CLASSPATH.
    */
-  private String getWebAppsPath(String appName) throws FileNotFoundException {
+  protected String getWebAppsPath(String appName) throws FileNotFoundException {
     URL url = getClass().getClassLoader().getResource("webapps/" + appName);
     if (url == null) 
       throw new FileNotFoundException("webapps/" + appName
