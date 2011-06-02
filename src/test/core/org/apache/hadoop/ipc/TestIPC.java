@@ -445,6 +445,7 @@ public class TestIPC {
    * Test that, if the socket factory throws an IOE, it properly propagates
    * to the client.
    */
+  @Test
   public void testSocketFactoryException() throws Exception {
     SocketFactory mockFactory = mock(SocketFactory.class);
     doThrow(new IOException("Injected fault")).when(mockFactory).createSocket();
@@ -460,6 +461,7 @@ public class TestIPC {
     }
   }
 
+  @Test
   public void testIpcTimeout() throws Exception {
     // start server
     Server server = new TestServer(1, true);
@@ -485,6 +487,7 @@ public class TestIPC {
    * Check that file descriptors aren't leaked by starting
    * and stopping IPC servers.
    */
+  @Test
   public void testSocketLeak() throws Exception {
     Assume.assumeTrue(FD_DIR.exists()); // only run on Linux
 

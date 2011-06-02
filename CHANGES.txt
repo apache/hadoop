@@ -504,6 +504,9 @@ Release 0.22.0 - Unreleased
     so subclasses could supply alternate webapps path but it was made private
     by HADOOP-6461 (Stack)
 
+    HADOOP-7349. HADOOP-7121 accidentally disabled some tests in TestIPC.
+    (todd)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
