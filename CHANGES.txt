@@ -4,6 +4,9 @@ Release 0.20.205.0 - unreleased
 
   BUG FIXES
 
+    MAPREDUCE-2452. Moves the cancellation of delegation tokens to a separate
+    thread. (ddas)
+
     HDFS-1377. Quota bug for partial blocks allows quotas to be violated. (eli)
 
     MAPREDUCE-2451. Log the details from health check script at the
