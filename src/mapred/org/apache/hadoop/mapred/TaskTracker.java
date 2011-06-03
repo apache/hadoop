@@ -3208,7 +3208,12 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     authorizeJVM(taskid.getJobID());
     TaskInProgress tip = tasks.get(taskid);
     if (tip != null) {
-      validateJVM(tip, jvmContext, taskid);
+      try {
+        validateJVM(tip, jvmContext, taskid);
+      } catch (IOException ie) {
+        LOG.warn("Failed validating JVM", ie);
+        return false;
+      }
       tip.reportProgress(taskStatus);
       return true;
     } else {
@@ -3286,7 +3291,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     LOG.info("Task " + taskid + " is in commit-pending," +"" +
              " task state:" +taskStatus.getRunState());
     // validateJVM is done in statusUpdate
-    statusUpdate(taskid, taskStatus, jvmContext);
+    if (!statusUpdate(taskid, taskStatus, jvmContext)) {
+      throw new IOException("Task not found for taskid: " + taskid);
+    }
     reportTaskFinished(taskid, true);
   }
   
