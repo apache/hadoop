@@ -61,6 +61,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
   private final TaskController taskController = new DefaultTaskController();
 
   private JobTrackerInstrumentation myMetrics = null;
+  private QueueMetrics queueMetrics = null;
 
   private static final String jobDir =  "localRunner/";
   
@@ -207,8 +208,10 @@ class LocalJobRunner implements JobSubmissionProtocol {
             map.setConf(localConf);
             map_tasks += 1;
             myMetrics.launchMap(mapId);
+            queueMetrics.launchMap(mapId);
             map.run(localConf, this);
             myMetrics.completeMap(mapId);
+            queueMetrics.completeMap(mapId);
             map_tasks -= 1;
             updateCounters(map);
           } else {
@@ -253,8 +256,10 @@ class LocalJobRunner implements JobSubmissionProtocol {
               reduce.setConf(localConf);
               reduce_tasks += 1;
               myMetrics.launchReduce(reduce.getTaskID());
+              queueMetrics.launchReduce(reduce.getTaskID());
               reduce.run(localConf, this);
               myMetrics.completeReduce(reduce.getTaskID());
+              queueMetrics.completeReduce(reduce.getTaskID());
               reduce_tasks -= 1;
               updateCounters(reduce);
             } else {
@@ -413,6 +418,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
     this.fs = FileSystem.getLocal(conf);
     this.conf = conf;
     myMetrics = JobTrackerInstrumentation.create(null, new JobConf(conf));
+    queueMetrics = QueueMetrics.create(conf.getQueueName(), new JobConf(conf));
     taskController.setConf(conf);
   }
 

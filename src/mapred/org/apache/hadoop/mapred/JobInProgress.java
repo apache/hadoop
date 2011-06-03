@@ -91,6 +91,7 @@ public class JobInProgress {
   JobStatus status;
   String jobFile = null;
   Path localJobFile = null;
+  final QueueMetrics queueMetrics;
 
   TaskInProgress maps[] = new TaskInProgress[0];
   TaskInProgress reduces[] = new TaskInProgress[0];
@@ -339,13 +340,16 @@ public class JobInProgress {
     this.resourceEstimator = new ResourceEstimator(this);
     this.status = new JobStatus(jobid, 0.0f, 0.0f, JobStatus.PREP);
     this.status.setUsername(conf.getUser());
+    String queueName = conf.getQueueName();
     this.profile = new JobProfile(conf.getUser(), jobid, "", "",
-                                  conf.getJobName(), conf.getQueueName());
+                                  conf.getJobName(), queueName);
     this.memoryPerMap = conf.getMemoryForMapTask();
     this.memoryPerReduce = conf.getMemoryForReduceTask();
     this.maxTaskFailuresPerTracker = conf.getMaxTaskFailuresPerTracker();
     this.mapFailuresPercent = conf.getMaxMapTaskFailuresPercent();
     this.reduceFailuresPercent = conf.getMaxReduceTaskFailuresPercent();
+
+    this.queueMetrics = this.jobtracker.getQueueManager().getQueue(queueName).getMetrics();
 
     // Check task limits
     checkTaskLimits();
@@ -371,6 +375,7 @@ public class JobInProgress {
       this.status = new JobStatus(jobId, 0.0f, 0.0f, JobStatus.PREP);
       this.status.setUsername(jobInfo.getUser().toString());
       this.jobtracker.getInstrumentation().addPrepJob(conf, jobId);
+      // Add the queue-level metric below (after the profile has been initialized)
       this.startTime = jobtracker.getClock().getTime();
       status.setStartTime(startTime);
       this.localFs = jobtracker.getLocalFileSystem();
@@ -418,9 +423,12 @@ public class JobInProgress {
       
       this.priority = conf.getJobPriority();
       this.status.setJobPriority(this.priority);
+      String queueName = conf.getQueueName();
       this.profile = new JobProfile(user, jobId, 
-          jobFile, url, conf.getJobName(),
-          conf.getQueueName());
+          jobFile, url, conf.getJobName(), queueName);
+
+      this.queueMetrics = this.jobtracker.getQueueManager().getQueue(queueName).getMetrics();
+      this.queueMetrics.addPrepJob(conf, jobId);
 
       this.submitHostName = conf.getJobSubmitHostName();
       this.submitHostAddress = conf.getJobSubmitHostAddress();
@@ -474,7 +482,15 @@ public class JobInProgress {
       FileSystem.closeAllForUGI(UserGroupInformation.getCurrentUser());
     }
   }
-    
+
+  /**
+   * Get the QueueMetrics object associated with this job
+   * @return QueueMetrics
+   */
+  public QueueMetrics getQueueMetrics() {
+    return this.queueMetrics;
+  }
+
   private void checkTaskLimits() throws IOException {
     // if the number of tasks is larger than a configured value
     // then fail the job.
@@ -682,6 +698,8 @@ public class JobInProgress {
 
     jobtracker.getInstrumentation().addWaitingMaps(getJobID(), numMapTasks);
     jobtracker.getInstrumentation().addWaitingReduces(getJobID(), numReduceTasks);
+    this.queueMetrics.addWaitingMaps(getJobID(), numMapTasks);
+    this.queueMetrics.addWaitingReduces(getJobID(), numReduceTasks);
 
     maps = new TaskInProgress[numMapTasks];
     for(int i=0; i < numMapTasks; ++i) {
@@ -1682,6 +1700,7 @@ public class JobInProgress {
       if (tip.getActiveTasks().size() > 1)
         speculativeMapTasks++;
       metrics.launchMap(id);
+      this.queueMetrics.launchMap(id);
     } else {
       ++runningReduceTasks;
       name = Values.REDUCE.name();
@@ -1689,6 +1708,7 @@ public class JobInProgress {
       if (tip.getActiveTasks().size() > 1)
         speculativeReduceTasks++;
       metrics.launchReduce(id);
+      this.queueMetrics.launchReduce(id);
     }
     // Note that the logs are for the scheduled tasks only. Tasks that join on 
     // restart has already their logs in place.
@@ -1839,9 +1859,11 @@ public class JobInProgress {
     map.put(taskTracker, info);
     if (type == TaskType.MAP) {
       jobtracker.getInstrumentation().addReservedMapSlots(reservedSlots);
+      this.queueMetrics.addReservedMapSlots(reservedSlots);
     }
     else {
       jobtracker.getInstrumentation().addReservedReduceSlots(reservedSlots);
+      this.queueMetrics.addReservedReduceSlots(reservedSlots);
     }
     jobtracker.incrementReservations(type, reservedSlots);
   }
@@ -1871,10 +1893,12 @@ public class JobInProgress {
     map.remove(taskTracker);
     if (type == TaskType.MAP) {
       jobtracker.getInstrumentation().decReservedMapSlots(info.getNumSlots());
+      this.queueMetrics.decReservedMapSlots(info.getNumSlots());
     }
     else {
       jobtracker.getInstrumentation().decReservedReduceSlots(
         info.getNumSlots());
+      this.queueMetrics.decReservedReduceSlots(info.getNumSlots());
     }
     jobtracker.decrementReservations(type, info.getNumSlots());
   }
@@ -2583,6 +2607,7 @@ public class JobInProgress {
       }
       finishedMapTasks += 1;
       metrics.completeMap(taskid);
+      this.queueMetrics.completeMap(taskid);
       // remove the completed map from the resp running caches
       retireMap(tip);
       if ((finishedMapTasks + failedMapTIPs) == (numMapTasks)) {
@@ -2598,6 +2623,7 @@ public class JobInProgress {
       }
       finishedReduceTasks += 1;
       metrics.completeReduce(taskid);
+      this.queueMetrics.completeReduce(taskid);
       // remove the completed reduces from the running reducers set
       retireReduce(tip);
       if ((finishedReduceTasks + failedReduceTIPs) == (numReduceTasks)) {
@@ -2642,14 +2668,18 @@ public class JobInProgress {
     //update the metrics
     if (oldState == JobStatus.PREP) {
       this.jobtracker.getInstrumentation().decPrepJob(conf, jobId);
+      this.queueMetrics.decPrepJob(conf, jobId);
     } else if (oldState == JobStatus.RUNNING) {
       this.jobtracker.getInstrumentation().decRunningJob(conf, jobId);
+      this.queueMetrics.decRunningJob(conf, jobId);
     }
     
     if (newState == JobStatus.PREP) {
       this.jobtracker.getInstrumentation().addPrepJob(conf, jobId);
+      this.queueMetrics.addPrepJob(conf, jobId);
     } else if (newState == JobStatus.RUNNING) {
       this.jobtracker.getInstrumentation().addRunningJob(conf, jobId);
+      this.queueMetrics.addRunningJob(conf, jobId);
     }
     
   }
@@ -2704,6 +2734,7 @@ public class JobInProgress {
       garbageCollect();
       
       metrics.completeJob(this.conf, this.status.getJobID());
+      this.queueMetrics.completeJob(this.conf, this.status.getJobID());
     }
   }
   
@@ -2744,9 +2775,11 @@ public class JobInProgress {
       if (jobTerminationState == JobStatus.FAILED) {
         jobtracker.getInstrumentation().failedJob(
             this.conf, this.status.getJobID());
+        this.queueMetrics.failedJob(this.conf, this.status.getJobID());
       } else {
         jobtracker.getInstrumentation().killedJob(
             this.conf, this.status.getJobID());
+        this.queueMetrics.killedJob(this.conf, this.status.getJobID());
       }
     }
   }
@@ -2897,9 +2930,11 @@ public class JobInProgress {
         if (tip.isMapTask() && !metricsDone) {
           runningMapTasks -= 1;
           metrics.failedMap(taskid);
+          this.queueMetrics.failedMap(taskid);
         } else if (!metricsDone) {
           runningReduceTasks -= 1;
           metrics.failedReduce(taskid);
+          this.queueMetrics.failedReduce(taskid);
         }
       }
       
@@ -3142,6 +3177,8 @@ public class JobInProgress {
       // Let the JobTracker know that a job is complete
       jobtracker.getInstrumentation().decWaitingMaps(getJobID(), pendingMaps());
       jobtracker.getInstrumentation().decWaitingReduces(getJobID(), pendingReduces());
+      this.queueMetrics.decWaitingMaps(getJobID(), pendingMaps());
+      this.queueMetrics.decWaitingReduces(getJobID(), pendingReduces());
       jobtracker.storeCompletedJob(this);
       jobtracker.finalizeJob(this);
 

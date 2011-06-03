@@ -432,7 +432,8 @@ public class TestCapacityScheduler extends TestCase {
       queues.clear();
       for (String qName : newQueues) {
         try {
-          queues.put(qName, new Queue(qName, acls, Queue.QueueState.RUNNING));
+          queues.put(qName, new Queue(qName, acls, Queue.QueueState.RUNNING,
+                     QueueMetrics.create(qName, new Configuration())));
         } catch (Throwable t) {
           throw new RuntimeException("Unable to initialize queue " + qName, t);
         }

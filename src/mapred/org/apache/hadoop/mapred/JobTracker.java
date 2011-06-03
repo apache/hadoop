@@ -4033,6 +4033,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       }
     }
     myInstrumentation.submitJob(job.getJobConf(), jobId);
+    job.getQueueMetrics().submitJob(job.getJobConf(), jobId);
+
     LOG.info("Job " + jobId + " added successfully for user '" 
              + job.getJobConf().getUser() + "' to queue '" 
              + job.getJobConf().getQueueName() + "'");
