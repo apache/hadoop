@@ -74,7 +74,6 @@ class Delete extends FsCommand {
       // etc), then the path will just be deleted because moveToTrash returns
       // false and it falls thru to fs.delete.  this doesn't seem right
       if (moveToTrash(item)) {
-        out.println("Moved to trash: " + item);
         return;
       }
       if (!item.fs.delete(item.path, deleteDirs)) {
@@ -86,8 +85,7 @@ class Delete extends FsCommand {
     private boolean moveToTrash(PathData item) throws IOException {
       boolean success = false;
       if (!skipTrash) {
-        Trash trash = new Trash(item.fs, getConf());
-        success = (trash.isEnabled() && trash.moveToTrash(item.path));
+        success = Trash.moveToAppropriateTrash(item.fs, item.path, getConf());
       }
       return success;
     }

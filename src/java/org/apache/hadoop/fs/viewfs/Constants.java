@@ -30,6 +30,12 @@ public interface Constants {
    * Prefix for the config variable prefix for the ViewFs mount-table
    */
   public static final String CONFIG_VIEWFS_PREFIX = "fs.viewfs.mounttable";
+ 
+  /**
+   * Prefix for the home dir for the mount table - if not specified
+   * then the hadoop default value (/user) is used.
+   */
+  public static final String CONFIG_VIEWFS_HOMEDIR = "homedir";
   
   /**
    * Config variable name for the default mount table.

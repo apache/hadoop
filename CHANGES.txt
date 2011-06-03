@@ -124,6 +124,8 @@ Trunk (unreleased changes)
     HADOOP-7336. TestFileContextResolveAfs will fail with default 
     test.build.data property. (jitendra)
 
+    HADOOP-7284 Trash and shell's rm does not work for viewfs (Sanjay Radia)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

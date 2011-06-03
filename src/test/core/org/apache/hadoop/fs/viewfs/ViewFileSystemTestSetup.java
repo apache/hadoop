@@ -32,7 +32,8 @@ import org.apache.hadoop.fs.viewfs.ConfigUtil;
  * If tests launched via ant (build.xml) the test root is absolute path
  * If tests launched via eclipse, the test root is 
  * is a test dir below the working directory. (see FileSystemTestHelper).
- * Since viewFs has no built-in wd, its wd is /user/<username>.
+ * Since viewFs has no built-in wd, its wd is /user/<username> 
+ *          (or /User/<username> on mac)
  * 
  * We set a viewFileSystems with mount point for 
  * /<firstComponent>" pointing to the target fs's  testdir 
@@ -45,32 +46,28 @@ public class ViewFileSystemTestSetup {
    * @return return the ViewFS File context to be used for tests
    * @throws Exception
    */
-  static public FileSystem setupForViewFs(FileSystem fsTarget) throws Exception {
+  static public FileSystem setupForViewFs(Configuration conf, FileSystem fsTarget) throws Exception {
     /**
      * create the test root on local_fs - the  mount table will point here
      */
-    Configuration conf = configWithViewfsScheme();
     Path targetOfTests = FileSystemTestHelper.getTestRootPath(fsTarget);
     // In case previous test was killed before cleanup
     fsTarget.delete(targetOfTests, true);
     
     fsTarget.mkdirs(targetOfTests);
   
-    String srcTestFirstDir;
-    if (FileSystemTestHelper.TEST_ROOT_DIR.startsWith("/")) {
-      int indexOf2ndSlash = FileSystemTestHelper.TEST_ROOT_DIR.indexOf('/', 1);
-      srcTestFirstDir = FileSystemTestHelper.TEST_ROOT_DIR.substring(0, indexOf2ndSlash);
-    } else {
-      srcTestFirstDir = "/user"; 
-  
-    }
-    //System.out.println("srcTestFirstDir=" + srcTestFirstDir);
-  
-    // Set up the defaultMT in the config with mount point links
-    // The test dir is root is below  /user/<userid>
 
-    ConfigUtil.addLink(conf, srcTestFirstDir,
-        targetOfTests.toUri());
+    // Now set up a link from viewfs to targetfs for the first component of
+    // path of testdir. For example, if testdir is /user/<userid>/xx then
+    // a link from /user to targetfs://user.
+    
+    String testDir = FileSystemTestHelper.getTestRootPath(fsTarget).toUri().getPath();
+    int indexOf2ndSlash = testDir.indexOf('/', 1);
+    String testDirFirstComponent = testDir.substring(0, indexOf2ndSlash);
+    
+    
+    ConfigUtil.addLink(conf, testDirFirstComponent,
+        fsTarget.makeQualified(new Path(testDirFirstComponent)).toUri()); 
     
     FileSystem fsView = FileSystem.get(FsConstants.VIEWFS_URI, conf);
     //System.out.println("SRCOfTests = "+ getTestRootPath(fs, "test"));

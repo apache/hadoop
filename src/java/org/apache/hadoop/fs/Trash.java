@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.fs;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_CHECKPOINT_INTERVAL_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_CHECKPOINT_INTERVAL_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.DateFormat;
@@ -30,7 +35,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import static org.apache.hadoop.fs.CommonConfigurationKeys.*;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.StringUtils;
@@ -103,7 +107,12 @@ public class Trash extends Configured {
       Configuration conf) throws IOException {
     Path fullyResolvedPath = fs.resolvePath(p);
     Trash trash = new Trash(FileSystem.get(fullyResolvedPath.toUri(), conf), conf);
-    return trash.moveToTrash(fullyResolvedPath);
+    boolean success =  trash.moveToTrash(fullyResolvedPath);
+    if (success) {
+      System.out.println("Moved: '" + p + "' to trash at: " +
+          trash.getCurrentTrashDir() );
+    }
+    return success;
   }
   
   private Trash(Path home, Configuration conf) throws IOException {
@@ -141,7 +150,7 @@ public class Trash extends Configured {
     if (!fs.exists(path))                         // check that path exists
       throw new FileNotFoundException(path.toString());
 
-    String qpath = path.makeQualified(fs).toString();
+    String qpath = fs.makeQualified(path).toString();
 
     if (qpath.startsWith(trash.toString())) {
       return false;                               // already in trash

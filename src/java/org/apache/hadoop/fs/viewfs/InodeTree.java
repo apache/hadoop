@@ -62,6 +62,8 @@ abstract class InodeTree<T> {
   
   final INodeDir<T> root; // the root of the mount table
   
+  final String homedirPrefix; // the homedir config value for this mount table
+  
   List<MountPoint<T>> mountPoints = new ArrayList<MountPoint<T>>();
   
   
@@ -298,6 +300,7 @@ abstract class InodeTree<T> {
     if (vName == null) {
       vName = Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE;
     }
+    homedirPrefix = ConfigUtil.getHomeDirValue(config, vName);
     root = new INodeDir<T>("/", UserGroupInformation.getCurrentUser());
     root.InodeDirFs = getTargetFileSystem(root);
     root.isRoot = true;
@@ -319,6 +322,9 @@ abstract class InodeTree<T> {
         } else if (src.startsWith(linkMergePrefix)) { // A merge link
           isMergeLink = true;
           src = src.substring(linkMergePrefix.length());
+        } else if (src.startsWith(Constants.CONFIG_VIEWFS_HOMEDIR)) {
+          // ignore - we set home dir from config
+          continue;
         } else {
           throw new IOException(
           "ViewFs: Cannot initialize: Invalid entry in Mount table in config: "+ 
@@ -441,5 +447,14 @@ abstract class InodeTree<T> {
   
   List<MountPoint<T>> getMountPoints() { 
     return mountPoints;
+  }
+  
+  /**
+   * 
+   * @return home dir value from mount table; null if no config value
+   * was found.
+   */
+  String getHomeDirPrefixValue() {
+    return homedirPrefix;
   }
 }
