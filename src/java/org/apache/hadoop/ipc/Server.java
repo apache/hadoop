@@ -67,6 +67,7 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.ipc.RPC.VersionMismatch;
 import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
 import org.apache.hadoop.security.AccessControlException;
@@ -1172,6 +1173,7 @@ public abstract class Server {
                      hostAddress + ":" + remotePort +
                      " got version " + version + 
                      " expected version " + CURRENT_VERSION);
+            setupBadVersionResponse(version);
             return -1;
           }
           dataLengthBuffer.clear();
@@ -1243,6 +1245,40 @@ public abstract class Server {
           }
         } 
         return count;
+      }
+    }
+
+    /**
+     * Try to set up the response to indicate that the client version
+     * is incompatible with the server. This can contain special-case
+     * code to speak enough of past IPC protocols to pass back
+     * an exception to the caller.
+     * @param clientVersion the version the caller is using 
+     * @throws IOException
+     */
+    private void setupBadVersionResponse(int clientVersion) throws IOException {
+      String errMsg = "Server IPC version " + CURRENT_VERSION +
+      " cannot communicate with client version " + clientVersion;
+      ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+      
+      if (clientVersion >= 3) {
+        Call fakeCall =  new Call(-1, null, this);
+        // Versions 3 and greater can interpret this exception
+        // response in the same manner
+        setupResponse(buffer, fakeCall, Status.FATAL,
+            null, VersionMismatch.class.getName(), errMsg);
+
+        responder.doRespond(fakeCall);
+      } else if (clientVersion == 2) { // Hadoop 0.18.3
+        Call fakeCall =  new Call(0, null, this);
+        DataOutputStream out = new DataOutputStream(buffer);
+        out.writeInt(0); // call ID
+        out.writeBoolean(true); // error
+        WritableUtils.writeString(out, VersionMismatch.class.getName());
+        WritableUtils.writeString(out, errMsg);
+        fakeCall.setResponse(ByteBuffer.wrap(buffer.toByteArray()));
+        
+        responder.doRespond(fakeCall);
       }
     }
 
