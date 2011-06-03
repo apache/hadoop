@@ -238,6 +238,7 @@ Release 0.91.0 - Unreleased
                (Adam Worthington)
    HBASE-2556  Add convenience method to HBaseAdmin to get a collection of
                HRegionInfo objects for each table (Ming Ma)
+   HBASE-3592  Guava snuck back in as a dependency via hbase-3777
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
