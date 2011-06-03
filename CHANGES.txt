@@ -86,6 +86,9 @@ Trunk (unreleased changes)
     HADOOP-7001.  Configuration changes can occur via the Reconfigurable
     interface. (Patrick Kline via dhruba)
 
+    HADOOP-7331. Make hadoop-daemon.sh return exit code 1 if daemon processes
+    did not get started. (Tanping Wang via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES

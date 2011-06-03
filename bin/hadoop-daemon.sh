@@ -135,6 +135,10 @@ case $startStop in
     nohup nice -n $HADOOP_NICENESS $hadoopScript --config $HADOOP_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
     echo $! > $pid
     sleep 1; head "$log"
+    sleep 3;
+    if ! ps -p $! > /dev/null ; then
+      exit 1
+    fi
     ;;
           
   (stop)
@@ -145,9 +149,11 @@ case $startStop in
         kill `cat $pid`
       else
         echo no $command to stop
+        exit 1
       fi
     else
       echo no $command to stop
+      exit 1
     fi
     ;;
 
