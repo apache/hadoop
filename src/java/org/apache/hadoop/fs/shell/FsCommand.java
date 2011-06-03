@@ -75,7 +75,7 @@ abstract public class FsCommand extends Command {
     throw new RuntimeException("not supposed to get here");
   }
   
-  /** @deprecated use {@link #run(String...argv)} */
+  /** @deprecated use {@link Command#run(String...argv)} */
   @Deprecated
   @Override
   public int runAll() {

@@ -21,7 +21,6 @@ import java.io.*;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.*;
 
 /** Stream that permits positional reading. */
 @InterfaceAudience.Public

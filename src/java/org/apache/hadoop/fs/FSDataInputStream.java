@@ -38,34 +38,81 @@ public class FSDataInputStream extends DataInputStream
     }
   }
   
+  /**
+   * Seek to the given offset.
+   *
+   * @param desired offset to seek to
+   */
   public synchronized void seek(long desired) throws IOException {
     ((Seekable)in).seek(desired);
   }
 
+  /**
+   * Get the current position in the input stream.
+   *
+   * @return current position in the input stream
+   */
   public long getPos() throws IOException {
     return ((Seekable)in).getPos();
   }
   
+  /**
+   * Read bytes from the given position in the stream to the given buffer.
+   *
+   * @param position  position in the input stream to seek
+   * @param buffer    buffer into which data is read
+   * @param offset    offset into the buffer in which data is written
+   * @param length    maximum number of bytes to read
+   * @return total number of bytes read into the buffer, or <code>-1</code>
+   *         if there is no more data because the end of the stream has been
+   *         reached
+   */
   public int read(long position, byte[] buffer, int offset, int length)
     throws IOException {
     return ((PositionedReadable)in).read(position, buffer, offset, length);
   }
-  
+
+  /**
+   * Read bytes from the given position in the stream to the given buffer.
+   * Continues to read until <code>length</code> bytes have been read.
+   *
+   * @param position  position in the input stream to seek
+   * @param buffer    buffer into which data is read
+   * @param offset    offset into the buffer in which data is written
+   * @param length    the number of bytes to read
+   * @throws EOFException If the end of stream is reached while reading.
+   *                      If an exception is thrown an undetermined number
+   *                      of bytes in the buffer may have been written. 
+   */
   public void readFully(long position, byte[] buffer, int offset, int length)
     throws IOException {
     ((PositionedReadable)in).readFully(position, buffer, offset, length);
   }
   
+  /**
+   * See {@link #readFully(long, byte[], int, int)}.
+   */
   public void readFully(long position, byte[] buffer)
     throws IOException {
     ((PositionedReadable)in).readFully(position, buffer, 0, buffer.length);
   }
   
+  /**
+   * Seek to the given position on an alternate copy of the data.
+   *
+   * @param  targetPos  position to seek to
+   * @return true if a new source is found, false otherwise
+   */
   public boolean seekToNewSource(long targetPos) throws IOException {
     return ((Seekable)in).seekToNewSource(targetPos); 
   }
   
-  // Returns the underlying input stream. This is used by unit tests.
+  /**
+   * Get a reference to the wrapped input stream. Used by unit tests.
+   *
+   * @return the underlying input stream
+   */
+  @InterfaceAudience.LimitedPrivate({"HDFS"})
   public InputStream getWrappedStream() {
     return in;
   }

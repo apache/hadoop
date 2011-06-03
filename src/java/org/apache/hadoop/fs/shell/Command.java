@@ -232,7 +232,7 @@ abstract public class Command extends Configured {
    * Processes a {@link PathData} item, calling
    * {@link #processPathArgument(PathData)} or
    * {@link #processNonexistentPath(PathData)} on each item.
-   * @param arg {@link PathData} item to process
+   * @param item {@link PathData} item to process
    * @throws IOException if anything goes wrong...
    */
   protected void processArgument(PathData item) throws IOException {

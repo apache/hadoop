@@ -83,15 +83,28 @@ public class FSDataOutputStream extends DataOutputStream implements Syncable {
     wrappedStream = out;
   }
   
+  /**
+   * Get the current position in the output stream.
+   *
+   * @return the current position in the output stream
+   */
   public long getPos() throws IOException {
     return ((PositionCache)out).getPos();
   }
 
+  /**
+   * Close the underlying output stream.
+   */
   public void close() throws IOException {
-    out.close();         // This invokes PositionCache.close()
+    out.close(); // This invokes PositionCache.close()
   }
 
-  // Returns the underlying output stream. This is used by unit tests.
+  /**
+   * Get a reference to the wrapped output stream. Used by unit tests.
+   *
+   * @return the underlying output stream
+   */
+  @InterfaceAudience.LimitedPrivate({"HDFS"})
   public OutputStream getWrappedStream() {
     return wrappedStream;
   }
