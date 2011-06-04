@@ -33,6 +33,7 @@ import java.util.LinkedList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileUtil;
 
 /**
  * A Proc file-system based ProcessTree. Works only on Linux.
@@ -268,16 +269,18 @@ public class ProcfsBasedProcessTree extends ProcessTree {
     String[] processDirs = (new File(procfsDir)).list();
     List<Integer> processList = new ArrayList<Integer>();
 
-    for (String dir : processDirs) {
-      try {
-        int pd = Integer.parseInt(dir);
-        if ((new File(procfsDir, dir)).isDirectory()) {
-          processList.add(Integer.valueOf(pd));
+    if (processDirs != null) {
+      for (String dir : processDirs) {
+        try {
+          int pd = Integer.parseInt(dir);
+          if ((new File(procfsDir, dir)).isDirectory()) {
+            processList.add(Integer.valueOf(pd));
+          }
+        } catch (NumberFormatException n) {
+          // skip this directory
+        } catch (SecurityException s) {
+          // skip this process
         }
-      } catch (NumberFormatException n) {
-        // skip this directory
-      } catch (SecurityException s) {
-        // skip this process
       }
     }
     return processList;

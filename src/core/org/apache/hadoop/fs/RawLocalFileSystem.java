@@ -271,7 +271,7 @@ public class RawLocalFileSystem extends FileSystem {
     if (f.isFile()) {
       return f.delete();
     } else if ((!recursive) && f.isDirectory() && 
-        (f.listFiles().length != 0)) {
+        (FileUtil.listFiles(f).length != 0)) {
       throw new IOException("Directory " + f.toString() + " is not empty");
     }
     return FileUtil.fullyDelete(f);

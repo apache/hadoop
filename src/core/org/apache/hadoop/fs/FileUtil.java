@@ -291,7 +291,7 @@ public class FileUtil {
       if (!dstFS.mkdirs(dst)) {
         return false;
       }
-      File contents[] = src.listFiles();
+      File contents[] = listFiles(src);
       for (int i = 0; i < contents.length; i++) {
         copy(contents[i], dstFS, new Path(dst, contents[i].getName()),
              deleteSource, conf);
@@ -447,8 +447,10 @@ public class FileUtil {
     } else {
       size = dir.length();
       File[] allFiles = dir.listFiles();
-      for (int i = 0; i < allFiles.length; i++) {
-        size = size + getDU(allFiles[i]);
+      if(allFiles != null) {
+        for (int i = 0; i < allFiles.length; i++) {
+           size = size + getDU(allFiles[i]);
+        }
       }
       return size;
     }
@@ -656,4 +658,42 @@ public class FileUtil {
       }
     }
   }
+
+  /**
+   * A wrapper for {@link File#listFiles()}. This java.io API returns null 
+   * when a dir is not a directory or for any I/O error. Instead of having
+   * null check everywhere File#listFiles() is used, we will add utility API
+   * to get around this problem. For the majority of cases where we prefer 
+   * an IOException to be thrown.
+   * @param dir directory for which listing should be performed
+   * @return list of files or empty list
+   * @exception IOException for invalid directory or for a bad disk.
+   */
+  public static File[] listFiles(File dir) throws IOException {
+    File[] files = dir.listFiles();
+    if(files == null) {
+      throw new IOException("Invalid directory or I/O error occurred for dir: "
+                + dir.toString());
+    }
+    return files;
+  }
+  
+  /**
+   * A wrapper for {@link File#list()}. This java.io API returns null 
+   * when a dir is not a directory or for any I/O error. Instead of having
+   * null check everywhere File#list() is used, we will add utility API
+   * to get around this problem. For the majority of cases where we prefer 
+   * an IOException to be thrown.
+   * @param dir directory for which listing should be performed
+   * @return list of file names or empty string list
+   * @exception IOException for invalid directory or for a bad disk.
+   */
+  public static String[] list(File dir) throws IOException {
+    String[] fileNames = dir.list();
+    if(fileNames == null) {
+      throw new IOException("Invalid directory or I/O error occurred for dir: "
+                + dir.toString());
+    }
+    return fileNames;
+  }  
 }
