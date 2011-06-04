@@ -276,8 +276,6 @@ Release 0.91.0 - Unreleased
                RS web UIs
    HBASE-3691  Add compressor support for 'snappy', google's compressor
                (Nichole Treadway and Nicholas Telford)
-   HBASE-3899  enhance HBase RPC to support free-ing up server handler threads
-               even if response is not ready (Dhruba Borthakur)
 
 
 Release 0.90.4 - Unreleased
