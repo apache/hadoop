@@ -52,7 +52,6 @@ import org.apache.zookeeper.KeeperException;
 public class ServerShutdownHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(ServerShutdownHandler.class);
   private final ServerName serverName;
-  private final Server server;
   private final MasterServices services;
   private final DeadServer deadServers;
 
@@ -107,6 +106,15 @@ public class ServerShutdownHandler extends EventHandler {
     return false;
   }
 
+  @Override
+  public String toString() {
+    String name = "UnknownServerName";
+    if(server != null && server.getServerName() != null) {
+      name = server.getServerName().toString();
+    }
+    return getClass().getSimpleName() + "-" + name + "-" + getSeqid();
+  }
+  
   @Override
   public void process() throws IOException {
     final ServerName serverName = this.serverName;

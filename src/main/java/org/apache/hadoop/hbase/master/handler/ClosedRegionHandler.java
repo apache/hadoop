@@ -79,6 +79,15 @@ public class ClosedRegionHandler extends EventHandler implements TotesHRegionInf
   }
 
   @Override
+  public String toString() {
+    String name = "UnknownServerName";
+    if(server != null && server.getServerName() != null) {
+      name = server.getServerName().toString();
+    }
+    return getClass().getSimpleName() + "-" + name + "-" + getSeqid();
+  }
+  
+  @Override
   public void process() {
     LOG.debug("Handling CLOSED event for " + regionInfo.getEncodedName());
     // Check if this table is being disabled or not

@@ -61,6 +61,15 @@ public class EnableTableHandler extends EventHandler {
   }
 
   @Override
+  public String toString() {
+    String name = "UnknownServerName";
+    if(server != null && server.getServerName() != null) {
+      name = server.getServerName().toString();
+    }
+    return getClass().getSimpleName() + "-" + name + "-" + getSeqid() + "-" + tableNameStr;
+  }
+  
+  @Override
   public void process() {
     try {
       LOG.info("Attemping to enable the table " + this.tableNameStr);

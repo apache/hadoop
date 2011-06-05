@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -188,7 +189,7 @@ public class ExecutorService {
       List<Runnable> wasRunning =
         entry.getValue().threadPoolExecutor.shutdownNow();
       if (!wasRunning.isEmpty()) {
-        LOG.info(entry.getKey() + " had " + wasRunning + " on shutdown");
+        LOG.info(entry.getValue() + " had " + wasRunning + " on shutdown");
       }
     }
     this.executorMap.clear();
@@ -255,9 +256,12 @@ public class ExecutorService {
     final BlockingQueue<Runnable> q = new LinkedBlockingQueue<Runnable>();
     private final String name;
     private final Map<EventHandler.EventType, EventHandlerListener> eventHandlerListeners;
+    private static final AtomicLong seqids = new AtomicLong(0);
+    private final long id;
 
     protected Executor(String name, int maxThreads,
         final Map<EventHandler.EventType, EventHandlerListener> eventHandlerListeners) {
+      this.id = seqids.incrementAndGet();
       this.name = name;
       this.eventHandlerListeners = eventHandlerListeners;
       // create the thread pool executor
@@ -282,6 +286,10 @@ public class ExecutorService {
         event.setListener(listener);
       }
       this.threadPoolExecutor.execute(event);
+    }
+    
+    public String toString() {
+      return getClass().getSimpleName() + "-" + id + "-" + name;
     }
   }
 }

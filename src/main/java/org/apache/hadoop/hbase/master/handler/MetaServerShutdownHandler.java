@@ -50,4 +50,13 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
   boolean isCarryingMeta() {
     return this.carryingMeta;
   }
+  
+  @Override
+  public String toString() {
+    String name = "UnknownServerName";
+    if(server != null && server.getServerName() != null) {
+      name = server.getServerName().toString();
+    }
+    return getClass().getSimpleName() + "-" + name + "-" + getSeqid();
+  }
 }

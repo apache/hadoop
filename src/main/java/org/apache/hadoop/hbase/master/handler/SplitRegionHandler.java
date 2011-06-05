@@ -59,6 +59,19 @@ public class SplitRegionHandler extends EventHandler implements TotesHRegionInfo
   public HRegionInfo getHRegionInfo() {
     return this.parent;
   }
+  
+  @Override
+  public String toString() {
+    String name = "UnknownServerName";
+    if(server != null && server.getServerName() != null) {
+      name = server.getServerName().toString();
+    }
+    String parentRegion = "UnknownRegion";
+    if(parent != null) {
+      parentRegion = parent.getRegionNameAsString();
+    }
+    return getClass().getSimpleName() + "-" + name + "-" + getSeqid() + "-" + parentRegion;
+  }
 
   @Override
   public void process() {

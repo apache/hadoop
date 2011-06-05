@@ -239,6 +239,8 @@ Release 0.91.0 - Unreleased
    HBASE-2556  Add convenience method to HBaseAdmin to get a collection of
                HRegionInfo objects for each table (Ming Ma)
    HBASE-3592  Guava snuck back in as a dependency via hbase-3777
+   HBASE-3808  Implement Executor.toString for master handlers at least
+               (Brock Noland)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

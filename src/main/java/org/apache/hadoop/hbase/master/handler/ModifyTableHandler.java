@@ -49,4 +49,12 @@ public class ModifyTableHandler extends TableEventHandler {
       this.masterServices.getMasterFileSystem().updateRegionInfo(hri);
     }
   }
+  @Override
+  public String toString() {
+    String name = "UnknownServerName";
+    if(server != null && server.getServerName() != null) {
+      name = server.getServerName().toString();
+    }
+    return getClass().getSimpleName() + "-" + name + "-" + getSeqid() + "-" + tableNameStr;
+  }
 }

@@ -78,7 +78,16 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
   public HRegionInfo getHRegionInfo() {
     return this.regionInfo;
   }
-
+  
+  @Override
+  public String toString() {
+    String name = "UnknownServerName";
+    if(server != null && server.getServerName() != null) {
+      name = server.getServerName().toString();
+    }
+    return getClass().getSimpleName() + "-" + name + "-" + getSeqid();
+  }
+  
   @Override
   public void process() {
     LOG.debug("Handling OPENED event for " + this.regionInfo.getEncodedName() +

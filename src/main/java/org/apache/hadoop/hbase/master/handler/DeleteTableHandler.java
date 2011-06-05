@@ -75,4 +75,13 @@ public class DeleteTableHandler extends TableEventHandler {
     // Call to undisableTable does this. TODO: Make a more formal purge table.
     am.getZKTable().setEnabledTable(Bytes.toString(tableName));
   }
+  
+  @Override
+  public String toString() {
+    String name = "UnknownServerName";
+    if(server != null && server.getServerName() != null) {
+      name = server.getServerName().toString();
+    }
+    return getClass().getSimpleName() + "-" + name + "-" + getSeqid() + "-" + tableNameStr;
+  }
 }

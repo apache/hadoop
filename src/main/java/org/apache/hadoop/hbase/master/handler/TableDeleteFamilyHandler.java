@@ -66,4 +66,16 @@ public class TableDeleteFamilyHandler extends TableEventHandler {
       this.masterServices.getMasterFileSystem().updateRegionInfo(hri);
     }
   }
+  @Override
+  public String toString() {
+    String name = "UnknownServerName";
+    if(server != null && server.getServerName() != null) {
+      name = server.getServerName().toString();
+    }
+    String family = "UnknownFamily";
+    if(familyName != null) {
+      family = Bytes.toString(familyName);
+    }
+    return getClass().getSimpleName() + "-" + name + "-" + getSeqid() + "-" + tableNameStr + "-" + family;
+  }
 }

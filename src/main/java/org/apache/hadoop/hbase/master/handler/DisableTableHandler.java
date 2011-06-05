@@ -62,6 +62,15 @@ public class DisableTableHandler extends EventHandler {
   }
 
   @Override
+  public String toString() {
+    String name = "UnknownServerName";
+    if(server != null && server.getServerName() != null) {
+      name = server.getServerName().toString();
+    }
+    return getClass().getSimpleName() + "-" + name + "-" + getSeqid() + "-" + tableNameStr;
+  }
+  
+  @Override
   public void process() {
     try {
       LOG.info("Attemping to disable table " + this.tableNameStr);

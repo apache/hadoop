@@ -63,4 +63,16 @@ public class TableAddFamilyHandler extends TableEventHandler {
       this.masterServices.getMasterFileSystem().updateRegionInfo(hri);
     }
   }
+  @Override
+  public String toString() {
+    String name = "UnknownServerName";
+    if(server != null && server.getServerName() != null) {
+      name = server.getServerName().toString();
+    }
+    String family = "UnknownFamily";
+    if(familyDesc != null) {
+      family = familyDesc.getNameAsString();
+    }
+    return getClass().getSimpleName() + "-" + name + "-" + getSeqid() + "-" + tableNameStr + "-" + family;
+  }
 }
