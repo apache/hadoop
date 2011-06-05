@@ -46,7 +46,7 @@ class Test extends FsCommand {
   
   @Override
   protected void processOptions(LinkedList<String> args) {
-    CommandFormat cf = new CommandFormat(null, 1, 1, "e", "d", "z");
+    CommandFormat cf = new CommandFormat(1, 1, "e", "d", "z");
     cf.parse(args);
     
     String[] opts = cf.getOpts().toArray(new String[0]);

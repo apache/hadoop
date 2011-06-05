@@ -57,7 +57,7 @@ class Delete extends FsCommand {
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
       CommandFormat cf = new CommandFormat(
-          null, 1, Integer.MAX_VALUE, "r", "R", "skipTrash");
+          1, Integer.MAX_VALUE, "r", "R", "skipTrash");
       cf.parse(args);
       deleteDirs = cf.getOpt("r") || cf.getOpt("R");
       skipTrash = cf.getOpt("skipTrash");
@@ -115,7 +115,7 @@ class Delete extends FsCommand {
     // TODO: should probably allow path arguments for the filesystems
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(null, 0, 0);
+      CommandFormat cf = new CommandFormat(0, 0);
       cf.parse(args);
     }
 

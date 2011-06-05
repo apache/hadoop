@@ -29,14 +29,30 @@ import java.util.Set;
  * Parse the args of a command and check the format of args.
  */
 public class CommandFormat {
-  final String name;
   final int minPar, maxPar;
   final Map<String, Boolean> options = new HashMap<String, Boolean>();
   boolean ignoreUnknownOpts = false;
   
-  /** constructor */
+  /**
+   * @deprecated use replacement since name is an unused parameter
+   * @param name of command, but never used
+   * @param min see replacement
+   * @param max see replacement
+   * @param possibleOpt see replacement
+   * @see #CommandFormat(int, int, String...)
+   */
+  @Deprecated
   public CommandFormat(String n, int min, int max, String ... possibleOpt) {
-    name = n;
+    this(min, max, possibleOpt);
+  }
+  
+  /**
+   * Simple parsing of command line arguments
+   * @param min minimum arguments required
+   * @param max maximum arguments permitted
+   * @param possibleOpt list of the allowed switches
+   */
+  public CommandFormat(int min, int max, String ... possibleOpt) {
     minPar = min;
     maxPar = max;
     for (String opt : possibleOpt) {
@@ -71,16 +87,23 @@ public class CommandFormat {
     int pos = 0;
     while (pos < args.size()) {
       String arg = args.get(pos);
-      if (arg.startsWith("-") && arg.length() > 1) {
-        String opt = arg.substring(1);
-        if (options.containsKey(opt)) {
-          args.remove(pos);
-          options.put(opt, Boolean.TRUE);
-          continue;
-        }
-        if (!ignoreUnknownOpts) throw new UnknownOptionException(arg);
+      // stop if not an opt, or the stdin arg "-" is found
+      if (!arg.startsWith("-") || arg.equals("-")) { 
+        break;
+      } else if (arg.equals("--")) { // force end of option processing
+        args.remove(pos);
+        break;
       }
-      pos++;
+      
+      String opt = arg.substring(1);
+      if (options.containsKey(opt)) {
+        args.remove(pos);
+        options.put(opt, Boolean.TRUE);
+      } else if (ignoreUnknownOpts) {
+        pos++;
+      } else {
+        throw new UnknownOptionException(arg);
+      }
     }
     int psize = args.size();
     if (psize < minPar) {

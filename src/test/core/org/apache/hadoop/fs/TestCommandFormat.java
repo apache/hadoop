@@ -119,63 +119,59 @@ public class TestCommandFormat {
   @Test
   public void testArgOpt() {
     args = listOf("b", "-a");
-    expectedOpts = setOf("a");
-    expectedArgs = listOf("b");
+    expectedArgs = listOf("b", "-a");
 
-    checkArgLimits(UnknownOptionException.class, 0, 0);
     checkArgLimits(TooManyArgumentsException.class, 0, 0, "a", "b");
-    checkArgLimits(null, 0, 1, "a", "b");
-    checkArgLimits(null, 1, 1, "a", "b");
     checkArgLimits(null, 1, 2, "a", "b");
-    checkArgLimits(NotEnoughArgumentsException.class, 2, 2, "a", "b");
+    checkArgLimits(null, 2, 2, "a", "b");
+    checkArgLimits(NotEnoughArgumentsException.class, 3, 4, "a", "b");
   }
 
   @Test
-  public void testOptArgOpt() {
-    args = listOf("a", "-b", "c");
-    expectedOpts = setOf("b");
-    expectedArgs = listOf("a", "c");
+  public void testOptStopOptArg() {
+    args = listOf("-a", "--", "-b", "c");
+    expectedOpts = setOf("a");
+    expectedArgs = listOf("-b", "c");
 
     checkArgLimits(UnknownOptionException.class, 0, 0);
-    checkArgLimits(TooManyArgumentsException.class, 0, 0, "b");
-    checkArgLimits(TooManyArgumentsException.class, 1, 1, "b");
-    checkArgLimits(null, 0, 2, "b");
-    checkArgLimits(NotEnoughArgumentsException.class, 3, 3, "b");
+    checkArgLimits(TooManyArgumentsException.class, 0, 1, "a", "b");
+    checkArgLimits(null, 2, 2, "a", "b");
+    checkArgLimits(NotEnoughArgumentsException.class, 3, 4, "a", "b");
   }
 
   @Test
   public void testOptDashArg() {
-    args = listOf("-b", "-", "c");
+    args = listOf("-b", "-", "-c");
     expectedOpts = setOf("b");
-    expectedArgs = listOf("-", "c");
+    expectedArgs = listOf("-", "-c");
 
     checkArgLimits(UnknownOptionException.class, 0, 0);
-    checkArgLimits(TooManyArgumentsException.class, 0, 0, "b");
-    checkArgLimits(TooManyArgumentsException.class, 1, 1, "b");
-    checkArgLimits(null, 2, 2, "b");
-    checkArgLimits(NotEnoughArgumentsException.class, 3, 4, "b");
+    checkArgLimits(TooManyArgumentsException.class, 0, 0, "b", "c");
+    checkArgLimits(TooManyArgumentsException.class, 1, 1, "b", "c");
+    checkArgLimits(null, 2, 2, "b", "c");
+    checkArgLimits(NotEnoughArgumentsException.class, 3, 4, "b", "c");
   }
   
   @Test
   public void testOldArgsWithIndex() {
     String[] arrayArgs = new String[]{"ignore", "-a", "b", "-c"};
     {
-      CommandFormat cf = new CommandFormat("", 0, 9, "a", "c");
+      CommandFormat cf = new CommandFormat(0, 9, "a", "c");
       List<String> parsedArgs = cf.parse(arrayArgs, 0);
-      assertEquals(setOf("a", "c"), cf.getOpts());
-      assertEquals(listOf("ignore", "b"), parsedArgs);
+      assertEquals(setOf(), cf.getOpts());
+      assertEquals(listOf("ignore", "-a", "b", "-c"), parsedArgs);
     }
     { 
-      CommandFormat cf = new CommandFormat("", 0, 9, "a", "c");
+      CommandFormat cf = new CommandFormat(0, 9, "a", "c");
       List<String> parsedArgs = cf.parse(arrayArgs, 1);
-      assertEquals(setOf("a", "c"), cf.getOpts());
-      assertEquals(listOf("b"), parsedArgs);
+      assertEquals(setOf("a"), cf.getOpts());
+      assertEquals(listOf("b", "-c"), parsedArgs);
     }
     { 
-      CommandFormat cf = new CommandFormat("", 0, 9, "a", "c");
+      CommandFormat cf = new CommandFormat(0, 9, "a", "c");
       List<String> parsedArgs = cf.parse(arrayArgs, 2);
-      assertEquals(setOf("c"), cf.getOpts());
-      assertEquals(listOf("b"), parsedArgs);
+      assertEquals(setOf(), cf.getOpts());
+      assertEquals(listOf("b", "-c"), parsedArgs);
     }
   }
   
@@ -183,7 +179,7 @@ public class TestCommandFormat {
       Class<? extends IllegalArgumentException> expectedErr,
       int min, int max, String ... opts)
   {
-    CommandFormat cf = new CommandFormat("", min, max, opts);
+    CommandFormat cf = new CommandFormat(min, max, opts);
     List<String> parsedArgs = new ArrayList<String>(args);
     
     Class<?> cfError = null;
@@ -202,11 +198,13 @@ public class TestCommandFormat {
     return cf;
   }
   
-  private static <T> List<T> listOf(T ... objects) {
+  // Don't use generics to avoid warning:
+  // unchecked generic array creation of type T[] for varargs parameter
+  private static List<String> listOf(String ... objects) {
     return Arrays.asList(objects);
   }
   
-  private static <T> Set<T> setOf(T ... objects) {
-    return new HashSet<T>(listOf(objects));
+  private static Set<String> setOf(String ... objects) {
+    return new HashSet<String>(listOf(objects));
   }
 }

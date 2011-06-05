@@ -78,7 +78,7 @@ class MoveCommands {
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(null, 2, Integer.MAX_VALUE);
+      CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE);
       cf.parse(args);
       getRemoteDestination(args);
     }

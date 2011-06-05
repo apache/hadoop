@@ -45,7 +45,7 @@ class Mkdir extends FsCommand {
 
   @Override
   protected void processOptions(LinkedList<String> args) {
-    CommandFormat cf = new CommandFormat(null, 1, Integer.MAX_VALUE);
+    CommandFormat cf = new CommandFormat(1, Integer.MAX_VALUE);
     cf.parse(args);
   }
 

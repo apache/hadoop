@@ -67,7 +67,7 @@ class FsUsage extends FsCommand {
     @Override
     protected void processOptions(LinkedList<String> args)
     throws IOException {
-      CommandFormat cf = new CommandFormat(null, 0, Integer.MAX_VALUE, "h");
+      CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "h");
       cf.parse(args);
       humanReadable = cf.getOpt("h");
       if (args.isEmpty()) args.add(Path.SEPARATOR);
@@ -123,7 +123,7 @@ class FsUsage extends FsCommand {
     
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(null, 0, Integer.MAX_VALUE, "h", "s");
+      CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "h", "s");
       cf.parse(args);
       humanReadable = cf.getOpt("h");
       summary = cf.getOpt("s");

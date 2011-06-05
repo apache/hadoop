@@ -66,7 +66,7 @@ class Display extends FsCommand {
     @Override
     protected void processOptions(LinkedList<String> args)
     throws IOException {
-      CommandFormat cf = new CommandFormat(null, 1, Integer.MAX_VALUE, "ignoreCrc");
+      CommandFormat cf = new CommandFormat(1, Integer.MAX_VALUE, "ignoreCrc");
       cf.parse(args);
       verifyChecksum = !cf.getOpt("ignoreCrc");
     }

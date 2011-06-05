@@ -73,7 +73,7 @@ public class Count extends FsCommand {
 
   @Override
   protected void processOptions(LinkedList<String> args) {
-    CommandFormat cf = new CommandFormat(NAME, 1, Integer.MAX_VALUE, "q");
+    CommandFormat cf = new CommandFormat(1, Integer.MAX_VALUE, "q");
     cf.parse(args);
     if (args.isEmpty()) { // default path is the current working directory
       args.add(".");

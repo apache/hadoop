@@ -62,7 +62,7 @@ class Ls extends FsCommand {
   @Override
   protected void processOptions(LinkedList<String> args)
   throws IOException {
-    CommandFormat cf = new CommandFormat(null, 0, Integer.MAX_VALUE, "R");
+    CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "R");
     cf.parse(args);
     setRecursive(cf.getOpt("R"));
     if (args.isEmpty()) args.add(Path.CUR_DIR);

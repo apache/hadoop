@@ -51,7 +51,7 @@ class Tail extends FsCommand {
   
   @Override
   protected void processOptions(LinkedList<String> args) throws IOException {
-    CommandFormat cf = new CommandFormat(null, 1, 1, "f");
+    CommandFormat cf = new CommandFormat(1, 1, "f");
     cf.parse(args);
     follow = cf.getOpt("f");
   }

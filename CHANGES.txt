@@ -278,6 +278,8 @@ Trunk (unreleased changes)
 
     HADOOP-7284 Trash and shell's rm does not work for viewfs (Sanjay Radia)
 
+    HADOOP-7341. Fix options parsing in CommandFormat (Daryn Sharp via todd)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

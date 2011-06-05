@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.shell.PathExceptions.PathIOException;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 
-public class SetReplication extends FsCommand {
+class SetReplication extends FsCommand {
   public static void registerCommands(CommandFactory factory) {
     factory.addClass(SetReplication.class, "-setrep");
   }
@@ -51,7 +51,7 @@ public class SetReplication extends FsCommand {
   
   @Override
   protected void processOptions(LinkedList<String> args) throws IOException {
-    CommandFormat cf = new CommandFormat(null, 2, Integer.MAX_VALUE, "R", "w");
+    CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE, "R", "w");
     cf.parse(args);
     waitOpt = cf.getOpt("w");
     setRecursive(cf.getOpt("R"));

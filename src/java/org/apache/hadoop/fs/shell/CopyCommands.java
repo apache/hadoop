@@ -64,7 +64,7 @@ class CopyCommands {
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(null, 2, 3);
+      CommandFormat cf = new CommandFormat(2, 3);
       cf.parse(args);
 
       // TODO: this really should be a -nl option
@@ -94,7 +94,7 @@ class CopyCommands {
     
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(null, 2, Integer.MAX_VALUE);
+      CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE);
       cf.parse(args);
       getRemoteDestination(args);
     }
@@ -137,7 +137,7 @@ class CopyCommands {
     throws IOException {
       localFs = FileSystem.getLocal(getConf());
       CommandFormat cf = new CommandFormat(
-          null, 1, Integer.MAX_VALUE, "crc", "ignoreCrc");
+          1, Integer.MAX_VALUE, "crc", "ignoreCrc");
       cf.parse(args);
       copyCrc = cf.getOpt("crc");
       verifyChecksum = !cf.getOpt("ignoreCrc");
@@ -216,7 +216,7 @@ class CopyCommands {
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(null, 1, Integer.MAX_VALUE);
+      CommandFormat cf = new CommandFormat(1, Integer.MAX_VALUE);
       cf.parse(args);
       getRemoteDestination(args);
     }
