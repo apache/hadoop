@@ -37,6 +37,8 @@ class ShuffleServerInstrumentation implements MetricsSource {
       registry.newCounter("shuffle_failed_outputs", "", 0);
   final MetricMutableCounterInt successOutputs =
       registry.newCounter("shuffle_success_outputs", "", 0);
+  final MetricMutableCounterInt exceptionsCaught =
+    registry.newCounter("shuffle_exceptions_caught", "", 0);
 
   ShuffleServerInstrumentation(TaskTracker tt) {
     ttWorkerThreads = tt.workerThreads;
@@ -68,6 +70,12 @@ class ShuffleServerInstrumentation implements MetricsSource {
   void successOutput() {
     successOutputs.incr();
   }
+
+  //@Override
+  void exceptionsCaught() {
+    exceptionsCaught.incr();
+  }
+
 
   @Override
   public void getMetrics(MetricsBuilder builder, boolean all) {
