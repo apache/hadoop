@@ -39,7 +39,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>hadoop fs is the command to execute fs commands. The full syntax is</expected-output>
+          <expected-output>Usage: hadoop fs [generic options]</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -730,7 +730,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-help \[cmd\]:( |\t)*Displays help for given command or all commands if none( )*</expected-output>
+          <expected-output>^-help \[cmd ...\]:( |\t)*Displays help for given command or all commands if none( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>

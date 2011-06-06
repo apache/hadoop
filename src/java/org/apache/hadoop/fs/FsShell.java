@@ -18,9 +18,10 @@
 package org.apache.hadoop.fs;
 
 import java.io.IOException;
+import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.LinkedList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,9 +31,6 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFactory;
 import org.apache.hadoop.fs.shell.FsCommand;
-import org.apache.hadoop.fs.shell.PathExceptions.PathNotFoundException;
-import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -46,23 +44,31 @@ public class FsShell extends Configured implements Tool {
   private Trash trash;
   protected CommandFactory commandFactory;
 
+  private final String usagePrefix =
+    "Usage: hadoop fs [generic options]";
+
   /**
+   * Default ctor with no configuration.  Be sure to invoke
+   * {@link #setConf(Configuration)} with a valid configuration prior
+   * to running commands.
    */
   public FsShell() {
     this(null);
   }
 
+  /**
+   * Construct a FsShell with the given configuration.  Commands can be
+   * executed via {@link #run(String[])}
+   * @param conf the hadoop configuration
+   */
   public FsShell(Configuration conf) {
     super(conf);
-    fs = null;
-    trash = null;
-    commandFactory = new CommandFactory();
   }
   
   protected FileSystem getFS() throws IOException {
-    if(fs == null)
+    if (fs == null) {
       fs = FileSystem.get(getConf());
-    
+    }
     return fs;
   }
   
@@ -75,93 +81,145 @@ public class FsShell extends Configured implements Tool {
   
   protected void init() throws IOException {
     getConf().setQuietMode(true);
+    if (commandFactory == null) {
+      commandFactory = new CommandFactory(getConf());
+      commandFactory.addObject(new Help(), "-help");
+      commandFactory.addObject(new Usage(), "-usage");
+      registerCommands(commandFactory);
+    }
   }
 
+  protected void registerCommands(CommandFactory factory) {
+    // TODO: DFSAdmin subclasses FsShell so need to protect the command
+    // registration.  This class should morph into a base class for
+    // commands, and then this method can be abstract
+    if (this.getClass().equals(FsShell.class)) {
+      factory.registerCommands(FsCommand.class);
+    }
+  }
+  
   /**
    * Returns the Trash object associated with this shell.
+   * @return Path to the trash
+   * @throws IOException upon error
    */
   public Path getCurrentTrashDir() throws IOException {
     return getTrash().getCurrentTrashDir();
   }
 
-  /**
-   * Return an abbreviated English-language desc of the byte length
-   * @deprecated Consider using {@link org.apache.hadoop.util.StringUtils#byteDesc} instead.
-   */
-  @Deprecated
-  public static String byteDesc(long len) {
-    return StringUtils.byteDesc(len);
-  }
-
-  /**
-   * @deprecated Consider using {@link org.apache.hadoop.util.StringUtils#limitDecimalTo2} instead.
-   */
-  @Deprecated
-  public static synchronized String limitDecimalTo2(double d) {
-    return StringUtils.limitDecimalTo2(d);
-  }
-
-  private void printHelp(String cmd) {
-    String summary = "hadoop fs is the command to execute fs commands. " +
-      "The full syntax is: \n\n" +
-      "hadoop fs [-fs <local | file system URI>] [-conf <configuration file>]\n\t" +
-      "[-D <property=value>]\n\t" +
-      "[-report]";
-
-    String conf ="-conf <configuration file>:  Specify an application configuration file.";
- 
-    String D = "-D <property=value>:  Use value for given property.";
+  // NOTE: Usage/Help are inner classes to allow access to outer methods
+  // that access commandFactory
   
-    String fs = "-fs [local | <file system URI>]: \tSpecify the file system to use.\n" + 
-      "\t\tIf not specified, the current configuration is used, \n" +
-      "\t\ttaken from the following, in increasing precedence: \n" + 
-      "\t\t\tcore-default.xml inside the hadoop jar file \n" +
-      "\t\t\tcore-site.xml in $HADOOP_CONF_DIR \n" +
-      "\t\t'local' means use the local file system as your DFS. \n" +
-      "\t\t<file system URI> specifies a particular file system to \n" +
-      "\t\tcontact. This argument is optional but if used must appear\n" +
-      "\t\tappear first on the command line.  Exactly one additional\n" +
-      "\t\targument must be specified. \n";
+  /**
+   *  Display help for commands with their short usage and long description
+   */
+   protected class Usage extends FsCommand {
+    public static final String NAME = "usage";
+    public static final String USAGE = "[cmd ...]";
+    public static final String DESCRIPTION =
+      "Displays the usage for given command or all commands if none\n" +
+      "is specified.";
+    
+    @Override
+    protected void processRawArguments(LinkedList<String> args) {
+      if (args.isEmpty()) {
+        printUsage(System.out);
+      } else {
+        for (String arg : args) printUsage(System.out, arg);
+      }
+    }
+  } 
 
-    String help = "-help [cmd]: \tDisplays help for given command or all commands if none\n" +
-      "\t\tis specified.\n";
+  /**
+   * Displays short usage of commands sans the long description
+   */
+  protected class Help extends FsCommand {
+    public static final String NAME = "help";
+    public static final String USAGE = "[cmd ...]";
+    public static final String DESCRIPTION =
+      "Displays help for given command or all commands if none\n" +
+      "is specified.";
+    
+    @Override
+    protected void processRawArguments(LinkedList<String> args) {
+      if (args.isEmpty()) {
+        printHelp(System.out);
+      } else {
+        for (String arg : args) printHelp(System.out, arg);
+      }
+    }
+  }
 
-    Command instance = commandFactory.getInstance("-" + cmd);
-    if (instance != null) {
-      printHelp(instance);
-    } else if ("fs".equals(cmd)) {
-      System.out.println(fs);
-    } else if ("conf".equals(cmd)) {
-      System.out.println(conf);
-    } else if ("D".equals(cmd)) {
-      System.out.println(D);
-    } else if ("help".equals(cmd)) {
-      System.out.println(help);
+  /*
+   * The following are helper methods for getInfo().  They are defined
+   * outside of the scope of the Help/Usage class because the run() method
+   * needs to invoke them too. 
+   */
+
+  // print all usages
+  private void printUsage(PrintStream out) {
+    printInfo(out, null, false);
+  }
+  
+  // print one usage
+  private void printUsage(PrintStream out, String cmd) {
+    printInfo(out, cmd, false);
+  }
+
+  // print all helps
+  private void printHelp(PrintStream out) {
+    printInfo(out, null, true);
+  }
+
+  // print one help
+  private void printHelp(PrintStream out, String cmd) {
+    printInfo(out, cmd, true);
+  }
+
+  private void printInfo(PrintStream out, String cmd, boolean showHelp) {
+    if (cmd != null) {
+      // display help or usage for one command
+      Command instance = commandFactory.getInstance("-" + cmd);
+      if (instance == null) {
+        throw new UnknownCommandException(cmd);
+      }
+      if (showHelp) {
+        printInstanceHelp(out, instance);
+      } else {
+        printInstanceUsage(out, instance);
+      }
     } else {
-      System.out.println(summary);
-      for (String thisCmdName : commandFactory.getNames()) {
-        instance = commandFactory.getInstance(thisCmdName);
+      // display help or usage for all commands 
+      out.println(usagePrefix);
+      
+      // display list of short usages
+      ArrayList<Command> instances = new ArrayList<Command>();
+      for (String name : commandFactory.getNames()) {
+        Command instance = commandFactory.getInstance(name);
         if (!instance.isDeprecated()) {
           System.out.println("\t[" + instance.getUsage() + "]");
+          instances.add(instance);
         }
       }
-      System.out.println("\t[-help [cmd]]\n");
-      
-      System.out.println(fs);
+      // display long descriptions for each command
+      if (showHelp) {
+        for (Command instance : instances) {
+          out.println();
+          printInstanceHelp(out, instance);
+        }
+      }
+      out.println();
+      ToolRunner.printGenericCommandUsage(out);
+    }
+  }
 
-      for (String thisCmdName : commandFactory.getNames()) {
-        instance = commandFactory.getInstance(thisCmdName);
-        if (!instance.isDeprecated()) {
-          printHelp(instance);
-        }
-      }
-      System.out.println(help);
-    }        
+  private void printInstanceUsage(PrintStream out, Command instance) {
+    out.println(usagePrefix + " " + instance.getUsage());
   }
 
   // TODO: will eventually auto-wrap the text, but this matches the expected
   // output for the hdfs tests...
-  private void printHelp(Command instance) {
+  private void printInstanceHelp(PrintStream out, Command instance) {
     boolean firstLine = true;
     for (String line : instance.getDescription().split("\n")) {
       String prefix;
@@ -174,120 +232,51 @@ public class FsShell extends Configured implements Tool {
       System.out.println(prefix + line);
     }    
   }
-  
-  /**
-   * Displays format of commands.
-   * 
-   */
-  private void printUsage(String cmd) {
-    String prefix = "Usage: java " + FsShell.class.getSimpleName();
-
-    Command instance = commandFactory.getInstance(cmd);
-    if (instance != null) {
-      System.err.println(prefix + " [" + instance.getUsage() + "]");
-    } else if ("-fs".equals(cmd)) {
-      System.err.println("Usage: java FsShell" + 
-                         " [-fs <local | file system URI>]");
-    } else if ("-conf".equals(cmd)) {
-      System.err.println("Usage: java FsShell" + 
-                         " [-conf <configuration file>]");
-    } else if ("-D".equals(cmd)) {
-      System.err.println("Usage: java FsShell" + 
-                         " [-D <[property=value>]");
-    } else {
-      System.err.println("Usage: java FsShell");
-      for (String name : commandFactory.getNames()) {
-        instance = commandFactory.getInstance(name);
-        if (!instance.isDeprecated()) {
-          System.err.println("           [" + instance.getUsage() + "]");
-        }
-      }
-      System.err.println("           [-help [cmd]]");
-      System.err.println();
-      ToolRunner.printGenericCommandUsage(System.err);
-    }
-  }
 
   /**
    * run
    */
   public int run(String argv[]) throws Exception {
-    // TODO: This isn't the best place, but this class is being abused with
-    // subclasses which of course override this method.  There really needs
-    // to be a better base class for all commands
-    commandFactory.setConf(getConf());
-    commandFactory.registerCommands(FsCommand.class);
-    
-    if (argv.length < 1) {
-      printUsage(""); 
-      return -1;
-    }
+    // initialize FsShell
+    init();
 
     int exitCode = -1;
-    int i = 0;
-    String cmd = argv[i++];
-    // initialize FsShell
-    try {
-      init();
-    } catch (RPC.VersionMismatch v) {
-      LOG.debug("Version mismatch", v);
-      System.err.println("Version Mismatch between client and server" +
-                         "... command aborted.");
-      return exitCode;
-    } catch (IOException e) {
-      LOG.debug("Error", e);
-      System.err.println("Bad connection to FS. Command aborted. Exception: " +
-          e.getLocalizedMessage());
-      return exitCode;
-    }
-
-    try {
-      Command instance = commandFactory.getInstance(cmd);
-      if (instance != null) {
-        exitCode = instance.run(Arrays.copyOfRange(argv, i, argv.length));
-      } else if ("-help".equals(cmd)) {
-        if (i < argv.length) {
-          printHelp(argv[i]);
-        } else {
-          printHelp("");
+    if (argv.length < 1) {
+      printUsage(System.err);
+    } else {
+      String cmd = argv[0];
+      Command instance = null;
+      try {
+        instance = commandFactory.getInstance(cmd);
+        if (instance == null) {
+          throw new UnknownCommandException();
         }
-      } else {
-        System.err.println(cmd + ": Unknown command");
-        printUsage("");
-      }
-    } catch (Exception e) {
-      exitCode = 1;
-      LOG.debug("Error", e);
-      displayError(cmd, e);
-      if (e instanceof IllegalArgumentException) {
-        exitCode = -1;
-        printUsage(cmd);
+        exitCode = instance.run(Arrays.copyOfRange(argv, 1, argv.length));
+      } catch (IllegalArgumentException e) {
+        displayError(cmd, e.getLocalizedMessage());
+        if (instance != null) {
+          printInstanceUsage(System.err, instance);
+        }
+      } catch (Exception e) {
+        // instance.run catches IOE, so something is REALLY wrong if here
+        LOG.debug("Error", e);
+        displayError(cmd, "Fatal internal error");
+        e.printStackTrace(System.err);
       }
     }
     return exitCode;
   }
-
-  // TODO: this is a quick workaround to accelerate the integration of
-  // redesigned commands.  this will be removed this once all commands are
-  // converted.  this change will avoid having to change the hdfs tests
-  // every time a command is converted to use path-based exceptions
-  private static Pattern[] fnfPatterns = {
-    Pattern.compile("File (.*) does not exist\\."),
-    Pattern.compile("File does not exist: (.*)"),
-    Pattern.compile("`(.*)': specified destination directory doest not exist")
-  };
-  private void displayError(String cmd, Exception e) {
-    String message = e.getLocalizedMessage().split("\n")[0];
-    for (Pattern pattern : fnfPatterns) {
-      Matcher matcher = pattern.matcher(message);
-      if (matcher.matches()) {
-        message = new PathNotFoundException(matcher.group(1)).getMessage();
-        break;
-      }
+  
+  private void displayError(String cmd, String message) {
+    for (String line : message.split("\n")) {
+      System.err.println(cmd.substring(1) + ": " + line);
     }
-    System.err.println(cmd.substring(1) + ": " + message);  
   }
   
+  /**
+   *  Performs any necessary cleanup
+   * @throws IOException upon error
+   */
   public void close() throws IOException {
     if (fs != null) {
       fs.close();
@@ -297,9 +286,11 @@ public class FsShell extends Configured implements Tool {
 
   /**
    * main() has some simple utility methods
+   * @param argv the command and its arguments
+   * @throws Exception upon error
    */
   public static void main(String argv[]) throws Exception {
-    FsShell shell = new FsShell();
+    FsShell shell = newShellInstance();
     int res;
     try {
       res = ToolRunner.run(shell, argv);
@@ -307,5 +298,27 @@ public class FsShell extends Configured implements Tool {
       shell.close();
     }
     System.exit(res);
+  }
+
+  // TODO: this should be abstract in a base class
+  protected static FsShell newShellInstance() {
+    return new FsShell();
+  }
+  
+  /**
+   * The default ctor signals that the command being executed does not exist,
+   * while other ctor signals that a specific command does not exist.  The
+   * latter is used by commands that process other commands, ex. -usage/-help
+   */
+  @SuppressWarnings("serial")
+  static class UnknownCommandException extends IllegalArgumentException {
+    private final String cmd;    
+    UnknownCommandException() { this(null); }
+    UnknownCommandException(String cmd) { this.cmd = cmd; }
+    
+    @Override
+    public String getMessage() {
+      return ((cmd != null) ? "`"+cmd+"': " : "") + "Unknown command";
+    }
   }
 }

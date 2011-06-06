@@ -19,7 +19,8 @@
 package org.apache.hadoop.fs.shell;
 
 import java.util.Arrays;
-import java.util.Hashtable;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -35,8 +36,11 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceStability.Unstable
 
 public class CommandFactory extends Configured implements Configurable {
-  private Hashtable<String, Class<? extends Command>> classMap =
-    new Hashtable<String, Class<? extends Command>>();
+  private Map<String, Class<? extends Command>> classMap =
+    new HashMap<String, Class<? extends Command>>();
+
+  private Map<String, Command> objectMap =
+    new HashMap<String, Command>();
 
   /** Factory constructor for commands */
   public CommandFactory() {
@@ -79,16 +83,22 @@ public class CommandFactory extends Configured implements Configurable {
   }
   
   /**
-   * Returns the class implementing the given command.  The
-   * class must have been registered via
-   * {@link #addClass(Class, String...)}
-   * @param cmd name of the command
-   * @return instance of the requested command
+   * Register the given object as handling the given list of command
+   * names.  Avoid calling this method and use
+   * {@link #addClass(Class, String...)} whenever possible to avoid
+   * startup overhead from excessive command object instantiations.  This
+   * method is intended only for handling nested non-static classes that
+   * are re-usable.  Namely -help/-usage.
+   * @param cmdObject the object implementing the command names
+   * @param names one or more command names that will invoke this class
    */
-  protected Class<? extends Command> getClass(String cmd) {
-    return classMap.get(cmd);
+  public void addObject(Command cmdObject, String ... names) {
+    for (String name : names) {
+      objectMap.put(name, cmdObject);
+      classMap.put(name, null); // just so it shows up in the list of commands
+    }
   }
-  
+
   /**
    * Returns an instance of the class implementing the given command.  The
    * class must have been registered via
@@ -109,11 +119,13 @@ public class CommandFactory extends Configured implements Configurable {
   public Command getInstance(String cmdName, Configuration conf) {
     if (conf == null) throw new NullPointerException("configuration is null");
     
-    Command instance = null;
-    Class<? extends Command> cmdClass = getClass(cmdName);
-    if (cmdClass != null) {
-      instance = ReflectionUtils.newInstance(cmdClass, conf);
-      instance.setCommandName(cmdName);
+    Command instance = objectMap.get(cmdName);
+    if (instance == null) {
+      Class<? extends Command> cmdClass = classMap.get(cmdName);
+      if (cmdClass != null) {
+        instance = ReflectionUtils.newInstance(cmdClass, conf);
+        instance.setName(cmdName);
+      }
     }
     return instance;
   }

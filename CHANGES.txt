@@ -280,6 +280,9 @@ Trunk (unreleased changes)
 
     HADOOP-7341. Fix options parsing in CommandFormat (Daryn Sharp via todd)
 
+    HADOOP-7353. Cleanup FsShell and prevent masking of RTE stack traces.
+    (Daryn Sharp via todd)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

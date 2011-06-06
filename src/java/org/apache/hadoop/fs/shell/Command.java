@@ -42,6 +42,13 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceStability.Evolving
 
 abstract public class Command extends Configured {
+  /** default name of the command */
+  public static String NAME;
+  /** the command's usage switches and arguments format */
+  public static String USAGE;
+  /** the command's long description */
+  public static String DESCRIPTION;
+    
   protected String[] args;
   protected String name;
   protected int exitCode = 0;
@@ -69,14 +76,6 @@ abstract public class Command extends Configured {
   
   /** @return the command's name excluding the leading character - */
   abstract public String getCommandName();
-  
-  /**
-   * Name the command
-   * @param cmdName as invoked
-   */
-  public void setCommandName(String cmdName) {
-    name = cmdName;
-  }
   
   protected void setRecursive(boolean flag) {
     recursive = flag;
@@ -120,14 +119,16 @@ abstract public class Command extends Configured {
    * expand arguments, and then process each argument.
    * <pre>
    * run
-   * \-> {@link #processOptions(LinkedList)}
-   * \-> {@link #expandArguments(LinkedList)} -> {@link #expandArgument(String)}*
-   * \-> {@link #processArguments(LinkedList)}
-   *     \-> {@link #processArgument(PathData)}*
-   *         \-> {@link #processPathArgument(PathData)}
-   *             \-> {@link #processPaths(PathData, PathData...)}
-   *                 \-> {@link #processPath(PathData)}*
-   *         \-> {@link #processNonexistentPath(PathData)}
+   * |-> {@link #processOptions(LinkedList)}
+   * \-> {@link #processRawArguments(LinkedList)}
+   *      |-> {@link #expandArguments(LinkedList)}
+   *      |   \-> {@link #expandArgument(String)}*
+   *      \-> {@link #processArguments(LinkedList)}
+   *          |-> {@link #processArgument(PathData)}*
+   *          |   |-> {@link #processPathArgument(PathData)}
+   *          |   \-> {@link #processPaths(PathData, PathData...)}
+   *          |        \-> {@link #processPath(PathData)}*
+   *          \-> {@link #processNonexistentPath(PathData)}
    * </pre>
    * Most commands will chose to implement just
    * {@link #processOptions(LinkedList)} and {@link #processPath(PathData)}
@@ -144,7 +145,7 @@ abstract public class Command extends Configured {
             "DEPRECATED: Please use '"+ getReplacementCommand() + "' instead.");
       }
       processOptions(args);
-      processArguments(expandArguments(args));
+      processRawArguments(args);
     } catch (IOException e) {
       displayError(e);
     }
@@ -169,6 +170,19 @@ abstract public class Command extends Configured {
    * @throws IOException
    */
   protected void processOptions(LinkedList<String> args) throws IOException {}
+
+  /**
+   * Allows commands that don't use paths to handle the raw arguments.
+   * Default behavior is to expand the arguments via
+   * {@link #expandArguments(LinkedList)} and pass the resulting list to
+   * {@link #processArguments(LinkedList)} 
+   * @param args the list of argument strings
+   * @throws IOException
+   */
+  protected void processRawArguments(LinkedList<String> args)
+  throws IOException {
+    processArguments(expandArguments(args));
+  }
 
   /**
    *  Expands a list of arguments into {@link PathData} objects.  The default
@@ -353,7 +367,26 @@ abstract public class Command extends Configured {
    * @param message warning message to display
    */
   public void displayWarning(String message) {
-    err.println(getCommandName() + ": " + message);
+    err.println(getName() + ": " + message);
+  }
+  
+  /**
+   * The name of the command.  Will first try to use the assigned name
+   * else fallback to the command's preferred name
+   * @return name of the command
+   */
+  public String getName() {
+    return (name == null)
+      ? getCommandField("NAME")
+      : name.startsWith("-") ? name.substring(1) : name; // this is a historical method
+  }
+
+  /**
+   * Define the name of the command.
+   * @param name as invoked
+   */
+  public void setName(String name) {
+    this.name = name;
   }
   
   /**
@@ -361,7 +394,7 @@ abstract public class Command extends Configured {
    * @return "name options"
    */
   public String getUsage() {
-    String cmd = "-" + getCommandName();
+    String cmd = "-" + getName();
     String usage = isDeprecated() ? "" : getCommandField("USAGE");
     return usage.isEmpty() ? cmd : cmd + " " + usage; 
   }
@@ -400,9 +433,10 @@ abstract public class Command extends Configured {
   private String getCommandField(String field) {
     String value;
     try {
-      value = (String)this.getClass().getField(field).get(null);
+      value = this.getClass().getField(field).get(this).toString();
     } catch (Exception e) {
-      throw new RuntimeException(StringUtils.stringifyException(e));
+      throw new RuntimeException(
+          "failed to get " + this.getClass().getSimpleName()+"."+field, e);
     }
     return value;
   }

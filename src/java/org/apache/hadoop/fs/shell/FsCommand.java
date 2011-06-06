@@ -65,8 +65,10 @@ abstract public class FsCommand extends Command {
     super(conf);
   }
 
-  public String getCommandName() {
-    return name.startsWith("-") ? name.substring(1) : name; 
+  // historical abstract method in Command
+  @Override
+  public String getCommandName() { 
+    return getName(); 
   }
   
   // abstract method that normally is invoked by runall() which is

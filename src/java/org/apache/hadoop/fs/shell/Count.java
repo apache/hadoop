@@ -54,9 +54,7 @@ public class Count extends FsCommand {
   private boolean showQuotas;
 
   /** Constructor */
-  public Count() {
-    setCommandName(NAME);
-  }
+  public Count() {}
   
   /** Constructor
    * @deprecated invoke via {@link FsShell}
@@ -67,7 +65,6 @@ public class Count extends FsCommand {
   @Deprecated
   public Count(String[] cmd, int pos, Configuration conf) {
     super(conf);
-    setCommandName(NAME);
     this.args = Arrays.copyOfRange(cmd, pos, cmd.length);
   }
 

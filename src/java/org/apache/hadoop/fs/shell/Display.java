@@ -100,7 +100,7 @@ class Display extends FsCommand {
    */ 
   public static class Text extends Cat {
     public static final String NAME = "text";
-    public static final String SHORT_USAGE = Cat.USAGE;
+    public static final String USAGE = Cat.USAGE;
     public static final String DESCRIPTION =
       "Takes a source file and outputs the file in text format.\n" +
       "The allowed formats are zip and TextRecordInputStream.";
