@@ -23,7 +23,11 @@ echo "This script is Deprecated. Instead use start-dfs.sh and start-mapred.sh"
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/../libexec/hadoop-config.sh
+if [ -e "$bin/../libexec/hadoop-config.sh" ]; then
+  . "$bin"/../libexec/hadoop-config.sh
+else
+  . "$bin"/hadoop-config.sh
+fi
 
 # start hdfs daemons if hdfs is present
 if [ -f "${HADOOP_HDFS_HOME}"/bin/start-dfs.sh ]; then

@@ -283,6 +283,9 @@ Trunk (unreleased changes)
     HADOOP-7353. Cleanup FsShell and prevent masking of RTE stack traces.
     (Daryn Sharp via todd)
 
+    HADOOP-7356. RPM packages broke bin/hadoop script in developer environment.
+    (Eric Yang via todd)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

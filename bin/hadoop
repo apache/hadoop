@@ -21,7 +21,11 @@ bin=`which $0`
 bin=`dirname ${bin}`
 bin=`cd "$bin"; pwd`
  
-. "$bin"/../libexec/hadoop-config.sh
+if [ -e "$bin/../libexec/hadoop-config.sh" ]; then
+  . "$bin"/../libexec/hadoop-config.sh
+else
+  . "$bin"/hadoop-config.sh
+fi
 
 function print_usage(){
   echo "Usage: hadoop [--config confdir] COMMAND"
