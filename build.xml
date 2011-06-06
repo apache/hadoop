@@ -753,6 +753,7 @@
         <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml" />
         <sysproperty key="java.library.path"
           value="${build.native}/lib:${lib.dir}/native/${build.platform}"/>
+        <sysproperty key="java.security.egd" value="file:///dev/urandom" />
         <sysproperty key="install.c++.examples" value="${install.c++.examples}"/>
         <!-- set io.compression.codec.lzo.class in the child jvm only if it is set -->
         <syspropertyset dynamic="no">

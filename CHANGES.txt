@@ -526,6 +526,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7346. Send back nicer error message to clients using outdated IPC
     version. (todd)
 
+    HADOOP-7335. Force entropy to come from non-true random for tests.
+    (todd via eli)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
