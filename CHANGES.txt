@@ -257,6 +257,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7335. Force entropy to come from non-true random for tests.
     (todd via eli)
 
+    HADOOP-7325. The hadoop command should not accept class names starting with
+    a hyphen. (Brock Noland via todd)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
