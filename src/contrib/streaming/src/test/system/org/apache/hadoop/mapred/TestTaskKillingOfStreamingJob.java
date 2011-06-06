@@ -27,7 +27,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.mapred.JobClient.NetworkedJob;
 import org.apache.hadoop.mapreduce.test.system.JTProtocol;
 import org.apache.hadoop.mapreduce.test.system.JobInfo;
 import org.apache.hadoop.mapreduce.test.system.MRCluster;
@@ -94,7 +93,7 @@ public class TestTaskKillingOfStreamingJob {
         jtClient.isTaskStarted(taskInfo));
 
     JobInfo jInfo = wovenClient.getJobInfo(jobId); 
-    NetworkedJob networkJob = client.new NetworkedJob(jInfo.getStatus());
+    RunningJob networkJob = client.getJob(jobId);
     TaskID tID = TaskID.downgrade(taskInfo.getTaskID());
     TaskAttemptID taskAttID = new TaskAttemptID(tID, 0);
     networkJob.killTask(taskAttID, false);
@@ -153,7 +152,7 @@ public class TestTaskKillingOfStreamingJob {
         jtClient.isTaskStarted(taskInfo));
     
     JobInfo jInfo = wovenClient.getJobInfo(jobId);
-    NetworkedJob networkJob = client.new NetworkedJob(jInfo.getStatus());
+    RunningJob networkJob = client.getJob(jobId);
     TaskID tID = TaskID.downgrade(taskInfo.getTaskID());
     TaskAttemptID taskAttID = new TaskAttemptID(tID, 0);
     networkJob.killTask(taskAttID, true);

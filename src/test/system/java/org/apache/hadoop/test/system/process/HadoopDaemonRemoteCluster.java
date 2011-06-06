@@ -124,9 +124,11 @@ public abstract class HadoopDaemonRemoteCluster
         }
       } finally {
         try {
-          reader.close();
+          if(reader != null) {
+              reader.close();
+          }
         } catch (IOException e) {
-          LOG.warn("Could not close reader");
+          LOG.warn("Could not close reader", e);
         }
       }
       LOG.info("Created HadoopDaemonInfo for " + cmd + " " + role + " from " 

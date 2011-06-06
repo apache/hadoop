@@ -30,7 +30,6 @@ import org.apache.hadoop.mapreduce.test.system.MRCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.UtilsForTests;
-import org.apache.hadoop.mapred.JobClient.NetworkedJob;
 import org.apache.hadoop.examples.SleepJob;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -340,11 +339,9 @@ public class TestTaskTrackerInfoSuccessfulFailedJobs {
     Assert.assertTrue("Task has not been started for 1 min.", 
       count != 60);
 
-    NetworkedJob networkJob = (cluster.getJTClient().getClient()).new 
-      NetworkedJob(jInfo.getStatus());
     TaskID tID = TaskID.downgrade(taskInfo.getTaskID());
     TaskAttemptID taskAttID = new TaskAttemptID(tID , 0);
-    networkJob.killTask(taskAttID, false);
+    rJob.killTask(taskAttID, false);
 
     count = 0;
     LOG.info("Waiting till the job is completed...");
