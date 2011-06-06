@@ -251,6 +251,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7355  Add audience and stability annotations to HttpServer class
     (stack)
 
+    HADOOP-7335. Force entropy to come from non-true random for tests.
+    (todd via eli)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
