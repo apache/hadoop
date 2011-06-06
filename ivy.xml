@@ -301,5 +301,9 @@
       rev="${jsch.version}"
       conf="common->default">
     </dependency>
+    <dependency org="com.google.guava"
+      name="guava"
+      rev="${guava.version}"
+      conf="common->default"/>
     </dependencies>
 </ivy-module>
