@@ -1408,23 +1408,19 @@ false
     SNAPPY
     </title>
     <para>
-        To set SNAPPY compression on a column family, do as following:
+        If snappy is installed, HBase can make use of it (courtesy of
+        <link xlink:href="http://code.google.com/p/hadoop-snappy/">hadoop-snappy</link>).
+
         <orderedlist>
             <listitem>
                 <para>
-                 Install hadoop-snappy using these instructions: http://code.google.com/p/hadoop-snappy/
+                    Build and install <link xlink:href="http://code.google.com/p/snappy/">snappy</link> on all nodes
+                    of your cluster.
                 </para>
             </listitem>
             <listitem>
                 <para>
-                    You need to ensure the hadoop-snappy libs (incl. the native libs) are in the HBase classpath. One way to do this is
-                    to just symlink the libs from <filename>HADOOP_HOME/lib</filename> to <filename>HBASE_HOME/lib</filename>.
-                    This needs to be done on all HBase nodes, as with LZO.
-                </para>
-            </listitem>
-            <listitem>
-                <para>
-        Use CompressionTest to verify snappy support is enabled and the libs can be loaded:
+        Use CompressionTest to verify snappy support is enabled and the libs can be loaded ON ALL NODES of your cluster:
         <programlisting>$ hbase org.apache.hadoop.hbase.util.CompressionTest hdfs://host/path/to/hbase snappy</programlisting>
                 </para>
             </listitem>

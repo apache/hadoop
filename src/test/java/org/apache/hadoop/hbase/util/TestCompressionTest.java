@@ -54,6 +54,23 @@ public class TestCompressionTest {
     assertFalse(CompressionTest.testCompression("LZO"));
     assertTrue(CompressionTest.testCompression("NONE"));
     assertTrue(CompressionTest.testCompression("GZ"));
-    assertFalse(CompressionTest.testCompression("SNAPPY"));
+
+    if (isCompressionAvailable("org.apache.hadoop.io.compress.SnappyCodec")) {
+      assertTrue(CompressionTest.testCompression("SNAPPY"));
+    }
+    else {
+      assertFalse(CompressionTest.testCompression("SNAPPY"));
+    }
   }
+
+  private boolean isCompressionAvailable(String codecClassName) {
+    try {
+      Thread.currentThread().getContextClassLoader().loadClass(codecClassName);
+      return true;
+    }
+    catch (Exception ex) {
+      return false;
+    }
+  }
+
 }

@@ -10,6 +10,12 @@
     <title>Building HBase</title>
     <para>This chapter will be of interest only to those building HBase from source.
     </para>
+    <section xml:id="build.snappy">
+        <title>Building in snappy compression support</title>
+        <p>Pass <code>-Dsnappy</code> to trigger the snappy maven profile for building
+            snappy native libs into hbase.</p>
+    </section>
+
     <section xml:id="mvn_repo">
         <title>Adding an HBase release to Apache's Maven Repository</title>
         <para>Follow the instructions at

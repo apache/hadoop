@@ -241,6 +241,8 @@ Release 0.91.0 - Unreleased
    HBASE-3592  Guava snuck back in as a dependency via hbase-3777
    HBASE-3808  Implement Executor.toString for master handlers at least
                (Brock Noland)
+   HBASE-3873  Mavenize Hadoop Snappy JAR/SOs project dependencies
+               (Alejandro Abdelnur)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

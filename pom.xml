@@ -416,10 +416,15 @@
             <exclude>**/*$*</exclude>
             <exclude>${test.exclude.pattern}</exclude>
           </excludes>
+          <environmentVariables>
+            <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/nativelib</LD_LIBRARY_PATH>
+            <DYLD_LIBRARY_PATH>${env.DYLD_LIBRARY_PATH}:${project.build.directory}/nativelib</DYLD_LIBRARY_PATH>
+          </environmentVariables>
         </configuration>
       </plugin>
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.6</version>
         <executions>
           <execution>
             <id>generate</id>
@@ -472,7 +477,45 @@
               <tasks>
                 <replace file="${project.build.outputDirectory}/hbase-default.xml"
                   token="@@@VERSION@@@" value="${project.version}" />
+                <mkdir dir="${project.build.directory}/nativelib"/>
+                <exec executable="tar" dir="${project.build.directory}/nativelib" failonerror="false">
+                  <arg value="xf"/>
+                  <arg value="hadoop-snappy-nativelibs.tar"/>
+                </exec>
               </tasks>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>package</id>
+            <phase>package</phase>
+            <configuration>
+              <target>
+                <!-- Complements the assembly -->
+
+                <mkdir dir="${project.build.directory}/${project.artifactId}-${project.version}/${project.artifactId}-${project.version}/lib/native/${build.platform}"/>
+
+                <!-- Using Unix cp to preserve symlinks, using script to handle wildcards -->
+                <echo file="${project.build.directory}/copynativelibs.sh">
+                    if [ `ls ${project.build.directory}/nativelib | wc -l` -ne 0 ]; then
+                      cp -PR ${project.build.directory}/nativelib/lib* ${project.build.directory}/${project.artifactId}-${project.version}/${project.artifactId}-${project.version}/lib/native/${build.platform}
+                    fi
+                </echo>
+                <exec executable="sh" dir="${project.build.directory}" failonerror="true">
+                    <arg line="./copynativelibs.sh"/>
+                </exec>
+
+                <!-- Using Unix tar to preserve symlinks -->
+                <exec executable="tar" failonerror="yes"
+                  dir="${project.build.directory}/${project.artifactId}-${project.version}">
+                    <arg value="czf"/>
+                    <arg value="${project.build.directory}/${project.artifactId}-${project.version}.tar.gz"/>
+                    <arg value="."/>
+                </exec>
+
+              </target>
             </configuration>
             <goals>
               <goal>run</goal>
@@ -587,6 +630,7 @@
     <stax-api.version>1.0.1</stax-api.version>
     <thrift.version>0.6.1</thrift.version>
     <zookeeper.version>3.3.3</zookeeper.version>
+    <hadoop-snappy.version>0.0.1-cdh3u1-SNAPSHOT</hadoop-snappy.version>
 
     <package.prefix>/usr</package.prefix>	           
     <package.conf.dir>/etc/hbase</package.conf.dir>  
@@ -974,6 +1018,78 @@
                 <version>0.8</version>
               </dependency>
             </dependencies>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    
+    <profile>
+      <id>os.linux</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+        <os>
+          <family>Linux</family>
+        </os>
+      </activation>
+      <properties>
+        <build.platform>${os.name}-${os.arch}-${sun.arch.data.model}</build.platform>
+      </properties>
+    </profile>
+    <profile>
+        <id>os.mac</id>
+        <activation>
+            <os>
+                <family>Mac</family>
+            </os>
+        </activation>
+        <properties>
+            <build.platform>Mac_OS_X-${sun.arch.data.model}</build.platform>
+        </properties>
+    </profile>
+
+    <profile>
+      <id>hadoop-snappy</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+        <property>
+          <name>snappy</name>
+        </property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-snappy</artifactId>
+          <version>${hadoop-snappy.version}</version>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>get-hadoop-snappy-native</id>
+                <phase>generate-resources</phase>
+                <goals>
+                  <goal>copy</goal>
+                </goals>
+                <configuration>
+                  <artifactItems>
+                    <artifactItem>
+                      <groupId>org.apache.hadoop</groupId>
+                      <artifactId>hadoop-snappy</artifactId>
+                      <version>${hadoop-snappy.version}</version>
+                      <classifier>${build.platform}</classifier>
+                      <type>tar</type>
+                      <overWrite>false</overWrite>
+                      <outputDirectory>${project.build.directory}/nativelib</outputDirectory>
+                      <destFileName>hadoop-snappy-nativelibs.tar</destFileName>
+                    </artifactItem>
+                  </artifactItems>
+                </configuration>
+              </execution>
+            </executions>
           </plugin>
         </plugins>
       </build>
