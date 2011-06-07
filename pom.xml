@@ -630,7 +630,7 @@
     <stax-api.version>1.0.1</stax-api.version>
     <thrift.version>0.6.1</thrift.version>
     <zookeeper.version>3.3.3</zookeeper.version>
-    <hadoop-snappy.version>0.0.1-cdh3u1-SNAPSHOT</hadoop-snappy.version>
+    <hadoop-snappy.version>0.0.1-SNAPSHOT</hadoop-snappy.version>
 
     <package.prefix>/usr</package.prefix>	           
     <package.conf.dir>/etc/hbase</package.conf.dir>  

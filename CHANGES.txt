@@ -113,6 +113,8 @@ Release 0.91.0 - Unreleased
    HBASE-3903  A successful write to client write-buffer may be lost or not
                visible (Doug Meil)
    HBASE-3894  Thread contention over row locks set monitor (Dave Latham)
+   HBASE-3959  hadoop-snappy version in the pom.xml is incorrect
+               (Alejandro Abdelnur)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
