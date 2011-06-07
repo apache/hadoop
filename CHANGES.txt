@@ -59,6 +59,9 @@ Release 0.20.205.0 - unreleased
     MAPREDUCE-2529. Add support for regex-based shuffle metric counting
     exceptions. (Thomas Graves via cdouglas)
 
+    HDFS-2044. TestQueueProcessingStatistics failing automatic test due to 
+    timing issues. (mattf)
+
 Release 0.20.204.0 - unreleased
 
   NEW FEATURES
