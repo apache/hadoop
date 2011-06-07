@@ -199,6 +199,9 @@ Trunk (unreleased changes)
     HADOOP-7316. Add public javadocs to FSDataInputStream and
     FSDataOutputStream. (eli)
 
+    HADOOP-7323. Add capability to resolve compression codec based on codec
+    name. (Alejandro Abdelnur via tomwhite)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

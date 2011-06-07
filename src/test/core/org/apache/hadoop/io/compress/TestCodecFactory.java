@@ -131,12 +131,41 @@ public class TestCodecFactory extends TestCase {
     checkCodec("default factory for .gz", GzipCodec.class, codec);
     codec = factory.getCodecByClassName(GzipCodec.class.getCanonicalName());
     checkCodec("default factory for gzip codec", GzipCodec.class, codec);
-    
+    codec = factory.getCodecByName("gzip");
+    checkCodec("default factory for gzip codec", GzipCodec.class, codec);
+    codec = factory.getCodecByName("GZIP");
+    checkCodec("default factory for gzip codec", GzipCodec.class, codec);
+    codec = factory.getCodecByName("GZIPCodec");
+    checkCodec("default factory for gzip codec", GzipCodec.class, codec);
+    codec = factory.getCodecByName("gzipcodec");
+    checkCodec("default factory for gzip codec", GzipCodec.class, codec);
+    Class klass = factory.getCodecClassByName("gzipcodec");
+    assertEquals(GzipCodec.class, klass);
+
     codec = factory.getCodec(new Path("/tmp/foo.bz2"));
     checkCodec("default factory for .bz2", BZip2Codec.class, codec);
     codec = factory.getCodecByClassName(BZip2Codec.class.getCanonicalName());
     checkCodec("default factory for bzip2 codec", BZip2Codec.class, codec);
-    
+    codec = factory.getCodecByName("bzip2");
+    checkCodec("default factory for bzip2 codec", BZip2Codec.class, codec);
+    codec = factory.getCodecByName("bzip2codec");
+    checkCodec("default factory for bzip2 codec", BZip2Codec.class, codec);
+    codec = factory.getCodecByName("BZIP2");
+    checkCodec("default factory for bzip2 codec", BZip2Codec.class, codec);
+    codec = factory.getCodecByName("BZIP2CODEC");
+    checkCodec("default factory for bzip2 codec", BZip2Codec.class, codec);
+
+    codec = factory.getCodecByClassName(DeflateCodec.class.getCanonicalName());
+    checkCodec("default factory for deflate codec", DeflateCodec.class, codec);
+    codec = factory.getCodecByName("deflate");
+    checkCodec("default factory for deflate codec", DeflateCodec.class, codec);
+    codec = factory.getCodecByName("deflatecodec");
+    checkCodec("default factory for deflate codec", DeflateCodec.class, codec);
+    codec = factory.getCodecByName("DEFLATE");
+    checkCodec("default factory for deflate codec", DeflateCodec.class, codec);
+    codec = factory.getCodecByName("DEFLATECODEC");
+    checkCodec("default factory for deflate codec", DeflateCodec.class, codec);
+
     factory = setClasses(new Class[0]);
     codec = factory.getCodec(new Path("/tmp/foo.bar"));
     assertEquals("empty codec bar codec", null, codec);
@@ -164,20 +193,32 @@ public class TestCodecFactory extends TestCase {
     assertEquals("full factory for .bz2", null, codec);
     codec = factory.getCodecByClassName(BZip2Codec.class.getCanonicalName());
     assertEquals("full codec bzip2 codec", null, codec);
-    
+
     codec = factory.getCodec(new Path("/tmp/foo.bar"));
     checkCodec("full factory bar codec", BarCodec.class, codec);
     codec = factory.getCodecByClassName(BarCodec.class.getCanonicalName());
     checkCodec("full factory bar codec", BarCodec.class, codec);
-    
+    codec = factory.getCodecByName("bar");
+    checkCodec("full factory bar codec", BarCodec.class, codec);
+    codec = factory.getCodecByName("BAR");
+    checkCodec("full factory bar codec", BarCodec.class, codec);
+
     codec = factory.getCodec(new Path("/tmp/foo/baz.foo.bar"));
     checkCodec("full factory foo bar codec", FooBarCodec.class, codec);
     codec = factory.getCodecByClassName(FooBarCodec.class.getCanonicalName());
     checkCodec("full factory foo bar codec", FooBarCodec.class, codec);
-    
+    codec = factory.getCodecByName("foobar");
+    checkCodec("full factory foo bar codec", FooBarCodec.class, codec);
+    codec = factory.getCodecByName("FOOBAR");
+    checkCodec("full factory foo bar codec", FooBarCodec.class, codec);
+
     codec = factory.getCodec(new Path("/tmp/foo.foo"));
     checkCodec("full factory foo codec", FooCodec.class, codec);
     codec = factory.getCodecByClassName(FooCodec.class.getCanonicalName());
+    checkCodec("full factory foo codec", FooCodec.class, codec);
+    codec = factory.getCodecByName("foo");
+    checkCodec("full factory foo codec", FooCodec.class, codec);
+    codec = factory.getCodecByName("FOO");
     checkCodec("full factory foo codec", FooCodec.class, codec);
   }
 }

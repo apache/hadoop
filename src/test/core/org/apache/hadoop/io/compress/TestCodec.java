@@ -98,6 +98,12 @@ public class TestCodec {
   }
 
   @Test
+  public void testDeflateCodec() throws IOException {
+    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.DeflateCodec");
+    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.DeflateCodec");
+  }
+
+  @Test
   public void testGzipCodecWithParam() throws IOException {
     Configuration conf = new Configuration(this.conf);
     ZlibFactory.setCompressionLevel(conf, CompressionLevel.BEST_COMPRESSION);
@@ -425,6 +431,13 @@ public class TestCodec {
     sequenceFileCodecTest(conf, 0, "org.apache.hadoop.io.compress.BZip2Codec", 100);
     sequenceFileCodecTest(conf, 100, "org.apache.hadoop.io.compress.BZip2Codec", 100);
     sequenceFileCodecTest(conf, 200000, "org.apache.hadoop.io.compress.BZip2Codec", 1000000);
+  }
+
+  @Test
+  public void testSequenceFileDeflateCodec() throws IOException, ClassNotFoundException,
+      InstantiationException, IllegalAccessException {
+    sequenceFileCodecTest(conf, 100, "org.apache.hadoop.io.compress.DeflateCodec", 100);
+    sequenceFileCodecTest(conf, 200000, "org.apache.hadoop.io.compress.DeflateCodec", 1000000);
   }
 
   private static void sequenceFileCodecTest(Configuration conf, int lines, 

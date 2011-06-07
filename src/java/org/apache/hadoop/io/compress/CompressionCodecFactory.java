@@ -43,7 +43,14 @@ public class CompressionCodecFactory {
    * automatically supports finding the longest matching suffix. 
    */
   private SortedMap<String, CompressionCodec> codecs = null;
-  
+
+    /**
+     * A map from the reversed filename suffixes to the codecs.
+     * This is probably overkill, because the maps should be small, but it
+     * automatically supports finding the longest matching suffix.
+     */
+    private Map<String, CompressionCodec> codecsByName = null;
+
   /**
    * A map from class names to the codecs
    */
@@ -53,8 +60,15 @@ public class CompressionCodecFactory {
     String suffix = codec.getDefaultExtension();
     codecs.put(new StringBuilder(suffix).reverse().toString(), codec);
     codecsByClassName.put(codec.getClass().getCanonicalName(), codec);
+
+    String codecName = codec.getClass().getSimpleName();
+    codecsByName.put(codecName.toLowerCase(), codec);
+    if (codecName.endsWith("Codec")) {
+      codecName = codecName.substring(0, codecName.length() - "Codec".length());
+      codecsByName.put(codecName.toLowerCase(), codec);
+    }
   }
-  
+
   /**
    * Print the extension map out as a string.
    */
@@ -142,6 +156,7 @@ public class CompressionCodecFactory {
   public CompressionCodecFactory(Configuration conf) {
     codecs = new TreeMap<String, CompressionCodec>();
     codecsByClassName = new HashMap<String, CompressionCodec>();
+    codecsByName = new HashMap<String, CompressionCodec>();
     List<Class<? extends CompressionCodec>> codecClasses = getCodecClasses(conf);
     if (codecClasses == null) {
       addCodec(new GzipCodec());
@@ -189,6 +204,56 @@ public class CompressionCodecFactory {
     }
     return codecsByClassName.get(classname);
   }
+
+    /**
+     * Find the relevant compression codec for the codec's canonical class name
+     * or by codec alias.
+     * <p/>
+     * Codec aliases are case insensitive.
+     * <p/>
+     * The code alias is the short class name (without the package name).
+     * If the short class name ends with 'Codec', then there are two aliases for
+     * the codec, the complete short class name and the short class name without
+     * the 'Codec' ending. For example for the 'GzipCodec' codec class name the
+     * alias are 'gzip' and 'gzipcodec'.
+     *
+     * @param codecName the canonical class name of the codec
+     * @return the codec object
+     */
+    public CompressionCodec getCodecByName(String codecName) {
+      if (codecsByClassName == null) {
+        return null;
+      }
+      CompressionCodec codec = getCodecByClassName(codecName);
+      if (codec == null) {
+        // trying to get the codec by name in case the name was specified instead a class
+        codec = codecsByName.get(codecName.toLowerCase());
+      }
+      return codec;
+    }
+
+    /**
+     * Find the relevant compression codec for the codec's canonical class name
+     * or by codec alias and returns its implemetation class.
+     * <p/>
+     * Codec aliases are case insensitive.
+     * <p/>
+     * The code alias is the short class name (without the package name).
+     * If the short class name ends with 'Codec', then there are two aliases for
+     * the codec, the complete short class name and the short class name without
+     * the 'Codec' ending. For example for the 'GzipCodec' codec class name the
+     * alias are 'gzip' and 'gzipcodec'.
+     *
+     * @param codecName the canonical class name of the codec
+     * @return the codec class
+     */
+    public Class<? extends CompressionCodec> getCodecClassByName(String codecName) {
+      CompressionCodec codec = getCodecByName(codecName);
+      if (codec == null) {
+        return null;
+      }
+      return codec.getClass();
+    }
 
   /**
    * Removes a suffix from a filename, if it has it.
