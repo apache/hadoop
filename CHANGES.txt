@@ -245,6 +245,8 @@ Release 0.91.0 - Unreleased
                (Brock Noland)
    HBASE-3873  Mavenize Hadoop Snappy JAR/SOs project dependencies
                (Alejandro Abdelnur)
+   HBASE-3941  "hbase version" command line should print version info
+               (Jolly Chen)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
