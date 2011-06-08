@@ -349,7 +349,11 @@ public class JobInProgress {
     this.mapFailuresPercent = conf.getMaxMapTaskFailuresPercent();
     this.reduceFailuresPercent = conf.getMaxReduceTaskFailuresPercent();
 
-    this.queueMetrics = this.jobtracker.getQueueManager().getQueue(queueName).getMetrics();
+    Queue queue = this.jobtracker.getQueueManager().getQueue(queueName);
+    if (queue == null) {
+      throw new IOException("Queue \"" + queueName + "\" does not exist");
+    }
+    this.queueMetrics = queue.getMetrics();
 
     // Check task limits
     checkTaskLimits();
@@ -427,7 +431,11 @@ public class JobInProgress {
       this.profile = new JobProfile(user, jobId, 
           jobFile, url, conf.getJobName(), queueName);
 
-      this.queueMetrics = this.jobtracker.getQueueManager().getQueue(queueName).getMetrics();
+      Queue queue = this.jobtracker.getQueueManager().getQueue(queueName);
+      if (queue == null) {
+        throw new IOException("Queue \"" + queueName + "\" does not exist");
+      }
+      this.queueMetrics = queue.getMetrics();
       this.queueMetrics.addPrepJob(conf, jobId);
 
       this.submitHostName = conf.getJobSubmitHostName();
