@@ -308,6 +308,8 @@ Release 0.90.4 - Unreleased
                the same time (Jieshan Bean)
    HBASE-3934  MemStoreFlusher.getMemStoreLimit() doesn't honor defaultLimit
                (Ted Yu)
+   HBASE-3946  The splitted region can be online again while the standby
+               hmaster becomes the active one (Jieshan Bean)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the

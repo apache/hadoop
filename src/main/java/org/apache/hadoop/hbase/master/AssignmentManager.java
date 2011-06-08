@@ -1687,14 +1687,17 @@ public class AssignmentManager extends ZooKeeperListener {
         Result result = region.getSecond();
         // If region was in transition (was in zk) force it offline for reassign
         try {
-          ZKAssign.createOrForceNodeOffline(watcher, regionInfo,
-            this.master.getServerName());
+          // Process with existing RS shutdown code  
+          boolean isNotDisabledAndSplitted =
+            ServerShutdownHandler.processDeadRegion(regionInfo, result, this,
+            this.catalogTracker);
+          if (isNotDisabledAndSplitted) {
+            ZKAssign.createOrForceNodeOffline(watcher, regionInfo,
+              master.getServerName()); 
+          }
         } catch (KeeperException.NoNodeException nne) {
           // This is fine
         }
-        // Process with existing RS shutdown code
-        ServerShutdownHandler.processDeadRegion(regionInfo, result, this,
-            this.catalogTracker);
       }
     }
   }
