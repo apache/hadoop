@@ -1493,6 +1493,8 @@
       <param.listofitems>
         <tarfileset dir="${build.dir}" mode="664">
           <exclude name="${final.name}/bin/*" />
+          <exclude name="${final.name}/sbin/*" />
+          <exclude name="${final.name}/libexec/*" />
           <exclude name="${final.name}/contrib/*/bin/*" />
           <exclude name="${final.name}/src/contrib/ec2/bin/*" />
           <exclude name="${final.name}/src/contrib/ec2/bin/image/*" />
@@ -1500,6 +1502,8 @@
         </tarfileset>
         <tarfileset dir="${build.dir}" mode="755">
           <include name="${final.name}/bin/*" />
+          <include name="${final.name}/sbin/*" />
+          <include name="${final.name}/libexec/*" />
           <include name="${final.name}/contrib/*/bin/*" />
           <include name="${final.name}/src/contrib/ec2/bin/*" />
           <include name="${final.name}/src/contrib/ec2/bin/image/*" />
