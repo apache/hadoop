@@ -32,7 +32,7 @@ this="$bin/$script"
 
 # the root of the Hadoop installation
 export HADOOP_PREFIX=`dirname "$this"`/..
-if [ -d ${HADOOP_PREFIX}/share/hadoop ]; then
+if [ -d ${HADOOP_PREFIX}/share/hadoop/bin ]; then
   export HADOOP_HOME=${HADOOP_PREFIX}/share/hadoop
 else
   export HADOOP_HOME=${HADOOP_PREFIX}
