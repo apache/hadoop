@@ -4,6 +4,10 @@ Release 0.20.205.0 - unreleased
 
   BUG FIXES
 
+    HDFS-1878. TestHDFSServerPorts unit test failure - race condition 
+    in FSNamesystem.close() causes NullPointerException without serious
+    consequence. (mattf)
+
     MAPREDUCE-2452. Moves the cancellation of delegation tokens to a separate
     thread. (ddas)
 
