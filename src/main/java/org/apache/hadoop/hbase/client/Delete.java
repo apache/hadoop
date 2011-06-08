@@ -69,12 +69,13 @@ import java.util.TreeMap;
  * timestamp.  The constructor timestamp is not referenced.
  */
 public class Delete implements Writable, Row, Comparable<Row> {
-  private static final byte DELETE_VERSION = (byte)2;
+  private static final byte DELETE_VERSION = (byte)3;
 
   private byte [] row = null;
   // This ts is only used when doing a deleteRow.  Anything less,
   private long ts;
   private long lockId = -1L;
+  private boolean writeToWAL = true;
   private final Map<byte [], List<KeyValue>> familyMap =
     new TreeMap<byte [], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
 
@@ -128,6 +129,7 @@ public class Delete implements Writable, Row, Comparable<Row> {
     this.ts = d.getTimeStamp();
     this.lockId = d.getLockId();
     this.familyMap.putAll(d.getFamilyMap());
+    this.writeToWAL = d.writeToWAL;
   }
 
   public int compareTo(final Row d) {
@@ -382,6 +384,9 @@ public class Delete implements Writable, Row, Comparable<Row> {
     this.row = Bytes.readByteArray(in);
     this.ts = in.readLong();
     this.lockId = in.readLong();
+    if (version > 2) {
+      this.writeToWAL = in.readBoolean();
+    }
     this.familyMap.clear();
     int numFamilies = in.readInt();
     for(int i=0;i<numFamilies;i++) {
@@ -413,6 +418,7 @@ public class Delete implements Writable, Row, Comparable<Row> {
     Bytes.writeByteArray(out, this.row);
     out.writeLong(this.ts);
     out.writeLong(this.lockId);
+    out.writeBoolean(this.writeToWAL);
     out.writeInt(familyMap.size());
     for(Map.Entry<byte [], List<KeyValue>> entry : familyMap.entrySet()) {
       Bytes.writeByteArray(out, entry.getKey());
@@ -459,5 +465,21 @@ public class Delete implements Writable, Row, Comparable<Row> {
     byte [][] parts = KeyValue.parseColumn(column);
     this.deleteColumn(parts[0], parts[1], HConstants.LATEST_TIMESTAMP);
     return this;
+  }
+
+  /**
+   * @return true if edits should be applied to WAL, false if not
+   */
+  public boolean getWriteToWAL() {
+    return this.writeToWAL;
+  }
+
+  /**
+   * Set whether this Delete should be written to the WAL or not.
+   * Not writing the WAL means you may lose edits on server crash.
+   * @param write true if edits should be written to WAL, false if not
+   */
+  public void setWriteToWAL(boolean write) {
+    this.writeToWAL = write;
   }
 }

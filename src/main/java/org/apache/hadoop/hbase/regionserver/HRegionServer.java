@@ -2068,7 +2068,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       throws IOException {
     checkOpen();
     try {
-      boolean writeToWAL = true;
+      boolean writeToWAL = delete.getWriteToWAL();
       this.requestCount.incrementAndGet();
       HRegion region = getRegion(regionName);
       if (!region.getRegionInfo().isMetaTable()) {
@@ -2088,7 +2088,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     checkOpen();
     HRegion region = null;
     try {
-      boolean writeToWAL = true;
       region = getRegion(regionName);
       if (!region.getRegionInfo().isMetaTable()) {
         this.cacheFlusher.reclaimMemStoreMemory();
@@ -2098,7 +2097,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       for (Delete delete : deletes) {
         this.requestCount.incrementAndGet();
         locks[i] = getLockFromId(delete.getLockId());
-        region.delete(delete, locks[i], writeToWAL);
+        region.delete(delete, locks[i], delete.getWriteToWAL());
         i++;
       }
     } catch (WrongRegionException ex) {
