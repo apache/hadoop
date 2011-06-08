@@ -564,7 +564,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       if (pendingReplications != null) pendingReplications.stop();
       if (hbthread != null) hbthread.interrupt();
       if (replthread != null) replthread.interrupt();
-      if (replmon != null) replmon = null;
       if (dnthread != null) dnthread.interrupt();
       if (smmthread != null) smmthread.interrupt();
       if (dtSecretManager != null) dtSecretManager.stopThreads();
