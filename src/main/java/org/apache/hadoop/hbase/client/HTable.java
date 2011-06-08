@@ -393,7 +393,7 @@ public class HTable implements HTableInterface, Closeable {
           return true;
         }
         HRegionInfo info = Writables.getHRegionInfo(bytes);
-        if (Bytes.equals(info.getTableName(), getTableName())) {
+        if (Bytes.equals(info.getTableDesc().getName(), getTableName())) {
           if (!(info.isOffline() || info.isSplit())) {
             startKeyList.add(info.getStartKey());
             endKeyList.add(info.getEndKey());
@@ -423,7 +423,7 @@ public class HTable implements HTableInterface, Closeable {
             rowResult.getValue(HConstants.CATALOG_FAMILY,
                 HConstants.REGIONINFO_QUALIFIER));
 
-        if (!(Bytes.equals(info.getTableName(), getTableName()))) {
+        if (!(Bytes.equals(info.getTableDesc().getName(), getTableName()))) {
           return false;
         }
 

@@ -82,12 +82,9 @@ public class TestCompactSelection extends TestCase {
 
     HTableDescriptor htd = new HTableDescriptor(Bytes.toBytes("table"));
     htd.addFamily(hcd);
-    HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
-
+    HRegionInfo info = new HRegionInfo(htd, null, null, false);
     HLog hlog = new HLog(fs, logdir, oldLogDir, conf);
-    HRegion.createHRegion(info, basedir, conf, htd);
-    Path tableDir = new Path(basedir, Bytes.toString(htd.getName()));
-    HRegion region = new HRegion(tableDir, hlog, fs, conf, info, null);
+    HRegion region = new HRegion(basedir, hlog, fs, conf, info, null);
 
     store = new Store(basedir, region, hcd, fs, conf);
     TEST_FILE = StoreFile.getRandomFilename(fs, store.getHomedir());

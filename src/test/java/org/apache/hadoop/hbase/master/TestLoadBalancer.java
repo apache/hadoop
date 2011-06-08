@@ -486,7 +486,7 @@ public class TestLoadBalancer {
       Bytes.putInt(start, 0, numRegions << 1);
       Bytes.putInt(end, 0, (numRegions << 1) + 1);
       HRegionInfo hri = new HRegionInfo(
-          Bytes.toBytes("table" + i), start, end,
+          new HTableDescriptor(Bytes.toBytes("table" + i)), start, end,
           false, regionId++);
       regions.add(hri);
     }

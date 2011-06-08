@@ -261,7 +261,7 @@ class HMerge {
               Bytes.toString(HConstants.REGIONINFO_QUALIFIER));
         }
         HRegionInfo region = Writables.getHRegionInfo(regionInfoValue);
-        if (!Bytes.equals(region.getTableName(), this.tableName)) {
+        if (!Bytes.equals(region.getTableDesc().getName(), this.tableName)) {
           return null;
         }
         return region;

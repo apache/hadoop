@@ -180,8 +180,7 @@ public class TestCoprocessorInterface extends HBaseTestCase {
 
   HRegion reopenRegion(final HRegion closedRegion, Class<?> implClass)
       throws IOException {
-    //HRegionInfo info = new HRegionInfo(tableName, null, null, false);
-    HRegion r = new HRegion(closedRegion.getTableDir(), closedRegion.getLog(),
+    HRegion r = new HRegion(closedRegion.getRegionDir(), closedRegion.getLog(),
         closedRegion.getFilesystem(), closedRegion.getConf(),
         closedRegion.getRegionInfo(), null);
     r.initialize();
@@ -212,9 +211,9 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     for(byte [] family : families) {
       htd.addFamily(new HColumnDescriptor(family));
     }
-    HRegionInfo info = new HRegionInfo(tableName, null, null, false);
+    HRegionInfo info = new HRegionInfo(htd, null, null, false);
     Path path = new Path(DIR + callingMethod);
-    HRegion r = HRegion.createHRegion(info, path, conf, htd);
+    HRegion r = HRegion.createHRegion(info, path, conf);
 
     // this following piece is a hack.
     RegionCoprocessorHost host = new RegionCoprocessorHost(r, null, conf);

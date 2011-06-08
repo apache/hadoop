@@ -136,8 +136,8 @@ public class TestMergeTable {
   private HRegion createRegion(final HTableDescriptor desc,
       byte [] startKey, byte [] endKey, int firstRow, int nrows, Path rootdir)
   throws IOException {
-    HRegionInfo hri = new HRegionInfo(desc.getName(), startKey, endKey);
-    HRegion region = HRegion.createHRegion(hri, rootdir, UTIL.getConfiguration(), desc);
+    HRegionInfo hri = new HRegionInfo(desc, startKey, endKey);
+    HRegion region = HRegion.createHRegion(hri, rootdir, UTIL.getConfiguration());
     LOG.info("Created region " + region.getRegionNameAsString());
     for(int i = firstRow; i < firstRow + nrows; i++) {
       Put put = new Put(Bytes.toBytes("row_" + String.format("%1$05d", i)));
@@ -156,11 +156,10 @@ public class TestMergeTable {
   protected void setupROOTAndMeta(Path rootdir, final HRegion [] regions)
   throws IOException {
     HRegion root =
-      HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO, rootdir,
-          UTIL.getConfiguration(), HTableDescriptor.ROOT_TABLEDESC);
+      HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO, rootdir, UTIL.getConfiguration());
     HRegion meta =
       HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO, rootdir,
-      UTIL.getConfiguration(), HTableDescriptor.META_TABLEDESC);
+      UTIL.getConfiguration());
     HRegion.addRegionToMETA(root, meta);
     for (HRegion r: regions) {
       HRegion.addRegionToMETA(meta, r);

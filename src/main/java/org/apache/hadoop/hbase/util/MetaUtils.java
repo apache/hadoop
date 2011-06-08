@@ -322,6 +322,78 @@ public class MetaUtils {
   }
 
   /**
+   * Offline version of the online TableOperation,
+   * org.apache.hadoop.hbase.master.AddColumn.
+   * @param tableName table name
+   * @param hcd Add this column to <code>tableName</code>
+   * @throws IOException e
+   */
+  public void addColumn(final byte [] tableName,
+      final HColumnDescriptor hcd)
+  throws IOException {
+    List<HRegionInfo> metas = getMETARows(tableName);
+    for (HRegionInfo hri: metas) {
+      final HRegion m = getMetaRegion(hri);
+      scanMetaRegion(m, new ScannerListener() {
+        private boolean inTable = true;
+
+        @SuppressWarnings("synthetic-access")
+        public boolean processRow(HRegionInfo info) throws IOException {
+          LOG.debug("Testing " + Bytes.toString(tableName) + " against " +
+            Bytes.toString(info.getTableDesc().getName()));
+          if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
+            this.inTable = false;
+            info.getTableDesc().addFamily(hcd);
+            updateMETARegionInfo(m, info);
+            return true;
+          }
+          // If we got here and we have not yet encountered the table yet,
+          // inTable will be false.  Otherwise, we've passed out the table.
+          // Stop the scanner.
+          return this.inTable;
+        }});
+    }
+  }
+
+  /**
+   * Offline version of the online TableOperation,
+   * org.apache.hadoop.hbase.master.DeleteColumn.
+   * @param tableName table name
+   * @param columnFamily Name of column name to remove.
+   * @throws IOException e
+   */
+  public void deleteColumn(final byte [] tableName,
+      final byte [] columnFamily) throws IOException {
+    List<HRegionInfo> metas = getMETARows(tableName);
+    for (HRegionInfo hri: metas) {
+      final HRegion m = getMetaRegion(hri);
+      scanMetaRegion(m, new ScannerListener() {
+        private boolean inTable = true;
+
+        @SuppressWarnings("synthetic-access")
+        public boolean processRow(HRegionInfo info) throws IOException {
+          if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
+            this.inTable = false;
+            info.getTableDesc().removeFamily(columnFamily);
+            updateMETARegionInfo(m, info);
+            Path tabledir = new Path(rootdir,
+              info.getTableDesc().getNameAsString());
+            Path p = Store.getStoreHomedir(tabledir, info.getEncodedName(),
+              columnFamily);
+            if (!fs.delete(p, true)) {
+              LOG.warn("Failed delete of " + p);
+            }
+            return false;
+          }
+          // If we got here and we have not yet encountered the table yet,
+          // inTable will be false.  Otherwise, we've passed out the table.
+          // Stop the scanner.
+          return this.inTable;
+        }});
+    }
+  }
+
+  /**
    * Update COL_REGIONINFO in meta region r with HRegionInfo hri
    *
    * @param r region
@@ -394,7 +466,7 @@ public class MetaUtils {
 
       public boolean processRow(HRegionInfo info) throws IOException {
         SL_LOG.debug("Testing " + info);
-        if (Bytes.equals(info.getTableName(),
+        if (Bytes.equals(info.getTableDesc().getName(),
             HConstants.META_TABLE_NAME)) {
           result.add(info);
           return false;

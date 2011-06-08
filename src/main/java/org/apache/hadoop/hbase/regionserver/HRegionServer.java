@@ -1348,7 +1348,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public void postOpenDeployTasks(final HRegion r, final CatalogTracker ct,
       final boolean daughter)
   throws KeeperException, IOException {
-    LOG.info("HRS.PostOpenDeployTasks");
     // Do checks to see if we need to compact (references or too many files)
     for (Store s : r.getStores().values()) {
       if (s.hasReferences() || s.needsCompaction()) {
@@ -1358,36 +1357,24 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
     // Add to online regions if all above was successful.
     addToOnlineRegions(r);
-    LOG.info("addToOnlineRegions is done" + r.getRegionInfo());
+
     // Update ZK, ROOT or META
     if (r.getRegionInfo().isRootRegion()) {
-
-      LOG.info("setRootLocation");
       RootLocationEditor.setRootLocation(getZooKeeper(),
        this.serverNameFromMasterPOV);
     } else if (r.getRegionInfo().isMetaRegion()) {
-      LOG.info("updateMetaLocation");
-
       MetaEditor.updateMetaLocation(ct, r.getRegionInfo(),
         this.serverNameFromMasterPOV);
     } else {
-      LOG.info("updateMetaLocation 111");
-
       if (daughter) {
-        LOG.info("updateMetaLocation 22");
-
         // If daughter of a split, update whole row, not just location.
         MetaEditor.addDaughter(ct, r.getRegionInfo(),
           this.serverNameFromMasterPOV);
       } else {
-        LOG.info("updateMetaLocation 33");
-
         MetaEditor.updateRegionLocation(ct, r.getRegionInfo(),
           this.serverNameFromMasterPOV);
       }
     }
-    LOG.info("END HRS.PostOpenDeployTasks");
-
   }
 
   /**

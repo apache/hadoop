@@ -560,9 +560,8 @@ public class RegionSplitter {
           if (sk.length == 0)
             sk = splitAlgo.firstRow();
           String startKey = splitAlgo.rowToStr(sk);
-          HTableDescriptor htd = table.getTableDescriptor();
           // check every Column Family for that region
-          for (HColumnDescriptor c : htd.getFamilies()) {
+          for (HColumnDescriptor c : hri.getTableDesc().getFamilies()) {
             Path cfDir = Store.getStoreHomedir(tableDir, hri.getEncodedName(),
                 c.getName());
             if (fs.exists(cfDir)) {

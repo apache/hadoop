@@ -288,7 +288,7 @@ public class MetaScanner {
         HRegionInfo info = Writables.getHRegionInfo(
             rowResult.getValue(HConstants.CATALOG_FAMILY,
                 HConstants.REGIONINFO_QUALIFIER));
-        if (!(Bytes.equals(info.getTableName(), tablename))) {
+        if (!(Bytes.equals(info.getTableDesc().getName(), tablename))) {
           return false;
         }
         byte [] value = rowResult.getValue(HConstants.CATALOG_FAMILY,

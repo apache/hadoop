@@ -103,8 +103,8 @@ public class TestSerialization {
     HRegionInfo deserializedHri =
       (HRegionInfo)Writables.getWritable(hrib, new HRegionInfo());
     assertEquals(hri.getEncodedName(), deserializedHri.getEncodedName());
-    //assertEquals(hri.getTableDesc().getFamilies().size(),
-    //  deserializedHri.getTableDesc().getFamilies().size());
+    assertEquals(hri.getTableDesc().getFamilies().size(),
+      deserializedHri.getTableDesc().getFamilies().size());
   }
 
   @Test public void testRegionInfos() throws Exception {
@@ -126,7 +126,7 @@ public class TestSerialization {
     for (int i = 0; i < families.length; i++) {
       htd.addFamily(new HColumnDescriptor(families[i]));
     }
-    return new HRegionInfo(htd.getName(), HConstants.EMPTY_START_ROW,
+    return new HRegionInfo(htd, HConstants.EMPTY_START_ROW,
       HConstants.EMPTY_END_ROW);
   }
 

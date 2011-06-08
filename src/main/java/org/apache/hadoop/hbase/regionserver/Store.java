@@ -39,7 +39,11 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -191,15 +195,9 @@ public class Store implements HeapSize {
 
     // Check if this is in-memory store
     this.inMemory = family.isInMemory();
-    long maxFileSize = 0L;
-    HTableDescriptor hTableDescriptor = region.getTableDesc();
-    if (hTableDescriptor != null) {
-      maxFileSize = hTableDescriptor.getMaxFileSize();
-    } else {
-      maxFileSize = HConstants.DEFAULT_MAX_FILE_SIZE;
-    }
 
     // By default we split region if a file > HConstants.DEFAULT_MAX_FILE_SIZE.
+    long maxFileSize = info.getTableDesc().getMaxFileSize();
     if (maxFileSize == HConstants.DEFAULT_MAX_FILE_SIZE) {
       maxFileSize = conf.getLong("hbase.hregion.max.filesize",
         HConstants.DEFAULT_MAX_FILE_SIZE);

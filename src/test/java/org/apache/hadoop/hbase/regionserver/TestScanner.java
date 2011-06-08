@@ -72,7 +72,7 @@ public class TestScanner extends HBaseTestCase {
   }
   /** HRegionInfo for root region */
   public static final HRegionInfo REGION_INFO =
-    new HRegionInfo(TESTTABLEDESC.getName(), HConstants.EMPTY_BYTE_ARRAY,
+    new HRegionInfo(TESTTABLEDESC, HConstants.EMPTY_BYTE_ARRAY,
     HConstants.EMPTY_BYTE_ARRAY);
 
   private static final byte [] ROW_KEY = REGION_INFO.getRegionName();
@@ -101,7 +101,7 @@ public class TestScanner extends HBaseTestCase {
     byte [] startrow = Bytes.toBytes("bbb");
     byte [] stoprow = Bytes.toBytes("ccc");
     try {
-      this.r = createNewHRegion(TESTTABLEDESC, null, null);
+      this.r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
       addContent(this.r, HConstants.CATALOG_FAMILY);
       List<KeyValue> results = new ArrayList<KeyValue>();
       // Do simple test of getting one row only first.
@@ -175,7 +175,7 @@ public class TestScanner extends HBaseTestCase {
 
   public void testFilters() throws IOException {
     try {
-      this.r = createNewHRegion(TESTTABLEDESC, null, null);
+      this.r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
       addContent(this.r, HConstants.CATALOG_FAMILY);
       byte [] prefix = Bytes.toBytes("ab");
       Filter newFilter = new PrefixFilter(prefix);
@@ -203,7 +203,7 @@ public class TestScanner extends HBaseTestCase {
    */
   public void testRaceBetweenClientAndTimeout() throws Exception {
     try {
-      this.r = createNewHRegion(TESTTABLEDESC, null, null);
+      this.r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
       addContent(this.r, HConstants.CATALOG_FAMILY);
       Scan scan = new Scan();
       InternalScanner s = r.getScanner(scan);
@@ -352,7 +352,7 @@ public class TestScanner extends HBaseTestCase {
     assertEquals(0, info.getStartKey().length);
     assertEquals(0, info.getEndKey().length);
     assertEquals(0, Bytes.compareTo(info.getRegionName(), REGION_INFO.getRegionName()));
-    //assertEquals(0, info.getTableDesc().compareTo(REGION_INFO.getTableDesc()));
+    assertEquals(0, info.getTableDesc().compareTo(REGION_INFO.getTableDesc()));
   }
 
   /** Use a scanner to get the region info and then validate the results */
@@ -448,7 +448,7 @@ public class TestScanner extends HBaseTestCase {
    * @throws Exception
    */
   public void testScanAndSyncFlush() throws Exception {
-    this.r = createNewHRegion(TESTTABLEDESC, null, null);
+    this.r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
     HRegionIncommon hri = new HRegionIncommon(r);
     try {
         LOG.info("Added: " + addContent(hri, Bytes.toString(HConstants.CATALOG_FAMILY),
@@ -472,7 +472,7 @@ public class TestScanner extends HBaseTestCase {
    * @throws Exception
    */
   public void testScanAndRealConcurrentFlush() throws Exception {
-    this.r = createNewHRegion(TESTTABLEDESC, null, null);
+    this.r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
     HRegionIncommon hri = new HRegionIncommon(r);
     try {
         LOG.info("Added: " + addContent(hri, Bytes.toString(HConstants.CATALOG_FAMILY),

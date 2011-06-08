@@ -634,6 +634,33 @@ public class HConnectionManager {
       return reload? relocateRegion(name, row): locateRegion(name, row);
     }
 
+    public HTableDescriptor[] listTables() throws IOException {
+      final TreeSet<HTableDescriptor> uniqueTables =
+        new TreeSet<HTableDescriptor>();
+      MetaScannerVisitor visitor = new MetaScannerVisitor() {
+        public boolean processRow(Result result) throws IOException {
+          try {
+            byte[] value = result.getValue(HConstants.CATALOG_FAMILY,
+                HConstants.REGIONINFO_QUALIFIER);
+            HRegionInfo info = null;
+            if (value != null) {
+              info = Writables.getHRegionInfo(value);
+            }
+            // Only examine the rows where the startKey is zero length
+            if (info != null && info.getStartKey().length == 0) {
+              uniqueTables.add(info.getTableDesc());
+            }
+            return true;
+          } catch (RuntimeException e) {
+            LOG.error("Result=" + result);
+            throw e;
+          }
+        }
+      };
+      MetaScanner.metaScan(conf, visitor);
+      return uniqueTables.toArray(new HTableDescriptor[uniqueTables.size()]);
+    }
+
     public boolean isTableEnabled(byte[] tableName) throws IOException {
       return testTableOnlineState(tableName, true);
     }
@@ -652,7 +679,7 @@ public class HConnectionManager {
               HConstants.REGIONINFO_QUALIFIER);
           HRegionInfo info = Writables.getHRegionInfoOrNull(value);
           if (info != null) {
-            if (Bytes.equals(tableName, info.getTableName())) {
+            if (Bytes.equals(tableName, info.getTableDesc().getName())) {
               value = row.getValue(HConstants.CATALOG_FAMILY,
                   HConstants.SERVER_QUALIFIER);
               if (value == null) {
@@ -687,6 +714,47 @@ public class HConnectionManager {
       } catch (KeeperException e) {
         throw new IOException("Enable/Disable failed", e);
       }
+    }
+
+    private static class HTableDescriptorFinder
+    implements MetaScanner.MetaScannerVisitor {
+        byte[] tableName;
+        HTableDescriptor result;
+        protected HTableDescriptorFinder(byte[] tableName) {
+          this.tableName = tableName;
+        }
+        public boolean processRow(Result rowResult) throws IOException {
+          HRegionInfo info = Writables.getHRegionInfoOrNull(
+              rowResult.getValue(HConstants.CATALOG_FAMILY,
+                  HConstants.REGIONINFO_QUALIFIER));
+          if (info == null) return true;
+          HTableDescriptor desc = info.getTableDesc();
+          if (Bytes.compareTo(desc.getName(), tableName) == 0) {
+            result = desc;
+            return false;
+          }
+          return true;
+        }
+        HTableDescriptor getResult() {
+          return result;
+        }
+    }
+
+    public HTableDescriptor getHTableDescriptor(final byte[] tableName)
+    throws IOException {
+      if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
+        return new UnmodifyableHTableDescriptor(HTableDescriptor.ROOT_TABLEDESC);
+      }
+      if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
+        return HTableDescriptor.META_TABLEDESC;
+      }
+      HTableDescriptorFinder finder = new HTableDescriptorFinder(tableName);
+      MetaScanner.metaScan(conf, finder, tableName);
+      HTableDescriptor result = finder.getResult();
+      if (result == null) {
+        throw new TableNotFoundException(Bytes.toString(tableName));
+      }
+      return result;
     }
 
     @Override
@@ -768,7 +836,7 @@ public class HConnectionManager {
               regionInfo = Writables.getHRegionInfo(value);
 
               // possible we got a region of a different table...
-              if (!Bytes.equals(regionInfo.getTableName(),
+              if (!Bytes.equals(regionInfo.getTableDesc().getName(),
                   tableName)) {
                 return false; // stop scanning
               }
@@ -888,7 +956,7 @@ public class HConnectionManager {
           HRegionInfo regionInfo = (HRegionInfo) Writables.getWritable(
               value, new HRegionInfo());
           // possible we got a region of a different table...
-          if (!Bytes.equals(regionInfo.getTableName(), tableName)) {
+          if (!Bytes.equals(regionInfo.getTableDesc().getName(), tableName)) {
             throw new TableNotFoundException(
               "Table '" + Bytes.toString(tableName) + "' was not found.");
           }
@@ -1717,50 +1785,5 @@ public class HConnectionManager {
       LOG.debug("The connection to " + this.zooKeeper
           + " was closed by the finalize method.");
     }
-
-    public HTableDescriptor[] listTables() throws IOException {
-      if (this.master == null) {
-        this.master = getMaster();
-      }
-      HTableDescriptor[] htd = master.getHTableDescriptors();
-      return htd;
-    }
-
-    public HTableDescriptor[] getHTableDescriptors(List<String> tableNames) throws IOException {
-      if (tableNames == null || tableNames.size() == 0) return null;
-      if (this.master == null) {
-        this.master = getMaster();
-      }
-      return master.getHTableDescriptors(tableNames);
-    }
-
-    public HTableDescriptor getHTableDescriptor(final byte[] tableName)
-    throws IOException {
-      if (tableName == null || tableName.length == 0) return null;
-      if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
-        return new UnmodifyableHTableDescriptor(HTableDescriptor.ROOT_TABLEDESC);
-      }
-      if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
-        return HTableDescriptor.META_TABLEDESC;
-      }
-      if (this.master == null) {
-        this.master = getMaster();
-      }
-      HTableDescriptor hTableDescriptor = null;
-      HTableDescriptor[] htds = master.getHTableDescriptors();
-      if (htds != null && htds.length > 0) {
-        for (HTableDescriptor htd: htds) {
-          if (Bytes.equals(tableName, htd.getName())) {
-            hTableDescriptor = htd;
-          }
-        }
-      }
-      //HTableDescriptor htd = master.getHTableDescriptor(tableName);
-      if (hTableDescriptor == null) {
-        throw new TableNotFoundException(Bytes.toString(tableName));
-      }
-      return hTableDescriptor;
-    }
-
   }
 }

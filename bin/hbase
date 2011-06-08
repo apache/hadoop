@@ -77,8 +77,6 @@ if [ $# = 0 ]; then
   echo "  migrate          upgrade an hbase.rootdir"
   echo "  hbck             run the hbase 'fsck' tool"
   echo "  classpath        dump hbase CLASSPATH"
-  echo "  version          print the version"
-
   echo " or"
   echo "  CLASSNAME        run the class named CLASSNAME"
   echo "Most commands print help when invoked w/o parameters."
@@ -261,8 +259,6 @@ elif [ "$COMMAND" = "zkcli" ] ; then
 elif [ "$COMMAND" = "classpath" ] ; then
   echo $CLASSPATH
   exit 0
-elif [ "$COMMAND" = "version" ] ; then
-  CLASS='org.apache.hadoop.hbase.util.VersionInfo'
 else
   CLASS=$COMMAND
 fi

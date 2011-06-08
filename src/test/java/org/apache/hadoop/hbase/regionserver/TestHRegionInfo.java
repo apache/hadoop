@@ -56,7 +56,7 @@ public class TestHRegionInfo {
   public void testContainsRange() {
     HTableDescriptor tableDesc = new HTableDescriptor("testtable");
     HRegionInfo hri = new HRegionInfo(
-        tableDesc.getName(), Bytes.toBytes("a"), Bytes.toBytes("g"));
+        tableDesc, Bytes.toBytes("a"), Bytes.toBytes("g"));
     // Single row range at start of region
     assertTrue(hri.containsRange(Bytes.toBytes("a"), Bytes.toBytes("a")));
     // Fully contained range

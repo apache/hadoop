@@ -68,10 +68,10 @@ public class TestColumnSeeking {
             HColumnDescriptor.DEFAULT_BLOOMFILTER);
     HTableDescriptor htd = new HTableDescriptor(table);
     htd.addFamily(hcd);
-    HRegionInfo info = new HRegionInfo(Bytes.toBytes(table), null, null, false);
+    HRegionInfo info = new HRegionInfo(htd, null, null, false);
     HRegion region =
         HRegion.createHRegion(info, HBaseTestingUtility.getTestDir(), TEST_UTIL
-            .getConfiguration(), htd);
+            .getConfiguration());
 
     List<String> rows = generateRandomWords(10, "row");
     List<String> allColumns = generateRandomWords(10, "column");
@@ -172,11 +172,10 @@ public class TestColumnSeeking {
 
     HTableDescriptor htd = new HTableDescriptor(table);
     htd.addFamily(new HColumnDescriptor(family));
-
-    HRegionInfo info = new HRegionInfo(Bytes.toBytes(table), null, null, false);
+    HRegionInfo info = new HRegionInfo(htd, null, null, false);
     HRegion region =
         HRegion.createHRegion(info, HBaseTestingUtility.getTestDir(), TEST_UTIL
-            .getConfiguration(), htd);
+            .getConfiguration());
 
     List<String> rows = generateRandomWords(10, "row");
     List<String> allColumns = generateRandomWords(100, "column");

@@ -30,6 +30,7 @@ class UnmodifyableHRegionInfo extends HRegionInfo {
    */
   UnmodifyableHRegionInfo(HRegionInfo info) {
     super(info);
+    this.tableDesc = new UnmodifyableHTableDescriptor(info.getTableDesc());
   }
 
   /**

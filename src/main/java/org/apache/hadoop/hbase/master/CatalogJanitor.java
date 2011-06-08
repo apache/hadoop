@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
@@ -42,9 +41,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
-
 
 /**
  * A janitor for the catalog tables.  Scans the <code>.META.</code> catalog
@@ -256,10 +253,8 @@ class CatalogJanitor extends Chore {
     if (split == null)  return result;
     FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
     Path rootdir = this.services.getMasterFileSystem().getRootDir();
-    Path tabledir = new Path(rootdir, split.getTableNameAsString());
-    HTableDescriptor parentDescriptor = getTableDescriptor(parent.getTableName());
-
-    for (HColumnDescriptor family: parentDescriptor.getFamilies()) {
+    Path tabledir = new Path(rootdir, split.getTableDesc().getNameAsString());
+    for (HColumnDescriptor family: split.getTableDesc().getFamilies()) {
       Path p = Store.getStoreHomedir(tabledir, split.getEncodedName(),
         family.getName());
       // Look for reference files.  Call listStatus with anonymous instance of PathFilter.
@@ -281,10 +276,4 @@ class CatalogJanitor extends Chore {
     }
     return result;
   }
-
-  private HTableDescriptor getTableDescriptor(byte[] tableName) {
-    return this.services.getAssignmentManager().getTableDescriptor(
-        Bytes.toString(tableName));
-  }
-
 }

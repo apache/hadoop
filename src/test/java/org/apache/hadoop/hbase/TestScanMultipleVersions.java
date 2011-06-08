@@ -57,10 +57,10 @@ public class TestScanMultipleVersions extends HBaseClusterTestCase {
     this.desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
 
     // Region 0 will contain the key range [,row_0500)
-    INFOS[0] = new HRegionInfo(desc.getName(), HConstants.EMPTY_START_ROW,
+    INFOS[0] = new HRegionInfo(this.desc, HConstants.EMPTY_START_ROW,
         Bytes.toBytes("row_0500"));
     // Region 1 will contain the key range [row_0500,)
-    INFOS[1] = new HRegionInfo(desc.getName(), Bytes.toBytes("row_0500"),
+    INFOS[1] = new HRegionInfo(this.desc, Bytes.toBytes("row_0500"),
         HConstants.EMPTY_END_ROW);
 
     // Create root and meta regions
@@ -68,8 +68,7 @@ public class TestScanMultipleVersions extends HBaseClusterTestCase {
     // Create the regions
     for (int i = 0; i < REGIONS.length; i++) {
       REGIONS[i] =
-        HRegion.createHRegion(this.INFOS[i], this.testDir, this.conf,
-            this.desc);
+        HRegion.createHRegion(this.INFOS[i], this.testDir, this.conf);
       // Insert data
       for (int j = 0; j < TIMESTAMPS.length; j++) {
         Put put = new Put(ROWS[i], TIMESTAMPS[j], null);

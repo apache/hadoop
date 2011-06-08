@@ -116,14 +116,9 @@ public class TestCatalogJanitor {
    */
   class MockMasterServices implements MasterServices {
     private final MasterFileSystem mfs;
-    private final AssignmentManager asm;
 
     MockMasterServices(final Server server) throws IOException {
       this.mfs = new MasterFileSystem(server, null);
-      HTableDescriptor htd = new HTableDescriptor("table");
-      htd.addFamily(new HColumnDescriptor("family"));
-      this.asm = Mockito.mock(AssignmentManager.class);
-      Mockito.when(asm.getTableDescriptor("table")).thenReturn(htd);
     }
 
     @Override
@@ -133,7 +128,7 @@ public class TestCatalogJanitor {
 
     @Override
     public AssignmentManager getAssignmentManager() {
-      return this.asm;
+      return null;
     }
 
     @Override
@@ -224,14 +219,11 @@ public class TestCatalogJanitor {
     HTableDescriptor htd = new HTableDescriptor("table");
     htd.addFamily(new HColumnDescriptor("family"));
     HRegionInfo parent =
-      new HRegionInfo(htd.getName(), Bytes.toBytes("aaa"),
-          Bytes.toBytes("eee"));
+      new HRegionInfo(htd, Bytes.toBytes("aaa"), Bytes.toBytes("eee"));
     HRegionInfo splita =
-      new HRegionInfo(htd.getName(), Bytes.toBytes("aaa"),
-          Bytes.toBytes("ccc"));
+      new HRegionInfo(htd, Bytes.toBytes("aaa"), Bytes.toBytes("ccc"));
     HRegionInfo splitb =
-      new HRegionInfo(htd.getName(), Bytes.toBytes("ccc"),
-          Bytes.toBytes("eee"));
+      new HRegionInfo(htd, Bytes.toBytes("ccc"), Bytes.toBytes("eee"));
     // Test that when both daughter regions are in place, that we do not
     // remove the parent.
     List<KeyValue> kvs = new ArrayList<KeyValue>();
