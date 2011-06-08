@@ -32,7 +32,11 @@ this="$bin/$script"
 
 # the root of the Hadoop installation
 export HADOOP_PREFIX=`dirname "$this"`/..
-export HADOOP_HOME=${HADOOP_PREFIX}/share/hadoop
+if [ -d ${HADOOP_PREFIX}/share/hadoop ]; then
+  export HADOOP_HOME=${HADOOP_PREFIX}/share/hadoop
+else
+  export HADOOP_HOME=${HADOOP_PREFIX}
+fi
 
 #check to see if the conf dir is given as an optional argument
 if [ $# -gt 1 ]

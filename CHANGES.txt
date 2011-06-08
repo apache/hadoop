@@ -82,6 +82,8 @@ Release 0.20.204.0 - unreleased
 
   BUG FIXES
 
+    HADOOP-7356. Fix bin/hadoop scripts (eyang via omalley)
+
     MAPREDUCE-2316. Updated CapacityScheduler documentation. (acmurthy) 
 
     MAPREDUCE-2447. Fix Child.java to set Task.jvmContext sooner to avoid
