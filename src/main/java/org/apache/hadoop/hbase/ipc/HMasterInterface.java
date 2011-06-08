@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -200,4 +201,25 @@ public interface HMasterInterface extends VersionedProtocol {
    * @return Previous balancer value
    */
   public boolean balanceSwitch(final boolean b);
+
+  /**
+   * Get array of all HTDs.
+   * @return array of HTableDescriptor
+   */
+  public HTableDescriptor[] getHTableDescriptors();
+
+  /**
+   * Get current HTD for a given tablename
+   * @param tableName
+   * @return HTableDescriptor for the table
+   */
+  //public HTableDescriptor getHTableDescriptor(final byte[] tableName);
+
+  /**
+   * Get array of HTDs for requested tables.
+   * @param tableNames
+   * @return array of HTableDescriptor
+   */
+  public HTableDescriptor[] getHTableDescriptors(List<String> tableNames);
+
 }

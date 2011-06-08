@@ -69,10 +69,6 @@ public class TestWideScanner extends HBaseTestCase {
   }
 
   /** HRegionInfo for root region */
-  public static final HRegionInfo REGION_INFO =
-    new HRegionInfo(TESTTABLEDESC, HConstants.EMPTY_BYTE_ARRAY,
-    HConstants.EMPTY_BYTE_ARRAY);
-
   MiniDFSCluster cluster = null;
   HRegion r;
 
@@ -107,7 +103,7 @@ public class TestWideScanner extends HBaseTestCase {
   public void testWideScanBatching() throws IOException {
     final int batch = 256;
     try {
-      this.r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
+      this.r = createNewHRegion(TESTTABLEDESC, null, null);
       int inserted = addWideContent(this.r);
       List<KeyValue> results = new ArrayList<KeyValue>();
       Scan scan = new Scan();

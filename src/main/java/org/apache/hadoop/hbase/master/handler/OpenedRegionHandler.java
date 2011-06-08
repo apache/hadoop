@@ -109,7 +109,7 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
         " because regions is NOT in RIT -- presuming this is because it SPLIT");
     }
     if (this.assignmentManager.getZKTable().isDisablingOrDisabledTable(
-        regionInfo.getTableDesc().getNameAsString())) {
+        regionInfo.getTableNameAsString())) {
       LOG.debug("Opened region " + regionInfo.getRegionNameAsString() + " but "
           + "this table is disabled, triggering close of region");
       assignmentManager.unassign(regionInfo);

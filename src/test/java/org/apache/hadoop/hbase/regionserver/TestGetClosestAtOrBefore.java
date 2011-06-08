@@ -72,17 +72,17 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
     Path rootdir = filesystem.makeQualified(new Path(conf.get(HConstants.HBASE_DIR)));
     filesystem.mkdirs(rootdir);
     // Up flush size else we bind up when we use default catalog flush of 16k.
-    HRegionInfo.FIRST_META_REGIONINFO.getTableDesc().
-      setMemStoreFlushSize(64 * 1024 * 1024);
+    HTableDescriptor.META_TABLEDESC.setMemStoreFlushSize(64 * 1024 * 1024);
+
     HRegion mr = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO,
-      rootdir, this.conf);
+      rootdir, this.conf, HTableDescriptor.META_TABLEDESC);
     // Write rows for three tables 'A', 'B', and 'C'.
     for (char c = 'A'; c < 'D'; c++) {
       HTableDescriptor htd = new HTableDescriptor("" + c);
       final int last = 128;
       final int interval = 2;
       for (int i = 0; i <= last; i += interval) {
-        HRegionInfo hri = new HRegionInfo(htd,
+        HRegionInfo hri = new HRegionInfo(htd.getName(),
           i == 0? HConstants.EMPTY_BYTE_ARRAY: Bytes.toBytes((byte)i),
           i == last? HConstants.EMPTY_BYTE_ARRAY: Bytes.toBytes((byte)i + interval));
         Put put = new Put(hri.getRegionName());

@@ -27,11 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -88,16 +84,19 @@ public class TestWALObserver {
     list.add(observer);
     DummyWALObserver laterobserver = new DummyWALObserver();
     HLog hlog = new HLog(fs, logDir, oldLogDir, conf, list, null);
-    HRegionInfo hri = new HRegionInfo(new HTableDescriptor(SOME_BYTES),
-        SOME_BYTES, SOME_BYTES, false);
+    HRegionInfo hri = new HRegionInfo(SOME_BYTES,
+             SOME_BYTES, SOME_BYTES, false);
 
     for (int i = 0; i < 20; i++) {
       byte[] b = Bytes.toBytes(i+"");
       KeyValue kv = new KeyValue(b,b,b);
       WALEdit edit = new WALEdit();
       edit.add(kv);
+      HTableDescriptor htd = new HTableDescriptor();
+      htd.addFamily(new HColumnDescriptor(b));
+
       HLogKey key = new HLogKey(b,b, 0, 0);
-      hlog.append(hri, key, edit);
+      hlog.append(hri, key, edit, htd);
       if (i == 10) {
         hlog.registerWALActionsListener(laterobserver);
       }
@@ -113,6 +112,7 @@ public class TestWALObserver {
     assertEquals(5, laterobserver.logRollCounter);
     assertEquals(2, observer.closedCount);
   }
+
 
   /**
    * Just counts when methods are called
@@ -142,5 +142,10 @@ public class TestWALObserver {
     public void logCloseRequested() {
       closedCount++;
     }
+
+    public void visitLogEntryBeforeWrite(HTableDescriptor htd, HLogKey logKey, WALEdit logEdit) {
+      //To change body of implemented methods use File | Settings | File Templates.
+    }
+
   }
 }

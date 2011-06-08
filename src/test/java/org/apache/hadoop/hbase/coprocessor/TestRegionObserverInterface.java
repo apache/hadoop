@@ -256,7 +256,7 @@ public class TestRegionObserverInterface {
     try {
       for (JVMClusterUtil.RegionServerThread t : cluster.getRegionServerThreads()) {
         for (HRegionInfo r : t.getRegionServer().getOnlineRegions()) {
-          if (!Arrays.equals(r.getTableDesc().getName(), tableName)) {
+          if (!Arrays.equals(r.getTableName(), tableName)) {
             continue;
           }
           RegionCoprocessorHost cph = t.getRegionServer().getOnlineRegion(r.getRegionName()).

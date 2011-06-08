@@ -26,7 +26,9 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.util.Bytes;
 
 public class ModifyTableHandler extends TableEventHandler {
   private final HTableDescriptor htd;
@@ -41,13 +43,19 @@ public class ModifyTableHandler extends TableEventHandler {
   @Override
   protected void handleTableOperation(List<HRegionInfo> hris)
   throws IOException {
-    for (HRegionInfo hri : hris) {
-      // Update region info in META
-      hri.setTableDesc(this.htd);
-      MetaEditor.updateRegionInfo(this.server.getCatalogTracker(), hri);
-      // Update region info in FS
-      this.masterServices.getMasterFileSystem().updateRegionInfo(hri);
+    AssignmentManager am = this.masterServices.getAssignmentManager();
+    HTableDescriptor htd = am.getTableDescriptor(Bytes.toString(tableName));
+    if (htd == null) {
+      throw new IOException("Modify Table operation could not be completed as " +
+          "HTableDescritor is missing for table = "
+          + Bytes.toString(tableName));
     }
+    // Update table descriptor in HDFS
+
+    HTableDescriptor updatedHTD = this.masterServices.getMasterFileSystem()
+        .updateTableDescriptor(this.htd);
+    // Update in-memory descriptor cache
+    am.updateTableDesc(Bytes.toString(tableName), updatedHTD);
   }
   @Override
   public String toString() {

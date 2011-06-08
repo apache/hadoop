@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 
 /**
  * Get notification of {@link HLog}/WAL log events. The invocations are inline
@@ -51,4 +52,14 @@ public interface WALObserver {
   */
  public void visitLogEntryBeforeWrite(HRegionInfo info, HLogKey logKey,
    WALEdit logEdit);
+
+  /**
+   *
+   * @param htd
+   * @param logKey
+   * @param logEdit
+   */
+ public void visitLogEntryBeforeWrite(HTableDescriptor htd, HLogKey logKey,
+   WALEdit logEdit);
+
 }

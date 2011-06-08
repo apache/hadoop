@@ -138,7 +138,12 @@ public class TestWALObserver {
    */
   @Test
   public void testWALObserverWriteToWAL() throws Exception {
+
     HRegionInfo hri = createBasic3FamilyHRegionInfo(Bytes.toString(TEST_TABLE));
+    final HTableDescriptor htd = createBasic3FamilyHTD(Bytes.toString(TEST_TABLE));
+    HRegion region2 = HRegion.createHRegion(hri,
+            hbaseRootDir, this.conf, htd);
+
     Path basedir = new Path(this.hbaseRootDir, Bytes.toString(TEST_TABLE));
     deleteDir(basedir);
     fs.mkdirs(new Path(basedir, hri.getEncodedName()));
@@ -190,7 +195,7 @@ public class TestWALObserver {
 
     // it's where WAL write cp should occur.
     long now = EnvironmentEdgeManager.currentTimeMillis();
-    log.append(hri, hri.getTableDesc().getName(), edit, now);
+    log.append(hri, hri.getTableName(), edit, now, htd);
 
     // the edit shall have been change now by the coprocessor.
     foundFamily0 = false;
@@ -221,15 +226,24 @@ public class TestWALObserver {
    * Test WAL replay behavior with WALObserver.
    */
   @Test
-  public void testWALObserverReplay() throws Exception {
+  public void testWALCoprocessorReplay() throws Exception {
     // WAL replay is handled at HRegion::replayRecoveredEdits(), which is
     // ultimately called by HRegion::initialize()
     byte[] tableName = Bytes.toBytes("testWALCoprocessorReplay");
+    final HTableDescriptor htd = getBasic3FamilyHTableDescriptor(Bytes.toString(tableName));
+    //final HRegionInfo hri = createBasic3FamilyHRegionInfo(Bytes.toString(tableName));
+    //final HRegionInfo hri1 = createBasic3FamilyHRegionInfo(Bytes.toString(tableName));
+    final HRegionInfo hri = new HRegionInfo(tableName, null, null);
 
-    final HRegionInfo hri = createBasic3FamilyHRegionInfo(Bytes.toString(tableName));
     final Path basedir = new Path(this.hbaseRootDir, Bytes.toString(tableName));
     deleteDir(basedir);
     fs.mkdirs(new Path(basedir, hri.getEncodedName()));
+
+    final Configuration newConf = HBaseConfiguration.create(this.conf);
+
+    HRegion region2 = HRegion.createHRegion(hri,
+        hbaseRootDir, newConf,htd);
+
 
     //HLog wal = new HLog(this.fs, this.dir, this.oldLogDir, this.conf);
     HLog wal = createWAL(this.conf);
@@ -238,40 +252,46 @@ public class TestWALObserver {
     long now = EnvironmentEdgeManager.currentTimeMillis();
     //addFamilyMapToWALEdit(p.getFamilyMap(), edit);
     final int countPerFamily = 1000;
-    for (HColumnDescriptor hcd: hri.getTableDesc().getFamilies()) {
+    //for (HColumnDescriptor hcd: hri.getTableDesc().getFamilies()) {
+    for (HColumnDescriptor hcd: htd.getFamilies()) {
+          //addWALEdits(tableName, hri, TEST_ROW, hcd.getName(), countPerFamily,
+          //EnvironmentEdgeManager.getDelegate(), wal);
       addWALEdits(tableName, hri, TEST_ROW, hcd.getName(), countPerFamily,
-          EnvironmentEdgeManager.getDelegate(), wal);
+      EnvironmentEdgeManager.getDelegate(), wal, htd);
     }
-    wal.append(hri, tableName, edit, now);
+    wal.append(hri, tableName, edit, now, htd);
     // sync to fs.
     wal.sync();
 
-    final Configuration newConf = HBaseConfiguration.create(this.conf);
     User user = HBaseTestingUtility.getDifferentUser(newConf,
         ".replay.wal.secondtime");
     user.runAs(new PrivilegedExceptionAction() {
       public Object run() throws Exception {
-        runWALSplit(newConf);
+        Path p = runWALSplit(newConf);
+        LOG.info("WALSplit path == " + p);
         FileSystem newFS = FileSystem.get(newConf);
         // Make a new wal for new region open.
         HLog wal2 = createWAL(newConf);
-        HRegion region2 = new HRegion(basedir, wal2, FileSystem.get(newConf),
+        Path tableDir =
+        HTableDescriptor.getTableDir(hbaseRootDir, hri.getTableName());
+        HRegion region = new HRegion(tableDir, wal2, FileSystem.get(newConf),
           newConf, hri, TEST_UTIL.getHBaseCluster().getRegionServer(0));
-        long seqid2 = region2.initialize();
 
+        long seqid2 = region.initialize();
         SampleRegionWALObserver cp2 =
-          (SampleRegionWALObserver)region2.getCoprocessorHost().findCoprocessor(
+          (SampleRegionWALObserver)region.getCoprocessorHost().findCoprocessor(
               SampleRegionWALObserver.class.getName());
         // TODO: asserting here is problematic.
         assertNotNull(cp2);
         assertTrue(cp2.isPreWALRestoreCalled());
         assertTrue(cp2.isPostWALRestoreCalled());
-        region2.close();
+        region.close();
         wal2.closeAndDelete();
         return null;
       }
     });
   }
+
   /**
    * Test to see CP loaded successfully or not. There is a duplication
    * at TestHLog, but the purpose of that one is to see whether the loaded
@@ -301,7 +321,7 @@ public class TestWALObserver {
       HColumnDescriptor a = new HColumnDescriptor(TEST_FAMILY[i]);
       htd.addFamily(a);
     }
-    return new HRegionInfo(htd, null, null, false);
+    return new HRegionInfo(htd.getName(), null, null, false);
   }
 
   /*
@@ -356,7 +376,7 @@ public class TestWALObserver {
   }
   private void addWALEdits (final byte [] tableName, final HRegionInfo hri,
       final byte [] rowName, final byte [] family,
-      final int count, EnvironmentEdge ee, final HLog wal)
+      final int count, EnvironmentEdge ee, final HLog wal, final HTableDescriptor htd)
   throws IOException {
     String familyStr = Bytes.toString(family);
     for (int j = 0; j < count; j++) {
@@ -365,8 +385,30 @@ public class TestWALObserver {
       WALEdit edit = new WALEdit();
       edit.add(new KeyValue(rowName, family, qualifierBytes,
         ee.currentTimeMillis(), columnBytes));
-      wal.append(hri, tableName, edit, ee.currentTimeMillis());
+      wal.append(hri, tableName, edit, ee.currentTimeMillis(), htd);
     }
   }
+  private HTableDescriptor getBasic3FamilyHTableDescriptor(
+      final String tableName) {
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+
+    for (int i = 0; i < TEST_FAMILY.length; i++ ) {
+      HColumnDescriptor a = new HColumnDescriptor(TEST_FAMILY[i]);
+      htd.addFamily(a);
+    }
+    return htd;
+  }
+
+  private HTableDescriptor createBasic3FamilyHTD(final String tableName) {
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HColumnDescriptor a = new HColumnDescriptor(Bytes.toBytes("a"));
+    htd.addFamily(a);
+    HColumnDescriptor b = new HColumnDescriptor(Bytes.toBytes("b"));
+    htd.addFamily(b);
+    HColumnDescriptor c = new HColumnDescriptor(Bytes.toBytes("c"));
+    htd.addFamily(c);
+    return htd;
+  }
+
 }
 

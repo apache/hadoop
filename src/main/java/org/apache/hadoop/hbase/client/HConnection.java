@@ -373,4 +373,13 @@ public interface HConnection extends Abortable, Closeable {
    * @deprecated This method will be changed from public to package protected.
    */
   public int getCurrentNrHRS() throws IOException;
+
+  /**
+   * @param tableNames List of table names
+   * @return HTD[] table metadata
+   * @throws IOException if a remote or network exception occurs
+   */
+  public HTableDescriptor[] getHTableDescriptors(List<String> tableNames)
+  throws IOException;
+
 }

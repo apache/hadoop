@@ -22,10 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -163,6 +160,12 @@ class LogRoller extends Thread implements WALObserver {
   public void visitLogEntryBeforeWrite(HRegionInfo info, HLogKey logKey,
       WALEdit logEdit) {
     // Not interested.
+  }
+
+  @Override
+  public void visitLogEntryBeforeWrite(HTableDescriptor htd, HLogKey logKey,
+                                       WALEdit logEdit) {
+    //Not interested
   }
 
   @Override

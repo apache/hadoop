@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.migration.HRegionInfo090x;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Writable;
 
@@ -62,7 +63,7 @@ public class Writables {
 
   /**
    * Put a bunch of Writables as bytes all into the one byte array.
-   * @param w writable
+   * @param ws writable
    * @return The bytes of <code>w</code> gotten by running its
    * {@link Writable#write(java.io.DataOutput)} method.
    * @throws IOException e
@@ -215,4 +216,16 @@ public class Writables {
     }
     return tgt;
   }
+
+  /**
+   * Get HREgionInfoForMigration serialized from bytes.
+   * @param bytes serialized bytes
+   * @return HRegionInfoForMigration
+   * @throws IOException
+   */
+  public static HRegionInfo090x getHRegionInfoForMigration(final byte [] bytes)
+  throws IOException {
+    return (HRegionInfo090x)getWritable(bytes, new HRegionInfo090x());
+  }
+
 }

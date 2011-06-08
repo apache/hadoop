@@ -233,11 +233,17 @@ public class TestOpenRegionHandler {
     HTableDescriptor htd =
       new HTableDescriptor("testOpenRegionHandlerYankingRegionFromUnderIt");
     final HRegionInfo hri =
-      new HRegionInfo(htd, HConstants.EMPTY_END_ROW, HConstants.EMPTY_END_ROW);
+      new HRegionInfo(htd.getName(), HConstants.EMPTY_END_ROW,
+          HConstants.EMPTY_END_ROW);
+    HRegion region =
+         HRegion.createHRegion(hri, HBaseTestingUtility.getTestDir(), HTU
+            .getConfiguration(), htd);
     OpenRegionHandler handler = new OpenRegionHandler(server, rss, hri) {
       HRegion openRegion() {
         // Open region first, then remove znode as though it'd been hijacked.
-        HRegion region = super.openRegion();
+        //HRegion region = super.openRegion();
+        HRegion region = super.openRegion(HBaseTestingUtility.getTestDir());
+
         // Don't actually open region BUT remove the znode as though it'd
         // been hijacked on us.
         ZooKeeperWatcher zkw = this.server.getZooKeeper();

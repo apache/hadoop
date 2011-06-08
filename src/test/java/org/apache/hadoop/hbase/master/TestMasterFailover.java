@@ -31,18 +31,14 @@ import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -262,12 +258,21 @@ public class TestMasterFailover {
     byte [] enabledTable = Bytes.toBytes("enabledTable");
     HTableDescriptor htdEnabled = new HTableDescriptor(enabledTable);
     htdEnabled.addFamily(new HColumnDescriptor(FAMILY));
+
+    FileSystem filesystem = FileSystem.get(conf);
+    Path rootdir = filesystem.makeQualified(
+        new Path(conf.get(HConstants.HBASE_DIR)));
+    HRegionInfo hriEnabled = new HRegionInfo(htdEnabled.getName(), null, null);
+    HRegion.createHRegion(hriEnabled, rootdir, conf, htdEnabled);
+
     List<HRegionInfo> enabledRegions = TEST_UTIL.createMultiRegionsInMeta(
         TEST_UTIL.getConfiguration(), htdEnabled, SPLIT_KEYS);
 
     byte [] disabledTable = Bytes.toBytes("disabledTable");
     HTableDescriptor htdDisabled = new HTableDescriptor(disabledTable);
     htdDisabled.addFamily(new HColumnDescriptor(FAMILY));
+    HRegionInfo hriDisabled = new HRegionInfo(htdDisabled.getName(), null, null);
+    HRegion.createHRegion(hriDisabled, rootdir, conf, htdDisabled);
     List<HRegionInfo> disabledRegions = TEST_UTIL.createMultiRegionsInMeta(
         TEST_UTIL.getConfiguration(), htdDisabled, SPLIT_KEYS);
 
@@ -566,12 +571,23 @@ public class TestMasterFailover {
     byte [] enabledTable = Bytes.toBytes("enabledTable");
     HTableDescriptor htdEnabled = new HTableDescriptor(enabledTable);
     htdEnabled.addFamily(new HColumnDescriptor(FAMILY));
+    FileSystem filesystem = FileSystem.get(conf);
+    Path rootdir = filesystem.makeQualified(
+           new Path(conf.get(HConstants.HBASE_DIR)));
+
+    HRegionInfo hriEnabled = new HRegionInfo(htdEnabled.getName(),
+        null, null);
+    HRegion.createHRegion(hriEnabled, rootdir, conf, htdEnabled);
+
     List<HRegionInfo> enabledRegions = TEST_UTIL.createMultiRegionsInMeta(
         TEST_UTIL.getConfiguration(), htdEnabled, SPLIT_KEYS);
 
     byte [] disabledTable = Bytes.toBytes("disabledTable");
     HTableDescriptor htdDisabled = new HTableDescriptor(disabledTable);
     htdDisabled.addFamily(new HColumnDescriptor(FAMILY));
+    HRegionInfo hriDisabled = new HRegionInfo(htdDisabled.getName(), null, null);
+    HRegion.createHRegion(hriDisabled, rootdir, conf, htdDisabled);
+
     List<HRegionInfo> disabledRegions = TEST_UTIL.createMultiRegionsInMeta(
         TEST_UTIL.getConfiguration(), htdDisabled, SPLIT_KEYS);
 

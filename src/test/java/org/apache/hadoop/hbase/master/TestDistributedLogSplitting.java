@@ -301,7 +301,7 @@ public class TestDistributedLogSplitting {
     HTable ht = TEST_UTIL.createTable(table, family);
     int numRegions = TEST_UTIL.createMultiRegions(conf, ht, family, nrs);
     assertEquals(nrs, numRegions);
-    LOG.info("Waiting for no more RIT\n");
+      LOG.info("Waiting for no more RIT\n");
     blockUntilNoRIT(zkw, master);
     // disable-enable cycle to get rid of table's dead regions left behind
     // by createMultiRegions
@@ -353,6 +353,7 @@ public class TestDistributedLogSplitting {
       int num_edits, int edit_size) throws IOException {
 
     byte[] table = Bytes.toBytes(tname);
+    HTableDescriptor htd = new HTableDescriptor(tname);
     byte[] value = new byte[edit_size];
     for (int i = 0; i < edit_size; i++) {
       value[i] = (byte)('a' + (i % 26));
@@ -369,7 +370,7 @@ public class TestDistributedLogSplitting {
           System.currentTimeMillis(), value));
       // LOG.info("Region " + i + ": " + e);
       j++;
-      log.append(hris.get(j % n), table, e, System.currentTimeMillis());
+      log.append(hris.get(j % n), table, e, System.currentTimeMillis(), htd);
       counts[j % n] += 1;
       // if ((i % 8096) == 0) {
         // log.sync();

@@ -153,8 +153,8 @@ public class TestSplitTransaction {
     int daughtersRowCount = 0;
     for (HRegion r: daughters) {
       // Open so can count its content.
-      HRegion openRegion = HRegion.openHRegion(r.getRegionInfo(),
-        r.getLog(), r.getConf());
+      HRegion openRegion = HRegion.openHRegion(this.testdir, r.getRegionInfo(),
+         r.getLog(), r.getConf());
       try {
         int count = countRows(openRegion);
         assertTrue(count > 0 && count != rowcount);
@@ -208,8 +208,8 @@ public class TestSplitTransaction {
     int daughtersRowCount = 0;
     for (HRegion r: daughters) {
       // Open so can count its content.
-      HRegion openRegion = HRegion.openHRegion(r.getRegionInfo(),
-        r.getLog(), r.getConf());
+      HRegion openRegion = HRegion.openHRegion(this.testdir, r.getRegionInfo(),
+         r.getLog(), r.getConf());
       try {
         int count = countRows(openRegion);
         assertTrue(count > 0 && count != rowcount);
@@ -252,7 +252,8 @@ public class TestSplitTransaction {
     HTableDescriptor htd = new HTableDescriptor("table");
     HColumnDescriptor hcd = new HColumnDescriptor(CF);
     htd.addFamily(hcd);
-    HRegionInfo hri = new HRegionInfo(htd, STARTROW, ENDROW);
-    return HRegion.openHRegion(hri, wal, TEST_UTIL.getConfiguration());
+    HRegionInfo hri = new HRegionInfo(htd.getName(), STARTROW, ENDROW);
+    HRegion.createHRegion(hri, testdir, TEST_UTIL.getConfiguration(), htd);
+    return HRegion.openHRegion(testdir, hri, wal, TEST_UTIL.getConfiguration());
   }
 }

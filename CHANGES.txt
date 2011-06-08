@@ -115,6 +115,8 @@ Release 0.91.0 - Unreleased
    HBASE-3894  Thread contention over row locks set monitor (Dave Latham)
    HBASE-3959  hadoop-snappy version in the pom.xml is incorrect
                (Alejandro Abdelnur)
+   HBASE-3941  "hbase version" command line should print version info
+               (Jolly Chen)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

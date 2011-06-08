@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -132,12 +133,18 @@ public class Replication implements WALObserver {
   @Override
   public void visitLogEntryBeforeWrite(HRegionInfo info, HLogKey logKey,
       WALEdit logEdit) {
+    // Not interested
+  }
+
+  @Override
+  public void visitLogEntryBeforeWrite(HTableDescriptor htd, HLogKey logKey,
+                                       WALEdit logEdit) {
     NavigableMap<byte[], Integer> scopes =
         new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
     byte[] family;
     for (KeyValue kv : logEdit.getKeyValues()) {
       family = kv.getFamily();
-      int scope = info.getTableDesc().getFamily(family).getScope();
+      int scope = htd.getFamily(family).getScope();
       if (scope != REPLICATION_SCOPE_LOCAL &&
           !scopes.containsKey(family)) {
         scopes.put(family, scope);

@@ -103,10 +103,14 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   private synchronized CatalogTracker getCatalogTracker()
   throws ZooKeeperConnectionException, IOException {
+    LOG.info("HBaseAdmin.getCatalogTracker()");
     CatalogTracker ct = null;
     try {
       ct = new CatalogTracker(this.conf);
+      LOG.info("HBaseAdmin.getCatalogTracker()--11");
+
       ct.start();
+      LOG.info("HBaseAdmin.getCatalogTracker()-- CTracker started");
     } catch (InterruptedException e) {
       // Let it out as an IOE for now until we redo all so tolerate IEs
       Thread.currentThread().interrupt();
@@ -529,6 +533,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void disableTable(final byte [] tableName)
   throws IOException {
+    LOG.info("HBaseAdmin.disableTable");
     disableTableAsync(tableName);
     // Wait until table is disabled
     boolean disabled = false;
@@ -1266,4 +1271,16 @@ public class HBaseAdmin implements Abortable, Closeable {
       this.connection.close();
     }
   }
+
+ /**
+ * Get tableDescriptors
+ * @param tableNames List of table names
+ * @return HTD[] the tableDescriptor
+ * @throws IOException if a remote or network exception occurs
+ */
+  public HTableDescriptor[] getTableDescriptors(List<String> tableNames)
+  throws IOException {
+    return this.connection.getHTableDescriptors(tableNames);
+  }
+
 }
