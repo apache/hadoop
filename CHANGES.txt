@@ -64,7 +64,10 @@ Release 0.20.205.0 - unreleased
 
     MAPREDUCE-2558. Add queue-level metrics 0.20-security branch - test fix
     (jeffrey nasbit via mahadev)
-    
+   
+    HADOOP-7364. TestMiniMRDFSCaching fails if test.build.dir is set to something other 
+    than build/test. (Thomas Graves via mahadev)
+
 Release 0.20.204.0 - unreleased
 
   NEW FEATURES
