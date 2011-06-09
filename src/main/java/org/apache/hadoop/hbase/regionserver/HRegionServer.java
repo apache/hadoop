@@ -1288,7 +1288,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     boolean auto = this.conf.getBoolean("hbase.regionserver.info.port.auto", false);
     while (true) {
       try {
-        this.infoServer = new InfoServer("regionserver", addr, port, false);
+        this.infoServer = new InfoServer("regionserver", addr, port, false, this.conf);
         this.infoServer.addServlet("status", "/rs-status", RSStatusServlet.class); 
         this.infoServer.setAttribute(REGIONSERVER, this);
         this.infoServer.start();

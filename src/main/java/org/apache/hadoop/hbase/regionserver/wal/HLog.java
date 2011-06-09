@@ -48,6 +48,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -139,8 +140,8 @@ public class HLog implements Syncable {
     HLog.logReaderClass = null;
   }
 
-  private OutputStream hdfs_out;     // OutputStream associated with the current SequenceFile.writer
-  private int initialReplication;    // initial replication factor of SequenceFile.writer
+  private FSDataOutputStream hdfs_out; // FSDataOutputStream associated with the current SequenceFile.writer
+  private int initialReplication; // initial replication factor of SequenceFile.writer
   private Method getNumCurrentReplicas; // refers to DFSOutputStream.getNumCurrentReplicas
   final static Object [] NO_ARGS = new Object []{};
 
@@ -368,33 +369,42 @@ public class HLog implements Syncable {
     rollWriter();
 
     // handle the reflection necessary to call getNumCurrentReplicas()
-    this.getNumCurrentReplicas = null;
+    this.getNumCurrentReplicas = getGetNumCurrentReplicas(this.hdfs_out);
+
+    logSyncerThread = new LogSyncer(this.optionalFlushInterval);
+    Threads.setDaemonThreadRunning(logSyncerThread,
+        Thread.currentThread().getName() + ".logSyncer");
+    coprocessorHost = new WALCoprocessorHost(this, conf);
+  }
+
+  /**
+   * Find the 'getNumCurrentReplicas' on the passed <code>os</code> stream.
+   * @return Method or null.
+   */
+  private Method getGetNumCurrentReplicas(final FSDataOutputStream os) {
+    Method m = null;
     Exception exception = null;
-    if (this.hdfs_out != null) {
+    if (os != null) {
       try {
-        this.getNumCurrentReplicas = this.hdfs_out.getClass().
+        m = os.getWrappedStream().getClass().
           getMethod("getNumCurrentReplicas", new Class<?> []{});
-        this.getNumCurrentReplicas.setAccessible(true);
+        m.setAccessible(true);
       } catch (NoSuchMethodException e) {
         // Thrown if getNumCurrentReplicas() function isn't available
         exception = e;
       } catch (SecurityException e) {
         // Thrown if we can't get access to getNumCurrentReplicas()
         exception = e;
-        this.getNumCurrentReplicas = null; // could happen on setAccessible()
+        m = null; // could happen on setAccessible()
       }
     }
-    if (this.getNumCurrentReplicas != null) {
+    if (m != null) {
       LOG.info("Using getNumCurrentReplicas--HDFS-826");
     } else {
       LOG.info("getNumCurrentReplicas--HDFS-826 not available; hdfs_out=" +
-        this.hdfs_out + ", exception=" + exception.getMessage());
+        os + ", exception=" + exception.getMessage());
     }
-
-    logSyncerThread = new LogSyncer(this.optionalFlushInterval);
-    Threads.setDaemonThreadRunning(logSyncerThread,
-        Thread.currentThread().getName() + ".logSyncer");
-    coprocessorHost = new WALCoprocessorHost(this, conf);
+    return m;
   }
 
   public void registerWALActionsListener (final WALObserver listener) {
@@ -436,9 +446,15 @@ public class HLog implements Syncable {
     return logSeqNum.get();
   }
 
+  /**
+   * Method used internal to this class and for tests only.
+   * @return The wrapped stream our writer is using; its not the
+   * writer's 'out' FSDatoOutputStream but the stream that this 'out' wraps
+   * (In hdfs its an instance of DFSDataOutputStream).
+   */
   // usage: see TestLogRolling.java
   OutputStream getOutputStream() {
-    return this.hdfs_out;
+    return this.hdfs_out.getWrappedStream();
   }
 
   /**
@@ -482,10 +498,9 @@ public class HLog implements Syncable {
       // Can we get at the dfsclient outputstream?  If an instance of
       // SFLW, it'll have done the necessary reflection to get at the
       // protected field name.
-      OutputStream nextHdfsOut = null;
+      FSDataOutputStream nextHdfsOut = null;
       if (nextWriter instanceof SequenceFileLogWriter) {
-        nextHdfsOut =
-          ((SequenceFileLogWriter)nextWriter).getDFSCOutputStream();
+        nextHdfsOut = ((SequenceFileLogWriter)nextWriter).getWriterFSDataOutputStream();
       }
       // Tell our listeners that a new log was created
       if (!this.listeners.isEmpty()) {
@@ -768,6 +783,7 @@ public class HLog implements Syncable {
    */
   public void closeAndDelete() throws IOException {
     close();
+    if (!fs.exists(this.dir)) return;
     FileStatus[] files = fs.listStatus(this.dir);
     for(FileStatus file : files) {
       Path p = getHLogArchivePath(this.oldLogDir, file.getPath());
@@ -776,7 +792,7 @@ public class HLog implements Syncable {
       }
     }
     LOG.debug("Moved " + files.length + " log files to " +
-        FSUtils.getPath(this.oldLogDir));
+      FSUtils.getPath(this.oldLogDir));
     if (!fs.delete(dir, true)) {
       LOG.info("Unable to delete " + dir);
     }
@@ -966,8 +982,7 @@ public class HLog implements Syncable {
     }
   }
 
-  @Override
-  public void sync() throws IOException {
+  private void syncer() throws IOException {
     synchronized (this.updateLock) {
       if (this.closed) {
         return;
@@ -1027,9 +1042,10 @@ public class HLog implements Syncable {
    *
    * @throws Exception
    */
-  int getLogReplication() throws IllegalArgumentException, IllegalAccessException, InvocationTargetException {
-    if(this.getNumCurrentReplicas != null && this.hdfs_out != null) {
-      Object repl = this.getNumCurrentReplicas.invoke(this.hdfs_out, NO_ARGS);
+  int getLogReplication()
+  throws IllegalArgumentException, IllegalAccessException, InvocationTargetException {
+    if (this.getNumCurrentReplicas != null && this.hdfs_out != null) {
+      Object repl = this.getNumCurrentReplicas.invoke(getOutputStream(), NO_ARGS);
       if (repl instanceof Integer) {
         return ((Integer)repl).intValue();
       }
@@ -1042,8 +1058,15 @@ public class HLog implements Syncable {
   }
 
   public void hsync() throws IOException {
-    // Not yet implemented up in hdfs so just call hflush.
-    sync();
+    syncer();
+  }
+
+  public void hflush() throws IOException {
+    syncer();
+  }
+
+  public void sync() throws IOException {
+    syncer();
   }
 
   private void requestLogRoll() {
@@ -1309,7 +1332,9 @@ public class HLog implements Syncable {
   public static NavigableSet<Path> getSplitEditFilesSorted(final FileSystem fs,
       final Path regiondir)
   throws IOException {
+    NavigableSet<Path> filesSorted = new TreeSet<Path>();
     Path editsdir = getRegionDirRecoveredEditsDir(regiondir);
+    if (!fs.exists(editsdir)) return filesSorted;
     FileStatus[] files = fs.listStatus(editsdir, new PathFilter() {
       @Override
       public boolean accept(Path p) {
@@ -1327,7 +1352,6 @@ public class HLog implements Syncable {
         return result;
       }
     });
-    NavigableSet<Path> filesSorted = new TreeSet<Path>();
     if (files == null) return filesSorted;
     for (FileStatus status: files) {
       filesSorted.add(status.getPath());

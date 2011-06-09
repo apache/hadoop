@@ -173,9 +173,8 @@ public class TestHLogSplit {
   throws IOException {
     AtomicBoolean stop = new AtomicBoolean(false);
 
-    FileStatus[] stats = fs.listStatus(new Path("/hbase/t1"));
-    assertTrue("Previous test should clean up table dir",
-        stats == null || stats.length == 0);
+    assertFalse("Previous test should clean up table dir",
+      fs.exists(new Path("/hbase/t1")));
 
     generateHLogs(-1);
 
@@ -967,8 +966,7 @@ public class TestHLogSplit {
     HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
         logfile.getPath().toString(), conf);
     Path tdir = HTableDescriptor.getTableDir(hbaseDir, TABLE_NAME);
-    FileStatus [] files = this.fs.listStatus(tdir);
-    assertTrue(files == null || files.length == 0);
+    assertFalse(fs.exists(tdir));
 
     assertEquals(0, countHLog(fs.listStatus(oldLogDir)[0].getPath(), fs, conf));
   }

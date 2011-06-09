@@ -357,7 +357,7 @@ public class ServerManager {
     boolean carryingRoot;
     try {
       ServerName address = ct.getRootLocation();
-      carryingRoot = address.equals(serverName);
+      carryingRoot = address != null && address.equals(serverName);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       LOG.info("Interrupted");
@@ -369,7 +369,7 @@ public class ServerManager {
     // has an inmemory list of who has what.  This list will be cleared as we
     // process the dead server but should be  find asking it now.
     ServerName address = ct.getMetaLocation();
-    boolean carryingMeta = address.equals(serverName);
+    boolean carryingMeta = address != null && address.equals(serverName);
     if (carryingRoot || carryingMeta) {
       this.services.getExecutorService().submit(new MetaServerShutdownHandler(this.master,
         this.services, this.deadservers, serverName, carryingRoot, carryingMeta));

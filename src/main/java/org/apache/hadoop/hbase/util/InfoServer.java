@@ -20,15 +20,18 @@
 
 package org.apache.hadoop.hbase.util;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.util.Map;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.http.HttpServer;
 import org.mortbay.jetty.handler.ContextHandlerCollection;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.DefaultServlet;
-
-import java.io.IOException;
-import java.net.URL;
-import java.util.Map;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal
@@ -39,6 +42,8 @@ import java.util.Map;
  *   "/" -> the jsp server code from (src/hbase-webapps/<name>)
  */
 public class InfoServer extends HttpServer {
+  private final Configuration config;
+
   /**
    * Create a status server on the given port.
    * The jsp scripts are taken from src/hbase-webapps/<code>name<code>.
@@ -49,15 +54,19 @@ public class InfoServer extends HttpServer {
    * increment by 1 until it finds a free port.
    * @throws IOException e
    */
-  public InfoServer(String name, String bindAddress, int port, boolean findPort)
+  public InfoServer(String name, String bindAddress, int port, boolean findPort,
+      final Configuration c)
   throws IOException {
     super(name, bindAddress, port, findPort, HBaseConfiguration.create());
-    webServer.addHandler(new ContextHandlerCollection());
+    this.config = c;
+    fixupLogsServletLocation();
   }
 
-  protected void addDefaultApps(ContextHandlerCollection parent, String appDir)
-  throws IOException {
-    super.addDefaultApps(parent, appDir);
+  /**
+   * Fixup where the logs app points, make it point at hbase logs rather than
+   * hadoop logs.
+   */
+  private void fixupLogsServletLocation() {
     // Must be same as up in hadoop.
     final String logsContextPath = "/logs";
     // Now, put my logs in place of hadoops... disable old one first.
@@ -72,10 +81,13 @@ public class InfoServer extends HttpServer {
       this.defaultContexts.put(oldLogsContext, Boolean.FALSE);
     }
     // Now do my logs.
-    // set up the context for "/logs/" if "hadoop.log.dir" property is defined.
+    // Set up the context for "/logs/" if "hbase.log.dir" property is defined.
     String logDir = System.getProperty("hbase.log.dir");
     if (logDir != null) {
-      Context logContext = new Context(parent, "/logs");
+      // This is a little presumptious but seems to work.
+      Context logContext =
+        new Context((ContextHandlerCollection)this.webServer.getHandler(),
+          logsContextPath);
       logContext.setResourceBase(logDir);
       logContext.addServlet(DefaultServlet.class, "/");
       defaultContexts.put(logContext, true);
@@ -83,10 +95,25 @@ public class InfoServer extends HttpServer {
   }
 
   /**
+   * Get the pathname to the webapps files.
+   * @param appName eg "secondary" or "datanode"
+   * @return the pathname as a URL
+   * @throws FileNotFoundException if 'webapps' directory cannot be found on CLASSPATH.
+   */
+  protected String getWebAppsPath(String appName) throws FileNotFoundException {
+    // Copied from the super-class.
+    URL url = getClass().getClassLoader().getResource("hbase-webapps/" + appName);
+    if (url == null)
+      throw new FileNotFoundException("webapps/" + appName
+          + " not found in CLASSPATH");
+    String urlString = url.toString();
+    return urlString.substring(0, urlString.lastIndexOf('/'));
+  }
+
+  /**
    * Get the pathname to the <code>path</code> files.
    * @return the pathname as a URL
    */
-  @Override
   protected String getWebAppsPath() throws IOException {
     // Hack: webapps is not a unique enough element to find in CLASSPATH
     // We'll more than likely find the hadoop webapps dir.  So, instead
@@ -95,29 +122,9 @@ public class InfoServer extends HttpServer {
     // master webapp resides is where we want this InfoServer picking up
     // web applications.
     final String master = "master";
-    String p = getWebAppDir(master);
-    // Now strip master + the separator off the end of our context
-    return p.substring(0, p.length() - (master.length() + 1/* The separator*/));
-  }
-
-  private static String getWebAppsPath(final String path)
-  throws IOException {
-    URL url = InfoServer.class.getClassLoader().getResource(path);
-    if (url == null)
-      throw new IOException("hbase-webapps not found in CLASSPATH: " + path);
-    return url.toString();
-  }
-
-  /**
-   * Get the path for this web app
-   * @param webappName web app
-   * @return path
-   * @throws IOException e
-   */
-  public static String getWebAppDir(final String webappName)
-  throws IOException {
-    String webappDir;
-    webappDir = getWebAppsPath("hbase-webapps/" + webappName);
-    return webappDir;
+    String p = getWebAppsPath(master);
+    int index = p.lastIndexOf(master);
+    // Now strip master off the end if it is present
+    return index == -1? p: p.substring(0, index);
   }
 }

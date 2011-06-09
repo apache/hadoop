@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.mapreduce.hadoopbackport;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -132,8 +133,7 @@ public class InputSampler<K,V> extends Configured implements Tool  {
       int samplesPerSplit = numSamples / splitsToSample;
       long records = 0;
       for (int i = 0; i < splitsToSample; ++i) {
-        TaskAttemptContext samplingContext = new TaskAttemptContext(
-            job.getConfiguration(), new TaskAttemptID());
+        TaskAttemptContext samplingContext = getTaskAttemptContext(job);
         RecordReader<K,V> reader = inf.createRecordReader(
             splits.get(i), samplingContext);
         reader.initialize(splits.get(i), samplingContext);
@@ -148,6 +148,32 @@ public class InputSampler<K,V> extends Configured implements Tool  {
         reader.close();
       }
       return (K[])samples.toArray();
+    }
+  }
+
+  /**
+   * This method is about making hbase portable, making it so it can run on
+   * more than just hadoop 0.20.  In later hadoops, TaskAttemptContext became
+   * an Interface.  But in hadoops where TAC is an Interface, we shouldn't
+   * be using the classes that are in this package; we should be using the
+   * native Hadoop ones (We'll throw a ClassNotFoundException if end up in
+   * here when we should be using native hadoop TotalOrderPartitioner).
+   * @param job
+   * @return
+   * @throws IOException 
+   */
+  public static TaskAttemptContext getTaskAttemptContext(final Job job)
+  throws IOException {
+    Constructor<TaskAttemptContext> c;
+    try {
+      c = TaskAttemptContext.class.getConstructor(Configuration.class, TaskAttemptID.class);
+    } catch (Exception e) {
+      throw new IOException("Failed getting constructor", e);
+    }
+    try {
+      return c.newInstance(job.getConfiguration(), new TaskAttemptID());
+    } catch (Exception e) {
+      throw new IOException("Failed creating instance", e);
     }
   }
 
@@ -214,8 +240,7 @@ public class InputSampler<K,V> extends Configured implements Tool  {
       // the target sample keyset
       for (int i = 0; i < splitsToSample ||
                      (i < splits.size() && samples.size() < numSamples); ++i) {
-        TaskAttemptContext samplingContext = new TaskAttemptContext(
-            job.getConfiguration(), new TaskAttemptID());
+        TaskAttemptContext samplingContext = getTaskAttemptContext(job);
         RecordReader<K,V> reader = inf.createRecordReader(
             splits.get(i), samplingContext);
         reader.initialize(splits.get(i), samplingContext);
@@ -285,8 +310,7 @@ public class InputSampler<K,V> extends Configured implements Tool  {
       long records = 0;
       long kept = 0;
       for (int i = 0; i < splitsToSample; ++i) {
-        TaskAttemptContext samplingContext = new TaskAttemptContext(
-            job.getConfiguration(), new TaskAttemptID());
+        TaskAttemptContext samplingContext = getTaskAttemptContext(job);
         RecordReader<K,V> reader = inf.createRecordReader(
             splits.get(i), samplingContext);
         reader.initialize(splits.get(i), samplingContext);

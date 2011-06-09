@@ -595,7 +595,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
    int port = this.conf.getInt("hbase.master.info.port", 60010);
    if (port >= 0) {
      String a = this.conf.get("hbase.master.info.bindAddress", "0.0.0.0");
-     this.infoServer = new InfoServer(MASTER, a, port, false);
+     this.infoServer = new InfoServer(MASTER, a, port, false, this.conf);
      this.infoServer.addServlet("status", "/master-status", MasterStatusServlet.class);
      this.infoServer.setAttribute(MASTER, this);
      this.infoServer.start();

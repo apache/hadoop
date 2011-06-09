@@ -26,6 +26,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -165,7 +166,7 @@ public class TestHFileOutputFormat  {
    */
   @Test
   public void test_LATEST_TIMESTAMP_isReplaced()
-  throws IOException, InterruptedException {
+  throws Exception {
     Configuration conf = new Configuration(this.util.getConfiguration());
     RecordWriter<ImmutableBytesWritable, KeyValue> writer = null;
     TaskAttemptContext context = null;
@@ -174,8 +175,7 @@ public class TestHFileOutputFormat  {
     try {
       Job job = new Job(conf);
       FileOutputFormat.setOutputPath(job, dir);
-      context = new TaskAttemptContext(job.getConfiguration(),
-        new TaskAttemptID());
+      context = getTestTaskAttemptContext(job);
       HFileOutputFormat hof = new HFileOutputFormat();
       writer = hof.getRecordWriter(context);
       final byte [] b = Bytes.toBytes("b");
@@ -201,6 +201,32 @@ public class TestHFileOutputFormat  {
       if (writer != null && context != null) writer.close(context);
       dir.getFileSystem(conf).delete(dir, true);
     }
+  }
+
+  /**
+   * @return True if the available mapreduce is post-0.20.
+   */
+  private static boolean isPost020MapReduce() {
+    // Here is a coarse test for post 0.20 hadoop; TAC became an interface.
+    return TaskAttemptContext.class.isInterface();
+  }
+
+  private TaskAttemptContext getTestTaskAttemptContext(final Job job)
+  throws IOException, Exception {
+    TaskAttemptContext context;
+    if (isPost020MapReduce()) {
+      TaskAttemptID id =
+        TaskAttemptID.forName("attempt_200707121733_0001_m_000000_0");
+      Class<?> clazz =
+        Class.forName("org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl");
+      Constructor<?> c = clazz.
+          getConstructor(job.getConfiguration().getClass(), TaskAttemptID.class);
+      context = (TaskAttemptContext)c.newInstance(job.getConfiguration(), id);
+    } else {
+      context = org.apache.hadoop.hbase.mapreduce.hadoopbackport.InputSampler.
+        getTaskAttemptContext(job);
+    }
+    return context;
   }
 
   /**
@@ -454,8 +480,7 @@ public class TestHFileOutputFormat  {
    * from the column family descriptor
    */
   @Test
-  public void testColumnFamilyCompression()
-      throws IOException, InterruptedException {
+  public void testColumnFamilyCompression() throws Exception {
     Configuration conf = new Configuration(this.util.getConfiguration());
     RecordWriter<ImmutableBytesWritable, KeyValue> writer = null;
     TaskAttemptContext context = null;
@@ -484,8 +509,7 @@ public class TestHFileOutputFormat  {
       setupRandomGeneratorMapper(job);
       HFileOutputFormat.configureIncrementalLoad(job, table);
       FileOutputFormat.setOutputPath(job, dir);
-      context = new TaskAttemptContext(job.getConfiguration(),
-          new TaskAttemptID());
+      context = getTestTaskAttemptContext(job);
       HFileOutputFormat hof = new HFileOutputFormat();
       writer = hof.getRecordWriter(context);
 

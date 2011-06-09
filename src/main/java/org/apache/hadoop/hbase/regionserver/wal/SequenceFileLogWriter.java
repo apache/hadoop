@@ -43,12 +43,14 @@ public class SequenceFileLogWriter implements HLog.Writer {
   private final Log LOG = LogFactory.getLog(this.getClass());
   // The sequence file we delegate to.
   private SequenceFile.Writer writer;
-  // The dfsclient out stream gotten made accessible or null if not available.
-  private OutputStream dfsClient_out;
-  // The syncFs method from hdfs-200 or null if not available.
-  private Method syncFs;
+  // This is the FSDataOutputStream instance that is the 'out' instance
+  // in the SequenceFile.Writer 'writer' instance above.
+  private FSDataOutputStream writer_out;
 
   private Class<? extends HLogKey> keyClass;
+
+  private Method syncFs = null;
+  private Method hflush = null;
 
   /**
    * Default constructor.
@@ -66,10 +68,10 @@ public class SequenceFileLogWriter implements HLog.Writer {
   public SequenceFileLogWriter(Class<? extends HLogKey> keyClass) {
     this.keyClass = keyClass;
   }
-  
+
   @Override
   public void init(FileSystem fs, Path path, Configuration conf)
-      throws IOException {
+  throws IOException {
 
     if (null == keyClass) {
       keyClass = HLog.getKeyClass(conf);
@@ -87,10 +89,63 @@ public class SequenceFileLogWriter implements HLog.Writer {
       new DefaultCodec(),
       null,
       new Metadata());
+    
+    this.writer_out = getSequenceFilePrivateFSDataOutputStreamAccessible();
+    this.syncFs = getSyncFs();
+    this.hflush = getHFlush();
+    String msg =
+      "syncFs=" + (this.syncFs != null) + ", hflush=" + (this.hflush != null);
+    if (this.syncFs != null || this.hflush != null) {
+      LOG.debug(msg);
+    } else {
+      LOG.warn("No sync support! " + msg);
+    }
+  }
 
-    // Get at the private FSDataOutputStream inside in SequenceFile so we can
-    // call sync on it.  Make it accessible.  Stash it aside for call up in
-    // the sync method.
+  /**
+   * Now do dirty work to see if syncFs is available on the backing this.writer.
+   * It will be available in branch-0.20-append and in CDH3.
+   * @return The syncFs method or null if not available.
+   * @throws IOException
+   */
+  private Method getSyncFs()
+  throws IOException {
+    Method m = null;
+    try {
+      // function pointer to writer.syncFs() method; present when sync is hdfs-200.
+      m = this.writer.getClass().getMethod("syncFs", new Class<?> []{});
+    } catch (SecurityException e) {
+      throw new IOException("Failed test for syncfs", e);
+    } catch (NoSuchMethodException e) {
+      // Not available
+    }
+    return m;
+  }
+
+  /**
+   * See if hflush (0.21 and 0.22 hadoop) is available.
+   * @return The hflush method or null if not available.
+   * @throws IOException
+   */
+  private Method getHFlush()
+  throws IOException {
+    Method m = null;
+    try {
+      Class<? extends OutputStream> c = getWriterFSDataOutputStream().getClass();
+      m = c.getMethod("hflush", new Class<?> []{});
+    } catch (SecurityException e) {
+      throw new IOException("Failed test for hflush", e);
+    } catch (NoSuchMethodException e) {
+      // Ignore
+    }
+    return m;
+  }
+
+  // Get at the private FSDataOutputStream inside in SequenceFile so we can
+  // call sync on it.  Make it accessible.
+  private FSDataOutputStream getSequenceFilePrivateFSDataOutputStreamAccessible()
+  throws IOException {
+    FSDataOutputStream out = null;
     final Field fields [] = this.writer.getClass().getDeclaredFields();
     final String fieldName = "out";
     for (int i = 0; i < fields.length; ++i) {
@@ -98,34 +153,17 @@ public class SequenceFileLogWriter implements HLog.Writer {
         try {
           // Make the 'out' field up in SF.Writer accessible.
           fields[i].setAccessible(true);
-          FSDataOutputStream out =
-            (FSDataOutputStream)fields[i].get(this.writer);
-          this.dfsClient_out = out.getWrappedStream();
+          out = (FSDataOutputStream)fields[i].get(this.writer);
           break;
         } catch (IllegalAccessException ex) {
           throw new IOException("Accessing " + fieldName, ex);
+        } catch (SecurityException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
         }
       }
     }
-
-    // Now do dirty work to see if syncFs is available.
-    // Test if syncfs is available.
-    Method m = null;
-    boolean append = conf.getBoolean("dfs.support.append", false);
-    if (append) {
-      try {
-        // function pointer to writer.syncFs()
-        m = this.writer.getClass().getMethod("syncFs", new Class<?> []{});
-      } catch (SecurityException e) {
-        throw new IOException("Failed test for syncfs", e);
-      } catch (NoSuchMethodException e) {
-        // Not available
-      }
-    }
-    this.syncFs = m;
-    LOG.info((this.syncFs != null)?
-      "Using syncFs -- HDFS-200":
-      ("syncFs -- HDFS-200 -- not available, dfs.support.append=" + append));
+    return out;
   }
 
   @Override
@@ -146,6 +184,12 @@ public class SequenceFileLogWriter implements HLog.Writer {
       } catch (Exception e) {
         throw new IOException("Reflection", e);
       }
+    } else if (this.hflush != null) {
+      try {
+        this.hflush.invoke(getWriterFSDataOutputStream(), HLog.NO_ARGS);
+      } catch (Exception e) {
+        throw new IOException("Reflection", e);
+      }
     }
   }
 
@@ -158,7 +202,7 @@ public class SequenceFileLogWriter implements HLog.Writer {
    * @return The dfsclient out stream up inside SF.Writer made accessible, or
    * null if not available.
    */
-  public OutputStream getDFSCOutputStream() {
-    return this.dfsClient_out;
+  public FSDataOutputStream getWriterFSDataOutputStream() {
+    return this.writer_out;
   }
 }

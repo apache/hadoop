@@ -737,9 +737,12 @@ public class FSUtils {
       } catch (NoSuchMethodException e) {
         append = false;
       }
-    } else {
+    }
+    if (!append) {
+      // Look for the 0.21, 0.22, new-style append evidence.
       try {
         FSDataOutputStream.class.getMethod("hflush", new Class<?> []{});
+        append = true;
       } catch (NoSuchMethodException e) {
         append = false;
       }

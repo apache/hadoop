@@ -59,6 +59,7 @@ public class TestReplication {
 
   private static Configuration conf1;
   private static Configuration conf2;
+  private static Configuration CONF_WITH_LOCALFS;
 
   private static ZooKeeperWatcher zkw1;
   private static ZooKeeperWatcher zkw2;
@@ -123,7 +124,7 @@ public class TestReplication {
     setIsReplication(true);
 
     LOG.info("Setup second Zk");
-
+    CONF_WITH_LOCALFS = HBaseConfiguration.create(conf1);
     utility1.startMiniCluster(2);
     utility2.startMiniCluster(2);
 
@@ -137,7 +138,6 @@ public class TestReplication {
     HBaseAdmin admin2 = new HBaseAdmin(conf2);
     admin1.createTable(table);
     admin2.createTable(table);
-
     htable1 = new HTable(conf1, tableName);
     htable1.setWriteBufferSize(1024);
     htable2 = new HTable(conf2, tableName);
@@ -476,7 +476,7 @@ public class TestReplication {
     testSmallBatch();
 
     String[] args = new String[] {"2", Bytes.toString(tableName)};
-    Job job = VerifyReplication.createSubmittableJob(conf1, args);
+    Job job = VerifyReplication.createSubmittableJob(CONF_WITH_LOCALFS, args);
     if (job == null) {
       fail("Job wasn't created, see the log");
     }
@@ -500,7 +500,7 @@ public class TestReplication {
     }
     Delete delete = new Delete(put.getRow());
     htable2.delete(delete);
-    job = VerifyReplication.createSubmittableJob(conf1, args);
+    job = VerifyReplication.createSubmittableJob(CONF_WITH_LOCALFS, args);
     if (job == null) {
       fail("Job wasn't created, see the log");
     }

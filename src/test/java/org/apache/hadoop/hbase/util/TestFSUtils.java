@@ -34,7 +34,6 @@ public class TestFSUtils {
     HBaseTestingUtility htu = new HBaseTestingUtility();
     htu.getConfiguration().setBoolean("dfs.support.append", false);
     assertFalse(FSUtils.isHDFS(htu.getConfiguration()));
-    assertFalse(FSUtils.isAppendSupported(htu.getConfiguration()));
     htu.getConfiguration().setBoolean("dfs.support.append", true);
     MiniDFSCluster cluster = null;
     try {

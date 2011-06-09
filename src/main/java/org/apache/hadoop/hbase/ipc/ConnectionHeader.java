@@ -33,7 +33,6 @@ import org.apache.hadoop.security.UserGroupInformation;
  */
 class ConnectionHeader implements Writable {
   private String protocol;
-  private UserGroupInformation ugi = null;
 
   public ConnectionHeader() {}
 
@@ -47,7 +46,6 @@ class ConnectionHeader implements Writable {
    */
   public ConnectionHeader(String protocol, UserGroupInformation ugi) {
     this.protocol = protocol;
-    this.ugi = ugi;
   }
 
   @Override
@@ -56,26 +54,11 @@ class ConnectionHeader implements Writable {
     if (protocol.isEmpty()) {
       protocol = null;
     }
-
-    boolean ugiUsernamePresent = in.readBoolean();
-    if (ugiUsernamePresent) {
-      String username = in.readUTF();
-      ugi.readFields(in);
-    } else {
-      ugi = null;
-    }
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
     Text.writeString(out, (protocol == null) ? "" : protocol);
-    if (ugi != null) {
-      //Send both effective user and real user for simple auth
-      out.writeBoolean(true);
-      out.writeUTF(ugi.getUserName());
-    } else {
-      out.writeBoolean(false);
-    }
   }
 
   public String getProtocol() {
@@ -83,10 +66,10 @@ class ConnectionHeader implements Writable {
   }
 
   public UserGroupInformation getUgi() {
-    return ugi;
+    return null;
   }
 
   public String toString() {
-    return protocol + "-" + ugi;
+    return protocol;
   }
 }

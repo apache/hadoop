@@ -257,6 +257,7 @@ class CatalogJanitor extends Chore {
     for (HColumnDescriptor family: split.getTableDesc().getFamilies()) {
       Path p = Store.getStoreHomedir(tabledir, split.getEncodedName(),
         family.getName());
+      if (!fs.exists(p)) continue;
       // Look for reference files.  Call listStatus with anonymous instance of PathFilter.
       FileStatus [] ps = fs.listStatus(p,
           new PathFilter () {
