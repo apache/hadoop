@@ -110,7 +110,7 @@ public class TestJobHistoryConfig extends TestCase {
     conf.setSpeculativeExecution(false);
     conf.setJobName("test");
     conf.setUser("testuser");
-    conf.setQueueName("testQueue");
+    conf.setQueueName("default");
     String TEST_ROOT_DIR = new Path(System.getProperty("test.build.data",
         "/tmp")).toString().replace(' ', '+');
     JobTracker jt = JobTracker.startTracker(conf);
