@@ -71,6 +71,24 @@ public final class Compression {
   }
 
   /**
+   * Returns the classloader to load the Codec class from.
+   * @return
+   */
+  private static ClassLoader getClassLoaderForCodec() {
+    ClassLoader cl = Thread.currentThread().getContextClassLoader();
+    if (cl == null) {
+      cl = Compression.class.getClassLoader();
+    }
+    if (cl == null) {
+      cl = ClassLoader.getSystemClassLoader();
+    }
+    if (cl == null) {
+      throw new RuntimeException("A ClassLoader to load the Codec could not be determined");
+    }
+    return cl;
+  }
+
+  /**
    * Compression algorithms. The ordinal of these cannot change or else you
    * risk breaking all existing HFiles out there.  Even the ones that are
    * not compressed! (They use the NONE algorithm)
@@ -85,7 +103,7 @@ public final class Compression {
         if (lzoCodec == null) {
           try {
             Class<?> externalCodec =
-                ClassLoader.getSystemClassLoader().loadClass("com.hadoop.compression.lzo.LzoCodec");
+                getClassLoaderForCodec().loadClass("com.hadoop.compression.lzo.LzoCodec");
             lzoCodec = (CompressionCodec) ReflectionUtils.newInstance(externalCodec, 
                 new Configuration(conf));
           } catch (ClassNotFoundException e) {
@@ -150,7 +168,7 @@ public final class Compression {
           if (snappyCodec == null) {
             try {
               Class<?> externalCodec =
-                  ClassLoader.getSystemClassLoader().loadClass("org.apache.hadoop.io.compress.SnappyCodec");
+                  getClassLoaderForCodec().loadClass("org.apache.hadoop.io.compress.SnappyCodec");
               snappyCodec = (CompressionCodec) ReflectionUtils.newInstance(externalCodec, 
                   conf);
             } catch (ClassNotFoundException e) {
