@@ -117,6 +117,34 @@ public class TestFileUtil {
     }
   }
 
+
+  @Test
+  public void testListAPI() throws IOException {
+    setupDirs();
+    //Test existing files case 
+    String[] files = FileUtil.list(partitioned);
+    Assert.assertEquals("Unexpected number of pre-existing files", 2, files.length);
+
+    //Test existing directory with no files case 
+    File newDir = new File(tmp.getPath(),"test");
+    newDir.mkdir();
+    Assert.assertTrue("Failed to create test dir", newDir.exists());
+    files = FileUtil.list(newDir);
+    Assert.assertEquals("New directory unexpectedly contains files", 0, files.length);
+    newDir.delete();
+    Assert.assertFalse("Failed to delete test dir", newDir.exists());
+    
+    //Test non-existing directory case, this throws 
+    //IOException
+    try {
+      files = FileUtil.list(newDir);
+      Assert.fail("IOException expected on list() for non-existent dir "
+          + newDir.toString());
+    } catch(IOException ioe) {
+      //Expected an IOException
+    }
+  }
+  
   @After
   public void tearDown() throws IOException {
     FileUtil.fullyDelete(del);

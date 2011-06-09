@@ -6,6 +6,9 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    HADOOP-7342. Add an utility API in FileUtil for JDK File.list
+    avoid NPEs on File.list() (Bharath Mundlapudi via mattf)
+
     HADOOP-6994. Api to get delegation token in AbstractFileSystem. (jitendra)
 
     HADOOP-7171. Support UGI in FileContext API. (jitendra)
