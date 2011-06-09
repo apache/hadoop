@@ -211,18 +211,20 @@ stopping hbase...............</programlisting></para>
             <primary>Hadoop</primary>
           </indexterm></title>
 
-        <para>This version of HBase will only run on <link
+          <para>
+              This version of HBase will only run on <link
         xlink:href="http://hadoop.apache.org/common/releases.html">Hadoop
-        0.20.x</link>. It will not run on hadoop 0.21.x (nor 0.22.x). HBase
-        will lose data unless it is running on an HDFS that has a durable
-        <code>sync</code>. Currently only the <link
+        0.20.x</link>. It will not run on hadoop 0.21.x (nor 0.22.x).
+        HBase will lose data unless it is running on an HDFS that has a durable
+        <code>sync</code>. Hadoop 0.20.2 and Hadoop 0.20.203.0 DO NOT have this attribute.
+        Currently only the <link
         xlink:href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/">branch-0.20-append</link>
         branch has this attribute<footnote>
             <para>See <link
             xlink:href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/CHANGES.txt">CHANGES.txt</link>
             in branch-0.20-append to see list of patches involved adding
             append on the Hadoop 0.20 branch.</para>
-          </footnote>. No official releases have been made from this branch up
+          </footnote>. No official releases have been made from the branch-0.20-append branch up
         to now so you will have to build your own Hadoop from the tip of this
         branch.  Michael Noll has written a detailed blog,
         <link xlink:href="http://www.michael-noll.com/blog/2011/04/14/building-an-hadoop-0-20-x-version-for-hbase-0-90-2/">Building
@@ -237,27 +239,14 @@ stopping hbase...............</programlisting></para>
         <para>Because HBase depends on Hadoop, it bundles an instance of the
         Hadoop jar under its <filename>lib</filename> directory. The bundled
         Hadoop was made from the Apache branch-0.20-append branch at the time
-        of this HBase's release. It is <emphasis>critical</emphasis> that the
-        version of Hadoop that is out on your cluster matches what is Hbase
-        match. Replace the hadoop jar found in the HBase
+        of the HBase's release. It is <emphasis>critical</emphasis> that the
+        version of Hadoop that is out on your cluster matches what is under
+        HBase.  Replace the hadoop jar found in the HBase
         <filename>lib</filename> directory with the hadoop jar you are running
         out on your cluster to avoid version mismatch issues. Make sure you
-        replace the jar all over your cluster. For example, versions of CDH do
-        not have HDFS-724 whereas Hadoops branch-0.20-append branch does have
-        HDFS-724. This patch changes the RPC version because protocol was
-        changed. Version mismatch issues have various manifestations but often
-        all looks like its hung up.</para>
-
-        <note>
-          <title>Can I just replace the jar in Hadoop 0.20.2 tarball with the
-          <emphasis>sync</emphasis>-supporting Hadoop jar found in
-          HBase?</title>
-
-          <para>You could do this. It works going by a recent posting up on
-          the <link
-          xlink:href="http://www.apacheserver.net/Using-Hadoop-bundled-in-lib-directory-HBase-at1136240.htm">mailing
-          list</link>.</para>
-        </note>
+        replace the jar in HBase everywhere on your cluster.  Hadoop version
+        mismatch issues have various manifestations but often all looks like
+        its hung up.</para>
 
         <note>
           <title>Hadoop Security</title>
