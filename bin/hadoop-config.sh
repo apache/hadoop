@@ -25,10 +25,10 @@ script="$(basename -- "$this")"
 this="$common_bin/$script"
 
 # convert relative path to absolute path
-bin=`dirname "$this"`
+config_bin=`dirname "$this"`
 script=`basename "$this"`
-bin=`cd "$bin"; pwd`
-this="$bin/$script"
+config_bin=`cd "$config_bin"; pwd`
+this="$config_bin/$script"
 
 # the root of the Hadoop installation
 export HADOOP_PREFIX=`dirname "$this"`/..
