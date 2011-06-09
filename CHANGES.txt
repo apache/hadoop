@@ -83,6 +83,9 @@ Release 0.20.204.0 - unreleased
 
   BUG FIXES
 
+    HADOOP-7373. Fix {start,stop}-{dfs,mapred} and hadoop-daemons.sh from
+    trying to use the wrong bin directory. (omalley)
+
     HADOOP-7369. Fix permissions in tarball for sbin/* and libexec/* (omalley)
 
     HADOOP-7356. Fix bin/hadoop scripts (eyang via omalley)
