@@ -164,7 +164,30 @@ export HBASE_OPTS="-XX:NewSize=64m -XX:MaxNewSize=64m &lt;cms options from above
     </section>
     <section xml:id="trouble.tools">
       <title>Tools</title>
-      <section xml:id="trouble.tools.searchhadoop">
+         <section xml:id="trouble.tools.builtin">
+           <title>Builtin Tools</title>
+            <section xml:id="trouble.tools.builtin.webmaster">
+              <title>Master Web Interface</title>
+              <para>The Master starts a web-interface on port 60010 by default.
+              </para>
+              <para>The Master web UI lists created tables and their definition (e.g., ColumnFamilies, blocksize, etc.).  Additionally, 
+              the available RegionServers in the cluster are listed along with selected high-level metrics (requests, number of regions, usedHeap, maxHeap).
+              The Master web UI allows navigation to each RegionServer's web UI.
+              </para>
+            </section>
+            <section xml:id="trouble.tools.builtin.webregion">
+              <title>RegionServer Web Interface</title>
+              <para>RegionServers starts a web-interface on port 60030 by default.
+              </para>
+              <para>The RegionServer web UI lists online regions and their start/end keys, as well as point-in-time RegionServer metrics (requests, regions, storeFileIndexSize, compactionQueueSize, etc.).
+              </para>
+              <para>See <xref linkend="hbase_metrics"/> for more information in metric definitions.
+            </para>
+          </section>
+       </section>
+       <section xml:id="trouble.tools.external">
+          <title>External Tools</title>
+       <section xml:id="trouble.tools.searchhadoop">
         <title>search-hadoop.com</title>
         <para>
         <link xlink:href="http://search-hadoop.com">search-hadoop.com</link> indexes all the mailing lists and <link xlink:href="https://issues.apache.org/jira/browse/HBASE">JIRA</link>, it’s really helpful when looking for Hadoop/HBase-specific issues.
@@ -400,7 +423,8 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
           </para>
        </section>
     </section>
-
+    </section>
+    
     <section xml:id="trouble.client">
       <title>Client</title>
        <section xml:id="trouble.client.scantimeout">
