@@ -30,9 +30,11 @@ module Shell
       end
 
       def refresh_width()
-        @max_width = Java::jline.Terminal.getTerminal().getTerminalWidth() if $stdout.tty?
-        # the above doesn't work in some terminals (such as shell running within emacs)
-        @max_width = 100 if @max_width.to_i.zero?
+        if $stdout.tty?
+          @max_width = Java::jline.Terminal.getTerminal().getTerminalWidth()
+        else
+          @max_width = 0
+        end
       end
 
       # Takes an output stream and a print width.
@@ -63,7 +65,7 @@ module Shell
 
         # Print a string
         if args.is_a?(String)
-          output(@max_width, args)
+          output(args)
           @out.puts
           return
         end
@@ -72,12 +74,16 @@ module Shell
         if args.length == 1
           splits = split(@max_width, dump(args[0]))
           for l in splits
-            output(@max_width, l)
+            output(l)
             @out.puts
           end
         elsif args.length == 2
-          col1width = (not widths or widths.length == 0) ? @max_width / 4 : @max_width * widths[0] / 100
-          col2width = (not widths or widths.length < 2) ? @max_width - col1width - 2 : @max_width * widths[1] / 100 - 2
+          if @max_width == 0
+            col1width = col2width = 0
+          else
+            col1width = (not widths or widths.length == 0) ? @max_width / 4 : @max_width * widths[0] / 100
+            col2width = (not widths or widths.length < 2) ? @max_width - col1width - 2 : @max_width * widths[1] / 100 - 2
+          end
           splits1 = split(col1width, dump(args[0]))
           splits2 = split(col2width, dump(args[1]))
           biggest = (splits2.length > splits1.length)? splits2.length: splits1.length
@@ -108,6 +114,9 @@ module Shell
       end
 
       def split(width, str)
+        if width == 0
+          return [str]
+        end
         result = []
         index = 0
         while index < str.length do
@@ -123,10 +132,19 @@ module Shell
         return str
       end
 
+      def output(str)
+        output(@max_width, str)
+      end
+
       def output(width, str)
-        # Make up a spec for printf
-        spec = "%%-%ds" % width
-        @out.printf(spec, str)
+        if str == nil
+          str = ''
+        end
+        if not width or width == str.length
+          @out.print(str)
+        else
+          @out.printf('%-*s', width, str)
+        end
       end
 
       def footer(start_time = nil, row_count = nil)

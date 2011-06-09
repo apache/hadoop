@@ -317,6 +317,8 @@ Release 0.90.4 - Unreleased
    HBASE-3920  HLog hbase.regionserver.flushlogentries no longer supported
                (Dave Latham)
    HBASE-3919  More places output binary data to text (Dave Latham)
+   HBASE-3873  HBase IRB shell: Don't pretty-print the output when stdout
+               isn't a TTY (Benoît Sigoure)
 
 Release 0.90.3 - May 19th, 2011
 
