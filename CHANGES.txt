@@ -3,6 +3,7 @@ Hn jaadoop Change Log
 Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
+   HADOOP-6904. Support method based RPC compatiblity. (hairong)
 
   NEW FEATURES
 
@@ -43,6 +44,9 @@ Trunk (unreleased changes)
 
     HADOOP-7235. Refactor the tail command to conform to new FsCommand class.
     (Daryn Sharp via szetszwo)
+
+    HADOOP-7227. Remove protocol version check at proxy creation in Hadoop
+    RPC. (jitendra)
 
     HADOOP-7236. Refactor the mkdir command to conform to new FsCommand class.
     (Daryn Sharp via szetszwo)
