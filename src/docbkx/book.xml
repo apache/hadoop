@@ -1578,6 +1578,16 @@ When I build, why do I always get <code>Unable to find resource 'VM_global_libra
                 </para>
             </answer>
         </qandaentry>
+        <qandaentry>
+            <question><para>
+                    Back up my HBase Cluster?
+            </para></question>
+            <answer>
+                <para>
+                    See <link xlink:href="http://blog.sematext.com/2011/03/11/hbase-backup-options/">HBase Backup Options</link> over on the Sematext Blog.
+                </para>
+            </answer>
+        </qandaentry>
     </qandadiv>
     </qandaset>
   </appendix>
