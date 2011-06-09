@@ -132,6 +132,9 @@ Trunk (unreleased changes)
 
     HADOOP-7284 Trash and shell's rm does not work for viewfs (Sanjay Radia)
 
+    HADOOP-7287. Configuration deprecation mechanism doesn't work properly for
+    GenericOptionsParser and Tools. (Aaron T. Myers via todd)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
