@@ -239,11 +239,11 @@ stopping hbase...............</programlisting></para>
         <para>Because HBase depends on Hadoop, it bundles an instance of the
         Hadoop jar under its <filename>lib</filename> directory. The bundled
         Hadoop was made from the Apache branch-0.20-append branch at the time
-        of the HBase's release. It is <emphasis>critical</emphasis> that the
-        version of Hadoop that is out on your cluster matches what is under
-        HBase.  Replace the hadoop jar found in the HBase
-        <filename>lib</filename> directory with the hadoop jar you are running
-        out on your cluster to avoid version mismatch issues. Make sure you
+        of the HBase's release.  The bundled jar is ONLY for use in standalone mode.
+        In distributed mode, it is <emphasis>critical</emphasis> that the version of Hadoop that is out
+        on your cluster match what is under HBase.  Replace the hadoop jar found in the HBase
+        <filename>lib</filename> directory with the hadoop jar you are running on
+        your cluster to avoid version mismatch issues. Make sure you
         replace the jar in HBase everywhere on your cluster.  Hadoop version
         mismatch issues have various manifestations but often all looks like
         its hung up.</para>
