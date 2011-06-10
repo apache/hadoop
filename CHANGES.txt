@@ -119,6 +119,7 @@ Release 0.91.0 - Unreleased
                to load codec (Alejandro Abdelnur)
    HBASE-3976  Disable block cache on compactions (Karthik Sankarachary)
    HBASE-3979  Trivial fixes in code, document (Ming Ma)
+   HBASE-3794  Ability to Discard Bad HTable Puts
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
