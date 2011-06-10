@@ -751,7 +751,7 @@ public class RegionCoprocessorHost
 
   /**
    * @param increment increment object
-   * @param result the result returned by incrementColumnValue
+   * @param result the result returned by postIncrement
    * @throws IOException if an error occurred on the coprocessor
    */
   public void postIncrement(final Increment increment, Result result)

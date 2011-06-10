@@ -980,8 +980,6 @@ public class HConnectionManager {
           // Instantiate the location
           String hostname = Addressing.parseHostname(hostAndPort);
           int port = Addressing.parsePort(hostAndPort);
-          value = regionInfoRow.getValue(HConstants.CATALOG_FAMILY,
-            HConstants.SERVER_QUALIFIER);
           location = new HRegionLocation(regionInfo, hostname, port);
           cacheLocation(tableName, location);
           return location;

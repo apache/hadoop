@@ -173,8 +173,8 @@ public class SplitLogManager extends ZooKeeperListener {
    * available worker region server. This method must only be called after the
    * region servers have been brought online.
    *
-   * @param serverName
-   *          region server name
+   * @param logDir
+   *          the log directory encoded with a region server name
    * @throws IOException
    *          if there was an error while splitting any log file
    * @return cumulative size of the logfiles split
