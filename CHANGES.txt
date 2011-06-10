@@ -147,6 +147,9 @@ Release 0.20.204.0 - unreleased
     by throwing an error to indicate the editlog needs to be empty.
     (suresh)
 
+    HDFS-2057. Wait time to terminate the threads causes unit tests to
+    take longer time. (Bharath Mundlapudi via suresh)
+
   IMPROVEMENTS
 
     HDFS-2023. Backport of NPE for File.list and File.listFiles.
