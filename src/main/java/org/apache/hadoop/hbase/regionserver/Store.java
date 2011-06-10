@@ -1169,8 +1169,9 @@ public class Store implements HeapSize {
         LOG.error("Failed move of compacted file " + compactedFile.getPath(), e);
         return null;
       }
-      result = new StoreFile(this.fs, p, blockcache, this.conf,
-          this.family.getBloomFilterType(), this.inMemory);
+      result = new StoreFile(this.fs, p, 
+          false, // never cache during compaction
+          this.conf, this.family.getBloomFilterType(), this.inMemory);
       result.createReader();
     }
     this.lock.writeLock().lock();
