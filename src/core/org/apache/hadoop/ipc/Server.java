@@ -568,12 +568,6 @@ public abstract class Server {
         }
       }
       readPool.shutdown();
-      try {
-          readPool.awaitTermination(10, TimeUnit.SECONDS);
-      } catch (InterruptedException e) {
-       LOG.info("Exception occured in doStop:" + e.getMessage());
-      }
-      readPool.shutdownNow();
     }
 
     // The method that will return the next reader to work with

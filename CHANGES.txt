@@ -76,6 +76,9 @@ Release 0.20.204.0 - unreleased
 
     HDFS-1377. Quota bug for partial blocks allows quotas to be violated. (eli)
 
+    HDFS-2057. Wait time to terminate the threads causes unit tests to
+    take longer time. (Bharath Mundlapudi via suresh)
+
   IMPROVEMENTS
 
     MAPREDUCE-2415. Distribute the user task logs on to multiple disks.
