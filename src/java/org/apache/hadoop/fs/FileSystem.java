@@ -119,9 +119,9 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * Get a filesystem instance based on the uri, the passed
    * configuration and the user
-   * @param uri
-   * @param conf
-   * @param user
+   * @param uri of the filesystem
+   * @param conf the configuration to use
+   * @param user to perform the get as
    * @return the filesystem instance
    * @throws IOException
    * @throws InterruptedException
@@ -141,13 +141,16 @@ public abstract class FileSystem extends Configured implements Closeable {
     });
   }
 
-  /** Returns the configured filesystem implementation.*/
+  /**
+   * Returns the configured filesystem implementation.
+   * @param conf the configuration to use
+   */
   public static FileSystem get(Configuration conf) throws IOException {
     return get(getDefaultUri(conf), conf);
   }
   
   /** Get the default filesystem URI from a configuration.
-   * @param conf the configuration to access
+   * @param conf the configuration to use
    * @return the uri of the default filesystem
    */
   public static URI getDefaultUri(Configuration conf) {
@@ -268,9 +271,9 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * Returns the FileSystem for this URI's scheme and authority and the 
    * passed user. Internally invokes {@link #newInstance(URI, Configuration)}
-   * @param uri
-   * @param conf
-   * @param user
+   * @param uri of the filesystem
+   * @param conf the configuration to use
+   * @param user to perform the get as
    * @return filesystem instance
    * @throws IOException
    * @throws InterruptedException
@@ -314,7 +317,9 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /** Returns a unique configured filesystem implementation.
-   * This always returns a new FileSystem object. */
+   * This always returns a new FileSystem object.
+   * @param conf the configuration to use
+   */
   public static FileSystem newInstance(Configuration conf) throws IOException {
     return newInstance(getDefaultUri(conf), conf);
   }
@@ -343,7 +348,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * Close all cached filesystems for a given UGI. Be sure those filesystems 
    * are not used anymore.
-   * @param ugi
+   * @param ugi user group info to close
    * @throws IOException
    */
   public static void closeAllForUGI(UserGroupInformation ugi) 
@@ -351,7 +356,10 @@ public abstract class FileSystem extends Configured implements Closeable {
     CACHE.closeAll(ugi);
   }
 
-  /** Make sure that a path specifies a FileSystem. */
+  /** 
+   * Make sure that a path specifies a FileSystem.
+   * @param path to use
+   */
   public Path makeQualified(Path path) {
     checkPath(path);
     return path.makeQualified(this.getUri(), this.getWorkingDirectory());
@@ -438,7 +446,10 @@ public abstract class FileSystem extends Configured implements Closeable {
     super(null);
   }
 
-  /** Check that a Path belongs to this FileSystem. */
+  /** 
+   * Check that a Path belongs to this FileSystem.
+   * @param path to check
+   */
   protected void checkPath(Path path) {
     URI uri = path.toUri();
     if (uri.getScheme() == null)                // fs is relative 
@@ -483,6 +494,10 @@ public abstract class FileSystem extends Configured implements Closeable {
    * hostnames of machines that contain the given file.
    *
    * The FileSystem will simply return an elt containing 'localhost'.
+   *
+   * @param file FilesStatus to get data from
+   * @param start offset into the given file
+   * @param len length for which to get locations for
    */
   public BlockLocation[] getFileBlockLocations(FileStatus file, 
       long start, long len) throws IOException {
@@ -490,7 +505,7 @@ public abstract class FileSystem extends Configured implements Closeable {
       return null;
     }
 
-    if ( (start<0) || (len < 0) ) {
+    if (start < 0 || len < 0) {
       throw new IllegalArgumentException("Invalid start or len parameter");
     }
 
@@ -500,7 +515,8 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
     String[] name = { "localhost:50010" };
     String[] host = { "localhost" };
-    return new BlockLocation[] { new BlockLocation(name, host, 0, file.getLen()) };
+    return new BlockLocation[] {
+      new BlockLocation(name, host, 0, file.getLen()) };
   }
  
 
@@ -513,6 +529,10 @@ public abstract class FileSystem extends Configured implements Closeable {
    * hostnames of machines that contain the given file.
    *
    * The FileSystem will simply return an elt containing 'localhost'.
+   *
+   * @param p path of file to get locations for
+   * @param start offset into the given file
+   * @param len length for which to get locations for
    */
   public BlockLocation[] getFileBlockLocations(Path p, 
       long start, long len) throws IOException {
@@ -566,18 +586,22 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
-   * Opens an FSDataOutputStream at the indicated Path.
+   * Create an FSDataOutputStream at the indicated Path.
    * Files are overwritten by default.
+   * @param f the file to create
    */
   public FSDataOutputStream create(Path f) throws IOException {
     return create(f, true);
   }
 
   /**
-   * Opens an FSDataOutputStream at the indicated Path.
+   * Create an FSDataOutputStream at the indicated Path.
+   * @param f the file to create
+   * @param overwrite if a file with this name already exists, then if true,
+   *   the file will be overwritten, and if false an exception will be thrown.
    */
   public FSDataOutputStream create(Path f, boolean overwrite)
-    throws IOException {
+      throws IOException {
     return create(f, overwrite, 
                   getConf().getInt("io.file.buffer.size", 4096),
                   getDefaultReplication(),
@@ -588,8 +612,11 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Create an FSDataOutputStream at the indicated Path with write-progress
    * reporting.
    * Files are overwritten by default.
+   * @param f the file to create
+   * @param progress to report progress
    */
-  public FSDataOutputStream create(Path f, Progressable progress) throws IOException {
+  public FSDataOutputStream create(Path f, Progressable progress) 
+      throws IOException {
     return create(f, true, 
                   getConf().getInt("io.file.buffer.size", 4096),
                   getDefaultReplication(),
@@ -597,11 +624,13 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
-   * Opens an FSDataOutputStream at the indicated Path.
+   * Create an FSDataOutputStream at the indicated Path.
    * Files are overwritten by default.
+   * @param f the file to create
+   * @param replication the replication factor
    */
   public FSDataOutputStream create(Path f, short replication)
-    throws IOException {
+      throws IOException {
     return create(f, true, 
                   getConf().getInt("io.file.buffer.size", 4096),
                   replication,
@@ -609,12 +638,15 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
-   * Opens an FSDataOutputStream at the indicated Path with write-progress
+   * Create an FSDataOutputStream at the indicated Path with write-progress
    * reporting.
    * Files are overwritten by default.
+   * @param f the file to create
+   * @param replication the replication factor
+   * @param progress to report progress
    */
-  public FSDataOutputStream create(Path f, short replication, Progressable progress)
-    throws IOException {
+  public FSDataOutputStream create(Path f, short replication, 
+      Progressable progress) throws IOException {
     return create(f, true, 
                   getConf().getInt("io.file.buffer.size", 4096),
                   replication,
@@ -623,8 +655,8 @@ public abstract class FileSystem extends Configured implements Closeable {
 
     
   /**
-   * Opens an FSDataOutputStream at the indicated Path.
-   * @param f the file name to open
+   * Create an FSDataOutputStream at the indicated Path.
+   * @param f the file name to create
    * @param overwrite if a file with this name already exists, then if true,
    *   the file will be overwritten, and if false an error will be thrown.
    * @param bufferSize the size of the buffer to be used.
@@ -639,9 +671,9 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
     
   /**
-   * Opens an FSDataOutputStream at the indicated Path with write-progress
+   * Create an FSDataOutputStream at the indicated Path with write-progress
    * reporting.
-   * @param f the file name to open
+   * @param f the path of the file to open
    * @param overwrite if a file with this name already exists, then if true,
    *   the file will be overwritten, and if false an error will be thrown.
    * @param bufferSize the size of the buffer to be used.
@@ -658,7 +690,7 @@ public abstract class FileSystem extends Configured implements Closeable {
     
     
   /**
-   * Opens an FSDataOutputStream at the indicated Path.
+   * Create an FSDataOutputStream at the indicated Path.
    * @param f the file name to open
    * @param overwrite if a file with this name already exists, then if true,
    *   the file will be overwritten, and if false an error will be thrown.
@@ -675,7 +707,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
-   * Opens an FSDataOutputStream at the indicated Path with write-progress
+   * Create an FSDataOutputStream at the indicated Path with write-progress
    * reporting.
    * @param f the file name to open
    * @param overwrite if a file with this name already exists, then if true,
@@ -696,7 +728,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
-   * Opens an FSDataOutputStream at the indicated Path with write-progress
+   * Create an FSDataOutputStream at the indicated Path with write-progress
    * reporting.
    * @param f the file name to open
    * @param permission
@@ -801,6 +833,8 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * Creates the given Path as a brand-new zero-length file.  If
    * create fails, or if it already existed, return false.
+   *
+   * @param f path to use for create
    */
   public boolean createNewFile(Path f) throws IOException {
     if (exists(f)) {
@@ -871,6 +905,8 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * Renames Path src to Path dst.  Can take place on local fs
    * or remote DFS.
+   * @param src path to be renamed
+   * @param dst new path after rename
    * @throws IOException on failure
    * @return true if rename is successful
    */
@@ -1039,6 +1075,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   /** True iff the named path is a directory.
    * Note: Avoid using this method. Instead reuse the FileStatus 
    * returned by getFileStatus() or listStatus() methods.
+   * @param f path to check
    */
   public boolean isDirectory(Path f) throws IOException {
     try {
@@ -1051,6 +1088,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   /** True iff the named path is a regular file.
    * Note: Avoid using this method. Instead reuse the FileStatus 
    * returned by getFileStatus() or listStatus() methods.
+   * @param f path to check
    */
   public boolean isFile(Path f) throws IOException {
     try {
@@ -1067,7 +1105,9 @@ public abstract class FileSystem extends Configured implements Closeable {
     return getFileStatus(f).getLen();
   }
     
-  /** Return the {@link ContentSummary} of a given {@link Path}. */
+  /** Return the {@link ContentSummary} of a given {@link Path}.
+  * @param f path to use
+  */
   public ContentSummary getContentSummary(Path f) throws IOException {
     FileStatus status = getFileStatus(f);
     if (status.isFile()) {
@@ -1549,6 +1589,8 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Make the given file and all non-existent parents into
    * directories. Has the semantics of Unix 'mkdir -p'.
    * Existence of the directory hierarchy is not an error.
+   * @param f path to create
+   * @param permission to apply to f
    */
   public abstract boolean mkdirs(Path f, FsPermission permission
       ) throws IOException;
@@ -1556,6 +1598,8 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * The src file is on the local disk.  Add it to FS at
    * the given dst name and the source is kept intact afterwards
+   * @param src path
+   * @param dst path
    */
   public void copyFromLocalFile(Path src, Path dst)
     throws IOException {
@@ -1565,6 +1609,8 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * The src files is on the local disk.  Add it to FS at
    * the given dst name, removing the source afterwards.
+   * @param srcs path
+   * @param dst path
    */
   public void moveFromLocalFile(Path[] srcs, Path dst)
     throws IOException {
@@ -1574,6 +1620,8 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * The src file is on the local disk.  Add it to FS at
    * the given dst name, removing the source afterwards.
+   * @param src path
+   * @param dst path
    */
   public void moveFromLocalFile(Path src, Path dst)
     throws IOException {
@@ -1584,6 +1632,9 @@ public abstract class FileSystem extends Configured implements Closeable {
    * The src file is on the local disk.  Add it to FS at
    * the given dst name.
    * delSrc indicates if the source should be removed
+   * @param delSrc whether to delete the src
+   * @param src path
+   * @param dst path
    */
   public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
     throws IOException {
@@ -1594,6 +1645,10 @@ public abstract class FileSystem extends Configured implements Closeable {
    * The src files are on the local disk.  Add it to FS at
    * the given dst name.
    * delSrc indicates if the source should be removed
+   * @param delSrc whether to delete the src
+   * @param overwrite whether to overwrite an existing file
+   * @param srcs array of paths which are source
+   * @param dst path
    */
   public void copyFromLocalFile(boolean delSrc, boolean overwrite, 
                                 Path[] srcs, Path dst)
@@ -1606,6 +1661,10 @@ public abstract class FileSystem extends Configured implements Closeable {
    * The src file is on the local disk.  Add it to FS at
    * the given dst name.
    * delSrc indicates if the source should be removed
+   * @param delSrc whether to delete the src
+   * @param overwrite whether to overwrite an existing file
+   * @param src path
+   * @param dst path
    */
   public void copyFromLocalFile(boolean delSrc, boolean overwrite, 
                                 Path src, Path dst)
@@ -1617,6 +1676,8 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * The src file is under FS, and the dst is on the local disk.
    * Copy it from FS control to the local dst name.
+   * @param src path
+   * @param dst path
    */
   public void copyToLocalFile(Path src, Path dst) throws IOException {
     copyToLocalFile(false, src, dst);
@@ -1626,6 +1687,8 @@ public abstract class FileSystem extends Configured implements Closeable {
    * The src file is under FS, and the dst is on the local disk.
    * Copy it from FS control to the local dst name.
    * Remove the source afterwards
+   * @param src path
+   * @param dst path
    */
   public void moveToLocalFile(Path src, Path dst) throws IOException {
     copyToLocalFile(true, src, dst);
@@ -1635,6 +1698,9 @@ public abstract class FileSystem extends Configured implements Closeable {
    * The src file is under FS, and the dst is on the local disk.
    * Copy it from FS control to the local dst name.
    * delSrc indicates if the src will be removed or not.
+   * @param delSrc whether to delete the src
+   * @param src path
+   * @param dst path
    */   
   public void copyToLocalFile(boolean delSrc, Path src, Path dst)
     throws IOException {
@@ -1646,6 +1712,8 @@ public abstract class FileSystem extends Configured implements Closeable {
    * provides both the eventual FS target name and the local working
    * file.  If the FS is local, we write directly into the target.  If
    * the FS is remote, we write into the tmp local area.
+   * @param fsOutputFile path of output file
+   * @param tmpLocalFile path of local tmp file
    */
   public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
     throws IOException {
@@ -1657,6 +1725,8 @@ public abstract class FileSystem extends Configured implements Closeable {
    * do nothing, because we've written to exactly the right place.  A remote
    * FS will copy the contents of tmpLocalFile to the correct target at
    * fsOutputFile.
+   * @param fsOutputFile path of output file
+   * @param tmpLocalFile path to local tmp file
    */
   public void completeLocalOutput(Path fsOutputFile, Path tmpLocalFile)
     throws IOException {
@@ -2189,12 +2259,18 @@ public abstract class FileSystem extends Configured implements Closeable {
     return result;
   }
   
+  /**
+   * Reset all statistics for all file systems
+   */
   public static synchronized void clearStatistics() {
     for(Statistics stat: statisticsTable.values()) {
       stat.reset();
     }
   }
 
+  /**
+   * Print all statistics for all file systems
+   */
   public static synchronized
   void printStatistics() throws IOException {
     for (Map.Entry<Class<? extends FileSystem>, Statistics> pair: 

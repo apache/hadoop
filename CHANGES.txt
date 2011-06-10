@@ -202,6 +202,8 @@ Trunk (unreleased changes)
     HADOOP-7323. Add capability to resolve compression codec based on codec
     name. (Alejandro Abdelnur via tomwhite)
 
+    HADOOP-1886. Undocumented parameters in FilesSystem. (Frank Conrad via eli)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
