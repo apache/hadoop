@@ -290,13 +290,12 @@ module Hbase
         for k, v in status.getRegionsInTransition()
           puts("    %s" % [v])
         end
-        puts("%d live servers" % [ status.getServers() ])
-        for server in status.getServerInfo()
+        puts("%d live servers" % [ status.getServersSize() ])
+        for server in status.getServers()
           puts("    %s:%d %d" % \
-            [ server.getServerAddress().getHostname(),  \
-              server.getServerAddress().getPort(), server.getStartCode() ])
-          puts("        %s" % [ server.getLoad().toString() ])
-          for region in server.getLoad().getRegionsLoad()
+            [ server.getHostname(), server.getPort(), server.getStartcode() ])
+          puts("        %s" % [ status.getLoad(server).toString() ])
+          for name, region in status.getLoad(server).getRegionsLoad()
             puts("        %s" % [ region.getNameAsString() ])
             puts("            %s" % [ region.toString() ])
           end
@@ -308,14 +307,13 @@ module Hbase
       elsif format == "simple"
         load = 0
         regions = 0
-        puts("%d live servers" % [ status.getServers() ])
-        for server in status.getServerInfo()
+        puts("%d live servers" % [ status.getServersSize() ])
+        for server in status.getServers()
           puts("    %s:%d %d" % \
-            [ server.getServerAddress().getHostname(),  \
-              server.getServerAddress().getPort(), server.getStartCode() ])
-          puts("        %s" % [ server.getLoad().toString() ])
-          load += server.getLoad().getNumberOfRequests()
-          regions += server.getLoad().getNumberOfRegions()
+            [ server.getHostname(), server.getPort(), server.getStartcode() ])
+          puts("        %s" % [ status.getLoad(server).toString() ])
+          load += status.getLoad(server).getNumberOfRequests()
+          regions += status.getLoad(server).getNumberOfRegions()
         end
         puts("%d dead servers" % [ status.getDeadServers() ])
         for server in status.getDeadServerNames()
@@ -323,7 +321,7 @@ module Hbase
         end
         puts("Aggregate load: %d, regions: %d" % [ load , regions ] )
       else
-        puts "#{status.getServers} servers, #{status.getDeadServers} dead, #{'%.4f' % status.getAverageLoad} average load"
+        puts "#{status.getServersSize} servers, #{status.getDeadServers} dead, #{'%.4f' % status.getAverageLoad} average load"
       end
     end
 
