@@ -1,0 +1,69 @@
+<ivysettings>
+
+ <!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+ <!--
+  see http://www.jayasoft.org/ivy/doc/configuration
+  -->
+  <!-- you can override this property to use mirrors
+          http://repo1.maven.org/maven2/
+          http://mirrors.dotsrc.org/maven2
+          http://ftp.ggi-project.org/pub/packages/maven2
+          http://mirrors.sunsite.dk/maven2
+          http://public.planetmirror.com/pub/maven2
+          http://ibiblio.lsu.edu/main/pub/packages/maven2
+          http://www.ibiblio.net/pub/packages/maven2
+  -->
+  <property name="repo.maven.org" value="http://repo1.maven.org/maven2/" override="false"/>
+  <property name="snapshot.apache.org" value="https://repository.apache.org/content/repositories/snapshots/" override="false"/>
+  <property name="maven2.pattern" value="[organisation]/[module]/[revision]/[module]-[revision]"/>
+  <property name="repo.dir" value="${user.home}/.m2/repository"/>
+  <property name="maven2.pattern.ext"  value="${maven2.pattern}.[ext]"/>
+  <property name="resolvers" value="default" override="false"/>
+  <settings defaultResolver="${resolvers}"/>
+
+  <resolvers>
+    <ibiblio name="maven2" root="${repo.maven.org}" pattern="${maven2.pattern.ext}" m2compatible="true"/>
+    <ibiblio name="apache-snapshot" root="${snapshot.apache.org}" m2compatible="true"
+        checkmodified="true" changingPattern=".*SNAPSHOT"/>
+
+    <filesystem name="fs" m2compatible="true" force="true">
+       <artifact pattern="${repo.dir}/[organisation]/[module]/[revision]/[module]-[revision].[ext]"/>
+       <ivy pattern="${repo.dir}/[organisation]/[module]/[revision]/[module]-[revision].pom"/>
+    </filesystem>
+
+    <chain name="default" dual="true" checkmodified="true" changingPattern=".*SNAPSHOT">
+      <resolver ref="apache-snapshot"/> 
+      <resolver ref="maven2"/>
+    </chain>
+
+    <chain name="internal" dual="true">
+      <resolver ref="fs"/>
+      <resolver ref="apache-snapshot"/> 
+      <resolver ref="maven2"/>
+    </chain>
+
+    <chain name="external">
+      <resolver ref="maven2"/>
+    </chain>
+
+  </resolvers>
+  <modules>
+     <module organisation="org.apache.hadoop" name="hadoop-*" resolver="${resolvers}"/>
+  </modules>
+</ivysettings>

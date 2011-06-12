@@ -1,0 +1,976 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Hadoop MapReduce 0.21.0 Release Notes</title>
+<STYLE type="text/css">
+		H1 {font-family: sans-serif}
+		H2 {font-family: sans-serif; margin-left: 7mm}
+		TABLE {margin-left: 7mm}
+	</STYLE>
+</head>
+<body>
+<h1>Hadoop MapReduce 0.21.0 Release Notes</h1>
+		These release notes include new developer and user-facing incompatibilities, features, and major improvements.
+
+
+<a name="changes"></a>
+<h2>Changes Since Hadoop 0.20.2</h2>
+
+<h3>        Sub-task
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-157'>MAPREDUCE-157</a>] -         Job History log file format is not friendly for external tools.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-181'>MAPREDUCE-181</a>] -         Secure job submission 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-355'>MAPREDUCE-355</a>] -         Change org.apache.hadoop.mapred.join to use new api
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-358'>MAPREDUCE-358</a>] -         Change org.apache.hadoop.examples. AggregateWordCount and  org.apache.hadoop.examples.AggregateWordHistogram to use new mapreduce api.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-361'>MAPREDUCE-361</a>] -         Change org.apache.hadoop.examples.terasort to use new mapreduce api
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-364'>MAPREDUCE-364</a>] -         Change org.apache.hadoop.examples.MultiFileWordCount to use new mapreduce api.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-369'>MAPREDUCE-369</a>] -         Change org.apache.hadoop.mapred.lib.MultipleInputs to use new api.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-370'>MAPREDUCE-370</a>] -         Change org.apache.hadoop.mapred.lib.MultipleOutputs to use new api.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-371'>MAPREDUCE-371</a>] -         Change org.apache.hadoop.mapred.lib.KeyFieldBasedComparator and org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner to use new api
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-372'>MAPREDUCE-372</a>] -         Change org.apache.hadoop.mapred.lib.ChainMapper/Reducer to use new api.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-373'>MAPREDUCE-373</a>] -         Change org.apache.hadoop.mapred.lib. FieldSelectionMapReduce to use new api.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-375'>MAPREDUCE-375</a>] -          Change org.apache.hadoop.mapred.lib.NLineInputFormat and org.apache.hadoop.mapred.MapFileOutputFormat to use new api.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-655'>MAPREDUCE-655</a>] -         Change KeyValueLineRecordReader and KeyValueTextInputFormat to use new api.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-656'>MAPREDUCE-656</a>] -         Change org.apache.hadoop.mapred.SequenceFile* classes to use new api
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-744'>MAPREDUCE-744</a>] -         Support in DistributedCache to share cache files with other users after HADOOP-4493
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-814'>MAPREDUCE-814</a>] -         Move completed Job history files to HDFS
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-817'>MAPREDUCE-817</a>] -         Add a cache for retired jobs with minimal job info and provide a way to access history file url
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-842'>MAPREDUCE-842</a>] -         Per-job local data on the TaskTracker node should have right access-control
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-856'>MAPREDUCE-856</a>] -         Localized files from DistributedCache should have right access-control
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-861'>MAPREDUCE-861</a>] -         Modify queue configuration format and parsing to support a hierarchy of queues.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-862'>MAPREDUCE-862</a>] -         Modify UI to support a hierarchy of queues
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-870'>MAPREDUCE-870</a>] -         Clean up the job Retire code
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-871'>MAPREDUCE-871</a>] -         Job/Task local files have incorrect group ownership set by LinuxTaskController binary
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-898'>MAPREDUCE-898</a>] -         Change DistributedCache to use new api.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-927'>MAPREDUCE-927</a>] -         Cleanup of task-logs should happen in TaskTracker instead of the Child
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-943'>MAPREDUCE-943</a>] -         TestNodeRefresh timesout occasionally
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-975'>MAPREDUCE-975</a>] -         Add an API in job client to get the history file url for a given job id
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1026'>MAPREDUCE-1026</a>] -         Shuffle should be secure
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1033'>MAPREDUCE-1033</a>] -         Resolve location of scripts and configuration files after project split
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1035'>MAPREDUCE-1035</a>] -         Remove streaming forrest documentation from the common project
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1039'>MAPREDUCE-1039</a>] -         cluster_setup.xml exists in both mapreduce and common projects
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1081'>MAPREDUCE-1081</a>] -         Move hadoop_archives.xml out of mapreduce project
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1190'>MAPREDUCE-1190</a>] -         Add package.html to pi and pi.math packages.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1201'>MAPREDUCE-1201</a>] -         Make ProcfsBasedProcessTree collect CPU usage information
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1209'>MAPREDUCE-1209</a>] -         Move common specific part of the test TestReflectionUtils out of mapred into common
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1218'>MAPREDUCE-1218</a>] -         Collecting cpu and memory usage for TaskTrackers
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1307'>MAPREDUCE-1307</a>] -         Introduce the concept of Job Permissions
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1326'>MAPREDUCE-1326</a>] -         fi tests don't use fi-site.xml 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1430'>MAPREDUCE-1430</a>] -         JobTracker should be able to renew delegation tokens for the jobs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1432'>MAPREDUCE-1432</a>] -         Add the hooks in JobTracker and TaskTracker to load tokens from the token cache into the user's UGI
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1433'>MAPREDUCE-1433</a>] -         Create a Delegation token for MapReduce
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1454'>MAPREDUCE-1454</a>] -         The servlets should quote server generated strings sent in the response
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1455'>MAPREDUCE-1455</a>] -         Authorization for servlets
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1457'>MAPREDUCE-1457</a>] -         For secure job execution, couple of more UserGroupInformation.doAs needs to be added
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1493'>MAPREDUCE-1493</a>] -         Authorization for job-history pages
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1623'>MAPREDUCE-1623</a>] -         Apply audience and stability annotations to classes in mapred package
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1625'>MAPREDUCE-1625</a>] -         Improve grouping of packages in Javadoc
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1650'>MAPREDUCE-1650</a>] -         Exclude Private elements from generated MapReduce Javadoc
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1791'>MAPREDUCE-1791</a>] -         Remote cluster control functionality needs JavaDocs improvement
+</li>
+</ul>
+    
+<h3>        Bug
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-28'>MAPREDUCE-28</a>] -         TestQueueManager takes too long and times out some times
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-64'>MAPREDUCE-64</a>] -         Map-side sort is hampered by io.sort.record.percent
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-144'>MAPREDUCE-144</a>] -         TaskMemoryManager should log process-tree's status while killing tasks.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-153'>MAPREDUCE-153</a>] -         TestJobInProgressListener sometimes timesout
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-408'>MAPREDUCE-408</a>] -         TestKillSubProcesses fails with assertion failure sometimes
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-416'>MAPREDUCE-416</a>] -         Move the completed jobs' history files to a DONE subdirectory inside the configured history directory
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-419'>MAPREDUCE-419</a>] -         mapred.userlog.limit.kb has inconsistent defaults
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-516'>MAPREDUCE-516</a>] -         Fix the 'cluster drain' problem in the Capacity Scheduler wrt High RAM Jobs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-522'>MAPREDUCE-522</a>] -         Rewrite TestQueueCapacities to make it simpler and avoid timeout errors
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-543'>MAPREDUCE-543</a>] -         large pending jobs hog resources
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-626'>MAPREDUCE-626</a>] -         Modify TestLostTracker to improve execution time
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-627'>MAPREDUCE-627</a>] -         Modify TestTrackerBlacklistAcrossJobs to improve execution time
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-628'>MAPREDUCE-628</a>] -         TestJobInProgress brings up MinMR/DFS clusters for every test
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-630'>MAPREDUCE-630</a>] -         TestKillCompletedJob can be modified to improve execution times
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-637'>MAPREDUCE-637</a>] -         Check in the codes that compute the 10^15+1st bit of π
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-639'>MAPREDUCE-639</a>] -         Update the TeraSort to reflect the new benchmark rules for '09
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-642'>MAPREDUCE-642</a>] -         distcp could have an option to preserve the full source path
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-645'>MAPREDUCE-645</a>] -         When disctp is used to overwrite a file, it should return immediately with an error message
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-646'>MAPREDUCE-646</a>] -         distcp should place the file distcp_src_files in distributed cache
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-648'>MAPREDUCE-648</a>] -         Two distcp bugs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-658'>MAPREDUCE-658</a>] -         NPE in distcp if source path does not exist
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-659'>MAPREDUCE-659</a>] -         gridmix2 not compiling under mapred module trunk/src/benchmarks/gridmix2 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-662'>MAPREDUCE-662</a>] -         distcp -update fails if source directory is empty (i.e. no files to copy) and target directory does not exists.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-671'>MAPREDUCE-671</a>] -         Update ignore list
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-676'>MAPREDUCE-676</a>] -         Existing diagnostic rules fail for MAP ONLY jobs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-677'>MAPREDUCE-677</a>] -         TestNodeRefresh timesout
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-680'>MAPREDUCE-680</a>] -         Reuse of Writable objects is improperly handled by MRUnit
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-682'>MAPREDUCE-682</a>] -         Reserved tasktrackers should be removed when a node is globally blacklisted
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-683'>MAPREDUCE-683</a>] -         TestJobTrackerRestart fails with Map task completion events ordering mismatch
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-694'>MAPREDUCE-694</a>] -         JSP jars should be added to dependcy list for Capacity scheduler
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-702'>MAPREDUCE-702</a>] -         eclipse-plugin jar target fails during packaging
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-708'>MAPREDUCE-708</a>] -         node health check script does not refresh the &quot;reason for blacklisting&quot;
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-709'>MAPREDUCE-709</a>] -         node health check script does not display the correct message on timeout
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-716'>MAPREDUCE-716</a>] -         org.apache.hadoop.mapred.lib.db.DBInputformat not working with oracle
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-717'>MAPREDUCE-717</a>] -         Fix some corner case issues in speculative execution (post hadoop-2141)
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-722'>MAPREDUCE-722</a>] -         More slots are getting reserved for HiRAM job tasks then required
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-730'>MAPREDUCE-730</a>] -         allow relative paths to be created inside archives.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-732'>MAPREDUCE-732</a>] -         node health check script should not log &quot;UNHEALTHY&quot; status for every heartbeat in INFO mode
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-733'>MAPREDUCE-733</a>] -         When running ant test TestTrackerBlacklistAcrossJobs, losing task tracker heartbeat exception occurs. 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-734'>MAPREDUCE-734</a>] -         java.util.ConcurrentModificationException observed in unreserving slots for HiRam Jobs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-743'>MAPREDUCE-743</a>] -         Progress of map phase in map task is not updated properly
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-754'>MAPREDUCE-754</a>] -         NPE in expiry thread when a TT is lost
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-760'>MAPREDUCE-760</a>] -         TestNodeRefresh might not work as expected
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-764'>MAPREDUCE-764</a>] -         TypedBytesInput's readRaw() does not preserve custom type codes
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-769'>MAPREDUCE-769</a>] -         findbugs and javac warnings on trunk is non-zero
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-771'>MAPREDUCE-771</a>] -         Setup and cleanup tasks remain in UNASSIGNED state for a long time on tasktrackers with long running high RAM tasks
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-773'>MAPREDUCE-773</a>] -         LineRecordReader can report non-zero progress while it is processing a compressed stream
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-787'>MAPREDUCE-787</a>] -         -files, -archives should honor user given symlink path
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-792'>MAPREDUCE-792</a>] -         javac warnings in DBInputFormat
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-799'>MAPREDUCE-799</a>] -         Some of MRUnit's self-tests were not being run
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-808'>MAPREDUCE-808</a>] -         Buffer objects incorrectly serialized to typed bytes
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-809'>MAPREDUCE-809</a>] -         Job summary logs show status of completed jobs as RUNNING 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-825'>MAPREDUCE-825</a>] -         JobClient completion poll interval of 5s causes slow tests in local mode
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-839'>MAPREDUCE-839</a>] -         unit test TestMiniMRChildTask fails on mac os-x
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-840'>MAPREDUCE-840</a>] -         DBInputFormat leaves open transaction
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-845'>MAPREDUCE-845</a>] -         build.xml hard codes findbugs heap size, in some configurations 512M is insufficient to successfully build
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-848'>MAPREDUCE-848</a>] -         TestCapacityScheduler is failing
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-852'>MAPREDUCE-852</a>] -         ExampleDriver is incorrectly set as a Main-Class in tools in build.xml
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-859'>MAPREDUCE-859</a>] -         Unable to run examples with current trunk
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-867'>MAPREDUCE-867</a>] -         trunk builds fails as ivy is lookin for avro jar from the local resolver
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-868'>MAPREDUCE-868</a>] -         Trunk  can't be compiled since Avro dependencies cannot be resolved
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-877'>MAPREDUCE-877</a>] -         Required avro class are missing in contrib projects
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-879'>MAPREDUCE-879</a>] -         TestTaskTrackerLocalization fails on MAC OS
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-884'>MAPREDUCE-884</a>] -         TestReduceFetchFromPartialMem fails sometimes
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-889'>MAPREDUCE-889</a>] -         binary communication formats added to Streaming by HADOOP-1722 should be documented
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-890'>MAPREDUCE-890</a>] -         After HADOOP-4491, the user who started mapred system is not able to run job.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-891'>MAPREDUCE-891</a>] -         Streaming tests fail with NPE in MiniDFSCluster
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-895'>MAPREDUCE-895</a>] -         FileSystem::ListStatus will now throw FileNotFoundException, MapRed needs updated
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-896'>MAPREDUCE-896</a>] -         Users can set non-writable permissions on temporary files for TT and can abuse disk usage.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-899'>MAPREDUCE-899</a>] -         When using LinuxTaskController, localized files may become accessible to unintended users if permissions are misconfigured.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-912'>MAPREDUCE-912</a>] -         apache license header missing for some java files
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-913'>MAPREDUCE-913</a>] -         TaskRunner crashes with NPE resulting in held up slots, UNINITIALIZED tasks and hung TaskTracker
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-915'>MAPREDUCE-915</a>] -         For secure environments, the Map/Reduce debug script must be run as the user.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-917'>MAPREDUCE-917</a>] -         Remove getInputCounter and getOutputCounter from Contexts
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-941'>MAPREDUCE-941</a>] -         vaidya script calls awk instead of nawk
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-945'>MAPREDUCE-945</a>] -         Test programs support only default queue.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-946'>MAPREDUCE-946</a>] -         Fix regression in LineRecordReader to comply with line length parameters
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-951'>MAPREDUCE-951</a>] -         MAP_INPUT_BYTES counter is missing
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-952'>MAPREDUCE-952</a>] -         Previously removed Task.Counter reintroduced by MAPREDUCE-318
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-962'>MAPREDUCE-962</a>] -         NPE in ProcfsBasedProcessTree.destroy()
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-964'>MAPREDUCE-964</a>] -         Inaccurate values in jobSummary logs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-968'>MAPREDUCE-968</a>] -         NPE in distcp encountered when placing _logs directory on S3FileSystem
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-971'>MAPREDUCE-971</a>] -         distcp does not always remove distcp.tmp.dir
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-973'>MAPREDUCE-973</a>] -         Move test utilities from examples to test
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-977'>MAPREDUCE-977</a>] -         Missing jackson jars from Eclipse template
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-986'>MAPREDUCE-986</a>] -         rumen makes a task with a null type when one of the task lines is truncated
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-988'>MAPREDUCE-988</a>] -         ant package does not copy the capacity-scheduler.jar under HADOOP_HOME/build/hadoop-mapred-0.21.0-dev/contrib/capacity-scheduler
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-996'>MAPREDUCE-996</a>] -         Queue Scheduling Information is lost from Ui when we run mapred mradmin -refreshQueues after mapreduce 861
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1000'>MAPREDUCE-1000</a>] -         JobHistory.initDone() should retain the try ... catch in the body
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1002'>MAPREDUCE-1002</a>] -         After MAPREDUCE-862, command line queue-list doesn't print any queues
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1003'>MAPREDUCE-1003</a>] -         trunk build fails when -Declipse.home is set
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1007'>MAPREDUCE-1007</a>] -         MAPREDUCE-777 breaks the UI for hierarchial Queues. 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1009'>MAPREDUCE-1009</a>] -         Forrest documentation needs to be updated to describes features provided for supporting hierarchical queues
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1014'>MAPREDUCE-1014</a>] -         After the 0.21 branch, MapReduce trunk doesn't compile
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1016'>MAPREDUCE-1016</a>] -         Make the format of the Job History be JSON instead of Avro binary
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1018'>MAPREDUCE-1018</a>] -         Document changes to the memory management and scheduling model
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1022'>MAPREDUCE-1022</a>] -         Trunk tests fail because of test-failure in Vertica
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1023'>MAPREDUCE-1023</a>] -         Newly introduced findBugs warnings should be suppressed
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1028'>MAPREDUCE-1028</a>] -         Cleanup tasks are scheduled using high memory configuration, leaving tasks in unassigned state.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1029'>MAPREDUCE-1029</a>] -         TestCopyFiles fails on testHftpAccessControl()
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1030'>MAPREDUCE-1030</a>] -         Reduce tasks are getting starved in capacity scheduler
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1031'>MAPREDUCE-1031</a>] -         ant tar target doens't seem to compile tests in contrib projects
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1038'>MAPREDUCE-1038</a>] -         Mumak's compile-aspects target weaves aspects even though there are no changes to the Mumak's sources
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1041'>MAPREDUCE-1041</a>] -         TaskStatuses map in TaskInProgress should be made package private instead of protected
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1062'>MAPREDUCE-1062</a>] -         MRReliability test does not work with retired jobs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1065'>MAPREDUCE-1065</a>] -         Modify the mapred tutorial documentation to use new mapreduce api.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1071'>MAPREDUCE-1071</a>] -         o.a.h.mapreduce.jobhistory.EventReader constructor should expect DataInputStream
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1075'>MAPREDUCE-1075</a>] -         getQueue(String queue) in JobTracker would return NPE for invalid queue name
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1076'>MAPREDUCE-1076</a>] -         ClusterStatus class should be deprecated 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1077'>MAPREDUCE-1077</a>] -         When rumen reads a truncated job tracker log, it produces a job whose outcome is SUCCESS.  Should be null.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1080'>MAPREDUCE-1080</a>] -         Properties max.map.slots and max.reduce.slots should be hyphenated.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1082'>MAPREDUCE-1082</a>] -         Command line UI for queues' information is broken with hierarchical queues.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1086'>MAPREDUCE-1086</a>] -         hadoop commands in streaming tasks are trying to write to tasktracker's log
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1089'>MAPREDUCE-1089</a>] -         Fair Scheduler preemption triggers NPE when tasks are scheduled but not running
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1090'>MAPREDUCE-1090</a>] -         Modify log statement in Tasktracker log related to memory monitoring to include attempt id.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1091'>MAPREDUCE-1091</a>] -         TaskTrackers only work with same build as the JobTracker
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1098'>MAPREDUCE-1098</a>] -         Incorrect synchronization in DistributedCache causes TaskTrackers to freeze up during localization of Cache for tasks.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1104'>MAPREDUCE-1104</a>] -         RecoveryManager not initialized in SimulatorJobTracker led to NPE in JT Jetty server
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1105'>MAPREDUCE-1105</a>] -         CapacityScheduler: It should be possible to set queue hard-limit beyond it's actual capacity
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1111'>MAPREDUCE-1111</a>] -         JT Jetty UI not working if we run mumak.sh off packaged distribution directory.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1117'>MAPREDUCE-1117</a>] -         ClusterMetrics return metrics for tasks instead of slots'
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1119'>MAPREDUCE-1119</a>] -         When tasks fail to report status, show tasks's stack dump before killing
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1124'>MAPREDUCE-1124</a>] -         TestGridmixSubmission fails sometimes
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1128'>MAPREDUCE-1128</a>] -         MRUnit Allows Iteration Twice
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1131'>MAPREDUCE-1131</a>] -         Using profilers other than hprof can cause JobClient to report job failure
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1133'>MAPREDUCE-1133</a>] -         Eclipse .classpath template has outdated jar files and is missing some new ones.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1140'>MAPREDUCE-1140</a>] -         Per cache-file refcount can become negative when tasks release distributed-cache files
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1143'>MAPREDUCE-1143</a>] -         runningMapTasks counter is not properly decremented in case of failed Tasks.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1152'>MAPREDUCE-1152</a>] -         JobTrackerInstrumentation.killed{Map/Reduce} is never called
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1153'>MAPREDUCE-1153</a>] -         Metrics counting tasktrackers and blacklisted tasktrackers are not updated when trackers are decommissioned.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1155'>MAPREDUCE-1155</a>] -         Streaming tests swallow exceptions
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1158'>MAPREDUCE-1158</a>] -         running_maps is not decremented when the tasks of a job is killed/failed 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1160'>MAPREDUCE-1160</a>] -         Two log statements at INFO level fill up jobtracker logs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1161'>MAPREDUCE-1161</a>] -         NotificationTestCase should not lock current thread
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1165'>MAPREDUCE-1165</a>] -         SerialUtils.hh: __PRETTY_FUNCTION__ is a GNU extension and not portable
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1171'>MAPREDUCE-1171</a>] -         Lots of fetch failures
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1177'>MAPREDUCE-1177</a>] -         TestTaskTrackerMemoryManager retries a task for more than 100 times.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1178'>MAPREDUCE-1178</a>] -         MultipleInputs fails with ClassCastException 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1186'>MAPREDUCE-1186</a>] -         While localizing a DistributedCache file, TT sets permissions recursively on the whole base-dir
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1196'>MAPREDUCE-1196</a>] -         MAPREDUCE-947 incompatibly changed FileOutputCommitter
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1212'>MAPREDUCE-1212</a>] -         Mapreduce contrib project ivy dependencies are not included in binary target
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1213'>MAPREDUCE-1213</a>] -         TaskTrackers restart is very slow because it deletes distributed cache directory synchronously
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1219'>MAPREDUCE-1219</a>] -         JobTracker Metrics causes undue load on JobTracker
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1222'>MAPREDUCE-1222</a>] -         [Mumak] We should not include nodes with numeric ips in cluster topology.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1230'>MAPREDUCE-1230</a>] -         Vertica streaming adapter doesn't handle nulls in all cases
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1239'>MAPREDUCE-1239</a>] -         Mapreduce test build is broken after HADOOP-5107
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1241'>MAPREDUCE-1241</a>] -         JobTracker should not crash when mapred-queues.xml does not exist
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1244'>MAPREDUCE-1244</a>] -         eclipse-plugin fails with missing dependencies
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1245'>MAPREDUCE-1245</a>] -         TestFairScheduler fails with &quot;too many open files&quot; error
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1249'>MAPREDUCE-1249</a>] -         mapreduce.reduce.shuffle.read.timeout's default value should be 3 minutes, in mapred-default.xml
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1258'>MAPREDUCE-1258</a>] -         Fair scheduler event log not logging job info
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1260'>MAPREDUCE-1260</a>] -         Update Eclipse configuration to match changes to Ivy configuration
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1267'>MAPREDUCE-1267</a>] -         Fix typo in mapred-default.xml
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1276'>MAPREDUCE-1276</a>] -         Shuffle connection logic needs correction 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1284'>MAPREDUCE-1284</a>] -         TestLocalizationWithLinuxTaskController fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1285'>MAPREDUCE-1285</a>] -         DistCp cannot handle -delete if destination is local filesystem
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1293'>MAPREDUCE-1293</a>] -         AutoInputFormat doesn't work with non-default FileSystems
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1294'>MAPREDUCE-1294</a>] -         Build fails to pull latest hadoop-core-* artifacts
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1301'>MAPREDUCE-1301</a>] -         TestDebugScriptWithLinuxTaskController fails 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1314'>MAPREDUCE-1314</a>] -         Some logs have wrong configuration names.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1316'>MAPREDUCE-1316</a>] -         JobTracker holds stale references to retired jobs via unreported tasks 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1322'>MAPREDUCE-1322</a>] -         TestStreamingAsDifferentUser fails on trunk
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1342'>MAPREDUCE-1342</a>] -         Potential JT deadlock in faulty TT tracking
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1348'>MAPREDUCE-1348</a>] -         Package org.apache.hadoop.blockforensics does not match directory name
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1358'>MAPREDUCE-1358</a>] -         Utils.OutputLogFilter incorrectly filters for _logs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1365'>MAPREDUCE-1365</a>] -         TestTaskTrackerBlacklisting.AtestTrackerBlacklistingForJobFailures is mistyped.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1369'>MAPREDUCE-1369</a>] -         JUnit tests should never depend on anything in conf
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1372'>MAPREDUCE-1372</a>] -         ConcurrentModificationException in JobInProgress
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1378'>MAPREDUCE-1378</a>] -         Args in job details links on jobhistory.jsp are not URL encoded
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1386'>MAPREDUCE-1386</a>] -         'ant javadoc' fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1397'>MAPREDUCE-1397</a>] -         NullPointerException observed during task failures
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1398'>MAPREDUCE-1398</a>] -         TaskLauncher remains stuck on tasks waiting for free nodes even if task is killed.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1399'>MAPREDUCE-1399</a>] -         The archive command shows a null error message
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1400'>MAPREDUCE-1400</a>] -         sed in build.xml fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1406'>MAPREDUCE-1406</a>] -         JobContext.MAP_COMBINE_MIN_SPILLS is misspelled
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1408'>MAPREDUCE-1408</a>] -         Allow customization of job submission policies
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1409'>MAPREDUCE-1409</a>] -         FileOutputCommitter.abortTask should not catch IOException
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1412'>MAPREDUCE-1412</a>] -         TestTaskTrackerBlacklisting fails sometimes
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1417'>MAPREDUCE-1417</a>] -         Forrest documentation should be updated to reflect the changes in MAPREDUCE-744
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1420'>MAPREDUCE-1420</a>] -         TestTTResourceReporting failing in trunk
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1421'>MAPREDUCE-1421</a>] -         LinuxTaskController tests failing on trunk after the commit of MAPREDUCE-1385
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1422'>MAPREDUCE-1422</a>] -         Changing permissions of files/dirs under job-work-dir may be needed sothat cleaning up of job-dir in all mapred-local-directories succeeds always
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1435'>MAPREDUCE-1435</a>] -         symlinks in cwd of the task are not handled properly after MAPREDUCE-896
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1448'>MAPREDUCE-1448</a>] -         [Mumak] mumak.sh does not honor --config option.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1474'>MAPREDUCE-1474</a>] -         forrest docs for archives is out of date.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1476'>MAPREDUCE-1476</a>] -         committer.needsTaskCommit should not be called for a task cleanup attempt
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1482'>MAPREDUCE-1482</a>] -         Better handling of task diagnostic information stored in the TaskInProgress
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1490'>MAPREDUCE-1490</a>] -         Raid client throws NullPointerException during initialization
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1494'>MAPREDUCE-1494</a>] -         TestJobDirCleanup verifies wrong jobcache directory
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1497'>MAPREDUCE-1497</a>] -         Suppress warning on inconsistent TaskTracker.indexCache synchronization
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1508'>MAPREDUCE-1508</a>] -         NPE in TestMultipleLevelCaching on error cleanup path
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1515'>MAPREDUCE-1515</a>] -         need to pass down java5 and forrest home variables
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1519'>MAPREDUCE-1519</a>] -         RaidNode fails to create new parity file if an older version already exists
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1520'>MAPREDUCE-1520</a>] -         TestMiniMRLocalFS fails on trunk
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1523'>MAPREDUCE-1523</a>] -         Sometimes rumen trace generator fails to extract the job finish time.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1536'>MAPREDUCE-1536</a>] -         DataDrivenDBInputFormat does not split date columns correctly.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1537'>MAPREDUCE-1537</a>] -         TestDelegationTokenRenewal fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1538'>MAPREDUCE-1538</a>] -         TrackerDistributedCacheManager can fail because the number of subdirectories reaches system limit
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1547'>MAPREDUCE-1547</a>] -         Build Hadoop-Mapreduce-trunk and Mapreduce-trunk-Commit  fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1573'>MAPREDUCE-1573</a>] -         TestStreamingAsDifferentUser fails if run as tt_user
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1578'>MAPREDUCE-1578</a>] -         HadoopArchives.java should not use HarFileSystem.VERSION
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1585'>MAPREDUCE-1585</a>] -         Create Hadoop Archives version 2 with filenames URL-encoded
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1596'>MAPREDUCE-1596</a>] -         MapReduce trunk snapshot is not being published to maven
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1602'>MAPREDUCE-1602</a>] -         When the src does not exist, archive shows IndexOutOfBoundsException
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1604'>MAPREDUCE-1604</a>] -         Job acls should be documented in forrest.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1606'>MAPREDUCE-1606</a>] -         TestJobACLs may timeout as there are no slots for launching JOB_CLEANUP task
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1607'>MAPREDUCE-1607</a>] -         Task controller may not set permissions for a task cleanup attempt's log directory
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1609'>MAPREDUCE-1609</a>] -         TaskTracker.localizeJob should not set permissions on job log directory recursively
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1610'>MAPREDUCE-1610</a>] -         Forrest documentation should be updated to reflect the changes in MAPREDUCE-856
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1611'>MAPREDUCE-1611</a>] -         Refresh nodes and refresh queues doesnt work with service authorization enabled
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1612'>MAPREDUCE-1612</a>] -         job conf file is not accessible from job history web page
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1615'>MAPREDUCE-1615</a>] -         ant test on trunk does not compile.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1618'>MAPREDUCE-1618</a>] -         JobStatus.getJobAcls() and setJobAcls should have javadoc
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1622'>MAPREDUCE-1622</a>] -         Include slf4j dependencies in binary tarball
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1628'>MAPREDUCE-1628</a>] -         HarFileSystem shows incorrect replication numbers and permissions
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1629'>MAPREDUCE-1629</a>] -         Get rid of fakeBlockLocations() on HarFileSystem, since it's not used
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1635'>MAPREDUCE-1635</a>] -         ResourceEstimator does not work after MAPREDUCE-842
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1657'>MAPREDUCE-1657</a>] -         After task logs directory is deleted, tasklog servlet displays wrong error message about job ACLs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1659'>MAPREDUCE-1659</a>] -         RaidNode should write temp files on /tmp and add random numbers to their names to avoid conflicts
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1692'>MAPREDUCE-1692</a>] -         Remove TestStreamedMerge from the streaming tests
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1694'>MAPREDUCE-1694</a>] -         streaming documentation appears to be wrong on overriding settings w/-D
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1695'>MAPREDUCE-1695</a>] -         capacity scheduler is not included in findbugs/javadoc targets
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1697'>MAPREDUCE-1697</a>] -         Document the behavior of -file option in streaming and deprecate it in favour of generic -files option.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1705'>MAPREDUCE-1705</a>] -         Archiving and Purging of parity files should handle globbed policies
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1725'>MAPREDUCE-1725</a>] -         Fix MapReduce API incompatibilities between 0.20 and 0.21
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1727'>MAPREDUCE-1727</a>] -         TestJobACLs fails after HADOOP-6686
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1728'>MAPREDUCE-1728</a>] -         Oracle timezone strings do not match Java
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1747'>MAPREDUCE-1747</a>] -         Remove documentation for the 'unstable' job-acls feature
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1765'>MAPREDUCE-1765</a>] -         Streaming doc - change StreamXmlRecord to StreamXmlRecordReader 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1789'>MAPREDUCE-1789</a>] -         MapReduce trunk fails to compile following HADOOP-6600
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1810'>MAPREDUCE-1810</a>] -         0.21 build is broken
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1845'>MAPREDUCE-1845</a>] -         FairScheduler.tasksToPeempt() can return negative number
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1853'>MAPREDUCE-1853</a>] -         MultipleOutputs does not cache TaskAttemptContext
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1870'>MAPREDUCE-1870</a>] -         Harmonize MapReduce JAR library versions with Common and HDFS
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1876'>MAPREDUCE-1876</a>] -         TaskAttemptStartedEvent.java incorrectly logs MAP_ATTEMPT_STARTED as event type for reduce tasks
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1880'>MAPREDUCE-1880</a>] -         &quot;java.lang.ArithmeticException: Non-terminating decimal expansion; no exact representable decimal result.&quot; while running &quot;hadoop jar hadoop-0.20.1+169.89-examples.jar pi 4 30&quot;
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1885'>MAPREDUCE-1885</a>] -         Trunk compilation is broken because of FileSystem api change in HADOOP-6826
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1915'>MAPREDUCE-1915</a>] -         IndexCache - getIndexInformation - check reduce index Out Of Bounds
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1920'>MAPREDUCE-1920</a>] -         Job.getCounters() returns null when using a cluster
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1926'>MAPREDUCE-1926</a>] -         MapReduce distribution is missing build-utils.xml
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1929'>MAPREDUCE-1929</a>] -         Allow artifacts to be published to the staging Apache Nexus Maven Repository
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1942'>MAPREDUCE-1942</a>] -          'compile-fault-inject' should never be called directly.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1980'>MAPREDUCE-1980</a>] -         TaskAttemptUnsuccessfulCompletionEvent.java incorrectly logs MAP_ATTEMPT_KILLED as event type for reduce tasks
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-2012'>MAPREDUCE-2012</a>] -         Some contrib tests fail in branch 0.21 and trunk
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-2014'>MAPREDUCE-2014</a>] -         Remove task-controller from 0.21 branch
+</li>
+</ul>
+    
+<h3>        Improvement
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-245'>MAPREDUCE-245</a>] -         Job and JobControl classes should return interfaces rather than implementations
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-270'>MAPREDUCE-270</a>] -         TaskTracker could send an out-of-band heartbeat when the last running map/reduce completes
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-277'>MAPREDUCE-277</a>] -         Job history counters should be avaible on the UI.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-284'>MAPREDUCE-284</a>] -         Improvements to RPC between Child and TaskTracker
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-318'>MAPREDUCE-318</a>] -         Refactor reduce shuffle code
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-336'>MAPREDUCE-336</a>] -         The logging level of the tasks should be configurable by the job
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-353'>MAPREDUCE-353</a>] -         Allow shuffle read and connection timeouts to be configurable
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-463'>MAPREDUCE-463</a>] -         The job setup and cleanup tasks should be optional
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-476'>MAPREDUCE-476</a>] -         extend DistributedCache to work locally (LocalJobRunner)
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-478'>MAPREDUCE-478</a>] -         separate jvm param for mapper and reducer
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-479'>MAPREDUCE-479</a>] -         Add reduce ID to shuffle clienttrace
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-487'>MAPREDUCE-487</a>] -         DBInputFormat support for Oracle
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-502'>MAPREDUCE-502</a>] -         Allow jobtracker to be configured with zero completed jobs in memory
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-625'>MAPREDUCE-625</a>] -         Modify TestTaskLimits to improve execution time
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-632'>MAPREDUCE-632</a>] -         Merge TestCustomOutputCommitter with TestCommandLineJobSubmission
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-649'>MAPREDUCE-649</a>] -         distcp should validate the data copied
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-654'>MAPREDUCE-654</a>] -         Add an option -count to distcp for displaying some info about the src files
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-664'>MAPREDUCE-664</a>] -         distcp with -delete option does not display number of files deleted from the target that were not present on source 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-689'>MAPREDUCE-689</a>] -         Update distcp guide for new distcp features
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-701'>MAPREDUCE-701</a>] -         Make TestRackAwareTaskPlacement a unit test
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-711'>MAPREDUCE-711</a>] -         Move Distributed Cache from Common to Map/Reduce
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-712'>MAPREDUCE-712</a>] -         RandomTextWriter example is CPU bound
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-739'>MAPREDUCE-739</a>] -         Allow relative paths to be created inside archives.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-742'>MAPREDUCE-742</a>] -         Improve the java comments for the π examples
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-765'>MAPREDUCE-765</a>] -         eliminate the usage of FileSystem.create( ) depracated by Hadoop-5438 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-766'>MAPREDUCE-766</a>] -         Enhance -list-blacklisted-trackers to display host name, blacklisted reason and blacklist report.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-772'>MAPREDUCE-772</a>] -         Chaging LineRecordReader algo so that it does not need to skip backwards in the stream
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-779'>MAPREDUCE-779</a>] -         Add node health failures into JobTrackerStatistics
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-781'>MAPREDUCE-781</a>] -         distcp overrides user-selected job name
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-782'>MAPREDUCE-782</a>] -         Use PureJavaCrc32 in mapreduce spills
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-784'>MAPREDUCE-784</a>] -         Modify TestUserDefinedCounters to use LocalJobRunner instead of MiniMR
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-788'>MAPREDUCE-788</a>] -         Modify gridmix2 to use new api.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-797'>MAPREDUCE-797</a>] -         MRUnit MapReduceDriver should support combiners
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-830'>MAPREDUCE-830</a>] -         Providing BZip2 splitting support for Text data
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-847'>MAPREDUCE-847</a>] -         Adding Apache License Headers and reduce releaseaudit warnings to zero
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-849'>MAPREDUCE-849</a>] -         Renaming of configuration property names in mapreduce
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-873'>MAPREDUCE-873</a>] -         Simplify Job Recovery
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-874'>MAPREDUCE-874</a>] -         The name &quot;PiEstimator&quot; is misleading
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-875'>MAPREDUCE-875</a>] -         Make DBRecordReader execute queries lazily
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-885'>MAPREDUCE-885</a>] -         More efficient SQL queries for DBInputFormat
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-893'>MAPREDUCE-893</a>] -         Provide an ability to refresh queue configuration without restart.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-903'>MAPREDUCE-903</a>] -         Adding AVRO jar to eclipse classpath
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-905'>MAPREDUCE-905</a>] -         Add Eclipse launch tasks for MapReduce
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-910'>MAPREDUCE-910</a>] -         MRUnit should support counters
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-930'>MAPREDUCE-930</a>] -         rumen should interpret job history log input paths with respect to default FS, not local FS
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-931'>MAPREDUCE-931</a>] -         rumen should use its own interpolation classes to create runtimes for simulated tasks
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-936'>MAPREDUCE-936</a>] -         Allow a load difference in fairshare scheduler
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-937'>MAPREDUCE-937</a>] -         Allow comments in mapred.hosts and mapred.hosts.exclude files
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-944'>MAPREDUCE-944</a>] -         Extend FairShare scheduler to fair-share memory usage in the cluster
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-947'>MAPREDUCE-947</a>] -         OutputCommitter should have an abortJob method
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-953'>MAPREDUCE-953</a>] -         Generate configuration dump for hierarchial queue configuration
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-954'>MAPREDUCE-954</a>] -         The new interface's Context objects should be interfaces
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-960'>MAPREDUCE-960</a>] -         Unnecessary copy in mapreduce.lib.input.KeyValueLineRecordReader
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-963'>MAPREDUCE-963</a>] -         mapred's FileAlreadyExistsException should be deprecated in favor of hadoop-common's one.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-966'>MAPREDUCE-966</a>] -         Rumen interface improvement
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-967'>MAPREDUCE-967</a>] -         TaskTracker does not need to fully unjar job jars
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-972'>MAPREDUCE-972</a>] -         distcp can timeout during rename operation to s3
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1011'>MAPREDUCE-1011</a>] -         Git and Subversion ignore of build.properties
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1012'>MAPREDUCE-1012</a>] -         Context interfaces should be Public Evolving
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1048'>MAPREDUCE-1048</a>] -         Show total slot usage in cluster summary on jobtracker webui
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1083'>MAPREDUCE-1083</a>] -          Use the user-to-groups mapping service in the JobTracker
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1084'>MAPREDUCE-1084</a>] -         Implementing aspects development and fault injeciton framework for MapReduce
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1097'>MAPREDUCE-1097</a>] -         Changes/fixes to support Vertica 3.5
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1103'>MAPREDUCE-1103</a>] -         Additional JobTracker metrics
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1185'>MAPREDUCE-1185</a>] -         URL to JT webconsole for running job and job history should be the same
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1189'>MAPREDUCE-1189</a>] -         Reduce ivy console output to ovservable level
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1198'>MAPREDUCE-1198</a>] -         Alternatively schedule different types of tasks in fair share scheduler
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1221'>MAPREDUCE-1221</a>] -         Kill tasks on a node if the free physical memory on that machine falls below a configured threshold
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1229'>MAPREDUCE-1229</a>] -         [Mumak] Allow customization of job submission policy
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1231'>MAPREDUCE-1231</a>] -         Distcp is very slow
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1250'>MAPREDUCE-1250</a>] -         Refactor job token to use a common token interface
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1265'>MAPREDUCE-1265</a>] -         Include tasktracker name in the task attempt error log
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1287'>MAPREDUCE-1287</a>] -         Avoid calling Partitioner with only 1 reducer
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1302'>MAPREDUCE-1302</a>] -         TrackerDistributedCacheManager can delete file asynchronously
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1305'>MAPREDUCE-1305</a>] -         Running distcp with -delete incurs avoidable penalties
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1306'>MAPREDUCE-1306</a>] -         [MUMAK] Randomize the arrival of heartbeat responses
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1309'>MAPREDUCE-1309</a>] -         I want to change the rumen job trace generator to use a more modular internal structure, to allow for more input log formats 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1317'>MAPREDUCE-1317</a>] -         Reducing memory consumption of rumen objects
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1337'>MAPREDUCE-1337</a>] -         Generify StreamJob for better readability
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1367'>MAPREDUCE-1367</a>] -         LocalJobRunner should support parallel mapper execution
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1403'>MAPREDUCE-1403</a>] -         Save file-sizes of each of the artifacts in DistributedCache in the JobConf
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1423'>MAPREDUCE-1423</a>] -         Improve performance of CombineFileInputFormat when multiple pools are configured
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1425'>MAPREDUCE-1425</a>] -         archive throws OutOfMemoryError
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1428'>MAPREDUCE-1428</a>] -         Make block size and the size of archive created files configurable.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1440'>MAPREDUCE-1440</a>] -         MapReduce should use the short form of the user names
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1460'>MAPREDUCE-1460</a>] -         Oracle support in DataDrivenDBInputFormat
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1466'>MAPREDUCE-1466</a>] -         FileInputFormat should save #input-files in JobConf
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1470'>MAPREDUCE-1470</a>] -         Move Delegation token into Common so that we can use it for MapReduce also
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1489'>MAPREDUCE-1489</a>] -         DataDrivenDBInputFormat should not query the database when generating only one split
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1491'>MAPREDUCE-1491</a>] -         Use HAR filesystem to merge parity files 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1503'>MAPREDUCE-1503</a>] -         Push HADOOP-6551 into MapReduce
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1512'>MAPREDUCE-1512</a>] -         RAID could use HarFileSystem directly instead of FileSystem.get
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1514'>MAPREDUCE-1514</a>] -         Add documentation on permissions, limitations, error handling for archives.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1518'>MAPREDUCE-1518</a>] -         On contrib/raid, the RaidNode currently runs the deletion check for parity files on directories too. It would be better if it didn't.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1527'>MAPREDUCE-1527</a>] -         QueueManager should issue warning if mapred-queues.xml is skipped.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1535'>MAPREDUCE-1535</a>] -         Replace usage of FileStatus#isDir()
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1556'>MAPREDUCE-1556</a>] -         upgrade to Avro 1.3.0
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1568'>MAPREDUCE-1568</a>] -         TrackerDistributedCacheManager should clean up cache in a background thread
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1569'>MAPREDUCE-1569</a>] -         Mock Contexts &amp; Configurations
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1570'>MAPREDUCE-1570</a>] -         Shuffle stage - Key and Group Comparators
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1579'>MAPREDUCE-1579</a>] -         archive: check and possibly replace the space charater in paths
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1590'>MAPREDUCE-1590</a>] -         Move HarFileSystem from Hadoop Common to Mapreduce tools.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1593'>MAPREDUCE-1593</a>] -         [Rumen] Improvements to random seed generation 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1613'>MAPREDUCE-1613</a>] -         Install/deploy source jars to Maven repo
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1619'>MAPREDUCE-1619</a>] -         Eclipse .classpath file should be generated from Ivy files to avoid duplicating dependencies
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1627'>MAPREDUCE-1627</a>] -         HadoopArchives should not uses DistCp method
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1656'>MAPREDUCE-1656</a>] -         JobStory should provide queue info.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1735'>MAPREDUCE-1735</a>] -         Un-deprecate the old MapReduce API in the 0.21 branch
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1749'>MAPREDUCE-1749</a>] -         Pull configuration strings out of JobContext
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1751'>MAPREDUCE-1751</a>] -         Change MapReduce to depend on Hadoop 'common' artifacts instead of 'core'
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1832'>MAPREDUCE-1832</a>] -         Support for file sizes less than 1MB in DFSIO benchmark.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1856'>MAPREDUCE-1856</a>] -         Extract a subset of tests for smoke (DOA) validation
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-2003'>MAPREDUCE-2003</a>] -         It should be able to specify different jvm settings for map and reduce child process (via mapred.child.map.java.opts and mapred.child.reduce.java.opts options) 
+</li>
+</ul>
+    
+<h3>        New Feature
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-211'>MAPREDUCE-211</a>] -         Provide a node health check script and run it periodically to check the node health status
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-467'>MAPREDUCE-467</a>] -         Collect information about number of tasks succeeded / total per time unit for a tasktracker. 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-532'>MAPREDUCE-532</a>] -         Allow admins of the Capacity Scheduler to set a hard-limit on the capacity of a queue
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-546'>MAPREDUCE-546</a>] -         Provide sample fair scheduler config file in conf/ and use it by default if no other config file is specified
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-548'>MAPREDUCE-548</a>] -         Global scheduling in the Fair Scheduler
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-551'>MAPREDUCE-551</a>] -         Add preemption to the fair scheduler
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-567'>MAPREDUCE-567</a>] -         Add a new example MR that always fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-679'>MAPREDUCE-679</a>] -         XML-based metrics as JSP servlet for JobTracker
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-698'>MAPREDUCE-698</a>] -         Per-pool task limits for the fair scheduler
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-706'>MAPREDUCE-706</a>] -         Support for FIFO pools in the fair scheduler
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-707'>MAPREDUCE-707</a>] -         Provide a jobconf property for explicitly assigning a job to a pool
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-728'>MAPREDUCE-728</a>] -         Mumak: Map-Reduce Simulator
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-740'>MAPREDUCE-740</a>] -         Provide summary information per job once a job is finished.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-751'>MAPREDUCE-751</a>] -         Rumen: a tool to extract job characterization data from job tracker logs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-768'>MAPREDUCE-768</a>] -         Configuration information should generate dump in a standard format.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-775'>MAPREDUCE-775</a>] -         Add input/output formatters for Vertica clustered ADBMS.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-776'>MAPREDUCE-776</a>] -         Gridmix: Trace-based benchmark for Map/Reduce
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-777'>MAPREDUCE-777</a>] -         A method for finding and tracking jobs from the new API
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-798'>MAPREDUCE-798</a>] -         MRUnit should be able to test a succession of MapReduce passes
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-800'>MAPREDUCE-800</a>] -         MRUnit should support the new API
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-824'>MAPREDUCE-824</a>] -         Support a hierarchy of queues in the capacity scheduler
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-853'>MAPREDUCE-853</a>] -         Support a hierarchy of queues in the Map/Reduce framework
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-948'>MAPREDUCE-948</a>] -         FileOutputCommitter should create a _DONE file for successful jobs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-980'>MAPREDUCE-980</a>] -         Modify JobHistory to use Avro for serialization instead of raw JSON
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1074'>MAPREDUCE-1074</a>] -         Provide documentation for Mark/Reset functionality
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1167'>MAPREDUCE-1167</a>] -         Make ProcfsBasedProcessTree collect rss memory information
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1295'>MAPREDUCE-1295</a>] -         We need a job trace manipulator to build gridmix runs.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1304'>MAPREDUCE-1304</a>] -         Add counters for task time spent in GC
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1335'>MAPREDUCE-1335</a>] -         Add SASL DIGEST-MD5 authentication to TaskUmbilicalProtocol
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1338'>MAPREDUCE-1338</a>] -         need security keys storage solution
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1383'>MAPREDUCE-1383</a>] -         Allow storage and caching of delegation token.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1385'>MAPREDUCE-1385</a>] -         Make changes to MapReduce for the new UserGroupInformation APIs (HADOOP-6299)
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1464'>MAPREDUCE-1464</a>] -         In JobTokenIdentifier change method getUsername to getUser which returns UGI
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1673'>MAPREDUCE-1673</a>] -         Start and Stop scripts for the RaidNode
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1774'>MAPREDUCE-1774</a>] -         Large-scale Automated Framework
+</li>
+</ul>
+                    
+<h3>        Task
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-665'>MAPREDUCE-665</a>] -         Move libhdfs to HDFS project
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-813'>MAPREDUCE-813</a>] -         Streaming Doc and  M/R-Tutorial Doc - updates
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-819'>MAPREDUCE-819</a>] -         DistCP Guide - updates
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-878'>MAPREDUCE-878</a>] -         Rename fair scheduler design doc to fair-scheduler-design-doc.tex and add Apache license header
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-916'>MAPREDUCE-916</a>] -         Hadoop Doc Split: MapReduce Docs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1063'>MAPREDUCE-1063</a>] -         Document Gridmix benchmark
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1121'>MAPREDUCE-1121</a>] -         Hadoop MapReduce - Site Logo
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1352'>MAPREDUCE-1352</a>] -         0.21.0 - snapshot incorrect dependency published in .pom files 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1364'>MAPREDUCE-1364</a>] -         Hudson build of mapreduce - 0.21.0 to be green 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1388'>MAPREDUCE-1388</a>] -         Move RAID from HDFS to MR
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1404'>MAPREDUCE-1404</a>] -         Cluster-Setup and Single-Node-Setup Docs 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1812'>MAPREDUCE-1812</a>] -         New properties for suspend and resume process.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1896'>MAPREDUCE-1896</a>] -         [Herriot] New property for multi user list.
+</li>
+</ul>
+        
+<h3>        Test
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-670'>MAPREDUCE-670</a>] -          Create target for 10 minute patch test build for mapreduce
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-686'>MAPREDUCE-686</a>] -         Move TestSpeculativeExecution.Fake* into a separate class so that it can be used by other tests also
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-785'>MAPREDUCE-785</a>] -         Refactor TestReduceFetchFromPartialMem into a separate test 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-793'>MAPREDUCE-793</a>] -         Create a new test that consolidates a few tests to be included in the commit-test list
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1050'>MAPREDUCE-1050</a>] -         Introduce a mock object testing framework
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1061'>MAPREDUCE-1061</a>] -         Gridmix unit test should validate input/output bytes
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1359'>MAPREDUCE-1359</a>] -         TypedBytes TestIO doesn't mkdir its test dir first
+</li>
+</ul>
+
+
+</body>
+</html>

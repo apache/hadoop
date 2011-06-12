@@ -1,0 +1,85 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<!-- 
+
+This file defines the mappings from username to comma seperated list
+of certificate serial numbers that the user is allowed to use. One mapping
+per user. Wildcard characters, such as "*" and "?", are not recognized. 
+Any leading or trailing whitespaces are stripped/ignored.
+
+-->
+
+<configuration>
+
+<property>
+  <name> kan </name>
+  <value> ,6  ,,  4 , 9a2cf0be9ddf8280
+
+
+
+         </value>
+</property>
+
+<property>
+  <name> k. zhang </name>
+  <value> ,  ,,  2 , 9a2cf0be9ddf8280
+
+
+
+         </value>
+</property>
+
+<property>
+  <name> zhiyong1 </name>
+  <value> ,5  ,,  3 , 9a2cf0be9ddf8280
+
+
+
+         </value>
+</property>
+
+<property>
+  <name> nobody </name>
+  <value> ,6  ,,  3 , 9a2cf0be9ddf8280
+
+
+
+         </value>
+</property>
+
+<property>
+  <name> root </name>
+  <value> ,7  ,,  3 , 9a2cf0be9ddf8280
+
+
+
+         </value>
+</property>
+
+<property>
+  <name> Admin </name>
+  <value>, 6,  ,,  3 , 9a2cf0be9ddf8280
+
+
+
+         </value>
+</property>
+
+</configuration>

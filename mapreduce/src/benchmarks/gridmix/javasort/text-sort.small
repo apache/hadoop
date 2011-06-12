@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+GRID_DIR=`dirname "$0"`
+GRID_DIR=`cd "$GRID_DIR"; pwd`
+source $GRID_DIR/../gridmix-env
+
+INDIR="${VARINFLTEXT}/{part-00000,part-00001,part-00002}"
+Date=`date +%F-%H-%M-%S-%N`
+
+OUTDIR=perf-out/sort-out-dir-small_$Date
+${HADOOP_HOME}/bin/hadoop dfs -rmr $OUTDIR
+
+${HADOOP_HOME}/bin/hadoop jar ${EXAMPLE_JAR} sort -m 1 -r $NUM_OF_REDUCERS_FOR_SMALL_JOB -inFormat org.apache.hadoop.mapred.KeyValueTextInputFormat -outFormat org.apache.hadoop.mapred.TextOutputFormat -outKey org.apache.hadoop.io.Text -outValue org.apache.hadoop.io.Text $INDIR $OUTDIR
+

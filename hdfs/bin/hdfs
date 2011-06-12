@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
+
+. "$bin"/hdfs-config.sh
+
+function print_usage(){
+  echo "Usage: hdfs [--config confdir] COMMAND"
+  echo "       where COMMAND is one of:"
+  echo "  namenode -format     format the DFS filesystem"
+  echo "  secondarynamenode    run the DFS secondary namenode"
+  echo "  namenode             run the DFS namenode"
+  echo "  datanode             run a DFS datanode"
+  echo "  dfsadmin             run a DFS admin client"
+  echo "  fsck                 run a DFS filesystem checking utility"
+  echo "  balancer             run a cluster balancing utility"
+  echo "  jmxget               get JMX exported values from NameNode or DataNode."
+  echo "  oiv                  apply the offline fsimage viewer to an fsimage"
+  echo "  fetchdt              fetch a delegation token from the NameNode"
+  echo "						Use -help to see options"
+  echo ""
+  echo "Most commands print help when invoked w/o parameters."
+}
+
+if [ $# = 0 ]; then
+  print_usage
+  exit
+fi
+
+COMMAND=$1
+shift
+
+if [ "$COMMAND" = "namenode" ] ; then
+  CLASS='org.apache.hadoop.hdfs.server.namenode.NameNode'
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_NAMENODE_OPTS"
+elif [ "$COMMAND" = "secondarynamenode" ] ; then
+  CLASS='org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode'
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_SECONDARYNAMENODE_OPTS"
+elif [ "$COMMAND" = "datanode" ] ; then
+  CLASS='org.apache.hadoop.hdfs.server.datanode.DataNode'
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_DATANODE_OPTS"
+elif [ "$COMMAND" = "dfs" ] ; then
+  CLASS=org.apache.hadoop.fs.FsShell
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+elif [ "$COMMAND" = "dfsadmin" ] ; then
+  CLASS=org.apache.hadoop.hdfs.tools.DFSAdmin
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+elif [ "$COMMAND" = "fsck" ] ; then
+  CLASS=org.apache.hadoop.hdfs.tools.DFSck
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+elif [ "$COMMAND" = "balancer" ] ; then
+  CLASS=org.apache.hadoop.hdfs.server.balancer.Balancer
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_BALANCER_OPTS"
+elif [ "$COMMAND" = "jmxget" ] ; then
+  CLASS=org.apache.hadoop.hdfs.tools.JMXGet
+elif [ "$COMMAND" = "oiv" ] ; then
+  CLASS=org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer
+elif [ "$COMMAND" = "fetchdt" ] ; then
+  CLASS=org.apache.hadoop.hdfs.tools.DelegationTokenFetcher
+else
+  echo $COMMAND - invalid command
+  print_usage
+  exit
+fi
+
+# for developers, add hdfs classes to CLASSPATH
+if [ -d "$HADOOP_HDFS_HOME/build/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/build/classes
+fi
+if [ -d "$HADOOP_HDFS_HOME/build/webapps" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/build
+fi
+if [ -d "$HADOOP_HDFS_HOME/build/test/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/build/test/classes
+fi
+if [ -d "$HADOOP_HDFS_HOME/build/tools" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/build/tools
+fi
+
+# for releases, add core hdfs jar & webapps to CLASSPATH
+if [ -d "$HADOOP_HDFS_HOME/webapps" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME
+fi
+for f in $HADOOP_HDFS_HOME/hadoop-hdfs-*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+
+# add libs to CLASSPATH
+for f in $HADOOP_HDFS_HOME/lib/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+
+if $cygwin; then
+  CLASSPATH=`cygpath -p -w "$CLASSPATH"`
+fi
+export CLASSPATH=$CLASSPATH
+exec "$JAVA" $JAVA_HEAP_MAX $HADOOP_OPTS $CLASS "$@"

@@ -1,0 +1,90 @@
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<ivy-module version="1.0">
+  <info organisation="org.apache.hadoop" module="${ant.project.name}" revision="${version}">
+    <license name="Apache 2.0"/>
+    <ivyauthor name="Apache Hadoop Team" url="http://hadoop.apache.org"/>
+    <description>
+        Hadoop Core
+    </description>
+  </info>
+  <configurations defaultconfmapping="default">
+    <!--these match the Maven configurations-->
+    <conf name="default" extends="master,runtime"/>
+    <conf name="master" description="contains the artifact but no dependencies"/>
+    <conf name="compile" description="contains the artifact but no dependencies"/>
+    <conf name="runtime" description="runtime but not the artifact"/>
+
+    <!--
+    These public configurations contain the core dependencies for running hadoop client or server.
+    The server is effectively a superset of the client.
+    -->
+    <!--Private configurations. -->
+
+    <conf name="common" visibility="private" extends="compile,runtime" description="common artifacts"/>
+    <conf name="javadoc" visibility="private" description="artiracts required while performing doc generation" extends="common"/>
+    <conf name="test" extends="common" visibility="private" description="the classpath needed to run tests"/>
+    <conf name="system" extends="test" visibility="private" description="the classpath needed to run system tests"/>
+
+    <conf name="test-hdfswithmr" extends="test, common" visibility="private" description="the classpath needed to run tests"/>
+
+    <conf name="releaseaudit" visibility="private" description="Artifacts required for releaseaudit target"/>
+     
+    <conf name="jdiff" visibility="private" extends="common"/>
+    <conf name="checkstyle" visibility="private"/>
+
+  </configurations>
+
+  <publications>
+    <!--get the artifact from our module name-->
+    <artifact conf="master"/>
+  </publications>
+  <dependencies>
+    
+    <dependency org="org.apache.hadoop" name="hadoop-common" rev="${hadoop-common.version}" conf="common->default"/>
+    <dependency org="org.apache.hadoop" name="hadoop-common-instrumented" rev="${hadoop-common.version}" conf="system->default"/>
+    <dependency org="commons-logging" name="commons-logging" rev="${commons-logging.version}" conf="common->master"/>
+    <dependency org="log4j" name="log4j" rev="${log4j.version}" conf="common->master"/>
+    <dependency org="org.apache.hadoop" name="avro" rev="${avro.version}" conf="common->default">
+      <exclude module="ant"/>
+      <exclude module="jetty"/>
+      <exclude module="slf4j-simple"/>
+    </dependency>
+    <dependency org="org.aspectj" name="aspectjrt" rev="${aspectj.version}" conf="common->default"/>
+    <dependency org="org.aspectj" name="aspectjtools" rev="${aspectj.version}" conf="common->default"/>
+
+    <dependency org="org.slf4j" name="slf4j-api" rev="${slf4j-api.version}" conf="test->master"/>
+    <dependency org="org.slf4j" name="slf4j-log4j12" rev="${slf4j-log4j12.version}" conf="test->master"/>
+    <dependency org="org.apache.hadoop" name="hadoop-common-test" rev="${hadoop-common.version}" conf="test->default"/>
+
+    <dependency org="checkstyle" name="checkstyle" rev="${checkstyle.version}" conf="checkstyle->default"/>
+
+    <dependency org="jdiff" name="jdiff" rev="${jdiff.version}" conf="jdiff->default"/>
+    <dependency org="xerces" name="xerces" rev="${xerces.version}" conf="jdiff->default"/>
+
+    <dependency org="org.apache.rat" name="apache-rat-tasks" rev="${rats-lib.version}" conf="releaseaudit->default"/>
+    <dependency org="commons-lang" name="commons-lang" rev="${commons-lang.version}" conf="releaseaudit->default"/>
+    <dependency org="commons-collections" name="commons-collections" rev="${commons-collections.version}" conf="releaseaudit->default"/>
+
+    <dependency org="org.apache.lucene" name="lucene-core" rev="${lucene-core.version}" conf="javadoc->default"/> 
+
+    <dependency org="org.mockito" name="mockito-all" rev="${mockito-all.version}" conf="common->master"/>
+
+   </dependencies>
+  
+</ivy-module>
