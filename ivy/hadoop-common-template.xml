@@ -150,5 +150,10 @@
       <artifactId>guava</artifactId>
       <version>r09</version>
     </dependency>
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+      <version>2.4.0a</version>
+    </dependency>
   </dependencies>
 </project>

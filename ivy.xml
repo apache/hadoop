@@ -323,5 +323,9 @@
       name="guava"
       rev="${guava.version}"
       conf="common->default"/>
+    <dependency org="com.google.protobuf"
+      name="protobuf-java"
+      rev="${protobuf.version}"
+      conf="common->default"/>
   </dependencies>
 </ivy-module>

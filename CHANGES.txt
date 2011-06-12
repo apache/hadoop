@@ -206,6 +206,9 @@ Trunk (unreleased changes)
 
     HADOOP-7375. Add resolvePath method to FileContext. (Sanjay Radia via eli)
 
+    HADOOP-7383. HDFS needs to export protobuf library dependency in pom.
+    (todd via eli)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
