@@ -117,7 +117,6 @@ Release 0.91.0 - Unreleased
                (Alejandro Abdelnur)
    HBASE-3971  Compression.java uses ClassLoader.getSystemClassLoader()
                to load codec (Alejandro Abdelnur)
-   HBASE-3976  Disable block cache on compactions (Karthik Sankarachary)
    HBASE-3979  Trivial fixes in code, document (Ming Ma)
    HBASE-3794  Ability to Discard Bad HTable Puts
    HBASE-3923  HBASE-1502 Broke Shell's status 'simple' and 'detailed'
