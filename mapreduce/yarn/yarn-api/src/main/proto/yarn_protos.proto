@@ -1,0 +1,254 @@
+option java_package = "org.apache.hadoop.yarn.proto";
+option java_outer_classname = "YarnProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+
+message YarnRemoteExceptionProto {
+  optional string message = 1;
+  optional string trace = 2;
+  optional string class_name = 3;
+  optional YarnRemoteExceptionProto cause = 4;
+}
+
+message ApplicationIdProto {
+  optional int32 id = 1;
+  optional int64 cluster_timestamp = 2;
+}
+
+message ContainerIdProto {
+  optional ApplicationIdProto app_id = 1;
+  optional int32 id = 2;
+}
+
+message ResourceProto {
+  optional int32 memory = 1;
+}
+
+enum ContainerStateProto {
+  C_INITIALIZING = 1;
+  C_RUNNING = 2;
+  C_COMPLETE = 3;
+}
+
+message ContainerTokenProto {
+  optional bytes identifier = 1;
+  optional bytes password = 2;
+  optional string kind = 3;
+  optional string service = 4;
+}
+
+message ContainerProto {
+  optional ContainerIdProto id = 1;
+  optional string container_manager_address = 2;
+  optional string node_http_address = 3;
+  optional ResourceProto resource = 4;
+  optional ContainerStateProto state = 5;
+  optional ContainerTokenProto container_token = 6;
+  optional ContainerStatusProto container_status = 7;
+}
+
+enum ApplicationStateProto {
+  PENDING = 1;
+  ALLOCATING = 2;
+  ALLOCATED = 3;
+  EXPIRED_PENDING=12;
+  LAUNCHING = 4;
+  LAUNCHED = 5;
+  RUNNING = 6;
+  PAUSED = 7;
+  CLEANUP = 8;
+  COMPLETED = 9;
+  KILLED = 10;
+  FAILED = 11;
+}
+
+message ApplicationStatusProto {
+  optional int32 response_id = 1;
+  optional ApplicationIdProto application_id = 2;
+  optional float progress = 3;
+  optional int64 last_seen = 4;
+}
+
+message ApplicationMasterProto {
+  optional ApplicationIdProto application_id = 1;
+  optional string host = 2;
+  optional int32 rpc_port = 3;
+  optional string trackingUrl = 4;
+  optional ApplicationStatusProto status = 5;
+  optional ApplicationStateProto state = 6;
+  optional string client_token = 7;
+  optional int32 containerCount = 8;
+  optional int32 amFailCount = 9;
+  optional string diagnostics = 10 [default = ""];
+}
+
+message URLProto {
+  optional string scheme = 1;
+  optional string host = 2; 
+  optional int32 port = 3;
+  optional string file = 4;
+}
+
+enum LocalResourceVisibilityProto {
+  PUBLIC = 1;
+  PRIVATE = 2;
+  APPLICATION = 3;
+}
+
+enum LocalResourceTypeProto {
+  ARCHIVE = 1;
+  FILE = 2;
+}
+
+message LocalResourceProto {
+  optional URLProto resource = 1;
+  optional int64 size = 2;
+  optional int64 timestamp = 3;
+  optional LocalResourceTypeProto type = 4;
+  optional LocalResourceVisibilityProto visibility= 5;
+}
+
+message ApplicationProto {
+  optional ApplicationIdProto applicationId = 1;
+  optional string user = 2;
+  optional string queue = 3;
+  optional string name = 4;
+  optional ApplicationStatusProto status = 5;
+  optional ApplicationStateProto state = 6;
+  optional ContainerProto masterContainer = 7;
+  optional string trackingUrl = 8;
+  optional string diagnostics = 9 [default = "N/A"];
+}
+
+message NodeIdProto {
+  optional int32 id = 1;
+}
+
+message NodeManagerInfoProto {
+  optional string nodeAddress = 1;
+  optional string httpAddress = 2;
+  optional string rackName = 3;
+  optional ResourceProto used = 4;
+  optional ResourceProto capability = 5;
+  optional int32 numContainers = 6;
+  optional NodeIdProto nodeId = 7;
+}
+
+
+////////////////////////////////////////////////////////////////////////
+////// From AM_RM_Protocol /////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+message ResourceRequestProto {
+  optional PriorityProto priority = 1;
+  optional string host_name = 2;
+  optional ResourceProto capability = 3;
+  optional int32 num_containers = 4;
+}
+
+message AMResponseProto {
+  optional bool reboot = 1;
+  optional int32 response_id = 2;
+  repeated ContainerProto containers = 3;
+  optional ResourceProto limit = 4;
+}
+
+
+////////////////////////////////////////////////////////////////////////
+////// From client_RM_Protocol /////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+message ApplicationSubmissionContextProto {
+  optional ApplicationIdProto application_id = 1;
+  optional string application_name = 2;
+  optional ResourceProto master_capability = 3;
+  repeated StringURLMapProto resources = 4;
+  repeated StringLocalResourceMapProto resources_todo = 5;
+  repeated string fs_tokens = 6;
+  optional bytes fs_tokens_todo = 7;
+  repeated StringStringMapProto environment = 8;
+  repeated string command = 9;
+  optional string queue = 10;
+  optional PriorityProto priority = 11;
+  optional string user = 12;
+}
+
+message YarnClusterMetricsProto {
+  optional int32 num_node_managers = 1;
+}
+
+enum QueueStateProto {
+  Q_STOPPED = 1;
+  Q_RUNNING = 2;
+}
+
+message QueueInfoProto {
+  optional string queueName = 1;
+  optional float capacity = 2;
+  optional float maximumCapacity = 3;
+  optional float currentCapacity = 4;
+  optional QueueStateProto state = 5;
+  repeated QueueInfoProto childQueues = 6;
+  repeated ApplicationProto applications = 7;
+}
+
+enum QueueACLProto {
+  Q_SUBMIT_JOB = 1;
+  Q_ADMINISTER_QUEUE = 2;
+  Q_ADMINISTER_JOBS = 3;
+}
+
+message QueueUserACLInfoProto {
+  optional string queueName = 1;
+  repeated QueueACLProto userAcls = 2;
+}
+
+////////////////////////////////////////////////////////////////////////
+////// From container_manager //////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+
+message ContainerLaunchContextProto {
+  optional ContainerIdProto container_id = 1;
+  optional string user = 2;
+  optional ResourceProto resource = 3;
+  repeated StringLocalResourceMapProto localResources = 4;
+  optional bytes container_tokens = 5;
+  repeated StringBytesMapProto service_data = 6;
+  repeated StringStringMapProto env = 7;
+  repeated string command = 8;
+}
+
+message ContainerStatusProto {
+  optional ContainerIdProto container_id = 1;
+  optional ContainerStateProto state = 2;
+  optional string diagnostics = 3 [default = ""];
+  optional string exit_status = 4 [default = "N/A"];
+}
+
+
+
+////////////////////////////////////////////////////////////////////////
+////// From common//////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+message PriorityProto {
+  optional int32 priority = 1;
+}
+
+message StringURLMapProto {
+  optional string key = 1;
+  optional URLProto value = 2;
+}
+
+message StringLocalResourceMapProto {
+  optional string key = 1;
+  optional LocalResourceProto value = 2;
+}
+
+message StringStringMapProto {
+  optional string key = 1;
+  optional string value = 2;
+}
+
+message StringBytesMapProto {
+  optional string key = 1;
+  optional bytes value = 2;
+}
+

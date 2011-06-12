@@ -1,0 +1,743 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="testConf.xsl"?>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<configuration>
+  <!-- Normal mode is test. To run just the commands and dump the output
+       to the log, set it to nocompare -->
+  <mode>test</mode>
+  
+  <!--  Comparator types:
+           ExactComparator
+           SubstringComparator
+           RegexpComparator
+           TokenComparator
+           -->
+  <tests>
+    <!-- Tests for help -->
+    <test> <!-- TESTED -->
+      <description>help: check if fs help message is shown</description>
+      <test-commands>
+        <command>-help</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>hadoop fs is the command to execute fs commands. The full syntax is</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for ls</description>
+      <test-commands>
+        <command>-help ls</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-ls \[-R\] \[&lt;path&gt; \.\.\.\]:( |\t)*List the contents that match the specified file pattern. If( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*path is not specified, the contents of /user/&lt;currentUser&gt;( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*path is not specified, the contents of /user/&lt;currentUser&gt;( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*will be listed. Directory entries are of the form( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*dirName \(full path\) &lt;dir&gt;( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*and file entries are of the form( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*fileName\(full path\) &lt;r n&gt; size( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*where n is the number of replicas specified for the file( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*and size is the size of the file, in bytes.( )*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for lsr</description>
+      <test-commands>
+        <command>-help lsr</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-lsr:\s+\(DEPRECATED\) Same as 'ls -R'</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for get</description>
+      <test-commands>
+        <command>-help get</command>
+      </test-commands>
+      <cleanup-commands>
+        <!-- No cleanup -->
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-get( )*\[-ignoreCrc\]( )*\[-crc\]( )*&lt;src&gt; \.\.\. &lt;localdst&gt;:( |\t)*Copy files that match the file pattern &lt;src&gt;( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*to the local name.( )*&lt;src&gt; is kept.( )*When copying multiple,( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*files, the destination must be a directory.( )*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for du</description>
+      <test-commands>
+        <command>-help du</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-du \[-s\] \[-h\] &lt;path&gt; \.\.\.:\s+Show the amount of space, in bytes, used by the files that\s*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*match the specified file pattern. The following flags are optional:</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*-s\s*Rather than showing the size of each individual file that</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*matches the pattern, shows the total \(summary\) size.</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*-h\s*Formats the sizes of files in a human-readable fashion</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>\s*rather than a number of bytes.</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*Note that, even without the -s option, this only shows size summaries</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*one level deep into a directory.</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*The output is in the form </expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*size\s+name\(full path\)\s*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for dus</description>
+      <test-commands>
+        <command>-help dus</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-dus:\s+\(DEPRECATED\) Same as 'du -s'</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for count</description>
+      <test-commands>
+        <command>-help count</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-count \[-q\] &lt;path&gt; \.\.\.:( |\t)*Count the number of directories, files and bytes under the paths( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*that match the specified file pattern.  The output columns are:( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*DIR_COUNT FILE_COUNT CONTENT_SIZE FILE_NAME or( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*QUOTA REMAINING_QUATA SPACE_QUOTA REMAINING_SPACE_QUOTA( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*DIR_COUNT FILE_COUNT CONTENT_SIZE FILE_NAME( )*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+   <test> <!-- TESTED -->
+      <description>help: help for mv</description>
+      <test-commands>
+        <command>-help mv</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-mv &lt;src&gt; \.\.\. &lt;dst&gt;:( |\t)*Move files that match the specified file pattern &lt;src&gt;( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*to a destination &lt;dst&gt;.  When moving multiple files, the( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*destination must be a directory.( )*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for cp</description>
+      <test-commands>
+        <command>-help cp</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-cp &lt;src&gt; \.\.\. &lt;dst&gt;:( |\t)*Copy files that match the file pattern &lt;src&gt; to a( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*destination.  When copying multiple files, the destination( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*must be a directory.( )*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for rm</description>
+      <test-commands>
+        <command>-help rm</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-rm \[-r\|-R\] \[-skipTrash\] &lt;src&gt; \.\.\.:( |\t)*Delete all files that match the specified file pattern.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*Equivalent to the Unix command "rm &lt;src&gt;"( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*-skipTrash option bypasses trash, if enabled, and immediately( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*deletes &lt;src&gt;( )*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for rmr</description>
+      <test-commands>
+        <command>-help rmr</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-rmr:\s+\(DEPRECATED\) Same as 'rm -r'</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+   <test> <!-- TESTED -->
+      <description>help: help for put</description>
+      <test-commands>
+        <command>-help put</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-put &lt;localsrc&gt; \.\.\. &lt;dst&gt;:\s+Copy files from the local file system</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*into fs.( )*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for copyFromLocal</description>
+      <test-commands>
+        <command>-help copyFromLocal</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-copyFromLocal &lt;localsrc&gt; \.\.\. &lt;dst&gt;:\s+Identical to the -put command\.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for moveFromLocal</description>
+      <test-commands>
+        <command>-help moveFromLocal</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-moveFromLocal &lt;localsrc&gt; \.\.\. &lt;dst&gt;:\s+Same as -put, except that the source is</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*deleted after it's copied.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for get</description>
+      <test-commands>
+        <command>-help get</command>
+      </test-commands>
+      <cleanup-commands>
+        <!-- No cleanup -->
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-get( )*\[-ignoreCrc\]( )*\[-crc\]( )*&lt;src&gt; \.\.\. &lt;localdst&gt;:( |\t)*Copy files that match the file pattern &lt;src&gt;( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*to the local name.( )*&lt;src&gt; is kept.( )*When copying multiple,( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*files, the destination must be a directory.( )*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for getmerge</description>
+      <test-commands>
+        <command>-help getmerge</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-getmerge &lt;src&gt; &lt;localdst&gt; \[addnl\]:( |\t)*Get all the files in the directories that( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*match the source file pattern and merge and sort them to only( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*one file on local fs. &lt;src&gt; is kept.( )*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for cat</description>
+      <test-commands>
+        <command>-help cat</command>
+      </test-commands>
+      <cleanup-commands>
+        <!-- No cleanup -->
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-cat \[-ignoreCrc\] &lt;src&gt; \.\.\.:( |\t)*Fetch all files that match the file pattern &lt;src&gt;( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*and display their content on stdout.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for copyToLocal</description>
+      <test-commands>
+        <command>-help copyToLocal</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-copyToLocal \[-ignoreCrc\] \[-crc\] &lt;src&gt; \.\.\. &lt;localdst&gt;:\s+Identical to the -get command.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for moveToLocal</description>
+      <test-commands>
+        <command>-help moveToLocal</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-moveToLocal &lt;src&gt; &lt;localdst&gt;:\s+Not implemented yet</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for mkdir</description>
+      <test-commands>
+        <command>-help mkdir</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-mkdir &lt;path&gt; \.\.\.:( |\t)*Create a directory in specified location.( )*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for setrep</description>
+      <test-commands>
+        <command>-help setrep</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-setrep \[-R\] \[-w\] &lt;rep&gt; &lt;path/file&gt; \.\.\.:( |\t)*Set the replication level of a file.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*The -R flag requests a recursive change of replication level( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*for an entire tree.( )*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for touchz</description>
+      <test-commands>
+        <command>-help touchz</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-touchz &lt;path&gt; \.\.\.:( |\t)*Creates a file of zero length( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*at &lt;path&gt; with current time as the timestamp of that &lt;path&gt;.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*An error is returned if the file exists with non-zero length( )*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for test</description>
+      <test-commands>
+        <command>-help test</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-test -\[ezd\] &lt;path&gt;:\s+If file exists, has zero length, is a directory( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*then return 0, else return 1.( )*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for stat</description>
+      <test-commands>
+        <command>-help stat</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-stat \[format\] &lt;path&gt; \.\.\.:( |\t)*Print statistics about the file/directory at &lt;path&gt;( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*in the specified format. Format accepts filesize in blocks \(%b\), filename \(%n\),( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*block size \(%o\), replication \(%r\), modification date \(%y, %Y\)( )*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for tail</description>
+      <test-commands>
+        <command>-help tail</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-tail \[-f\] &lt;file&gt;:( |\t)+Show the last 1KB of the file.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*The -f option shows appended data as the file grows.( )*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for chmod</description>
+      <test-commands>
+        <command>-help chmod</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-chmod \[-R\] &lt;MODE\[,MODE\]... \| OCTALMODE&gt; PATH...:( |\t)*Changes permissions of a file.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*This works similar to shell's chmod with a few exceptions.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*-R( |\t)*modifies the files recursively. This is the only option( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*currently supported.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*MODE( |\t)*Mode is same as mode used for chmod shell command.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*Only letters recognized are 'rwxXt'. E.g. \+t,a\+r,g-w,\+rwx,o=r( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*OCTALMODE Mode specifed in 3 or 4 digits. If 4 digits, the first may( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*be 1 or 0 to turn the sticky bit on or off, respectively.( )*Unlike( |\t)*shell command, it is not possible to specify only part of the mode( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*E.g. 754 is same as u=rwx,g=rx,o=r( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*If none of 'augo' is specified, 'a' is assumed and unlike( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*shell command, no umask is applied.( )*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for chown</description>
+      <test-commands>
+        <command>-help chown</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-chown \[-R\] \[OWNER\]\[:\[GROUP\]\] PATH...:( |\t)*Changes owner and group of a file.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*This is similar to shell's chown with a few exceptions.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*-R( |\t)*modifies the files recursively. This is the only option( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*currently supported.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*If only owner or group is specified then only owner or( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*group is modified.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*The owner and group names may only cosists of digits, alphabet,( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*and any of '-_.@/' i.e. \[-_.@/a-zA-Z0-9\]. The names are case( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*sensitive.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*WARNING: Avoid using '.' to separate user name and group though( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*Linux allows it. If user names have dots in them and you are( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*using local file system, you might see surprising results since( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*shell command 'chown' is used for local files.( )*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for chgrp</description>
+      <test-commands>
+        <command>-help chgrp</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-chgrp \[-R\] GROUP PATH...:( |\t)*This is equivalent to -chown ... :GROUP ...( )*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for help</description>
+      <test-commands>
+        <command>-help help</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-help \[cmd\]:( |\t)*Displays help for given command or all commands if none( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*is specified.( )*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+  </tests>
+</configuration>

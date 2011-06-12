@@ -1,0 +1,62 @@
+To compile  Hadoop Mapreduce next following, do the following:
+
+Step 1) Download Hadoop Common
+
+svn checkout http://svn.apache.org/repos/asf/hadoop/common/branches/yahoo-merge/
+ant veryclean mvn-install 
+
+Step 2) Download Hadoop HDFS 
+
+svn checkout http://svn.apache.org/repos/asf/hadoop/hdfs/branches/HDFS-1052/
+ant veryclean mvn-install -Dresolvers=internal 
+
+Step 3) Go to the root directory of hadoop mapreduce
+
+Step 4) Run 
+
+mvn clean install assembly:assembly
+ant veryclean jar jar-test  -Dresolvers=internal 
+
+In case you want to skip the tests run:
+
+mvn clean install assembly:assembly -Dmaven.test.skip.exec=true
+ant veryclean jar jar-test  -Dresolvers=internal 
+
+You will see a tarball in
+ls target/hadoop-mapreduce-1.0-SNAPSHOT-bin.tar.gz  
+
+Step 5) Untar the tarball in a clean and different directory.
+say HADOOP_YARN_INSTALL
+
+To run Hadoop Mapreduce next applications :
+
+Step 6) cd $HADOOP_YARN_INSTALL
+
+Step 7) export the following variables:
+
+HADOOP_MAPRED_HOME=
+HADOOP_COMMON_HOME=
+HADOOP_HDFS_HOME=
+YARN_HOME=directory where you untarred yarn
+HADOOP_CONF_DIR=
+YARN_CONF_DIR=$HADOOP_CONF_DIR
+
+Step 8) bin/yarn-daemon.sh start resourcemanager
+
+Step 9) bin/yarn-daemon.sh start nodemanager
+
+Step 10) Create the following symlinks in hadoop-common/lib 
+
+ln -s $HADOOP_YARN_INSTALL/modules/hadoop-mapreduce-client-app-1.0-SNAPSHOT.jar .	
+ln -s $HADOOP_YARN_INSTALL/modules/yarn-api-1.0-SNAPSHOT.jar .
+ln -s $HADOOP_YARN_INSTALL/modules/hadoop-mapreduce-client-common-1.0-SNAPSHOT.jar .	
+ln -s $HADOOP_YARN_INSTALL/modules/yarn-common-1.0-SNAPSHOT.jar .
+ln -s $HADOOP_YARN_INSTALL/modules/hadoop-mapreduce-client-core-1.0-SNAPSHOT.jar .	
+ln -s $HADOOP_YARN_INSTALL/modules/yarn-server-common-1.0-SNAPSHOT.jar .
+ln -s $HADOOP_YARN_INSTALL/lib/protobuf-java-2.4.0a.jar .
+
+Step 11) You are all set, an example on how to run a job is:
+
+$HADOOP_COMMON_HOME/bin/hadoop jar $HADOOP_MAPRED_HOME/build/hadoop-mapred-examples-0.22.0-SNAPSHOT.jar randomwriter -Dmapreduce.job.user.name=$USER -Dmapreduce.randomwriter.bytespermap=10000 -Ddfs.blocksize=536870912 -Ddfs.block.size=536870912 -libjars $HADOOP_YARN_INSTALL/hadoop-mapreduce-1.0-SNAPSHOT/modules/hadoop-mapreduce-client-jobclient-1.0-SNAPSHOT.jar output 
+
+

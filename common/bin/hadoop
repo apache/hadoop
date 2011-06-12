@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This script runs the hadoop core commands. 
+
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
+ 
+. "$bin"/hadoop-config.sh
+
+function print_usage(){
+  echo "Usage: hadoop [--config confdir] COMMAND"
+  echo "       where COMMAND is one of:"
+  echo "  fs                   run a generic filesystem user client"
+  echo "  version              print the version"
+  echo "  jar <jar>            run a jar file"
+  echo "  distcp <srcurl> <desturl> copy file or directories recursively"
+  echo "  archive -archiveName NAME -p <parent path> <src>* <dest> create a hadoop archive"
+  echo "  classpath            prints the class path needed to get the"
+  echo "                       Hadoop jar and the required libraries"
+  echo "  daemonlog            get/set the log level for each daemon"
+  echo " or"
+  echo "  CLASSNAME            run the class named CLASSNAME"
+  echo ""
+  echo "Most commands print help when invoked w/o parameters."
+}
+
+if [ $# = 0 ]; then
+  print_usage
+  exit
+fi
+
+COMMAND=$1
+case $COMMAND in
+  #hdfs commands
+  namenode|secondarynamenode|datanode|dfs|dfsadmin|fsck|balancer)
+    echo "DEPRECATED: Use of this script to execute hdfs command is deprecated."
+    echo "Instead use the hdfs command for it."
+    echo ""
+    #try to locate hdfs and if present, delegate to it.  
+    if [ -f "${HADOOP_HDFS_HOME}"/bin/hdfs ]; then
+      exec "${HADOOP_HDFS_HOME}"/bin/hdfs $*
+    elif [ -f "${HADOOP_HOME}"/bin/hdfs ]; then
+      exec "${HADOOP_HOME}"/bin/hdfs $*
+    else
+      echo "HDFS not found."
+      exit
+    fi
+    ;;
+
+  #mapred commands  
+  mradmin|jobtracker|tasktracker|pipes|job|queue)
+    echo "DEPRECATED: Use of this script to execute mapred command is deprecated."
+    echo "Instead use the mapred command for it."
+    echo ""
+    #try to locate mapred and if present, delegate to it.
+    if [ -f "${HADOOP_MAPRED_HOME}"/bin/mapred ]; then
+      exec "${HADOOP_MAPRED_HOME}"/bin/mapred $*
+    elif [ -f "${HADOOP_HOME}"/bin/mapred ]; then
+      exec "${HADOOP_HOME}"/bin/mapred $* 
+    else
+      echo "MAPRED not found."
+      exit
+    fi
+    ;;
+
+  classpath)
+    if $cygwin; then
+      CLASSPATH=`cygpath -p -w "$CLASSPATH"`
+    fi
+    echo $CLASSPATH
+    exit
+    ;;
+
+  #core commands  
+  *)
+    # the core commands
+    if [ "$COMMAND" = "fs" ] ; then
+      CLASS=org.apache.hadoop.fs.FsShell
+      HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+    elif [ "$COMMAND" = "version" ] ; then
+      CLASS=org.apache.hadoop.util.VersionInfo
+      HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+    elif [ "$COMMAND" = "jar" ] ; then
+      CLASS=org.apache.hadoop.util.RunJar
+    elif [ "$COMMAND" = "distcp" ] ; then
+      CLASS=org.apache.hadoop.tools.DistCp
+      CLASSPATH=${CLASSPATH}:${TOOL_PATH}
+      HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+    elif [ "$COMMAND" = "daemonlog" ] ; then
+      CLASS=org.apache.hadoop.log.LogLevel
+      HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+    elif [ "$COMMAND" = "archive" ] ; then
+      CLASS=org.apache.hadoop.tools.HadoopArchives
+      CLASSPATH=${CLASSPATH}:${TOOL_PATH}
+      HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+    else
+      CLASS=$COMMAND
+    fi
+    shift
+    
+    if $cygwin; then
+      CLASSPATH=`cygpath -p -w "$CLASSPATH"`
+    fi
+    export CLASSPATH=$CLASSPATH
+    exec "$JAVA" $JAVA_HEAP_MAX $HADOOP_OPTS $CLASS "$@"
+    ;;
+
+esac

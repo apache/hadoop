@@ -1,0 +1,14 @@
+option java_package = "org.apache.hadoop.yarn.proto";
+option java_outer_classname = "RMAdminProtocol";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+
+import "yarn_server_resourcemanager_service_protos.proto";
+
+service RMAdminProtocolService {
+  rpc refreshQueues(RefreshQueuesRequestProto) returns (RefreshQueuesResponseProto);
+  rpc refreshNodes(RefreshNodesRequestProto) returns (RefreshNodesResponseProto);
+  rpc refreshSuperUserGroupsConfiguration(RefreshSuperUserGroupsConfigurationRequestProto) returns (RefreshSuperUserGroupsConfigurationResponseProto);
+  rpc refreshUserToGroupsMappings(RefreshUserToGroupsMappingsRequestProto) returns (RefreshUserToGroupsMappingsResponseProto);
+  rpc refreshAdminAcls(RefreshAdminAclsRequestProto) returns (RefreshAdminAclsResponseProto);
+}

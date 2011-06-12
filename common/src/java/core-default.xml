@@ -1,0 +1,810 @@
+<?xml version="1.0"?>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- Do not modify this file directly.  Instead, copy entries that you -->
+<!-- wish to modify from this file into core-site.xml and change them -->
+<!-- there.  If core-site.xml does not already exist, create it.      -->
+
+<configuration>
+
+<!--- global properties -->
+
+<property>
+  <name>hadoop.common.configuration.version</name>
+  <value>0.21.0</value>
+  <description>version of this configuration file</description>
+</property>
+
+<property>
+  <name>hadoop.tmp.dir</name>
+  <value>/tmp/hadoop-${user.name}</value>
+  <description>A base for other temporary directories.</description>
+</property>
+
+<property>
+  <name>io.native.lib.available</name>
+  <value>true</value>
+  <description>Should native hadoop libraries, if present, be used.</description>
+</property>
+
+<property>
+  <name>hadoop.http.filter.initializers</name>
+  <value></value>
+  <description>A comma separated list of class names. Each class in the list 
+  must extend org.apache.hadoop.http.FilterInitializer. The corresponding 
+  Filter will be initialized. Then, the Filter will be applied to all user 
+  facing jsp and servlet web pages.  The ordering of the list defines the 
+  ordering of the filters.</description>
+</property>
+
+<!--- security properties -->
+
+<property>
+  <name>hadoop.security.authorization</name>
+  <value>false</value>
+  <description>Is service-level authorization enabled?</description>
+</property>
+
+<property>
+  <name>hadoop.security.authentication</name>
+  <value>simple</value>
+  <description>Possible values are simple (no authentication), and kerberos
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping</name>
+  <value>org.apache.hadoop.security.ShellBasedUnixGroupsMapping</value>
+  <description>
+    Class for user to group mapping (get groups for a given user) for ACL
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.groups.cache.secs</name>
+  <value>300</value>
+  <description>
+    This is the config controlling the validity of the entries in the cache
+    containing the user->group mapping. When this duration has expired,
+    then the implementation of the group mapping provider is invoked to get
+    the groups of the user and then cached back.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.service.user.name.key</name>
+  <value></value>
+  <description>
+    For those cases where the same RPC protocol is implemented by multiple
+    servers, this configuration is required for specifying the principal
+    name to use for the service when the client wishes to make an RPC call.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.info.class.name</name>
+  <value>org.apache.hadoop.security.AnnotatedSecurityInfo</value>
+  <description>
+    Implementation of org.apache.hadoop.security.SecurityInfo interface to 
+    be used by RPC for a given protocol.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.rpc.protection</name>
+  <value>authentication</value>
+  <description>This field sets the quality of protection for secured sasl 
+      connections. Possible values are authentication, integrity and privacy.
+      authentication means authentication only and no integrity or privacy; 
+      integrity implies authentication and integrity are enabled; and privacy 
+      implies all of authentication, integrity and privacy are enabled.
+  </description>
+</property>
+
+<!--- logging properties -->
+
+<property>
+  <name>hadoop.logfile.size</name>
+  <value>10000000</value>
+  <description>The max size of each log file</description>
+</property>
+
+<property>
+  <name>hadoop.logfile.count</name>
+  <value>10</value>
+  <description>The max number of log files</description>
+</property>
+
+<!-- i/o properties -->
+<property>
+  <name>io.file.buffer.size</name>
+  <value>4096</value>
+  <description>The size of buffer for use in sequence files.
+  The size of this buffer should probably be a multiple of hardware
+  page size (4096 on Intel x86), and it determines how much data is
+  buffered during read and write operations.</description>
+</property>
+  
+<property>
+  <name>io.bytes.per.checksum</name>
+  <value>512</value>
+  <description>The number of bytes per checksum.  Must not be larger than
+  io.file.buffer.size.</description>
+</property>
+
+<property>
+  <name>io.skip.checksum.errors</name>
+  <value>false</value>
+  <description>If true, when a checksum error is encountered while
+  reading a sequence file, entries are skipped, instead of throwing an
+  exception.</description>
+</property>
+
+<property>
+  <name>io.compression.codecs</name>
+  <value>org.apache.hadoop.io.compress.DefaultCodec,org.apache.hadoop.io.compress.GzipCodec,org.apache.hadoop.io.compress.BZip2Codec</value>
+  <description>A list of the compression codec classes that can be used 
+               for compression/decompression.</description>
+</property>
+
+<property>
+  <name>io.serializations</name>
+  <value>org.apache.hadoop.io.serializer.WritableSerialization,org.apache.hadoop.io.serializer.avro.AvroSpecificSerialization,org.apache.hadoop.io.serializer.avro.AvroReflectSerialization</value>
+  <description>A list of serialization classes that can be used for
+  obtaining serializers and deserializers.</description>
+</property>
+
+<property>
+  <name>io.seqfile.local.dir</name>
+  <value>${hadoop.tmp.dir}/io/local</value>
+  <description>The local directory where sequence file stores intermediate
+  data files during merge.  May be a comma-separated list of
+  directories on different devices in order to spread disk i/o.
+  Directories that do not exist are ignored.
+  </description>
+</property>
+
+<property>
+  <name>io.map.index.skip</name>
+  <value>0</value>
+  <description>Number of index entries to skip between each entry.
+  Zero by default. Setting this to values larger than zero can
+  facilitate opening large MapFiles using less memory.</description>
+</property>
+
+<property>
+  <name>io.map.index.interval</name>
+  <value>128</value>
+  <description>
+    MapFile consist of two files - data file (tuples) and index file
+    (keys). For every io.map.index.interval records written in the
+    data file, an entry (record-key, data-file-position) is written
+    in the index file. This is to allow for doing binary search later
+    within the index file to look up records by their keys and get their
+    closest positions in the data file.
+  </description>
+</property>
+
+<!-- file system properties -->
+
+<property>
+  <name>fs.defaultFS</name>
+  <value>file:///</value>
+  <description>The name of the default file system.  A URI whose
+  scheme and authority determine the FileSystem implementation.  The
+  uri's scheme determines the config property (fs.SCHEME.impl) naming
+  the FileSystem implementation class.  The uri's authority is used to
+  determine the host, port, etc. for a filesystem.</description>
+</property>
+
+<property>
+  <name>fs.trash.interval</name>
+  <value>0</value>
+  <description>Number of minutes after which the checkpoint
+  gets deleted.
+  If zero, the trash feature is disabled.
+  </description>
+</property>
+
+<property>
+  <name>fs.trash.checkpoint.interval</name>
+  <value>0</value>
+  <description>Number of minutes between trash checkpoints.
+  Should be smaller or equal to fs.trash.interval.
+  Every time the checkpointer runs it creates a new checkpoint 
+  out of current and removes checkpoints created more than 
+  fs.trash.interval minutes ago.
+  </description>
+</property>
+
+<property>
+  <name>fs.file.impl</name>
+  <value>org.apache.hadoop.fs.LocalFileSystem</value>
+  <description>The FileSystem for file: uris.</description>
+</property>
+
+<property>
+  <name>fs.hdfs.impl</name>
+  <value>org.apache.hadoop.hdfs.DistributedFileSystem</value>
+  <description>The FileSystem for hdfs: uris.</description>
+</property>
+
+
+<property>
+  <name>fs.viewfs.impl</name>
+  <value>org.apache.hadoop.fs.viewfs.ViewFileSystem</value>
+  <description>The FileSystem for view file system for viewfs: uris
+  (ie client side mount table:).</description>
+</property>
+
+<property>
+  <name>fs.viewfs.impl</name>
+  <value>org.apache.hadoop.fs.viewfs.ViewFileSystem</value>
+  <description>The FileSystem for view file system for viewfs: uris
+  (ie client side mount table:).</description>
+</property>
+
+<property>
+  <name>fs.AbstractFileSystem.file.impl</name>
+  <value>org.apache.hadoop.fs.local.LocalFs</value>
+  <description>The AbstractFileSystem for file: uris.</description>
+</property>
+
+
+<property>
+  <name>fs.AbstractFileSystem.hdfs.impl</name>
+  <value>org.apache.hadoop.fs.Hdfs</value>
+  <description>The AbstractFileSystem for hdfs: uris.</description>
+</property>
+
+
+<property>
+  <name>fs.AbstractFileSystem.viewfs.impl</name>
+  <value>org.apache.hadoop.fs.viewfs.ViewFs</value>
+  <description>The AbstractFileSystem for view file system for viewfs: uris
+  (ie client side mount table:).</description>
+</property>
+
+<property>
+  <name>fs.AbstractFileSystem.viewfs.impl</name>
+  <value>org.apache.hadoop.fs.viewfs.ViewFs</value>
+  <description>The AbstractFileSystem for view file system for viewfs: uris
+  (ie client side mount table:).</description>
+</property>
+
+<property>
+  <name>fs.s3.impl</name>
+  <value>org.apache.hadoop.fs.s3.S3FileSystem</value>
+  <description>The FileSystem for s3: uris.</description>
+</property>
+
+<property>
+  <name>fs.s3n.impl</name>
+  <value>org.apache.hadoop.fs.s3native.NativeS3FileSystem</value>
+  <description>The FileSystem for s3n: (Native S3) uris.</description>
+</property>
+
+<property>
+  <name>fs.kfs.impl</name>
+  <value>org.apache.hadoop.fs.kfs.KosmosFileSystem</value>
+  <description>The FileSystem for kfs: uris.</description>
+</property>
+
+<property>
+  <name>fs.hftp.impl</name>
+  <value>org.apache.hadoop.hdfs.HftpFileSystem</value>
+</property>
+
+<property>
+  <name>fs.hsftp.impl</name>
+  <value>org.apache.hadoop.hdfs.HsftpFileSystem</value>
+</property>
+
+<property>
+  <name>fs.ftp.impl</name>
+  <value>org.apache.hadoop.fs.ftp.FTPFileSystem</value>
+  <description>The FileSystem for ftp: uris.</description>
+</property>
+
+<property>
+  <name>fs.ftp.host</name>
+  <value>0.0.0.0</value>
+  <description>FTP filesystem connects to this server</description>
+</property>
+
+<property>
+  <name>fs.ftp.host.port</name>
+  <value>21</value>
+  <description>
+    FTP filesystem connects to fs.ftp.host on this port
+  </description>
+</property>
+
+<property>
+  <name>fs.ramfs.impl</name>
+  <value>org.apache.hadoop.fs.InMemoryFileSystem</value>
+  <description>The FileSystem for ramfs: uris.</description>
+</property>
+
+<property>
+  <name>fs.har.impl</name>
+  <value>org.apache.hadoop.fs.HarFileSystem</value>
+  <description>The filesystem for Hadoop archives. </description>
+</property>
+
+<property>
+  <name>fs.har.impl.disable.cache</name>
+  <value>true</value>
+  <description>Don't cache 'har' filesystem instances.</description>
+</property>
+
+<property>
+  <name>fs.df.interval</name>
+  <value>60000</value>
+  <description>Disk usage statistics refresh interval in msec.</description>
+</property>
+
+<property>
+  <name>fs.s3.block.size</name>
+  <value>67108864</value>
+  <description>Block size to use when writing files to S3.</description>
+</property>
+
+<property>
+  <name>fs.s3.buffer.dir</name>
+  <value>${hadoop.tmp.dir}/s3</value>
+  <description>Determines where on the local filesystem the S3 filesystem
+  should store files before sending them to S3
+  (or after retrieving them from S3).
+  </description>
+</property>
+
+<property>
+  <name>fs.s3.maxRetries</name>
+  <value>4</value>
+  <description>The maximum number of retries for reading or writing files to S3, 
+  before we signal failure to the application.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3.sleepTimeSeconds</name>
+  <value>10</value>
+  <description>The number of seconds to sleep between each S3 retry.
+  </description>
+</property>
+
+
+<property>
+  <name>fs.automatic.close</name>
+  <value>true</value>
+  <description>By default, FileSystem instances are automatically closed at program
+  exit using a JVM shutdown hook. Setting this property to false disables this
+  behavior. This is an advanced option that should only be used by server applications
+  requiring a more carefully orchestrated shutdown sequence.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3n.block.size</name>
+  <value>67108864</value>
+  <description>Block size to use when reading files using the native S3
+  filesystem (s3n: URIs).</description>
+</property>
+
+<property>
+  <name>local.cache.size</name>
+  <value>10737418240</value>
+  <description>The limit on the size of cache you want to keep, set by default
+  to 10GB. This will act as a soft limit on the cache directory for out of band data.
+  </description>
+</property>
+            
+<property>
+  <name>io.seqfile.compress.blocksize</name>
+  <value>1000000</value>
+  <description>The minimum block size for compression in block compressed 
+          SequenceFiles.
+  </description>
+</property>
+
+<property>
+  <name>io.seqfile.lazydecompress</name>
+  <value>true</value>
+  <description>Should values of block-compressed SequenceFiles be decompressed
+          only when necessary.
+  </description>
+</property>
+
+<property>
+  <name>io.seqfile.sorter.recordlimit</name>
+  <value>1000000</value>
+  <description>The limit on number of records to be kept in memory in a spill 
+          in SequenceFiles.Sorter
+  </description>
+</property>
+
+ <property>
+  <name>io.mapfile.bloom.size</name>
+  <value>1048576</value>
+  <description>The size of BloomFilter-s used in BloomMapFile. Each time this many
+  keys is appended the next BloomFilter will be created (inside a DynamicBloomFilter).
+  Larger values minimize the number of filters, which slightly increases the performance,
+  but may waste too much space if the total number of keys is usually much smaller
+  than this number.
+  </description>
+</property>
+
+<property>
+  <name>io.mapfile.bloom.error.rate</name>
+  <value>0.005</value>
+  <description>The rate of false positives in BloomFilter-s used in BloomMapFile.
+  As this value decreases, the size of BloomFilter-s increases exponentially. This
+  value is the probability of encountering false positives (default is 0.5%).
+  </description>
+</property>
+
+<property>
+  <name>hadoop.util.hash.type</name>
+  <value>murmur</value>
+  <description>The default implementation of Hash. Currently this can take one of the
+  two values: 'murmur' to select MurmurHash and 'jenkins' to select JenkinsHash.
+  </description>
+</property>
+
+
+<!-- ipc properties -->
+
+<property>
+  <name>ipc.client.idlethreshold</name>
+  <value>4000</value>
+  <description>Defines the threshold number of connections after which
+               connections will be inspected for idleness.
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.kill.max</name>
+  <value>10</value>
+  <description>Defines the maximum number of clients to disconnect in one go.
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.connection.maxidletime</name>
+  <value>10000</value>
+  <description>The maximum time in msec after which a client will bring down the
+               connection to the server.
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.connect.max.retries</name>
+  <value>10</value>
+  <description>Indicates the number of retries a client will make to establish
+               a server connection.
+  </description>
+</property>
+
+<property>
+  <name>ipc.server.listen.queue.size</name>
+  <value>128</value>
+  <description>Indicates the length of the listen queue for servers accepting
+               client connections.
+  </description>
+</property>
+
+<property>
+  <name>ipc.server.tcpnodelay</name>
+  <value>false</value>
+  <description>Turn on/off Nagle's algorithm for the TCP socket connection on 
+  the server. Setting to true disables the algorithm and may decrease latency
+  with a cost of more/smaller packets. 
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.tcpnodelay</name>
+  <value>false</value>
+  <description>Turn on/off Nagle's algorithm for the TCP socket connection on 
+  the client. Setting to true disables the algorithm and may decrease latency
+  with a cost of more/smaller packets. 
+  </description>
+</property>
+
+
+<!-- Web Interface Configuration -->
+
+<property>
+  <name>webinterface.private.actions</name>
+  <value>false</value>
+  <description> If set to true, the web interfaces of JT and NN may contain 
+                actions, such as kill job, delete file, etc., that should 
+                not be exposed to public. Enable this option if the interfaces 
+                are only reachable by those who have the right authorization.
+  </description>
+</property>
+
+<!-- Proxy Configuration -->
+
+<property>
+  <name>hadoop.rpc.socket.factory.class.default</name>
+  <value>org.apache.hadoop.net.StandardSocketFactory</value>
+  <description> Default SocketFactory to use. This parameter is expected to be
+    formatted as "package.FactoryClassName".
+  </description>
+</property>
+
+<property>
+  <name>hadoop.rpc.socket.factory.class.ClientProtocol</name>
+  <value></value>
+  <description> SocketFactory to use to connect to a DFS. If null or empty, use
+    hadoop.rpc.socket.class.default. This socket factory is also used by
+    DFSClient to create sockets to DataNodes.
+  </description>
+</property>
+
+
+
+<property>
+  <name>hadoop.socks.server</name>
+  <value></value>
+  <description> Address (host:port) of the SOCKS server to be used by the
+    SocksSocketFactory.
+  </description>
+</property>
+
+<!-- Rack Configuration -->
+
+<property>
+	<name>net.topology.node.switch.mapping.impl</name>
+  <value>org.apache.hadoop.net.ScriptBasedMapping</value>
+  <description> The default implementation of the DNSToSwitchMapping. It
+    invokes a script specified in topology.script.file.name to resolve
+    node names. If the value for topology.script.file.name is not set, the
+    default value of DEFAULT_RACK is returned for all node names.
+  </description>
+</property>
+
+<property>
+  <name>net.topology.script.file.name</name>
+  <value></value>
+  <description> The script name that should be invoked to resolve DNS names to
+    NetworkTopology names. Example: the script would take host.foo.bar as an
+    argument, and return /rack1 as the output.
+  </description>
+</property>
+
+<property>
+  <name>net.topology.script.number.args</name>
+  <value>100</value>
+  <description> The max number of args that the script configured with 
+    topology.script.file.name should be run with. Each arg is an
+    IP address.
+  </description>
+</property>
+
+<!-- Local file system -->
+<property>
+  <name>file.stream-buffer-size</name>
+  <value>4096</value>
+  <description>The size of buffer to stream files.
+  The size of this buffer should probably be a multiple of hardware
+  page size (4096 on Intel x86), and it determines how much data is
+  buffered during read and write operations.</description>
+</property>
+
+<property>
+  <name>file.bytes-per-checksum</name>
+  <value>512</value>
+  <description>The number of bytes per checksum.  Must not be larger than
+  file.stream-buffer-size</description>
+</property>
+
+<property>
+  <name>file.client-write-packet-size</name>
+  <value>65536</value>
+  <description>Packet size for clients to write</description>
+</property>
+
+<property>
+  <name>file.blocksize</name>
+  <value>67108864</value>
+  <description>Block size</description>
+</property>
+
+<property>
+  <name>file.replication</name>
+  <value>1</value>
+  <description>Replication factor</description>
+</property>
+
+<!-- s3 File System -->
+
+<property>
+  <name>s3.stream-buffer-size</name>
+  <value>4096</value>
+  <description>The size of buffer to stream files.
+  The size of this buffer should probably be a multiple of hardware
+  page size (4096 on Intel x86), and it determines how much data is
+  buffered during read and write operations.</description>
+</property>
+
+<property>
+  <name>s3.bytes-per-checksum</name>
+  <value>512</value>
+  <description>The number of bytes per checksum.  Must not be larger than
+  s3.stream-buffer-size</description>
+</property>
+
+<property>
+  <name>s3.client-write-packet-size</name>
+  <value>65536</value>
+  <description>Packet size for clients to write</description>
+</property>
+
+<property>
+  <name>s3.blocksize</name>
+  <value>67108864</value>
+  <description>Block size</description>
+</property>
+
+<property>
+  <name>s3.replication</name>
+  <value>3</value>
+  <description>Replication factor</description>
+</property>
+
+<!-- s3native File System -->
+
+<property>
+  <name>s3native.stream-buffer-size</name>
+  <value>4096</value>
+  <description>The size of buffer to stream files.
+  The size of this buffer should probably be a multiple of hardware
+  page size (4096 on Intel x86), and it determines how much data is
+  buffered during read and write operations.</description>
+</property>
+
+<property>
+  <name>s3native.bytes-per-checksum</name>
+  <value>512</value>
+  <description>The number of bytes per checksum.  Must not be larger than
+  s3native.stream-buffer-size</description>
+</property>
+
+<property>
+  <name>s3native.client-write-packet-size</name>
+  <value>65536</value>
+  <description>Packet size for clients to write</description>
+</property>
+
+<property>
+  <name>s3native.blocksize</name>
+  <value>67108864</value>
+  <description>Block size</description>
+</property>
+
+<property>
+  <name>s3native.replication</name>
+  <value>3</value>
+  <description>Replication factor</description>
+</property>
+
+<!-- Kosmos File System -->
+
+<property>
+  <name>kfs.stream-buffer-size</name>
+  <value>4096</value>
+  <description>The size of buffer to stream files.
+  The size of this buffer should probably be a multiple of hardware
+  page size (4096 on Intel x86), and it determines how much data is
+  buffered during read and write operations.</description>
+</property>
+
+<property>
+  <name>kfs.bytes-per-checksum</name>
+  <value>512</value>
+  <description>The number of bytes per checksum.  Must not be larger than
+  kfs.stream-buffer-size</description>
+</property>
+
+<property>
+  <name>kfs.client-write-packet-size</name>
+  <value>65536</value>
+  <description>Packet size for clients to write</description>
+</property>
+
+<property>
+  <name>kfs.blocksize</name>
+  <value>67108864</value>
+  <description>Block size</description>
+</property>
+
+<property>
+  <name>kfs.replication</name>
+  <value>3</value>
+  <description>Replication factor</description>
+</property>
+
+<!-- FTP file system -->
+<property>
+  <name>ftp.stream-buffer-size</name>
+  <value>4096</value>
+  <description>The size of buffer to stream files.
+  The size of this buffer should probably be a multiple of hardware
+  page size (4096 on Intel x86), and it determines how much data is
+  buffered during read and write operations.</description>
+</property>
+
+<property>
+  <name>ftp.bytes-per-checksum</name>
+  <value>512</value>
+  <description>The number of bytes per checksum.  Must not be larger than
+  ftp.stream-buffer-size</description>
+</property>
+
+<property>
+  <name>ftp.client-write-packet-size</name>
+  <value>65536</value>
+  <description>Packet size for clients to write</description>
+</property>
+
+<property>
+  <name>ftp.blocksize</name>
+  <value>67108864</value>
+  <description>Block size</description>
+</property>
+
+<property>
+  <name>ftp.replication</name>
+  <value>3</value>
+  <description>Replication factor</description>
+</property>
+
+<!-- Tfile -->
+
+<property>
+  <name>tfile.io.chunk.size</name>
+  <value>1048576</value>
+  <description>
+    Value chunk size in bytes. Default  to
+    1MB. Values of the length less than the chunk size is
+    guaranteed to have known value length in read time (See also
+    TFile.Reader.Scanner.Entry.isValueLengthKnown()).
+  </description>
+</property>
+
+<property>
+  <name>tfile.fs.output.buffer.size</name>
+  <value>262144</value>
+  <description>
+    Buffer size used for FSDataOutputStream in bytes.
+  </description>
+</property>
+
+<property>
+  <name>tfile.fs.input.buffer.size</name>
+  <value>262144</value>
+  <description>
+    Buffer size used for FSDataInputStream in bytes.
+  </description>
+</property>
+
+</configuration>

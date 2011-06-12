@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<project>
+  <parent>
+    <artifactId>yarn</artifactId>
+    <groupId>org.apache.hadoop</groupId>
+    <version>${yarn.version}</version>
+  </parent>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.apache.hadoop</groupId>
+  <artifactId>yarn-server</artifactId>
+  <name>yarn-server</name>
+  <packaging>pom</packaging>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>yarn-common</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <modules>
+    <module>yarn-server-common</module>
+    <module>yarn-server-nodemanager</module>
+    <module>yarn-server-resourcemanager</module>
+    <module>yarn-server-tests</module>
+  </modules>
+</project>

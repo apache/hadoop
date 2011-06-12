@@ -1,0 +1,25 @@
+option java_package = "org.apache.hadoop.yarn.proto";
+option java_outer_classname = "YarnServerCommonServiceProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+
+import "yarn_protos.proto";
+import "yarn_server_common_protos.proto";
+
+message RegisterNodeManagerRequestProto {
+  optional string host = 1;
+  optional int32 container_manager_port = 2;
+  optional int32 http_port = 3;
+  optional ResourceProto resource = 4;
+}
+message RegisterNodeManagerResponseProto {
+  optional RegistrationResponseProto registration_response = 1;
+}
+
+message NodeHeartbeatRequestProto {
+  optional NodeStatusProto node_status = 1;
+}
+
+message NodeHeartbeatResponseProto {
+  optional HeartbeatResponseProto heartbeat_response = 1;
+}

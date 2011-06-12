@@ -1,0 +1,45 @@
+@namespace("org.apache.hadoop.yarn")
+protocol ClientRMProtocol {
+
+  import idl "yarn/yarn-api/src/main/avro/yarn-types.genavro";
+
+  record Priority {
+   int priority;
+  }
+
+  record ApplicationSubmissionContext {
+    ApplicationID applicationId;
+    union {null, string} applicationName;
+    Resource masterCapability; // TODO: Needs RM validation
+
+    //all the files required by the container to run the ApplicationMaster
+    //KEY-> destination dir name
+    //VALUE-> source path
+    map<URL> resources;
+    union {null, map<LocalResource>} resources_todo;
+    
+    // TODO - Remove fsTokens (url encoded)
+    union {null, array<string>} fsTokens;
+    union {null, bytes} fsTokens_todo;
+    
+    //env to be set before launching the command for ApplicationMaster
+    //KEY-> env variable name
+    //VALUE -> env variable value.
+    map<string> environment;
+    //command-line of the container that is going to launch the ApplicationMaster.
+    array<string> command;
+    union {null, string} queue;
+    union {null, Priority} priority;
+    string user; // TODO: Shouldn't pass it like this.
+  }
+  
+  record YarnClusterMetrics {
+    int numNodeManagers;
+  }
+
+  ApplicationID getNewApplicationId() throws YarnRemoteException;
+  ApplicationMaster getApplicationMaster(ApplicationID applicationId) throws YarnRemoteException;
+  void submitApplication(ApplicationSubmissionContext context) throws YarnRemoteException;
+  void finishApplication(ApplicationID applicationId) throws YarnRemoteException;
+  YarnClusterMetrics getClusterMetrics() throws YarnRemoteException;  
+}
