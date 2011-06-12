@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE web-app
+    PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
+    "http://java.sun.com/dtd/web-app_2_3.dtd">
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<web-app>
+
+    <context-param>
+      <param-name>param</param-name>
+      <param-value>value used for testing</param-value>
+    </context-param>
+    
+    <servlet>
+        <servlet-name>ServletRedirector</servlet-name>
+        <servlet-class>org.apache.cactus.server.ServletTestRedirector</servlet-class>
+        <init-param>
+          <param-name>param1</param-name>
+          <param-value>value1 used for testing</param-value>
+        </init-param>
+    </servlet>
+    
+    <servlet>
+        <servlet-name>ServletRedirector_TestOverride</servlet-name>
+        <servlet-class>org.apache.cactus.server.ServletTestRedirector</servlet-class>
+        <init-param>
+          <param-name>param2</param-name>
+          <param-value>value2 used for testing</param-value>
+        </init-param>
+    </servlet>
+
+    <servlet>
+        <servlet-name>TestJsp</servlet-name>
+        <jsp-file>/test/test.jsp</jsp-file>
+    </servlet>
+
+    <servlet>
+        <servlet-name>JspRedirector</servlet-name>
+        <jsp-file>/jspRedirector.jsp</jsp-file>
+        <init-param>
+          <param-name>param1</param-name>
+          <param-value>value1 used for testing</param-value>
+        </init-param>
+    </servlet>
+		
+		<servlet>
+      <servlet-name>Simple</servlet-name>
+      <description> A Simple Servlet </description>
+      <servlet-class>org.apache.hadoop.hdfsproxy.SimpleServlet</servlet-class>
+    </servlet>
+    
+    <servlet-mapping>
+        <servlet-name>ServletRedirector_TestOverride</servlet-name>
+        <url-pattern>/ServletRedirectorOverride</url-pattern>
+    </servlet-mapping>
+    
+    <servlet-mapping>
+        <servlet-name>Simple</servlet-name>
+        <url-pattern>/simple/*</url-pattern>
+    </servlet-mapping>
+
+</web-app>
