@@ -1,0 +1,52 @@
+Changes for HDFS-1073 branch
+
+This change list will be merged into the trunk CHANGES.txt when the HDFS-1073
+branch is merged.
+----------------------------
+
+HDFS-1521. Persist transaction ID on disk between NN restarts.
+           (Ivan Kelly and Todd Lipcon via todd)
+HDFS-1538. Refactor more startup and image loading code out of FSImage.
+           (todd)
+HDFS-1729. Add code to detect valid length of an edits file. (todd)
+HDFS-1793. Add code to inspect a storage directory with txid-based filenames
+           (todd)
+HDFS-1794. Add code to list which edit logs are available on a remote NN (todd)
+HDFS-1858. Add state management variables to FSEditLog (Ivan Kelly and Todd
+           Lipcon via todd)
+HDFS-1859. Add some convenience functions to iterate over edit log streams
+           (Ivan Kelly and Todd Lipcon via todd)
+HDFS-1894. Add constants for LAYOUT_VERSIONs in edits log branch (todd)
+HDFS-1892. Fix EditLogFileInputStream.getValidLength to be aware of OP_INVALID
+           filler (todd)
+HDFS-1799. Refactor log rolling and filename management out of FSEditLog
+           (Ivan Kelly and Todd Lipcon via todd)
+HDFS-1801. Remove use of timestamps to identify checkpoints and logs (todd)
+HDFS-1930. TestDFSUpgrade failing in HDFS-1073 branch (todd)
+HDFS-1800. Extend image checksumming to function with multiple fsimage files
+           per directory. (todd)
+HDFS-1725. Set storage directories only at FSImage construction (Ivan Kelly
+           via todd)
+HDFS-1926. Remove references to StorageDirectory from JournalManager interface
+           (Ivan Kelly via todd)
+HDFS-1893. Change edit logs and images to be named based on txid (todd)
+HDFS-1985. Clean up image transfer servlet (todd)
+HDFS-1984. Enable multiple secondary namenodes to run simultaneously (todd)
+HDFS-1987. Re-enable TestCheckpoint.testSecondaryImageDownload which was not
+           running previously. (todd)
+HDFS-1993. TestCheckpoint needs to clean up between cases (todd)
+HDFS-1992. Remove vestiges of NNStorageListener. (todd)
+HDFS-1991. Some refactoring of Secondary NameNode to be able to share more
+           code with the BackupNode or CheckpointNode. (todd)
+HDFS-1994. Fix race conditions when running two rapidly checkpointing
+           Secondary NameNodes. (todd)
+HDFS-2001. Remove use of previous.checkpoint and lastcheckpoint.tmp directories
+           (todd)
+HDFS-2015. Remove checkpointTxId from VERSION file. (todd)
+HDFS-2016. Add infrastructure to remove or archive old and unneeded storage
+           files within the name directories. (todd)
+HDFS-2047. Improve TestNamespace and TestEditLog in HDFS-1073 branch. (todd)
+HDFS-2048. Add upgrade tests and fix upgrade from 0.22 with corrupt image.
+           (todd)
+HDFS-2027. Image inspector should return finalized logs before unfinalized
+           logs. (todd)

@@ -1,0 +1,104 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<!-- Put hdfsproxy specific properties in this file. -->
+
+<configuration>
+
+<property>
+  <name>hdfsproxy.https.address</name>
+  <value>0.0.0.0:8443</value>
+  <description>the SSL port that hdfsproxy listens on
+  </description>
+</property>
+
+<property>
+  <name>hdfsproxy.hosts</name>
+  <value>hdfsproxy-hosts</value>
+  <description>location of hdfsproxy-hosts file
+  </description>
+</property>
+
+<property>
+  <name>hdfsproxy.dfs.namenode.address</name>
+  <value>localhost:54321</value>
+  <description>namenode address of the HDFS cluster being proxied
+  </description>
+</property>
+
+<property>
+  <name>hdfsproxy.https.server.keystore.resource</name>
+  <value>ssl-server.xml</value>
+  <description>location of the resource from which ssl server keystore
+  information will be extracted
+  </description>
+</property>
+
+<property>
+  <name>hdfsproxy.user.permissions.file.location</name>
+  <value>user-permissions.xml</value>
+  <description>location of the user permissions file
+  </description>
+</property>
+
+<property>
+  <name>hdfsproxy.user.certs.file.location</name>
+  <value>user-certs.xml</value>
+  <description>location of the user certs file
+  </description>
+</property>
+
+<property>
+  <name>hdfsproxy.ugi.cache.ugi.lifetime</name>
+  <value>15</value>
+  <description> The lifetime (in minutes) of a cached ugi
+  </description>
+</property>
+
+<property>
+  <name>hdfsproxy.ldap.initial.context.factory</name>
+  <value>com.sun.jndi.ldap.LdapCtxFactory</value>
+  <description> ldap initial context factory
+  </description>
+</property>
+
+<property>
+  <name>hdfsproxy.ldap.provider.url</name>
+  <value>ldap://ldapserver:389</value>
+  <description> ldap server address
+  </description>
+</property>
+
+<property>
+  <name>hdfsproxy.ldap.role.base</name>
+  <value>ou=proxyroles,dc=mycompany,dc=com</value>
+  <description> ldap role base
+  </description>
+</property>
+
+<property>
+  <name>fs.default.name</name>
+  <!-- cluster variant -->
+  <value>hdfs://localhost:8020</value>
+  <description>The name of the default file system.  Either the
+  literal string "local" or a host:port for NDFS.</description>
+  <final>true</final>
+</property>
+
+</configuration>
+

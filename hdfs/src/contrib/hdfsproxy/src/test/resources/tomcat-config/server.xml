@@ -1,0 +1,60 @@
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<Server port="@ADMIN.PORT@" shutdown="SHUTDOWN" debug="4">
+
+  <Service name="Catalina" debug="4">
+
+    <Connector port="@HTTP.PORT@"
+        maxThreads="150" minSpareThreads="25" maxSpareThreads="75"
+        enableLookups="false" redirectPort="8443" acceptCount="100"
+        connectionTimeout="20000" disableUploadTimeout="true"
+        scheme="http" secure="false"
+        debug="4"/>
+    <Connector port="@HTTPS.PORT@" protocol="HTTP/1.1" SSLEnabled="true"
+               maxThreads="150" scheme="https" secure="true" 
+               keystoreFile="${javax.net.ssl.keyStore.proxy}" keystorePass="changeme" keystoreType="JKS" clientAuth="true" sslProtocol="TLS" />
+
+    <Engine name="Catalina" defaultHost="localhost" 
+        debug="4">
+
+      <Realm className="org.apache.catalina.realm.MemoryRealm" />
+
+      <!-- Note: There seems to be a bug in Tomcat 5.x if the debug attribute 
+           is present. Ideally we would have written:
+               debug="4"
+           However, doing this result in a NullPointerException in 
+           ExpandWar.java at line 145. -->
+      <Host name="localhost" appBase="webapps" unpackWARs="true"
+          autoDeploy="true" xmlValidation="false" xmlNamespaceAware="false">
+
+        <!-- Contexts to explicitely point to where the wars are located -->
+         <Context path="/test" docBase="${build.target}/test.war" debug="4">
+ 
+</Context>
+
+        <Valve className="org.apache.catalina.valves.AccessLogValve"
+            directory="logs" prefix="localhost_access_log." suffix=".txt"
+            pattern="common" resolveHosts="false"/>
+          
+      </Host>
+
+    </Engine>
+
+  </Service>
+
+</Server>

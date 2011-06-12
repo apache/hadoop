@@ -1,0 +1,82 @@
+<?xml version="1.0"?>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- This is one of the configuration files for capacity-scheduler
+     (org.apache.hadoop.mapred.CapacityTaskScheduler), a TaskScheduler
+     for Map/Reduce system. The other configuration file is
+     conf/mapred-queues.xml which it shares with the framework for
+     configuring queues in the system. -->
+
+<!-- This file can be used to configure (1) job-initialization-poller
+     related properties and (2) the default values for various properties
+     for all the queues.-->
+
+<configuration>   
+  <!-- The default configuration settings for the capacity task scheduler --> 
+  <!-- The default values would be applied to all the queues which don't have -->    
+  <!-- the appropriate property for the particular queue configured in the -->       
+  <!-- queue-configuration file conf/mapred-queues.xml -->                           
+
+  <property>
+    <name>mapred.capacity-scheduler.default-supports-priority</name>
+    <value>false</value>
+    <description>If true, priorities of jobs will be taken into 
+      account in scheduling decisions by default in a job queue.
+    </description>
+  </property>
+  
+  <property>
+    <name>mapred.capacity-scheduler.default-minimum-user-limit-percent</name>
+    <value>100</value>
+    <description>The percentage of the resources limited to a particular user
+      for the job queue at any given point of time by default.
+    </description>
+  </property>
+
+  <property>
+    <name>mapred.capacity-scheduler.default-maximum-initialized-jobs-per-user</name>
+    <value>2</value>
+    <description>The maximum number of jobs to be pre-initialized for a user
+    of the job queue.
+    </description>
+  </property>
+
+
+  <!-- Capacity scheduler Job Initialization configuration parameters -->
+  <property>
+    <name>mapred.capacity-scheduler.init-poll-interval</name>
+    <value>5000</value>
+    <description>The amount of time in miliseconds which is used to poll 
+    the job queues for jobs to initialize.
+    </description>
+  </property>
+  <property>
+    <name>mapred.capacity-scheduler.init-worker-threads</name>
+    <value>5</value>
+    <description>Number of worker threads which would be used by
+    Initialization poller to initialize jobs in a set of queue.
+    If number mentioned in property is equal to number of job queues
+    then a single thread would initialize jobs in a queue. If lesser
+    then a thread would get a set of queues assigned. If the number
+    is greater then number of threads would be equal to number of 
+    job queues.
+    </description>
+  </property>
+
+</configuration>
