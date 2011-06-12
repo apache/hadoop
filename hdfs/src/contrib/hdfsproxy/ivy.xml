@@ -1,0 +1,45 @@
+<?xml version="1.0" ?>
+<ivy-module version="1.0">
+  <info organisation="org.apache.hadoop" module="${ant.project.name}">
+    <license name="Apache 2.0"/>
+    <ivyauthor name="Apache Hadoop Team" url="http://hadoop.apache.org"/>
+    <description>
+        Apache Hadoop contrib
+    </description>
+  </info>
+  <configurations defaultconfmapping="default">
+    <!--these match the Maven configurations-->
+    <conf name="default" extends="master,runtime"/>
+    <conf name="master" description="contains the artifact but no dependencies"/>
+    <conf name="runtime" description="runtime but not the artifact" />
+
+    <conf name="common" visibility="private" 
+      description="artifacts needed to compile/test the application"/>
+  </configurations>
+
+  <publications>
+    <!--get the artifact from our module name-->
+    <artifact conf="master"/>
+  </publications>
+  <dependencies>
+    <dependency org="org.apache.hadoop"
+      name="hadoop-common"
+      rev="${hadoop-common.version}"
+      conf="common->default"/>
+    <dependency org="org.apache.hadoop"
+      name="hadoop-common-test"
+      rev="${hadoop-common.version}"
+      conf="common->default"/>
+    <dependency org="commons-io" name="commons-io" rev="1.4" conf="common->master"/>
+    <dependency org="org.apache.cactus" name="cactus.core.framework.uberjar.javaEE.14" rev="${cactus.version}" conf="common->master"/>
+    <dependency org="org.apache.cactus" name="cactus.integration.ant" rev="${cactus.version}" conf="common->master"/>
+    <dependency org="org.apache.cactus" name="cactus.integration.shared.api" rev="${cactus.version}" conf="common->master"/>
+    <dependency org="aspectj" name="aspectjrt" rev="1.5.3" conf="common->master"/>
+    <dependency org="org.codehaus.cargo" name="cargo-core-uberjar" rev="0.9" conf="common->master"/>
+    <dependency org="org.codehaus.cargo" name="cargo-ant" rev="0.9" conf="common->master"/>
+    <dependency org="junitperf" name="junitperf" rev="1.8" conf="common->master"/>
+    <dependency org="javax.servlet" name="jstl" rev="1.1.2" conf="common->master"/>
+    <dependency org="taglibs" name="standard" rev="1.1.2" conf="common->master"/>
+    <dependency org="xerces" name="xerces" rev="${xerces.version}" conf="common->master"/>
+  </dependencies>
+</ivy-module>
