@@ -1,0 +1,221 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<body>
+<div id="header">
+<h1>MRUnit</h1>
+</div>
+<div id="content">
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph"><p>MRUnit is a unit test library designed to facilitate easy integration between
+your MapReduce development process and standard development and testing tools
+such as JUnit. MRUnit contains mock objects that behave like classes you
+interact with during MapReduce execution (e.g., <tt>InputSplit</tt> and
+<tt>OutputCollector</tt>) as well as test harness "drivers" that test your program&#8217;s
+correctness while maintaining compliance with the MapReduce semantics. <em>Mapper</em>
+and <em>Reducer</em> implementations can be tested individually, as well as together to
+form a full MapReduce job.</p></div>
+<div class="paragraph"><p>This document describes how to get started using MRUnit to unit test your Mapper
+and Reducer implementations.</p></div>
+</div>
+</div>
+<h2 id="_getting_started_with_mrunit">Getting Started with MRUnit</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>MRUnit is compiled as a jar and resides in <tt>$HADOOP_HOME/contrib/mrunit</tt>.
+MRUnit is designed to augment an existing unit test framework such as JUnit.</p></div>
+<div class="paragraph"><p>To use MRUnit, add the MRUnit JAR from the above path to the classpath or
+project build path in your development environment (ant buildfile, Eclipse
+project, etc.).</p></div>
+</div>
+<h2 id="_an_example">An Example</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The following example test case demonstrates how to use MRUnit:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>import junit.framework.TestCase;
+
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.Mapper;
+import org.apache.hadoop.mapred.lib.IdentityMapper;
+import org.apache.hadoop.mrunit.MapDriver;
+import org.junit.Before;
+import org.junit.Test;
+
+public class TestExample extends TestCase {
+
+  private Mapper mapper;
+  private MapDriver driver;
+
+  @Before
+  public void setUp() {
+    mapper = new IdentityMapper();
+    driver = new MapDriver(mapper);
+  }
+
+  @Test
+  public void testIdentityMapper() {
+    driver.withInput(new Text("foo"), new Text("bar"))
+            .withOutput(new Text("foo"), new Text("bar"))
+            .runTest();
+  }
+}</tt></pre>
+</div></div>
+<div class="paragraph"><p>In this example, we see an existing <tt>Mapper</tt> implementation (<tt>IdentityMapper</tt>)
+being tested. We made a class named <tt>TestExample</tt> designed to test this mapper
+implementation. In JUnit, each particular test is created in a separate method
+whose name begins with test, and is marked with the <tt>@Test</tt> annotation. All of
+the <tt>test*()</tt> methods are run in succession. Before each test method, the
+<tt>setUp()</tt> method (if one is present) is executed. After each test, a
+<tt>tearDown()</tt> method, if one exists, is executed. (In this example, no
+<tt>tearDown()</tt> takes place.)</p></div>
+<div class="paragraph"><p>MRUnit is designed to allow you to test the precise actions of a particular
+class. Here we&#8217;re verifying that the <tt>IdentityMapper</tt> emits the same (key,
+value) pair that is provided to it as input. This test process is facilitated
+by a driver. In the <tt>setUp()</tt> method, we created an instance of the
+<tt>IdentityMapper</tt> that we want to test, as well as a <tt>MapDriver</tt> to run the
+test. In the <tt>testIdentityMapper()</tt> method, we configure the driver to pass the
+(key, value) pair <tt>("foo", "bar")</tt> to our mapper as input. When <tt>runTest()</tt> is
+called, the <tt>MapDriver</tt> will send this single (key, value) pair as input to a
+mapper. We also configured the driver to expect the (key, value) pair <tt>("foo",
+"bar")</tt> as output.  After the planned input and expected output are configured,
+<tt>runTest()</tt> invokes the mapper on the input, and compares the expected and
+actual outputs. If these mismatch, it causes the JUnit test to fail.</p></div>
+</div>
+<h2 id="_test_drivers_and_running_tests">Test Drivers and Running Tests</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Each MRUnit test is designed to test a mapper, a reducer, or a mapper/reducer
+pair (i.e., a "job"). MRUnit provides three <em>TestDriver</em> classes that are
+designed to test each of these three scenarios. A <strong><tt>MapDriver</tt></strong> will provide a
+single (key, value) pair as input to an instance of the <em>Mapper</em> interface.
+When its <tt>run()</tt> or <tt>runTest()</tt> method is called, the mapper&#8217;s <tt>map()</tt> method
+is called with the provided (key, value) pair, as well as MRUnit-specific
+implementations of <tt>OutputCollector</tt> and <tt>Reporter</tt>. After the mapper
+completes, any output (key, value) pairs sent to this <tt>OutputCollector</tt> are
+compiled into a list.</p></div>
+<div class="paragraph"><p>If the test was launched via <tt>MapDriver.runTest()</tt>, the emitted (key, value)
+pairs are compared with the (key, value) pairs provided to the <tt>MapDriver</tt> as
+expected output. The driver uses <tt>equals()</tt> to determine whether the emitted
+value list is equal to the expected value list. If these differ, the driver
+raises a JUnit assertion failure to signify a failing test.</p></div>
+<div class="paragraph"><p>If the test was launched via <tt>MapDriver.run()</tt>, the emitted (key, value) pair
+list is returned to the calling method, where you can process the outputs using
+your own logic to assess the success or failure of the test.</p></div>
+<div class="paragraph"><p>Similar to the <tt>MapDriver</tt> implementation, <strong><tt>ReduceDriver</tt></strong> will put a single
+<em>Reducer</em> implementation under test. A single input key is provided, as well as
+an ordered list of input values. The reducer receives an iterator over this
+list of values, as well as the input key. It may emit an arbitrary number of
+output (key, value) pairs; <tt>runTest()</tt> will compare these against a list
+provided as expected output.</p></div>
+<div class="paragraph"><p>Finally, one may want to test a complete MapReduce job consisting of a mapper
+and a reducer composed together. The <strong><tt>MapReduceDriver</tt></strong> receives a <em>Mapper</em>
+and <em>Reducer</em> implementation, as well as an arbitrary number of (key, value)
+pairs as input. These are used as inputs to the <tt>Mapper.map()</tt> method. The
+outputs from these map calls are put through a process similar to shuffling
+when <tt>mapred.reduce.tasks</tt> is set to 1. No partitioner is called, but the
+values are aggregated by key and the keys are sorted by their <tt>compareTo()</tt>
+methods. The <tt>Reducer.reduce()</tt> method is called to process these intermediate
+(key, value list) sets in order. Finally, the output (key, value) pairs are
+again compared with any expected values provided by the user.</p></div>
+</div>
+<h2 id="_configuring_tests">Configuring Tests</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>MRUnit provides multiple ways of configuring individual tests to facilitate
+different programming styles.</p></div>
+<h3 id="_setter_methods">Setter Methods</h3><div style="clear:left"></div>
+<div class="paragraph"><p>Various setter methods allow you to set the mapper/reducer classes under test,
+or the input (key, value) pair. e.g., <tt>myMapDriver.setInputPair(key, value)</tt>.
+Because a mapper may emit multiple (key, value) pairs as output, outputs are
+set with <tt>myMapDriver.addOutputPair(key, value)</tt>. These expected outputs are
+added to an ordered list.</p></div>
+<h3 id="_fluent_programming_style">Fluent Programming Style</h3><div style="clear:left"></div>
+<div class="paragraph"><p>Another alternate mechanism for configuring tests (which is also the author&#8217;s
+preferred way) is to use "fluent" methods. Several methods whose names begin
+with with will set a configuration input, and return this. These calls can be
+chained together (as done in the example above) to concisely specify all the
+inputs to the test process; e.g., <tt>myMapDriver.withInputPair(k1,
+v1).withOutputPair(k2, v2).runTest()</tt>.</p></div>
+</div>
+<h2 id="_additional_api_features">Additional API Features</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>This section describes additional features of the MRUnit API.</p></div>
+<h3 id="_mock_objects">Mock Objects</h3><div style="clear:left"></div>
+<div class="paragraph"><p>To facilitate calls to <tt>map()</tt> and <tt>reduce()</tt>, MRUnit provides mock
+implementations of the classes used for non-user provided arguments. The
+<tt>MockReporter</tt> implementation ignores most of its function calls except
+<tt>getInputSplit()</tt>, which returns a <tt>MockInputSplit</tt>, and the counter-increment
+methods. <tt>MockInputSplit</tt> subclasses <tt>FileInputSplit</tt> and contains a dummy
+filename, but otherwise does nothing. The <tt>MockOutputCollector</tt> aggregates
+(key, value) pairs sent to it via <tt>collect()</tt> into a list. This list is then
+used during the shuffling or output comparson functions. Unlike the full Hadoop
+job running process, this list is not spilled to disk nor are any memory
+management methods used. It is assumed that the volume of data used during
+MRUnit does not exceed the available heap size.</p></div>
+<h3 id="_additional_test_drivers">Additional Test Drivers</h3><div style="clear:left"></div>
+<div class="paragraph"><p>MRUnit comes with an additional test driver called the <strong><tt>PipelineMapReduceDriver</tt></strong>
+which allows testing of a series of MapReduce passes. By calling the <tt>addMapReduce()</tt>
+or <tt>withMapReduce()</tt> methods, an additional mapper and reducer pass can be added
+to the pipeline under test.</p></div>
+<div class="paragraph"><p>By calling <tt>runTest()</tt>, the harness will deliver the input to the first
+<em>Mapper</em>, feed the intermediate results to the first <em>Reducer</em> (without checking
+them), and proceed to forward this data along to subsequent <em>Mapper</em>/<em>Reducer</em>
+jobs in the pipeline until the final <em>Reducer</em>. The last <em>Reducer</em>'s outputs are
+checked against the expected results.</p></div>
+<div class="paragraph"><p>This is designed for slightly more complicated integration tests than the
+<tt>MapReduceDriver</tt>, which is for smaller unit tests.</p></div>
+<div class="paragraph"><p><tt>(K1, V1)</tt> in the type signature refer to the types associated with the inputs
+to the first <em>Mapper</em>. <tt>(K2, V2)</tt> refer to the types associated with the final
+<em>Reducer</em>'s output. No intermediate types are specified.</p></div>
+<h3 id="_testing_combiners">Testing Combiners</h3><div style="clear:left"></div>
+<div class="paragraph"><p>The <tt>MapReduceDriver</tt> will allow you to test a combiner in addition to a mapper
+and reducer. The <tt>setCombiner()</tt> method configures the driver to pass all mapper
+output (key, value) pairs through a combiner before being sent to the reducer
+under test.</p></div>
+<h3 id="_counters">Counters</h3><div style="clear:left"></div>
+<div class="paragraph"><p>The test drivers support testing of the <tt>Counters</tt> system in Hadoop. The
+<tt>Reporter.incrCounter()</tt> method works as it usually does inside <em>Mapper</em>
+or <em>Reducer</em> instances under test. The TestDriver implementation itself holds
+a <tt>Counters</tt> object which can be retrieved with <tt>getCounters()</tt>. You can then
+verify the correct counter values have been set by your code under test.</p></div>
+<div class="paragraph"><p>The <tt>setCounters()</tt> and <tt>withCounters()</tt> methods allow you to set the
+<tt>Counters</tt> instance being used to accumulate values during testing.</p></div>
+<div class="paragraph"><p>One departure from the typical interface is that in the
+<tt>PipelineMapReduceDriver</tt>, all MapReduce passes share the same <tt>Counters</tt>
+instance and counter values are not reset. If several MapReduce passes are
+tested together, their counter values are accumulated together as well.</p></div>
+</div>
+<h2 id="_the_new_mapreduce_api">The New MapReduce API</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>MRUnit includes support for the "new" (i.e., version 0.20 and later) API
+as well. MRUnit provides <tt>MapDriver</tt>, <tt>ReduceDriver</tt>, and <tt>MapReduceDriver</tt>
+implementations compatable with the new MapReduce (<tt>Context</tt>-based) API
+in the <tt>org.apache.hadoop.mrunit.mapreduce</tt> package. These classes work
+identically to their old-API counterparts in the <tt>org.apache.hadoop.mrunit</tt>
+package, but work with <tt>org.apache.hadoop.mapreduce.Mapper</tt> and
+<tt>org.apache.hadoop.mapreduce.Reducer</tt> instances.</p></div>
+<div class="paragraph"><p>Mock implementations of <tt>InputSplit</tt>, <tt>MapContext</tt>, <tt>OutputCommitter</tt>,
+<tt>ReduceContext</tt>, and <tt>Reporter</tt> compatible with the new interfaces are
+provided.</p></div>
+</div>
+</div>
+<div id="footnotes"><hr /></div>
+</body>
+</html>

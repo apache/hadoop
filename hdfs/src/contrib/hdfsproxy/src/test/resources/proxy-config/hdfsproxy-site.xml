@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- Put hdfsproxy specific properties in this file. -->
+
+<configuration>
+<property>
+  <name>proxy-test</name>
+  <value>/test</value>
+  <description>one hostname corresponds to one web application archive 
+  </description>
+</property>
+
+</configuration>
+

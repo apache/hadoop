@@ -1,0 +1,47 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+HDFS Proxy is a proxy server through which a hadoop client (through HSFTP) or a standard
+HTTPS client (wget, curl, etc) can talk to a hadoop server and more importantly pull data
+from the sever. It put an access control layer in front of hadoop namenode server and extends
+its functionalities to allow hadoop cross-version data transfer.
+
+HDFSPROXY can be configured/started via either Jetty or Tomcat with different supporting features.
+
+A) With Jetty-based Installation, supporting features include:
+> Single Hadoop source cluster data transfer
+> Single Hadoop version data transfer
+> Authenticate users via user SSL certificates with ProxyFilter installed
+> Enforce access control based on configuration files.
+
+B) With Tomcat-based Installation, supporting features include:
+> Multiple Hadoop source cluster data transfer
+> Multiple Hadoop version data transfer
+> Authenticate users via user SSL certificates with ProxyFilter installed
+> Authentication and authorization via LDAP with LdapIpDirFilter installed
+> Access control based on configuration files if ProxyFilter is installed.
+> Access control based on LDAP entries if LdapIpDirFilter is installed.
+> Standard HTTPS Get Support for file transfer
+
+The detailed configuration/set-up guide is in the Forrest 
+documentation, which can be found at $HADOOP_HDFS_HOME/docs. In order to build the 
+documentation on your own from source please use the following command in 
+the downloaded source folder:
+
+ant docs -Dforrest.home=path to forrest -Djava5.home= path to jdk5. 
+
+The documentation so built would be under $HADOOP_HDFS_HOME/build/docs

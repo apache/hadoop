@@ -1,0 +1,22 @@
+{
+  "name" : "<root>",
+  "children" : [ {
+    "name" : "194\\.6\\.129\\.64",
+    "children" : [ {
+      "name" : "node1817\\.megatron\\.com",
+      "children" : null
+    }, {
+      "name" : "194\\.6\\.129\\.67",
+      "children" : null
+    } ]
+  }, {
+    "name" : "192\\.30\\.63\\.64",
+    "children" : [ {
+      "name" : "192\\.30\\.63\\.69",
+      "children" : null
+    }, {
+      "name" : "192\\.30\\.63\\.81",
+      "children" : null
+    } ]
+  } ]
+}
