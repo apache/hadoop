@@ -220,6 +220,9 @@ Release 0.22.0 - Unreleased
     MAPREDUCE-2516. Rename webinterface.private.actions to
     mapreduce.jobtracker.webinterface.trusted (Ari Rabkin via todd)
 
+    HADOOP-7106. Reorganize project SVN layout to "unsplit" the projects.
+    (todd, nigel)
+
   OPTIMIZATIONS
     
     MAPREDUCE-1354. Enhancements to JobTracker for better performance and

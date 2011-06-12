@@ -267,6 +267,9 @@ Release 0.22.0 - Unreleased
     UnsupportedActionException("register") instead of "journal".
     (Ching-Shen Chen via shv)
 
+    HADOOP-7106. Reorganize project SVN layout to "unsplit" the projects.
+    (todd, nigel)
+
   OPTIMIZATIONS
 
     HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)
