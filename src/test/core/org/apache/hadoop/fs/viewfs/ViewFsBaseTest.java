@@ -468,20 +468,20 @@ public class ViewFsBaseTest {
   
   @Test
   public void testResolvePathInternalPaths() throws IOException {
-    Assert.assertEquals(new Path("/"), fcView.getDefaultFileSystem().resolvePath(new Path("/")));
+    Assert.assertEquals(new Path("/"), fcView.resolvePath(new Path("/")));
     Assert.assertEquals(new Path("/internalDir"),
-                          fcView.getDefaultFileSystem().resolvePath(new Path("/internalDir")));
+                          fcView.resolvePath(new Path("/internalDir")));
   }
   @Test
   public void testResolvePathMountPoints() throws IOException {
     Assert.assertEquals(new Path(targetTestRoot,"user"),
-                          fcView.getDefaultFileSystem().resolvePath(new Path("/user")));
+                          fcView.resolvePath(new Path("/user")));
     Assert.assertEquals(new Path(targetTestRoot,"data"),
-        fcView.getDefaultFileSystem().resolvePath(new Path("/data")));
+        fcView.resolvePath(new Path("/data")));
     Assert.assertEquals(new Path(targetTestRoot,"dir2"),
-        fcView.getDefaultFileSystem().resolvePath(new Path("/internalDir/linkToDir2")));
+        fcView.resolvePath(new Path("/internalDir/linkToDir2")));
     Assert.assertEquals(new Path(targetTestRoot,"dir3"),
-        fcView.getDefaultFileSystem().resolvePath(new Path("/internalDir/internalDir2/linkToDir3")));
+        fcView.resolvePath(new Path("/internalDir/internalDir2/linkToDir3")));
 
   }
   
@@ -489,30 +489,30 @@ public class ViewFsBaseTest {
   public void testResolvePathThroughMountPoints() throws IOException {
     FileContextTestHelper.createFile(fcView, "/user/foo");
     Assert.assertEquals(new Path(targetTestRoot,"user/foo"),
-                          fcView.getDefaultFileSystem().resolvePath(new Path("/user/foo")));
+                          fcView.resolvePath(new Path("/user/foo")));
     
     fcView.mkdir(
         FileContextTestHelper.getTestRootPath(fcView, "/user/dirX"),
         FileContext.DEFAULT_PERM, false);
     Assert.assertEquals(new Path(targetTestRoot,"user/dirX"),
-        fcView.getDefaultFileSystem().resolvePath(new Path("/user/dirX")));
+        fcView.resolvePath(new Path("/user/dirX")));
 
     
     fcView.mkdir(
         FileContextTestHelper.getTestRootPath(fcView, "/user/dirX/dirY"),
         FileContext.DEFAULT_PERM, false);
     Assert.assertEquals(new Path(targetTestRoot,"user/dirX/dirY"),
-        fcView.getDefaultFileSystem().resolvePath(new Path("/user/dirX/dirY")));
+        fcView.resolvePath(new Path("/user/dirX/dirY")));
   }
 
   @Test(expected=FileNotFoundException.class) 
   public void testResolvePathDanglingLink() throws IOException {
-      fcView.getDefaultFileSystem().resolvePath(new Path("/danglingLink"));
+      fcView.resolvePath(new Path("/danglingLink"));
   }
   
   @Test(expected=FileNotFoundException.class) 
   public void testResolvePathMissingThroughMountPoints() throws IOException {
-    fcView.getDefaultFileSystem().resolvePath(new Path("/user/nonExisting"));
+    fcView.resolvePath(new Path("/user/nonExisting"));
   }
   
 
@@ -521,7 +521,7 @@ public class ViewFsBaseTest {
     fcView.mkdir(
         FileContextTestHelper.getTestRootPath(fcView, "/user/dirX"),
         FileContext.DEFAULT_PERM, false);
-    fcView.getDefaultFileSystem().resolvePath(new Path("/user/dirX/nonExisting"));
+    fcView.resolvePath(new Path("/user/dirX/nonExisting"));
   }
   
   

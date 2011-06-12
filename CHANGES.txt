@@ -204,6 +204,8 @@ Trunk (unreleased changes)
 
     HADOOP-1886. Undocumented parameters in FilesSystem. (Frank Conrad via eli)
 
+    HADOOP-7375. Add resolvePath method to FileContext. (Sanjay Radia via eli)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

@@ -547,6 +547,29 @@ public final class FileContext {
   
   
   /**
+   * Resolve the path following any symlinks or mount points
+   * @param f to be resolved
+   * @return fully qualified resolved path
+   * 
+   * @throws FileNotFoundException  If <code>f</code> does not exist
+   * @throws AccessControlException if access denied
+   * @throws IOException If an IO Error occurred
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws
+   *           undeclared exception to RPC server
+   * 
+   * RuntimeExceptions:
+   * @throws InvalidPathException If path <code>f</code> is not valid
+   */
+  public Path resolvePath(final Path f) throws FileNotFoundException,
+      UnresolvedLinkException, AccessControlException, IOException {
+    return resolve(f);
+  }
+  
+  /**
    * Make the path fully qualified if it is isn't. 
    * A Fully-qualified path has scheme and authority specified and an absolute
    * path.
@@ -2204,13 +2227,14 @@ public final class FileContext {
    * Resolves all symbolic links in the specified path.
    * Returns the new path object.
    */
-  protected Path resolve(final Path f) throws IOException {
-    return new FSLinkResolver<FileStatus>() {
-      public FileStatus next(final AbstractFileSystem fs, final Path p) 
+  protected Path resolve(final Path f) throws FileNotFoundException,
+      UnresolvedLinkException, AccessControlException, IOException {
+    return new FSLinkResolver<Path>() {
+      public Path next(final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
-        return fs.getFileStatus(p);
+        return fs.resolvePath(p);
       }
-    }.resolve(this, f).getPath();
+    }.resolve(this, f);
   }
 
   /**
@@ -2240,7 +2264,8 @@ public final class FileContext {
   Set<AbstractFileSystem> resolveAbstractFileSystems(final Path f)
       throws IOException {
     final Path absF = fixRelativePart(f);
-    final HashSet<AbstractFileSystem> result = new HashSet<AbstractFileSystem>();
+    final HashSet<AbstractFileSystem> result 
+      = new HashSet<AbstractFileSystem>();
     new FSLinkResolver<Void>() {
       public Void next(final AbstractFileSystem fs, final Path p)
           throws IOException, UnresolvedLinkException {
