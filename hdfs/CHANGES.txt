@@ -503,6 +503,9 @@ Trunk (unreleased changes)
     HDFS-2066. Create a package and individual class files for
     DataTransferProtocol.  (szetszwo)
 
+    HADOOP-7106. Reorganize project SVN layout to "unsplit" the projects.
+    (todd, nigel)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

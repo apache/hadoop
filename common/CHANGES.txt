@@ -212,6 +212,9 @@ Trunk (unreleased changes)
     HADOOP-7374. Don't add tools.jar to the classpath when running Hadoop.
     (eli)
 
+    HADOOP-7106. Reorganize project SVN layout to "unsplit" the projects.
+    (todd, nigel)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

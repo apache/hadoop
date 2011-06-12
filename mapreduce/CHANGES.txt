@@ -166,6 +166,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2452. Makes the cancellation of delegation tokens happen in a 
     separate thread. (ddas)
 
+    HADOOP-7106. Reorganize project SVN layout to "unsplit" the projects.
+    (todd, nigel)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
