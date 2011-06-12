@@ -1,0 +1,82 @@
+<?xml version="1.0"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+<document>
+        <header>
+        <title>Hadoop Archives Guide</title>
+        </header>
+        <body>
+        <section>
+        <title>Overview</title>
+        <p>
+        Hadoop archives are special format archives. A Hadoop archive
+        maps to a file system directory. A Hadoop archive always has a *.har
+        extension. A Hadoop archive directory contains metadata (in the form 
+        of _index and _masterindex) and data (part-*) files. The _index file contains
+        the name of the files that are part of the archive and the location
+        within the part files. 
+        </p>
+        </section>
+        
+        <section>
+        <title> How to Create an Archive </title>
+        <p>
+        <code>Usage: hadoop archive -archiveName name &lt;src&gt;* &lt;dest&gt;</code>
+        </p>
+        <p>
+        -archiveName is the name of the archive you would like to create. 
+        An example would be foo.har. The name should have a *.har extension. 
+        The inputs are file system pathnames which work as usual with regular
+        expressions. The destination directory would contain the archive.
+        Note that this is a MapReduce job that creates the archives. You would
+        need a MapReduce cluster to run this. The following is an example:</p>
+        <p>
+        <code>hadoop archive -archiveName foo.har /user/hadoop/dir1 /user/hadoop/dir2 /user/zoo/</code>
+        </p><p>
+        In the above example /user/hadoop/dir1 and /user/hadoop/dir2 will be
+        archived in the following file system directory -- /user/zoo/foo.har.
+        The sources are not changed or removed when an archive is created.
+        </p>
+        </section>
+        
+        <section>
+        <title> How to Look Up Files in Archives </title>
+        <p>
+        The archive exposes itself as a file system layer. So all the fs shell
+        commands in the archives work but with a different URI. Also, note that
+        archives are immutable. So, rename, delete and create will return
+        an error. The URI for Hadoop Archives is:
+        </p><p><code>har://scheme-hostname:port/archivepath/fileinarchive</code></p><p>
+        If no scheme is provided it assumes the underlying filesystem. 
+        In that case the URI would look like this:
+        </p><p><code>
+        har:///archivepath/fileinarchive</code></p>
+        <p>
+        Here is an example of archive. The input to the archives is /dir. The directory dir contains 
+        files filea, fileb. To archive /dir to /user/hadoop/foo.har, the command is: 
+        </p>
+        <p><code>hadoop archive -archiveName foo.har /dir /user/hadoop</code>
+        </p><p>
+        To get file listing for files in the created archive: 
+        </p>
+        <p><code>hadoop dfs -lsr har:///user/hadoop/foo.har</code></p>
+        <p>To cat filea in archive:
+        </p><p><code>hadoop dfs -cat har:///user/hadoop/foo.har/dir/filea</code></p>
+        </section>
+	</body>
+</document>
