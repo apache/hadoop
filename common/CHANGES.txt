@@ -12,6 +12,9 @@ Release 0.21.1 - Unreleased
     HADOOP-7177. CodecPool should report which compressor it is using.
     (Allen Wittenauer via eli)
 
+    HADOOP-7106. Reorganize project SVN layout to "unsplit" the projects.
+    (todd, nigel)
+
   BUG FIXES
 
     HADOOP-6925. BZip2Codec incorrectly implements read(). 

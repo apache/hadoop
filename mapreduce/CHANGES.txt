@@ -11,6 +11,9 @@ Release 0.21.1 - Unreleased
 
     MAPREDUCE-2140. Regenerate fair scheduler design doc PDF. (matei)
 
+    HADOOP-7106. Reorganize project SVN layout to "unsplit" the projects.
+    (todd, nigel)
+
   BUG FIXES
 
     MAPREDUCE-1897. trunk build broken on compile-mapred-test (cos)
