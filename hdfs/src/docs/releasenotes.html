@@ -1,0 +1,693 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Hadoop HDFS 0.21.0 Release Notes</title>
+<STYLE type="text/css">
+		H1 {font-family: sans-serif}
+		H2 {font-family: sans-serif; margin-left: 7mm}
+		TABLE {margin-left: 7mm}
+	</STYLE>
+</head>
+<body>
+<h1>Hadoop HDFS 0.21.0 Release Notes</h1>
+		These release notes include new developer and user-facing incompatibilities, features, and major improvements.
+
+
+<a name="changes"></a>
+<h2>Changes Since Hadoop 0.20.2</h2>
+
+<h3>        Sub-task
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-396'>HDFS-396</a>] -         Process dfs.name.edits.dirs as URI 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-436'>HDFS-436</a>] -         AspectJ framework for HDFS code and tests
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-444'>HDFS-444</a>] -         Current fault injection framework implementation doesn't allow to change probability levels dynamically
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-475'>HDFS-475</a>] -         Create a separate targets for fault injection related test and jar files creation files
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-498'>HDFS-498</a>] -         Add development guide and framework documentation
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-508'>HDFS-508</a>] -         Factor out BlockInfo from BlocksMap
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-519'>HDFS-519</a>] -         Create new tests for lease recovery
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-520'>HDFS-520</a>] -         Create new tests for block recovery
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-521'>HDFS-521</a>] -         Create new tests for pipeline
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-551'>HDFS-551</a>] -         Create new functional test for a block report.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-552'>HDFS-552</a>] -         Change TestFiDataTransferProtocol to junit 4 and add a few new tests
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-561'>HDFS-561</a>] -         Fix write pipeline READ_TIMEOUT
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-564'>HDFS-564</a>] -         Adding pipeline test 17-35
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-616'>HDFS-616</a>] -         Create functional tests for new design of the block report
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-660'>HDFS-660</a>] -         Remove deprecated methods from InterDatanodeProtocol.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-663'>HDFS-663</a>] -         DFSIO for append
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-668'>HDFS-668</a>] -         TestFileAppend3#TC7 sometimes hangs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-676'>HDFS-676</a>] -         NPE in FSDataset.updateReplicaUnderRecovery(..)
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-716'>HDFS-716</a>] -         Define a pointcut for pipeline close
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-719'>HDFS-719</a>] -         Add more fault injection tests for pipeline close
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-730'>HDFS-730</a>] -         Add fault injection tests for pipleline close ack
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1057'>HDFS-1057</a>] -         Concurrent readers hit ChecksumExceptions if following a writer to very end of file
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1067'>HDFS-1067</a>] -         Create block recovery tests that handle errors
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1100'>HDFS-1100</a>] -         Override TestFcHdfsSymlink#unwrapException
+</li>
+</ul>
+    
+<h3>        Bug
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-15'>HDFS-15</a>] -         All replicas of a block end up on only 1 rack
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-29'>HDFS-29</a>] -         In Datanode, update block may fail due to length inconsistency
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-76'>HDFS-76</a>] -         Namespace quota exceeded message unclear
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-94'>HDFS-94</a>] -         The &quot;Heap Size&quot; in HDFS web ui may not be accurate
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-101'>HDFS-101</a>] -         DFS write pipeline : DFSClient sometimes does not detect second datanode failure 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-119'>HDFS-119</a>] -         logSync() may block NameNode forever.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-127'>HDFS-127</a>] -         DFSClient block read failures cause open DFSInputStream to become unusable
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-145'>HDFS-145</a>] -         FSNameSystem#addStoredBlock does not handle inconsistent block length correctly
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-167'>HDFS-167</a>] -         DFSClient continues to retry indefinitely
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-181'>HDFS-181</a>] -         INode.getPathComponents throws NPE when given a non-absolute path
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-187'>HDFS-187</a>] -         TestStartup fails if hdfs is running in the same machine
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-192'>HDFS-192</a>] -         TestBackupNode sometimes fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-195'>HDFS-195</a>] -         Need to handle access token expiration when re-establishing the pipeline for dfs write
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-415'>HDFS-415</a>] -         Unchecked exception thrown inside of BlockReceiver cause some threads hang
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-423'>HDFS-423</a>] -         Unbreak FUSE build and fuse_dfs_wrapper.sh
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-438'>HDFS-438</a>] -         Improve help message for quotas
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-439'>HDFS-439</a>] -         HADOOP-5961 is incorrectly committed.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-440'>HDFS-440</a>] -         javadoc warnings: broken links
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-441'>HDFS-441</a>] -         TestFTPFileSystem fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-445'>HDFS-445</a>] -         pread() fails when cached block locations are no longer valid
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-446'>HDFS-446</a>] -         Offline Image Viewer Ls visitor incorrectly says 'output file' instead of 'input file'
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-454'>HDFS-454</a>] -         HDFS workflow in JIRA does not match MAPREDUCE, HADOOP
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-456'>HDFS-456</a>] -         Problems with dfs.name.edits.dirs as URI
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-462'>HDFS-462</a>] -         Unit tests not working under Windows
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-463'>HDFS-463</a>] -         CreateEditsLog utility broken due to FSImage URL scheme check
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-464'>HDFS-464</a>] -         Memory leaks in libhdfs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-466'>HDFS-466</a>] -         hdfs_write infinite loop when dfs fails and cannot write files &gt; 2 GB
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-472'>HDFS-472</a>] -         Document hdfsproxy design and set-up guide
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-480'>HDFS-480</a>] -         Typo in jar name in build.xml
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-481'>HDFS-481</a>] -         Bug Fixes + HdfsProxy to use proxy user to impresonate the real user
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-482'>HDFS-482</a>] -         change HsftpFileSystem's ssl.client.do.not.authenticate.server configuration setting to ssl-client.xml  
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-483'>HDFS-483</a>] -         Data transfer (aka pipeline) implementation cannot tolerate exceptions
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-484'>HDFS-484</a>] -         bin-package and package doesnt seem to package any jar file
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-489'>HDFS-489</a>] -         Updated TestHDFSCLI for changes from HADOOP-6139
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-499'>HDFS-499</a>] -         Fix deprecation warnings introduced by HADOOP-5438
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-500'>HDFS-500</a>] -         Fix lingering and new javac warnings
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-514'>HDFS-514</a>] -         DFSClient.namenode is a public field. Should be private.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-525'>HDFS-525</a>] -         ListPathsServlet.java uses static SimpleDateFormat that has threading issues
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-534'>HDFS-534</a>] -         Required avro classes are missing
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-538'>HDFS-538</a>] -         DistributedFileSystem::listStatus incorrectly returns null for empty result sets
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-540'>HDFS-540</a>] -         TestNameNodeMetrics fails intermittently
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-553'>HDFS-553</a>] -         BlockSender reports wrong failed position in ChecksumException
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-568'>HDFS-568</a>] -         TestServiceLevelAuthorization fails on latest build in Hudson
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-586'>HDFS-586</a>] -         TestBlocksWithNotEnoughRacks fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-587'>HDFS-587</a>] -         Test programs support only default queue.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-590'>HDFS-590</a>] -         When trying to rename a non-existent path, LocalFileSystem throws an FileNotFoundException, while HDFS returns false
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-596'>HDFS-596</a>] -         Memory leak in libhdfs: hdfsFreeFileInfo() in libhdfs does not free memory for mOwner and mGroup
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-601'>HDFS-601</a>] -         TestBlockReport should obtain data directories from MiniHDFSCluster
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-602'>HDFS-602</a>] -         Atempt to make a directory under an existing file on DistributedFileSystem should throw an FileAlreadyExistsException instead of FileNotFoundException
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-606'>HDFS-606</a>] -         ConcurrentModificationException in invalidateCorruptReplicas()
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-609'>HDFS-609</a>] -         Create a file with the append flag does not work in HDFS
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-611'>HDFS-611</a>] -         Heartbeats times from Datanodes increase when there are plenty of blocks to delete
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-612'>HDFS-612</a>] -         FSDataset should not use org.mortbay.log.Log
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-614'>HDFS-614</a>] -         TestDatanodeBlockScanner obtain should data-node directories directly from MiniDFSCluster
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-615'>HDFS-615</a>] -         TestLargeDirectoryDelete fails with NullPointerException
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-622'>HDFS-622</a>] -         checkMinReplication should count only live node.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-625'>HDFS-625</a>] -         ListPathsServlet throws NullPointerException
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-629'>HDFS-629</a>] -         Remove ReplicationTargetChooser.java along with fixing import warnings.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-637'>HDFS-637</a>] -         DataNode sends a Success ack when block write fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-638'>HDFS-638</a>] -         The build.xml refences jars that don't exist
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-640'>HDFS-640</a>] -         TestHDFSFileContextMainOperations uses old FileContext.mkdirs(..)
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-641'>HDFS-641</a>] -         Move all of the benchmarks and tests that depend on mapreduce to mapreduce
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-646'>HDFS-646</a>] -         missing test-contrib ant target would break hudson patch test process
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-647'>HDFS-647</a>] -         Internal server errors
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-653'>HDFS-653</a>] -         Multiple unit tests fail in branch-0.21
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-673'>HDFS-673</a>] -         BlockReceiver#PacketResponder should not remove a packet from the ack queue before its ack is sent
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-677'>HDFS-677</a>] -         Rename failure due to quota results in deletion of src directory
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-679'>HDFS-679</a>] -         Appending to a partial chunk incorrectly assumes the first packet fills up the partial chunk
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-682'>HDFS-682</a>] -         TestBlockUnderConstruction fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-688'>HDFS-688</a>] -         Add configuration resources to DFSAdmin
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-690'>HDFS-690</a>] -         TestAppend2#testComplexAppend failed on &quot;Too many open files&quot;
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-691'>HDFS-691</a>] -         Limitation on java.io.InputStream.available()
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-695'>HDFS-695</a>] -         RaidNode should read in configuration from hdfs-site.xml
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-699'>HDFS-699</a>] -         Primary datanode should compare replicas' on disk lengths
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-706'>HDFS-706</a>] -         Intermittent failures in TestFiHFlush
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-709'>HDFS-709</a>] -         TestDFSShell failure
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-720'>HDFS-720</a>] -         NPE in BlockReceiver$PacketResponder.run(BlockReceiver.java:923)
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-722'>HDFS-722</a>] -         The pointcut callCreateBlockWriteStream in FSDatasetAspects is broken
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-724'>HDFS-724</a>] -         Pipeline close hangs if one of the datanode is not responsive.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-725'>HDFS-725</a>] -         Support the build error fix for HADOOP-6327
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-726'>HDFS-726</a>] -         Eclipse .classpath template has outdated jar files and is missing some new ones.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-735'>HDFS-735</a>] -         TestReadWhileWriting has wrong line termination symbols
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-741'>HDFS-741</a>] -         TestHFlush test doesn't seek() past previously written part of the file
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-750'>HDFS-750</a>] -         TestRename build failure
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-751'>HDFS-751</a>] -         TestCrcCorruption succeeds but is not testing anything of value
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-756'>HDFS-756</a>] -         libhdfs unit tests do not run 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-757'>HDFS-757</a>] -         Unit tests failure for RAID
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-760'>HDFS-760</a>] -         &quot;fs -put&quot; fails if dfs.umask is set to 63
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-761'>HDFS-761</a>] -         Failure to process rename operation from edits log due to quota verification
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-762'>HDFS-762</a>] -         Trying to start the balancer throws a NPE
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-763'>HDFS-763</a>] -         DataBlockScanner reporting of bad blocks is slightly misleading
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-774'>HDFS-774</a>] -         Intermittent race condition in TestFiPipelines
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-775'>HDFS-775</a>] -         FSDataset calls getCapacity() twice -bug?
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-781'>HDFS-781</a>] -         Metrics PendingDeletionBlocks is not decremented
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-783'>HDFS-783</a>] -         libhdfs tests brakes code coverage runs with Clover
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-785'>HDFS-785</a>] -         Missing license header in java source files. 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-787'>HDFS-787</a>] -         Make the versions of libraries consistent
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-791'>HDFS-791</a>] -         Build is broken after HDFS-787 patch has been applied
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-792'>HDFS-792</a>] -         TestHDFSCLI is failing 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-793'>HDFS-793</a>] -         DataNode should first receive the whole packet ack message before it constructs and sends its own ack message for the packet
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-797'>HDFS-797</a>] -         TestHDFSCLI much slower after HDFS-265 merge
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-802'>HDFS-802</a>] -         Update Eclipse configuration to match changes to Ivy configuration
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-812'>HDFS-812</a>] -         FSNamesystem#internalReleaseLease throws NullPointerException on a single-block file's lease recovery
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-823'>HDFS-823</a>] -         In Checkpointer the getImage servlet is added to public rather than internal servlet list
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-824'>HDFS-824</a>] -         Stop lease checker in TestReadWhileWriting
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-825'>HDFS-825</a>] -         Build fails to pull latest hadoop-core-* artifacts
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-840'>HDFS-840</a>] -         Update File Context tests to use FileContextTestHelper
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-849'>HDFS-849</a>] -         TestFiDataTransferProtocol2#pipeline_Fi_18 sometimes fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-856'>HDFS-856</a>] -         Hardcoded replication level for new files in fuse-dfs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-857'>HDFS-857</a>] -         Incorrect type for fuse-dfs capacity can cause &quot;df&quot; to return negative values on 32-bit machines
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-858'>HDFS-858</a>] -         Incorrect return codes for fuse-dfs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-859'>HDFS-859</a>] -         fuse-dfs utime behavior causes issues with tar
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-861'>HDFS-861</a>] -         fuse-dfs does not support O_RDWR
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-868'>HDFS-868</a>] -         Link to Hadoop Upgrade Wiki is broken
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-877'>HDFS-877</a>] -         Client-driven block verification not functioning
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-880'>HDFS-880</a>] -         TestNNLeaseRecovery fails on windows
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-885'>HDFS-885</a>] -         Datanode toString() NPEs on null dnRegistration
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-894'>HDFS-894</a>] -         DatanodeID.ipcPort is not updated when existing node re-registers
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-897'>HDFS-897</a>] -         ReplicasMap remove has a bug in generation stamp comparison
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-909'>HDFS-909</a>] -         Race condition between rollEditLog or rollFSImage ant FSEditsLog.write operations  corrupts edits log
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-913'>HDFS-913</a>] -         TestRename won't run automatically from 'run-test-hdfs-faul-inject' target
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-927'>HDFS-927</a>] -         DFSInputStream retries too many times for new block locations
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-938'>HDFS-938</a>] -         Replace calls to UGI.getUserName() with UGI.getShortUserName()
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-939'>HDFS-939</a>] -         libhdfs test is broken
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-940'>HDFS-940</a>] -         libhdfs uses UnixUserGroupInformation
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-961'>HDFS-961</a>] -         dfs_readdir incorrectly parses paths
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-965'>HDFS-965</a>] -         TestDelegationToken fails in trunk
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-966'>HDFS-966</a>] -         NameNode recovers lease even in safemode
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-995'>HDFS-995</a>] -         Replace usage of FileStatus#isDir()
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1000'>HDFS-1000</a>] -         libhdfs needs to be updated to use the new UGI
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1002'>HDFS-1002</a>] -         Secondary Name Node crash, NPE in edit log replay
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1010'>HDFS-1010</a>] -         HDFSProxy: Retrieve group information from UnixUserGroupInformation instead of LdapEntry
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1014'>HDFS-1014</a>] -         Error in reading delegation tokens from edit logs.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1015'>HDFS-1015</a>] -         Intermittent failure in TestSecurityTokenEditLog
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1024'>HDFS-1024</a>] -         SecondaryNamenode fails to checkpoint because namenode fails with CancelledKeyException
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1041'>HDFS-1041</a>] -         DFSClient does not retry in getFileChecksum(..)
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1046'>HDFS-1046</a>] -         Build fails trying to download an old version of tomcat
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1072'>HDFS-1072</a>] -         AlreadyBeingCreatedException with HDFS_NameNode as the lease holder
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1074'>HDFS-1074</a>] -         TestProxyUtil fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1088'>HDFS-1088</a>] -         Prevent renaming a symlink to its target 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1101'>HDFS-1101</a>] -         TestDiskError.testLocalDirs() fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1104'>HDFS-1104</a>] -         Fsck triggers full GC on NameNode
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1159'>HDFS-1159</a>] -         clean-cache target removes wrong ivy cache
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1165'>HDFS-1165</a>] -         createSymlink should not hold the fsnamesytem lock when sync its edit log to disk
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1173'>HDFS-1173</a>] -         Fix references to 0.22 in 0.21 branch
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1181'>HDFS-1181</a>] -         Move configuration and script files post project split
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1193'>HDFS-1193</a>] -         -mvn-system-deploy target is broken which inturn fails the mvn-deploy task leading to unstable mapreduce build.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1212'>HDFS-1212</a>] -         Harmonize HDFS JAR library versions with Common
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1255'>HDFS-1255</a>] -         test-libhdfs.sh fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1256'>HDFS-1256</a>] -         libhdfs is missing from the tarball
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1258'>HDFS-1258</a>] -         Clearing namespace quota on &quot;/&quot; corrupts FS image
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1267'>HDFS-1267</a>] -         fuse-dfs does not compile
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1288'>HDFS-1288</a>] -         start-all.sh / stop-all.sh does not seem to work with HDFS
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1292'>HDFS-1292</a>] -         Allow artifacts to be published to the staging Apache Nexus Maven Repository
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1299'>HDFS-1299</a>] -         'compile-fault-inject' never should be called directly.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1311'>HDFS-1311</a>] -         Running tests with 'testcase' cause triple execution of the same test case
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1313'>HDFS-1313</a>] -         HdfsProxy changes from HDFS-481 missed in y20.1xx
+</li>
+</ul>
+    
+<h3>        Improvement
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-173'>HDFS-173</a>] -         Recursively deleting a directory with millions of files makes NameNode unresponsive for other commands until the deletion completes
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-265'>HDFS-265</a>] -         Revisit append
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-278'>HDFS-278</a>] -         Should DFS outputstream's close wait forever?
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-288'>HDFS-288</a>] -         Redundant computation in hashCode() implemenation
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-352'>HDFS-352</a>] -         saveNamespace command should be documented.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-377'>HDFS-377</a>] -         Code Refactoring: separate codes which implement DataTransferProtocol
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-381'>HDFS-381</a>] -         Datanode should report deletion of blocks to Namenode explicitly
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-385'>HDFS-385</a>] -         Design a pluggable interface to place replicas of blocks in HDFS
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-412'>HDFS-412</a>] -         Hadoop JMX usage makes Nagios monitoring impossible
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-443'>HDFS-443</a>] -         New metrics in namenode to capture lost heartbeats.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-457'>HDFS-457</a>] -         better handling of volume failure in Data Node storage
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-490'>HDFS-490</a>] -         eliminate the usage of FileSystem.create( ) depracated by Hadoop-5438 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-493'>HDFS-493</a>] -         Only fault-injected tests have to be executed by run-test-*-faul-inject targets; none of fault-injected tests need to be ran normal testing process
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-496'>HDFS-496</a>] -         Use PureJavaCrc32 in HDFS
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-501'>HDFS-501</a>] -         Use enum to define the constants in DataTransferProtocol
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-504'>HDFS-504</a>] -         HDFS updates the modification time of a file when the file is closed.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-510'>HDFS-510</a>] -         Rename DatanodeBlockInfo to be ReplicaInfo
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-511'>HDFS-511</a>] -         Redundant block searches in BlockManager.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-512'>HDFS-512</a>] -         Set block id as the key to Block
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-524'>HDFS-524</a>] -         Further DataTransferProtocol code refactoring.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-527'>HDFS-527</a>] -         Refactor DFSClient constructors
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-529'>HDFS-529</a>] -         More redundant block searches in BlockManager.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-530'>HDFS-530</a>] -         Refactor TestFileAppend* to remove code duplications
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-531'>HDFS-531</a>] -         Renaming of configuration keys
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-532'>HDFS-532</a>] -         Allow applications to know that a read request failed because block is missing
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-539'>HDFS-539</a>] -         Fault injeciton utlis for pipeline testing needs to be refactored for future reuse by other tests
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-546'>HDFS-546</a>] -         DatanodeDescriptor block iterator should be BlockInfo based rather than Block.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-548'>HDFS-548</a>] -         TestFsck takes nearly 10 minutes to run - a quarter of the entire hdfs-test time
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-549'>HDFS-549</a>] -         Allow non fault-inject specific tests execution with an explicit -Dtestcase=... setting
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-563'>HDFS-563</a>] -         Simplify the codes in FSNamesystem.getBlockLocations(..)
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-578'>HDFS-578</a>] -         Support for using server default values for blockSize and replication when creating a file
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-581'>HDFS-581</a>] -         Introduce an iterator over blocks in the block report array.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-584'>HDFS-584</a>] -         Fail the fault-inject build if any advices are mis-bound
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-598'>HDFS-598</a>] -         Eclipse launch task for HDFS
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-605'>HDFS-605</a>] -         There's not need to run fault-inject tests by 'run-test-hdfs-with-mr' target
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-617'>HDFS-617</a>] -         Support for non-recursive create() in HDFS
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-618'>HDFS-618</a>] -         Support for non-recursive mkdir in HDFS
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-630'>HDFS-630</a>] -         In DFSOutputStream.nextBlockOutputStream(), the client can exclude specific datanodes when locating the next block.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-631'>HDFS-631</a>] -         Changes in HDFS to rename the config keys as detailed in HDFS-531.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-680'>HDFS-680</a>] -         Add new access method to a copy of a block's replica
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-685'>HDFS-685</a>] -         Use the user-to-groups mapping service in the NameNode
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-703'>HDFS-703</a>] -         Replace current fault injection implementation with one from Common
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-704'>HDFS-704</a>] -         Unify build property names to facilitate cross-projects modifications
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-707'>HDFS-707</a>] -         Remove unused method INodeFile.toINodeFileUnderConstruction()
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-728'>HDFS-728</a>] -         Create a comprehensive functional test for append
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-729'>HDFS-729</a>] -         fsck option to list only corrupted files
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-736'>HDFS-736</a>] -         commitBlockSynchronization() should directly update block GS and length.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-737'>HDFS-737</a>] -         Improvement in metasave output
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-754'>HDFS-754</a>] -         Reduce ivy console output to observable level
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-755'>HDFS-755</a>] -         Read multiple checksum chunks at once in DFSInputStream
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-758'>HDFS-758</a>] -         Improve reporting of progress of decommissioning
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-764'>HDFS-764</a>] -         Moving Access Token implementation from Common to HDFS
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-767'>HDFS-767</a>] -         Job failure due to BlockMissingException
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-786'>HDFS-786</a>] -         Implement getContentSummary(..) in HftpFileSystem
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-800'>HDFS-800</a>] -         The last block of a file under construction may change to the COMPLETE state in response to getAdditionalBlock or completeFileInternal
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-806'>HDFS-806</a>] -         Add new unit tests to the 10-mins 'run-commit-test' target
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-822'>HDFS-822</a>] -         Appends to already-finalized blocks can rename across volumes
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-826'>HDFS-826</a>] -         Allow a mechanism for an application to detect that datanode(s)  have died in the write pipeline
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-832'>HDFS-832</a>] -         HDFS side of HADOOP-6222. 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-844'>HDFS-844</a>] -         Log the filename when file locking fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-850'>HDFS-850</a>] -         Display more memory details on the web ui
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-854'>HDFS-854</a>] -         Datanode should scan devices in parallel to generate block report
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-873'>HDFS-873</a>] -         DataNode directories as URIs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-883'>HDFS-883</a>] -         Datanode shutdown should log problems with Storage.unlockAll()
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-892'>HDFS-892</a>] -         optionally use Avro for namenode RPC
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-921'>HDFS-921</a>] -         Convert TestDFSClientRetries::testNotYetReplicatedErrors to Mockito
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-930'>HDFS-930</a>] -         o.a.h.hdfs.server.datanode.DataXceiver - run() - Version mismatch exception - more context to help debugging
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-933'>HDFS-933</a>] -         Add createIdentifier() implementation to DelegationTokenSecretManager
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-946'>HDFS-946</a>] -         NameNode should not return full path name when lisitng a diretory or getting the status of a file
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-949'>HDFS-949</a>] -         Move Delegation token into Common so that we can use it for MapReduce also
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-968'>HDFS-968</a>] -         s/StringBuffer/StringBuilder - as necessary
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-986'>HDFS-986</a>] -         Push HADOOP-6551 into HDFS
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-994'>HDFS-994</a>] -         Provide methods for obtaining delegation token from Namenode for hftp and other uses
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-997'>HDFS-997</a>] -         DataNode local directories should have narrow permissions
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-998'>HDFS-998</a>] -         The servlets should quote server generated strings sent in the response
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1009'>HDFS-1009</a>] -         Support Kerberos authorization in HDFSProxy
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1011'>HDFS-1011</a>] -         Improve Logging in HDFSProxy to include cluster name associated with the request
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1012'>HDFS-1012</a>] -         documentLocation attribute in LdapEntry for HDFSProxy isn't specific to a cluster
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1016'>HDFS-1016</a>] -         HDFS side change for HADOOP-6569
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1031'>HDFS-1031</a>] -         Enhance the webUi to list a few of the corrupted files in HDFS
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1047'>HDFS-1047</a>] -         Install/deploy source jars to Maven repo
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1054'>HDFS-1054</a>] -         Remove unnecessary sleep after failure in nextBlockOutputStream
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1063'>HDFS-1063</a>] -         Eclipse .classpath file should be generated from Ivy files to avoid duplicating dependencies
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1078'>HDFS-1078</a>] -         update libhdfs build process to produce static libraries
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1083'>HDFS-1083</a>] -         Update TestHDFSCLI to not to expect exception class name in the error messages
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1087'>HDFS-1087</a>] -         Use StringBuilder instead of Formatter for audit logs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1089'>HDFS-1089</a>] -         Remove uses of FileContext#isFile, isDirectory and exists
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1092'>HDFS-1092</a>] -         Use logging rather than System.err in MiniDFSCluster
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1107'>HDFS-1107</a>] -         Turn on append by default.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1126'>HDFS-1126</a>] -         Change HDFS to depend on Hadoop 'common' artifacts instead of 'core'
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1134'>HDFS-1134</a>] -         Large-scale Automated Framework
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1161'>HDFS-1161</a>] -         Make DN minimum valid volumes configurable
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1170'>HDFS-1170</a>] -         Add more assertions to TestLargeDirectoryDelete
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1199'>HDFS-1199</a>] -         Extract a subset of tests for smoke (DOA) validation.
+</li>
+</ul>
+    
+<h3>        New Feature
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-204'>HDFS-204</a>] -         Revive number of files listed metrics
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-222'>HDFS-222</a>] -         Support for concatenating of files into a single file
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-235'>HDFS-235</a>] -         Add support for byte-ranges to hftp
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-245'>HDFS-245</a>] -         Create symbolic links in HDFS
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-447'>HDFS-447</a>] -         proxy to call LDAP for IP lookup and get user ID and directories, validate requested URL
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-458'>HDFS-458</a>] -         Create target for 10 minute patch test build for hdfs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-459'>HDFS-459</a>] -         Job History Log Analyzer
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-461'>HDFS-461</a>] -         Analyzing file size distribution.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-492'>HDFS-492</a>] -         Expose corrupt replica/block information
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-503'>HDFS-503</a>] -         Implement erasure coding as a layer on HDFS
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-567'>HDFS-567</a>] -         Two contrib tools to facilitate searching for block history information 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-595'>HDFS-595</a>] -         FsPermission tests need to be updated for new octal configuration parameter from HADOOP-6234
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-610'>HDFS-610</a>] -         Add support for FileContext
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-654'>HDFS-654</a>] -         HDFS needs to support new rename introduced for FileContext
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-702'>HDFS-702</a>] -         Add Hdfs Impl for the new file system interface
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-731'>HDFS-731</a>] -         Support new Syncable interface in HDFS
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-814'>HDFS-814</a>] -         Add an api to get the visible length of a DFSDataInputStream.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-905'>HDFS-905</a>] -         Make changes to HDFS for the new UserGroupInformation APIs (HADOOP-6299)
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-935'>HDFS-935</a>] -         Real user in delegation token.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-984'>HDFS-984</a>] -         Delegation Tokens should be persisted in Namenode
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-985'>HDFS-985</a>] -         HDFS should issue multiple RPCs for listing a large directory
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-991'>HDFS-991</a>] -         Allow browsing the filesystem over http using delegation tokens
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-999'>HDFS-999</a>] -         Secondary namenode should login using kerberos if security is configured
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1091'>HDFS-1091</a>] -         Implement listStatus that returns an Iterator of FileStatus 
+</li>
+</ul>
+                    
+<h3>        Task
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-256'>HDFS-256</a>] -         Split HDFS into sub project
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-574'>HDFS-574</a>] -         Hadoop Doc Split: HDFS Docs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-651'>HDFS-651</a>] -         HDFS Docs - fix listing of docs in the doc menu
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-715'>HDFS-715</a>] -         Hadoop HDFS - Site Logo
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-869'>HDFS-869</a>] -         0.21.0 - snapshot incorrect dependency published in .pom files
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1174'>HDFS-1174</a>] -         New properties for suspend and resume process.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1277'>HDFS-1277</a>] -         [Herriot] New property for multi user list.
+</li>
+</ul>
+        
+<h3>        Test
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-409'>HDFS-409</a>] -         Add more access token tests
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-451'>HDFS-451</a>] -         Test DataTransferProtocol with fault injection
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-669'>HDFS-669</a>] -         Add unit tests framework (Mockito)
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-705'>HDFS-705</a>] -         Create an adapter to access some of package-private methods of DataNode from tests
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-710'>HDFS-710</a>] -         Add actions with constraints to the pipeline fault injection tests
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-713'>HDFS-713</a>] -         Need to properly check the type of the test class from an aspect
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-714'>HDFS-714</a>] -         Create fault injection test for the new pipeline close
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-804'>HDFS-804</a>] -         New unit tests for concurrent lease recovery
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-813'>HDFS-813</a>] -         Enable the append test in TestReadWhileWriting
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-902'>HDFS-902</a>] -         Move RAID from HDFS to MR
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-907'>HDFS-907</a>] -         Add  tests for getBlockLocations and totalLoad metrics. 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-919'>HDFS-919</a>] -         Create test to validate the BlocksVerified metric
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1043'>HDFS-1043</a>] -         Benchmark overhead of server-side group resolution of users
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1099'>HDFS-1099</a>] -         Add test for umask backward compatibility
+</li>
+</ul>
+
+
+
+</body>
+</html>

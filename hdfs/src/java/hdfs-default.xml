@@ -1,0 +1,522 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- Do not modify this file directly.  Instead, copy entries that you -->
+<!-- wish to modify from this file into hdfs-site.xml and change them -->
+<!-- there.  If hdfs-site.xml does not already exist, create it.      -->
+
+<configuration>
+
+<property>
+  <name>hadoop.hdfs.configuration.version</name>
+  <value>1</value>
+  <description>version of this configuration file</description>
+</property>
+
+<property>
+  <name>dfs.namenode.logging.level</name>
+  <value>info</value>
+  <description>The logging level for dfs namenode. Other values are "dir"(trac
+e namespace mutations), "block"(trace block under/over replications and block
+creations/deletions), or "all".</description>
+</property>
+
+<property>
+  <name>dfs.namenode.secondary.http-address</name>
+  <value>0.0.0.0:50090</value>
+  <description>
+    The secondary namenode http server address and port.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.address</name>
+  <value>0.0.0.0:50010</value>
+  <description>
+    The address where the datanode server will listen to.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.http.address</name>
+  <value>0.0.0.0:50075</value>
+  <description>
+    The datanode http server address and port.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.ipc.address</name>
+  <value>0.0.0.0:50020</value>
+  <description>
+    The datanode ipc server address and port.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.handler.count</name>
+  <value>3</value>
+  <description>The number of server threads for the datanode.</description>
+</property>
+
+<property>
+  <name>dfs.namenode.http-address</name>
+  <value>0.0.0.0:50070</value>
+  <description>
+    The address and the base port where the dfs namenode web ui will listen on.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.https.enable</name>
+  <value>false</value>
+  <description>Decide if HTTPS(SSL) is supported on HDFS
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.https.need-auth</name>
+  <value>false</value>
+  <description>Whether SSL client certificate authentication is required
+  </description>
+</property>
+
+<property>
+  <name>dfs.https.server.keystore.resource</name>
+  <value>ssl-server.xml</value>
+  <description>Resource file from which ssl server keystore
+  information will be extracted
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.https.keystore.resource</name>
+  <value>ssl-client.xml</value>
+  <description>Resource file from which ssl client keystore
+  information will be extracted
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.https.address</name>
+  <value>0.0.0.0:50475</value>
+</property>
+
+<property>
+  <name>dfs.namenode.https-address</name>
+  <value>0.0.0.0:50470</value>
+</property>
+
+ <property>
+  <name>dfs.datanode.dns.interface</name>
+  <value>default</value>
+  <description>The name of the Network Interface from which a data node should 
+  report its IP address.
+  </description>
+ </property>
+ 
+<property>
+  <name>dfs.datanode.dns.nameserver</name>
+  <value>default</value>
+  <description>The host name or IP address of the name server (DNS)
+  which a DataNode should use to determine the host name used by the
+  NameNode for communication and display purposes.
+  </description>
+ </property>
+ 
+ <property>
+  <name>dfs.namenode.backup.address</name>
+  <value>0.0.0.0:50100</value>
+  <description>
+    The backup node server address and port.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+ 
+ <property>
+  <name>dfs.namenode.backup.http-address</name>
+  <value>0.0.0.0:50105</value>
+  <description>
+    The backup node http server address and port.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.replication.considerLoad</name>
+  <value>true</value>
+  <description>Decide if chooseTarget considers the target's load or not
+  </description>
+</property>
+<property>
+  <name>dfs.default.chunk.view.size</name>
+  <value>32768</value>
+  <description>The number of bytes to view for a file on the browser.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.du.reserved</name>
+  <value>0</value>
+  <description>Reserved space in bytes per volume. Always leave this much space free for non dfs use.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.name.dir</name>
+  <value>file://${hadoop.tmp.dir}/dfs/name</value>
+  <description>Determines where on the local filesystem the DFS name node
+      should store the name table(fsimage).  If this is a comma-delimited list
+      of directories then the name table is replicated in all of the
+      directories, for redundancy. </description>
+</property>
+
+<property>
+  <name>dfs.namenode.edits.dir</name>
+  <value>${dfs.namenode.name.dir}</value>
+  <description>Determines where on the local filesystem the DFS name node
+      should store the transaction (edits) file. If this is a comma-delimited list
+      of directories then the transaction file is replicated in all of the 
+      directories, for redundancy. Default value is same as dfs.name.dir
+  </description>
+</property>
+<property>
+  <name>dfs.web.ugi</name>
+  <value>webuser,webgroup</value>
+  <description>The user account used by the web interface.
+    Syntax: USERNAME,GROUP1,GROUP2, ...
+  </description>
+</property>
+
+<property>
+  <name>dfs.permissions.enabled</name>
+  <value>true</value>
+  <description>
+    If "true", enable permission checking in HDFS.
+    If "false", permission checking is turned off,
+    but all other behavior is unchanged.
+    Switching from one parameter value to the other does not change the mode,
+    owner or group of files or directories.
+  </description>
+</property>
+
+<property>
+  <name>dfs.permissions.superusergroup</name>
+  <value>supergroup</value>
+  <description>The name of the group of super-users.</description>
+</property>
+
+<property>
+  <name>dfs.block.access.token.enable</name>
+  <value>false</value>
+  <description>
+    If "true", access tokens are used as capabilities for accessing datanodes.
+    If "false", no access tokens are checked on accessing datanodes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.block.access.key.update.interval</name>
+  <value>600</value>
+  <description>
+    Interval in minutes at which namenode updates its access keys.
+  </description>
+</property>
+
+<property>
+  <name>dfs.block.access.token.lifetime</name>
+  <value>600</value>
+  <description>The lifetime of access tokens in minutes.</description>
+</property>
+
+<property>
+  <name>dfs.datanode.data.dir</name>
+  <value>file://${hadoop.tmp.dir}/dfs/data</value>
+  <description>Determines where on the local filesystem an DFS data node
+  should store its blocks.  If this is a comma-delimited
+  list of directories, then data will be stored in all named
+  directories, typically on different devices.
+  Directories that do not exist are ignored.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.data.dir.perm</name>
+  <value>755</value>
+  <description>Permissions for the directories on on the local filesystem where
+  the DFS data node store its blocks. The permissions can either be octal or
+  symbolic.</description>
+</property>
+
+<property>
+  <name>dfs.replication</name>
+  <value>3</value>
+  <description>Default block replication. 
+  The actual number of replications can be specified when the file is created.
+  The default is used if replication is not specified in create time.
+  </description>
+</property>
+
+<property>
+  <name>dfs.replication.max</name>
+  <value>512</value>
+  <description>Maximal block replication. 
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.replication.min</name>
+  <value>1</value>
+  <description>Minimal block replication. 
+  </description>
+</property>
+
+<property>
+  <name>dfs.blocksize</name>
+  <value>67108864</value>
+  <description>The default block size for new files.</description>
+</property>
+
+<property>
+  <name>dfs.client.block.write.retries</name>
+  <value>3</value>
+  <description>The number of retries for writing blocks to the data nodes, 
+  before we signal failure to the application.
+  </description>
+</property>
+
+<property>
+  <name>dfs.blockreport.intervalMsec</name>
+  <value>21600000</value>
+  <description>Determines block reporting interval in milliseconds.</description>
+</property>
+
+<property>
+  <name>dfs.blockreport.initialDelay</name>  <value>0</value>
+  <description>Delay for first block report in seconds.</description>
+</property>
+
+<property>
+  <name>dfs.datanode.directoryscan.interval</name>
+  <value>21600</value>
+  <description>Interval in seconds for Datanode to scan data directories and
+  reconcile the difference between blocks in memory and on the disk.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.directoryscan.threads</name>
+  <value>1</value>
+  <description>How many threads should the threadpool used to compile reports
+  for volumes in parallel have.
+  </description>
+</property>
+
+<property>
+  <name>dfs.heartbeat.interval</name>
+  <value>3</value>
+  <description>Determines datanode heartbeat interval in seconds.</description>
+</property>
+
+<property>
+  <name>dfs.namenode.handler.count</name>
+  <value>10</value>
+  <description>The number of server threads for the namenode.</description>
+</property>
+
+<property>
+  <name>dfs.namenode.safemode.threshold-pct</name>
+  <value>0.999f</value>
+  <description>
+    Specifies the percentage of blocks that should satisfy 
+    the minimal replication requirement defined by dfs.namenode.replication.min.
+    Values less than or equal to 0 mean not to start in safe mode.
+    Values greater than 1 will make safe mode permanent.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.safemode.extension</name>
+  <value>30000</value>
+  <description>
+    Determines extension of safe mode in milliseconds 
+    after the threshold level is reached.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.balance.bandwidthPerSec</name>
+  <value>1048576</value>
+  <description>
+        Specifies the maximum amount of bandwidth that each datanode
+        can utilize for the balancing purpose in term of
+        the number of bytes per second.
+  </description>
+</property>
+
+<property>
+  <name>dfs.hosts</name>
+  <value></value>
+  <description>Names a file that contains a list of hosts that are
+  permitted to connect to the namenode. The full pathname of the file
+  must be specified.  If the value is empty, all hosts are
+  permitted.</description>
+</property>
+
+<property>
+  <name>dfs.hosts.exclude</name>
+  <value></value>
+  <description>Names a file that contains a list of hosts that are
+  not permitted to connect to the namenode.  The full pathname of the
+  file must be specified.  If the value is empty, no hosts are
+  excluded.</description>
+</property> 
+
+<property>
+  <name>dfs.namenode.max.objects</name>
+  <value>0</value>
+  <description>The maximum number of files, directories and blocks
+  dfs supports. A value of zero indicates no limit to the number
+  of objects that dfs supports.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.decommission.interval</name>
+  <value>30</value>
+  <description>Namenode periodicity in seconds to check if decommission is 
+  complete.</description>
+</property>
+
+<property>
+  <name>dfs.namenode.decommission.nodes.per.interval</name>
+  <value>5</value>
+  <description>The number of nodes namenode checks if decommission is complete
+  in each dfs.namenode.decommission.interval.</description>
+</property>
+
+<property>
+  <name>dfs.namenode.replication.interval</name>
+  <value>3</value>
+  <description>The periodicity in seconds with which the namenode computes 
+  repliaction work for datanodes. </description>
+</property>
+
+<property>
+  <name>dfs.namenode.accesstime.precision</name>
+  <value>3600000</value>
+  <description>The access time for HDFS file is precise upto this value. 
+               The default value is 1 hour. Setting a value of 0 disables
+               access times for HDFS.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.plugins</name>
+  <value></value>
+  <description>Comma-separated list of datanode plug-ins to be activated.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.plugins</name>
+  <value></value>
+  <description>Comma-separated list of namenode plug-ins to be activated.
+  </description>
+</property>
+
+<property>
+  <name>dfs.stream-buffer-size</name>
+  <value>4096</value>
+  <description>The size of buffer to stream files.
+  The size of this buffer should probably be a multiple of hardware
+  page size (4096 on Intel x86), and it determines how much data is
+  buffered during read and write operations.</description>
+</property>
+
+<property>
+  <name>dfs.bytes-per-checksum</name>
+  <value>512</value>
+  <description>The number of bytes per checksum.  Must not be larger than
+  dfs.stream-buffer-size</description>
+</property>
+
+<property>
+  <name>dfs.client-write-packet-size</name>
+  <value>65536</value>
+  <description>Packet size for clients to write</description>
+</property>
+
+<property>
+  <name>dfs.namenode.checkpoint.dir</name>
+  <value>file://${hadoop.tmp.dir}/dfs/namesecondary</value>
+  <description>Determines where on the local filesystem the DFS secondary
+      name node should store the temporary images to merge.
+      If this is a comma-delimited list of directories then the image is
+      replicated in all of the directories for redundancy.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.checkpoint.edits.dir</name>
+  <value>${dfs.namenode.checkpoint.dir}</value>
+  <description>Determines where on the local filesystem the DFS secondary
+      name node should store the temporary edits to merge.
+      If this is a comma-delimited list of directoires then teh edits is
+      replicated in all of the directoires for redundancy.
+      Default value is same as dfs.namenode.checkpoint.dir
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.checkpoint.period</name>
+  <value>3600</value>
+  <description>The number of seconds between two periodic checkpoints.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.checkpoint.size</name>
+  <value>67108864</value>
+  <description>The size of the current edit log (in bytes) that triggers
+       a periodic checkpoint even if the dfs.namenode.checkpoint.period hasn't expired.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.delegation.key.update-interval</name>
+  <value>86400</value>
+  <description>The update frequency of master key for delegation tokens 
+       in the namenode.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.delegation.token.max-lifetime</name>
+  <value>604800</value>
+  <description>The maximum lifetime for which a delegation token is valid.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.delegation.token.renew-interval</name>
+  <value>86400</value>
+  <description>The frequency of renewal of delegation token.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.failed.volumes.tolerated</name>
+  <value>0</value>
+  <description>The number of volumes that are allowed to
+  fail before a datanode stops offering service. By default
+  any volume failure will cause a datanode to shutdown.
+  </description>
+</property>
+
+</configuration>

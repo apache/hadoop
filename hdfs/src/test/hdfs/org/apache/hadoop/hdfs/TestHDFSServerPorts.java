@@ -1,0 +1,366 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.hdfs;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.UnknownHostException;
+
+import junit.framework.TestCase;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.namenode.BackupNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.net.DNS;
+
+/**
+ * This test checks correctness of port usage by hdfs components:
+ * NameNode, DataNode, SecondaryNamenode and BackupNode.
+ * 
+ * The correct behavior is:<br> 
+ * - when a specific port is provided the server must either start on that port 
+ * or fail by throwing {@link java.net.BindException}.<br>
+ * - if the port = 0 (ephemeral) then the server should choose 
+ * a free port and start on it.
+ */
+public class TestHDFSServerPorts extends TestCase {
+  public static final Log LOG = LogFactory.getLog(TestHDFSServerPorts.class);
+  
+  public static final String NAME_NODE_HOST = "localhost:";
+  public static final String NAME_NODE_HTTP_HOST = getFullHostName() + ":";
+
+  Configuration config;
+  File hdfsDir;
+
+  /**
+   * Attempt to determine the fully qualified domain name for this host 
+   * to compare during testing.
+   * 
+   * This is necessary because in order for the BackupNode test to correctly 
+   * work, the namenode must have its http server started with the fully 
+   * qualified address, as this is the one the backupnode will attempt to start
+   * on as well.
+   * 
+   * @return Fully qualified hostname, or 127.0.0.1 if can't determine
+   */
+  private static String getFullHostName() {
+    try {
+      return DNS.getDefaultHost("default");
+    } catch (UnknownHostException e) {
+      LOG.warn("Unable to determine hostname.  May interfere with obtaining " +
+          "valid test results.");
+      return "127.0.0.1";
+    }
+  }
+  
+  /**
+   * Get base directory these tests should run in.
+   */
+  private String getTestingDir() {
+    return System.getProperty("test.build.data", "build/test/data");
+  }
+  
+  /**
+   * Start the namenode.
+   */
+  public NameNode startNameNode() throws IOException {
+    String dataDir = getTestingDir();
+    hdfsDir = new File(dataDir, "dfs");
+    if ( hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir) ) {
+      throw new IOException("Could not delete hdfs directory '" + hdfsDir + "'");
+    }
+    config = new HdfsConfiguration();
+    config.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+        fileAsURI(new File(hdfsDir, "name1")).toString());
+    FileSystem.setDefaultUri(config, "hdfs://"+NAME_NODE_HOST + "0");
+    config.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, NAME_NODE_HTTP_HOST + "0");
+    NameNode.format(config);
+
+    String[] args = new String[] {};
+    // NameNode will modify config with the ports it bound to
+    return NameNode.createNameNode(args, config);
+  }
+
+  /**
+   * Start the BackupNode
+   */
+  public BackupNode startBackupNode(Configuration conf) throws IOException {
+    String dataDir = getTestingDir();
+    // Set up testing environment directories
+    hdfsDir = new File(dataDir, "backupNode");
+    if ( hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir) ) {
+      throw new IOException("Could not delete hdfs directory '" + hdfsDir + "'");
+    }
+    File currDir = new File(hdfsDir, "name2");
+    File currDir2 = new File(currDir, "current");
+    File currDir3 = new File(currDir, "image");
+    
+    assertTrue(currDir.mkdirs());
+    assertTrue(currDir2.mkdirs());
+    assertTrue(currDir3.mkdirs());
+    
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+        fileAsURI(new File(hdfsDir, "name2")).toString());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, "${dfs.name.dir}");
+    
+    // Start BackupNode
+    String[] args = new String [] { StartupOption.BACKUP.getName() };
+    BackupNode bu = (BackupNode)NameNode.createNameNode(args, conf);
+
+    return bu;
+  }
+  
+  /**
+   * Start the datanode.
+   */
+  public DataNode startDataNode(int index, Configuration config) 
+  throws IOException {
+    String dataDir = getTestingDir();
+    File dataNodeDir = new File(dataDir, "data-" + index);
+    config.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dataNodeDir.getPath());
+
+    String[] args = new String[] {};
+    // NameNode will modify config with the ports it bound to
+    return DataNode.createDataNode(args, config);
+  }
+
+  /**
+   * Stop the datanode.
+   */
+  public void stopDataNode(DataNode dn) {
+    if (dn != null) {
+      dn.shutdown();
+    }
+  }
+
+  public void stopNameNode(NameNode nn) {
+    if (nn != null) {
+      nn.stop();
+    }
+  }
+
+  public Configuration getConfig() {
+    return this.config;
+  }
+
+  /**
+   * Check whether the namenode can be started.
+   */
+  private boolean canStartNameNode(Configuration conf) throws IOException {
+    NameNode nn2 = null;
+    try {
+      nn2 = NameNode.createNameNode(new String[]{}, conf);
+    } catch(IOException e) {
+      if (e instanceof java.net.BindException)
+        return false;
+      throw e;
+    } finally {
+      stopNameNode(nn2);
+    }
+    return true;
+  }
+
+  /**
+   * Check whether the datanode can be started.
+   */
+  private boolean canStartDataNode(Configuration conf) throws IOException {
+    DataNode dn = null;
+    try {
+      dn = DataNode.createDataNode(new String[]{}, conf);
+    } catch(IOException e) {
+      if (e instanceof java.net.BindException)
+        return false;
+      throw e;
+    } finally {
+      if(dn != null) dn.shutdown();
+    }
+    return true;
+  }
+
+  /**
+   * Check whether the secondary name-node can be started.
+   */
+  @SuppressWarnings("deprecation")
+  private boolean canStartSecondaryNode(Configuration conf) throws IOException {
+    // Using full name allows us not to have to add deprecation tag to
+    // entire source file.
+    org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode sn = null;
+    try {
+      sn = new org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode(conf);
+    } catch(IOException e) {
+      if (e instanceof java.net.BindException)
+        return false;
+      throw e;
+    } finally {
+      if(sn != null) sn.shutdown();
+    }
+    return true;
+  }
+  
+  /**
+   * Check whether the BackupNode can be started.
+   */
+  private boolean canStartBackupNode(Configuration conf) throws IOException {
+    BackupNode bn = null;
+
+    try {
+      bn = startBackupNode(conf);
+    } catch(IOException e) {
+      if (e instanceof java.net.BindException)
+        return false;
+      throw e;
+    } finally {
+      if(bn != null) bn.stop();
+    }
+
+    return true;
+  }
+
+  /**
+   * Verify namenode port usage.
+   */
+  public void testNameNodePorts() throws Exception {
+    NameNode nn = null;
+    try {
+      nn = startNameNode();
+
+      // start another namenode on the same port
+      Configuration conf2 = new HdfsConfiguration(config);
+      conf2.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+          fileAsURI(new File(hdfsDir, "name2")).toString());
+      NameNode.format(conf2);
+      boolean started = canStartNameNode(conf2);
+      assertFalse(started); // should fail
+
+      // start on a different main port
+      FileSystem.setDefaultUri(conf2, "hdfs://"+NAME_NODE_HOST + "0");
+      started = canStartNameNode(conf2);
+      assertFalse(started); // should fail again
+
+      // reset conf2 since NameNode modifies it
+      FileSystem.setDefaultUri(conf2, "hdfs://"+NAME_NODE_HOST + "0");
+      // different http port
+      conf2.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, NAME_NODE_HTTP_HOST + "0");
+      started = canStartNameNode(conf2);
+      assertTrue(started); // should start now
+    } finally {
+      stopNameNode(nn);
+    }
+  }
+
+  /**
+   * Verify datanode port usage.
+   */
+  public void testDataNodePorts() throws Exception {
+    NameNode nn = null;
+    try {
+      nn = startNameNode();
+
+      // start data-node on the same port as name-node
+      Configuration conf2 = new HdfsConfiguration(config);
+      conf2.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, new File(hdfsDir, "data").getPath());
+      conf2.set("dfs.datanode.address",
+                FileSystem.getDefaultUri(config).getAuthority());
+      conf2.set("dfs.datanode.http.address", NAME_NODE_HTTP_HOST + "0");
+      boolean started = canStartDataNode(conf2);
+      assertFalse(started); // should fail
+
+      // bind http server to the same port as name-node
+      conf2.set("dfs.datanode.address", NAME_NODE_HOST + "0");
+      conf2.set("dfs.datanode.http.address", 
+                config.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY));
+      started = canStartDataNode(conf2);
+      assertFalse(started); // should fail
+    
+      // both ports are different from the name-node ones
+      conf2.set("dfs.datanode.address", NAME_NODE_HOST + "0");
+      conf2.set("dfs.datanode.http.address", NAME_NODE_HTTP_HOST + "0");
+      conf2.set("dfs.datanode.ipc.address", NAME_NODE_HOST + "0");
+      started = canStartDataNode(conf2);
+      assertTrue(started); // should start now
+    } finally {
+      stopNameNode(nn);
+    }
+  }
+
+  /**
+   * Verify secondary namenode port usage.
+   */
+  public void testSecondaryNodePorts() throws Exception {
+    NameNode nn = null;
+    try {
+      nn = startNameNode();
+
+      // bind http server to the same port as name-node
+      Configuration conf2 = new HdfsConfiguration(config);
+      conf2.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, 
+                config.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY));
+      LOG.info("= Starting 1 on: " + 
+                                 conf2.get(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY));
+      boolean started = canStartSecondaryNode(conf2);
+      assertFalse(started); // should fail
+
+      // bind http server to a different port
+      conf2.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, NAME_NODE_HTTP_HOST + "0");
+      LOG.info("= Starting 2 on: " + 
+                                 conf2.get(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY));
+      started = canStartSecondaryNode(conf2);
+      assertTrue(started); // should start now
+    } finally {
+      stopNameNode(nn);
+    }
+  }
+    
+    /**
+     * Verify BackupNode port usage.
+     */
+    public void testBackupNodePorts() throws Exception {
+      NameNode nn = null;
+      try {
+        nn = startNameNode();
+
+        // bind http server to the same port as name-node
+        Configuration backup_config = new HdfsConfiguration(config);
+        backup_config.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, 
+                                        backup_config.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY));
+
+        LOG.info("= Starting 1 on: " + 
+                                  backup_config.get(DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY));
+
+        assertFalse("Backup started on same port as Namenode", 
+                           canStartBackupNode(backup_config)); // should fail
+
+        // bind http server to a different port
+        backup_config.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, NAME_NODE_HTTP_HOST + "0");
+        LOG.info("= Starting 2 on: " + 
+                                  backup_config.get(DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY));
+
+        assertTrue(canStartBackupNode(backup_config)); // should start now
+      } finally {
+        stopNameNode(nn);
+      }
+  }
+}

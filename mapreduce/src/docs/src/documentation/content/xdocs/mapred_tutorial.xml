@@ -1,0 +1,2911 @@
+<?xml version="1.0"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+
+<document>
+  
+  <header>
+    <title>MapReduce Tutorial</title>
+  </header>
+  
+  <body>
+
+    <section>
+      <title>Purpose</title>
+      
+      <p>This document comprehensively describes all user-facing facets of the 
+      Hadoop MapReduce framework and serves as a tutorial.
+      </p>
+    </section>
+    
+    <section>
+      <title>Prerequisites</title>
+      
+      <p>Make sure Hadoop is installed, configured and running. See these guides:
+      </p> 
+      <ul>
+        <li>
+          <a href="ext:single-node-setup">Single Node Setup</a> for first-time users.
+        </li>
+        <li>
+          <a href="ext:cluster-setup">Cluster Setup</a> for large, distributed clusters.
+        </li>
+      </ul>
+    </section>
+    
+    <section>
+      <title>Overview</title>
+      
+      <p>Hadoop MapReduce is a software framework for easily writing 
+      applications which process vast amounts of data (multi-terabyte data-sets) 
+      in-parallel on large clusters (thousands of nodes) of commodity 
+      hardware in a reliable, fault-tolerant manner.</p>
+      
+      <p>A MapReduce <em>job</em> usually splits the input data-set into 
+      independent chunks which are processed by the <em>map tasks</em> in a
+      completely parallel manner. The framework sorts the outputs of the maps, 
+      which are then input to the <em>reduce tasks</em>. Typically both the 
+      input and the output of the job are stored in a file-system. The framework 
+      takes care of scheduling tasks, monitoring them and re-executes the failed
+      tasks.</p>
+      
+      <p>Typically the compute nodes and the storage nodes are the same, that is, 
+      the MapReduce framework and the 
+      <a href="http://hadoop.apache.org/hdfs/docs/current/index.html">Hadoop
+        Distributed File System</a> (HDFS) 
+      are running on the same set of nodes. This configuration
+      allows the framework to effectively schedule tasks on the nodes where data 
+      is already present, resulting in very high aggregate bandwidth across the 
+      cluster.</p>
+      
+      <p>The MapReduce framework consists of a single master 
+      <code>JobTracker</code> and one slave <code>TaskTracker</code> per 
+      cluster-node. The master is responsible for scheduling the jobs' component 
+      tasks on the slaves, monitoring them and re-executing the failed tasks. The 
+      slaves execute the tasks as directed by the master.</p>
+      
+      <p>Minimally, applications specify the input/output locations and supply
+      <em>map</em> and <em>reduce</em> functions via implementations of
+      appropriate interfaces and/or abstract-classes. These, and other job 
+      parameters, comprise the <em>job configuration</em>. The Hadoop 
+      <em>job client</em> then submits the job (jar/executable etc.) and 
+      configuration to the <code>JobTracker</code> which then assumes the 
+      responsibility of distributing the software/configuration to the slaves, 
+      scheduling tasks and monitoring them, providing status and diagnostic 
+      information to the job-client.</p>
+      
+      <p>Although the Hadoop framework is implemented in Java<sup>TM</sup>, 
+      MapReduce applications need not be written in Java.</p>
+      <ul>
+        <li>
+          <a href="ext:api/org/apache/hadoop/streaming/package-summary">
+          Hadoop Streaming</a> is a utility which allows users to create and run 
+          jobs with any executables (e.g. shell utilities) as the mapper and/or 
+          the reducer.
+        </li>
+        <li>
+          <a href="ext:api/org/apache/hadoop/mapred/pipes/package-summary">
+          Hadoop Pipes</a> is a <a href="http://www.swig.org/">SWIG</a>-
+          compatible <em>C++ API</em> to implement MapReduce applications (non 
+          JNI<sup>TM</sup> based).
+        </li>
+      </ul>
+    </section>
+    
+    <section>
+      <title>Inputs and Outputs</title>
+
+      <p>The MapReduce framework operates exclusively on 
+      <code>&lt;key, value&gt;</code> pairs, that is, the framework views the 
+      input to the job as a set of <code>&lt;key, value&gt;</code> pairs and 
+      produces a set of <code>&lt;key, value&gt;</code> pairs as the output of 
+      the job, conceivably of different types.</p> 
+      
+      <p>The <code>key</code> and <code>value</code> classes have to be 
+        serializable by the framework. Several serialization systems exists; the
+        default serialization mechanism requires keys and values to implement
+        the
+      <a href="ext:api/org/apache/hadoop/io/writable">Writable</a> interface.
+      Additionally, the <code>key</code> classes must facilitate sorting by the
+      framework; a straightforward means to do so is for them to implement the
+      <a href="ext:api/org/apache/hadoop/io/writablecomparable">
+        WritableComparable</a> interface.
+      </p>
+
+      <p>Input and Output types of a MapReduce job:</p>
+      <p>
+        (input) <code>&lt;k1, v1&gt;</code> 
+        -&gt; 
+        <strong>map</strong> 
+        -&gt; 
+        <code>&lt;k2, v2&gt;</code> 
+        -&gt; 
+        <strong>combine*</strong> 
+        -&gt; 
+        <code>&lt;k2, v2&gt;</code> 
+        -&gt; 
+        <strong>reduce</strong> 
+        -&gt; 
+        <code>&lt;k3, v3&gt;</code> (output)
+      </p>
+      <p>Note that the combine phase may run zero or more times in this
+        process.</p>
+    </section>
+    
+    <section>
+      <title>Example: WordCount v1.0</title>
+      
+      <p>Before we jump into the details, lets walk through an example MapReduce 
+      application to get a flavour for how they work.</p>
+      
+      <p><code>WordCount</code> is a simple application that counts the number of
+      occurences of each word in a given input set.</p>
+      
+      <p>This example works with a 
+      pseudo-distributed (<a href="ext:single-node-setup">Single Node Setup</a>) 
+     or fully-distributed (<a href="ext:cluster-setup">Cluster Setup</a>) 
+      Hadoop installation.</p>   
+      
+      <section>
+        <title>Source Code</title>
+
+        <table>
+          <tr>
+            <th></th>
+            <th>WordCount.java</th>
+          </tr>
+<tr><td>1.</td><td><code>package&nbsp;org.myorg;
+</code></td></tr>
+<tr><td>2.</td><td><code>
+</code></td></tr>
+<tr><td>3.</td><td><code>import&nbsp;java.io.IOException;
+</code></td></tr>
+<tr><td>4.</td><td><code>import&nbsp;java.util.*;
+</code></td></tr>
+<tr><td>5.</td><td><code>
+</code></td></tr>
+<tr><td>6.</td><td><code>import&nbsp;org.apache.hadoop.fs.Path;
+</code></td></tr>
+<tr><td>7.</td><td><code>import&nbsp;org.apache.hadoop.conf.*;
+</code></td></tr>
+<tr><td>8.</td><td><code>import&nbsp;org.apache.hadoop.io.*;
+</code></td></tr>
+<tr><td>9.</td><td><code>import&nbsp;org.apache.hadoop.mapreduce.*;
+</code></td></tr>
+<tr><td>10.</td><td><code>import&nbsp;org.apache.hadoop.mapreduce.lib.input.*;
+</code></td></tr>
+<tr><td>11.</td><td><code>import&nbsp;org.apache.hadoop.mapreduce.lib.output.*;
+</code></td></tr>
+<tr><td>12.</td><td><code>import&nbsp;org.apache.hadoop.util.*;
+</code></td></tr>
+<tr><td>13.</td><td><code>
+</code></td></tr>
+<tr><td>14.</td><td><code>public&nbsp;class&nbsp;WordCount&nbsp;extends&nbsp;Configured&nbsp;implements&nbsp;Tool&nbsp;{
+</code></td></tr>
+<tr><td>15.</td><td><code>
+</code></td></tr>
+<tr><td>16.</td><td><code>&nbsp;&nbsp;&nbsp;public&nbsp;static&nbsp;class&nbsp;Map
+</code></td></tr>
+<tr><td>17.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;extends&nbsp;Mapper&lt;LongWritable,&nbsp;Text,&nbsp;Text,&nbsp;IntWritable&gt;&nbsp;{
+</code></td></tr>
+<tr><td>18.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;private&nbsp;final&nbsp;static&nbsp;IntWritable&nbsp;one&nbsp;=&nbsp;new&nbsp;IntWritable(1);
+</code></td></tr>
+<tr><td>19.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;private&nbsp;Text&nbsp;word&nbsp;=&nbsp;new&nbsp;Text();
+</code></td></tr>
+<tr><td>20.</td><td><code>
+</code></td></tr>
+<tr><td>21.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;public&nbsp;void&nbsp;map(LongWritable&nbsp;key,&nbsp;Text&nbsp;value,&nbsp;Context&nbsp;context)
+</code></td></tr>
+<tr><td>22.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;throws&nbsp;IOException,&nbsp;InterruptedException&nbsp;{
+</code></td></tr>
+<tr><td>23.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String&nbsp;line&nbsp;=&nbsp;value.toString();
+</code></td></tr>
+<tr><td>24.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;StringTokenizer&nbsp;tokenizer&nbsp;=&nbsp;new&nbsp;StringTokenizer(line);
+</code></td></tr>
+<tr><td>25.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;while&nbsp;(tokenizer.hasMoreTokens())&nbsp;{
+</code></td></tr>
+<tr><td>26.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;word.set(tokenizer.nextToken());
+</code></td></tr>
+<tr><td>27.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.write(word,&nbsp;one);
+</code></td></tr>
+<tr><td>28.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>29.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>30.</td><td><code>&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>31.</td><td><code>
+</code></td></tr>
+<tr><td>32.</td><td><code>&nbsp;&nbsp;&nbsp;public&nbsp;static&nbsp;class&nbsp;Reduce
+</code></td></tr>
+<tr><td>33.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;extends&nbsp;Reducer&lt;Text,&nbsp;IntWritable,&nbsp;Text,&nbsp;IntWritable&gt;&nbsp;{
+</code></td></tr>
+<tr><td>34.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;public&nbsp;void&nbsp;reduce(Text&nbsp;key,&nbsp;Iterable&lt;IntWritable&gt;&nbsp;values,
+</code></td></tr>
+<tr><td>35.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Context&nbsp;context)&nbsp;throws&nbsp;IOException,&nbsp;InterruptedException&nbsp;{
+</code></td></tr>
+<tr><td>36.</td><td><code>
+</code></td></tr>
+<tr><td>37.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;int&nbsp;sum&nbsp;=&nbsp;0;
+</code></td></tr>
+<tr><td>38.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for&nbsp;(IntWritable&nbsp;val&nbsp;:&nbsp;values)&nbsp;{
+</code></td></tr>
+<tr><td>39.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sum&nbsp;+=&nbsp;val.get();
+</code></td></tr>
+<tr><td>40.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>41.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.write(key,&nbsp;new&nbsp;IntWritable(sum));
+</code></td></tr>
+<tr><td>42.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>43.</td><td><code>&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>44.</td><td><code>
+</code></td></tr>
+<tr><td>45.</td><td><code>&nbsp;&nbsp;&nbsp;public&nbsp;int&nbsp;run(String&nbsp;[]&nbsp;args)&nbsp;throws&nbsp;Exception&nbsp;{
+</code></td></tr>
+<tr><td>46.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Job&nbsp;job&nbsp;=&nbsp;new&nbsp;Job(getConf());
+</code></td></tr>
+<tr><td>47.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job.setJarByClass(WordCount.class);
+</code></td></tr>
+<tr><td>48.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job.setJobName(&quot;wordcount&quot;);
+</code></td></tr>
+<tr><td>49.</td><td><code>
+</code></td></tr>
+<tr><td>50.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job.setOutputKeyClass(Text.class);
+</code></td></tr>
+<tr><td>51.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job.setOutputValueClass(IntWritable.class);
+</code></td></tr>
+<tr><td>52.</td><td><code>
+</code></td></tr>
+<tr><td>53.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job.setMapperClass(Map.class);
+</code></td></tr>
+<tr><td>54.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job.setCombinerClass(Reduce.class);
+</code></td></tr>
+<tr><td>55.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job.setReducerClass(Reduce.class);
+</code></td></tr>
+<tr><td>56.</td><td><code>
+</code></td></tr>
+<tr><td>57.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job.setInputFormatClass(TextInputFormat.class);
+</code></td></tr>
+<tr><td>58.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job.setOutputFormatClass(TextOutputFormat.class);
+</code></td></tr>
+<tr><td>59.</td><td><code>
+</code></td></tr>
+<tr><td>60.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FileInputFormat.setInputPaths(job,&nbsp;new&nbsp;Path(args[0]));
+</code></td></tr>
+<tr><td>61.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FileOutputFormat.setOutputPath(job,&nbsp;new&nbsp;Path(args[1]));
+</code></td></tr>
+<tr><td>62.</td><td><code>
+</code></td></tr>
+<tr><td>63.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolean&nbsp;success&nbsp;=&nbsp;job.waitForCompletion(true);
+</code></td></tr>
+<tr><td>64.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return&nbsp;success&nbsp;?&nbsp;0&nbsp;:&nbsp;1;
+</code></td></tr>
+<tr><td>65.</td><td><code>&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>66.</td><td><code>
+</code></td></tr>
+<tr><td>67.</td><td><code>&nbsp;&nbsp;&nbsp;public&nbsp;static&nbsp;void&nbsp;main(String[]&nbsp;args)&nbsp;throws&nbsp;Exception&nbsp;{
+</code></td></tr>
+<tr><td>68.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;int&nbsp;ret&nbsp;=&nbsp;ToolRunner.run(new&nbsp;WordCount(),&nbsp;args);
+</code></td></tr>
+<tr><td>69.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.exit(ret);
+</code></td></tr>
+<tr><td>70.</td><td><code>&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>71.</td><td><code>}
+</code></td></tr>
+<tr><td>72.</td><td><code>
+</code></td></tr>
+        </table>
+      </section>
+        
+      <section>
+        <title>Usage</title>
+        
+        <p>Assuming <code>HADOOP_HOME</code> is the root of the installation and 
+        <code>HADOOP_VERSION</code> is the Hadoop version installed, compile 
+        <code>WordCount.java</code> and create a jar:</p>
+        <p>
+          <code>$ mkdir wordcount_classes</code><br/>
+          <code>
+            $ javac -classpath
+            ${HADOOP_HOME}/hadoop-core-${HADOOP_VERSION}.jar:${HADOOP_HOME}/hadoop-mapred-${HADOOP_VERSION}.jar:${HADOOP_HOME}/hadoop-hdfs-${HADOOP_VERSION}.jar
+              -d wordcount_classes WordCount.java
+          </code><br/>
+          <code>$ jar -cvf /user/joe/wordcount.jar -C wordcount_classes/ .</code> 
+        </p>
+        
+        <p>Assuming that:</p>
+        <ul>
+          <li>
+            <code>/user/joe/wordcount/input</code>  - input directory in HDFS
+          </li>
+          <li>
+            <code>/user/joe/wordcount/output</code> - output directory in HDFS
+          </li>
+        </ul>
+        
+        <p>Sample text-files as input:</p>
+        <p>
+          <code>$ bin/hadoop fs -ls /user/joe/wordcount/input/</code><br/>
+          <code>/user/joe/wordcount/input/file01</code><br/>
+          <code>/user/joe/wordcount/input/file02</code><br/>
+          <br/>
+          <code>$ bin/hadoop fs -cat /user/joe/wordcount/input/file01</code><br/>
+          <code>Hello World Bye World</code><br/>
+          <br/>
+          <code>$ bin/hadoop fs -cat /user/joe/wordcount/input/file02</code><br/>
+          <code>Hello Hadoop Goodbye Hadoop</code>
+        </p>
+
+        <p>Run the application:</p>
+        <p>
+          <code>
+            $ bin/hadoop jar /user/joe/wordcount.jar org.myorg.WordCount 
+              /user/joe/wordcount/input /user/joe/wordcount/output 
+          </code>
+        </p>
+
+        <p>Output:</p>
+        <p>
+          <code>
+            $ bin/hadoop fs -cat /user/joe/wordcount/output/part-r-00000
+          </code>
+          <br/>
+          <code>Bye    1</code><br/>
+          <code>Goodbye    1</code><br/>
+          <code>Hadoop    2</code><br/>
+          <code>Hello    2</code><br/>
+          <code>World    2</code><br/>
+        </p>
+
+      </section>
+      <section>
+        <title>Bundling a data payload with your application</title>
+        
+        <p> Applications can specify a comma-separated list of paths which
+        would be present in the current working directory of the task 
+        using the option <code>-files</code>. The <code>-libjars</code>
+        option allows applications to add jars to the classpaths of the maps
+        and reduces. The option <code>-archives</code> allows them to pass 
+        comma separated list of archives as arguments. These archives are 
+        unarchived and a link with name of the archive is created in 
+        the current working directory of tasks. The mechanism that
+        provides this functionality is called the <em>distributed cache</em>.
+        More details about the command line options surrounding job launching
+        and control of the distributed cache are available at 
+        <a href="ext:commands-manual"> Hadoop Commands Guide.</a></p>
+        
+        <p>Hadoop ships with some example code in a jar precompiled for you;
+        one of these is (another) wordcount program. Here's an example
+        invocation of the <code>wordcount</code> example with 
+        <code>-libjars</code>, <code>-files</code> and <code>-archives</code>:
+        <br/>
+        <code> hadoop jar hadoop-examples.jar wordcount -files cachefile.txt 
+        -libjars mylib.jar -archives myarchive.zip input output </code> 
+         Here, myarchive.zip will be placed and unzipped into a directory 
+         by the name "myarchive.zip"
+        </p>
+        
+        <p> Users can specify a different symbolic name for 
+        files and archives passed through -files and -archives option, using #.
+        </p>
+        
+        <p> For example,
+        <code> hadoop jar hadoop-examples.jar wordcount 
+        -files dir1/dict.txt#dict1,dir2/dict.txt#dict2 
+        -archives mytar.tgz#tgzdir input output </code>
+        Here, the files dir1/dict.txt and dir2/dict.txt can be accessed by 
+        tasks using the symbolic names dict1 and dict2 respectively.
+        And the archive mytar.tgz will be placed and unarchived into a 
+        directory by the name tgzdir.
+        </p> 
+
+        <p>The distributed cache is also described in greater detail further
+        down in this tutorial.</p>
+      </section>
+      
+      <section>
+        <title>Walk-through</title>
+        
+        <p>This section describes the operation of the <code>WordCount</code>
+        application shown earlier in this tutorial.</p> 
+        
+      <p>The <a href="ext:api/org/apache/hadoop/mapreduce/mapper"
+          ><code>Mapper</code></a>
+        implementation (lines 16-30), via the 
+        <code>map</code> method (lines 21-29), processes one line at a time,
+        as provided by the specified <a
+          href="ext:api/org/apache/hadoop/mapreduce/lib/input/textinputformat"
+          ><code>TextInputFormat</code></a> (line 57). 
+        It then splits the line into tokens separated by whitespaces, via the 
+        <code>StringTokenizer</code>, and emits a key-value pair of 
+        <code>&lt; &lt;word&gt;, 1&gt;</code>.</p>
+        
+        <p>
+          For the given sample input the first map emits:<br/>
+          <code>&lt; Hello, 1&gt;</code><br/>
+          <code>&lt; World, 1&gt;</code><br/>
+          <code>&lt; Bye, 1&gt;</code><br/>
+          <code>&lt; World, 1&gt;</code><br/>
+        </p>
+        
+        <p>
+          The second map emits:<br/>
+          <code>&lt; Hello, 1&gt;</code><br/>
+          <code>&lt; Hadoop, 1&gt;</code><br/>
+          <code>&lt; Goodbye, 1&gt;</code><br/>
+          <code>&lt; Hadoop, 1&gt;</code><br/>
+        </p>
+        
+        <p>We'll learn more about the number of maps spawned for a given job, and
+        how to control them in a fine-grained manner, a bit later in the 
+        tutorial.</p>
+        
+        <p><code>WordCount</code> also specifies a <code>combiner</code> (line 
+        54). Hence, the output of each map is passed through the local combiner 
+        (which is same as the <a
+          href="ext:api/org/apache/hadoop/mapreduce/reducer"
+          ><code>Reducer</code></a>
+        as per the job configuration) for local aggregation, after being
+        sorted on the <em>key</em>s.</p>
+
+        <p>
+          The output of the first map:<br/>
+          <code>&lt; Bye, 1&gt;</code><br/>
+          <code>&lt; Hello, 1&gt;</code><br/>
+          <code>&lt; World, 2&gt;</code><br/>
+        </p>
+        
+        <p>
+          The output of the second map:<br/>
+          <code>&lt; Goodbye, 1&gt;</code><br/>
+          <code>&lt; Hadoop, 2&gt;</code><br/>
+          <code>&lt; Hello, 1&gt;</code><br/>
+        </p>
+
+        <p>The <a href="ext:api/org/apache/hadoop/mapreduce/reducer"
+            ><code>Reducer</code></a>
+        implementation (lines 32-43), via the
+        <code>reduce</code> method (lines 34-42) just sums up the values,
+        which are the occurence counts for each key (i.e. words in this
+        example).
+        </p>
+        
+        <p>
+          Thus the output of the job is:<br/>
+          <code>&lt; Bye, 1&gt;</code><br/>
+          <code>&lt; Goodbye, 1&gt;</code><br/>
+          <code>&lt; Hadoop, 2&gt;</code><br/>
+          <code>&lt; Hello, 2&gt;</code><br/>
+          <code>&lt; World, 2&gt;</code><br/>
+        </p>
+        
+        <p>The <code>run</code> method specifies various facets of the job, such 
+        as the input/output paths (passed via the command line), key/value 
+        types, input/output formats etc., in the <a
+        href="ext:api/org/apache/hadoop/mapreduce/job"><code>Job</code></a>.
+        It then calls the <a
+          href="ext:api/org/apache/hadoop/mapreduce/job/waitforcompletion"
+          ><code>Job.waitForCompletion()</code></a> (line 63)
+        to submit the job to Hadoop and monitor its progress.</p>
+
+        <p>We'll learn more about <a
+        href="ext:api/org/apache/hadoop/mapreduce/job"><code>Job</code></a>,
+      <a href="ext:api/org/apache/hadoop/mapreduce/mapper"
+        ><code>Mapper</code></a>,
+        <a href="ext:api/org/apache/hadoop/util/tool"><code>Tool</code></a>
+        and other interfaces and classes a bit later in the 
+        tutorial.</p>
+      </section>
+    </section>
+    
+    <section>
+      <title>MapReduce - User Interfaces</title>
+      
+      <p>This section provides a reasonable amount of detail on every
+        user-facing aspect of the MapReduce framwork. This should help users
+        implement, configure and tune their jobs in a fine-grained manner.
+        However, please note that the javadoc for each class/interface remains
+        the most comprehensive documentation available; this is only meant to
+        be a tutorial.
+      </p>
+      
+      <p>Let us first take the
+        <a href="ext:api/org/apache/hadoop/mapreduce/mapper"
+          ><code>Mapper</code></a> and
+        <a href="ext:api/org/apache/hadoop/mapreduce/reducer"
+          ><code>Reducer</code></a>
+      classes. Applications typically extend them to provide the 
+      <code>map</code> and <code>reduce</code> methods.</p>
+      
+      <p>We will then discuss other core classes including 
+      <a href="ext:api/org/apache/hadoop/mapreduce/job"><code>Job</code></a>,
+      <a href="ext:api/org/apache/hadoop/mapreduce/partitioner"
+        ><code>Partitioner</code></a>,
+      <a href="ext:api/org/apache/hadoop/mapreduce/mapcontext"
+        ><code>Context</code></a>,
+      <a href="ext:api/org/apache/hadoop/mapreduce/inputformat"
+        ><code>InputFormat</code></a>,
+      <a href="ext:api/org/apache/hadoop/mapreduce/outputformat"
+        ><code>OutputFormat</code></a>,
+      <a href="ext:api/org/apache/hadoop/mapreduce/outputcommitter"
+        ><code>OutputCommitter</code></a>
+      and others.</p>
+      
+      <p>Finally, we will wrap up by discussing some useful features of the
+      framework such as the <code>DistributedCache</code>, 
+      <code>IsolationRunner</code> etc.</p>
+
+      <section>
+        <title>Payload</title>
+        
+        <p>Applications typically extend the <code>Mapper</code> and
+        <code>Reducer</code> classes to provide the <code>map</code> and 
+        <code>reduce</code> methods. These form the core of the job.</p>
+        
+        <section>
+          <title>Mapper</title>
+
+          <p><a href="ext:api/org/apache/hadoop/mapreduce/mapper"
+              ><code>Mapper</code></a>
+          maps input key/value pairs to a set of
+          intermediate key/value pairs.</p>
+ 
+          <p>Maps are the individual tasks that transform input records into 
+          intermediate records. The transformed intermediate records do not need
+          to be of the same type as the input records. A given input pair may 
+          map to zero or many output pairs.</p> 
+ 
+          <p>The Hadoop MapReduce framework spawns one map task for each 
+            <a href="ext:api/org/apache/hadoop/mapreduce/inputsplit"
+              ><code>InputSplit</code></a>
+          generated by the
+          <a href="ext:api/org/apache/hadoop/mapreduce/inputformat"
+            ><code>InputFormat</code></a>
+          for the job. An <code>InputSplit</code> is a logical representation of
+          a unit of input work for a map task; e.g., a filename and a byte
+          range within that file to process. The <code>InputFormat</code> is
+          responsible for enumerating the <code>InputSplits</code>, and
+          producing a
+          <a href="ext:api/org/apache/hadoop/mapreduce/recordreader"
+            ><code>RecordReader</code></a>
+          which will turn those
+          logical work units into actual physical input records.</p>
+          
+          <p>Overall, <code>Mapper</code> implementations are specified in the
+          <a href="ext:api/org/apache/hadoop/mapreduce/job"><code>Job</code></a>,
+          a client-side class that describes the job's
+          configuration and interfaces with the cluster on behalf of the
+          client program. The <code>Mapper</code> itself then is instantiated
+          in the running job, and is passed a <a
+            href="ext:api/org/apache/hadoop/mapreduce/mapcontext"
+            ><code>MapContext</code></a> object
+          which it can use to configure itself. The <code>Mapper</code>
+          contains a <code>run()</code> method which calls its
+          <code>setup()</code>
+          method once, its <code>map()</code> method for each input record,
+          and finally its <code>cleanup()</code> method. All of these methods
+          (including <code>run()</code> itself) can be overridden with
+          your own code. If you do not override any methods (leaving even
+          map as-is), it will act as the <em>identity function</em>, emitting
+          each input record as a separate output.</p>
+
+          <p>The <code>Context</code> object allows the mapper to interact
+          with the rest of the Hadoop system. It includes configuration
+          data for the job, as well as interfaces which allow it to emit
+          output. The <code>getConfiguration()</code> method returns a
+          <a href="ext:api/org/apache/hadoop/conf/configuration">
+          <code>Configuration</code></a> which contains configuration data
+          for your program. You can set arbitrary (key, value) pairs of
+          configuration data in your <code>Job</code>, e.g. with
+          <code>Job.getConfiguration().set("myKey", "myVal")</code>,
+          and then retrieve this data in your mapper with
+          <code>Context.getConfiguration().get("myKey")</code>. This sort of
+          functionality is typically done in the Mapper's
+          <a href="ext:api/org/apache/hadoop/mapreduce/mapper/setup"
+            ><code>setup()</code></a>
+          method.</p>
+
+          <p>The
+            <a href="ext:api/org/apache/hadoop/mapreduce/mapper/run"
+              ><code>Mapper.run()</code></a>
+          method then calls 
+          <code>map(KeyInType, ValInType, Context)</code> for 
+          each key/value pair in the <code>InputSplit</code> for that task.
+          Note that in the WordCount program's map() method, we then emit
+          our output data via the <code>Context</code> argument, using its
+          <code>write()</code> method.
+          </p>
+
+          <p>Applications can then override the Mapper's
+            <a href="ext:api/org/apache/hadoop/mapreduce/mapper/cleanup"
+              ><code>cleanup()</code></a>
+          method to perform any required teardown operations.</p>
+
+          <p>Output pairs do not need to be of the same types as input pairs. A 
+          given input pair may map to zero or many output pairs.  Output pairs 
+          are collected with calls to
+          <a href="ext:api/org/apache/hadoop/mapreduce/taskinputoutputcontext/write"
+            ><code>Context.write(KeyOutType, ValOutType)</code></a>.</p>
+
+          <p>Applications can also use the <code>Context</code> to report 
+          progress, set application-level status messages and update 
+          <code>Counters</code>, or just indicate that they are alive.</p>
+ 
+          <p>All intermediate values associated with a given output key are 
+          subsequently grouped by the framework, and passed to the
+          <code>Reducer</code>(s) to  determine the final output. Users can 
+          control the grouping by specifying a <code>Comparator</code> via 
+          <a
+            href="ext:api/org/apache/hadoop/mapreduce/job/setgroupingcomparatorclass"
+            ><code>Job.setGroupingComparatorClass(Class)</code></a>.
+          If a grouping comparator is not specified, then all values with the
+          same key will be presented by an unordered <code>Iterable</code> to
+          a call to the <code>Reducer.reduce()</code> method.</p>
+
+          <p>The <code>Mapper</code> outputs are sorted and
+          partitioned per <code>Reducer</code>. The total number of partitions is 
+          the same as the number of reduce tasks for the job. Users can control 
+          which keys (and hence records) go to which <code>Reducer</code> by 
+          implementing a custom
+          <a href="ext:api/org/apache/hadoop/mapreduce/partitioner"
+            ><code>Partitioner</code></a>.</p>
+ 
+          <p>Users can optionally specify a <code>combiner</code>, via 
+          <a
+            href="ext:api/org/apache/hadoop/mapreduce/job/setcombinerclass"
+            ><code>Job.setCombinerClass(Class)</code></a>,
+          to perform local aggregation of 
+          the intermediate outputs, which helps to cut down the amount of data 
+          transferred from the <code>Mapper</code> to the <code>Reducer</code>.
+          </p>
+ 
+          <p>The intermediate, sorted outputs are always stored in a simple 
+          (key-len, key, value-len, value) format. 
+          Applications can control if, and how, the 
+          intermediate outputs are to be compressed and the 
+          <a href="ext:api/org/apache/hadoop/io/compress/compressioncodec">
+          CompressionCodec</a> to be used via the <code>Job</code>.
+          </p>
+          
+          <section>
+            <title>How Many Maps?</title>
+             
+            <p>The number of maps is usually driven by the total size of the 
+            inputs, that is, the total number of blocks of the input files.</p>
+  
+            <p>The right level of parallelism for maps seems to be around 10-100 
+            maps per-node, although it has been set up to 300 maps for very 
+            cpu-light map tasks. Task setup takes awhile, so it is best if the 
+            maps take at least a minute to execute.</p>
+ 
+            <p>Thus, if you expect 10TB of input data and have a blocksize of 
+              <code>128MB</code>, you'll end up with 82,000 maps, unless the
+              <code>mapreduce.job.maps</code> parameter
+            (which only provides a hint to the
+            framework) is used to set it even higher. Ultimately, the number
+            of tasks is controlled by the number of splits returned by the
+            <a
+              href="ext:api/org/apache/hadoop/mapreduce/inputformat/getsplits"
+              ><code>InputFormat.getSplits()</code></a> method (which you can
+            override).
+            </p>
+          </section>
+        </section>
+        
+        <section>
+          <title>Reducer</title>
+          
+          <p><a href="ext:api/org/apache/hadoop/mapreduce/reducer"
+              ><code>Reducer</code></a>
+          reduces a set of intermediate values which
+          share a key to a (usually smaller) set of values.</p>
+          
+          <p>The number of reduces for the job is set by the user via <a
+              href="ext:api/org/apache/hadoop/mapreduce/job/setnumreducetasks"
+              ><code>Job.setNumReduceTasks(int)</code></a>.</p>
+          
+          <p>The API of <code>Reducer</code> is very similar to that of
+          <code>Mapper</code>; there's a <a
+            href="ext:api/org/apache/hadoop/mapreduce/reducer/run"
+            ><code>run()</code></a> method that receives
+          a <a href="ext:api/org/apache/hadoop/mapreduce/reducecontext"
+            ><code>Context</code></a> containing the job's configuration as
+          well as interfacing methods that return data from the reducer itself
+          back to the framework. The <code>run()</code> method calls <a
+            href="ext:api/org/apache/hadoop/mapreduce/reducer/setup"
+            ><code>setup()</code></a> once,
+          <a href="ext:api/org/apache/hadoop/mapreduce/reducer/reduce"
+            ><code>reduce()</code></a> once for each key associated with the
+          reduce task, and <a
+            href="ext:api/org/apache/hadoop/mapreduce/reducer/cleanup"
+            ><code>cleanup()</code></a>
+          once at the end. Each of these methods
+          can access the job's configuration data by using
+          <code>Context.getConfiguration()</code>.</p>
+
+          <p>As in <code>Mapper</code>, any or all of these methods can be
+          overridden with custom implementations. If none of these methods are
+          overridden, the default reducer operation is the identity function;
+          values are passed through without further processing.</p>
+
+          <p>The heart of <code>Reducer</code> is its <code>reduce()</code>
+          method. This is called once per key; the second argument is an
+          <code>Iterable</code> which returns all the values associated with
+          that key. In the WordCount example, this is all of the 1's or other
+          partial counts associated with a given word. The Reducer should
+          emit its final output (key, value) pairs with the
+          <code>Context.write()</code> method. It may emit 0, 1, or more
+          (key, value) pairs for each input.</p>
+
+          <p><code>Reducer</code> has 3 primary phases: shuffle, sort and reduce.
+          </p>
+          
+          <section>
+            <title>Shuffle</title>
+   
+            <p>Input to the <code>Reducer</code> is the sorted output of the
+            mappers. In this phase the framework fetches the relevant partition 
+            of the output of all the mappers, via HTTP.</p>
+          </section>
+   
+          <section>
+            <title>Sort</title>
+   
+            <p>The framework groups <code>Reducer</code> inputs by keys (since 
+            different mappers may have output the same key) in this stage.</p>
+   
+            <p>The shuffle and sort phases occur simultaneously; while 
+            map-outputs are being fetched they are merged.</p>
+      
+            <section>
+              <title>Secondary Sort</title>
+   
+              <p>If equivalence rules for grouping the intermediate keys are 
+              required to be different from those for grouping keys before 
+              reduction, then one may specify a <code>Comparator</code> via 
+              <a
+                href="ext:api/org/apache/hadoop/mapreduce/job/setgroupingcomparatorclass"
+                >Job.setGroupingComparatorClass(Class)</a>. Since this
+              can be used to control how intermediate keys are grouped, these
+              can be used in conjunction to simulate <em>secondary sort on
+              values</em>.</p>
+            </section>
+          </section>
+   
+          <section>   
+            <title>Reduce</title>
+   
+            <p>In this phase the 
+              <a href="ext:api/org/apache/hadoop/mapreduce/reducer/reduce"
+                ><code>reduce(MapOutKeyType,
+            Iterable&lt;MapOutValType&gt;, Context)</code></a>
+            method is called for each <code>&lt;key, (list of
+            values)&gt;</code> pair in the grouped inputs.</p>
+
+            <p>The output of the reduce task is typically written to the 
+            <a href="ext:api/org/apache/hadoop/fs/filesystem">
+            FileSystem</a> via 
+            <code>Context.write(ReduceOutKeyType, ReduceOutValType)</code>.</p>
+   
+            <p>Applications can use the <code>Context</code> to report 
+            progress, set application-level status messages and update 
+            <a href="ext:api/org/apache/hadoop/mapreduce/counters"
+              ><code>Counters</code></a>,
+            or just indicate that they are alive.</p>
+ 
+           <p>The output of the <code>Reducer</code> is <em>not sorted</em>.</p>
+          </section>
+          
+          <section>
+            <title>How Many Reduces?</title>
+ 
+            <p>The right number of reduces seems to be <code>0.95</code> or 
+            <code>1.75</code> multiplied by (&lt;<em>no. of nodes</em>&gt; * 
+            <code>mapreduce.tasktracker.reduce.tasks.maximum</code>).</p>
+ 
+            <p>With <code>0.95</code> all of the reduces can launch immediately 
+            and start transfering map outputs as the maps finish. With 
+            <code>1.75</code> the faster nodes will finish their first round of 
+            reduces and launch a second wave of reduces doing a much better job 
+            of load balancing.</p>
+ 
+            <p>Increasing the number of reduces increases the framework
+            overhead, but increases load balancing and lowers the cost of
+            failures.</p>
+ 
+            <p>The scaling factors above are slightly less than whole numbers to 
+            reserve a few reduce slots in the framework for speculative-tasks
+            and failed tasks.</p>
+          </section>
+          
+          <section>
+            <title>Reducer NONE</title>
+            
+            <p>It is legal to set the number of reduce-tasks to <em>zero</em> if 
+            no reduction is desired.</p>
+ 
+            <p>In this case the outputs of the map-tasks go directly to the
+            <code>FileSystem</code>, into the output path set by 
+            <a href="ext:api/org/apache/hadoop/mapreduce/lib/output/fileoutputformat/setoutputpath">
+            setOutputPath(Path)</a>. The framework does not sort the 
+            map-outputs before writing them out to the <code>FileSystem</code>.
+            </p>
+          </section>
+
+          <section>
+            <title>Mark-Reset</title>
+
+            <p>While applications iterate through the values for a given key, it
+              is possible to mark the current position and later reset the
+              iterator to this position and continue the iteration process.
+              The corresponding methods are <code>mark()</code> and
+              <code>reset()</code>. 
+            </p>
+
+            <p><code>mark()</code> and <code>reset()</code> can be called any
+            number of times during the iteration cycle. The <code>reset()</code>
+            method will reset the iterator to the last record before a call to
+            the previous <code>mark()</code>.
+            </p>
+
+            <p>This functionality is available only with the new context based
+               reduce iterator.
+            </p>
+
+            <p> The following code snippet demonstrates the use of this 
+                functionality.
+            </p>
+           
+            <section>
+            <title>Source Code</title>
+
+            <table>
+            <tr><td>
+            <code>
+              public void reduce(IntWritable key, 
+                Iterable&lt;IntWritable&gt; values,
+                Context context) throws IOException, InterruptedException {
+            </code>
+            </td></tr>
+
+            <tr><td></td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                MarkableIterator&lt;IntWritable&gt; mitr = 
+                  new MarkableIterator&lt;IntWritable&gt;(values.iterator());
+            </code>
+            </td></tr>
+
+            <tr><td></td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                // Mark the position
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                mitr.mark();
+            </code>
+            </td></tr>
+
+            <tr><td></td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                while (mitr.hasNext()) {
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                  &nbsp;&nbsp;&nbsp;&nbsp;
+                  i = mitr.next();
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                  &nbsp;&nbsp;&nbsp;&nbsp;
+                  // Do the necessary processing
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                }
+            </code>
+            </td></tr>
+
+            <tr><td></td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                // Reset
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                mitr.reset();
+            </code>
+            </td></tr>
+
+            <tr><td></td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                // Iterate all over again. Since mark was called before the first
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                // call to mitr.next() in this example, we will iterate over all
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                // the values now
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                while (mitr.hasNext()) {
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                  &nbsp;&nbsp;&nbsp;&nbsp;
+                  i = mitr.next();
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                  &nbsp;&nbsp;&nbsp;&nbsp;
+                  // Do the necessary processing
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                }
+            </code>
+            </td></tr>
+
+            <tr><td></td></tr>
+
+            <tr><td>
+            <code>
+              }
+            </code>
+            </td></tr>
+
+            </table>
+          </section>
+
+          </section>
+        </section>
+        
+        <section>
+          <title>Partitioner</title>
+          
+          <p><a href="ext:api/org/apache/hadoop/mapreduce/partitioner"><code>
+          Partitioner</code></a> partitions the key space.</p>
+
+          <p>Partitioner controls the partitioning of the keys of the 
+          intermediate map-outputs. The key (or a subset of the key) is used to 
+          derive the partition, typically by a <em>hash function</em>. The total 
+          number of partitions is the same as the number of reduce tasks for the 
+          job. Hence this controls which of the <code>m</code> reduce tasks the 
+          intermediate key (and hence the record) is sent to for reduction.</p>
+          
+          <p><a
+          href="ext:api/org/apache/hadoop/mapreduce/lib/partition/hashpartitioner"
+          ><code>HashPartitioner</code></a> is the default
+          <code>Partitioner</code>.</p>
+        </section>
+        
+        <section>
+          <title>Reporting Progress</title>
+        
+          <p>Via the mapper or reducer's Context, MapReduce applications can
+          report progress, set application-level status messages and update 
+          <a href="ext:api/org/apache/hadoop/mapreduce/counters"
+            ><code>Counters</code></a>.</p>
+ 
+          <p><code>Mapper</code> and <code>Reducer</code> implementations can
+          use the <code>Context</code> to report progress or just indicate 
+          that they are alive. In scenarios where the application takes a
+          significant amount of time to process individual key/value pairs, 
+          this is crucial since the framework might assume that the task has 
+          timed-out and kill that task. Another way to avoid this is to 
+          set the configuration parameter <code>mapreduce.task.timeout</code>
+          to a high-enough value (or even set it to <em>zero</em> for no
+          time-outs).
+          </p>
+
+          <p>Applications can also update <code>Counters</code> using the 
+          <code>Context</code>.</p>
+        </section>
+      
+        <p>Hadoop MapReduce comes bundled with a 
+        library of generally useful mappers, reducers, and partitioners
+        in the <a
+        href="ext:api/org/apache/hadoop/mapreduce/lib/package-summary"
+        ><code>org.apache.hadoop.mapreduce.lib</code></a> package.</p>
+      </section>
+      
+      <section>
+        <title>Job Configuration</title>
+        
+        <p>The <code>Job</code> represents a MapReduce job configuration.
+        The actual state for this object is written to an underlying instance of
+        <a href="ext:api/org/apache/hadoop/conf/configuration"
+        >Configuration</a>.</p>
+ 
+        <p><a href="ext:api/org/apache/hadoop/mapreduce/job"
+        ><code>Job</code></a> is the primary interface for a user to describe
+        a MapReduce job to the Hadoop framework for execution. The framework 
+        tries to faithfully execute the job as described by <code>Job</code>, 
+        however:</p> 
+        <ul>
+          <li>
+            Some configuration parameters may have been marked as 
+            <a href="ext:api/org/apache/hadoop/conf/configuration/final_parameters">
+            final</a> by administrators and hence cannot be altered.
+          </li>
+          <li>
+            While some job parameters are straight-forward to set (e.g. 
+            <code>setNumReduceTasks(int)</code>), other parameters interact
+            subtly with  the rest of the framework and/or job configuration
+            and are more complex to set (e.g. <code>mapreduce.job.maps</code>).
+          </li>
+        </ul>
+ 
+        <p>The <code>Job</code> is typically used to specify the 
+        <code>Mapper</code>, combiner (if any), <code>Partitioner</code>, 
+        <code>Reducer</code>, <code>InputFormat</code>, 
+        <code>OutputFormat</code> and <code>OutputCommitter</code> 
+        implementations. <code>Job</code> also 
+        indicates the set of input files 
+        (<a href="ext:api/org/apache/hadoop/mapreduce/lib/input/fileinputformat/setinputpaths">setInputPaths(Job, Path...)</a>
+        /<a href="ext:api/org/apache/hadoop/mapreduce/lib/input/fileinputformat/addinputpath">addInputPath(Job, Path)</a>)
+        and (<a
+        href="ext:api/org/apache/hadoop/mapreduce/lib/input/fileinputformat/setinputpathstring">setInputPaths(Job, String)</a>
+        /<a
+        href="ext:api/org/apache/hadoop/mapreduce/lib/input/fileinputformat/addinputpathstring">addInputPaths(Job, String)</a>)
+        and where the output files should be written
+        (<a href="ext:api/org/apache/hadoop/mapreduce/lib/output/fileoutputformat/setoutputpath">setOutputPath(Path)</a>).</p>
+
+        <p>Optionally, <code>Job</code> is used to specify other advanced 
+        facets of the job such as the <code>Comparator</code> to be used, files 
+        to be put in the <code>DistributedCache</code>, whether intermediate 
+        and/or job outputs are to be compressed (and how), debugging via 
+        user-provided scripts,
+        whether job tasks can be executed in a <em>speculative</em> manner 
+        (<a
+          href="ext:api/org/apache/hadoop/mapreduce/job/setmapspeculativeexecution"
+          >setMapSpeculativeExecution(boolean)</a>)/(<a
+          href="ext:api/org/apache/hadoop/mapreduce/job/setreducespeculativeexecution"
+          >setReduceSpeculativeExecution(boolean)</a>)
+        , maximum number of attempts per task
+        (<a
+          href="ext:api/org/apache/hadoop/mapreduce/job/setmaxmapattempts"
+          >setMaxMapAttempts(int)</a>/<a
+          href="ext:api/org/apache/hadoop/mapreduce/job/setmaxreduceattempts"
+          >setMaxReduceAttempts(int)</a>) 
+        , percentage of tasks failure which can be tolerated by the job
+        (Job.getConfiguration().setInt(Job.MAP_FAILURES_MAX_PERCENT,
+        int)/Job.getConfiguration().setInt(Job.REDUCE_FAILURES_MAX_PERCENT,
+        int)), etc.</p>
+        
+        <p>Of course, users can use <code>Job.getConfiguration()</code> to get
+        access to the underlying configuration state, and can then use
+        <a href="ext:api/org/apache/hadoop/conf/configuration/set">set(String,
+          String)</a>/<a href="ext:api/org/apache/hadoop/conf/configuration/get"
+          >get(String, String)</a>
+        to set/get arbitrary parameters needed by applications. However, use the 
+        <code>DistributedCache</code> for large amounts of (read-only) data.</p>
+      </section>
+
+      <section>
+        <title>Task Execution &amp; Environment</title>
+
+        <p>The <code>TaskTracker</code> executes the <code>Mapper</code>/ 
+        <code>Reducer</code>  <em>task</em> as a child process in a separate jvm.
+        </p>
+        
+        <p>The child-task inherits the environment of the parent 
+        <code>TaskTracker</code>. The user can specify additional options to the
+        child-jvm via the <code>mapred.{map|reduce}.child.java.opts</code> 
+        configuration parameter in the job configuration such as non-standard 
+         paths for the run-time linker to search shared libraries via 
+        <code>-Djava.library.path=&lt;&gt;</code> etc. If the 
+        <code>mapred.{map|reduce}.child.java.opts</code> parameters contains the 
+        symbol <em>@taskid@</em> it is interpolated with value of 
+        <code>taskid</code> of the MapReduce task.</p>
+        
+        <p>Here is an example with multiple arguments and substitutions, 
+        showing jvm GC logging, and start of a passwordless JVM JMX agent so that
+        it can connect with jconsole and the likes to watch child memory, 
+        threads and get thread dumps. It also sets the maximum heap-size of the 
+        map and reduce child jvm to 512MB &amp; 1024MB respectively. It also 
+        adds an additional path to the <code>java.library.path</code> of the 
+        child-jvm.</p>
+
+        <p>
+          <code>&lt;property&gt;</code><br/>
+          &nbsp;&nbsp;<code>&lt;name&gt;mapreduce.map.java.opts&lt;/name&gt;</code><br/>
+          &nbsp;&nbsp;<code>&lt;value&gt;</code><br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;<code>
+                    -Xmx512M -Djava.library.path=/home/mycompany/lib
+                    -verbose:gc -Xloggc:/tmp/@taskid@.gc</code><br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;<code>
+                    -Dcom.sun.management.jmxremote.authenticate=false 
+                    -Dcom.sun.management.jmxremote.ssl=false</code><br/>
+          &nbsp;&nbsp;<code>&lt;/value&gt;</code><br/>
+          <code>&lt;/property&gt;</code>
+        </p>
+        
+        <p>
+          <code>&lt;property&gt;</code><br/>
+          &nbsp;&nbsp;<code>&lt;name&gt;mapreduce.reduce.java.opts&lt;/name&gt;</code><br/>
+          &nbsp;&nbsp;<code>&lt;value&gt;</code><br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;<code>
+                    -Xmx1024M -Djava.library.path=/home/mycompany/lib
+                    -verbose:gc -Xloggc:/tmp/@taskid@.gc</code><br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;<code>
+                    -Dcom.sun.management.jmxremote.authenticate=false 
+                    -Dcom.sun.management.jmxremote.ssl=false</code><br/>
+          &nbsp;&nbsp;<code>&lt;/value&gt;</code><br/>
+          <code>&lt;/property&gt;</code>
+        </p>
+        
+        <section>
+         <title>Configuring Memory Requirements For A Job</title>
+         
+         <p>
+         MapReduce tasks are launched with some default memory limits
+         that are provided by the system or by the cluster's administrators.
+         Memory intensive jobs might need to use more than these default
+         values. Hadoop has some configuration options that allow these to 
+         be changed.
+         Without such modifications, memory intensive jobs could fail due
+         to <code>OutOfMemory</code> errors in tasks or could get killed
+         when the limits are enforced by the system. This section describes
+         the various options that can be used to configure specific
+         memory requirements.
+         </p>
+          
+         <ul>
+         
+           <li>
+           <code>mapreduce.{map|reduce}.java.opts</code>: If the task
+           requires more Java heap space, this option must be used. The
+           value of this option should pass the desired heap using the JVM
+           option -Xmx. For example, to use 1G of heap space, the option
+           should be passed in as -Xmx1024m. Note that other JVM options
+           are also passed using the same option. Hence, append the
+           heap space option along with other options already configured.
+           </li>
+         
+           <li>
+           <code>mapreduce.{map|reduce}.ulimit</code>: The slaves where
+           tasks are run could be configured with a ulimit value that
+           applies a limit to every process that is launched on the slave.
+           If the task, or any child that the task launches (like in
+           streaming), requires more than the configured limit, this option
+           must be used. The value is given in kilobytes. For example, to
+           increase the ulimit to 1G, the option should be set to 1048576.
+           Note that this value is a per process limit. Since it applies 
+           to the JVM as well, the heap space given to the JVM through 
+           the <code>mapreduce.{map|reduce}.java.opts</code> should be less
+           than the value configured for the ulimit. Otherwise the JVM
+           will not start.
+           </li>
+           
+           <li>
+           <code>mapreduce.{map|reduce}.memory.mb</code>: In some 
+           environments, administrators might have configured a total limit
+           on the virtual memory used by the entire process tree for a task, 
+           including all processes launched recursively by the task or 
+           its children, like in streaming. More details about this can be
+           found in the section on 
+           <a href="ext:cluster-setup/ConfiguringMemoryParameters">
+           Monitoring Task Memory Usage</a> in the Cluster SetUp guide.
+           If a task requires more virtual memory for its entire tree, 
+           this option 
+           must be used. The value is given in MB. For example, to set 
+           the limit to 1G, the option should be set to 1024. Note that this 
+           value does not automatically influence the per process ulimit or 
+           heap space. Hence, you may need to set those parameters as well 
+           (as described above) in order to give your tasks the right amount 
+           of memory.
+           </li>
+          
+           <li>
+           <code>mapreduce.{map|reduce}.memory.physical.mb</code>: 
+           This parameter is similar to 
+           <code>mapreduce.{map|reduce}.memory.mb</code>, except it specifies
+           how much physical memory is required by a task for its entire
+           tree of processes. The parameter is applicable if administrators
+           have configured a total limit on the physical memory used by
+           all MapReduce tasks.
+           </li>
+ 
+         </ul>
+         
+         <p>
+         As seen above, each of the options can be specified separately for
+         map and reduce tasks. It is typically the case that the different
+         types of tasks have different memory requirements. Hence different
+         values can be set for the corresponding options.
+         </p>
+         
+         <p>
+         The memory available to some parts of the framework is also
+         configurable. In map and reduce tasks, performance may be influenced
+         by adjusting parameters influencing the concurrency of operations and
+         the frequency with which data will hit disk. Monitoring the filesystem
+         counters for a job- particularly relative to byte counts from the map
+         and into the reduce- is invaluable to the tuning of these
+         parameters.
+         </p>
+           
+         <p>
+         Note: The memory related configuration options described above 
+         are used only for configuring the launched child tasks from the 
+         tasktracker. Configuring the memory options for daemons is documented 
+         under
+         <a href="ext:cluster-setup/ConfiguringEnvironmentHadoopDaemons">
+         Configuring the Environment of the Hadoop Daemons</a> (Cluster Setup).
+         </p>
+          
+        </section>
+
+        <section>
+          <title>Map Parameters</title>
+
+          <p>A record emitted from a map and its metadata will be serialized
+          into a buffer. As described in the following options, when the record
+          data exceed a threshold, the contents of this buffer will be sorted
+          and written to disk in the background (a "spill") while the map
+          continues to output records. If the remainder of the buffer fills
+          during the spill, the map thread will block. When the map is
+          finished, any buffered records are written to disk and all on-disk
+          segments are merged into a single file. Minimizing the number of
+          spills to disk <em>can</em> decrease map time, but a larger buffer
+          also decreases the memory available to the mapper.</p>
+
+          <table>
+            <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+            <tr><td>mapreduce.task.io.sort.mb</td><td>int</td>
+                <td>The cumulative size of the serialization and accounting
+                buffers storing records emitted from the map, in megabytes.
+                </td></tr>
+            <tr><td>mapreduce.map.sort.spill.percent</td><td>float</td>
+                <td>This is the threshold for the accounting and serialization
+                buffer. When this percentage of the <code>io.sort.mb</code> has
+                filled, its contents will be spilled to disk in the background.
+                Note that a higher value may decrease the number of- or even
+                eliminate- merges, but will also increase the probability of
+                the map task getting blocked. The lowest average map times are
+                usually obtained by accurately estimating the size of the map
+                output and preventing multiple spills.</td></tr>
+          </table>
+
+          <p>Other notes</p>
+          <ul>
+            <li>If the spill threshold is exceeded while a spill is in
+            progress, collection will continue until the spill is finished. For
+            example, if <code>mapreduce.map.sort.spill.percent</code> is set to
+            0.33, and the remainder of the buffer is filled while the spill
+            runs, the next spill will include all the collected records, or
+            0.66 of the buffer, and will not generate additional spills. In
+            other words, the thresholds are defining triggers, not
+            blocking.</li>
+            <li>A record larger than the serialization buffer will first
+            trigger a spill, then be spilled to a separate file. It is
+            undefined whether or not this record will first pass through the
+            combiner.</li>
+          </ul>
+        </section>
+
+        <section>
+          <title>Shuffle/Reduce Parameters</title>
+
+          <p>As described previously, each reduce fetches the output assigned
+          to it by the Partitioner via HTTP into memory and periodically
+          merges these outputs to disk. If intermediate compression of map
+          outputs is turned on, each output is decompressed into memory. The
+          following options affect the frequency of these merges to disk prior
+          to the reduce and the memory allocated to map output during the
+          reduce.</p>
+
+          <table>
+            <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+            <tr><td>mapreduce.task.io.sort.factor</td><td>int</td>
+                <td>Specifies the number of segments on disk to be merged at
+                the same time. It limits the number of open files and
+                compression codecs during the merge. If the number of files
+                exceeds this limit, the merge will proceed in several passes.
+                Though this limit also applies to the map, most jobs should be
+                configured so that hitting this limit is unlikely
+                there.</td></tr>
+            <tr><td>mapreduce.reduce.merge.inmem.threshold</td><td>int</td>
+                <td>The number of sorted map outputs fetched into memory
+                before being merged to disk. Like the spill thresholds in the
+                preceding note, this is not defining a unit of partition, but
+                a trigger. In practice, this is usually set very high (1000)
+                or disabled (0), since merging in-memory segments is often
+                less expensive than merging from disk (see notes following
+                this table). This threshold influences only the frequency of
+                in-memory merges during the shuffle.</td></tr>
+            <tr><td>mapreduce.reduce.shuffle.merge.percent</td><td>float</td>
+                <td>The memory threshold for fetched map outputs before an
+                in-memory merge is started, expressed as a percentage of
+                memory allocated to storing map outputs in memory. Since map
+                outputs that can't fit in memory can be stalled, setting this
+                high may decrease parallelism between the fetch and merge.
+                Conversely, values as high as 1.0 have been effective for
+                reduces whose input can fit entirely in memory. This parameter
+                influences only the frequency of in-memory merges during the
+                shuffle.</td></tr>
+            <tr><td>mapreduce.reduce.shuffle.input.buffer.percent</td><td>float</td>
+                <td>The percentage of memory- relative to the maximum heapsize
+                as typically specified in <code>mapreduce.reduce.java.opts</code>-
+                that can be allocated to storing map outputs during the
+                shuffle. Though some memory should be set aside for the
+                framework, in general it is advantageous to set this high
+                enough to store large and numerous map outputs.</td></tr>
+            <tr><td>mapreduce.reduce.input.buffer.percent</td><td>float</td>
+                <td>The percentage of memory relative to the maximum heapsize
+                in which map outputs may be retained during the reduce. When
+                the reduce begins, map outputs will be merged to disk until
+                those that remain are under the resource limit this defines.
+                By default, all map outputs are merged to disk before the
+                reduce begins to maximize the memory available to the reduce.
+                For less memory-intensive reduces, this should be increased to
+                avoid trips to disk.</td></tr>
+          </table>
+
+          <p>Other notes</p>
+          <ul>
+            <li>If a map output is larger than 25 percent of the memory
+            allocated to copying map outputs, it will be written directly to
+            disk without first staging through memory.</li>
+            <li>When running with a combiner, the reasoning about high merge
+            thresholds and large buffers may not hold. For merges started
+            before all map outputs have been fetched, the combiner is run
+            while spilling to disk. In some cases, one can obtain better
+            reduce times by spending resources combining map outputs- making
+            disk spills small and parallelizing spilling and fetching- rather
+            than aggressively increasing buffer sizes.</li>
+            <li>When merging in-memory map outputs to disk to begin the
+            reduce, if an intermediate merge is necessary because there are
+            segments to spill and at least 
+            <code>mapreduce.task.io.sort.factor</code>
+            segments already on disk, the in-memory map outputs will be part
+            of the intermediate merge.</li>
+          </ul>
+
+        </section>
+
+        <section>
+        <title> Directory Structure </title>
+        <p>The task tracker has local directory,
+        <code> ${mapreduce.cluster.local.dir}/taskTracker/</code> to create
+        localized cache and localized job. It can define multiple local
+        directories (spanning multiple disks) and then each filename is assigned
+        to a semi-random local directory. When the job starts, task tracker 
+        creates a localized job directory relative to the local directory
+        specified in the configuration. Thus the task tracker directory 
+        structure looks as following: </p>
+        <ul>
+        <li><code>${mapreduce.cluster.local.dir}/taskTracker/distcache/</code> :
+        The public distributed cache for the jobs of all users. This directory
+        holds the localized public distributed cache. Thus localized public
+        distributed cache is shared among all the tasks and jobs of all users.
+        </li>
+        <li><code>${mapreduce.cluster.local.dir}/taskTracker/$user/distcache/
+        </code> :
+        The private distributed cache for the jobs of the specific user. This
+        directory holds the localized private distributed cache. Thus localized
+        private distributed cache is shared among all the tasks and jobs of the
+        specific user only. It is not accessible to jobs of other users.
+        </li>
+        <li><code>
+        ${mapreduce.cluster.local.dir}/taskTracker/$user/jobcache/$jobid/
+        </code> : The localized job directory
+        <ul>
+        <li><code>
+        ${mapreduce.cluster.local.dir}/taskTracker/$user/jobcache/$jobid/work/
+        </code>
+        : The job-specific shared directory. The tasks can use this space as 
+        scratch space and share files among them. This directory is exposed
+        to the users through the configuration property  
+        <code>mapreduce.job.local.dir</code>. It is available as System property
+        also. So, users (streaming etc.) can call 
+        <code>System.getProperty("mapreduce.job.local.dir")</code> to access the 
+        directory.</li>
+        <li><code>
+        ${mapreduce.cluster.local.dir}/taskTracker/$user/jobcache/$jobid/jars/
+        </code>
+        : The jars directory, which has the job jar file and expanded jar.
+        The <code>job.jar</code> is the application's jar file that is
+        automatically distributed to each machine. Any library jars that are
+        dependencies of the application code may be packaged inside this jar in
+        a <code>lib/</code> directory.
+        This directory is extracted from <code>job.jar</code> and its contents
+        are automatically added to the classpath for each task.
+        The job.jar location is accessible to the application through the API
+        <a href="ext:api/org/apache/hadoop/mapreduce/task/jobcontextimpl/getjar"> 
+        Job.getJar() </a>. To access the unjarred directory,
+        Job.getJar().getParent() can be called.</li>
+        <li><code>
+        ${mapreduce.cluster.local.dir}/taskTracker/$user/jobcache/$jobid/job.xml
+        </code>
+        : The job.xml file, the generic job configuration, localized for 
+        the job. </li>
+        <li><code>
+        ${mapreduce.cluster.local.dir}/taskTracker/$user/jobcache/$jobid/$taskid
+        </code>
+        : The task directory for each task attempt. Each task directory
+        again has the following structure :
+        <ul>
+        <li><code>
+        ${mapreduce.cluster.local.dir}/taskTracker/$user/jobcache/$jobid/$taskid/job.xml
+        </code>
+        : A job.xml file, task localized job configuration, Task localization
+        means that properties have been set that are specific to
+        this particular task within the job. The properties localized for 
+        each task are described below.</li>
+        <li><code>
+        ${mapreduce.cluster.local.dir}/taskTracker/$user/jobcache/$jobid/$taskid/output
+        </code>
+        : A directory for intermediate output files. This contains the
+        temporary map reduce data generated by the framework
+        such as map output files etc. </li>
+        <li><code>
+        ${mapreduce.cluster.local.dir}/taskTracker/$user/jobcache/$jobid/$taskid/work
+        </code>
+        : The curernt working directory of the task. 
+        With <a href="#Task+JVM+Reuse">jvm reuse</a> enabled for tasks, this 
+        directory will be the directory on which the jvm has started</li>
+        <li><code>
+        ${mapreduce.cluster.local.dir}/taskTracker/$user/jobcache/$jobid/$taskid/work/tmp
+        </code>
+        : The temporary directory for the task. 
+        (User can specify the property <code>mapreduce.task.tmp.dir</code> to set
+        the value of temporary directory for map and reduce tasks. This 
+        defaults to <code>./tmp</code>. If the value is not an absolute path,
+        it is prepended with task's working directory. Otherwise, it is
+        directly assigned. The directory will be created if it doesn't exist.
+        Then, the child java tasks are executed with option
+        <code>-Djava.io.tmpdir='the absolute path of the tmp dir'</code>.
+        Pipes and streaming are set with environment variable,
+        <code>TMPDIR='the absolute path of the tmp dir'</code>). This 
+        directory is created, if <code>mapreduce.task.tmp.dir</code> has the value
+        <code>./tmp</code> </li>
+        </ul>
+        </li>
+        </ul>
+        </li>
+        </ul>
+        </section>
+        
+        <section>
+        <title>Task JVM Reuse</title>
+        <p>Jobs can enable task JVMs to be reused by specifying the job 
+        configuration <code>mapreduce.job.jvm.numtasks</code>. If the
+        value is 1 (the default), then JVMs are not reused 
+        (i.e. 1 task per JVM). If it is -1, there is no limit to the number
+        of tasks a JVM can run (of the same job). One can also specify some
+        value greater than 1 using the api 
+        <code>Job.getConfiguration().setInt(Job.JVM_NUM_TASKS_TO_RUN, int)</code>.</p>
+        </section>
+
+        <section>
+                <title>Configured Parameters</title>
+        <p>The following properties are localized in the job configuration 
+         for each task's execution: </p>
+        <table>
+          <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+          <tr><td>mapreduce.job.id</td><td>String</td><td>The job id</td></tr>
+          <tr><td>mapreduce.job.jar</td><td>String</td>
+              <td>job.jar location in job directory</td></tr>
+          <tr><td>mapreduce.job.local.dir</td><td> String</td>
+              <td> The job specific shared scratch space</td></tr>
+          <tr><td>mapreduce.task.id</td><td> String</td>
+              <td> The task id</td></tr>
+          <tr><td>mapreduce.task.attempt.id</td><td> String</td>
+              <td> The task attempt id</td></tr>
+          <tr><td>mapreduce.task.ismap</td><td> boolean </td>
+              <td>Is this a map task</td></tr>
+          <tr><td>mapreduce.task.partition</td><td> int </td>
+              <td>The id of the task within the job</td></tr>
+          <tr><td>mapreduce.map.input.file</td><td> String</td>
+              <td> The filename that the map is reading from</td></tr>
+          <tr><td>mapreduce.map.input.start</td><td> long</td>
+              <td> The offset of the start of the map input split</td></tr>
+          <tr><td>mapreduce.map.input.length </td><td>long </td>
+              <td>The number of bytes in the map input split</td></tr>
+          <tr><td>mapreduce.task.output.dir</td><td> String </td>
+              <td>The task's temporary output directory</td></tr>
+        </table>
+
+        <p>
+        <strong>Note:</strong>
+        During the execution of a streaming job, the names of the "mapred" parameters are transformed. 
+        The dots ( . ) become underscores ( _ ).
+        For example, mapreduce.job.id becomes mapreduce.job.id and mapreduce.job.jar becomes mapreduce.job.jar. 
+        To get the values in a streaming job's mapper/reducer use the parameter names with the underscores.
+        </p>
+        </section>
+
+        <section>
+                <title>Task Logs</title>
+        <p>The standard output (stdout) and error (stderr) streams of the task 
+        are read by the TaskTracker and logged to 
+        <code>${HADOOP_LOG_DIR}/userlogs</code></p>
+         </section>
+
+         <section>
+                <title>Distributing Libraries</title>
+        <p>The <a href="#DistributedCache">DistributedCache</a> can also be used
+        to distribute both jars and native libraries for use in the map 
+        and/or reduce tasks. The child-jvm always has its 
+        <em>current working directory</em> added to the
+        <code>java.library.path</code> and <code>LD_LIBRARY_PATH</code>. 
+        And hence the cached libraries can be loaded via 
+        <a href="http://java.sun.com/javase/6/docs/api/java/lang/System.html#loadLibrary(java.lang.String)">
+        System.loadLibrary</a> or 
+        <a href="http://java.sun.com/javase/6/docs/api/java/lang/System.html#load(java.lang.String)">
+        System.load</a>. More details on how to load shared libraries through 
+        distributed cache are documented under 
+        <a href="http://hadoop.apache.org/common/docs/current/native_libraries.html#Loading+Native+Libraries+Through+DistributedCache">
+        Building Native Hadoop Libraries</a>.</p>
+        </section>
+      </section>
+      
+      <section>
+        <title>Job Submission and Monitoring</title>
+        
+        <p>The <code>Job</code>
+        is the primary interface by which user-job interacts
+        with the <code>JobTracker</code>.</p>
+ 
+        <p><code>Job</code> provides facilities to submit jobs, track their 
+        progress, access component-tasks' reports and logs, get the MapReduce 
+        cluster's status information and so on.</p>
+ 
+        <p>The job submission process involves:</p>
+        <ol>
+          <li>Checking the input and output specifications of the job.</li>
+          <li>Computing the <code>InputSplit</code> values for the job.</li>
+          <li>
+            Setting up the requisite accounting information for the 
+            <code>DistributedCache</code> of the job, if necessary.
+          </li>
+          <li>
+            Copying the job's jar and configuration to the MapReduce system 
+            directory on the <code>FileSystem</code>.
+          </li>
+          <li>
+            Submitting the job to the <code>JobTracker</code> and optionally 
+            monitoring it's status.
+          </li>
+        </ol>
+
+        <p> User can view the history log summary for a given history file
+        using the following command <br/>
+        <code>$ bin/hadoop job -history history-file</code><br/> 
+        This command will print job details, failed and killed tip
+        details. <br/>
+        More details about the job such as successful tasks and 
+        task attempts made for each task can be viewed using the  
+        following command <br/>
+       <code>$ bin/hadoop job -history all history-file</code><br/></p> 
+            
+        <p> User can use 
+        <a href="ext:api/org/apache/hadoop/mapred/outputlogfilter">OutputLogFilter</a>
+        to filter log files from the output directory listing. </p>
+        
+        <p>Normally the user creates the application, describes various facets 
+        of the job via <code>Job</code>, and then uses the 
+        <code>waitForCompletion()</code> method to submit the job and monitor its progress.</p>
+
+        <section>
+          <title>Job Control</title>
+ 
+          <p>Users may need to chain MapReduce jobs to accomplish complex
+          tasks which cannot be done via a single MapReduce job. This is fairly
+          easy since the output of the job typically goes to distributed 
+          file-system, and the output, in turn, can be used as the input for the 
+          next job.</p>
+ 
+          <p>However, this also means that the onus on ensuring jobs are 
+          complete (success/failure) lies squarely on the clients. In such 
+          cases, the various job-control options are:</p>
+          <ul>
+            <li><a
+            href="ext:api/org/apache/hadoop/mapreduce/job/waitforcompletion"><code>Job.waitForCompletion()</code></a> :
+              Submits the job and returns only after the 
+              job has completed.
+            </li>
+            <li>
+              <a href="ext:api/org/apache/hadoop/mapreduce/job/submit"><code>Job.submit()</code></a> : Only submits the job;, then poll the
+              other methods of <code>Job</code> such as <code>isComplete()</code>,
+              <code>isSuccessful()</code>, etc.
+              to query status and make scheduling decisions.
+            </li>
+            <li>
+              <code>Job.getConfiguration().set(Job.END_NOTIFICATION_URL, String)</code>
+              : Sets up a notification upon job-completion, thus avoiding polling.
+            </li>
+          </ul>
+        </section>
+        
+        <section>
+          <title>Job Authorization</title>
+          <p>Job level authorization is enabled on the cluster, if the configuration
+          <code>mapreduce.cluster.job-authorization-enabled</code> is set to
+          true. When enabled, access control checks are done by the JobTracker
+          and the TaskTracker before allowing users to view
+          job details or to modify a job using Map/Reduce APIs,
+          CLI or web user interfaces.</p>
+         
+          <p>A job submitter can specify access control lists for viewing or
+          modifying a job via the configuration properties
+          <code>mapreduce.job.acl-view-job</code> and
+          <code>mapreduce.job.acl-modify-job</code> respectively. By default, 
+          nobody is given access in these properties.</p> 
+          
+          <p>However, irrespective of the ACLs configured, a job's owner,
+          the superuser and the members of an admin configured supergroup
+          (<code>mapreduce.cluster.permissions.supergroup</code>) always
+          have access to view and modify a job.</p>
+          
+          <p> A job view ACL authorizes users against the configured 
+          <code>mapreduce.job.acl-view-job</code> before returning possibly 
+          sensitive information about a job, like: </p>
+          <ul>
+            <li> job level counters </li>
+            <li> task level counters </li>
+            <li> tasks's diagnostic information </li>
+            <li> task logs displayed on the TaskTracker web UI </li>
+            <li> job.xml showed by the JobTracker's web UI </li>
+          </ul>
+          <p>Other information about a job, like its status and its profile, 
+          is accessible to all users, without requiring authorization.</p>
+          
+          <p> A job modification ACL authorizes users against the configured
+          <code>mapreduce.job.acl-modify-job</code> before allowing
+          modifications to jobs, like: </p>
+          <ul>
+            <li> killing a job </li>
+            <li> killing/failing a task of a job </li>
+            <li> setting the priority of a job </li>
+          </ul>
+          <p>These operations are also protected by the queue level ACL,
+          "acl-administer-jobs", configured via mapred-queue-acls.xml. The caller
+          will be authorized against both queue level ACLs and job level ACLs,
+          depending on what is enabled.</p>
+          
+          <p>The format of a job level ACL is the same as the format for a
+          queue level ACL as defined in the
+          <a href ="ext:cluster-setup/ConfiguringHadoopDaemons">
+          Cluster Setup</a> documentation.
+          </p>
+          
+        </section>
+      </section>
+
+      <section>
+        <title>Job Input</title>
+        
+        <p><a href="ext:api/org/apache/hadoop/mapreduce/inputformat">
+        InputFormat</a> describes the input-specification for a MapReduce job.
+        </p> 
+ 
+        <p>The MapReduce framework relies on the <code>InputFormat</code> of 
+        the job to:</p>
+        <ol>
+          <li>Validate the input-specification of the job.</li>
+          <li>
+            Split-up the input file(s) into logical <code>InputSplit</code> 
+            instances, each of which is then assigned to an individual 
+            <code>Mapper</code>.
+          </li>
+          <li>
+            Provide the <code>RecordReader</code> implementation used to
+            glean input records from the logical <code>InputSplit</code> for 
+            processing by the <code>Mapper</code>.
+          </li>
+        </ol>
+ 
+        <p>The default behavior of file-based <code>InputFormat</code>
+        implementations, typically sub-classes of 
+        <a href="ext:api/org/apache/hadoop/mapreduce/lib/input/fileinputformat">
+        FileInputFormat</a>, is to split the input into <em>logical</em> 
+        <code>InputSplit</code> instances based on the total size, in bytes, of 
+        the input files. However, the <code>FileSystem</code> blocksize of the 
+        input files is treated as an upper bound for input splits. A lower bound
+        on the split size can be set via <code>mapreduce.input.fileinputformat.split.minsize</code>.</p>
+ 
+        <p>Clearly, logical splits based on input-size is insufficient for many
+        applications since record boundaries must be respected. In such cases, 
+        the application should implement a <code>RecordReader</code>, who is 
+        responsible for respecting record-boundaries and presents a 
+        record-oriented view of the logical <code>InputSplit</code> to the 
+        individual task.</p>
+
+        <p><a href="ext:api/org/apache/hadoop/mapreduce/lib/input/textinputformat">
+        TextInputFormat</a> is the default <code>InputFormat</code>.</p>
+        
+        <p>If <code>TextInputFormat</code> is the <code>InputFormat</code> for a 
+        given job, the framework detects input-files with the <em>.gz</em>
+        extensions and automatically decompresses them using the 
+        appropriate <code>CompressionCodec</code>. However, it must be noted that
+        compressed files with the above extensions cannot be <em>split</em> and 
+        each compressed file is processed in its entirety by a single mapper.</p>
+        
+        <section>
+          <title>InputSplit</title>
+          
+          <p><a href="ext:api/org/apache/hadoop/mapreduce/inputsplit">
+          InputSplit</a> represents the data to be processed by an individual 
+          <code>Mapper</code>.</p>
+
+          <p>Typically <code>InputSplit</code> presents a byte-oriented view of
+          the input, and it is the responsibility of <code>RecordReader</code>
+          to process and present a record-oriented view.</p>
+          
+          <p><a href="ext:api/org/apache/hadoop/mapreduce/lib/input/filesplit">
+          FileSplit</a> is the default <code>InputSplit</code>. It sets 
+          <code>mapreduce.map.input.file</code> to the path of the input file for the
+          logical split.</p>
+        </section>
+        
+        <section>
+          <title>RecordReader</title>
+          
+          <p><a href="ext:api/org/apache/hadoop/mapreduce/recordreader">
+          RecordReader</a> reads <code>&lt;key, value&gt;</code> pairs from an 
+          <code>InputSplit</code>.</p>
+
+          <p>Typically the <code>RecordReader</code> converts the byte-oriented 
+          view of the input, provided by the <code>InputSplit</code>, and 
+          presents a record-oriented to the <code>Mapper</code> implementations 
+          for processing. <code>RecordReader</code> thus assumes the 
+          responsibility of processing record boundaries and presents the tasks 
+          with keys and values.</p>
+        </section>
+      </section>
+
+      <section>
+        <title>Job Output</title>
+        
+        <p><a href="ext:api/org/apache/hadoop/mapreduce/outputformat">
+        OutputFormat</a> describes the output-specification for a MapReduce 
+        job.</p>
+
+        <p>The MapReduce framework relies on the <code>OutputFormat</code> of 
+        the job to:</p>
+        <ol>
+          <li>
+            Validate the output-specification of the job; for example, check that 
+            the output directory doesn't already exist.
+          </li>
+          <li>
+            Provide the <code>RecordWriter</code> implementation used to 
+            write the output files of the job. Output files are stored in a 
+            <code>FileSystem</code>.
+          </li>
+        </ol>
+ 
+        <p><code>TextOutputFormat</code> is the default 
+        <code>OutputFormat</code>.</p>
+
+        <section>
+        <title>Lazy Output Creation</title>
+        <p>It is possible to delay creation of output until the first write attempt 
+           by using <a href="ext:api/org/apache/hadoop/mapreduce/lib/output/lazyoutputformat">
+           LazyOutputFormat</a>. This is particularly useful in preventing the 
+           creation of zero byte files when there is no call to output.collect 
+           (or Context.write). This is achieved by calling the static method 
+           <code>setOutputFormatClass</code> of <code>LazyOutputFormat</code> 
+           with the intended <code>OutputFormat</code> as the argument. The following example 
+           shows how to delay creation of files when using the <code>TextOutputFormat</code>
+        </p>
+
+        <p>
+        <code>import org.apache.hadoop.mapreduce.lib.output.LazyOutputFormat;</code> <br/>
+        <code>LazyOutputFormat.setOutputFormatClass(job, TextOutputFormat.class);</code>
+        </p>
+         
+        </section>
+
+        <section>
+        <title>OutputCommitter</title>
+        
+        <p><a href="ext:api/org/apache/hadoop/mapreduce/outputcommitter">
+        OutputCommitter</a> describes the commit of task output for a 
+        MapReduce job.</p>
+
+        <p>The MapReduce framework relies on the <code>OutputCommitter</code>
+        of the job to:</p>
+        <ol>
+          <li>
+            Setup the job during initialization. For example, create
+            the temporary output directory for the job during the
+            initialization of the job. 
+            Job setup is done by a separate task when the job is
+            in PREP state and after initializing tasks. Once the setup task
+            completes, the job will be moved to RUNNING state.
+          </li>
+          <li>
+            Cleanup the job after the job completion. For example, remove the
+            temporary output directory after the job completion.
+            Job cleanup is done by a separate task at the end of the job.
+            Job is declared SUCCEDED/FAILED/KILLED after the cleanup
+            task completes.
+          </li>
+          <li>
+            Setup the task temporary output.
+            Task setup is done as part of the same task, during task initialization.
+          </li> 
+          <li>
+            Check whether a task needs a commit. This is to avoid the commit
+            procedure if a task does not need commit.
+          </li>
+          <li>
+            Commit of the task output. 
+            Once task is done, the task will commit it's output if required.  
+          </li> 
+          <li>
+            Discard the task commit.
+            If the task has been failed/killed, the output will be cleaned-up. 
+            If task could not cleanup (in exception block), a separate task 
+            will be launched with same attempt-id to do the cleanup.
+          </li>
+        </ol>
+        <p><a
+        href="ext:api/org/apache/hadoop/mapreduce/lib/output/fileoutputcommitter"
+        ><code>FileOutputCommitter</code></a>
+        is the default 
+        <code>OutputCommitter</code>. Job setup/cleanup tasks occupy 
+        map or reduce slots, whichever is free on the TaskTracker. And
+        JobCleanup task, TaskCleanup tasks and JobSetup task have the highest
+        priority, and in that order.</p>
+        </section>
+ 
+        <section>
+          <title>Task Side-Effect Files</title>
+ 
+          <p>In some applications, component tasks need to create and/or write to
+          side-files, which differ from the actual job-output files.</p>
+ 
+          <p>In such cases there could be issues with two instances of the same 
+          <code>Mapper</code> or <code>Reducer</code> running simultaneously (for
+          example, speculative tasks) trying to open and/or write to the same 
+          file (path) on the <code>FileSystem</code>. Hence the 
+          application-writer will have to pick unique names per task-attempt 
+          (using the attemptid, say <code>attempt_200709221812_0001_m_000000_0</code>), 
+          not just per task.</p> 
+ 
+          <p>To avoid these issues the MapReduce framework, when the 
+          <code>OutputCommitter</code> is <code>FileOutputCommitter</code>, 
+          maintains a special 
+          <code>${mapreduce.output.fileoutputformat.outputdir}/_temporary/_${taskid}</code>
+          sub-directory
+          accessible via <code>${mapreduce.task.output.dir}</code>
+          for each task-attempt on the <code>FileSystem</code> where the output
+          of the task-attempt is stored. On successful completion of the 
+          task-attempt, the files in the 
+          <code>${mapreduce.output.fileoutputformat.outputdir}/_temporary/_${taskid}</code>
+          (only) are <em>promoted</em> to
+          <code>${mapreduce.output.fileoutputformat.outputdir}</code>. Of course, 
+          the framework discards the sub-directory of unsuccessful task-attempts. 
+          This process is completely transparent to the application.</p>
+ 
+          <p>The application-writer can take advantage of this feature by 
+          creating any side-files required in <code>${mapreduce.task.output.dir}</code>
+          during execution of a task via 
+          <a href="ext:api/org/apache/hadoop/mapreduce/lib/output/fileoutputformat/getworkoutputpath">
+          FileOutputFormat.getWorkOutputPath()</a>, and the framework will promote them 
+          similarly for succesful task-attempts, thus eliminating the need to 
+          pick unique paths per task-attempt.</p>
+          
+          <p>Note: The value of <code>${mapreduce.task.output.dir}</code> during 
+          execution of a particular task-attempt is actually 
+          <code>${mapreduce.output.fileoutputformat.outputdir}/_temporary/_{$taskid}</code>, and this value is 
+          set by the MapReduce framework. So, just create any side-files in the 
+          path  returned by
+          <a href="ext:api/org/apache/hadoop/mapreduce/lib/output/fileoutputformat/getworkoutputpath">
+          FileOutputFormat.getWorkOutputPath() </a>from MapReduce 
+          task to take advantage of this feature.</p>
+          
+          <p>The entire discussion holds true for maps of jobs with 
+           reducer=NONE (i.e. 0 reduces) since output of the map, in that case, 
+           goes directly to HDFS.</p> 
+        </section>
+        
+        <section>
+          <title>RecordWriter</title>
+          
+          <p><a href="ext:api/org/apache/hadoop/mapreduce/recordwriter">
+          RecordWriter</a> writes the output <code>&lt;key, value&gt;</code> 
+          pairs to an output file.</p>
+
+          <p>RecordWriter implementations write the job outputs to the 
+          <code>FileSystem</code>.</p>
+        </section>
+      </section>
+      
+      <section>
+        <title>Other Useful Features</title>
+ 
+        <section>
+          <title>Submitting Jobs to Queues</title>
+          <p>Users submit jobs to Queues. Queues, as collection of jobs, 
+          allow the system to provide specific functionality. For example, 
+          queues use ACLs to control which users 
+          who can submit jobs to them. Queues are expected to be primarily 
+          used by Hadoop Schedulers. </p> 
+
+          <p>Hadoop comes configured with a single mandatory queue, called 
+          'default'. Queue names are defined in the 
+          <code>mapred.queue.names</code> property of the Hadoop site
+          configuration. Some job schedulers, such as the 
+          <a href="capacity_scheduler.html">Capacity Scheduler</a>, 
+          support multiple queues.</p>
+          
+          <p>A job defines the queue it needs to be submitted to through the
+          <code>mapreduce.job.queuename</code> property.
+          Setting the queue name is optional. If a job is submitted 
+          without an associated queue name, it is submitted to the 'default' 
+          queue.</p> 
+        </section>
+        <section>
+          <title>Counters</title>
+          
+          <p><a href="ext:api/org/apache/hadoop/mapreduce/counters"
+          ><code>Counters</code></a> represent global counters, defined either by 
+          the MapReduce framework or applications. Each <a
+            href="ext:api/org/apache/hadoop/mapreduce/counter"
+            ><code>Counter</code></a> can 
+          be of any <code>Enum</code> type. Counters of a particular 
+          <code>Enum</code> are bunched into groups of type 
+          <code>Counters.Group</code>.</p>
+          
+          <p>Applications can define arbitrary <code>Counters</code> (of type 
+          <code>Enum</code>); get a <code>Counter</code> object from the task's
+          Context with the <a
+            href="ext:api/org/apache/hadoop/mapreduce/taskinputoutputcontext/getcounter"
+            ><code>getCounter()</code></a> method, and then call
+          the <a
+            href="ext:api/org/apache/hadoop/mapreduce/counter/increment"
+            ><code>Counter.increment(long)</code></a> method to increment its
+          value locally. These counters are then globally aggregated by the framework.</p>
+        </section>       
+        
+        <section>
+          <title>DistributedCache</title>
+          
+          <p><a href="ext:api/org/apache/hadoop/filecache/distributedcache">
+          DistributedCache</a> distributes application-specific, large, read-only 
+          files efficiently.</p>
+ 
+          <p><code>DistributedCache</code> is a facility provided by the 
+          MapReduce framework to cache files (text, archives, jars and so on) 
+          needed by applications.</p>
+ 
+          <p>Applications specify the files to be cached via urls (hdfs://)
+          in the <code>Job</code>. The <code>DistributedCache</code> 
+          assumes that the files specified via hdfs:// urls are already present 
+          on the <code>FileSystem</code>.</p>
+
+          <p>The framework will copy the necessary files to the slave node 
+          before any tasks for the job are executed on that node. Its 
+          efficiency stems from the fact that the files are only copied once 
+          per job and the ability to cache archives which are un-archived on 
+          the slaves.</p> 
+          
+          <p><code>DistributedCache</code> tracks the modification timestamps of 
+          the cached files. Clearly the cache files should not be modified by 
+          the application or externally while the job is executing.</p>
+
+          <p><code>DistributedCache</code> can be used to distribute simple, 
+          read-only data/text files and more complex types such as archives and
+          jars. Archives (zip, tar, tgz and tar.gz files) are 
+          <em>un-archived</em> at the slave nodes. Files 
+          have <em>execution permissions</em> set. </p>
+          
+          <p>The files/archives can be distributed by setting the property
+          <code>mapred.cache.{files|archives}</code>. If more than one 
+          file/archive has to be distributed, they can be added as comma
+          separated paths. The properties can also be set by APIs 
+          <a href="ext:api/org/apache/hadoop/filecache/distributedcache/addcachefile">
+          DistributedCache.addCacheFile(URI,conf)</a>/ 
+          <a href="ext:api/org/apache/hadoop/filecache/distributedcache/addcachearchive">
+          DistributedCache.addCacheArchive(URI,conf)</a> and
+          <a href="ext:api/org/apache/hadoop/filecache/distributedcache/setcachefiles">
+          DistributedCache.setCacheFiles(URIs,conf)</a>/
+          <a href="ext:api/org/apache/hadoop/filecache/distributedcache/setcachearchives">
+          DistributedCache.setCacheArchives(URIs,conf)</a> 
+          where URI is of the form
+          <code>hdfs://host:port/absolute-path#link-name</code>.
+          In Streaming, the files can be distributed through command line
+          option <code>-cacheFile/-cacheArchive</code>.</p>
+          
+          <p>Optionally users can also direct the <code>DistributedCache</code>
+          to <em>symlink</em> the cached file(s) into the <code>current working 
+          directory</code> of the task via the 
+          <a href="ext:api/org/apache/hadoop/filecache/distributedcache/createsymlink">
+          DistributedCache.createSymlink(Configuration)</a> api. Or by setting
+          the configuration property <code>mapreduce.job.cache.symlink.create</code>
+          as <code>yes</code>. The DistributedCache will use the 
+          <code>fragment</code> of the URI as the name of the symlink. 
+          For example, the URI 
+          <code>hdfs://namenode:port/lib.so.1#lib.so</code>
+          will have the symlink name as <code>lib.so</code> in task's cwd
+          for the file <code>lib.so.1</code> in distributed cache.</p>
+         
+          <p>The <code>DistributedCache</code> can also be used as a 
+          rudimentary software distribution mechanism for use in the
+          map and/or reduce tasks. It can be used to distribute both
+          jars and native libraries. The 
+          <a href="ext:api/org/apache/hadoop/filecache/distributedcache/addarchivetoclasspath">
+          DistributedCache.addArchiveToClassPath(Path, Configuration)</a> or 
+          <a href="ext:api/org/apache/hadoop/filecache/distributedcache/addfiletoclasspath">
+          DistributedCache.addFileToClassPath(Path, Configuration)</a> api 
+          can be used to cache files/jars and also add them to the 
+          <em>classpath</em> of child-jvm. The same can be done by setting
+          the configuration properties 
+          <code>mapreduce.job.classpath.{files|archives}</code>. Similarly the
+          cached files that are symlinked into the working directory of the
+          task can be used to distribute native libraries and load them.</p>
+          
+          <section>
+            <title>Private and Public DistributedCache Files</title>
+            <p>DistributedCache files can be private or public, that
+               determines how they can be shared on the slave nodes.</p>
+            <ul>
+              <li>"Private" DistributedCache files are cached in a local
+              directory private to the user whose jobs need these
+              files. These files are shared by all
+              tasks and jobs of the specific user only and cannot be accessed by
+              jobs of other users on the slaves. A DistributedCache file becomes
+              private by virtue of its permissions on the file system where the
+              files are uploaded, typically HDFS. If the file has no
+              world readable access, or if the directory path leading to the
+              file has no world executable access for lookup, then the file
+              becomes private.
+              </li>
+              <li>"Public" DistributedCache files are cached in a global
+              directory and the file access is setup such that they are
+              publicly visible to all users. These files can be shared by
+              tasks and jobs of all users on the slaves.
+              A DistributedCache file becomes public by virtue of its permissions
+              on the file system where the files are uploaded, typically HDFS.
+              If the file has world readable access, AND if the directory
+              path leading to the file has world executable access for lookup,
+              then the file becomes public. In other words, if the user intends
+              to make a file publicly available to all users, the file permissions
+              must be set to be world readable, and the directory permissions
+              on the path leading to the file must be world executable.
+            </li>
+            </ul>
+          </section>
+          <p>The <code>DistributedCache</code> tracks modification timestamps 
+          of the cache files/archives. Clearly the cache files/archives should
+          not be modified by the application or externally 
+          while the job is executing.</p>
+          
+          <p>Here is an illustrative example on how to use the 
+          <code>DistributedCache</code>:<br/>
+           // Setting up the cache for the application
+           1. Copy the requisite files to the <code>FileSystem</code>:<br/>
+            <code>$ bin/hadoop fs -copyFromLocal lookup.dat /myapp/lookup.dat</code><br/>  
+            <code>$ bin/hadoop fs -copyFromLocal map.zip /myapp/map.zip </code><br/> 
+            <code>$ bin/hadoop fs -copyFromLocal mylib.jar /myapp/mylib.jar</code><br/>
+            <code>$ bin/hadoop fs -copyFromLocal mytar.tar /myapp/mytar.tar</code><br/>
+            <code>$ bin/hadoop fs -copyFromLocal mytgz.tgz /myapp/mytgz.tgz</code><br/>
+            <code>$ bin/hadoop fs -copyFromLocal mytargz.tar.gz /myapp/mytargz.tar.gz</code><br/>
+           2. Setup the job<br/>
+            <code>Job job = new Job(conf);</code><br/>
+            <code>job.addCacheFile(new URI("/myapp/lookup.dat#lookup.dat"));</code><br/>
+            <code>job.addCacheArchive(new URI("/myapp/map.zip"));</code><br/>
+            <code>job.addFileToClassPath(new Path("/myapp/mylib.jar"));</code><br/>
+            <code>job.addCacheArchive(new URI("/myapp/mytar.tar"));</code><br/>
+            <code>job.addCacheArchive(new URI("/myapp/mytgz.tgz"));</code><br/>
+            <code>job.addCacheArchive(new URI("/myapp/mytargz.tar.gz"));</code><br/>
+      
+           3. Use the cached files in the 
+              <code>{@link org.apache.hadoop.mapreduce.Mapper}
+              or {@link org.apache.hadoop.mapreduce.Reducer}:</code><br/>
+      
+              <code>public static class MapClass extends Mapper&lt;K, V, K, V&gt; {</code><br/>
+                <code>&nbsp;&nbsp;private Path[] localArchives;</code><br/>
+                <code>&nbsp;&nbsp;private Path[] localFiles;</code><br/>
+                <code>&nbsp;&nbsp;public void setup(Context context) {</code><br/>
+                 <code>&nbsp;&nbsp;&nbsp;&nbsp;// Get the cached archives/files</code><br/>
+                 <code>&nbsp;&nbsp;&nbsp;&nbsp;localArchives = context.getLocalCacheArchives();</code><br/>
+                 <code>&nbsp;&nbsp;&nbsp;&nbsp;localFiles = context.getLocalCacheFiles();</code><br/>
+              <code>&nbsp;&nbsp;}</code><br/>
+        
+              <code>&nbsp;&nbsp;public void map(K key, V value, 
+                  Context context) throws IOException {</code><br/>
+                <code>&nbsp;&nbsp;&nbsp;&nbsp;// Use data from the cached archives/files here</code><br/>
+                <code>&nbsp;&nbsp;&nbsp;&nbsp;// ...</code><br/>
+                <code>&nbsp;&nbsp;&nbsp;&nbsp;// ...</code><br/>
+                <code>&nbsp;&nbsp;&nbsp;&nbsp;context.write(k, v);</code><br/>
+              <code>&nbsp;&nbsp;}</code><br/>
+            <code>}</code></p>
+          
+        </section>
+        
+        <section>
+          <title>Tool</title>
+          
+          <p>The <a href="ext:api/org/apache/hadoop/util/tool">Tool</a> 
+          interface supports the handling of generic Hadoop command-line options.
+          </p>
+          
+          <p><code>Tool</code> is the standard for any MapReduce tool or 
+          application. The application should delegate the handling of 
+          standard command-line options to 
+          <a href="ext:api/org/apache/hadoop/util/genericoptionsparser">
+          GenericOptionsParser</a> via          
+          <a href="ext:api/org/apache/hadoop/util/toolrunner/run">
+          ToolRunner.run(Tool, String[])</a> and only handle its custom 
+          arguments.</p>
+          
+          <p>
+            The generic Hadoop command-line options are:<br/>
+            <code>
+              -conf &lt;configuration file&gt;
+            </code>
+            <br/>
+            <code>
+              -D &lt;property=value&gt;
+            </code>
+            <br/>
+            <code>
+              -fs &lt;local|namenode:port&gt;
+            </code>
+            <br/>
+            <code>
+              -jt &lt;local|jobtracker:port&gt;
+            </code>
+          </p>
+        </section>
+        
+        <section>
+          <title>IsolationRunner</title>
+          
+          <p><a href="ext:api/org/apache/hadoop/mapred/isolationrunner">
+          IsolationRunner</a> is a utility to help debug MapReduce programs.</p>
+          
+          <p>To use the <code>IsolationRunner</code>, first set 
+          <code>keep.failed.tasks.files</code> to <code>true</code> 
+          (also see <code>keep.tasks.files.pattern</code>).</p>
+          
+          <p>
+            Next, go to the node on which the failed task ran and go to the 
+            <code>TaskTracker</code>'s local directory and run the 
+            <code>IsolationRunner</code>:<br/>
+            <code>$ cd &lt;local path&gt;
+            /taskTracker/$user/jobcache/$jobid/${taskid}/work</code><br/>
+            <code>
+              $ bin/hadoop org.apache.hadoop.mapred.IsolationRunner ../job.xml
+            </code>
+          </p>
+          
+          <p><code>IsolationRunner</code> will run the failed task in a single 
+          jvm, which can be in the debugger, over precisely the same input.</p>
+        </section>
+
+        <section>
+          <title>Profiling</title>
+          <p>Profiling is a utility to get a representative (2 or 3) sample
+          of built-in java profiler for a sample of maps and reduces. </p>
+          
+          <p>User can specify whether the system should collect profiler
+          information for some of the tasks in the job by setting the
+          configuration property <code>mapreduce.task.profile</code>. The
+          value can be set using the api 
+          <a href="ext:api/org/apache/hadoop/mapreduce/job/setprofileenabled">
+          Job.setProfileEnabled(boolean)</a>. If the value is set 
+          <code>true</code>, the task profiling is enabled. The profiler
+          information is stored in the user log directory. By default, 
+          profiling is not enabled for the job.  </p>
+          
+          <p>Once user configures that profiling is needed, she/he can use
+          the configuration property 
+          <code>mapreduce.task.profile.{maps|reduces}</code> to set the ranges
+          of MapReduce tasks to profile. The value can be set using the api 
+          <a href="ext:api/org/apache/hadoop/mapreduce/job/setprofiletaskrange">
+          Job.setProfileTaskRange(boolean,String)</a>.
+          By default, the specified range is <code>0-2</code>.</p>
+          
+          <p>User can also specify the profiler configuration arguments by 
+          setting the configuration property 
+          <code>mapreduce.task.profile.params</code>. The value can be specified 
+          using the api
+          <a href="ext:api/org/apache/hadoop/mapreduce/job/setprofileparams">
+          Job.setProfileParams(String)</a>. If the string contains a 
+          <code>%s</code>, it will be replaced with the name of the profiling
+          output file when the task runs. These parameters are passed to the
+          task child JVM on the command line. The default value for 
+          the profiling parameters is 
+          <code>-agentlib:hprof=cpu=samples,heap=sites,force=n,thread=y,verbose=n,file=%s</code>
+          </p>
+        </section>
+        
+        <section>
+          <title>Debugging</title>
+          <p>The MapReduce framework provides a facility to run user-provided 
+          scripts for debugging. When a MapReduce task fails, a user can run 
+          a debug script, to process task logs for example. The script is 
+          given access to the task's stdout and stderr outputs, syslog and 
+          jobconf. The output from the debug script's stdout and stderr is 
+          displayed on the console diagnostics and also as part of the 
+          job UI. </p>
+
+          <p> In the following sections we discuss how to submit a debug script
+          with a job. The script file needs to be distributed and submitted to 
+          the framework.</p>
+          <section>
+          <title> How to distribute the script file: </title>
+          <p>
+          The user needs to use  
+          <a href="mapred_tutorial.html#DistributedCache">DistributedCache</a>
+          to <em>distribute</em> and <em>symlink</em> the script file.</p>
+          </section>
+          <section>
+          <title> How to submit the script: </title>
+          <p> A quick way to submit the debug script is to set values for the 
+          properties <code>mapreduce.map.debug.script</code> and 
+          <code>mapreduce.reduce.debug.script</code>, for debugging map and 
+          reduce tasks respectively. These properties can also be set by using APIs 
+          <code>Job.getConfiguration().set(Job.MAP_DEBUG_SCRIPT, String)</code>
+          and <code>Job.getConfiguration().set(Job.REDUCE_DEBUG_SCRIPT,
+          String)</code>. In streaming mode, a debug 
+          script can be submitted with the command-line options 
+          <code>-mapdebug</code> and <code>-reducedebug</code>, for debugging 
+          map and reduce tasks respectively.</p>
+            
+          <p>The arguments to the script are the task's stdout, stderr, 
+          syslog and jobconf files. The debug command, run on the node where
+          the MapReduce task failed, is: <br/>
+          <code> $script $stdout $stderr $syslog $jobconf </code> </p> 
+
+          <p> Pipes programs have the c++ program name as a fifth argument
+          for the command. Thus for the pipes programs the command is <br/> 
+          <code>$script $stdout $stderr $syslog $jobconf $program </code>  
+          </p>
+          </section>
+          
+          <section>
+          <title> Default Behavior: </title>
+          <p> For pipes, a default script is run to process core dumps under
+          gdb, prints stack trace and gives info about running threads. </p>
+          </section>
+        </section>
+        
+        <section>
+          <title>JobControl</title>
+          
+          <p><a href="ext:api/org/apache/hadoop/mapred/jobcontrol/package-summary">
+          JobControl</a> is a utility which encapsulates a set of MapReduce jobs
+          and their dependencies.</p>
+        </section>
+        
+        <section>
+          <title>Data Compression</title>
+          
+          <p>Hadoop MapReduce provides facilities for the application-writer to
+          specify compression for both intermediate map-outputs and the
+          job-outputs i.e. output of the reduces. It also comes bundled with
+          <a href="ext:api/org/apache/hadoop/io/compress/compressioncodec">
+          CompressionCodec</a> implementation for the 
+          <a href="ext:zlib">zlib</a> compression 
+          algorithm. The <a href="ext:gzip">gzip</a> file format is also
+          supported.</p>
+          
+         <p>Hadoop also provides native implementations of the above compression
+          codecs for reasons of both performance (zlib) and non-availability of
+          Java libraries. For more information see the
+          <a href="http://hadoop.apache.org/common/docs/current/native_libraries.html">Native Libraries Guide</a>.</p>
+          
+          
+          <section>
+            <title>Intermediate Outputs</title>
+            
+            <p>Applications can control compression of intermediate map-outputs
+            via the <code>Job.getConfiguration().setBoolean(Job.MAP_OUTPUT_COMPRESS, bool)</code>
+            api and the <code>CompressionCodec</code> to be used via the
+            <code>Job.getConfiguration().setClass(Job.MAP_OUTPUT_COMPRESS_CODEC, Class,
+            CompressionCodec.class)</code> api.</p>
+          </section>
+          
+          <section>
+            <title>Job Outputs</title>
+            
+            <p>Applications can control compression of job-outputs via the
+            <a href="ext:api/org/apache/hadoop/mapreduce/lib/output/fileoutputformat/setcompressoutput">
+            FileOutputFormat.setCompressOutput(Job, boolean)</a> api and the 
+            <code>CompressionCodec</code> to be used can be specified via the
+            <a href="ext:api/org/apache/hadoop/mapreduce/lib/output//fileoutputformat/setoutputcompressorclass">
+            FileOutputFormat.setOutputCompressorClass(Job, Class)</a> api.</p>
+            
+            <p>If the job outputs are to be stored in the 
+            <a href="ext:api/org/apache/hadoop/mapreduce/lib/output/sequencefileoutputformat">
+            SequenceFileOutputFormat</a>, the required
+            <code>SequenceFile.CompressionType</code> (i.e. <code>RECORD</code> / 
+            <code>BLOCK</code> - defaults to <code>RECORD</code>) can be 
+            specified via the 
+            <a href="ext:api/org/apache/hadoop/mapreduce/lib/output//sequencefileoutputformat/setoutputcompressiontype">
+            SequenceFileOutputFormat.setOutputCompressionType(Job, 
+            SequenceFile.CompressionType)</a> api.</p>
+          </section>
+        </section>
+        
+        <section>
+          <title>Skipping Bad Records</title>
+          <p>Hadoop provides an option where a certain set of bad input 
+          records can be skipped when processing map inputs. Applications 
+          can control this feature through the  
+          <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords">
+          SkipBadRecords</a> class.</p>
+          
+          <p>This feature can be used when map tasks crash deterministically 
+          on certain input. This usually happens due to bugs in the 
+          map function. Usually, the user would have to fix these bugs. 
+          This is, however, not possible sometimes. The bug may be in third 
+          party libraries, for example, for which the source code is not 
+          available. In such cases, the task never completes successfully even
+          after multiple attempts, and the job fails. With this feature, only 
+          a small portion of data surrounding the 
+          bad records is lost, which may be acceptable for some applications 
+          (those performing statistical analysis on very large data, for 
+          example). </p>
+
+          <p>By default this feature is disabled. For enabling it, 
+          refer to <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/setmappermaxskiprecords">
+          SkipBadRecords.setMapperMaxSkipRecords(Configuration, long)</a> and 
+          <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/setreducermaxskipgroups">
+          SkipBadRecords.setReducerMaxSkipGroups(Configuration, long)</a>.
+          </p>
+ 
+          <p>With this feature enabled, the framework gets into 'skipping 
+          mode' after a certain number of map failures. For more details, 
+          see <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/setattemptsTostartskipping">
+          SkipBadRecords.setAttemptsToStartSkipping(Configuration, int)</a>. 
+          In 'skipping mode', map tasks maintain the range of records being 
+          processed. To do this, the framework relies on the processed record 
+          counter. See <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/counter_map_processed_records">
+          SkipBadRecords.COUNTER_MAP_PROCESSED_RECORDS</a> and 
+          <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/counter_reduce_processed_groups">
+          SkipBadRecords.COUNTER_REDUCE_PROCESSED_GROUPS</a>. 
+          This counter enables the framework to know how many records have 
+          been processed successfully, and hence, what record range caused 
+          a task to crash. On further attempts, this range of records is 
+          skipped.</p>
+     
+          <p>The number of records skipped depends on how frequently the 
+          processed record counter is incremented by the application. 
+          It is recommended that this counter be incremented after every 
+          record is processed. This may not be possible in some applications 
+          that typically batch their processing. In such cases, the framework 
+          may skip additional records surrounding the bad record. Users can 
+          control the number of skipped records through 
+          <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/setmappermaxskiprecords">
+          SkipBadRecords.setMapperMaxSkipRecords(Configuration, long)</a> and 
+          <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/setreducermaxskipgroups">
+          SkipBadRecords.setReducerMaxSkipGroups(Configuration, long)</a>. 
+          The framework tries to narrow the range of skipped records using a 
+          binary search-like approach. The skipped range is divided into two 
+          halves and only one half gets executed. On subsequent 
+          failures, the framework figures out which half contains 
+          bad records. A task will be re-executed till the
+          acceptable skipped value is met or all task attempts are exhausted.
+          To increase the number of task attempts, use
+          <a href="ext:api/org/apache/hadoop/mapreduce/job/setmaxmapattempts">
+          Job.setMaxMapAttempts(int)</a> and 
+          <a href="ext:api/org/apache/hadoop/mapreduce/job/setmaxreduceattempts">
+          Job.setMaxReduceAttempts(int)</a>.
+          </p>
+          
+          <p>Skipped records are written to HDFS in the sequence file 
+          format, for later analysis. The location can be changed through 
+          <a href="ext:api/org/apache/hadoop/mapred/skipbadrecords/setskipoutputpath">
+          SkipBadRecords.setSkipOutputPath(conf, Path)</a>.
+          </p> 
+
+        </section>
+        
+      </section>
+    </section>
+
+    <section>
+      <title>Example: WordCount v2.0</title>
+      
+      <p>Here is a more complete <code>WordCount</code> which uses many of the
+      features provided by the MapReduce framework we discussed so far.</p>
+      
+      <p>This example needs the HDFS to be up and running, especially for the 
+      <code>DistributedCache</code>-related features. Hence it only works with a 
+      pseudo-distributed (<a href="ext:single-node-setup">Single Node Setup</a>) 
+     or fully-distributed (<a href="ext:cluster-setup/FullyDistributedOperation">Cluster Setup</a>) 
+      Hadoop installation.</p>     
+      
+      <section>
+        <title>Source Code</title>
+        
+        <table>
+          <tr>
+            <th></th>
+            <th>WordCount2.java</th>
+          </tr>
+<tr><td>1.</td><td><code>package&nbsp;org.myorg;
+</code></td></tr>
+<tr><td>2.</td><td><code>
+</code></td></tr>
+<tr><td>3.</td><td><code>import&nbsp;java.io.*;
+</code></td></tr>
+<tr><td>4.</td><td><code>import&nbsp;java.util.*;
+</code></td></tr>
+<tr><td>5.</td><td><code>
+</code></td></tr>
+<tr><td>6.</td><td><code>import&nbsp;org.apache.hadoop.fs.Path;
+</code></td></tr>
+<tr><td>7.</td><td><code>import&nbsp;org.apache.hadoop.filecache.DistributedCache;
+</code></td></tr>
+<tr><td>8.</td><td><code>import&nbsp;org.apache.hadoop.conf.*;
+</code></td></tr>
+<tr><td>9.</td><td><code>import&nbsp;org.apache.hadoop.io.*;
+</code></td></tr>
+<tr><td>10.</td><td><code>import&nbsp;org.apache.hadoop.mapreduce.*;
+</code></td></tr>
+<tr><td>11.</td><td><code>import&nbsp;org.apache.hadoop.mapreduce.lib.input.*;
+</code></td></tr>
+<tr><td>12.</td><td><code>import&nbsp;org.apache.hadoop.mapreduce.lib.output.*;
+</code></td></tr>
+<tr><td>13.</td><td><code>import&nbsp;org.apache.hadoop.util.*;
+</code></td></tr>
+<tr><td>14.</td><td><code>
+</code></td></tr>
+<tr><td>15.</td><td><code>public&nbsp;class&nbsp;WordCount2&nbsp;extends&nbsp;Configured&nbsp;implements&nbsp;Tool&nbsp;{
+</code></td></tr>
+<tr><td>16.</td><td><code>
+</code></td></tr>
+<tr><td>17.</td><td><code>&nbsp;&nbsp;&nbsp;public&nbsp;static&nbsp;class&nbsp;Map
+</code></td></tr>
+<tr><td>18.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;extends&nbsp;Mapper&lt;LongWritable,&nbsp;Text,&nbsp;Text,&nbsp;IntWritable&gt;&nbsp;{
+</code></td></tr>
+<tr><td>19.</td><td><code>
+</code></td></tr>
+<tr><td>20.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;static&nbsp;enum&nbsp;Counters&nbsp;{&nbsp;INPUT_WORDS&nbsp;}
+</code></td></tr>
+<tr><td>21.</td><td><code>
+</code></td></tr>
+<tr><td>22.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;private&nbsp;final&nbsp;static&nbsp;IntWritable&nbsp;one&nbsp;=&nbsp;new&nbsp;IntWritable(1);
+</code></td></tr>
+<tr><td>23.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;private&nbsp;Text&nbsp;word&nbsp;=&nbsp;new&nbsp;Text();
+</code></td></tr>
+<tr><td>24.</td><td><code>
+</code></td></tr>
+<tr><td>25.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;private&nbsp;boolean&nbsp;caseSensitive&nbsp;=&nbsp;true;
+</code></td></tr>
+<tr><td>26.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;private&nbsp;Set&lt;String&gt;&nbsp;patternsToSkip&nbsp;=&nbsp;new&nbsp;HashSet&lt;String&gt;();
+</code></td></tr>
+<tr><td>27.</td><td><code>
+</code></td></tr>
+<tr><td>28.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;private&nbsp;long&nbsp;numRecords&nbsp;=&nbsp;0;
+</code></td></tr>
+<tr><td>29.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;private&nbsp;String&nbsp;inputFile;
+</code></td></tr>
+<tr><td>30.</td><td><code>
+</code></td></tr>
+<tr><td>31.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;public&nbsp;void&nbsp;setup(Context&nbsp;context)&nbsp;{
+</code></td></tr>
+<tr><td>32.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Configuration&nbsp;conf&nbsp;=&nbsp;context.getConfiguration();
+</code></td></tr>
+<tr><td>33.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;caseSensitive&nbsp;=&nbsp;conf.getBoolean(&quot;wordcount.case.sensitive&quot;,&nbsp;true);
+</code></td></tr>
+<tr><td>34.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;inputFile&nbsp;=&nbsp;conf.get(&quot;mapreduce.map.input.file&quot;);
+</code></td></tr>
+<tr><td>35.</td><td><code>
+</code></td></tr>
+<tr><td>36.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if&nbsp;(conf.getBoolean(&quot;wordcount.skip.patterns&quot;,&nbsp;false))&nbsp;{
+</code></td></tr>
+<tr><td>37.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Path[]&nbsp;patternsFiles&nbsp;=&nbsp;new&nbsp;Path[0];
+</code></td></tr>
+<tr><td>38.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;try&nbsp;{
+</code></td></tr>
+<tr><td>39.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;patternsFiles&nbsp;=&nbsp;DistributedCache.getLocalCacheFiles(conf);
+</code></td></tr>
+<tr><td>40.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;catch&nbsp;(IOException&nbsp;ioe)&nbsp;{
+</code></td></tr>
+<tr><td>41.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.err.println(&quot;Caught&nbsp;exception&nbsp;while&nbsp;getting&nbsp;cached&nbsp;files:&nbsp;&quot;
+</code></td></tr>
+<tr><td>42.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;StringUtils.stringifyException(ioe));
+</code></td></tr>
+<tr><td>43.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>44.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for&nbsp;(Path&nbsp;patternsFile&nbsp;:&nbsp;patternsFiles)&nbsp;{
+</code></td></tr>
+<tr><td>45.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;parseSkipFile(patternsFile);
+</code></td></tr>
+<tr><td>46.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>47.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>48.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>49.</td><td><code>
+</code></td></tr>
+<tr><td>50.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;private&nbsp;void&nbsp;parseSkipFile(Path&nbsp;patternsFile)&nbsp;{
+</code></td></tr>
+<tr><td>51.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;try&nbsp;{
+</code></td></tr>
+<tr><td>52.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BufferedReader&nbsp;fis&nbsp;=&nbsp;new&nbsp;BufferedReader(new&nbsp;FileReader(
+</code></td></tr>
+<tr><td>53.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;patternsFile.toString()));
+</code></td></tr>
+<tr><td>54.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String&nbsp;pattern&nbsp;=&nbsp;null;
+</code></td></tr>
+<tr><td>55.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;while&nbsp;((pattern&nbsp;=&nbsp;fis.readLine())&nbsp;!=&nbsp;null)&nbsp;{
+</code></td></tr>
+<tr><td>56.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;patternsToSkip.add(pattern);
+</code></td></tr>
+<tr><td>57.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>58.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;catch&nbsp;(IOException&nbsp;ioe)&nbsp;{
+</code></td></tr>
+<tr><td>59.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.err.println(&quot;Caught&nbsp;exception&nbsp;while&nbsp;parsing&nbsp;the&nbsp;cached&nbsp;file&nbsp;'&quot;
+</code></td></tr>
+<tr><td>60.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;patternsFile&nbsp;+&nbsp;&quot;'&nbsp;:&nbsp;&quot;&nbsp;+&nbsp;StringUtils.stringifyException(ioe));
+</code></td></tr>
+<tr><td>61.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>62.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>63.</td><td><code>
+</code></td></tr>
+<tr><td>64.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;public&nbsp;void&nbsp;map(LongWritable&nbsp;key,&nbsp;Text&nbsp;value,&nbsp;Context&nbsp;context)
+</code></td></tr>
+<tr><td>65.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;throws&nbsp;IOException,&nbsp;InterruptedException&nbsp;{
+</code></td></tr>
+<tr><td>66.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String&nbsp;line&nbsp;=&nbsp;(caseSensitive)&nbsp;?
+</code></td></tr>
+<tr><td>67.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;value.toString()&nbsp;:&nbsp;value.toString().toLowerCase();
+</code></td></tr>
+<tr><td>68.</td><td><code>
+</code></td></tr>
+<tr><td>69.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for&nbsp;(String&nbsp;pattern&nbsp;:&nbsp;patternsToSkip)&nbsp;{
+</code></td></tr>
+<tr><td>70.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;line&nbsp;=&nbsp;line.replaceAll(pattern,&nbsp;&quot;&quot;);
+</code></td></tr>
+<tr><td>71.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>72.</td><td><code>
+</code></td></tr>
+<tr><td>73.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;StringTokenizer&nbsp;tokenizer&nbsp;=&nbsp;new&nbsp;StringTokenizer(line);
+</code></td></tr>
+<tr><td>74.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;while&nbsp;(tokenizer.hasMoreTokens())&nbsp;{
+</code></td></tr>
+<tr><td>75.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;word.set(tokenizer.nextToken());
+</code></td></tr>
+<tr><td>76.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.write(word,&nbsp;one);
+</code></td></tr>
+<tr><td>77.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.getCounter(Counters.INPUT_WORDS).increment(1);
+</code></td></tr>
+<tr><td>78.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>79.</td><td><code>
+</code></td></tr>
+<tr><td>80.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if&nbsp;((++numRecords&nbsp;%&nbsp;100)&nbsp;==&nbsp;0)&nbsp;{
+</code></td></tr>
+<tr><td>81.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.setStatus(&quot;Finished&nbsp;processing&nbsp;&quot;&nbsp;+&nbsp;numRecords
+</code></td></tr>
+<tr><td>82.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;&quot;&nbsp;records&nbsp;&quot;&nbsp;+&nbsp;&quot;from&nbsp;the&nbsp;input&nbsp;file:&nbsp;&quot;&nbsp;+&nbsp;inputFile);
+</code></td></tr>
+<tr><td>83.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>84.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>85.</td><td><code>&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>86.</td><td><code>
+</code></td></tr>
+<tr><td>87.</td><td><code>&nbsp;&nbsp;&nbsp;public&nbsp;static&nbsp;class&nbsp;Reduce
+</code></td></tr>
+<tr><td>88.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;extends&nbsp;Reducer&lt;Text,&nbsp;IntWritable,&nbsp;Text,&nbsp;IntWritable&gt;&nbsp;{
+</code></td></tr>
+<tr><td>89.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;public&nbsp;void&nbsp;reduce(Text&nbsp;key,&nbsp;Iterable&lt;IntWritable&gt;&nbsp;values,
+</code></td></tr>
+<tr><td>90.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Context&nbsp;context)&nbsp;throws&nbsp;IOException,&nbsp;InterruptedException&nbsp;{
+</code></td></tr>
+<tr><td>91.</td><td><code>
+</code></td></tr>
+<tr><td>92.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;int&nbsp;sum&nbsp;=&nbsp;0;
+</code></td></tr>
+<tr><td>93.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for&nbsp;(IntWritable&nbsp;val&nbsp;:&nbsp;values)&nbsp;{
+</code></td></tr>
+<tr><td>94.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sum&nbsp;+=&nbsp;val.get();
+</code></td></tr>
+<tr><td>95.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>96.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.write(key,&nbsp;new&nbsp;IntWritable(sum));
+</code></td></tr>
+<tr><td>97.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>98.</td><td><code>&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>99.</td><td><code>
+</code></td></tr>
+<tr><td>100.</td><td><code>&nbsp;&nbsp;&nbsp;public&nbsp;int&nbsp;run(String[]&nbsp;args)&nbsp;throws&nbsp;Exception&nbsp;{
+</code></td></tr>
+<tr><td>101.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Job&nbsp;job&nbsp;=&nbsp;new&nbsp;Job(getConf());
+</code></td></tr>
+<tr><td>102.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job.setJarByClass(WordCount2.class);
+</code></td></tr>
+<tr><td>103.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job.setJobName(&quot;wordcount2.0&quot;);
+</code></td></tr>
+<tr><td>104.</td><td><code>
+</code></td></tr>
+<tr><td>105.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job.setOutputKeyClass(Text.class);
+</code></td></tr>
+<tr><td>106.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job.setOutputValueClass(IntWritable.class);
+</code></td></tr>
+<tr><td>107.</td><td><code>
+</code></td></tr>
+<tr><td>108.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job.setMapperClass(Map.class);
+</code></td></tr>
+<tr><td>109.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job.setCombinerClass(Reduce.class);
+</code></td></tr>
+<tr><td>110.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job.setReducerClass(Reduce.class);
+</code></td></tr>
+<tr><td>111.</td><td><code>
+</code></td></tr>
+<tr><td>112.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;//&nbsp;Note&nbsp;that&nbsp;these&nbsp;are&nbsp;the&nbsp;default.
+</code></td></tr>
+<tr><td>113.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job.setInputFormatClass(TextInputFormat.class);
+</code></td></tr>
+<tr><td>114.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job.setOutputFormatClass(TextOutputFormat.class);
+</code></td></tr>
+<tr><td>115.</td><td><code>
+</code></td></tr>
+<tr><td>116.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;List&lt;String&gt;&nbsp;other_args&nbsp;=&nbsp;new&nbsp;ArrayList&lt;String&gt;();
+</code></td></tr>
+<tr><td>117.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for&nbsp;(int&nbsp;i=0;&nbsp;i&nbsp;&lt;&nbsp;args.length;&nbsp;++i)&nbsp;{
+</code></td></tr>
+<tr><td>118.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if&nbsp;(&quot;-skip&quot;.equals(args[i]))&nbsp;{
+</code></td></tr>
+<tr><td>119.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DistributedCache.addCacheFile(new&nbsp;Path(args[++i]).toUri(),
+</code></td></tr>
+<tr><td>120.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job.getConfiguration());
+</code></td></tr>
+<tr><td>121.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job.getConfiguration().setBoolean(&quot;wordcount.skip.patterns&quot;,&nbsp;true);
+</code></td></tr>
+<tr><td>122.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;else&nbsp;{
+</code></td></tr>
+<tr><td>123.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;other_args.add(args[i]);
+</code></td></tr>
+<tr><td>124.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>125.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>126.</td><td><code>
+</code></td></tr>
+<tr><td>127.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FileInputFormat.setInputPaths(job,&nbsp;new&nbsp;Path(other_args.get(0)));
+</code></td></tr>
+<tr><td>128.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FileOutputFormat.setOutputPath(job,&nbsp;new&nbsp;Path(other_args.get(1)));
+</code></td></tr>
+<tr><td>129.</td><td><code>
+</code></td></tr>
+<tr><td>130.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolean&nbsp;success&nbsp;=&nbsp;job.waitForCompletion(true);
+</code></td></tr>
+<tr><td>131.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return&nbsp;success&nbsp;?&nbsp;0&nbsp;:&nbsp;1;
+</code></td></tr>
+<tr><td>132.</td><td><code>&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>133.</td><td><code>
+</code></td></tr>
+<tr><td>134.</td><td><code>&nbsp;&nbsp;&nbsp;public&nbsp;static&nbsp;void&nbsp;main(String[]&nbsp;args)&nbsp;throws&nbsp;Exception&nbsp;{
+</code></td></tr>
+<tr><td>135.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;int&nbsp;res&nbsp;=&nbsp;ToolRunner.run(new&nbsp;Configuration(),&nbsp;new&nbsp;WordCount2(),&nbsp;args);
+</code></td></tr>
+<tr><td>136.</td><td><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.exit(res);
+</code></td></tr>
+<tr><td>137.</td><td><code>&nbsp;&nbsp;&nbsp;}
+</code></td></tr>
+<tr><td>138.</td><td><code>}
+</code></td></tr>
+        </table>
+      </section>
+        
+      <section>
+        <title>Sample Runs</title>
+        
+        <p>Sample text-files as input:</p>
+        <p>
+          <code>$ bin/hadoop fs -ls /user/joe/wordcount/input/</code><br/>
+          <code>/user/joe/wordcount/input/file01</code><br/>
+          <code>/user/joe/wordcount/input/file02</code><br/>
+          <br/>
+          <code>$ bin/hadoop fs -cat /user/joe/wordcount/input/file01</code><br/>
+          <code>Hello World, Bye World!</code><br/>
+          <br/>
+          <code>$ bin/hadoop fs -cat /user/joe/wordcount/input/file02</code><br/>
+          <code>Hello Hadoop, Goodbye to hadoop.</code>
+        </p>
+        
+        <p>Run the application:</p>
+        <p>
+          <code>
+            $ bin/hadoop jar /user/joe/wordcount.jar org.myorg.WordCount2
+              /user/joe/wordcount/input /user/joe/wordcount/output 
+          </code>
+        </p>
+
+        <p>Output:</p>
+        <p>
+          <code>
+            $ bin/hadoop fs -cat /user/joe/wordcount/output/part-r-00000
+          </code>
+          <br/>
+          <code>Bye    1</code><br/>
+          <code>Goodbye    1</code><br/>
+          <code>Hadoop,    1</code><br/>
+          <code>Hello    2</code><br/>
+          <code>World!    1</code><br/>
+          <code>World,    1</code><br/>
+          <code>hadoop.    1</code><br/>
+          <code>to    1</code><br/>
+        </p>
+        
+        <p>Notice that the inputs differ from the first version we looked at, 
+        and how they affect the outputs.</p>
+
+        <p>Now, lets plug-in a pattern-file which lists the word-patterns to be 
+        ignored, via the <code>DistributedCache</code>.</p>
+        
+        <p>
+          <code>$ hadoop fs -cat /user/joe/wordcount/patterns.txt</code><br/>
+          <code>\.</code><br/>
+          <code>\,</code><br/>
+          <code>\!</code><br/>
+          <code>to</code><br/>
+        </p>
+        
+        <p>Run it again, this time with more options:</p>
+        <p>
+          <code>
+            $ bin/hadoop jar /user/joe/wordcount.jar org.myorg.WordCount2
+              -Dwordcount.case.sensitive=true /user/joe/wordcount/input 
+              /user/joe/wordcount/output -skip /user/joe/wordcount/patterns.txt
+          </code>
+        </p>
+        
+        <p>As expected, the output:</p>
+        <p>
+          <code>
+            $ bin/hadoop fs -cat /user/joe/wordcount/output/part-r-00000
+          </code>
+          <br/>
+          <code>Bye    1</code><br/>
+          <code>Goodbye    1</code><br/>
+          <code>Hadoop    1</code><br/>
+          <code>Hello    2</code><br/>
+          <code>World    2</code><br/>
+          <code>hadoop    1</code><br/>
+        </p>
+        
+        <p>Run it once more, this time switch-off case-sensitivity:</p>
+        <p>
+          <code>
+            $ bin/hadoop jar /user/joe/wordcount.jar org.myorg.WordCount2
+              -Dwordcount.case.sensitive=false /user/joe/wordcount/input 
+              /user/joe/wordcount/output -skip /user/joe/wordcount/patterns.txt
+          </code>
+        </p>
+        
+        <p>Sure enough, the output:</p>
+        <p>
+          <code>
+            $ bin/hadoop fs -cat /user/joe/wordcount/output/part-r-00000
+          </code>
+          <br/>
+          <code>bye    1</code><br/>
+          <code>goodbye    1</code><br/>
+          <code>hadoop    2</code><br/>
+          <code>hello    2</code><br/>
+          <code>world    2</code><br/>
+        </p>
+      </section>
+      
+      <section>
+        <title>Highlights</title>
+        
+        <p>The second version of <code>WordCount</code> improves upon the 
+        previous one by using some features offered by the MapReduce framework:
+        </p>
+        <ul>
+          <li>
+            Demonstrates how applications can access configuration parameters
+            in the <code>setup</code> method of the <code>Mapper</code> (and
+            <code>Reducer</code>) implementations (lines 31-48).
+          </li>
+          <li>
+            Demonstrates how the <code>DistributedCache</code> can be used to 
+            distribute read-only data needed by the jobs. Here it allows the user 
+            to specify word-patterns to skip while counting (line 119).
+          </li>
+          <li>
+            Demonstrates the utility of the <code>Tool</code> interface and the
+            <code>GenericOptionsParser</code> to handle generic Hadoop 
+            command-line options (line 135).
+          </li>
+          <li>
+            Demonstrates how applications can use <code>Counters</code> (line 77)
+            and how they can set application-specific status information via 
+            the <code>Context</code> instance passed to the <code>map</code> (and
+            <code>reduce</code>) method (line 81).
+          </li>
+        </ul>
+        
+      </section>
+    </section>
+
+    <p>
+      <em>Java and JNI are trademarks or registered trademarks of 
+      Sun Microsystems, Inc. in the United States and other countries.</em>
+    </p>
+    
+  </body>
+  
+</document>

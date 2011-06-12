@@ -1,0 +1,228 @@
+<FindBugsFilter>
+     <Match>
+       <Package name="org.apache.hadoop.record.compiler.generated" />
+     </Match>
+     <Match>
+       <Bug pattern="EI_EXPOSE_REP" />
+     </Match>
+     <Match>
+       <Bug pattern="EI_EXPOSE_REP2" />
+     </Match>
+     <Match>
+       <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
+     </Match>
+     <Match>
+       <Class name="~.*_jsp" />
+       <Bug pattern="DLS_DEAD_LOCAL_STORE" />
+     </Match>
+     <Match>
+       <Field name="_jspx_dependants" />
+       <Bug pattern="UWF_UNWRITTEN_FIELD" />
+     </Match>
+     <!-- 
+       Inconsistent synchronization for Client.Connection.out is
+       is intentional to make a connection to be closed instantly. 
+     --> 
+     <Match>
+       <Class name="org.apache.hadoop.ipc.Client$Connection" />
+       <Field name="out" />
+       <Bug pattern="IS2_INCONSISTENT_SYNC" />
+     </Match>
+     <!-- 
+       Ignore Cross Scripting Vulnerabilities
+       We have an input quoting filter that protects us.
+     -->
+     <Match>
+       <Bug code="XSS" />
+     </Match>
+     <Match>
+       <Bug code="HRS" />
+     </Match>
+     <!--
+       Ignore warnings where child class has the same name as
+       super class. Classes based on Old API shadow names from
+       new API. Should go off after HADOOP-1.0
+     -->
+     <Match>
+       <Class name="~org.apache.hadoop.mapred.*" />
+       <Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS" />
+     </Match>
+     <!--
+       Ignore warnings for usage of System.exit. This is
+       required and have been well thought out
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.mapred.Child$2" />
+       <Method name="run" />
+       <Bug pattern="DM_EXIT" />
+     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.mapred.JobTracker" />
+       <Method name="addHostToNodeMapping" />
+       <Bug pattern="DM_EXIT" />
+     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.mapred.Task" />
+       <Or>
+       <Method name="done" />
+       <Method name="commit" />
+       <Method name="statusUpdate" />
+       </Or>
+       <Bug pattern="DM_EXIT" />
+     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.mapred.Task$TaskReporter" />
+       <Method name="run" />
+       <Bug pattern="DM_EXIT" />
+     </Match>
+     <!--
+       We need to cast objects between old and new api objects
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.mapred.OutputCommitter" />
+       <Bug pattern="BC_UNCONFIRMED_CAST" />
+     </Match>
+     <!--
+       We intentionally do the get name from the inner class
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.mapred.TaskTracker$MapEventsFetcherThread" />
+       <Method name="run" />
+       <Bug pattern="IA_AMBIGUOUS_INVOCATION_OF_INHERITED_OR_OUTER_METHOD" />
+     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.mapred.FileOutputCommitter" />
+       <Bug pattern="NM_WRONG_PACKAGE_INTENTIONAL" />
+     </Match>
+     <!--
+       Ignoring this warning as resolving this would need a non-trivial change in code 
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.mapred.lib.aggregate.ValueAggregatorBaseDescriptor" />
+       <Method name="configure" />
+       <Field name="maxNumItems" />
+       <Bug pattern="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD" />
+     </Match>
+     <!--
+       Comes from org.apache.jasper.runtime.ResourceInjector. Cannot do much.
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.mapred.jobqueue_005fdetails_jsp" />
+       <Field name="_jspx_resourceInjector" />
+       <Bug pattern="SE_BAD_FIELD" />
+     </Match>
+     <!--
+       Storing textInputFormat and then passing it as a parameter. Safe to ignore.
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.mapred.lib.aggregate.ValueAggregatorJob" />
+       <Method name="createValueAggregatorJob" />
+       <Bug pattern="DLS_DEAD_STORE_OF_CLASS_LITERAL" />
+     </Match>
+     <!--
+       Can remove this after the upgrade to findbugs1.3.8
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.mapred.lib.db.DBInputFormat" />
+       <Method name="getSplits" />
+       <Bug pattern="DLS_DEAD_LOCAL_STORE" />
+     </Match>
+    <!--
+      This is a spurious warning. Just ignore
+    -->
+     <Match>
+       <Class name="org.apache.hadoop.mapred.MapTask$MapOutputBuffer" />
+       <Field name="kvindex" />
+       <Bug pattern="IS2_INCONSISTENT_SYNC" />
+     </Match>
+
+     <!-- 
+        core changes 
+     -->
+     <Match>
+       <Class name="~org.apache.hadoop.*" />
+       <Bug code="MS" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.fs.FileSystem" />
+       <Method name="checkPath" />
+       <Bug pattern="ES_COMPARING_STRINGS_WITH_EQ" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.fs.kfs.KFSOutputStream" />
+       <Field name="path" />
+       <Bug pattern="URF_UNREAD_FIELD" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.fs.kfs.KosmosFileSystem" />
+       <Method name="initialize" />
+       <Bug pattern="DM_EXIT" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.io.Closeable" />
+       <Bug pattern="NM_SAME_SIMPLE_NAME_AS_INTERFACE" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.security.AccessControlException" />
+       <Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.record.meta.Utils" />
+       <Method name="skip" />
+       <Bug pattern="BC_UNCONFIRMED_CAST" />
+     </Match>
+
+     <!--
+        The compareTo method is actually a dummy method that just
+        throws excpetions. So, no need to override equals. Ignore
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.record.meta.RecordTypeInfo" />
+       <Bug pattern="EQ_COMPARETO_USE_OBJECT_EQUALS" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.util.ProcfsBasedProcessTree" />
+       <Bug pattern="DMI_HARDCODED_ABSOLUTE_FILENAME" />
+     </Match>
+
+     <!--
+       Streaming, Examples
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.streaming.StreamUtil$TaskId" />
+       <Bug pattern="URF_UNREAD_FIELD" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.examples.DBCountPageView" />
+       <Method name="verify" />
+       <Bug pattern="OBL_UNSATISFIED_OBLIGATION" />
+     </Match>
+
+     <!--
+       getTmpInputStreams is pretty much like a stream constructor.
+       The newly created streams are not supposed to be closed in the constructor. So ignore
+       the OBL warning.
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.server.datanode.FSDataset" />
+       <Method name="getTmpInputStreams" />
+       <Bug pattern="OBL_UNSATISFIED_OBLIGATION" />
+     </Match>
+
+     <!--
+      ResponseProccessor is thread that is designed to catch RuntimeException.
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.DFSClient$DFSOutputStream$DataStreamer$ResponseProcessor" />
+       <Method name="run" />
+       <Bug pattern="REC_CATCH_EXCEPTION" />
+     </Match>
+ </FindBugsFilter>
