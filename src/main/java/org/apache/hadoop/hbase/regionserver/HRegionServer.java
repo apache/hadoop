@@ -1616,13 +1616,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     requestCount.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
+      Integer lock = getLockFromId(get.getLockId());
       if (region.getCoprocessorHost() != null) {
         Boolean result = region.getCoprocessorHost().preExists(get);
         if (result != null) {
           return result.booleanValue();
         }
       }
-      Result r = region.get(get, getLockFromId(get.getLockId()));
+      Result r = region.get(get, lock);
       boolean result = r != null && !r.isEmpty();
       if (region.getCoprocessorHost() != null) {
         result = region.getCoprocessorHost().postExists(get, result);
@@ -1723,6 +1724,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           + "regionName is null");
     }
     HRegion region = getRegion(regionName);
+    Integer lock = getLockFromId(put.getLockId());
     WritableByteArrayComparable comparator = new BinaryComparator(value);
     if (region.getCoprocessorHost() != null) {
       Boolean result = region.getCoprocessorHost()
@@ -1734,7 +1736,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     boolean result = checkAndMutate(regionName, row, family, qualifier,
       CompareOp.EQUAL, new BinaryComparator(value), put,
-      getLockFromId(put.getLockId()));
+      lock);
     if (region.getCoprocessorHost() != null) {
       result = region.getCoprocessorHost().postCheckAndPut(row, family,
         qualifier, CompareOp.EQUAL, comparator, put, result);
@@ -1764,6 +1766,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           + "regionName is null");
     }
     HRegion region = getRegion(regionName);
+    Integer lock = getLockFromId(put.getLockId());    
     if (region.getCoprocessorHost() != null) {
       Boolean result = region.getCoprocessorHost()
         .preCheckAndPut(row, family, qualifier, compareOp, comparator, put);
@@ -1772,7 +1775,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       }
     }
     boolean result = checkAndMutate(regionName, row, family, qualifier,
-      compareOp, comparator, put, getLockFromId(put.getLockId()));
+      compareOp, comparator, put, lock);
     if (region.getCoprocessorHost() != null) {
       result = region.getCoprocessorHost().postCheckAndPut(row, family,
         qualifier, compareOp, comparator, put, result);
@@ -1802,6 +1805,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           + "regionName is null");
     }
     HRegion region = getRegion(regionName);
+    Integer lock = getLockFromId(delete.getLockId());        
     WritableByteArrayComparable comparator = new BinaryComparator(value);
     if (region.getCoprocessorHost() != null) {
       Boolean result = region.getCoprocessorHost().preCheckAndDelete(row,
@@ -1811,7 +1815,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       }
     }
     boolean result = checkAndMutate(regionName, row, family, qualifier,
-      CompareOp.EQUAL, comparator, delete, getLockFromId(delete.getLockId()));
+      CompareOp.EQUAL, comparator, delete, lock);
     if (region.getCoprocessorHost() != null) {
       result = region.getCoprocessorHost().postCheckAndDelete(row, family,
         qualifier, CompareOp.EQUAL, comparator, delete, result);
@@ -1842,6 +1846,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         + "regionName is null");
     }
     HRegion region = getRegion(regionName);
+    Integer lock = getLockFromId(delete.getLockId());        
     if (region.getCoprocessorHost() != null) {
       Boolean result = region.getCoprocessorHost().preCheckAndDelete(row,
         family, qualifier, compareOp, comparator, delete);
@@ -1850,7 +1855,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
      }
     }
     boolean result = checkAndMutate(regionName, row, family, qualifier,
-      compareOp, comparator, delete, getLockFromId(delete.getLockId()));
+      compareOp, comparator, delete, lock);
    if (region.getCoprocessorHost() != null) {
      result = region.getCoprocessorHost().postCheckAndDelete(row, family,
        qualifier, compareOp, comparator, delete, result);
@@ -2618,6 +2623,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     requestCount.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
+      Integer lock = getLockFromId(increment.getLockId());
       Increment incVal = increment;
       Result resVal;
       if (region.getCoprocessorHost() != null) {
@@ -2626,7 +2632,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           return resVal;
         }
       }
-      resVal = region.increment(incVal, getLockFromId(increment.getLockId()),
+      resVal = region.increment(incVal, lock,
           increment.getWriteToWAL());
       if (region.getCoprocessorHost() != null) {
         region.getCoprocessorHost().postIncrement(incVal, resVal);
