@@ -123,6 +123,7 @@ Release 0.91.0 - Unreleased
    HBASE-3978  Rowlock lease renew doesn't work when custom coprocessor
                indicates to bypass default action (Ming Ma)
    HBASE-3963  Schedule all log-spliiting at startup all at once (mingjian)
+   HBASE-3983  list command in shell seems broken
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

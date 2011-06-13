@@ -74,7 +74,7 @@ module Shell
         if args.length == 1
           splits = split(@max_width, dump(args[0]))
           for l in splits
-            output(l)
+            output(@mac_width, l)
             @out.puts
           end
         elsif args.length == 2
