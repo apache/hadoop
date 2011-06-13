@@ -506,6 +506,8 @@ Trunk (unreleased changes)
     HADOOP-7106. Reorganize project SVN layout to "unsplit" the projects.
     (todd, nigel)
 
+    HDFS-2046. Force entropy to come from non-true random for tests. (todd)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
