@@ -78,6 +78,12 @@ public class CompletedTaskAttempt implements TaskAttempt {
   }
 
   @Override
+  public String getAssignedContainerMgrAddress() {
+    // TODO Container details needs to be part of some historyEvent to be able to render the log directory.
+    return null;
+  }
+
+  @Override
   public String getNodeHttpAddress() {
     return attemptInfo.getHostname() + ":" + attemptInfo.getHttpPort();
   }

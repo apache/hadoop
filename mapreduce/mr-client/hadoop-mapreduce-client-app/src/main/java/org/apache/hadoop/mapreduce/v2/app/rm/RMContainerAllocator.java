@@ -232,7 +232,21 @@ public class RMContainerAllocator extends RMContainerRequestor
         LOG.error("Could not deallocate container for task attemptId " + 
             aId);
       }
+    } else if (
+        event.getType() == ContainerAllocator.EventType.CONTAINER_FAILED) {
+      ContainerFailedEvent fEv = (ContainerFailedEvent) event;
+      String host = getHost(fEv.getContMgrAddress());
+      containerFailedOnHost(host);
     }
+  }
+
+  private static String getHost(String contMgrAddress) {
+    String host = contMgrAddress;
+    String[] hostport = host.split(":");
+    if (hostport.length == 2) {
+      host = hostport[0];
+    }
+    return host;
   }
 
   private void preemptReducesIfNeeded() {
@@ -589,11 +603,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       ContainerRequest assigned = null;
       while (assigned == null && maps.size() > 0
           && allocated.getResource().getMemory() >= mapResourceReqt) {
-        String host = allocated.getContainerManagerAddress();
-        String[] hostport = host.split(":");
-        if (hostport.length == 2) {
-          host = hostport[0];
-        }
+        String host = getHost(allocated.getContainerManagerAddress());
         LinkedList<TaskAttemptId> list = mapsHostMapping.get(host);
         while (list != null && list.size() > 0) {
           LOG.info("Host matched to the request list " + host);

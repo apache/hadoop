@@ -46,6 +46,10 @@ public interface TaskAttempt {
    */
   ContainerId getAssignedContainerID();
 
+  /**If container Assigned then return container mgr address, otherwise null.
+   */
+  String getAssignedContainerMgrAddress();
+  
   /**If container Assigned then return the node's http address, otherwise null.
    */
   String getNodeHttpAddress();

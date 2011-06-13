@@ -50,6 +50,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.metrics.MRAppMetrics;
+import org.apache.hadoop.mapreduce.v2.app.rm.ContainerFailedEvent;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
@@ -745,6 +746,13 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     public TaskState transition(TaskImpl task, TaskEvent event) {
       task.failedAttempts++;
       TaskTAttemptEvent castEvent = (TaskTAttemptEvent) event;
+      TaskAttempt attempt = task.attempts.get(castEvent.getTaskAttemptID());
+      if (attempt.getAssignedContainerMgrAddress() != null) {
+        //container was assigned
+        task.eventHandler.handle(new ContainerFailedEvent(attempt.getID(), 
+            attempt.getAssignedContainerMgrAddress()));
+      }
+      
       if (task.failedAttempts < task.maxAttempts) {
         task.handleTaskAttemptCompletion(
             ((TaskTAttemptEvent) event).getTaskAttemptID(), 

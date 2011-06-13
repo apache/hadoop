@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.v2.app.rm;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,7 +29,10 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
+import org.apache.hadoop.mapreduce.v2.app.AMConstants;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -69,6 +73,11 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   private final Set<ResourceRequest> ask = new TreeSet<ResourceRequest>();
   private final Set<Container> release = new TreeSet<Container>(); 
 
+  private boolean nodeBlacklistingEnabled;
+  private int maxTaskFailuresPerNode;
+  private final Map<String, Integer> nodeFailures = new HashMap<String, Integer>();
+  private final Set<String> blacklistedNodes = new HashSet<String>();
+
   public RMContainerRequestor(ClientService clientService, AppContext context) {
     super(clientService, context);
   }
@@ -89,7 +98,18 @@ public abstract class RMContainerRequestor extends RMCommunicator {
       this.priority = priority;
     }
   }
-  
+
+  @Override
+  public void init(Configuration conf) {
+    super.init(conf);
+    nodeBlacklistingEnabled = 
+      conf.getBoolean(AMConstants.NODE_BLACKLISTING_ENABLE, true);
+    LOG.info("nodeBlacklistingEnabled:" + nodeBlacklistingEnabled);
+    maxTaskFailuresPerNode = 
+      conf.getInt(MRJobConfig.MAX_TASK_FAILURES_PER_TRACKER, 3);
+    LOG.info("maxTaskFailuresPerNode is " + maxTaskFailuresPerNode);
+  }
+
   protected abstract void heartbeat() throws Exception;
 
   protected List<Container> makeRemoteRequest() throws YarnRemoteException {
@@ -116,6 +136,39 @@ public abstract class RMContainerRequestor extends RMCommunicator {
         + allContainers.size()
         + " resourcelimit=" + availableResources);
     return allContainers;
+  }
+
+  protected void containerFailedOnHost(String hostName) {
+    if (!nodeBlacklistingEnabled) {
+      return;
+    }
+    if (blacklistedNodes.contains(hostName)) {
+      LOG.info("Host " + hostName + " is already blacklisted.");
+      return; //already blacklisted
+    }
+    Integer failures = nodeFailures.remove(hostName);
+    failures = failures == null ? 0 : failures;
+    failures++;
+    LOG.info(failures + " failures on node " + hostName);
+    if (failures >= maxTaskFailuresPerNode) {
+      blacklistedNodes.add(hostName);
+      LOG.info("Blacklisted host " + hostName);
+      
+      //remove all the requests corresponding to this hostname
+      for (Map<String, Map<Resource, ResourceRequest>> remoteRequests 
+          : remoteRequestsTable.values()){
+        //remove from host
+        Map<Resource, ResourceRequest> reqMap = remoteRequests.remove(hostName);
+        if (reqMap != null) {
+          for (ResourceRequest req : reqMap.values()) {
+            ask.remove(req);
+          }
+        }
+        //TODO: remove from rack
+      }
+    } else {
+      nodeFailures.put(hostName, failures);
+    }
   }
 
   protected Resource getAvailableResources() {

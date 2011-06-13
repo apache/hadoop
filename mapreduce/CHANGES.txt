@@ -4,6 +4,7 @@ Trunk (unreleased changes)
 
 
     MAPREDUCE-279
+    Job level node blacklisting. (sharad)
 
     Fixing the bug which was causing FAILED jobs to be displayed as COMPLETED
     on the RM UI. (vinodkv)

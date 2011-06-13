@@ -697,6 +697,11 @@ public class TestRuntimeEstimators {
     public long getFinishTime() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
+
+    @Override
+    public String getAssignedContainerMgrAddress() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
   }
 
   static class MockClock implements Clock {

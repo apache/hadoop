@@ -67,4 +67,7 @@ public interface AMConstants {
   public static final float DEFAULT_REDUCE_PREEMPTION_LIMIT = 0.5f;
   public static final String REDUCE_PREEMPTION_LIMIT = MRConstants.YARN_MR_PREFIX
   + "reduce.preemption.limit";
+
+  public static final String NODE_BLACKLISTING_ENABLE = MRConstants.YARN_MR_PREFIX
+  + "node.blacklisting.enable";
 }

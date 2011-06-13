@@ -242,6 +242,11 @@ public class MockJobs extends MockApps {
       public List<String> getDiagnostics() {
         return diags;
       }
+
+      @Override
+      public String getAssignedContainerMgrAddress() {
+        return "localhost:9998";
+      }
     };
   }
 

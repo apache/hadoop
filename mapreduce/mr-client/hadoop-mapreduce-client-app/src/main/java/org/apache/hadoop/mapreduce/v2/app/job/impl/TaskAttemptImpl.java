@@ -694,6 +694,16 @@ public abstract class TaskAttemptImpl implements
   }
 
   @Override
+  public String getAssignedContainerMgrAddress() {
+    readLock.lock();
+    try {
+      return containerMgrAddress;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @Override
   public long getLaunchTime() {
     readLock.lock();
     try {

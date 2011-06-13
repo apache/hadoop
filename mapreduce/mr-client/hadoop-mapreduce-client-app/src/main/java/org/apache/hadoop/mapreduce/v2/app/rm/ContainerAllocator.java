@@ -25,7 +25,8 @@ public interface ContainerAllocator extends EventHandler<ContainerAllocatorEvent
   enum EventType {
 
     CONTAINER_REQ,
-    CONTAINER_DEALLOCATE
+    CONTAINER_DEALLOCATE,
+    CONTAINER_FAILED
   }
 
 }
