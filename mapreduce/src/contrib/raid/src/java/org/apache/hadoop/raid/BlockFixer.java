@@ -43,7 +43,7 @@ import java.lang.reflect.InvocationTargetException;
 
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
+import org.apache.hadoop.hdfs.protocol.datatransfer.*;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
@@ -780,8 +780,7 @@ public abstract class BlockFixer extends Configured implements Runnable {
                               });
         
         DatanodeInfo[] nodes = new DatanodeInfo[]{datanode};
-        DataTransferProtocol.Sender.opWriteBlock(out, block.getBlock(), 1,
-                                                 DataTransferProtocol.
+        Sender.opWriteBlock(out, block.getBlock(), 1,
                                                  BlockConstructionStage.
                                                  PIPELINE_SETUP_CREATE,
                                                  0, blockSize, 0, "", null,

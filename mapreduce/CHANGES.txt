@@ -290,6 +290,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-2581. Spelling errors in log messages. (Tim Sell via eli)
 
+    MAPREDUCE-2588. Change raid to the new DataTransferProtocol API.  (szetszwo)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
