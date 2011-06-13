@@ -20,7 +20,9 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.*;
+
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -167,6 +169,40 @@ public class SplitLogManager extends ZooKeeperListener {
     }
   }
 
+  private FileStatus[] getFileList(List<Path> logDirs) throws IOException {
+    List<FileStatus> fileStatus = new ArrayList<FileStatus>();
+    for (Path hLogDir : logDirs) {
+      this.fs = hLogDir.getFileSystem(conf);
+      if (!fs.exists(hLogDir)) {
+        LOG.warn(hLogDir + " doesn't exist. Nothing to do!");
+        continue;
+      }
+      FileStatus[] logfiles = fs.listStatus(hLogDir); // TODO filter filenames?
+      if (logfiles == null || logfiles.length == 0) {
+        LOG.info(hLogDir + " is empty dir, no logs to split");
+      } else {
+        for (FileStatus status : logfiles)
+          fileStatus.add(status);
+      }
+    }
+    if (fileStatus.isEmpty())
+      return null;
+    FileStatus[] a = new FileStatus[fileStatus.size()];
+    return fileStatus.toArray(a);
+  }
+
+  /**
+   * @param logDir
+   *            one region sever hlog dir path in .logs
+   * @throws IOException
+   *             if there was an error while splitting any log file
+   * @return cumulative size of the logfiles split
+   */
+  public long splitLogDistributed(final Path logDir) throws IOException {
+    List<Path> logDirs = new ArrayList<Path>();
+    logDirs.add(logDir);
+    return splitLogDistributed(logDirs);
+  }
   /**
    * The caller will block until all the log files of the given region server
    * have been processed - successfully split or an error is encountered - by an
@@ -179,28 +215,18 @@ public class SplitLogManager extends ZooKeeperListener {
    *          if there was an error while splitting any log file
    * @return cumulative size of the logfiles split
    */
-  public long splitLogDistributed(final Path logDir) throws IOException {
-    this.fs = logDir.getFileSystem(conf);
-    if (!fs.exists(logDir)) {
-      LOG.warn(logDir + " doesn't exist. Nothing to do!");
-      return 0;
-    }
-    
+  public long splitLogDistributed(final List<Path> logDirs) throws IOException {
     MonitoredTask status = TaskMonitor.get().createStatus(
-          "Doing distributed log split in " + logDir);
-
-    status.setStatus("Checking directory contents...");
-    FileStatus[] logfiles = fs.listStatus(logDir); // TODO filter filenames?
-    if (logfiles == null || logfiles.length == 0) {
-      LOG.info(logDir + " is empty dir, no logs to split");
+          "Doing distributed log split in " + logDirs);
+    FileStatus[] logfiles = getFileList(logDirs);
+    if(logfiles == null)
       return 0;
-    }
-    
-    status.setStatus("Scheduling batch of logs to split");
+    status.setStatus("Checking directory contents...");
+    LOG.debug("Scheduling batch of logs to split");
     tot_mgr_log_split_batch_start.incrementAndGet();
-    LOG.info("started splitting logs in " + logDir);
+    LOG.info("started splitting logs in " + logDirs);
     long t = EnvironmentEdgeManager.currentTimeMillis();
-    long totalSize = 0;    
+    long totalSize = 0;
     TaskBatch batch = new TaskBatch();
     for (FileStatus lf : logfiles) {
       // TODO If the log file is still being written to - which is most likely
@@ -218,32 +244,29 @@ public class SplitLogManager extends ZooKeeperListener {
     if (batch.done != batch.installed) {
       stopTrackingTasks(batch);
       tot_mgr_log_split_batch_err.incrementAndGet();
-      LOG.warn("error while splitting logs in " + logDir +
+      LOG.warn("error while splitting logs in " + logDirs +
       " installed = " + batch.installed + " but only " + batch.done + " done");
       throw new IOException("error or interrupt while splitting logs in "
-          + logDir + " Task = " + batch);
+          + logDirs + " Task = " + batch);
     }
-    
-    status.setStatus("Checking for orphaned logs in log directory...");
-    if (anyNewLogFiles(logDir, logfiles)) {
-      tot_mgr_new_unexpected_hlogs.incrementAndGet();
-      LOG.warn("new hlogs were produced while logs in " + logDir +
+    for(Path logDir: logDirs){
+      if (anyNewLogFiles(logDir, logfiles)) {
+        tot_mgr_new_unexpected_hlogs.incrementAndGet();
+        LOG.warn("new hlogs were produced while logs in " + logDir +
           " were being split");
-      throw new OrphanHLogAfterSplitException();
+        throw new OrphanHLogAfterSplitException();
+      }
+      tot_mgr_log_split_batch_success.incrementAndGet();
+      status.setStatus("Cleaning up log directory...");
+      if (!fs.delete(logDir, true)) {
+        throw new IOException("Unable to delete src dir: " + logDir);
+      }
     }
-    tot_mgr_log_split_batch_success.incrementAndGet();
-    
-    status.setStatus("Cleaning up log directory...");
-    if (!fs.delete(logDir, true)) {
-      throw new IOException("Unable to delete src dir: " + logDir);
-    }
-
     String msg = "finished splitting (more than or equal to) " + totalSize +
-        " bytes in " + batch.installed + " log files in " + logDir + " in " +
+        " bytes in " + batch.installed + " log files in " + logDirs + " in " +
         (EnvironmentEdgeManager.currentTimeMillis() - t) + "ms";
     status.markComplete(msg);
     LOG.info(msg);
-    
     return totalSize;
   }
 

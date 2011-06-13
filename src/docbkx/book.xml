@@ -1183,7 +1183,7 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
         is an experimental feature).
         </para>
     </section>
-    <section><title>HFile Tool</title>
+    <section xml:id="hfile_tool2"><title>HFile Tool</title>
         <para>See <xref linkend="hfile_tool" />.</para>
     </section>
     <section xml:id="wal_tools">
