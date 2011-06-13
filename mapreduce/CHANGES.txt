@@ -4,6 +4,9 @@ Trunk (unreleased changes)
 
 
     MAPREDUCE-279
+   
+    Fix NPE in history event handling (siddharth seth via mahadev)
+    
     Job level node blacklisting. (sharad)
 
     Fixing the bug which was causing FAILED jobs to be displayed as COMPLETED

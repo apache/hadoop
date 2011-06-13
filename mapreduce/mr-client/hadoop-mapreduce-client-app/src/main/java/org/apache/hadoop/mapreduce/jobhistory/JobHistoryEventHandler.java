@@ -133,25 +133,30 @@ public class JobHistoryEventHandler extends AbstractService
       // This directory will be in a common location, or this may be a cluster
       // meant for a single user. Creating based on the conf. Should ideally be
       // created by the JobHistoryServer or as part of deployment.
+      if (!doneDirFS.exists(doneDirPath)) {
       if (JobHistoryUtils.shouldCreateNonUserDirectory(conf)) {
         LOG.info("Creating intermediate history logDir: ["
             + doneDirPath
             + "] + based on conf. Should ideally be created by the JobHistoryServer: "
             + JHConfig.CREATE_HISTORY_INTERMEDIATE_BASE_DIR_KEY);
-        mkdir(doneDirFS, doneDirPath, new FsPermission(
+          mkdir(
+              doneDirFS,
+              doneDirPath,
+              new FsPermission(
             JobHistoryUtils.HISTORY_INTERMEDIATE_DONE_DIR_PERMISSIONS
                 .toShort()));
-        // TODO Temporary toShort till new FsPermission(FsPermissions) respects
+          // TODO Temporary toShort till new FsPermission(FsPermissions)
+          // respects
         // sticky
       } else {
-        String message =
-            "Not creating intermediate history logDir: ["
+          String message = "Not creating intermediate history logDir: ["
                 + doneDirPath
                 + "] based on conf: "
                 + JHConfig.CREATE_HISTORY_INTERMEDIATE_BASE_DIR_KEY
                 + ". Either set to true or pre-create this directory with appropriate permissions";
         LOG.error(message);
         throw new YarnException(message);
+      }
       }
     } catch (IOException e) {
       LOG.error("Failed checking for the existance of history intermediate done directory: ["

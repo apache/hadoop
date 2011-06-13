@@ -866,7 +866,7 @@ public abstract class TaskAttemptImpl implements
         TypeConverter.fromYarn(taskAttempt.attemptId),
         TypeConverter.fromYarn(taskAttempt.attemptId.getTaskId().getTaskType()),
         attemptState.toString(), taskAttempt.finishTime,
-        taskAttempt.containerMgrAddress,
+        taskAttempt.containerMgrAddress == null ? "UNKNOWN" : taskAttempt.containerMgrAddress,
         taskAttempt.reportedStatus.diagnosticInfo.toString());
       //TODO Different constructor - allSplits
     return tauce;
@@ -1103,7 +1103,7 @@ public abstract class TaskAttemptImpl implements
          TypeConverter.fromYarn(attemptId.getTaskId().getTaskType()),
          state.toString(),
          finishTime, //TODO TaskAttemptStatus changes. MapFinishTime
-         finishTime, this.containerMgrAddress,
+         finishTime, this.containerMgrAddress == null ? "UNKNOWN" : this.containerMgrAddress,
          state.toString(), //TODO state is a progress string.
          TypeConverter.fromYarn(getCounters()),null);
          eventHandler.handle(
@@ -1115,7 +1115,7 @@ public abstract class TaskAttemptImpl implements
          state.toString(),
          finishTime, //TODO TaskAttemptStatus changes. ShuffleFinishTime
          finishTime, //TODO TaskAttemptStatus changes. SortFinishTime
-         finishTime, this.containerMgrAddress,
+         finishTime, this.containerMgrAddress == null ? "UNKNOWN" : this.containerMgrAddress,
          state.toString(),
          TypeConverter.fromYarn(getCounters()),null);
          eventHandler.handle(
