@@ -529,10 +529,8 @@ public class KeyValue implements Writable, HeapSize {
     KeyValue kv = (KeyValue)other;
     // Comparing bytes should be fine doing equals test.  Shouldn't have to
     // worry about special .META. comparators doing straight equals.
-    boolean result = Bytes.BYTES_RAWCOMPARATOR.compare(getBuffer(),
-        getKeyOffset(), getKeyLength(),
-      kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength()) == 0;
-    return result;
+    return Bytes.equals(getBuffer(), getKeyOffset(), getKeyLength(),
+      kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength());
   }
 
   public int hashCode() {
@@ -828,8 +826,8 @@ public class KeyValue implements Writable, HeapSize {
    * @return True if this KeyValue has a LATEST_TIMESTAMP timestamp.
    */
   public boolean isLatestTimestamp() {
-    return  Bytes.compareTo(getBuffer(), getTimestampOffset(), Bytes.SIZEOF_LONG,
-      HConstants.LATEST_TIMESTAMP_BYTES, 0, Bytes.SIZEOF_LONG) == 0;
+    return Bytes.equals(getBuffer(), getTimestampOffset(), Bytes.SIZEOF_LONG,
+      HConstants.LATEST_TIMESTAMP_BYTES, 0, Bytes.SIZEOF_LONG);
   }
 
   /**
@@ -1089,8 +1087,8 @@ public class KeyValue implements Writable, HeapSize {
     if (this.length == 0 || this.bytes.length == 0) {
       return false;
     }
-    return Bytes.compareTo(family, offset, length,
-        this.bytes, getFamilyOffset(), getFamilyLength()) == 0;
+    return Bytes.equals(family, offset, length,
+        this.bytes, getFamilyOffset(), getFamilyLength());
   }
 
   public boolean matchingFamily(final KeyValue other) {
@@ -1107,8 +1105,8 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   public boolean matchingQualifier(final byte [] qualifier, int offset, int length) {
-    return Bytes.compareTo(qualifier, offset, length,
-        this.bytes, getQualifierOffset(), getQualifierLength()) == 0;
+    return Bytes.equals(qualifier, offset, length,
+        this.bytes, getQualifierOffset(), getQualifierLength());
   }
 
   public boolean matchingQualifier(final KeyValue other) {
@@ -1121,8 +1119,8 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   public boolean matchingRow(final byte[] row, int offset, int length) {
-    return Bytes.compareTo(row, offset, length,
-        this.bytes, getRowOffset(), getRowLength()) == 0;
+    return Bytes.equals(row, offset, length,
+        this.bytes, getRowOffset(), getRowLength());
   }
 
   public boolean matchingRow(KeyValue other) {
@@ -1139,7 +1137,7 @@ public class KeyValue implements Writable, HeapSize {
     int o = getFamilyOffset(rl);
     int fl = getFamilyLength(o);
     int l = fl + getQualifierLength(rl,fl);
-    return Bytes.compareTo(column, 0, column.length, this.bytes, o, l) == 0;
+    return Bytes.equals(column, 0, column.length, this.bytes, o, l);
   }
 
   /**
@@ -1153,8 +1151,7 @@ public class KeyValue implements Writable, HeapSize {
     int o = getFamilyOffset(rl);
     int fl = getFamilyLength(o);
     int ql = getQualifierLength(rl,fl);
-    if (Bytes.compareTo(family, 0, family.length, this.bytes, o, family.length)
-        != 0) {
+    if (!Bytes.equals(family, 0, family.length, this.bytes, o, family.length)) {
       return false;
     }
     if (qualifier == null || qualifier.length == 0) {
@@ -1163,8 +1160,8 @@ public class KeyValue implements Writable, HeapSize {
       }
       return false;
     }
-    return Bytes.compareTo(qualifier, 0, qualifier.length,
-        this.bytes, o + fl, ql) == 0;
+    return Bytes.equals(qualifier, 0, qualifier.length,
+        this.bytes, o + fl, ql);
   }
 
   /**
@@ -1459,7 +1456,7 @@ public class KeyValue implements Writable, HeapSize {
       return getRawComparator().compareRows(left, loffset, llength,
         right, roffset, rlength);
     }
-
+    
     public int compareColumns(final KeyValue left, final byte [] right,
         final int roffset, final int rlength, final int rfamilyoffset) {
       int offset = left.getFamilyOffset();
@@ -1505,7 +1502,8 @@ public class KeyValue implements Writable, HeapSize {
      * @return True if rows match.
      */
     public boolean matchingRows(final KeyValue left, final byte [] right) {
-      return compareRows(left, right) == 0;
+      return Bytes.equals(left.getBuffer(), left.getRowOffset(), left.getRowLength(),
+          right, 0, right.length);
     }
 
     /**
@@ -1530,18 +1528,15 @@ public class KeyValue implements Writable, HeapSize {
     public boolean matchingRows(final KeyValue left, final short lrowlength,
         final KeyValue right, final short rrowlength) {
       return lrowlength == rrowlength &&
-        compareRows(left, lrowlength, right, rrowlength) == 0;
+          Bytes.equals(left.getBuffer(), left.getRowOffset(), lrowlength,
+              right.getBuffer(), right.getRowOffset(), rrowlength);
     }
 
     public boolean matchingRows(final byte [] left, final int loffset,
         final int llength,
         final byte [] right, final int roffset, final int rlength) {
-      int compare = compareRows(left, loffset, llength,
+      return Bytes.equals(left, loffset, llength,
           right, roffset, rlength);
-      if (compare != 0) {
-        return false;
-      }
-      return true;
     }
 
     /**

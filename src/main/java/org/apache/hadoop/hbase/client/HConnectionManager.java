@@ -729,7 +729,7 @@ public class HConnectionManager {
                   HConstants.REGIONINFO_QUALIFIER));
           if (info == null) return true;
           HTableDescriptor desc = info.getTableDesc();
-          if (Bytes.compareTo(desc.getName(), tableName) == 0) {
+          if (Bytes.equals(desc.getName(), tableName)) {
             result = desc;
             return false;
           }

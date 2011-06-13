@@ -1995,7 +1995,7 @@ public class HFile {
                     "\n\tfilename -> " + file +
                     "\n\tkeyvalue -> " + Bytes.toStringBinary(kv.getKey()));
               }
-              if (pkv != null && Bytes.compareTo(pkv.getFamily(), kv.getFamily()) != 0) {
+              if (pkv != null && !Bytes.equals(pkv.getFamily(), kv.getFamily())) {
                 System.err.println("WARNING, previous kv has different family" +
                     " compared to current key\n\tfilename -> " + file +
                     "\n\tprevious -> " +  Bytes.toStringBinary(pkv.getKey()) +
@@ -2017,17 +2017,17 @@ public class HFile {
           System.out.println("Fileinfo:");
           for (Map.Entry<byte[], byte[]> e : fileInfo.entrySet()) {
             System.out.print(Bytes.toString(e.getKey()) + " = " );
-            if (Bytes.compareTo(e.getKey(), Bytes.toBytes("MAX_SEQ_ID_KEY"))==0) {
+            if (Bytes.equals(e.getKey(), Bytes.toBytes("MAX_SEQ_ID_KEY"))) {
               long seqid = Bytes.toLong(e.getValue());
               System.out.println(seqid);
-            } else if (Bytes.compareTo(e.getKey(),
-                Bytes.toBytes("TIMERANGE")) == 0) {
+            } else if (Bytes.equals(e.getKey(),
+                Bytes.toBytes("TIMERANGE"))) {
               TimeRangeTracker timeRangeTracker = new TimeRangeTracker();
               Writables.copyWritable(e.getValue(), timeRangeTracker);
               System.out.println(timeRangeTracker.getMinimumTimestamp() +
                   "...." + timeRangeTracker.getMaximumTimestamp());
-            } else if (Bytes.compareTo(e.getKey(), FileInfo.AVG_KEY_LEN) == 0 ||
-                Bytes.compareTo(e.getKey(), FileInfo.AVG_VALUE_LEN) == 0) {
+            } else if (Bytes.equals(e.getKey(), FileInfo.AVG_KEY_LEN) ||
+                Bytes.equals(e.getKey(), FileInfo.AVG_VALUE_LEN)) {
               System.out.println(Bytes.toInt(e.getValue()));
             } else {
               System.out.println(Bytes.toStringBinary(e.getValue()));

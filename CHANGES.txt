@@ -256,6 +256,7 @@ Release 0.91.0 - Unreleased
    HBASE-3941  "hbase version" command line should print version info
                (Jolly Chen)
    HBASE-3961  Add Delete.setWriteToWAL functionality (Bruno Dumon)
+   HBASE-3928  Some potential performance improvements to Bytes/KeyValue
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

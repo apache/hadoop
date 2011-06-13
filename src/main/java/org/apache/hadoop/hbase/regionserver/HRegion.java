@@ -1756,7 +1756,7 @@ public class HRegion implements HeapSize { // , Writable{
     if (!isPut && !(w instanceof Delete))
       throw new DoNotRetryIOException("Action must be Put or Delete");
     Row r = (Row)w;
-    if (Bytes.compareTo(row, r.getRow()) != 0) {
+    if (!Bytes.equals(row, r.getRow())) {
       throw new DoNotRetryIOException("Action's getRow must match the passed row");
     }
 

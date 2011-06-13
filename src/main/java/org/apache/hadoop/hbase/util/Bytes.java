@@ -943,6 +943,12 @@ public class Bytes {
    */
   public static int compareTo(byte[] buffer1, int offset1, int length1,
       byte[] buffer2, int offset2, int length2) {
+    // Short circuit equal case
+    if (buffer1 == buffer2 &&
+        offset1 == offset2 &&
+        length1 == length2) {
+      return 0;
+    }
     // Bring WritableComparator code local
     int end1 = offset1 + length1;
     int end2 = offset2 + length2;
@@ -964,12 +970,44 @@ public class Bytes {
   public static boolean equals(final byte [] left, final byte [] right) {
     // Could use Arrays.equals?
     //noinspection SimplifiableConditionalExpression
-    if (left == null && right == null) {
+    if (left == right) return true;
+    if (left == null || right == null) return false;
+    if (left.length != right.length) return false;
+    if (left.length == 0) return true;
+    
+    // Since we're often comparing adjacent sorted data,
+    // it's usual to have equal arrays except for the very last byte
+    // so check that first
+    if (left[left.length - 1] != right[right.length - 1]) return false;
+
+    return compareTo(left, right) == 0;
+  }
+  
+  public static boolean equals(final byte[] left, int leftOffset, int leftLen,
+                               final byte[] right, int rightOffset, int rightLen) {
+    // short circuit case
+    if (left == right &&
+        leftOffset == rightOffset &&
+        leftLen == rightLen) {
       return true;
     }
-    return (left == null || right == null || (left.length != right.length)
-            ? false : compareTo(left, right) == 0);
+    // different lengths fast check
+    if (leftLen != rightLen) {
+      return false;
+    }
+    if (leftLen == 0) {
+      return true;
+    }
+    
+    // Since we're often comparing adjacent sorted data,
+    // it's usual to have equal arrays except for the very last byte
+    // so check that first
+    if (left[leftOffset + leftLen - 1] != right[rightOffset + rightLen - 1]) return false;
+
+    return compareTo(left, leftOffset, leftLen,
+                     right, rightOffset, rightLen) == 0;
   }
+  
 
   /**
    * Return true if the byte array on the right is a prefix of the byte

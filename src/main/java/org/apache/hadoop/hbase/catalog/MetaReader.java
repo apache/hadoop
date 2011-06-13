@@ -113,8 +113,8 @@ public class MetaReader {
     }
     // Compare the prefix of regionName.  If it matches META_REGION_PREFIX prefix,
     // then this is region from .META. table.
-    return Bytes.compareTo(regionName, 0, META_REGION_PREFIX.length,
-      META_REGION_PREFIX, 0, META_REGION_PREFIX.length) == 0;
+    return Bytes.equals(regionName, 0, META_REGION_PREFIX.length,
+      META_REGION_PREFIX, 0, META_REGION_PREFIX.length);
   }
 
   /**

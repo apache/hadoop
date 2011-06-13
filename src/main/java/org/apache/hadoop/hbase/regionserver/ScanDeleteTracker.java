@@ -76,8 +76,8 @@ public class ScanDeleteTracker implements DeleteTracker {
 
       if (deleteBuffer != null && type < deleteType) {
         // same column, so ignore less specific delete
-        if (Bytes.compareTo(deleteBuffer, deleteOffset, deleteLength,
-            buffer, qualifierOffset, qualifierLength) == 0){
+        if (Bytes.equals(deleteBuffer, deleteOffset, deleteLength,
+            buffer, qualifierOffset, qualifierLength)){
           return;
         }
       }
