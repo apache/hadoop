@@ -4151,5 +4151,47 @@ public class TestFromClientSide {
     }
     executorService.shutdownNow();
   }
+  
+  
+  @Test
+  public void testCheckAndPut() throws IOException {
+    final byte [] anotherrow = Bytes.toBytes("anotherrow");
+    final byte [] value2 = Bytes.toBytes("abcd");
+    
+    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testCheckAndPut"),
+      new byte [][] {FAMILY});
+    Put put1 = new Put(ROW);
+    put1.add(FAMILY, QUALIFIER, VALUE);
+
+    // row doesn't exist, so using non-null value should be considered "not match".
+    boolean ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, VALUE, put1);
+    assertEquals(ok, false);
+    
+    // row doesn't exist, so using "null" to check for existence should be considered "match".
+    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, null, put1);
+    assertEquals(ok, true);
+
+    // row now exists, so using "null" to check for existence should be considered "not match".
+    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, null, put1);
+    assertEquals(ok, false);
+    
+    Put put2 = new Put(ROW);
+    put2.add(FAMILY, QUALIFIER, value2);
+    
+    // row now exists, use the matching value to check
+    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, VALUE, put2);
+    assertEquals(ok, true);
+
+    Put put3 = new Put(anotherrow);
+    put3.add(FAMILY, QUALIFIER, VALUE);
+    
+    // try to do CheckAndPut on different rows       
+    try {
+        ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, value2, put3);
+        fail("trying to check and modify different rows should have failed.");
+      } catch(Exception e) {}      
+    
+  }  
+  
 }
 

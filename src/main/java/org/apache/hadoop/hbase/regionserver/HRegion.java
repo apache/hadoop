@@ -1774,11 +1774,12 @@ public class HRegion implements HeapSize { // , Writable{
       try {
         result = get(get, false);
 
+        boolean valueIsNull = comparator.getValue() == null ||
+          comparator.getValue().length == 0;
         boolean matches = false;
-        if (result.size() == 0 &&
-           (comparator.getValue() == null || comparator.getValue().length == 0)) {
+        if (result.size() == 0 && valueIsNull) {
           matches = true;
-        } else if (result.size() == 1) {
+        } else if (result.size() == 1 && !valueIsNull) {
           int compareResult = comparator.compareTo(result.get(0).getValue());
           switch (compareOp) {
           case LESS:
