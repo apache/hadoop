@@ -215,6 +215,8 @@ Trunk (unreleased changes)
     HADOOP-7106. Reorganize project SVN layout to "unsplit" the projects.
     (todd, nigel)
 
+    HADOOP-6605. Add JAVA_HOME detection to hadoop-config. (eli)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

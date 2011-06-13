@@ -107,18 +107,26 @@ fi
 # we use in Hadoop. Tune the variable down to prevent vmem explosion.
 export MALLOC_ARENA_MAX=${MALLOC_ARENA_MAX:-4}
 
-# some Java parameters
-if [ "$JAVA_HOME" != "" ]; then
-  #echo "run java in $JAVA_HOME"
-  JAVA_HOME=$JAVA_HOME
-fi
-  
-if [ "$JAVA_HOME" = "" ]; then
-  echo "Error: JAVA_HOME is not set."
-  exit 1
+# Attempt to set JAVA_HOME if it is not set
+if [[ -z $JAVA_HOME ]]; then
+  # On OSX use java_home (or /Library for older versions)
+  if [ "Darwin" == "$(uname -s)" ]; then
+    if [ -x /usr/libexec/java_home ]; then
+      export JAVA_HOME=($(/usr/libexec/java_home))
+    else
+      export JAVA_HOME=(/Library/Java/Home)
+    fi
+  fi
+
+  # Bail if we did not detect it
+  if [[ -z $JAVA_HOME ]]; then
+    echo "Error: JAVA_HOME is not set and could not be found." 1>&2
+    exit 1
+  fi
 fi
 
 JAVA=$JAVA_HOME/bin/java
+# some Java parameters
 JAVA_HEAP_MAX=-Xmx1000m 
 
 # check envvars which might override default args
