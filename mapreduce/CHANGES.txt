@@ -5,10 +5,13 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    MAPREDUCE-2569. Ensure root queue allocated 100% capacity. (Jonathan
+    Eagles via cdouglas)
+
     Changes to do rack resolutions in the RM and in the AM (ddas)
-   
+
     Fix NPE in history event handling (siddharth seth via mahadev)
-    
+
     Job level node blacklisting. (sharad)
 
     Fixing the bug which was causing FAILED jobs to be displayed as COMPLETED

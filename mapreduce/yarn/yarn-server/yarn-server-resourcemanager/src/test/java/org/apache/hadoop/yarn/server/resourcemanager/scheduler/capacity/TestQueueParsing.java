@@ -93,4 +93,15 @@ public class TestQueueParsing {
     
     LOG.info("Setup 3rd-level queues");
   }
+
+  @Test (expected=java.lang.IllegalArgumentException.class)
+  public void testRootQueueParsing() throws Exception {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+
+    // non-100 percent value will throw IllegalArgumentException
+    conf.setCapacity(CapacityScheduler.ROOT, 90);
+
+    CapacityScheduler capacityScheduler = new CapacityScheduler();
+    capacityScheduler.reinitialize(conf, null, null);
+  }
 }

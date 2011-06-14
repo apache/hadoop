@@ -108,8 +108,16 @@ public class ParentQueue implements Queue {
         QueueMetrics.forQueue(getQueuePath(), parent,
         cs.getConfiguration().getEnableUserMetrics());
 
-    float capacity = 
-      (float)cs.getConfiguration().getCapacity(getQueuePath()) / 100;
+    int rawCapacity = cs.getConfiguration().getCapacity(getQueuePath());
+
+    if (rootQueue &&
+        (rawCapacity != CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE)) {
+      throw new IllegalArgumentException("Illegal " +
+          "capacity of " + rawCapacity + " for queue " + queueName +
+          ". Must be " + CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE);
+    }
+
+    float capacity = (float) rawCapacity / 100;
 
     float parentAbsoluteCapacity = 
       (parent == null) ? 1.0f : parent.getAbsoluteCapacity();
