@@ -321,6 +321,8 @@ Release 0.90.4 - Unreleased
                (Ted Yu)
    HBASE-3946  The splitted region can be online again while the standby
                hmaster becomes the active one (Jieshan Bean)
+   HBASE-3916  Fix the default bind address of ThriftServer to be wildcard
+               instead of localhost. (Li Pi)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the
