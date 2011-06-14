@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventHandler;
@@ -71,9 +72,7 @@ public class OpenRegionHandler extends EventHandler {
   public void process() throws IOException {
     try {
       final String name = regionInfo.getRegionNameAsString();
-      LOG.debug("Processing open of " + name);
       if (this.server.isStopped() || this.rsServices.isStopping()) {
-        LOG.info("Server stopping or stopped, skipping open of " + name);
         return;
       }
       final String encodedName = regionInfo.getEncodedName();
@@ -182,6 +181,7 @@ public class OpenRegionHandler extends EventHandler {
         Thread.currentThread().interrupt();
       }
     }
+
     // Was there an exception opening the region?  This should trigger on
     // InterruptedException too.  If so, we failed.
     return !t.interrupted() && t.getException() == null;
@@ -259,6 +259,33 @@ public class OpenRegionHandler extends EventHandler {
         " from OPENING to OPENED -- closing region", e);
     }
     return result;
+  }
+
+  /**
+   * @return Instance of HRegion if successful open else null.
+   */
+  HRegion openRegion(Path tableDir) {
+    HRegion region = null;
+    try {
+      // Instantiate the region.  This also periodically tickles our zk OPENING
+      // state so master doesn't timeout this region in transition.
+      region = HRegion.openHRegion(tableDir, this.regionInfo, this.rsServices.getWAL(),
+        this.server.getConfiguration(), this.rsServices,
+        new CancelableProgressable() {
+          public boolean progress() {
+            // We may lose the znode ownership during the open.  Currently its
+            // too hard interrupting ongoing region open.  Just let it complete
+            // and check we still have the znode after region open.
+            return tickleOpening("open_region_progress");
+          }
+        });
+    } catch (IOException e) {
+      // We failed open.  Let our znode expire in regions-in-transition and
+      // Master will assign elsewhere.  Presumes nothing to close.
+      LOG.error("Failed open of region=" +
+        this.regionInfo.getRegionNameAsString(), e);
+    }
+    return region;
   }
 
   /**

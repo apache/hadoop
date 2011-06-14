@@ -25,14 +25,12 @@ import java.util.List;
 import java.util.NavigableMap;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hbase.tmpl.master.MasterStatusTmpl;
@@ -56,11 +54,20 @@ public class TestMasterStatusServlet {
     new ServerName("fakehost", 12345, 1234567890);
   static final HTableDescriptor FAKE_TABLE =
     new HTableDescriptor("mytable");
-  static final HRegionInfo FAKE_REGION =
-    new HRegionInfo(FAKE_TABLE, Bytes.toBytes("a"), Bytes.toBytes("b"));
-  
+  static final HRegionInfo FAKE_HRI =
+      new HRegionInfo(FAKE_TABLE.getName(), Bytes.toBytes("a"), Bytes.toBytes("b"));
+
+ // static final HRegionInfo FAKE_REGION = null;
+
   @Before
   public void setupBasicMocks() {
+    try {
+       HRegion.createHRegion(FAKE_HRI, HBaseTestingUtility.getTestDir(),
+          HBaseConfiguration.create(), FAKE_TABLE);
+    } catch(IOException ioe) {
+
+    }
+
     conf = HBaseConfiguration.create();
     
     master = Mockito.mock(HMaster.class);
@@ -77,7 +84,7 @@ public class TestMasterStatusServlet {
     NavigableMap<String, RegionState> regionsInTransition =
       Maps.newTreeMap();
     regionsInTransition.put("r1",
-        new RegionState(FAKE_REGION, RegionState.State.CLOSING, 12345L, FAKE_HOST));        
+        new RegionState(FAKE_HRI, RegionState.State.CLOSING, 12345L, FAKE_HOST));
     Mockito.doReturn(regionsInTransition).when(am).getRegionsInTransition();
     Mockito.doReturn(am).when(master).getAssignmentManager();
     

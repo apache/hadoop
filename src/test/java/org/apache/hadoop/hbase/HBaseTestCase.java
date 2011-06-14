@@ -57,9 +57,15 @@ public abstract class HBaseTestCase extends TestCase {
   /** configuration parameter name for test directory */
   public static final String TEST_DIRECTORY_KEY = "test.build.data";
 
+/*
   protected final static byte [] fam1 = Bytes.toBytes("colfamily1");
   protected final static byte [] fam2 = Bytes.toBytes("colfamily2");
   protected final static byte [] fam3 = Bytes.toBytes("colfamily3");
+*/
+  protected final static byte [] fam1 = Bytes.toBytes("colfamily11");
+  protected final static byte [] fam2 = Bytes.toBytes("colfamily21");
+  protected final static byte [] fam3 = Bytes.toBytes("colfamily31");
+
   protected static final byte [][] COLUMNS = {fam1, fam2, fam3};
 
   private boolean localfs = false;
@@ -159,9 +165,8 @@ public abstract class HBaseTestCase extends TestCase {
     Path rootdir = filesystem.makeQualified(
         new Path(conf.get(HConstants.HBASE_DIR)));
     filesystem.mkdirs(rootdir);
-
-    return HRegion.createHRegion(new HRegionInfo(desc, startKey, endKey),
-        rootdir, conf);
+    HRegionInfo hri = new HRegionInfo(desc.getName(), startKey, endKey);
+    return HRegion.createHRegion(hri, rootdir, conf, desc);
   }
 
   protected HRegion openClosedRegion(final HRegion closedRegion)
@@ -653,9 +658,10 @@ public abstract class HBaseTestCase extends TestCase {
   }
 
   protected void createRootAndMetaRegions() throws IOException {
-    root = HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO, testDir, conf);
+    root = HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO, testDir,
+        conf, HTableDescriptor.ROOT_TABLEDESC);
     meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO, testDir,
-        conf);
+        conf, HTableDescriptor.META_TABLEDESC);
     HRegion.addRegionToMETA(root, meta);
   }
 

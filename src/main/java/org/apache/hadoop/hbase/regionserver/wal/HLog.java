@@ -54,11 +54,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.Syncable;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -832,22 +828,6 @@ public class HLog implements Syncable {
     }
   }
 
-   /** Append an entry to the log.
-   *
-   * @param regionInfo
-   * @param logEdit
-   * @param now Time of this edit write.
-   * @throws IOException
-   */
-  public void append(HRegionInfo regionInfo, WALEdit logEdit,
-    final long now,
-    final boolean isMetaRegion)
-  throws IOException {
-    byte [] regionName = regionInfo.getEncodedNameAsBytes();
-    byte [] tableName = regionInfo.getTableDesc().getName();
-    this.append(regionInfo, makeKey(regionName, tableName, -1, now), logEdit);
-  }
-
   /**
    * @param now
    * @param regionName
@@ -867,7 +847,8 @@ public class HLog implements Syncable {
    * @param logKey
    * @throws IOException
    */
-  public void append(HRegionInfo regionInfo, HLogKey logKey, WALEdit logEdit)
+  public void append(HRegionInfo regionInfo, HLogKey logKey, WALEdit logEdit,
+                     HTableDescriptor htd)
   throws IOException {
     if (this.closed) {
       throw new IOException("Cannot append; log is closed");
@@ -882,14 +863,14 @@ public class HLog implements Syncable {
       // is greater than or equal to the value in lastSeqWritten.
       this.lastSeqWritten.putIfAbsent(regionInfo.getEncodedNameAsBytes(),
         Long.valueOf(seqNum));
-      doWrite(regionInfo, logKey, logEdit);
+      doWrite(regionInfo, logKey, logEdit, htd);
       this.numEntries.incrementAndGet();
     }
 
     // Sync if catalog region, and if not then check if that table supports
     // deferred log flushing
     if (regionInfo.isMetaRegion() ||
-        !regionInfo.getTableDesc().isDeferredLogFlush()) {
+        !htd.isDeferredLogFlush()) {
       // sync txn to file system
       this.sync();
     }
@@ -919,7 +900,7 @@ public class HLog implements Syncable {
    * @throws IOException
    */
   public void append(HRegionInfo info, byte [] tableName, WALEdit edits,
-    final long now)
+    final long now, HTableDescriptor htd)
   throws IOException {
     if (edits.isEmpty()) return;
     if (this.closed) {
@@ -937,13 +918,13 @@ public class HLog implements Syncable {
       byte [] hriKey = info.getEncodedNameAsBytes();
       this.lastSeqWritten.putIfAbsent(hriKey, seqNum);
       HLogKey logKey = makeKey(hriKey, tableName, seqNum, now);
-      doWrite(info, logKey, edits);
+      doWrite(info, logKey, edits, htd);
       this.numEntries.incrementAndGet();
     }
     // Sync if catalog region, and if not then check if that table supports
     // deferred log flushing
     if (info.isMetaRegion() ||
-        !info.getTableDesc().isDeferredLogFlush()) {
+        !htd.isDeferredLogFlush()) {
       // sync txn to file system
       this.sync();
     }
@@ -1077,14 +1058,15 @@ public class HLog implements Syncable {
     }
   }
 
-  protected void doWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit)
+  protected void doWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit,
+                           HTableDescriptor htd)
   throws IOException {
     if (!this.enabled) {
       return;
     }
     if (!this.listeners.isEmpty()) {
       for (WALObserver i: this.listeners) {
-        i.visitLogEntryBeforeWrite(info, logKey, logEdit);
+        i.visitLogEntryBeforeWrite(htd, logKey, logEdit);
       }
     }
     try {
@@ -1100,12 +1082,12 @@ public class HLog implements Syncable {
       writeOps++;
       if (took > 1000) {
         long len = 0;
-        for(KeyValue kv : logEdit.getKeyValues()) { 
-          len += kv.getLength(); 
+        for(KeyValue kv : logEdit.getKeyValues()) {
+          len += kv.getLength();
         }
         LOG.warn(String.format(
           "%s took %d ms appending an edit to hlog; editcount=%d, len~=%s",
-          Thread.currentThread().getName(), took, this.numEntries.get(), 
+          Thread.currentThread().getName(), took, this.numEntries.get(),
           StringUtils.humanReadableInt(len)));
       }
     } catch (IOException e) {
@@ -1114,6 +1096,7 @@ public class HLog implements Syncable {
       throw e;
     }
   }
+
 
   /** @return How many items have been added to the log */
   int getNumEntries() {

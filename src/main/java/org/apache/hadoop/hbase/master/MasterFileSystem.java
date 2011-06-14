@@ -33,12 +33,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -332,13 +336,15 @@ public class MasterFileSystem {
       // not make it in first place.  Turn off block caching for bootstrap.
       // Enable after.
       HRegionInfo rootHRI = new HRegionInfo(HRegionInfo.ROOT_REGIONINFO);
-      setInfoFamilyCaching(rootHRI, false);
+      setInfoFamilyCachingForRoot(false);
       HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
-      setInfoFamilyCaching(metaHRI, false);
-      HRegion root = HRegion.createHRegion(rootHRI, rd, c);
-      HRegion meta = HRegion.createHRegion(metaHRI, rd, c);
-      setInfoFamilyCaching(rootHRI, true);
-      setInfoFamilyCaching(metaHRI, true);
+      setInfoFamilyCachingForMeta(false);
+      HRegion root = HRegion.createHRegion(rootHRI, rd, c,
+          HTableDescriptor.ROOT_TABLEDESC);
+      HRegion meta = HRegion.createHRegion(metaHRI, rd, c,
+          HTableDescriptor.META_TABLEDESC);
+      setInfoFamilyCachingForRoot(true);
+      setInfoFamilyCachingForMeta(true);
       // Add first region from the META table to the ROOT region.
       HRegion.addRegionToMETA(root, meta);
       root.close();
@@ -352,18 +358,26 @@ public class MasterFileSystem {
     }
   }
 
-  /**
-   * @param hri Set all family block caching to <code>b</code>
-   * @param b
-   */
-  private static void setInfoFamilyCaching(final HRegionInfo hri, final boolean b) {
-    for (HColumnDescriptor hcd: hri.getTableDesc().families.values()) {
+  private static void setInfoFamilyCachingForRoot(final boolean b) {
+    for (HColumnDescriptor hcd:
+        HTableDescriptor.ROOT_TABLEDESC.families.values()) {
+       if (Bytes.equals(hcd.getName(), HConstants.CATALOG_FAMILY)) {
+         hcd.setBlockCacheEnabled(b);
+         hcd.setInMemory(b);
+     }
+    }
+  }
+
+  private static void setInfoFamilyCachingForMeta(final boolean b) {
+    for (HColumnDescriptor hcd:
+        HTableDescriptor.META_TABLEDESC.families.values()) {
       if (Bytes.equals(hcd.getName(), HConstants.CATALOG_FAMILY)) {
         hcd.setBlockCacheEnabled(b);
         hcd.setInMemory(b);
       }
     }
   }
+
 
   public void deleteRegion(HRegionInfo region) throws IOException {
     fs.delete(HRegion.getRegionDir(rootdir, region), true);
@@ -379,16 +393,126 @@ public class MasterFileSystem {
     //      @see HRegion.checkRegioninfoOnFilesystem()
   }
 
-  public void deleteFamily(HRegionInfo region, byte[] familyName)
-  throws IOException {
-    fs.delete(Store.getStoreHomedir(
-        new Path(rootdir, region.getTableDesc().getNameAsString()),
-        region.getEncodedName(), familyName), true);
-  }
-
   public void stop() {
     if (splitLogManager != null) {
       this.splitLogManager.stop();
     }
   }
+
+  /**
+   * Get table info path for a table.
+   * @param tableName
+   * @return Table info path
+   */
+  private Path getTableInfoPath(byte[] tableName) {
+    Path tablePath = new Path(this.rootdir, Bytes.toString(tableName));
+    Path tableInfoPath = new Path(tablePath, HConstants.TABLEINFO_NAME);
+    return tableInfoPath;
+  }
+
+    /**
+   * Get table info path for a table.
+   * @param tableName
+   * @return Table info path
+   */
+  private Path getTablePath(byte[] tableName) {
+    return new Path(this.rootdir, Bytes.toString(tableName));
+  }
+  /**
+   * Get a HTableDescriptor of a table.
+   * @param tableName
+   * @return HTableDescriptor
+   */
+  public HTableDescriptor getTableDescriptor(byte[] tableName) {
+    try {
+      return FSUtils.getTableDescriptor(fs, this.rootdir, tableName);
+    } catch (IOException ioe) {
+      LOG.info("Exception during readTableDecriptor ", ioe);
+    }
+    return null;
+  }
+
+    /**
+   * Create new HTableDescriptor in HDFS.
+   * @param htableDescriptor
+   */
+  public void createTableDescriptor(HTableDescriptor htableDescriptor) {
+    FSUtils.createTableDescriptor(htableDescriptor, conf);
+  }
+
+  /**
+   * Update a table descriptor.
+   * @param htableDescriptor
+   * @return updated HTableDescriptor
+   * @throws IOException
+   */
+  public HTableDescriptor updateTableDescriptor(HTableDescriptor htableDescriptor)
+      throws IOException {
+    LOG.info("Update Table Descriptor.  Current HTD = " + htableDescriptor);
+    FSUtils.updateHTableDescriptor(fs, conf, htableDescriptor);
+    return htableDescriptor;
+  }
+
+  /**
+   * Delete column of a table
+   * @param tableName
+   * @param familyName
+   * @return Modified HTableDescriptor with requested column deleted.
+   * @throws IOException
+   */
+  public HTableDescriptor deleteColumn(byte[] tableName, byte[] familyName)
+      throws IOException {
+    LOG.info("DeleteColumn. Table = " + Bytes.toString(tableName)
+        + " family = " + Bytes.toString(familyName));
+    HTableDescriptor htd = getTableDescriptor(tableName);
+    htd.removeFamily(familyName);
+    updateTableDescriptor(htd);
+    return htd;
+  }
+
+  /**
+   * Modify Column of a table
+   * @param tableName
+   * @param hcd HColumnDesciptor
+   * @return Modified HTableDescriptor with the column modified.
+   * @throws IOException
+   */
+  public HTableDescriptor modifyColumn(byte[] tableName, HColumnDescriptor hcd)
+      throws IOException {
+    LOG.info("AddModifyColumn. Table = " + Bytes.toString(tableName)
+        + " HCD = " + hcd.toString());
+
+    HTableDescriptor htd = getTableDescriptor(tableName);
+    byte [] familyName = hcd.getName();
+    if(!htd.hasFamily(familyName)) {
+      throw new InvalidFamilyOperationException("Family '" +
+        Bytes.toString(familyName) + "' doesn't exists so cannot be modified");
+    }
+    htd.addFamily(hcd);
+    updateTableDescriptor(htd);
+    return htd;
+  }
+
+  /**
+   * Add column to a table
+   * @param tableName
+   * @param hcd
+   * @return Modified HTableDescriptor with new column added.
+   * @throws IOException
+   */
+  public HTableDescriptor addColumn(byte[] tableName, HColumnDescriptor hcd)
+      throws IOException {
+    LOG.info("AddColumn. Table = " + Bytes.toString(tableName)
+        + " HCD = " + hcd.toString());
+
+    HTableDescriptor htd = getTableDescriptor(tableName);
+    if(htd == null) {
+      throw new InvalidFamilyOperationException("Family '" +
+        hcd.getNameAsString() + "' cannot be modified as HTD is null");
+    }
+    htd.addFamily(hcd);
+    updateTableDescriptor(htd);
+    return htd;
+  }
+
 }

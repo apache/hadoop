@@ -131,7 +131,7 @@ public class TestHBaseFsck {
       htd, byte[] startKey, byte[] endKey)
       throws IOException {
     HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
-    HRegionInfo hri = new HRegionInfo(htd, startKey, endKey);
+    HRegionInfo hri = new HRegionInfo(htd.getName(), startKey, endKey);
     Put put = new Put(hri.getRegionName());
     put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
         Writables.getBytes(hri));

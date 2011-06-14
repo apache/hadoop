@@ -217,7 +217,7 @@ public class ServerShutdownHandler extends EventHandler {
   throws IOException {
     // If table is not disabled but the region is offlined,
     boolean disabled = assignmentManager.getZKTable().isDisabledTable(
-        hri.getTableDesc().getNameAsString());
+        hri.getTableNameAsString());
     if (disabled) return false;
     if (hri.isOffline() && hri.isSplit()) {
       LOG.debug("Offlined and split region " + hri.getRegionNameAsString() +
@@ -328,8 +328,8 @@ public class ServerShutdownHandler extends EventHandler {
         return true;
       }
       // Now see if we have gone beyond the daughter's startrow.
-      if (!Bytes.equals(daughter.getTableDesc().getName(),
-          hri.getTableDesc().getName())) {
+      if (!Bytes.equals(daughter.getTableName(),
+          hri.getTableName())) {
         // We fell into another table.  Stop scanning.
         return false;
       }

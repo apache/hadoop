@@ -92,8 +92,8 @@ public class TestFilter extends HBaseTestCase {
     HTableDescriptor htd = new HTableDescriptor(getName());
     htd.addFamily(new HColumnDescriptor(FAMILIES[0]));
     htd.addFamily(new HColumnDescriptor(FAMILIES[1]));
-    HRegionInfo info = new HRegionInfo(htd, null, null, false);
-    this.region = HRegion.createHRegion(info, this.testDir, this.conf);
+    HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
+    this.region = HRegion.createHRegion(info, this.testDir, this.conf, htd);
 
     // Insert first half
     for(byte [] ROW : ROWS_ONE) {

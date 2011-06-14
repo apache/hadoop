@@ -106,6 +106,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     CatalogTracker ct = null;
     try {
       ct = new CatalogTracker(this.conf);
+
       ct.start();
     } catch (InterruptedException e) {
       // Let it out as an IOE for now until we redo all so tolerate IEs
@@ -1266,4 +1267,16 @@ public class HBaseAdmin implements Abortable, Closeable {
       this.connection.close();
     }
   }
+
+ /**
+ * Get tableDescriptors
+ * @param tableNames List of table names
+ * @return HTD[] the tableDescriptor
+ * @throws IOException if a remote or network exception occurs
+ */
+  public HTableDescriptor[] getTableDescriptors(List<String> tableNames)
+  throws IOException {
+    return this.connection.getHTableDescriptors(tableNames);
+  }
+
 }

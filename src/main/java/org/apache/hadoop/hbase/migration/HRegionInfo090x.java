@@ -17,17 +17,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.migration;
 
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
-import org.apache.hadoop.hbase.migration.HRegionInfo090x;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.hbase.util.MD5Hash;
@@ -39,9 +42,10 @@ import org.apache.hadoop.io.WritableComparable;
  * Contains HRegion id, start and end keys, a reference to this
  * HRegions' table descriptor, etc.
  */
-public class HRegionInfo extends VersionedWritable implements WritableComparable<HRegionInfo>{
+public class HRegionInfo090x extends VersionedWritable implements
+    WritableComparable<HRegionInfo090x>{
   private static final byte VERSION = 0;
-  private static final Log LOG = LogFactory.getLog(HRegionInfo.class);
+  private static final Log LOG = LogFactory.getLog(HRegionInfo090x.class);
 
   /**
    * The new format for a region name contains its encodedName at the end.
@@ -53,11 +57,11 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    * where,
    *    &lt;encodedName> is a hex version of the MD5 hash of
    *    &lt;tablename>,&lt;startkey>,&lt;regionIdTimestamp>
-   * 
+   *
    * The old region name format:
    *    &lt;tablename>,&lt;startkey>,&lt;regionIdTimestamp>
    * For region names in the old format, the encoded name is a 32-bit
-   * JenkinsHash integer value (in its decimal notation, string form). 
+   * JenkinsHash integer value (in its decimal notation, string form).
    *<p>
    * **NOTE**
    *
@@ -67,8 +71,8 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    */
 
   /** Separator used to demarcate the encodedName in a region name
-   * in the new format. See description on new format above. 
-   */ 
+   * in the new format. See description on new format above.
+   */
   private static final int ENC_SEPARATOR = '.';
   public  static final int MD5_HEX_LENGTH   = 32;
 
@@ -83,11 +87,11 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     if ((regionName.length >= 1)
         && (regionName[regionName.length - 1] == ENC_SEPARATOR)) {
       // region name is new format. it contains the encoded name.
-      return true; 
+      return true;
     }
     return false;
   }
-  
+
   /**
    * @param regionName
    * @return the encodedName
@@ -101,7 +105,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
           regionName.length - MD5_HEX_LENGTH - 1,
           MD5_HEX_LENGTH);
     } else {
-      // old format region name. ROOT and first META region also 
+      // old format region name. ROOT and first META region also
       // use this format.EncodedName is the JenkinsHash value.
       int hashVal = Math.abs(JenkinsHash.getInstance().hash(regionName,
         regionName.length, 0));
@@ -130,12 +134,12 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   public static final int DELIMITER = ',';
 
   /** HRegionInfo for root region */
-  public static final HRegionInfo ROOT_REGIONINFO =
-    new HRegionInfo(0L, Bytes.toBytes("-ROOT-"));
+  public static final HRegionInfo090x ROOT_REGIONINFO =
+    new HRegionInfo090x(0L, HTableDescriptor.ROOT_TABLEDESC);
 
   /** HRegionInfo for first meta region */
-  public static final HRegionInfo FIRST_META_REGIONINFO =
-    new HRegionInfo(1L, Bytes.toBytes(".META."));
+  public static final HRegionInfo090x FIRST_META_REGIONINFO =
+    new HRegionInfo090x(1L, HTableDescriptor.META_TABLEDESC);
 
   private byte [] endKey = HConstants.EMPTY_BYTE_ARRAY;
   // This flag is in the parent of a split while the parent is still referenced
@@ -147,15 +151,12 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   private String regionNameStr = "";
   private boolean split = false;
   private byte [] startKey = HConstants.EMPTY_BYTE_ARRAY;
+  protected HTableDescriptor tableDesc = null;
   private int hashCode = -1;
   //TODO: Move NO_HASH to HStoreFile which is really the only place it is used.
   public static final String NO_HASH = null;
   private volatile String encodedName = NO_HASH;
   private byte [] encodedNameAsBytes = null;
-
-  // Current TableName
-  private byte[] tableName = null;
-  private String tableNameAsString = null;
 
   private void setHashCode() {
     int result = Arrays.hashCode(this.regionName);
@@ -163,89 +164,66 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     result ^= Arrays.hashCode(this.startKey);
     result ^= Arrays.hashCode(this.endKey);
     result ^= Boolean.valueOf(this.offLine).hashCode();
-    result ^= Arrays.hashCode(this.tableName);
+    result ^= this.tableDesc.hashCode();
     this.hashCode = result;
   }
-
 
   /**
    * Private constructor used constructing HRegionInfo for the catalog root and
    * first meta regions
    */
-  private HRegionInfo(long regionId, byte[] tableName) {
+  private HRegionInfo090x(long regionId, HTableDescriptor tableDesc) {
     super();
     this.regionId = regionId;
-    this.tableName = tableName.clone();
+    this.tableDesc = tableDesc;
+
     // Note: Root & First Meta regions names are still in old format
-    this.regionName = createRegionName(tableName, null,
+    this.regionName = createRegionName(tableDesc.getName(), null,
                                        regionId, false);
     this.regionNameStr = Bytes.toStringBinary(this.regionName);
     setHashCode();
   }
 
   /** Default constructor - creates empty object */
-  public HRegionInfo() {
+  public HRegionInfo090x() {
     super();
-  }
-
-  /**
-   * Used only for migration
-   * @param other HRegionInfoForMigration
-   */
-  public HRegionInfo(HRegionInfo090x other) {
-    super();
-    this.endKey = other.getEndKey();
-    this.offLine = other.isOffline();
-    this.regionId = other.getRegionId();
-    this.regionName = other.getRegionName();
-    this.regionNameStr = Bytes.toStringBinary(this.regionName);
-    this.split = other.isSplit();
-    this.startKey = other.getStartKey();
-    this.hashCode = other.hashCode();
-    this.encodedName = other.getEncodedName();
-    this.tableName = other.getTableDesc().getName();
-  }
-
-  public HRegionInfo(final byte[] tableName) {
-    this(tableName, null, null);
+    this.tableDesc = new HTableDescriptor();
   }
 
   /**
    * Construct HRegionInfo with explicit parameters
    *
-   * @param tableName the table name
+   * @param tableDesc the table descriptor
    * @param startKey first key in region
    * @param endKey end of key range
    * @throws IllegalArgumentException
    */
-  public HRegionInfo(final byte[] tableName, final byte[] startKey,
-                     final byte[] endKey)
+  public HRegionInfo090x(final HTableDescriptor tableDesc, final byte[] startKey,
+                         final byte[] endKey)
   throws IllegalArgumentException {
-    this(tableName, startKey, endKey, false);
+    this(tableDesc, startKey, endKey, false);
   }
-
 
   /**
    * Construct HRegionInfo with explicit parameters
    *
-   * @param tableName the table descriptor
+   * @param tableDesc the table descriptor
    * @param startKey first key in region
    * @param endKey end of key range
    * @param split true if this region has split and we have daughter regions
    * regions that may or may not hold references to this region.
    * @throws IllegalArgumentException
    */
-  public HRegionInfo(final byte[] tableName, final byte[] startKey,
-                     final byte[] endKey, final boolean split)
+  public HRegionInfo090x(HTableDescriptor tableDesc, final byte[] startKey,
+                         final byte[] endKey, final boolean split)
   throws IllegalArgumentException {
-    this(tableName, startKey, endKey, split, System.currentTimeMillis());
+    this(tableDesc, startKey, endKey, split, System.currentTimeMillis());
   }
-
 
   /**
    * Construct HRegionInfo with explicit parameters
    *
-   * @param tableName the table descriptor
+   * @param tableDesc the table descriptor
    * @param startKey first key in region
    * @param endKey end of key range
    * @param split true if this region has split and we have daughter regions
@@ -253,26 +231,22 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    * @param regionid Region id to use.
    * @throws IllegalArgumentException
    */
-  public HRegionInfo(final byte[] tableName, final byte[] startKey,
-                     final byte[] endKey, final boolean split, final long regionid)
+  public HRegionInfo090x(HTableDescriptor tableDesc, final byte[] startKey,
+                         final byte[] endKey, final boolean split, final long regionid)
   throws IllegalArgumentException {
-
     super();
-    if (tableName == null) {
-      throw new IllegalArgumentException("tableName cannot be null");
+    if (tableDesc == null) {
+      throw new IllegalArgumentException("tableDesc cannot be null");
     }
-    this.tableName = tableName.clone();
     this.offLine = false;
     this.regionId = regionid;
-
-    this.regionName = createRegionName(this.tableName, startKey, regionId, true);
-
+    this.regionName = createRegionName(tableDesc.getName(), startKey, regionId, true);
     this.regionNameStr = Bytes.toStringBinary(this.regionName);
     this.split = split;
     this.endKey = endKey == null? HConstants.EMPTY_END_ROW: endKey.clone();
     this.startKey = startKey == null?
       HConstants.EMPTY_START_ROW: startKey.clone();
-    this.tableName = tableName.clone();
+    this.tableDesc = tableDesc;
     setHashCode();
   }
 
@@ -281,7 +255,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    *
    * @param other
    */
-  public HRegionInfo(HRegionInfo other) {
+  public HRegionInfo090x(HRegionInfo090x other) {
     super();
     this.endKey = other.getEndKey();
     this.offLine = other.isOffline();
@@ -290,11 +264,10 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     this.regionNameStr = Bytes.toStringBinary(this.regionName);
     this.split = other.isSplit();
     this.startKey = other.getStartKey();
+    this.tableDesc = other.getTableDesc();
     this.hashCode = other.hashCode();
     this.encodedName = other.getEncodedName();
-    this.tableName = other.tableName;
   }
-
 
   /**
    * Make a region name of passed parameters.
@@ -363,7 +336,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
 
       if (md5HashBytes.length != MD5_HEX_LENGTH) {
         LOG.error("MD5-hash length mismatch: Expected=" + MD5_HEX_LENGTH +
-                  "; Got=" + md5HashBytes.length); 
+                  "; Got=" + md5HashBytes.length);
       }
 
       // now append the bytes '.<encodedName>.' to the end
@@ -372,7 +345,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
       offset += MD5_HEX_LENGTH;
       b[offset++] = ENC_SEPARATOR;
     }
-    
+
     return b;
   }
 
@@ -483,26 +456,10 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   public byte [] getStartKey(){
     return startKey;
   }
-  
+
   /** @return the endKey */
   public byte [] getEndKey(){
     return endKey;
-  }
-
-  /**
-   * Get current table name of the region
-   * @return byte array of table name
-   */
-  public byte[] getTableName() {
-    return tableName;
-  }
-
-  /**
-   * Get current table name as string
-   * @return string representation of current table
-   */
-  public String getTableNameAsString() {
-    return Bytes.toString(tableName);
   }
 
   /**
@@ -525,7 +482,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
       Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY);
     return firstKeyInRange && lastKeyInRange;
   }
-  
+
   /**
    * Return true if the given row falls in this region.
    */
@@ -536,34 +493,32 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   }
 
   /** @return the tableDesc */
-   @Deprecated
   public HTableDescriptor getTableDesc(){
-    return null;
+    return tableDesc;
   }
 
   /**
    * @param newDesc new table descriptor to use
    */
-  @Deprecated
   public void setTableDesc(HTableDescriptor newDesc) {
-    // do nothing.
+    this.tableDesc = newDesc;
   }
 
   /** @return true if this is the root region */
   public boolean isRootRegion() {
-    return Bytes.equals(tableName, HRegionInfo.ROOT_REGIONINFO.getTableName());
+    return this.tableDesc.isRootRegion();
   }
 
   /** @return true if this region is from a table that is a meta table,
    * either <code>.META.</code> or <code>-ROOT-</code>
    */
   public boolean isMetaTable() {
-    return Bytes.equals(tableName, HRegionInfo.FIRST_META_REGIONINFO.getTableName());
+    return this.tableDesc.isMetaTable();
   }
 
   /** @return true if this region is a meta region */
   public boolean isMetaRegion() {
-     return isMetaTable();
+    return this.tableDesc.isMetaRegion();
   }
 
   /**
@@ -614,14 +569,14 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   @Override
   public String toString() {
     return "REGION => {" + HConstants.NAME + " => '" +
-      this.regionNameStr
-      + " TableName => " +  this.tableName
-      + "', STARTKEY => '" +
+      this.regionNameStr +
+      "', STARTKEY => '" +
       Bytes.toStringBinary(this.startKey) + "', ENDKEY => '" +
       Bytes.toStringBinary(this.endKey) +
       "', ENCODED => " + getEncodedName() + "," +
       (isOffline()? " OFFLINE => true,": "") +
-      (isSplit()? " SPLIT => true,": "") + "}";
+      (isSplit()? " SPLIT => true,": "") +
+      " TABLE => {" + this.tableDesc.toString() + "}";
   }
 
   /**
@@ -635,10 +590,10 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     if (o == null) {
       return false;
     }
-    if (!(o instanceof HRegionInfo)) {
+    if (!(o instanceof HRegionInfo090x)) {
       return false;
     }
-    return this.compareTo((HRegionInfo)o) == 0;
+    return this.compareTo((HRegionInfo090x)o) == 0;
   }
 
   /**
@@ -668,7 +623,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     Bytes.writeByteArray(out, regionName);
     out.writeBoolean(split);
     Bytes.writeByteArray(out, startKey);
-    Bytes.writeByteArray(out, tableName);
+    tableDesc.write(out);
     out.writeInt(hashCode);
   }
 
@@ -682,7 +637,11 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     this.regionNameStr = Bytes.toStringBinary(this.regionName);
     this.split = in.readBoolean();
     this.startKey = Bytes.readByteArray(in);
-    this.tableName = Bytes.readByteArray(in);
+    try {
+      this.tableDesc.readFields(in);
+    } catch(EOFException eofe) {
+       throw new IOException("HTD not found in input buffer");
+    }
     this.hashCode = in.readInt();
   }
 
@@ -690,13 +649,13 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   // Comparable
   //
 
-  public int compareTo(HRegionInfo o) {
+  public int compareTo(HRegionInfo090x o) {
     if (o == null) {
       return 1;
     }
 
     // Are regions of same table?
-    int result = Bytes.compareTo(this.tableName, o.tableName);
+    int result = Bytes.compareTo(this.tableDesc.getName(), o.tableDesc.getName());
     if (result != 0) {
       return result;
     }
@@ -712,7 +671,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   }
 
   /**
-   * @return Comparator to use comparing {@link KeyValue}s.
+   * @return Comparator to use comparing {@link org.apache.hadoop.hbase.KeyValue}s.
    */
   public KVComparator getComparator() {
     return isRootRegion()? KeyValue.ROOT_COMPARATOR: isMetaRegion()?

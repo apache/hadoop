@@ -36,7 +36,7 @@ public class TimestampTestBase extends HBaseTestCase {
   private static final long T1 = 100L;
   private static final long T2 = 200L;
 
-  private static final byte [] FAMILY_NAME = Bytes.toBytes("colfamily1");
+  private static final byte [] FAMILY_NAME = Bytes.toBytes("colfamily11");
   private static final byte [] QUALIFIER_NAME = Bytes.toBytes("contents");
 
   private static final byte [] ROW = Bytes.toBytes("row");

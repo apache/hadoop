@@ -181,7 +181,7 @@ public class TestFromClientSide {
      for (Map.Entry<HRegionInfo, HServerAddress> e: loadedRegions.entrySet()) {
        HRegionInfo hri = e.getKey();
        assertTrue(HConnectionManager.isRegionCached(conf,
-           hri.getTableDesc().getName(), hri.getStartKey()));
+           hri.getTableName(), hri.getStartKey()));
      }
 
      // delete the temp file

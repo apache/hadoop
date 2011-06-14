@@ -28,16 +28,14 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
-import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.ServerName;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.migration.HRegionInfo090x;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
@@ -50,6 +48,8 @@ import org.apache.hadoop.ipc.RemoteException;
  * catalogs.
  */
 public class MetaReader {
+  private static final Log LOG = LogFactory.getLog(MetaReader.class);
+
   public static final byte [] META_REGION_PREFIX;
   static {
     // Copy the prefix from FIRST_META_REGIONINFO into META_REGION_PREFIX.
@@ -182,7 +182,7 @@ public class MetaReader {
         if (region == null) return true;
         HRegionInfo hri = region.getFirst();
         if (disabledTables.contains(
-            hri.getTableDesc().getNameAsString())) return true;
+            hri.getTableNameAsString())) return true;
         // Are we to include split parents in the list?
         if (excludeOfflinedSplitParents && hri.isSplitParent()) return true;
         regions.put(hri, region.getSecond());
@@ -582,6 +582,48 @@ public class MetaReader {
       metaServer.close(scannerid);
     }
   }
+
+  public static void fullScanMetaAndPrint(
+      CatalogTracker catalogTracker)
+  throws IOException {
+    final List<HRegionInfo090x> regions =
+      new ArrayList<HRegionInfo090x>();
+    Visitor v = new Visitor() {
+      @Override
+      public boolean visit(Result r) throws IOException {
+        if (r ==  null || r.isEmpty()) return true;
+        LOG.info("fullScanMetaAndPrint.Current Meta Row: " + r);
+        HRegionInfo hrim = MetaEditor.getHRegionInfo(r);
+        LOG.info("fullScanMetaAndPrint.HRI Print= " + hrim);
+        return true;
+      }
+    };
+    fullScan(catalogTracker, v);
+  }
+
+
+  public static List<HRegionInfo090x> fullScanMetaAndPrintHRIM(
+      CatalogTracker catalogTracker)
+  throws IOException {
+    final List<HRegionInfo090x> regions =
+      new ArrayList<HRegionInfo090x>();
+    Visitor v = new Visitor() {
+      @Override
+      public boolean visit(Result r) throws IOException {
+        if (r ==  null || r.isEmpty()) return true;
+        LOG.info("fullScanMetaAndPrint1.Current Meta Result: " + r);
+        HRegionInfo090x hrim = MetaEditor.getHRegionInfoForMigration(r);
+        LOG.info("fullScanMetaAndPrint.HRIM Print= " + hrim);
+        regions.add(hrim);
+        return true;
+      }
+    };
+    fullScan(catalogTracker, v);
+    return regions;
+  }
+
+
+
 
   /**
    * Implementations 'visit' a catalog table row.

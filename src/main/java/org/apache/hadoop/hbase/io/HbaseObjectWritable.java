@@ -163,6 +163,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(HServerAddress.class, code++);
     addToMap(HServerInfo.class, code++);
     addToMap(HTableDescriptor.class, code++);
+    addToMap(HTableDescriptor[].class, code++);
     addToMap(MapWritable.class, code++);
 
     //
