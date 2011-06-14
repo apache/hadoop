@@ -2,8 +2,17 @@ Hadoop Change Log
 
 Release 0.20.206.0 - unreleased
 
-  MAPREDUCE-7343. Make the number of warnings accepted by test-patch
-  configurable to limit false positives. (Thomas Graves via cdouglas)
+  NEW FEATURES
+
+  BUG FIXES
+
+  IMPROVEMENTS
+
+    MAPREDUCE-7343. Make the number of warnings accepted by test-patch
+    configurable to limit false positives. (Thomas Graves via cdouglas)
+
+    HDFS-1836. Thousand of CLOSE_WAIT socket. Contributed by Todd Lipcon,
+    ported to security branch by Bharath Mundlapudi. (via mattf)
 
 Release 0.20.205.0 - unreleased
 
