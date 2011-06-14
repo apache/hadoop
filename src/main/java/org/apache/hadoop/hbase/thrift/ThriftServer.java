@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.thrift.generated.TScan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
@@ -1022,7 +1023,6 @@ public class ThriftServer {
       serverArgs.processor(processor);
       serverArgs.protocolFactory(protocolFactory);
       serverArgs.transportFactory(transportFactory);
-
       LOG.info("starting HBase ThreadPool Thrift server on " + listenAddress + ":" + Integer.toString(listenPort));
       server = new TThreadPoolServer(serverArgs);
     }
@@ -1035,6 +1035,7 @@ public class ThriftServer {
    * @throws Exception
    */
   public static void main(String [] args) throws Exception {
+	VersionInfo.logVersion();
     doMain(args);
   }
 }

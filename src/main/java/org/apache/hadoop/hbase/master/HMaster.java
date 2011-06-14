@@ -1437,6 +1437,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
    * @see org.apache.hadoop.hbase.master.HMasterCommandLine
    */
   public static void main(String [] args) throws Exception {
+	VersionInfo.logVersion();
     new HMasterCommandLine(HMaster.class).doMain(args);
   }
 }

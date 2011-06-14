@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.rest.filter.GzipFilter;
+import org.apache.hadoop.hbase.util.VersionInfo;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -68,6 +69,7 @@ public class Main implements Constants {
   public static void main(String[] args) throws Exception {
     Log LOG = LogFactory.getLog("RESTServer");
 
+	VersionInfo.logVersion();
     Configuration conf = HBaseConfiguration.create();
     RESTServlet servlet = RESTServlet.getInstance(conf);
 
