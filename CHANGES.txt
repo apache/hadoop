@@ -263,6 +263,7 @@ Release 0.91.0 - Unreleased
    HBASE-3982  Improvements to TestHFileSeek
    HBASE-3940  HBase daemons should log version info at startup and possibly
                periodically (Li Pi)
+   HBASE-3976  Disable Block Cache On Compactions (Karthick Sankarachary)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
