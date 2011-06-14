@@ -202,7 +202,7 @@ public class MasterFileSystem {
     List<ServerName> serverNames = new ArrayList<ServerName>();
     for (FileStatus status : logFolders) {
       ServerName serverName = new ServerName(status.getPath().getName());
-      if (onlineServers.contains(serverName)) {
+      if (!onlineServers.contains(serverName)) {
         LOG.info("Log folder " + status.getPath() + " doesn't belong " +
           "to a known region server, splitting");
         serverNames.add(serverName);
