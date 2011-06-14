@@ -260,6 +260,7 @@ Release 0.91.0 - Unreleased
                (Jolly Chen)
    HBASE-3961  Add Delete.setWriteToWAL functionality (Bruno Dumon)
    HBASE-3928  Some potential performance improvements to Bytes/KeyValue
+   HBASE-3982  Improvements to TestHFileSeek
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

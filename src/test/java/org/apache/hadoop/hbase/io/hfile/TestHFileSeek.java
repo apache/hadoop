@@ -37,10 +37,12 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.io.BytesWritable;
+import org.mortbay.log.Log;
 
 /**
  * test the performance for seek.
@@ -51,6 +53,7 @@ import org.apache.hadoop.io.BytesWritable;
  * instead.</p>
  */
 public class TestHFileSeek extends TestCase {
+  private static final boolean USE_PREAD = true;
   private MyOptions options;
   private Configuration conf;
   private Path path;
@@ -67,6 +70,11 @@ public class TestHFileSeek extends TestCase {
     }
 
     conf = new Configuration();
+    
+    if (options.useRawFs) {
+      conf.setClass("fs.file.impl", RawLocalFileSystem.class, FileSystem.class);
+    }
+    
     conf.setInt("tfile.fs.input.buffer.size", options.fsInputBufferSize);
     conf.setInt("tfile.fs.output.buffer.size", options.fsOutputBufferSize);
     path = new Path(new Path(options.rootDir), options.file);
@@ -161,7 +169,7 @@ public class TestHFileSeek extends TestCase {
     KeySampler kSampler =
         new KeySampler(rng, reader.getFirstKey(), reader.getLastKey(),
             keyLenGen);
-    HFileScanner scanner = reader.getScanner(false, false);
+    HFileScanner scanner = reader.getScanner(false, USE_PREAD);
     BytesWritable key = new BytesWritable();
     timer.reset();
     timer.start();
@@ -250,7 +258,9 @@ public class TestHFileSeek extends TestCase {
     // Default writing 10MB.
     long fileSize = 10 * 1024 * 1024;
     long seekCount = 1000;
+    long trialCount = 1;
     long seed;
+    boolean useRawFs = false;
 
     static final int OP_CREATE = 1;
     static final int OP_READ = 2;
@@ -348,15 +358,31 @@ public class TestHFileSeek extends TestCase {
               .withDescription(
                   "specify how many seek operations we perform (requires -x r or -x rw.")
               .create('n');
+      
+      Option trialCount =
+          OptionBuilder 
+              .withLongOpt("trials")
+              .withArgName("n")
+              .hasArg()
+              .withDescription(
+                  "specify how many times to run the whole benchmark")
+              .create('t');
 
+      Option useRawFs =
+          OptionBuilder
+            .withLongOpt("rawfs")
+            .withDescription("use raw instead of checksummed file system")
+            .create();
+      
       Option help =
           OptionBuilder.withLongOpt("help").hasArg(false).withDescription(
               "show this screen").create("h");
 
       return new Options().addOption(compress).addOption(fileSize).addOption(
           fsInputBufferSz).addOption(fsOutputBufferSize).addOption(keyLen)
-          .addOption(blockSz).addOption(rootDir).addOption(valueLen).addOption(
-              operation).addOption(seekCount).addOption(file).addOption(help);
+          .addOption(blockSz).addOption(rootDir).addOption(valueLen)
+          .addOption(operation).addOption(seekCount).addOption(file)
+          .addOption(trialCount).addOption(useRawFs).addOption(help);
 
     }
 
@@ -395,6 +421,10 @@ public class TestHFileSeek extends TestCase {
 
       if (line.hasOption('n')) {
         seekCount = Integer.parseInt(line.getOptionValue('n'));
+      }
+      
+      if (line.hasOption('t')) {
+        trialCount = Integer.parseInt(line.getOptionValue('t'));
       }
 
       if (line.hasOption('k')) {
@@ -440,6 +470,8 @@ public class TestHFileSeek extends TestCase {
           throw new ParseException("Unknown action specifier: " + strOp);
         }
       }
+      
+      useRawFs = line.hasOption("rawfs");
 
       proceed = true;
     }
@@ -489,8 +521,11 @@ public class TestHFileSeek extends TestCase {
     }
 
     testCase.options = options;
-    testCase.setUp();
-    testCase.testSeeks();
-    testCase.tearDown();
+    for (int i = 0; i < options.trialCount; i++) {
+      Log.info("Beginning trial " + (i+1));
+      testCase.setUp();
+      testCase.testSeeks();
+      testCase.tearDown();
+    }
   }
 }
