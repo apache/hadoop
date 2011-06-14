@@ -20,8 +20,13 @@ package org.apache.hadoop.mapred.gridmix.test.system;
 import org.apache.hadoop.mapred.gridmix.Gridmix;
 import org.apache.hadoop.mapred.gridmix.JobCreator;
 import org.apache.hadoop.mapred.gridmix.SleepJob;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 
+/**
+ * Gridmix system tests configurations. 
+ */
 public class GridMixConfig {
 
   /**
@@ -171,4 +176,46 @@ public class GridMixConfig {
    */
   public static final String GRIDMIX_SLEEP_REDUCE_MAX_TIME = 
       SleepJob.GRIDMIX_SLEEP_MAX_REDUCE_TIME;
+
+  /**
+   * Gridmix high ram job emulation enable.
+   */
+  public static final String GRIDMIX_HIGH_RAM_JOB_ENABLE = 
+      "gridmix.highram-emulation.enable";
+
+  /**
+   * Job map memory in mb.
+   */
+  public static final String JOB_MAP_MEMORY_MB = 
+      MRJobConfig.MAP_MEMORY_MB;
+
+  /**
+   * Job reduce memory in mb.
+   */
+  public static final String JOB_REDUCE_MEMORY_MB = 
+      MRJobConfig.REDUCE_MEMORY_MB;
+
+  /**
+   * Cluster map memory in mb. 
+   */
+  public static final String CLUSTER_MAP_MEMORY = 
+      MRConfig.MAPMEMORY_MB;
+
+  /**
+   * Cluster reduce memory in mb.
+   */
+  public static final String CLUSTER_REDUCE_MEMORY = 
+      MRConfig.REDUCEMEMORY_MB;
+
+  /**
+   * Cluster maximum map memory.
+   */
+  public static final String CLUSTER_MAX_MAP_MEMORY = 
+      JTConfig.JT_MAX_MAPMEMORY_MB;
+
+  /**
+   * Cluster maximum reduce memory.
+   */
+  public static final String CLUSTER_MAX_REDUCE_MEMORY = 
+      JTConfig.JT_MAX_REDUCEMEMORY_MB;
 }

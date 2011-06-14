@@ -24,11 +24,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.test.system.MRCluster;
 import org.apache.hadoop.mapreduce.test.system.JTProtocol;
 import org.apache.hadoop.mapreduce.test.system.JTClient;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.gridmix.test.system.GridmixJobSubmission;
 import org.apache.hadoop.mapred.gridmix.test.system.GridmixJobVerification;
 import org.apache.hadoop.mapred.gridmix.test.system.GridMixRunMode;
 import org.apache.hadoop.mapred.gridmix.test.system.GridMixConfig;
 import org.apache.hadoop.mapred.gridmix.test.system.UtilsForGridmix;
+import org.apache.hadoop.mapred.gridmix.test.system.GridmixJobStory;
+import org.apache.hadoop.tools.rumen.ZombieJob;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.mapreduce.JobID;
 import org.junit.AfterClass;
@@ -37,7 +40,9 @@ import org.junit.BeforeClass;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.List;
+import java.util.Set;
 import java.io.IOException;
+import org.junit.Assert;
 
 /**
  * Run and verify the Gridmix jobs for given a trace.
@@ -80,7 +85,8 @@ public class GridmixSystemTestCase {
 
     /* Clean up the proxy user directories if gridmix run with 
       RoundRobinUserResovler mode.*/
-    if (gridmixJV.getJobUserResolver().contains("RoundRobin")) {
+    if (gridmixJV != null 
+       && gridmixJV.getJobUserResolver().contains("RoundRobin")) {
        List<String> proxyUsers = 
            UtilsForGridmix.listProxyUsers(gridmixJS.getJobConf(),
            UserGroupInformation.getLoginUser().getShortUserName());
@@ -161,6 +167,59 @@ public class GridmixSystemTestCase {
       }
     }
     return null;
+  }
+
+  /**
+   * Validate the task memory parameters.
+   * @param tracePath - trace file.
+   * @param isTraceHasHighRamJobs - true if trace has high ram job(s) 
+   *                                otherwise its false 
+   */
+  @SuppressWarnings("deprecation")
+  public static void validateTaskMemoryParamters(String tracePath,
+      boolean isTraceHasHighRamJobs) throws IOException {
+    if (isTraceHasHighRamJobs) {
+      GridmixJobStory gjs = new GridmixJobStory(new Path(tracePath),
+                                                rtClient.getDaemonConf());
+      Set<JobID> jobids = gjs.getZombieJobs().keySet();
+      boolean isHighRamFlag = false;
+      for (JobID jobid :jobids) {
+        ZombieJob zombieJob = gjs.getZombieJobs().get(jobid);
+        JobConf origJobConf = zombieJob.getJobConf();
+        int origMapFactor =
+            GridmixJobVerification.getMapFactor(origJobConf);
+        int origReduceFactor =
+            GridmixJobVerification.getReduceFactor(origJobConf);
+        if (origMapFactor >= 2 || origReduceFactor >= 2) {
+          isHighRamFlag = true;
+          long TaskMapMemInMB =
+              GridmixJobVerification.getScaledTaskMemInMB(
+                      GridMixConfig.JOB_MAP_MEMORY_MB,
+                      GridMixConfig.CLUSTER_MAP_MEMORY,
+                      origJobConf, rtClient.getDaemonConf());
+
+          long TaskReduceMemInMB =
+              GridmixJobVerification.getScaledTaskMemInMB(
+                      GridMixConfig.JOB_REDUCE_MEMORY_MB,
+                      GridMixConfig.CLUSTER_REDUCE_MEMORY,
+                      origJobConf, rtClient.getDaemonConf());
+          long taskMapLimitInMB =
+              conf.getLong(GridMixConfig.CLUSTER_MAX_MAP_MEMORY,
+                           JobConf.DISABLED_MEMORY_LIMIT);
+
+          long taskReduceLimitInMB =
+              conf.getLong(GridMixConfig.CLUSTER_MAX_REDUCE_MEMORY,
+                           JobConf.DISABLED_MEMORY_LIMIT);
+
+          GridmixJobVerification.verifyMemoryLimits(TaskMapMemInMB,
+                                                    taskMapLimitInMB);
+          GridmixJobVerification.verifyMemoryLimits(TaskReduceMemInMB,
+                                                    taskReduceLimitInMB);
+        }
+      }
+      Assert.assertTrue("Trace doesn't have atleast one high ram job.",
+                        isHighRamFlag);
+    }
   }
 
   public static boolean isLocalDistCache(String fileName, String userName, 
