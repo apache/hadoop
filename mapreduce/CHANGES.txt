@@ -4,6 +4,8 @@ Trunk (unreleased changes)
 
 
     MAPREDUCE-279
+
+    Changes to do rack resolutions in the RM and in the AM (ddas)
    
     Fix NPE in history event handling (siddharth seth via mahadev)
     
