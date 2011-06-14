@@ -217,6 +217,8 @@ Trunk (unreleased changes)
 
     HADOOP-6605. Add JAVA_HOME detection to hadoop-config. (eli)
 
+    HADOOP-7384. Allow test-patch to be more flexible about patch format. (todd)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

@@ -18,7 +18,8 @@ ulimit -n 1024
 ### Setup some variables.  
 ### SVN_REVISION and BUILD_URL are set by Hudson if it is run by patch process
 ### Read variables from properties file
-. `dirname $0`/../test-patch.properties
+bindir=$(dirname $0)
+. $bindir/../test-patch.properties
 
 ###############################################################################
 parseArgs() {
@@ -270,7 +271,8 @@ applyPatch () {
   echo "======================================================================"
   echo ""
   echo ""
-  $PATCH -E -p0 < $PATCH_DIR/patch
+  export PATCH
+  $bindir/smart-apply-patch.sh $PATCH_DIR/patch
   if [[ $? != 0 ]] ; then
     echo "PATCH APPLICATION FAILED"
     JIRA_COMMENT="$JIRA_COMMENT
