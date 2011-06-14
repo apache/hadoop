@@ -306,6 +306,9 @@ Trunk (unreleased changes)
     HADOOP-7356. RPM packages broke bin/hadoop script in developer environment.
     (Eric Yang via todd)
 
+    HADOOP-7389. Use of TestingGroups by tests causes subsequent tests to fail.
+    (atm via tomwhite)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

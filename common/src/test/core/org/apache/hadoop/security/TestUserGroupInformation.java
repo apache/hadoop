@@ -62,6 +62,29 @@ public class TestUserGroupInformation {
         + "DEFAULT");
     UserGroupInformation.setConfiguration(conf);
   }
+  
+  /** Test login method */
+  @Test
+  public void testLogin() throws Exception {
+    // login from unix
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    assertEquals(UserGroupInformation.getCurrentUser(),
+                 UserGroupInformation.getLoginUser());
+    assertTrue(ugi.getGroupNames().length >= 1);
+
+    // ensure that doAs works correctly
+    UserGroupInformation userGroupInfo = 
+      UserGroupInformation.createUserForTesting(USER_NAME, GROUP_NAMES);
+    UserGroupInformation curUGI = 
+      userGroupInfo.doAs(new PrivilegedExceptionAction<UserGroupInformation>(){
+        public UserGroupInformation run() throws IOException {
+          return UserGroupInformation.getCurrentUser();
+        }});
+    // make sure in the scope of the doAs, the right user is current
+    assertEquals(curUGI, userGroupInfo);
+    // make sure it is not the same as the login user
+    assertFalse(curUGI.equals(UserGroupInformation.getLoginUser()));
+  }
 
   /**
    * given user name - get all the groups.
@@ -105,29 +128,6 @@ public class TestUserGroupInformation {
         assertEquals(0, current.getGroupNames().length);
         return null;
       }});
-  }
-
-  /** Test login method */
-  @Test
-  public void testLogin() throws Exception {
-    // login from unix
-    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    assertEquals(UserGroupInformation.getCurrentUser(),
-                 UserGroupInformation.getLoginUser());
-    assertTrue(ugi.getGroupNames().length >= 1);
-
-    // ensure that doAs works correctly
-    UserGroupInformation userGroupInfo = 
-      UserGroupInformation.createUserForTesting(USER_NAME, GROUP_NAMES);
-    UserGroupInformation curUGI = 
-      userGroupInfo.doAs(new PrivilegedExceptionAction<UserGroupInformation>(){
-        public UserGroupInformation run() throws IOException {
-          return UserGroupInformation.getCurrentUser();
-        }});
-    // make sure in the scope of the doAs, the right user is current
-    assertEquals(curUGI, userGroupInfo);
-    // make sure it is not the same as the login user
-    assertFalse(curUGI.equals(UserGroupInformation.getLoginUser()));
   }
 
   /** test constructor */

@@ -878,17 +878,21 @@ public class UserGroupInformation {
   private static class TestingGroups extends Groups {
     private final Map<String, List<String>> userToGroupsMapping = 
       new HashMap<String,List<String>>();
+    private Groups underlyingImplementation;
     
-    private TestingGroups() {
+    private TestingGroups(Groups underlyingImplementation) {
       super(new org.apache.hadoop.conf.Configuration());
+      this.underlyingImplementation = underlyingImplementation;
     }
     
     @Override
-    public List<String> getGroups(String user) {
+    public List<String> getGroups(String user) throws IOException {
       List<String> result = userToGroupsMapping.get(user);
+      
       if (result == null) {
-        result = new ArrayList<String>();
+        result = underlyingImplementation.getGroups(user);
       }
+
       return result;
     }
 
@@ -910,7 +914,7 @@ public class UserGroupInformation {
     UserGroupInformation ugi = createRemoteUser(user);
     // make sure that the testing object is setup
     if (!(groups instanceof TestingGroups)) {
-      groups = new TestingGroups();
+      groups = new TestingGroups(groups);
     }
     // add the user groups
     ((TestingGroups) groups).setUserGroups(ugi.getShortUserName(), userGroups);
@@ -936,7 +940,7 @@ public class UserGroupInformation {
     UserGroupInformation ugi = createProxyUser(user, realUser);
     // make sure that the testing object is setup
     if (!(groups instanceof TestingGroups)) {
-      groups = new TestingGroups();
+      groups = new TestingGroups(groups);
     }
     // add the user groups
     ((TestingGroups) groups).setUserGroups(ugi.getShortUserName(), userGroups);
