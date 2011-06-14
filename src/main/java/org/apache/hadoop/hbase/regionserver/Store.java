@@ -549,18 +549,12 @@ public class Store implements HeapSize {
    * @return Writer for a new StoreFile in the tmp dir.
    */
   private StoreFile.Writer createWriterInTmp(int maxKeyCount,
-      Compression.Algorithm compression) throws IOException {
-    return createWriterInTmp(maxKeyCount, compression,
-        conf.getBoolean("hbase.rs.cacheblocksonwrite", false));
-  }
-
-  private StoreFile.Writer createWriterInTmp(int maxKeyCount,
-    Compression.Algorithm compression, boolean cacheBlocksOnWrite)
+    Compression.Algorithm compression)
   throws IOException {
     return StoreFile.createWriter(this.fs, region.getTmpDir(), this.blocksize,
         compression, this.comparator, this.conf,
         this.family.getBloomFilterType(), maxKeyCount,
-        cacheBlocksOnWrite);
+        conf.getBoolean("hbase.rs.cacheblocksonwrite", false));
   }
 
   /*
@@ -1103,7 +1097,7 @@ public class Store implements HeapSize {
         while (scanner.next(kvs)) {
           if (writer == null && !kvs.isEmpty()) {
             writer = createWriterInTmp(maxKeyCount,
-              this.compactionCompression, false);
+              this.compactionCompression);
           }
           if (writer != null) {
             // output to writer:
