@@ -176,7 +176,8 @@ public class TestGridmixRecord {
       a.setReduceOutputBytes(out_bytes);
       final int min = WritableUtils.getVIntSize(in_rec)
                     + WritableUtils.getVIntSize(out_rec)
-                    + WritableUtils.getVIntSize(out_bytes);
+                    + WritableUtils.getVIntSize(out_bytes)
+                    + WritableUtils.getVIntSize(0);
       assertEquals(min + 2, a.fixedBytes()); // meta + vint min
       final int size = r.nextInt(1024) + a.fixedBytes() + 1;
       setSerialize(a, r.nextLong(), size, out);
@@ -207,7 +208,7 @@ public class TestGridmixRecord {
 
   @Test
   public void testKeySpec() throws Exception {
-    final int min = 5;
+    final int min = 6;
     final int max = 300;
     final GridmixKey a = new GridmixKey(GridmixKey.REDUCE_SPEC, 1, 0L);
     final GridmixKey b = new GridmixKey(GridmixKey.REDUCE_SPEC, 1, 0L);

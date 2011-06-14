@@ -28,6 +28,7 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.JobStoryProducer;
 import org.apache.hadoop.tools.rumen.Pre21JobHistoryConstants.Values;
+import org.apache.hadoop.tools.rumen.ResourceUsageMetrics;
 import org.apache.hadoop.tools.rumen.TaskAttemptInfo;
 import org.apache.hadoop.tools.rumen.TaskInfo;
 import org.apache.hadoop.tools.rumen.ZombieJobProducer;
@@ -111,7 +112,7 @@ abstract class JobFactory<T> implements Gridmix.Component<Void>,StatListener<T> 
     public MinTaskInfo(TaskInfo info) {
       super(info.getInputBytes(), info.getInputRecords(),
             info.getOutputBytes(), info.getOutputRecords(),
-            info.getTaskMemory());
+            info.getTaskMemory(), info.getResourceUsageMetrics());
     }
     public long getInputBytes() {
       return Math.max(0, super.getInputBytes());

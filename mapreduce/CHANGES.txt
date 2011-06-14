@@ -11,6 +11,9 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    MAPREDUCE-2106. [Gridmix] Cumulative CPU usage emulation in Gridmix. 
+    (amarrk)
+
     MAPREDUCE-2543. [Gridmix] High-Ram feature emulation in Gridmix. (amarrk)
 
     MAPREDUCE-2408. [Gridmix] Compression emulation in Gridmix. (amarrk)

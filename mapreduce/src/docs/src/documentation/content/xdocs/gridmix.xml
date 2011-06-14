@@ -663,8 +663,53 @@ hadoop jar &lt;gridmix-jar&gt; org.apache.hadoop.mapred.gridmix.Gridmix \
      </ul>
      <p>High-Ram feature emulation can be disabled by setting  
         <code>gridmix.highram-emulation.enable</code> to
-        <code>false</code>. By default High-Ram feature emulation is enabled.
-        Note that this feature works only for jobs of type <em>LOADJOB</em>.
+        <code>false</code>.
+     </p>
+    </section>
+    
+    <section id="resource-usage-emulation">
+      <title>Emulating resource usages</title>
+      <p>Usages of resources like CPU, physical memory, virtual memory, JVM heap
+         etc are recorded by MapReduce using its task counters. This information
+         is used by GridMix to emulate the resource usages in the simulated 
+         tasks. Emulating resource usages will help GridMix exert similar load 
+         on the test cluster as seen in the actual cluster.
+      </p>
+      <p>MapReduce tasks use up resources during its entire lifetime. GridMix
+         also tries to mimic this behavior by spanning resource usage emulation
+         across the entire lifetime of the simulated task. Each resource to be
+         emulated should have an <em>emulator</em> associated with it.
+         Each such <em>emulator</em> should implement the 
+         <code>org.apache.hadoop.mapred.gridmix.emulators.resourceusage
+         .ResourceUsageEmulatorPlugin</code> interface. Resource 
+         <em>emulators</em> in GridMix are <em>plugins</em> that can be 
+         configured (plugged in or out) before every run. GridMix users can 
+         configure multiple emulator <em>plugins</em> by passing a comma 
+         separated list of <em>emulators</em> as a value for the 
+         <code>gridmix.emulators.resource-usage.plugins</code> parameter. 
+      </p>
+      <p>List of <em>emulators</em> shipped with GridMix:
+      </p>
+     <ul>
+       <li>Cumulative CPU usage <em>emulator</em>: 
+           GridMix uses the cumulative CPU usage value published by Rumen 
+           and makes sure that the total cumulative CPU usage of the simulated 
+           task is close to the value published by Rumen. GridMix can be 
+           configured to emulate cumulative CPU usage by adding 
+           <code>org.apache.hadoop.mapred.gridmix.emulators.resourceusage
+           .CumulativeCpuUsageEmulatorPlugin</code> to the list of emulator 
+           <em>plugins</em> configured for the 
+           <code>gridmix.emulators.resource-usage.plugins</code> parameter.
+           CPU usage emulator is designed in such a way that
+           it only emulates at specific progress boundaries of the task. This 
+           interval can be configured using 
+           <code>gridmix.emulators.resource-usage.cpu.frequency</code>. The 
+           default value for this parameter is <code>0.1</code> i.e 
+           <code>10%</code>.
+       </li>
+     </ul>
+     <p>Note that GridMix will emulate resource usages only for jobs of type 
+        <em>LOADJOB</em>.
      </p>
     </section>
     
@@ -677,10 +722,6 @@ hadoop jar &lt;gridmix-jar&gt; org.apache.hadoop.mapred.gridmix.Gridmix \
       the following characteristics of job load are not currently captured in
       job traces and cannot be accurately reproduced in GridMix:</p>
       <ul>
-	<li><em>CPU Usage</em> - We have no data for per-task CPU usage, so we
-	cannot even attempt an approximation. GridMix tasks are never
-	CPU-bound independent of I/O, though this surely happens in
-	practice.</li>
 	<li><em>Filesystem Properties</em> - No attempt is made to match block
 	sizes, namespace hierarchies, or any property of input, intermediate
 	or output data other than the bytes/records consumed and emitted from
