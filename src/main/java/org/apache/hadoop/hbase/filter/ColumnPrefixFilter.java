@@ -29,7 +29,7 @@ import java.io.DataInput;
 
 /**
  * This filter is used for selecting only those keys with columns that matches
- * a particular prefix. For example, if prefix is 'an', it will pass keys will
+ * a particular prefix. For example, if prefix is 'an', it will pass keys with
  * columns like 'and', 'anti' but not keys with columns like 'ball', 'act'.
  */
 public class ColumnPrefixFilter extends FilterBase {
