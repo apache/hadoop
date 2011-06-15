@@ -4,6 +4,8 @@ Trunk (unreleased changes)
 
 
     MAPREDUCE-279
+
+    Fix NPE when killing/failing already killed/failed tasks. (llu)
    
     Update install instructions with svn unsplit (Thomas Graves via mahadev)
 

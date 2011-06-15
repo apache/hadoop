@@ -396,29 +396,6 @@ public class ClientServiceDelegate {
     (taskReports).toArray(new org.apache.hadoop.mapreduce.TaskReport[0]);
   }
 
-  public Void killJob(JobID jobID) throws YarnRemoteException,
-  YarnRemoteException {
-    org.apache.hadoop.mapreduce.v2.api.records.JobId  nJobID = TypeConverter.toYarn(jobID);
-    KillJobRequest request = recordFactory.newRecordInstance(KillJobRequest.class);
-    try {
-      request.setJobId(nJobID);
-      getProxy(jobID).killJob(request);
-    } catch(YarnRemoteException yre) {//thrown by remote server, no need to redirect
-      LOG.warn(RPCUtil.toString(yre));
-      throw yre;
-    } catch(Exception e) {
-      LOG.debug("Failed to contact application master ", e);
-      try {
-        request.setJobId(nJobID);
-        getRefreshedProxy(jobID).killJob(request);
-      } catch(YarnRemoteException yre) {
-        LOG.warn(RPCUtil.toString(yre));
-        throw yre;
-      }
-    }
-    return null;
-  }
-
   public boolean killTask(TaskAttemptID taskAttemptID, boolean fail)
   throws YarnRemoteException {
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID 
@@ -438,13 +415,17 @@ public class ClientServiceDelegate {
       throw yre;
     } catch(Exception e) {
       LOG.debug("Failed to contact application master ", e);
+      MRClientProtocol proxy = getRefreshedProxy(taskAttemptID.getJobID());
+      if (proxy == null) {
+        return false;
+      }
       try {
         if (fail) {
           failRequest.setTaskAttemptId(attemptID);
-          getRefreshedProxy(taskAttemptID.getJobID()).failTaskAttempt(failRequest);
+          proxy.failTaskAttempt(failRequest);
         } else {
           killRequest.setTaskAttemptId(attemptID);
-          getRefreshedProxy(taskAttemptID.getJobID()).killTaskAttempt(killRequest);
+          proxy.killTaskAttempt(killRequest);
         }
       } catch(YarnRemoteException yre) {
         LOG.warn(RPCUtil.toString(yre));
