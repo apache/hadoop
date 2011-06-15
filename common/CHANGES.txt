@@ -315,6 +315,9 @@ Trunk (unreleased changes)
     HADOOP-7390. VersionInfo not generated properly in git after unsplit. (todd
     via atm)
 
+    HADOOP-7377. Fix command name handling affecting DFSAdmin. (Daryn Sharp
+    via mattf)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
