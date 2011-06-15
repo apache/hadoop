@@ -51,7 +51,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.util.RackResolver;
 
 /**
  * Allocates the container from the ResourceManager scheduler.
@@ -137,7 +136,6 @@ public class RMContainerAllocator extends RMContainerRequestor
     maxReducePreemptionLimit = conf.getFloat(
         AMConstants.REDUCE_PREEMPTION_LIMIT,
         AMConstants.DEFAULT_REDUCE_PREEMPTION_LIMIT);
-    RackResolver.init(conf);
   }
 
   @Override
@@ -618,7 +616,8 @@ public class RMContainerAllocator extends RMContainerRequestor
           }
         }
         if (assigned == null) {
-          String rack = RackResolver.resolve(host).getNetworkLocation();
+          // TODO: get rack
+          String rack = "";
           list = mapsRackMapping.get(rack);
           while (list != null && list.size() > 0) {
             TaskAttemptId tId = list.removeFirst();
