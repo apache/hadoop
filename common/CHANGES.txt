@@ -222,6 +222,9 @@ Trunk (unreleased changes)
 
     HADOOP-7384. Allow test-patch to be more flexible about patch format. (todd)
 
+    HADOOP-6929. RPC should have a way to pass Security information other than 
+    protocol annotations. (sharad and omalley via mahadev)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

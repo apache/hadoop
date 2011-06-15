@@ -228,7 +228,7 @@
     <pathelement path="${clover.jar}"/>
     <path refid="ivy-common.classpath"/>
     <path refid="ivy-test.classpath"/>
-    <pathelement location="${build.classes}"/>
+    <pathelement location="${hadoop-common.jar}"/>
     <pathelement location="${test.conf.dir}"/>
   </path>
 <!--
@@ -489,6 +489,10 @@
     <property name="jar.properties.list" value="commons-logging.properties, log4j.properties, hadoop-metrics.properties" />
     <jar jarfile="${build.dir}/${final.name}.jar"
          basedir="${build.classes}">
+      <service type="org.apache.hadoop.security.SecurityInfo">
+        <provider 
+           classname="org.apache.hadoop.security.AnnotatedSecurityInfo"/>
+      </service>
       <manifest>
         <section name="org/apache/hadoop">
           <attribute name="Implementation-Title" value="${ant.project.name}"/>
@@ -562,7 +566,7 @@
   <target name="-classes-compilation"
     depends="compile-core-classes, compile-core-test"/> 
 
-  <target name="compile-core-test" depends="compile-core-classes, ivy-retrieve-test, generate-test-records, generate-avro-records, generate-avro-protocols">
+  <target name="compile-core-test" depends="jar, ivy-retrieve-test, generate-test-records, generate-avro-records, generate-avro-protocols">
     <mkdir dir="${test.core.build.classes}"/>
     <javac 
      encoding="${build.encoding}" 

@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.ipc;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
-import static org.junit.Assert.*;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
@@ -33,28 +36,28 @@ import javax.security.sasl.Sasl;
 
 import junit.framework.Assert;
 
-import org.apache.commons.logging.*;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.KerberosInfo;
+import org.apache.hadoop.security.SaslInputStream;
+import org.apache.hadoop.security.SaslRpcClient;
+import org.apache.hadoop.security.SaslRpcServer;
+import org.apache.hadoop.security.SecurityInfo;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.TestUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
-import org.apache.hadoop.security.SaslInputStream;
-import org.apache.hadoop.security.SaslRpcClient;
-import org.apache.hadoop.security.SaslRpcServer;
-import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.TestUserGroupInformation;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
-
 import org.apache.log4j.Level;
 import org.junit.Test;
 
@@ -187,6 +190,42 @@ public class TestSaslRPC {
     }
   }
 
+  public static class CustomSecurityInfo extends SecurityInfo {
+
+    @Override
+    public KerberosInfo getKerberosInfo(Class<?> protocol) {
+      return new KerberosInfo() {
+        @Override
+        public Class<? extends Annotation> annotationType() {
+          return null;
+        }
+        @Override
+        public String serverPrincipal() {
+          return SERVER_PRINCIPAL_KEY;
+        }
+        @Override
+        public String clientPrincipal() {
+          return null;
+        }
+      };
+    }
+
+    @Override
+    public TokenInfo getTokenInfo(Class<?> protocol) {
+      return new TokenInfo() {
+        @Override
+        public Class<? extends TokenSelector<? extends 
+            TokenIdentifier>> value() {
+          return TestTokenSelector.class;
+        }
+        @Override
+        public Class<? extends Annotation> annotationType() {
+          return null;
+        }
+      };
+    }
+  }
+
   @Test
   public void testDigestRpc() throws Exception {
     TestTokenSecretManager sm = new TestTokenSecretManager();
@@ -195,7 +234,21 @@ public class TestSaslRPC {
 
     doDigestRpc(server, sm);
   }
-  
+
+  @Test
+  public void testDigestRpcWithoutAnnotation() throws Exception {
+    TestTokenSecretManager sm = new TestTokenSecretManager();
+    try {
+      SecurityUtil.setSecurityInfoProviders(new CustomSecurityInfo());
+      final Server server = RPC.getServer(TestSaslProtocol.class,
+                                          new TestSaslImpl(), ADDRESS, 0, 5, 
+                                          true, conf, sm);
+      doDigestRpc(server, sm);
+    } finally {
+      SecurityUtil.setSecurityInfoProviders(new SecurityInfo[0]);
+    }
+  }
+
   @Test
   public void testSecureToInsecureRpc() throws Exception {
     Server server = RPC.getServer(TestSaslProtocol.class,
@@ -223,8 +276,8 @@ public class TestSaslRPC {
     assertTrue(succeeded);
   }
   
-  private void doDigestRpc(Server server, TestTokenSecretManager sm)
-      throws Exception {
+  private void doDigestRpc(Server server, TestTokenSecretManager sm
+                           ) throws Exception {
     server.start();
 
     final UserGroupInformation current = UserGroupInformation.getCurrentUser();

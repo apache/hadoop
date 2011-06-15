@@ -19,10 +19,8 @@
 package org.apache.hadoop.ipc;
 
 import java.net.InetAddress;
-import java.net.NetworkInterface;
 import java.net.Socket;
 import java.net.InetSocketAddress;
-import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.net.ConnectException;
@@ -254,7 +252,7 @@ public class Client {
       Class<?> protocol = remoteId.getProtocol();
       this.useSasl = UserGroupInformation.isSecurityEnabled();
       if (useSasl && protocol != null) {
-        TokenInfo tokenInfo = protocol.getAnnotation(TokenInfo.class);
+        TokenInfo tokenInfo = SecurityUtil.getTokenInfo(protocol);
         if (tokenInfo != null) {
           TokenSelector<? extends TokenIdentifier> tokenSelector = null;
           try {
@@ -269,7 +267,7 @@ public class Client {
               .getHostAddress() + ":" + addr.getPort()), 
               ticket.getTokens());
         }
-        KerberosInfo krbInfo = protocol.getAnnotation(KerberosInfo.class);
+        KerberosInfo krbInfo = SecurityUtil.getKerberosInfo(protocol);
         if (krbInfo != null) {
           serverPrincipal = remoteId.getServerPrincipal();
           if (LOG.isDebugEnabled()) {
@@ -1283,7 +1281,7 @@ public class Client {
       if (!UserGroupInformation.isSecurityEnabled() || protocol == null) {
         return null;
       }
-      KerberosInfo krbInfo = protocol.getAnnotation(KerberosInfo.class);
+      KerberosInfo krbInfo = SecurityUtil.getKerberosInfo(protocol);
       if (krbInfo != null) {
         String serverKey = krbInfo.serverPrincipal();
         if (serverKey == null) {
