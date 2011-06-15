@@ -26,7 +26,7 @@ build_dir=$2
 user=`whoami | tr '\n\r' '\n'`
 date=`date`
 cwd=`pwd`
-if [ -d .git ]; then
+if git rev-parse HEAD 2>/dev/null > /dev/null ; then
   revision=`git log -1 --pretty=format:"%H"`
   hostname=`hostname`
   branch=`git branch | sed -n -e 's/^* //p'`

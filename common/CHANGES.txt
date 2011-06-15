@@ -309,6 +309,9 @@ Trunk (unreleased changes)
     HADOOP-7389. Use of TestingGroups by tests causes subsequent tests to fail.
     (atm via tomwhite)
 
+    HADOOP-7390. VersionInfo not generated properly in git after unsplit. (todd
+    via atm)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
