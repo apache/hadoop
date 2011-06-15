@@ -36,9 +36,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
-import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.yarn.Lock;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -64,6 +62,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceListener;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.service.AbstractService;
+import org.apache.hadoop.yarn.util.RackResolver;
 
 /**
  * This class is responsible for the interaction with the NodeManagers.
@@ -153,6 +152,7 @@ NodeTracker, ClusterTracker {
         this.hostsReader = null;
       }
     }
+    RackResolver.init(conf);
   }
 
   private void printConfiguredHosts() {
@@ -194,7 +194,7 @@ NodeTracker, ClusterTracker {
    */
   @Lock(Lock.NoLock.class)
   public static Node resolve(String hostName) {
-    return new NodeBase(hostName, NetworkTopology.DEFAULT_RACK);
+    return RackResolver.resolve(hostName);
   }
   
   @Lock(Lock.NoLock.class)

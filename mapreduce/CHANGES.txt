@@ -5,6 +5,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    Changes for invoking rack resolution in the RM and in the AM (ddas)
+
     Fix ClassCastException in JobHistoryServer for certain jobs.
     (Siddharth Seth via llu)
 
