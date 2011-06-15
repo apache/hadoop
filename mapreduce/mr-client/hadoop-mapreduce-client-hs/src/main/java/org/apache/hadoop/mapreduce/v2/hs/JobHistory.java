@@ -527,7 +527,7 @@ public class JobHistory extends AbstractService implements HistoryContext   {
    */
   private MetaInfo scanOldDirsForJob(JobId jobId) throws IOException {
     int jobSerialNumber = JobHistoryUtils.jobSerialNumber(jobId);
-    Integer boxedSerialNumber = jobSerialNumber;
+    String boxedSerialNumber = String.valueOf(jobSerialNumber);
     Set<String> dateStringSet = idToDateString.get(boxedSerialNumber);
     if (dateStringSet == null) {
       return null;

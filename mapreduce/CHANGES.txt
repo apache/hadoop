@@ -5,6 +5,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    Fix ClassCastException in JobHistoryServer for certain jobs.
+    (Siddharth Seth via llu)
+
     MAPREDUCE-2569. Ensure root queue allocated 100% capacity. (Jonathan
     Eagles via cdouglas)
 
