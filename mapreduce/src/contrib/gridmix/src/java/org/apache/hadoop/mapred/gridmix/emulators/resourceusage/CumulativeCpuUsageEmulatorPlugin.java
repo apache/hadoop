@@ -34,7 +34,7 @@ import org.apache.hadoop.tools.rumen.ResourceUsageMetrics;
  * 
  * <p>{@link CumulativeCpuUsageEmulatorPlugin} emulates the CPU usage in steps. 
  * The frequency of emulation can be configured via 
- * {@link #CPU_EMULATION_FREQUENCY}.
+ * {@link #CPU_EMULATION_PROGRESS_INTERVAL}.
  * CPU usage values are matched via emulation only on the interval boundaries.
  * </p>
  *  
@@ -70,8 +70,8 @@ implements ResourceUsageEmulatorPlugin {
   private long lastSeenCpuUsageCpuUsage = 0;
   
   // Configuration parameters
-  public static final String CPU_EMULATION_FREQUENCY = 
-    "gridmix.emulators.resource-usage.cpu.frequency";
+  public static final String CPU_EMULATION_PROGRESS_INTERVAL = 
+    "gridmix.emulators.resource-usage.cpu.emulation-interval";
   private static final float DEFAULT_EMULATION_FREQUENCY = 0.1F; // 10 times
 
   /**
@@ -302,7 +302,7 @@ implements ResourceUsageEmulatorPlugin {
     
     this.monitor = monitor;
     this.progress = progress;
-    emulationInterval =  conf.getFloat(CPU_EMULATION_FREQUENCY, 
+    emulationInterval =  conf.getFloat(CPU_EMULATION_PROGRESS_INTERVAL, 
                                        DEFAULT_EMULATION_FREQUENCY);
     
     // calibrate the core cpu-usage utility

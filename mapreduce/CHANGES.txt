@@ -11,6 +11,9 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    MAPREDUCE-2107. [Gridmix] Total heap usage emulation in Gridmix.
+    (Amar Kamat and Ravi Gummadi via amarrk)
+
     MAPREDUCE-2106. [Gridmix] Cumulative CPU usage emulation in Gridmix. 
     (amarrk)
 

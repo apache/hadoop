@@ -198,6 +198,15 @@ hadoop jar &lt;gridmix-jar&gt; org.apache.hadoop.mapred.gridmix.Gridmix \
           <td>The maximum size of the input files. The default limit is 100
 	  TiB.</td>
         </tr>
+        <tr>
+          <td>
+            <code>gridmix.task.jvm-options.enable</code>
+          </td>
+          <td>Enables Gridmix to configure the simulated task's max heap 
+              options using the values obtained from the original task (i.e via
+              trace).
+          </td>
+        </tr>
       </table>
     </section>
     <section id="jobtypes">
@@ -703,10 +712,26 @@ hadoop jar &lt;gridmix-jar&gt; org.apache.hadoop.mapred.gridmix.Gridmix \
            CPU usage emulator is designed in such a way that
            it only emulates at specific progress boundaries of the task. This 
            interval can be configured using 
-           <code>gridmix.emulators.resource-usage.cpu.frequency</code>. The 
-           default value for this parameter is <code>0.1</code> i.e 
+           <code>gridmix.emulators.resource-usage.cpu.emulation-interval</code>.
+           The default value for this parameter is <code>0.1</code> i.e 
            <code>10%</code>.
        </li>
+       <li>Total heap usage <em>emulator</em>: 
+           GridMix uses the total heap usage value published by Rumen 
+           and makes sure that the total heap usage of the simulated 
+           task is close to the value published by Rumen. GridMix can be 
+           configured to emulate cumulative heap usage by adding 
+           <code>org.apache.hadoop.mapred.gridmix.emulators.resourceusage
+                 .TotalHeapUsageEmulatorPlugin</code> to the list of emulator 
+           <em>plugins</em> configured for the 
+           <code>gridmix.emulators.resource-usage.plugins</code> parameter.
+           Heap usage emulator is designed in such a way that
+           it only emulates at specific progress boundaries of the task. This 
+           interval can be configured using 
+           <code>gridmix.emulators.resource-usage.heap.emulation-interval
+           </code>. The default value for this parameter is <code>0.1</code> 
+           i.e <code>10%</code> progress interval.
+</li>
      </ul>
      <p>Note that GridMix will emulate resource usages only for jobs of type 
         <em>LOADJOB</em>.

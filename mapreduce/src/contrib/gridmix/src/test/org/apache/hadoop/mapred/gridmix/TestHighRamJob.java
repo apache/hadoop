@@ -41,7 +41,7 @@ public class TestHighRamJob {
   /**
    * A dummy {@link GridmixJob} that opens up the simulated job for testing.
    */
-  private static class DummyGridmixJob extends GridmixJob {
+  protected static class DummyGridmixJob extends GridmixJob {
     public DummyGridmixJob(Configuration conf, JobStory desc) 
     throws IOException {
       super(conf, System.currentTimeMillis(), desc, new Path("test"), 

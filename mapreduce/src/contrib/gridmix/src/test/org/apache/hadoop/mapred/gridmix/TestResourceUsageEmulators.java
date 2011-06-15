@@ -427,7 +427,7 @@ public class TestResourceUsageEmulators {
   }
   
   // Creates a ResourceUsageMetrics object from the target usage
-  private static ResourceUsageMetrics createMetrics(long target) {
+  static ResourceUsageMetrics createMetrics(long target) {
     ResourceUsageMetrics metrics = new ResourceUsageMetrics();
     metrics.setCumulativeCpuUsage(target);
     metrics.setVirtualMemoryUsage(target);
@@ -487,7 +487,7 @@ public class TestResourceUsageEmulators {
                           targetCpuUsage, targetCpuUsage / unitCpuUsage);
     
     // test with custom value for emulation interval of 20%
-    conf.setFloat(CumulativeCpuUsageEmulatorPlugin.CPU_EMULATION_FREQUENCY,
+    conf.setFloat(CumulativeCpuUsageEmulatorPlugin.CPU_EMULATION_PROGRESS_INTERVAL,
                   0.2F);
     testEmulationAccuracy(conf, fakeCore, monitor, metrics, cpuPlugin, 
                           targetCpuUsage, targetCpuUsage / unitCpuUsage);
@@ -497,7 +497,7 @@ public class TestResourceUsageEmulators {
     fakeProgress = new FakeProgressive(); // initialize
     fakeCore.reset();
     fakeCore.setUnitUsage(1);
-    conf.setFloat(CumulativeCpuUsageEmulatorPlugin.CPU_EMULATION_FREQUENCY,
+    conf.setFloat(CumulativeCpuUsageEmulatorPlugin.CPU_EMULATION_PROGRESS_INTERVAL,
                   0.25F);
     cpuPlugin.initialize(conf, metrics, monitor, fakeProgress);
     // take a snapshot after the initialization
@@ -534,7 +534,7 @@ public class TestResourceUsageEmulators {
     fakeProgress = new FakeProgressive(); // initialize
     fakeCore.reset();
     fakeCore.setUnitUsage(unitCpuUsage);
-    conf.setFloat(CumulativeCpuUsageEmulatorPlugin.CPU_EMULATION_FREQUENCY,
+    conf.setFloat(CumulativeCpuUsageEmulatorPlugin.CPU_EMULATION_PROGRESS_INTERVAL,
                   0.40F);
     cpuPlugin.initialize(conf, metrics, monitor, fakeProgress);
     // take a snapshot after the initialization

@@ -19,12 +19,15 @@ package org.apache.hadoop.mapred.gridmix;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
@@ -86,6 +89,11 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
   // configuration key to enable/disable High-Ram feature emulation
   static final String GRIDMIX_HIGHRAM_EMULATION_ENABLE = 
     "gridmix.highram-emulation.enable";
+  // configuration key to enable/disable task jvm options
+  static final String GRIDMIX_TASK_JVM_OPTIONS_ENABLE = 
+    "gridmix.task.jvm-options.enable";
+  private static final Pattern maxHeapPattern = 
+    Pattern.compile("-Xmx[0-9]+[kKmMgGtT]?+");
 
   private static void setJobQueue(Job job, String queue) {
     if (queue != null) {
@@ -137,6 +145,19 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
                                        ret.getConfiguration());
           }
           
+          // configure task jvm options if enabled
+          // this knob can be turned off if there is a mismatch between the
+          // target (simulation) cluster and the original cluster. Such a 
+          // mismatch can result in job failures (due to memory issues) on the 
+          // target (simulated) cluster.
+          //
+          // TODO If configured, scale the original task's JVM (heap related)
+          //      options to suit the target (simulation) cluster
+          if (conf.getBoolean(GRIDMIX_TASK_JVM_OPTIONS_ENABLE, true)) {
+            configureTaskJVMOptions(jobdesc.getJobConf(), 
+                                    ret.getConfiguration());
+          }
+          
           return ret;
         }
       });
@@ -147,6 +168,74 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
     submissionTimeNanos = TimeUnit.NANOSECONDS.convert(
         submissionMillis, TimeUnit.MILLISECONDS);
     outdir = new Path(outRoot, "" + seq);
+  }
+  
+  @SuppressWarnings("deprecation")
+  protected static void configureTaskJVMOptions(Configuration originalJobConf,
+                                                Configuration simulatedJobConf){
+    // Get the heap related java opts used for the original job and set the 
+    // same for the simulated job.
+    //    set task task heap options
+    configureTaskJVMMaxHeapOptions(originalJobConf, simulatedJobConf, 
+                                   JobConf.MAPRED_TASK_JAVA_OPTS);
+    //  set map task heap options
+    configureTaskJVMMaxHeapOptions(originalJobConf, simulatedJobConf, 
+                                   MRJobConfig.MAP_JAVA_OPTS);
+
+    //  set reduce task heap options
+    configureTaskJVMMaxHeapOptions(originalJobConf, simulatedJobConf, 
+                                   MRJobConfig.REDUCE_JAVA_OPTS);
+  }
+  
+  // Configures the task's max heap options using the specified key
+  private static void configureTaskJVMMaxHeapOptions(Configuration srcConf, 
+                                                     Configuration destConf,
+                                                     String key) {
+    String srcHeapOpts = srcConf.get(key);
+    if (srcHeapOpts != null) {
+      List<String> srcMaxOptsList = new ArrayList<String>();
+      // extract the max heap options and ignore the rest
+      extractMaxHeapOpts(srcHeapOpts, srcMaxOptsList, 
+                         new ArrayList<String>());
+      if (srcMaxOptsList.size() > 0) {
+        List<String> destOtherOptsList = new ArrayList<String>();
+        // extract the other heap options and ignore the max options in the 
+        // destination configuration
+        String destHeapOpts = destConf.get(key);
+        if (destHeapOpts != null) {
+          extractMaxHeapOpts(destHeapOpts, new ArrayList<String>(), 
+                             destOtherOptsList);
+        }
+        
+        // the source configuration might have some task level max heap opts set
+        // remove these opts from the destination configuration and replace
+        // with the options set in the original configuration
+        StringBuilder newHeapOpts = new StringBuilder();
+        
+        for (String otherOpt : destOtherOptsList) {
+          newHeapOpts.append(otherOpt).append(" ");
+        }
+        
+        for (String opts : srcMaxOptsList) {
+          newHeapOpts.append(opts).append(" ");
+        }
+        
+        // set the final heap opts 
+        destConf.set(key, newHeapOpts.toString().trim());
+      }
+    }
+  }
+  
+  private static void extractMaxHeapOpts(String javaOptions,  
+      List<String> maxOpts,  List<String> others) {
+    for (String opt : javaOptions.split(" ")) {
+      Matcher matcher = maxHeapPattern.matcher(opt);
+      if (matcher.find()) {
+        maxOpts.add(opt);
+      } else {
+        others.add(opt);
+      }
+    }
   }
 
   // Scales the desired job-level configuration parameter. This API makes sure 
