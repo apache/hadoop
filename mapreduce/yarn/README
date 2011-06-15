@@ -11,7 +11,7 @@ Setup
 Install the Avro maven plugin in local maven repository:
 mvn install:install-file -Dfile=./avro-maven-plugin/avro-maven-plugin-1.4.0-SNAPSHOT.jar -DpomFile=./avro-maven-plugin/avro-maven-plugin-1.4.0-SNAPSHOT.pom
 
-Install protobuf 2.4.0a (Download from http://code.google.com/p/protobuf/downloads/list)
+Install protobuf 2.4.0a or higher (Download from http://code.google.com/p/protobuf/downloads/list)
  - install the protoc executable (configure, make, make install)
  - install the maven artifact (cd java; mvn install)
 Installing protoc requires gcc 4.1.x or higher.

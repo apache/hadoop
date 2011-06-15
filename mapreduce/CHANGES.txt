@@ -4,6 +4,8 @@ Trunk (unreleased changes)
 
 
     MAPREDUCE-279
+   
+    Update install instructions with svn unsplit (Thomas Graves via mahadev)
 
     MAPREDUCE-2587. Generate yarn version for UI. (Thomas Graves via llu)
 
