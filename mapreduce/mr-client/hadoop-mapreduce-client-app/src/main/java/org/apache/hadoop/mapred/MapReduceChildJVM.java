@@ -164,6 +164,7 @@ public class MapReduceChildJVM {
 
     Vector<String> vargs = new Vector<String>(8);
 
+    vargs.add("exec");
     vargs.add(javaHome + "/bin/java");
 
     // Add child (task) java-vm options.

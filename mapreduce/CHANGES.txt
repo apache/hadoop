@@ -5,6 +5,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    Fix stopContainer for setsid challenged platforms. (llu)
+
     Fix concurrent modification exception in the Capacity Scheduler (mahadev)
 
     Changes for invoking rack resolution in the RM and in the AM (ddas)

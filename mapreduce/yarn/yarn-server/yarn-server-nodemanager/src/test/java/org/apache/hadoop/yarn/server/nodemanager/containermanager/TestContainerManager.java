@@ -177,7 +177,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
     fileWriter.write("\numask 0"); // So that start file is readable by the test.
     fileWriter.write("\necho Hello World! > " + processStartFile);
     fileWriter.write("\necho $$ >> " + processStartFile);
-    fileWriter.write("\nsleep 100");
+    fileWriter.write("\nexec sleep 100");
     fileWriter.close();
 
     ContainerLaunchContext containerLaunchContext = recordFactory.newRecordInstance(ContainerLaunchContext.class);
