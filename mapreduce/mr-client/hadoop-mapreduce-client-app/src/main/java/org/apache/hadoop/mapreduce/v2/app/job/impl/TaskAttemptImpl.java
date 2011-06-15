@@ -114,7 +114,6 @@ import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.hadoop.yarn.util.RackResolver;
 
 /**
  * Implementation of TaskAttempt interface.
@@ -418,7 +417,6 @@ public abstract class TaskAttemptImpl implements
     this.resourceCapability = recordFactory.newRecordInstance(Resource.class);
     this.resourceCapability.setMemory(getMemoryRequired(conf, taskId.getTaskType()));
     this.dataLocalHosts = dataLocalHosts;
-    RackResolver.init(conf);
 
     // This "this leak" is okay because the retained pointer is in an
     //  instance variable.
@@ -874,6 +872,7 @@ public abstract class TaskAttemptImpl implements
     return tauce;
   }
 
+  private static String[] racks = new String[] {NetworkTopology.DEFAULT_RACK};
   private static class RequestContainerTransition implements
       SingleArcTransition<TaskAttemptImpl, TaskAttemptEvent> {
     boolean rescheduled = false;
@@ -893,11 +892,6 @@ public abstract class TaskAttemptImpl implements
                 taskAttempt.attemptId, 
                 taskAttempt.resourceCapability));
       } else {
-        int i = 0;
-        String[] racks = new String[taskAttempt.dataLocalHosts.length];
-        for (String host : taskAttempt.dataLocalHosts) {
-          racks[i++] = RackResolver.resolve(host).getNetworkLocation();
-        }
         taskAttempt.eventHandler.handle(
             new ContainerRequestEvent(taskAttempt.attemptId, 
                 taskAttempt.resourceCapability, 

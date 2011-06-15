@@ -5,7 +5,6 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
-
     MAPREDUCE-2569. Ensure root queue allocated 100% capacity. (Jonathan
     Eagles via cdouglas)
 
