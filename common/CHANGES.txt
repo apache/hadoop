@@ -44,6 +44,9 @@ Trunk (unreleased changes)
     HADOOP-7144. Expose JMX metrics via JSON servlet. (Robert Joseph Evans via
     cdouglas)
 
+    HADOOP-7379. Add the ability to serialize and deserialize protocol buffers
+    in ObjectWritable. (todd)
+
   IMPROVEMENTS
 
     HADOOP-7042. Updates to test-patch.sh to include failed test names and
