@@ -1284,15 +1284,21 @@ public class DataNode extends Configured
     A "PACKET" is defined further below.
     
     The client reads data until it receives a packet with 
-    "LastPacketInBlock" set to true or with a zero length. If there is 
-    no checksum error, it replies to DataNode with OP_STATUS_CHECKSUM_OK:
+    "LastPacketInBlock" set to true or with a zero length. It then replies
+    to DataNode with one of the status codes:
+    - CHECKSUM_OK:    All the chunk checksums have been verified
+    - SUCCESS:        Data received; checksums not verified
+    - ERROR_CHECKSUM: (Currently not used) Detected invalid checksums
+
+      +---------------+
+      | 2 byte Status |
+      +---------------+
     
-    Client optional response at the end of data transmission of any length:
-      +------------------------------+
-      | 2 byte OP_STATUS_CHECKSUM_OK |
-      +------------------------------+
-    The DataNode always checks OP_STATUS_CHECKSUM_OK. It will close the
-    client connection if it is absent.
+    The DataNode expects all well behaved clients to send the 2 byte
+    status code. And if the the client doesn't, the DN will close the
+    connection. So the status code is optional in the sense that it
+    does not affect the correctness of the data. (And the client can
+    always reconnect.)
     
     PACKET : Contains a packet header, checksum and data. Amount of data
     ======== carried is set by BUFFER_SIZE.

@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 
 import java.util.List;
 
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.fs.Path;
 
@@ -43,23 +44,24 @@ public class TestClientBlockVerification {
   public static void setupCluster() throws Exception {
     final int REPLICATION_FACTOR = 1;
     util = new BlockReaderTestUtil(REPLICATION_FACTOR);
-    List<LocatedBlock> blkList = util.writeFile(TEST_FILE, FILE_SIZE_K);
+    util.writeFile(TEST_FILE, FILE_SIZE_K);
+    List<LocatedBlock> blkList = util.getFileBlocks(TEST_FILE, FILE_SIZE_K);
     testBlock = blkList.get(0);     // Use the first block to test
   }
 
   /**
-   * Verify that if we read an entire block, we send checksumOk
+   * Verify that if we read an entire block, we send CHECKSUM_OK
    */
   @Test
   public void testBlockVerification() throws Exception {
     BlockReader reader = spy(util.getBlockReader(testBlock, 0, FILE_SIZE_K * 1024));
     util.readAndCheckEOS(reader, FILE_SIZE_K * 1024, true);
-    verify(reader).checksumOk(reader.dnSock);
+    verify(reader).sendReadResult(reader.dnSock, Status.CHECKSUM_OK);
     reader.close();
   }
 
   /**
-   * Test that if we do an incomplete read, we don't call checksumOk
+   * Test that if we do an incomplete read, we don't call CHECKSUM_OK
    */
   @Test
   public void testIncompleteRead() throws Exception {
@@ -67,14 +69,14 @@ public class TestClientBlockVerification {
     util.readAndCheckEOS(reader, FILE_SIZE_K / 2 * 1024, false);
 
     // We asked the blockreader for the whole file, and only read
-    // half of it, so no checksumOk
-    verify(reader, never()).checksumOk(reader.dnSock);
+    // half of it, so no CHECKSUM_OK
+    verify(reader, never()).sendReadResult(reader.dnSock, Status.CHECKSUM_OK);
     reader.close();
   }
 
   /**
    * Test that if we ask for a half block, and read it all, we *do*
-   * call checksumOk. The DN takes care of knowing whether it was
+   * send CHECKSUM_OK. The DN takes care of knowing whether it was
    * the whole block or not.
    */
   @Test
@@ -83,7 +85,7 @@ public class TestClientBlockVerification {
     BlockReader reader = spy(util.getBlockReader(testBlock, 0, FILE_SIZE_K * 1024 / 2));
     // And read half the file
     util.readAndCheckEOS(reader, FILE_SIZE_K * 1024 / 2, true);
-    verify(reader).checksumOk(reader.dnSock);
+    verify(reader).sendReadResult(reader.dnSock, Status.CHECKSUM_OK);
     reader.close();
   }
 
@@ -101,7 +103,7 @@ public class TestClientBlockVerification {
                            " len=" + length);
         BlockReader reader = spy(util.getBlockReader(testBlock, startOffset, length));
         util.readAndCheckEOS(reader, length, true);
-        verify(reader).checksumOk(reader.dnSock);
+        verify(reader).sendReadResult(reader.dnSock, Status.CHECKSUM_OK);
         reader.close();
       }
     }

@@ -290,6 +290,9 @@ Release 0.22.0 - Unreleased
 
     HDFS-1602. Fix HADOOP-4885 for it is doesn't work as expected. (boryas)
 
+    HDFS-941. The DFS client should cache and reuse open sockets to datanodes
+    while performing reads. (bc Wong and Todd Lipcon via todd)
+
   BUG FIXES
 
     HDFS-1039. Adding test for  JspHelper.getUGI(jnp via boryas)

@@ -85,6 +85,7 @@
     <dependency org="org.apache.lucene" name="lucene-core" rev="${lucene-core.version}" conf="javadoc->default"/> 
 
     <dependency org="org.mockito" name="mockito-all" rev="${mockito-all.version}" conf="common->master"/>
+    <dependency org="com.google.guava" name="guava" rev="${guava.version}" conf="common->default"/>
 
    </dependencies>
   

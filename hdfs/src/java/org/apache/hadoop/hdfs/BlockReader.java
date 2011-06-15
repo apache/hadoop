@@ -46,12 +46,29 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 
 /** This is a wrapper around connection to datanode
- * and understands checksum, offset etc
+ * and understands checksum, offset etc.
+ *
+ * Terminology:
+ * <dl>
+ * <dt>block</dt>
+ *   <dd>The hdfs block, typically large (~64MB).
+ *   </dd>
+ * <dt>chunk</dt>
+ *   <dd>A block is divided into chunks, each comes with a checksum.
+ *       We want transfers to be chunk-aligned, to be able to
+ *       verify checksums.
+ *   </dd>
+ * <dt>packet</dt>
+ *   <dd>A grouping of chunks used for transport. It contains a
+ *       header, followed by checksum data, followed by real data.
+ *   </dd>
+ * </dl>
+ * Please see DataNode for the RPC specification.
  */
 @InterfaceAudience.Private
 public class BlockReader extends FSInputChecker {
 
-  Socket dnSock; //for now just sending checksumOk.
+  Socket dnSock; //for now just sending the status code (e.g. checksumOk) after the read.
   private DataInputStream in;
   private DataChecksum checksum;
 
@@ -77,10 +94,12 @@ public class BlockReader extends FSInputChecker {
    */
   private final long bytesNeededToFinish;
 
-  private boolean gotEOS = false;
+  private boolean eos = false;
+  private boolean sentStatusCode = false;
   
   byte[] skipBuf = null;
   ByteBuffer checksumBytes = null;
+  /** Amount of unread data in the current received packet */
   int dataLeft = 0;
   
   /* FSInputChecker interface */
@@ -99,7 +118,7 @@ public class BlockReader extends FSInputChecker {
     // This has to be set here, *before* the skip, since we can
     // hit EOS during the skip, in the case that our entire read
     // is smaller than the checksum chunk.
-    boolean eosBefore = gotEOS;
+    boolean eosBefore = eos;
 
     //for the first read, skip the extra bytes at the front.
     if (lastChunkLen < 0 && startOffset > firstChunkOffset && len > 0) {
@@ -115,11 +134,14 @@ public class BlockReader extends FSInputChecker {
     }
     
     int nRead = super.read(buf, off, len);
-    
-    // if gotEOS was set in the previous read and checksum is enabled :
-    if (gotEOS && !eosBefore && nRead >= 0 && needChecksum()) {
-      //checksum is verified and there are no errors.
-      checksumOk(dnSock);
+
+    // if eos was set in the previous read, send a status code to the DN
+    if (eos && !eosBefore && nRead >= 0) {
+      if (needChecksum()) {
+        sendReadResult(dnSock, CHECKSUM_OK);
+      } else {
+        sendReadResult(dnSock, SUCCESS);
+      }
     }
     return nRead;
   }
@@ -191,7 +213,7 @@ public class BlockReader extends FSInputChecker {
                                        int len, byte[] checksumBuf) 
                                        throws IOException {
     // Read one chunk.
-    if ( gotEOS ) {
+    if (eos) {
       // Already hit EOF
       return -1;
     }
@@ -246,7 +268,7 @@ public class BlockReader extends FSInputChecker {
 
     if (checksumSize > 0) {
 
-      // How many chunks left in our stream - this is a ceiling
+      // How many chunks left in our packet - this is a ceiling
       // since we may have a partial chunk at the end of the file
       int chunksLeft = (dataLeft - 1) / bytesPerChecksum + 1;
 
@@ -307,7 +329,7 @@ public class BlockReader extends FSInputChecker {
                               ", dataLen : " + dataLen);
       }
 
-      gotEOS = true;
+      eos = true;
     }
 
     if ( bytesToRead == 0 ) {
@@ -337,7 +359,7 @@ public class BlockReader extends FSInputChecker {
     // The total number of bytes that we need to transfer from the DN is
     // the amount that the user wants (bytesToRead), plus the padding at
     // the beginning in order to chunk-align. Note that the DN may elect
-    // to send more than this amount if the read ends mid-chunk.
+    // to send more than this amount if the read starts/ends mid-chunk.
     this.bytesNeededToFinish = bytesToRead + (startOffset - firstChunkOffset);
 
     this.firstChunkOffset = firstChunkOffset;
@@ -366,6 +388,21 @@ public class BlockReader extends FSInputChecker {
                           len, bufferSize, verifyChecksum, "");
   }
 
+  /**
+   * Create a new BlockReader specifically to satisfy a read.
+   * This method also sends the OP_READ_BLOCK request.
+   *
+   * @param sock  An established Socket to the DN. The BlockReader will not close it normally
+   * @param file  File location
+   * @param block  The block object
+   * @param blockToken  The block token for security
+   * @param startOffset  The read offset, relative to block head
+   * @param len  The number of bytes to read
+   * @param bufferSize  The IO buffer size (not the client buffer size)
+   * @param verifyChecksum  Whether to verify checksum
+   * @param clientName  Client name
+   * @return New BlockReader instance, or null on error.
+   */
   public static BlockReader newBlockReader( Socket sock, String file,
                                      Block block, 
                                      Token<BlockTokenIdentifier> blockToken,
@@ -425,6 +462,10 @@ public class BlockReader extends FSInputChecker {
   public synchronized void close() throws IOException {
     startOffset = -1;
     checksum = null;
+    if (dnSock != null) {
+      dnSock.close();
+    }
+
     // in will be closed when its Socket is closed.
   }
   
@@ -434,22 +475,43 @@ public class BlockReader extends FSInputChecker {
   public int readAll(byte[] buf, int offset, int len) throws IOException {
     return readFully(this, buf, offset, len);
   }
-  
-  /* When the reader reaches end of the read and there are no checksum
-   * errors, we send OP_STATUS_CHECKSUM_OK to datanode to inform that 
-   * checksum was verified and there was no error.
-   */ 
-  void checksumOk(Socket sock) {
+
+  /**
+   * Take the socket used to talk to the DN.
+   */
+  public Socket takeSocket() {
+    assert hasSentStatusCode() :
+      "BlockReader shouldn't give back sockets mid-read";
+    Socket res = dnSock;
+    dnSock = null;
+    return res;
+  }
+
+  /**
+   * Whether the BlockReader has reached the end of its input stream
+   * and successfully sent a status code back to the datanode.
+   */
+  public boolean hasSentStatusCode() {
+    return sentStatusCode;
+  }
+
+  /**
+   * When the reader reaches end of the read, it sends a status response
+   * (e.g. CHECKSUM_OK) to the DN. Failure to do so could lead to the DN
+   * closing our connection (which we will re-open), but won't affect
+   * data correctness.
+   */
+  void sendReadResult(Socket sock, DataTransferProtocol.Status statusCode) {
+    assert !sentStatusCode : "already sent status code to " + sock;
     try {
       OutputStream out = NetUtils.getOutputStream(sock, HdfsConstants.WRITE_TIMEOUT);
-      CHECKSUM_OK.writeOutputStream(out);
+      statusCode.writeOutputStream(out);
       out.flush();
+      sentStatusCode = true;
     } catch (IOException e) {
-      // its ok not to be able to send this.
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Could not write to datanode " + sock.getInetAddress() +
-                  ": " + e.getMessage());
-      }
+      // It's ok not to be able to send this. But something is probably wrong.
+      LOG.info("Could not send read status (" + statusCode + ") to datanode " +
+               sock.getInetAddress() + ": " + e.getMessage());
     }
   }
   

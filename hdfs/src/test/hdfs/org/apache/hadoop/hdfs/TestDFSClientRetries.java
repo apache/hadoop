@@ -383,6 +383,8 @@ public class TestDFSClientRetries extends TestCase {
     conf.setInt(DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY, xcievers);
     conf.setInt("dfs.client.max.block.acquire.failures", retries);
     conf.setInt("dfs.client.retry.window.base", timeWin);
+    // Disable keepalive
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_KEY, 0);
 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(replicationFactor).build();
     cluster.waitActive();

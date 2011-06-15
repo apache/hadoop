@@ -140,6 +140,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   final FileSystem.Statistics stats;
   final int hdfsTimeout;    // timeout value for a DFS operation.
 
+  final SocketCache socketCache;
+  
   /**
    * The locking hierarchy is to first acquire lock on DFSClient object, followed by 
    * lock on leasechecker, followed by lock on an individual DFSOutputStream.
@@ -273,6 +275,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     }
     defaultBlockSize = conf.getLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
     defaultReplication = (short) conf.getInt("dfs.replication", 3);
+    this.socketCache = new SocketCache(
+        conf.getInt(DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY,
+            DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_DEFAULT));
 
     if (nameNodeAddr != null && rpcNamenode == null) {
       this.rpcNamenode = createRPCNamenode(nameNodeAddr, conf, ugi);
