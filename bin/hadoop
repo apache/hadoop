@@ -50,7 +50,7 @@
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-if [ "$HADOOP_HOME" != "" ]; then
+if [ "$HADOOP_HOME_WARN_SUPPRESS" == "" ] && [ "$HADOOP_HOME" != "" ]; then
   echo "Warning: \$HADOOP_HOME is deprecated."
   echo
 fi

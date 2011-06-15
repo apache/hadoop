@@ -166,6 +166,9 @@ Release 0.20.204.0 - unreleased
 
   IMPROVEMENTS
 
+    HADOOP-7398. Add mechanism to suppress warnings about use of HADOOP_HOME.
+    (omalley)
+
     HDFS-2023. Backport of NPE for File.list and File.listFiles.
     Merged ports of HADOOP-7322, HDFS-1934, HADOOP-7342, and HDFS-2019.
     (Bharath Mundlapudi via mattf)
