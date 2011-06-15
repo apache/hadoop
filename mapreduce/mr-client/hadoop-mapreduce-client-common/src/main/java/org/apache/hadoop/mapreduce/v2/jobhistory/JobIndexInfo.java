@@ -32,12 +32,13 @@ public class JobIndexInfo {
   private JobId jobId;
   private int numMaps;
   private int numReduces;
+  private String jobStatus;
   
   public JobIndexInfo() {
   }
   
   public JobIndexInfo(long submitTime, long finishTime, String user,
-      String jobName, JobId jobId, int numMaps, int numReduces) {
+      String jobName, JobId jobId, int numMaps, int numReduces, String jobStatus) {
     this.submitTime = submitTime;
     this.finishTime = finishTime;
     this.user = user;
@@ -45,6 +46,7 @@ public class JobIndexInfo {
     this.jobId = jobId;
     this.numMaps = numMaps;
     this.numReduces = numReduces;
+    this.jobStatus = jobStatus;
   }
   
   public long getSubmitTime() {
@@ -89,12 +91,19 @@ public class JobIndexInfo {
   public void setNumReduces(int numReduces) {
     this.numReduces = numReduces;
   }
+  public String getJobStatus() {
+    return jobStatus;
+  }
+  public void setJobStatus(String jobStatus) {
+    this.jobStatus = jobStatus;
+  }
 
   @Override
   public String toString() {
     return "JobIndexInfo [submitTime=" + submitTime + ", finishTime="
         + finishTime + ", user=" + user + ", jobName=" + jobName + ", jobId="
-        + jobId + ", numMaps=" + numMaps + ", numReduces=" + numReduces + "]";
+        + jobId + ", numMaps=" + numMaps + ", numReduces=" + numReduces
+        + ", jobStatus=" + jobStatus + "]";
   }
   
   

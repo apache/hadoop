@@ -148,13 +148,14 @@ public class ClientServiceDelegate {
      * on a allocating Application.
      */
     
-    if (currentAppState == ApplicationState.ALLOCATING || currentAppState == ApplicationState.KILLED
-        || currentAppState == ApplicationState.FAILED) {
+    if (currentAppState == ApplicationState.ALLOCATING) {
       realProxy = null;
       return;
     }
     
-    if (ApplicationState.COMPLETED.equals(appMaster.getState())) {
+    if (currentAppState == ApplicationState.COMPLETED
+        || currentAppState == ApplicationState.FAILED
+        || currentAppState == ApplicationState.KILLED) {
       serviceAddr = conf.get(JHConfig.HS_BIND_ADDRESS,
           JHConfig.DEFAULT_HS_BIND_ADDRESS);
       LOG.info("Application state is completed. " +

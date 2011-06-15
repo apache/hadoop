@@ -34,6 +34,8 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 
+import clover.org.apache.log4j.Logger;
+
 public class PartialJob implements org.apache.hadoop.mapreduce.v2.app.job.Job {
 
   private JobIndexInfo jobIndexInfo = null;
@@ -59,7 +61,17 @@ public class PartialJob implements org.apache.hadoop.mapreduce.v2.app.job.Job {
 
   @Override
   public JobState getState() {
-    return JobState.SUCCEEDED;
+    JobState js = null;
+    try {
+      js = JobState.valueOf(jobIndexInfo.getJobStatus());
+    } catch (Exception e) {
+      // Meant for use by the display UI. Exception would prevent it from being
+      // rendered.e Defaulting to KILLED
+      Logger.getLogger(this.getClass().getName()).warn(
+          "Exception while parsing job state. Defaulting to KILLED", e);
+      js = JobState.KILLED;
+    }
+    return js;
   }
 
   @Override

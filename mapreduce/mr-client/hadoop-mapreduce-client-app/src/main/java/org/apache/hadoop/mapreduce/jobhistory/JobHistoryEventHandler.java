@@ -36,8 +36,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHConfig;
@@ -295,7 +295,8 @@ public class JobHistoryEventHandler extends AbstractService
       throw new IOException(
           "User is null while setting up jobhistory eventwriter");
     }
-    String jobName = TypeConverter.fromYarn(jobId).toString();
+
+    String jobName = context.getJob(jobId).getName();
     EventWriter writer = (oldFi == null) ? null : oldFi.writer;
  
     if (writer == null) {
@@ -402,6 +403,7 @@ public class JobHistoryEventHandler extends AbstractService
           mi.getJobIndexInfo().setNumMaps(jFinishedEvent.getFinishedMaps());
           mi.getJobIndexInfo().setNumReduces(
               jFinishedEvent.getFinishedReduces());
+          mi.getJobIndexInfo().setJobStatus(JobState.SUCCEEDED.toString());
           closeEventWriter(event.getJobID());
         } catch (IOException e) {
           throw new YarnException(e);
@@ -416,6 +418,7 @@ public class JobHistoryEventHandler extends AbstractService
           mi.getJobIndexInfo().setFinishTime(jucEvent.getFinishTime());
           mi.getJobIndexInfo().setNumMaps(jucEvent.getFinishedMaps());
           mi.getJobIndexInfo().setNumReduces(jucEvent.getFinishedReduces());
+          mi.getJobIndexInfo().setJobStatus(jucEvent.getStatus());
           closeEventWriter(event.getJobID());
         } catch (IOException e) {
           throw new YarnException(e);
@@ -570,7 +573,7 @@ public class JobHistoryEventHandler extends AbstractService
       this.historyFile = historyFile;
       this.confFile = conf;
       this.writer = writer;
-      this.jobIndexInfo = new JobIndexInfo(submitTime, -1, user, jobName, jobId, -1, -1);
+      this.jobIndexInfo = new JobIndexInfo(submitTime, -1, user, jobName, jobId, -1, -1, null);
       this.jobSummary = new JobSummary();
     }
 

@@ -205,6 +205,9 @@ public class TypeConverter {
   
   public static org.apache.hadoop.mapreduce.Counters fromYarn(
       Counters yCntrs) {
+    if (yCntrs == null) {
+      return null;
+    }
     org.apache.hadoop.mapreduce.Counters counters = 
       new org.apache.hadoop.mapreduce.Counters();
     for (CounterGroup yGrp : yCntrs.getAllCounterGroups().values()) {
@@ -219,6 +222,9 @@ public class TypeConverter {
   }
 
   public static Counters toYarn(org.apache.hadoop.mapred.Counters counters) {
+    if (counters == null) {
+      return null;
+    }
     Counters yCntrs = recordFactory.newRecordInstance(Counters.class);
     yCntrs.addAllCounterGroups(new HashMap<String, CounterGroup>());
     for (org.apache.hadoop.mapred.Counters.Group grp : counters) {
@@ -239,6 +245,9 @@ public class TypeConverter {
   }
 
   public static Counters toYarn(org.apache.hadoop.mapreduce.Counters counters) {
+    if (counters == null) {
+      return null;
+    }
     Counters yCntrs = recordFactory.newRecordInstance(Counters.class);
     yCntrs.addAllCounterGroups(new HashMap<String, CounterGroup>());
     for (org.apache.hadoop.mapreduce.CounterGroup grp : counters) {

@@ -20,7 +20,10 @@ package org.apache.hadoop.mapreduce.v2.hs;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -39,9 +42,12 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEventStatus;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
+import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.YarnException;
@@ -64,14 +70,14 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   private final Map<TaskId, Task> mapTasks = new HashMap<TaskId, Task>();
   private final Map<TaskId, Task> reduceTasks = new HashMap<TaskId, Task>();
   
-  private TaskAttemptCompletionEvent[] completionEvents;
+  private List<TaskAttemptCompletionEvent> completionEvents = null;
   private JobInfo jobInfo;
 
   public CompletedJob(Configuration conf, JobId jobId, Path historyFile, boolean loadTasks) throws IOException {
+    LOG.info("Loading job: " + jobId + " from file: " + historyFile);
     this.conf = conf;
     this.jobId = jobId;
     
-    //TODO: load the data lazily. for now load the full data upfront
     loadFullHistoryData(loadTasks, historyFile);
 
     counters = TypeConverter.toYarn(jobInfo.getTotalCounters());
@@ -81,6 +87,9 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     report.setJobState(JobState.valueOf(jobInfo.getJobStatus()));
     report.setStartTime(jobInfo.getLaunchTime());
     report.setFinishTime(jobInfo.getFinishTime());
+    //TOODO Possibly populate job progress. Never used.
+    //report.setMapProgress(progress) 
+    //report.setReduceProgress(progress)
   }
 
   @Override
@@ -121,7 +130,85 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   @Override
   public TaskAttemptCompletionEvent[] getTaskAttemptCompletionEvents(
       int fromEventId, int maxEvents) {
-    return completionEvents;
+    if (completionEvents == null) {
+      constructTaskAttemptCompletionEvents();
+    }
+    TaskAttemptCompletionEvent[] events = new TaskAttemptCompletionEvent[0];
+    if (completionEvents.size() > fromEventId) {
+      int actualMax = Math.min(maxEvents,
+          (completionEvents.size() - fromEventId));
+      events = completionEvents.subList(fromEventId, actualMax + fromEventId)
+          .toArray(events);
+    }
+    return events;
+  }
+
+  private void constructTaskAttemptCompletionEvents() {
+    completionEvents = new LinkedList<TaskAttemptCompletionEvent>();
+    List<TaskAttempt> allTaskAttempts = new LinkedList<TaskAttempt>();
+    for (TaskId taskId : tasks.keySet()) {
+      Task task = tasks.get(taskId);
+      for (TaskAttemptId taskAttemptId : task.getAttempts().keySet()) {
+        TaskAttempt taskAttempt = task.getAttempts().get(taskAttemptId);
+        allTaskAttempts.add(taskAttempt);
+      }
+    }
+    Collections.sort(allTaskAttempts, new Comparator<TaskAttempt>() {
+
+      @Override
+      public int compare(TaskAttempt o1, TaskAttempt o2) {
+        if (o1.getFinishTime() == 0 || o2.getFinishTime() == 0) {
+          if (o1.getFinishTime() == 0 && o2.getFinishTime() == 0) {
+            if (o1.getLaunchTime() == 0 || o2.getLaunchTime() == 0) {
+              if (o1.getLaunchTime() == 0 && o2.getLaunchTime() == 0) {
+                return 0;
+              } else {
+                long res = o1.getLaunchTime() - o2.getLaunchTime();
+                return res > 0 ? -1 : 1;
+              }
+            } else {
+              return (int) (o1.getLaunchTime() - o2.getLaunchTime());
+            }
+          } else {
+            long res = o1.getFinishTime() - o2.getFinishTime();
+            return res > 0 ? -1 : 1;
+          }
+        } else {
+          return (int) (o1.getFinishTime() - o2.getFinishTime());
+        }
+      }
+    });
+
+    int eventId = 0;
+    for (TaskAttempt taskAttempt : allTaskAttempts) {
+
+      TaskAttemptCompletionEvent tace = RecordFactoryProvider.getRecordFactory(
+          null).newRecordInstance(TaskAttemptCompletionEvent.class);
+
+      int attemptRunTime = -1;
+      if (taskAttempt.getLaunchTime() != 0 && taskAttempt.getFinishTime() != 0) {
+        attemptRunTime = (int) (taskAttempt.getFinishTime() - taskAttempt
+            .getLaunchTime());
+      }
+      // Default to KILLED
+      TaskAttemptCompletionEventStatus taceStatus = TaskAttemptCompletionEventStatus.KILLED;
+      String taStateString = taskAttempt.getState().toString();
+      try {
+        taceStatus = TaskAttemptCompletionEventStatus.valueOf(taStateString);
+      } catch (Exception e) {
+        LOG.warn("Cannot constuct TACEStatus from TaskAtemptState: ["
+            + taStateString + "] for taskAttemptId: [" + taskAttempt.getID()
+            + "]. Defaulting to KILLED");
+      }
+
+      tace.setAttemptId(taskAttempt.getID());
+      tace.setAttemptRunTime(attemptRunTime);
+      tace.setEventId(eventId++);
+      tace.setMapOutputServerAddress(taskAttempt
+          .getAssignedContainerMgrAddress());
+      tace.setStatus(taceStatus);
+      completionEvents.add(tace);
+    }
   }
 
   @Override
@@ -131,6 +218,7 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
 
   //History data is leisurely loaded when task level data is requested
   private synchronized void loadFullHistoryData(boolean loadTasks, Path historyFileAbsolute) throws IOException {
+    LOG.info("Loading history file: [" + historyFileAbsolute + "]");
     if (jobInfo != null) {
       return; //data already loaded
     }
@@ -148,7 +236,6 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     }
     
     if (loadTasks) {
-    // populate the tasks
     for (Map.Entry<org.apache.hadoop.mapreduce.TaskID, TaskInfo> entry : jobInfo
         .getAllTasks().entrySet()) {
       TaskId yarnTaskID = TypeConverter.toYarn(entry.getKey());
@@ -162,9 +249,6 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
       }
     }
     }
-    
-    // TODO: populate the TaskAttemptCompletionEvent
-    completionEvents = new TaskAttemptCompletionEvent[0];
     LOG.info("TaskInfo loaded");
   }
 
@@ -190,7 +274,7 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
 
   @Override
   public boolean isUber() {
-    return false;
+    return jobInfo.getIsUber();
   }
 
   @Override

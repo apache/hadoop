@@ -116,7 +116,6 @@ public class HistoryClientService extends AbstractService {
       throw new YarnException(e);
     }
 
-    //TODO: security
     server =
         rpc.getServer(MRClientProtocol.class, protocolHandler, address,
             conf, null,
@@ -128,7 +127,6 @@ public class HistoryClientService extends AbstractService {
             + ":" + server.getPort());
     LOG.info("Instantiated MRClientService at " + this.bindAddress);
     
-    //TODO: start webApp on fixed port ??
     super.start();
   }
 

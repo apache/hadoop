@@ -37,32 +37,46 @@ public class CompletedTaskAttempt implements TaskAttempt {
 
   private final TaskAttemptInfo attemptInfo;
   private final TaskAttemptId attemptId;
-  private final Counters counters;
+  private Counters counters;
   private final TaskAttemptState state;
   private final TaskAttemptReport report;
   private final List<String> diagnostics = new ArrayList<String>();
 
+  private String localDiagMessage;
+
   CompletedTaskAttempt(TaskId taskId, TaskAttemptInfo attemptInfo) {
     this.attemptInfo = attemptInfo;
     this.attemptId = TypeConverter.toYarn(attemptInfo.getAttemptId());
-    this.counters = TypeConverter.toYarn(
-        new org.apache.hadoop.mapred.Counters(attemptInfo.getCounters()));
-    this.state = TaskAttemptState.valueOf(attemptInfo.getState());
+    if (attemptInfo.getCounters() != null)
+      this.counters = TypeConverter.toYarn(attemptInfo.getCounters());
+    if (attemptInfo.getTaskStatus() != null) {
+      this.state = TaskAttemptState.valueOf(attemptInfo.getTaskStatus());
+    } else {
+      this.state = TaskAttemptState.KILLED;
+      localDiagMessage = "Attmpt state missing from History : marked as KILLED";
+      diagnostics.add(localDiagMessage);
+    }
     
     if (attemptInfo.getError() != null) {
       diagnostics.add(attemptInfo.getError());
     }
     
     report = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskAttemptReport.class);
+    report.setCounters(counters);
+    
     report.setTaskAttemptId(attemptId);
     report.setTaskAttemptState(state);
     report.setProgress(getProgress());
     report.setStartTime(attemptInfo.getStartTime());
     
     report.setFinishTime(attemptInfo.getFinishTime());
+    if (localDiagMessage != null) {
+      report.setDiagnosticInfo(attemptInfo.getError() + ", " + localDiagMessage);
+    } else {
     report.setDiagnosticInfo(attemptInfo.getError());
-    //result.phase = attemptInfo.get;//TODO
-    report.setStateString(state.toString());
+    }
+//    report.setPhase(attemptInfo.get); //TODO
+    report.setStateString(attemptInfo.getState());
     report.setCounters(getCounters());
   }
 
@@ -79,8 +93,8 @@ public class CompletedTaskAttempt implements TaskAttempt {
 
   @Override
   public String getAssignedContainerMgrAddress() {
-    // TODO Container details needs to be part of some historyEvent to be able to render the log directory.
-    return null;
+    // TODO Verify this is correct.
+    return attemptInfo.getTrackerName();
   }
 
   @Override

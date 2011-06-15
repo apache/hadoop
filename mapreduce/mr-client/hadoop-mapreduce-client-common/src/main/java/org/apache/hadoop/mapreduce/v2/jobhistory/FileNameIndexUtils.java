@@ -42,7 +42,8 @@ public class FileNameIndexUtils {
   private static final int FINISH_TIME_INDEX = 4;
   private static final int NUM_MAPS_INDEX = 5;
   private static final int NUM_REDUCES_INDEX = 6;
-  private static final int MAX_INDEX = NUM_REDUCES_INDEX;
+  private static final int JOB_STATUS_INDEX = 7;
+  private static final int MAX_INDEX = JOB_STATUS_INDEX;
 
   /**
    * Constructs the job history file name from the JobIndexInfo.
@@ -78,6 +79,10 @@ public class FileNameIndexUtils {
     
     //NumReduces
     sb.append(indexInfo.getNumReduces());
+    sb.append(DELIMITER);
+    
+    //JobStatus
+    sb.append(indexInfo.getJobStatus());
     
     sb.append(JobHistoryUtils.JOB_HISTORY_FILE_EXTENSION);
     return encodeJobHistoryFileName(sb.toString());
@@ -114,6 +119,8 @@ public class FileNameIndexUtils {
     indexInfo.setNumMaps(Integer.parseInt(decodeJobHistoryFileName(jobDetails[NUM_MAPS_INDEX])));
     
     indexInfo.setNumReduces(Integer.parseInt(decodeJobHistoryFileName(jobDetails[NUM_REDUCES_INDEX])));
+    
+    indexInfo.setJobStatus(decodeJobHistoryFileName(jobDetails[JOB_STATUS_INDEX]));
     
     return indexInfo;
   }

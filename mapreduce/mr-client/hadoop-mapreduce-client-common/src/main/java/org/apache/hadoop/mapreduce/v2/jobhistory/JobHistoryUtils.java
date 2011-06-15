@@ -123,6 +123,9 @@ public class JobHistoryUtils {
     }
   };
 
+  public static boolean isValidJobHistoryFileName(String pathString) {
+    return pathString.endsWith(JOB_HISTORY_FILE_EXTENSION);
+  }
 
   /**
    * Gets a PathFilter which would match configuration files.

@@ -41,10 +41,10 @@ public class CompletedTask implements Task {
 
 
   private final TaskType type;
-  private final Counters counters;
+  private Counters counters;
   private final long startTime;
   private final long finishTime;
-  private final TaskState state;
+  private TaskState state;
   private final TaskId taskId;
   private final TaskReport report;
   private final Map<TaskAttemptId, TaskAttempt> attempts =
@@ -52,27 +52,35 @@ public class CompletedTask implements Task {
   
   private static final Log LOG = LogFactory.getLog(CompletedTask.class);
 
-  CompletedTask(TaskId taskId, TaskInfo taskinfo) {
+  CompletedTask(TaskId taskId, TaskInfo taskInfo) {
+    //TODO JobHistoryParser.handleTaskFailedAttempt should use state from the event.
+    LOG.debug("HandlingTaskId: [" + taskId + "]");
     this.taskId = taskId;
-    this.startTime = taskinfo.getStartTime();
-    this.finishTime = taskinfo.getFinishTime();
-    this.type = TypeConverter.toYarn(taskinfo.getTaskType());
-    this.counters = TypeConverter.toYarn(
-        new org.apache.hadoop.mapred.Counters(taskinfo.getCounters()));
-    this.state = TaskState.valueOf(taskinfo.getTaskStatus());
+    this.startTime = taskInfo.getStartTime();
+    this.finishTime = taskInfo.getFinishTime();
+    this.type = TypeConverter.toYarn(taskInfo.getTaskType());
+    if (taskInfo.getCounters() != null)
+      this.counters = TypeConverter.toYarn(taskInfo.getCounters());
+    if (taskInfo.getTaskStatus() != null) {
+      this.state = TaskState.valueOf(taskInfo.getTaskStatus());
+    } else {
+      this.state = TaskState.KILLED;
+    }
     report = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskReport.class);
-    for (TaskAttemptInfo attemptHistory : 
-                taskinfo.getAllTaskAttempts().values()) {
+    for (TaskAttemptInfo attemptHistory : taskInfo.getAllTaskAttempts()
+        .values()) {
       CompletedTaskAttempt attempt = new CompletedTaskAttempt(taskId, 
           attemptHistory);
+      report.addAllDiagnostics(attempt.getDiagnostics()); //TODO TMI?
       attempts.put(attempt.getID(), attempt);
-      if (attemptHistory.getState().equals(TaskState.SUCCEEDED.toString())
+      if (attemptHistory.getTaskStatus() != null
+          && attemptHistory.getTaskStatus().equals(
+              TaskState.SUCCEEDED.toString())
           && report.getSuccessfulAttempt() == null) {
         report.setSuccessfulAttempt(TypeConverter.toYarn(attemptHistory
             .getAttemptId()));
       }
     }
-    
     report.setTaskId(taskId);
     report.setStartTime(startTime);
     report.setFinishTime(finishTime);

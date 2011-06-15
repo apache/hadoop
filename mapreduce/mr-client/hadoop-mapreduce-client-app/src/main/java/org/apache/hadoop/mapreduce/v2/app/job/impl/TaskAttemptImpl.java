@@ -984,10 +984,15 @@ public abstract class TaskAttemptImpl implements
               TaskEventType.T_ATTEMPT_KILLED));
           break;
       }
+      if (taskAttempt.getLaunchTime() != 0) {
       TaskAttemptUnsuccessfulCompletionEvent tauce = createTaskAttemptUnsuccessfulCompletionEvent(
           taskAttempt, finalState);
-      taskAttempt.eventHandler.handle(new JobHistoryEvent(taskAttempt.attemptId
-          .getTaskId().getJobId(), tauce));
+        taskAttempt.eventHandler.handle(new JobHistoryEvent(
+            taskAttempt.attemptId.getTaskId().getJobId(), tauce));
+      } else {
+        LOG.debug("Not generating HistoryFinish event since start event not generated for taskAttempt: "
+            + taskAttempt.getID());
+      }
     }
   }
 
@@ -1087,22 +1092,28 @@ public abstract class TaskAttemptImpl implements
   private static class FailedTransition implements
       SingleArcTransition<TaskAttemptImpl, TaskAttemptEvent> {
     @Override
-    public void transition(TaskAttemptImpl taskAttempt, 
-        TaskAttemptEvent event) {
-      //set the finish time
+    public void transition(TaskAttemptImpl taskAttempt, TaskAttemptEvent event) {
+      // set the finish time
       taskAttempt.setFinishTime();
+      if (taskAttempt.getLaunchTime() != 0) {
       TaskAttemptUnsuccessfulCompletionEvent tauce = createTaskAttemptUnsuccessfulCompletionEvent(
           taskAttempt, TaskAttemptState.FAILED);
-      taskAttempt.eventHandler.handle(new JobHistoryEvent(taskAttempt.attemptId
-          .getTaskId().getJobId(), tauce));
-//      taskAttempt.logAttemptFinishedEvent(TaskAttemptState.FAILED); Not handling failed map/reduce events.
+        taskAttempt.eventHandler.handle(new JobHistoryEvent(
+            taskAttempt.attemptId.getTaskId().getJobId(), tauce));
+        // taskAttempt.logAttemptFinishedEvent(TaskAttemptState.FAILED); Not
+        // handling failed map/reduce events.
+      }else {
+        LOG.debug("Not generating HistoryFinish event since start event not generated for taskAttempt: "
+            + taskAttempt.getID());
+      }
       taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
-          taskAttempt.attemptId,
-          TaskEventType.T_ATTEMPT_FAILED));
+          taskAttempt.attemptId, TaskEventType.T_ATTEMPT_FAILED));
     }
   }
 
   private void logAttemptFinishedEvent(TaskAttemptState state) {
+    //Log finished events only if an attempt started.
+    if (getLaunchTime() == 0) return; 
     if (attemptId.getTaskId().getTaskType() == TaskType.MAP) {
       MapAttemptFinishedEvent mfe =
          new MapAttemptFinishedEvent(TypeConverter.fromYarn(attemptId),
@@ -1137,10 +1148,15 @@ public abstract class TaskAttemptImpl implements
       taskAttempt.addDiagnosticInfo("Too Many fetch failures.Failing the attempt");
       //set the finish time
       taskAttempt.setFinishTime();
+      if (taskAttempt.getLaunchTime() != 0) {
       TaskAttemptUnsuccessfulCompletionEvent tauce = createTaskAttemptUnsuccessfulCompletionEvent(
           taskAttempt, TaskAttemptState.FAILED);
-      taskAttempt.eventHandler.handle(new JobHistoryEvent(taskAttempt.attemptId
-          .getTaskId().getJobId(), tauce));
+        taskAttempt.eventHandler.handle(new JobHistoryEvent(
+            taskAttempt.attemptId.getTaskId().getJobId(), tauce));
+      }else {
+        LOG.debug("Not generating HistoryFinish event since start event not generated for taskAttempt: "
+            + taskAttempt.getID());
+      }
       taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
           taskAttempt.attemptId, TaskEventType.T_ATTEMPT_FAILED));
     }
@@ -1154,10 +1170,15 @@ public abstract class TaskAttemptImpl implements
         TaskAttemptEvent event) {
       //set the finish time
       taskAttempt.setFinishTime();
+      if (taskAttempt.getLaunchTime() != 0) {
       TaskAttemptUnsuccessfulCompletionEvent tauce = createTaskAttemptUnsuccessfulCompletionEvent(
           taskAttempt, TaskAttemptState.KILLED);
-      taskAttempt.eventHandler.handle(new JobHistoryEvent(taskAttempt.attemptId
-          .getTaskId().getJobId(), tauce));
+        taskAttempt.eventHandler.handle(new JobHistoryEvent(
+            taskAttempt.attemptId.getTaskId().getJobId(), tauce));
+      }else {
+        LOG.debug("Not generating HistoryFinish event since start event not generated for taskAttempt: "
+            + taskAttempt.getID());
+      }
 //      taskAttempt.logAttemptFinishedEvent(TaskAttemptState.KILLED); Not logging Map/Reduce attempts in case of failure.
       taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
           taskAttempt.attemptId,
