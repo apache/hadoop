@@ -23,16 +23,14 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
 
 public class HBaseFsckRepair {
@@ -41,14 +39,14 @@ public class HBaseFsckRepair {
    * Fix dupe assignment by doing silent closes on each RS hosting the region
    * and then force ZK unassigned node to OFFLINE to trigger assignment by
    * master.
-   * @param conf
+   * @param admin
    * @param region
    * @param servers
    * @throws IOException
    * @throws KeeperException
    * @throws InterruptedException
    */
-  public static void fixDupeAssignment(Configuration conf, HRegionInfo region,
+  public static void fixDupeAssignment(HBaseAdmin admin, HRegionInfo region,
       List<ServerName> servers)
   throws IOException, KeeperException, InterruptedException {
 
@@ -56,45 +54,33 @@ public class HBaseFsckRepair {
 
     // Close region on the servers silently
     for(ServerName server : servers) {
-      closeRegionSilentlyAndWait(conf, server, actualRegion);
+      closeRegionSilentlyAndWait(admin.getConfiguration(), server, actualRegion);
     }
 
     // Force ZK node to OFFLINE so master assigns
-    forceOfflineInZK(conf, actualRegion);
+    forceOfflineInZK(admin, actualRegion);
   }
 
   /**
    * Fix unassigned by creating/transition the unassigned ZK node for this
    * region to OFFLINE state with a special flag to tell the master that this
    * is a forced operation by HBCK.
-   * @param conf
+   * @param admin
    * @param region
    * @throws IOException
    * @throws KeeperException
    */
-  public static void fixUnassigned(Configuration conf, HRegionInfo region)
+  public static void fixUnassigned(HBaseAdmin admin, HRegionInfo region)
   throws IOException, KeeperException {
     HRegionInfo actualRegion = new HRegionInfo(region);
 
     // Force ZK node to OFFLINE so master assigns
-    forceOfflineInZK(conf, actualRegion);
+    forceOfflineInZK(admin, actualRegion);
   }
 
-  private static void forceOfflineInZK(Configuration conf, final HRegionInfo region)
+  private static void forceOfflineInZK(HBaseAdmin admin, final HRegionInfo region)
   throws ZooKeeperConnectionException, KeeperException, IOException {
-    HConnectionManager.execute(new HConnectable<Void>(conf) {
-      @Override
-      public Void connect(HConnection connection) throws IOException {
-        try {
-          ZKAssign.createOrForceNodeOffline(
-              connection.getZooKeeperWatcher(),
-              region, HConstants.HBCK_CODE_SERVERNAME);
-        } catch (KeeperException ke) {
-          throw new IOException(ke);
-        }
-        return null;
-      }
-    });
+    admin.assign(region.getRegionName(), true);
   }
 
   private static void closeRegionSilentlyAndWait(Configuration conf,

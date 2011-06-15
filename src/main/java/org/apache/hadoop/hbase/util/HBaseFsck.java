@@ -95,6 +95,7 @@ public class HBaseFsck {
   // Empty regioninfo qualifiers in .META.
   private Set<Result> emptyRegionInfoQualifiers = new HashSet<Result>();
   private int numThreads = MAX_NUM_THREADS;
+  private final HBaseAdmin admin;
 
   ThreadPoolExecutor executor; // threads to retrieve data from regionservers
 
@@ -109,7 +110,7 @@ public class HBaseFsck {
     throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
     this.conf = conf;
 
-    HBaseAdmin admin = new HBaseAdmin(conf);
+    admin = new HBaseAdmin(conf);
     status = admin.getMaster().getClusterStatus();
     connection = admin.getConnection();
 
@@ -466,7 +467,7 @@ public class HBaseFsck {
       if (shouldFix()) {
         errors.print("Trying to fix unassigned region...");
         setShouldRerun();
-        HBaseFsckRepair.fixUnassigned(this.conf, hbi.metaEntry);
+        HBaseFsckRepair.fixUnassigned(this.admin, hbi.metaEntry);
       }
     } else if (inMeta && inHdfs && isDeployed && !shouldBeDeployed) {
       errors.reportError(ERROR_CODE.SHOULD_NOT_BE_DEPLOYED, "Region "
@@ -481,7 +482,7 @@ public class HBaseFsck {
       if (shouldFix()) {
         errors.print("Trying to fix assignment error...");
         setShouldRerun();
-        HBaseFsckRepair.fixDupeAssignment(this.conf, hbi.metaEntry, hbi.deployedOn);
+        HBaseFsckRepair.fixDupeAssignment(this.admin, hbi.metaEntry, hbi.deployedOn);
       }
     } else if (inMeta && inHdfs && isDeployed && !deploymentMatchesMeta) {
       errors.reportError(ERROR_CODE.SERVER_DOES_NOT_MATCH_META, "Region "
@@ -492,7 +493,7 @@ public class HBaseFsck {
       if (shouldFix()) {
         errors.print("Trying to fix assignment error...");
         setShouldRerun();
-        HBaseFsckRepair.fixDupeAssignment(this.conf, hbi.metaEntry, hbi.deployedOn);
+        HBaseFsckRepair.fixDupeAssignment(this.admin, hbi.metaEntry, hbi.deployedOn);
       }
     } else {
       errors.reportError(ERROR_CODE.UNKNOWN, "Region " + descriptiveName +
@@ -735,7 +736,7 @@ public class HBaseFsck {
           errors.print("Trying to fix a problem with .META...");
           setShouldRerun();
           // try to fix it (treat it as unassigned region)
-          HBaseFsckRepair.fixUnassigned(conf, root.metaEntry);
+          HBaseFsckRepair.fixUnassigned(this.admin, root.metaEntry);
         }
       }
       // If there are more than one regions pretending to hold the .META.
@@ -749,7 +750,7 @@ public class HBaseFsck {
           for (HbckInfo mRegion : metaRegions) {
             deployedOn.add(mRegion.metaEntry.regionServer);
           }
-          HBaseFsckRepair.fixDupeAssignment(conf, root.metaEntry, deployedOn);
+          HBaseFsckRepair.fixDupeAssignment(this.admin, root.metaEntry, deployedOn);
         }
       }
       // rerun hbck with hopefully fixed META

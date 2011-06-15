@@ -109,7 +109,7 @@ public class CloseRegionHandler extends EventHandler {
 
       int expectedVersion = FAILED;
       if (this.zk) {
-        expectedVersion = setClosingState();
+        expectedVersion = getCurrentVersion();
         if (expectedVersion == FAILED) return;
       }
 
@@ -169,16 +169,16 @@ public class CloseRegionHandler extends EventHandler {
   }
 
   /**
-   * Create ZK node in CLOSING state.
-   * @return The expectedVersion.  If -1, we failed setting CLOSING.
+   * Get the node's current version
+   * @return The expectedVersion.  If -1, we failed getting the node
    */
-  private int setClosingState() {
+  private int getCurrentVersion() {
     int expectedVersion = FAILED;
     try {
-      if ((expectedVersion = ZKAssign.createNodeClosing(
-          server.getZooKeeper(), regionInfo, server.getServerName())) == FAILED) {
-        LOG.warn("Error creating node in CLOSING state, aborting close of " +
-          regionInfo.getRegionNameAsString());
+      if ((expectedVersion = ZKAssign.getVersion(
+          server.getZooKeeper(), regionInfo)) == FAILED) {
+        LOG.warn("Error getting node's version in CLOSING state," +
+          " aborting close of " + regionInfo.getRegionNameAsString());
       }
     } catch (KeeperException e) {
       LOG.warn("Error creating node in CLOSING state, aborting close of " +

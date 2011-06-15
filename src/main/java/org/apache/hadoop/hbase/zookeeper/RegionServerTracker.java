@@ -66,16 +66,16 @@ public class RegionServerTracker extends ZooKeeperListener {
    */
   public void start() throws KeeperException, IOException {
     watcher.registerListener(this);
-    List<NodeAndData> servers =
-      ZKUtil.watchAndGetNewChildren(watcher, watcher.rsZNode);
+    List<String> servers =
+      ZKUtil.listChildrenAndWatchThem(watcher, watcher.rsZNode);
     add(servers);
   }
 
-  private void add(final List<NodeAndData> servers) throws IOException {
+  private void add(final List<String> servers) throws IOException {
     synchronized(this.regionServers) {
       this.regionServers.clear();
-      for (NodeAndData n: servers) {
-        ServerName sn = new ServerName(ZKUtil.getNodeName(n.getNode()));
+      for (String n: servers) {
+        ServerName sn = new ServerName(ZKUtil.getNodeName(n));
         this.regionServers.add(sn);
       }
     }
@@ -107,8 +107,8 @@ public class RegionServerTracker extends ZooKeeperListener {
   public void nodeChildrenChanged(String path) {
     if (path.equals(watcher.rsZNode)) {
       try {
-        List<NodeAndData> servers =
-          ZKUtil.watchAndGetNewChildren(watcher, watcher.rsZNode);
+        List<String> servers =
+          ZKUtil.listChildrenAndWatchThem(watcher, watcher.rsZNode);
         add(servers);
       } catch (IOException e) {
         abortable.abort("Unexpected zk exception getting RS nodes", e);

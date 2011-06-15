@@ -89,69 +89,6 @@ public class TestSplitTransactionOnCluster {
   }
 
   /**
-   * Test what happens if master goes to balance a region just as regionserver
-   * goes to split it.  The PENDING_CLOSE state is the strange one since its
-   * in the Master's head only, not out in zk.  Test this case.
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws NodeExistsException
-   * @throws KeeperException
-   */
-  @Test (timeout = 600000) public void testPendingCloseAndSplit()
-  throws IOException, InterruptedException, NodeExistsException, KeeperException {
-    final byte [] tableName = Bytes.toBytes("pendingCloseAndSplit");
-
-    // Create table then get the single region for our new table.
-    HTable t = TESTING_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
-
-    List<HRegion> regions = cluster.getRegions(tableName);
-    HRegionInfo hri = getAndCheckSingleTableRegion(regions);
-
-    int tableRegionIndex = ensureTableRegionNotOnSameServerAsMeta(admin, hri);
-
-    // Turn off balancer so it doesn't cut in and mess up our placements.
-    this.admin.balanceSwitch(false);
-    // Turn off the meta scanner so it don't remove parent on us.
-    this.cluster.getMaster().setCatalogJanitorEnabled(false);
-    try {
-      // Add a bit of load up into the table so splittable.
-      TESTING_UTIL.loadTable(t, HConstants.CATALOG_FAMILY);
-      // Get region pre-split.
-      HRegionServer server = cluster.getRegionServer(tableRegionIndex);
-      printOutRegions(server, "Initial regions: ");
-      int regionCount = server.getOnlineRegions().size();
-      // Now send in a close of a region but first make the close on the regionserver
-      // a NOOP.  This way the master has all the state of it going to close
-      // but then a SPLITTING arrives.  This is what we want to test.
-      // Here is how we turn CLOSE into NOOP in test.
-      MiniHBaseCluster.MiniHBaseClusterRegionServer.TEST_SKIP_CLOSE = true;
-      this.cluster.getMaster().unassign(hri.getRegionName(), false);
-      // Now try splitting and it should work.
-      LOG.info("Running split on server " + server.toString());
-      split(hri, server, regionCount);
-      // Get daughters
-      List<HRegion> daughters = this.cluster.getRegions(tableName);
-      assertTrue(daughters.size() >= 2);
-      // Assert the ephemeral node is gone in zk.
-      String path = ZKAssign.getNodeName(t.getConnection().getZooKeeperWatcher(),
-        hri.getEncodedName());
-      Stat stat = null;
-      for (int i = 0; i < 10; i++) {
-        stat = t.getConnection().getZooKeeperWatcher().getZooKeeper().exists(path, false);
-        LOG.info("Stat for znode path=" + path + ": " + stat);
-        if (stat == null) break;
-        org.apache.hadoop.hbase.util.Threads.sleep(100);
-      }
-      assertTrue(stat == null);
-    } finally {
-      // Set this flag back.
-      MiniHBaseCluster.MiniHBaseClusterRegionServer.TEST_SKIP_CLOSE = false;
-      admin.balanceSwitch(true);
-      cluster.getMaster().setCatalogJanitorEnabled(true);
-    }
-  }
-
-  /**
    * A test that intentionally has master fail the processing of the split message.
    * Tests that the regionserver split ephemeral node gets cleaned up if it
    * crashes and that after we process server shutdown, the daughters are up on

@@ -38,6 +38,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -70,7 +71,6 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil.NodeAndData;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.Writable;
@@ -446,10 +446,17 @@ public class AssignmentManager extends ZooKeeperListener {
           if (!isInStateForSplitting(regionState)) break;
           // If null, add SPLITTING state before going to SPLIT
           if (regionState == null) {
-            LOG.info("Received SPLIT for region " + prettyPrintedRegionName +
-              " from server " + sn +
-              " but region was not first in SPLITTING state; continuing");
-            addSplittingToRIT(sn, encodedName);
+            regionState = addSplittingToRIT(sn, encodedName);
+            String message = "Received SPLIT for region " + prettyPrintedRegionName +
+              " from server " + sn;
+            // If still null, it means we cannot find it and it was already processed
+            if (regionState == null) {
+              LOG.warn(message + " but it doesn't exist anymore," +
+                  " probably already processed its split");
+              break;
+            }
+            LOG.info(message +
+                " but region was not first in SPLITTING state; continuing");
           }
           // Check it has daughters.
           byte [] payload = data.getPayload();
@@ -589,8 +596,10 @@ public class AssignmentManager extends ZooKeeperListener {
     RegionState regionState = null;
     synchronized (this.regions) {
       regionState = findHRegionInfoThenAddToRIT(serverName, encodedName);
-      regionState.update(RegionState.State.SPLITTING,
+      if (regionState != null) {
+        regionState.update(RegionState.State.SPLITTING,
           System.currentTimeMillis(), serverName);
+      }
     }
     return regionState;
   }
@@ -689,16 +698,14 @@ public class AssignmentManager extends ZooKeeperListener {
   @Override
   public void nodeCreated(String path) {
     if(path.startsWith(watcher.assignmentZNode)) {
-      synchronized(regionsInTransition) {
-        try {
-          RegionTransitionData data = ZKAssign.getData(watcher, path);
-          if(data == null) {
-            return;
-          }
-          handleRegion(data);
-        } catch (KeeperException e) {
-          master.abort("Unexpected ZK exception reading unassigned node data", e);
+      try {
+        RegionTransitionData data = ZKAssign.getData(watcher, path);
+        if (data == null) {
+          return;
         }
+        handleRegion(data);
+      } catch (KeeperException e) {
+        master.abort("Unexpected ZK exception reading unassigned node data", e);
       }
     }
   }
@@ -718,16 +725,14 @@ public class AssignmentManager extends ZooKeeperListener {
   @Override
   public void nodeDataChanged(String path) {
     if(path.startsWith(watcher.assignmentZNode)) {
-      synchronized(regionsInTransition) {
-        try {
-          RegionTransitionData data = ZKAssign.getData(watcher, path);
-          if (data == null) {
-            return;
-          }
-          handleRegion(data);
-        } catch (KeeperException e) {
-          master.abort("Unexpected ZK exception reading unassigned node data", e);
+      try {
+        RegionTransitionData data = ZKAssign.getData(watcher, path);
+        if (data == null) {
+          return;
         }
+        handleRegion(data);
+      } catch (KeeperException e) {
+        master.abort("Unexpected ZK exception reading unassigned node data", e);
       }
     }
   }
@@ -762,23 +767,17 @@ public class AssignmentManager extends ZooKeeperListener {
    * <ol>
    *   <li>Watch the node for further children changed events</li>
    *   <li>Watch all new children for changed events</li>
-   *   <li>Read all children and handle them</li>
    * </ol>
    */
   @Override
   public void nodeChildrenChanged(String path) {
     if(path.equals(watcher.assignmentZNode)) {
-      synchronized(regionsInTransition) {
-        try {
-          List<NodeAndData> newNodes = ZKUtil.watchAndGetNewChildren(watcher,
-              watcher.assignmentZNode);
-          for(NodeAndData newNode : newNodes) {
-            LOG.debug("Handling new unassigned node: " + newNode);
-            handleRegion(RegionTransitionData.fromBytes(newNode.getData()));
-          }
-        } catch(KeeperException e) {
-          master.abort("Unexpected ZK exception reading unassigned children", e);
-        }
+      try {
+        // Just make sure we see the changes for the new znodes
+        ZKUtil.listChildrenAndWatchThem(watcher,
+            watcher.assignmentZNode);
+      } catch(KeeperException e) {
+        master.abort("Unexpected ZK exception reading unassigned children", e);
       }
     }
   }
@@ -843,9 +842,7 @@ public class AssignmentManager extends ZooKeeperListener {
         rs = this.regionsInTransition.get(e.getKey());
       }
       if (rs == null) continue;
-      synchronized (rs) {
-        rs.updateTimestampToNow();
-      }
+      rs.updateTimestampToNow();
     }
   }
 
@@ -1311,9 +1308,20 @@ public class AssignmentManager extends ZooKeeperListener {
     synchronized (regionsInTransition) {
       state = regionsInTransition.get(encodedName);
       if (state == null) {
+
+         // Create the znode in CLOSING state
+        try {
+          ZKAssign.createNodeClosing(
+            master.getZooKeeper(), region, master.getServerName());
+        } catch (KeeperException e) {
+          master.abort("Unexpected ZK exception creating node CLOSING", e);
+          return;
+        }
         state = new RegionState(region, RegionState.State.PENDING_CLOSE);
         regionsInTransition.put(encodedName, state);
       } else if (force && state.isPendingClose()) {
+        // JD 05/25/11
+        // in my experience this is useless, when this happens it just spins
         LOG.debug("Attempting to unassign region " +
             region.getRegionNameAsString() + " which is already pending close "
             + "but forcing an additional close");
@@ -1893,9 +1901,7 @@ public class AssignmentManager extends ZooKeeperListener {
                   " has been CLOSED for too long, waiting on queued " +
                   "ClosedRegionHandler to run or server shutdown");
                 // Update our timestamp.
-                synchronized(regionState) {
-                  regionState.update(regionState.getState());
-                }
+                regionState.updateTimestampToNow();
                 break;
               case OFFLINE:
                 LOG.info("Region has been OFFLINE for too long, " +
@@ -2320,10 +2326,13 @@ public class AssignmentManager extends ZooKeeperListener {
     }
 
     private State state;
-    private long stamp;
+    // Many threads can update the state at the stamp at the same time
+    private final AtomicLong stamp;
     private ServerName serverName;
 
-    public RegionState() {}
+    public RegionState() {
+      this.stamp = new AtomicLong(System.currentTimeMillis());
+    }
 
     RegionState(HRegionInfo region, State state) {
       this(region, state, System.currentTimeMillis(), null);
@@ -2332,24 +2341,28 @@ public class AssignmentManager extends ZooKeeperListener {
     RegionState(HRegionInfo region, State state, long stamp, ServerName serverName) {
       this.region = region;
       this.state = state;
-      this.stamp = stamp;
+      this.stamp = new AtomicLong(stamp);
       this.serverName = serverName;
     }
 
     public void update(State state, long stamp, ServerName serverName) {
       this.state = state;
-      this.stamp = stamp;
+      updateTimestamp(stamp);
       this.serverName = serverName;
     }
 
     public void update(State state) {
       this.state = state;
-      this.stamp = System.currentTimeMillis();
+      updateTimestampToNow();
       this.serverName = null;
     }
 
+    public void updateTimestamp(long stamp) {
+      this.stamp.set(stamp);
+    }
+
     public void updateTimestampToNow() {
-      this.stamp = System.currentTimeMillis();
+      this.stamp.set(System.currentTimeMillis());
     }
 
     public State getState() {
@@ -2357,7 +2370,7 @@ public class AssignmentManager extends ZooKeeperListener {
     }
 
     public long getStamp() {
-      return stamp;
+      return stamp.get();
     }
 
     public HRegionInfo getRegion() {
@@ -2413,14 +2426,14 @@ public class AssignmentManager extends ZooKeeperListener {
       region = new HRegionInfo();
       region.readFields(in);
       state = State.valueOf(in.readUTF());
-      stamp = in.readLong();
+      stamp.set(in.readLong());
     }
 
     @Override
     public void write(DataOutput out) throws IOException {
       region.write(out);
       out.writeUTF(state.name());
-      out.writeLong(stamp);
+      out.writeLong(stamp.get());
     }
   }
 

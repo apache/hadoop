@@ -97,13 +97,6 @@ public class MiniHBaseCluster {
       this.user = User.getCurrent();
     }
 
-    @Override
-    public boolean closeRegion(HRegionInfo region)
-        throws IOException {
-      if (TEST_SKIP_CLOSE) return true;
-      return super.closeRegion(region);
-    }
-
     /*
      * @param c
      * @param currentfs We return this if we did not make a new one.

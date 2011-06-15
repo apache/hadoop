@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -37,7 +38,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -168,7 +171,14 @@ public class TestHBaseFsck {
     Thread.sleep(1 * 1000);
     ArrayList servers = new ArrayList();
     servers.add(rsAddressOrig);
-    HBaseFsckRepair.fixDupeAssignment(conf, hriOrig, servers);
+    try {
+      HBaseFsckRepair.fixDupeAssignment(TEST_UTIL.getHBaseAdmin(), hriOrig, servers);
+    } catch (IOException ex) {
+      ex = RemoteExceptionHandler.checkIOException(ex);
+      if (!(ex instanceof UnknownRegionException)) {
+        fail("Unexpected exception: " + ex);
+      }
+    }
 
     // We created 1 table, should be fine
     assertNoErrors(doFsck(false));

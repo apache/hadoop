@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -67,9 +66,6 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
   // listeners to be notified
   private final List<ZooKeeperListener> listeners =
     new CopyOnWriteArrayList<ZooKeeperListener>();
-
-  // set of unassigned nodes watched
-  private Set<String> unassignedNodes = new HashSet<String>();
 
   // node names
 
@@ -370,14 +366,6 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
    */
   public void sync(String path) {
     this.zooKeeper.sync(path, null, null);
-  }
-
-  /**
-   * Get the set of already watched unassigned nodes.
-   * @return Set of Nodes.
-   */
-  public Set<String> getNodes() {
-    return unassignedNodes;
   }
 
   /**

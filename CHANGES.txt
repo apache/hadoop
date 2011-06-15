@@ -263,6 +263,7 @@ Release 0.91.0 - Unreleased
    HBASE-3982  Improvements to TestHFileSeek
    HBASE-3940  HBase daemons should log version info at startup and possibly
                periodically (Li Pi)
+   HBASE-3789  Cleanup the locking contention in the master
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

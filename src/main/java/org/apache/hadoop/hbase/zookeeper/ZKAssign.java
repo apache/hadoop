@@ -143,11 +143,8 @@ public class ZKAssign {
       region.getEncodedName() + " in OFFLINE state"));
     RegionTransitionData data = new RegionTransitionData(event,
       region.getRegionName(), serverName);
-    synchronized(zkw.getNodes()) {
-      String node = getNodeName(zkw, region.getEncodedName());
-      zkw.getNodes().add(node);
-      ZKUtil.createAndWatch(zkw, node, data.getBytes());
-    }
+    String node = getNodeName(zkw, region.getEncodedName());
+    ZKUtil.createAndWatch(zkw, node, data.getBytes());
   }
 
   /**
@@ -173,11 +170,8 @@ public class ZKAssign {
       region.getEncodedName() + " with OFFLINE state"));
     RegionTransitionData data = new RegionTransitionData(
         EventType.M_ZK_REGION_OFFLINE, region.getRegionName(), serverName);
-    synchronized(zkw.getNodes()) {
-      String node = getNodeName(zkw, region.getEncodedName());
-      zkw.getNodes().add(node);
-      ZKUtil.asyncCreate(zkw, node, data.getBytes(), cb, ctx);
-    }
+    String node = getNodeName(zkw, region.getEncodedName());
+    ZKUtil.asyncCreate(zkw, node, data.getBytes(), cb, ctx);
   }
 
   /**
@@ -205,11 +199,8 @@ public class ZKAssign {
       region.getEncodedName() + " to OFFLINE state"));
     RegionTransitionData data = new RegionTransitionData(
         EventType.M_ZK_REGION_OFFLINE, region.getRegionName(), serverName);
-    synchronized(zkw.getNodes()) {
-      String node = getNodeName(zkw, region.getEncodedName());
-      zkw.getNodes().add(node);
-      ZKUtil.setData(zkw, node, data.getBytes());
-    }
+    String node = getNodeName(zkw, region.getEncodedName());
+    ZKUtil.setData(zkw, node, data.getBytes());
   }
 
 
@@ -238,25 +229,22 @@ public class ZKAssign {
       region.getEncodedName() + " with OFFLINE state"));
     RegionTransitionData data = new RegionTransitionData(
         EventType.M_ZK_REGION_OFFLINE, region.getRegionName(), serverName);
-    synchronized(zkw.getNodes()) {
-      String node = getNodeName(zkw, region.getEncodedName());
-      zkw.sync(node);
-      zkw.getNodes().add(node);
-      int version = ZKUtil.checkExists(zkw, node);
-      if(version == -1) {
-        ZKUtil.createAndWatch(zkw, node, data.getBytes());
+    String node = getNodeName(zkw, region.getEncodedName());
+    zkw.sync(node);
+    int version = ZKUtil.checkExists(zkw, node);
+    if (version == -1) {
+      ZKUtil.createAndWatch(zkw, node, data.getBytes());
+    } else {
+      if (!ZKUtil.setData(zkw, node, data.getBytes(), version)) {
+        return false;
       } else {
-        if (!ZKUtil.setData(zkw, node, data.getBytes(), version)) {
-          return false;
-        } else {
-          // We successfully forced to OFFLINE, reset watch and handle if
-          // the state changed in between our set and the watch
-          RegionTransitionData curData =
+        // We successfully forced to OFFLINE, reset watch and handle if
+        // the state changed in between our set and the watch
+        RegionTransitionData curData =
             ZKAssign.getData(zkw, region.getEncodedName());
-          if (curData.getEventType() != data.getEventType()) {
-            // state changed, need to process
-            return false;
-          }
+        if (curData.getEventType() != data.getEventType()) {
+          // state changed, need to process
+          return false;
         }
       }
     }
@@ -408,19 +396,15 @@ public class ZKAssign {
         " state but node is in " + data.getEventType() + " state"));
       return false;
     }
-    synchronized(zkw.getNodes()) {
-      // TODO: Does this go here or only if we successfully delete node?
-      zkw.getNodes().remove(node);
-      if(!ZKUtil.deleteNode(zkw, node, stat.getVersion())) {
-        LOG.warn(zkw.prefix("Attempting to delete " +
+    if(!ZKUtil.deleteNode(zkw, node, stat.getVersion())) {
+      LOG.warn(zkw.prefix("Attempting to delete " +
           "unassigned node in " + expectedState +
-            " state but after verifying state, we got a version mismatch"));
-        return false;
-      }
-      LOG.debug(zkw.prefix("Successfully deleted unassigned node for region " +
-          regionName + " in expected state " + expectedState));
-      return true;
+          " state but after verifying state, we got a version mismatch"));
+      return false;
     }
+    LOG.debug(zkw.prefix("Successfully deleted unassigned node for region " +
+        regionName + " in expected state " + expectedState));
+    return true;
   }
 
   /**
@@ -473,11 +457,8 @@ public class ZKAssign {
     RegionTransitionData data = new RegionTransitionData(
         EventType.RS_ZK_REGION_CLOSING, region.getRegionName(), serverName);
 
-    synchronized (zkw.getNodes()) {
-      String node = getNodeName(zkw, region.getEncodedName());
-      zkw.getNodes().add(node);
-      return ZKUtil.createAndWatch(zkw, node, data.getBytes());
-    }
+    String node = getNodeName(zkw, region.getEncodedName());
+    return ZKUtil.createAndWatch(zkw, node, data.getBytes());
   }
 
   /**
@@ -780,6 +761,19 @@ public class ZKAssign {
       return null;
     }
     return RegionTransitionData.fromBytes(data);
+  }
+
+  /**
+   * Get the version of the specified znode
+   * @param zkw zk reference
+   * @param region region's info
+   * @return the version of the znode, -1 if it doesn't exist
+   * @throws KeeperException
+   */
+  public static int getVersion(ZooKeeperWatcher zkw, HRegionInfo region)
+    throws KeeperException {
+    String znode = getNodeName(zkw, region.getEncodedName());
+    return ZKUtil.checkExists(zkw, znode);
   }
 
   /**

@@ -304,13 +304,35 @@ public class SplitTransaction {
     // Tell master about split by updating zk.  If we fail, abort.
     if (server != null && server.getZooKeeper() != null) {
       try {
-        transitionNodeSplit(server.getZooKeeper(), parent.getRegionInfo(),
-          a.getRegionInfo(), b.getRegionInfo(), server.getServerName(),
-          this.znodeVersion);
+        this.znodeVersion = transitionNodeSplit(server.getZooKeeper(),
+          parent.getRegionInfo(), a.getRegionInfo(), b.getRegionInfo(),
+          server.getServerName(), this.znodeVersion);
+
+        int spins = 0;
+        // Now wait for the master to process the split. We know it's done
+        // when the znode is deleted. The reason we keep tickling the znode is
+        // that it's possible for the master to miss an event.
+        do {
+          if (spins % 10 == 0) {
+            LOG.info("Still waiting on the master to process the split for " +
+                this.parent.getRegionInfo().getEncodedName());
+          }
+          Thread.sleep(100);
+          // When this returns -1 it means the znode doesn't exist
+          this.znodeVersion = tickleNodeSplit(server.getZooKeeper(),
+            parent.getRegionInfo(), a.getRegionInfo(), b.getRegionInfo(),
+            server.getServerName(), this.znodeVersion);
+          spins++;
+        } while (this.znodeVersion != -1);
       } catch (Exception e) {
+        if (e instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+        }
         server.abort("Failed telling master about split", e);
       }
     }
+
+
 
     // Coprocessor callback
     if (this.parent.getCoprocessorHost() != null) {
@@ -701,13 +723,10 @@ public class SplitTransaction {
     RegionTransitionData data =
       new RegionTransitionData(EventType.RS_ZK_REGION_SPLITTING,
         region.getRegionName(), serverName);
-    // This synchronization is copied from ZKAssign.
-    synchronized(zkw.getNodes()) {
-      String node = ZKAssign.getNodeName(zkw, region.getEncodedName());
-      zkw.getNodes().add(node);
-      if (!ZKUtil.createEphemeralNodeAndWatch(zkw, node, data.getBytes())) {
-        throw new IOException("Failed create of ephemeral " + node);
-      }
+
+    String node = ZKAssign.getNodeName(zkw, region.getEncodedName());
+    if (!ZKUtil.createEphemeralNodeAndWatch(zkw, node, data.getBytes())) {
+      throw new IOException("Failed create of ephemeral " + node);
     }
     // Transition node from SPLITTING to SPLITTING and pick up version so we
     // can be sure this znode is ours; version is needed deleting.
@@ -763,5 +782,15 @@ public class SplitTransaction {
   throws KeeperException, IOException {
     return ZKAssign.transitionNode(zkw, parent, serverName,
       EventType.RS_ZK_REGION_SPLITTING, EventType.RS_ZK_REGION_SPLITTING, version);
+  }
+
+  private static int tickleNodeSplit(ZooKeeperWatcher zkw,
+      HRegionInfo parent, HRegionInfo a, HRegionInfo b, ServerName serverName,
+      final int znodeVersion)
+  throws KeeperException, IOException {
+    byte [] payload = Writables.getBytes(a, b);
+    return ZKAssign.transitionNode(zkw, parent, serverName,
+      EventType.RS_ZK_REGION_SPLIT, EventType.RS_ZK_REGION_SPLIT,
+      znodeVersion, payload);
   }
 }

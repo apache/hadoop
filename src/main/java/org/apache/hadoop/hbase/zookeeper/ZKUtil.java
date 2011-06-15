@@ -349,30 +349,6 @@ public class ZKUtil {
   }
 
   /**
-   * Atomically add watches and read data from all unwatched unassigned nodes.
-   *
-   * <p>This works because master is the only person deleting nodes.
-   */
-  public static List<NodeAndData> watchAndGetNewChildren(ZooKeeperWatcher zkw,
-      String baseNode)
-  throws KeeperException {
-    List<NodeAndData> newNodes = new ArrayList<NodeAndData>();
-    synchronized(zkw.getNodes()) {
-      List<String> nodes =
-        ZKUtil.listChildrenAndWatchForNewChildren(zkw, baseNode);
-      for(String node : nodes) {
-        String nodePath = ZKUtil.joinZNode(baseNode, node);
-        if(!zkw.getNodes().contains(nodePath)) {
-          byte [] data = ZKUtil.getDataAndWatch(zkw, nodePath);
-          newNodes.add(new NodeAndData(nodePath, data));
-          zkw.getNodes().add(nodePath);
-        }
-      }
-    }
-    return newNodes;
-  }
-
-  /**
    * Simple class to hold a node path and node data.
    */
   public static class NodeAndData {
