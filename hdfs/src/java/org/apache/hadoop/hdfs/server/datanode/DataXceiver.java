@@ -171,7 +171,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
         opStartTime = now();
         processOp(op, in);
         ++opsProcessed;
-      } while (s.isConnected() && socketKeepaliveTimeout > 0);
+      } while (!s.isClosed() && socketKeepaliveTimeout > 0);
     } catch (Throwable t) {
       LOG.error(datanode.dnRegistration + ":DataXceiver, at " +
         s.toString(), t);
