@@ -901,16 +901,10 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     if (!isMasterRunning()) {
       throw new MasterNotRunningException();
     }
-    String tableName = hTableDescriptor.getNameAsString();
-    if(MetaReader.tableExists(catalogTracker, tableName)) {
-      throw new TableExistsException(tableName);
-    }
-
     if (cpHost != null) {
       cpHost.preCreateTable(hTableDescriptor, splitKeys);
     }
     HRegionInfo [] newRegions = getHRegionInfos(hTableDescriptor, splitKeys);
-    storeTableDescriptor(hTableDescriptor);
     int timeout = conf.getInt("hbase.client.catalog.timeout", 10000);
     // Need META availability to create a table
     try {
@@ -945,9 +939,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   return hRegionInfos;
 }
 
-  private void storeTableDescriptor(HTableDescriptor hTableDescriptor) {
+  private void storeTableDescriptor(HTableDescriptor hTableDescriptor)
+      throws IOException {
     FSUtils.createTableDescriptor(hTableDescriptor, conf);
-    //fileSystemManager.createTableDescriptor(hTableDescriptor);
   }
 
   private synchronized void createTable(final HTableDescriptor hTableDescriptor,
@@ -958,6 +952,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     if(MetaReader.tableExists(catalogTracker, tableName)) {
       throw new TableExistsException(tableName);
     }
+    storeTableDescriptor(hTableDescriptor);
+
     for (HRegionInfo newRegion : newRegions) {
       // 1. Set table enabling flag up in zk.
       try {
