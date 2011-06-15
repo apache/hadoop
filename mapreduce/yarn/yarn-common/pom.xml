@@ -73,6 +73,20 @@
               <goal>exec</goal>
             </goals>
           </execution>
+          <execution>
+            <id>generate-version</id>
+            <phase>generate-sources</phase>
+            <configuration>
+              <executable>scripts/saveVersion.sh</executable>
+              <arguments>
+                <argument>${yarn.version}</argument>
+                <argument>${project.build.directory}</argument>
+              </arguments>
+            </configuration>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+          </execution>
         </executions>
       </plugin>
 
@@ -89,6 +103,7 @@
             <configuration>
               <sources>
                 <source>target/generated-sources/proto</source>
+                <source>target/generated-sources/version</source>
               </sources>
             </configuration>
           </execution>

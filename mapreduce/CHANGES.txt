@@ -5,6 +5,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    MAPREDUCE-2587. Generate yarn version for UI. (Thomas Graves via llu)
+
     Fix stopContainer for setsid challenged platforms. (llu)
 
     Fix concurrent modification exception in the Capacity Scheduler (mahadev)

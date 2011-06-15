@@ -23,6 +23,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp.QUEU
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 
 import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.api.records.Application;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -54,7 +55,7 @@ public class RmController extends Controller {
       _("Cluster ID:", ts).
       _("ResourceManager state:", rm.getServiceState()).
       _("ResourceManager started on:", Times.format(ts)).
-      _("ResourceManager version:", "1.0-SNAPSHOT").
+      _("ResourceManager version:", YarnVersionInfo.getBuildVersion()).
       _("Hadoop version:", VersionInfo.getBuildVersion());
     render(InfoPage.class);
   }
