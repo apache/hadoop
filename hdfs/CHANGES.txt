@@ -1218,6 +1218,9 @@ Release 0.22.0 - Unreleased
 
     HDFS-988. saveNamespace race can corrupt the edits log. (eli)
 
+    HDFS-2071. Use of isConnected() in DataXceiver is invalid. (Kihwal Lee
+    via todd)
+
 Release 0.21.1 - Unreleased
     HDFS-1466. TestFcHdfsSymlink relies on /tmp/test not existing. (eli)
 

@@ -178,7 +178,7 @@ class DataXceiver extends Receiver implements Runnable, FSConstants {
         opStartTime = now();
         processOp(op, in);
         ++opsProcessed;
-      } while (s.isConnected() && socketKeepaliveTimeout > 0);
+      } while (!s.isClosed() && socketKeepaliveTimeout > 0);
     } catch (Throwable t) {
       LOG.error(datanode.getMachineName() + ":DataXceiver, at " +
         s.toString(), t);
