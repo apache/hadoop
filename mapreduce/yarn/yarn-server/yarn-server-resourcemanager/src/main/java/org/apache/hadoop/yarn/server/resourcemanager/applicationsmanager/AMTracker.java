@@ -262,7 +262,7 @@ public class AMTracker extends AbstractService  implements EventHandler<ASMEvent
     masterInfo.getMaster().setDiagnostics(
         remoteApplicationMaster.getDiagnostics());
 
-    rmContext.getDispatcher().getSyncHandler().handle(
+    rmContext.getDispatcher().getEventHandler().handle(
         new ApplicationFinishEvent(masterInfo, remoteApplicationMaster
             .getState()));
   }
