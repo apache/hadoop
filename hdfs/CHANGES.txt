@@ -508,6 +508,8 @@ Trunk (unreleased changes)
 
     HDFS-2046. Force entropy to come from non-true random for tests. (todd)
 
+    HDFS-2073. Add @Override annotation to NameNode. (suresh)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
