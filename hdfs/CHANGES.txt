@@ -740,6 +740,9 @@ Trunk (unreleased changes)
     HDFS-2069. Incorrect default trash interval value in the docs.
     (Harsh J Chouraria via eli)
 
+    HDFS-1942. Datanode must exist when all the block pool service threads
+    exit. (Bharath Mundlapudi via suresh)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

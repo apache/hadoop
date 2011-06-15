@@ -1425,6 +1425,10 @@ public class DataNode extends Configured
     return blockPoolManager.getAllNamenodeThreads();
   }
   
+  int getBpOsCount() {
+    return blockPoolManager.getAllNamenodeThreads().length;
+  }
+  
   /**
    * Initializes the {@link #data}. The initialization is done only once, when
    * handshake with the the first namenode is completed.
@@ -2134,6 +2138,10 @@ public class DataNode extends Configured
     while (shouldRun) {
       try {
         blockPoolManager.joinAll();
+        if (blockPoolManager.getAllNamenodeThreads() != null
+            && blockPoolManager.getAllNamenodeThreads().length == 0) {
+          shouldRun = false;
+        }
         Thread.sleep(2000);
       } catch (InterruptedException ex) {
         LOG.warn("Received exception in Datanode#join: " + ex);
