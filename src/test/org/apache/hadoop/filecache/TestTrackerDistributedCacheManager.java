@@ -25,6 +25,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.login.LoginException;
 
@@ -544,6 +546,62 @@ public class TestTrackerDistributedCacheManager extends TestCase {
       assertEquals(owner, fs.getFileStatus(p).getOwner());
       assertEquals(group, fs.getFileStatus(p).getGroup());
     }
+  }
+  
+  public static class MyTrackerDistributedCacheManager 
+      extends TrackerDistributedCacheManager {
+
+    public Throwable caught = null;
+    public CountDownLatch done = new CountDownLatch(1);
+
+    
+    public MyTrackerDistributedCacheManager(Configuration conf,
+        TaskController controller) throws IOException {
+      super(conf, controller);
+      this.baseDirManager = new TrackerDistributedCacheManager.BaseDirManager() {
+        
+        @Override
+        void checkAndCleanup() throws IOException {
+          throw new RuntimeException("This is a test!!!!");
+        }
+      };
+      
+      this.cleanupThread = new TestCleanupThread(conf);
+    }
+      
+    class TestCleanupThread extends TrackerDistributedCacheManager.CleanupThread {
+      
+      public TestCleanupThread(Configuration conf) {
+        super(conf);
+      }
+
+      @Override
+      protected void exitTaskTracker(Throwable t) {
+        caught = t;
+        this.stopRunning();
+        done.countDown();
+      }        
+    }
+  }
+  
+  public void testRuntimeExceptionInCleanup() throws Exception {
+    if(!canRun()) {
+      return;
+    }
+    
+    Configuration conf2 = new Configuration(conf);
+    conf2.set("mapred.local.dir", ROOT_MAPRED_LOCAL_DIR.toString());
+    conf2.setLong("local.cache.size", LOCAL_CACHE_LIMIT);
+    conf2.setLong("mapreduce.tasktracker.distributedcache.checkperiod", 0); // 0 ms (Don't sleep)
+    
+    refreshConf(conf2);
+    MyTrackerDistributedCacheManager manager = 
+        new MyTrackerDistributedCacheManager(conf2, taskController);
+    manager.startCleanupThread();
+    
+    assertTrue(manager.done.await(200l, TimeUnit.MILLISECONDS));
+    assertNotNull(manager.caught);
+    assertTrue(manager.caught instanceof RuntimeException);
   }
   
   protected String getJobOwnerName() throws IOException {
