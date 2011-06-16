@@ -20,6 +20,10 @@ Release 0.20.204.0 - unreleased
     MAPREDUCE-2535. Fix NPE in JobClient caused by retirement. (Robert Joseph
     Evans via cdouglas)
 
+    MAPREDUCE-2456. Log the reduce taskID and associated TaskTrackers with
+    failed fetch notifications in the JobTracker log.
+    (Jeffrey Naisbitt via cdouglas)
+
     HDFS-2044. TestQueueProcessingStatistics failing automatic test due to 
     timing issues. (mattf)
 
