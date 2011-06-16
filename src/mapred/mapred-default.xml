@@ -310,12 +310,11 @@
 </property>
 
 <property>
-  <name>mapred.reduce.copy.backoff</name>
-  <value>300</value>
-  <description>The maximum amount of time (in seconds) a reducer spends on 
-  fetching one map output before declaring it as failed.
-  </description>
-</property>
+  <name>mapreduce.reduce.shuffle.maxfetchfailures</name>
+  <value>10</value>
+  <description>The maximum number of times a reducer tries to
+  fetch a map output before it reports it.
+</description></property>
 
 <property>
   <name>mapreduce.reduce.shuffle.connect.timeout</name>
