@@ -136,6 +136,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
 
   @Override
   public void run() {
+   try {
     LOG.info("SplitLogWorker " + this.serverName + " starting");
     this.watcher.registerListener(this);
     int res;
@@ -162,8 +163,13 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
     }
 
     taskLoop();
-
-    LOG.info("SplitLogWorker " + this.serverName + " exiting");
+   } catch (Throwable t) {
+	   // only a logical error can cause here. Printing it out 
+	   // to make debugging easier
+	   LOG.error("unexpected error ", t);
+   } finally {
+	   LOG.info("SplitLogWorker " + this.serverName + " exiting");
+   }
   }
 
   /**

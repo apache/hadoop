@@ -152,7 +152,8 @@ public class TestHLogSplit {
    * @throws IOException
    * @see https://issues.apache.org/jira/browse/HBASE-3020
    */
-  @Test public void testRecoveredEditsPathForMeta() throws IOException {
+  @Test 
+  public void testRecoveredEditsPathForMeta() throws IOException {
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     byte [] encoded = HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
     Path tdir = new Path(hbaseDir, Bytes.toString(HConstants.META_TABLE_NAME));
@@ -952,7 +953,35 @@ public class TestHLogSplit {
 
     assertEquals(true, logsAreEqual(originalLog, splitLog));
   }
+  
+  @Test
+  public void testSplitLogFileDeletedRegionDir()
+  throws IOException {
+	LOG.info("testSplitLogFileDeletedRegionDir");
+	final String REGION = "region__1";
+    regions.removeAll(regions);
+    regions.add(REGION);
 
+
+    generateHLogs(1, 10, -1);
+    FileStatus logfile = fs.listStatus(hlogDir)[0];
+    fs.initialize(fs.getUri(), conf);
+    
+    Path regiondir = new Path(tabledir, REGION);
+    LOG.info("Region directory is" + regiondir);
+    fs.delete(regiondir, true);
+    
+    HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs,
+        conf, reporter);
+    HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
+        logfile.getPath().toString(), conf);
+    
+    assertTrue(!fs.exists(regiondir));
+    assertTrue(true);
+  }
+
+  
+  
   @Test
   public void testSplitLogFileEmpty() throws IOException {
     LOG.info("testSplitLogFileEmpty");
@@ -1008,7 +1037,6 @@ public class TestHLogSplit {
         "hbase.regionserver.hlog.splitlog.corrupt.dir", ".corrupt"));
     assertEquals(1, fs.listStatus(corruptDir).length);
   }
-
 
   private void flushToConsole(String s) {
     System.out.println(s);
