@@ -390,9 +390,9 @@ public class ZKAssign {
       throw KeeperException.create(Code.NONODE);
     }
     RegionTransitionData data = RegionTransitionData.fromBytes(bytes);
-    if(!data.getEventType().equals(expectedState)) {
+    if (!data.getEventType().equals(expectedState)) {
       LOG.warn(zkw.prefix("Attempting to delete unassigned " +
-        "node in " + expectedState +
+        "node " + regionName + " in " + expectedState +
         " state but node is in " + data.getEventType() + " state"));
       return false;
     }

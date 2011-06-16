@@ -1195,6 +1195,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       // Update in-memory structures to reflect our earlier Root/Meta assignment.
       assignRootAndMeta(status);
       // process RIT if any
+      // TODO: Why does this not call AssignmentManager.joinCluster?  Otherwise
+      // we are not processing dead servers if any.
       this.assignmentManager.processRegionsInTransition();
       return true;
     } finally {
