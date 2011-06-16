@@ -1006,6 +1006,38 @@ int hdfsFlush(hdfsFS fs, hdfsFile f)
 
 
 
+int hdfsHFlush(hdfsFS fs, hdfsFile f)
+{
+    //Get the JNIEnv* corresponding to current thread
+    JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
+
+    //Parameters
+    jobject jOutputStream = (jobject)(f ? f->file : 0);
+
+    //Caught exception
+    jthrowable jExc = NULL;
+
+    //Sanity check
+    if (!f || f->type != OUTPUT) {
+        errno = EBADF;
+        return -1;
+    }
+
+    if (invokeMethod(env, NULL, &jExc, INSTANCE, jOutputStream,
+                     HADOOP_OSTRM, "hflush", "()V") != 0) {
+        errno = errnoFromException(jExc, env, HADOOP_OSTRM "::hflush");
+        return -1;
+    }
+
+    return 0;
+}
+
+
+
 int hdfsAvailable(hdfsFS fs, hdfsFile f)
 {
     // JAVA EQUIVALENT

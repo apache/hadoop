@@ -290,6 +290,8 @@ Trunk (unreleased changes)
     HDFS-2058. Change Data Transfer wire protocol to use protocol buffers.
     (todd)
 
+    HDFS-2055. Add hflush support to libhdfs. (Travis Crawford via eli)
+
   IMPROVEMENTS
 
     HDFS-1875. MiniDFSCluster hard-codes dfs.datanode.address to localhost

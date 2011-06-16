@@ -95,6 +95,12 @@ int main(int argc, char **argv) {
         }
         fprintf(stderr, "Flushed %s successfully!\n", writePath); 
 
+        if (hdfsHFlush(fs, writeFile)) {
+            fprintf(stderr, "Failed to 'hflush' %s\n", writePath);
+            exit(-1);
+        }
+        fprintf(stderr, "HFlushed %s successfully!\n", writePath);
+
         hdfsCloseFile(fs, writeFile);
     }
 
