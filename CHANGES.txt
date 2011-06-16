@@ -11,6 +11,9 @@ Release 0.20.204.0 - unreleased
 
   BUG FIXES
 
+    MAPREDUCE-2535. Fix NPE in JobClient caused by retirement. (Robert Joseph
+    Evans via cdouglas)
+
     HDFS-2044. TestQueueProcessingStatistics failing automatic test due to 
     timing issues. (mattf)
 

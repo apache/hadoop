@@ -28,7 +28,6 @@ import org.apache.hadoop.mapreduce.test.system.TTClient;
 import org.apache.hadoop.mapreduce.test.system.JTProtocol;
 import org.apache.hadoop.mapreduce.test.system.TaskInfo;
 import org.apache.hadoop.mapreduce.test.system.JobInfo;
-import org.apache.hadoop.mapred.JobClient.NetworkedJob;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -189,8 +188,8 @@ public class TestJobCacheDirectoriesCleanUp {
           int MAX_MAP_TASK_ATTEMPTS = Integer.
                parseInt(jobConf.get("mapred.map.max.attempts"));
           while(taskinfo.numFailedAttempts() < MAX_MAP_TASK_ATTEMPTS) {
-            NetworkedJob networkJob = jtClient.getClient().
-               new NetworkedJob(jobInfo.getStatus());
+            org.apache.hadoop.mapreduce.JobID temp = jobInfo.getID();
+            RunningJob networkJob = client.getJob(new JobID(temp.getJtIdentifier(), temp.getId()));
             networkJob.killTask(taskAttID, true);
             taskinfo = rtClient.getTaskInfo(taskinfo.getTaskID());
             taskAttID = new TaskAttemptID(taskId, taskinfo.numFailedAttempts());
