@@ -83,7 +83,7 @@ public class TestMetaMigration {
   }
 
   @Test
-  public void testUpdatesOnMetaWithLegacyHRI() throws Exception {
+  public void testMetaMigration() throws Exception {
     LOG.info("Starting testMetaWithLegacyHRI");
     final byte[] FAMILY = Bytes.toBytes("family");
     HTableDescriptor htd = new HTableDescriptor("testMetaMigration");
@@ -103,6 +103,7 @@ public class TestMetaMigration {
 
     List<HTableDescriptor> htds = MetaEditor.updateMetaWithNewRegionInfo(
           TEST_UTIL.getHBaseCluster().getMaster());
+    MetaReader.fullScanMetaAndPrint(ct);
     assertEquals(3, htds.size());
     // Assert that the flag in ROOT is updated to reflect the correct status
     boolean metaUpdated = miniHBaseCluster.getMaster().isMetaHRIUpdated();
@@ -111,26 +112,45 @@ public class TestMetaMigration {
 
   }
 
-  //@Test
-  public void dtestUpdatesOnMetaWithNewHRI() throws Exception {
-    LOG.info("Starting testMetaWithLegacyHRI");
+  /**
+   * This test assumes a master crash/failure during the meta migration process
+   * and attempts to continue the meta migration process when a new master takes over.
+   * When a master dies during the meta migration we will have some rows of
+   * META.CatalogFamily updated with new HRI, (i.e HRI with out HTD) and some
+   * still hanging with legacy HRI. (i.e HRI with HTD). When the backup master/ or
+   * fresh start of master attempts the migration it will encouter some rows of META
+   * already updated with new HRI and some still legacy. This test will simulate this
+   * scenario and validates that the migration process can safely skip the updated
+   * rows and migrate any pending rows at startup.
+   * @throws Exception
+   */
+  @Test
+  public void testMasterCrashDuringMetaMigration() throws Exception {
+    LOG.info("Starting testMasterCrashDuringMetaMigration");
     final byte[] FAMILY = Bytes.toBytes("family");
-    HTableDescriptor htd = new HTableDescriptor("testMetaMigration");
+    HTableDescriptor htd = new HTableDescriptor("testMasterCrashDuringMetaMigration");
     HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
       htd.addFamily(hcd);
     Configuration conf = TEST_UTIL.getConfiguration();
-    TEST_UTIL.createMultiRegionsWithNewHRI(conf, htd, FAMILY,
-        new byte[][]{
-            HConstants.EMPTY_START_ROW,
-            Bytes.toBytes("region_a"),
-            Bytes.toBytes("region_b")});
+    // Create 10 New regions.
+    TEST_UTIL.createMultiRegionsWithNewHRI(conf, htd, FAMILY, 10);
+    // Create 10 Legacy regions.
+    TEST_UTIL.createMultiRegionsWithLegacyHRI(conf, htd, FAMILY, 10);
+    CatalogTracker ct = miniHBaseCluster.getMaster().getCatalogTracker();
+    // just for this test set it to false.
+    MetaEditor.updateRootWithMetaMigrationStatus(ct, false);
+    //MetaReader.fullScanMetaAndPrint(ct);
+    LOG.info("MEta Print completed.testUpdatesOnMetaWithLegacyHRI");
+
     List<HTableDescriptor> htds = MetaEditor.updateMetaWithNewRegionInfo(
           TEST_UTIL.getHBaseCluster().getMaster());
-    assertEquals(3, htds.size());
+    assertEquals(10, htds.size());
+    // Assert that the flag in ROOT is updated to reflect the correct status
+    boolean metaUpdated = miniHBaseCluster.getMaster().isMetaHRIUpdated();
+    assertEquals(true, metaUpdated);
+    LOG.info("END testMetaWithLegacyHRI");
+
   }
-
-
-
 
   public static void assertEquals(int expected,
                                int actual) {

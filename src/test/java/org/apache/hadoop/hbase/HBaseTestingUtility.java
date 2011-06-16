@@ -862,6 +862,22 @@ public class HBaseTestingUtility {
 
   public int createMultiRegionsWithLegacyHRI(final Configuration c,
                                              final HTableDescriptor htd,
+      final byte [] family, int numRegions)
+  throws IOException {
+    if (numRegions < 3) throw new IOException("Must create at least 3 regions");
+    byte [] startKey = Bytes.toBytes("aaaaa");
+    byte [] endKey = Bytes.toBytes("zzzzz");
+    byte [][] splitKeys = Bytes.split(startKey, endKey, numRegions - 3);
+    byte [][] regionStartKeys = new byte[splitKeys.length+1][];
+    for (int i=0;i<splitKeys.length;i++) {
+      regionStartKeys[i+1] = splitKeys[i];
+    }
+    regionStartKeys[0] = HConstants.EMPTY_BYTE_ARRAY;
+    return createMultiRegionsWithLegacyHRI(c, htd, family, regionStartKeys);
+  }
+
+  public int createMultiRegionsWithLegacyHRI(final Configuration c,
+                                             final HTableDescriptor htd,
       final byte[] columnFamily, byte [][] startKeys)
   throws IOException {
     Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
@@ -888,6 +904,22 @@ public class HBaseTestingUtility {
     }
     return count;
 
+  }
+
+  public int createMultiRegionsWithNewHRI(final Configuration c,
+                                             final HTableDescriptor htd,
+      final byte [] family, int numRegions)
+  throws IOException {
+    if (numRegions < 3) throw new IOException("Must create at least 3 regions");
+    byte [] startKey = Bytes.toBytes("aaaaa");
+    byte [] endKey = Bytes.toBytes("zzzzz");
+    byte [][] splitKeys = Bytes.split(startKey, endKey, numRegions - 3);
+    byte [][] regionStartKeys = new byte[splitKeys.length+1][];
+    for (int i=0;i<splitKeys.length;i++) {
+      regionStartKeys[i+1] = splitKeys[i];
+    }
+    regionStartKeys[0] = HConstants.EMPTY_BYTE_ARRAY;
+    return createMultiRegionsWithNewHRI(c, htd, family, regionStartKeys);
   }
 
   public int createMultiRegionsWithNewHRI(final Configuration c, final HTableDescriptor htd,

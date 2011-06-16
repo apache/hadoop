@@ -246,6 +246,7 @@ public class MetaEditor {
       public boolean visit(Result r) throws IOException {
         if (r ==  null || r.isEmpty()) return true;
         HRegionInfo090x hrfm = getHRegionInfoForMigration(r);
+        if (hrfm == null) return true;
         htds.add(hrfm.getTableDesc());
         masterServices.getMasterFileSystem().createTableDescriptor(hrfm.getTableDesc());
         HRegionInfo regionInfo = new HRegionInfo(hrfm);
@@ -267,10 +268,19 @@ public class MetaEditor {
 
   public static HRegionInfo090x getHRegionInfoForMigration(
       Result data) throws IOException {
+    HRegionInfo090x info = null;
     byte [] bytes =
       data.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     if (bytes == null) return null;
-    HRegionInfo090x info = Writables.getHRegionInfoForMigration(bytes);
+    try {
+      info = Writables.getHRegionInfoForMigration(bytes);
+    } catch(IOException ioe) {
+      if (ioe.getMessage().equalsIgnoreCase("HTD not found in input buffer")) {
+         return null;
+      } else {
+        throw ioe;
+      }
+    }
     LOG.info("Current INFO from scan results = " + info);
     return info;
   }
