@@ -751,6 +751,9 @@ Trunk (unreleased changes)
     HDFS-1656. Fixes an issue to do with fetching of delegation tokens in
     HftpFileSystem. Contributed by Kan Zhang.
 
+    HDFS-1692. In secure mode, Datanode process doesn't exit when disks 
+    fail. (Bharath Mundlapudi via suresh)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
