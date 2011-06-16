@@ -11,6 +11,8 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    HDFS-1359. Add BlockPoolID to Block. (suresh)
+
     HDFS-1365. Federation: propose ClusterID and BlockPoolID format 
     (Tanping via boryas)
 
@@ -671,6 +673,8 @@ Trunk (unreleased changes)
     HDFS-1931. Update TestDFSShell for improved "du" shell command. (Daryn
     Sharp via todd)
 
+    HDFS-1439. HDFS Federation: Fix compilation error in TestFiHftp. (suresh)
+
     HDFS-1881. Federation: after taking snapshot the current directory 
     of datanode is empty. (Tanping Wang via suresh)
 
@@ -778,8 +782,6 @@ Release 0.22.0 - Unreleased
     HDFS-202.  HDFS support of listLocatedStatus introduced in HADOOP-6870.
     HDFS piggyback block locations to each file status when listing a
     directory.  (hairong)
-
-    HDFS-1359. Add BlockPoolID to Block. (suresh)
 
     HDFS-1361. Add -fileStatus operation to NNThroughputBenchmark. (shv)
 
@@ -1417,8 +1419,6 @@ Release 0.21.0 - 2010-08-13
     HDFS-1016. HDFS side change for HADOOP-6569. This jira changes the
     error message on the screen when cat a directory or a 
     non-existent file. (hairong)
-
-    HDFS-1439. HDFS Federation: Fix compilation error in TestFiHftp. (suresh)
 
   NEW FEATURES
 
