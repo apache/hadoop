@@ -5,7 +5,10 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
-    Adding attempts page to the history server UI. (vinodkv
+    Bug fix to set correct state on containers so as to avoid duplicate
+    containers from RM to AM. (vinodkv)
+
+    Adding attempts page to the history server UI. (vinodkv)
 
     Task diagnostic info made available on the AM UI. (vinodkv)
 

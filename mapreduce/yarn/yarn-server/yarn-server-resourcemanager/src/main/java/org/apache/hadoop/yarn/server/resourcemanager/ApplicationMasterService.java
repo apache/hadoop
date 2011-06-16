@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
 import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -152,6 +153,12 @@ AMRMProtocol, EventHandler<ASMEvent<ApplicationTrackerEventType>> {
     ApplicationStatus status = request.getApplicationStatus();
     List<ResourceRequest> ask = request.getAskList();
     List<Container> release = request.getReleaseList();
+    // TODO: This is a hack. Arbitrary changing state can screw things up.
+    // Set Container state as complete, as this will be returned back to AM as
+    // is to inform AM of the list of completed containers.
+    for (Container container : release) {
+      container.setState(ContainerState.COMPLETE);
+    }
     try {
       /* check if its in cache */
       synchronized(responseMap) {
