@@ -32,6 +32,8 @@ Release 0.20.204.0 - unreleased
     HADOOP-7373. Fix {start,stop}-{dfs,mapred} and hadoop-daemons.sh from
     trying to use the wrong bin directory. (omalley)
 
+    HADOOP-7274. Fix typos in IOUtils. (Jonathan Eagles via cdouglas)
+
     HADOOP-7369. Fix permissions in tarball for sbin/* and libexec/* (omalley)
 
     MAPREDUCE-2479. Move distributed cache cleanup to a background task,
