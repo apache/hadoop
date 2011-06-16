@@ -86,6 +86,9 @@ Release 0.20.204.0 - unreleased
 
   IMPROVEMENTS
 
+    HADOOP-7144. Expose JMX metrics via JSON servlet. (Robert Joseph Evans via
+    cdouglas)
+
     MAPREDUCE-2524. Port reduce failure reporting semantics from trunk, to
     fail faulty maps more aggressively. (Thomas Graves via cdouglas)
 
