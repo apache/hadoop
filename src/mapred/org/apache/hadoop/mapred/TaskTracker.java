@@ -1880,7 +1880,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       for (TaskTrackerAction action : actions) {
         if (action.getActionId() == 
             TaskTrackerAction.ActionType.REINIT_TRACKER) {
-          LOG.info("Recieved RenitTrackerAction from JobTracker");
+          LOG.info("Recieved ReinitTrackerAction from JobTracker");
           return true;
         }
       }

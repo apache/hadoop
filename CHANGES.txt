@@ -36,6 +36,9 @@ Release 0.20.204.0 - unreleased
 
     HADOOP-7356. Fix bin/hadoop scripts (eyang via omalley)
 
+    MAPREDUCE-2514. Fix typo in TaskTracker ReinitTrackerAction log message.
+    (Jonathan Eagles via cdouglas)
+
     MAPREDUCE-2490. Add logging to graylist and blacklist activity to aid
     diagnosis of related issues. (Jonathan Eagles via cdouglas)
 
