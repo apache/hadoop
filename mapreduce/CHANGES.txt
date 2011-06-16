@@ -5,6 +5,10 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    Changes a couple of usages of FileContext to FileSystem in TaskAttemptImpl 
+    to handle distributed cache path resolutions on non-default filesystems.
+    (ddas)
+
     Hack until MAPREDUCE-2365 is fixed to make PIG work with MRV2. (mahadev)
 
     Fix race between multiple localizers on single node (chris douglas via mahadev) 
