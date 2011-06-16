@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.MapContext;
@@ -52,8 +53,15 @@ public class SequenceFileRecordReader<K, V> extends RecordReader<K, V> {
                          TaskAttemptContext context
                          ) throws IOException, InterruptedException {
     FileSplit fileSplit = (FileSplit) split;
-    inputByteCounter = ((MapContext)context).getCounter(
-      FileInputFormat.COUNTER_GROUP, FileInputFormat.BYTES_READ);
+    /* TODO This is a hack. MAPREDUCE-2365 is the proper solution */
+    if (context instanceof MapContext) {
+      inputByteCounter = 
+        ((MapContext)context).getCounter(
+            FileInputFormat.COUNTER_GROUP, FileInputFormat.BYTES_READ);
+    } else {
+      inputByteCounter = new Counters().findCounter(FileInputFormat.COUNTER_GROUP
+          ,  FileInputFormat.BYTES_READ);
+    }
     conf = context.getConfiguration();    
     Path path = fileSplit.getPath();
     FileSystem fs = path.getFileSystem(conf);
