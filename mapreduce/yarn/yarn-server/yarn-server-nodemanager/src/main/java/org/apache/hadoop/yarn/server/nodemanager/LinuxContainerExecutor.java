@@ -29,9 +29,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -71,8 +74,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   }
 
   /**
-   * Result codes returned from the C task-controller.
-   * These must match the values in task-controller.h.
+   * Result codes returned from the C container-executor.
+   * These must match the values in container-executor.h.
    */
   enum ResultCode {
     OK(0),
@@ -137,7 +140,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       }
     } catch (ExitCodeException e) {
       int exitCode = shExec.getExitCode();
-      LOG.warn("Exit code from task is : " + exitCode);
+      LOG.warn("Exit code from container is : " + exitCode);
       logOutput(shExec.getOutput());
       throw new IOException("App initialization failed (" + exitCode + ")", e);
     }
@@ -147,7 +150,9 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   public int launchContainer(Container container,
       Path nmPrivateCotainerScriptPath, Path nmPrivateTokensPath,
       String user, String appId, Path containerWorkDir) throws IOException {
-    String containerIdStr = ConverterUtils.toString(container.getContainerID());
+
+    ContainerId containerId = container.getContainerID();
+    String containerIdStr = ConverterUtils.toString(containerId);
     List<String> command = new ArrayList<String>(
       Arrays.asList(containerExecutorExe, 
                     user, 
@@ -159,34 +164,42 @@ public class LinuxContainerExecutor extends ContainerExecutor {
                     nmPrivateTokensPath.toUri().getPath().toString()));
     String[] commandArray = command.toArray(new String[command.size()]);
     ShellCommandExecutor shExec = new ShellCommandExecutor(commandArray);
-    launchCommandObjs.put(container.getLaunchContext().getContainerId(), shExec);
+    launchCommandObjs.put(containerId, shExec);
     // DEBUG
     LOG.info("launchContainer: " + Arrays.toString(commandArray));
     if (LOG.isDebugEnabled()) {
       LOG.debug("launchContainer: " + Arrays.toString(commandArray));
     }
+    String output = shExec.getOutput();
     try {
       shExec.execute();
       if (LOG.isDebugEnabled()) {
-        logOutput(shExec.getOutput());
+        logOutput(output);
       }
     } catch (ExitCodeException e) {
       int exitCode = shExec.getExitCode();
-      LOG.warn("Exit code from task is : " + exitCode);
-      // 143 (SIGTERM) and 137 (SIGKILL) exit codes means the task was
+      LOG.warn("Exit code from container is : " + exitCode);
+      // 143 (SIGTERM) and 137 (SIGKILL) exit codes means the container was
       // terminated/killed forcefully. In all other cases, log the
-      // task-controller output
+      // container-executor's output
       if (exitCode != 143 && exitCode != 137) {
-        LOG.warn("Exception thrown while launching task JVM : ", e);
-        logOutput(shExec.getOutput());
+        LOG.warn("Exception from container-launch : ", e);
+        logOutput(output);
+        String diagnostics = "Exception from container-launch: \n"
+            + StringUtils.stringifyException(e) + "\n" + output;
+        container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
+            diagnostics));
+      } else {
+        container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
+            "Container killed on request. Exit code is " + exitCode));
       }
       return exitCode;
     } finally {
-      launchCommandObjs.remove(container.getLaunchContext().getContainerId());
+      launchCommandObjs.remove(containerId);
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Output from LinuxContainerExecutor's launchTask follows:");
-      logOutput(shExec.getOutput());
+      LOG.debug("Output from LinuxContainerExecutor's launchContainer follows:");
+      logOutput(output);
     }
     return 0;
   }
@@ -203,7 +216,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
                    Integer.toString(signal.getValue()) };
     ShellCommandExecutor shExec = new ShellCommandExecutor(command);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("signalTask: " + Arrays.toString(command));
+      LOG.debug("signalContainer: " + Arrays.toString(command));
     }
     try {
       shExec.execute();
@@ -248,7 +261,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       }
     } catch (IOException e) {
       int exitCode = shExec.getExitCode();
-      LOG.warn("Exit code from task is : " + exitCode);
+      LOG.warn("Exit code from container is : " + exitCode);
       if (exitCode != 0) {
         LOG.error("DeleteAsUser for " + dir.toUri().getPath()
             + " returned with non-zero exit code" + exitCode);

@@ -120,7 +120,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
       // vmem limit
       long limit = 700000;
 
-      ContainersMonitorImpl test = new ContainersMonitorImpl(null, null);
+      ContainersMonitorImpl test = new ContainersMonitorImpl(null, null, null);
 
       // create process trees
       // tree rooted at 100 is over limit immediately, as it is

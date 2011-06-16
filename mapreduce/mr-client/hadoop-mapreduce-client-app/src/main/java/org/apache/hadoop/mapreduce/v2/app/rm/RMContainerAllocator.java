@@ -44,6 +44,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssignedEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -412,6 +413,10 @@ public class RMContainerAllocator extends RMContainerRequestor
           //send the container completed event to Task attempt
           eventHandler.handle(new TaskAttemptEvent(attemptID,
               TaskAttemptEventType.TA_CONTAINER_COMPLETED));
+          // Send the diagnostics
+          String diagnostics = cont.getContainerStatus().getDiagnostics();
+          eventHandler.handle(new TaskAttemptDiagnosticsUpdateEvent(
+              attemptID, diagnostics));
         }
       }
       LOG.debug("Received Container :" + cont);

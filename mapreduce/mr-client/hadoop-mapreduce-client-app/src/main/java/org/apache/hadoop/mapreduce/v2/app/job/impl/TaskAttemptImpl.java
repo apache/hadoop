@@ -151,6 +151,11 @@ public abstract class TaskAttemptImpl implements
 
   private static final CleanupContainerTransition CLEANUP_CONTAINER_TRANSITION =
     new CleanupContainerTransition();
+
+  private static final DiagnosticInformationUpdater 
+    DIAGNOSTIC_INFORMATION_UPDATE_TRANSITION 
+      = new DiagnosticInformationUpdater();
+
   private static final StateMachineFactory
         <TaskAttemptImpl, TaskAttemptState, TaskAttemptEventType, TaskAttemptEvent>
         stateMachineFactory
@@ -198,7 +203,7 @@ public abstract class TaskAttemptImpl implements
          TaskAttemptEventType.TA_UPDATE, new StatusUpdater())
      .addTransition(TaskAttemptState.RUNNING, TaskAttemptState.RUNNING,
          TaskAttemptEventType.TA_DIAGNOSTICS_UPDATE,
-         new DiagnosticInformationUpdater())
+         DIAGNOSTIC_INFORMATION_UPDATE_TRANSITION)
      // If no commit is required, task directly goes to success
      .addTransition(TaskAttemptState.RUNNING,
          TaskAttemptState.SUCCESS_CONTAINER_CLEANUP,
@@ -232,7 +237,7 @@ public abstract class TaskAttemptImpl implements
      .addTransition(TaskAttemptState.COMMIT_PENDING,
          TaskAttemptState.COMMIT_PENDING,
          TaskAttemptEventType.TA_DIAGNOSTICS_UPDATE,
-         new DiagnosticInformationUpdater())
+         DIAGNOSTIC_INFORMATION_UPDATE_TRANSITION)
      .addTransition(TaskAttemptState.COMMIT_PENDING,
          TaskAttemptState.SUCCESS_CONTAINER_CLEANUP,
          TaskAttemptEventType.TA_DONE, CLEANUP_CONTAINER_TRANSITION)
@@ -260,6 +265,7 @@ public abstract class TaskAttemptImpl implements
          TaskAttemptState.SUCCESS_CONTAINER_CLEANUP,
          EnumSet.of(TaskAttemptEventType.TA_KILL,
              TaskAttemptEventType.TA_FAILMSG,
+             TaskAttemptEventType.TA_DIAGNOSTICS_UPDATE,
              TaskAttemptEventType.TA_TIMED_OUT,
              TaskAttemptEventType.TA_CONTAINER_COMPLETED))
 
@@ -339,6 +345,7 @@ public abstract class TaskAttemptImpl implements
          TaskAttemptState.SUCCEEDED,
          EnumSet.of(TaskAttemptEventType.TA_KILL,
              TaskAttemptEventType.TA_FAILMSG,
+             TaskAttemptEventType.TA_DIAGNOSTICS_UPDATE,
              TaskAttemptEventType.TA_CONTAINER_COMPLETED))
 
      // Ignore-able events for FAILED state

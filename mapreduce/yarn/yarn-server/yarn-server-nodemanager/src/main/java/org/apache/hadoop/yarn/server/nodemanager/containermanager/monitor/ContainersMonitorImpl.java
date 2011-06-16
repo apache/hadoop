@@ -14,10 +14,13 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NMConfig;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
@@ -46,6 +49,7 @@ public class ContainersMonitorImpl extends AbstractService implements
 
   final ContainerExecutor containerExecutor;
   private final Dispatcher eventDispatcher;
+  private final Context context;
   private ResourceCalculatorPlugin resourceCalculatorPlugin;
 
   private long maxVmemAllottedForContainers = DISABLED_MEMORY_LIMIT;
@@ -63,11 +67,12 @@ public class ContainersMonitorImpl extends AbstractService implements
           "limit : %d bytes; Physical %d bytes, limit %d bytes";
 
   public ContainersMonitorImpl(ContainerExecutor exec,
-      AsyncDispatcher dispatcher) {
+      AsyncDispatcher dispatcher, Context context) {
     super("containers-monitor");
 
     this.containerExecutor = exec;
     this.eventDispatcher = dispatcher;
+    this.context = context;
 
     this.containersToBeAdded = new HashMap<ContainerId, ProcessTreeInfo>();
     this.containersToBeRemoved = new ArrayList<ContainerId>();

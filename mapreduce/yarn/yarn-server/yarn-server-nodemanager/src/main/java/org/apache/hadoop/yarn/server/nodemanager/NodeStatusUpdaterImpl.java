@@ -189,11 +189,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   }
 
   private NodeStatus getNodeStatus() {
-    NodeStatus status = recordFactory.newRecordInstance(NodeStatus.class);
-    status.setNodeId(this.nodeId);
 
-    Map<String, List<org.apache.hadoop.yarn.api.records.Container>> activeContainers =
-        status.getAllContainers();
+    NodeStatus nodeStatus = recordFactory.newRecordInstance(NodeStatus.class);
+    nodeStatus.setNodeId(this.nodeId);
 
     int numActiveContainers = 0;
     synchronized (this.context.getContainers()) {
@@ -204,12 +202,11 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         Container container = e.getValue();
         String applicationId = String.valueOf(containerId.getAppId().getId()); // TODO: ID? Really?
 
-        List<org.apache.hadoop.yarn.api.records.Container> applicationContainers = status.getContainers(applicationId);
-            activeContainers.get(applicationId);
+        List<org.apache.hadoop.yarn.api.records.Container> applicationContainers = nodeStatus
+            .getContainers(applicationId);
         if (applicationContainers == null) {
           applicationContainers = new ArrayList<org.apache.hadoop.yarn.api.records.Container>();
-          status.setContainers(applicationId, applicationContainers);
-//          activeContainers.put(applicationId, applicationContainers);
+          nodeStatus.setContainers(applicationId, applicationContainers);
         }
 
         // Clone the container to send it to the RM
@@ -238,9 +235,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     }
     LOG.debug("Node's health-status : " + nodeHealthStatus.getIsNodeHealthy()
         + ", " + nodeHealthStatus.getHealthReport());
-    status.setNodeHealthStatus(nodeHealthStatus);
+    nodeStatus.setNodeHealthStatus(nodeHealthStatus);
 
-    return status;
+    return nodeStatus;
   }
 
   @Override

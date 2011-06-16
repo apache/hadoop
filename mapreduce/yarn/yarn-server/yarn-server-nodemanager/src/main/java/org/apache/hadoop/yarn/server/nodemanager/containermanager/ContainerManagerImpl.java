@@ -145,7 +145,7 @@ public class ContainerManagerImpl extends CompositeService implements
     addService(auxiluaryServices);
 
     this.containersMonitor =
-        new ContainersMonitorImpl(exec, dispatcher);
+        new ContainersMonitorImpl(exec, dispatcher, this.context);
     addService(this.containersMonitor);
 
     LogAggregationService logAggregationService =
@@ -228,15 +228,18 @@ public class ContainerManagerImpl extends CompositeService implements
     }
     super.stop();
   }
-  
+
+  /**
+   * Start a container on this NodeManager.
+   */
   @Override
   public StartContainerResponse startContainer(StartContainerRequest request)
       throws YarnRemoteException {
     ContainerLaunchContext launchContext = request.getContainerLaunchContext();
 
     LOG.info(" container is " + request);
-
-    // parse credentials
+  
+    // //////////// Parse credentials
     ByteBuffer tokens = launchContext.getContainerTokens();
     Credentials credentials = new Credentials();
     if (tokens != null) {
@@ -255,6 +258,7 @@ public class ContainerManagerImpl extends CompositeService implements
         throw RPCUtil.getRemoteException(e);
       }
     }
+    // //////////// End of parsing credentials
 
     Container container =
         new ContainerImpl(this.dispatcher, launchContext, credentials, metrics);

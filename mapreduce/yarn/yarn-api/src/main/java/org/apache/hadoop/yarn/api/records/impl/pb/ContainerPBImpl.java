@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -38,6 +40,7 @@ import org.apache.hadoop.yarn.util.ProtoUtils;
 
     
 public class ContainerPBImpl extends ProtoBase<ContainerProto> implements Container {
+
   ContainerProto proto = ContainerProto.getDefaultInstance();
   ContainerProto.Builder builder = null;
   boolean viaProto = false;
@@ -65,14 +68,25 @@ public class ContainerPBImpl extends ProtoBase<ContainerProto> implements Contai
   }
 
   private void mergeLocalToBuilder() {
-    if (this.containerId != null &&  !((ContainerIdPBImpl)containerId).getProto().equals(builder.getId())) {
+    if (this.containerId != null
+        && !((ContainerIdPBImpl) containerId).getProto().equals(
+            builder.getId())) {
       builder.setId(convertToProtoFormat(this.containerId));
     }
-    if (this.resource != null && !((ResourcePBImpl)this.resource).getProto().equals(builder.getResource())) {
+    if (this.resource != null
+        && !((ResourcePBImpl) this.resource).getProto().equals(
+            builder.getResource())) {
       builder.setResource(convertToProtoFormat(this.resource));
     }
-    if (this.containerToken != null && !((ContainerTokenPBImpl)this.containerToken).getProto().equals(builder.getContainerToken())) {
+    if (this.containerToken != null
+        && !((ContainerTokenPBImpl) this.containerToken).getProto().equals(
+            builder.getContainerToken())) {
       builder.setContainerToken(convertToProtoFormat(this.containerToken));
+    }
+    if (this.containerStatus != null
+        && !((ContainerStatusPBImpl) this.containerStatus).getProto().equals(
+            builder.getContainerStatus())) {
+      builder.setContainerStatus(convertToProtoFormat(this.containerStatus));
     }
   }
 

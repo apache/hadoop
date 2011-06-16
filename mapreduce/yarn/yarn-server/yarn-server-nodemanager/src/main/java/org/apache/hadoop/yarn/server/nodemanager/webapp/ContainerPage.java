@@ -24,6 +24,7 @@ import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -66,12 +67,18 @@ public class ContainerPage extends NMView implements NMWebParams {
     protected void render(Block html) {
       ContainerId containerID =
         ConverterUtils.toContainerId(this.recordFactory, $(CONTAINER_ID));
-    Container container = this.nmContext.getContainers().get(containerID);
-    info("Container information")
-      ._("ContainerID", $(CONTAINER_ID))
-      ._("ContainerState", container.getContainerState())
-      ._("logs", ujoin("containerlogs", $(CONTAINER_ID)), "Link to logs");
-    html._(InfoBlock.class);
+      Container container = this.nmContext.getContainers().get(containerID);
+      ContainerStatus containerData = container.cloneAndGetContainerStatus();
+      info("Container information")
+        ._("ContainerID", $(CONTAINER_ID))
+        ._("ContainerState", container.getContainerState())
+        ._("ExitStatus", containerData.getExitStatus())
+        ._("Diagnostics", containerData.getDiagnostics())
+        ._("User", container.getUser())
+        ._("TotalMemoryNeeded",
+            container.getLaunchContext().getResource().getMemory())
+        ._("logs", ujoin("containerlogs", $(CONTAINER_ID)), "Link to logs");
+      html._(InfoBlock.class);
     }
   }
 }

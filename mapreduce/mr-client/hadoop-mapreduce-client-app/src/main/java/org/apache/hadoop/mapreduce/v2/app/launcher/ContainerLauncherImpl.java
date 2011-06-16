@@ -30,8 +30,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.app.AMConstants;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
@@ -40,6 +42,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
@@ -47,6 +50,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ContainerManagerSecurityInfo;
@@ -66,6 +70,7 @@ public class ContainerLauncherImpl extends AbstractService implements
   private Thread eventHandlingThread;
   private BlockingQueue<ContainerLauncherEvent> eventQueue =
       new LinkedBlockingQueue<ContainerLauncherEvent>();
+  private RecordFactory recordFactory;
 
   public ContainerLauncherImpl(AppContext context) {
     super(ContainerLauncherImpl.class.getName());
@@ -80,6 +85,7 @@ public class ContainerLauncherImpl extends AbstractService implements
     myLocalConfig.setClass(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_INFO_CLASS_NAME,
         ContainerManagerSecurityInfo.class, SecurityInfo.class);
+    this.recordFactory = RecordFactoryProvider.getRecordFactory(conf);
     super.init(myLocalConfig);
   }
 
@@ -172,6 +178,7 @@ public class ContainerLauncherImpl extends AbstractService implements
       case CONTAINER_REMOTE_LAUNCH:
         ContainerRemoteLaunchEvent launchEv = (ContainerRemoteLaunchEvent) event;
 
+        TaskAttemptId taskAttemptID = launchEv.getTaskAttemptID();
         try {
           
           ContainerManager proxy = 
@@ -184,19 +191,24 @@ public class ContainerLauncherImpl extends AbstractService implements
           // TODO: Make sure that child's mapred-local-dir is set correctly.
 
           // Now launch the actual container
-          StartContainerRequest startRequest = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(StartContainerRequest.class);
+          StartContainerRequest startRequest = recordFactory
+              .newRecordInstance(StartContainerRequest.class);
           startRequest.setContainerLaunchContext(containerLaunchContext);
           proxy.startContainer(startRequest);
 
           // after launching, send launched event to task attempt to move
           // it from ASSIGNED to RUNNING state
           context.getEventHandler().handle(
-              new TaskAttemptEvent(launchEv.getTaskAttemptID(),
+              new TaskAttemptEvent(taskAttemptID,
                   TaskAttemptEventType.TA_CONTAINER_LAUNCHED));
         } catch (Exception e) {
-          LOG.error("Container launch failed", e);
+          String message = "Container launch failed for " + containerID
+              + " : " + StringUtils.stringifyException(e);
+          LOG.error(message);
           context.getEventHandler().handle(
-              new TaskAttemptEvent(launchEv.getTaskAttemptID(),
+              new TaskAttemptDiagnosticsUpdateEvent(taskAttemptID, message));
+          context.getEventHandler().handle(
+              new TaskAttemptEvent(taskAttemptID,
                   TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED));
         }
 
@@ -218,7 +230,8 @@ public class ContainerLauncherImpl extends AbstractService implements
             // TODO:check whether container is launched
 
             // kill the remote container if already launched
-            StopContainerRequest stopRequest = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(StopContainerRequest.class);
+            StopContainerRequest stopRequest = recordFactory
+                .newRecordInstance(StopContainerRequest.class);
             stopRequest.setContainerId(event.getContainerID());
             proxy.stopContainer(stopRequest);
 

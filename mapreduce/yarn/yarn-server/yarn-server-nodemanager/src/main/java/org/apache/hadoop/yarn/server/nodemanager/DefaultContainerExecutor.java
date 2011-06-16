@@ -32,8 +32,10 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -89,8 +91,10 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       String userName, String appId, Path containerWorkDir)
       throws IOException {
 
+    ContainerId containerId = container.getContainerID();
+
     // create container dirs on all disks
-    String containerIdStr = ConverterUtils.toString(container.getContainerID());
+    String containerIdStr = ConverterUtils.toString(containerId);
     String appIdStr =
         ConverterUtils.toString(container.getContainerID().getAppId());
     String[] sLocalDirs =
@@ -128,7 +132,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       LOG.info("launchContainer: " + Arrays.toString(command));
       shExec = new ShellCommandExecutor(command,
           new File(containerWorkDir.toUri().getPath()));
-      launchCommandObjs.put(container.getLaunchContext().getContainerId(), shExec);
+      launchCommandObjs.put(containerId, shExec);
       shExec.execute();
     } catch (Exception e) {
       if (null == shExec) {
@@ -136,10 +140,13 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       }
       int exitCode = shExec.getExitCode();
       LOG.warn("Exit code from task is : " + exitCode);
-      logOutput(shExec.getOutput());
+      String message = shExec.getOutput();
+      logOutput(message);
+      container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
+          message));
       return exitCode;
     } finally {
-      launchCommandObjs.remove(container.getLaunchContext().getContainerId());
+      launchCommandObjs.remove(containerId);
     }
     return 0;
   }

@@ -5,6 +5,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    Task diagnostic info made available on the AM UI. (vinodkv)
+
     MAPREDUCE-2598. Fix NPE and UI for JobHistory. (Siddharth Seth via llu)
 
     Fix NPE when killing/failing already killed/failed tasks. (llu)

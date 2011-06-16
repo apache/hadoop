@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -87,6 +86,7 @@ public class ContainerLaunch implements Callable<Integer> {
   public Integer call() {
     final ContainerLaunchContext launchContext = container.getLaunchContext();
     final Map<Path,String> localResources = container.getLocalizedResources();
+    String containerIdStr = ConverterUtils.toString(container.getContainerID());
     final String user = launchContext.getUser();
     final Map<String,String> env = launchContext.getAllEnv();
     final List<String> command = launchContext.getCommandList();
@@ -96,8 +96,6 @@ public class ContainerLaunch implements Callable<Integer> {
       // /////////////////////////// Variable expansion
       // Before the container script gets written out.
       List<String> newCmds = new ArrayList<String>(command.size());
-      String containerIdStr =
-          ConverterUtils.toString(container.getContainerID());
       String appIdStr = app.toString();
       Path containerLogDir =
           this.logDirsSelector.getLocalPathForWrite(appIdStr + Path.SEPARATOR
@@ -172,7 +170,7 @@ public class ContainerLaunch implements Callable<Integer> {
             containerWorkDir, FINAL_CONTAINER_TOKENS_FILE).toUri().getPath());
 
         writeLaunchEnv(containerScriptOutStream, env, localResources,
-            command, appDirs);
+            launchContext.getCommandList(), appDirs);
         // /////////// End of writing out container-script
 
         // /////////// Write out the container-tokens in the nmPrivate space.
@@ -194,18 +192,6 @@ public class ContainerLaunch implements Callable<Integer> {
       ret =
           exec.launchContainer(container, nmPrivateContainerScriptPath,
               nmPrivateTokensPath, user, appIdStr, containerWorkDir);
-      if (ret == ExitCode.KILLED.getExitCode()) {
-        // If the process was killed, Send container_cleanedup_after_kill and
-        // just break out of this method.
-        dispatcher.getEventHandler().handle(
-            new ContainerExitEvent(launchContext.getContainerId(),
-                ContainerEventType.CONTAINER_KILLED_ON_REQUEST, ret));
-        return ret;
-      }
-
-      if (ret != 0) {
-        throw new ExitCodeException(ret, "Container failed");
-      }
     } catch (Throwable e) {
       LOG.warn("Failed to launch container", e);
       dispatcher.getEventHandler().handle(new ContainerExitEvent(
@@ -213,8 +199,25 @@ public class ContainerLaunch implements Callable<Integer> {
             ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret));
       return ret;
     }
-    LOG.info("Container " + container + " succeeded "
-        + launchContext.getContainerId());
+
+    if (ret == ExitCode.KILLED.getExitCode()) {
+      // If the process was killed, Send container_cleanedup_after_kill and
+      // just break out of this method.
+      dispatcher.getEventHandler().handle(
+            new ContainerExitEvent(launchContext.getContainerId(),
+                ContainerEventType.CONTAINER_KILLED_ON_REQUEST, ret));
+      return ret;
+    }
+
+    if (ret != 0) {
+      LOG.warn("Container exited with a non-zero exit code " + ret);
+      this.dispatcher.getEventHandler().handle(new ContainerExitEvent(
+              launchContext.getContainerId(),
+              ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret));
+      return ret;
+    }
+
+    LOG.info("Container " + containerIdStr + " succeeded ");
     dispatcher.getEventHandler().handle(
         new ContainerEvent(launchContext.getContainerId(),
             ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS));

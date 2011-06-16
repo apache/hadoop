@@ -65,8 +65,10 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
@@ -296,8 +298,11 @@ public class MRClientService extends AbstractService
     public KillJobResponse killJob(KillJobRequest request) 
       throws YarnRemoteException {
       JobId jobId = request.getJobId();
-      LOG.info("Kill Job received from client " + jobId);
-	  verifyAndGetJob(jobId, true);
+      String message = "Kill Job received from client " + jobId;
+      LOG.info(message);
+  	  verifyAndGetJob(jobId, true);
+      appContext.getEventHandler().handle(
+          new JobDiagnosticsUpdateEvent(jobId, message));
       appContext.getEventHandler().handle(
           new JobEvent(jobId, JobEventType.JOB_KILL));
       KillJobResponse response = 
@@ -309,7 +314,8 @@ public class MRClientService extends AbstractService
     public KillTaskResponse killTask(KillTaskRequest request) 
       throws YarnRemoteException {
       TaskId taskId = request.getTaskId();
-      LOG.info("Kill task received from client " + taskId);
+      String message = "Kill task received from client " + taskId;
+      LOG.info(message);
       verifyAndGetTask(taskId, true);
       appContext.getEventHandler().handle(
           new TaskEvent(taskId, TaskEventType.T_KILL));
@@ -322,8 +328,11 @@ public class MRClientService extends AbstractService
     public KillTaskAttemptResponse killTaskAttempt(
         KillTaskAttemptRequest request) throws YarnRemoteException {
       TaskAttemptId taskAttemptId = request.getTaskAttemptId();
-      LOG.info("Kill task attempt received from client " + taskAttemptId);
+      String message = "Kill task attempt received from client " + taskAttemptId;
+      LOG.info(message);
       verifyAndGetAttempt(taskAttemptId, true);
+      appContext.getEventHandler().handle(
+          new TaskAttemptDiagnosticsUpdateEvent(taskAttemptId, message));
       appContext.getEventHandler().handle(
           new TaskAttemptEvent(taskAttemptId, 
               TaskAttemptEventType.TA_KILL));
@@ -348,8 +357,11 @@ public class MRClientService extends AbstractService
     public FailTaskAttemptResponse failTaskAttempt(
         FailTaskAttemptRequest request) throws YarnRemoteException {
       TaskAttemptId taskAttemptId = request.getTaskAttemptId();
-      LOG.info("Fail task attempt received from client " + taskAttemptId);
+      String message = "Fail task attempt received from client " + taskAttemptId;
+      LOG.info(message);
       verifyAndGetAttempt(taskAttemptId, true);
+      appContext.getEventHandler().handle(
+          new TaskAttemptDiagnosticsUpdateEvent(taskAttemptId, message));
       appContext.getEventHandler().handle(
           new TaskAttemptEvent(taskAttemptId, 
               TaskAttemptEventType.TA_FAILMSG));

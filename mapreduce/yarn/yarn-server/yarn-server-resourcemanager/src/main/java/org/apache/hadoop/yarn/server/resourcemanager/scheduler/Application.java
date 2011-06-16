@@ -284,10 +284,6 @@ public class Application {
     Resources.subtractFrom(currentConsumption, containerResource);
   }
 
-  synchronized public void completedContainers(List<Container> containers) {
-    completedContainers.addAll(containers);
-  }
-
   /**
    * Resources have been allocated to this application by the resource
    * scheduler. Track them.
