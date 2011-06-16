@@ -11,6 +11,9 @@ Release 0.20.204.0 - unreleased
 
   BUG FIXES
 
+    MAPREDUCE-2555. Avoid sprious logging from completedtasks. (Thomas Graves
+    via cdouglas)
+
     MAPREDUCE-2535. Fix NPE in JobClient caused by retirement. (Robert Joseph
     Evans via cdouglas)
 
