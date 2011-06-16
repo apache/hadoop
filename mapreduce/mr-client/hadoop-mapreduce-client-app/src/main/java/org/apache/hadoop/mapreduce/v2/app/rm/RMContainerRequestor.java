@@ -128,13 +128,14 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     lastResponseID = response.getResponseId();
     List<Container> allContainers = response.getContainerList();
     availableResources = response.getAvailableResources();
-    ask.clear();
-    release.clear();
 
     LOG.info("getResources() for " + applicationId + ":" + " ask="
         + ask.size() + " release= " + release.size() + " recieved="
         + allContainers.size()
         + " resourcelimit=" + availableResources);
+
+    ask.clear();
+    release.clear();
     return allContainers;
   }
 

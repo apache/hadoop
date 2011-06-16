@@ -4,6 +4,8 @@ Trunk (unreleased changes)
 
 
     MAPREDUCE-279
+    Improve logging for AM when requesting containers to show the right ask 
+    and release fields (mahadev)
 
     Fix NPE when requesting attempts for completed jobs. (Siddharth Seth via llu)
 
