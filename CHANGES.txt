@@ -29,6 +29,9 @@ Release 0.20.204.0 - unreleased
     HADOOP-7364. TestMiniMRDFSCaching fails if test.build.dir is set to 
     something other than build/test. (Thomas Graves via mahadev)
 
+    HADOOP-7277. Add generation of run configurations to eclipse target.
+    (Jeffrey Naisbitt and Philip Zeyliger via cdouglas)
+
     HADOOP-7373. Fix {start,stop}-{dfs,mapred} and hadoop-daemons.sh from
     trying to use the wrong bin directory. (omalley)
 
