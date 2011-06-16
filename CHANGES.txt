@@ -39,6 +39,9 @@ Release 0.20.204.0 - unreleased
     MAPREDUCE-2514. Fix typo in TaskTracker ReinitTrackerAction log message.
     (Jonathan Eagles via cdouglas)
 
+    HDFS-1906. Remove logging exception stack trace in client logs when one of
+    the datanode targets to read from is not reachable. (suresh)
+
     MAPREDUCE-2490. Add logging to graylist and blacklist activity to aid
     diagnosis of related issues. (Jonathan Eagles via cdouglas)
 
