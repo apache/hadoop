@@ -812,7 +812,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     // Initialize DistributedCache
     this.distributedCacheManager = new TrackerDistributedCacheManager(
         this.fConf, taskController);
-
+    this.distributedCacheManager.startCleanupThread();
+    
     this.jobClient = (InterTrackerProtocol) 
     UserGroupInformation.getLoginUser().doAs(
         new PrivilegedExceptionAction<Object>() {
@@ -1365,6 +1366,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     this.mapLauncher.interrupt();
     this.reduceLauncher.interrupt();
 
+    this.distributedCacheManager.stopCleanupThread();
     jvmManager.stop();
     
     // shutdown RPC connections

@@ -34,6 +34,9 @@ Release 0.20.204.0 - unreleased
 
     HADOOP-7369. Fix permissions in tarball for sbin/* and libexec/* (omalley)
 
+    MAPREDUCE-2479. Move distributed cache cleanup to a background task,
+    backporting MAPREDUCE-1568. (Robert Joseph Evans via cdouglas)
+
     HADOOP-7356. Fix bin/hadoop scripts (eyang via omalley)
 
     HADOOP-7272. Remove unnecessary security related info logs. (suresh)
