@@ -335,6 +335,9 @@ Release 0.90.4 - Unreleased
                instead of localhost. (Li Pi)
    HBASE-3985  Same Region could be picked out twice in LoadBalance
                (Jieshan Bean)
+   HBASE-3987  Fix a NullPointerException on a failure to load Bloom filter data
+               (Mikhail Bautin)
+
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the

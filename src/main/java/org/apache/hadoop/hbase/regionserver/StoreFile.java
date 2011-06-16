@@ -983,7 +983,8 @@ public class StoreFile {
     }
 
     private boolean passesBloomFilter(Scan scan, final SortedSet<byte[]> columns) {
-      if (this.bloomFilter == null || !scan.isGetScan()) {
+      BloomFilter bm = this.bloomFilter;
+      if (bm == null || !scan.isGetScan()) {
         return true;
       }
       byte[] row = scan.getStartRow();
@@ -1011,11 +1012,11 @@ public class StoreFile {
             // columns, a file might be skipped if using row+col Bloom filter.
             // In order to ensure this file is included an additional check is
             // required looking only for a row bloom.
-            return this.bloomFilter.contains(key, bloom) ||
-                this.bloomFilter.contains(row, bloom);
+            return bm.contains(key, bloom) ||
+                bm.contains(row, bloom);
           }
           else {
-            return this.bloomFilter.contains(key, bloom);
+            return bm.contains(key, bloom);
           }
         }
       } catch (IOException e) {
