@@ -337,6 +337,8 @@ Release 0.90.4 - Unreleased
                (Jieshan Bean)
    HBASE-3987  Fix a NullPointerException on a failure to load Bloom filter data
                (Mikhail Bautin)
+   HBASE-3948  Improve split/compact result page for RegionServer status page
+               (Li Pi)
 
 
   IMPROVEMENT

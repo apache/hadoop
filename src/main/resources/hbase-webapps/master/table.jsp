@@ -47,6 +47,7 @@
 %>
 <head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
 <link rel="stylesheet" type="text/css" href="/static/hbase.css" />
+<meta http-equiv="refresh" content="5,javascript:history.back()" />
 </head>
 <body>
 <a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="HBase Logo" title="HBase Logo" /></a>
@@ -70,7 +71,8 @@
     %> Compact request accepted. <%
   }
 %>
-<p>Reload.
+<p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
+
 </body>
 <%
 } else {
