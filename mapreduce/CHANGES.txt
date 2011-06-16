@@ -5,6 +5,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    Fix NPE when requesting attempts for completed jobs. (Siddharth Seth via llu)
+
     Changes a couple of usages of FileContext to FileSystem in TaskAttemptImpl 
     to handle distributed cache path resolutions on non-default filesystems.
     (ddas)
