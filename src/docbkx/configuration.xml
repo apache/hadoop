@@ -129,6 +129,13 @@ to ensure well-formedness of your document after an edit session.
               with configuration such as this.
           </para>
       </section>
+          <section xml:id="zookeeper.instances"><title>Number of ZooKeeper Instances</title>
+          <para>It is best to use an odd number of machines (1, 3, 5) for a ZooKeeper ensemble.
+          See the <link xlink:href="http://wiki.apache.org/hadoop/ZooKeeper/FAQ#A7">ZooKeeper Wiki</link> or the 
+          <link xlink:href="http://zookeeper.apache.org/doc/r3.3.3/zookeeperAdmin.html#sc_zkMulitServerSetup">ZooKeeper documentation</link> 
+          for more information on ZooKeeper sizing.
+          </para>
+      </section>
           <section xml:id="hbase.regionserver.handler.count"><title><varname>hbase.regionserver.handler.count</varname></title>
           <para>
           This setting defines the number of threads that are kept open to answer
