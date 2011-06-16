@@ -331,6 +331,8 @@ Release 0.90.4 - Unreleased
                hmaster becomes the active one (Jieshan Bean)
    HBASE-3916  Fix the default bind address of ThriftServer to be wildcard
                instead of localhost. (Li Pi)
+   HBASE-3985  Same Region could be picked out twice in LoadBalance
+               (Jieshan Bean)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the
