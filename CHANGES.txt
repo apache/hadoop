@@ -11,6 +11,9 @@ Release 0.20.204.0 - unreleased
 
   BUG FIXES
 
+    HDFS-2044. TestQueueProcessingStatistics failing automatic test due to 
+    timing issues. (mattf)
+
     MAPREDUCE-2558. Add queue-level metrics 0.20-security branch - test fix
     (jeffrey nasbit via mahadev)
     
