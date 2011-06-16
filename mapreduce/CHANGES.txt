@@ -5,6 +5,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    Adding attempts page to the history server UI. (vinodkv
+
     Task diagnostic info made available on the AM UI. (vinodkv)
 
     MAPREDUCE-2598. Fix NPE and UI for JobHistory. (Siddharth Seth via llu)

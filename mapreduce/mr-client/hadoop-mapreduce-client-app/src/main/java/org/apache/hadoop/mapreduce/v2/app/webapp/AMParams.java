@@ -19,9 +19,9 @@
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
 /**
- * Params constants for the AM webapp
+ * Params constants for the AM webapp and the history webapp.
  */
-interface AMParams {
+public interface AMParams {
   static final String RM_WEB = "rm.web";
   static final String APP_ID = "app.id";
   static final String JOB_ID = "job.id";
