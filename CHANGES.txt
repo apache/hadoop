@@ -14,6 +14,9 @@ Release 0.20.204.0 - unreleased
     MAPREDUCE-2495. exit() the TaskTracker when the distributed cache cleanup
     thread dies. (Robert Joseph Evans via cdouglas)
 
+    MAPREDUCE-2452. Moves the cancellation of delegation tokens to a separate
+    thread. (ddas)
+
     MAPREDUCE-2555. Avoid sprious logging from completedtasks. (Thomas Graves
     via cdouglas)
 
