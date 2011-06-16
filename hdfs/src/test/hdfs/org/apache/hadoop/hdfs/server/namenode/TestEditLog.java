@@ -24,6 +24,9 @@ import java.util.Iterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.permission.*;
@@ -38,11 +41,16 @@ import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
  
 import org.mockito.Mockito;
+import static org.mockito.Matchers.anyObject;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
 
 /**
  * This class tests the creation and validation of a checkpoint.
  */
 public class TestEditLog extends TestCase {
+  private static final Log LOG = LogFactory.getLog(TestEditLog.class);
+  
   static final int NUM_DATA_NODES = 0;
 
   // This test creates NUM_THREADS threads and each thread does
@@ -303,4 +311,63 @@ public class TestEditLog extends TestCase {
       if(cluster != null) cluster.shutdown();
     }
   }
+  
+  public void testFailedOpen() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).build();
+    cluster.waitActive();
+    FSNamesystem fsn = cluster.getNamesystem();
+
+    // Set up spys
+    FSImage originalImage = fsn.getFSImage();
+    originalImage.unlockAll();
+    FSImage spyImage = spy(originalImage);
+    
+    FSEditLog editLog = originalImage.getEditLog();
+    FSEditLog spyLog = spy(editLog);
+
+    fsn.dir.fsImage = spyImage;
+    spyImage.setStorageDirectories(
+        FSNamesystem.getNamespaceDirs(conf), 
+        FSNamesystem.getNamespaceEditsDirs(conf));
+    
+    // Fail every attempt to open a new edit file
+    doThrow(new IOException("Injected fault: open")).
+      when(spyLog).addNewEditLogStream((File)anyObject());
+    
+    try {
+      spyLog.close();
+      spyLog.open();
+      fail("open did not fail even when all directories failed!");
+    } catch(IOException ioe) {
+      LOG.info("Got expected exception", ioe);
+    } finally {
+      spyLog.close();
+    }
+    
+    // Reset and try it with a working open
+    editLog.close();
+    originalImage.close();
+    fsn.close();
+    
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).build();
+    cluster.waitActive();
+    fsn = cluster.getNamesystem();
+    originalImage = fsn.getFSImage();
+    originalImage.unlockAll();
+    editLog = originalImage.getEditLog();
+    originalImage.setStorageDirectories(
+        FSNamesystem.getNamespaceDirs(conf), 
+        FSNamesystem.getNamespaceEditsDirs(conf));
+    
+    editLog.close();
+    editLog.open();
+    
+    // Close everything off
+    editLog.close();
+    originalImage.close();
+    fsn.close();
+  }
+
 }

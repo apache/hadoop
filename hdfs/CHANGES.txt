@@ -587,6 +587,9 @@ Release 0.22.0 - Unreleased
     HDFS-2071. Use of isConnected() in DataXceiver is invalid. (Kihwal Lee
     via todd)
 
+    HDFS-1952. FSEditLog.open() appears to succeed even if all EDITS
+    directories fail. (Andrew Wang via mattf)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

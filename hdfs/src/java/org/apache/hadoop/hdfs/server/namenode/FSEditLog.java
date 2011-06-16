@@ -198,11 +198,17 @@ public class FSEditLog {
         // Remove the directory from list of storage directories
         if(al == null) al = new ArrayList<StorageDirectory>(1);
         al.add(sd);
-        
       }
     }
     
     if(al != null) fsimage.processIOError(al, false);
+    
+    // If there was an error in every storage dir, each one will have
+    // been removed from the list of storage directories.
+    if (fsimage.getNumStorageDirs(NameNodeDirType.EDITS) == 0) {
+      throw new IOException(
+          "Failed to initialize edits log in any storage directory.");
+    }
   }
   
   
