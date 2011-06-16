@@ -5,6 +5,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    Fix race between multiple localizers on single node (chris douglas via mahadev) 
+
     Bug fix to set correct state on containers so as to avoid duplicate
     containers from RM to AM. (vinodkv)
 

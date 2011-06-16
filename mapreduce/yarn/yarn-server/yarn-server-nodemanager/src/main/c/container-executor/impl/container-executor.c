@@ -519,29 +519,16 @@ int create_directory_for_user(const char* path) {
   int ret = 0;
   ret = change_effective_user(tt_uid, tt_gid);
   if (ret == 0) {
-    if (mkdir(path, permissions) == 0) {
+    if (0 == mkdir(path, permissions) || EEXIST == errno) {
       // need to reassert the group sticky bit
       if (chmod(path, permissions) != 0) {
         fprintf(LOGFILE, "Can't chmod %s to add the sticky bit - %s\n",
                 path, strerror(errno));
         ret = -1;
       } else if (change_owner(path, user, tt_gid) != 0) {
+        fprintf(LOGFILE, "Failed to chown %s to %d:%d: %s\n", path, user, tt_gid,
+            strerror(errno));
         ret = -1;
-      }
-    } else if (errno == EEXIST) {
-      struct stat file_stat;
-      if (stat(path, &file_stat) != 0) {
-        fprintf(LOGFILE, "Can't stat directory %s - %s\n", path, 
-                strerror(errno));
-        ret = -1;
-      } else {
-        if (file_stat.st_uid != user ||
-            file_stat.st_gid != tt_gid) {
-          fprintf(LOGFILE, "Directory %s owned by wrong user or group. "
-                  "Expected %d:%d and found %d:%d.\n",
-                  path, user, tt_gid, file_stat.st_uid, file_stat.st_gid);
-          ret = -1;
-        }
       }
     } else {
       fprintf(LOGFILE, "Failed to create directory %s - %s\n", path,
