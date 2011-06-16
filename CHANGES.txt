@@ -339,6 +339,7 @@ Release 0.90.4 - Unreleased
                (Mikhail Bautin)
    HBASE-3948  Improve split/compact result page for RegionServer status page
                (Li Pi)
+   HBASE-3988  Infinite loop for secondary master (Liyin Tang)
 
 
   IMPROVEMENT

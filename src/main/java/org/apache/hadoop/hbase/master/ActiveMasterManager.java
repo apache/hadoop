@@ -185,7 +185,16 @@ class ActiveMasterManager extends ZooKeeperListener {
    * @return True if cluster has an active master.
    */
   public boolean isActiveMaster() {
-    return this.clusterHasActiveMaster.get();
+    try {
+      if (ZKUtil.checkExists(watcher, watcher.masterAddressZNode) >= 0) {
+        return true;
+      }
+    } 
+    catch (KeeperException ke) {
+      LOG.info("Received an unexpected KeeperException when checking " +
+          "isActiveMaster : "+ ke);
+    }
+    return false;
   }
 
   public void stop() {
