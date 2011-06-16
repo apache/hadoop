@@ -86,6 +86,9 @@ Release 0.20.204.0 - unreleased
 
   IMPROVEMENTS
 
+    MAPREDUCE-2529. Add support for regex-based shuffle metric counting
+    exceptions. (Thomas Graves via cdouglas)
+
     HADOOP-7398. Suppress warnings about use of HADOOP_HOME. (omalley)
 
     MAPREDUCE-2415. Distribute the user task logs on to multiple disks.
