@@ -36,6 +36,9 @@ Release 0.20.204.0 - unreleased
 
     HADOOP-7356. Fix bin/hadoop scripts (eyang via omalley)
 
+    MAPREDUCE-2490. Add logging to graylist and blacklist activity to aid
+    diagnosis of related issues. (Jonathan Eagles via cdouglas)
+
     MAPREDUCE-2447. Fix Child.java to set Task.jvmContext sooner to avoid
     corner cases in error handling. (Siddharth Seth via acmurthy) 
 
