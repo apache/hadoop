@@ -21,7 +21,7 @@ import org.apache.hadoop.tools.rumen.TaskAttemptInfo;
 
 /**
  * This class is used to augment {@link LaunchTaskAction} with run time statistics 
- * and the final task state (successfull xor failed).
+ * and the final task state (successful or failed).
  */
 class SimulatorLaunchTaskAction extends LaunchTaskAction {
   /**

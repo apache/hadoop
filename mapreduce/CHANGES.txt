@@ -301,6 +301,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-2588. Change raid to the new DataTransferProtocol API.  (szetszwo)
 
+    MAPREDUCE-2576. Typo in comment in SimulatorLaunchTaskAction.java.
+    (Tim Sell via jghoman)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
