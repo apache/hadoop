@@ -5,6 +5,9 @@ Release 0.20.206.0 - unreleased
   NEW FEATURES
 
   BUG FIXES
+  
+  HADOOP-7400. Fix HdfsProxyTests fails when the -Dtest.build.dir 
+	and -Dbuild.test is set a dir other than build dir (gkesavan).
 
   IMPROVEMENTS
 
