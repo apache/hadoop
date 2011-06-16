@@ -1092,6 +1092,10 @@ public class StoreFile {
       return reader.length();
     }
 
+    public long getTotalUncompressedBytes() {
+      return reader.getTotalUncompressedBytes();
+    }
+
     public int getEntries() {
       return reader.getEntries();
     }

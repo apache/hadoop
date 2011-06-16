@@ -908,6 +908,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     byte[] name = r.getRegionName();
     int stores = 0;
     int storefiles = 0;
+    int storeUncompressedSizeMB = 0;
     int storefileSizeMB = 0;
     int memstoreSizeMB = (int) (r.memstoreSize.get() / 1024 / 1024);
     int storefileIndexSizeMB = 0;
@@ -915,11 +916,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       stores += r.stores.size();
       for (Store store : r.stores.values()) {
         storefiles += store.getStorefilesCount();
+        storeUncompressedSizeMB += (int) (store.getStoreSizeUncompressed()
+            / 1024 / 1024);
         storefileSizeMB += (int) (store.getStorefilesSize() / 1024 / 1024);
         storefileIndexSizeMB += (int) (store.getStorefilesIndexSize() / 1024 / 1024);
       }
     }
     return new HServerLoad.RegionLoad(name,stores, storefiles,
+        storeUncompressedSizeMB,
         storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB,
         (int) r.readRequestsCount.get(), (int) r.writeRequestsCount.get());
   }

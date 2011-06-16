@@ -841,6 +841,10 @@ public class HFile {
       return this.fileSize;
     }
 
+    public long getTotalUncompressedBytes() {
+      return this.trailer.totalUncompressedBytes;
+    }
+    
     public boolean inMemory() {
       return this.inMemory;
     }

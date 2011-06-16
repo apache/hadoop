@@ -36,7 +36,7 @@ import org.apache.hadoop.io.WritableComparable;
  */
 public class HServerLoad extends VersionedWritable
 implements WritableComparable<HServerLoad> {
-  private static final byte VERSION = 1;
+  private static final byte VERSION = 2;
   // Empty load instance.
   public static final HServerLoad EMPTY_HSERVERLOAD = new HServerLoad();
 
@@ -64,7 +64,7 @@ implements WritableComparable<HServerLoad> {
    * Encapsulates per-region loading metrics.
    */
   public static class RegionLoad extends VersionedWritable {
-    private static final byte VERSION = 0;
+    private static final byte VERSION = 1;
 
     /** @return the object version number */
     public byte getVersion() {
@@ -77,6 +77,8 @@ implements WritableComparable<HServerLoad> {
     private int stores;
     /** the number of storefiles for the region */
     private int storefiles;
+    /** the total size of the store files for the region, uncompressed, in MB */
+    private int storeUncompressedSizeMB;
     /** the current total size of the store files for the region, in MB */
     private int storefileSizeMB;
     /** the current size of the memstore for the region, in MB */
@@ -106,12 +108,14 @@ implements WritableComparable<HServerLoad> {
      * @param writeRequestsCount
      */
     public RegionLoad(final byte[] name, final int stores,
-        final int storefiles, final int storefileSizeMB,
+        final int storefiles, final int storeUncompressedSizeMB,
+        final int storefileSizeMB,
         final int memstoreSizeMB, final int storefileIndexSizeMB,
         final int readRequestsCount, final int writeRequestsCount) {
       this.name = name;
       this.stores = stores;
       this.storefiles = storefiles;
+      this.storeUncompressedSizeMB = storeUncompressedSizeMB;
       this.storefileSizeMB = storefileSizeMB;
       this.memstoreSizeMB = memstoreSizeMB;
       this.storefileIndexSizeMB = storefileIndexSizeMB;
@@ -246,13 +250,14 @@ implements WritableComparable<HServerLoad> {
     // Writable
     public void readFields(DataInput in) throws IOException {
       super.readFields(in);
-      int version = getVersion();
-      if (version != VERSION) throw new IOException("Version mismatch; " + version);
+      int version = in.readByte();
+      if (version > VERSION) throw new IOException("Version mismatch; " + version);
       int namelen = in.readInt();
       this.name = new byte[namelen];
       in.readFully(this.name);
       this.stores = in.readInt();
       this.storefiles = in.readInt();
+      this.storeUncompressedSizeMB = in.readInt();
       this.storefileSizeMB = in.readInt();
       this.memstoreSizeMB = in.readInt();
       this.storefileIndexSizeMB = in.readInt();
@@ -262,10 +267,12 @@ implements WritableComparable<HServerLoad> {
 
     public void write(DataOutput out) throws IOException {
       super.write(out);
+      out.writeByte(VERSION);
       out.writeInt(name.length);
       out.write(name);
       out.writeInt(stores);
       out.writeInt(storefiles);
+      out.writeInt(storeUncompressedSizeMB);
       out.writeInt(storefileSizeMB);
       out.writeInt(memstoreSizeMB);
       out.writeInt(storefileIndexSizeMB);
@@ -282,8 +289,15 @@ implements WritableComparable<HServerLoad> {
         Integer.valueOf(this.stores));
       sb = Strings.appendKeyValue(sb, "storefiles",
         Integer.valueOf(this.storefiles));
+      sb = Strings.appendKeyValue(sb, "storefileUncompressedSizeMB",
+        Integer.valueOf(this.storeUncompressedSizeMB));
       sb = Strings.appendKeyValue(sb, "storefileSizeMB",
           Integer.valueOf(this.storefileSizeMB));
+      if (this.storeUncompressedSizeMB != 0) {
+        sb = Strings.appendKeyValue(sb, "compressionRatio",
+            String.format("%.4f", (float)this.storefileSizeMB/
+                (float)this.storeUncompressedSizeMB));        
+      }
       sb = Strings.appendKeyValue(sb, "memstoreSizeMB",
         Integer.valueOf(this.memstoreSizeMB));
       sb = Strings.appendKeyValue(sb, "storefileIndexSizeMB",
@@ -480,8 +494,8 @@ implements WritableComparable<HServerLoad> {
 
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
-    int version = getVersion();
-    if (version != VERSION) throw new IOException("Version mismatch; " + version);
+    int version = in.readByte();
+    if (version > VERSION) throw new IOException("Version mismatch; " + version);
     numberOfRequests = in.readInt();
     usedHeapMB = in.readInt();
     maxHeapMB = in.readInt();
@@ -495,6 +509,7 @@ implements WritableComparable<HServerLoad> {
 
   public void write(DataOutput out) throws IOException {
     super.write(out);
+    out.writeByte(VERSION);
     out.writeInt(numberOfRequests);
     out.writeInt(usedHeapMB);
     out.writeInt(maxHeapMB);

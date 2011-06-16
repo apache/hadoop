@@ -353,7 +353,7 @@ public class HLogSplitter {
   }
 
   public boolean splitLogFileToTemp(FileStatus logfile, String tmpname,
-      CancelableProgressable reporter)  throws IOException {
+      CancelableProgressable reporter)  throws IOException {	    
     final Map<byte[], Object> logWriters = Collections.
     synchronizedMap(new TreeMap<byte[], Object>(Bytes.BYTES_COMPARATOR));
     boolean isCorrupted = false;
@@ -409,7 +409,10 @@ public class HLogSplitter {
         if (wap == null) {
           wap = createWAP(region, entry, rootDir, tmpname, fs, conf);
           if (wap == null) {
+        	  // ignore edits from this region. It doesn't ezist anymore.
+        	  // It was probably already split.
             logWriters.put(region, BAD_WRITER);
+            continue;
           } else {
             logWriters.put(region, wap);
           }
