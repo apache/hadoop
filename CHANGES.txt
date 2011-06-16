@@ -14,6 +14,10 @@ Release 0.20.204.0 - unreleased
     MAPREDUCE-2495. exit() the TaskTracker when the distributed cache cleanup
     thread dies. (Robert Joseph Evans via cdouglas)
 
+    HDFS-1878. TestHDFSServerPorts unit test failure - race condition 
+    in FSNamesystem.close() causes NullPointerException without serious
+    consequence. (mattf)
+
     MAPREDUCE-2452. Moves the cancellation of delegation tokens to a separate
     thread. (ddas)
 
