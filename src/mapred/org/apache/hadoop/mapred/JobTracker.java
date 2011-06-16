@@ -3926,13 +3926,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
     
     synchronized (this) {
-      String queue = job.getProfile().getQueueName();
-      if (!(queueManager.getQueues().contains(queue))) {
-        job.fail();
-        throw new IOException("Queue \"" + queue + "\" does not exist");
-      }
-
       // check if queue is RUNNING
+      String queue = job.getProfile().getQueueName();
       if (!queueManager.isRunning(queue)) {
         throw new IOException("Queue \"" + queue + "\" is not running");
       }
