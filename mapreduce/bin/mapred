@@ -19,7 +19,11 @@ bin=`which $0`
 bin=`dirname ${bin}`
 bin=`cd "$bin"; pwd`
 
-. $bin/../libexec/mapred-config.sh
+if [ -e $bin/../libexec/mapred-config.sh ]; then
+  . $bin/../libexec/mapred-config.sh
+else
+  . "$bin/mapred-config.sh"
+fi
 
 function print_usage(){
   echo "Usage: mapred [--config confdir] COMMAND"

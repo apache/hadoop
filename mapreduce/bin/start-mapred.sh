@@ -21,7 +21,12 @@
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin"; pwd`
 
-. $bin/../libexec/mapred-config.sh
+if [ -e $bin/../libexec/mapred-config.sh ]; then
+  . $bin/../libexec/mapred-config.sh
+else
+  . "$bin/mapred-config.sh"
+fi
+
 
 # start mapred daemons
 # start jobtracker first to minimize connection errors at startup

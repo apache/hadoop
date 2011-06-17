@@ -304,6 +304,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2576. Typo in comment in SimulatorLaunchTaskAction.java.
     (Tim Sell via jghoman)
 
+    MAPREDUCE-2550. Fix bin/mapred to work properly from within a source
+    checkout (Eric Yang via todd)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

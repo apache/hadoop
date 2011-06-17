@@ -22,10 +22,14 @@ bin=`which "$0"`
 bin=`dirname "${bin}"`
 bin=`cd "$bin"; pwd`
 
-if [ -d "${bin}" ]; then
-  . "$bin"/../libexec/hadoop-config.sh
-elif [ -e "${HADOOP_PREFIX}"/bin/hadoop-config.sh ]; then
-  . "$HADOOP_MAPRED_PREFIX"/bin/hadoop-config.sh
+if [ -e "$bin/../libexec/hadoop-config.sh" ]; then
+  . "$bin/../libexec/hadoop-config.sh"
+elif [ -e "${HADOOP_COMMON_HOME}/bin/hadoop-config.sh" ]; then
+  . "$HADOOP_COMMON_HOME"/bin/hadoop-config.sh
+elif [ -e "${HADOOP_HOME}/bin/hadoop-config.sh" ]; then
+  . "$HADOOP_HOME"/bin/hadoop-config.sh
+elif [ -e "${HADOOP_MAPRED_HOME}/bin/hadoop-config.sh" ]; then
+  . "$HADOOP_MAPRED_HOME"/bin/hadoop-config.sh
 else
   echo "Hadoop common not found."
   exit
