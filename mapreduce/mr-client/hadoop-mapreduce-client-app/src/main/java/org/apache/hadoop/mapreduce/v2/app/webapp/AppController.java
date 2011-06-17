@@ -23,8 +23,6 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 import java.util.Locale;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
@@ -37,7 +35,6 @@ import org.apache.hadoop.yarn.webapp.Controller;
 import com.google.inject.Inject;
 
 public class AppController extends Controller implements AMParams {
-  private static final Log LOG = LogFactory.getLog(AppController.class);
   final App app;
   
   protected AppController(App app, Configuration conf, RequestContext ctx,
@@ -63,7 +60,8 @@ public class AppController extends Controller implements AMParams {
       _("Application Name:", app.context.getApplicationName()).
       _("User:", app.context.getUser()).
       _("Started on:", Times.format(app.context.getStartTime())).
-      _("Elasped: ", Times.elapsed(app.context.getStartTime(), 0));
+      _("Elasped: ", org.apache.hadoop.util.StringUtils.formatTime(
+        Times.elapsed(app.context.getStartTime(), 0)));
     render(InfoPage.class);
   }
 

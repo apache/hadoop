@@ -35,7 +35,7 @@ public class RmView extends TwoColumnLayout {
     commonPreHead(html);
     set(DATATABLES_ID, "apps");
     set(initID(DATATABLES, "apps"), appsTableInit());
-    setTableStyles(html, "apps");
+    setTableStyles(html, "apps", ".queue {width:6em}", ".ui {width:8em}");
   }
 
   protected void commonPreHead(Page.HTML<_> html) {
@@ -56,10 +56,11 @@ public class RmView extends TwoColumnLayout {
   }
 
   private String appsTableInit() {
-    AppsList list = injector().getInstance(AppsList.class);
+    AppsList list = getInstance(AppsList.class);
+    // id, user, name, queue, state, progress, ui, note
     StringBuilder init = tableInit().
         append(", aoColumns:[{sType:'title-numeric'}, null, null, null, null,").
-        append("{sType:'title-numeric', bSearchable:false}, null]");
+        append("{sType:'title-numeric', bSearchable:false}, null, null]");
     String rows = $("rowlimit");
     int rowLimit = rows.isEmpty() ? MAX_DISPLAY_ROWS : Integer.parseInt(rows);
     if (list.apps.size() < rowLimit) {

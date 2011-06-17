@@ -296,11 +296,6 @@ class SchedulerNegotiator extends AbstractService implements EventHandler<ASMEve
     }
 
     @Override
-    public long getLastSeen() {
-      throw notImplementedException;
-    }
-
-    @Override
     public String getName() {
       throw notImplementedException;
     }
@@ -317,6 +312,16 @@ class SchedulerNegotiator extends AbstractService implements EventHandler<ASMEve
 
     @Override
     public ApplicationStore getStore() {
+      throw notImplementedException;
+    }
+
+    @Override
+    public long getStartTime() {
+      throw notImplementedException;
+    }
+
+    @Override
+    public long getFinishTime() {
       throw notImplementedException;
     }
   }

@@ -51,9 +51,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.factories.RecordFactory;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-
+import org.apache.hadoop.yarn.util.Records;
 
 public class MockJobs extends MockApps {
   static final Iterator<JobState> JOB_STATES = Iterators.cycle(
@@ -81,7 +79,8 @@ public class MockJobs extends MockApps {
   static final Iterator<String> DIAGS = Iterators.cycle(
       "Error: java.lang.OutOfMemoryError: Java heap space",
       "Lost task tracker: tasktracker.domain/127.0.0.1:40879");
-  static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+
+  static final int DT = 1000000; // ms
 
   public static String newJobName() {
     return newAppName();
@@ -99,17 +98,17 @@ public class MockJobs extends MockApps {
   }
 
   public static JobId newJobID(ApplicationId appID, int i) {
-    JobId id = recordFactory.newRecordInstance(JobId.class);
+    JobId id = Records.newRecord(JobId.class);
     id.setAppId(appID);
     id.setId(i);
     return id;
   }
 
   public static JobReport newJobReport(JobId id) {
-    JobReport report = recordFactory.newRecordInstance(JobReport.class);
+    JobReport report = Records.newRecord(JobReport.class);
     report.setJobId(id);
-    report.setStartTime(System.currentTimeMillis() - (int)(Math.random() * 1000000));
-    report.setFinishTime(System.currentTimeMillis() + (int)(Math.random() * 1000000) + 1);
+    report.setStartTime(System.currentTimeMillis() - (int)(Math.random() * DT));
+    report.setFinishTime(System.currentTimeMillis() + (int)(Math.random() * DT) + 1);
     report.setMapProgress((float)Math.random());
     report.setReduceProgress((float)Math.random());
     report.setJobState(JOB_STATES.next());
@@ -117,10 +116,10 @@ public class MockJobs extends MockApps {
   }
 
   public static TaskReport newTaskReport(TaskId id) {
-    TaskReport report = recordFactory.newRecordInstance(TaskReport.class);
+    TaskReport report = Records.newRecord(TaskReport.class);
     report.setTaskId(id);
-    report.setStartTime(System.currentTimeMillis() - (int)(Math.random() * 1000000));
-    report.setFinishTime(System.currentTimeMillis() + (int)(Math.random() * 1000000) + 1);
+    report.setStartTime(System.currentTimeMillis() - (int)(Math.random() * DT));
+    report.setFinishTime(System.currentTimeMillis() + (int)(Math.random() * DT) + 1);
     report.setProgress((float)Math.random());
     report.setCounters(newCounters());
     report.setTaskState(TASK_STATES.next());
@@ -128,10 +127,10 @@ public class MockJobs extends MockApps {
   }
 
   public static TaskAttemptReport newTaskAttemptReport(TaskAttemptId id) {
-    TaskAttemptReport report = recordFactory.newRecordInstance(TaskAttemptReport.class);
+    TaskAttemptReport report = Records.newRecord(TaskAttemptReport.class);
     report.setTaskAttemptId(id);
-    report.setStartTime(System.currentTimeMillis() - (int)(Math.random() * 1000000));
-    report.setFinishTime(System.currentTimeMillis() + (int)(Math.random() * 1000000) + 1);
+    report.setStartTime(System.currentTimeMillis() - (int)(Math.random() * DT));
+    report.setFinishTime(System.currentTimeMillis() + (int)(Math.random() * DT) + 1);
     report.setPhase(PHASES.next());
     report.setTaskAttemptState(TASK_ATTEMPT_STATES.next());
     report.setProgress((float)Math.random());
@@ -153,7 +152,7 @@ public class MockJobs extends MockApps {
     for (int i = 0; i < nc; ++i) {
       for (FileSystemCounter c : FileSystemCounter.values()) {
         hc.findCounter(FS_SCHEMES.next(), c).
-            setValue((long)(Math.random() * 1000000));
+            setValue((long)(Math.random() * DT));
       }
     }
     for (int i = 0; i < 2 * 3; ++i) {
@@ -174,7 +173,7 @@ public class MockJobs extends MockApps {
   }
 
   public static TaskAttempt newTaskAttempt(TaskId tid, int i) {
-    final TaskAttemptId taid = recordFactory.newRecordInstance(TaskAttemptId.class);
+    final TaskAttemptId taid = Records.newRecord(TaskAttemptId.class);
     taid.setTaskId(tid);
     taid.setId(i);
     final TaskAttemptReport report = newTaskAttemptReport(taid);
@@ -228,7 +227,7 @@ public class MockJobs extends MockApps {
 
       @Override
       public ContainerId getAssignedContainerID() {
-        ContainerId id = recordFactory.newRecordInstance(ContainerId.class);
+        ContainerId id = Records.newRecord(ContainerId.class);
         id.setAppId(taid.getTaskId().getJobId().getAppId());
         return id;
       }
@@ -260,7 +259,7 @@ public class MockJobs extends MockApps {
   }
 
   public static Task newTask(JobId jid, int i, int m) {
-    final TaskId tid = recordFactory.newRecordInstance(TaskId.class);
+    final TaskId tid = Records.newRecord(TaskId.class);
     tid.setJobId(jid);
     tid.setId(i);
     tid.setTaskType(TASK_TYPES.next());

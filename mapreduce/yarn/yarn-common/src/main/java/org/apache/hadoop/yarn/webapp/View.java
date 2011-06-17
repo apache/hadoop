@@ -101,6 +101,10 @@ public abstract class View implements Params {
 
   public Injector injector() { return context().rc.injector; }
 
+  public <T> T getInstance(Class<T> cls) {
+    return injector().getInstance(cls);
+  }
+
   public HttpServletRequest request() {
     return context().rc.request;
   }
@@ -194,7 +198,7 @@ public abstract class View implements Params {
   }
 
   public ResponseInfo info(String about) {
-    return injector().getInstance(ResponseInfo.class).about(about);
+    return getInstance(ResponseInfo.class).about(about);
   }
 
   /**
@@ -203,7 +207,7 @@ public abstract class View implements Params {
    */
   public void render(Class<? extends SubView> cls) {
     int saved = context().nestLevel;
-    injector().getInstance(cls).renderPartial();
+    getInstance(cls).renderPartial();
     if (context().nestLevel != saved) {
       throw new WebAppException("View "+ cls.getSimpleName() +" not complete");
     }

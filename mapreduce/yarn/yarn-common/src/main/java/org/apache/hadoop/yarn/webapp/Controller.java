@@ -146,6 +146,10 @@ public abstract class Controller implements Params {
 
   public Injector injector() { return context().injector; }
 
+  public <T> T getInstance(Class<T> cls) {
+    return injector.getInstance(cls);
+  }
+
   public HttpServletRequest request() { return context().request; }
 
   public HttpServletResponse response() { return context().response; }
@@ -172,7 +176,7 @@ public abstract class Controller implements Params {
   }
 
   public ResponseInfo info(String about) {
-    return injector().getInstance(ResponseInfo.class).about(about);
+    return getInstance(ResponseInfo.class).about(about);
   }
 
   /**
@@ -203,7 +207,7 @@ public abstract class Controller implements Params {
 
   protected void render(Class<? extends View> cls) {
     context().rendered = true;
-    injector().getInstance(cls).render();
+    getInstance(cls).render();
   }
 
   /**
@@ -224,7 +228,7 @@ public abstract class Controller implements Params {
   protected void renderJSON(Class<? extends ToJSON> cls) {
     context().rendered = true;
     response().setContentType(MimeType.JSON);
-    injector().getInstance(cls).toJSON(writer());
+    getInstance(cls).toJSON(writer());
   }
 
   /**

@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import com.google.inject.Inject;
 
-import org.apache.hadoop.yarn.api.records.Application;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.AppContext;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.*;
@@ -48,24 +48,25 @@ class AppsBlock extends HtmlBlock {
             th(".queue", "Queue").
             th(".state", "State").
             th(".progress", "Progress").
-            th(".master", "Master Tracking URL")._()._().
+            th(".ui", "Tracking UI").
+            th(".note", "Note")._()._().
         tbody();
     int i = 0;
-    for (Application app : list.apps) {
-      String appId = Apps.toString(app.getApplicationId());
-      String masterTrackingURL = app.getTrackingUrl();
-      masterTrackingURL =
-          masterTrackingURL == null ? "UNASSIGNED" : masterTrackingURL;
+    for (AppContext app : list.apps) {
+      String appId = Apps.toString(app.getApplicationID());
+      String trackingUrl = app.getMaster().getTrackingUrl();
+      String ui = trackingUrl == null || trackingUrl.isEmpty() ? "UNASSIGNED" :
+          (app.getFinishTime() == 0 ? "ApplicationMaster" : "JobHistory");
       String percent = String.format("%.1f", app.getStatus().getProgress() * 100);
       tbody.
         tr().
           td().
-            br().$title(String.valueOf(app.getApplicationId().getId()))._(). // for sorting
+            br().$title(String.valueOf(app.getApplicationID().getId()))._(). // for sorting
             a(url("app", appId), appId)._().
           td(app.getUser().toString()).
           td(app.getName().toString()).
           td(app.getQueue().toString()).
-          td(app.getState().toString()).
+          td(app.getMaster().getState().toString()).
           td().
             br().$title(percent)._(). // for sorting
             div(_PROGRESSBAR).
@@ -73,8 +74,8 @@ class AppsBlock extends HtmlBlock {
               div(_PROGRESSBAR_VALUE).
                 $style(join("width:", percent, '%'))._()._()._().
           td().
-            a(masterTrackingURL == null ? "#" : join("http://",
-                masterTrackingURL), masterTrackingURL)._()._();
+            a(trackingUrl == null ? "#" : join("http://", trackingUrl), ui)._().
+          td(app.getMaster().getDiagnostics())._();
       if (list.rendering != Render.HTML && ++i >= 20) break;
     }
     tbody._()._();

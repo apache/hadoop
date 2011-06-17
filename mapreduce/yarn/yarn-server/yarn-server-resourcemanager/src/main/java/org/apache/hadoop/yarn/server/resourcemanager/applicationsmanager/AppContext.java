@@ -76,12 +76,6 @@ public interface AppContext {
   public String getUser();
   
   /**
-   * The last time the RM heard from this application
-   * @return the last time RM heard from this application.
-   */
-  public long getLastSeen();  
-  
-  /**
    * the name for this application
    * @return the application name.
    */
@@ -104,4 +98,16 @@ public interface AppContext {
    * @return the application store for this application
    */
   public ApplicationStore getStore();
+  
+  /**
+   * the start time of the application
+   * @return the start time of the application
+   */
+  public long getStartTime();
+  
+  /**
+   * The finish time of the application
+   * @return the finish time of the application
+   */
+  public long getFinishTime();
 }

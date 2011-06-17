@@ -354,10 +354,7 @@ public class AMTracker extends AbstractService  implements EventHandler<ASMEvent
     public String getUser() {   
       throw notimplemented;
     }
-    @Override
-    public long getLastSeen() {
-      return master.getStatus().getLastSeen();
-    }
+   
     @Override
     public String getName() {
       throw notimplemented;
@@ -375,6 +372,16 @@ public class AMTracker extends AbstractService  implements EventHandler<ASMEvent
     @Override
     public ApplicationStore getStore() {
      throw notimplemented;
+    }
+
+    @Override
+    public long getStartTime() {
+      throw notimplemented;
+    }
+
+    @Override
+    public long getFinishTime() {
+      throw notimplemented;
     }
   }
 

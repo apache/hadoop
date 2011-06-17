@@ -29,7 +29,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * Utilities to generate fake test apps
@@ -146,14 +146,14 @@ public class MockApps {
   }
 
   public static ApplicationId newAppID(int i) {
-    ApplicationId id = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationId.class);
+    ApplicationId id = Records.newRecord(ApplicationId.class);
     id.setClusterTimestamp(TS);
     id.setId(i);
     return id;
   }
 
   public static ApplicationStatus newAppStatus() {
-    ApplicationStatus status = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationStatus.class);
+    ApplicationStatus status = Records.newRecord(ApplicationStatus.class);
     status.setProgress((float)Math.random());
     status.setLastSeen(System.currentTimeMillis());
     return status;

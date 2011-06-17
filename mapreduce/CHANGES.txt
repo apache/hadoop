@@ -4,6 +4,9 @@ Trunk (unreleased changes)
 
 
     MAPREDUCE-279
+
+    Fix RM app start/finish time and diagnostics. (llu)
+
     Fix race condition between multiple localizers on a single node. (cdouglas via mahadev)
 
     Improve logging for AM when requesting containers to show the right ask 

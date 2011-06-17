@@ -68,6 +68,13 @@ public class ApplicationMasterInfo implements AppContext, EventHandler<ASMEvent<
   private final EventHandler syncHandler;
   private Container masterContainer;
   final private String user;
+  private long startTime = 0;
+  private long finishTime = 0;
+  private String diagnostic;
+  private static String DIAGNOSTIC_KILL_APPLICATION = "Application was killed.";
+  private static String DIAGNOSTIC_AM_FAILED = "Application Master failed";
+  private static String DIAGNOSTIC_AM_LAUNCH_FAILED = "Application Master failed to launch";
+  
   private int numFailed = 0;
   private final ApplicationStore appStore;
   
@@ -218,7 +225,9 @@ public class ApplicationMasterInfo implements AppContext, EventHandler<ASMEvent<
     stateMachine = stateMachineFactory.make(this);
     master.setState(ApplicationState.PENDING);
     master.setClientToken(clientToken);
+    master.setDiagnostics("");
     this.appStore = appStore;
+    this.startTime = System.currentTimeMillis();
   }
 
   @Override
@@ -254,7 +263,17 @@ public class ApplicationMasterInfo implements AppContext, EventHandler<ASMEvent<
   public synchronized ApplicationState getState() {
     return master.getState();
   }
-
+  
+  @Override
+  public synchronized long getStartTime() {
+    return this.startTime;
+  }
+  
+  @Override
+  public synchronized long getFinishTime() {
+    return this.finishTime;
+  }
+  
   @Override
   public synchronized Container getMasterContainer() {
     return masterContainer;
@@ -266,10 +285,6 @@ public class ApplicationMasterInfo implements AppContext, EventHandler<ASMEvent<
     return this.user;
   }
 
-  @Override
-  public synchronized long getLastSeen() {
-    return this.master.getStatus().getLastSeen();
-  }
 
   @Override
   public synchronized int getFailedCount() {
@@ -304,7 +319,7 @@ public class ApplicationMasterInfo implements AppContext, EventHandler<ASMEvent<
         AMLauncherEventType.CLEANUP, masterInfo));
       masterInfo.handler.handle(new ASMEvent<ApplicationTrackerEventType>(
       ApplicationTrackerEventType.REMOVE, masterInfo));
-
+      masterInfo.finishTime = System.currentTimeMillis();
       ApplicationFinishEvent finishEvent = (ApplicationFinishEvent) event;
       return finishEvent.getFinalApplicationState();
     }
@@ -325,6 +340,8 @@ public class ApplicationMasterInfo implements AppContext, EventHandler<ASMEvent<
     @Override
     public void transition(ApplicationMasterInfo masterInfo,
     ASMEvent<ApplicationEventType> event) {
+      masterInfo.finishTime = System.currentTimeMillis();
+      masterInfo.getMaster().setDiagnostics(DIAGNOSTIC_KILL_APPLICATION);
       masterInfo.handler.handle(new ASMEvent<SNEventType>(SNEventType.CLEANUP, masterInfo));
       masterInfo.handler.handle(new ASMEvent<AMLauncherEventType>(AMLauncherEventType.CLEANUP, masterInfo));
       masterInfo.handler.handle(new ASMEvent<ApplicationTrackerEventType>(ApplicationTrackerEventType.REMOVE,
@@ -351,6 +368,8 @@ public class ApplicationMasterInfo implements AppContext, EventHandler<ASMEvent<
     @Override
     public void transition(ApplicationMasterInfo masterInfo,
     ASMEvent<ApplicationEventType> event) {
+      masterInfo.finishTime = System.currentTimeMillis();
+      masterInfo.getMaster().setDiagnostics(DIAGNOSTIC_AM_LAUNCH_FAILED);
       masterInfo.handler.handle(new ASMEvent<SNEventType>(
       SNEventType.RELEASE, masterInfo));
     }

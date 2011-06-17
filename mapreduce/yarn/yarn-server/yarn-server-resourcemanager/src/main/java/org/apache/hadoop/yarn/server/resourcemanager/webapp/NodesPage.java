@@ -81,7 +81,8 @@ class NodesPage extends RmView {
     setTitle("Nodes of the cluster");
     set(DATATABLES_ID, "nodes");
     set(initID(DATATABLES, "nodes"), nodesTableInit());
-    setTableStyles(html, "nodes");
+    setTableStyles(html, "nodes", ".healthStatus {width:10em}",
+                   ".healthReport {width:10em}");
   }
 
   @Override protected Class<? extends SubView> content() {

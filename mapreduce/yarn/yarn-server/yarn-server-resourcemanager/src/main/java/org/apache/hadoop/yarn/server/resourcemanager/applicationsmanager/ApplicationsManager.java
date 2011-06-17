@@ -56,6 +56,13 @@ public interface ApplicationsManager extends Recoverable {
     * @return {@link Application} information about the application.
     */
    Application getApplication(ApplicationId applicationID);
+
+   /**
+    * Lookup AppContext by application id.
+    * @param appId the application id to lookup
+    * @return the {@link AppContext} of the application
+    */
+   AppContext getAppContext(ApplicationId appId);
    
    /**
     * Submit the application to run on the cluster.
@@ -78,7 +85,7 @@ public interface ApplicationsManager extends Recoverable {
     * This is used by the webUI.
     * @return the applications in the cluster.
     */
-   List<AppContext> getAllApplications();
+   List<AppContext> getAllAppContexts();
    
    /**
     * Get all the applications in the cluster. 

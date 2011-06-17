@@ -256,7 +256,7 @@ public class ApplicationsManagerImpl extends CompositeService
  }
 
   @Override
-  public  List<AppContext> getAllApplications() {
+  public  List<AppContext> getAllAppContexts() {
     return amTracker.getAllApplications();
   }
 
@@ -264,9 +264,15 @@ public class ApplicationsManagerImpl extends CompositeService
       applicationId) {
     return amTracker.get(applicationId);
   }
+
+  @Override
+  public AppContext getAppContext(ApplicationId appId) {
+    return getApplicationMasterInfo(appId);
+  }
   
-  private Application createApplication(ApplicationMaster am, String user,
+  private Application createApplication(AppContext context, String user,
       String queue, String name, Container masterContainer) {
+    ApplicationMaster am = context.getMaster();
     Application application = 
       recordFactory.newRecordInstance(Application.class);
     application.setApplicationId(am.getApplicationId());
@@ -284,8 +290,8 @@ public class ApplicationsManagerImpl extends CompositeService
   @Override
   public List<Application> getApplications() {
     List<Application> apps = new ArrayList<Application>();
-    for (AppContext am: getAllApplications()) {
-      apps.add(createApplication(am.getMaster(), 
+    for (AppContext am: getAllAppContexts()) {
+      apps.add(createApplication(am, 
           am.getUser(), am.getQueue(), am.getName(), am.getMasterContainer()));
     }
     return apps;
@@ -294,7 +300,7 @@ public class ApplicationsManagerImpl extends CompositeService
   @Override
   public Application getApplication(ApplicationId appID) {
     ApplicationMasterInfo master = amTracker.get(appID);
-    return (master == null) ? null : createApplication(master.getMaster(),
+    return (master == null) ? null : createApplication(master,
         master.getUser(), master.getQueue(), master.getName(),
         master.getMasterContainer());
   }

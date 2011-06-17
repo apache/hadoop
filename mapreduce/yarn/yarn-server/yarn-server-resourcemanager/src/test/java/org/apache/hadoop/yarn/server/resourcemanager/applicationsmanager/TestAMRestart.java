@@ -300,11 +300,6 @@ public class TestAMRestart extends TestCase {
     }
 
     @Override
-    public long getLastSeen() {
-      return 0;
-    }
-
-    @Override
     public String getName() {
       return null;
     }
@@ -322,6 +317,14 @@ public class TestAMRestart extends TestCase {
     @Override
     public ApplicationStore getStore() {
      return StoreFactory.createVoidAppStore();
+    }
+    @Override
+    public long getStartTime() {
+      return 0;
+    }
+    @Override
+    public long getFinishTime() {
+      return 0;
     }
     
   }

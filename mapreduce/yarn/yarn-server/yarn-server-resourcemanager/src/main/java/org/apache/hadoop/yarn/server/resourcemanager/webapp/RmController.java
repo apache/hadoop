@@ -24,7 +24,6 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
-import org.apache.hadoop.yarn.api.records.Application;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.ApplicationsManager;
@@ -37,6 +36,9 @@ import org.apache.hadoop.yarn.webapp.Controller;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
 
 import com.google.inject.Inject;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.AppContext;
 
 // Do NOT rename/refactor this to RMView as it will wreak havoc
 // on Mac OS HFS as its case-insensitive!
@@ -50,7 +52,7 @@ public class RmController extends Controller {
   public void info() {
     setTitle("About the Cluster");
     long ts = ResourceManager.clusterTimeStamp;
-    ResourceManager rm = injector().getInstance(ResourceManager.class);
+    ResourceManager rm = getInstance(ResourceManager.class);
     info("Cluster overview").
       _("Cluster ID:", ts).
       _("ResourceManager state:", rm.getServiceState()).
@@ -68,8 +70,8 @@ public class RmController extends Controller {
       return;
     }
     ApplicationId appID = Apps.toAppID(aid);
-    ApplicationsManager asm = injector().getInstance(ApplicationsManager.class);
-    Application app = asm.getApplication(appID);
+    ApplicationsManager asm = getInstance(ApplicationsManager.class);
+    AppContext app = asm.getAppContext(appID);
     if (app == null) {
       // TODO: handle redirect to jobhistory server
       setStatus(response().SC_NOT_FOUND);
@@ -77,23 +79,26 @@ public class RmController extends Controller {
       return;
     }
     setTitle(join("Application ", aid));
-    CharSequence masterTrackingURL = app.getTrackingUrl();
-    String ui = masterTrackingURL == null ? "UNASSIGNED" : app.getTrackingUrl();
+    String trackingUrl = app.getMaster().getTrackingUrl();
+    String ui = trackingUrl == null ? "UNASSIGNED" :
+        (app.getFinishTime() == 0 ? "ApplicationMaster" : "JobHistory");
 
     ResponseInfo info = info("Application Overview").
       _("User:", app.getUser()).
       _("Name:", app.getName()).
-      _("State:", app.getState()).
-      _("Started:", "FIXAPI!").
-      _("Elapsed:", "FIXAPI!").
-      _("Master Tracking URL:", join("http://", ui), join("http://", ui)).
-      _("Diagnostics:", app.getDiagnostics());
-    if (app.getMasterContainer() != null) {
-      String masterTrackingURLLink = join("http://", app.getMasterContainer()
-          .getNodeHttpAddress(), "/yarn", "/containerlogs/", ConverterUtils
-          .toString(app.getMasterContainer().getId()));
-      info._("AM container logs:", masterTrackingURLLink,
-          masterTrackingURLLink);
+      _("State:", app.getMaster().getState()).
+      _("Started:", Times.format(app.getStartTime())).
+      _("Elapsed:", StringUtils.formatTime(
+        Times.elapsed(app.getStartTime(), app.getFinishTime()))).
+      _("Tracking URL:", trackingUrl == null ? "#" :
+        join("http://", trackingUrl), ui).
+      _("Diagnostics:", app.getMaster().getDiagnostics());
+    Container masterContainer = app.getMasterContainer();
+    if (masterContainer != null) {
+      String url = join("http://", masterContainer.getNodeHttpAddress(),
+          "/yarn", "/containerlogs/",
+          ConverterUtils.toString(masterContainer.getId()));
+      info._("AM container logs:", url, url);
     } else {
       info._("AM container logs:", "AM not yet registered with RM");
     }
@@ -105,7 +110,7 @@ public class RmController extends Controller {
   }
 
   public void scheduler() {
-    ResourceManager rm = injector().getInstance(ResourceManager.class);
+    ResourceManager rm = getInstance(ResourceManager.class);
     ResourceScheduler rs = rm.getResourceScheduler();
     if (rs == null || rs instanceof CapacityScheduler) {
       setTitle("Capacity Scheduler");

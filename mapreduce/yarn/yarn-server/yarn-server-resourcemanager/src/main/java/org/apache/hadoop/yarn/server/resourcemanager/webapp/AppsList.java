@@ -25,11 +25,10 @@ import java.io.PrintWriter;
 import java.util.List;
 
 import static org.apache.commons.lang.StringEscapeUtils.*;
-import static org.apache.hadoop.yarn.util.StringHelper.*;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
 import static org.apache.hadoop.yarn.webapp.view.Jsons.*;
 
-import org.apache.hadoop.yarn.api.records.Application;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.AppContext;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.ApplicationsManager;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.webapp.ToJSON;
@@ -39,37 +38,39 @@ import org.apache.hadoop.yarn.webapp.Controller.RequestContext;
 @RequestScoped
 class AppsList implements ToJSON {
   final RequestContext rc;
-  final List<Application> apps;
+  final List<AppContext> apps;
   Render rendering;
 
   @Inject AppsList(RequestContext ctx, ApplicationsManager asm) {
     rc = ctx;
-    apps = asm.getApplications();
+    apps = asm.getAllAppContexts();
   }
 
   void toDataTableArrays(PrintWriter out) {
     out.append('[');
     boolean first = true;
-    for (Application app : apps) {
+    for (AppContext app : apps) {
       if (first) {
         first = false;
       } else {
         out.append(",\n");
       }
-      String appID = Apps.toString(app.getApplicationId());
-      String masterTrackingURL = app.getTrackingUrl();
-      masterTrackingURL = masterTrackingURL == null ? "UNASSIGNED" : masterTrackingURL;
+      String appID = Apps.toString(app.getApplicationID());
+      String trackingUrl = app.getMaster().getTrackingUrl();
+      String ui = trackingUrl == null ? "UNASSIGNED" :
+          (app.getFinishTime() == 0 ? "ApplicationMaster" : "JobHistory");
       out.append("[\"");
-      appendSortable(out, app.getApplicationId().getId());
+      appendSortable(out, app.getApplicationID().getId());
       appendLink(out, appID, rc.prefix(), "app", appID).append(_SEP).
           append(escapeHtml(app.getUser().toString())).append(_SEP).
           append(escapeHtml(app.getName().toString())).append(_SEP).
           append(escapeHtml(app.getQueue())).append(_SEP).
-          append(app.getState().toString()).append(_SEP);
+          append(app.getMaster().getState().toString()).append(_SEP);
       appendProgressBar(out, app.getStatus().getProgress()).append(_SEP);
-      appendLink(out, masterTrackingURL, rc.prefix(),
-          masterTrackingURL == null ? "#" : "http://", masterTrackingURL)
-          .append("\"]");
+      appendLink(out, ui, rc.prefix(),
+                 trackingUrl == null ? "#" : "http://", trackingUrl).
+          append(_SEP).append(escapeHtml(app.getMaster().getDiagnostics())).
+          append("\"]");
     }
     out.append(']');
   }

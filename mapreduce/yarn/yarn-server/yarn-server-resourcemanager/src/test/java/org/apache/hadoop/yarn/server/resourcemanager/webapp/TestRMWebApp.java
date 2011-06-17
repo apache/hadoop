@@ -18,30 +18,18 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import com.google.common.collect.Maps;
 import com.google.inject.Injector;
-import java.io.IOException;
 
-import java.util.Map;
 import java.util.List;
 
 import static org.apache.hadoop.test.MockitoMaker.*;
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNodes.*;
 import static org.apache.hadoop.yarn.webapp.Params.*;
 
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.MockApps;
-import org.apache.hadoop.yarn.api.records.Application;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationMaster;
-import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.factories.RecordFactory;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.AppContext;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.ApplicationsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.MockAsm;
 import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.RMResourceTrackerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.ClusterTracker;
@@ -57,60 +45,6 @@ import static org.mockito.Mockito.*;
 
 public class TestRMWebApp {
   static final int GiB = 1024; // MiB
-  private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-
-  static class TestAsm implements ApplicationsManager {
-    final List<Application> appsList;
-    final Map<ApplicationId, Application> appsMap = Maps.newHashMap();
-
-    TestAsm(int n) {
-      appsList = MockApps.genApps(n);
-      for (Application app : appsList) {
-        appsMap.put(app.getApplicationId(), app);
-      }
-    }
-
-    @Override
-    public ApplicationId getNewApplicationID() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public ApplicationMaster getApplicationMaster(ApplicationId applicationId) {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public Application getApplication(ApplicationId applicationID) {
-      return appsMap.get(applicationID);
-    }
-
-    @Override
-    public void submitApplication(ApplicationSubmissionContext context) throws IOException {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public void finishApplication(ApplicationId applicationId, UserGroupInformation 
-        callingUser) throws IOException {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public List<AppContext> getAllApplications() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public List<Application> getApplications() {
-      return appsList;
-    }
-
-    @Override
-    public void recover(RMState state) throws Exception {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-  }
 
   @Test public void testControllerIndex() {
     Injector injector = WebAppTests.createMockInjector(this);
@@ -120,8 +54,8 @@ public class TestRMWebApp {
   }
 
   @Test public void testView() {
-    Injector injector =
-        WebAppTests.createMockInjector(ApplicationsManager.class, mockAsm(3));
+    Injector injector = WebAppTests.createMockInjector(ApplicationsManager.class,
+                                                       MockAsm.create(3));
     injector.getInstance(RmView.class).render();
     WebAppTests.flushOutput(injector);
   }
@@ -129,10 +63,6 @@ public class TestRMWebApp {
   @Test public void testNodesPage() {
     WebAppTests.testPage(NodesPage.class, ClusterTracker.class,
                          mockResource(1, 2, 8*GiB));
-  }
-
-  public static ApplicationsManager mockAsm(int n) {
-    return new TestAsm(n);
   }
 
   public static RMResourceTrackerImpl mockResource(int racks, int nodes,
@@ -147,16 +77,16 @@ public class TestRMWebApp {
                                        int mbsPerNode)
   throws Exception {
     ResourceManager rm = mock(ResourceManager.class);
-    ApplicationsManager asm = mockAsm(apps);
+    ApplicationsManager asm = MockAsm.create(apps);
     RMResourceTrackerImpl rt = mockResource(racks, nodes, mbsPerNode);
-    ResourceScheduler rs = mockCS();
+    ResourceScheduler rs = mockCapacityScheduler();
     when(rm.getApplicationsManager()).thenReturn(asm);
     when(rm.getResourceTracker()).thenReturn(rt);
     when(rm.getResourceScheduler()).thenReturn(rs);
     return rm;
   }
 
-  public static CapacityScheduler mockCS() throws Exception {
+  public static CapacityScheduler mockCapacityScheduler() throws Exception {
     // stolen from TestCapacityScheduler
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(conf);
@@ -217,7 +147,7 @@ public class TestRMWebApp {
 
   public static void main(String[] args) throws Exception {
     // For manual testing
-    WebApps.$for("yarn", new TestRMWebApp()).at(8088).inDevMode().
-        start(new RMWebApp(mockRm(101, 8, 8, 8*GiB))).joinThread();
+    WebApps.$for("yarn", new TestRMWebApp()).at(8888).inDevMode().
+        start(new RMWebApp(mockRm(88, 8, 8, 8*GiB))).joinThread();
   }
 }
