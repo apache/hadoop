@@ -4,6 +4,8 @@ Trunk (unreleased changes)
 
 
     MAPREDUCE-279
+    Fix race condition between multiple localizers on a single node. (cdouglas via mahadev)
+
     Improve logging for AM when requesting containers to show the right ask 
     and release fields (mahadev)
 
