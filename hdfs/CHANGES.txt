@@ -754,6 +754,9 @@ Trunk (unreleased changes)
     HDFS-1692. In secure mode, Datanode process doesn't exit when disks 
     fail. (Bharath Mundlapudi via suresh)
 
+    HDFS-1734. 'Chunk size to view' option is not working in Name Node UI.
+    (Uma Maheswara Rao G via jitendra)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
