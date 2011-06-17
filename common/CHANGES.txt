@@ -321,6 +321,8 @@ Trunk (unreleased changes)
     HADOOP-7377. Fix command name handling affecting DFSAdmin. (Daryn Sharp
     via mattf)
 
+    HADOOP-7402. TestConfiguration doesn't clean up after itself. (atm via eli)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
