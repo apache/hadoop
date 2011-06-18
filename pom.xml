@@ -121,6 +121,14 @@
       <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
     <developer>
+      <id>tedyu</id>
+      <name>Ted Yu</name>
+      <email>yuzhihong@gmail.com</email>
+      <timezone>-8</timezone>
+      <organization>CarrierIQ</organization>
+      <organizationUrl>http://www.carrieriq.com</organizationUrl>
+    </developer>
+    <developer>
       <id>larsgeorge</id>
       <name>Lars George</name>
       <email>larsgeorge@apache.org</email>
