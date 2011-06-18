@@ -128,6 +128,8 @@ Release 0.91.0 - Unreleased
    HBASE-3793  HBASE-3468 Broke checkAndPut with null value (Ming Ma)
    HBASE-3995  HBASE-3946 broke TestMasterFailover
    HBASE-3889  NPE in Distributed Log Splitting (Anirudh Todi)
+   HBASE-4000  You can't specify split points when you create a table in
+               the shell (Joey Echeverria)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

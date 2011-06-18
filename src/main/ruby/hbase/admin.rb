@@ -142,24 +142,48 @@ module Hbase
 
       # Start defining the table
       htd = org.apache.hadoop.hbase.HTableDescriptor.new(table_name)
-
-      # All args are columns, add them to the table definition
+      splits = nil
+      # Args are either columns or splits, add them to the table definition
       # TODO: add table options support
       args.each do |arg|
         unless arg.kind_of?(String) || arg.kind_of?(Hash)
           raise(ArgumentError, "#{arg.class} of #{arg.inspect} is not of Hash or String type")
         end
 
-        # Add column to the table
-        descriptor = hcd(arg, htd)
-        if arg[COMPRESSION_COMPACT]
-          descriptor.setValue(COMPRESSION_COMPACT, arg[COMPRESSION_COMPACT])
+        if arg.kind_of?(Hash) and (arg.has_key?(SPLITS) or arg.has_key?(SPLITS_FILE))
+          if arg.has_key?(SPLITS_FILE)
+            unless File.exist?(arg[SPLITS_FILE])
+              raise(ArgumentError, "Splits file #{arg[SPLITS_FILE]} doesn't exist")
+            end
+            arg[SPLITS] = []
+            File.foreach(arg[SPLITS_FILE]) do |line|
+              arg[SPLITS].push(line.strip())
+            end
+          end
+
+          splits = Java::byte[][arg[SPLITS].size].new
+          idx = 0
+          arg[SPLITS].each do |split|
+            splits[idx] = split.to_java_bytes
+            idx = idx + 1
+          end
+        else
+          # Add column to the table
+          descriptor = hcd(arg, htd)
+          if arg[COMPRESSION_COMPACT]
+            descriptor.setValue(COMPRESSION_COMPACT, arg[COMPRESSION_COMPACT])
+          end
+          htd.addFamily(descriptor)
         end
-        htd.addFamily(descriptor)
       end
 
-      # Perform the create table call
-      @admin.createTable(htd)
+      if splits.nil?
+        # Perform the create table call
+        @admin.createTable(htd)
+      else
+        # Perform the create table call
+        @admin.createTable(htd, splits)
+      end
     end
 
     #----------------------------------------------------------------------------------------------
