@@ -118,7 +118,7 @@ class QueueManager {
         LOG.error("The queue, " + name + " does not have a configured ACL list");
       }
       queues.put(name, new Queue(name, getQueueAcls(name, conf),
-          getQueueState(name, conf)));
+          getQueueState(name, conf), QueueMetrics.create(name, conf)));
     }
     
     return queues;
@@ -136,7 +136,17 @@ class QueueManager {
   public synchronized Set<String> getQueues() {
     return queues.keySet();
   }
-  
+
+  /**
+   * Return a specific queue configured in the system.
+   * 
+   * @param queueName Name of the queue requested
+   * @return Queue object corresponding to queueName
+   */
+  public synchronized Queue getQueue(String queueName) {
+    return queues.get(queueName);
+  }
+
   /**
    * Return true if the given user is part of the ACL for the given
    * {@link QueueACL} name for the given queue.

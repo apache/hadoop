@@ -32,6 +32,18 @@
       name="log4j"
       rev="${log4j.version}"
       conf="common->master"/>
+    <dependency org="junit"
+      name="junit"
+      rev="${junit.version}"
+      conf="common->default"/>
+    <dependency org="org.mortbay.jetty"
+      name="jetty-util"
+      rev="${jetty-util.version}"
+      conf="common->master"/>
+    <dependency org="org.mortbay.jetty"
+      name="jetty"
+      rev="${jetty.version}"
+      conf="common->default"/>
     <dependency org="org.apache.lucene"
       name="lucene-core"
       rev="${lucene-core.version}"
@@ -43,6 +55,10 @@
     <dependency org="org.apache.commons"
       name="commons-math"
       rev="${commons-math.version}"
+      conf="common->default"/>
+    <dependency org="org.codehaus.jackson"
+      name="jackson-core-asl"
+      rev="${jackson.version}"
       conf="common->default"/>
     </dependencies>
 </ivy-module>
