@@ -31,6 +31,6 @@
 
   <tab label="Project" href="http://hadoop.apache.org/core/" />
   <tab label="Wiki" href="http://wiki.apache.org/hadoop" />
-  <tab label="Hadoop 0.20 Documentation" dir="" />  
+  <tab label="Hadoop 0.20.204.0 Documentation" dir="" />  
   
 </tabs>

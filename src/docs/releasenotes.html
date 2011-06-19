@@ -2,7 +2,7 @@
 <html>
 <head>
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Hadoop 0.20.1 Release Notes</title>
+<title>Hadoop 0.20.204.0 Release Notes</title>
 <STYLE type="text/css">
 		H1 {font-family: sans-serif}
 		H2 {font-family: sans-serif; margin-left: 7mm}
@@ -10,339 +10,1974 @@
 	</STYLE>
 </head>
 <body>
-<h1>Hadoop 0.20.1 Release Notes</h1>
-		These release notes include new developer and user-facing incompatibilities, features, and major improvements. The table below is sorted by Component.
+<h1>Hadoop 0.20.204.0 Release Notes</h1>
+		These release notes include new developer and user-facing incompatibilities, features, and major improvements. 
 
-		<a name="changes"></a>
-<h2>Changes Since Hadoop 0.20.0</h2>
+<a name="changes"/>
+<h2>Changes since Hadoop 0.20.203.0</h2>
 
-<h3>Common</h3>
-
-<h4>        Sub-task
-</h4>
-<ul>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6213'>HADOOP-6213</a>] -         Remove commons dependency on commons-cli2
-</li>
-</ul>
-    
-<h4>        Bug
-</h4>
-<ul>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4626'>HADOOP-4626</a>] -         API link in forrest doc should point to the same version of hadoop.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4674'>HADOOP-4674</a>] -         hadoop fs -help should list detailed help info for the following commands: test, text, tail, stat &amp; touchz
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4856'>HADOOP-4856</a>] -         Document JobInitializationPoller configuration in capacity scheduler forrest documentation.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4931'>HADOOP-4931</a>] -         Document TaskTracker's memory management functionality and CapacityScheduler's memory based scheduling.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5210'>HADOOP-5210</a>] -         Reduce Task Progress shows &gt; 100% when the total size of map outputs (for a single reducer) is high 
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5213'>HADOOP-5213</a>] -         BZip2CompressionOutputStream NullPointerException
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5349'>HADOOP-5349</a>] -         When the size required for a path is -1, LocalDirAllocator.getLocalPathForWrite fails with a DiskCheckerException when the disk it selects is bad.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5533'>HADOOP-5533</a>] -         Recovery duration shown on the jobtracker webpage is inaccurate
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5539'>HADOOP-5539</a>] -         o.a.h.mapred.Merger not maintaining map out compression on intermediate files
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5636'>HADOOP-5636</a>] -         Job is left in Running state after a killJob
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5641'>HADOOP-5641</a>] -         Possible NPE in CapacityScheduler's MemoryMatcher
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5646'>HADOOP-5646</a>] -         TestQueueCapacities is failing Hudson tests for the last few builds
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5648'>HADOOP-5648</a>] -         Not able to generate gridmix.jar on already compiled version of hadoop
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5654'>HADOOP-5654</a>] -         TestReplicationPolicy.&lt;init&gt; fails on java.net.BindException
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5655'>HADOOP-5655</a>] -         TestMRServerPorts fails on java.net.BindException
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5688'>HADOOP-5688</a>] -         HftpFileSystem.getChecksum(..) does not work for the paths with scheme and authority
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5691'>HADOOP-5691</a>] -         org.apache.hadoop.mapreduce.Reducer should not be abstract.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5711'>HADOOP-5711</a>] -         Change Namenode file close log to info
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5718'>HADOOP-5718</a>] -         Capacity Scheduler should not check for presence of default queue while starting up.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5719'>HADOOP-5719</a>] -         Jobs failed during job initalization are never removed from Capacity Schedulers waiting list
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5736'>HADOOP-5736</a>] -         Update CapacityScheduler documentation to reflect latest changes
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5746'>HADOOP-5746</a>] -         Errors encountered in MROutputThread after the last map/reduce call can go undetected
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5796'>HADOOP-5796</a>] -         DFS Write pipeline does not detect defective datanode correctly in some cases (HADOOP-3339)
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5828'>HADOOP-5828</a>] -         Use absolute path for JobTracker's mapred.local.dir in MiniMRCluster
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5850'>HADOOP-5850</a>] -         map/reduce doesn't run jobs with 0 maps
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5863'>HADOOP-5863</a>] -         mapred metrics shows negative count of waiting maps and reduces 
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5869'>HADOOP-5869</a>] -         TestQueueCapacitisues.apache.org/jjira/browse/HADOOP-OP-6017</a>] -         NameNode and SecondaryNameNode fail to restart because of abnormal filenames.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6097'>HADOOP-6097</a>] -         Multiple bugs w/ Hadoop archives
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6139'>HADOOP-6139</a>] -         Incomplete help message is displayed for rm and rmr options.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6141'>HADOOP-6141</a>] -         hadoop 0.20 branch &quot;test-patch&quot; is broken
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6145'>HADOOP-6145</a>] -         No error message for deleting non-existant file or directory.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6215'>HADOOP-6215</a>] -         fix GenericOptionParser to deal with -D with '=' in the value
-</li>
-</ul>
-    
-<h4>        Improvement
-</h4>
-<ul>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5726'>HADOOP-5726</a>] -         Remove pre-emption from the capacity scheduler code base
-</li>
-</ul>
-    
-<h4>        New Feature
-</h4>
-<ul>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3315'>HADOOP-3315</a>] -         New binary file format
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5714'>HADOOP-5714</a>] -         Metric to show number of fs.exists (or number of getFileInfo) calls
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6080'>HADOOP-6080</a>] -         Handling of  Trash with quota
-</li>
-</ul>
-
-<h3>HDFS</h3>
-
-<h4>        Bug
-</h4>
-<ul>
-  <li>[<a href='https://issues.apache.org/jira/browse/HDFS-26'>HDFS-26</a>] -           HADOOP-5862 for version .20  (Namespace quota exceeded message unclear)
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-167'>HDFS-167</a>] -         DFSClient continues to retry indefinitely
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-438'>HDFS-438</a>] -         Improve help message for quotas
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-442'>HDFS-442</a>] -         dfsthroughput in test.jar throws NPE
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-485'>HDFS-485</a>] -         error : too many fetch failures
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-495'>HDFS-495</a>] -         Hadoop FSNamesystem startFileInternal() getLease() has bug
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-525'>HDFS-525</a>] -         ListPathsServlet.java uses static SimpleDateFormat that has threading issues
-</li>
-</ul>
-    
-<h4>        Improvement
-</h4>
-<ul>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-504'>HDFS-504</a>] -         HDFS updates the modification time of a file when the file is closed.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-527'>HDFS-527</a>] -         Refactor DFSClient constructors
-</li>
-</ul>
-                                
-<h3>Map/Reduce</h3>
-
-<h4>        Bug
-</h4>
-<ul>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-2'>MAPREDUCE-2</a>] -         ArrayOutOfIndex error in KeyFieldBasedPartitioner on empty key
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-18'>MAPREDUCE-18</a>] -         Under load the shuffle sometimes gets incorrect data
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-40'>MAPREDUCE-40</a>] -         Memory management variables need a backwards compatibility option after HADOOP-5881
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-112'>MAPREDUCE-112</a>] -         Reduce Input Records and Reduce Output Records counters are not being set when using the new Mapreduce reducer API
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-124'>MAPREDUCE-124</a>] -         When abortTask of OutputCommitter fails with an Exception for a map-only job, the task is marked as success
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-130'>MAPREDUCE-130</a>] -         Delete the jobconf copy from the log directory of the JobTracker when the job is retired
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-179'>MAPREDUCE-179</a>] -         setProgress not called for new RecordReaders
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-383'>MAPREDUCE-383</a>] -         pipes combiner does not reset properly after a spill
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-421'>MAPREDUCE-421</a>] -         mapred pipes might return exit code 0 even when failing
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-430'>MAPREDUCE-430</a>] -         Task stuck in cleanup with OutOfMemoryErrors
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-565'>MAPREDUCE-565</a>] -         Partitioner does not work with new API
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-657'>MAPREDUCE-657</a>] -         CompletedJobStatusStore hardcodes filesystem to hdfs
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-687'>MAPREDUCE-687</a>] -         TestMiniMRMapRedDebugScript fails sometimes
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-735'>MAPREDUCE-735</a>] -         ArrayIndexOutOfBoundsException is thrown by KeyFieldBasedPartitioner
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-745'>MAPREDUCE-745</a>] -         TestRecoveryManager fails sometimes
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-796'>MAPREDUCE-796</a>] -         Encountered &quot;ClassCastException&quot; on tasktracker while running wordcount with MultithreadedMapRunner
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-805'>MAPREDUCE-805</a>] -         Deadlock in Jobtracker
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-806'>MAPREDUCE-806</a>] -         WordCount example does not compile given the current instructions
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-807'>MAPREDUCE-807</a>] -         Stray user files in mapred.system.dir with permissions other than 777 can prevent the jobtracker from starting up.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-818'>MAPREDUCE-818</a>] -         org.apache.hadoop.mapreduce.Counters.getGroup returns null if the group name doesnt exist.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-827'>MAPREDUCE-827</a>] -         &quot;hadoop job -status &lt;jobid&gt;&quot; command should display job's completion status also.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-832'>MAPREDUCE-832</a>] -         Too many WARN messages about deprecated memorty config variables in JobTacker log
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-834'>MAPREDUCE-834</a>] -         When TaskTracker config use old memory management values its memory monitoring is diabled.
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-838'>MAPREDUCE-838</a>] -         Task succeeds even when committer.commitTask fails with IOException
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-911'>MAPREDUCE-911</a>] -         TestTaskFail fail sometimes
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-924'>MAPREDUCE-924</a>] -         TestPipes crashes on trunk
-</li>
-</ul>
-    
-<h4>        Improvement
-</h4>
-<ul>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-465'>MAPREDUCE-465</a>] -         Deprecate org.apache.hadoop.mapred.lib.MultithreadedMapRunner
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-487'>MAPREDUCE-487</a>] -         DBInputFormat support for Oracle
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-767'>MAPREDUCE-767</a>] -         to remove mapreduce dependency on commons-cli2
-</li>
-</ul>
-
-<h2>Changes Since Hadoop 0.19.1</h2>
-<table border="1">
-<tr bgcolor="#DDDDDD">
-<th align="left">Issue</th><th align="left">Component</th><th align="left">Notes</th>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-3344">HADOOP-3344</a></td><td>build</td><td>Changed build procedure for libhdfs to build correctly for different platforms. Build instructions are in the Jira item.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4253">HADOOP-4253</a></td><td>conf</td><td>Removed  from class org.apache.hadoop.fs.RawLocalFileSystem deprecated methods public String getName(), public void lock(Path p, boolean shared) and public void release(Path p).</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4454">HADOOP-4454</a></td><td>conf</td><td>Changed processing of conf/slaves file to allow # to begin a comment.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4631">HADOOP-4631</a></td><td>conf</td><td>Split hadoop-default.xml into core-default.xml, hdfs-default.xml and mapreduce-default.xml.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4035">HADOOP-4035</a></td><td>contrib/capacity-sched</td><td>Changed capacity scheduler policy to take note of task memory requirements and task tracker memory availability.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4445">HADOOP-4445</a></td><td>contrib/capacity-sched</td><td>Changed JobTracker UI to better present the number of active tasks.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4576">HADOOP-4576</a></td><td>contrib/capacity-sched</td><td>Changed capacity scheduler UI to better present number of running and pending tasks.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4179">HADOOP-4179</a></td><td>contrib/chukwa</td><td>Introduced Vaidya rule based performance diagnostic tool for Map/Reduce jobs.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4827">HADOOP-4827</a></td><td>contrib/chukwa</td><td>Improved framework for data aggregation in Chuckwa.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4843">HADOOP-4843</a></td><td>contrib/chukwa</td><td>Introduced Chuckwa collection of job history.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-5030">HADOOP-5030</a></td><td>contrib/chukwa</td><td>Changed RPM install location to the value specified by build.properties file.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-5531">HADOOP-5531</a></td><td>contrib/chukwa</td><td>Disabled Chukwa unit tests for 0.20 branch only.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4789">HADOOP-4789</a></td><td>contrib/fair-share</td><td>Changed fair scheduler to divide resources equally between pools, not jobs.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4873">HADOOP-4873</a></td><td>contrib/fair-share</td><td>Changed fair scheduler UI to display minMaps and minReduces variables.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-3750">HADOOP-3750</a></td><td>dfs</td><td>Removed deprecated method parseArgs from org.apache.hadoop.fs.FileSystem.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4029">HADOOP-4029</a></td><td>dfs</td><td>Added name node storage information to the dfshealth page, and moved data node information to a separated page.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4103">HADOOP-4103</a></td><td>dfs</td><td>Modified dfsadmin -report to report under replicated blocks. blocks with corrupt replicas, and missing blocks&quot;.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4567">HADOOP-4567</a></td><td>dfs</td><td>Changed GetFileBlockLocations to return topology information for nodes that host the block replicas.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4572">HADOOP-4572</a></td><td>dfs</td><td>Moved org.apache.hadoop.hdfs.{CreateEditsLog, NNThroughputBenchmark} to org.apache.hadoop.hdfs.server.namenode.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4618">HADOOP-4618</a></td><td>dfs</td><td>Moved HTTP server from FSNameSystem to NameNode. Removed FSNamesystem.getNameNodeInfoPort(). Replaced FSNamesystem.getDFSNameNodeMachine() and FSNamesystem.getDFSNameNodePort() with new method  FSNamesystem.getDFSNameNodeAddress(). Removed constructor NameNode(bindAddress, conf).</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4826">HADOOP-4826</a></td><td>dfs</td><td>Introduced new dfsadmin command saveNamespace to command the name service to do an immediate save of the file system image.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4970">HADOOP-4970</a></td><td>dfs</td><td>Changed trash facility to use absolute path of the deleted file.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-5468">HADOOP-5468</a></td><td>documentation</td><td>Reformatted HTML documentation for Hadoop to use submenus at the left column.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-3497">HADOOP-3497</a></td><td>fs</td><td>Changed the semantics of file globbing with a PathFilter (using the globStatus method of FileSystem). Previously, the filtering was too restrictive, so that a glob of /*/* and a filter that only accepts /a/b would not have matched /a/b. With this change /a/b does match. </td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4234">HADOOP-4234</a></td><td>fs</td><td>Changed KFS glue layer to allow applications to interface with multiple KFS metaservers.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4422">HADOOP-4422</a></td><td>fs/s3</td><td>Modified Hadoop file system to no longer create S3 buckets. Applications can create buckets for their S3 file systems by other means, for example, using the JetS3t API.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-3063">HADOOP-3063</a></td><td>io</td><td>Introduced BloomMapFile subclass of MapFile that creates a Bloom filter from all keys.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-1230">HADOOP-1230</a></td><td>mapred</td><td>Replaced parameters with context obejcts in Mapper, Reducer, Partitioner, InputFormat, and OutputFormat classes.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-1650">HADOOP-1650</a></td><td>mapred</td><td>Upgraded all core servers to use Jetty 6</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-3923">HADOOP-3923</a></td><td>mapred</td><td>Moved class org.apache.hadoop.mapred.StatusHttpServer to org.apache.hadoop.http.HttpServer.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-3986">HADOOP-3986</a></td><td>mapred</td><td>Removed classes org.apache.hadoop.mapred.JobShell and org.apache.hadoop.mapred.TestJobShell. Removed from JobClient methods static void  setCommandLineConfig(Configuration conf) and public static Configuration getCommandLineConfig().</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4188">HADOOP-4188</a></td><td>mapred</td><td>Removed Task's dependency on concrete file systems by taking list from FileSystem class. Added statistics table to FileSystem class. Deprecated FileSystem method getStatistics(Class&lt;? extends FileSystem&gt; cls).</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4210">HADOOP-4210</a></td><td>mapred</td><td>Changed public class org.apache.hadoop.mapreduce.ID to be an abstract class. Removed from class org.apache.hadoop.mapreduce.ID the methods  public static ID read(DataInput in) and public static ID forName(String str).</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4305">HADOOP-4305</a></td><td>mapred</td><td>Improved TaskTracker blacklisting strategy to better exclude faulty tracker from executing tasks.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4435">HADOOP-4435</a></td><td>mapred</td><td>Changed JobTracker web status page to display the amount of heap memory in use. This changes the JobSubmissionProtocol.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4565">HADOOP-4565</a></td><td>mapred</td><td>Improved MultiFileInputFormat so that multiple blocks from the same node or same rack can be combined into a single split.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4749">HADOOP-4749</a></td><td>mapred</td><td>Added a new counter REDUCE_INPUT_BYTES.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4783">HADOOP-4783</a></td><td>mapred</td><td>Changed history directory permissions to 750 and history file permissions to 740.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-3422">HADOOP-3422</a></td><td>metrics</td><td>Changed names of ganglia metrics to avoid conflicts and to better identify source function.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4284">HADOOP-4284</a></td><td>security</td><td>Introduced HttpServer method to support global filters.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4575">HADOOP-4575</a></td><td>security</td><td>Introduced independent HSFTP proxy server for authenticated access to clusters.</td>
-</tr>
-<tr>
-<td><a href="https://issues.apache.org:443/jira/browse/HADOOP-4661">HADOOP-4661</a></td><td>tools/distcp</td><td>Introduced distch tool for parallel ch{mod, own, grp}.</td>
-</tr>
+<table border=0 cellpadding=2 cellspacing=0 style='border-collapse:
+ collapse;table-layout:fixed'>
+ <col class=xl24 width=150>
+ <col class=xl24 width=400>
+ <col class=xl24 width=125>
+ <tr height=16>
+  <td height=16 class=xl25 width=101>Key</td>
+  <td class=xl25 width=300>Summary</td>
+  <td class=xl25 width=125>Component/s</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/MAPREDUCE-2558">MAPREDUCE-2558</a></td>
+  <td class=xl26 width=300>Add queue-level metrics 0.20-security branch</td>
+  <td class=xl26 width=125>jobtracker</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/MAPREDUCE-2555">MAPREDUCE-2555</a></td>
+  <td class=xl26 width=300>JvmInvalidate errors in the gridmix TT logs</td>
+  <td class=xl26 width=125>tasktracker</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/MAPREDUCE-2529">MAPREDUCE-2529</a></td>
+  <td class=xl26 width=300>Recognize Jetty bug 1342 and handle it</td>
+  <td class=xl26 width=125>tasktracker</td>
+ </tr>
+ <tr height=24>
+  <td height=24 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/MAPREDUCE-2524">MAPREDUCE-2524</a></td>
+  <td class=xl26 width=300>Backport trunk heuristics for failing maps when we
+  get fetch failures retrieving map output during shuffle</td>
+  <td class=xl26 width=125>tasktracker</td>
+ </tr>
+ <tr height=24>
+  <td height=24 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/MAPREDUCE-2514">MAPREDUCE-2514</a></td>
+  <td class=xl26 width=300>ReinitTrackerAction class name misspelled
+  RenitTrackerAction in task tracker log</td>
+  <td class=xl26 width=125>tasktracker</td>
+ </tr>
+ <tr height=24>
+  <td height=24 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/MAPREDUCE-2495">MAPREDUCE-2495</a></td>
+  <td class=xl26 width=300>The distributed cache cleanup thread has no
+  monitoring to check to see if it has died for some reason</td>
+  <td class=xl26 width=125>distributed-cache</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/MAPREDUCE-2490">MAPREDUCE-2490</a></td>
+  <td class=xl26 width=300>Log blacklist debug count</td>
+  <td class=xl26 width=125>jobtracker</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/MAPREDUCE-2479">MAPREDUCE-2479</a></td>
+  <td class=xl26 width=300>Backport MAPREDUCE-1568 to hadoop security branch</td>
+  <td class=xl26 width=125>tasktracker</td>
+ </tr>
+ <tr height=24>
+  <td height=24 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/MAPREDUCE-2456">MAPREDUCE-2456</a></td>
+  <td class=xl26 width=300>Show the reducer taskid and map/reduce tasktrackers
+  for &quot;Failed fetch notification #_ for task attempt...&quot; log messages</td>
+  <td class=xl26 width=125>jobtracker</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/MAPREDUCE-2451">MAPREDUCE-2451</a></td>
+  <td class=xl26 width=300>Log the reason string of healthcheck script</td>
+  <td class=xl26 width=125>jobtracker</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/MAPREDUCE-2447">MAPREDUCE-2447</a></td>
+  <td class=xl26 width=300>Set JvmContext sooner for a task - MR2429</td>
+  <td class=xl26 width=125>&nbsp;</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/MAPREDUCE-2443">MAPREDUCE-2443</a></td>
+  <td class=xl26 width=300>Fix FI build - broken after MR-2429</td>
+  <td class=xl26 width=125>test</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/MAPREDUCE-2429">MAPREDUCE-2429</a></td>
+  <td class=xl26 width=300>Check jvmid during task status report</td>
+  <td class=xl26 width=125>tasktracker</td>
+ </tr>
+ <tr height=24>
+  <td height=24 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/MAPREDUCE-2418">MAPREDUCE-2418</a></td>
+  <td class=xl26 width=300>Errors not shown in the JobHistory servlet
+  (specifically Counter Limit Exceeded)</td>
+  <td class=xl26 width=125>&nbsp;</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/MAPREDUCE-2415">MAPREDUCE-2415</a></td>
+  <td class=xl26 width=300>Distribute TaskTracker userlogs onto multiple disks</td>
+  <td class=xl26 width=125>task-controller, tasktracker</td>
+ </tr>
+ <tr height=24>
+  <td height=24 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/MAPREDUCE-2413">MAPREDUCE-2413</a></td>
+  <td class=xl26 width=300>TaskTracker should handle disk failures at both
+  startup and runtime</td>
+  <td class=xl26 width=125>task-controller, tasktracker</td>
+ </tr>
+ <tr height=24>
+  <td height=24 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/MAPREDUCE-2411">MAPREDUCE-2411</a></td>
+  <td class=xl26 width=300>When you submit a job to a queue with no ACLs you
+  get an inscrutible NPE</td>
+  <td class=xl26 width=125>&nbsp;</td>
+ </tr>
+ <tr height=24>
+  <td height=24 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/MAPREDUCE-2409">MAPREDUCE-2409</a></td>
+  <td class=xl26 width=300>Distributed Cache does not differentiate between
+  file /archive for files with the same path</td>
+  <td class=xl26 width=125>distributed-cache</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/MAPREDUCE-118">MAPREDUCE-118</a></td>
+  <td class=xl26 width=300>Job.getJobID() will always return null</td>
+  <td class=xl26 width=125>client</td>
+ </tr>
+ <tr height=24>
+  <td height=24 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HDFS-2057">HDFS-2057</a></td>
+  <td class=xl26 width=300>Wait time to terminate the threads causing unit
+  tests to take longer time</td>
+  <td class=xl26 width=125>data-node</td>
+ </tr>
+ <tr height=24>
+  <td height=24 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HDFS-2044">HDFS-2044</a></td>
+  <td class=xl26 width=300>TestQueueProcessingStatistics failing automatic test
+  due to timing issues</td>
+  <td class=xl26 width=125>test</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HDFS-2023">HDFS-2023</a></td>
+  <td class=xl26 width=300>Backport of NPE for File.list and File.listFiles</td>
+  <td class=xl26 width=125>data-node</td>
+ </tr>
+ <tr height=36>
+  <td height=36 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HDFS-1878">HDFS-1878</a></td>
+  <td class=xl26 width=300>TestHDFSServerPorts unit test failure - race
+  condition in FSNamesystem.close() causes NullPointerException without serious
+  consequence</td>
+  <td class=xl26 width=125>name-node</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HDFS-1836">HDFS-1836</a></td>
+  <td class=xl26 width=300>Thousand of CLOSE_WAIT socket</td>
+  <td class=xl26 width=125>hdfs client</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HDFS-1822">HDFS-1822</a></td>
+  <td class=xl26 width=300>Editlog opcodes overlap between 20 security and
+  later releases</td>
+  <td class=xl26 width=125>name-node</td>
+ </tr>
+ <tr height=24>
+  <td height=24 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HDFS-1773">HDFS-1773</a></td>
+  <td class=xl26 width=300>Remove a datanode from cluster if include list is
+  not empty and this datanode is removed from both include and exclude lists</td>
+  <td class=xl26 width=125>name-node</td>
+ </tr>
+ <tr height=24>
+  <td height=24 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HDFS-1767">HDFS-1767</a></td>
+  <td class=xl26 width=300>Namenode should ignore non-initial block reports
+  from datanodes when in safemode during startup</td>
+  <td class=xl26 width=125>data-node</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HDFS-1758">HDFS-1758</a></td>
+  <td class=xl26 width=300>Web UI JSP pages thread safety issue</td>
+  <td class=xl26 width=125>tools</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HDFS-1750">HDFS-1750</a></td>
+  <td class=xl26 width=300>fs -ls hftp://file not working</td>
+  <td class=xl26 width=125>&nbsp;</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HDFS-1692">HDFS-1692</a></td>
+  <td class=xl26 width=300>In secure mode, Datanode process doesn't exit when
+  disks fail.</td>
+  <td class=xl26 width=125>data-node</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HDFS-1592">HDFS-1592</a></td>
+  <td class=xl26 width=300>Datanode startup doesn't honor volumes.tolerated</td>
+  <td class=xl26 width=125>&nbsp;</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HDFS-1541">HDFS-1541</a></td>
+  <td class=xl26 width=300>Not marking datanodes dead When namenode in safemode</td>
+  <td class=xl26 width=125>name-node</td>
+ </tr>
+ <tr height=36>
+  <td height=36 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HDFS-1445">HDFS-1445</a></td>
+  <td class=xl26 width=300>HDFS-1443 Batch the calls in DataStorage to
+  FileUtil.createHardLink(), so we call it once per directory instead of once
+  per file</td>
+  <td class=xl26 width=125>data-node</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HDFS-1377">HDFS-1377</a></td>
+  <td class=xl26 width=300>Quota bug for partial blocks allows quotas to be
+  violated</td>
+  <td class=xl26 width=125>name-node</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HDFS-1258">HDFS-1258</a></td>
+  <td class=xl26 width=300>Clearing namespace quota on &quot;/&quot; corrupts
+  FS image</td>
+  <td class=xl26 width=125>name-node</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HDFS-1189">HDFS-1189</a></td>
+  <td class=xl26 width=300>Quota counts missed between clear quota and set
+  quota</td>
+  <td class=xl26 width=125>name-node</td>
+ </tr>
+ <tr height=24>
+  <td height=24 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HADOOP-7398">HADOOP-7398</a></td>
+  <td class=xl26 width=300>create a mechanism to suppress the HADOOP_HOME
+  deprecated warning</td>
+  <td class=xl26 width=125>&nbsp;</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HADOOP-7373">HADOOP-7373</a></td>
+  <td class=xl26 width=300>Tarball deployment doesn't work with
+  {start,stop}-{dfs,mapred}</td>
+  <td class=xl26 width=125>&nbsp;</td>
+ </tr>
+ <tr height=24>
+  <td height=24 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HADOOP-7364">HADOOP-7364</a></td>
+  <td class=xl26 width=300>TestMiniMRDFSCaching fails if test.build.dir is set
+  to something other than build/test</td>
+  <td class=xl26 width=125>test</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HADOOP-7356">HADOOP-7356</a></td>
+  <td class=xl26 width=300>RPM packages broke bin/hadoop script for hadoop
+  0.20.205</td>
+  <td class=xl26 width=125>&nbsp;</td>
+ </tr>
+ <tr height=24>
+  <td height=24 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HADOOP-7330">HADOOP-7330</a></td>
+  <td class=xl26 width=300>The metrics source mbean implementation should
+  return the attribute value instead of the object</td>
+  <td class=xl26 width=125>metrics</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HADOOP-7277">HADOOP-7277</a></td>
+  <td class=xl26 width=300>Add Eclipse launch tasks for the 0.20-security
+  branch</td>
+  <td class=xl26 width=125>build</td>
+ </tr>
+ <tr height=24>
+  <td height=24 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HADOOP-7274">HADOOP-7274</a></td>
+  <td class=xl26 width=300>CLONE - IOUtils.readFully and IOUtils.skipFully have
+  typo in exception creation's message</td>
+  <td class=xl26 width=125>util</td>
+ </tr>
+ <tr height=36>
+  <td height=36 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HADOOP-7248">HADOOP-7248</a></td>
+  <td class=xl26 width=300>Have a way to automatically update Eclipse
+  .classpath file when new libs are added to the classpath through Ivy for
+  0.20-* based sources</td>
+  <td class=xl26 width=125>build</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HADOOP-7232">HADOOP-7232</a></td>
+  <td class=xl26 width=300>Fix javadoc warnings</td>
+  <td class=xl26 width=125>documentation</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HADOOP-7144">HADOOP-7144</a></td>
+  <td class=xl26 width=300>Expose JMX with something like JMXProxyServlet</td>
+  <td class=xl26 width=125>&nbsp;</td>
+ </tr>
+ <tr height=16>
+  <td height=16 class=xl27 width=101><a
+  href="https://issues.apache.org/jira/browse/HADOOP-6255">HADOOP-6255</a></td>
+  <td class=xl26 width=300>Create an rpm integration project</td>
+  <td class=xl26 width=125>&nbsp;</td>
+ </tr>
 </table>
+
+<h2>Changes Since Hadoop 0.20.2</h2>
+
+<ul>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7190">HADOOP-7190</a>. Add metrics v1 back for backwards compatibility. (omalley)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2360">MAPREDUCE-2360</a>. Remove stripping of scheme, authority from submit dir in 
+    support of viewfs. (cdouglas)
+    
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2359">MAPREDUCE-2359</a> Use correct file system to access distributed cache objects.
+    (Krishna Ramachandran)
+ 
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2361">MAPREDUCE-2361</a>. "Fix Distributed Cache is not adding files to class paths
+    correctly" - Drop the host/scheme/fragment from URI (cdouglas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2362">MAPREDUCE-2362</a>. Fix unit-test failures: TestBadRecords (NPE due to
+    rearranged MapTask code) and TestTaskTrackerMemoryManager
+    (need hostname in output-string pattern). (Greg Roelofs, Krishna 
+    Ramachandran)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1729">HDFS-1729</a>. Add statistics logging for better visibility into
+    startup time costs. (Matt Foley)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2363">MAPREDUCE-2363</a>.  When a queue is built without any access rights we 
+    explain the problem.  (Richard King)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1563">MAPREDUCE-1563</a>. TaskDiagnosticInfo may be missed sometime. (Krishna 
+    Ramachandran)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2364">MAPREDUCE-2364</a>. Don't hold the rjob lock while localizing resources. (ddas
+    via omalley)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1598">HDFS-1598</a>. Directory listing on hftp:// does not show
+    .*.crc files.  (szetszwo)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2365">MAPREDUCE-2365</a>. New counters for FileInputFormat (BYTES_READ) and 
+    FileOutputFormat (BYTES_WRITTEN). 
+    New counter MAP_OUTPUT_MATERIALIZED_BYTES for compressed MapOutputSize.
+    (Siddharth Seth)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7040">HADOOP-7040</a>. Change DiskErrorException to IOException (boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7104">HADOOP-7104</a>. Remove unnecessary DNS reverse lookups from RPC layer 
+    (kzhang)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2366">MAPREDUCE-2366</a>.  Fix a problem where the task browser UI can't retrieve the
+    stdxxx printouts of streaming jobs that abend in the unix code, in
+    the common case where the containing job doesn't reuse JVM's.
+    (Richard King)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6977">HADOOP-6977</a>. Herriot daemon clients should vend statistics (cos)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6971">HADOOP-6971</a>. Clover build doesn't generate per-test coverage (cos)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6879">HADOOP-6879</a>. Provide SSH based (Jsch) remote execution API for system
+    tests. (cos)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2355">MAPREDUCE-2355</a>. Add a configuration knob 
+    mapreduce.tasktracker.outofband.heartbeat.damper that limits out of band
+    heartbeats (acmurthy)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2356">MAPREDUCE-2356</a>. Fix a race-condition that corrupted a task's state on the 
+    JobTracker. (Luke Lu)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2357">MAPREDUCE-2357</a>. Always propagate IOExceptions that are thrown by 
+    non-FileInputFormat. (Luke Lu)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7163">HADOOP-7163</a>. RPC handles SocketTimeOutException during SASL negotiation.
+    (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2358">MAPREDUCE-2358</a>. MapReduce assumes the default FileSystem is HDFS.
+    (Krishna Ramachandran)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1904">MAPREDUCE-1904</a>. Reducing locking contention in TaskTracker's 
+    MapOutputServlet LocalDirAllocator. (Rajesh Balamohan via acmurthy)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1626">HDFS-1626</a>. Make BLOCK_INVALIDATE_LIMIT configurable. (szetszwo)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1584">HDFS-1584</a>. Adds a check for whether relogin is needed to 
+    getDelegationToken in HftpFileSystem. (Kan Zhang via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7115">HADOOP-7115</a>. Reduces the number of calls to getpwuid_r and 
+    getpwgid_r, by implementing a cache in NativeIO. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6882">HADOOP-6882</a>. An XSS security exploit in jetty-6.1.14. jetty upgraded to
+    6.1.26. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2278">MAPREDUCE-2278</a>. Fixes a memory leak in the TaskTracker. (cdouglas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1353 redux">HDFS-1353 redux</a>. Modulate original 1353  to not bump RPC version.
+    (jhoman)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2082">MAPREDUCE-2082</a> Race condition in writing the jobtoken password file when 
+    launching pipes jobs (jitendra and ddas)
+                
+    <a href="https://issues.apache.org/jira/browse/HADOOP-6978">HADOOP-6978</a>. Fixes task log servlet vulnerabilities via symlinks. 
+    (Todd Lipcon and Devaraj Das)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2178">MAPREDUCE-2178</a>. Write task initialization to avoid race 
+    conditions leading to privilege escalation and resource leakage by 
+    performing more actiions as the user. (Owen O'Malley, Devaraj Das, 
+    Chris Douglas via cdouglas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1364">HDFS-1364</a>. HFTP client should support relogin from keytab
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6907">HADOOP-6907</a>. Make RPC client to use per-proxy configuration.
+    (Kan Zhang via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2055">MAPREDUCE-2055</a>. Fix JobTracker to decouple job retirement from copy of 
+    job-history file to HDFS and enhance RetiredJobInfo to carry aggregated 
+    job-counters to prevent a disk roundtrip on job-completion to fetch 
+    counters for the JobClient. (Krishna Ramachandran via acmurthy)
+                
+    <a href="https://issues.apache.org/jira/browse/HDFS-1353">HDFS-1353</a>. Remove most of getBlockLocation optimization (jghoman)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2023">MAPREDUCE-2023</a>. TestDFSIO read test may not read specified bytes. (htang)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1340">HDFS-1340</a>. A null delegation token is appended to the url if security is 
+    disabled when browsing filesystem.(boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1352">HDFS-1352</a>. Fix jsvc.location. (jghoman)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6860">HADOOP-6860</a>. 'compile-fault-inject' should never be called directly. (cos)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2005">MAPREDUCE-2005</a>. TestDelegationTokenRenewal fails (boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2000">MAPREDUCE-2000</a>. Rumen is not able to extract counters for Job history logs
+    from Hadoop 0.20. (htang)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1961">MAPREDUCE-1961</a>. ConcurrentModificationException when shutting down Gridmix.
+    (htang)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6899">HADOOP-6899</a>. RawLocalFileSystem set working directory does
+    not work for relative names. (suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-495">HDFS-495</a>. New clients should be able to take over files lease if the old 
+    client died. (shv)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6728">HADOOP-6728</a>. Re-design and overhaul of the Metrics framework. (Luke Lu via
+    acmurthy)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1966">MAPREDUCE-1966</a>. Change blacklisting of tasktrackers on task failures to be
+    a simple graylist to fingerpoint bad tasktrackers. (Greg Roelofs via
+    acmurthy)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6864">HADOOP-6864</a>. Add ability to get netgroups (as returned by getent
+    netgroup command) using native code (JNI) instead of forking. (Erik Steffl)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1318">HDFS-1318</a>. HDFS Namenode and Datanode WebUI information needs to be 
+    accessible programmatically for scripts. (Tanping Wang via suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1315">HDFS-1315</a>. Add fsck event to audit log and remove other audit log events 
+    corresponding to FSCK listStatus and open calls. (suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1941">MAPREDUCE-1941</a>. Provides access to JobHistory file (raw) with job user/acl 
+    permission. (Srikanth Sundarrajan via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-291.">MAPREDUCE-291.</a> Optionally a separate daemon should serve JobHistory.
+    (Srikanth Sundarrajan via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1936">MAPREDUCE-1936</a>. Make Gridmix3 more customizable (sync changes from trunk).
+    (htang)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5981">HADOOP-5981</a>. Fix variable substitution during parsing of child environment
+    variables. (Krishna Ramachandran via acmurthy)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-339.">MAPREDUCE-339.</a> Greedily schedule failed tasks to cause early job failure.
+    (cdouglas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1872">MAPREDUCE-1872</a>. Hardened CapacityScheduler to have comprehensive, coherent
+    limits on tasks/jobs for jobs/users/queues. Also, added the ability to
+    refresh queue definitions without the need to restart the JobTracker.
+    (acmurthy)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1161">HDFS-1161</a>. Make DN minimum valid volumes configurable. (shv)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-457">HDFS-457</a>. Reintroduce volume failure tolerance for DataNodes. (shv)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1307 Add start time, end time and total time taken for FSCK 
+    to FSCK report">HDFS-1307 Add start time, end time and total time taken for FSCK 
+    to FSCK report</a>. (suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1207">MAPREDUCE-1207</a>. Sanitize user environment of map/reduce tasks and allow 
+    admins to set environment and java options. (Krishna Ramachandran via
+    acmurthy) 
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1298 - Add support in HDFS for new statistics added in FileSystem
+    to track the file system operations (suresh)
+
+<li> HDFS-1301">HDFS-1298 - Add support in HDFS for new statistics added in FileSystem
+    to track the file system operations (suresh)
+
+<li> HDFS-1301</a>. TestHDFSProxy need to use server side conf for ProxyUser  
+    stuff.(boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6859">HADOOP-6859</a> - Introduce additional statistics to FileSystem to track 
+    file system operations (suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6818">HADOOP-6818</a>. Provides a JNI implementation of Unix Group resolution. The 
+    config hadoop.security.group.mapping should be set to 
+    org.apache.hadoop.security.JniBasedUnixGroupsMapping to enable this
+    implementation. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1938">MAPREDUCE-1938</a>. Introduces a configuration for putting user classes before
+    the system classes during job submission and in task launches. Two things
+    need to be done in order to use this feature - 
+    (1) mapreduce.user.classpath.first : this should be set to true in the 
+    jobconf, and, (2) HADOOP_USER_CLASSPATH_FIRST : this is relevant for job 
+    submissions done using bin/hadoop shell script. HADOOP_USER_CLASSPATH_FIRST
+    should be defined in the environment with some non-empty value 
+    (like "true"), and then bin/hadoop should be executed. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6669">HADOOP-6669</a>. Respect compression configuration when creating DefaultCodec
+    compressors. (Koji Noguchi via cdouglas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6855">HADOOP-6855</a>. Add support for netgroups, as returned by command
+    getent netgroup. (Erik Steffl)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-599">HDFS-599</a>. Allow NameNode to have a seprate port for service requests from
+    client requests. (Dmytro Molkov via hairong)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-132">HDFS-132</a>. Fix namenode to not report files deleted metrics for deletions
+    done while replaying edits during startup. (shv)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1521">MAPREDUCE-1521</a>. Protection against incorrectly configured reduces
+    (mahadev) 
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1936">MAPREDUCE-1936</a>. Make Gridmix3 more customizable. (htang)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-517.">MAPREDUCE-517.</a> Enhance the CapacityScheduler to assign multiple tasks
+    per-heartbeat. (acmurthy) 
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-323.">MAPREDUCE-323.</a> Re-factor layout of JobHistory files on HDFS to improve 
+    operability. (Dick King via acmurthy) 
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1921">MAPREDUCE-1921</a>. Ensure exceptions during reading of input data in map
+    tasks are augmented by information about actual input file which caused
+    the exception. (Krishna Ramachandran via acmurthy)  
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1118">MAPREDUCE-1118</a>. Enhance the JobTracker web-ui to ensure tabular columns
+    are sortable, also added a /scheduler servlet to CapacityScheduler for
+    enhanced UI for queue information. (Krishna Ramachandran via acmurthy) 
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5913">HADOOP-5913</a>. Add support for starting/stopping queues. (cdouglas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6835">HADOOP-6835</a>. Add decode support for concatenated gzip files. (Greg Roelofs)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1158">HDFS-1158</a>. Revert <a href="https://issues.apache.org/jira/browse/HDFS-457">HDFS-457</a>. (shv)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1699">MAPREDUCE-1699</a>. Ensure JobHistory isn't disabled for any reason. (Krishna
+    Ramachandran via acmurthy)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1682">MAPREDUCE-1682</a>. Fix speculative execution to ensure tasks are not
+    scheduled after job failure. (acmurthy)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1914">MAPREDUCE-1914</a>. Ensure unique sub-directories for artifacts in the
+    DistributedCache are cleaned up. (Dick King via acmurthy)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6713">HADOOP-6713</a>. Multiple RPC Reader Threads (Bharathm)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1250">HDFS-1250</a>. Namenode should reject block reports and block received
+    requests from dead datanodes (suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1863">MAPREDUCE-1863</a>. [Rumen] Null failedMapAttemptCDFs in job traces generated 
+    by Rumen. (htang)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1309">MAPREDUCE-1309</a>. Rumen refactory. (htang)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1114">HDFS-1114</a>. Implement LightWeightGSet for BlocksMap in order to reduce
+    NameNode memory footprint.  (szetszwo)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-572.">MAPREDUCE-572.</a> Fixes DistributedCache.checkURIs to throw error if link is
+    missing for uri in cache archives. (amareshwari)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-787.">MAPREDUCE-787.</a> Fix JobSubmitter to honor user given symlink in the path.
+    (amareshwari)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6815">HADOOP-6815</a>. refreshSuperUserGroupsConfiguration should use 
+    server side configuration for the refresh( boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1868">MAPREDUCE-1868</a>. Add a read and connection timeout to JobClient while
+    pulling tasklogs. (Krishna Ramachandran via acmurthy)   
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1119">HDFS-1119</a>. Introduce a GSet interface to BlocksMap.  (szetszwo)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1778">MAPREDUCE-1778</a>. Ensure failure to setup CompletedJobStatusStore is not
+    silently ignored by the JobTracker. (Krishna Ramachandran via acmurthy)  
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1538">MAPREDUCE-1538</a>. Add a limit on the number of artifacts in the
+    DistributedCache to ensure we cleanup aggressively. (Dick King via
+    acmurthy) 
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1850">MAPREDUCE-1850</a>. Add information about the host from which a job is
+    submitted. (Krishna Ramachandran via acmurthy) 
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1110">HDFS-1110</a>. Reuses objects for commonly used file names in namenode to
+    reduce the heap usage. (suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6810">HADOOP-6810</a>. Extract a subset of tests for smoke (DOA) validation. (cos)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6642">HADOOP-6642</a>. Remove debug stmt left from original patch. (cdouglas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6808">HADOOP-6808</a>. Add comments on how to setup File/Ganglia Context for
+    kerberos metrics (Erik Steffl)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1061">HDFS-1061</a>.  INodeFile memory optimization. (bharathm)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1109">HDFS-1109</a>. HFTP supports filenames that contains the character "+".
+    (Dmytro Molkov via dhruba, backported by szetszwo)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1085">HDFS-1085</a>. Check file length and bytes read when reading a file through
+    hftp in order to detect failure.  (szetszwo)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1311">HDFS-1311</a>. Running tests with 'testcase' cause triple execution of the
+    same test case (cos)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1150">HDFS-1150</a>.FIX.  Verify datanodes' identities to clients in secure clusters.
+    Update to patch to improve handling of jsvc source in build.xml (jghoman)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6752">HADOOP-6752</a>. Remote cluster control functionality needs JavaDocs
+    improvement. (Balaji Rajagopalan via cos)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1288">MAPREDUCE-1288</a>. Fixes TrackerDistributedCacheManager to take into account
+    the owner of the localized file in the mapping from cache URIs to 
+    CacheStatus objects. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1682">MAPREDUCE-1682</a>. Fix speculative execution to ensure tasks are not
+    scheduled after job failure. (acmurthy) 
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1914">MAPREDUCE-1914</a>. Ensure unique sub-directories for artifacts in the
+    DistributedCache are cleaned up. (Dick King via acmurthy) 
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1538">MAPREDUCE-1538</a>. Add a limit on the number of artifacts in the
+    DistributedCache to ensure we cleanup aggressively. (Dick King via
+    acmurthy)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1900">MAPREDUCE-1900</a>. Fixes a FS leak that i missed in the earlier patch.
+    (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1900">MAPREDUCE-1900</a>. Makes JobTracker/TaskTracker close filesystems, created
+    on behalf of users, when they are no longer needed. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6832">HADOOP-6832</a>. Add a static user plugin for web auth for external users.
+    (omalley)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1007">HDFS-1007</a>. Fixes a bug in SecurityUtil.buildDTServiceName to do
+    with handling of null hostname. (omalley)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1007">HDFS-1007</a>. makes long running servers using hftp work. Also has some
+    refactoring in the MR code to do with handling of delegation tokens. 
+    (omalley & ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1178">HDFS-1178</a>. The NameNode servlets should not use RPC to connect to the
+    NameNode. (omalley)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1807">MAPREDUCE-1807</a>. Re-factor TestQueueManager. (Richard King via acmurthy)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1150">HDFS-1150</a>. Fixes the earlier patch to do logging in the right directory
+    and also adds facility for monitoring processes (via -Dprocname in the
+    command line). (Jakob Homan via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6781">HADOOP-6781</a>. security audit log shouldn't have exception in it. (boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6776">HADOOP-6776</a>. Fixes the javadoc in UGI.createProxyUser. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1150">HDFS-1150</a>. building jsvc from source tar. source tar is also checked in.
+    (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1150">HDFS-1150</a>. Bugfix in the hadoop shell script. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1153">HDFS-1153</a>. The navigation to /dfsnodelist.jsp with invalid input 
+    parameters produces NPE and HTTP 500 error (rphulari)
+    
+    <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1664">MAPREDUCE-1664</a>. Bugfix to enable queue administrators of a queue to
+    view job details of jobs submitted to that queue even though they
+    are not part of acl-view-job. 
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1150">HDFS-1150</a>. Bugfix to add more knobs to secure datanode starter.
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1157">HDFS-1157</a>. Modifications introduced by <a href="https://issues.apache.org/jira/browse/HDFS-1150 are breaking aspect's
+    bindings (cos)
+
+<li> HDFS-1130">HDFS-1150 are breaking aspect's
+    bindings (cos)
+
+<li> HDFS-1130</a>. Adds a configuration dfs.cluster.administrators for 
+    controlling access to the default servlets in hdfs. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6706">HADOOP-6706</a>.FIX. Relogin behavior for RPC clients could be improved 
+    (boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1150">HDFS-1150</a>. Verify datanodes' identities to clients in secure clusters.
+    (jghoman)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1442">MAPREDUCE-1442</a>. Fixed regex in job-history related to parsing Counter
+    values. (Luke Lu via acmurthy)  
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6760">HADOOP-6760</a>. WebServer shouldn't increase port number in case of negative
+    port setting caused by Jetty's race. (cos)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1146">HDFS-1146</a>. Javadoc for getDelegationTokenSecretManager in FSNamesystem.
+    (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6706">HADOOP-6706</a>. Fix on top of the earlier patch. Closes the connection
+    on a SASL connection failure, and retries again with a new
+    connection. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1716">MAPREDUCE-1716</a>. Fix on top of earlier patch for logs truncation a.k.a 
+    <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1100">MAPREDUCE-1100</a>. Addresses log truncation issues when binary data is
+    written to log files and adds a header to a truncated log file to
+    inform users of the done trucation.
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1383">HDFS-1383</a>. Improve the error messages when using hftp://.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1744">MAPREDUCE-1744</a>. Fixed DistributedCache apis to take a user-supplied
+    FileSystem to allow for better proxy behaviour for Oozie. (Richard King) 
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1733">MAPREDUCE-1733</a>. Authentication between pipes processes and java 
+    counterparts. (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1664">MAPREDUCE-1664</a>. Bugfix on top of the previous patch. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1136">HDFS-1136</a>. FileChecksumServlets.RedirectServlet doesn't carry forward 
+    the delegation token (boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6756">HADOOP-6756</a>. Change value of FS_DEFAULT_NAME_KEY from fs.defaultFS
+    to fs.default.name which is a correct name for 0.20 (steffl)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6756">HADOOP-6756</a>. Document (javadoc comments) and cleanup configuration
+    keys in CommonConfigurationKeys.java (steffl)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1759">MAPREDUCE-1759</a>. Exception message for unauthorized user doing killJob,
+    killTask, setJobPriority needs to be improved. (gravi via vinodkv)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6715">HADOOP-6715</a>. AccessControlList.toString() returns empty string when
+    we set acl to "*". (gravi via vinodkv)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6757">HADOOP-6757</a>. NullPointerException for hadoop clients launched from
+    streaming tasks. (amarrk via vinodkv)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6631">HADOOP-6631</a>. FileUtil.fullyDelete() should continue to delete other files
+    despite failure at any level. (vinodkv)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1317">MAPREDUCE-1317</a>. NPE in setHostName in Rumen. (rksingh)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1754">MAPREDUCE-1754</a>. Replace mapred.persmissions.supergroup with an acl : 
+    mapreduce.cluster.administrators and <a href="https://issues.apache.org/jira/browse/HADOOP-6748">HADOOP-6748</a>.: Remove
+    hadoop.cluster.administrators. Contributed by Amareshwari Sriramadasu.
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6701">HADOOP-6701</a>.  Incorrect exit codes for "dfs -chown", "dfs -chgrp"
+    (rphulari)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6640">HADOOP-6640</a>. FileSystem.get() does RPC retires within a static
+    synchronized block. (hairong)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1006">HDFS-1006</a>. Removes unnecessary logins from the previous patch. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6745">HADOOP-6745</a>. adding some java doc to Server.RpcMetrics, UGI (boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1707">MAPREDUCE-1707</a>. TaskRunner can get NPE in getting ugi from TaskTracker. 
+    (vinodkv)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1104">HDFS-1104</a>. Fsck triggers full GC on NameNode. (hairong)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6332">HADOOP-6332</a>. Large-scale Automated Test Framework (sharad, Sreekanth
+    Ramakrishnan, at all via cos)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6526">HADOOP-6526</a>. Additional fix for test context on top of existing one. (cos)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6710">HADOOP-6710</a>. Symbolic umask for file creation is not conformant with posix.
+    (suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6693">HADOOP-6693</a>. Added metrics to track kerberos login success and failure.
+    (suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1711">MAPREDUCE-1711</a>. Gridmix should provide an option to submit jobs to the same
+    queues as specified in the trace. (rksing via htang)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1687">MAPREDUCE-1687</a>. Stress submission policy does not always stress the
+    cluster. (htang)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1641">MAPREDUCE-1641</a>. Bug-fix to ensure command line options such as
+    -files/-archives are checked for duplicate artifacts in the
+    DistributedCache. (Amareshwari Sreeramadasu via acmurthy) 
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1641">MAPREDUCE-1641</a>. Fix DistributedCache to ensure same files cannot be put in
+    both the archives and files sections. (Richard King via acmurthy) 
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6670">HADOOP-6670</a>. Fixes a testcase issue introduced by the earlier commit
+    of the <a href="https://issues.apache.org/jira/browse/HADOOP-6670">HADOOP-6670</a> patch. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1718">MAPREDUCE-1718</a>. Fixes a problem to do with correctly constructing
+    service name for the delegation token lookup in HftpFileSystem
+    (borya via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6674">HADOOP-6674</a>. Fixes the earlier patch to handle pings correctly (ddas).
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1664">MAPREDUCE-1664</a>. Job Acls affect when Queue Acls are set. 
+    (Ravi Gummadi via vinodkv)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6718">HADOOP-6718</a>. Fixes a problem to do with clients not closing RPC
+    connections on a SASL failure. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1397">MAPREDUCE-1397</a>. NullPointerException observed during task failures.
+    (Amareshwari Sriramadasu via vinodkv)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6670">HADOOP-6670</a>. Use the UserGroupInformation's Subject as the criteria for
+    equals and hashCode. (omalley)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6716">HADOOP-6716</a>. System won't start in non-secure mode when kerb5.conf 
+   (edu.mit.kerberos on Mac) is not present. (boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1607">MAPREDUCE-1607</a>. Task controller may not set permissions for a 
+    task cleanup attempt's log directory. (Amareshwari Sreeramadasu via 
+    vinodkv)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1533">MAPREDUCE-1533</a>. JobTracker performance enhancements. (Amar Kamat via 
+    vinodkv)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1701">MAPREDUCE-1701</a>.  AccessControlException while renewing a delegation token 
+    in not correctly handled in the JobTracker. (boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-481">HDFS-481</a>. Incremental patch to fix broken unit test in contrib/hdfsproxy
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6706">HADOOP-6706</a>. Fixes a bug in the earlier version of the same patch (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1096">HDFS-1096</a>. allow dfsadmin/mradmin refresh of superuser proxy group 
+    mappings(boryas).
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1012">HDFS-1012</a>. Support for cluster specific path entries in ldap for hdfsproxy
+    (Srikanth Sundarrajan via Nicholas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1011">HDFS-1011</a>. Improve Logging in HDFSProxy to include cluster name associated
+    with the request (Srikanth Sundarrajan via Nicholas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1010">HDFS-1010</a>. Retrieve group information from UnixUserGroupInformation 
+    instead of LdapEntry (Srikanth Sundarrajan via Nicholas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-481">HDFS-481</a>. Bug fix - hdfsproxy: Stack overflow + Race conditions
+    (Srikanth Sundarrajan via Nicholas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1657">MAPREDUCE-1657</a>. After task logs directory is deleted, tasklog servlet
+    displays wrong error message about job ACLs. (Ravi Gummadi via vinodkv)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1692">MAPREDUCE-1692</a>. Remove TestStreamedMerge from the streaming tests.
+    (Amareshwari Sriramadasu and Sreekanth Ramakrishnan via vinodkv)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1081">HDFS-1081</a>. Performance regression in 
+    DistributedFileSystem::getFileBlockLocations in secure systems (jhoman)
+    
+    <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1656">MAPREDUCE-1656</a>. JobStory should provide queue info. (htang)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1317">MAPREDUCE-1317</a>. Reducing memory consumption of rumen objects. (htang)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1317">MAPREDUCE-1317</a>. Reverting the patch since it caused build failures. (htang)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1683">MAPREDUCE-1683</a>. Fixed jobtracker web-ui to correctly display heap-usage.
+    (acmurthy)
+    
+    <a href="https://issues.apache.org/jira/browse/HADOOP-6706">HADOOP-6706</a>. Fixes exception handling for saslConnect. The ideal
+    solution is to the Refreshable interface but as Owen noted in 
+    <a href="https://issues.apache.org/jira/browse/HADOOP-6656">HADOOP-6656</a>, it doesn't seem to work as expected. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1617">MAPREDUCE-1617</a>. TestBadRecords failed once in our test runs. (Amar
+    Kamat via vinodkv).
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-587.">MAPREDUCE-587.</a> Stream test TestStreamingExitStatus fails with Out of
+    Memory. (Amar Kamat via vinodkv).
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1096">HDFS-1096</a>. Reverting the patch since it caused build failures. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1317">MAPREDUCE-1317</a>. Reducing memory consumption of rumen objects. (htang)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1680">MAPREDUCE-1680</a>. Add a metric to track number of heartbeats processed by the
+    JobTracker. (Richard King via acmurthy)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1683">MAPREDUCE-1683</a>.  Removes JNI calls to get jvm current/max heap usage in
+    ClusterStatus by default. (acmurthy)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6687">HADOOP-6687</a>.  user object in the subject in UGI should be reused in case 
+    of a relogin. (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5647">HADOOP-5647</a>. TestJobHistory fails if /tmp/_logs is not writable to. 
+    Testcase should not depend on /tmp. (Ravi Gummadi via vinodkv)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-181.">MAPREDUCE-181.</a> Bug fix for Secure job submission. (Ravi Gummadi via 
+    vinodkv)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1635">MAPREDUCE-1635</a>. ResourceEstimator does not work after <a href="https://issues.apache.org/jira/browse/MAPREDUCE-842.">MAPREDUCE-842.</a> 
+    (Amareshwari Sriramadasu via vinodkv)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1526">MAPREDUCE-1526</a>. Cache the job related information while submitting the 
+    job. (rksingh)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6674">HADOOP-6674</a>. Turn off SASL checksums for RPCs. (jitendra via omalley)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5958">HADOOP-5958</a>. Replace fork of DF with library call. (cdouglas via omalley)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-999">HDFS-999</a>.  Secondary namenode should login using kerberos if security
+    is configured. Bugfix to original patch. (jhoman)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1594">MAPREDUCE-1594</a>. Support for SleepJobs in Gridmix (rksingh)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1007">HDFS-1007</a>. Fix. ServiceName for delegation token for Hftp has hftp
+    port and not RPC port. 
+    
+    <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1376">MAPREDUCE-1376</a>. Support for varied user submissions in Gridmix (rksingh)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1080">HDFS-1080</a>.  SecondaryNameNode image transfer should use the defined 
+    http address rather than local ip address (jhoman)
+    
+    <a href="https://issues.apache.org/jira/browse/HADOOP-6661">HADOOP-6661</a>. User document for UserGroupInformation.doAs for secure
+    impersonation. (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1624">MAPREDUCE-1624</a>. Documents the job credentials and associated details 
+    to do with delegation tokens (ddas)
+    <a href="https://issues.apache.org/jira/browse/HDFS-1036">HDFS-1036</a>. Documentation for fetchdt for forrest (boryas)
+    <a href="https://issues.apache.org/jira/browse/HDFS-1039">HDFS-1039</a>. New patch on top of previous patch. Gets namenode address
+    from conf. (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6656">HADOOP-6656</a>. Renew Kerberos TGT when 80% of the renew lifetime has been
+    used up. (omalley)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6653">HADOOP-6653</a>. Protect against NPE in setupSaslConnection when real user is
+    null. (omalley)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6649">HADOOP-6649</a>. An error in the previous committed patch. (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6652">HADOOP-6652</a>. ShellBasedUnixGroupsMapping shouldn't have a cache. 
+    (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6649">HADOOP-6649</a>. login object in UGI should be inside the subject
+    (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6637">HADOOP-6637</a>.  Benchmark overhead of RPC session establishment
+    (shv via jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6648">HADOOP-6648</a>. Credentials must ignore null tokens that can be generated
+    when using HFTP to talk to insecure clusters. (omalley)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6632">HADOOP-6632</a>. Fix on JobTracker to reuse filesystem handles if possible.
+    (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6647">HADOOP-6647</a>. balancer fails with "is not authorized for protocol 
+    interface NamenodeProtocol" in secure environment (boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1612">MAPREDUCE-1612</a>. job conf file is not accessible from job history 
+    web page. (Ravi Gummadi via vinodkv)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1611">MAPREDUCE-1611</a>. Refresh nodes and refresh queues doesnt work with 
+    service authorization enabled. (Amar Kamat via vinodkv)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6644">HADOOP-6644</a>. util.Shell getGROUPS_FOR_USER_COMMAND method 
+   name - should use common naming convention (boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1609">MAPREDUCE-1609</a>. Fixes a problem with localization of job log
+    directories when tasktracker is re-initialized that can result
+    in failed tasks. (Amareshwari Sriramadasu via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1610">MAPREDUCE-1610</a>. Update forrest documentation for directory
+    structure of localized files. (Ravi Gummadi via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1532">MAPREDUCE-1532</a>. Fixes a javadoc and an exception message in JobInProgress
+    when the authenticated user is different from the user in conf. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1417">MAPREDUCE-1417</a>. Update forrest documentation for private
+    and public distributed cache files. (Ravi Gummadi via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6634">HADOOP-6634</a>. AccessControlList uses full-principal names to verify acls
+    causing queue-acls to fail (vinodkv)
+    
+    <a href="https://issues.apache.org/jira/browse/HADOOP-6642">HADOOP-6642</a>. Fix javac, javadoc, findbugs warnings. (chrisdo via acmurthy) 
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1044">HDFS-1044</a>.  Cannot submit mapreduce job from secure client to 
+    unsecure sever. (boryas)
+    <a href="https://issues.apache.org/jira/browse/HADOOP-6638">HADOOP-6638</a>. try to relogin in a case of failed RPC connection 
+    (expired tgt) only in case the subject is loginUser or  
+    proxyUgi.realUser. (boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6632">HADOOP-6632</a>. Support for using different Kerberos keys for different 
+    instances of Hadoop services. (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6526">HADOOP-6526</a>. Need mapping from long principal names to local OS 
+    user names. (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1604">MAPREDUCE-1604</a>. Update Forrest documentation for job authorization
+    ACLs. (Amareshwari Sriramadasu via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1045">HDFS-1045</a>.  In secure clusters, re-login is necessary for https 
+    clients before opening connections (jhoman)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6603">HADOOP-6603</a>.  Addition to original patch to be explicit
+    about new method not being for general use. (jhoman)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1543">MAPREDUCE-1543</a>. Add audit log messages for job and queue
+    access control checks. (Amar Kamat via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1606">MAPREDUCE-1606</a>. Fixed occassinal timeout in TestJobACL. (Ravi Gummadi via
+    acmurthy)
+
+<li><a href="https://issues.apache.org/jira/browse/HADOOP-6633">HADOOP-6633</a>. normalize property names for JT/NN kerberos principal 
+    names in configuration. (boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6613">HADOOP-6613</a>. Changes the RPC server so that version is checked first
+    on an incoming connection. (Kan Zhang via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5592">HADOOP-5592</a>. Fix typo in Streaming doc in reference to GzipCodec.
+    (Corinne Chandel via tomwhite)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-813.">MAPREDUCE-813.</a> Updates Streaming and M/R tutorial documents.
+    (Corinne Chandel via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-927.">MAPREDUCE-927.</a> Cleanup of task-logs should happen in TaskTracker instead
+    of the Child. (Amareshwari Sriramadasu via vinodkv)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1039">HDFS-1039</a>. Service should be set in the token in JspHelper.getUGI.
+    (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1599">MAPREDUCE-1599</a>. MRBench reuses jobConf and credentials there in.
+    (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1522">MAPREDUCE-1522</a>. FileInputFormat may use the default FileSystem for the
+    input path. (Tsz Wo (Nicholas), SZE via cdouglas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1036">HDFS-1036</a>. In DelegationTokenFetch pass Configuration object so 
+    getDefaultUri will work correctly.
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1038">HDFS-1038</a>. In nn_browsedfscontent.jsp fetch delegation token only if 
+    security is enabled. (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1036">HDFS-1036</a>. in DelegationTokenFetch dfs.getURI returns no port (boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6598">HADOOP-6598</a>. Verbose logging from the Group class (one more case)
+    (boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6627">HADOOP-6627</a>. Bad Connection to FS" message in FSShell should print 
+    message from the exception (boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1033">HDFS-1033</a>. In secure clusters, NN and SNN should verify that the remote 
+    principal during image and edits transfer (jhoman)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1005">HDFS-1005</a>. Fixes a bug to do with calling the cross-realm API in Fsck
+    client. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1422">MAPREDUCE-1422</a>. Fix cleanup of localized job directory to work if files
+    with non-deletable permissions are created within it.
+    (Amar Kamat via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1007">HDFS-1007</a>. Fixes bugs to do with 20S cluster talking to 20 over 
+    hftp (borya)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1566">MAPREDUCE-1566</a>. Fixes bugs in the earlier patch. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-992">HDFS-992</a>. A bug in backport for <a href="https://issues.apache.org/jira/browse/HDFS-992">HDFS-992</a>. (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6598">HADOOP-6598</a>. Remove verbose logging from the Groups class. (borya)
+    <a href="https://issues.apache.org/jira/browse/HADOOP-6620">HADOOP-6620</a>. NPE if renewer is passed as null in getDelegationToken.
+    (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1023">HDFS-1023</a>. Second Update to original patch to fix username (jhoman)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1435">MAPREDUCE-1435</a>. Add test cases to already committed patch for this
+    jira, synchronizing changes with trunk. (yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6612">HADOOP-6612</a>. Protocols RefreshUserToGroupMappingsProtocol and 
+    RefreshAuthorizationPolicyProtocol  authorization settings thru 
+    KerberosInfo (boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1566">MAPREDUCE-1566</a>. Bugfix for tests on top of the earlier patch. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1566">MAPREDUCE-1566</a>. Mechanism to import tokens and secrets from a file in to
+    the submitted job. (omalley)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6603">HADOOP-6603</a>. Provide workaround for issue with Kerberos not
+    resolving corss-realm principal. (kan via jhoman)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1023">HDFS-1023</a>. Update to original patch to fix username (jhoman)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-814">HDFS-814</a>. Add an api to get the visible length of a 
+    DFSDataInputStream. (hairong)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1023">HDFS-1023</a>. Allow http server to start as regular user if https
+    principal is not defined. (jhoman)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1022">HDFS-1022</a>. Merge all three test specs files (common, hdfs, mapred)
+    into one. (steffl)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-101">HDFS-101</a>. DFS write pipeline: DFSClient sometimes does not detect
+    second datanode failure. (hairong)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1015">HDFS-1015</a>. Intermittent failure in TestSecurityTokenEditLog. (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1550">MAPREDUCE-1550</a>. A bugfix on top of what was committed earlier (ddas).
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1155">MAPREDUCE-1155</a>. DISABLING THE TestStreamingExitStatus temporarily. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1020">HDFS-1020</a>. Changes the check for renewer from short name to long name
+    in the cancel/renew delegation token methods. (jitendra via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1019">HDFS-1019</a>. Fixes values of delegation token parameters in
+    hdfs-default.xml. (jitendra via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1430">MAPREDUCE-1430</a>. Fixes a backport issue with the earlier patch. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1559">MAPREDUCE-1559</a>. Fixes a problem in DelegationTokenRenewal class to
+    do with using the right credentials when talking to the NameNode.(ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1550">MAPREDUCE-1550</a>. Fixes a problem to do with creating a filesystem using
+    the user's UGI in the JobHistory browsing. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6609">HADOOP-6609</a>. Fix UTF8 to use a thread local DataOutputBuffer instead of
+    a static that was causing a deadlock in RPC. (omalley)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6584">HADOOP-6584</a>. Fix javadoc warnings introduced by original <a href="https://issues.apache.org/jira/browse/HADOOP-6584">HADOOP-6584</a>
+    patch (jhoman)
+    
+    <a href="https://issues.apache.org/jira/browse/HDFS-1017">HDFS-1017</a>. browsedfs jsp should call JspHelper.getUGI rather than using 
+    createRemoteUser(). (jhoman)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-899.">MAPREDUCE-899.</a> Modified LinuxTaskController to check that task-controller
+    has right permissions and ownership before performing any actions.
+    (Amareshwari Sriramadasu via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-204">HDFS-204</a>. Revive number of files listed metrics. (hairong)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6569">HADOOP-6569</a>. FsShell#cat should avoid calling uneccessary getFileStatus
+    before opening a file to read. (hairong)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1014">HDFS-1014</a>. Error in reading delegation tokens from edit logs. (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-458">HDFS-458</a>. Add under-10-min tests from 0.22 to 0.20.1xx, only the tests
+    that already exist in 0.20.1xx (steffl)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1155">MAPREDUCE-1155</a>. Just pulls out the TestStreamingExitStatus part of the
+    patch from jira (that went to 0.22). (ddas)
+ 
+    <a href="https://issues.apache.org/jira/browse/HADOOP-6600">HADOOP-6600</a>. Fix for branch backport only. Comparing of user should use
+    equals. (boryas).
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1006">HDFS-1006</a>. Fixes NameNode and SecondaryNameNode to use kerberizedSSL for
+    the http communication. (Jakob Homan via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1007">HDFS-1007</a>. Fixes a bug on top of the earlier patch. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1005">HDFS-1005</a>. Fsck security. Makes it work over kerberized SSL (boryas and 
+    jhoman)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1007">HDFS-1007</a>. Makes HFTP and Distcp use kerberized SSL. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1455">MAPREDUCE-1455</a>. Fixes a testcase in the earlier patch. 
+    (Ravi Gummadi via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-992">HDFS-992</a>. Refactors block access token implementation to conform to the 
+    generic Token interface. (Kan Zhang via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6584">HADOOP-6584</a>. Adds KrbSSL connector for jetty. (Jakob Homan via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6589">HADOOP-6589</a>. Add a framework for better error messages when rpc connections
+    fail to authenticate. (Kan Zhang via omalley)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6600">HADOOP-6600</a>,<a href="https://issues.apache.org/jira/browse/HDFS-1003,<a href="https://issues">HDFS-1003,<a href="https://issues</a>.apache.org/jira/browse/MAPREDUCE-1539">MAPREDUCE-1539</a>. mechanism for authorization check
+    for inter-server protocols(boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6580">HADOOP-6580</a>,<a href="https://issues.apache.org/jira/browse/HDFS-993,<a href="https://issues">HDFS-993,<a href="https://issues</a>.apache.org/jira/browse/MAPREDUCE-1516">MAPREDUCE-1516</a>. UGI should contain authentication 
+    method.
+
+<li> Namenode and JT should issue a delegation token only for kerberos 
+    authenticated  clients. (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-984,<a href="https://issues">HDFS-984,<a href="https://issues</a>.apache.org/jira/browse/HADOOP-6573">HADOOP-6573</a>,<a href="https://issues.apache.org/jira/browse/MAPREDUCE-1537">MAPREDUCE-1537</a>. Delegation Tokens should be persisted
+    in Namenode, and corresponding changes in common and mr. (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-994">HDFS-994</a>. Provide methods for obtaining delegation token from Namenode for 
+    hftp and other uses. Incorporates <a href="https://issues.apache.org/jira/browse/HADOOP-6594">HADOOP-6594</a>: Update hdfs script to 
+    provide fetchdt tool. (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6586">HADOOP-6586</a>. Log authentication and authorization failures and successes
+    (boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-991">HDFS-991</a>. Allow use of delegation tokens to authenticate to the 
+    HDFS servlets. (omalley)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-1849">HADOOP-1849</a>. Add undocumented configuration parameter for per handler 
+    call queue size in IPC Server. (shv)
+    
+    <a href="https://issues.apache.org/jira/browse/HADOOP-6599">HADOOP-6599</a>. Split existing RpcMetrics with summary in RpcMetrics and
+    details information in RpcDetailedMetrics. (suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-985">HDFS-985</a>. HDFS should issue multiple RPCs for listing a large directory.
+    (hairong)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1000">HDFS-1000</a>. Updates libhdfs to use the new UGI. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1532">MAPREDUCE-1532</a>. Ensures all filesystem operations at the client is done
+    as the job submitter. Also, changes the renewal to maintain list of tokens
+    to renew. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6596">HADOOP-6596</a>. Add a version field to the seialization of the 
+    AbstractDelegationTokenIdentifier. (omalley)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5561">HADOOP-5561</a>. Add javadoc.maxmemory to build.xml to allow larger memory.
+    (jkhoman via omalley)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6579">HADOOP-6579</a>. Add a mechanism for encoding and decoding Tokens in to
+    url-safe strings. (omalley)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1354">MAPREDUCE-1354</a>. Make incremental changes in jobtracker for
+    improving scalability (acmurthy)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-999">HDFS-999</a>.Secondary namenode should login using kerberos if security
+    is configured(boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1466">MAPREDUCE-1466</a>. Added a private configuration variable 
+    mapreduce.input.num.files, to store number of input files 
+    being processed by M/R job. (Arun Murthy via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1403">MAPREDUCE-1403</a>. Save file-sizes of each of the artifacts in 
+    DistributedCache in the JobConf (Arun Murthy via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6543">HADOOP-6543</a>. Fixes a compilation problem in the original commit. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1520">MAPREDUCE-1520</a>. Moves a call to setWorkingDirectory in Child to within
+    a doAs block. (Amareshwari Sriramadasu via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6543">HADOOP-6543</a>. Allows secure clients to talk to unsecure clusters. 
+    (Kan Zhang via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1505">MAPREDUCE-1505</a>. Delays construction of the job client until it is really
+    required. (Arun C Murthy via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6549">HADOOP-6549</a>. TestDoAsEffectiveUser should use ip address of the host
+    for superuser ip check. (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-464">HDFS-464</a>. Fix memory leaks in libhdfs. (Christian Kunz via suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-946">HDFS-946</a>. NameNode should not return full path name when lisitng a
+    diretory or getting the status of a file. (hairong)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1398">MAPREDUCE-1398</a>. Fix TaskLauncher to stop waiting for slots on a TIP 
+    that is killed / failed. (Amareshwari Sriramadasu via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1476">MAPREDUCE-1476</a>. Fix the M/R framework to not call commit for special 
+    tasks like job setup/cleanup and task cleanup.
+    (Amareshwari Sriramadasu via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6467">HADOOP-6467</a>.  Performance improvement for liststatus on directories in
+    hadoop archives. (mahadev)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6558">HADOOP-6558</a>. archive does not work with distcp -update. (nicholas via
+    mahadev)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6583">HADOOP-6583</a>. Captures authentication and authorization metrics. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1316">MAPREDUCE-1316</a>. Fixes a memory leak of TaskInProgress instances in
+    the jobtracker. (Amar Kamat via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-670.">MAPREDUCE-670.</a> Creates ant target for 10 mins patch test build.
+    (Jothi Padmanabhan via gkesavan)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1430">MAPREDUCE-1430</a>. JobTracker should be able to renew delegation tokens 
+    for the jobs(boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6551">HADOOP-6551</a>, <a href="https://issues.apache.org/jira/browse/HDFS-986, <a href="https://issues">HDFS-986, <a href="https://issues</a>.apache.org/jira/browse/MAPREDUCE-1503">MAPREDUCE-1503</a>. Change API for tokens to throw
+    exceptions instead of returning booleans. (omalley)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6545">HADOOP-6545</a>. Changes the Key for the FileSystem to be UGI. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6572">HADOOP-6572</a>. Makes sure that SASL encryption and push to responder queue 
+    for the RPC response happens atomically. (Kan Zhang via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-965">HDFS-965</a>. Split the HDFS TestDelegationToken into two tests, of which
+    one proxy users and the other normal users. (jitendra via omalley)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6560">HADOOP-6560</a>. HarFileSystem throws NPE for har://hdfs-/foo (nicholas via
+    mahadev)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-686.">MAPREDUCE-686.</a> Move TestSpeculativeExecution.Fake* into a separate class
+    so that it can be used by other tests. (Jothi Padmanabhan via sharad)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-181.">MAPREDUCE-181.</a> Fixes an issue in the use of the right config. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1026">MAPREDUCE-1026</a>. Fixes a bug in the backport. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6559">HADOOP-6559</a>. Makes the RPC client automatically re-login when the SASL 
+    connection setup fails. This is applicable to only keytab based logins. 
+    (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-2141">HADOOP-2141</a>. Backport changes made in the original JIRA to aid
+    fast unit tests in Map/Reduce. (Amar Kamat via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6382">HADOOP-6382</a>.  Import the mavenizable pom file structure and adjust
+    the build targets and bin scripts. (gkesvan via ltucker)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1425">MAPREDUCE-1425</a>. archive throws OutOfMemoryError (mahadev) 
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1399">MAPREDUCE-1399</a>. The archive command shows a null error message. (nicholas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6552">HADOOP-6552</a>. Puts renewTGT=true and useTicketCache=true for the keytab 
+    kerberos options. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1433">MAPREDUCE-1433</a>. Adds delegation token for MapReduce (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-4359">HADOOP-4359</a>. Fixes a bug in the earlier backport. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6547">HADOOP-6547</a>, <a href="https://issues.apache.org/jira/browse/HDFS-949, <a href="https://issues">HDFS-949, <a href="https://issues</a>.apache.org/jira/browse/MAPREDUCE-1470">MAPREDUCE-1470</a>. Move Delegation token into Common 
+    so that we can use it for MapReduce also. It is a combined patch for 
+    common, hdfs and mr. (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6510">HADOOP-6510</a>,<a href="https://issues.apache.org/jira/browse/HDFS-935,<a href="https://issues">HDFS-935,<a href="https://issues</a>.apache.org/jira/browse/MAPREDUCE-1464">MAPREDUCE-1464</a>. Support for doAs to allow 
+    authenticated superuser to impersonate proxy users. It is a combined 
+    patch with compatible fixes in HDFS and MR. (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1435">MAPREDUCE-1435</a>. Fixes the way symlinks are handled when cleaning up
+    work directory files. (Ravi Gummadi via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6419">MAPREDUCE-6419</a>. Fixes a bug in the backported patch. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1457">MAPREDUCE-1457</a>. Fixes JobTracker to get the FileSystem object within 
+    getStagingAreaDir within a privileged block. Fixes Child.java to use the
+    appropriate UGIs while getting the TaskUmbilicalProtocol proxy and while
+    executing the task. Contributed by Jakob Homan. (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1440">MAPREDUCE-1440</a>. Replace the long user name in MapReduce with the local
+    name. (ddas) 
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6419">HADOOP-6419</a>. Adds SASL based authentication to RPC. Also includes the 
+    <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1335">MAPREDUCE-1335</a> and <a href="https://issues.apache.org/jira/browse/HDFS-933 patches">HDFS-933 patches</a>. Contributed by Kan Zhang. 
+    (ddas)
+ 
+    <a href="https://issues.apache.org/jira/browse/HADOOP-6538">HADOOP-6538</a>. Sets hadoop.security.authentication to simple by default.
+    (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-938">HDFS-938</a>.  Replace calls to UGI.getUserName() with 
+    UGI.getShortUserName()(boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6544">HADOOP-6544</a>. fix ivy settings to include JSON jackson.codehause.org
+     libs for .20 (boryas)
+     
+    <a href="https://issues.apache.org/jira/browse/HDFS-907">HDFS-907</a>. Add tests for getBlockLocations and totalLoad metrics. (rphulari)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6204">HADOOP-6204</a>. Implementing aspects development and fault injeciton
+    framework for Hadoop (cos)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1432">MAPREDUCE-1432</a>. Adds hooks in the jobtracker and tasktracker
+    for loading the tokens in the user's ugi. This is required for
+    the copying of files from the hdfs. (Devaraj Das vi boryas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1383">MAPREDUCE-1383</a>. Automates fetching of delegation tokens in File*Formats
+    Distributed Cache and Distcp. Also, provides a config 
+    mapreduce.job.hdfs-servers that the jobs can populate with a comma 
+    separated list of namenodes. The job client automatically fetches 
+    delegation tokens from those namenodes.
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6337">HADOOP-6337</a>. Update FilterInitializer class to be more visible
+    and take a conf for further development. (jhoman)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6520">HADOOP-6520</a>. UGI should load tokens from the environment. (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6517">HADOOP-6517</a>, <a href="https://issues.apache.org/jira/browse/HADOOP-6518">HADOOP-6518</a>. Ability to add/get tokens from 
+    UserGroupInformation & Kerberos login in UGI should honor KRB5CCNAME
+    (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6299">HADOOP-6299</a>. Reimplement the UserGroupInformation to use the OS
+    specific and Kerberos JAAS login. (jhoman, ddas, oom)
+    
+    <a href="https://issues.apache.org/jira/browse/HADOOP-6524">HADOOP-6524</a>. Contrib tests are failing Clover'ed build. (cos)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-842.">MAPREDUCE-842.</a> Fixing a bug in the earlier version of the patch
+    related to improper localization of the job token file.
+    (Ravi Gummadi via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-919">HDFS-919</a>. Create test to validate the BlocksVerified metric (Gary Murry
+    via cos)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1186">MAPREDUCE-1186</a>. Modified code in distributed cache to set 
+    permissions only on required set of localized paths.
+    (Amareshwari Sriramadasu via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-899">HDFS-899</a>. Delegation Token Implementation. (Jitendra Nath Pandey)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-896.">MAPREDUCE-896.</a> Enhance tasktracker to cleanup files that might have 
+    been created by user tasks with non-writable permissions. 
+    (Ravi Gummadi via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5879">HADOOP-5879</a>. Read compression level and strategy from Configuration for
+    gzip compression. (He Yongqiang via cdouglas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6161">HADOOP-6161</a>. Add get/setEnum methods to Configuration. (cdouglas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6382">HADOOP-6382</a> Mavenize the build.xml targets and update the bin scripts
+    in preparation for publishing POM files (giri kesavan via ltucker)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-737">HDFS-737</a>. Add full path name of the file to the block information and 
+    summary of total number of files, blocks, live and deadnodes to 
+    metasave output. (Jitendra Nath Pandey via suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6577">HADOOP-6577</a>. Add hidden configuration option "ipc.server.max.response.size"
+    to change the default 1 MB, the maximum size when large IPC handler 
+    response buffer is reset. (suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6521">HADOOP-6521</a>. Fix backward compatiblity issue with umask when applications 
+    use deprecated param dfs.umask in configuration or use 
+    FsPermission.setUMask(). (suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-737">HDFS-737</a>. Add full path name of the file to the block information and 
+    summary of total number of files, blocks, live and deadnodes to 
+    metasave output. (Jitendra Nath Pandey via suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6521">HADOOP-6521</a>. Fix backward compatiblity issue with umask when applications 
+    use deprecated param dfs.umask in configuration or use 
+    FsPermission.setUMask(). (suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-433.">MAPREDUCE-433.</a> Use more reliable counters in TestReduceFetch.
+    (Christopher Douglas via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-744.">MAPREDUCE-744.</a> Introduces the notion of a public distributed cache.
+    (ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1140">MAPREDUCE-1140</a>. Fix DistributedCache to not decrement reference counts 
+    for unreferenced files in error conditions.    
+    (Amareshwari Sriramadasu via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1284">MAPREDUCE-1284</a>. Fix fts_open() call in task-controller that was failing 
+    LinuxTaskController unit tests. (Ravi Gummadi via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1098">MAPREDUCE-1098</a>. Fixed the distributed-cache to not do i/o while 
+    holding a global lock.
+    (Amareshwari Sriramadasu via acmurthy)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1338">MAPREDUCE-1338</a>. Introduces the notion of token cache using which 
+    tokens and secrets can be sent by the Job client to the JobTracker.
+    (Boris Shkolnik)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6495">HADOOP-6495</a>. Identifier should be serialized after the password is created
+    In Token constructor. (Jitendra Nath Pandey)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6506">HADOOP-6506</a>. Failing tests prevent the rest of test targets from
+    execution. (cos)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5457">HADOOP-5457</a>. Fix to continue to run builds even if contrib test fails.
+    (gkesavan)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-856.">MAPREDUCE-856.</a> Setup secure permissions for distributed cache files.
+    (Vinod Kumar Vavilapalli via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-871.">MAPREDUCE-871.</a> Fix ownership of Job/Task local files to have correct 
+    group ownership according to the egid of the tasktracker.
+    (Vinod Kumar Vavilapalli via yhemanth)
+    
+    <a href="https://issues.apache.org/jira/browse/MAPREDUCE-476.">MAPREDUCE-476.</a> Extend DistributedCache to work locally (LocalJobRunner). 
+    (Philip Zeyliger via tomwhite)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-711.">MAPREDUCE-711.</a> Removed Distributed Cache from Common, to move it under 
+    Map/Reduce. (Vinod Kumar Vavilapalli via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-478.">MAPREDUCE-478.</a> Allow map and reduce jvm parameters, environment 
+    variables and ulimit to be set separately. (acmurthy)
+ 
+    <a href="https://issues.apache.org/jira/browse/MAPREDUCE-842.">MAPREDUCE-842.</a> Setup secure permissions for localized job files, 
+    intermediate outputs and log files on tasktrackers.
+    (Vinod Kumar Vavilapalli via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-408.">MAPREDUCE-408.</a> Fixes an assertion problem in TestKillSubProcesses.
+    (Ravi Gummadi via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-4041">HADOOP-4041</a>. IsolationRunner does not work as documented.
+    (Philip Zeyliger via tomwhite)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-181.">MAPREDUCE-181.</a> Changes the job submission process to be secure.
+    (Devaraj Das)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5737">HADOOP-5737</a>. Fixes a problem in the way the JobTracker used to talk to 
+    other daemons like the NameNode to get the job's files. Also adds APIs 
+    in the JobTracker to get the FileSystem objects as per the JobTracker's 
+    configuration. (Amar Kamat via ddas)
+ 
+    <a href="https://issues.apache.org/jira/browse/HADOOP-5771">HADOOP-5771</a>. Implements unit tests for LinuxTaskController.
+    (Sreekanth Ramakrishnan and Vinod Kumar Vavilapalli via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-4656">HADOOP-4656</a>, <a href="https://issues.apache.org/jira/browse/HDFS-685, <a href="https://issues">HDFS-685, <a href="https://issues</a>.apache.org/jira/browse/MAPREDUCE-1083">MAPREDUCE-1083</a>. Use the user-to-groups mapping 
+    service in the NameNode and JobTracker. Combined patch for these 3 jiras 
+    otherwise tests fail. (Jitendra Nath Pandey)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1250">MAPREDUCE-1250</a>. Refactor job token to use a common token interface.
+    (Jitendra Nath Pandey)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1026">MAPREDUCE-1026</a>. Shuffle should be secure. (Jitendra Nath Pandey)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-4268">HADOOP-4268</a>. Permission checking in fsck. (Jitendra Nath Pandey)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6415">HADOOP-6415</a>. Adding a common token interface for both job token and 
+    delegation token. (Jitendra Nath Pandey)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6367">HADOOP-6367</a>, <a href="https://issues.apache.org/jira/browse/HDFS-764">HDFS-764</a>. Moving Access Token implementation from Common to 
+    HDFS. These two jiras must be committed together otherwise build will
+    fail. (Jitendra Nath Pandey)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-409">HDFS-409</a>. Add more access token tests
+    (Jitendra Nath Pandey)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6132">HADOOP-6132</a>. RPC client opens an extra connection for VersionedProtocol.
+    (Jitendra Nath Pandey)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-445">HDFS-445</a>. pread() fails when cached block locations are no longer valid.
+    (Jitendra Nath Pandey)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-195">HDFS-195</a>. Need to handle access token expiration when re-establishing the 
+    pipeline for dfs write. (Jitendra Nath Pandey)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6176">HADOOP-6176</a>. Adding a couple private methods to AccessTokenHandler 
+    for testing purposes. (Jitendra Nath Pandey)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5824">HADOOP-5824</a>. remove OP_READ_METADATA functionality from Datanode.
+    (Jitendra Nath Pandey)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-4359">HADOOP-4359</a>. Access Token: Support for data access authorization 
+    checking on DataNodes. (Jitendra Nath Pandey)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1372">MAPREDUCE-1372</a>. Fixed a ConcurrentModificationException in jobtracker.
+    (Arun C Murthy via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1316">MAPREDUCE-1316</a>. Fix jobs' retirement from the JobTracker to prevent memory
+    leaks via stale references. (Amar Kamat via acmurthy)  
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1342">MAPREDUCE-1342</a>. Fixed deadlock in global blacklisting of tasktrackers. 
+    (Amareshwari Sriramadasu via acmurthy)  
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6460">HADOOP-6460</a>. Reinitializes buffers used for serializing responses in ipc
+    server on exceeding maximum response size to free up Java heap. (suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1100">MAPREDUCE-1100</a>. Truncate user logs to prevent TaskTrackers' disks from
+    filling up. (Vinod Kumar Vavilapalli via acmurthy) 
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1143">MAPREDUCE-1143</a>. Fix running task counters to be updated correctly
+    when speculative attempts are running for a TIP.
+    (Rahul Kumar Singh via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6151">HADOOP-6151</a>, 6281, 6285,  6441. Add HTML quoting of the parameters to all
+    of the servlets to prevent XSS attacks. (omalley)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-896.">MAPREDUCE-896.</a> Fix bug in earlier implementation to prevent
+    spurious logging in tasktracker logs for absent file paths.
+    (Ravi Gummadi via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-676.">MAPREDUCE-676.</a> Fix Hadoop Vaidya to ensure it works for map-only jobs. 
+    (Suhas Gogate via acmurthy) 
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5582">HADOOP-5582</a>. Fix Hadoop Vaidya to use new Counters in
+    org.apache.hadoop.mapreduce package. (Suhas Gogate via acmurthy) 
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-595">HDFS-595</a>.  umask settings in configuration may now use octal or 
+    symbolic instead of decimal.  Update HDFS tests as such.  (jghoman)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1068">MAPREDUCE-1068</a>. Added a verbose error message when user specifies an
+    incorrect -file parameter. (Amareshwari Sriramadasu via acmurthy)  
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1171">MAPREDUCE-1171</a>. Allow the read-error notification in shuffle to be
+    configurable. (Amareshwari Sriramadasu via acmurthy) 
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-353.">MAPREDUCE-353.</a> Allow shuffle read and connection timeouts to be
+    configurable. (Amareshwari Sriramadasu via acmurthy) 
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-781">HDFS-781</a>. Namenode metrics PendingDeletionBlocks is not decremented. 
+    (suresh)
+ 
+    <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1185">MAPREDUCE-1185</a>. Redirect running job url to history url if job is already 
+    retired. (Amareshwari Sriramadasu and Sharad Agarwal via sharad)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-754.">MAPREDUCE-754.</a> Fix NPE in expiry thread when a TT is lost. (Amar Kamat 
+    via sharad)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-896.">MAPREDUCE-896.</a> Modify permissions for local files on tasktracker before
+    deletion so they can be deleted cleanly. (Ravi Gummadi via yhemanth)
+ 
+    <a href="https://issues.apache.org/jira/browse/HADOOP-5771">HADOOP-5771</a>. Implements unit tests for LinuxTaskController.
+    (Sreekanth Ramakrishnan and Vinod Kumar Vavilapalli via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1124">MAPREDUCE-1124</a>. Import Gridmix3 and Rumen. (cdouglas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1063">MAPREDUCE-1063</a>. Document gridmix benchmark. (cdouglas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-758">HDFS-758</a>. Changes to report status of decommissioining on the namenode web
+    UI. (jitendra)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6234">HADOOP-6234</a>. Add new option dfs.umaskmode to set umask in configuration
+    to use octal or symbolic instead of decimal. (Jakob Homan via suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1147">MAPREDUCE-1147</a>. Add map output counters to new API. (Amar Kamat via
+    cdouglas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1182">MAPREDUCE-1182</a>. Fix overflow in reduce causing allocations to exceed the
+    configured threshold. (cdouglas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-4933">HADOOP-4933</a>. Fixes a ConcurrentModificationException problem that shows up
+    when the history viewer is accessed concurrently.
+    (Amar Kamat via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1140">MAPREDUCE-1140</a>. Fix DistributedCache to not decrement reference counts for 
+    unreferenced files in error conditions.
+    (Amareshwari Sriramadasu via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6203">HADOOP-6203</a>. FsShell rm/rmr error message indicates exceeding Trash quota
+    and suggests using -skpTrash, when moving to trash fails.
+    (Boris Shkolnik via suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5675">HADOOP-5675</a>. Do not launch a job if DistCp has no work to do. (Tsz Wo
+    (Nicholas), SZE via cdouglas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-457">HDFS-457</a>. Better handling of volume failure in Data Node storage,
+    This fix is a port from hdfs-0.22 to common-0.20 by Boris Shkolnik.
+    Contributed by Erik Steffl
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-625">HDFS-625</a>. Fix NullPointerException thrown from ListPathServlet. 
+    Contributed by Suresh Srinivas.
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6343">HADOOP-6343</a>. Log unexpected throwable object caught in RPC.  
+    Contributed by Jitendra Nath Pandey
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1186">MAPREDUCE-1186</a>. Fixed DistributedCache to do a recursive chmod on just the
+    per-cache directory, not all of mapred.local.dir.
+    (Amareshwari Sriramadasu via acmurthy)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1231">MAPREDUCE-1231</a>. Add an option to distcp to ignore checksums when used with
+    the upgrade option.
+    (Jothi Padmanabhan via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1219">MAPREDUCE-1219</a>. Fixed JobTracker to not collect per-job metrics, thus
+    easing load on it. (Amareshwari Sriramadasu via acmurthy)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-761">HDFS-761</a>. Fix failure to process rename operation from edits log due to
+    quota verification. (suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1196">MAPREDUCE-1196</a>. Fix FileOutputCommitter to use the deprecated cleanupJob
+    api correctly. (acmurthy)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6344">HADOOP-6344</a>.  rm and rmr immediately delete files rather than sending
+    to trash, despite trash being enabled, if a user is over-quota. (jhoman)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1160">MAPREDUCE-1160</a>. Reduce verbosity of log lines in some Map/Reduce classes
+    to avoid filling up jobtracker logs on a busy cluster.
+    (Ravi Gummadi and Hong Tang via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-587">HDFS-587</a>. Add ability to run HDFS with MR test on non-default queue,
+    also updated junit dependendcy from junit-3.8.1 to junit-4.5 (to make
+    it possible to use Configured and Tool to process command line to
+    be able to specify a queue). Contributed by Erik Steffl.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1158">MAPREDUCE-1158</a>. Fix JT running maps and running reduces metrics.
+    (sharad)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-947.">MAPREDUCE-947.</a> Fix bug in earlier implementation that was
+    causing unit tests to fail.
+    (Ravi Gummadi via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1062">MAPREDUCE-1062</a>. Fix MRReliabilityTest to work with retired jobs
+    (Contributed by Sreekanth Ramakrishnan)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1090">MAPREDUCE-1090</a>. Modified log statement in TaskMemoryManagerThread to
+    include task attempt id. (yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1098">MAPREDUCE-1098</a>. Fixed the distributed-cache to not do i/o while
+    holding a global lock. (Amareshwari Sriramadasu via acmurthy)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1048">MAPREDUCE-1048</a>. Add occupied/reserved slot usage summary on
+    jobtracker UI. (Amareshwari Sriramadasu via sharad)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1103">MAPREDUCE-1103</a>. Added more metrics to Jobtracker. (sharad)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-947.">MAPREDUCE-947.</a> Added commitJob and abortJob apis to OutputCommitter.
+    Enhanced FileOutputCommitter to create a _SUCCESS file for successful
+    jobs. (Amar Kamat & Jothi Padmanabhan via acmurthy) 
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1105">MAPREDUCE-1105</a>. Remove max limit configuration in capacity scheduler in
+    favor of max capacity percentage thus allowing the limit to go over
+    queue capacity. (Rahul Kumar Singh via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1086">MAPREDUCE-1086</a>. Setup Hadoop logging environment for tasks to point to
+    task related parameters. (Ravi Gummadi via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-739.">MAPREDUCE-739.</a> Allow relative paths to be created inside archives. 
+    (mahadev)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6097">HADOOP-6097</a>. Multiple bugs w/ Hadoop archives (mahadev)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6231">HADOOP-6231</a>. Allow caching of filesystem instances to be disabled on a
+    per-instance basis (ben slusky via mahadev)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-826.">MAPREDUCE-826.</a>  harchive doesn't use ToolRunner / harchive returns 0 even
+    if the job fails with exception (koji via mahadev)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-686">HDFS-686</a>. NullPointerException is thrown while merging edit log and
+    image. (hairong)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-709">HDFS-709</a>. Fix TestDFSShell failure due to rename bug introduced by 
+    <a href="https://issues.apache.org/jira/browse/HDFS-677">HDFS-677</a>. (suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-677">HDFS-677</a>. Rename failure when both source and destination quota exceeds
+    results in deletion of source. (suresh)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6284">HADOOP-6284</a>. Add a new parameter, HADOOP_JAVA_PLATFORM_OPTS, to
+    hadoop-config.sh so that it allows setting java command options for
+    JAVA_PLATFORM.  (Koji Noguchi via szetszwo)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-732.">MAPREDUCE-732.</a> Removed spurious log statements in the node
+    blacklisting logic. (Sreekanth Ramakrishnan via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-144.">MAPREDUCE-144.</a> Includes dump of the process tree in task diagnostics when 
+    a task is killed due to exceeding memory limits.
+    (Vinod Kumar Vavilapalli via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-979.">MAPREDUCE-979.</a> Fixed JobConf APIs related to memory parameters to 
+    return values of new configuration variables when deprecated 
+    variables are disabled. (Sreekanth Ramakrishnan via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-277.">MAPREDUCE-277.</a> Makes job history counters available on the job history
+    viewers. (Jothi Padmanabhan via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5625">HADOOP-5625</a>. Add operation duration to clienttrace. (Lei Xu 
+    via cdouglas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5222">HADOOP-5222</a>. Add offset to datanode clienttrace. (Lei Xu via cdouglas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6218">HADOOP-6218</a>. Adds a feature where TFile can be split by Record
+    Sequence number. Contributed by Hong Tang and Raghu Angadi.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1088">MAPREDUCE-1088</a>. Changed permissions on JobHistory files on local disk to
+    0744. Contributed by Arun C. Murthy.
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6304">HADOOP-6304</a>. Use java.io.File.set{Readable|Writable|Executable} where
+    possible in RawLocalFileSystem. Contributed by Arun C. Murthy.
+    
+    <a href="https://issues.apache.org/jira/browse/MAPREDUCE-270.">MAPREDUCE-270.</a> Fix the tasktracker to optionally send an out-of-band
+    heartbeat on task-completion for better job-latency. Contributed by
+    Arun C. Murthy
+    Configuration changes:
+      add mapreduce.tasktracker.outofband.heartbeat
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1030">MAPREDUCE-1030</a>. Fix capacity-scheduler to assign a map and a reduce task
+    per-heartbeat. Contributed by Rahuk K Singh.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1028">MAPREDUCE-1028</a>. Fixed number of slots occupied by cleanup tasks to one
+    irrespective of slot size for the job. Contributed by Ravi Gummadi. 
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-964.">MAPREDUCE-964.</a> Fixed start and finish times of TaskStatus to be
+    consistent, thereby fixing inconsistencies in metering tasks.
+    Contributed by Sreekanth Ramakrishnan.
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5976">HADOOP-5976</a>. Add a new command, classpath, to the hadoop 
+    script. Contributed by Owen O'Malley and Gary Murry
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5784">HADOOP-5784</a>. Makes the number of heartbeats that should arrive 
+    a second at the JobTracker configurable. Contributed by 
+    Amareshwari Sriramadasu.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-945.">MAPREDUCE-945.</a> Modifies MRBench and TestMapRed to use 
+    ToolRunner so that options such as queue name can be 
+    passed via command line. Contributed by Sreekanth Ramakrishnan.
+
+<li> HADOOP:5420 Correct bug in earlier implementation
+    by Arun C. Murthy
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5363">HADOOP-5363</a> Add support for proxying connections to multiple 
+    clusters with different versions to hdfsproxy. Contributed 
+    by Zhiyong Zhang
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5780">HADOOP-5780</a>. Improve per block message prited by -metaSave 
+    in HDFS. (Raghu Angadi)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6227">HADOOP-6227</a>. Fix Configuration to allow final parameters to be set 
+    to null and prevent them from being overridden. Contributed by 
+    Amareshwari Sriramadasu.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-430 ">MAPREDUCE-430 </a> Added patch supplied by Amar Kamat to allow roll forward
+    on branch to includ externally committed patch.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-768.">MAPREDUCE-768.</a> Provide an option to dump jobtracker configuration in 
+    JSON format to standard output. Contributed by V.V.Chaitanya
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-834 ">MAPREDUCE-834 </a>Correct an issue created by merging this issue with
+    patch attached to external Jira.
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6184">HADOOP-6184</a> Provide an API to dump Configuration in a JSON format. 
+    Contributed by V.V.Chaitanya Krishna.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-745 ">MAPREDUCE-745 </a> Patch added for this issue to allow branch-0.20 to 
+    merge cleanly.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-478 ">MAPREDUCE-478 </a>Allow map and reduce jvm parameters, environment 
+    variables and ulimit to be set separately.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-682 ">MAPREDUCE-682 </a>Removes reservations on tasktrackers which are blacklisted. 
+    Contributed by Sreekanth Ramakrishnan.
+
+<li> HADOOP:5420 Support killing of process groups in LinuxTaskController 
+    binary
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5488">HADOOP-5488</a> Removes the pidfile management for the Task JVM from the 
+    framework and instead passes the PID back and forth between the 
+    TaskTracker and the Task processes. Contributed by Ravi Gummadi.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-467 ">MAPREDUCE-467 </a>Provide ability to collect statistics about total tasks and 
+    succeeded tasks in different time windows.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-817.">MAPREDUCE-817.</a> Add a cache for retired jobs with minimal job
+    info and provide a way to access history file url
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-814.">MAPREDUCE-814.</a> Provide a way to configure completed job history
+    files to be on HDFS.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-838 ">MAPREDUCE-838 </a>Fixes a problem in the way commit of task outputs
+    happens. The bug was that even if commit failed, the task would be
+    declared as successful. Contributed by Amareshwari Sriramadasu.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-809 ">MAPREDUCE-809 </a>Fix job-summary logs to correctly record final status of 
+    FAILED and KILLED jobs.  
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-740 ">MAPREDUCE-740 </a>Log a job-summary at the end of a job, while
+    allowing it to be configured to use a custom appender if desired.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-771 ">MAPREDUCE-771 </a>Fixes a bug which delays normal jobs in favor of
+    high-ram jobs.
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5420">HADOOP-5420</a> Support setsid based kill in LinuxTaskController.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-733 ">MAPREDUCE-733 </a>Fixes a bug that when a task tracker is killed ,
+    it throws exception. Instead it should catch it and process it and
+    allow the rest of the flow to go through
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-734 ">MAPREDUCE-734 </a>Fixes a bug which prevented hi ram jobs from being
+    removed from the scheduler queue.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-693 ">MAPREDUCE-693 </a> Fixes a bug that when a job is submitted and the
+    JT is restarted (before job files have been written) and the job
+    is killed after recovery, the conf files fail to be moved to the
+    "done" subdirectory.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-722 ">MAPREDUCE-722 </a>Fixes a bug where more slots are getting reserved
+    for HiRAM job tasks than required.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-683 ">MAPREDUCE-683 </a>TestJobTrackerRestart failed because of stale
+    filemanager cache (which was created once per jvm). This patch makes
+    sure that the filemanager is inited upon every JobHistory.init()
+    and hence upon every restart. Note that this wont happen in production
+    as upon a restart the new jobtracker will start in a new jvm and
+    hence a new cache will be created.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-709 ">MAPREDUCE-709 </a>Fixes a bug where node health check script does
+    not display the correct message on timeout.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-708 ">MAPREDUCE-708 </a>Fixes a bug where node health check script does
+    not refresh the "reason for blacklisting".
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-522 ">MAPREDUCE-522 </a>Rewrote TestQueueCapacities to make it simpler
+    and avoid timeout errors.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-532 ">MAPREDUCE-532 </a>Provided ability in the capacity scheduler to
+    limit the number of slots that can be concurrently used per queue
+    at any given time.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-211 ">MAPREDUCE-211 </a>Provides ability to run a health check script on
+    the tasktracker nodes and blacklist nodes if they are unhealthy.
+    Contributed by Sreekanth Ramakrishnan.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-516 ">MAPREDUCE-516 </a>Remove .orig file included by mistake.
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-416 ">MAPREDUCE-416 </a>Moves the history file to a "done" folder whenever
+    a job completes.
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5980">HADOOP-5980</a> Previously, task spawned off by LinuxTaskController
+    didn't get LD_LIBRARY_PATH in their environment. The tasks will now
+    get same LD_LIBRARY_PATH value as when spawned off by
+    DefaultTaskController.
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5981">HADOOP-5981</a> This issue completes the feature mentioned in
+    <a href="https://issues.apache.org/jira/browse/HADOOP-2838">HADOOP-2838</a>. <a href="https://issues.apache.org/jira/browse/HADOOP-2838">HADOOP-2838</a> provided a way to set env variables in
+    child process. This issue provides a way to inherit tt's env variables
+    and append or reset it. So now X=$X:y will inherit X (if there) and
+    append y to it.
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5419">HADOOP-5419</a>  This issue is to provide an improvement on the
+    existing M/R framework to let users know which queues they have
+    access to, and for what operations. One use case for this would
+    that currently there is no easy way to know if the user has access
+    to submit jobs to a queue, until it fails with an access control
+    exception.
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5420">HADOOP-5420</a> Support setsid based kill in LinuxTaskController.
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5643">HADOOP-5643</a> Added the functionality to refresh jobtrackers node
+    list via command line (bin/hadoop mradmin -refreshNodes). The command
+    should be run as the jobtracker owner (jobtracker process owner)
+    or from a super group (mapred.permissions.supergroup).
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-2838">HADOOP-2838</a> Now the users can set environment variables using
+    mapred.child.env. They can do the following X=Y : set X to Y X=$X:Y
+    : Append Y to X (which should be taken from the tasktracker)
+    
+    <a href="https://issues.apache.org/jira/browse/HADOOP-5818">HADOOP-5818</a>. Revert the renaming from FSNamesystem.checkSuperuserPrivilege
+    to checkAccess by <a href="https://issues.apache.org/jira/browse/HADOOP-5643">HADOOP-5643</a>.  (Amar Kamat via szetszwo)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5801">HADOOP-5801</a>. Fixes the problem: If the hosts file is changed across restart
+    then it should be refreshed upon recovery so that the excluded hosts are
+    lost and the maps are re-executed. (Amar Kamat via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5643">HADOOP-5643</a>. <a href="https://issues.apache.org/jira/browse/HADOOP-5643">HADOOP-5643</a>. Adds a way to decommission TaskTrackers 
+    while the JobTracker is running. (Amar Kamat via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5419">HADOOP-5419</a>. Provide a facility to query the Queue ACLs for the
+    current user.  (Rahul Kumar Singh via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5733">HADOOP-5733</a>. Add map/reduce slot capacity and blacklisted capacity to
+    JobTracker metrics. (Sreekanth Ramakrishnan via cdouglas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5738">HADOOP-5738</a>. Split "waiting_tasks" JobTracker metric into waiting maps and
+    waiting reduces. (Sreekanth Ramakrishnan via cdouglas) 
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-4842">HADOOP-4842</a>. Streaming now allows specifiying a command for the combiner.
+    (Amareshwari Sriramadasu via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-4490">HADOOP-4490</a>. Provide ability to run tasks as job owners.
+    (Sreekanth Ramakrishnan via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5442">HADOOP-5442</a>. Paginate jobhistory display and added some search
+    capabilities. (Amar Kamat via acmurthy)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-3327">HADOOP-3327</a>. Improves handling of READ_TIMEOUT during map output copying.
+    (Amareshwari Sriramadasu via ddas)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5113">HADOOP-5113</a>. Fixed logcondense to remove files for usernames
+    beginning with characters specified in the -l option.
+    (Peeyush Bishnoi via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-2898">HADOOP-2898</a>. Provide an option to specify a port range for
+    Hadoop services provisioned by HOD.
+    (Peeyush Bishnoi via yhemanth)
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-4930">HADOOP-4930</a>. Implement a Linux native executable that can be used to
+    launch tasks as users. (Sreekanth Ramakrishnan via yhemanth)
+</ul>
+
 </body>
 </html>
