@@ -2235,7 +2235,7 @@
         <source path="${contrib.dir}/capacity-scheduler/src/test"
                 output="${build.dir.eclipse-contrib-classes}/capacity-scheduler/test" />
         <output path="${build.dir.eclipse-main-classes}" />
-        <library pathref="classpath" exported="false" />
+        <library pathref="src.lib.classpath" exported="false" />
         <library pathref="test.lib.classpath" exported="false" />
         <variable path="ANT_HOME/lib/ant.jar" exported="false" />
         <library path="${conf.dir}" exported="false" />
