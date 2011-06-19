@@ -249,4 +249,58 @@ public class TestFileUtil {
     boolean ret = FileUtil.fullyDeleteContents(new MyFile(del));
     validateAndSetWritablePermissions(ret);
   }
+  
+  @Test
+  public void testListFiles() throws IOException {
+    setupDirs();
+    //Test existing files case 
+    File[] files = FileUtil.listFiles(tmp);
+    Assert.assertEquals(1, files.length);
+
+    //Test existing directory with no files case 
+    File newDir = new File(tmp.getPath(),"test");
+    newDir.mkdir();
+    Assert.assertTrue("Failed to create test dir", newDir.exists());
+    files = FileUtil.listFiles(newDir);
+    Assert.assertEquals(0, files.length);
+    newDir.delete();
+    Assert.assertFalse("Failed to delete test dir", newDir.exists());
+    
+    //Test non-existing directory case, this throws 
+    //IOException
+    try {
+      files = FileUtil.listFiles(newDir);
+      Assert.fail("IOException expected on listFiles() for non-existent dir "
+          + newDir.toString());
+    } catch(IOException ioe) {
+      //Expected an IOException
+    }
+  }
+
+  @Test
+  public void testListAPI() throws IOException {
+    setupDirs();
+    //Test existing files case 
+    String[] files = FileUtil.list(tmp);
+    Assert.assertEquals(1, files.length);
+
+    //Test existing directory with no files case 
+    File newDir = new File(tmp.getPath(),"test");
+    newDir.mkdir();
+    Assert.assertTrue("Failed to create test dir", newDir.exists());
+    files = FileUtil.list(newDir);
+    Assert.assertEquals(0, files.length);
+    newDir.delete();
+    Assert.assertFalse("Failed to delete test dir", newDir.exists());
+    
+    //Test non-existing directory case, this throws 
+    //IOException
+    try {
+      files = FileUtil.list(newDir);
+      Assert.fail("IOException expected on list() for non-existent dir "
+          + newDir.toString());
+    } catch(IOException ioe) {
+      //Expected an IOException
+    }
+  }
 }

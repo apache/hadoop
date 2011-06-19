@@ -82,7 +82,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
                                 dir.toString());
         }
       } else {
-        File[] files = dir.listFiles();
+        File[] files = FileUtil.listFiles(dir);
         int numChildren = 0;
         for (int idx = 0; idx < files.length; idx++) {
           if (files[idx].isDirectory()) {
@@ -202,10 +202,14 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       }
 
       File blockFiles[] = dir.listFiles();
-      for (int i = 0; i < blockFiles.length; i++) {
-        if (Block.isBlockFilename(blockFiles[i])) {
-          long genStamp = getGenerationStampFromFile(blockFiles, blockFiles[i]);
-          blockSet.add(new Block(blockFiles[i], blockFiles[i].length(), genStamp));
+      if (blockFiles != null) {
+        for (int i = 0; i < blockFiles.length; i++) {
+          if (Block.isBlockFilename(blockFiles[i])) {
+            long genStamp = getGenerationStampFromFile(blockFiles,
+                blockFiles[i]);
+            blockSet.add(new Block(blockFiles[i], blockFiles[i].length(),
+                genStamp));
+          }
         }
       }
     }
@@ -218,11 +222,14 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       }
 
       File blockFiles[] = dir.listFiles();
-      for (int i = 0; i < blockFiles.length; i++) {
-        if (Block.isBlockFilename(blockFiles[i])) {
-          long genStamp = getGenerationStampFromFile(blockFiles, blockFiles[i]);
-          volumeMap.put(new Block(blockFiles[i], blockFiles[i].length(), genStamp), 
-                        new DatanodeBlockInfo(volume, blockFiles[i]));
+      if (blockFiles != null) {
+        for (int i = 0; i < blockFiles.length; i++) {
+          if (Block.isBlockFilename(blockFiles[i])) {
+            long genStamp = getGenerationStampFromFile(blockFiles,
+                blockFiles[i]);
+            volumeMap.put(new Block(blockFiles[i], blockFiles[i].length(),
+                genStamp), new DatanodeBlockInfo(volume, blockFiles[i]));
+          }
         }
       }
     }
@@ -469,10 +476,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
      */
     private void recoverDetachedBlocks(File dataDir, File dir) 
                                            throws IOException {
-      File contents[] = dir.listFiles();
-      if (contents == null) {
-        return;
-      }
+      File contents[] = FileUtil.listFiles(dir);
       for (int i = 0; i < contents.length; i++) {
         if (!contents[i].isFile()) {
           throw new IOException ("Found " + contents[i] + " in " + dir +
