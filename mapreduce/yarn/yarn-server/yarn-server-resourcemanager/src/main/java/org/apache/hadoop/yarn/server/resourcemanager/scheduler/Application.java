@@ -243,7 +243,9 @@ public class Application {
     for (Container container : release) {
       LOG.debug("update: " + "application=" + applicationId + " released="
           + container);
-      Resources.subtractFrom(currentConsumption, container.getResource());
+      // TOday in all code paths, this is taken by completedContainer called by
+      // the caller. So commenting this.
+      // Resources.subtractFrom(currentConsumption, container.getResource());
       for (Iterator<Container> i = acquired.iterator(); i.hasNext();) {
         Container c = i.next();
         if (c.getId().equals(container.getId())) {

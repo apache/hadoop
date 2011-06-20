@@ -910,7 +910,7 @@ public class LeafQueue implements Queue {
           unreserve(application, priority, node);
         }
         
-        LOG.info("allocatedContainer" +
+        LOG.info("assignedContainer" +
             " application=" + application.getApplicationId() +
             " container=" + container + 
             " queue=" + this.toString() + 

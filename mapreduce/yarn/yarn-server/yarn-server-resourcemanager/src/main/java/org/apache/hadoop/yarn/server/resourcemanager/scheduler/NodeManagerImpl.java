@@ -52,7 +52,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.NodeInfo;
 @Private
 @Unstable
 public class NodeManagerImpl implements NodeManager {
-  private static final Log LOG = LogFactory.getLog(NodeManager.class);
+  private static final Log LOG = LogFactory.getLog(NodeManagerImpl.class);
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private final NodeId nodeId;
   private final String hostName;

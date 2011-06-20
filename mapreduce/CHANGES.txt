@@ -5,6 +5,10 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    Fixing scheduling deadlock in AM because of incorrect headRoom values from
+    RM. The bug happens when AM releases containers and RM decrements current
+    memory usage twice for all those containers. (vinodkv)
+
     Disabling locality-wait in CapacityScheduler for now to prevent uber-slow
     scheduling for apps with no data-locality constraints (sleep-job like). (vinodkv)
 
