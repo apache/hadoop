@@ -5,6 +5,10 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    Fix to schedule reduces irrespective of the headroom when all maps are
+    done so as to avoid stall in reduce-scheduling when slow-start is
+    disabled. (Sharad Agarwal via vinodkv).
+
     Fix RM app start/finish time and diagnostics. (llu)
 
     Fix race condition between multiple localizers on a single node. (cdouglas via mahadev)

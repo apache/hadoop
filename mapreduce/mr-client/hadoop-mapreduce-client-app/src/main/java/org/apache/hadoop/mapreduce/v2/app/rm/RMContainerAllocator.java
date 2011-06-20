@@ -258,14 +258,23 @@ public class RMContainerAllocator extends RMContainerRequestor
     }
     //check if reduces have taken over the whole cluster and there are 
     //unassigned maps
-    int memLimit = getMemLimit();
     if (scheduledRequests.maps.size() > 0) {
+      int memLimit = getMemLimit();
       int availableMemForMap = memLimit - ((assignedRequests.reduces.size() -
           assignedRequests.preemptionWaitingReduces.size()) * reduceResourceReqt);
       //availableMemForMap must be sufficient to run atleast 1 map
       if (availableMemForMap < mapResourceReqt) {
+        //to make sure new containers are given to maps and not reduces
+        //ramp down all scheduled reduces if any
+        //(since reduces are scheduled at higher priority than maps)
+        LOG.info("Ramping down all scheduled reduces:" + scheduledRequests.reduces.size());
+        for (ContainerRequest req : scheduledRequests.reduces.values()) {
+          pendingReduces.add(req);
+        }
+        scheduledRequests.reduces.clear();
+        
         //preempt for making space for atleast one map
-        int premeptionLimit = Math.max(mapResourceReqt - availableMemForMap, 
+        int premeptionLimit = Math.max(mapResourceReqt, 
             (int) (maxReducePreemptionLimit * memLimit));
         
         int preemptMem = Math.min(scheduledRequests.maps.size() * mapResourceReqt, 
@@ -287,6 +296,18 @@ public class RMContainerAllocator extends RMContainerRequestor
     }
     
     LOG.info("Recalculating schedule...");
+    
+    //if all maps are assigned, then ramp up all reduces irrespective of the 
+    //headroom
+    if (scheduledRequests.maps.size() == 0 && pendingReduces.size() > 0) {
+      LOG.info("All maps assigned. Ramping up all remaining reduces:" + pendingReduces.size());
+      for (ContainerRequest req : pendingReduces) {
+        scheduledRequests.addReduce(req);
+      }
+      pendingReduces.clear();
+      return;
+    }
+    
     
     int totalMaps = assignedRequests.maps.size() + completedMaps + scheduledRequests.maps.size();
     
