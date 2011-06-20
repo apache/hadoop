@@ -810,14 +810,14 @@ public class LeafQueue implements Queue {
           return true;
         }
         
-        // Check if we have waited long enough
-        if (missedNodes < (requiredContainers * localityWaitFactor)) {
-          LOG.info("Application " + application.getApplicationId() + 
-              " has missed " + missedNodes + " opportunities," +
-              " waitFactor= " + localityWaitFactor + 
-              " for cluster of size " + scheduler.getNumClusterNodes());
-          return false;
-        }
+//        // Check if we have waited long enough
+//        if (missedNodes < (requiredContainers * localityWaitFactor)) {
+//          LOG.info("Application " + application.getApplicationId() + 
+//              " has missed " + missedNodes + " opportunities," +
+//              " waitFactor= " + localityWaitFactor + 
+//              " for cluster of size " + scheduler.getNumClusterNodes());
+//          return false;
+//        }
         return true;
       }
       return false;

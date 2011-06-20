@@ -5,6 +5,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    Disabling locality-wait in CapacityScheduler for now to prevent uber-slow
+    scheduling for apps with no data-locality constraints (sleep-job like). (vinodkv)
+
     Fix to schedule reduces irrespective of the headroom when all maps are
     done so as to avoid stall in reduce-scheduling when slow-start is
     disabled. (Sharad Agarwal via vinodkv).

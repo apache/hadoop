@@ -24,9 +24,9 @@ import org.apache.hadoop.yarn.api.records.Resource;
 
 public class ContainerRequestEvent extends ContainerAllocatorEvent {
   
-  private Resource capability;
-  private String[] hosts;
-  private String[] racks;
+  private final Resource capability;
+  private final String[] hosts;
+  private final String[] racks;
   private boolean earlierAttemptFailed = false;
 
   public ContainerRequestEvent(TaskAttemptId attemptID, 
