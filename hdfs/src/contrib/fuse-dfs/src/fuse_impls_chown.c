@@ -26,10 +26,9 @@
   TRACE1("chown", path)
 
   int ret = 0;
-
-#if PERMS
   char *user = NULL;
   char *group = NULL;
+  hdfsFS userFS = NULL;
 
   // retrieve dfs specific data
   dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
@@ -43,36 +42,40 @@
   if (NULL == user) {
     ERROR("Could not lookup the user id string %d",(int)uid); 
     ret = -EIO;
+    goto cleanup;
   }
 
-  if (0 == ret) {
-    group = getGroup(gid);
-    if (group == NULL) {
-      ERROR("Could not lookup the group id string %d",(int)gid);
-      ret = -EIO;
-    } 
+  group = getGroup(gid);
+  if (group == NULL) {
+    ERROR("Could not lookup the group id string %d",(int)gid);
+    ret = -EIO;
+    goto cleanup;
+  } 
+
+  userFS = doConnectAsUser(dfs->nn_hostname, dfs->nn_port);
+  if (userFS == NULL) {
+    ERROR("Could not connect to HDFS");
+    ret = -EIO;
+    goto cleanup;
   }
 
-  hdfsFS userFS = NULL;
-  if (0 == ret) {
-    // if not connected, try to connect and fail out if we can't.
-    if ((userFS = doConnectAsUser(dfs->nn_hostname,dfs->nn_port))== NULL) {
-      ERROR("Could not connect to HDFS");
-      ret = -EIO;
-    }
+  if (hdfsChown(userFS, path, user, group)) {
+    ERROR("Could not chown %s to %d:%d", path, (int)uid, gid);
+    ret = (errno > 0) ? -errno : -EIO;
+    goto cleanup;
   }
 
-  if (0 == ret) {
-    if (hdfsChown(userFS, path, user, group)) {
-      ERROR("Could not chown %s to %d:%d", path, (int)uid, gid);
-      ret = -EIO;
-    }
+cleanup:
+  if (userFS && doDisconnect(userFS)) {
+    ret = -EIO;
   }
-  if (user) 
+  if (user) {
     free(user);
-  if (group)
+  }
+  if (group) {
     free(group);
-#endif
+  }
+
   return ret;
 
 }

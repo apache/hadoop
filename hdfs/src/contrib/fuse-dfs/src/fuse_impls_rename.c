@@ -46,17 +46,23 @@ int dfs_rename(const char *from, const char *to)
     return -EACCES;
   }
 
-  hdfsFS userFS;
-  // if not connected, try to connect and fail out if we can't.
-  if ((userFS = doConnectAsUser(dfs->nn_hostname,dfs->nn_port))== NULL) {
+  hdfsFS userFS = doConnectAsUser(dfs->nn_hostname, dfs->nn_port);
+  if (userFS == NULL) {
     ERROR("Could not connect");
     return -EIO;
   }
 
+  int ret = 0;
   if (hdfsRename(userFS, from, to)) {
     ERROR("Rename %s to %s failed", from, to);
-    return -EIO;
+    ret = (errno > 0) ? -errno : -EIO;
+    goto cleanup;
   }
 
-  return 0;
+cleanup:
+  if (doDisconnect(userFS)) {
+    ret = -EIO;
+  }
+  return ret;
+
 }

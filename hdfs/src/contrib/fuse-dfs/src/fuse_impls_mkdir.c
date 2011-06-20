@@ -25,10 +25,8 @@ int dfs_mkdir(const char *path, mode_t mode)
 {
   TRACE1("mkdir", path)
 
-  // retrieve dfs specific data
   dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
 
-  // check params and the context var
   assert(path);
   assert(dfs);
   assert('/' == *path);
@@ -43,25 +41,29 @@ int dfs_mkdir(const char *path, mode_t mode)
     return -EACCES;
   }
   
-  hdfsFS userFS;
-  // if not connected, try to connect and fail out if we can't.
-  if ((userFS = doConnectAsUser(dfs->nn_hostname,dfs->nn_port))== NULL) {
+  hdfsFS userFS = doConnectAsUser(dfs->nn_hostname, dfs->nn_port);
+  if (userFS == NULL) {
     ERROR("Could not connect");
     return -EIO;
   }
 
   // In theory the create and chmod should be atomic.
 
+  int ret = 0;
   if (hdfsCreateDirectory(userFS, path)) {
     ERROR("HDFS could not create directory %s", path);
-    return -EIO;
+    ret = (errno > 0) ? -errno : -EIO;
+    goto cleanup;
   }
 
-#if PERMS
   if (hdfsChmod(userFS, path, (short)mode)) {
     ERROR("Could not chmod %s to %d", path, (int)mode);
-    return -EIO;
+    ret = (errno > 0) ? -errno : -EIO;
   }
-#endif
-  return 0;
+
+cleanup:
+  if (doDisconnect(userFS)) {
+    ret = -EIO;
+  }
+  return ret;
 }

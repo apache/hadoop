@@ -33,7 +33,6 @@ typedef struct dfs_context_struct {
   int debug;
   char *nn_hostname;
   int nn_port;
-  hdfsFS fs;
   int read_only;
   int usetrash;
   int direct_io;

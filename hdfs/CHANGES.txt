@@ -514,6 +514,8 @@ Trunk (unreleased changes)
 
     HDFS-2073. Add @Override annotation to NameNode. (suresh)
 
+    HDFS-420. Fuse-dfs should cache fs handles. (Brian Bockelman and eli)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

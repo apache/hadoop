@@ -29,11 +29,7 @@
     </fail>
   </target>
 
-  <target name="compile">
-    <condition property="perms" value="1" else="0">
-      <not> <isset property="libhdfs.noperms"/> </not>
-    </condition>
-
+  <target name="compile" if="fusedfs">
     <exec executable="autoreconf" dir="${basedir}" 
           searchpath="yes" failonerror="yes">
        <arg value="-if"/>
@@ -49,7 +45,18 @@
       <env key="HADOOP_PREFIX" value="${hadoop.root}"/>
       <env key="PACKAGE_VERSION" value="0.1.0"/>
       <env key="BUILD_PLATFORM" value="${build.platform}" />
-      <env key="PERMS" value="${perms}"/>
+    </exec>
+
+    <mkdir dir="${build.dir}"/>
+    <mkdir dir="${build.dir}/test"/>
+
+    <!-- Use exec since the copy task doesn't preserve attrs -->
+    <exec executable="cp" failonerror="true">
+      <arg line="${hadoop.root}/src/contrib/fuse-dfs/src/fuse_dfs ${build.dir}"/>
+    </exec>
+
+    <exec executable="cp" failonerror="true">
+      <arg line="${hadoop.root}/src/contrib/fuse-dfs/src/fuse_dfs_wrapper.sh ${build.dir}"/>
     </exec>
   </target>
 
@@ -57,8 +64,6 @@
   <target name="package" />
 
   <target name="compile-test" depends="ivy-retrieve-common, check-libhdfs-exists" if="fusedfs">
-    <mkdir dir="${build.dir}"/>
-    <mkdir dir="${build.dir}/test"/>
     <javac encoding="${build.encoding}"
 	   srcdir="${src.test}"
 	   includes="**/*.java"
@@ -66,28 +71,18 @@
 	   debug="${javac.debug}">
       <classpath refid="test.classpath"/>
     </javac>
-
-    <!-- Use exec since the copy task doesn't preserve attrs -->
-    <exec executable="cp" failonerror="true">
-      <arg line="${hadoop.root}/src/contrib/fuse-dfs/src/fuse_dfs ${build.dir}"/>
-    </exec>
-
-    <mkdir dir="${build.dir}/test"/>
-
-    <exec executable="cp" failonerror="true">
-      <arg line="${hadoop.root}/src/contrib/fuse-dfs/src/fuse_dfs_wrapper.sh ${build.dir}"/>
-    </exec>
   </target>
 
   <target name="test" depends="compile-test,check-libhdfs-exists" if="fusedfs">
-    <junit showoutput="${test.output}" fork="yes" printsummary="yes" errorProperty="tests.failed" haltonfailure="no" failureProperty="tests.failed">
+    <junit showoutput="${test.output}" fork="yes" printsummary="yes"
+           errorProperty="tests.failed" haltonfailure="no" failureProperty="tests.failed">
       <classpath refid="test.classpath"/>
       <sysproperty key="test.build.data" value="${build.test}/data"/>
       <sysproperty key="build.test" value="${build.test}"/>
       <sysproperty key="user.dir" value="${build.test}/data"/>
       <sysproperty key="hadoop.log.dir" value="${hadoop.log.dir}"/>
       <sysproperty key="test.src.dir" value="${test.src.dir}"/>
-      <formatter type="plain" />
+      <formatter type="${test.junit.output.format}" />
       <batchtest todir="${build.test}" unless="testcase">
         <fileset dir="${src.test}">
           <include name="**/Test*.java"/>

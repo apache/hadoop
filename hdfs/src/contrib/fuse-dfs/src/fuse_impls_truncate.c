@@ -29,9 +29,6 @@
 int dfs_truncate(const char *path, off_t size)
 {
   TRACE1("truncate", path)
-  if (size != 0) {
-    return -ENOTSUP;
-  }
 
   dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
 
@@ -39,16 +36,20 @@ int dfs_truncate(const char *path, off_t size)
   assert('/' == *path);
   assert(dfs);
 
+  if (size != 0) {
+    return -ENOTSUP;
+  }
+
   int ret = dfs_unlink(path);
   if (ret != 0) {
     return ret;
   }
 
-  hdfsFS userFS;
-  // if not connected, try to connect and fail out if we can't.
-  if ((userFS = doConnectAsUser(dfs->nn_hostname,dfs->nn_port)) == NULL) {
+  hdfsFS userFS = doConnectAsUser(dfs->nn_hostname, dfs->nn_port);
+  if (userFS == NULL) {
     ERROR("Could not connect");
-    return -EIO;
+    ret = -EIO;
+    goto cleanup;
   }
 
   int flags = O_WRONLY | O_CREAT;
@@ -56,12 +57,19 @@ int dfs_truncate(const char *path, off_t size)
   hdfsFile file;
   if ((file = (hdfsFile)hdfsOpenFile(userFS, path, flags,  0, 0, 0)) == NULL) {
     ERROR("Could not connect open file %s", path);
-    return -EIO;
+    ret = -EIO;
+    goto cleanup;
   }
 
   if (hdfsCloseFile(userFS, file) != 0) {
     ERROR("Could not close file %s", path);
-    return -EIO;
+    ret = -EIO;
+    goto cleanup;
   }
-  return 0;
+
+cleanup:
+  if (doDisconnect(userFS)) {
+    ret = -EIO;
+  }
+  return ret;
 }

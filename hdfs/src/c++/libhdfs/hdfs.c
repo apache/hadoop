@@ -259,7 +259,7 @@ hdfsFS hdfsConnectAsUser(const char* host, tPort port, const char *user)
       sprintf(cURI, "hdfs://%s:%d", host, (int)(port));
       if (cURI == NULL) {
         fprintf (stderr, "Couldn't allocate an object of size %d",
-                 strlen(host) + 16);
+                 (int)(strlen(host) + 16));
         errno = EINTERNAL;			
         goto done;	
       }

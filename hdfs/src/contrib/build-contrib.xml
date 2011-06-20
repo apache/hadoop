@@ -43,6 +43,8 @@
   <property name="test.output" value="no"/>
   <property name="test.timeout" value="900000"/>
   <property name="build.dir" location="${hadoop.root}/build/contrib/${name}"/>
+  <property name="build.webapps.root.dir" value="${hadoop.root}/build/web"/>
+  <property name="build.webapps" value="${build.webapps.root.dir}/webapps"/>
   <property name="build.classes" location="${build.dir}/classes"/>
   <!-- NB: sun.arch.data.model is not supported on all platforms -->
   <property name="build.platform"
@@ -96,7 +98,8 @@
 
   <!-- the unit test classpath -->
   <path id="test.classpath">
-    <pathelement location="${build.test}" />
+    <pathelement location="${build.test}"/>
+    <pathelement location="${build.webapps.root.dir}"/>
     <pathelement location="${hadoop.root}/build/test/core/classes"/>
     <pathelement location="${hadoop.root}/build/test/hdfs/classes"/>
     <pathelement location="${hadoop.root}/build/test/mapred/classes"/>

@@ -24,24 +24,15 @@
 int dfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                        off_t offset, struct fuse_file_info *fi)
 {
-  TRACE1("readdir",path)
-
-  (void) offset;
-  (void) fi;
-
-  // retrieve dfs specific data
+  TRACE1("readdir", path)
   dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
 
-  // check params and the context var
   assert(dfs);
   assert(path);
   assert(buf);
 
-  int path_len = strlen(path);
-
-  hdfsFS userFS;
-  // if not connected, try to connect and fail out if we can't.
-  if ((userFS = doConnectAsUser(dfs->nn_hostname,dfs->nn_port))== NULL) {
+  hdfsFS userFS = doConnectAsUser(dfs->nn_hostname, dfs->nn_port);
+  if (userFS == NULL) {
     ERROR("Could not connect");
     return -EIO;
   }
@@ -50,16 +41,16 @@ int dfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   // component (HDFS-975) would save us from parsing it out below.
   int numEntries = 0;
   hdfsFileInfo *info = hdfsListDirectory(userFS, path, &numEntries);
-  userFS = NULL;
 
+  int ret = 0;
   // NULL means either the directory doesn't exist or maybe IO error.
   if (NULL == info) {
-    return -ENOENT;
+    ret = (errno > 0) ? -errno : -ENOENT;
+    goto cleanup;
   }
 
   int i ;
   for (i = 0; i < numEntries; i++) {
-
     if (NULL == info[i].mName) {
       ERROR("Path %s info[%d].mName is NULL", path, i);
       continue;
@@ -115,5 +106,11 @@ int dfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     }
   // free the info pointers
   hdfsFreeFileInfo(info,numEntries);
-  return 0;
+
+cleanup:
+  if (doDisconnect(userFS)) {
+    ret = -EIO;
+    ERROR("Failed to disconnect %d", errno);
+  }
+  return ret;
 }

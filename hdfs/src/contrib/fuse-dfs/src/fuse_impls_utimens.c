@@ -23,11 +23,9 @@
 int dfs_utimens(const char *path, const struct timespec ts[2])
 {
   TRACE1("utimens", path)
-#if PERMS
-  // retrieve dfs specific data
+  int ret = 0;
   dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
 
-  // check params and the context var
   assert(path);
   assert(dfs);
   assert('/' == *path);
@@ -35,25 +33,31 @@ int dfs_utimens(const char *path, const struct timespec ts[2])
   time_t aTime = ts[0].tv_sec;
   time_t mTime = ts[1].tv_sec;
 
-  hdfsFS userFS;
-  // if not connected, try to connect and fail out if we can't.
-  if ((userFS = doConnectAsUser(dfs->nn_hostname,dfs->nn_port))== NULL) {
+  hdfsFS userFS = doConnectAsUser(dfs->nn_hostname, dfs->nn_port);
+  if (userFS == NULL) {
     ERROR("Could not connect");
     return -EIO;
   }
 
   if (hdfsUtime(userFS, path, mTime, aTime)) {
-    hdfsFileInfo *info = hdfsGetPathInfo(dfs->fs,path);
+    hdfsFileInfo *info = hdfsGetPathInfo(userFS, path);
     if (info == NULL) {
-      return -EIO;
+      ret = (errno > 0) ? -errno : -ENOENT;
+      goto cleanup;
     }
     // Silently ignore utimens failure for directories, otherwise 
     // some programs like tar will fail.
     if (info->mKind == kObjectKindDirectory) {
-      return 0;
+      ret = 0;
+    } else {
+      ret = (errno > 0) ? -errno : -EACCES;
     }
-    return -errno;
+    goto cleanup;
   }
-#endif  
-  return 0;
+
+cleanup:
+  if (doDisconnect(userFS)) {
+    ret = -EIO;
+  }
+  return ret;
 }

@@ -39,19 +39,20 @@ int dfs_open(const char *path, struct fuse_file_info *fi)
   int flags = (fi->flags & 0x7FFF);
 
   // retrieve dfs specific data
-  dfs_fh *fh = (dfs_fh*)malloc(sizeof (dfs_fh));
+  dfs_fh *fh = (dfs_fh*)calloc(1, sizeof (dfs_fh));
   if (fh == NULL) {
     ERROR("Malloc of new file handle failed");
     return -EIO;
   }
 
-  if ((fh->fs = doConnectAsUser(dfs->nn_hostname,dfs->nn_port)) == NULL) {
+  fh->fs = doConnectAsUser(dfs->nn_hostname, dfs->nn_port);
+  if (fh->fs == NULL) {
     ERROR("Could not connect to dfs");
     return -EIO;
   }
 
   if (flags & O_RDWR) {
-    hdfsFileInfo *info = hdfsGetPathInfo(dfs->fs,path);
+    hdfsFileInfo *info = hdfsGetPathInfo(fh->fs,path);
     if (info == NULL) {
       // File does not exist (maybe?); interpret it as a O_WRONLY
       // If the actual error was something else, we'll get it again when
@@ -73,28 +74,20 @@ int dfs_open(const char *path, struct fuse_file_info *fi)
     return -errno;
   }
 
-  // 
-  // mutex needed for reads/writes
-  //
   pthread_mutex_init(&fh->mutex, NULL);
 
   if (fi->flags & O_WRONLY || fi->flags & O_CREAT) {
-    // write specific initialization
     fh->buf = NULL;
   } else  {
-    // read specific initialization
-
     assert(dfs->rdbuffer_size > 0);
-
-    if (NULL == (fh->buf = (char*)malloc(dfs->rdbuffer_size*sizeof (char)))) {
+    fh->buf = (char*)malloc(dfs->rdbuffer_size * sizeof(char));
+    if (NULL == fh->buf) {
       ERROR("Could not allocate memory for a read for file %s\n", path);
       ret = -EIO;
     }
-
     fh->buffersStartOffset = 0;
     fh->bufferSize = 0;
   }
-
   fi->fh = (uint64_t)fh;
 
   return ret;

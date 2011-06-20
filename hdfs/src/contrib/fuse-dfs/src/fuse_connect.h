@@ -21,12 +21,8 @@
 
 #include "fuse_dfs.h"
 
-/**
- * Connects to the NN as the current user/group according to FUSE.
- * Uses the fuse context to get the user name and groups.
- * (if hadoop pre 0.19, will ignore user and group).
- */
-
-hdfsFS doConnectAsUser(const char *hostname, int port) ;
+hdfsFS doConnectAsUser(const char *hostname, int port);
+int doDisconnect(hdfsFS fs);
+int allocFsTable(void);
 
 #endif
