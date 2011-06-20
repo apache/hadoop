@@ -327,5 +327,9 @@
       name="protobuf-java"
       rev="${protobuf.version}"
       conf="common->default"/>
+    <dependency org="org.xerial.snappy"
+      name="snappy-java"
+      rev="${snappy-java.version}"
+      conf="common->default"/>
   </dependencies>
 </ivy-module>

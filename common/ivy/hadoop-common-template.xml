@@ -155,5 +155,10 @@
       <artifactId>protobuf-java</artifactId>
       <version>2.4.0a</version>
     </dependency>
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>java-snappy</artifactId>
+      <version>1.0.3-rc2</version>
+    </dependency>
   </dependencies>
 </project>
