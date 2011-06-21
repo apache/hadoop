@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -49,7 +48,7 @@ public class TableModifyFamilyHandler extends TableEventHandler {
   @Override
   protected void handleTableOperation(List<HRegionInfo> regions) throws IOException {
     AssignmentManager am = this.masterServices.getAssignmentManager();
-    HTableDescriptor htd = am.getTableDescriptor(Bytes.toString(tableName));
+    HTableDescriptor htd = this.masterServices.getTableDescriptors().get(Bytes.toString(tableName));
     byte [] familyName = familyDesc.getName();
     if (htd == null) {
       throw new IOException("Modify Family operation could not be completed as " +
@@ -61,10 +60,9 @@ public class TableModifyFamilyHandler extends TableEventHandler {
         Bytes.toString(familyName) + "' doesn't exists so cannot be modified");
     }
     // Update table descriptor in HDFS
-    htd = this.masterServices.getMasterFileSystem()
-        .modifyColumn(tableName, familyDesc);
+    htd = this.masterServices.getMasterFileSystem().modifyColumn(tableName, familyDesc);
     // Update in-memory descriptor cache
-    am.updateTableDesc(Bytes.toString(tableName), htd);
+    this.masterServices.getTableDescriptors().add(htd);
   }
   @Override
   public String toString() {

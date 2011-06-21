@@ -33,19 +33,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.regionserver.wal.OrphanHLogAfterSplitException;
@@ -80,11 +77,14 @@ public class MasterFileSystem {
   final Lock splitLogLock = new ReentrantLock();
   final boolean distributedLogSplitting;
   final SplitLogManager splitLogManager;
+  private final MasterServices services;
 
-  public MasterFileSystem(Server master, MasterMetrics metrics)
+  public MasterFileSystem(Server master, MasterServices services,
+      MasterMetrics metrics)
   throws IOException {
     this.conf = master.getConfiguration();
     this.master = master;
+    this.services = services;
     this.metrics = metrics;
     // Set filesystem to be that of this.rootdir else we get complaints about
     // mismatched filesystems if hbase.rootdir is hdfs and fs.defaultFS is
@@ -411,46 +411,11 @@ public class MasterFileSystem {
   }
 
     /**
-   * Get table info path for a table.
-   * @param tableName
-   * @return Table info path
-   */
-  private Path getTablePath(byte[] tableName) {
-    return new Path(this.rootdir, Bytes.toString(tableName));
-  }
-  /**
-   * Get a HTableDescriptor of a table.
-   * @param tableName
-   * @return HTableDescriptor
-   */
-  public HTableDescriptor getTableDescriptor(byte[] tableName) {
-    try {
-      return FSUtils.getTableDescriptor(fs, this.rootdir, tableName);
-    } catch (IOException ioe) {
-      LOG.info("Exception during readTableDecriptor ", ioe);
-    }
-    return null;
-  }
-
-    /**
    * Create new HTableDescriptor in HDFS.
    * @param htableDescriptor
    */
   public void createTableDescriptor(HTableDescriptor htableDescriptor) {
     FSUtils.createTableDescriptor(htableDescriptor, conf);
-  }
-
-  /**
-   * Update a table descriptor.
-   * @param htableDescriptor
-   * @return updated HTableDescriptor
-   * @throws IOException
-   */
-  public HTableDescriptor updateTableDescriptor(HTableDescriptor htableDescriptor)
-      throws IOException {
-    LOG.info("Update Table Descriptor.  Current HTD = " + htableDescriptor);
-    FSUtils.updateHTableDescriptor(fs, conf, htableDescriptor);
-    return htableDescriptor;
   }
 
   /**
@@ -464,9 +429,9 @@ public class MasterFileSystem {
       throws IOException {
     LOG.info("DeleteColumn. Table = " + Bytes.toString(tableName)
         + " family = " + Bytes.toString(familyName));
-    HTableDescriptor htd = getTableDescriptor(tableName);
+    HTableDescriptor htd = this.services.getTableDescriptors().get(tableName);
     htd.removeFamily(familyName);
-    updateTableDescriptor(htd);
+    this.services.getTableDescriptors().add(htd);
     return htd;
   }
 
@@ -482,14 +447,14 @@ public class MasterFileSystem {
     LOG.info("AddModifyColumn. Table = " + Bytes.toString(tableName)
         + " HCD = " + hcd.toString());
 
-    HTableDescriptor htd = getTableDescriptor(tableName);
+    HTableDescriptor htd = this.services.getTableDescriptors().get(tableName);
     byte [] familyName = hcd.getName();
     if(!htd.hasFamily(familyName)) {
       throw new InvalidFamilyOperationException("Family '" +
         Bytes.toString(familyName) + "' doesn't exists so cannot be modified");
     }
     htd.addFamily(hcd);
-    updateTableDescriptor(htd);
+    this.services.getTableDescriptors().add(htd);
     return htd;
   }
 
@@ -502,17 +467,15 @@ public class MasterFileSystem {
    */
   public HTableDescriptor addColumn(byte[] tableName, HColumnDescriptor hcd)
       throws IOException {
-    LOG.info("AddColumn. Table = " + Bytes.toString(tableName)
-        + " HCD = " + hcd.toString());
-
-    HTableDescriptor htd = getTableDescriptor(tableName);
-    if(htd == null) {
+    LOG.info("AddColumn. Table = " + Bytes.toString(tableName) + " HCD = " +
+      hcd.toString());
+    HTableDescriptor htd = this.services.getTableDescriptors().get(tableName);
+    if (htd == null) {
       throw new InvalidFamilyOperationException("Family '" +
         hcd.getNameAsString() + "' cannot be modified as HTD is null");
     }
     htd.addFamily(hcd);
-    updateTableDescriptor(htd);
+    this.services.getTableDescriptors().add(htd);
     return htd;
   }
-
 }

@@ -20,14 +20,23 @@
 
 package org.apache.hadoop.hbase.util;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -36,17 +45,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 /**
  * Contains utility methods for manipulating HBase meta tables.
@@ -59,7 +58,6 @@ public class MetaUtils {
   private static final Log LOG = LogFactory.getLog(MetaUtils.class);
   private final Configuration conf;
   private FileSystem fs;
-  private Path rootdir;
   private HLog log;
   private HRegion rootRegion;
   private Map<byte [], HRegion> metaRegions = Collections.synchronizedSortedMap(
@@ -89,8 +87,6 @@ public class MetaUtils {
    */
   private void initialize() throws IOException {
     this.fs = FileSystem.get(this.conf);
-    // Get root directory of HBase installation
-    this.rootdir = FSUtils.getRootDir(this.conf);
   }
 
   /**
@@ -266,14 +262,16 @@ public class MetaUtils {
     if (this.rootRegion != null) {
       return this.rootRegion;
     }
-    this.rootRegion = HRegion.openHRegion(HRegionInfo.ROOT_REGIONINFO, getLog(),
+    this.rootRegion = HRegion.openHRegion(HRegionInfo.ROOT_REGIONINFO,
+      HTableDescriptor.ROOT_TABLEDESC, getLog(),
       this.conf);
     this.rootRegion.compactStores();
     return this.rootRegion;
   }
 
   private HRegion openMetaRegion(HRegionInfo metaInfo) throws IOException {
-    HRegion meta = HRegion.openHRegion(metaInfo, getLog(), this.conf);
+    HRegion meta = HRegion.openHRegion(metaInfo, HTableDescriptor.META_TABLEDESC,
+      getLog(), this.conf);
     meta.compactStores();
     return meta;
   }

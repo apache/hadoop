@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 
 /**
@@ -91,6 +92,9 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
       HRegion.addRegionToMETA(meta, region);
     }
     closeRootAndMeta();
+
+    // Add new table descriptor file
+    FSUtils.createTableDescriptor(this.desc, this.conf);
   }
 
   /**

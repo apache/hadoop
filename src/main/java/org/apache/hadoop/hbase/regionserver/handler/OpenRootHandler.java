@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver.handler;
 
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 
@@ -30,7 +31,8 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
  */
 public class OpenRootHandler extends OpenRegionHandler {
   public OpenRootHandler(final Server server,
-      final RegionServerServices rsServices, HRegionInfo regionInfo) {
-    super(server, rsServices, regionInfo, EventType.M_RS_OPEN_ROOT);
+      final RegionServerServices rsServices, HRegionInfo regionInfo,
+      final HTableDescriptor htd) {
+    super(server, rsServices, regionInfo, htd, EventType.M_RS_OPEN_ROOT);
   }
 }

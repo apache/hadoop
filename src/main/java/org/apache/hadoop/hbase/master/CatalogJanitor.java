@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Map;
 import java.util.TreeMap;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Result;
@@ -283,9 +285,8 @@ class CatalogJanitor extends Chore {
     return result;
   }
 
-  private HTableDescriptor getTableDescriptor(byte[] tableName) {
-    return this.services.getAssignmentManager().getTableDescriptor(
-        Bytes.toString(tableName));
+  private HTableDescriptor getTableDescriptor(byte[] tableName)
+  throws TableExistsException, FileNotFoundException, IOException {
+    return this.services.getTableDescriptors().get(Bytes.toString(tableName));
   }
-
 }

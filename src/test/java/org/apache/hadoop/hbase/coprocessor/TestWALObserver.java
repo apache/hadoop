@@ -273,9 +273,9 @@ public class TestWALObserver {
         // Make a new wal for new region open.
         HLog wal2 = createWAL(newConf);
         Path tableDir =
-        HTableDescriptor.getTableDir(hbaseRootDir, hri.getTableName());
+          HTableDescriptor.getTableDir(hbaseRootDir, hri.getTableName());
         HRegion region = new HRegion(tableDir, wal2, FileSystem.get(newConf),
-          newConf, hri, TEST_UTIL.getHBaseCluster().getRegionServer(0));
+          newConf, hri, htd, TEST_UTIL.getHBaseCluster().getRegionServer(0));
 
         long seqid2 = region.initialize();
         SampleRegionWALObserver cp2 =

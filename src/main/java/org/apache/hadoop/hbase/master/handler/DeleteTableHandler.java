@@ -71,7 +71,7 @@ public class DeleteTableHandler extends TableEventHandler {
     // Delete table from FS
     this.masterServices.getMasterFileSystem().deleteTable(tableName);
     // Update table descriptor cache
-    am.deleteTableDesc(Bytes.toString(tableName));
+    this.masterServices.getTableDescriptors().remove(Bytes.toString(tableName));
 
     // If entry for this table in zk, and up in AssignmentManager, remove it.
     // Call to undisableTable does this. TODO: Make a more formal purge table.

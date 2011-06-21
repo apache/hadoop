@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -153,7 +154,7 @@ public class Merge extends Configured implements Tool {
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     List<KeyValue> cells2 =  rootRegion.get(get, null).list();
     HRegionInfo info2 = Writables.getHRegionInfo((cells2 == null)? null: cells2.get(0).getValue());
-    HRegion merged = merge(info1, rootRegion, info2, rootRegion);
+    HRegion merged = merge(HTableDescriptor.META_TABLEDESC, info1, rootRegion, info2, rootRegion);
     LOG.info("Adding " + merged.getRegionInfo() + " to " +
         rootRegion.getRegionInfo());
     HRegion.addRegionToMETA(rootRegion, merged);
@@ -216,8 +217,9 @@ public class Merge extends Configured implements Tool {
     Get get = new Get(region1);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     List<KeyValue> cells1 =  metaRegion1.get(get, null).list();
-    HRegionInfo info1 = Writables.getHRegionInfo((cells1 == null)? null: cells1.get(0).getValue());
-    if (info1== null) {
+    HRegionInfo info1 =
+      Writables.getHRegionInfo((cells1 == null)? null: cells1.get(0).getValue());
+    if (info1 == null) {
       throw new NullPointerException("info1 is null using key " +
           Bytes.toStringBinary(region1) + " in " + meta1);
     }
@@ -235,7 +237,9 @@ public class Merge extends Configured implements Tool {
     if (info2 == null) {
       throw new NullPointerException("info2 is null using key " + meta2);
     }
-    HRegion merged = merge(info1, metaRegion1, info2, metaRegion2);
+    HTableDescriptor htd = FSUtils.getTableDescriptor(FileSystem.get(getConf()),
+      this.rootdir, this.tableName);
+    HRegion merged = merge(htd, info1, metaRegion1, info2, metaRegion2);
 
     // Now find the meta region which will contain the newly merged region
 
@@ -267,8 +271,8 @@ public class Merge extends Configured implements Tool {
    * to scan the meta if the resulting merged region does not go in either)
    * Returns HRegion object for newly merged region
    */
-  private HRegion merge(HRegionInfo info1, HRegion meta1, HRegionInfo info2,
-      HRegion meta2)
+  private HRegion merge(final HTableDescriptor htd, HRegionInfo info1,
+      HRegion meta1, HRegionInfo info2, HRegion meta2)
   throws IOException {
     if (info1 == null) {
       throw new IOException("Could not find " + Bytes.toStringBinary(region1) + " in " +
@@ -280,9 +284,9 @@ public class Merge extends Configured implements Tool {
     }
     HRegion merged = null;
     HLog log = utils.getLog();
-    HRegion r1 = HRegion.openHRegion(info1, log, getConf());
+    HRegion r1 = HRegion.openHRegion(info1, htd, log, getConf());
     try {
-      HRegion r2 = HRegion.openHRegion(info2, log, getConf());
+      HRegion r2 = HRegion.openHRegion(info2, htd, log, getConf());
       try {
         merged = HRegion.merge(r1, r2);
       } finally {

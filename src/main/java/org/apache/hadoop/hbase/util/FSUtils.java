@@ -49,7 +49,9 @@ import java.io.InterruptedIOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -835,68 +837,68 @@ public class FSUtils {
     LOG.info("Finished lease recover attempt for " + p);
   }
 
-
-  public static Map<String, HTableDescriptor> getTableDescriptors(
-    final Configuration config)
+  /**
+   * @param fs
+   * @param rootdir
+   * @return All the table directories under <code>rootdir</code>
+   * @throws IOException
+   */
+  public static List<Path> getTableDirs(final FileSystem fs, final Path rootdir)
   throws IOException {
-    Path path = getRootDir(config);
-    // since HMaster.getFileSystem() is package private
-    FileSystem fs = path.getFileSystem(config);
-    return getTableDescriptors(fs, path);
-  }
-
-  public static Map<String, HTableDescriptor> getTableDescriptors(
-    final FileSystem fs, final Path hbaseRootDir)
-  throws IOException {
-    Map<String, HTableDescriptor> desc =
-        new HashMap<String, HTableDescriptor>();
-    DirFilter df = new DirFilter(fs);
     // presumes any directory under hbase.rootdir is a table
-    FileStatus [] tableDirs = fs.listStatus(hbaseRootDir, df);
-    for (FileStatus tableDir : tableDirs) {
-      Path d = tableDir.getPath();
-      String tableName = d.getName();
-
-      if (tableName.equals(HConstants.HREGION_LOGDIR_NAME)
-          || tableName.equals(Bytes.toString(HConstants.ROOT_TABLE_NAME))
-          || tableName.equals(Bytes.toString(HConstants.META_TABLE_NAME))
-          || tableName.equals(HConstants.HREGION_OLDLOGDIR_NAME)
-          ) {
+    FileStatus [] dirs = fs.listStatus(rootdir, new DirFilter(fs));
+    List<Path> tabledirs = new ArrayList<Path>(dirs.length);
+    for (FileStatus dir: dirs) {
+      Path p = dir.getPath();
+      String tableName = p.getName();
+      if (tableName.equals(HConstants.HREGION_LOGDIR_NAME) ||
+          tableName.equals(Bytes.toString(HConstants.ROOT_TABLE_NAME)) ||
+          tableName.equals(Bytes.toString(HConstants.META_TABLE_NAME)) ||
+          tableName.equals(HConstants.HREGION_OLDLOGDIR_NAME) ) {
         continue;
       }
-      LOG.info("Adding tabledescriptor for table = " + tableName);
-      HTableDescriptor htd = readTableDescriptor(fs, hbaseRootDir,
-          tableName);
-      if (htd != null) {
-        if (!desc.containsKey(tableName)) {
-          desc.put(tableName, htd);
-        }
-      }
+      tabledirs.add(p);
     }
-    return desc;
-  }
-
-  private static Path getTableInfoPath(Path hbaseRootDir, String tableName) {
-    Path tablePath = new Path(hbaseRootDir, tableName);
-    return new Path(tablePath, HConstants.TABLEINFO_NAME);
+    return tabledirs;
   }
 
   /**
    * Get table info path for a table.
+   * @param rootdir
    * @param tableName
    * @return Table info path
    */
-  private static Path getTableInfoPath(byte[] tableName, Configuration conf) throws IOException {
-    Path tablePath = new Path(getRootDir(conf), Bytes.toString(tableName));
-    Path tableInfoPath = new Path(tablePath, HConstants.TABLEINFO_NAME);
-    return tableInfoPath;
+  private static Path getTableInfoPath(Path rootdir, String tablename) {
+    Path tablePath = getTablePath(rootdir, tablename);
+    return new Path(tablePath, HConstants.TABLEINFO_NAME);
   }
 
-  private static Path getTablePath(byte[] tableName, Configuration conf) throws IOException {
-    return new Path(getRootDir(conf), Bytes.toString(tableName));
+  /**
+   * @param fs
+   * @param rootdir
+   * @param tablename
+   * @return Modification time for the table {@link HConstants#TABLEINFO_NAME} file.
+   * @throws IOException
+   */
+  public static long getTableInfoModtime(final FileSystem fs, final Path rootdir,
+      final String tablename)
+  throws IOException {
+    Path p = getTablePath(rootdir, tablename);
+    FileStatus [] status = fs.listStatus(p);
+    if (status.length < 1) throw new FileNotFoundException("No status for " + p.toString());
+    return status[0].getModificationTime();
   }
 
-  private static FileSystem getCurrentFileSystem(Configuration conf) throws IOException {
+  public static Path getTablePath(Path rootdir, byte [] tableName) {
+    return getTablePath(rootdir, Bytes.toString(tableName));
+  }
+
+  public static Path getTablePath(Path rootdir, final String tableName) {
+    return new Path(rootdir, tableName);
+  }
+
+  private static FileSystem getCurrentFileSystem(Configuration conf)
+  throws IOException {
     return getRootDir(conf).getFileSystem(conf);
   }
 
@@ -908,27 +910,11 @@ public class FSUtils {
    * @throws IOException
    */
   public static HTableDescriptor getHTableDescriptor(Configuration config,
-                                              String tableName)
-      throws IOException {
+      String tableName)
+  throws IOException {
     Path path = getRootDir(config);
     FileSystem fs = path.getFileSystem(config);
-    return readTableDescriptor(fs, path, tableName);
-  }
-
-  private static HTableDescriptor readTableDescriptor(FileSystem fs,
-                                              Path hbaseRootDir,
-                                              String tableName) {
-    try {
-      FSDataInputStream fsDataInputStream =
-          fs.open(getTableInfoPath(hbaseRootDir, tableName));
-      HTableDescriptor hTableDescriptor = new HTableDescriptor();
-      hTableDescriptor.readFields(fsDataInputStream);
-      fsDataInputStream.close();
-      return hTableDescriptor;
-    } catch (IOException ioe) {
-      LOG.info("Exception during readTableDecriptor. Current table name = " + tableName , ioe);
-    }
-    return null;
+    return getTableDescriptor(fs, path, tableName);
   }
 
   /**
@@ -936,92 +922,99 @@ public class FSUtils {
    * @param fs
    * @param hbaseRootDir
    * @param tableName
-   * @return
+   * @return Descriptor or null if none found.
    * @throws IOException
    */
   public static HTableDescriptor getTableDescriptor(FileSystem fs,
-                                                    Path hbaseRootDir,
-                                                    byte[] tableName)
-      throws IOException {
-     return readTableDescriptor(fs, hbaseRootDir, Bytes.toString(tableName));
+      Path hbaseRootDir, byte[] tableName)
+  throws IOException {
+     return getTableDescriptor(fs, hbaseRootDir, Bytes.toString(tableName));
   }
 
-
-  public static HTableDescriptor getTableDescriptor(Path tableDir, FileSystem fs) {
+  public static HTableDescriptor getTableDescriptor(FileSystem fs,
+      Path hbaseRootDir, String tableName) {
+    HTableDescriptor htd = null;
     try {
-      LOG.info("Reading table descriptor from .tableinfo. current path = "
-          + tableDir);
-      if (tableDir == null) {
-        LOG.info("Reading table descriptor from .tableinfo current tablename is NULL ");
-        return null;
-      }
-
-      FSDataInputStream fsDataInputStream =
-          fs.open(new Path(tableDir, HConstants.TABLEINFO_NAME));
-      HTableDescriptor hTableDescriptor = new HTableDescriptor();
-      hTableDescriptor.readFields(fsDataInputStream);
-      LOG.info("Current tabledescriptor from .tableinfo is " + hTableDescriptor.toString());
-      fsDataInputStream.close();
-      return hTableDescriptor;
+      htd = getTableDescriptor(fs, getTablePath(hbaseRootDir, tableName));
     } catch (IOException ioe) {
-      LOG.info("Exception during getTableDescriptor ", ioe);
+      LOG.debug("Exception during readTableDecriptor. Current table name = " +
+        tableName , ioe);
     }
-    return null;
+    return htd;
   }
 
-    /**
-   * Create new HTableDescriptor in HDFS.
+  public static HTableDescriptor getTableDescriptor(FileSystem fs, Path tableDir)
+  throws IOException {
+    if (tableDir == null) throw new NullPointerException();
+    FSDataInputStream fsDataInputStream =
+      fs.open(new Path(tableDir, HConstants.TABLEINFO_NAME));
+    HTableDescriptor hTableDescriptor = null;
+    try {
+      hTableDescriptor = new HTableDescriptor();
+      hTableDescriptor.readFields(fsDataInputStream);
+    } finally {
+      fsDataInputStream.close();
+    }
+    return hTableDescriptor;
+  }
+
+  /**
+   * Create new HTableDescriptor in HDFS.  Happens when we are creating table.
+  /**
    * @param htableDescriptor
+   * @param conf
    */
   public static void createTableDescriptor(HTableDescriptor htableDescriptor,
-                                           Configuration conf) {
+      Configuration conf) {
     try {
-      Path tableDir = getTablePath(htableDescriptor.getName(), conf);
       FileSystem fs = getCurrentFileSystem(conf);
-      createTableDescriptor(fs, htableDescriptor, tableDir);
+      createTableDescriptor(fs, getRootDir(conf), htableDescriptor);
     } catch(IOException ioe) {
       LOG.info("IOException while trying to create tableInfo in HDFS", ioe);
     }
   }
 
+  /**
+   * @param fs
+   * @param htableDescriptor
+   * @param rootdir
+   */
   public static void createTableDescriptor(FileSystem fs,
-                                           HTableDescriptor htableDescriptor,
-                                           Path tableDir) {
+      Path rootdir, HTableDescriptor htableDescriptor) {
     try {
-      Path tableInfoPath = new Path(tableDir, HConstants.TABLEINFO_NAME);
-      LOG.info("Current tableInfoPath = " + tableInfoPath
-          + " tableDir = " + tableDir) ;
+      Path tableInfoPath =
+        getTableInfoPath(rootdir, htableDescriptor.getNameAsString());
+      LOG.info("Current tableInfoPath = " + tableInfoPath) ;
       if (fs.exists(tableInfoPath) &&
           fs.getFileStatus(tableInfoPath).getLen() > 0) {
         LOG.info("TableInfo already exists.. Skipping creation");
         return;
       }
-      writeTableDescriptor(fs, htableDescriptor, tableDir);
+      writeTableDescriptor(fs, htableDescriptor,
+        getTablePath(rootdir, htableDescriptor.getNameAsString()));
     } catch(IOException ioe) {
       LOG.info("IOException while trying to create tableInfo in HDFS", ioe);
     }
   }
 
+  /**
+   * Called when we are creating a table to write out the tables' descriptor.
+   * @param fs
+   * @param hTableDescriptor
+   * @param tableDir
+   * @throws IOException
+   */
   private static void writeTableDescriptor(FileSystem fs,
-                                           HTableDescriptor hTableDescriptor,
-                                           Path tableDir) throws IOException {
+      HTableDescriptor hTableDescriptor, Path tableDir)
+  throws IOException {
     // Create in tmpdir and then move into place in case we crash after
     // create but before close.  If we don't successfully close the file,
     // subsequent region reopens will fail the below because create is
     // registered in NN.
     Path tableInfoPath = new Path(tableDir, HConstants.TABLEINFO_NAME);
-    Path tmpPath = new Path(new Path(tableDir,".tmp"),
-        HConstants.TABLEINFO_NAME);
+    Path tmpPath = new Path(new Path(tableDir,".tmp"), HConstants.TABLEINFO_NAME);
     LOG.info("TableInfoPath = " + tableInfoPath + " tmpPath = " + tmpPath);
-    FSDataOutputStream out = fs.create(tmpPath, true);
-    try {
-      hTableDescriptor.write(out);
-      out.write('\n');
-      out.write('\n');
-      out.write(Bytes.toBytes(hTableDescriptor.toString()));
-    } finally {
-      out.close();
-    }
+    writeHTD(fs, tmpPath, hTableDescriptor);
     if (!fs.rename(tmpPath, tableInfoPath)) {
       throw new IOException("Unable to rename " + tmpPath + " to " +
         tableInfoPath);
@@ -1030,29 +1023,34 @@ public class FSUtils {
     }
   }
 
+  /**
+   * Update table descriptor
+   * @param fs
+   * @param conf
+   * @param hTableDescriptor
+   * @throws IOException
+   */
+  public static void updateHTableDescriptor(FileSystem fs, Path rootdir,
+      HTableDescriptor hTableDescriptor)
+  throws IOException {
+    Path tableInfoPath =
+      getTableInfoPath(rootdir, hTableDescriptor.getNameAsString());
+    writeHTD(fs, tableInfoPath, hTableDescriptor);
+    LOG.info("updateHTableDescriptor. Updated tableinfo in HDFS under " +
+      tableInfoPath + " For HTD => " + hTableDescriptor.toString());
+  }
 
-  public static void updateHTableDescriptor(FileSystem fs,
-                                            Configuration conf,
-                                            HTableDescriptor hTableDescriptor) throws IOException
-  {
-    Path tableInfoPath = getTableInfoPath(hTableDescriptor.getName(), conf);
-    FSDataOutputStream out = fs.create(tableInfoPath, true);
+  private static void writeHTD(final FileSystem fs, final Path p,
+      final HTableDescriptor htd)
+  throws IOException {
+    FSDataOutputStream out = fs.create(p, true);
     try {
-      hTableDescriptor.write(out);
+      htd.write(out);
       out.write('\n');
       out.write('\n');
-      out.write(Bytes.toBytes(hTableDescriptor.toString()));
-      LOG.info("updateHTableDescriptor. Updated tableinfo in HDFS under "
-        + tableInfoPath + " For HTD => "
-        + hTableDescriptor.toString());
+      out.write(Bytes.toBytes(htd.toString()));
     } finally {
       out.close();
     }
   }
-
-  private static Path getTmpDir(HTableDescriptor htableDescriptor, Configuration configuration)
-      throws IOException {
-    return new Path(getTablePath(htableDescriptor.getName(), configuration), ".tmp");
-  }
-
 }

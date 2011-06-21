@@ -26,9 +26,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.master.AssignmentManager;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -48,7 +46,7 @@ public class TableDeleteFamilyHandler extends TableEventHandler {
   @Override
   protected void handleTableOperation(List<HRegionInfo> hris) throws IOException {
     AssignmentManager am = this.masterServices.getAssignmentManager();
-    HTableDescriptor htd = am.getTableDescriptor(Bytes.toString(tableName));
+    HTableDescriptor htd = this.masterServices.getTableDescriptors().get(Bytes.toString(tableName));
     if (htd == null) {
       throw new IOException("Add Family operation could not be completed as " +
           "HTableDescritor is missing for table = "
@@ -63,7 +61,7 @@ public class TableDeleteFamilyHandler extends TableEventHandler {
     htd = this.masterServices.getMasterFileSystem()
         .deleteColumn(tableName, familyName);
     // Update in-memory descriptor cache
-    am.updateTableDesc(Bytes.toString(tableName), htd);
+    this.masterServices.getTableDescriptors().add(htd);
   }
 
   @Override

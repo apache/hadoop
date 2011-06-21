@@ -173,7 +173,7 @@ public abstract class HBaseTestCase extends TestCase {
   throws IOException {
     HRegion r = new HRegion(closedRegion.getTableDir(), closedRegion.getLog(),
         closedRegion.getFilesystem(), closedRegion.getConf(),
-        closedRegion.getRegionInfo(), null);
+        closedRegion.getRegionInfo(), closedRegion.getTableDesc(), null);
     r.initialize();
     return r;
   }

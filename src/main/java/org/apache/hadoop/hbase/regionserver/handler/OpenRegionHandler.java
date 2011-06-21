@@ -26,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -45,6 +46,7 @@ public class OpenRegionHandler extends EventHandler {
   private final RegionServerServices rsServices;
 
   private final HRegionInfo regionInfo;
+  private final HTableDescriptor htd;
 
   // We get version of our znode at start of open process and monitor it across
   // the total open. We'll fail the open if someone hijacks our znode; we can
@@ -52,16 +54,18 @@ public class OpenRegionHandler extends EventHandler {
   private volatile int version = -1;
 
   public OpenRegionHandler(final Server server,
-      final RegionServerServices rsServices, HRegionInfo regionInfo) {
-    this(server, rsServices, regionInfo, EventType.M_RS_OPEN_REGION);
+      final RegionServerServices rsServices, HRegionInfo regionInfo,
+      HTableDescriptor htd) {
+    this (server, rsServices, regionInfo, htd, EventType.M_RS_OPEN_REGION);
   }
 
   protected OpenRegionHandler(final Server server,
       final RegionServerServices rsServices, final HRegionInfo regionInfo,
-      EventType eventType) {
+      final HTableDescriptor htd, EventType eventType) {
     super(server, eventType);
     this.rsServices = rsServices;
     this.regionInfo = regionInfo;
+    this.htd = htd;
   }
 
   public HRegionInfo getRegionInfo() {
@@ -184,7 +188,7 @@ public class OpenRegionHandler extends EventHandler {
 
     // Was there an exception opening the region?  This should trigger on
     // InterruptedException too.  If so, we failed.
-    return !t.interrupted() && t.getException() == null;
+    return !Thread.interrupted() && t.getException() == null;
   }
 
   /**
@@ -269,8 +273,9 @@ public class OpenRegionHandler extends EventHandler {
     try {
       // Instantiate the region.  This also periodically tickles our zk OPENING
       // state so master doesn't timeout this region in transition.
-      region = HRegion.openHRegion(tableDir, this.regionInfo, this.rsServices.getWAL(),
-        this.server.getConfiguration(), this.rsServices,
+      region = HRegion.openHRegion(tableDir, this.regionInfo, this.htd,
+          this.rsServices.getWAL(), this.server.getConfiguration(),
+          this.rsServices,
         new CancelableProgressable() {
           public boolean progress() {
             // We may lose the znode ownership during the open.  Currently its
@@ -296,8 +301,9 @@ public class OpenRegionHandler extends EventHandler {
     try {
       // Instantiate the region.  This also periodically tickles our zk OPENING
       // state so master doesn't timeout this region in transition.
-      region = HRegion.openHRegion(this.regionInfo, this.rsServices.getWAL(),
-        this.server.getConfiguration(), this.rsServices,
+      region = HRegion.openHRegion(this.regionInfo, this.htd,
+          this.rsServices.getWAL(), this.server.getConfiguration(),
+          this.rsServices,
         new CancelableProgressable() {
           public boolean progress() {
             // We may lose the znode ownership during the open.  Currently its

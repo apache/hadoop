@@ -231,7 +231,7 @@ public class SplitLogManager extends ZooKeeperListener {
     for (FileStatus lf : logfiles) {
       // TODO If the log file is still being written to - which is most likely
       // the case for the last log file - then its length will show up here
-      // as zero. The size of such a file can only be retrieved after after
+      // as zero. The size of such a file can only be retrieved after
       // recover-lease is done. totalSize will be under in most cases and the
       // metrics that it drives will also be under-reported.
       totalSize += lf.getLen();

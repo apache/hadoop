@@ -154,7 +154,7 @@ public class TestSplitTransaction {
     for (HRegion r: daughters) {
       // Open so can count its content.
       HRegion openRegion = HRegion.openHRegion(this.testdir, r.getRegionInfo(),
-         r.getLog(), r.getConf());
+         r.getTableDesc(), r.getLog(), r.getConf());
       try {
         int count = countRows(openRegion);
         assertTrue(count > 0 && count != rowcount);
@@ -209,7 +209,7 @@ public class TestSplitTransaction {
     for (HRegion r: daughters) {
       // Open so can count its content.
       HRegion openRegion = HRegion.openHRegion(this.testdir, r.getRegionInfo(),
-         r.getLog(), r.getConf());
+         r.getTableDesc(), r.getLog(), r.getConf());
       try {
         int count = countRows(openRegion);
         assertTrue(count > 0 && count != rowcount);
@@ -254,6 +254,7 @@ public class TestSplitTransaction {
     htd.addFamily(hcd);
     HRegionInfo hri = new HRegionInfo(htd.getName(), STARTROW, ENDROW);
     HRegion.createHRegion(hri, testdir, TEST_UTIL.getConfiguration(), htd);
-    return HRegion.openHRegion(testdir, hri, wal, TEST_UTIL.getConfiguration());
+    return HRegion.openHRegion(testdir, hri, htd, wal,
+      TEST_UTIL.getConfiguration());
   }
 }

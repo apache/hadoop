@@ -63,12 +63,14 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterAddressTracker;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
@@ -120,6 +122,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
@@ -292,6 +295,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * This servers startcode.
    */
   private final long startcode;
+
+  /**
+   * Go here to get table descriptors.
+   */
+  private TableDescriptors tableDescriptors;
 
   /**
    * Starts a HRegionServer at the default location
@@ -863,6 +871,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       // Get fs instance used by this RS
       this.fs = FileSystem.get(this.conf);
       this.rootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
+      this.tableDescriptors = new FSTableDescriptors(this.fs, this.rootDir, true);
       this.hlog = setupWALAndReplication();
       // Init in here rather than in constructor after thread name has been set
       this.metrics = new RegionServerMetrics();
@@ -2268,12 +2277,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     LOG.info("Received request to open region: " +
       region.getRegionNameAsString());
     if (this.stopped) throw new RegionServerStoppedException();
+    HTableDescriptor htd = this.tableDescriptors.get(region.getTableName());
     if (region.isRootRegion()) {
-      this.service.submit(new OpenRootHandler(this, this, region));
+      this.service.submit(new OpenRootHandler(this, this, region, htd));
     } else if(region.isMetaRegion()) {
-      this.service.submit(new OpenMetaHandler(this, this, region));
+      this.service.submit(new OpenMetaHandler(this, this, region, htd));
     } else {
-      this.service.submit(new OpenRegionHandler(this, this, region));
+      this.service.submit(new OpenRegionHandler(this, this, region, htd));
     }
   }
 

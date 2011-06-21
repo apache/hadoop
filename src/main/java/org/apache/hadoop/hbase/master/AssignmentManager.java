@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -46,7 +45,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -64,7 +62,6 @@ import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.SplitRegionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
@@ -141,10 +138,6 @@ public class AssignmentManager extends ZooKeeperListener {
 
   private final ExecutorService executorService;
 
-  private Map<String, HTableDescriptor> tableDescMap =
-      new HashMap<String, HTableDescriptor>();
-
-
   /**
    * Constructs a new assignment manager.
    *
@@ -153,10 +146,11 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param catalogTracker
    * @param service
    * @throws KeeperException
+   * @throws IOException 
    */
   public AssignmentManager(Server master, ServerManager serverManager,
       CatalogTracker catalogTracker, final ExecutorService service)
-  throws KeeperException {
+  throws KeeperException, IOException {
     super(master.getZooKeeper());
     this.master = master;
     this.serverManager = serverManager;
@@ -172,7 +166,6 @@ public class AssignmentManager extends ZooKeeperListener {
     this.zkTable = new ZKTable(this.master.getZooKeeper());
     this.maximumAssignmentAttempts =
       this.master.getConfiguration().getInt("hbase.assignment.maximum.attempts", 10);
-    initHTableDescriptorMap();
   }
 
   /**
@@ -1070,10 +1063,6 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     // Move on to open regions.
     try {
-      // Update the tableDesc map.
-      for (HRegionInfo region : regions) {
-        updateDescMap(region.getTableNameAsString());
-      }
       // Send OPEN RPC. This can fail if the server on other end is is not up.
       // If we fail, fail the startup by aborting the server.  There is one
       // exception we will tolerate: ServerNotRunningException.  This is thrown
@@ -2256,140 +2245,6 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     LOG.info("Bulk assigning done");
   }
-
-
-  private void initHTableDescriptorMap() {
-    try {
-      synchronized (this.tableDescMap) {
-        this.tableDescMap =
-            FSUtils.getTableDescriptors(this.master.getConfiguration());
-      }
-    } catch (IOException e) {
-      LOG.info("IOException while initializing HTableDescriptor Map");
-    }
-  }
-
-  private HTableDescriptor readTableDescriptor(String tableName)
-      throws IOException {
-    return FSUtils.getHTableDescriptor(
-        this.master.getConfiguration(), tableName);
-  }
-
-  private boolean isRootOrMetaRegion(String tableName) {
-    return (
-        tableName.equals(
-            HRegionInfo.ROOT_REGIONINFO.getTableNameAsString())
-        ||
-        tableName.equals(
-            HRegionInfo.FIRST_META_REGIONINFO.getTableNameAsString()));
-  }
-
-  private void updateDescMap(String tableName) throws IOException {
-
-    if (this.tableDescMap == null) {
-      LOG.error("Table Descriptor cache is null. " +
-          "Skipping desc map update for table = " + tableName);
-      return;
-    }
-
-    if (tableName == null || isRootOrMetaRegion(tableName))
-      return;
-    if (!this.tableDescMap.containsKey(tableName)) {
-      HTableDescriptor htd = readTableDescriptor(tableName);
-      if (htd != null) {
-        LOG.info("Updating TableDesc Map for tablename = " + tableName
-        + "htd == " + htd);
-        synchronized (this.tableDescMap) {
-        this.tableDescMap.put(tableName, htd);
-        }
-      } else {
-        LOG.info("HTable Descriptor is NULL for table = " + tableName);
-      }
-    }
-  }
-
-  public void updateTableDesc(String tableName, HTableDescriptor htd) {
-    if (this.tableDescMap == null) {
-      LOG.error("Table Descriptor cache is null. " +
-          "Skipping desc map update for table = " + tableName);
-      return;
-    }
-    if (tableName == null || isRootOrMetaRegion(tableName))
-      return;
-    if (!this.tableDescMap.containsKey(tableName)) {
-      LOG.error("Table descriptor missing in DescMap. for tablename = " + tableName);
-    }
-    synchronized (this.tableDescMap) {
-      this.tableDescMap.put(tableName, htd);
-    }
-    LOG.info("TableDesc updated successfully for table = " + tableName);
-  }
-
-  public void deleteTableDesc(String tableName) {
-    if (this.tableDescMap == null) {
-      LOG.error("Table Descriptor cache is null. " +
-          "Skipping desc map update for table = " + tableName);
-      return;
-    }
-    if (tableName == null || isRootOrMetaRegion(tableName))
-      return;
-    if (!this.tableDescMap.containsKey(tableName)) {
-      LOG.error("Table descriptor missing in DescMap. for tablename = " + tableName);
-    }
-    synchronized (this.tableDescMap) {
-      this.tableDescMap.remove(tableName);
-    }
-    LOG.info("TableDesc removed successfully for table = " + tableName);
-  }
-
-  public HTableDescriptor[] getHTableDescriptors(List<String> tableNames) {
-    List htdList = null;
-    HTableDescriptor[] htd = null;
-    if (tableNames != null && tableNames.size() > 0) {
-      if (this.tableDescMap != null) {
-        htd = new HTableDescriptor[tableNames.size()];
-        htdList = new ArrayList();
-        synchronized (this.tableDescMap) {
-          int index = 0;
-          for (String tableName : tableNames) {
-            HTableDescriptor htdesc = this.tableDescMap.get(tableName);
-            htd[index++] = this.tableDescMap.get(tableName);
-            if (htdesc != null) {
-              htdList.add(htdesc);
-            }
-
-          }
-        }
-      }
-    }
-    if (htdList != null && htdList.size() > 0 ) {
-      return (HTableDescriptor[]) htdList.toArray(new HTableDescriptor[htdList.size()]);
-    }
-    return null;
-  }
-
-  public HTableDescriptor[] getHTableDescriptors() {
-    if (this.tableDescMap != null) {
-      synchronized (this.tableDescMap) {
-        Collection<HTableDescriptor> htdc = this.tableDescMap.values();
-        if (htdc != null) {
-          return htdc.toArray(new HTableDescriptor[htdc.size()]);
-        }
-      }
-    }
-    return null;
-  }
-
-  public HTableDescriptor getTableDescriptor(String tableName) {
-    HTableDescriptor htd = null;
-    if (tableName != null) {
-      synchronized (this.tableDescMap) {
-        htd = this.tableDescMap.get(tableName);
-      }
-    }
-    return htd;
-  }
-
 
   /**
    * State of a Region while undergoing transitions.
