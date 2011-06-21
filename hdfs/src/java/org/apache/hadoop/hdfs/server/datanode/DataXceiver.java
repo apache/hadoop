@@ -129,6 +129,7 @@ class DataXceiver extends Receiver implements Runnable, FSConstants {
 
     DataInputStream in=null; 
     int opsProcessed = 0;
+    Op op = null;
     try {
       in = new DataInputStream(
           new BufferedInputStream(NetUtils.getInputStream(s), 
@@ -139,7 +140,6 @@ class DataXceiver extends Receiver implements Runnable, FSConstants {
       // This optimistic behaviour allows the other end to reuse connections.
       // Setting keepalive timeout to 0 disable this behavior.
       do {
-        Op op;
         try {
           if (opsProcessed != 0) {
             assert socketKeepaliveTimeout > 0;
@@ -180,8 +180,10 @@ class DataXceiver extends Receiver implements Runnable, FSConstants {
         ++opsProcessed;
       } while (!s.isClosed() && socketKeepaliveTimeout > 0);
     } catch (Throwable t) {
-      LOG.error(datanode.getMachineName() + ":DataXceiver, at " +
-        s.toString(), t);
+      LOG.error(datanode.getMachineName() + ":DataXceiver error processing " +
+                ((op == null) ? "unknown" : op.name()) + " operation " +
+                " src: " + remoteAddress +
+                " dest: " + localAddress, t);
     } finally {
       if (LOG.isDebugEnabled()) {
         LOG.debug(datanode.getMachineName() + ":Number of active connections is: "
@@ -218,7 +220,7 @@ class DataXceiver extends Receiver implements Runnable, FSConstants {
             "%d", "HDFS_READ", clientName, "%d",
             dnR.getStorageID(), block, "%d")
         : dnR + " Served block " + block + " to " +
-            s.getInetAddress();
+            remoteAddress;
 
     updateCurrentThreadName("Sending block " + block);
     try {
@@ -226,6 +228,7 @@ class DataXceiver extends Receiver implements Runnable, FSConstants {
         blockSender = new BlockSender(block, startOffset, length,
             true, true, false, datanode, clientTraceFmt);
       } catch(IOException e) {
+        LOG.info("opReadBlock " + block + " received exception " + e);
         sendResponse(s, ERROR, datanode.socketWriteTimeout);
         throw e;
       }
@@ -256,6 +259,10 @@ class DataXceiver extends Receiver implements Runnable, FSConstants {
       datanode.metrics.incrBytesRead((int) read);
       datanode.metrics.incrBlocksRead();
     } catch ( SocketException ignored ) {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(dnR + ":Ignoring exception while serving " + block + " to " +
+            remoteAddress, ignored);
+      }
       // Its ok for remote side to close the connection anytime.
       datanode.metrics.incrBlocksRead();
       IOUtils.closeStream(out);
@@ -265,7 +272,7 @@ class DataXceiver extends Receiver implements Runnable, FSConstants {
        */
       LOG.warn(dnR +  ":Got exception while serving " + 
           block + " to " +
-                s.getInetAddress() + ":\n" + 
+                remoteAddress + ":\n" + 
                 StringUtils.stringifyException(ioe) );
       throw ioe;
     } finally {
@@ -412,6 +419,8 @@ class DataXceiver extends Receiver implements Runnable, FSConstants {
           IOUtils.closeSocket(mirrorSock);
           mirrorSock = null;
           if (isClient) {
+            LOG.error(datanode + ":Exception transfering block " +
+                      block + " to mirror " + mirrorNode + ": " + e);
             throw e;
           } else {
             LOG.info(datanode + ":Exception transfering block " +
@@ -473,7 +482,7 @@ class DataXceiver extends Receiver implements Runnable, FSConstants {
 
       
     } catch (IOException ioe) {
-      LOG.info("writeBlock " + block + " received exception " + ioe);
+      LOG.info("opWriteBlock " + block + " received exception " + ioe);
       throw ioe;
     } finally {
       // close all opened streams
@@ -619,6 +628,7 @@ class DataXceiver extends Receiver implements Runnable, FSConstants {
       LOG.info("Copied block " + block + " to " + s.getRemoteSocketAddress());
     } catch (IOException ioe) {
       isOpSuccess = false;
+      LOG.info("opCopyBlock " + block + " received exception " + ioe);
       throw ioe;
     } finally {
       dataXceiverServer.balanceThrottler.release();
@@ -724,6 +734,7 @@ class DataXceiver extends Receiver implements Runnable, FSConstants {
       
     } catch (IOException ioe) {
       opStatus = ERROR;
+      LOG.info("opReplaceBlock " + block + " received exception " + ioe);
       throw ioe;
     } finally {
       // receive the last byte that indicates the proxy released its thread resource

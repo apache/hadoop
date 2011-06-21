@@ -516,6 +516,9 @@ Trunk (unreleased changes)
 
     HDFS-420. Fuse-dfs should cache fs handles. (Brian Bockelman and eli)
 
+    HDFS-1568. Improve the log messages in DataXceiver.  (Joey Echeverria via
+    szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
