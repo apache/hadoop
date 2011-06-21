@@ -468,6 +468,15 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     status.markComplete("Initialization successful");
     LOG.info("Master has completed initialization");
     initialized = true;
+
+    if (this.cpHost != null) {
+      // don't let cp initialization errors kill the master
+      try {
+        this.cpHost.postStartMaster();
+      } catch (IOException ioe) {
+        LOG.error("Coprocessor postStartMaster() hook failed", ioe);
+      }
+    }
   }
 
   public boolean isMetaHRIUpdated()

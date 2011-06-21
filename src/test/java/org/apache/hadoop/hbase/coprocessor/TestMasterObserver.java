@@ -86,6 +86,7 @@ public class TestMasterObserver {
     private boolean postBalanceSwitchCalled;
     private boolean preShutdownCalled;
     private boolean preStopMasterCalled;
+    private boolean postStartMasterCalled;
     private boolean startCalled;
     private boolean stopCalled;
 
@@ -313,6 +314,16 @@ public class TestMasterObserver {
     }
 
     @Override
+    public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx)
+        throws IOException {
+      postStartMasterCalled = true;
+    }
+
+    public boolean wasStartMasterCalled() {
+      return postStartMasterCalled;
+    }
+
+    @Override
     public void start(CoprocessorEnvironment env) throws IOException {
       startCalled = true;
     }
@@ -360,6 +371,8 @@ public class TestMasterObserver {
 
     // check basic lifecycle
     assertTrue("MasterObserver should have been started", cp.wasStarted());
+    assertTrue("postStartMaster() hook should have been called",
+        cp.wasStartMasterCalled());
   }
 
   @Test

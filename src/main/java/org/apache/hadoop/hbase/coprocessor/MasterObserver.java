@@ -217,4 +217,12 @@ public interface MasterObserver extends Coprocessor {
    */
   void preStopMaster(final ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException;
+
+  /**
+   * Called immediately after an active master instance has completed
+   * initialization.  Will not be called on standby master instances unless
+   * they take over the active role.
+   */
+  void postStartMaster(final ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException;
 }

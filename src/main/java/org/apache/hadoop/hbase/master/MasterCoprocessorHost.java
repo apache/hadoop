@@ -466,4 +466,16 @@ public class MasterCoprocessorHost
     }
   }
 
+  void postStartMaster() throws IOException {
+    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
+    for (MasterEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof MasterObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        ((MasterObserver)env.getInstance()).postStartMaster(ctx);
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
 }
