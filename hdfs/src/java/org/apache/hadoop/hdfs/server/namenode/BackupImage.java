@@ -34,6 +34,8 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageState;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
+
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.LogHeader;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
@@ -356,13 +358,10 @@ public class BackupImage extends FSImage {
       BufferedInputStream bin = new BufferedInputStream(edits);
       DataInputStream in = new DataInputStream(bin);
       FSEditLogLoader logLoader = new FSEditLogLoader(namesystem);
-      int logVersion = logLoader.readLogVersion(in);
-      Checksum checksum = null;
-      if (LayoutVersion.supports(Feature.EDITS_CHESKUM, logVersion)) {
-        checksum = FSEditLog.getChecksum();
-        in = new DataInputStream(new CheckedInputStream(bin, checksum));
-      }
-      int loaded = logLoader.loadEditRecords(logVersion, in, checksum, false,
+
+      LogHeader header = FSEditLogOp.LogHeader.read(in);
+      int loaded = logLoader.loadEditRecords(
+          header.logVersion, in, header.checksum, false,
           lastAppliedTxId + 1);
 
       lastAppliedTxId += loaded;
@@ -370,8 +369,9 @@ public class BackupImage extends FSImage {
 
       // first time reached the end of spool
       jsState = JSpoolState.WAIT;
-      loaded = logLoader.loadEditRecords(logVersion, in, checksum,
-                                         true, lastAppliedTxId + 1);
+      loaded = logLoader.loadEditRecords(
+          header.logVersion, in, header.checksum,
+          true, lastAppliedTxId + 1);
       numEdits += loaded;
       lastAppliedTxId += loaded;
 

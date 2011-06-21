@@ -50,3 +50,5 @@ HDFS-2048. Add upgrade tests and fix upgrade from 0.22 with corrupt image.
            (todd)
 HDFS-2027. Image inspector should return finalized logs before unfinalized
            logs. (todd)
+HDFS-2074. Determine edit log validity by truly reading and validating
+           transactions. (todd)

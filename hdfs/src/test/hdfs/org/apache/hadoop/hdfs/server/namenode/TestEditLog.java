@@ -605,54 +605,6 @@ public class TestEditLog extends TestCase {
     }
   }
   
-
-  public void testGetValidLength() throws Exception {
-    assertTrue(TEST_DIR.mkdirs() || TEST_DIR.exists());
-
-    // For each of a combination of valid bytes followed by invalid,
-    // make sure we determine the proper non-trailer size of the file.
-    // Sizes designed to find off-by-one errors around 1024 byte chunk size.
-    final int VALID_SIZES[] = new int[] {0, 1, 789, 1023, 1024, 1025};
-    final int TRAILER_SIZES[] = new int[] {0, 1, 1024-789-1, 1024-789,
-        1024-789+1, 1023, 1024, 1025};
-    
-    for (int validPart : VALID_SIZES) {
-      for (int trailerPart : TRAILER_SIZES) {
-        doValidLengthTest(validPart, trailerPart);
-        doValidLengthTest(validPart*3, trailerPart*3);
-      }
-    }
-  }
-
-  private void doValidLengthTest(int validPart, int trailerPart) throws Exception {
-    File file = new File(TEST_DIR, "validLengthTest");
-    FileOutputStream fos = new FileOutputStream(file);
-    try {
-      try {
-        byte[] valid = new byte[validPart];
-        for (int i = 0; i < validPart; i++) {
-          valid[i] = (byte)(i & 0xFF);
-        }
-        // The valid data shouldn't end in a trailer byte, or else we'd think it was one shorter
-        // than actual length
-        if (validPart > 0) valid[validPart - 1] = 1;
-        fos.write(valid);
-        
-        byte[] trailer = new byte[trailerPart];
-        Arrays.fill(trailer, TRAILER_BYTE);
-        fos.write(trailer);
-      } finally {
-        fos.close();
-      }
-      
-      long computedValid = EditLogFileInputStream.getValidLength(file, 1024);
-      assertEquals("Testing valid=" + validPart + " trailer=" + trailerPart,
-          validPart, computedValid);
-    } finally {
-      file.delete();
-    }
-  }
-
   private static class EditLogByteInputStream extends EditLogInputStream {
     private InputStream input;
     private long len;

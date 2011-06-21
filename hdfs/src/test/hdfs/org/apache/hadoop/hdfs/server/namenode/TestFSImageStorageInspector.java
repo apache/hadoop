@@ -249,14 +249,15 @@ public class TestFSImageStorageInspector {
     LogGroup lg = inspector.logGroups.get(123L);
     assertEquals(3, lg.logs.size());
     
-    // Inject spies to return the lengths we would like to see
-    long validLengths[] = new long[] { 2000, 2000, 1000 };
+    // Inject spies to return the valid counts we would like to see
+    long validTxnCounts[] = new long[] { 2000, 2000, 1000 };
     for (int i = 0; i < 3; i++) {
       FoundEditLog inProgressLog = lg.logs.get(i);
       assertTrue(inProgressLog.isInProgress());
       
       inProgressLog = spy(inProgressLog);
-      doReturn(validLengths[i]).when(inProgressLog).getValidLength();
+      doReturn(new FSEditLogLoader.EditLogValidation(-1, validTxnCounts[i]))
+        .when(inProgressLog).validateLog();
       lg.logs.set(i, inProgressLog);      
     }
 

@@ -47,6 +47,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.io.Files;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.doReturn;
@@ -95,6 +96,23 @@ public abstract class FSImageTestUtil {
     return inspector;
   }
 
+  
+  /**
+   * Return a standalone instance of FSEditLog that will log into the given
+   * log directory. The returned instance is not yet opened.
+   */
+  public static FSEditLog createStandaloneEditLog(File logDir)
+      throws IOException {
+    assertTrue(logDir.mkdirs() || logDir.exists());
+    Files.deleteDirectoryContents(logDir);
+    NNStorage storage = Mockito.mock(NNStorage.class);
+    List<StorageDirectory> sds = Lists.newArrayList(
+        FSImageTestUtil.mockStorageDirectory(logDir, NameNodeDirType.EDITS));
+    Mockito.doReturn(sds).when(storage).dirIterable(NameNodeDirType.EDITS);
+
+    return new FSEditLog(storage);
+  }
+  
   /**
    * Assert that all of the given directories have the same newest filename
    * for fsimage that they hold the same data.

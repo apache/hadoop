@@ -36,6 +36,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
@@ -398,17 +399,19 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
         return;
       }
 
-      long maxValidLength = Long.MIN_VALUE;
+      long maxValidTxnCount = Long.MIN_VALUE;
       for (FoundEditLog log : logs) {
-        long validLength = log.getValidLength();
-        LOG.warn("  Log " + log.getFile() + " valid length=" + validLength);
-        maxValidLength = Math.max(maxValidLength, validLength);
+        long validTxnCount = log.validateLog().numTransactions;
+        LOG.warn("  Log " + log.getFile() + " valid txns=" + validTxnCount);
+        maxValidTxnCount = Math.max(maxValidTxnCount, validTxnCount);
       }        
 
       for (FoundEditLog log : logs) {
-        if (log.getValidLength() < maxValidLength) {
+        long txns = log.validateLog().numTransactions;
+        if (txns < maxValidTxnCount) {
           LOG.warn("Marking log at " + log.getFile() + " as corrupt since " +
-              "it is shorter than " + maxValidLength + " bytes");
+                   "it is has only " + txns + " valid txns whereas another " +
+                   "log has " + maxValidTxnCount);
           log.markCorrupt();
         }
       }
@@ -475,7 +478,7 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
     final long startTxId;
     final long lastTxId;
     
-    private long cachedValidLength = -1;
+    private EditLogValidation cachedValidation = null;
     private boolean isCorrupt = false;
     
     static final long UNKNOWN_END = -1;
@@ -500,11 +503,11 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
       return lastTxId;
     }
 
-    long getValidLength() throws IOException {
-      if (cachedValidLength == -1) {
-        cachedValidLength = EditLogFileInputStream.getValidLength(file);
+    EditLogValidation validateLog() throws IOException {
+      if (cachedValidation == null) {
+        cachedValidation = FSEditLogLoader.validateEditLog(file);
       }
-      return cachedValidLength;
+      return cachedValidation;
     }
 
     boolean isInProgress() {

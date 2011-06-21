@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.DU;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.Test;
@@ -48,8 +49,10 @@ public class TestEditLogFileOutputStream {
       .getStorage().getStorageDir(0);
     File editLog = NNStorage.getInProgressEditsFile(sd, 1);
 
+    EditLogValidation validation = FSEditLogLoader.validateEditLog(editLog);
     assertEquals("Edit log should contain a header as valid length",
-        HEADER_LEN, EditLogFileInputStream.getValidLength(editLog));
+        HEADER_LEN, validation.validLength);
+    assertEquals(1, validation.numTransactions);
     assertEquals("Edit log should have 1MB of bytes allocated",
         1024*1024, editLog.length());
     
@@ -57,9 +60,11 @@ public class TestEditLogFileOutputStream {
     cluster.getFileSystem().mkdirs(new Path("/tmp"),
         new FsPermission((short)777));
 
+    validation = FSEditLogLoader.validateEditLog(editLog);
     assertEquals("Edit log should have more valid data after writing a txn",
         MKDIR_LEN + HEADER_LEN,
-        EditLogFileInputStream.getValidLength(editLog));
+        validation.validLength);
+    assertEquals(2, validation.numTransactions);
 
     assertEquals("Edit log should be 1MB long",
         1024 * 1024, editLog.length());
