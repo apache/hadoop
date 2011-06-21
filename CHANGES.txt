@@ -126,7 +126,6 @@ Release 0.91.0 - Unreleased
    HBASE-3963  Schedule all log-spliiting at startup all at once (mingjian)
    HBASE-3983  list command in shell seems broken
    HBASE-3793  HBASE-3468 Broke checkAndPut with null value (Ming Ma)
-   HBASE-3995  HBASE-3946 broke TestMasterFailover
    HBASE-3889  NPE in Distributed Log Splitting (Anirudh Todi)
    HBASE-4000  You can't specify split points when you create a table in
                the shell (Joey Echeverria)
@@ -343,6 +342,7 @@ Release 0.90.4 - Unreleased
    HBASE-3948  Improve split/compact result page for RegionServer status page
                (Li Pi)
    HBASE-3988  Infinite loop for secondary master (Liyin Tang)
+   HBASE-3995  HBASE-3946 broke TestMasterFailover
 
 
   IMPROVEMENT
