@@ -1589,52 +1589,67 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * 
    * @param out the writer to write to.
    */
-  public synchronized void writeXml(Writer out) throws IOException {
+  public void writeXml(Writer out) throws IOException {
+    Document doc = asXmlDocument();
+
     Properties properties = getProps();
     try {
-      Document doc =
-        DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
-      Element conf = doc.createElement("configuration");
-      doc.appendChild(conf);
-      conf.appendChild(doc.createTextNode("\n"));
-      for (Enumeration e = properties.keys(); e.hasMoreElements();) {
-        String name = (String)e.nextElement();
-        Object object = properties.get(name);
-        String value = null;
-        if (object instanceof String) {
-          value = (String) object;
-        }else {
-          continue;
-        }
-        Element propNode = doc.createElement("property");
-        conf.appendChild(propNode);
-
-        if (updatingResource != null) {
-          Comment commentNode = doc.createComment(
-            "Loaded from " + updatingResource.get(name));
-          propNode.appendChild(commentNode);
-        }
-        Element nameNode = doc.createElement("name");
-        nameNode.appendChild(doc.createTextNode(name));
-        propNode.appendChild(nameNode);
-      
-        Element valueNode = doc.createElement("value");
-        valueNode.appendChild(doc.createTextNode(value));
-        propNode.appendChild(valueNode);
-
-        conf.appendChild(doc.createTextNode("\n"));
-      }
-    
       DOMSource source = new DOMSource(doc);
       StreamResult result = new StreamResult(out);
       TransformerFactory transFactory = TransformerFactory.newInstance();
       Transformer transformer = transFactory.newTransformer();
+
+      // Important to not hold Configuration log while writing result, since
+      // 'out' may be an HDFS stream which needs to lock this configuration
+      // from another thread.
       transformer.transform(source, result);
     } catch (TransformerException te) {
       throw new IOException(te);
+    }
+  }
+
+  /**
+   * Return the XML DOM corresponding to this Configuration.
+   */
+  private synchronized Document asXmlDocument() throws IOException {
+    Document doc;
+    try {
+      doc =
+        DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
     } catch (ParserConfigurationException pe) {
       throw new IOException(pe);
     }
+    Element conf = doc.createElement("configuration");
+    doc.appendChild(conf);
+    conf.appendChild(doc.createTextNode("\n"));
+    for (Enumeration e = properties.keys(); e.hasMoreElements();) {
+      String name = (String)e.nextElement();
+      Object object = properties.get(name);
+      String value = null;
+      if (object instanceof String) {
+        value = (String) object;
+      }else {
+        continue;
+      }
+      Element propNode = doc.createElement("property");
+      conf.appendChild(propNode);
+
+      if (updatingResource != null) {
+        Comment commentNode = doc.createComment(
+          "Loaded from " + updatingResource.get(name));
+        propNode.appendChild(commentNode);
+      }
+      Element nameNode = doc.createElement("name");
+      nameNode.appendChild(doc.createTextNode(name));
+      propNode.appendChild(nameNode);
+
+      Element valueNode = doc.createElement("value");
+      valueNode.appendChild(doc.createTextNode(value));
+      propNode.appendChild(valueNode);
+
+      conf.appendChild(doc.createTextNode("\n"));
+    }
+    return doc;
   }
 
   /**

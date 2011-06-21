@@ -1,4 +1,4 @@
-Hn jaadoop Change Log
+Hadoop Change Log
 
 Trunk (unreleased changes)
 
@@ -138,6 +138,9 @@ Trunk (unreleased changes)
 
     HADOOP-7287. Configuration deprecation mechanism doesn't work properly for
     GenericOptionsParser and Tools. (Aaron T. Myers via todd)
+
+    HADOOP-7082. Configuration.writeXML should not hold lock while outputting.
+    (todd)
 
 Release 0.22.0 - Unreleased
 
