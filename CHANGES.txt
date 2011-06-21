@@ -343,6 +343,8 @@ Release 0.90.4 - Unreleased
                (Li Pi)
    HBASE-3988  Infinite loop for secondary master (Liyin Tang)
    HBASE-3995  HBASE-3946 broke TestMasterFailover
+   HBASE-2077  NullPointerException with an open scanner that expired causing
+               an immediate region server shutdown -- part 2.
 
 
   IMPROVEMENT

@@ -1943,26 +1943,27 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   public Result[] next(final long scannerId, int nbRows) throws IOException {
+    String scannerName = String.valueOf(scannerId);
+    InternalScanner s = this.scanners.get(scannerName);
+    if (s == null) throw new UnknownScannerException("Name: " + scannerName);
     try {
-      String scannerName = String.valueOf(scannerId);
-      InternalScanner s = this.scanners.get(scannerName);
-      if (s == null) {
-        throw new UnknownScannerException("Name: " + scannerName);
-      }
+      checkOpen();
+    } catch (IOException e) {
+      // If checkOpen failed, server not running or filesystem gone,
+      // cancel this lease; filesystem is gone or we're closing or something.
       try {
-        checkOpen();
-      } catch (IOException e) {
-        // If checkOpen failed, server not running or filesystem gone,
-        // cancel this lease; filesystem is gone or we're closing or something.
-        try {
-          this.leases.cancelLease(scannerName);
-        } catch (LeaseException le) {
-          LOG.info("Server shutting down and client tried to access missing scanner " +
-            scannerName);
-        }
-        throw e;
+        this.leases.cancelLease(scannerName);
+      } catch (LeaseException le) {
+        LOG.info("Server shutting down and client tried to access missing scanner " +
+          scannerName);
       }
-      this.leases.renewLease(scannerName);
+      throw e;
+    }
+    Leases.Lease lease = null;
+    try {
+      // Remove lease while its being processed in server; protects against case
+      // where processing of request takes > lease expiration time.
+      lease = this.leases.removeLease(scannerName);
       List<Result> results = new ArrayList<Result>(nbRows);
       long currentScanResultSize = 0;
       List<KeyValue> values = new ArrayList<KeyValue>();
@@ -2024,10 +2025,15 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           : results.toArray(new Result[0]);
     } catch (Throwable t) {
       if (t instanceof NotServingRegionException) {
-        String scannerName = String.valueOf(scannerId);
         this.scanners.remove(scannerName);
       }
       throw convertThrowableToIOE(cleanup(t));
+    } finally {
+      // We're done. On way out readd the above removed lease.  Adding resets
+      // expiration time on lease.
+      if (this.scanners.containsKey(scannerName)) {
+        if (lease != null) this.leases.addLease(lease);
+      }
     }
   }
 

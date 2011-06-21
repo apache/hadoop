@@ -140,16 +140,24 @@ public class Leases extends Thread {
    */
   public void createLease(String leaseName, final LeaseListener listener)
   throws LeaseStillHeldException {
-    if (stopRequested) {
+    addLease(new Lease(leaseName, listener));
+  }
+
+  /**
+   * Inserts lease.  Resets expiration before insertion.
+   * @param lease
+   * @throws LeaseStillHeldException
+   */
+  public void addLease(final Lease lease) throws LeaseStillHeldException {
+    if (this.stopRequested) {
       return;
     }
-    Lease lease = new Lease(leaseName, listener,
-        System.currentTimeMillis() + leasePeriod);
+    lease.setExpirationTime(System.currentTimeMillis() + this.leasePeriod);
     synchronized (leaseQueue) {
-      if (leases.containsKey(leaseName)) {
-        throw new LeaseStillHeldException(leaseName);
+      if (leases.containsKey(lease.getLeaseName())) {
+        throw new LeaseStillHeldException(lease.getLeaseName());
       }
-      leases.put(leaseName, lease);
+      leases.put(lease.getLeaseName(), lease);
       leaseQueue.add(lease);
     }
   }
@@ -189,7 +197,7 @@ public class Leases extends Thread {
       // in a corrupt leaseQueue.
       if (lease == null || !leaseQueue.remove(lease)) {
         throw new LeaseException("lease '" + leaseName +
-                "' does not exist or has already expired");
+        "' does not exist or has already expired");
       }
       lease.setExpirationTime(System.currentTimeMillis() + leasePeriod);
       leaseQueue.add(lease);
@@ -198,25 +206,43 @@ public class Leases extends Thread {
 
   /**
    * Client explicitly cancels a lease.
-   *
    * @param leaseName name of lease
    * @throws LeaseException
    */
   public void cancelLease(final String leaseName) throws LeaseException {
+    removeLease(leaseName);
+  }
+
+  /**
+   * Remove named lease.
+   * Lease is removed from the list of leases and removed from the delay queue.
+   * Lease can be resinserted using {@link #addLease(Lease)}
+   *
+   * @param leaseName name of lease
+   * @throws LeaseException
+   * @return Removed lease
+   */
+  Lease removeLease(final String leaseName) throws LeaseException {
+    Lease lease =  null;
     synchronized (leaseQueue) {
-      Lease lease = leases.remove(leaseName);
+      lease = leases.remove(leaseName);
       if (lease == null) {
         throw new LeaseException("lease '" + leaseName + "' does not exist");
       }
       leaseQueue.remove(lease);
     }
+    return lease;
   }
 
   /** This class tracks a single Lease. */
-  private static class Lease implements Delayed {
+  static class Lease implements Delayed {
     private final String leaseName;
     private final LeaseListener listener;
     private long expirationTime;
+
+    Lease(final String leaseName, LeaseListener listener) {
+      this(leaseName, listener, 0);
+    }
 
     Lease(final String leaseName, LeaseListener listener, long expirationTime) {
       this.leaseName = leaseName;
@@ -269,14 +295,5 @@ public class Leases extends Thread {
     public void setExpirationTime(long expirationTime) {
       this.expirationTime = expirationTime;
     }
-
-    /**
-     * Get the expiration time for that lease
-     * @return expiration time
-     */
-    public long getExpirationTime() {
-      return this.expirationTime;
-    }
-
   }
 }

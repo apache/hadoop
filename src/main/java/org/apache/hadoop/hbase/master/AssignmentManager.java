@@ -1783,7 +1783,7 @@ public class AssignmentManager extends ZooKeeperListener {
         Result result = region.getSecond();
         // If region was in transition (was in zk) force it offline for reassign
         try {
-          // Process with existing RS shutdown code  
+          // Process with existing RS shutdown code
           boolean assign =
             ServerShutdownHandler.processDeadRegion(regionInfo, result, this,
             this.catalogTracker);
