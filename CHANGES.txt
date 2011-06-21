@@ -269,6 +269,8 @@ Release 0.91.0 - Unreleased
    HBASE-3789  Cleanup the locking contention in the master
    HBASE-3927  Display total uncompressed byte size of a region in web UI
    HBASE-4011  New MasterObserver hook: post startup of active master
+   HBASE-3994  SplitTransaction has a window where clients can
+               get RegionOfflineException
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

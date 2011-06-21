@@ -892,8 +892,15 @@ public class HConnectionManager {
             throw new TableNotFoundException(
               "Table '" + Bytes.toString(tableName) + "' was not found.");
           }
+          if (regionInfo.isSplit()) {
+            throw new RegionOfflineException("the only available region for" +
+              " the required row is a split parent," +
+              " the daughters should be online soon: " +
+              regionInfo.getRegionNameAsString());
+          }
           if (regionInfo.isOffline()) {
-            throw new RegionOfflineException("region offline: " +
+            throw new RegionOfflineException("the region is offline, could" +
+              " be caused by a disable table call: " +
               regionInfo.getRegionNameAsString());
           }
 
