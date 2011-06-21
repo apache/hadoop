@@ -11,6 +11,8 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    HDFS-1359. Add BlockPoolID to Block. (suresh)
+
     HDFS-1365. Federation: propose ClusterID and BlockPoolID format 
     (Tanping via boryas)
 
@@ -285,6 +287,11 @@ Trunk (unreleased changes)
     layout to be consistent across the binary tgz, rpm, and deb.
     (Eric Yang via omalley)
 
+    HDFS-2058. Change Data Transfer wire protocol to use protocol buffers.
+    (todd)
+
+    HDFS-2055. Add hflush support to libhdfs. (Travis Crawford via eli)
+
   IMPROVEMENTS
 
     HDFS-1875. MiniDFSCluster hard-codes dfs.datanode.address to localhost
@@ -497,6 +504,21 @@ Trunk (unreleased changes)
     HDFS-2003. Separate FSEditLog reading logic from edit log memory state
     building logic. (Ivan Kelly via todd)
 
+    HDFS-2066. Create a package and individual class files for
+    DataTransferProtocol.  (szetszwo)
+
+    HADOOP-7106. Reorganize project SVN layout to "unsplit" the projects.
+    (todd, nigel)
+
+    HDFS-2046. Force entropy to come from non-true random for tests. (todd)
+
+    HDFS-2073. Add @Override annotation to NameNode. (suresh)
+
+    HDFS-420. Fuse-dfs should cache fs handles. (Brian Bockelman and eli)
+
+    HDFS-1568. Improve the log messages in DataXceiver.  (Joey Echeverria via
+    szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
@@ -507,10 +529,14 @@ Trunk (unreleased changes)
     HDFS-1826. NameNode should save image to name directories in parallel
     during upgrade. (Matt Foley via hairong)
 
-    HDFS-941. The DFS client should cache and reuse open sockets to datanodes
-    while performing reads. (bc Wong and Todd Lipcon via todd)
+    HDFS-2030. Improve usability of namenode -upgrade command.
+    (Bharath Mundlapudi via suresh)
+
+    HDFS-2056. Update fetchdt usage. (Tanping Wang via jitendra)
 
   BUG FIXES
+
+    HDFS-2061. Two minor bugs in BlockManager block report processing. (mattf)
 
     HDFS-1449. Fix test failures - ExtendedBlock must return 
     block file name in #getBlockName(). (suresh)
@@ -654,6 +680,8 @@ Trunk (unreleased changes)
     HDFS-1931. Update TestDFSShell for improved "du" shell command. (Daryn
     Sharp via todd)
 
+    HDFS-1439. HDFS Federation: Fix compilation error in TestFiHftp. (suresh)
+
     HDFS-1881. Federation: after taking snapshot the current directory 
     of datanode is empty. (Tanping Wang via suresh)
 
@@ -711,6 +739,29 @@ Trunk (unreleased changes)
     HDFS-1998. Federation: Make refresh-namenodes.sh refresh all the
     namenode. (Tanping Wang via suresh)
 
+    HDFS-2041. OP_CONCAT_DELETE doesn't properly restore modification time
+    of the concatenated file when edit logs are replayed. (todd)
+
+    HDFS-2063. libhdfs test is broken. (Eric Yang via eli)
+
+    HDFS-2067. Bump DATA_TRANSFER_VERSION constant in trunk after introduction
+    of protocol buffers in the protocol. (szetszwo via todd)
+
+    HDFS-2069. Incorrect default trash interval value in the docs.
+    (Harsh J Chouraria via eli)
+
+    HDFS-1942. Datanode must exist when all the block pool service threads
+    exit. (Bharath Mundlapudi via suresh)
+
+    HDFS-1656. Fixes an issue to do with fetching of delegation tokens in
+    HftpFileSystem. Contributed by Kan Zhang.
+
+    HDFS-1692. In secure mode, Datanode process doesn't exit when disks 
+    fail. (Bharath Mundlapudi via suresh)
+
+    HDFS-1734. 'Chunk size to view' option is not working in Name Node UI.
+    (Uma Maheswara Rao G via jitendra)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -747,8 +798,6 @@ Release 0.22.0 - Unreleased
     HDFS-202.  HDFS support of listLocatedStatus introduced in HADOOP-6870.
     HDFS piggyback block locations to each file status when listing a
     directory.  (hairong)
-
-    HDFS-1359. Add BlockPoolID to Block. (suresh)
 
     HDFS-1361. Add -fileStatus operation to NNThroughputBenchmark. (shv)
 
@@ -962,6 +1011,13 @@ Release 0.22.0 - Unreleased
     HDFS-1948  Forward port 'hdfs-1520 lightweight namenode operation to
     trigger lease recovery' (stack)
 
+    HDFS-1954. Improved corrupt files warning on NameNode web UI.
+    (Patrick Hunt via shv)
+
+    HDFS-1409. BackupNode registration throwing  
+    UnsupportedActionException("register") instead of "journal".
+    (Ching-Shen Chen via shv)
+
   OPTIMIZATIONS
 
     HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)
@@ -979,6 +1035,9 @@ Release 0.22.0 - Unreleased
 
     HDFS-1434. Refactor Datanode#startDataNode method into smaller methods.
     (suresh)
+
+    HDFS-941. The DFS client should cache and reuse open sockets to datanodes
+    while performing reads. (bc Wong and Todd Lipcon via todd)
 
   BUG FIXES
 
@@ -1177,6 +1236,11 @@ Release 0.22.0 - Unreleased
     HDFS-2039. TestNameNodeMetrics uses a bad test root path, preventing it
     from running inside Eclipse. (todd)
 
+    HDFS-988. saveNamespace race can corrupt the edits log. (eli)
+
+    HDFS-2071. Use of isConnected() in DataXceiver is invalid. (Kihwal Lee
+    via todd)
+
 Release 0.21.1 - Unreleased
     HDFS-1466. TestFcHdfsSymlink relies on /tmp/test not existing. (eli)
 
@@ -1371,8 +1435,6 @@ Release 0.21.0 - 2010-08-13
     HDFS-1016. HDFS side change for HADOOP-6569. This jira changes the
     error message on the screen when cat a directory or a 
     non-existent file. (hairong)
-
-    HDFS-1439. HDFS Federation: Fix compilation error in TestFiHftp. (suresh)
 
   NEW FEATURES
 

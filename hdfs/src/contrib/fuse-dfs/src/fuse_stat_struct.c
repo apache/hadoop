@@ -25,18 +25,15 @@
 #include "fuse_stat_struct.h"
 #include "fuse_context_handle.h"
 
-#if PERMS
-/**
+/*
  * getpwuid and getgrgid return static structs so we safeguard the contents
  * while retrieving fields using the 2 structs below.
  * NOTE: if using both, always get the passwd struct firt!
  */
 extern pthread_mutex_t passwdstruct_mutex; 
 extern pthread_mutex_t groupstruct_mutex;
-#endif
 
-
-const int default_id       = 99; // nobody  - not configurable since soon uids in dfs, yeah!
+const int default_id = 99; // nobody  - not configurable since soon uids in dfs, yeah!
 const int blksize = 512;
 
 /**
@@ -55,7 +52,6 @@ int fill_stat_structure(hdfsFileInfo *info, struct stat *st)
   st->st_nlink = (info->mKind == kObjectKindDirectory) ? 0 : 1;
 
   uid_t owner_id = default_id;
-#if PERMS
   if (info->mOwner != NULL) {
     //
     // Critical section - protect from concurrent calls in different threads since
@@ -73,9 +69,9 @@ int fill_stat_structure(hdfsFileInfo *info, struct stat *st)
     pthread_mutex_unlock(&passwdstruct_mutex);
 
   } 
-#endif
+
   gid_t group_id = default_id;
-#if PERMS
+
   if (info->mGroup != NULL) {
     //
     // Critical section - protect from concurrent calls in different threads since
@@ -93,15 +89,12 @@ int fill_stat_structure(hdfsFileInfo *info, struct stat *st)
     pthread_mutex_unlock(&groupstruct_mutex);
 
   }
-#endif
 
   short perm = (info->mKind == kObjectKindDirectory) ? (S_IFDIR | 0777) :  (S_IFREG | 0666);
-#if PERMS
   if (info->mPermissions > 0) {
     perm = (info->mKind == kObjectKindDirectory) ? S_IFDIR:  S_IFREG ;
     perm |= info->mPermissions;
   }
-#endif
 
   // set stat metadata
   st->st_size     = (info->mKind == kObjectKindDirectory) ? 4096 : info->mSize;
@@ -110,11 +103,7 @@ int fill_stat_structure(hdfsFileInfo *info, struct stat *st)
   st->st_mode     = perm;
   st->st_uid      = owner_id;
   st->st_gid      = group_id;
-#if PERMS
   st->st_atime    = info->mLastAccess;
-#else
-  st->st_atime    = info->mLastMod;
-#endif
   st->st_mtime    = info->mLastMod;
   st->st_ctime    = info->mLastMod;
 

@@ -17,9 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 
 import org.apache.commons.logging.Log;
@@ -33,8 +32,7 @@ import org.apache.hadoop.hdfs.server.datanode.BlockReceiver.PacketResponder;
 import org.apache.hadoop.hdfs.PipelinesTestUtil.PipelinesTest;
 import org.apache.hadoop.hdfs.PipelinesTestUtil.NodeBytes;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status;
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PipelineAck;
+import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 
@@ -83,7 +81,7 @@ privileged public aspect BlockReceiverAspects {
   }
 
   pointcut afterDownstreamStatusRead(BlockReceiver.PacketResponder responder):
-    call(void PipelineAck.readFields(DataInput)) && this(responder);
+    call(void PipelineAck.readFields(InputStream)) && this(responder);
 
   after(BlockReceiver.PacketResponder responder)
       throws IOException: afterDownstreamStatusRead(responder) {
@@ -150,7 +148,7 @@ privileged public aspect BlockReceiverAspects {
   }
   
   pointcut preventAckSending () :
-    call (void PipelineAck.write(DataOutput)) 
+    call (void PipelineAck.write(OutputStream)) 
     && within (PacketResponder);
 
   static int ackCounter = 0;
@@ -203,7 +201,7 @@ privileged public aspect BlockReceiverAspects {
   }
 
   pointcut pipelineAck(BlockReceiver.PacketResponder packetresponder) :
-    call (void PipelineAck.readFields(DataInput))
+    call (void PipelineAck.readFields(InputStream))
       && this(packetresponder);
 
   after(BlockReceiver.PacketResponder packetresponder) throws IOException

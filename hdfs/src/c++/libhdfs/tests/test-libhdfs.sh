@@ -26,6 +26,8 @@
 # f) LIBHDFS_INSTALL_DIR
 # g) OS_NAME
 # h) CLOVER_JAR
+# i} HADOOP_VERSION
+# j) HADOOP_HDFS_HOME
 # All these are passed by build.xml.
 #
 
@@ -33,8 +35,8 @@ HDFS_TEST=hdfs_test
 HADOOP_LIB_DIR=$HADOOP_PREFIX/lib
 HADOOP_BIN_DIR=$HADOOP_PREFIX/bin
 
-COMMON_BUILD_DIR=$HADOOP_PREFIX/build/ivy/lib/Hadoop-Hdfs/common
-COMMON_JAR=$COMMON_BUILD_DIR/hadoop-common-0.22.0-SNAPSHOT.jar
+COMMON_BUILD_DIR=$HADOOP_PREFIX/build/ivy/lib/hadoop-hdfs/common
+COMMON_JAR=$COMMON_BUILD_DIR/hadoop-common-$HADOOP_VERSION.jar
 
 cat > $HADOOP_CONF_DIR/core-site.xml <<EOF
 <?xml version="1.0"?>

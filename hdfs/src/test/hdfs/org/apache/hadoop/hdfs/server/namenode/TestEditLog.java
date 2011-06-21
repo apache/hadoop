@@ -137,6 +137,7 @@ public class TestEditLog extends TestCase {
    */
   public void testPreTxIdEditLogNoEdits() throws Exception {
     FSNamesystem namesys = Mockito.mock(FSNamesystem.class);
+    namesys.dir = Mockito.mock(FSDirectory.class);
     int numEdits = testLoad(
         StringUtils.hexStringToByte("ffffffed"), // just version number
         namesys);

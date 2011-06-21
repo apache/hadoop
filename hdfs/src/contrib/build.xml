@@ -28,7 +28,7 @@
   <!-- ====================================================== -->
   <target name="compile">
     <subant target="compile">
-      <fileset dir="." includes="hdfsproxy/build.xml"/>
+      <fileset dir="." includes="*/build.xml"/>
     </subant>
   </target>
   
@@ -45,6 +45,10 @@
   <!-- Test all the contribs.                               -->
   <!-- ====================================================== -->
   <target name="test">
+    <subant target="test">
+      <fileset dir="." includes="fuse-dfs/build.xml"/>
+    </subant> 
+
     <!-- hdfsproxy tests failing due to HDFS-1666
     <subant target="test">
       <fileset dir="." includes="hdfsproxy/build.xml"/>

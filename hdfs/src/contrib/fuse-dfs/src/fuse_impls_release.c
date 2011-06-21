@@ -19,6 +19,7 @@
 #include "fuse_dfs.h"
 #include "fuse_impls.h"
 #include "fuse_file_handle.h"
+#include "fuse_connect.h"
 
 /**
  * This mutex is to protect releasing a file handle in case the user calls close in different threads
@@ -63,6 +64,11 @@ int dfs_release (const char *path, struct fuse_file_info *fi) {
     if (fh->buf != NULL) {
       free(fh->buf);
     }
+
+    if (doDisconnect(fh->fs)) {
+      ret = -EIO;
+    }
+
     // this is always created and initialized, so always destroy it. (see dfs_open)
     pthread_mutex_destroy(&fh->mutex);
 

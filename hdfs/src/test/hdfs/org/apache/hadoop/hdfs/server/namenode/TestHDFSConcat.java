@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -86,16 +87,6 @@ public class TestHDFSConcat {
     }
   }
   
-  private void runCommand(DFSAdmin admin, String args[], boolean expectEror)
-  throws Exception {
-    int val = admin.run(args);
-    if (expectEror) {
-      assertEquals(val, -1);
-    } else {
-      assertTrue(val>=0);
-    }
-  }
-
   /**
    * Concatenates 10 files into one
    * Verifies the final size, deletion of the file, number of blocks
@@ -220,6 +211,46 @@ public class TestHDFSConcat {
     // and length
     assertEquals(trgLen, totalLen+sFileLen);
     
+  }
+  
+  /**
+   * Test that the concat operation is properly persisted in the
+   * edit log, and properly replayed on restart.
+   */
+  @Test
+  public void testConcatInEditLog() throws Exception {
+    final Path TEST_DIR = new Path("/testConcatInEditLog");
+    final long FILE_LEN = blockSize;
+    
+    // 1. Concat some files
+    Path[] srcFiles = new Path[3];
+    for (int i = 0; i < srcFiles.length; i++) {
+      Path path = new Path(TEST_DIR, "src-" + i);
+      DFSTestUtil.createFile(dfs, path, FILE_LEN, REPL_FACTOR, 1);
+      srcFiles[i] = path;
+    }    
+    Path targetFile = new Path(TEST_DIR, "target");
+    DFSTestUtil.createFile(dfs, targetFile, FILE_LEN, REPL_FACTOR, 1);
+    
+    dfs.concat(targetFile, srcFiles);
+    
+    // 2. Verify the concat operation basically worked, and record
+    // file status.
+    assertTrue(dfs.exists(targetFile));
+    FileStatus origStatus = dfs.getFileStatus(targetFile);
+
+    // 3. Restart NN to force replay from edit log
+    cluster.restartNameNode(true);
+    
+    // 4. Verify concat operation was replayed correctly and file status
+    // did not change.
+    assertTrue(dfs.exists(targetFile));
+    assertFalse(dfs.exists(srcFiles[0]));
+
+    FileStatus statusAfterRestart = dfs.getFileStatus(targetFile);
+
+    assertEquals(origStatus.getModificationTime(),
+        statusAfterRestart.getModificationTime());
   }
 
   // compare content

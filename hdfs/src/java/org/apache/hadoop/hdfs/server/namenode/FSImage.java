@@ -241,24 +241,9 @@ public class FSImage implements Closeable {
           + "Please restart NameNode with -upgrade option.");
     }
     
-    // Upgrade to federation requires -upgrade -clusterid <clusterID> option
-    if (startOpt == StartupOption.UPGRADE && 
-        !LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
-      if (startOpt.getClusterId() == null) {
-        throw new IOException(
-            "\nFile system image contains an old layout version "
-                + layoutVersion + ".\nAn upgrade to version "
-                + FSConstants.LAYOUT_VERSION
-                + " is required.\nPlease restart NameNode with "
-                + "-upgrade -clusterid <clusterID> option.");
-      }
-      storage.setClusterID(startOpt.getClusterId());
-      
-      // Create new block pool Id
-      storage.setBlockPoolID(storage.newBlockPoolID());
-    }
-    
-    // check whether distributed upgrade is reguired and/or should be continued
+    storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
+
+    // check whether distributed upgrade is required and/or should be continued
     storage.verifyDistributedUpgradeProgress(startOpt);
 
     // 2. Format unformatted dirs.

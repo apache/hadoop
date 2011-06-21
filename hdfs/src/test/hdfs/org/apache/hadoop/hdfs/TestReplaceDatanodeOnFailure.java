@@ -26,9 +26,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
+import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.log4j.Level;
 import org.junit.Assert;
@@ -53,8 +54,7 @@ public class TestReplaceDatanodeOnFailure {
   /** Test DEFAULT ReplaceDatanodeOnFailure policy. */
   @Test
   public void testDefaultPolicy() throws Exception {
-    final DataTransferProtocol.ReplaceDatanodeOnFailure p
-        = DataTransferProtocol.ReplaceDatanodeOnFailure.DEFAULT;
+    final ReplaceDatanodeOnFailure p = ReplaceDatanodeOnFailure.DEFAULT;
 
     final DatanodeInfo[] infos = new DatanodeInfo[5];
     final DatanodeInfo[][] datanodes = new DatanodeInfo[infos.length + 1][];
@@ -113,7 +113,7 @@ public class TestReplaceDatanodeOnFailure {
     final Configuration conf = new HdfsConfiguration();
     
     //always replace a datanode
-    DataTransferProtocol.ReplaceDatanodeOnFailure.ALWAYS.write(conf);
+    ReplaceDatanodeOnFailure.ALWAYS.write(conf);
 
     final String[] racks = new String[REPLICATION];
     Arrays.fill(racks, RACK0);

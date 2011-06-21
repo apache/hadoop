@@ -190,9 +190,6 @@ public class HftpFileSystem extends FileSystem {
         }
       }
       
-      //Renew TGT if needed
-      ugi.reloginFromKeytab();
-      
       //since we don't already have a token, go get one over https
       if (delegationToken == null) {
         delegationToken = 
@@ -204,8 +201,10 @@ public class HftpFileSystem extends FileSystem {
   
 
   @Override
-  public Token<?> getDelegationToken(final String renewer) throws IOException {
+  public synchronized Token<?> getDelegationToken(final String renewer) throws IOException {
     try {
+      //Renew TGT if needed
+      ugi.reloginFromKeytab();
       return ugi.doAs(new PrivilegedExceptionAction<Token<?>>() {
         public Token<?> run() throws IOException {
           Credentials c;

@@ -108,6 +108,30 @@ public class LayoutVersion {
       this.ancestorLV = ancestorLV;
       this.description = description;
     }
+    
+    /** 
+     * Accessor method for feature layout version 
+     * @return int lv value
+     */
+    public int getLayoutVersion() {
+      return lv;
+    }
+
+    /** 
+     * Accessor method for feature ancestor layout version 
+     * @return int ancestor LV value
+     */
+    public int getAncestorLayoutVersion() {
+      return ancestorLV;
+    }
+
+    /** 
+     * Accessor method for feature description 
+     * @return String feature description 
+     */
+    public String getDescription() {
+      return description;
+    }
   }
   
   // Build layout version and corresponding feature matrix

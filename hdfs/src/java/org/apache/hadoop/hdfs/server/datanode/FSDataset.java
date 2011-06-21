@@ -879,7 +879,8 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
           if (removedVols == null) {
             removedVols = new ArrayList<FSVolume>(1);
           }
-          removedVols.add(volumeList.get(idx));
+          removedVols.add(fsv);
+          fsv.shutdown(); 
           volumeList.set(idx, null); // Remove the volume
           numFailedVolumes++;
         }

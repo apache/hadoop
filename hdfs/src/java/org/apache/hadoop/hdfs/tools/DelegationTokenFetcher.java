@@ -80,7 +80,8 @@ public class DelegationTokenFetcher {
     err.println("  --webservice <url>  Url to contact NN on");
     err.println("  --renewer <name>    Name of the delegation token renewer");
     err.println("  --cancel            Cancel the delegation token");
-    err.println("  --renew             Renew the delegation token");
+    err.println("  --renew             Renew the delegation token.  Delegation " 
+    		+ "token must have been fetched using the --renewer <name> option.");
     err.println("  --print             Print the delegation token");
     err.println();
     GenericOptionsParser.printGenericCommandUsage(err);

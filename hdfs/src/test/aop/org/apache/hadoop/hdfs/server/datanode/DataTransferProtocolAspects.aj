@@ -19,15 +19,16 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.DataInput;
 import java.io.DataInputStream;
+import java.io.InputStream;
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fi.DataTransferTestUtil;
 import org.apache.hadoop.fi.DataTransferTestUtil.DataTransferTest;
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Op;
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Receiver;
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
+import org.apache.hadoop.hdfs.protocol.datatransfer.Op;
+import org.apache.hadoop.hdfs.protocol.datatransfer.Receiver;
 
 /** Aspect for DataTransferProtocol */
 public aspect DataTransferProtocolAspects {
@@ -53,9 +54,9 @@ public aspect DataTransferProtocolAspects {
   }
 
   pointcut statusRead(DataXceiver dataxceiver):
-    call(Status Status.read(DataInput)) && this(dataxceiver);
+    call(BlockOpResponseProto BlockOpResponseProto.parseFrom(InputStream)) && this(dataxceiver);
 
-  after(DataXceiver dataxceiver) returning(Status status
+  after(DataXceiver dataxceiver) returning(BlockOpResponseProto status
       ) throws IOException: statusRead(dataxceiver) {
     final DataNode d = dataxceiver.getDataNode();
     LOG.info("FI: statusRead " + status + ", datanode="

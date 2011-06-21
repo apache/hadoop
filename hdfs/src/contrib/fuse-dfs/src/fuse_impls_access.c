@@ -23,21 +23,7 @@
 int dfs_access(const char *path, int mask)
 {
   TRACE1("access", path)
-  // bugbug - I think we need the FileSystemAPI/libhdfs to expose this!
-  // retrieve dfs specific data
-  dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
-
-  // check params and the context var
-  assert(dfs);
-  assert(path);
-
-  hdfsFS userFS;
-  if ((userFS = doConnectAsUser(dfs->nn_hostname,dfs->nn_port)) == NULL) {
-    ERROR("Could not connect to HDFS");
-    return -EIO;
-  }
-  //  return hdfsAccess(userFS, path, mask);
+  assert(path != NULL);
+  // TODO: HDFS-428
   return 0;
 }
-
-

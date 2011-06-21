@@ -26,16 +26,15 @@ int dfs_unlink(const char *path)
 {
   TRACE1("unlink", path)
 
-  // retrieve dfs specific data
+  int ret = 0;
   dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
 
-  // check params and the context var
   assert(path);
   assert(dfs);
   assert('/' == *path);
 
   if (is_protected(path)) {
-    ERROR("Trying to delete protected directory %s ", path);
+    ERROR("Trying to delete protected directory %s", path);
     return -EACCES;
   }
 
@@ -44,17 +43,22 @@ int dfs_unlink(const char *path)
     return -EACCES;
   }
 
-  hdfsFS userFS;
-  // if not connected, try to connect and fail out if we can't.
-  if ((userFS = doConnectAsUser(dfs->nn_hostname,dfs->nn_port))== NULL) {
+  hdfsFS userFS = doConnectAsUser(dfs->nn_hostname, dfs->nn_port);
+  if (userFS == NULL) {
     ERROR("Could not connect");
     return -EIO;
   }
 
   if (hdfsDeleteWithTrash(userFS, path, dfs->usetrash)) {
     ERROR("Could not delete file %s", path);
-    return -EIO;
+    ret = (errno > 0) ? -errno : -EIO;
+    goto cleanup;
   }
 
-  return 0;
+cleanup:
+  if (doDisconnect(userFS)) {
+    ret = -EIO;
+  }
+  return ret;
+
 }

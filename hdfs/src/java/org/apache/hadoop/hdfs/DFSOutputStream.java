@@ -17,8 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status.ERROR_ACCESS_TOKEN;
-import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status.SUCCESS;
+import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status.SUCCESS;
 
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -47,16 +46,20 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PacketHeader;
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PipelineAck;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.HdfsProtoUtil;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
+import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
+import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
+import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
+import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
+import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -64,7 +67,6 @@ import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
@@ -74,6 +76,8 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.PureJavaCrc32;
 import org.apache.hadoop.util.StringUtils;
+
+
 
 /****************************************************************
  * DFSOutputStream creates files from a stream of bytes.
@@ -650,7 +654,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
             long seqno = ack.getSeqno();
             // processes response status from datanodes.
             for (int i = ack.getNumOfReplies()-1; i >=0  && dfsClient.clientRunning; i--) {
-              final DataTransferProtocol.Status reply = ack.getReply(i);
+              final Status reply = ack.getReply(i);
               if (reply != SUCCESS) {
                 errorIndex = i; // first bad datanode
                 throw new IOException("Bad response " + reply +
@@ -843,12 +847,14 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
             DataNode.SMALL_BUFFER_SIZE));
 
         //send the TRANSFER_BLOCK request
-        DataTransferProtocol.Sender.opTransferBlock(out, block,
+        Sender.opTransferBlock(out, block,
             dfsClient.clientName, targets, blockToken);
 
         //ack
         in = new DataInputStream(NetUtils.getInputStream(sock));
-        if (SUCCESS != DataTransferProtocol.Status.read(in)) {
+        BlockOpResponseProto response =
+          BlockOpResponseProto.parseFrom(HdfsProtoUtil.vintPrefixed(in));
+        if (SUCCESS != response.getStatus()) {
           throw new IOException("Failed to add a datanode");
         }
       } finally {
@@ -990,7 +996,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
     //
     private boolean createBlockOutputStream(DatanodeInfo[] nodes, long newGS,
         boolean recoveryFlag) {
-      DataTransferProtocol.Status pipelineStatus = SUCCESS;
+      Status pipelineStatus = SUCCESS;
       String firstBadLink = "";
       if (DFSClient.LOG.isDebugEnabled()) {
         for (int i = 0; i < nodes.length; i++) {
@@ -1015,7 +1021,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         blockReplyStream = new DataInputStream(NetUtils.getInputStream(s));
 
         // send the request
-        DataTransferProtocol.Sender.opWriteBlock(out, block,
+        Sender.opWriteBlock(out, block,
             nodes.length, recoveryFlag ? stage.getRecoveryStage() : stage, newGS, 
             block.getNumBytes(), bytesSent, dfsClient.clientName, null, nodes,
             accessToken);
@@ -1023,10 +1029,13 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         out.flush();
 
         // receive ack for connect
-        pipelineStatus = DataTransferProtocol.Status.read(blockReplyStream);
-        firstBadLink = Text.readString(blockReplyStream);
+        BlockOpResponseProto resp = BlockOpResponseProto.parseFrom(
+            HdfsProtoUtil.vintPrefixed(blockReplyStream));
+        pipelineStatus = resp.getStatus();
+        firstBadLink = resp.getFirstBadLink();
+        
         if (pipelineStatus != SUCCESS) {
-          if (pipelineStatus == ERROR_ACCESS_TOKEN) {
+          if (pipelineStatus == Status.ERROR_ACCESS_TOKEN) {
             throw new InvalidBlockTokenException(
                 "Got access token error for connect ack with firstBadLink as "
                     + firstBadLink);
@@ -1401,9 +1410,8 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
   }
   
   /**
-   * flushes out to all replicas of the block. 
-   * The data is in the buffers of the DNs 
-   * but not neccessary on the DN's OS buffers. 
+   * Flushes out to all replicas of the block. The data is in the buffers
+   * of the DNs but not necessarily in the DN's OS buffers.
    *
    * It is a synchronous operation. When it returns,
    * it guarantees that flushed data become visible to new readers. 

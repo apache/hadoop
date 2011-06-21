@@ -868,6 +868,40 @@ public class NNStorage extends Storage implements Closeable {
     LOG.debug("at the end current list of storage dirs:" + lsd);
   }
   
+  /** 
+   * Processes the startup options for the clusterid and blockpoolid 
+   * for the upgrade. 
+   * @param startOpt Startup options 
+   * @param layoutVersion Layout version for the upgrade 
+   * @throws IOException
+   */
+  void processStartupOptionsForUpgrade(StartupOption startOpt, int layoutVersion)
+      throws IOException {
+    if (startOpt == StartupOption.UPGRADE) {
+      // If upgrade from a release that does not support federation,
+      // if clusterId is provided in the startupOptions use it.
+      // Else generate a new cluster ID      
+      if (!LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
+        if (startOpt.getClusterId() == null) {
+          startOpt.setClusterId(newClusterID());
+        }
+        setClusterID(startOpt.getClusterId());
+        setBlockPoolID(newBlockPoolID());
+      } else {
+        // Upgrade from one version of federation to another supported
+        // version of federation doesn't require clusterID.
+        // Warn the user if the current clusterid didn't match with the input
+        // clusterid.
+        if (startOpt.getClusterId() != null
+            && !startOpt.getClusterId().equals(getClusterID())) {
+          LOG.warn("Clusterid mismatch - current clusterid: " + getClusterID()
+              + ", Ignoring given clusterid: " + startOpt.getClusterId());
+        }
+      }
+      LOG.info("Using clusterid: " + getClusterID());
+    }
+  }
+  
   /**
    * Generate new clusterID.
    * 

@@ -47,7 +47,7 @@ class DataXceiverServer implements Runnable, FSConstants {
   
   ServerSocket ss;
   DataNode datanode;
-  // Record all sockets opend for data transfer
+  // Record all sockets opened for data transfer
   Map<Socket, Socket> childSockets = Collections.synchronizedMap(
                                        new HashMap<Socket, Socket>());
   
@@ -140,19 +140,18 @@ class DataXceiverServer implements Runnable, FSConstants {
       } catch (SocketTimeoutException ignored) {
         // wake up to see if should continue to run
       } catch (IOException ie) {
-        LOG.warn(datanode.getMachineName() + ":DataXceiveServer: " 
-                                + StringUtils.stringifyException(ie));
+        LOG.warn(datanode.getMachineName() + ":DataXceiveServer: ", ie);
       } catch (Throwable te) {
-        LOG.error(datanode.getMachineName() + ":DataXceiveServer: Exiting due to:" 
-                                 + StringUtils.stringifyException(te));
+        LOG.error(datanode.getMachineName()
+            + ":DataXceiveServer: Exiting due to: ", te);
         datanode.shouldRun = false;
       }
     }
     try {
       ss.close();
     } catch (IOException ie) {
-      LOG.warn(datanode.getMachineName() + ":DataXceiveServer: " 
-                              + StringUtils.stringifyException(ie));
+      LOG.warn(datanode.getMachineName()
+          + ":DataXceiveServer: Close exception due to: ", ie);
     }
   }
   

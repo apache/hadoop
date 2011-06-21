@@ -39,7 +39,8 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
-import static org.junit.Assert.assertFalse;
+
+import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
 import static org.mockito.Matchers.anyString;
@@ -99,6 +100,17 @@ public class TestNNLeaseRecovery {
     }
   }
 
+  // Release the lease for the given file
+  private boolean releaseLease(FSNamesystem ns, LeaseManager.Lease lm, 
+      Path file) throws IOException {
+    fsn.writeLock();
+    try {
+      return fsn.internalReleaseLease(lm, file.toString(), null);
+    } finally {
+      fsn.writeUnlock();
+    }
+  }
+
   /**
    * Mocks FSNamesystem instance, adds an empty file and invokes lease recovery
    * method. 
@@ -118,7 +130,7 @@ public class TestNNLeaseRecovery {
     fsn.dir.addFile(file.toString(), ps, (short)3, 1l, 
       "test", "test-machine", dnd, 1001l);
     assertTrue("True has to be returned in this case",
-      fsn.internalReleaseLease(lm, file.toString(), null));
+        releaseLease(fsn, lm, file));
   }
   
   /**
@@ -143,9 +155,9 @@ public class TestNNLeaseRecovery {
     mockFileBlocks(2, null, 
       HdfsConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps, false);
     
-    fsn.internalReleaseLease(lm, file.toString(), null);
-    assertTrue("FSNamesystem.internalReleaseLease suppose to throw " +
-      "IOException here", false);
+    releaseLease(fsn, lm, file);
+    fail("FSNamesystem.internalReleaseLease suppose to throw " +
+      "IOException here");
   }  
 
   /**
@@ -169,15 +181,14 @@ public class TestNNLeaseRecovery {
     mockFileBlocks(2, HdfsConstants.BlockUCState.COMMITTED, 
       HdfsConstants.BlockUCState.COMMITTED, file, dnd, ps, false);
 
-    fsn.internalReleaseLease(lm, file.toString(), null);
-    assertTrue("FSNamesystem.internalReleaseLease suppose to throw " +
-      "AlreadyBeingCreatedException here", false);
+    releaseLease(fsn, lm, file);
+    fail("FSNamesystem.internalReleaseLease suppose to throw " +
+      "IOException here");
   }
 
   /**
    * Mocks FSNamesystem instance, adds an empty file with 0 blocks
    * and invokes lease recovery method. 
-   * 
    */
   @Test
   public void testInternalReleaseLease_0blocks () throws IOException {
@@ -194,7 +205,7 @@ public class TestNNLeaseRecovery {
     mockFileBlocks(0, null, null, file, dnd, ps, false);
 
     assertTrue("True has to be returned in this case",
-      fsn.internalReleaseLease(lm, file.toString(), null));
+        releaseLease(fsn, lm, file));
   }
   
   /**
@@ -217,9 +228,9 @@ public class TestNNLeaseRecovery {
 
     mockFileBlocks(1, null, HdfsConstants.BlockUCState.COMMITTED, file, dnd, ps, false);
 
-    fsn.internalReleaseLease(lm, file.toString(), null);
-    assertTrue("FSNamesystem.internalReleaseLease suppose to throw " +
-      "AlreadyBeingCreatedException here", false);
+    releaseLease(fsn, lm, file);
+    fail("FSNamesystem.internalReleaseLease suppose to throw " +
+      "IOException here");
   }
 
   /**
@@ -244,7 +255,7 @@ public class TestNNLeaseRecovery {
       HdfsConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps, false);
         
     assertFalse("False is expected in return in this case",
-      fsn.internalReleaseLease(lm, file.toString(), null));
+        releaseLease(fsn, lm, file));
   }
 
   @Test

@@ -24,27 +24,30 @@
 int dfs_chmod(const char *path, mode_t mode)
 {
   TRACE1("chmod", path)
-
-#if PERMS
-  // retrieve dfs specific data
+  int ret = 0;
   dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
 
-  // check params and the context var
   assert(path);
   assert(dfs);
   assert('/' == *path);
 
-  hdfsFS userFS;
-  // if not connected, try to connect and fail out if we can't.
-  if ((userFS = doConnectAsUser(dfs->nn_hostname,dfs->nn_port))== NULL) {
+  hdfsFS userFS = doConnectAsUser(dfs->nn_hostname, dfs->nn_port);
+  if (userFS == NULL) {
     ERROR("Could not connect to HDFS");
-    return -EIO;
+    ret = -EIO;
+    goto cleanup;
   }
 
   if (hdfsChmod(userFS, path, (short)mode)) {
     ERROR("Could not chmod %s to %d", path, (int)mode);
-    return -EIO;
+    ret = (errno > 0) ? -errno : -EIO;
+    goto cleanup;
   }
-#endif
-  return 0;
+
+cleanup:
+  if (doDisconnect(userFS)) {
+    ret = -EIO;
+  }
+
+  return ret;
 }

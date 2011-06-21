@@ -268,7 +268,6 @@ public abstract class FSEditLogOp {
     int length;
     String path;
     long timestamp;
-    long atime;
     PermissionStatus permissions;
 
     private MkdirOp() {
@@ -291,9 +290,7 @@ public abstract class FSEditLogOp {
       // However, currently this is not being updated/used because of
       // performance reasons.
       if (LayoutVersion.supports(Feature.FILE_ACCESS_TIME, logVersion)) {
-        this.atime = readLong(in);
-      } else {
-        this.atime = 0;
+        /*unused this.atime = */readLong(in);
       }
 
       if (logVersion <= -11) {

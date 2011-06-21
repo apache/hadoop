@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import static org.junit.Assert.*;
 
 import org.junit.After;
@@ -201,7 +202,8 @@ public class TestDecommission {
     nodes.add(nodename);
     writeConfigFile(excludeFile, nodes);
     cluster.getNamesystem(nnIndex).refreshNodes(conf);
-    DatanodeInfo ret = cluster.getNamesystem(nnIndex).getDatanode(info[index]);
+    DatanodeInfo ret = NameNodeAdapter.getDatanode(
+        cluster.getNameNode(nnIndex), info[index]);
     waitNodeState(ret, waitForState);
     return ret;
   }
@@ -371,7 +373,7 @@ public class TestDecommission {
       // Stop decommissioning and verify stats
       writeConfigFile(excludeFile, null);
       fsn.refreshNodes(conf);
-      DatanodeInfo ret = fsn.getDatanode(downnode);
+      DatanodeInfo ret = NameNodeAdapter.getDatanode(namenode, downnode);
       waitNodeState(ret, AdminStates.NORMAL);
       verifyStats(namenode, fsn, ret, false);
     }

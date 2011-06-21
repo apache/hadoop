@@ -159,6 +159,11 @@ public class DatanodeInfo extends DatanodeID implements Node {
   public void setCapacity(long capacity) { 
     this.capacity = capacity; 
   }
+  
+  /** Sets the used space for the datanode. */
+  public void setDfsUsed(long dfsUsed) {
+    this.dfsUsed = dfsUsed;
+  }
 
   /** Sets raw free space. */
   public void setRemaining(long remaining) { 

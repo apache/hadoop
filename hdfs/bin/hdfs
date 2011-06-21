@@ -125,6 +125,18 @@ if [ -d "$HADOOP_HDFS_HOME/build/tools" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/build/tools
 fi
 
+if [ -d "$HADOOP_HDFS_HOME/build/ivy/lib/hadoop-hdfs/common" ]; then
+  for f in $HADOOP_HDFS_HOME/build/ivy/lib/hadoop-hdfs/common/*.jar; do
+    CLASSPATH=${CLASSPATH}:$f;
+  done
+fi
+
+if [ -d "$HADOOP_HDFS_HOME/build/ivy/lib/hadoop-hdfs/hdfs" ]; then
+  for f in $HADOOP_HDFS_HOME/build/ivy/lib/hadoop-hdfs/hdfs/*.jar; do
+    CLASSPATH=${CLASSPATH}:$f;
+  done
+fi
+
 # for releases, add core hdfs jar & webapps to CLASSPATH
 if [ -d "$HADOOP_PREFIX/share/hadoop/hdfs/webapps" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_PREFIX/share/hadoop/hdfs

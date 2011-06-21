@@ -35,11 +35,6 @@
 #include <config.h>
 #endif
 
-#ifdef linux
-/* For pread()/pwrite() */
-#define _XOPEN_SOURCE 500
-#endif
-
 #ifdef HAVE_SETXATTR
 #include <sys/xattr.h>
 #endif

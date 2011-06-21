@@ -19,24 +19,30 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.junit.Assert.assertTrue;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.URLEncoder;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.jsp.JspWriter;
+
 import org.apache.commons.httpclient.util.URIUtil;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class TestDatanodeJsp {
   
   private static final String FILE_DATA = "foo bar baz biz buz";
+  private static final HdfsConfiguration CONF = new HdfsConfiguration();
   
   private static void testViewingFile(MiniDFSCluster cluster, String filePath,
       boolean doTail) throws IOException {
@@ -74,8 +80,7 @@ public class TestDatanodeJsp {
   public void testViewFileJsp() throws IOException {
     MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new HdfsConfiguration();
-      cluster = new MiniDFSCluster.Builder(conf).build();
+      cluster = new MiniDFSCluster.Builder(CONF).build();
       cluster.waitActive();
       
       testViewingFile(cluster, "/test-file", false);
@@ -91,6 +96,50 @@ public class TestDatanodeJsp {
         cluster.shutdown();
       }
     }
+  }
+  
+  @Test
+  public void testGenStamp() throws Exception {
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(1)
+        .build();
+    try {
+      FileSystem fs = cluster.getFileSystem();
+      Path testFile = new Path("/test/mkdirs/TestchunkSizeToView");
+      writeFile(fs, testFile);
+      JspWriter writerMock = Mockito.mock(JspWriter.class);
+      HttpServletRequest reqMock = Mockito.mock(HttpServletRequest.class);
+      setTheMockExpectationsFromReq(testFile, reqMock);
+      DatanodeJspHelper.generateFileDetails(writerMock, reqMock, CONF);
+      Mockito.verify(writerMock, Mockito.atLeastOnce()).print(
+          "<input type=\"hidden\" name=\"genstamp\" value=\"987654321\">");
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  private void setTheMockExpectationsFromReq(Path testFile,
+      HttpServletRequest reqMock) {
+    Mockito.doReturn("987654321").when(reqMock).getParameter("genstamp");
+    Mockito.doReturn("1234").when(reqMock).getParameter("blockId");
+    Mockito.doReturn("8081").when(reqMock).getParameter("datanodePort");
+    Mockito.doReturn("8080").when(reqMock).getParameter("namenodeInfoPort");
+    Mockito.doReturn("100").when(reqMock).getParameter("chunkSizeToView");
+    Mockito.doReturn("1").when(reqMock).getParameter("startOffset");
+    Mockito.doReturn("1024").when(reqMock).getParameter("blockSize");
+    Mockito.doReturn(NameNode.getHostPortString(NameNode.getAddress(CONF)))
+        .when(reqMock).getParameter("nnaddr");
+    Mockito.doReturn(testFile.toString()).when(reqMock).getPathInfo();
+  }
+
+  static Path writeFile(FileSystem fs, Path f) throws IOException {
+    DataOutputStream out = fs.create(f);
+    try {
+      out.writeBytes("umamahesh: " + f);
+    } finally {
+      out.close();
+    }
+    assertTrue(fs.exists(f));
+    return f;
   }
 
 }

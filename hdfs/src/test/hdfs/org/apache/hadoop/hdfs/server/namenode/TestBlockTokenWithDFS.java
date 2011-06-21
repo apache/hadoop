@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.token.*;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
 
 import junit.framework.TestCase;
@@ -142,7 +143,8 @@ public class TestBlockTokenWithDFS extends TestCase {
             + "when it is expected to be valid", shouldSucceed);
         return;
       }
-      fail("OP_READ_BLOCK failed due to reasons other than access token");
+      fail("OP_READ_BLOCK failed due to reasons other than access token: "
+          + StringUtils.stringifyException(ex));
     } finally {
       if (s != null) {
         try {

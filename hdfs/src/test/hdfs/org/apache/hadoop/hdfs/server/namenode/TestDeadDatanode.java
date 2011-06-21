@@ -61,7 +61,14 @@ public class TestDeadDatanode {
     FSNamesystem namesystem = cluster.getNamesystem();
     String state = alive ? "alive" : "dead";
     while (System.currentTimeMillis() < stopTime) {
-      if (namesystem.getDatanode(nodeID).isAlive == alive) {
+      namesystem.readLock();
+      DatanodeDescriptor dd;
+      try {
+        dd = namesystem.getDatanode(nodeID);
+      } finally {
+        namesystem.readUnlock();
+      }
+      if (dd.isAlive == alive) {
         LOG.info("datanode " + nodeID + " is " + state);
         return;
       }

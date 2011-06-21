@@ -391,6 +391,7 @@ public class LeaseManager {
 
   /** Check the leases beginning from the oldest. */
   private synchronized void checkLeases() {
+    assert fsnamesystem.hasWriteLock();
     for(; sortedLeases.size() > 0; ) {
       final Lease oldest = sortedLeases.first();
       if (!oldest.expiredHardLimit()) {

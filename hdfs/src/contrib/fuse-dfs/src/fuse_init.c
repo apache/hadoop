@@ -22,6 +22,7 @@
 #include "fuse_init.h"
 #include "fuse_options.h"
 #include "fuse_context_handle.h"
+#include "fuse_connect.h"
 
 // Hacked up function to basically do:
 //  protectedpaths = split(options.protected,':');
@@ -29,7 +30,6 @@
 void init_protectedpaths(dfs_context *dfs) {
 
   char *tmp = options.protected;
-
 
   // handle degenerate case up front.
   if (tmp == NULL || 0 == *tmp) {
@@ -42,7 +42,6 @@ void init_protectedpaths(dfs_context *dfs) {
   if (options.debug) {
     print_options();
   }
-
 
   int i = 0;
   while (tmp && (NULL != (tmp = index(tmp,':')))) {
@@ -75,27 +74,15 @@ void init_protectedpaths(dfs_context *dfs) {
     j++;
   }
   dfs->protectedpaths[j] = NULL;
-
-  /*
-    j  = 0;
-    while (dfs->protectedpaths[j]) {
-    printf("dfs->protectedpaths[%d]=%s\n",j,dfs->protectedpaths[j]);
-    fflush(stdout);
-    j++;
-    }
-    exit(1);
-  */
 }
 
-void *dfs_init()
-{
 
+void *dfs_init(void) {
   //
   // Create a private struct of data we will pass to fuse here and which
   // will then be accessible on every call.
   //
-  dfs_context *dfs = (dfs_context*)malloc(sizeof (dfs_context));
-
+  dfs_context *dfs = (dfs_context*)malloc(sizeof(dfs_context));
   if (NULL == dfs) {
     ERROR("FATAL: could not malloc dfs_context");
     exit(1);
@@ -105,7 +92,6 @@ void *dfs_init()
   dfs->debug                 = options.debug;
   dfs->nn_hostname           = options.server;
   dfs->nn_port               = options.port;
-  dfs->fs                    = NULL;
   dfs->read_only             = options.read_only;
   dfs->usetrash              = options.usetrash;
   dfs->protectedpaths        = NULL;
@@ -121,14 +107,17 @@ void *dfs_init()
     DEBUG("dfs->rdbuffersize <= 0 = %ld", dfs->rdbuffer_size);
     dfs->rdbuffer_size = 32768;
   }
+
+  if (0 != allocFsTable()) {
+    ERROR("FATAL: could not allocate ");
+    exit(1);
+  }
+
   return (void*)dfs;
 }
 
 
-
-void dfs_destroy (void *ptr)
+void dfs_destroy(void *ptr)
 {
   TRACE("destroy")
-  dfs_context *dfs = (dfs_context*)ptr;
-  dfs->fs = NULL;
 }

@@ -40,6 +40,7 @@
 
   <property name="src.dir" value="${basedir}/src"/>  	
   <property name="java.src.dir" value="${src.dir}/java"/>
+  <property name="proto.src.dir" value="${src.dir}/proto"/>
   <property name="anttasks.dir" value="${basedir}/src/ant"/>
   <property name="lib.dir" value="${basedir}/lib"/>
   <property name="conf.dir" value="${basedir}/conf"/>
@@ -200,6 +201,9 @@
   <property name="build.dir.eclipse-main-generated-classes" value="${build.dir.eclipse}/classes-main-generated"/>
   <property name="build.dir.eclipse-test-classes" value="${build.dir.eclipse}/classes-test"/>
   <property name="build.dir.eclipse-contrib-classes" value="${build.dir.eclipse}/classes-contrib"/>
+
+  <!-- Protoc properties -->
+  <property name="protoc" value="protoc" />
 
   <property name="clover.jar" location="${clover.home}/lib/clover.jar"/>
   <available property="clover.present" file="${clover.jar}" />
@@ -644,6 +648,7 @@
         <sysproperty key="java.security.krb5.conf" value="${test.src.dir}/krb5.conf"/>
         <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml"/>
         <sysproperty key="hdfs.rpc.engine" value="${test.hdfs.rpc.engine}"/>
+        <sysproperty key="java.security.egd" value="file:///dev/urandom" />
         <classpath refid="@{classpath}"/>
         <!-- Pass probability specifications to the spawn JVM -->
         <syspropertyset id="FaultProbabilityProperties">
@@ -923,7 +928,9 @@
       bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
       maxmemory="${javadoc.maxmemory}">
 
-        <packageset dir="${java.src.dir}"/>
+        <packageset dir="${java.src.dir}">
+          <exclude name="org/apache/hadoop/hdfs/protocol/proto" />
+        </packageset>
         <link href="${javadoc.link.java}"/>
         <classpath >
           <path refid="classpath" />
@@ -943,7 +950,9 @@
          <param name="-apidir" value="${jdiff.xml.dir}"/>
          <param name="-apiname" value="hadoop-hdfs ${version}"/>
        </doclet>
-       <packageset dir="src/java"/>
+       <packageset dir="${java.src.dir}">
+         <exclude name="org/apache/hadoop/hdfs/protocol/proto" />
+       </packageset>
        <classpath >
          <path refid="classpath" />
          <path refid="jdiff-classpath" />
@@ -1365,6 +1374,8 @@
         <exclude name="lib/jdiff/"/>
         <exclude name="**/conf/*" />
         <exclude name="webapps/**/WEB-INF/web.xml"/>
+        <!-- generated code for protobufs don't have headers -->
+        <exclude name="src/java/org/apache/hadoop/hdfs/protocol/proto/*Protos.java" />
         <exclude name="src/docs/releasenotes.html" />
         <exclude name="src/test/hdfs/org/apache/hadoop/cli/clitest_data/" />
         <exclude name="src/test/hdfs/org/apache/hadoop/hdfs/tools/offlineEditsViewer/editsStored*" />
@@ -1449,6 +1460,7 @@
         <env key="JVM_ARCH" value="${jvm.arch}"/>
         <env key="LIBHDFS_BUILD_DIR" value="${build.c++.libhdfs}"/>
         <env key="HADOOP_PREFIX" value="${basedir}"/>
+        <env key="HADOOP_HDFS_HOME" value="${basedir}"/>
         <env key="HADOOP_CONF_DIR" value="${test.libhdfs.dir}/conf"/>
         <env key="HADOOP_LOG_DIR" value="${test.libhdfs.dir}/logs"/>
         <env key="LIBHDFS_TEST_DIR" value="${test.libhdfs.dir}"/>
@@ -1456,6 +1468,7 @@
         <env key="LIBHDFS_INSTALL_DIR" value="${install.c++}/lib"/>  
         <env key="LIB_DIR" value="${common.ivy.lib.dir}"/>
         <env key="CLOVER_JAR" value="${clover.jar}"/>
+        <env key="HADOOP_VERSION" value="${version}"/>
 		<arg value="test"/>
     </exec>
   </target>
@@ -1670,6 +1683,27 @@
         <filter token="PROJECT" value="${eclipse.project}"/>
       </filterset>
     </copy>
+  </target>
+
+  <target name="generate-protos"
+    description="Generate Java code from protocol buffer definitions">
+    <exec executable="bash" resultproperty="which.protoc.result" outputproperty="">
+      <arg value="-c" />
+      <arg value="which ${protoc}" />
+    </exec>
+    <condition property="protoc.found">
+      <equals arg1="${which.protoc.result}" arg2="0" />
+    </condition>
+    <fail unless="protoc.found"
+      message="No protoc compiler found. Please pass -Dprotoc=/path/to/protoc if it is not on your path." />
+
+    <exec executable="${protoc}" failonerror="true">
+      <arg value="--java_out=${java.src.dir}" />
+      <arg value="--proto_path=${proto.src.dir}" />
+      <arg value="${proto.src.dir}/hdfs.proto" />
+      <arg value="${proto.src.dir}/datatransfer.proto" />
+    </exec>
+    <echo message="Generated protocol buffer code successfully." />
   </target>
 
   <target name="ivy-init-dirs">

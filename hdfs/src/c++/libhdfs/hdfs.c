@@ -259,7 +259,7 @@ hdfsFS hdfsConnectAsUser(const char* host, tPort port, const char *user)
       sprintf(cURI, "hdfs://%s:%d", host, (int)(port));
       if (cURI == NULL) {
         fprintf (stderr, "Couldn't allocate an object of size %d",
-                 strlen(host) + 16);
+                 (int)(strlen(host) + 16));
         errno = EINTERNAL;			
         goto done;	
       }
@@ -998,6 +998,38 @@ int hdfsFlush(hdfsFS fs, hdfsFile f)
                      HADOOP_OSTRM, "flush", "()V") != 0) {
         errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
                                    "FSDataInputStream::flush");
+        return -1;
+    }
+
+    return 0;
+}
+
+
+
+int hdfsHFlush(hdfsFS fs, hdfsFile f)
+{
+    //Get the JNIEnv* corresponding to current thread
+    JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
+
+    //Parameters
+    jobject jOutputStream = (jobject)(f ? f->file : 0);
+
+    //Caught exception
+    jthrowable jExc = NULL;
+
+    //Sanity check
+    if (!f || f->type != OUTPUT) {
+        errno = EBADF;
+        return -1;
+    }
+
+    if (invokeMethod(env, NULL, &jExc, INSTANCE, jOutputStream,
+                     HADOOP_OSTRM, "hflush", "()V") != 0) {
+        errno = errnoFromException(jExc, env, HADOOP_OSTRM "::hflush");
         return -1;
     }
 

@@ -195,7 +195,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   }
     
 
-  @Override
+  @Override // VersionedProtocol
   public ProtocolSignature getProtocolSignature(String protocol,
       long clientVersion, int clientMethodsHash) throws IOException {
     return ProtocolSignature.getProtocolSignature(
@@ -696,7 +696,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     return namesystem.getBlocks(datanode, size); 
   }
 
-  /** {@inheritDoc} */
+  @Override // NamenodeProtocol
   public ExportedBlockKeys getBlockKeys() throws IOException {
     return namesystem.getBlockKeys();
   }
@@ -744,39 +744,34 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     return namesystem.getEditLogSize();
   }
 
-  /*
-   * Active name-node cannot journal.
-   */
   @Override // NamenodeProtocol
   public void journal(NamenodeRegistration registration,
                       int jAction,
                       int length,
                       byte[] args) throws IOException {
+    // Active name-node cannot journal.
     throw new UnsupportedActionException("journal");
   }
 
-  /////////////////////////////////////////////////////
-  // ClientProtocol
-  /////////////////////////////////////////////////////
-  
+  @Override // ClientProtocol
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
     return namesystem.getDelegationToken(renewer);
   }
 
-  @Override
+  @Override // ClientProtocol
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
     return namesystem.renewDelegationToken(token);
   }
 
-  @Override
+  @Override // ClientProtocol
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
     namesystem.cancelDelegationToken(token);
   }
   
-  /** {@inheritDoc} */
+  @Override // ClientProtocol
   public LocatedBlocks getBlockLocations(String src, 
                                           long offset, 
                                           long length) 
@@ -786,20 +781,12 @@ public class NameNode implements NamenodeProtocols, FSConstants {
                                         src, offset, length);
   }
   
-  private static String getClientMachine() {
-    String clientMachine = Server.getRemoteAddress();
-    if (clientMachine == null) {
-      clientMachine = "";
-    }
-    return clientMachine;
-  }
-
-  /** {@inheritDoc} */
+  @Override // ClientProtocol
   public FsServerDefaults getServerDefaults() throws IOException {
     return namesystem.getServerDefaults();
   }
 
-  /** {@inheritDoc} */
+  @Override // ClientProtocol
   public void create(String src, 
                      FsPermission masked,
                      String clientName, 
@@ -824,7 +811,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     metrics.incrCreateFileOps();
   }
 
-  /** {@inheritDoc} */
+  @Override // ClientProtocol
   public LocatedBlock append(String src, String clientName) 
       throws IOException {
     String clientMachine = getClientMachine();
@@ -837,31 +824,31 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     return info;
   }
 
-  /** {@inheritDoc} */
+  @Override // ClientProtocol
   public boolean recoverLease(String src, String clientName) throws IOException {
     String clientMachine = getClientMachine();
     return namesystem.recoverLease(src, clientName, clientMachine);
   }
 
-  /** {@inheritDoc} */
+  @Override // ClientProtocol
   public boolean setReplication(String src, short replication) 
     throws IOException {  
     return namesystem.setReplication(src, replication);
   }
     
-  /** {@inheritDoc} */
+  @Override // ClientProtocol
   public void setPermission(String src, FsPermission permissions)
       throws IOException {
     namesystem.setPermission(src, permissions);
   }
 
-  /** {@inheritDoc} */
+  @Override // ClientProtocol
   public void setOwner(String src, String username, String groupname)
       throws IOException {
     namesystem.setOwner(src, username, groupname);
   }
 
-  @Override
+  @Override // ClientProtocol
   public LocatedBlock addBlock(String src,
                                String clientName,
                                ExtendedBlock previous,
@@ -885,7 +872,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     return locatedBlock;
   }
 
-  @Override
+  @Override // ClientProtocol
   public LocatedBlock getAdditionalDatanode(final String src, final ExtendedBlock blk,
       final DatanodeInfo[] existings, final DatanodeInfo[] excludes,
       final int numAdditionalNodes, final String clientName
@@ -926,7 +913,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     }
   }
 
-  /** {@inheritDoc} */
+  @Override // ClientProtocol
   public boolean complete(String src, String clientName, ExtendedBlock last)
       throws IOException {
     if(stateChangeLog.isDebugEnabled()) {
@@ -942,6 +929,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
    * mark the block as corrupt.  In the future we might 
    * check the blocks are actually corrupt. 
    */
+  @Override
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {
     stateChangeLog.info("*DIR* NameNode.reportBadBlocks");
     for (int i = 0; i < blocks.length; i++) {
@@ -954,22 +942,21 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     }
   }
 
-  /** {@inheritDoc} */
-  @Override
+  @Override // ClientProtocol
   public LocatedBlock updateBlockForPipeline(ExtendedBlock block, String clientName)
       throws IOException {
     return namesystem.updateBlockForPipeline(block, clientName);
   }
 
 
-  @Override
+  @Override // ClientProtocol
   public void updatePipeline(String clientName, ExtendedBlock oldBlock,
       ExtendedBlock newBlock, DatanodeID[] newNodes)
       throws IOException {
     namesystem.updatePipeline(clientName, oldBlock, newBlock, newNodes);
   }
   
-  /** {@inheritDoc} */
+  @Override // DatanodeProtocol
   public void commitBlockSynchronization(ExtendedBlock block,
       long newgenerationstamp, long newlength,
       boolean closeFile, boolean deleteblock, DatanodeID[] newtargets)
@@ -978,14 +965,14 @@ public class NameNode implements NamenodeProtocols, FSConstants {
         newgenerationstamp, newlength, closeFile, deleteblock, newtargets);
   }
   
+  @Override // ClientProtocol
   public long getPreferredBlockSize(String filename) 
       throws IOException {
     return namesystem.getPreferredBlockSize(filename);
   }
     
-  /** {@inheritDoc} */
   @Deprecated
-  @Override
+  @Override // ClientProtocol
   public boolean rename(String src, String dst) throws IOException {
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst);
@@ -1001,15 +988,12 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     return ret;
   }
   
-  /** 
-   * {@inheritDoc}
-   */
+  @Override // ClientProtocol
   public void concat(String trg, String[] src) throws IOException {
     namesystem.concat(trg, src);
   }
   
-  /** {@inheritDoc} */
-  @Override
+  @Override // ClientProtocol
   public void rename(String src, String dst, Options.Rename... options)
       throws IOException {
     if(stateChangeLog.isDebugEnabled()) {
@@ -1023,14 +1007,13 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     metrics.incrFilesRenamed();
   }
 
-  /**
-   */
   @Deprecated
+  @Override // ClientProtocol
   public boolean delete(String src) throws IOException {
     return delete(src, true);
   }
 
-  /** {@inheritDoc} */
+  @Override // ClientProtocol
   public boolean delete(String src, boolean recursive) throws IOException {
     if (stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*DIR* Namenode.delete: src=" + src
@@ -1046,7 +1029,6 @@ public class NameNode implements NamenodeProtocols, FSConstants {
    * Check path length does not exceed maximum.  Returns true if
    * length and depth are okay.  Returns false if length is too long 
    * or depth is too great.
-   * 
    */
   private boolean checkPathLength(String src) {
     Path srcPath = new Path(src);
@@ -1054,7 +1036,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
             srcPath.depth() <= MAX_PATH_DEPTH);
   }
     
-  /** {@inheritDoc} */
+  @Override // ClientProtocol
   public boolean mkdirs(String src, FsPermission masked, boolean createParent)
       throws IOException {
     if(stateChangeLog.isDebugEnabled()) {
@@ -1069,15 +1051,12 @@ public class NameNode implements NamenodeProtocols, FSConstants {
             null, masked), createParent);
   }
 
-  /**
-   */
+  @Override // ClientProtocol
   public void renewLease(String clientName) throws IOException {
     namesystem.renewLease(clientName);        
   }
 
-  /**
-   */
-  @Override
+  @Override // ClientProtocol
   public DirectoryListing getListing(String src, byte[] startAfter,
       boolean needLocation)
   throws IOException {
@@ -1090,24 +1069,13 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     return files;
   }
 
-  /**
-   * Get the file info for a specific file.
-   * @param src The string representation of the path to the file
-   * @return object containing information regarding the file
-   *         or null if file not found
-   */
+  @Override // ClientProtocol
   public HdfsFileStatus getFileInfo(String src)  throws IOException {
     metrics.incrFileInfoOps();
     return namesystem.getFileInfo(src, true);
   }
 
-  /**
-   * Get the file info for a specific file. If the path refers to a 
-   * symlink then the FileStatus of the symlink is returned.
-   * @param src The string representation of the path to the file
-   * @return object containing information regarding the file
-   *         or null if file not found
-   */
+  @Override // ClientProtocol
   public HdfsFileStatus getFileLinkInfo(String src) throws IOException { 
     metrics.incrFileInfoOps();
     return namesystem.getFileInfo(src, false);
@@ -1118,8 +1086,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     return namesystem.getStats();
   }
 
-  /**
-   */
+  @Override // ClientProtocol
   public DatanodeInfo[] getDatanodeReport(DatanodeReportType type)
       throws IOException {
     DatanodeInfo results[] = namesystem.datanodeReport(type);
@@ -1129,7 +1096,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     return results;
   }
     
-  @Override
+  @Override // ClientProtocol
   public boolean setSafeMode(SafeModeAction action) throws IOException {
     return namesystem.setSafeMode(action);
   }
@@ -1141,38 +1108,29 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     return namesystem.isInSafeMode();
   }
 
-  @Override
+  @Override // ClientProtocol
   public boolean restoreFailedStorage(String arg) 
       throws AccessControlException {
     return namesystem.restoreFailedStorage(arg);
   }
 
-  @Override
+  @Override // ClientProtocol
   public void saveNamespace() throws IOException {
     namesystem.saveNamespace();
   }
 
-  /**
-   * Refresh the list of datanodes that the namenode should allow to  
-   * connect.  Re-reads conf by creating new HdfsConfiguration object and 
-   * uses the files list in the configuration to update the list. 
-   */
+  @Override // ClientProtocol
   public void refreshNodes() throws IOException {
     namesystem.refreshNodes(new HdfsConfiguration());
   }
 
-  /**
-   * Returns the size of the current edit log.
-   */
-  @Deprecated
+  @Deprecated // NamenodeProtocol
   public long getEditLogSize() throws IOException {
     return namesystem.getEditLogSize();
   }
 
-  /**
-   * Roll the edit log.
-   */
   @Deprecated
+  @Override // NamenodeProtocol
   public CheckpointSignature rollEditLog() throws IOException {
     return namesystem.rollEditLog();
   }
@@ -1183,29 +1141,25 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     return namesystem.getEditLogManifest(sinceTxId);
   }
     
+  @Override // ClientProtocol
   public void finalizeUpgrade() throws IOException {
     namesystem.finalizeUpgrade();
   }
 
+  @Override // ClientProtocol
   public UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action)
       throws IOException {
     return namesystem.distributedUpgradeProgress(action);
   }
 
-  /**
-   * Dumps namenode state into specified file
-   */
+  @Override // ClientProtocol
   public void metaSave(String filename) throws IOException {
     namesystem.metaSave(filename);
   }
 
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public CorruptFileBlocks
-    listCorruptFileBlocks(String path, String cookie) 
-    throws IOException {
+  @Override // ClientProtocol
+  public CorruptFileBlocks listCorruptFileBlocks(String path, String cookie)
+      throws IOException {
     Collection<FSNamesystem.CorruptFileBlockInfo> fbs =
       namesystem.listCorruptFileBlocks(path, cookie);
     
@@ -1219,32 +1173,31 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     return new CorruptFileBlocks(files, lastCookie);
   }
   
-  /** {@inheritDoc} */
+  @Override // ClientProtocol
   public ContentSummary getContentSummary(String path) throws IOException {
     return namesystem.getContentSummary(path);
   }
 
-  /** {@inheritDoc} */
+  @Override // ClientProtocol
   public void setQuota(String path, long namespaceQuota, long diskspaceQuota) 
       throws IOException {
     namesystem.setQuota(path, namespaceQuota, diskspaceQuota);
   }
   
-  /** {@inheritDoc} */
+  @Override // ClientProtocol
   public void fsync(String src, String clientName) throws IOException {
     namesystem.fsync(src, clientName);
   }
 
-  @Override
+  @Override // ClientProtocol
   public void setTimes(String src, long mtime, long atime) 
       throws IOException {
     namesystem.setTimes(src, mtime, atime);
   }
 
-  @Override
-  public void createSymlink(String target, String link, FsPermission dirPerms, 
-                            boolean createParent) 
-      throws IOException {
+  @Override // ClientProtocol
+  public void createSymlink(String target, String link, FsPermission dirPerms,
+      boolean createParent) throws IOException {
     metrics.incrCreateSymlinkOps();
     /* We enforce the MAX_PATH_LENGTH limit even though a symlink target 
      * URI may refer to a non-HDFS file system. 
@@ -1262,7 +1215,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
       new PermissionStatus(ugi.getShortUserName(), null, dirPerms), createParent);
   }
 
-  @Override
+  @Override // ClientProtocol
   public String getLinkTarget(String path) throws IOException {
     metrics.incrGetLinkTargetOps();
     /* Resolves the first symlink in the given path, returning a
@@ -1285,11 +1238,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   }
 
 
-  ////////////////////////////////////////////////////////////////
-  // DatanodeProtocol
-  ////////////////////////////////////////////////////////////////
-  /** 
-   */
+  @Override // DatanodeProtocol
   public DatanodeRegistration registerDatanode(DatanodeRegistration nodeReg)
       throws IOException {
     verifyVersion(nodeReg.getVersion());
@@ -1298,32 +1247,19 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     return nodeReg;
   }
 
-  /**
-   * Data node notify the name node that it is alive 
-   * Return an array of block-oriented commands for the datanode to execute.
-   * This will be either a transfer or a delete operation.
-   */
+  @Override // DatanodeProtocol
   public DatanodeCommand[] sendHeartbeat(DatanodeRegistration nodeReg,
-                                       long capacity,
-                                       long dfsUsed,
-                                       long remaining,
-                                       long blockPoolUsed,
-                                       int xmitsInProgress,
-                                       int xceiverCount,
-                                       int failedVolumes) throws IOException {
+      long capacity, long dfsUsed, long remaining, long blockPoolUsed,
+      int xmitsInProgress, int xceiverCount, int failedVolumes)
+      throws IOException {
     verifyRequest(nodeReg);
     return namesystem.handleHeartbeat(nodeReg, capacity, dfsUsed, remaining,
         blockPoolUsed, xceiverCount, xmitsInProgress, failedVolumes);
   }
 
-  /**
-   * sends block report to the corresponding namenode (for the poolId)
-   * @return DataNodeCommand from the namenode
-   * @throws IOException
-   */
+  @Override // DatanodeProtocol
   public DatanodeCommand blockReport(DatanodeRegistration nodeReg,
-                                     String poolId,
-                                     long[] blocks) throws IOException {
+      String poolId, long[] blocks) throws IOException {
     verifyRequest(nodeReg);
     BlockListAsLongs blist = new BlockListAsLongs(blocks);
     if(stateChangeLog.isDebugEnabled()) {
@@ -1338,10 +1274,9 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     return null;
   }
 
-  public void blockReceived(DatanodeRegistration nodeReg, 
-                            String poolId,
-                            Block blocks[],
-                            String delHints[]) throws IOException {
+  @Override // DatanodeProtocol
+  public void blockReceived(DatanodeRegistration nodeReg, String poolId,
+      Block blocks[], String delHints[]) throws IOException {
     verifyRequest(nodeReg);
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*BLOCK* NameNode.blockReceived: "
@@ -1352,9 +1287,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     }
   }
 
-  /**
-   * Handle an error report from a datanode.
-   */
+  @Override // DatanodeProtocol
   public void errorReport(DatanodeRegistration nodeReg,
                           int errorCode, String msg) throws IOException { 
     String dnName = (nodeReg == null ? "unknown DataNode" : nodeReg.getName());
@@ -1375,10 +1308,12 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     }
   }
     
+  @Override // DatanodeProtocol, NamenodeProtocol
   public NamespaceInfo versionRequest() throws IOException {
     return namesystem.getNamespaceInfo();
   }
 
+  @Override // DatanodeProtocol
   public UpgradeCommand processUpgradeCommand(UpgradeCommand comm) throws IOException {
     return namesystem.processDistributedUpgradeCommand(comm);
   }
@@ -1520,7 +1455,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     return false;
   }
 
-  @Override
+  @Override // RefreshAuthorizationPolicyProtocol
   public void refreshServiceAcl() throws IOException {
     if (!serviceAuthEnabled) {
       throw new AuthorizationException("Service Level Authorization not enabled!");
@@ -1532,21 +1467,21 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     }
   }
 
-  @Override
+  @Override // RefreshAuthorizationPolicyProtocol
   public void refreshUserToGroupsMappings() throws IOException {
     LOG.info("Refreshing all user-to-groups mappings. Requested by user: " + 
              UserGroupInformation.getCurrentUser().getShortUserName());
     Groups.getUserToGroupsMappingService().refresh();
   }
 
-  @Override
+  @Override // RefreshAuthorizationPolicyProtocol
   public void refreshSuperUserGroupsConfiguration() {
     LOG.info("Refreshing SuperUser proxy group mapping list ");
 
     ProxyUsers.refreshSuperUserGroupsConfiguration();
   }
   
-  @Override
+  @Override // GetUserMappingsProtocol
   public String[] getGroupsForUser(String user) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Getting groups for user " + user);
@@ -1724,5 +1659,13 @@ public class NameNode implements NamenodeProtocols, FSConstants {
       LOG.error(StringUtils.stringifyException(e));
       System.exit(-1);
     }
+  }
+  
+  private static String getClientMachine() {
+    String clientMachine = Server.getRemoteAddress();
+    if (clientMachine == null) {
+      clientMachine = "";
+    }
+    return clientMachine;
   }
 }

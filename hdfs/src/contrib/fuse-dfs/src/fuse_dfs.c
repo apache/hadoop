@@ -20,7 +20,7 @@
 #include "fuse_options.h"
 #include "fuse_impls.h"
 #include "fuse_init.h"
-
+#include "fuse_connect.h"
 
 int is_protected(const char *path) {
 
@@ -38,55 +38,49 @@ int is_protected(const char *path) {
 }
 
 static struct fuse_operations dfs_oper = {
-  .getattr	= dfs_getattr,
-  .access	= dfs_access,
-  .readdir	= dfs_readdir,
-  .destroy       = dfs_destroy,
-  .init         = dfs_init,
-  .open	        = dfs_open,
-  .read	        = dfs_read,
-  .symlink	= dfs_symlink,
-  .statfs	= dfs_statfs,
-  .mkdir	= dfs_mkdir,
-  .rmdir	= dfs_rmdir,
-  .rename	= dfs_rename,
-  .unlink       = dfs_unlink,
-  .release      = dfs_release,
-  .create       = dfs_create,
-  .write	= dfs_write,
-  .flush        = dfs_flush,
-  .mknod        = dfs_mknod,
-  .utimens      = dfs_utimens,
-  .chmod	= dfs_chmod,
-  .chown	= dfs_chown,
-  .truncate	= dfs_truncate,
+  .getattr  = dfs_getattr,
+  .access   = dfs_access,
+  .readdir  = dfs_readdir,
+  .destroy  = dfs_destroy,
+  .init     = dfs_init,
+  .open     = dfs_open,
+  .read     = dfs_read,
+  .symlink  = dfs_symlink,
+  .statfs   = dfs_statfs,
+  .mkdir    = dfs_mkdir,
+  .rmdir    = dfs_rmdir,
+  .rename   = dfs_rename,
+  .unlink   = dfs_unlink,
+  .release  = dfs_release,
+  .create   = dfs_create,
+  .write    = dfs_write,
+  .flush    = dfs_flush,
+  .mknod    = dfs_mknod,
+  .utimens  = dfs_utimens,
+  .chmod    = dfs_chmod,
+  .chown    = dfs_chown,
+  .truncate = dfs_truncate,
 };
-
 
 int main(int argc, char *argv[])
 {
-
   umask(0);
 
   extern const char *program;  
   program = argv[0];
   struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 
-  /* clear structure that holds our options */
   memset(&options, 0, sizeof(struct options));
 
-  // some defaults
   options.rdbuffer_size = 10*1024*1024; 
   options.attribute_timeout = 60; 
   options.entry_timeout = 60;
 
-  if (fuse_opt_parse(&args, &options, dfs_opts, dfs_options) == -1)
-    /** error parsing options */
+  if (-1 == fuse_opt_parse(&args, &options, dfs_opts, dfs_options)) {
     return -1;
+  }
 
-
-  // Some fuse options we set
-  if (! options.private) {
+  if (!options.private) {
     fuse_opt_add_arg(&args, "-oallow_other");
   }
 
@@ -109,28 +103,24 @@ int main(int argc, char *argv[])
     exit(0);
   }
 
-
-  // 
-  // Check we can connect to hdfs
-  // 
+  // Check connection as root
   if (options.initchecks == 1) {
-    hdfsFS temp;
-    if ((temp = hdfsConnect(options.server, options.port)) == NULL) {
+    hdfsFS tempFS = hdfsConnectAsUser(options.server, options.port, "root");
+    if (NULL == tempFS) {
       const char *cp = getenv("CLASSPATH");
       const char *ld = getenv("LD_LIBRARY_PATH");
       ERROR("FATAL: misconfiguration - cannot connect to HDFS");
       ERROR("LD_LIBRARY_PATH=%s",ld == NULL ? "NULL" : ld);
       ERROR("CLASSPATH=%s",cp == NULL ? "NULL" : cp);
-      exit(0);
+      exit(1);
+    }
+    if (doDisconnect(tempFS)) {
+      ERROR("FATAL: unable to disconnect from test filesystem.");
+      exit(1);
     }
   }
 
   int ret = fuse_main(args.argc, args.argv, &dfs_oper, NULL);
-
-  if (ret) printf("\n");
-
-  /** free arguments */
   fuse_opt_free_args(&args);
-
   return ret;
 }

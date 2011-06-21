@@ -56,7 +56,7 @@ public class TestHDFSCLI extends CLITestHelperDFS {
                                                  .racks(racks)
                                                  .hosts(hosts)
                                                  .build();
-    
+    dfsCluster.waitClusterUp();
     namenode = conf.get(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "file:///");
     
     username = System.getProperty("user.name");

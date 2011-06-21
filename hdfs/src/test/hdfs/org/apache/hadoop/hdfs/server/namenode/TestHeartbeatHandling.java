@@ -54,7 +54,13 @@ public class TestHeartbeatHandling extends TestCase {
       final DatanodeRegistration nodeReg = 
         DataNodeTestUtils.getDNRegistrationForBP(cluster.getDataNodes().get(0), poolId);
         
-      DatanodeDescriptor dd = namesystem.getDatanode(nodeReg);
+      namesystem.readLock();
+      DatanodeDescriptor dd;
+      try {
+        dd = namesystem.getDatanode(nodeReg);
+      } finally {
+        namesystem.readUnlock();
+      }
       
       final int REMAINING_BLOCKS = 1;
       final int MAX_REPLICATE_LIMIT = 

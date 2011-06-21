@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs;
 
 import java.util.List;
 
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.fs.Path;
 
 import org.junit.Test;

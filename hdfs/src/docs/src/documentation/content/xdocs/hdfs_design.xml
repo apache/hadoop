@@ -391,7 +391,7 @@
         <title> Replication Pipelining </title>
         <p>
         When a client is writing data to an HDFS file with a replication factor of 3, the NameNode retrieves a list of DataNodes using a replication target choosing algorithm.
-        This list contains the DataNodes that will host a replica of that block. The client then writes to the first DataNode. The first DataNode starts receiving the data in small portions (4 KB), 
+        This list contains the DataNodes that will host a replica of that block. The client then writes to the first DataNode. The first DataNode starts receiving the data in small portions (64 KB, configurable), 
         writes each portion to its local repository and transfers that portion to the second DataNode in the list. 
         The second DataNode, in turn starts receiving each portion of the data block, writes that portion to its 
         repository and then flushes that portion to the third DataNode. Finally, the third DataNode writes the 
@@ -498,9 +498,8 @@
         If a user wants to undelete a file that he/she has deleted, he/she can navigate the <code>/trash</code> 
         directory and retrieve the file. The <code>/trash</code> directory contains only the latest copy of the file 
         that was deleted. The <code>/trash</code> directory is just like any other directory with one special 
-        feature: HDFS applies specified policies to automatically delete files from this directory. The current 
-        default policy is to delete files from <code>/trash</code> that are more than 6 hours old. In the future, 
-        this policy will be configurable through a well defined interface.
+        feature: HDFS applies specified policies to automatically delete files from this directory.
+        By default, the trash feature is disabled. It can be enabled by setting the <em>fs.trash.interval</em> property in core-site.xml to a non-zero value (set as minutes of retention required). The property needs to exist on both client and server side configurations.
         </p>
       </section>
 

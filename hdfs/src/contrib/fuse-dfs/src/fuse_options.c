@@ -107,10 +107,10 @@ int dfs_options(void *data, const char *arg, int key,  struct fuse_args *outargs
 
   switch (key) {
   case FUSE_OPT_KEY_OPT:
-    fprintf(stderr, "fuse-dfs ignoring option %s\n", arg);
+    INFO("Ignoring option %s", arg);
     return 1;
-  case  KEY_VERSION:
-    fprintf(stdout, "%s %s\n", program, _FUSE_DFS_VERSION);
+  case KEY_VERSION:
+    INFO("%s %s\n", program, _FUSE_DFS_VERSION);
     exit(0);
   case KEY_HELP:
     print_usage(program);
@@ -159,14 +159,13 @@ int dfs_options(void *data, const char *arg, int key,  struct fuse_args *outargs
       } else if (strcmp(arg,"rw") == 0) {
         options.read_only = 0;
       } else {
-        ERROR("fuse-dfs didn't recognize %s,%d\n",arg,key);
-        fuse_opt_add_arg(outargs,arg);
+        INFO("Adding FUSE arg %s", arg);
+        fuse_opt_add_arg(outargs, arg);
         return 0;
       }
     } else {
       options.port = tmp_port;
       options.server = strdup(tmp_server);
-      ERROR("port=%d,server=%s\n", options.port, options.server);
     }
   }
   }

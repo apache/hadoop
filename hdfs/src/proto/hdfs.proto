@@ -1,0 +1,64 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// This file contains protocol buffers that are used throughout HDFS -- i.e.
+// by the client, server, and data transfer protocols.
+
+option java_package = "org.apache.hadoop.hdfs.protocol.proto";
+option java_outer_classname = "HdfsProtos";
+option java_generate_equals_and_hash = true;
+
+message ExtendedBlockProto {
+  required string poolId = 1;
+  required uint64 blockId = 2;
+  required uint64 numBytes = 3;
+  required uint64 generationStamp = 4;
+}
+
+message BlockTokenIdentifierProto {
+  required bytes identifier = 1;
+  required bytes password = 2;
+  required string kind = 3;
+  required string service = 4;
+}
+
+message DatanodeIDProto {
+  required string name = 1;
+  required string storageID = 2;
+  required uint32 infoPort = 3;
+}
+
+message DatanodeInfoProto {
+  required DatanodeIDProto id = 1;
+  optional uint64 capacity = 2;
+  optional uint64 dfsUsed = 3;
+  optional uint64 remaining = 4;
+  optional uint64 blockPoolUsed = 5;
+  optional uint64 lastUpdate = 6;
+  optional uint32 xceiverCount = 7;
+  optional string location = 8;
+  optional string hostName = 9;
+  enum AdminState {
+    NORMAL = 0;
+    DECOMMISSION_INPROGRESS = 1;
+    DECOMMISSIONED = 2;
+  }
+
+  optional AdminState adminState = 10;
+}
+

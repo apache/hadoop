@@ -29,10 +29,12 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.log4j.Level;
@@ -121,9 +123,9 @@ public class TestTransferRbw {
         //transfer RBW
         final ExtendedBlock b = new ExtendedBlock(bpid, oldrbw.getBlockId(), oldrbw.getBytesAcked(),
             oldrbw.getGenerationStamp());
-        final DataTransferProtocol.Status s = DFSTestUtil.transferRbw(
+        final BlockOpResponseProto s = DFSTestUtil.transferRbw(
             b, fs.getClient(), oldnodeinfo, newnodeinfo);
-        Assert.assertEquals(DataTransferProtocol.Status.SUCCESS, s);
+        Assert.assertEquals(Status.SUCCESS, s.getStatus());
       }
 
       //check new rbw

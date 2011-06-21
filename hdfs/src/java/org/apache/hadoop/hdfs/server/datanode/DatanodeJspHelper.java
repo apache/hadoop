@@ -241,6 +241,11 @@ public class DatanodeJspHelper {
     }
     datanodePort = Integer.parseInt(datanodePortStr);
 
+    final Long genStamp = JspHelper.validateLong(req.getParameter("genstamp"));
+    if (genStamp == null) {
+      out.print("Invalid input (genstamp absent)");
+      return;
+    }
     String namenodeInfoPortStr = req.getParameter("namenodeInfoPort");
     int namenodeInfoPort = -1;
     if (namenodeInfoPortStr != null)
@@ -321,6 +326,8 @@ public class DatanodeJspHelper {
     out.print("<input type=\"hidden\" name=\"startOffset\" value=\""
         + startOffset + "\">");
     out.print("<input type=\"hidden\" name=\"filename\" value=\"" + filename
+        + "\">");
+    out.print("<input type=\"hidden\" name=\"genstamp\" value=\"" + genStamp
         + "\">");
     out.print("<input type=\"hidden\" name=\"datanodePort\" value=\""
         + datanodePort + "\">");

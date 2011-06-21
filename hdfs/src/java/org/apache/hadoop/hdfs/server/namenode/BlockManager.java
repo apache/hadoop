@@ -570,6 +570,7 @@ public class BlockManager {
    * dumps the contents of recentInvalidateSets
    */
   private void dumpRecentInvalidateSets(PrintWriter out) {
+    assert namesystem.hasWriteLock();
     int size = recentInvalidateSets.values().size();
     out.println("Metasave: Blocks " + pendingDeletionBlocksCount 
         + " waiting deletion from " + size + " datanodes.");
@@ -1258,7 +1259,7 @@ public class BlockManager {
     // Ignore replicas already scheduled to be removed from the DN
     if(belongsToInvalidates(dn.getStorageID(), block)) {
       assert storedBlock.findDatanode(dn) < 0 : "Block " + block
-        + " in recentInvalidatesSet should not appear in DN " + this;
+        + " in recentInvalidatesSet should not appear in DN " + dn;
       return storedBlock;
     }
 
@@ -1392,9 +1393,9 @@ public class BlockManager {
                                DatanodeDescriptor delNodeHint,
                                boolean logEveryBlock)
   throws IOException {
-    assert (block != null && namesystem.hasWriteLock());
+    assert block != null && namesystem.hasWriteLock();
     BlockInfo storedBlock;
-    if (block.getClass() == BlockInfoUnderConstruction.class) {
+    if (block instanceof BlockInfoUnderConstruction) {
       //refresh our copy in case the block got completed in another thread
       storedBlock = blocksMap.getStoredBlock(block);
     } else {
@@ -1571,6 +1572,7 @@ public class BlockManager {
    */
   void processOverReplicatedBlock(Block block, short replication,
       DatanodeDescriptor addedNode, DatanodeDescriptor delNodeHint) {
+    assert namesystem.hasWriteLock();
     if (addedNode == delNodeHint) {
       delNodeHint = null;
     }
@@ -1596,6 +1598,7 @@ public class BlockManager {
   }
 
   void addToExcessReplicate(DatanodeInfo dn, Block block) {
+    assert namesystem.hasWriteLock();
     Collection<Block> excessBlocks = excessReplicateMap.get(dn.getStorageID());
     if (excessBlocks == null) {
       excessBlocks = new TreeSet<Block>();
