@@ -271,10 +271,14 @@ public class TestFSImageStorageInspector {
     // Calling recover should move it aside
     FoundEditLog badLog = lg.logs.get(2);
     Mockito.doNothing().when(badLog).moveAsideCorruptFile();
+    Mockito.doNothing().when(lg.logs.get(0)).finalizeLog();
+    Mockito.doNothing().when(lg.logs.get(1)).finalizeLog();
     
     lg.recover();
     
     Mockito.verify(badLog).moveAsideCorruptFile();
+    Mockito.verify(lg.logs.get(0)).finalizeLog();
+    Mockito.verify(lg.logs.get(1)).finalizeLog();
   }
   
   /**

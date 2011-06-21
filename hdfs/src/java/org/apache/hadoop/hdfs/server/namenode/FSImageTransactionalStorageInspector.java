@@ -434,6 +434,8 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
       for (FoundEditLog log : logs) {
         if (log.isCorrupt()) {
           log.moveAsideCorruptFile();
+        } else if (log.isInProgress()) {
+          log.finalizeLog();
         }
       }
     }    
@@ -476,7 +478,7 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
     final StorageDirectory sd;
     File file;
     final long startTxId;
-    final long lastTxId;
+    long lastTxId;
     
     private EditLogValidation cachedValidation = null;
     private boolean isCorrupt = false;
@@ -495,6 +497,19 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
       this.file = file;
     }
     
+    public void finalizeLog() throws IOException {
+      long numTransactions = validateLog().numTransactions;
+      long lastTxId = startTxId + numTransactions - 1;
+      File dst = new File(file.getParentFile(),
+          NNStorage.getFinalizedEditsFileName(startTxId, lastTxId));
+      if (!file.renameTo(dst)) {
+        throw new IOException("Couldn't finalize log " +
+            file + " to " + dst);
+      }
+      this.lastTxId = lastTxId;
+      file = dst;
+    }
+
     long getStartTxId() {
       return startTxId;
     }
