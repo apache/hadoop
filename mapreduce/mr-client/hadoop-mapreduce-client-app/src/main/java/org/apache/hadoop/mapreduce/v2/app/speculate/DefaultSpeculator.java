@@ -298,7 +298,7 @@ public class DefaultSpeculator extends AbstractService implements
    */
   protected void statusUpdate(TaskAttemptStatus reportedStatus, long timestamp) {
 
-    String stateString = reportedStatus.stateString.toString();
+    String stateString = reportedStatus.taskState.toString();
 
     TaskAttemptId attemptID = reportedStatus.id;
     TaskId taskID = attemptID.getTaskId();

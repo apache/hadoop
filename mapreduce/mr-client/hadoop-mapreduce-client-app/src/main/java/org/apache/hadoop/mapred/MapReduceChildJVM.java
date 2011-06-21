@@ -126,9 +126,8 @@ public class MapReduceChildJVM {
       }
     }
 
-    // TODO: Put a random pid in env for now.
-    // Long term we will need to get it from the Child
-    env.put("JVM_PID", "12344");
+    //This should not be set here (If an OS check is requied. moved to ContainerLuanch)
+    // env.put("JVM_PID", "`echo $$`");
 
     env.put(Constants.STDOUT_LOGFILE_ENV,
         getTaskLogFile(containerLogDir, TaskLog.LogName.STDOUT).toString());

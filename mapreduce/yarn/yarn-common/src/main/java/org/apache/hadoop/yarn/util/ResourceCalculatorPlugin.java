@@ -152,15 +152,15 @@ public abstract class ResourceCalculatorPlugin extends Configured {
 
     // FIXME
     // No class given, try a os specific class
-//    try {
-//      String osName = System.getProperty("os.name");
-//      if (osName.startsWith("Linux")) {
-//        return new LinuxResourceCalculatorPlugin();
-//      }
-//    } catch (SecurityException se) {
-//      // Failed to get Operating System name.
-//      return null;
-//    }
+    try {
+      String osName = System.getProperty("os.name");
+      if (osName.startsWith("Linux")) {
+        return new LinuxResourceCalculatorPlugin();
+      }
+    } catch (SecurityException se) {
+      // Failed to get Operating System name.
+      return null;
+    }
 
     // Not supported on this system.
     return null;

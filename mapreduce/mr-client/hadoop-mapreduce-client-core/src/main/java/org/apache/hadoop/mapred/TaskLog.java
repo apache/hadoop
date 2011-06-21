@@ -480,7 +480,7 @@ public class TaskLog {
     // Export the pid of taskJvm to env variable JVM_PID.
     // Currently pid is not used on Windows
     if (!Shell.WINDOWS) {
-      mergedCmd.append("export JVM_PID=`echo $$` ; ");
+      mergedCmd.append("export JVM_PID=$$; ");
     }
 
     if (setup != null) {

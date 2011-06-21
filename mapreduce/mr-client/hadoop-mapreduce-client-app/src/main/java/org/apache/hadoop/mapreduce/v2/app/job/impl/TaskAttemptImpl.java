@@ -43,13 +43,16 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceChildJVM;
+import org.apache.hadoop.mapred.ProgressSplitsBlock;
 import org.apache.hadoop.mapred.ShuffleHandler;
 import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.TaskAttemptContextImpl;
 import org.apache.hadoop.mapred.WrappedJvmID;
+import org.apache.hadoop.mapred.WrappedProgressSplitsBlock;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
@@ -60,6 +63,8 @@ import org.apache.hadoop.mapreduce.jobhistory.TaskAttemptUnsuccessfulCompletionE
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.v2.MRConstants;
+import org.apache.hadoop.mapreduce.v2.api.records.Counter;
+import org.apache.hadoop.mapreduce.v2.api.records.CounterGroup;
 import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.Phase;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
@@ -88,6 +93,7 @@ import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerRequestEvent;
 import org.apache.hadoop.mapreduce.v2.app.speculate.SpeculatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleanupEvent;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHConfig;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
@@ -124,6 +130,7 @@ public abstract class TaskAttemptImpl implements
       EventHandler<TaskAttemptEvent> {
 
   private static final Log LOG = LogFactory.getLog(TaskAttemptImpl.class);
+  private static final long MEMORY_SPLITS_RESOLUTION = 1024; //TODO Make configurable?
   private final static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
   protected final Configuration conf;
@@ -147,6 +154,7 @@ public abstract class TaskAttemptImpl implements
 
   private long launchTime;
   private long finishTime;
+  private WrappedProgressSplitsBlock progressSplitBlock;
 
   private static final CleanupContainerTransition CLEANUP_CONTAINER_TRANSITION =
     new CleanupContainerTransition();
@@ -900,9 +908,80 @@ public abstract class TaskAttemptImpl implements
         TypeConverter.fromYarn(taskAttempt.attemptId.getTaskId().getTaskType()),
         attemptState.toString(), taskAttempt.finishTime,
         taskAttempt.containerMgrAddress == null ? "UNKNOWN" : taskAttempt.containerMgrAddress,
-        taskAttempt.reportedStatus.diagnosticInfo.toString());
-      //TODO Different constructor - allSplits
+        taskAttempt.reportedStatus.diagnosticInfo.toString(),
+        taskAttempt.getProgressSplitBlock().burst());
     return tauce;
+  }
+
+  private WrappedProgressSplitsBlock getProgressSplitBlock() {
+    readLock.lock();
+    try {
+      if (progressSplitBlock == null) {
+        progressSplitBlock = new WrappedProgressSplitsBlock(conf.getInt(
+            JHConfig.JOBHISTORY_TASKPROGRESS_NUMBER_SPLITS_KEY,
+            WrappedProgressSplitsBlock.DEFAULT_NUMBER_PROGRESS_SPLITS));
+      }
+      return progressSplitBlock;
+    } finally {
+      readLock.unlock();
+    }
+  }
+  
+  private void updateProgressSplits() {
+    double newProgress = reportedStatus.progress;
+    Counters counters = reportedStatus.counters;
+    if (counters == null)
+      return;
+
+    WrappedProgressSplitsBlock splitsBlock = getProgressSplitBlock();
+    if (splitsBlock != null) {
+      long now = clock.getTime();
+      long start = getLaunchTime(); // TODO Ensure not 0
+
+      if (start != 0 && now - start <= Integer.MAX_VALUE) {
+        splitsBlock.getProgressWallclockTime().extend(newProgress,
+            (int) (now - start));
+      }
+
+      // TODO Fix the Counter API
+      CounterGroup cpuCounterGroup = counters
+          .getCounterGroup(TaskCounter.CPU_MILLISECONDS.getDeclaringClass()
+              .getName());
+      if (cpuCounterGroup != null) {
+        Counter cpuCounter = cpuCounterGroup
+            .getCounter(TaskCounter.CPU_MILLISECONDS.name());
+        if (cpuCounter != null && cpuCounter.getValue() <= Integer.MAX_VALUE) {
+          splitsBlock.getProgressCPUTime().extend(newProgress,
+              (int) cpuCounter.getValue());
+        }
+      }
+
+      // TODO Fix the Counter API
+      CounterGroup vbCounterGroup = counters
+          .getCounterGroup(TaskCounter.VIRTUAL_MEMORY_BYTES.getDeclaringClass()
+              .getName());
+      if (vbCounterGroup != null) {
+        Counter virtualBytes = vbCounterGroup
+            .getCounter(TaskCounter.VIRTUAL_MEMORY_BYTES.name());
+        if (virtualBytes != null) {
+          splitsBlock.getProgressVirtualMemoryKbytes().extend(newProgress,
+              (int) (virtualBytes.getValue() / (MEMORY_SPLITS_RESOLUTION)));
+        }
+      }
+
+      // TODO Fix the Counter API
+      CounterGroup pbCounterGroup = counters
+          .getCounterGroup(TaskCounter.PHYSICAL_MEMORY_BYTES
+              .getDeclaringClass().getName());
+      if (pbCounterGroup != null) {
+        Counter physicalBytes = pbCounterGroup
+            .getCounter(TaskCounter.PHYSICAL_MEMORY_BYTES.name());
+        if (physicalBytes != null) {
+          splitsBlock.getProgressPhysicalMemoryKbytes().extend(newProgress,
+              (int) (physicalBytes.getValue() / (MEMORY_SPLITS_RESOLUTION)));
+        }
+      }
+    }
   }
 
   private static class RequestContainerTransition implements
@@ -1150,10 +1229,11 @@ public abstract class TaskAttemptImpl implements
          new MapAttemptFinishedEvent(TypeConverter.fromYarn(attemptId),
          TypeConverter.fromYarn(attemptId.getTaskId().getTaskType()),
          state.toString(),
-         finishTime, //TODO TaskAttemptStatus changes. MapFinishTime
+         this.reportedStatus.mapFinishTime,
          finishTime, this.containerMgrAddress == null ? "UNKNOWN" : this.containerMgrAddress,
-         state.toString(), //TODO state is a progress string.
-         TypeConverter.fromYarn(getCounters()),null);
+         this.reportedStatus.stateString,
+         TypeConverter.fromYarn(getCounters()),
+         getProgressSplitBlock().burst());
          eventHandler.handle(
            new JobHistoryEvent(attemptId.getTaskId().getJobId(), mfe));
     } else {
@@ -1161,11 +1241,12 @@ public abstract class TaskAttemptImpl implements
          new ReduceAttemptFinishedEvent(TypeConverter.fromYarn(attemptId),
          TypeConverter.fromYarn(attemptId.getTaskId().getTaskType()),
          state.toString(),
-         finishTime, //TODO TaskAttemptStatus changes. ShuffleFinishTime
-         finishTime, //TODO TaskAttemptStatus changes. SortFinishTime
+         this.reportedStatus.shuffleFinishTime,
+         this.reportedStatus.sortFinishTime,
          finishTime, this.containerMgrAddress == null ? "UNKNOWN" : this.containerMgrAddress,
-         state.toString(),
-         TypeConverter.fromYarn(getCounters()),null);
+         this.reportedStatus.stateString,
+         TypeConverter.fromYarn(getCounters()),
+         getProgressSplitBlock().burst());
          eventHandler.handle(
            new JobHistoryEvent(attemptId.getTaskId().getJobId(), rfe));
     }
@@ -1252,6 +1333,7 @@ public abstract class TaskAttemptImpl implements
               .getReportedTaskAttemptStatus();
       // Now switch the information in the reportedStatus
       taskAttempt.reportedStatus = newReportedStatus;
+      taskAttempt.reportedStatus.taskState = taskAttempt.getState();
 
       // send event to speculator about the reported status
       taskAttempt.eventHandler.handle
@@ -1260,6 +1342,7 @@ public abstract class TaskAttemptImpl implements
       
       //add to diagnostic
       taskAttempt.addDiagnosticInfo(newReportedStatus.diagnosticInfo);
+      taskAttempt.updateProgressSplits();
       
       //if fetch failures are present, send the fetch failure event to job
       //this only will happen in reduce attempt type
@@ -1289,6 +1372,7 @@ public abstract class TaskAttemptImpl implements
     result.diagnosticInfo = new String("");
     result.phase = Phase.STARTING;
     result.stateString = new String("NEW");
+    result.taskState = TaskAttemptState.NEW;
     Counters counters = recordFactory.newRecordInstance(Counters.class);
 //    counters.groups = new HashMap<String, CounterGroup>();
     result.counters = counters;

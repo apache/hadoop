@@ -37,6 +37,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.Phase;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEventStatus;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
@@ -125,6 +126,16 @@ public class TypeConverter {
     return taskId;
   }
 
+  public static TaskAttemptState toYarn(org.apache.hadoop.mapred.TaskStatus.State state) {
+    if (state == org.apache.hadoop.mapred.TaskStatus.State.KILLED_UNCLEAN) {
+      return TaskAttemptState.KILLED;
+    }
+    if (state == org.apache.hadoop.mapred.TaskStatus.State.FAILED_UNCLEAN) {
+      return TaskAttemptState.FAILED;
+    }
+    return TaskAttemptState.valueOf(state.toString());
+  }
+  
   public static Phase toYarn(org.apache.hadoop.mapred.TaskStatus.Phase phase) {
     switch (phase) {
     case STARTING:
@@ -211,10 +222,11 @@ public class TypeConverter {
     org.apache.hadoop.mapreduce.Counters counters = 
       new org.apache.hadoop.mapreduce.Counters();
     for (CounterGroup yGrp : yCntrs.getAllCounterGroups().values()) {
+      counters.addGroup(yGrp.getName(), yGrp.getDisplayName());
       for (Counter yCntr : yGrp.getAllCounters().values()) {
         org.apache.hadoop.mapreduce.Counter c = 
-          counters.findCounter(yGrp.getDisplayName(), 
-              yCntr.getDisplayName());
+          counters.findCounter(yGrp.getName(), 
+              yCntr.getName());
         c.setValue(yCntr.getValue());
       }
     }

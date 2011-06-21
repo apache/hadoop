@@ -5,6 +5,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    MAPREDUCE-2611. Fix counters, finish times etc. in job history.
+    (Siddharth Seth via llu)
+
     Fixing scheduling deadlock in AM because of incorrect headRoom values from
     RM. The bug happens when AM releases containers and RM decrements current
     memory usage twice for all those containers. (vinodkv)

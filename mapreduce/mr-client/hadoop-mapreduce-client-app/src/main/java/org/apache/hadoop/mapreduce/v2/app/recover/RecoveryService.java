@@ -331,7 +331,7 @@ public class RecoveryService extends CompositeService implements Recovery {
       taskAttemptStatus.id = yarnAttemptID;
       taskAttemptStatus.progress = 1.0f;
       taskAttemptStatus.diagnosticInfo = "";
-      taskAttemptStatus.stateString = attemptInfo.getState();
+      taskAttemptStatus.stateString = attemptInfo.getTaskStatus(); 
       // taskAttemptStatus.outputSize = attemptInfo.getOutputSize();
       taskAttemptStatus.phase = Phase.CLEANUP;
       org.apache.hadoop.mapreduce.Counters cntrs = attemptInfo.getCounters();

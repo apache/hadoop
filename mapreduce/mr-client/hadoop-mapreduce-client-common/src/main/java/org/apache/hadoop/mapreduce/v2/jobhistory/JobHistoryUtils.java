@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -123,8 +124,26 @@ public class JobHistoryUtils {
     }
   };
 
+  /**
+   * Checks whether the provided path string is a valid job history file.
+   * @param pathString the path to be checked.
+   * @return
+   */
   public static boolean isValidJobHistoryFileName(String pathString) {
     return pathString.endsWith(JOB_HISTORY_FILE_EXTENSION);
+  }
+
+  /**
+   * Returns the jobId from a job history file name.
+   * @param pathString the path string.
+   * @return the JobId
+   * @throws IOException if the filename format is invalid.
+   */
+  public static JobID getJobIDFromHistoryFilePath(String pathString) throws IOException {
+    String [] parts = pathString.split(File.separator);
+    String fileNamePart = parts[parts.length -1];
+    JobIndexInfo jobIndexInfo =  FileNameIndexUtils.getIndexInfo(fileNamePart);
+    return TypeConverter.fromYarn(jobIndexInfo.getJobId());
   }
 
   /**

@@ -90,4 +90,10 @@ public class JHConfig {
   public static final String HS_CLIENT_THREADS = 
     HS_PREFIX + "client.threads";
   public static final int DEFAULT_HS_CLIENT_THREADS = 10;
+  
+//From JTConfig. May need to be moved elsewhere.
+  public static final String JOBHISTORY_TASKPROGRESS_NUMBER_SPLITS_KEY = 
+    "mapreduce.jobtracker.jobhistory.task.numberprogresssplits";
+  
+  public static int DEFAULT_NUMBER_PROGRESS_SPLITS = 12;
 }

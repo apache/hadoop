@@ -181,7 +181,7 @@ public class TaskAttemptListenerImpl extends CompositeService
         TypeConverter.toYarn(taskAttemptID);
 
     taskHeartbeatHandler.receivedPing(attemptID);
-
+    //Ignorable TaskStatus? - since a task will send a LastStatusUpdate
     context.getEventHandler().handle(
         new TaskAttemptEvent(attemptID, 
             TaskAttemptEventType.TA_COMMIT_PENDING));
@@ -314,6 +314,24 @@ public class TaskAttemptListenerImpl extends CompositeService
     taskAttemptStatus.counters =
         TypeConverter.toYarn(taskStatus.getCounters());
 
+    // Map Finish time set by the task (map only)
+    if (taskStatus.getIsMap() && taskStatus.getMapFinishTime() != 0) {
+      taskAttemptStatus.mapFinishTime = taskStatus.getMapFinishTime();
+    }
+
+    // Shuffle Finish time set by the task (reduce only).
+    if (!taskStatus.getIsMap() && taskStatus.getShuffleFinishTime() != 0) {
+      taskAttemptStatus.shuffleFinishTime = taskStatus.getShuffleFinishTime();
+    }
+
+    // Sort finish time set by the task (reduce only).
+    if (!taskStatus.getIsMap() && taskStatus.getSortFinishTime() != 0) {
+      taskAttemptStatus.sortFinishTime = taskStatus.getSortFinishTime();
+    }
+
+    // Not Setting the task state. Used by speculation - will be set in TaskAttemptImpl
+    //taskAttemptStatus.taskState =  TypeConverter.toYarn(taskStatus.getRunState());
+    
     //set the fetch failures
     if (taskStatus.getFetchFailedMaps() != null 
         && taskStatus.getFetchFailedMaps().size() > 0) {
@@ -325,8 +343,8 @@ public class TaskAttemptListenerImpl extends CompositeService
       }
     }
 
-    // Task sends the information about the nextRecordRange to the TT
-
+ // Task sends the information about the nextRecordRange to the TT
+    
 //    TODO: The following are not needed here, but needed to be set somewhere inside AppMaster.
 //    taskStatus.getRunState(); // Set by the TT/JT. Transform into a state TODO
 //    taskStatus.getStartTime(); // Used to be set by the TaskTracker. This should be set by getTask().

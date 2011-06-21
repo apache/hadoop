@@ -85,6 +85,7 @@ public class TestMRClientService {
     taskAttemptStatus.progress = 0.5f;
     taskAttemptStatus.diagnosticInfo = diagnostic2;
     taskAttemptStatus.stateString = "RUNNING";
+    taskAttemptStatus.taskState = TaskAttemptState.RUNNING;
     taskAttemptStatus.phase = Phase.MAP;
     taskAttemptStatus.outputSize = 3;
     // send the status update

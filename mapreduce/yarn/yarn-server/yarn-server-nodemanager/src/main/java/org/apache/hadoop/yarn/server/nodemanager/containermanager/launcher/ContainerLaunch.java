@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -287,6 +288,9 @@ public class ContainerLaunch implements Callable<Integer> {
       sb.env("YARN_HOME", System.getenv("YARN_HOME"));
     }
     sb.env(ApplicationConstants.LOCAL_DIR_ENV, StringUtils.join(",", appDirs));
+    if (!Shell.WINDOWS) {
+      sb.env("JVM_PID", "$$");
+    }
     if (environment != null) {
       for (Map.Entry<String,String> env : environment.entrySet()) {
         sb.env(env.getKey().toString(), env.getValue().toString());

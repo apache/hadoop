@@ -103,6 +103,7 @@ class YarnChild {
 
     // report non-pid to application master
     JvmContext context = new JvmContext(jvmId, "-1000");
+    LOG.debug("PID: " + System.getenv().get("JVM_PID"));
     Task task = null;
     UserGroupInformation childUGI = null;
 

@@ -191,6 +191,7 @@ public class TestRuntimeEstimators {
             status.id = attempt.getID();
             status.progress = attempt.getProgress();
             status.stateString = attempt.getState().name();
+            status.taskState = attempt.getState();
             SpeculatorEvent event = new SpeculatorEvent(status, clock.getTime());
             speculator.handle(event);
           }

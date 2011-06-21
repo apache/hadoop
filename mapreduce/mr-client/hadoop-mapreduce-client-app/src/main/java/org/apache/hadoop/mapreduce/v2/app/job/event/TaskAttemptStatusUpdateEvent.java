@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.Phase;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 
 
 public class TaskAttemptStatusUpdateEvent extends TaskAttemptEvent {
@@ -52,5 +53,9 @@ public class TaskAttemptStatusUpdateEvent extends TaskAttemptEvent {
     public Phase phase;
     public long outputSize;
     public List<TaskAttemptId> fetchFailedMaps;
+    public long mapFinishTime;
+    public long shuffleFinishTime;
+    public long sortFinishTime;
+    public TaskAttemptState taskState;
   }
 }

@@ -70,4 +70,5 @@ public interface AMConstants {
 
   public static final String NODE_BLACKLISTING_ENABLE = MRConstants.YARN_MR_PREFIX
   + "node.blacklisting.enable";
+  
 }

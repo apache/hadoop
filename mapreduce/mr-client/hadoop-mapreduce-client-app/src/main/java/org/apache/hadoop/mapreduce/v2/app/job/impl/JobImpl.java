@@ -452,6 +452,33 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     }
   }
 
+  private Counters getTypeCounters(Set<TaskId> taskIds) {
+    Counters counters = newCounters();
+    for (TaskId taskId : taskIds) {
+      Task task = tasks.get(taskId);
+      incrAllCounters(counters, task.getCounters());
+    }
+    return counters;
+  }
+
+  private Counters getMapCounters() {
+    readLock.lock();
+    try {
+      return getTypeCounters(mapTasks);
+    } finally {
+      readLock.unlock();
+    }
+  }
+  
+  private Counters getReduceCounters() {
+    readLock.lock();
+    try {
+      return getTypeCounters(reduceTasks);
+    } finally {
+      readLock.unlock();
+    }
+  }
+  
   public static Counters newCounters() {
     Counters counters = RecordFactoryProvider.getRecordFactory(null)
         .newRecordInstance(Counters.class);
@@ -1066,8 +1093,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         job.oldJobId, job.finishTime,
         job.succeededMapTaskCount, job.succeededReduceTaskCount,
         job.failedMapTaskCount, job.failedReduceTaskCount,
-        TypeConverter.fromYarn(job.getCounters()), //TODO replace with MapCounters
-        TypeConverter.fromYarn(job.getCounters()), //TODO replace with ReduceCoutners
+        TypeConverter.fromYarn(job.getMapCounters()),
+        TypeConverter.fromYarn(job.getReduceCounters()),
         TypeConverter.fromYarn(job.getCounters()));
     return jfe;
   }
