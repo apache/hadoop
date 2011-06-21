@@ -742,34 +742,36 @@ public class HBaseAdmin implements Abortable, Closeable {
    * Close a region. For expert-admins.  Runs close on the regionserver.  The
    * master will not be informed of the close.
    * @param regionname region name to close
-   * @param hostAndPort If supplied, we'll use this location rather than
+   * @param serverName If supplied, we'll use this location rather than
    * the one currently in <code>.META.</code>
    * @throws IOException if a remote or network exception occurs
    */
-  public void closeRegion(final String regionname, final String hostAndPort)
+  public void closeRegion(final String regionname, final String serverName)
   throws IOException {
-    closeRegion(Bytes.toBytes(regionname), hostAndPort);
+    closeRegion(Bytes.toBytes(regionname), serverName);
   }
 
   /**
    * Close a region.  For expert-admins  Runs close on the regionserver.  The
    * master will not be informed of the close.
    * @param regionname region name to close
-   * @param hostAndPort If supplied, we'll use this location rather than
-   * the one currently in <code>.META.</code>
+   * @param serverName The servername of the regionserver.  If passed null we
+   * will use servername found in the .META. table. A server name
+   * is made of host, port and startcode.  Here is an example:
+   * <code> host187.example.com,60020,1289493121758</code>
    * @throws IOException if a remote or network exception occurs
    */
-  public void closeRegion(final byte [] regionname, final String hostAndPort)
+  public void closeRegion(final byte [] regionname, final String serverName)
   throws IOException {
     CatalogTracker ct = getCatalogTracker();
     try {
-      if (hostAndPort != null) {
+      if (serverName != null) {
         Pair<HRegionInfo, ServerName> pair = MetaReader.getRegion(ct, regionname);
-        if (pair == null || pair.getSecond() == null) {
-          LOG.info("No server in .META. for " +
+        if (pair == null || pair.getFirst() == null) {
+          LOG.info("No region in .META. for " +
             Bytes.toStringBinary(regionname) + "; pair=" + pair);
         } else {
-          closeRegion(pair.getSecond(), pair.getFirst());
+          closeRegion(new ServerName(serverName), pair.getFirst());
         }
       } else {
         Pair<HRegionInfo, ServerName> pair = MetaReader.getRegion(ct, regionname);
@@ -785,7 +787,14 @@ public class HBaseAdmin implements Abortable, Closeable {
     }
   }
 
-  private void closeRegion(final ServerName sn, final HRegionInfo hri)
+  /**
+   * Close a region.  For expert-admins  Runs close on the regionserver.  The
+   * master will not be informed of the close.
+   * @param sn
+   * @param hri
+   * @throws IOException
+   */
+  public void closeRegion(final ServerName sn, final HRegionInfo hri)
   throws IOException {
     HRegionInterface rs =
       this.connection.getHRegionConnection(sn.getHostname(), sn.getPort());

@@ -189,7 +189,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Closes a region
     def close_region(region_name, server = nil)
-      @admin.closeRegion(region_name, server ? [server].to_java : nil)
+      @admin.closeRegion(region_name, server)
     end
 
     #----------------------------------------------------------------------------------------------
