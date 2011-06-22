@@ -97,13 +97,14 @@ public class TestFSTableDescriptors {
     for (int i = 0; i < count; i++) {
       assertTrue(htds.get(Bytes.toBytes(name + i)) !=  null);
     }
+    // Wait a while so mod time we write is for sure different.
+    Thread.sleep(1000);
     // Update the table infos
     for (int i = 0; i < count; i++) {
       HTableDescriptor htd = new HTableDescriptor(name + i);
       htd.addFamily(new HColumnDescriptor("" + i));
       FSUtils.updateHTableDescriptor(fs, rootdir, htd);
     }
-    Thread.sleep(2000);
     for (int i = 0; i < count; i++) {
       assertTrue(htds.get(Bytes.toBytes(name + i)) !=  null);
     }
