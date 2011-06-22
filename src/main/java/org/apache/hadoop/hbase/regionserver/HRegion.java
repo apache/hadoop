@@ -2778,23 +2778,48 @@ public class HRegion implements HeapSize { // , Writable{
   public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
       final Configuration conf, final HTableDescriptor hTableDescriptor)
   throws IOException {
+    return createHRegion(info, rootDir, conf, hTableDescriptor, null);
+  }
+
+  /**
+   * Convenience method creating new HRegions. Used by createTable.
+   * The {@link HLog} for the created region needs to be closed explicitly. 
+   * Use {@link HRegion#getLog()} to get access.
+   * 
+   * @param info Info for region to create.
+   * @param rootDir Root directory for HBase instance
+   * @param conf
+   * @param hTableDescriptor
+   * @param hlog shared HLog
+   * @return new HRegion
+   *
+   * @throws IOException
+   */
+  public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
+                                      final Configuration conf,
+                                      final HTableDescriptor hTableDescriptor,
+                                      final HLog hlog)
+      throws IOException {
     LOG.info("creating HRegion " + info.getTableNameAsString()
-    + " HTD == " + hTableDescriptor + " RootDir = " + rootDir +
-    " Table name == " + info.getTableNameAsString());
+        + " HTD == " + hTableDescriptor + " RootDir = " + rootDir +
+        " Table name == " + info.getTableNameAsString());
 
     Path tableDir =
         HTableDescriptor.getTableDir(rootDir, info.getTableName());
     Path regionDir = HRegion.getRegionDir(tableDir, info.getEncodedName());
     FileSystem fs = FileSystem.get(conf);
     fs.mkdirs(regionDir);
+    HLog effectiveHLog = hlog;
+    if (hlog == null) {
+      effectiveHLog = new HLog(fs, new Path(regionDir, HConstants.HREGION_LOGDIR_NAME),
+          new Path(regionDir, HConstants.HREGION_OLDLOGDIR_NAME), conf);     
+    }
     HRegion region = HRegion.newHRegion(tableDir,
-        new HLog(fs, new Path(regionDir, HConstants.HREGION_LOGDIR_NAME),
-            new Path(regionDir, HConstants.HREGION_OLDLOGDIR_NAME), conf),
-        fs, conf, info, hTableDescriptor, null);
+        effectiveHLog, fs, conf, info, hTableDescriptor, null);
     region.initialize();
     return region;
   }
-
+  
   /**
    * Open a Region.
    * @param info Info for region to be opened.

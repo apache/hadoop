@@ -1,5 +1,5 @@
 /**
- * Copyright 2010 The Apache Software Foundation
+ * Copyright 2011 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerLoad;
-
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
@@ -55,8 +54,8 @@ import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.MetaScanner;
-import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
@@ -76,16 +75,17 @@ import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.ClusterId;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
@@ -975,25 +975,39 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     // do rename to move it into place?
     FSUtils.createTableDescriptor(hTableDescriptor, conf);
 
-    for (HRegionInfo newRegion : newRegions) {
-      // 1. Set table enabling flag up in zk.
-      try {
-        assignmentManager.getZKTable().setEnabledTable(tableName);
-      } catch (KeeperException e) {
-        throw new IOException("Unable to ensure that the table will be" +
+    // 1. Set table enabling flag up in zk.
+    try {
+      assignmentManager.getZKTable().setEnabledTable(tableName);
+    } catch (KeeperException e) {
+      throw new IOException("Unable to ensure that the table will be" +
           " enabled because of a ZooKeeper issue", e);
-      }
+    }
 
+    List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>();
+    final int batchSize = this.conf.getInt("hbase.master.createtable.batchsize", 100);
+    HLog hlog = null;
+    for (int regionIdx = 0; regionIdx < newRegions.length; regionIdx++) {
+      HRegionInfo newRegion = newRegions[regionIdx];
       // 2. Create HRegion
       HRegion region = HRegion.createHRegion(newRegion,
-        fileSystemManager.getRootDir(), conf, hTableDescriptor);
+          fileSystemManager.getRootDir(), conf, hTableDescriptor, hlog);
+      if (hlog == null) {
+        hlog = region.getLog();
+      }
 
-      // 3. Insert into META
-      MetaEditor.addRegionToMeta(catalogTracker, region.getRegionInfo());
+      regionInfos.add(region.getRegionInfo());
+      if (regionIdx % batchSize == 0) {
+        // 3. Insert into META
+        MetaEditor.addRegionsToMeta(catalogTracker, regionInfos);
+        regionInfos.clear();
+      }
 
       // 4. Close the new region to flush to disk.  Close log file too.
       region.close();
-      region.getLog().closeAndDelete();
+    }
+    hlog.closeAndDelete();
+    if (regionInfos.size() > 0) {
+      MetaEditor.addRegionsToMeta(catalogTracker, regionInfos);
     }
 
     // 5. Trigger immediate assignment of the regions in round-robin fashion

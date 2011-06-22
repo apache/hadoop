@@ -47,6 +47,13 @@ import org.apache.hadoop.hbase.catalog.MetaReader.Visitor;
 public class MetaEditor {
   private static final Log LOG = LogFactory.getLog(MetaEditor.class);
 
+  private static Put makePutFromRegionInfo(HRegionInfo regionInfo) throws IOException {
+    Put put = new Put(regionInfo.getRegionName());
+    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+        Writables.getBytes(regionInfo));
+    return put;
+  }
+  
   /**
    * Adds a META row for the specified new region.
    * @param regionInfo region information
@@ -55,12 +62,28 @@ public class MetaEditor {
   public static void addRegionToMeta(CatalogTracker catalogTracker,
       HRegionInfo regionInfo)
   throws IOException {
-    Put put = new Put(regionInfo.getRegionName());
-    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-        Writables.getBytes(regionInfo));
     catalogTracker.waitForMetaServerConnectionDefault().put(
-        CatalogTracker.META_REGION, put);
+        CatalogTracker.META_REGION, makePutFromRegionInfo(regionInfo));
     LOG.info("Added region " + regionInfo.getRegionNameAsString() + " to META");
+  }
+
+  /**
+   * Adds a META row for each of the specified new regions.
+   * @param catalogTracker CatalogTracker
+   * @param regionInfos region information list
+   * @throws IOException if problem connecting or updating meta
+   */
+  public static void addRegionsToMeta(CatalogTracker catalogTracker,
+      List<HRegionInfo> regionInfos)
+  throws IOException {
+    List<Put> puts = new ArrayList<Put>();
+    for (HRegionInfo regionInfo : regionInfos) { 
+      puts.add(makePutFromRegionInfo(regionInfo));
+      LOG.debug("Added region " + regionInfo.getRegionNameAsString() + " to META");
+    }
+    catalogTracker.waitForMetaServerConnectionDefault().put(
+        CatalogTracker.META_REGION, puts);
+    LOG.info("Added " + puts.size() + " regions to META");
   }
 
   /**
