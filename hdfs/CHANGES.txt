@@ -519,6 +519,8 @@ Trunk (unreleased changes)
     HDFS-1568. Improve the log messages in DataXceiver.  (Joey Echeverria via
     szetszwo)
 
+    HDFS-2100. Improve TestStorageRestore. (atm)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
