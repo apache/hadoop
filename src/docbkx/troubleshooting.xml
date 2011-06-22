@@ -442,6 +442,21 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
             On your clients, edit <filename>$HBASE_HOME/conf/log4j.properties</filename> and change this: <code>log4j.logger.org.apache.hadoop.hbase=DEBUG</code> to this: <code>log4j.logger.org.apache.hadoop.hbase=INFO</code>, or even <code>log4j.logger.org.apache.hadoop.hbase=WARN</code>. 
             </para>
        </section>    
+       <section xml:id="trouble.client.longpauseswithcompression">
+            <title>Long Client Pauses With Compression</title>
+            <para>This is a fairly frequent question on the HBase dist-list.  The scenario is that a client is typically inserting a lot of data into a 
+            relatively un-optimized HBase cluster.  Compression can exacerbate the pauses, although it is not the source of the problem.</para>
+            <para>See <xref linkend="precreate.regions"/> on the pattern for pre-creating regions and confirm that the table isn't starting with a single region.</para>
+            <para>See <xref linkend="perf.configurations"/> for cluster configuration, particularly <code>hbase.hstore.blockingStoreFiles</code>, <code>hbase.hregion.memstore.block.multiplier</code>, 
+            <code>MAX_FILESIZE</code> (region size), and <code>MEMSTORE_FLUSHSIZE.</code>  </para>
+            <para>A slightly longer explanation of why pauses can happen is as follows:  Puts are sometimes blocked on the MemStores which are blocked by the flusher thread which is blocked because there are 
+            too many files to compact because the compactor is given too many small files to compact and has to compact the same data repeatedly.  This situation can occur even with minor compactions.
+            Compounding this situation, HBase doesn't compress data in memory.  Thus, the 64MB that lives in the MemStore could become a 6MB file after compression - which results in a smaller StoreFile.  The upside is that
+            more data is packed into the same region, but performance is achieved by being able to write larger files - which is why HBase waits until the flushize before writing a new StoreFile.  And smaller StoreFiles
+            become targets for compaction.  Without compression the files are much bigger and don't need as much compaction, however this is at the expense of I/O.   
+            </para>
+            
+       </section>    
 
     </section>    
     <section xml:id="trouble.rs">
@@ -585,6 +600,12 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
            If this is happening during an upload which only happens once (like initially loading all your data into HBase), consider bulk loading.
            </para>
            See <xref linkend="trouble.zookeeper.general"/> for other general information about ZooKeeper troubleshooting.
+        </section>
+        <section xml:id="trouble.rs.runtime.notservingregion">
+           <title>NotServingRegionException</title>
+           <para>This exception is "normal" when found in the RegionServer logs at DEBUG level.  This exception is returned back to the client
+           and then the client goes back to .META. to find the new location of the moved region.</para>
+           <para>However, if the NotServingRegionException is logged ERROR, then the client ran out of retries and something probably wrong.</para>
         </section>
 
       </section>    
