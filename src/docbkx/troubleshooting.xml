@@ -458,7 +458,18 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
             
        </section>    
 
-    </section>    
+    </section>
+    <section xml:id="trouble.namenode">
+      <title>NameNode</title>
+       <section xml:id="trouble.namenode.disk">
+            <title>HDFS Utilization of Tables and Regions</title>
+            <para>To determine how much space HBase is using on HDFS use the <code>hadoop</code> shell commands from the NameNode.  For example... </para>
+            <para><programlisting>hadoop fs -dus /hbase/</programlisting> ...returns the summarized disk utilization for all HBase objects.  </para>
+            <para><programlisting>hadoop fs -dus /hbase/myTable</programlisting> ...returns the summarized disk utilization for the HBase table 'myTable'. </para>
+            <para><programlisting>hadoop fs -du /hbase/myTable</programlisting> ...returns a list of the regions under the HBase table 'myTable' and their disk utilization. </para>
+       </section>    
+     </section>
+        
     <section xml:id="trouble.rs">
       <title>RegionServer</title>
       <section xml:id="trouble.rs.startup">
