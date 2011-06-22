@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -112,7 +112,10 @@ class YarnChild {
       JvmTask myTask = null;;
       // poll for new task
       for (int idle = 0; null == myTask; ++idle) {
-        SECONDS.sleep(Math.min(idle * 500, 1500));
+        long sleepTimeMilliSecs = Math.min(idle * 500, 1500);
+        LOG.info("Sleeping for " + sleepTimeMilliSecs
+            + "ms before retrying again. Got null now.");
+        MILLISECONDS.sleep(sleepTimeMilliSecs);
         myTask = umbilical.getTask(context);
       }
       if (myTask.shouldDie()) {

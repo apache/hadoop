@@ -29,13 +29,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
@@ -167,9 +166,6 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     launchCommandObjs.put(containerId, shExec);
     // DEBUG
     LOG.info("launchContainer: " + Arrays.toString(commandArray));
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("launchContainer: " + Arrays.toString(commandArray));
-    }
     String output = shExec.getOutput();
     try {
       shExec.execute();

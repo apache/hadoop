@@ -5,6 +5,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    Fix for NPE in YarnChild that was causing lots of tasks to fail. (vinodkv)
+
     Fix for ConcurrentModification exception while iterating through tokens in
     a UGI in ContainerLauncherImpl. (ddas)
 

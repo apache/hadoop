@@ -202,13 +202,13 @@ public class ContainerLauncherImpl extends AbstractService implements
           ContainerLaunchContext containerLaunchContext =
               launchEv.getContainer();
 
-          // TODO: Make sure that child's mapred-local-dir is set correctly.
-
           // Now launch the actual container
           StartContainerRequest startRequest = recordFactory
               .newRecordInstance(StartContainerRequest.class);
           startRequest.setContainerLaunchContext(containerLaunchContext);
           proxy.startContainer(startRequest);
+
+          LOG.info("Returning from container-launch for " + taskAttemptID);
 
           // after launching, send launched event to task attempt to move
           // it from ASSIGNED to RUNNING state

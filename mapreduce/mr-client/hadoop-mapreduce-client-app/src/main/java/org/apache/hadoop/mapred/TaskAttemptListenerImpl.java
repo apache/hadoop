@@ -402,7 +402,7 @@ public class TaskAttemptListenerImpl extends CompositeService
       
       return jvmTask;
     }
-    return new JvmTask(null, false);
+    return null;
   }
 
   @Override
