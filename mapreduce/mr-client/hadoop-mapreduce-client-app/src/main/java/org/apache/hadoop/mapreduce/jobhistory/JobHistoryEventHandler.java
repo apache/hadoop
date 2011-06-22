@@ -385,7 +385,7 @@ public class JobHistoryEventHandler extends AbstractService
       try {
         HistoryEvent historyEvent = event.getHistoryEvent();
         mi.writeEvent(historyEvent);
-        processEventForJobSummary(event.getHistoryEvent(), mi.getJobSummary());
+        processEventForJobSummary(event.getHistoryEvent(), mi.getJobSummary(), event.getJobID());
         LOG.info("In HistoryEventHandler "
             + event.getHistoryEvent().getEventType());
       } catch (IOException e) {
@@ -427,7 +427,7 @@ public class JobHistoryEventHandler extends AbstractService
     }
   }
 
-  private void processEventForJobSummary(HistoryEvent event, JobSummary summary) {
+  private void processEventForJobSummary(HistoryEvent event, JobSummary summary, JobId jobId) {
     // context.getJob could be used for some of this info as well.
     switch (event.getEventType()) {
     case JOB_SUBMITTED:
@@ -467,9 +467,10 @@ public class JobHistoryEventHandler extends AbstractService
     case JOB_KILLED:
       JobUnsuccessfulCompletionEvent juce = (JobUnsuccessfulCompletionEvent) event;
       summary.setJobStatus(juce.getStatus());
+      summary.setNumFinishedMaps(context.getJob(jobId).getTotalMaps());
+      summary.setNumFinishedReduces(context.getJob(jobId).getTotalReduces());
+      summary.setJobFinishTime(juce.getFinishTime());
       break;
-    // TODO Verify: MRV2 + MRV1. A JOB_FINISHED event will always come in after
-    // this. Stats on taskCounts can be set via that.
     }
   }
 

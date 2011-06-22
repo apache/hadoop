@@ -41,6 +41,7 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDiagnosticsRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetJobReportRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskAttemptCompletionEventsRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskReportsRequest;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillJobRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillTaskAttemptRequest;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -467,5 +468,39 @@ public class ClientServiceDelegate {
       }
     }
     return true;
+  }
+  
+  public boolean killJob(JobID oldJobID)
+  throws YarnRemoteException {
+    org.apache.hadoop.mapreduce.v2.api.records.JobId jobId 
+    = TypeConverter.toYarn(oldJobID);
+    KillJobRequest killRequest = recordFactory.newRecordInstance(KillJobRequest.class);
+    MRClientProtocol protocol = getProxy(oldJobID);
+    if (protocol == null) {
+      return false;
+    }
+    try {
+      killRequest.setJobId(jobId);
+      protocol.killJob(killRequest);
+      return true;
+    } catch(YarnRemoteException yre) {//thrown by remote server, no need to redirect
+      LOG.warn(RPCUtil.toString(yre));
+      throw yre;
+    } catch(Exception e) {
+      // Not really requied - if this is always the history context.
+      LOG.debug("Failed to contact application master ", e);
+      MRClientProtocol proxy = getRefreshedProxy(oldJobID);
+      if (proxy == null) {
+        return false;
+      }
+      try {
+        killRequest.setJobId(jobId);
+        protocol.killJob(killRequest);
+        return true;
+      } catch(YarnRemoteException yre) {
+        LOG.warn(RPCUtil.toString(yre));
+        throw yre;
+      }
+    }
   }
 }

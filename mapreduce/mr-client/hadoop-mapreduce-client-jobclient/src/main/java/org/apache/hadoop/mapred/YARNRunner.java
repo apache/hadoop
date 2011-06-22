@@ -537,7 +537,9 @@ public class YARNRunner implements ClientProtocol {
 
   @Override
   public void killJob(JobID arg0) throws IOException, InterruptedException {
+    if (!clientServiceDelegate.killJob(arg0)) {
     resMgrDelegate.killApplication(TypeConverter.toYarn(arg0).getAppId());
+  }
   }
 
   @Override
