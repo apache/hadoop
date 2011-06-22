@@ -1384,9 +1384,19 @@ false
     <title>
     LZO
     </title>
-    <para>
-        See <xref linkend="lzo" /> above.
-    </para>
+      <para>Unfortunately, HBase cannot ship with LZO because of
+      the licensing issues; HBase is Apache-licensed, LZO is GPL.
+      Therefore LZO install is to be done post-HBase install.
+      See the <link xlink:href="http://wiki.apache.org/hadoop/UsingLzoCompression">Using LZO Compression</link>
+      wiki page for how to make LZO work with HBase.
+      </para>
+      <para>A common problem users run into when using LZO is that while initial
+      setup of the cluster runs smooth, a month goes by and some sysadmin goes to
+      add a machine to the cluster only they'll have forgotten to do the LZO
+      fixup on the new machine.  In versions since HBase 0.90.0, we should
+      fail in a way that makes it plain what the problem is, but maybe not. </para>
+      <para>See <xref linkend="hbase.regionserver.codecs" />
+      for a feature to help protect against failed LZO install.</para>
     </section>
 
     <section xml:id="gzip.compression">

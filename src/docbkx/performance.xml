@@ -92,8 +92,8 @@
 
     <section xml:id="perf.compression">
       <title>Compression</title>
-      <para>Production systems should use compression such as <xref linkend="lzo" /> compression with their column family
-      definitions.</para>
+      <para>Production systems should use compression with their column family definitions.  See <xref linkend="compression" /> for more information.
+      </para>
     </section>
 
     <section xml:id="perf.handlers">

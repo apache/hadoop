@@ -508,7 +508,7 @@ java.lang.UnsatisfiedLinkError: no gplcompression in java.library.path
         at java.lang.Runtime.loadLibrary0(Runtime.java:823)
         at java.lang.System.loadLibrary(System.java:1028)
             </programlisting>
-            .. then there is a path issue with the compression libraries.  See the Configuration section on <link linkend="lzo">LZO compression configuration</link>.
+            .. then there is a path issue with the compression libraries.  See the Configuration section on <link linkend="lzo.compression">LZO compression configuration</link>.
             </para>
           </section> 
       </section>    

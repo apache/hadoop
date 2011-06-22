@@ -175,28 +175,12 @@ to ensure well-formedness of your document after an edit session.
 
       </section>
 
-      <section xml:id="lzo">
-      <title>LZO compression<indexterm><primary>LZO</primary></indexterm></title>
-      <para>You should consider enabling LZO compression.  Its
-      near-frictionless and in most all cases boosts performance.
+      <section xml:id="config.compression">
+      <title>Compression</title>
+      <para>You should consider enabling ColumnFamily compression.  There are several options that are near-frictionless and in most all cases boost
+      performance by reducing the size of StoreFiles and thus reducing I/O.
       </para>
-      <para>Unfortunately, HBase cannot ship with LZO because of
-      the licensing issues; HBase is Apache-licensed, LZO is GPL.
-      Therefore LZO install is to be done post-HBase install.
-      See the <link xlink:href="http://wiki.apache.org/hadoop/UsingLzoCompression">Using LZO Compression</link>
-      wiki page for how to make LZO work with HBase.
-      </para>
-      <para>A common problem users run into when using LZO is that while initial
-      setup of the cluster runs smooth, a month goes by and some sysadmin goes to
-      add a machine to the cluster only they'll have forgotten to do the LZO
-      fixup on the new machine.  In versions since HBase 0.90.0, we should
-      fail in a way that makes it plain what the problem is, but maybe not.
-      Remember you read this paragraph<footnote><para>See
-              <xref linkend="hbase.regionserver.codecs" />
-      for a feature to help protect against failed LZO install</para></footnote>.
-      </para>
-      <para>See also <xref linkend="compression" />
-      at the tail of this book.</para>
+      <para>See <xref linkend="compression" /> for more information.</para>
       </section>
       <section xml:id="bigger.regions">
       <title>Bigger Regions</title>
