@@ -149,6 +149,24 @@ throws InterruptedException, IOException {
   <para>HBase schemas can be created or updated with <xref linkend="shell" />
       or by using <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html">HBaseAdmin</link> in the Java API.
       </para>
+      <para>Tables must be disabled when making ColumnFamily modifications, for example..
+      <programlisting>
+Configuration config = HBaseConfiguration.create();  
+HBaseAdmin admin = new HBaseAdmin(conf);    
+String table = "myTable";
+
+admin.disableTable(table);           
+
+HColumnDescriptor cf1 = ...;
+admin.addColumn(table, cf1  );      // adding new ColumnFamily
+HColumnDescriptor cf2 = ...;
+admin.modifyColumn(table, cf2 );    // modifying existing ColumnFamily
+
+admin.enableTable(table);                
+      </programlisting>
+      </para>See <xref linkend="client_dependencies"/> for more information about configuring client connections.
+      <para>
+      </para>
   </section>   
   <section xml:id="number.of.cfs">
   <title>
