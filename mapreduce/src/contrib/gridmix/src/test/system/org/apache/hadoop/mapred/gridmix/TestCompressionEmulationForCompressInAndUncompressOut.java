@@ -56,6 +56,7 @@ public class TestCompressionEmulationForCompressInAndUncompressOut
 
     final String [] otherArgs = {
         "-D", GridMixConfig.GRIDMIX_DISTCACHE_ENABLE + "=false",
+        "-D", GridmixJob.GRIDMIX_HIGHRAM_EMULATION_ENABLE + "=false",
         "-D", GridMixConfig.GRIDMIX_COMPRESSION_ENABLE + "=true"
     };
 
@@ -85,6 +86,7 @@ public class TestCompressionEmulationForCompressInAndUncompressOut
         "-D", GridMixConfig.GRIDMIX_DISTCACHE_ENABLE + "=false",
         "-D", GridMixConfig.GRIDMIX_COMPRESSION_ENABLE + "=true",
         "-D", GridMixConfig.GRIDMIX_INPUT_DECOMPRESS_ENABLE + "=true",
+        "-D", GridmixJob.GRIDMIX_HIGHRAM_EMULATION_ENABLE + "=false",
         "-D", GridMixConfig.GRIDMIX_INPUT_COMPRESS_RATIO + "=0.58",
         "-D", GridMixConfig.GRIDMIX_INTERMEDIATE_COMPRESSION_RATIO + "=0.42"
     };

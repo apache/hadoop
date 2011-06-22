@@ -60,6 +60,7 @@ public class TestEmulationOfHDFSDCFilesWithDifferentVisibilities
 
     final String [] otherArgs = { 
         "-D", MRJobConfig.JOB_CANCEL_DELEGATION_TOKEN + "=false",
+        "-D", GridmixJob.GRIDMIX_HIGHRAM_EMULATION_ENABLE + "=false",
         "-D", GridMixConfig.GRIDMIX_DISTCACHE_ENABLE +  "=true"
     };
     runGridmixAndVerify(runtimeValues, otherArgs, tracePath, 
@@ -81,6 +82,7 @@ public class TestEmulationOfHDFSDCFilesWithDifferentVisibilities
                                      "REPLAY",
                                      tracePath};
     final String [] otherArgs = {
+        "-D", GridmixJob.GRIDMIX_HIGHRAM_EMULATION_ENABLE + "=false",
         "-D", GridMixConfig.GRIDMIX_DISTCACHE_ENABLE + "=false"
     };
     runGridmixAndVerify(runtimeValues, otherArgs, tracePath, 

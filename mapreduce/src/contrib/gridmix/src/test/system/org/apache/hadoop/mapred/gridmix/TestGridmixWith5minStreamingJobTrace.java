@@ -56,6 +56,7 @@ public class TestGridmixWith5minStreamingJobTrace
         "-D", GridMixConfig.GRIDMIX_KEY_FRC + "=0.5f",
         "-D", GridMixConfig.GRIDMIX_BYTES_PER_FILE + "=" + bytesPerFile,
         "-D", GridMixConfig.GRIDMIX_DISTCACHE_ENABLE + "=false",
+        "-D", GridmixJob.GRIDMIX_HIGHRAM_EMULATION_ENABLE + "=false",
         "-D", GridMixConfig.GRIDMIX_COMPRESSION_ENABLE + "=false"
     };
 

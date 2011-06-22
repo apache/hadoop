@@ -186,6 +186,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    MAPREDUCE-2603. Disable High-Ram emulation in system tests. 
+    (Vinay Kumar Thota via amarrk)
+
     MAPREDUCE-2539. Fixed NPE in getMapTaskReports in JobClient. (Robert Evans via
     acmurthy) 
 

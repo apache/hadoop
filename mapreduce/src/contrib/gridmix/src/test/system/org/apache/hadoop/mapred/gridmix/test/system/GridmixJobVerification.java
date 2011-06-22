@@ -316,7 +316,9 @@ public class GridmixJobVerification {
       Path jhpath = new Path(historyFilePath);
       fs = jhpath.getFileSystem(conf);
       fs.copyToLocalFile(jhpath,new Path(tmpJHFolder.toString()));
-      fs.copyToLocalFile(new Path(historyFilePath + "_conf.xml"), 
+      String historyPath =
+          historyFilePath.substring(0,historyFilePath.lastIndexOf("_"));
+      fs.copyToLocalFile(new Path(historyPath + "_conf.xml"), 
                          new Path(tmpJHFolder.toString()));
       JobConf jobConf = new JobConf();
       jobConf.addResource(new Path(tmpJHFolder.toString() 

@@ -56,6 +56,7 @@ public class TestGridmixWith2minStreamingJobTrace
         "-D", GridMixConfig.GRIDMIX_JOB_SUBMISSION_QUEUE_IN_TRACE + "=true",
         "-D", GridMixConfig.GRIDMIX_MINIMUM_FILE_SIZE + "=" + minFileSize,
         "-D", GridMixConfig.GRIDMIX_DISTCACHE_ENABLE + "=false",
+        "-D", GridmixJob.GRIDMIX_HIGHRAM_EMULATION_ENABLE + "=false",
         "-D", GridMixConfig.GRIDMIX_COMPRESSION_ENABLE + "=false"
     };
     runGridmixAndVerify(runtimeValues, otherArgs, tracePath);

@@ -51,6 +51,7 @@ public class TestGridmixWith5minTrace extends GridmixSystemTestCase {
     String [] otherArgs = {
         "-D", GridMixConfig.GRIDMIX_DISTCACHE_ENABLE + "=false",
         "-D", GridMixConfig.GRIDMIX_COMPRESSION_ENABLE + "=false",
+        "-D", GridmixJob.GRIDMIX_HIGHRAM_EMULATION_ENABLE + "=false",
         "-D", GridMixConfig.GRIDMIX_MINIMUM_FILE_SIZE + "=" + minFileSize
     };
 

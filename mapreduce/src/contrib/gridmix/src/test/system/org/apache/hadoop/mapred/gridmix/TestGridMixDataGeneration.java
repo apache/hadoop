@@ -93,6 +93,7 @@ public class TestGridMixDataGeneration {
 
     String [] otherArgs = {
         "-D", GridMixConfig.GRIDMIX_DISTCACHE_ENABLE + "=false", 
+        "-D", GridmixJob.GRIDMIX_HIGHRAM_EMULATION_ENABLE + "=false",
         "-D", GridMixConfig.GRIDMIX_COMPRESSION_ENABLE + "=false"
     };
     int exitCode = 
@@ -123,6 +124,7 @@ public class TestGridMixDataGeneration {
     
     String [] otherArgs = {
         "-D", GridMixConfig.GRIDMIX_DISTCACHE_ENABLE + "=false", 
+        "-D", GridmixJob.GRIDMIX_HIGHRAM_EMULATION_ENABLE + "=false",
         "-D", GridMixConfig.GRIDMIX_COMPRESSION_ENABLE + "=false"
     };
 
@@ -154,6 +156,7 @@ public class TestGridMixDataGeneration {
     long bytesPerFile = 200  * 1024 * 1024; // 200 mb per file of data
     String [] otherArgs = {
         "-D", GridMixConfig.GRIDMIX_BYTES_PER_FILE + "=" + bytesPerFile, 
+        "-D", GridmixJob.GRIDMIX_HIGHRAM_EMULATION_ENABLE + "=false",
         "-D", GridMixConfig.GRIDMIX_DISTCACHE_ENABLE + "=false", 
         "-D", GridMixConfig.GRIDMIX_COMPRESSION_ENABLE + "=false"
     };

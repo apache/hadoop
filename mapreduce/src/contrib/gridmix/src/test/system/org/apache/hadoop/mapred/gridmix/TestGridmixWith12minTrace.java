@@ -51,6 +51,7 @@ public class TestGridmixWith12minTrace extends GridmixSystemTestCase {
     String [] otherArgs = {
         "-D", GridMixConfig.GRIDMIX_DISTCACHE_ENABLE + "=false",
         "-D", GridMixConfig.GRIDMIX_COMPRESSION_ENABLE + "=false",
+        "-D", GridmixJob.GRIDMIX_HIGHRAM_EMULATION_ENABLE + "=false",
         "-D", GridMixConfig.GRIDMIX_SLEEP_MAP_MAX_TIME + "=10",
         "-D", GridMixConfig.GRIDMIX_SLEEP_REDUCE_MAX_TIME + "=5"
     };

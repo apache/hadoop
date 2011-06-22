@@ -57,6 +57,7 @@ public class TestEmulationOfLocalFSDCFiles extends GridmixSystemTestCase {
     final String [] otherArgs = {
        "-D", MRJobConfig.JOB_CANCEL_DELEGATION_TOKEN + "=false",
        "-D", GridMixConfig.GRIDMIX_DISTCACHE_ENABLE + "=true",
+       "-D", GridmixJob.GRIDMIX_HIGHRAM_EMULATION_ENABLE + "=false",
        "-D", GridMixConfig.GRIDMIX_COMPRESSION_ENABLE + "=false"
     };
     runGridmixAndVerify(runtimeValues, otherArgs, tracePath, 
@@ -83,6 +84,7 @@ public class TestEmulationOfLocalFSDCFiles extends GridmixSystemTestCase {
     final String [] otherArgs = {
        "-D", MRJobConfig.JOB_CANCEL_DELEGATION_TOKEN + "=false",
       "-D", GridMixConfig.GRIDMIX_DISTCACHE_ENABLE + "=true",
+      "-D", GridmixJob.GRIDMIX_HIGHRAM_EMULATION_ENABLE + "=false",
       "-D", GridMixConfig.GRIDMIX_COMPRESSION_ENABLE + "=false"
     };
     runGridmixAndVerify(runtimeValues, otherArgs, tracePath, 
