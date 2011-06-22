@@ -536,7 +536,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       containersAllocated += allocatedContainers.size();
       while (it.hasNext()) {
         Container allocated = it.next();
-        LOG.info("Assiging container " + allocated);
+        LOG.info("Assigning container " + allocated);
         ContainerRequest assigned = assign(allocated);
           
         if (assigned != null) {

@@ -5,6 +5,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    Fix for ConcurrentModification exception while iterating through tokens in
+    a UGI in ContainerLauncherImpl. (ddas)
+
     MAPREDUCE-2611. Fix counters, finish times etc. in job history.
     (Siddharth Seth via llu)
 
