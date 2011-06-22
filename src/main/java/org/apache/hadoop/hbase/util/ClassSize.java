@@ -185,45 +185,46 @@ public class ClassSize {
     int arrays = 0;
     //The number of references that a new object takes
     int references = nrOfRefsPerObj;
+    int index = 0;
 
     for ( ; null != cl; cl = cl.getSuperclass()) {
       Field[] field = cl.getDeclaredFields();
       if (null != field) {
         for (Field aField : field) {
-          if (!Modifier.isStatic(aField.getModifiers())) {
-            Class fieldClass = aField.getType();
-            if (fieldClass.isArray()) {
-              arrays++;
-              references++;
-            } else if (!fieldClass.isPrimitive()) {
-              references++;
-            } else {// Is simple primitive
-              String name = fieldClass.getName();
+          if (Modifier.isStatic(aField.getModifiers())) continue;
+          Class fieldClass = aField.getType();
+          if (fieldClass.isArray()) {
+            arrays++;
+            references++;
+          } else if (!fieldClass.isPrimitive()) {
+            references++;
+          } else {// Is simple primitive
+            String name = fieldClass.getName();
 
-              if (name.equals("int") || name.equals("I"))
-                primitives += Bytes.SIZEOF_INT;
-              else if (name.equals("long") || name.equals("J"))
-                primitives += Bytes.SIZEOF_LONG;
-              else if (name.equals("boolean") || name.equals("Z"))
-                primitives += Bytes.SIZEOF_BOOLEAN;
-              else if (name.equals("short") || name.equals("S"))
-                primitives += Bytes.SIZEOF_SHORT;
-              else if (name.equals("byte") || name.equals("B"))
-                primitives += Bytes.SIZEOF_BYTE;
-              else if (name.equals("char") || name.equals("C"))
-                primitives += Bytes.SIZEOF_CHAR;
-              else if (name.equals("float") || name.equals("F"))
-                primitives += Bytes.SIZEOF_FLOAT;
-              else if (name.equals("double") || name.equals("D"))
-                primitives += Bytes.SIZEOF_DOUBLE;
-            }
-            if (debug) {
-              if (LOG.isDebugEnabled()) {
-                // Write out region name as string and its encoded name.
-                LOG.debug(aField.getName() + "\n\t" + aField.getType());
-              }
+            if (name.equals("int") || name.equals("I"))
+              primitives += Bytes.SIZEOF_INT;
+            else if (name.equals("long") || name.equals("J"))
+              primitives += Bytes.SIZEOF_LONG;
+            else if (name.equals("boolean") || name.equals("Z"))
+              primitives += Bytes.SIZEOF_BOOLEAN;
+            else if (name.equals("short") || name.equals("S"))
+              primitives += Bytes.SIZEOF_SHORT;
+            else if (name.equals("byte") || name.equals("B"))
+              primitives += Bytes.SIZEOF_BYTE;
+            else if (name.equals("char") || name.equals("C"))
+              primitives += Bytes.SIZEOF_CHAR;
+            else if (name.equals("float") || name.equals("F"))
+              primitives += Bytes.SIZEOF_FLOAT;
+            else if (name.equals("double") || name.equals("D"))
+              primitives += Bytes.SIZEOF_DOUBLE;
+          }
+          if (debug) {
+            if (LOG.isDebugEnabled()) {
+              // Write out region name as string and its encoded name.
+              LOG.debug("" + index + " " + aField.getName() + " " + aField.getType());
             }
           }
+          index++;
         }
       }
     }
@@ -240,17 +241,17 @@ public class ClassSize {
    * @return the size estimate, in bytes
    */
   private static long estimateBaseFromCoefficients(int [] coeff, boolean debug) {
-    long size = coeff[0] + align(coeff[1]*ARRAY) + coeff[2]*REFERENCE;
+    long prealign_size = coeff[0] + align(coeff[1] * ARRAY) + coeff[2] * REFERENCE;
 
     // Round up to a multiple of 8
-    size = align(size);
+    long size = align(prealign_size);
     if(debug) {
       if (LOG.isDebugEnabled()) {
         // Write out region name as string and its encoded name.
-        LOG.debug("Primitives " + coeff[0] + ", arrays " + coeff[1] +
+        LOG.debug("Primitives=" + coeff[0] + ", arrays=" + coeff[1] +
             ", references(includes " + nrOfRefsPerObj +
-            " for object overhead) " + coeff[2] + ", refSize " + REFERENCE +
-            ", size " + size);
+            " for object overhead)=" + coeff[2] + ", refSize " + REFERENCE +
+            ", size=" + size + ", prealign_size=" + prealign_size);
       }
     }
     return size;
@@ -291,6 +292,5 @@ public class ClassSize {
     //stored and sent together
     return  ((num + 7) >> 3) << 3;
   }
-
 }
 

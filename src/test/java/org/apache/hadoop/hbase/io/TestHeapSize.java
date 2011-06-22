@@ -304,7 +304,7 @@ public class TestHeapSize extends TestCase {
     cl = HRegion.class;
     actual = HRegion.FIXED_OVERHEAD;
     expected = ClassSize.estimateBase(cl, false);
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
@@ -315,7 +315,5 @@ public class TestHeapSize extends TestCase {
     // accounted for.  But we have satisfied our two core requirements.
     // Sizing is quite accurate now, and our tests will throw errors if
     // any of these classes are modified without updating overhead sizes.
-
   }
-
 }
