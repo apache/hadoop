@@ -36,8 +36,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.junit.Test;
@@ -96,7 +94,9 @@ public class TestMergeTable {
     byte [] row_70001 = Bytes.toBytes("row_70001");
     byte [] row_80001 = Bytes.toBytes("row_80001");
 
-    // Create regions and populate them at same time.
+    // Create regions and populate them at same time.  Create the tabledir
+    // for them first.
+    FSUtils.createTableDescriptor(fs, rootdir, desc);
     HRegion [] regions = {
       createRegion(desc, null, row_70001, 1, 70000, rootdir),
       createRegion(desc, row_70001, row_80001, 70001, 10000, rootdir),

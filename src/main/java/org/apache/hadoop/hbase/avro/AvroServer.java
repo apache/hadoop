@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.avro.generated.AClusterStatus;
 import org.apache.hadoop.hbase.avro.generated.ADelete;
 import org.apache.hadoop.hbase.avro.generated.AFamilyDescriptor;
@@ -190,6 +191,8 @@ public class AvroServer {
     public ATableDescriptor describeTable(ByteBuffer table) throws AIOError {
       try {
 	return AvroUtil.htdToATD(admin.getTableDescriptor(Bytes.toBytes(table)));
+      } catch (TableNotFoundException e) {
+        return null;
       } catch (IOException e) {
         AIOError ioe = new AIOError();
         ioe.message = new Utf8(e.getMessage());

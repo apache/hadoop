@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
@@ -194,10 +195,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    * Method for getting the tableDescriptor
    * @param tableName as a byte []
    * @return the tableDescriptor
+   * @throws TableNotFoundException
    * @throws IOException if a remote or network exception occurs
    */
   public HTableDescriptor getTableDescriptor(final byte [] tableName)
-  throws IOException {
+  throws TableNotFoundException, IOException {
     return this.connection.getHTableDescriptor(tableName);
   }
 
