@@ -271,6 +271,7 @@ Release 0.91.0 - Unreleased
    HBASE-4011  New MasterObserver hook: post startup of active master
    HBASE-3994  SplitTransaction has a window where clients can
                get RegionOfflineException
+   HBASE-4010  HMaster.createTable could be heavily optimized
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
