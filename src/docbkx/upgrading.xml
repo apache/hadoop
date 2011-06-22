@@ -9,7 +9,7 @@
       xmlns:db="http://docbook.org/ns/docbook">
     <title>Upgrading</title>
     <para>
-        Review <xref linkend="requirements" />, in particular the section on Hadoop version.
+        Review <xref linkend="configuration" />, in particular the section on Hadoop version.
     </para>
     <section xml:id="upgrade0.90">
     <title>Upgrading to HBase 0.90.x from 0.20.x or 0.89.x</title>
