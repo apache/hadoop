@@ -87,7 +87,7 @@ public class TestFSTableDescriptors {
       @Override
       public HTableDescriptor get(byte[] tablename)
           throws TableExistsException, FileNotFoundException, IOException {
-        System.out.println(Bytes.toString(tablename));
+        System.out.println(Bytes.toString(tablename) + ", cachehits=" + this.cachehits);
         return super.get(tablename);
       }
     };
@@ -103,7 +103,7 @@ public class TestFSTableDescriptors {
       htd.addFamily(new HColumnDescriptor("" + i));
       FSUtils.updateHTableDescriptor(fs, rootdir, htd);
     }
-    Thread.sleep(1000);
+    Thread.sleep(2000);
     for (int i = 0; i < count; i++) {
       assertTrue(htds.get(Bytes.toBytes(name + i)) !=  null);
     }
