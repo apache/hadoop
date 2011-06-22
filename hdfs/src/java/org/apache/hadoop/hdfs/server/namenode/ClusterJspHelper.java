@@ -17,8 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -27,13 +31,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import javax.management.JMX;
-import javax.management.MBeanServerConnection;
 import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
-import javax.management.remote.JMXConnector;
-import javax.management.remote.JMXConnectorFactory;
-import javax.management.remote.JMXServiceURL;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,24 +41,27 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.util.StringUtils;
+import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
 import org.znerd.xmlenc.XMLOutputter;
 
 /**
  * This class generates the data that is needed to be displayed on cluster web 
- * console by connecting to each namenode through JMX.
+ * console.
  */
 @InterfaceAudience.Private
 class ClusterJspHelper {
   private static final Log LOG = LogFactory.getLog(ClusterJspHelper.class);
   public static final String OVERALL_STATUS = "overall-status";
   public static final String DEAD = "Dead";
+  private static final String JMX_QRY = 
+    "/jmx?qry=Hadoop:service=NameNode,name=NameNodeInfo";
   
   /**
    * JSP helper function that generates cluster health report.  When 
    * encountering exception while getting Namenode status, the exception will 
-   * be listed in the page with corresponding stack trace.
+   * be listed on the page with corresponding stack trace.
    */
   ClusterStatus generateClusterHealthReport() {
     ClusterStatus cs = new ClusterStatus();
@@ -79,26 +80,24 @@ class ClusterJspHelper {
       NamenodeMXBeanHelper nnHelper = null;
       try {
         nnHelper = new NamenodeMXBeanHelper(isa, conf);
-        NamenodeStatus nn = nnHelper.getNamenodeStatus();
+        String mbeanProps= queryMbean(nnHelper.httpAddress, conf);
+        NamenodeStatus nn = nnHelper.getNamenodeStatus(mbeanProps);
         if (cs.clusterid.isEmpty() || cs.clusterid.equals("")) { // Set clusterid only once
-          cs.clusterid = nnHelper.getClusterId();
+          cs.clusterid = nnHelper.getClusterId(mbeanProps);
         }
         cs.addNamenodeStatus(nn);
       } catch ( Exception e ) {
         // track exceptions encountered when connecting to namenodes
         cs.addException(isa.getHostName(), e);
         continue;
-      } finally {
-        if (nnHelper != null) {
-          nnHelper.cleanup();
-        }
-      }
+      } 
     }
     return cs;
   }
 
   /**
-   * Helper function that generates the decommissioning report.
+   * Helper function that generates the decommissioning report.  Connect to each
+   * Namenode over http via JmxJsonServlet to collect the data nodes status.
    */
   DecommissionStatus generateDecommissioningReport() {
     String clusterid = "";
@@ -127,21 +126,18 @@ class ClusterJspHelper {
       NamenodeMXBeanHelper nnHelper = null;
       try {
         nnHelper = new NamenodeMXBeanHelper(isa, conf);
+        String mbeanProps= queryMbean(nnHelper.httpAddress, conf);
         if (clusterid.equals("")) {
-          clusterid = nnHelper.getClusterId();
+          clusterid = nnHelper.getClusterId(mbeanProps);
         }
-        nnHelper.getDecomNodeInfoForReport(statusMap);
+        nnHelper.getDecomNodeInfoForReport(statusMap, mbeanProps);
       } catch (Exception e) {
         // catch exceptions encountered while connecting to namenodes
         String nnHost = isa.getHostName();
         decommissionExceptions.put(nnHost, e);
         unreportedNamenode.add(nnHost);
         continue;
-      } finally {
-        if (nnHelper != null) {
-          nnHelper.cleanup();
-        }
-      }
+      } 
     }
     updateUnknownStatus(statusMap, unreportedNamenode);
     getDecommissionNodeClusterState(statusMap);
@@ -260,40 +256,20 @@ class ClusterJspHelper {
     }
     return Integer.parseInt(address.split(":")[1]);
   }
-
+  
   /**
-   * Class for connecting to Namenode over JMX and get attributes
-   * exposed by the MXBean.
+   * Class for connecting to Namenode over http via JmxJsonServlet 
+   * to get JMX attributes exposed by the MXBean.  
    */
   static class NamenodeMXBeanHelper {
     private static final ObjectMapper mapper = new ObjectMapper();
-    private final InetSocketAddress rpcAddress;
     private final String host;
-    private final Configuration conf;
-    private final JMXConnector connector;
-    private final NameNodeMXBean mxbeanProxy;
+    private final String httpAddress;
     
     NamenodeMXBeanHelper(InetSocketAddress addr, Configuration conf)
         throws IOException, MalformedObjectNameException {
-      this.rpcAddress = addr;
       this.host = addr.getHostName();
-      this.conf = conf;
-      int port = conf.getInt("dfs.namenode.jmxport", -1);
-      
-      JMXServiceURL jmxURL = new JMXServiceURL("service:jmx:rmi:///jndi/rmi://"
-          + host + ":" + port + "/jmxrmi");
-      connector = JMXConnectorFactory.connect(jmxURL);
-      mxbeanProxy = getNamenodeMxBean();
-    }
-    
-    private NameNodeMXBean getNamenodeMxBean()
-        throws IOException, MalformedObjectNameException {
-      // Get an MBeanServerConnection on the remote VM.
-      MBeanServerConnection remote = connector.getMBeanServerConnection();
-      ObjectName mxbeanName = new ObjectName(
-          "Hadoop:service=NameNode,name=NameNodeInfo");
-
-      return JMX.newMXBeanProxy(remote, mxbeanName, NameNodeMXBean.class);
+      this.httpAddress = DFSUtil.getInfoServer(addr, conf, false);
     }
     
     /** Get the map corresponding to the JSON string */
@@ -305,10 +281,9 @@ class ClusterJspHelper {
     }
     
     /**
-     * Process JSON string returned from JMX connection to get the number of
-     * live datanodes.
+     * Get the number of live datanodes.
      * 
-     * @param json JSON output from JMX call that contains live node status.
+     * @param json JSON string that contains live node status.
      * @param nn namenode status to return information in
      */
     private static void getLiveNodeCount(String json, NamenodeStatus nn)
@@ -333,11 +308,10 @@ class ClusterJspHelper {
     }
   
     /**
-     * Count the number of dead datanode based on the JSON string returned from
-     * JMX call.
+     * Count the number of dead datanode.
      * 
      * @param nn namenode
-     * @param json JSON string returned from JMX call
+     * @param json JSON string
      */
     private static void getDeadNodeCount(String json, NamenodeStatus nn)
         throws IOException {
@@ -358,51 +332,53 @@ class ClusterJspHelper {
       }
     }
   
-    public String getClusterId() {
-      return mxbeanProxy.getClusterId();
+    public String getClusterId(String props) throws IOException {
+      return getProperty(props, "ClusterId").getTextValue();
     }
     
-    public NamenodeStatus getNamenodeStatus()
-        throws IOException, MalformedObjectNameException {
+    public NamenodeStatus getNamenodeStatus(String props) throws IOException,
+        MalformedObjectNameException, NumberFormatException {
       NamenodeStatus nn = new NamenodeStatus();
       nn.host = host;
-      nn.filesAndDirectories = mxbeanProxy.getTotalFiles();
-      nn.capacity = mxbeanProxy.getTotal();
-      nn.free = mxbeanProxy.getFree();
-      nn.bpUsed = mxbeanProxy.getBlockPoolUsedSpace();
-      nn.nonDfsUsed = mxbeanProxy.getNonDfsUsedSpace();
-      nn.blocksCount = mxbeanProxy.getTotalBlocks();
-      nn.missingBlocksCount = mxbeanProxy.getNumberOfMissingBlocks();
-      nn.free = mxbeanProxy.getFree();
-      nn.httpAddress = DFSUtil.getInfoServer(rpcAddress, conf, false);
-      getLiveNodeCount(mxbeanProxy.getLiveNodes(), nn);
-      getDeadNodeCount(mxbeanProxy.getDeadNodes(), nn);
+      nn.filesAndDirectories = getProperty(props, "TotalFiles").getLongValue();
+      nn.capacity = getProperty(props, "Total").getLongValue();
+      nn.free = getProperty(props, "Free").getLongValue();
+      nn.bpUsed = getProperty(props, "BlockPoolUsedSpace").getLongValue();
+      nn.nonDfsUsed = getProperty(props, "NonDfsUsedSpace").getLongValue();
+      nn.blocksCount = getProperty(props, "TotalBlocks").getLongValue();
+      nn.missingBlocksCount = getProperty(props, "NumberOfMissingBlocks")
+          .getLongValue();
+      nn.httpAddress = httpAddress;
+      getLiveNodeCount(getProperty(props, "LiveNodes").getValueAsText(), nn);
+      getDeadNodeCount(getProperty(props, "DeadNodes").getValueAsText(), nn);
       return nn;
     }
     
     /**
-     * Connect to namenode to get decommission node information.
+     * Get the decommission node information.
      * @param statusMap data node status map
-     * @param connector JMXConnector
+     * @param props string
      */
     private void getDecomNodeInfoForReport(
-        Map<String, Map<String, String>> statusMap) throws IOException,
-        MalformedObjectNameException {
-      getLiveNodeStatus(statusMap, host, mxbeanProxy.getLiveNodes());
-      getDeadNodeStatus(statusMap, host, mxbeanProxy.getDeadNodes());
-      getDecommissionNodeStatus(statusMap, host, mxbeanProxy.getDecomNodes());
+        Map<String, Map<String, String>> statusMap, String props)
+        throws IOException, MalformedObjectNameException {
+      getLiveNodeStatus(statusMap, host, getProperty(props, "LiveNodes")
+          .getValueAsText());
+      getDeadNodeStatus(statusMap, host, getProperty(props, "DeadNodes")
+          .getValueAsText());
+      getDecommissionNodeStatus(statusMap, host,
+          getProperty(props, "DecomNodes").getValueAsText());
     }
   
     /**
-     * Process the JSON string returned from JMX call to get live datanode
-     * status. Store the information into datanode status map and
-     * Decommissionnode.
+     * Store the live datanode status information into datanode status map and
+     * DecommissionNode.
      * 
      * @param statusMap Map of datanode status. Key is datanode, value
      *          is an inner map whose key is namenode, value is datanode status.
      *          reported by each namenode.
      * @param namenodeHost host name of the namenode
-     * @param decomnode update Decommissionnode with alive node status
+     * @param decomnode update DecommissionNode with alive node status
      * @param json JSON string contains datanode status
      * @throws IOException
      */
@@ -434,15 +410,14 @@ class ClusterJspHelper {
     }
   
     /**
-     * Process the JSON string returned from JMX connection to get the dead
-     * datanode information. Store the information into datanode status map and
-     * Decommissionnode.
+     * Store the dead datanode information into datanode status map and
+     * DecommissionNode.
      * 
      * @param statusMap map with key being datanode, value being an
      *          inner map (key:namenode, value:decommisionning state).
      * @param host datanode hostname
-     * @param decomnode
-     * @param json
+     * @param decomnode DecommissionNode
+     * @param json String
      * @throws IOException
      */
     private static void getDeadNodeStatus(
@@ -478,14 +453,13 @@ class ClusterJspHelper {
     }
   
     /**
-     * We process the JSON string returned from JMX connection to get the
-     * decommisioning datanode information.
+     * Get the decommisioning datanode information.
      * 
      * @param dataNodeStatusMap map with key being datanode, value being an
      *          inner map (key:namenode, value:decommisionning state).
      * @param host datanode
-     * @param decomnode Decommissionnode
-     * @param json JSON string returned from JMX connection
+     * @param decomnode DecommissionNode
+     * @param json String
      */
     private static void getDecommissionNodeStatus(
         Map<String, Map<String, String>> dataNodeStatusMap, String host,
@@ -506,19 +480,6 @@ class ClusterJspHelper {
         nnStatus.put(host, AdminStates.DECOMMISSION_INPROGRESS.toString());
         // dn-nn-status
         dataNodeStatusMap.put(dn, nnStatus);
-      }
-    }
-  
-    
-    public void cleanup() {
-      if (connector != null) {
-        try {
-          connector.close();
-        } catch (Exception e) {
-          // log failure of close jmx connection
-          LOG.warn("Unable to close JMX connection. "
-              + StringUtils.stringifyException(e));
-        }
       }
     }
   }
@@ -892,5 +853,48 @@ class ClusterJspHelper {
     doc.endTag(); // item
     doc.endTag(); // message
     doc.endTag(); // cluster
+  }
+  
+  /**
+   * Read in the content from a URL
+   * @param url URL To read
+   * @return the text from the output
+   * @throws IOException if something went wrong
+   */
+  private static String readOutput(URL url) throws IOException {
+    StringBuilder out = new StringBuilder();
+    URLConnection connection = url.openConnection();
+    BufferedReader in = new BufferedReader(
+                            new InputStreamReader(
+                            connection.getInputStream()));
+    String inputLine;
+    while ((inputLine = in.readLine()) != null) {
+      out.append(inputLine);
+    }
+    in.close();
+    return out.toString();
+  }
+
+  private static String queryMbean(String httpAddress, Configuration conf) 
+    throws IOException {
+    URL url = new URL("http://"+httpAddress+JMX_QRY);
+    return readOutput(url);
+  }
+  /**
+   * In order to query a namenode mxbean, a http connection in the form of
+   * "http://hostname/jmx?qry=Hadoop:service=NameNode,name=NameNodeInfo"
+   * is sent to namenode.  JMX attributes are exposed via JmxJsonServelet on 
+   * the namenode side.
+   */
+  private static JsonNode getProperty(String props, String propertyname)
+  throws IOException {
+    if (props == null || props.equals("") || propertyname == null 
+        || propertyname.equals("")) {
+      return null;
+    }
+    ObjectMapper m = new ObjectMapper();
+    JsonNode rootNode = m.readValue(props, JsonNode.class);
+    JsonNode jn = rootNode.get("beans").get(0).get(propertyname);
+    return jn;
   }
 } 

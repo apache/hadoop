@@ -291,6 +291,8 @@ Trunk (unreleased changes)
     (todd)
 
     HDFS-2055. Add hflush support to libhdfs. (Travis Crawford via eli)
+   
+    HDFS-2083. Query JMX statistics over http via JMXJsonServlet. (tanping)
 
   IMPROVEMENTS
 
