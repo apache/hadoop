@@ -201,7 +201,10 @@ to ensure well-formedness of your document after an edit session.
         branch.  Michael Noll has written a detailed blog,
         <link xlink:href="http://www.michael-noll.com/blog/2011/04/14/building-an-hadoop-0-20-x-version-for-hbase-0-90-2/">Building
         an Hadoop 0.20.x version for HBase 0.90.2</link>, on how to build an
-        Hadoop from branch-0.20-append.  Recommended.</para>
+    Hadoop from branch-0.20-append.  Recommended <footnote><para>Praveen Kumar has written
+            a complimentary article,
+            <link xlink:href="http://praveen.kumar.in/2011/06/20/building-hadoop-and-hbase-for-hbase-maven-application-development/">Building Hadoop and HBase for HBase Maven application development</link>.
+</para></footnote>.</para>
 
         <para>Or rather than build your own, you could use Cloudera's <link
         xlink:href="http://archive.cloudera.com/docs/">CDH3</link>. CDH has
