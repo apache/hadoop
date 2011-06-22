@@ -142,6 +142,9 @@ Trunk (unreleased changes)
     HADOOP-7082. Configuration.writeXML should not hold lock while outputting.
     (todd)
 
+    HADOOP-7390. VersionInfo not generated properly in git after unsplit. (todd
+    via atm)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
