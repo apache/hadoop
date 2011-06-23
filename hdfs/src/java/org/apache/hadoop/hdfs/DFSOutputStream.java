@@ -103,7 +103,6 @@ import org.apache.hadoop.util.StringUtils;
 ****************************************************************/
 class DFSOutputStream extends FSOutputSummer implements Syncable {
   private final DFSClient dfsClient;
-  private Configuration conf;
   private static final int MAX_PACKETS = 80; // each packet 64K, total 5MB
   private Socket s;
   // closed is accessed by different threads under different locks.
@@ -355,7 +354,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         // that expected size of of a packet, then create 
         // smaller size packet.
         //
-        computePacketChunkSize(Math.min(dfsClient.writePacketSize, freeInLastBlock), 
+        computePacketChunkSize(Math.min(dfsClient.getConf().writePacketSize, freeInLastBlock), 
             bytesPerChecksum);
       }
 
@@ -426,8 +425,8 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
                 && dataQueue.size() == 0 && 
                 (stage != BlockConstructionStage.DATA_STREAMING || 
                  stage == BlockConstructionStage.DATA_STREAMING && 
-                 now - lastPacket < dfsClient.socketTimeout/2)) || doSleep ) {
-              long timeout = dfsClient.socketTimeout/2 - (now-lastPacket);
+                 now - lastPacket < dfsClient.getConf().socketTimeout/2)) || doSleep ) {
+              long timeout = dfsClient.getConf().socketTimeout/2 - (now-lastPacket);
               timeout = timeout <= 0 ? 1000 : timeout;
               timeout = (stage == BlockConstructionStage.DATA_STREAMING)?
                  timeout : 1000;
@@ -953,8 +952,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
     private DatanodeInfo[] nextBlockOutputStream(String client) throws IOException {
       LocatedBlock lb = null;
       DatanodeInfo[] nodes = null;
-      int count = conf.getInt(DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_RETRIES_KEY,
-                              DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_RETRIES_DEFAULT);
+      int count = dfsClient.getConf().nBlockWriteRetry;
       boolean success = false;
       do {
         hasError = false;
@@ -1079,9 +1077,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
     private LocatedBlock locateFollowingBlock(long start,
         DatanodeInfo[] excludedNodes) 
         throws IOException, UnresolvedLinkException {
-      int retries = 
-        conf.getInt(DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY,
-                    DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_DEFAULT);
+      int retries = dfsClient.getConf().nBlockWriteLocateFollowingRetry;
       long sleeptime = 400;
       while (true) {
         long localstart = System.currentTimeMillis();
@@ -1201,7 +1197,6 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       int bytesPerChecksum, short replication) throws IOException {
     super(new PureJavaCrc32(), bytesPerChecksum, 4);
     this.dfsClient = dfsClient;
-    this.conf = dfsClient.conf;
     this.src = src;
     this.blockSize = blockSize;
     this.blockReplication = replication;
@@ -1232,7 +1227,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       throws IOException {
     this(dfsClient, src, blockSize, progress, bytesPerChecksum, replication);
 
-    computePacketChunkSize(dfsClient.writePacketSize, bytesPerChecksum);
+    computePacketChunkSize(dfsClient.getConf().writePacketSize, bytesPerChecksum);
 
     try {
       dfsClient.namenode.create(
@@ -1269,7 +1264,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       bytesCurBlock = lastBlock.getBlockSize();
       streamer = new DataStreamer(lastBlock, stat, bytesPerChecksum);
     } else {
-      computePacketChunkSize(dfsClient.writePacketSize, bytesPerChecksum);
+      computePacketChunkSize(dfsClient.getConf().writePacketSize, bytesPerChecksum);
       streamer = new DataStreamer();
     }
     streamer.start();
@@ -1385,7 +1380,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       }
 
       if (!appendChunk) {
-        int psize = Math.min((int)(blockSize-bytesCurBlock), dfsClient.writePacketSize);
+        int psize = Math.min((int)(blockSize-bytesCurBlock), dfsClient.getConf().writePacketSize);
         computePacketChunkSize(psize, bytesPerChecksum);
       }
       //

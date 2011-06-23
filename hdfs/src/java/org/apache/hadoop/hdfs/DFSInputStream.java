@@ -83,7 +83,7 @@ public class DFSInputStream extends FSInputStream {
    * capped at maxBlockAcquireFailures
    */
   private int failures = 0;
-  private int timeWindow = 3000; // wait time window (in msec) if BlockMissingException is caught
+  private int timeWindow; 
 
   /* XXX Use of CocurrentHashMap is temp fix. Need to fix 
    * parallel accesses to DFSInputStream (through ptreads) properly */
@@ -106,13 +106,9 @@ public class DFSInputStream extends FSInputStream {
     this.buffersize = buffersize;
     this.src = src;
     this.socketCache = dfsClient.socketCache;
-    prefetchSize = this.dfsClient.conf.getLong(DFSConfigKeys.DFS_CLIENT_READ_PREFETCH_SIZE_KEY,
-        10 * dfsClient.defaultBlockSize);
-    timeWindow = this.dfsClient.conf.getInt(
-        DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, timeWindow);
-    nCachedConnRetry = this.dfsClient.conf.getInt(
-        DFSConfigKeys.DFS_CLIENT_CACHED_CONN_RETRY_KEY,
-        DFSConfigKeys.DFS_CLIENT_CACHED_CONN_RETRY_DEFAULT);
+    prefetchSize = dfsClient.getConf().prefetchSize;
+    timeWindow = dfsClient.getConf().timeWindow;
+    nCachedConnRetry = dfsClient.getConf().nCachedConnRetry;
     openInfo();
   }
 
@@ -163,7 +159,7 @@ public class DFSInputStream extends FSInputStream {
       
       try {
         cdp = DFSClient.createClientDatanodeProtocolProxy(
-        datanode, dfsClient.conf, dfsClient.socketTimeout, locatedblock);
+        datanode, dfsClient.conf, dfsClient.getConf().socketTimeout, locatedblock);
         
         final long n = cdp.getReplicaVisibleLength(locatedblock.getBlock());
         
@@ -771,8 +767,8 @@ public class DFSInputStream extends FSInputStream {
         // disaster.
         sock.setTcpNoDelay(true);
 
-        NetUtils.connect(sock, dnAddr, dfsClient.socketTimeout);
-        sock.setSoTimeout(dfsClient.socketTimeout);
+        NetUtils.connect(sock, dnAddr, dfsClient.getConf().socketTimeout);
+        sock.setSoTimeout(dfsClient.getConf().socketTimeout);
       }
 
       try {

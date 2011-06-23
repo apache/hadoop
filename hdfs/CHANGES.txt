@@ -523,6 +523,9 @@ Trunk (unreleased changes)
 
     HDFS-2100. Improve TestStorageRestore. (atm)
 
+    HDFS-2092. Remove some object references to Configuration in DFSClient.
+    (Bharath Mundlapudi via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
