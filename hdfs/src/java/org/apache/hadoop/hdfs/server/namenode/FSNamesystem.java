@@ -31,6 +31,7 @@ import java.io.PrintWriter;
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -3784,9 +3785,19 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
             nodes.add(dn);
           }
           //Remove any form of the this datanode in include/exclude lists.
-          mustList.remove(dn.getName());
-          mustList.remove(dn.getHost());
-          mustList.remove(dn.getHostName());
+          try {
+            InetAddress inet = InetAddress.getByName(dn.getHost());
+            // compare hostname(:port)
+            mustList.remove(inet.getHostName());
+            mustList.remove(inet.getHostName()+":"+dn.getPort());
+            // compare ipaddress(:port)
+            mustList.remove(inet.getHostAddress().toString());
+            mustList.remove(inet.getHostAddress().toString()+ ":" +dn.getPort());
+          } catch ( UnknownHostException e ) {
+            mustList.remove(dn.getName());
+            mustList.remove(dn.getHost());
+            LOG.warn(e);
+          }
         }
       }
       
@@ -4031,23 +4042,62 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    */
   private boolean inHostsList(DatanodeID node, String ipAddr) {
     Set<String> hostsList = hostsReader.getHosts();
-    return (hostsList.isEmpty() || 
-            (ipAddr != null && hostsList.contains(ipAddr)) ||
-            hostsList.contains(node.getHost()) ||
-            hostsList.contains(node.getName()) || 
-            ((node instanceof DatanodeInfo) && 
-             hostsList.contains(((DatanodeInfo)node).getHostName())));
+     return checkInList(node, ipAddr, hostsList, false);
   }
   
   private boolean inExcludedHostsList(DatanodeID node, String ipAddr) {
     Set<String> excludeList = hostsReader.getExcludedHosts();
-    return  ((ipAddr != null && excludeList.contains(ipAddr)) ||
-            excludeList.contains(node.getHost()) ||
-            excludeList.contains(node.getName()) ||
-            ((node instanceof DatanodeInfo) && 
-             excludeList.contains(((DatanodeInfo)node).getHostName())));
+    return checkInList(node, ipAddr, excludeList, true);
   }
 
+
+  /**
+   * Check if the given node (of DatanodeID or ipAddress) is in the (include or 
+   * exclude) list.  If ipAddress in null, check only based upon the given 
+   * DatanodeID.  If ipAddress is not null, the ipAddress should refers to the
+   * same host that given DatanodeID refers to.
+   * 
+   * @param node, DatanodeID, the host DatanodeID
+   * @param ipAddress, if not null, should refers to the same host
+   *                   that DatanodeID refers to
+   * @param hostsList, the list of hosts in the include/exclude file
+   * @param isExcludeList, boolean, true if this is the exclude list
+   * @return boolean, if in the list
+   */
+  private boolean checkInList(DatanodeID node, String ipAddress,
+      Set<String> hostsList, boolean isExcludeList) {
+    InetAddress iaddr = null;
+    try {
+      if (ipAddress != null) {
+        iaddr = InetAddress.getByName(ipAddress);
+      } else {
+        iaddr = InetAddress.getByName(node.getHost());
+      }
+    }catch (UnknownHostException e) {
+      LOG.warn("Unknown host in host list: "+ipAddress);
+      // can't resolve the host name.
+      if (isExcludeList){
+        return true;
+      } else {
+        return false;
+      }
+    }
+
+    // if include list is empty, host is in include list
+    if ( (!isExcludeList) && (hostsList.isEmpty()) ){
+      return true;
+    }
+    return // compare ipaddress(:port)
+    (hostsList.contains(iaddr.getHostAddress().toString()))
+        || (hostsList.contains(iaddr.getHostAddress().toString() + ":"
+            + node.getPort()))
+        // compare hostname(:port)
+        || (hostsList.contains(iaddr.getHostName()))
+        || (hostsList.contains(iaddr.getHostName() + ":" + node.getPort()))
+        || ((node instanceof DatanodeInfo) && hostsList
+            .contains(((DatanodeInfo) node).getHostName()));
+  }
+  
   /**
    * Rereads the config to get hosts and exclude list file names.
    * Rereads the files to update the hosts and exclude lists.  It
