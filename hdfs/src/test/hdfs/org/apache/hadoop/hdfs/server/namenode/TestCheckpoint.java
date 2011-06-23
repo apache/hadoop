@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
@@ -45,10 +46,14 @@ import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode.CheckpointStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
+import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
+import org.apache.hadoop.ipc.WritableRpcEngine;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.util.StringUtils;
@@ -1253,6 +1258,126 @@ public class TestCheckpoint extends TestCase {
     // Validate that the NN received checkpoints at expected txids
     // (i.e that both checkpoints went through)
     assertNNHasCheckpoints(cluster, ImmutableList.of(6,8));
+  }
+  
+  /**
+   * Test case where the name node is reformatted while the secondary namenode
+   * is running. The secondary should shut itself down if if talks to a NN
+   * with the wrong namespace.
+   */
+  @SuppressWarnings("deprecation")
+  public void testReformatNNBetweenCheckpoints() throws IOException {
+    MiniDFSCluster cluster = null;
+    SecondaryNameNode secondary = null;
+    
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
+        1);
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+          .format(true).build();
+      int origPort = cluster.getNameNodePort();
+      int origHttpPort = cluster.getNameNode().getHttpAddress().getPort();
+      secondary = startSecondaryNameNode(conf);
+
+      // secondary checkpoints once
+      secondary.doCheckpoint();
+
+      // we reformat primary NN
+      cluster.shutdown();
+      cluster = null;
+
+      // Brief sleep to make sure that the 2NN's IPC connection to the NN
+      // is dropped.
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException ie) {
+      }
+      
+      // Start a new NN with the same host/port.
+      cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(0)
+        .nameNodePort(origPort)
+        .nameNodeHttpPort(origHttpPort)
+        .format(true).build();
+
+      try {
+        secondary.doCheckpoint();
+        fail("Should have failed checkpoint against a different namespace");
+      } catch (IOException ioe) {
+        LOG.info("Got expected failure", ioe);
+        assertTrue(ioe.toString().contains("Inconsistent checkpoint"));
+      }
+    } finally {
+      if (secondary != null) {
+        secondary.shutdown();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }  
+  }
+  
+  /**
+   * Test that the primary NN will not serve any files to a 2NN who doesn't
+   * share its namespace ID, and also will not accept any files from one.
+   */
+  @SuppressWarnings("deprecation")
+  public void testNamespaceVerifiedOnFileTransfer() throws IOException {
+    MiniDFSCluster cluster = null;
+    
+    Configuration conf = new HdfsConfiguration();
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+          .format(true).build();
+      
+      NameNode nn = cluster.getNameNode();
+      String fsName = NameNode.getHostPortString(nn.getHttpAddress());
+
+
+      // Make a finalized log on the server side. 
+      nn.rollEditLog();
+      RemoteEditLogManifest manifest = nn.getEditLogManifest(0);
+      RemoteEditLog log = manifest.getLogs().get(0);
+      
+      NNStorage dstImage = Mockito.mock(NNStorage.class);
+      Mockito.doReturn(Lists.newArrayList(new File("/wont-be-written")))
+        .when(dstImage).getFiles(
+            Mockito.<NameNodeDirType>anyObject(), Mockito.anyString());
+      
+      Mockito.doReturn(new StorageInfo(1, 1, "X", 1).toColonSeparatedString())
+        .when(dstImage).toColonSeparatedString();
+
+      try {
+        TransferFsImage.downloadImageToStorage(fsName, 0, dstImage, false);
+        fail("Storage info was not verified");
+      } catch (IOException ioe) {
+        String msg = StringUtils.stringifyException(ioe);
+        assertTrue(msg, msg.contains("but the secondary expected"));
+      }
+
+      try {
+        TransferFsImage.downloadEditsToStorage(fsName, log, dstImage);
+        fail("Storage info was not verified");
+      } catch (IOException ioe) {
+        String msg = StringUtils.stringifyException(ioe);
+        assertTrue(msg, msg.contains("but the secondary expected"));
+      }
+
+      try {
+        InetSocketAddress fakeAddr = new InetSocketAddress(1);
+        TransferFsImage.uploadImageFromStorage(fsName, fakeAddr, dstImage, 0);
+        fail("Storage info was not verified");
+      } catch (IOException ioe) {
+        String msg = StringUtils.stringifyException(ioe);
+        assertTrue(msg, msg.contains("but the secondary expected"));
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }  
   }
 
 

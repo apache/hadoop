@@ -776,7 +776,9 @@ public class NNStorage extends Storage implements Closeable {
    * @param uVersion the new version.
    */
   private void setDistributedUpgradeState(boolean uState, int uVersion) {
-    upgradeManager.setUpgradeState(uState, uVersion);
+    if (upgradeManager != null) {
+      upgradeManager.setUpgradeState(uState, uVersion);
+    }
   }
 
   /**

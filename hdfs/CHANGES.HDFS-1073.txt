@@ -53,3 +53,5 @@ HDFS-2027. Image inspector should return finalized logs before unfinalized
 HDFS-2074. Determine edit log validity by truly reading and validating
            transactions. (todd)
 HDFS-2085. Finalize in-progress edit logs at startup. (todd)
+HDFS-2026. SecondaryNameNode should properly handle the case where the
+           NameNode is reformatted. (todd)

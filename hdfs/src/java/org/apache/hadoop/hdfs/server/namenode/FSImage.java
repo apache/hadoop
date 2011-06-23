@@ -876,22 +876,6 @@ public class FSImage implements Closeable {
   }
 
   /**
-   * This is called just before a new checkpoint is uploaded to the
-   * namenode.
-   */
-  void validateCheckpointUpload(CheckpointSignature sig) throws IOException { 
-    // verify token
-    long curTxId = getEditLog().getLastWrittenTxId();
-    if (sig.curSegmentTxId > curTxId) {
-      throw new IOException("Namenode has already reached txid " +
-          curTxId + " but new checkpoint was created using editlog " +
-          "starting at txid " + sig.curSegmentTxId + ". Checkpoint Aborted.");
-    }
-
-    sig.validateStorageInfo(this);
-  }
-
-  /**
    * Start checkpoint.
    * <p>
    * If backup storage contains image that is newer than or incompatible with 

@@ -34,6 +34,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
@@ -58,7 +59,8 @@ class TransferFsImage implements FSConstants {
   static MD5Hash downloadImageToStorage(
       String fsName, long imageTxId, NNStorage dstStorage, boolean needDigest)
       throws IOException {
-    String fileid = GetImageServlet.getParamStringForImage(imageTxId);
+    String fileid = GetImageServlet.getParamStringForImage(
+        imageTxId, dstStorage);
     String fileName = NNStorage.getCheckpointImageFileName(imageTxId);
     
     List<File> dstFiles = dstStorage.getFiles(
@@ -74,18 +76,42 @@ class TransferFsImage implements FSConstants {
   }
   
   static void downloadEditsToStorage(String fsName, RemoteEditLog log,
-      NNStorage storage) throws IOException {
-    String fileid = GetImageServlet.getParamStringForLog(log);
+      NNStorage dstStorage) throws IOException {
+    String fileid = GetImageServlet.getParamStringForLog(
+        log, dstStorage);
     String fileName = NNStorage.getFinalizedEditsFileName(
         log.getStartTxId(), log.getEndTxId());
 
-    List<File> dstFiles = storage.getFiles(NameNodeDirType.EDITS, fileName);
+    List<File> dstFiles = dstStorage.getFiles(NameNodeDirType.EDITS, fileName);
     assert !dstFiles.isEmpty() : "No checkpoint targets.";
 
     getFileClient(fsName, fileid, dstFiles, false);
     LOG.info("Downloaded file " + dstFiles.get(0).getName() + " size " +
         dstFiles.get(0).length() + " bytes.");
   }
+ 
+  /**
+   * Requests that the NameNode download an image from this node.
+   *
+   * @param fsName the http address for the remote NN
+   * @param imageListenAddress the host/port where the local node is running an
+   *                           HTTPServer hosting GetImageServlet
+   * @param storage the storage directory to transfer the image from
+   * @param txid the transaction ID of the image to be uploaded
+   */
+  static void uploadImageFromStorage(String fsName,
+      InetSocketAddress imageListenAddress,
+      NNStorage storage, long txid) throws IOException {
+    
+    String fileid = GetImageServlet.getParamStringToPutImage(
+        txid, imageListenAddress, storage);
+    // this doesn't directly upload an image, but rather asks the NN
+    // to connect back to the 2NN to download the specified image.
+    TransferFsImage.getFileClient(fsName, fileid, null, false);
+    LOG.info("Uploaded image with txid " + txid + " to namenode at " +
+    		fsName);
+  }
+
   
   /**
    * A server-side method to respond to a getfile http request
@@ -249,4 +275,5 @@ class TransferFsImage implements FSConstants {
     String header = connection.getHeaderField(MD5_HEADER);
     return (header != null) ? new MD5Hash(header) : null;
   }
+
 }

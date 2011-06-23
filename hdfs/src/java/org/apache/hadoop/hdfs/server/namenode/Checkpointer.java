@@ -197,7 +197,8 @@ class Checkpointer extends Daemon {
    * Copy the new image into remote name-node.
    */
   private void uploadCheckpoint(CheckpointSignature sig) throws IOException {
-    // Use the exact http addr as specified in config to deal with ip aliasing
+    // TODO: checkpoint node disabled in 1073 branch
+/*    // Use the exact http addr as specified in config to deal with ip aliasing
     InetSocketAddress httpSocAddr = backupNode.getHttpAddress();
     int httpPort = httpSocAddr.getPort();
     String fileid = "putimage=1&port=" + httpPort +
@@ -206,6 +207,7 @@ class Checkpointer extends Daemon {
     LOG.info("Posted URL " + backupNode.nnHttpAddress + fileid);
     TransferFsImage.getFileClient(backupNode.nnHttpAddress, 
         fileid, null, false);
+        */
   }
 
   /**

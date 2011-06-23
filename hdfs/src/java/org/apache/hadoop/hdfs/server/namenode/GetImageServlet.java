@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.io.*;
+import java.net.InetSocketAddress;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -35,6 +36,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
@@ -58,6 +60,7 @@ public class GetImageServlet extends HttpServlet {
   private static final String TXID_PARAM = "txid";
   private static final String START_TXID_PARAM = "startTxId";
   private static final String END_TXID_PARAM = "endTxId";
+  private static final String STORAGEINFO_PARAM = "storageInfo";
   
   private static Set<Long> currentlyDownloadingCheckpoints =
     Collections.<Long>synchronizedSet(new HashSet<Long>());
@@ -81,12 +84,27 @@ public class GetImageServlet extends HttpServlet {
         return;
       }
       
+      String myStorageInfoString = nnImage.getStorage().toColonSeparatedString();
+      String theirStorageInfoString = parsedParams.getStorageInfoString();
+      if (theirStorageInfoString != null &&
+          !myStorageInfoString.equals(theirStorageInfoString)) {
+        response.sendError(HttpServletResponse.SC_FORBIDDEN,
+            "This namenode has storage info " + myStorageInfoString + 
+            " but the secondary expected " + theirStorageInfoString);
+        LOG.warn("Received an invalid request file transfer request " +
+            "from a secondary with storage info " + theirStorageInfoString);
+        return;
+      }
+      
       UserGroupInformation.getCurrentUser().doAs(new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
           if (parsedParams.isGetImage()) {
             long txid = parsedParams.getTxId();
             File imageFile = nnImage.getStorage().getFsImageName(txid);
+            if (imageFile == null) {
+              throw new IOException("Could not find image with txid " + txid);
+            }
             setVerificationHeaders(response, imageFile);
             // send fsImage
             TransferFsImage.getFileServer(response.getOutputStream(), imageFile,
@@ -119,7 +137,6 @@ public class GetImageServlet extends HttpServlet {
               }
               
               // issue a HTTP get request to download the new fsimage 
-              nnImage.validateCheckpointUpload(parsedParams.getToken());
               MD5Hash downloadImageDigest = reloginIfNecessary().doAs(
                   new PrivilegedExceptionAction<MD5Hash>() {
                   @Override
@@ -225,14 +242,33 @@ public class GetImageServlet extends HttpServlet {
     }
   }
 
-  static String getParamStringForImage(long txid) {
-    return "getimage=1&" + TXID_PARAM + "=" + txid;
+  static String getParamStringForImage(long txid,
+      StorageInfo remoteStorageInfo) {
+    return "getimage=1&" + TXID_PARAM + "=" + txid
+      + "&" + STORAGEINFO_PARAM + "=" +
+      remoteStorageInfo.toColonSeparatedString();
+    
   }
 
-  static String getParamStringForLog(RemoteEditLog log) {
+  static String getParamStringForLog(RemoteEditLog log,
+      StorageInfo remoteStorageInfo) {
     return "getedit=1&" + START_TXID_PARAM + "=" + log.getStartTxId()
-        + "&" + END_TXID_PARAM + "=" + log.getEndTxId();
+        + "&" + END_TXID_PARAM + "=" + log.getEndTxId()
+        + "&" + STORAGEINFO_PARAM + "=" +
+          remoteStorageInfo.toColonSeparatedString();
   }
+  
+  static String getParamStringToPutImage(long txid,
+      InetSocketAddress imageListenAddress, NNStorage storage) {
+    
+    return "putimage=1" +
+      "&" + TXID_PARAM + "=" + txid +
+      "&port=" + imageListenAddress.getPort() +
+      "&machine=" + imageListenAddress.getHostName()
+      + "&" + STORAGEINFO_PARAM + "=" +
+      storage.toColonSeparatedString();
+  }
+
   
   static class GetImageParams {
     private boolean isGetImage;
@@ -240,8 +276,8 @@ public class GetImageServlet extends HttpServlet {
     private boolean isPutImage;
     private int remoteport;
     private String machineName;
-    private CheckpointSignature token;
     private long startTxId, endTxId, txId;
+    private String storageInfoString;
 
     /**
      * @param request the object from which this servlet reads the url contents
@@ -256,7 +292,6 @@ public class GetImageServlet extends HttpServlet {
       isGetImage = isGetEdit = isPutImage = false;
       remoteport = 0;
       machineName = null;
-      token = null;
 
       for (Iterator<String> it = pmap.keySet().iterator(); it.hasNext();) {
         String key = it.next();
@@ -274,8 +309,8 @@ public class GetImageServlet extends HttpServlet {
           remoteport = new Integer(pmap.get("port")[0]).intValue();
         } else if (key.equals("machine")) { 
           machineName = pmap.get("machine")[0];
-        } else if (key.equals("token")) { 
-          token = new CheckpointSignature(pmap.get("token")[0]);
+        } else if (key.equals(STORAGEINFO_PARAM)) {
+          storageInfoString = pmap.get(key)[0];
         }
       }
 
@@ -283,6 +318,10 @@ public class GetImageServlet extends HttpServlet {
       if ((numGets > 1) || (numGets == 0) && !isPutImage) {
         throw new IOException("Illegal parameters to TransferFsImage");
       }
+    }
+
+    public String getStorageInfoString() {
+      return storageInfoString;
     }
 
     public long getTxId() {
@@ -310,10 +349,6 @@ public class GetImageServlet extends HttpServlet {
 
     boolean isPutImage() {
       return isPutImage;
-    }
-
-    CheckpointSignature getToken() {
-      return token;
     }
     
     String getInfoServer() throws IOException{

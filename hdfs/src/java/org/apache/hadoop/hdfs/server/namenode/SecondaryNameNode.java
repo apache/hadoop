@@ -28,6 +28,8 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
+import javax.jws.soap.SOAPBinding.Use;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -232,8 +234,8 @@ public class SecondaryNameNode implements Runnable {
             System.setProperty("https.cipherSuites", 
                 Krb5AndCertsSslSocketConnector.KRB5_CIPHER_SUITES.get(0));
             InetSocketAddress secInfoSocAddr = 
-              NetUtils.createSocketAddr(infoBindAddress + ":"+ conf.get(
-                "dfs.secondary.https.port", infoBindAddress + ":" + 0));
+              NetUtils.createSocketAddr(infoBindAddress + ":"+ conf.getInt(
+                "dfs.secondary.https.port", 443));
             imagePort = secInfoSocAddr.getPort();
             infoServer.addSslListener(secInfoSocAddr, conf, false, true);
           }
@@ -255,8 +257,10 @@ public class SecondaryNameNode implements Runnable {
 
     // The web-server port can be ephemeral... ensure we have the correct info
     infoPort = infoServer.getPort();
-    if(!UserGroupInformation.isSecurityEnabled())
+    if (!UserGroupInformation.isSecurityEnabled()) {
       imagePort = infoPort;
+    }
+    
     conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, infoBindAddress + ":" +infoPort); 
     LOG.info("Secondary Web-server up at: " + infoBindAddress + ":" +infoPort);
     LOG.info("Secondary image servlet up at: " + infoBindAddress + ":" + imagePort);
@@ -407,17 +411,6 @@ public class SecondaryNameNode implements Runnable {
   }
 
   /**
-   * Copy the new fsimage into the NameNode
-   */
-  private void putFSImage(CheckpointSignature sig, long txid) throws IOException {
-    String fileid = "putimage=1&txid=" + txid + "&port=" + imagePort +
-      "&machine=" + infoBindAddress + 
-      "&token=" + sig.toString();
-    LOG.info("Posted URL " + fsName + fileid);
-    TransferFsImage.getFileClient(fsName, fileid, null, false);
-  }
-
-  /**
    * Returns the Jetty server that the Namenode is listening on.
    */
   private String getInfoServer() throws IOException {
@@ -441,6 +434,14 @@ public class SecondaryNameNode implements Runnable {
       return configuredAddress;
     }
   }
+  
+  /**
+   * Return the host:port of where this SecondaryNameNode is listening
+   * for image transfers
+   */
+  private InetSocketAddress getImageListenAddress() {
+    return new InetSocketAddress(infoBindAddress, imagePort);
+  }
 
   /**
    * Create a new checkpoint
@@ -452,6 +453,17 @@ public class SecondaryNameNode implements Runnable {
     // Tell the namenode to start logging transactions in a new edit file
     // Returns a token that would be used to upload the merged image.
     CheckpointSignature sig = namenode.rollEditLog();
+    
+    // Make sure we're talking to the same NN!
+    if (checkpointImage.getNamespaceID() != 0) {
+      // If the image actually has some data, make sure we're talking
+      // to the same NN as we did before.
+      sig.validateStorageInfo(checkpointImage);
+    } else {
+      // if we're a fresh 2NN, just take the storage info from the server
+      // we first talk to.
+      checkpointImage.getStorage().setStorageInfo(sig);
+    }
 
     // error simulation code for junit test
     if (ErrorSimulator.getErrorSimulation(0)) {
@@ -482,7 +494,8 @@ public class SecondaryNameNode implements Runnable {
     // to make this new uploaded image as the most current image.
     //
     long txid = checkpointImage.getStorage().getMostRecentCheckpointTxId();
-    putFSImage(sig, txid);
+    TransferFsImage.uploadImageFromStorage(fsName, getImageListenAddress(),
+        checkpointImage.getStorage(), txid);
 
     // error simulation code for junit test
     if (ErrorSimulator.getErrorSimulation(1)) {
@@ -671,6 +684,11 @@ public class SecondaryNameNode implements Runnable {
           case NOT_FORMATTED:
             break;  // it's ok since initially there is no current and VERSION
           case NORMAL:
+            // Read the VERSION file. This verifies that:
+            // (a) the VERSION file for each of the directories is the same,
+            // and (b) when we connect to a NN, we can verify that the remote
+            // node matches the same namespace that we ran on previously.
+            sd.read();
             break;
           default:  // recovery is possible
             sd.doRecover(curState);
