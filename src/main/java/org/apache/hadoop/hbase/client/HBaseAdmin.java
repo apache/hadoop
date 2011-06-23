@@ -22,7 +22,9 @@ package org.apache.hadoop.hbase.client;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -188,6 +190,37 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public HTableDescriptor[] listTables() throws IOException {
     return this.connection.listTables();
+  }
+
+  /**
+   * List all the userspace tables matching the given pattern.
+   *
+   * @param pattern The compiled regular expression to match against
+   * @return - returns an array of HTableDescriptors
+   * @throws IOException if a remote or network exception occurs
+   * @see #listTables()
+   */
+  public HTableDescriptor[] listTables(Pattern pattern) throws IOException {
+    List<HTableDescriptor> matched = new LinkedList<HTableDescriptor>();
+    HTableDescriptor[] tables = listTables();
+    for (HTableDescriptor table : tables) {
+      if (pattern.matcher(table.getNameAsString()).matches()) {
+        matched.add(table);
+      }
+    }
+    return matched.toArray(new HTableDescriptor[matched.size()]);
+  }
+
+  /**
+   * List all the userspace tables matching the given regular expression.
+   *
+   * @param regex The regular expression to match against
+   * @return - returns an array of HTableDescriptors
+   * @throws IOException if a remote or network exception occurs
+   * @see #listTables(java.util.regex.Pattern)
+   */
+  public HTableDescriptor[] listTables(String regex) throws IOException {
+    return listTables(Pattern.compile(regex));
   }
 
 
@@ -417,6 +450,48 @@ public class HBaseAdmin implements Abortable, Closeable {
     LOG.info("Deleted " + Bytes.toString(tableName));
   }
 
+  /**
+   * Deletes tables matching the passed in pattern and wait on completion.
+   *
+   * Warning: Use this method carefully, there is no prompting and the effect is
+   * immediate. Consider using {@link #listTables(java.lang.String)} and
+   * {@link #deleteTable(byte[])}
+   *
+   * @param regex The regular expression to match table names against
+   * @return Table descriptors for tables that couldn't be deleted
+   * @throws IOException
+   * @see #deleteTables(java.util.regex.Pattern)
+   * @see #deleteTable(java.lang.String)
+   */
+  public HTableDescriptor[] deleteTables(String regex) throws IOException {
+    return deleteTables(Pattern.compile(regex));
+  }
+
+  /**
+   * Delete tables matching the passed in pattern and wait on completion.
+   *
+   * Warning: Use this method carefully, there is no prompting and the effect is
+   * immediate. Consider using {@link #listTables(java.util.regex.Pattern) } and
+   * {@link #deleteTable(byte[])}
+   *
+   * @param pattern The pattern to match table names against
+   * @return Table descriptors for tables that couldn't be deleted
+   * @throws IOException
+   */
+  public HTableDescriptor[] deleteTables(Pattern pattern) throws IOException {
+    List<HTableDescriptor> failed = new LinkedList<HTableDescriptor>();
+    for (HTableDescriptor table : listTables(pattern)) {
+      try {
+        deleteTable(table.getName());
+      } catch (IOException ex) {
+        LOG.info("Failed to delete table " + table.getNameAsString(), ex);
+        failed.add(table);
+      }
+    }
+    return failed.toArray(new HTableDescriptor[failed.size()]);
+  }
+
+
   public void enableTable(final String tableName)
   throws IOException {
     enableTable(Bytes.toBytes(tableName));
@@ -489,6 +564,47 @@ public class HBaseAdmin implements Abortable, Closeable {
     LOG.info("Started enable of " + Bytes.toString(tableName));
   }
 
+  /**
+   * Enable tables matching the passed in pattern and wait on completion.
+   *
+   * Warning: Use this method carefully, there is no prompting and the effect is
+   * immediate. Consider using {@link #listTables(java.lang.String)} and
+   * {@link #enableTable(byte[])}
+   *
+   * @param regex The regular expression to match table names against
+   * @throws IOException
+   * @see #enableTables(java.util.regex.Pattern)
+   * @see #enableTable(java.lang.String)
+   */
+  public HTableDescriptor[] enableTables(String regex) throws IOException {
+    return enableTables(Pattern.compile(regex));
+  }
+
+  /**
+   * Enable tables matching the passed in pattern and wait on completion.
+   *
+   * Warning: Use this method carefully, there is no prompting and the effect is
+   * immediate. Consider using {@link #listTables(java.util.regex.Pattern) } and
+   * {@link #enableTable(byte[])}
+   *
+   * @param pattern The pattern to match table names against
+   * @throws IOException
+   */
+  public HTableDescriptor[] enableTables(Pattern pattern) throws IOException {
+    List<HTableDescriptor> failed = new LinkedList<HTableDescriptor>();
+    for (HTableDescriptor table : listTables(pattern)) {
+      if (isTableDisabled(table.getName())) {
+        try {
+          enableTable(table.getName());
+        } catch (IOException ex) {
+          LOG.info("Failed to enable table " + table.getNameAsString(), ex);
+          failed.add(table);
+        }
+      }
+    }
+    return failed.toArray(new HTableDescriptor[failed.size()]);
+  }
+
   public void disableTableAsync(final String tableName) throws IOException {
     disableTableAsync(Bytes.toBytes(tableName));
   }
@@ -557,6 +673,49 @@ public class HBaseAdmin implements Abortable, Closeable {
         " for the table " + Bytes.toString(tableName) + " to be disabled.");
     }
     LOG.info("Disabled " + Bytes.toString(tableName));
+  }
+
+  /**
+   * Disable tables matching the passed in pattern and wait on completion.
+   *
+   * Warning: Use this method carefully, there is no prompting and the effect is
+   * immediate. Consider using {@link #listTables(java.lang.String)} and
+   * {@link #disableTable(byte[])}
+   *
+   * @param regex The regular expression to match table names against
+   * @return Table descriptors for tables that couldn't be disabled
+   * @throws IOException
+   * @see #disableTables(java.util.regex.Pattern)
+   * @see #disableTable(java.lang.String)
+   */
+  public HTableDescriptor[] disableTables(String regex) throws IOException {
+    return disableTables(Pattern.compile(regex));
+  }
+
+  /**
+   * Disable tables matching the passed in pattern and wait on completion.
+   *
+   * Warning: Use this method carefully, there is no prompting and the effect is
+   * immediate. Consider using {@link #listTables(java.util.regex.Pattern) } and
+   * {@link #disableTable(byte[])}
+   *
+   * @param pattern The pattern to match table names against
+   * @return Table descriptors for tables that couldn't be disabled
+   * @throws IOException
+   */
+  public HTableDescriptor[] disableTables(Pattern pattern) throws IOException {
+    List<HTableDescriptor> failed = new LinkedList<HTableDescriptor>();
+    for (HTableDescriptor table : listTables(pattern)) {
+      if (isTableEnabled(table.getName())) {
+        try {
+          disableTable(table.getName());
+        } catch (IOException ex) {
+          LOG.info("Failed to disable table " + table.getNameAsString(), ex);
+          failed.add(table);
+        }
+      }
+    }
+    return failed.toArray(new HTableDescriptor[failed.size()]);
   }
 
   /**

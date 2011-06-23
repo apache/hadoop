@@ -92,11 +92,25 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Enables all tables matching the given regex
+    def enable_all(regex)
+      regex = regex.to_s
+      @admin.enableTables(regex)
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Disables a table
     def disable(table_name)
       tableExists(table_name)
       return if disabled?(table_name)
       @admin.disableTable(table_name)
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Disables all tables matching the given regex
+    def disable_all(regex)
+      regex = regex.to_s
+      @admin.disableTables(regex).map { |t| t.getNameAsString }
     end
 
     #---------------------------------------------------------------------------------------------
@@ -120,6 +134,16 @@ module Hbase
       @admin.deleteTable(table_name)
       flush(org.apache.hadoop.hbase.HConstants::META_TABLE_NAME)
       major_compact(org.apache.hadoop.hbase.HConstants::META_TABLE_NAME)
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Drops a table
+    def drop_all(regex)
+      regex = regex.to_s
+      failed  = @admin.deleteTables(regex).map { |t| t.getNameAsString }
+      flush(org.apache.hadoop.hbase.HConstants::META_TABLE_NAME)
+      major_compact(org.apache.hadoop.hbase.HConstants::META_TABLE_NAME)
+      return failed
     end
 
     #----------------------------------------------------------------------------------------------

@@ -124,6 +124,55 @@ public class TestAdmin {
   }
 
   @Test
+  public void testDisableAndEnableTables() throws IOException {
+    final byte [] row = Bytes.toBytes("row");
+    final byte [] qualifier = Bytes.toBytes("qualifier");
+    final byte [] value = Bytes.toBytes("value");
+    final byte [] table1 = Bytes.toBytes("testDisableAndEnableTable1");
+    final byte [] table2 = Bytes.toBytes("testDisableAndEnableTable2");
+    HTable ht1 = TEST_UTIL.createTable(table1, HConstants.CATALOG_FAMILY);
+    HTable ht2 = TEST_UTIL.createTable(table2, HConstants.CATALOG_FAMILY);
+    Put put = new Put(row);
+    put.add(HConstants.CATALOG_FAMILY, qualifier, value);
+    ht1.put(put);
+    ht2.put(put);
+    Get get = new Get(row);
+    get.addColumn(HConstants.CATALOG_FAMILY, qualifier);
+    ht1.get(get);
+    ht2.get(get);
+
+    this.admin.disableTables("testDisableAndEnableTable.*");
+
+    // Test that tables are disabled
+    get = new Get(row);
+    get.addColumn(HConstants.CATALOG_FAMILY, qualifier);
+    boolean ok = false;
+    try {
+      ht1.get(get);
+      ht2.get(get);
+    } catch (NotServingRegionException e) {
+      ok = true;
+    } catch (RetriesExhaustedException e) {
+      ok = true;
+    }
+    assertTrue(ok);
+    this.admin.enableTables("testDisableAndEnableTable.*");
+
+    // Test that tables are enabled
+    try {
+      ht1.get(get);
+    } catch (RetriesExhaustedException e) {
+      ok = false;
+    }
+    try {
+      ht2.get(get);
+    } catch (RetriesExhaustedException e) {
+      ok = false;
+    }
+    assertTrue(ok);
+  }
+
+  @Test
   public void testCreateTable() throws IOException {
     HTableDescriptor [] tables = admin.listTables();
     int numTables = tables.length;
