@@ -1050,12 +1050,21 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   private static class CompactionChecker extends Chore {
     private final HRegionServer instance;
+    private final int majorCompactPriority;
+    private final static int DEFAULT_PRIORITY = Integer.MAX_VALUE;
 
     CompactionChecker(final HRegionServer h, final int sleepTime,
         final Stoppable stopper) {
       super("CompactionChecker", sleepTime, h);
       this.instance = h;
       LOG.info("Runs every " + StringUtils.formatTime(sleepTime));
+      
+      /* MajorCompactPriority is configurable.
+       * If not set, the compaction will use default priority.
+       */
+      this.majorCompactPriority = this.instance.conf.
+        getInt("hbase.regionserver.compactionChecker.majorCompactPriority",
+        DEFAULT_PRIORITY);      
     }
 
     @Override
@@ -1065,10 +1074,20 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           continue;
         for (Store s : r.getStores().values()) {
           try {
-            if (s.isMajorCompaction() || s.needsCompaction()) {
+            if (s.needsCompaction()) {
               // Queue a compaction. Will recognize if major is needed.
               this.instance.compactSplitThread.requestCompaction(r, s,
-                  getName() + " requests major compaction");
+                getName() + " requests compaction");
+            } else if (s.isMajorCompaction()) {
+              if (majorCompactPriority == DEFAULT_PRIORITY || 
+                  majorCompactPriority > r.getCompactPriority()) {
+                this.instance.compactSplitThread.requestCompaction(r, s,
+                    getName() + " requests major compaction; use default priority");
+              } else {
+               this.instance.compactSplitThread.requestCompaction(r, s,
+                  getName() + " requests major compaction; use configured priority",
+                  this.majorCompactPriority); 
+              }
             }
           } catch (IOException e) {
             LOG.warn("Failed major compaction check on " + r, e);

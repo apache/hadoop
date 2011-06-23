@@ -361,6 +361,7 @@ Release 0.90.4 - Unreleased
    HBASE-3919  More places output binary data to text (Dave Latham)
    HBASE-3873  HBase IRB shell: Don't pretty-print the output when stdout
                isn't a TTY (Benoît Sigoure)
+   HBASE-3969  Outdated data can not be cleaned in time (Zhou Shuaifeng)
 
 Release 0.90.3 - May 19th, 2011
 
