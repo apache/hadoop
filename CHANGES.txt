@@ -274,6 +274,7 @@ Release 0.91.0 - Unreleased
    HBASE-4010  HMaster.createTable could be heavily optimized
    HBASE-3506  Ability to disable, drop and enable tables using regex expression
                (Joey Echeverria via Ted Yu)
+   HBASE-4003  Cleanup Calls Conservatively On Timeout (Karthick Sankarachary)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
