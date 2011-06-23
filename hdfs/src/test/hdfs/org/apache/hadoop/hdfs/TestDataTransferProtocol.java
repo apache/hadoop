@@ -72,7 +72,8 @@ public class TestDataTransferProtocol extends TestCase {
   DatanodeID datanode;
   InetSocketAddress dnAddr;
   ByteArrayOutputStream sendBuf = new ByteArrayOutputStream(128);
-  DataOutputStream sendOut = new DataOutputStream(sendBuf);
+  final DataOutputStream sendOut = new DataOutputStream(sendBuf);
+  final Sender sender = new Sender(sendOut);
   ByteArrayOutputStream recvBuf = new ByteArrayOutputStream(128);
   DataOutputStream recvOut = new DataOutputStream(recvBuf);
 
@@ -185,9 +186,9 @@ public class TestDataTransferProtocol extends TestCase {
       String description, Boolean eofExcepted) throws IOException {
     sendBuf.reset();
     recvBuf.reset();
-    Sender.opWriteBlock(sendOut, block, 0,
-        stage, newGS, block.getNumBytes(), block.getNumBytes(), "cl", null,
-        new DatanodeInfo[1], BlockTokenSecretManager.DUMMY_TOKEN);
+    sender.writeBlock(block, BlockTokenSecretManager.DUMMY_TOKEN, "cl",
+        new DatanodeInfo[1], null, stage,
+        0, block.getNumBytes(), block.getNumBytes(), newGS);
     if (eofExcepted) {
       sendResponse(Status.ERROR, null, recvOut);
       sendRecvData(description, true);
@@ -372,10 +373,11 @@ public class TestDataTransferProtocol extends TestCase {
     
     /* Test OP_WRITE_BLOCK */
     sendBuf.reset();
-    Sender.opWriteBlock(sendOut, 
-        new ExtendedBlock(poolId, newBlockId), 0,
-        BlockConstructionStage.PIPELINE_SETUP_CREATE, 0L, 0L, 0L, "cl", null,
-        new DatanodeInfo[1], BlockTokenSecretManager.DUMMY_TOKEN);
+    sender.writeBlock(new ExtendedBlock(poolId, newBlockId),
+        BlockTokenSecretManager.DUMMY_TOKEN, "cl",
+        new DatanodeInfo[1], null,
+        BlockConstructionStage.PIPELINE_SETUP_CREATE,
+        0, 0L, 0L, 0L);
     sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
     
     // bad bytes per checksum
@@ -386,10 +388,10 @@ public class TestDataTransferProtocol extends TestCase {
 
     sendBuf.reset();
     recvBuf.reset();
-    Sender.opWriteBlock(sendOut,
-        new ExtendedBlock(poolId, ++newBlockId), 0,
-        BlockConstructionStage.PIPELINE_SETUP_CREATE, 0L, 0L, 0L, "cl", null,
-        new DatanodeInfo[1], BlockTokenSecretManager.DUMMY_TOKEN);
+    sender.writeBlock(new ExtendedBlock(poolId, ++newBlockId),
+        BlockTokenSecretManager.DUMMY_TOKEN, "cl",
+        new DatanodeInfo[1], null,
+        BlockConstructionStage.PIPELINE_SETUP_CREATE, 0, 0L, 0L, 0L);
     sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
     sendOut.writeInt(512);
 
@@ -409,10 +411,10 @@ public class TestDataTransferProtocol extends TestCase {
     // test for writing a valid zero size block
     sendBuf.reset();
     recvBuf.reset();
-    Sender.opWriteBlock(sendOut, 
-        new ExtendedBlock(poolId, ++newBlockId), 0,
-        BlockConstructionStage.PIPELINE_SETUP_CREATE, 0L, 0L, 0L, "cl", null,
-        new DatanodeInfo[1], BlockTokenSecretManager.DUMMY_TOKEN);
+    sender.writeBlock(new ExtendedBlock(poolId, ++newBlockId),
+        BlockTokenSecretManager.DUMMY_TOKEN, "cl",
+        new DatanodeInfo[1], null,
+        BlockConstructionStage.PIPELINE_SETUP_CREATE, 0, 0L, 0L, 0L);
     sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
     sendOut.writeInt(512);         // checksum size
 
@@ -439,22 +441,22 @@ public class TestDataTransferProtocol extends TestCase {
     sendBuf.reset();
     recvBuf.reset();
     blk.setBlockId(blkid-1);
-    Sender.opReadBlock(sendOut, blk, 0L, fileLen, "cl",
-          BlockTokenSecretManager.DUMMY_TOKEN);
+    sender.readBlock(blk, BlockTokenSecretManager.DUMMY_TOKEN, "cl",
+        0L, fileLen);
     sendRecvData("Wrong block ID " + newBlockId + " for read", false); 
 
     // negative block start offset -1L
     sendBuf.reset();
     blk.setBlockId(blkid);
-    Sender.opReadBlock(sendOut, blk, -1L, fileLen, "cl",
-          BlockTokenSecretManager.DUMMY_TOKEN);
+    sender.readBlock(blk, BlockTokenSecretManager.DUMMY_TOKEN, "cl",
+        -1L, fileLen);
     sendRecvData("Negative start-offset for read for block " + 
                  firstBlock.getBlockId(), false);
 
     // bad block start offset
     sendBuf.reset();
-    Sender.opReadBlock(sendOut, blk, fileLen, fileLen, "cl",
-          BlockTokenSecretManager.DUMMY_TOKEN);
+    sender.readBlock(blk, BlockTokenSecretManager.DUMMY_TOKEN, "cl",
+        fileLen, fileLen);
     sendRecvData("Wrong start-offset for reading block " +
                  firstBlock.getBlockId(), false);
     
@@ -462,8 +464,8 @@ public class TestDataTransferProtocol extends TestCase {
     recvBuf.reset();
     sendResponse(Status.SUCCESS, null, recvOut);
     sendBuf.reset();
-    Sender.opReadBlock(sendOut, blk, 0L, 
-        -1 - random.nextInt(oneMil), "cl", BlockTokenSecretManager.DUMMY_TOKEN);
+    sender.readBlock(blk, BlockTokenSecretManager.DUMMY_TOKEN, "cl",
+        0L, -1L-random.nextInt(oneMil));
     sendRecvData("Negative length for reading block " +
                  firstBlock.getBlockId(), false);
     
@@ -471,15 +473,15 @@ public class TestDataTransferProtocol extends TestCase {
     recvBuf.reset();
     sendResponse(Status.ERROR, null, recvOut);
     sendBuf.reset();
-    Sender.opReadBlock(sendOut, blk, 0L, 
-        fileLen + 1, "cl", BlockTokenSecretManager.DUMMY_TOKEN);
+    sender.readBlock(blk, BlockTokenSecretManager.DUMMY_TOKEN, "cl",
+        0L, fileLen+1);
     sendRecvData("Wrong length for reading block " +
                  firstBlock.getBlockId(), false);
     
     //At the end of all this, read the file to make sure that succeeds finally.
     sendBuf.reset();
-    Sender.opReadBlock(sendOut, blk, 0L, 
-        fileLen, "cl", BlockTokenSecretManager.DUMMY_TOKEN);
+    sender.readBlock(blk, BlockTokenSecretManager.DUMMY_TOKEN, "cl",
+        0L, fileLen);
     readFile(fileSys, file, fileLen);
     } finally {
       cluster.shutdown();

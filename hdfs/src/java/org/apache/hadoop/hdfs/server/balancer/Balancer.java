@@ -348,8 +348,8 @@ public class Balancer {
     private void sendRequest(DataOutputStream out) throws IOException {
       final ExtendedBlock eb = new ExtendedBlock(nnc.blockpoolID, block.getBlock());
       final Token<BlockTokenIdentifier> accessToken = nnc.getAccessToken(eb);
-      Sender.opReplaceBlock(out, eb, source.getStorageID(), 
-          proxySource.getDatanode(), accessToken);
+      new Sender(out).replaceBlock(eb, accessToken,
+          source.getStorageID(), proxySource.getDatanode());
     }
     
     /* Receive a block copy response from the input stream */ 

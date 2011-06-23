@@ -44,7 +44,14 @@ import com.google.protobuf.Message;
 /** Sender */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class Sender {
+public class Sender implements DataTransferProtocol {
+  private final DataOutputStream out;
+
+  /** Create a sender for DataTransferProtocol with a output stream. */
+  public Sender(final DataOutputStream out) {
+    this.out = out;    
+  }
+
   /** Initialize a operation. */
   private static void op(final DataOutput out, final Op op
       ) throws IOException {
@@ -59,79 +66,85 @@ public class Sender {
     out.flush();
   }
 
-  /** Send OP_READ_BLOCK */
-  public static void opReadBlock(DataOutputStream out, ExtendedBlock blk,
-      long blockOffset, long blockLen, String clientName,
-      Token<BlockTokenIdentifier> blockToken)
-      throws IOException {
+  @Override
+  public void readBlock(final ExtendedBlock blk,
+      final Token<BlockTokenIdentifier> blockToken,
+      final String clientName,
+      final long blockOffset,
+      final long length) throws IOException {
 
     OpReadBlockProto proto = OpReadBlockProto.newBuilder()
       .setHeader(DataTransferProtoUtil.buildClientHeader(blk, clientName, blockToken))
       .setOffset(blockOffset)
-      .setLen(blockLen)
+      .setLen(length)
       .build();
 
     send(out, Op.READ_BLOCK, proto);
   }
   
 
-  /** Send OP_WRITE_BLOCK */
-  public static void opWriteBlock(DataOutputStream out, ExtendedBlock blk,
-      int pipelineSize, BlockConstructionStage stage, long newGs,
-      long minBytesRcvd, long maxBytesRcvd, String client, DatanodeInfo src,
-      DatanodeInfo[] targets, Token<BlockTokenIdentifier> blockToken)
-      throws IOException {
-    ClientOperationHeaderProto header = DataTransferProtoUtil.buildClientHeader(blk, client,
-        blockToken);
+  @Override
+  public void writeBlock(final ExtendedBlock blk,
+      final Token<BlockTokenIdentifier> blockToken,
+      final String clientName,
+      final DatanodeInfo[] targets,
+      final DatanodeInfo source,
+      final BlockConstructionStage stage,
+      final int pipelineSize,
+      final long minBytesRcvd,
+      final long maxBytesRcvd,
+      final long latestGenerationStamp) throws IOException {
+    ClientOperationHeaderProto header = DataTransferProtoUtil.buildClientHeader(
+        blk, clientName, blockToken);
     
     OpWriteBlockProto.Builder proto = OpWriteBlockProto.newBuilder()
       .setHeader(header)
-      .addAllTargets(
-          toProtos(targets, 1))
+      .addAllTargets(toProtos(targets, 1))
       .setStage(toProto(stage))
       .setPipelineSize(pipelineSize)
       .setMinBytesRcvd(minBytesRcvd)
       .setMaxBytesRcvd(maxBytesRcvd)
-      .setLatestGenerationStamp(newGs);
+      .setLatestGenerationStamp(latestGenerationStamp);
     
-    if (src != null) {
-      proto.setSource(toProto(src));
+    if (source != null) {
+      proto.setSource(toProto(source));
     }
 
     send(out, Op.WRITE_BLOCK, proto.build());
   }
 
-  /** Send {@link Op#TRANSFER_BLOCK} */
-  public static void opTransferBlock(DataOutputStream out, ExtendedBlock blk,
-      String client, DatanodeInfo[] targets,
-      Token<BlockTokenIdentifier> blockToken) throws IOException {
+  @Override
+  public void transferBlock(final ExtendedBlock blk,
+      final Token<BlockTokenIdentifier> blockToken,
+      final String clientName,
+      final DatanodeInfo[] targets) throws IOException {
     
     OpTransferBlockProto proto = OpTransferBlockProto.newBuilder()
       .setHeader(DataTransferProtoUtil.buildClientHeader(
-          blk, client, blockToken))
+          blk, clientName, blockToken))
       .addAllTargets(toProtos(targets, 0))
       .build();
 
     send(out, Op.TRANSFER_BLOCK, proto);
   }
 
-  /** Send OP_REPLACE_BLOCK */
-  public static void opReplaceBlock(DataOutputStream out,
-      ExtendedBlock blk, String delHint, DatanodeInfo src,
-      Token<BlockTokenIdentifier> blockToken) throws IOException {
+  @Override
+  public void replaceBlock(final ExtendedBlock blk,
+      final Token<BlockTokenIdentifier> blockToken,
+      final String delHint,
+      final DatanodeInfo source) throws IOException {
     OpReplaceBlockProto proto = OpReplaceBlockProto.newBuilder()
       .setHeader(DataTransferProtoUtil.buildBaseHeader(blk, blockToken))
       .setDelHint(delHint)
-      .setSource(toProto(src))
+      .setSource(toProto(source))
       .build();
     
     send(out, Op.REPLACE_BLOCK, proto);
   }
 
-  /** Send OP_COPY_BLOCK */
-  public static void opCopyBlock(DataOutputStream out, ExtendedBlock blk,
-      Token<BlockTokenIdentifier> blockToken)
-      throws IOException {
+  @Override
+  public void copyBlock(final ExtendedBlock blk,
+      final Token<BlockTokenIdentifier> blockToken) throws IOException {
     OpCopyBlockProto proto = OpCopyBlockProto.newBuilder()
       .setHeader(DataTransferProtoUtil.buildBaseHeader(blk, blockToken))
       .build();
@@ -139,10 +152,9 @@ public class Sender {
     send(out, Op.COPY_BLOCK, proto);
   }
 
-  /** Send OP_BLOCK_CHECKSUM */
-  public static void opBlockChecksum(DataOutputStream out, ExtendedBlock blk,
-      Token<BlockTokenIdentifier> blockToken)
-      throws IOException {
+  @Override
+  public void blockChecksum(final ExtendedBlock blk,
+      final Token<BlockTokenIdentifier> blockToken) throws IOException {
     OpBlockChecksumProto proto = OpBlockChecksumProto.newBuilder()
       .setHeader(DataTransferProtoUtil.buildBaseHeader(blk, blockToken))
       .build();

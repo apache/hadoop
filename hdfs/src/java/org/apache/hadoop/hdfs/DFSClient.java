@@ -1164,7 +1164,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                 + Op.BLOCK_CHECKSUM + ", block=" + block);
           }
           // get block MD5
-          Sender.opBlockChecksum(out, block, lb.getBlockToken());
+          new Sender(out).blockChecksum(block, lb.getBlockToken());
 
           final BlockOpResponseProto reply =
             BlockOpResponseProto.parseFrom(HdfsProtoUtil.vintPrefixed(in));

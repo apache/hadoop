@@ -526,6 +526,9 @@ Trunk (unreleased changes)
     HDFS-2092. Remove some object references to Configuration in DFSClient.
     (Bharath Mundlapudi via szetszwo)
 
+    HDFS-2087. Declare methods in DataTransferProtocol interface, and change
+    Sender and Receiver to implement the interface.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

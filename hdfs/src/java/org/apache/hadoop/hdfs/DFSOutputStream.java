@@ -846,8 +846,8 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
             DataNode.SMALL_BUFFER_SIZE));
 
         //send the TRANSFER_BLOCK request
-        Sender.opTransferBlock(out, block,
-            dfsClient.clientName, targets, blockToken);
+        new Sender(out).transferBlock(block, blockToken, dfsClient.clientName,
+            targets);
 
         //ack
         in = new DataInputStream(NetUtils.getInputStream(sock));
@@ -1019,10 +1019,9 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         blockReplyStream = new DataInputStream(NetUtils.getInputStream(s));
 
         // send the request
-        Sender.opWriteBlock(out, block,
-            nodes.length, recoveryFlag ? stage.getRecoveryStage() : stage, newGS, 
-            block.getNumBytes(), bytesSent, dfsClient.clientName, null, nodes,
-            accessToken);
+        new Sender(out).writeBlock(block, accessToken, dfsClient.clientName,
+            nodes, null, recoveryFlag? stage.getRecoveryStage() : stage, 
+            nodes.length, block.getNumBytes(), bytesSent, newGS);
         checksum.writeHeader(out);
         out.flush();
 

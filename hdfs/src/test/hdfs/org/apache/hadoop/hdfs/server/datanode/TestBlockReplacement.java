@@ -258,8 +258,8 @@ public class TestBlockReplacement extends TestCase {
     sock.setKeepAlive(true);
     // sendRequest
     DataOutputStream out = new DataOutputStream(sock.getOutputStream());
-    Sender.opReplaceBlock(out, block, source
-        .getStorageID(), sourceProxy, BlockTokenSecretManager.DUMMY_TOKEN);
+    new Sender(out).replaceBlock(block, BlockTokenSecretManager.DUMMY_TOKEN,
+        source.getStorageID(), sourceProxy);
     out.flush();
     // receiveResponse
     DataInputStream reply = new DataInputStream(sock.getInputStream());

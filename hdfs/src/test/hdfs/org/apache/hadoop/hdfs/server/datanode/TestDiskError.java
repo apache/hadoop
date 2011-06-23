@@ -140,10 +140,10 @@ public class TestDiskError {
     // write the header.
     DataOutputStream out = new DataOutputStream(s.getOutputStream());
 
-    Sender.opWriteBlock(out, block.getBlock(), 1,
-        BlockConstructionStage.PIPELINE_SETUP_CREATE,
-        0L, 0L, 0L, "", null, new DatanodeInfo[0],
-        BlockTokenSecretManager.DUMMY_TOKEN);
+    new Sender(out).writeBlock(block.getBlock(),
+        BlockTokenSecretManager.DUMMY_TOKEN, "",
+        new DatanodeInfo[0], null,
+        BlockConstructionStage.PIPELINE_SETUP_CREATE, 1, 0L, 0L, 0L);
 
     // write check header
     out.writeByte( 1 );

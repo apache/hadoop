@@ -683,8 +683,8 @@ public class DFSTestUtil {
     final DataInputStream in = new DataInputStream(NetUtils.getInputStream(s));
 
     // send the request
-    Sender.opTransferBlock(out, b, dfsClient.clientName,
-        new DatanodeInfo[]{datanodes[1]}, new Token<BlockTokenIdentifier>());
+    new Sender(out).transferBlock(b, new Token<BlockTokenIdentifier>(),
+        dfsClient.clientName, new DatanodeInfo[]{datanodes[1]});
     out.flush();
 
     return BlockOpResponseProto.parseDelimitedFrom(in);

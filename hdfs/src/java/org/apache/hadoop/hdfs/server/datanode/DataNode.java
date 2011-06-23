@@ -1977,8 +1977,8 @@ public class DataNode extends Configured
               EnumSet.of(BlockTokenSecretManager.AccessMode.WRITE));
         }
 
-        Sender.opWriteBlock(out,
-            b, 0, stage, 0, 0, 0, clientname, srcNode, targets, accessToken);
+        new Sender(out).writeBlock(b, accessToken, clientname, targets, srcNode,
+            stage, 0, 0, 0, 0);
 
         // send data & checksum
         blockSender.sendBlock(out, baseStream, null);
