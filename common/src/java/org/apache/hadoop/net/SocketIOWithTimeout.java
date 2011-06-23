@@ -288,8 +288,7 @@ abstract class SocketIOWithTimeout {
           try {
             selector.close();
           } catch (IOException e) {
-            LOG.warn("Unexpected exception while closing selector : " +
-                     StringUtils.stringifyException(e));
+            LOG.warn("Unexpected exception while closing selector : ", e);
           }
         }
       }    
@@ -361,8 +360,7 @@ abstract class SocketIOWithTimeout {
         try {
           info.selector.selectNow();
         } catch (IOException e) {
-          LOG.info("Unexpected Exception while clearing selector : " +
-                   StringUtils.stringifyException(e));
+          LOG.info("Unexpected Exception while clearing selector : ", e);
           // don't put the selector back.
           info.close();
           return ret; 

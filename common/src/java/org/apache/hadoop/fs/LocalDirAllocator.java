@@ -232,15 +232,14 @@ public class LocalDirAllocator {
                 dirs.add(localDirs[i]);
                 dfList.add(new DF(new File(localDirs[i]), 30000));
               } catch (DiskErrorException de) {
-                LOG.warn( localDirs[i] + "is not writable\n" +
-                    StringUtils.stringifyException(de));
+                LOG.warn( localDirs[i] + "is not writable\n", de);
               }
             } else {
               LOG.warn( "Failed to create " + localDirs[i]);
             }
           } catch (IOException ie) { 
             LOG.warn( "Failed to create " + localDirs[i] + ": " +
-                ie.getMessage() + "\n" + StringUtils.stringifyException(ie));
+                ie.getMessage() + "\n", ie);
           } //ignore
         }
         localDirs = dirs.toArray(new String[dirs.size()]);
@@ -261,7 +260,7 @@ public class LocalDirAllocator {
         DiskChecker.checkDir(new File(file.getParent().toUri().getPath()));
         return file;
       } catch (DiskErrorException d) {
-        LOG.warn(StringUtils.stringifyException(d));
+        LOG.warn("Disk Error Exception: ", d);
         return null;
       }
     }

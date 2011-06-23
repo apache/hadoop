@@ -150,8 +150,7 @@ public class MetricsTimeVaryingRate extends MetricsBase {
       mr.incrMetric(getName() + "_num_ops", getPreviousIntervalNumOps());
       mr.setMetric(getName() + "_avg_time", getPreviousIntervalAverageTime());
     } catch (Exception e) {
-      LOG.info("pushMetric failed for " + getName() + "\n" +
-          StringUtils.stringifyException(e));
+      LOG.info("pushMetric failed for " + getName() + "\n" , e);
     }
   }
   

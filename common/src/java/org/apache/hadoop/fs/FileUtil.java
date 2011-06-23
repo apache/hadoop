@@ -652,9 +652,9 @@ public class FileUtil {
     try {
       shExec.execute();
     }catch(Exception e) {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Error while changing permission : " + filename 
-            +" Exception: " + StringUtils.stringifyException(e));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Error while changing permission : " + filename
+            + " Exception: ", e);
       }
     }
     return shExec.getExitCode();

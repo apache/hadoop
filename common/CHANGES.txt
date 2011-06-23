@@ -227,6 +227,9 @@ Trunk (unreleased changes)
     HADOOP-6929. RPC should have a way to pass Security information other than 
     protocol annotations. (sharad and omalley via mahadev)
 
+    HADOOP-7385. Remove StringUtils.stringifyException(ie) in logger functions.
+    (Bharath Mundlapudi via Tanping Wang).
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

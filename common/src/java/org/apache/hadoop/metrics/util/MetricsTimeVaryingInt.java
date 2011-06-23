@@ -106,8 +106,7 @@ public class MetricsTimeVaryingInt extends MetricsBase {
     try {
       mr.incrMetric(getName(), getPreviousIntervalValue());
     } catch (Exception e) {
-      LOG.info("pushMetric failed for " + getName() + "\n" +
-          StringUtils.stringifyException(e));
+      LOG.info("pushMetric failed for " + getName() + "\n" , e);
     }
   }
   

@@ -156,7 +156,7 @@ implements Configurable
         s.execute();
         allOutput.append(s.getOutput() + " ");
       } catch (Exception e) {
-        LOG.warn(StringUtils.stringifyException(e));
+        LOG.warn("Exception: ", e);
         return null;
       }
       loopCount++; 

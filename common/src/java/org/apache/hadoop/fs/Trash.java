@@ -327,15 +327,13 @@ public class Trash extends Configured {
             }
           }
         } catch (Exception e) {
-          LOG.warn("RuntimeException during Trash.Emptier.run() " + 
-                   StringUtils.stringifyException(e));
+          LOG.warn("RuntimeException during Trash.Emptier.run(): ", e); 
         }
       }
       try {
         fs.close();
       } catch(IOException e) {
-        LOG.warn("Trash cannot close FileSystem. " +
-            StringUtils.stringifyException(e));
+        LOG.warn("Trash cannot close FileSystem: ", e);
       }
     }
 
