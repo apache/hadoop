@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -557,7 +558,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
     Map<Priority, Set<NodeInfo>> reservations = application.getAllReservations();
     for (Map.Entry<Priority, Set<NodeInfo>> e : reservations.entrySet()) {
       Priority priority = e.getKey();
-      Set<NodeInfo> reservedNodes = new TreeSet<NodeInfo>(e.getValue());
+      Set<NodeInfo> reservedNodes = new HashSet<NodeInfo>(e.getValue());
       for (NodeInfo node : reservedNodes) {
         Resource allocatedResource = 
           application.getResourceRequest(priority, NodeManagerImpl.ANY).getCapability();
