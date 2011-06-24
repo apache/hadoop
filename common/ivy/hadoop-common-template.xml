@@ -157,7 +157,7 @@
     </dependency>
     <dependency>
       <groupId>org.xerial.snappy</groupId>
-      <artifactId>snappy-java</artifactId>
+      <artifactId>java-snappy</artifactId>
       <version>1.0.3-rc2</version>
     </dependency>
   </dependencies>
