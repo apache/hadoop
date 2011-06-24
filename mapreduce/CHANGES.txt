@@ -5,6 +5,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
     
+    Fix diagnostics display for more than 100 apps in RM. (llu)
+
     Fix class cast exception in release reserved containers in capacity scheduler (mahadev)
 
     MAPREDUCE-2615. Make killJob go through AM and fix JobSummaryLog.

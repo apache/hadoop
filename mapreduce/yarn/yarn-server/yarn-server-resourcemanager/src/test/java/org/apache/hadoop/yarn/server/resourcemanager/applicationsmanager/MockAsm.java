@@ -281,7 +281,7 @@ public abstract class MockAsm extends MockApps {
       public String getDiagnostics() {
         switch (getState()) {
           case FAILED: return "Application was failed";
-          case KILLED: return "Appiication was killed. yada yada yada.";
+          case KILLED: return "Appiication was killed.\nyada yada yada.";
         }
         return "";
       }
