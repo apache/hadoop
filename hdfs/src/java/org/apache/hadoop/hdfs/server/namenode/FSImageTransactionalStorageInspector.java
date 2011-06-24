@@ -413,6 +413,15 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
                "crash)");
       if (logs.size() == 1) {
         // Only one log, it's our only choice!
+        FoundEditLog log = logs.get(0);
+        if (log.validateLog().numTransactions == 0) {
+          // If it has no transactions, we should consider it corrupt just
+          // to be conservative.
+          // See comment below for similar case
+          LOG.warn("Marking log at " + log.getFile() + " as corrupt since " +
+              "it has no transactions in it.");
+          log.markCorrupt();          
+        }
         return;
       }
 
@@ -429,6 +438,13 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
           LOG.warn("Marking log at " + log.getFile() + " as corrupt since " +
                    "it is has only " + txns + " valid txns whereas another " +
                    "log has " + maxValidTxnCount);
+          log.markCorrupt();
+        } else if (txns == 0) {
+          // this can happen if the NN crashes right after rolling a log
+          // but before the START_LOG_SEGMENT txn is written. Since the log
+          // is empty, we can just move it aside to its corrupt name.
+          LOG.warn("Marking log at " + log.getFile() + " as corrupt since " +
+              "it has no transactions in it.");
           log.markCorrupt();
         }
       }
@@ -517,6 +533,8 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
       long lastTxId = startTxId + numTransactions - 1;
       File dst = new File(file.getParentFile(),
           NNStorage.getFinalizedEditsFileName(startTxId, lastTxId));
+      LOG.info("Finalizing edits log " + file + " by renaming to "
+          + dst.getName());
       if (!file.renameTo(dst)) {
         throw new IOException("Couldn't finalize log " +
             file + " to " + dst);

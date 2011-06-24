@@ -25,6 +25,7 @@ import static org.mockito.Mockito.spy;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -60,6 +61,8 @@ public class TestFSImageStorageInspector {
         "/foo/current/edits_inprogress_457");
 
     inspector.inspectDirectory(mockDir);
+    mockLogValidation(inspector,
+        "/foo/current/edits_inprogress_457", 10);
     
     assertEquals(2, inspector.foundEditLogs.size());
     assertEquals(2, inspector.foundImages.size());
@@ -125,6 +128,8 @@ public class TestFSImageStorageInspector {
         "/foo/current/edits_952-1000");
 
     inspector.inspectDirectory(mockDir);
+    mockLogValidation(inspector,
+        "/foo/current/edits_inprogress_901", 51);
 
     LoadPlan plan = inspector.createLoadPlan();
     LOG.info("Plan: " + plan);
@@ -237,30 +242,25 @@ public class TestFSImageStorageInspector {
    */
   @Test
   public void testLogGroupRecoveryInProgress() throws IOException {
+    String paths[] = new String[] {
+        "/foo1/current/edits_inprogress_123",
+        "/foo2/current/edits_inprogress_123",
+        "/foo3/current/edits_inprogress_123"
+    };
     FSImageTransactionalStorageInspector inspector =
         new FSImageTransactionalStorageInspector();
-    inspector.inspectDirectory(
-        mockDirectoryWithEditLogs("/foo1/current/edits_inprogress_123"));
-    inspector.inspectDirectory(
-        mockDirectoryWithEditLogs("/foo2/current/edits_inprogress_123"));
-    inspector.inspectDirectory(
-        mockDirectoryWithEditLogs("/foo3/current/edits_inprogress_123"));
+    inspector.inspectDirectory(mockDirectoryWithEditLogs(paths[0]));
+    inspector.inspectDirectory(mockDirectoryWithEditLogs(paths[1]));
+    inspector.inspectDirectory(mockDirectoryWithEditLogs(paths[2]));
+
+    // Inject spies to return the valid counts we would like to see
+    mockLogValidation(inspector, paths[0], 2000);
+    mockLogValidation(inspector, paths[1], 2000);
+    mockLogValidation(inspector, paths[2], 1000);
 
     LogGroup lg = inspector.logGroups.get(123L);
     assertEquals(3, lg.logs.size());
     
-    // Inject spies to return the valid counts we would like to see
-    long validTxnCounts[] = new long[] { 2000, 2000, 1000 };
-    for (int i = 0; i < 3; i++) {
-      FoundEditLog inProgressLog = lg.logs.get(i);
-      assertTrue(inProgressLog.isInProgress());
-      
-      inProgressLog = spy(inProgressLog);
-      doReturn(new FSEditLogLoader.EditLogValidation(-1, validTxnCounts[i]))
-        .when(inProgressLog).validateLog();
-      lg.logs.set(i, inProgressLog);      
-    }
-
     lg.planRecovery();
     
     // Check that the short one was marked corrupt
@@ -280,7 +280,32 @@ public class TestFSImageStorageInspector {
     Mockito.verify(lg.logs.get(0)).finalizeLog();
     Mockito.verify(lg.logs.get(1)).finalizeLog();
   }
-  
+
+  /**
+   * Mock out the log at the given path to return a specified number
+   * of transactions upon validation.
+   */
+  private void mockLogValidation(
+      FSImageTransactionalStorageInspector inspector,
+      String path, int numValidTransactions) throws IOException {
+    
+    for (LogGroup lg : inspector.logGroups.values()) {
+      List<FoundEditLog> logs = lg.logs;
+      for (int i = 0; i < logs.size(); i++) {
+        FoundEditLog log = logs.get(i);
+        if (log.file.getPath().equals(path)) {
+          // mock out its validation
+          FoundEditLog spyLog = spy(log);
+          doReturn(new FSEditLogLoader.EditLogValidation(-1, numValidTransactions))
+            .when(spyLog).validateLog();
+          logs.set(i, spyLog);
+          return;
+        }
+      }
+    }
+    fail("No log found to mock out at " + path);
+  }
+
   /**
    * Test when edits and image are in separate directories.
    */
@@ -306,6 +331,9 @@ public class TestFSImageStorageInspector {
     inspector.inspectDirectory(mockImageDir);
     inspector.inspectDirectory(mockEditsDir);
     inspector.inspectDirectory(mockImageDir2);
+    
+    mockLogValidation(inspector,
+        "/foo3/current/edits_inprogress_457", 2);
 
     assertEquals(2, inspector.foundEditLogs.size());
     assertEquals(2, inspector.foundImages.size());

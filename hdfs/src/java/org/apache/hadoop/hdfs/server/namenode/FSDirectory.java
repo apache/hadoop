@@ -162,6 +162,7 @@ class FSDirectory implements Closeable {
 
       startOpt = StartupOption.REGULAR;
     }
+    boolean success = false;
     try {
       if (fsImage.recoverTransitionRead(startOpt)) {
         fsImage.saveNamespace();
@@ -169,9 +170,11 @@ class FSDirectory implements Closeable {
       fsImage.openEditLog();
       
       fsImage.setCheckpointDirectories(null, null);
-    } catch(IOException e) {
-      fsImage.close();
-      throw e;
+      success = true;
+    } finally {
+      if (!success) {
+        fsImage.close();
+      }
     }
     writeLock();
     try {

@@ -60,3 +60,5 @@ HDFS-2077. Address checkpoint upload when one of the storage dirs is failed
 HDFS-2078. NameNode should not clear directory when restoring removed storage.
            (todd)
 HDFS-2088. Move edits log archiving logic into FSEditLog/JournalManager (todd)
+HDFS-2093. Handle case where an entirely empty log is left during NN crash
+           (todd)

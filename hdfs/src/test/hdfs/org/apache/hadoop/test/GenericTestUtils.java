@@ -77,12 +77,11 @@ public abstract class GenericTestUtils {
         Joiner.on(",").join(expectedSet));
   }
   
-  public static void assertExceptionContains(String string, IOException ioe) {
-    String msg = ioe.getMessage();
+  public static void assertExceptionContains(String string, Throwable t) {
+    String msg = t.getMessage();
     Assert.assertTrue(
-        "Unexpected exception:" + StringUtils.stringifyException(ioe),
-        msg.contains(string));
-    
+        "Unexpected exception:" + StringUtils.stringifyException(t),
+        msg.contains(string));    
   }  
 
   /**

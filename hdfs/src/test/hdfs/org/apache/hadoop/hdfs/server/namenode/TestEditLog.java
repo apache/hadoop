@@ -21,6 +21,7 @@ import junit.framework.TestCase;
 import java.io.*;
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -46,11 +47,14 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
 import org.aspectj.util.FileUtil;
 
 import org.mockito.Mockito;
+
+import com.google.common.collect.Lists;
 
 import static org.apache.hadoop.test.MetricsAsserts.*;
 import static org.junit.Assert.fail;
@@ -605,6 +609,63 @@ public class TestEditLog extends TestCase {
       }
     }
   }
+  
+  public void testCrashRecoveryEmptyLogOneDir() throws Exception {
+    doTestCrashRecoveryEmptyLog(false);
+  }
+  
+  public void testCrashRecoveryEmptyLogBothDirs() throws Exception {
+    doTestCrashRecoveryEmptyLog(true);
+  }
+  
+  /**
+   * Test that the NN handles the corruption properly
+   * after it crashes just after creating an edit log
+   * (ie before writing START_LOG_SEGMENT). In the case
+   * that all logs have this problem, it should mark them
+   * as corrupt instead of trying to finalize them.
+   * 
+   * @param inBothDirs if true, there will be a truncated log in
+   * both of the edits directories. If false, the truncated log
+   * will only be in one of the directories. In both cases, the
+   * NN should fail to start up, because it's aware that txid 3
+   * was reached, but unable to find a non-corrupt log starting there.
+   */
+  private void doTestCrashRecoveryEmptyLog(boolean inBothDirs) throws Exception {
+    // start a cluster 
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+    cluster = new MiniDFSCluster.Builder(conf)
+      .numDataNodes(NUM_DATA_NODES).build();
+    cluster.shutdown();
+    
+    Collection<URI> editsDirs = cluster.getNameEditsDirs(0);
+    for (URI uri : editsDirs) {
+      File dir = new File(uri.getPath());
+      File currentDir = new File(dir, "current");
+      // We should start with only the finalized edits_1-2
+      GenericTestUtils.assertGlobEquals(currentDir, "edits_.*",
+          "edits_1-2");
+      // Make a truncated edits_3_inprogress
+      File log = new File(currentDir,
+          NNStorage.getInProgressEditsFileName(3));
+      new EditLogFileOutputStream(log, 1024).create();
+      if (!inBothDirs) {
+        break;
+      }
+    }
+    
+    try {
+      cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(NUM_DATA_NODES).format(false).build();
+      fail("Did not fail to start with all-corrupt logs");
+    } catch (IllegalStateException ise) {
+      GenericTestUtils.assertExceptionContains(
+          "No non-corrupt logs for txid 3", ise);
+    }
+    cluster.shutdown();
+  }
+
   
   private static class EditLogByteInputStream extends EditLogInputStream {
     private InputStream input;
