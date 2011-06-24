@@ -23,6 +23,7 @@ import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -47,7 +48,15 @@ public abstract class GenericTestUtils {
   public static void assertExists(File f) {
     Assert.assertTrue("File " + f + " should exist", f.exists());
   }
-  
+
+  public static void assertExceptionContains(String string, IOException ioe) {
+    String msg = ioe.getMessage();
+    Assert.assertTrue(
+        "Unexpected exception:" + StringUtils.stringifyException(ioe),
+        msg.contains(string));
+    
+  }  
+
   /**
    * Mockito answer helper that triggers one latch as soon as the
    * method is called, then waits on another before continuing.
@@ -122,6 +131,6 @@ public abstract class GenericTestUtils {
       return invocation.getMethod().invoke(
           delegate, invocation.getArguments());
     }
-  };
-  
+  }
+
 }

@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
@@ -34,6 +36,8 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 
@@ -46,6 +50,7 @@ public class TestNNStorageArchivalManager {
   @Test
   public void testArchiveEasyCase() throws IOException {
     TestCaseDescription tc = new TestCaseDescription();
+    tc.addRoot("/foo1", NameNodeDirType.IMAGE_AND_EDITS);
     tc.addImage("/foo1/current/fsimage_100", true);
     tc.addImage("/foo1/current/fsimage_200", true);
     tc.addImage("/foo1/current/fsimage_300", false);
@@ -66,6 +71,8 @@ public class TestNNStorageArchivalManager {
   @Test
   public void testArchiveMultipleDirs() throws IOException {
     TestCaseDescription tc = new TestCaseDescription();
+    tc.addRoot("/foo1", NameNodeDirType.IMAGE_AND_EDITS);
+    tc.addRoot("/foo2", NameNodeDirType.IMAGE_AND_EDITS);
     tc.addImage("/foo1/current/fsimage_100", true);
     tc.addImage("/foo1/current/fsimage_200", true);
     tc.addImage("/foo2/current/fsimage_200", true);
@@ -87,6 +94,7 @@ public class TestNNStorageArchivalManager {
   @Test
   public void testArchiveLessThanRetention() throws IOException {
     TestCaseDescription tc = new TestCaseDescription();
+    tc.addRoot("/foo1", NameNodeDirType.IMAGE_AND_EDITS);
     tc.addImage("/foo1/current/fsimage_100", false);
     tc.addLog("/foo1/current/edits_101-200", false);
     tc.addLog("/foo1/current/edits_201-300", false);
@@ -101,6 +109,7 @@ public class TestNNStorageArchivalManager {
   @Test
   public void testNoLogs() throws IOException {
     TestCaseDescription tc = new TestCaseDescription();
+    tc.addRoot("/foo1", NameNodeDirType.IMAGE_AND_EDITS);
     tc.addImage("/foo1/current/fsimage_100", true);
     tc.addImage("/foo1/current/fsimage_200", true);
     tc.addImage("/foo1/current/fsimage_300", false);
@@ -114,6 +123,7 @@ public class TestNNStorageArchivalManager {
   @Test
   public void testEmptyDir() throws IOException {
     TestCaseDescription tc = new TestCaseDescription();
+    tc.addRoot("/foo1", NameNodeDirType.IMAGE_AND_EDITS);
     runTest(tc);
   }
 
@@ -123,6 +133,7 @@ public class TestNNStorageArchivalManager {
   @Test
   public void testOldInProgress() throws IOException {
     TestCaseDescription tc = new TestCaseDescription();
+    tc.addRoot("/foo1", NameNodeDirType.IMAGE_AND_EDITS);
     tc.addImage("/foo1/current/fsimage_100", true);
     tc.addImage("/foo1/current/fsimage_200", true);
     tc.addImage("/foo1/current/fsimage_300", false);
@@ -130,7 +141,23 @@ public class TestNNStorageArchivalManager {
     tc.addLog("/foo1/current/edits_inprogress_101", true);
     runTest(tc);
   }
-    
+
+  @Test
+  public void testSeparateEditDirs() throws IOException {
+    TestCaseDescription tc = new TestCaseDescription();
+    tc.addRoot("/foo1", NameNodeDirType.IMAGE);
+    tc.addRoot("/foo2", NameNodeDirType.EDITS);
+    tc.addImage("/foo1/current/fsimage_100", true);
+    tc.addImage("/foo1/current/fsimage_200", true);
+    tc.addImage("/foo1/current/fsimage_300", false);
+    tc.addImage("/foo1/current/fsimage_400", false);
+    tc.addLog("/foo2/current/edits_101-200", true);
+    tc.addLog("/foo2/current/edits_201-300", true);
+    tc.addLog("/foo2/current/edits_301-400", false);
+    tc.addLog("/foo2/current/edits_inprogress_401", false);
+    runTest(tc);    
+  }
+  
   private void runTest(TestCaseDescription tc) throws IOException {
     Configuration conf = new Configuration();
 
@@ -169,33 +196,55 @@ public class TestNNStorageArchivalManager {
   }
   
   private static class TestCaseDescription {
-    private Set<String> files = Sets.newHashSet();
+    private Map<String, FakeRoot> dirRoots = Maps.newHashMap();
     private Set<String> expectedArchivedLogs = Sets.newHashSet();
     private Set<String> expectedArchivedImages = Sets.newHashSet();
+    
+    private static class FakeRoot {
+      NameNodeDirType type;
+      List<String> files;
+      
+      FakeRoot(NameNodeDirType type) {
+        this.type = type;
+        files = Lists.newArrayList();
+      }
+    }
 
+    void addRoot(String root, NameNodeDirType dir) {
+      dirRoots.put(root, new FakeRoot(dir));
+    }
+
+    private void addFile(String path) {
+      for (Map.Entry<String, FakeRoot> entry : dirRoots.entrySet()) {
+        if (path.startsWith(entry.getKey())) {
+          entry.getValue().files.add(path);
+        }
+      }
+    }
+    
     void addLog(String path, boolean expectArchive) {
-      files.add(path);
+      addFile(path);
       if (expectArchive) {
         expectedArchivedLogs.add(path);
       }
     }
     
-    private String[] getPaths() {
-      return files.toArray(new String[0]);
-    }
-    
     void addImage(String path, boolean expectArchive) {
-      files.add(path);
+      addFile(path);
       if (expectArchive) {
         expectedArchivedImages.add(path);
       }
     }
     
     NNStorage mockStorage() throws IOException {
-      String[] paths = getPaths();
-      StorageDirectory mockDir = TestFSImageStorageInspector.mockDirectory(
-            NameNodeDirType.IMAGE_AND_EDITS, false, paths);
-      return mockStorageForDirs(mockDir);
+      List<StorageDirectory> sds = Lists.newArrayList();
+      for (FakeRoot root : dirRoots.values()) {
+        StorageDirectory mockDir = TestFSImageStorageInspector.mockDirectory(
+            root.type, false,
+            root.files.toArray(new String[0]));
+        sds.add(mockDir);
+      }
+      return mockStorageForDirs(sds.toArray(new StorageDirectory[0]));
     }
   }
 

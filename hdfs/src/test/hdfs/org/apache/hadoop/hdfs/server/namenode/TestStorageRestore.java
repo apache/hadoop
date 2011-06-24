@@ -226,6 +226,13 @@ public class TestStorageRestore extends TestCase {
     String md5BeforeEdit = FSImageTestUtil.getFileMD5(
         new File(path1, "current/edits_inprogress_5"));
     
+    // The original image should still be the previously failed image
+    // directory after it got restored, since it's still useful for
+    // a recovery!
+    FSImageTestUtil.assertFileContentsSame(
+            new File(path1, "current/fsimage_0"),
+            new File(path2, "current/fsimage_0"));
+    
     // Do another edit to verify that all the logs are active.
     path = new Path("/", "test2");
     assertTrue(fs.mkdirs(path));

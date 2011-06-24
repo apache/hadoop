@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 import junit.framework.TestCase;
 import java.net.InetSocketAddress;
 import java.io.File;
@@ -45,6 +46,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
@@ -1424,6 +1426,83 @@ public class TestCheckpoint extends TestCase {
       nn.rollEditLog();
 
       // Checkpoint again -- this should upload to both dirs
+      secondary.doCheckpoint();
+      
+      assertNNHasCheckpoints(cluster, ImmutableList.of(8));
+      assertParallelFilesInvariant(cluster, ImmutableList.of(secondary));
+    } finally {
+      if (currentDir != null) {
+        currentDir.setExecutable(true);
+      }
+      if (secondary != null) {
+        secondary.shutdown();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+  
+  /**
+   * Test case where the NN is configured with a name-only and an edits-only
+   * dir, with storage-restore turned on. In this case, if the name-only dir
+   * disappears and comes back, a new checkpoint after it has been restored
+   * should function correctly.
+   * @throws Exception
+   */
+  @SuppressWarnings("deprecation")
+  public void testCheckpointWithSeparateDirsAfterNameFails() throws Exception {
+    MiniDFSCluster cluster = null;
+    SecondaryNameNode secondary = null;
+    File currentDir = null;
+    
+    Configuration conf = new HdfsConfiguration();
+
+    File base_dir = new File(MiniDFSCluster.getBaseDirectory());
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_RESTORE_KEY, true);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+        MiniDFSCluster.getBaseDirectory() + "/name-only");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
+        MiniDFSCluster.getBaseDirectory() + "/edits-only");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY,
+        fileAsURI(new File(base_dir, "namesecondary1")).toString());
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+          .format(true)
+          .manageNameDfsDirs(false)
+          .build();
+  
+      secondary = startSecondaryNameNode(conf);
+
+      // Checkpoint once
+      secondary.doCheckpoint();
+
+      // Now primary NN experiences failure of its only name dir -- fake by
+      // setting its current dir to a-x permissions
+      NameNode nn = cluster.getNameNode();
+      NNStorage storage = nn.getFSImage().getStorage();
+      StorageDirectory sd0 = storage.getStorageDir(0);
+      assertEquals(NameNodeDirType.IMAGE, sd0.getStorageDirType());
+      currentDir = sd0.getCurrentDir();
+      currentDir.setExecutable(false);
+
+      // Try to upload checkpoint -- this should fail since there are no
+      // valid storage dirs
+      try {
+        secondary.doCheckpoint();
+        fail("Did not fail to checkpoint when there are no valid storage dirs");
+      } catch (IOException ioe) {
+        GenericTestUtils.assertExceptionContains(
+            "Unable to download to any storage dir", ioe);
+      }
+      
+      // Restore the good dir
+      currentDir.setExecutable(true);
+      nn.restoreFailedStorage("true");
+      nn.rollEditLog();
+
+      // Checkpoint again -- this should upload to the restored name dir
       secondary.doCheckpoint();
       
       assertNNHasCheckpoints(cluster, ImmutableList.of(8));

@@ -219,9 +219,10 @@ public class TestSaveNamespace {
     FSImage spyImage = spy(originalImage);
     fsn.dir.fsImage = spyImage;
     
-    File currentDir = storage.getStorageDir(0).getCurrentDir();
-    currentDir.setExecutable(false);
-    currentDir.setReadable(false);
+    File rootDir = storage.getStorageDir(0).getRoot();
+    rootDir.setExecutable(false);
+    rootDir.setWritable(false);
+    rootDir.setReadable(false);
 
     try {
       doAnEdit(fsn, 1);
@@ -238,8 +239,9 @@ public class TestSaveNamespace {
                  " bad directories.", 
                    storage.getRemovedStorageDirs().size() == 1);
 
-      currentDir.setExecutable(true);
-      currentDir.setReadable(true);
+      rootDir.setExecutable(true);
+      rootDir.setWritable(true);
+      rootDir.setReadable(true);
 
       // The next call to savenamespace should try inserting the
       // erroneous directory back to fs.name.dir. This command should
@@ -269,9 +271,10 @@ public class TestSaveNamespace {
       checkEditExists(fsn, 1);
       LOG.info("Reloaded image is good.");
     } finally {
-      if (currentDir.exists()) {
-        currentDir.setExecutable(true);
-        currentDir.setReadable(true);
+      if (rootDir.exists()) {
+        rootDir.setExecutable(true);
+        rootDir.setWritable(true);
+        rootDir.setReadable(true);
       }
 
       if (fsn != null) {

@@ -242,20 +242,10 @@ public class NNStorage extends Storage implements Closeable {
         LOG.info("currently disabled dir " + root.getAbsolutePath() +
                  "; type="+sd.getStorageDirType() 
                  + ";canwrite="+root.canWrite());
-        try {
-          
-          if(root.exists() && root.canWrite()) {
-            // when we try to restore we just need to remove all the data
-            // without saving current in-memory state (which could've changed).
-            // TODO does this still make sense with 1073?
-            sd.clearDirectory();
-            
-            LOG.info("restoring dir " + sd.getRoot().getAbsolutePath());
-            this.addStorageDir(sd); // restore
-            this.removedStorageDirs.remove(sd);
-          }
-        } catch(IOException e) {
-          LOG.warn("failed to restore " + sd.getRoot().getAbsolutePath(), e);
+        if(root.exists() && root.canWrite()) {
+          LOG.info("restoring dir " + sd.getRoot().getAbsolutePath());
+          this.addStorageDir(sd); // restore
+          this.removedStorageDirs.remove(sd);
         }
       }
     }
