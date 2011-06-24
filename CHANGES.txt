@@ -283,6 +283,7 @@ Release 0.91.0 - Unreleased
    HBASE-3071  Graceful decommissioning of a regionserver
    HBASE-3970  Address HMaster crash/failure half way through meta migration
                (Subbu M Iyer)
+   HBASE-4013  Make ZooKeeperListener Abstract (Akash Ashok via Ted Yu)
 
   NEW FEATURES
    HBASE-2001  Coprocessors: Colocate user code with regions (Mingjie Lai via

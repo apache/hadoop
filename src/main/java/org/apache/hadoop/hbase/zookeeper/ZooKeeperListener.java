@@ -32,7 +32,7 @@ package org.apache.hadoop.hbase.zookeeper;
  * Note that the watcher will be blocked when invoking methods in listeners so
  * they must not be long-running.
  */
-public class ZooKeeperListener {
+public abstract class ZooKeeperListener {
 
   // Reference to the zk watcher which also contains configuration and constants
   protected ZooKeeperWatcher watcher;
