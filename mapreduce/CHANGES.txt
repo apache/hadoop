@@ -4,6 +4,8 @@ Trunk (unreleased changes)
 
 
     MAPREDUCE-279
+
+    Fix some invalid transitions in the RM. (vinodkv via ddas)
     
     Fix diagnostics display for more than 100 apps in RM. (llu)
 

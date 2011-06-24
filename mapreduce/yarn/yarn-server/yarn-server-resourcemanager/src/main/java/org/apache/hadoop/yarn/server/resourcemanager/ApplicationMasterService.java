@@ -117,6 +117,7 @@ AMRMProtocol, EventHandler<ASMEvent<ApplicationTrackerEventType>> {
   
   @Override
   public RegisterApplicationMasterResponse registerApplicationMaster(RegisterApplicationMasterRequest request) throws YarnRemoteException {
+    // TODO: What if duplicate register due to lost RPCs
     ApplicationMaster applicationMaster = request.getApplicationMaster();
     try {
       applicationsManager.registerApplicationMaster(applicationMaster);
@@ -137,6 +138,7 @@ AMRMProtocol, EventHandler<ASMEvent<ApplicationTrackerEventType>> {
 
   @Override
   public FinishApplicationMasterResponse finishApplicationMaster(FinishApplicationMasterRequest request) throws YarnRemoteException {
+    // TODO: What if duplicate finish due to lost RPCs
     ApplicationMaster applicationMaster = request.getApplicationMaster();
     try {
       applicationsManager.finishApplicationMaster(applicationMaster);

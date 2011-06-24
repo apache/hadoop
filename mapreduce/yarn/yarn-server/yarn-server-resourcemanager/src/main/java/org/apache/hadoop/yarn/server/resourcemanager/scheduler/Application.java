@@ -149,6 +149,7 @@ public class Application {
    * Clear any pending requests from this application.
    */
   public synchronized void clearRequests() {
+    priorities.clear();
     requests.clear();
     LOG.info("Application " + applicationId + " requests cleared");
   }

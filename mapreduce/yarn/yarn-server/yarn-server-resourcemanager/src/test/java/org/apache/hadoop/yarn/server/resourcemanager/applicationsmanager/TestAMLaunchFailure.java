@@ -23,7 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import junit.framework.TestCase;
+import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -60,7 +60,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 /* a test case that tests the launch failure of a AM */
-public class TestAMLaunchFailure extends TestCase {
+public class TestAMLaunchFailure {
   private static final Log LOG = LogFactory.getLog(TestAMLaunchFailure.class);
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   ApplicationsManagerImpl asmImpl;
@@ -162,8 +162,8 @@ public class TestAMLaunchFailure extends TestCase {
               e.printStackTrace();
             }
             context.getDispatcher().getEventHandler().handle(
-                new ASMEvent<ApplicationEventType>(ApplicationEventType.LAUNCHED,
-                    app));
+                new ApplicationMasterInfoEvent(ApplicationEventType.LAUNCHED,
+                    app.getApplicationID()));
           }
         }
       }
@@ -216,9 +216,11 @@ public class TestAMLaunchFailure extends TestCase {
     ApplicationMaster master = asmImpl.getApplicationMaster(appID);
 
     while (master.getState() != ApplicationState.FAILED) {
+      LOG.info("Waiting for application to go to FAILED state."
+          + " Current state is " + master.getState());
       Thread.sleep(200);
       master = asmImpl.getApplicationMaster(appID);
     }
-    assertTrue(master.getState() == ApplicationState.FAILED);
+    Assert.assertEquals(ApplicationState.FAILED, master.getState());
   }
 }

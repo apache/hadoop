@@ -22,10 +22,8 @@ public interface ApplicationStatus {
   int getResponseId();
   ApplicationId getApplicationId();
   float getProgress();
-  long getLastSeen();
   
   void setResponseId(int id);
   void setApplicationId(ApplicationId applicationID);
   void setProgress(float progress);
-  void setLastSeen(long lastSeen);
 }

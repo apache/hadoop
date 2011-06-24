@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-import junit.framework.TestCase;
+import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -50,8 +50,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Test;
 
-public class TestAMRMRPCResponseId extends TestCase {
+public class TestAMRMRPCResponseId {
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   ApplicationMasterService amService = null;
   ApplicationTokenSecretManager appTokenManager = new ApplicationTokenSecretManager();
@@ -145,7 +146,8 @@ public class TestAMRMRPCResponseId extends TestCase {
   public void tearDown() {
     
   }
-  
+
+  @Test
   public void testARRMResponseId() throws Exception {
     ApplicationId applicationID = applicationsManager.getNewApplicationID();
     ApplicationSubmissionContext context = recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
@@ -163,21 +165,21 @@ public class TestAMRMRPCResponseId extends TestCase {
     AllocateRequest allocateRequest = recordFactory.newRecordInstance(AllocateRequest.class);
     allocateRequest.setApplicationStatus(status);
     AMResponse response = amService.allocate(allocateRequest).getAMResponse();
-    assertTrue(response.getResponseId() == 1);
-    assertFalse(response.getReboot());
+    Assert.assertEquals(1, response.getResponseId());
+    Assert.assertFalse(response.getReboot());
     status.setResponseId(response.getResponseId());
     
     allocateRequest.setApplicationStatus(status);
     response = amService.allocate(allocateRequest).getAMResponse();
-    assertTrue(response.getResponseId() == 2);
+    Assert.assertEquals(2, response.getResponseId());
     /* try resending */
     response = amService.allocate(allocateRequest).getAMResponse();
-    assertTrue(response.getResponseId() == 2);
+    Assert.assertEquals(2, response.getResponseId());
     
     /** try sending old **/
     status.setResponseId(0);
     allocateRequest.setApplicationStatus(status);
     response = amService.allocate(allocateRequest).getAMResponse();
-    assertTrue(response.getReboot());
+    Assert.assertTrue(response.getReboot());
   }
 }

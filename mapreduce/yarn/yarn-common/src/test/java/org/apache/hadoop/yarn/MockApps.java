@@ -155,7 +155,6 @@ public class MockApps {
   public static ApplicationStatus newAppStatus() {
     ApplicationStatus status = Records.newRecord(ApplicationStatus.class);
     status.setProgress((float)Math.random());
-    status.setLastSeen(System.currentTimeMillis());
     return status;
   }
 

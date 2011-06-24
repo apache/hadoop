@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import junit.framework.TestCase;
+import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -73,7 +73,7 @@ import org.junit.Test;
  *
  */
 @Ignore
-public class TestApplicationCleanup extends TestCase {
+public class TestApplicationCleanup {
   private static final Log LOG = LogFactory.getLog(TestApplicationCleanup.class);
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private AtomicInteger waitForState = new AtomicInteger(0);
@@ -159,9 +159,9 @@ public class TestApplicationCleanup extends TestCase {
           LOG.info("Launcher Launch called");
           launcherLaunchCalled = true;
           appContext = appEvent.getAppContext();
-          context.getDispatcher().getEventHandler().
-          handle(new ASMEvent<ApplicationEventType>(
-              ApplicationEventType.LAUNCHED, appContext));
+          context.getDispatcher().getEventHandler().handle(
+              new ApplicationMasterInfoEvent(ApplicationEventType.LAUNCHED,
+                  appContext.getApplicationID()));
           break;
         default:
           break;
@@ -186,9 +186,9 @@ public class TestApplicationCleanup extends TestCase {
         case SCHEDULE:
           schedulerScheduleCalled = true;
           acontext = appEvent.getAppContext();
-          context.getDispatcher().getEventHandler().
-          handle(new ASMEvent<ApplicationEventType>(
-              ApplicationEventType.ALLOCATED, acontext));
+          context.getDispatcher().getEventHandler().handle(
+              new ApplicationMasterAllocatedEvent(acontext.getApplicationID(),
+                  acontext.getMasterContainer()));
         default:
           break;
         }
@@ -221,7 +221,7 @@ public class TestApplicationCleanup extends TestCase {
       Thread.sleep(500);
       count++;
     }
-    assertTrue(masterInfo.getState() == finalState);
+    Assert.assertEquals(finalState, masterInfo.getState());
   }
 
 
@@ -277,22 +277,22 @@ public class TestApplicationCleanup extends TestCase {
     LOG.info("Available resource on first node" + firstNode.getAvailableResource());
     LOG.info("Available resource on second node" + secondNode.getAvailableResource());
     /* only allocate the containers to the first node */
-    assertTrue(firstNode.getAvailableResource().getMemory() == 
-      (firstNodeMemory - (2*memoryNeeded)));
+    Assert.assertEquals((firstNodeMemory - (2 * memoryNeeded)), firstNode
+        .getAvailableResource().getMemory());
     ApplicationMasterInfo masterInfo = asm.getApplicationMasterInfo(appID);
     asm.finishApplication(appID, UserGroupInformation.getCurrentUser());
     while (asm.launcherCleanupCalled != true) {
       Thread.sleep(500);
     }
-    assertTrue(asm.launcherCleanupCalled == true);
-    assertTrue(asm.launcherLaunchCalled == true);
-    assertTrue(asm.schedulerCleanupCalled == true);
-    assertTrue(asm.schedulerScheduleCalled == true);
+    Assert.assertTrue(asm.launcherCleanupCalled);
+    Assert.assertTrue(asm.launcherLaunchCalled);
+    Assert.assertTrue(asm.schedulerCleanupCalled);
+    Assert.assertTrue(asm.schedulerScheduleCalled);
     /* check for update of completed application */
     clusterTracker.updateListener(firstNode, containers);
     NodeResponse response = firstNode.statusUpdate(containers);
-    assertTrue(response.getFinishedApplications().contains(appID));
+    Assert.assertTrue(response.getFinishedApplications().contains(appID));
     LOG.info("The containers to clean up " + response.getContainersToCleanUp().size());
-    assertTrue(response.getContainersToCleanUp().size() == 2);
+    Assert.assertEquals(2, response.getContainersToCleanUp().size());
   }
 }

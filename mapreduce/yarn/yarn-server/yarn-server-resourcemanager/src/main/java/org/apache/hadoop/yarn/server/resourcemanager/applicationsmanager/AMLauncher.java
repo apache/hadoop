@@ -65,7 +65,6 @@ import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationFinishEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationEventType;
 
@@ -264,7 +263,8 @@ public class AMLauncher implements Runnable {
         LOG.info("Error launching ", ie);
         eventType = ApplicationEventType.LAUNCH_FAILED;
       }
-      handler.handle(new ASMEvent<ApplicationEventType>(eventType,  master));
+      handler.handle(new ApplicationMasterInfoEvent(eventType, master
+          .getApplicationID()));
       break;
     case CLEANUP:
       try {
@@ -273,7 +273,7 @@ public class AMLauncher implements Runnable {
       } catch(IOException ie) {
         LOG.info("Error cleaning master ", ie);
       }
-      handler.handle(new ApplicationFinishEvent(master,
+      handler.handle(new ApplicationFinishEvent(master.getApplicationID(),
           ApplicationState.COMPLETED)); // Doesn't matter what state you send :) :(
       break;
     default:

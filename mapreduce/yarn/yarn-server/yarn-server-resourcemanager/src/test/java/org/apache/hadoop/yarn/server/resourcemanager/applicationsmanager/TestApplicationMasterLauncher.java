@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import junit.framework.TestCase;
+import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,12 +31,11 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
+import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationFinishEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
@@ -49,7 +48,7 @@ import org.junit.Test;
  * Testing the applications manager launcher.
  *
  */
-public class TestApplicationMasterLauncher extends TestCase {
+public class TestApplicationMasterLauncher {
   private static final Log LOG = LogFactory.getLog(TestApplicationMasterLauncher.class);
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private ApplicationMasterLauncher amLauncher;
@@ -63,10 +62,12 @@ public class TestApplicationMasterLauncher extends TestCase {
   AtomicInteger launched = new AtomicInteger();
   AtomicInteger cleanedUp = new AtomicInteger();
   private RMContext context = new ResourceManager.RMContextImpl(new MemStore());
+
+  private Configuration conf = new Configuration();
   
-  private class DummyASM implements EventHandler<ASMEvent<ApplicationEventType>> {
+  private class DummyASM implements EventHandler<ApplicationMasterInfoEvent> {
     @Override
-    public void handle(ASMEvent<ApplicationEventType> appEvent) {
+    public void handle(ApplicationMasterInfoEvent appEvent) {
       ApplicationEventType event = appEvent.getType();
       switch (event) {
       case FINISH:
@@ -132,7 +133,6 @@ public class TestApplicationMasterLauncher extends TestCase {
     asmHandle = new DummyASM();
     amLauncher = new DummyApplicationMasterLauncher(applicationTokenSecretManager,
         clientToAMSecretManager, asmHandle);
-    Configuration conf = new Configuration();
     context.getDispatcher().init(conf);
     amLauncher.init(conf);
     context.getDispatcher().start();
@@ -147,14 +147,15 @@ public class TestApplicationMasterLauncher extends TestCase {
 
   @Test
   public void testAMLauncher() throws Exception {
-    ApplicationSubmissionContext context = recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
-    context.setApplicationId(recordFactory.newRecordInstance(ApplicationId.class));
-    context.getApplicationId().setClusterTimestamp(System.currentTimeMillis());
-    context.getApplicationId().setId(1);
-    context.setUser("dummyuser");
+    ApplicationSubmissionContext submissionContext = recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
+    submissionContext.setApplicationId(recordFactory.newRecordInstance(ApplicationId.class));
+    submissionContext.getApplicationId().setClusterTimestamp(System.currentTimeMillis());
+    submissionContext.getApplicationId().setId(1);
+    submissionContext.setUser("dummyuser");
     ApplicationMasterInfo masterInfo = new ApplicationMasterInfo(this.context,
-        "dummyuser", context,
-        "dummyclienttoken", StoreFactory.createVoidAppStore());
+        this.conf, "dummyuser", submissionContext, "dummyclienttoken",
+        StoreFactory.createVoidAppStore(), new AMLivelinessMonitor(context
+            .getDispatcher().getEventHandler()));
     amLauncher.handle(new ASMEvent<AMLauncherEventType>(AMLauncherEventType.LAUNCH, 
       masterInfo));
     amLauncher.handle(new ASMEvent<AMLauncherEventType>(AMLauncherEventType.CLEANUP,  
@@ -162,7 +163,7 @@ public class TestApplicationMasterLauncher extends TestCase {
     synchronized (doneLaunching) {
       doneLaunching.wait(10000);
     }
-    assertTrue(launched.get() == 1);
-    assertTrue(cleanedUp.get() == 1);
+    Assert.assertEquals(1, launched.get());
+    Assert.assertEquals(1, cleanedUp.get());
   }
 }

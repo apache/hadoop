@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import junit.framework.Assert;
-import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,7 +48,7 @@ import org.junit.Test;
  * A test case that tests the expiry of the application master.
  * More tests can be added to this. 
  */
-public class TestApplicationMasterExpiry extends TestCase {
+public class TestApplicationMasterExpiry {
   private static final Log LOG = LogFactory.getLog(TestApplicationMasterExpiry.class);
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   AMTracker tracker;
@@ -88,16 +87,17 @@ public class TestApplicationMasterExpiry extends TestCase {
   private AtomicInteger expiry = new AtomicInteger();
   private boolean expired = false;
   
-  private class ApplicationEventTypeListener implements EventHandler<ASMEvent<ApplicationEventType>> {
+  private class ApplicationEventTypeListener implements
+      EventHandler<ApplicationMasterInfoEvent> {
     ApplicationEventTypeListener() {
       context.getDispatcher().register(ApplicationEventType.class, this);
     }
     @Override
-    public void handle(ASMEvent<ApplicationEventType> event) {
+    public void handle(ApplicationMasterInfoEvent event) {
       switch(event.getType()) {
       case EXPIRE:
         expired = true;
-        LOG.info("Received expiry from application " + event.getAppContext().getApplicationID());
+        LOG.info("Received expiry from application " + event.getApplicationId());
         synchronized(expiry) {
           expiry.addAndGet(1);
         }
@@ -130,26 +130,31 @@ public class TestApplicationMasterExpiry extends TestCase {
       Thread.sleep(500);
       count++;
     }
-    assertTrue(masterInfo.getState() == finalState);
+    Assert.assertEquals(finalState, masterInfo.getState());
   }
 
   @Test
   public void testAMExpiry() throws Exception {
-    ApplicationSubmissionContext context = recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
-    context.setApplicationId(recordFactory.newRecordInstance(ApplicationId.class));
-    context.getApplicationId().setClusterTimestamp(System.currentTimeMillis());
-    context.getApplicationId().setId(1);
+    ApplicationSubmissionContext submissionContext = recordFactory
+        .newRecordInstance(ApplicationSubmissionContext.class);
+    submissionContext.setApplicationId(recordFactory
+        .newRecordInstance(ApplicationId.class));
+    submissionContext.getApplicationId().setClusterTimestamp(
+        System.currentTimeMillis());
+    submissionContext.getApplicationId().setId(1);
     
     tracker.addMaster(
         "dummy", 
-        context, "dummytoken");
-    ApplicationMasterInfo masterInfo = tracker.get(context.getApplicationId());
-    tracker.runApplication(context.getApplicationId());
+        submissionContext, "dummytoken");
+    ApplicationMasterInfo masterInfo = tracker.get(submissionContext.getApplicationId());
+    tracker.runApplication(submissionContext.getApplicationId());
     this.context.getDispatcher().getEventHandler().handle(
-        new ASMEvent<ApplicationEventType>(ApplicationEventType.ALLOCATED, masterInfo));
+        new ApplicationMasterAllocatedEvent(masterInfo.getApplicationID(),
+            masterInfo.getMasterContainer()));
     waitForState(masterInfo, ApplicationState.LAUNCHING);
     this.context.getDispatcher().getEventHandler().handle(
-    new ASMEvent<ApplicationEventType>(ApplicationEventType.LAUNCHED, masterInfo));
+        new ApplicationMasterInfoEvent(ApplicationEventType.LAUNCHED,
+            masterInfo.getApplicationID()));
     synchronized(expiry) {
       while (expiry.get() == 0) {
         expiry.wait(1000);

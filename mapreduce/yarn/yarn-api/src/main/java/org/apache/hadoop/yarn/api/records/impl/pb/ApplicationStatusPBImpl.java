@@ -104,17 +104,6 @@ public class ApplicationStatusPBImpl extends ProtoBase<ApplicationStatusProto> i
     maybeInitBuilder();
     builder.setProgress((progress));
   }
-  @Override
-  public long getLastSeen() {
-    ApplicationStatusProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getLastSeen());
-  }
-
-  @Override
-  public void setLastSeen(long lastSeen) {
-    maybeInitBuilder();
-    builder.setLastSeen((lastSeen));
-  }
 
   private ApplicationIdPBImpl convertFromProtoFormat(ApplicationIdProto p) {
     return new ApplicationIdPBImpl(p);

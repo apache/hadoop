@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 
 import junit.framework.Assert;
-import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -44,26 +43,24 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationTrackerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.ClusterTracker;
 import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-public class TestSchedulerNegotiator extends TestCase {
+public class TestSchedulerNegotiator {
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private SchedulerNegotiator schedulerNegotiator;
   private DummyScheduler scheduler;
@@ -72,7 +69,7 @@ public class TestSchedulerNegotiator extends TestCase {
   private final RMContext context = new ResourceManager.RMContextImpl(new MemStore());
   ApplicationMasterInfo masterInfo;
   private EventHandler handler;
-  
+  private Configuration conf = new Configuration();
   private class DummyScheduler implements ResourceScheduler {
     @Override
     public Allocation allocate(ApplicationId applicationId,
@@ -157,7 +154,6 @@ public class TestSchedulerNegotiator extends TestCase {
   public void setUp() {
     scheduler = new DummyScheduler();
     schedulerNegotiator = new SchedulerNegotiator(context, scheduler);
-    Configuration conf = new Configuration();
     schedulerNegotiator.init(conf);
     schedulerNegotiator.start();
     handler = context.getDispatcher().getEventHandler();
@@ -182,10 +178,10 @@ public class TestSchedulerNegotiator extends TestCase {
     }
     Assert.assertEquals(state, info.getState());
   }
-  
-  private class DummyEventHandler implements EventHandler<ASMEvent<ApplicationTrackerEventType>> {
+
+  private class DummyEventHandler implements EventHandler<ASMEvent<AMLauncherEventType>> {
     @Override
-    public void handle(ASMEvent<ApplicationTrackerEventType> event) {
+    public void handle(ASMEvent<AMLauncherEventType> event) {
     }
   }
 
@@ -196,15 +192,18 @@ public class TestSchedulerNegotiator extends TestCase {
     submissionContext.getApplicationId().setClusterTimestamp(System.currentTimeMillis());
     submissionContext.getApplicationId().setId(1);
     
-    masterInfo =
-      new ApplicationMasterInfo(this.context,
-          "dummy", submissionContext, "dummyClientToken", StoreFactory.createVoidAppStore());
+    masterInfo = new ApplicationMasterInfo(this.context, this.conf, "dummy",
+        submissionContext, "dummyClientToken", StoreFactory
+            .createVoidAppStore(), new AMLivelinessMonitor(context
+            .getDispatcher().getEventHandler()));
     context.getDispatcher().register(ApplicationEventType.class, masterInfo);
-    context.getDispatcher().register(ApplicationTrackerEventType.class, masterInfo);
-    handler.handle(new ASMEvent<ApplicationEventType>(ApplicationEventType.
-    ALLOCATE, masterInfo));
-    waitForState(ApplicationState.ALLOCATED, masterInfo);
+    context.getDispatcher().register(ApplicationTrackerEventType.class, scheduler);
+    context.getDispatcher().register(AMLauncherEventType.class,
+        new DummyEventHandler());
+    handler.handle(new ApplicationMasterInfoEvent(
+        ApplicationEventType.ALLOCATE, submissionContext.getApplicationId()));
+    waitForState(ApplicationState.LAUNCHING, masterInfo); // LAUNCHING because ALLOCATED automatically movesto LAUNCHING for now.
     Container container = masterInfo.getMasterContainer();
-    assertTrue(container.getId().getId() == testNum);
+    Assert.assertTrue(container.getId().getId() == testNum);
   }
 }

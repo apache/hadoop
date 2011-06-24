@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import junit.framework.TestCase;
+import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -15,7 +15,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
-import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -39,7 +38,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationTrackerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.ClusterTracker;
@@ -56,7 +54,7 @@ import org.junit.Test;
  * Test to restart the AM on failure.
  *
  */
-public class TestAMRestart extends TestCase {
+public class TestAMRestart {
   private static final Log LOG = LogFactory.getLog(TestAMRestart.class);
   ApplicationsManagerImpl appImpl;
   RMContext asmContext = new ResourceManager.RMContextImpl(new MemStore());
@@ -105,9 +103,9 @@ public class TestAMRestart extends TestCase {
                 } catch (InterruptedException e) {
                 }
               }
-              asmContext.getDispatcher().getEventHandler().handle(new 
-                  ASMEvent<ApplicationEventType>(ApplicationEventType.LAUNCHED,
-                      new TestAppContext(appID)));
+              asmContext.getDispatcher().getEventHandler().handle(
+                  new ApplicationMasterInfoEvent(
+                      ApplicationEventType.LAUNCHED, appID));
               launchNotify.addAndGet(-1);
             }
           }
@@ -255,78 +253,7 @@ public class TestAMRestart extends TestCase {
       Thread.sleep(500);
       count++;
     }
-    assertTrue(masterInfo.getState() == finalState);
-  }
-  
-  private class TestAppContext implements AppContext {
-    private ApplicationId appID;
-   
-    public TestAppContext(ApplicationId appID) {
-      this.appID = appID;
-    }
-    @Override
-    public ApplicationSubmissionContext getSubmissionContext() {
-      return null;
-    }
-
-    @Override
-    public Resource getResource() {
-      return null;
-    }
-
-    @Override
-    public ApplicationId getApplicationID() {
-      return appID;
-    }
-
-    @Override
-    public ApplicationStatus getStatus() {
-      return null;
-    }
-
-    @Override
-    public ApplicationMaster getMaster() {
-      return null;
-    }
-
-    @Override
-    public Container getMasterContainer() {
-      return null;
-    }
-
-    @Override
-    public String getUser() {
-      return null;
-    }
-
-    @Override
-    public String getName() {
-      return null;
-    }
-
-    @Override
-    public String getQueue() {
-      return null;
-    }
-
-    @Override
-    public int getFailedCount() {
-      return 0;
-    }
-    
-    @Override
-    public ApplicationStore getStore() {
-     return StoreFactory.createVoidAppStore();
-    }
-    @Override
-    public long getStartTime() {
-      return 0;
-    }
-    @Override
-    public long getFinishTime() {
-      return 0;
-    }
-    
+    Assert.assertEquals(finalState, masterInfo.getState());
   }
 
   @Test
@@ -345,11 +272,11 @@ public class TestAMRestart extends TestCase {
         schedulerNotify.wait();
       }
     }
-    assertTrue(launcherCleanupCalled == maxFailures);
-    assertTrue(launcherLaunchCalled == maxFailures);
-    assertTrue(schedulerAddApplication == maxFailures);
-    assertTrue(schedulerRemoveApplication == maxFailures);
-    assertTrue(masterInfo.getFailedCount() == maxFailures);
+    Assert.assertEquals(maxFailures, launcherCleanupCalled);
+    Assert.assertEquals(maxFailures, launcherLaunchCalled);
+    Assert.assertEquals(maxFailures, schedulerAddApplication);
+    Assert.assertEquals(maxFailures, schedulerRemoveApplication);
+    Assert.assertEquals(maxFailures, masterInfo.getFailedCount());
     waitForFailed(masterInfo, ApplicationState.FAILED);
     stop = true;
   }

@@ -166,12 +166,10 @@ class SchedulerNegotiator extends AbstractService implements EventHandler<ASMEve
               it.remove();
               Container container = containers.get(0);
               
-              LOG.info("Found container " + container + " for AM of " + 
-                  masterInfo.getMaster());
-              SNAppContext snAppContext = new SNAppContext(masterInfo.getApplicationID(),
-                container);
-              handler.handle(new ASMEvent<ApplicationEventType>(
-                ApplicationEventType.ALLOCATED, snAppContext));
+              LOG.info("Found container " + container + " for AM of "
+                  + masterInfo.getMaster());
+              handler.handle(new ApplicationMasterAllocatedEvent(masterInfo
+                  .getApplicationID(), container));
             }
           }
 
@@ -223,8 +221,8 @@ class SchedulerNegotiator extends AbstractService implements EventHandler<ASMEve
         //TODO remove IOException from the scheduler.
         LOG.error("Error while releasing container for AM " + appContext.getApplicationID());
       }
-      handler.handle(new ASMEvent<ApplicationEventType>(ApplicationEventType.RELEASED, 
-          appContext));
+      handler.handle(new ApplicationMasterInfoEvent(
+          ApplicationEventType.RELEASED, appContext.getApplicationID()));
       break;
     case CLEANUP:
       try {
@@ -247,82 +245,5 @@ class SchedulerNegotiator extends AbstractService implements EventHandler<ASMEve
     Container[] containers = new Container[] {masterInfo.getMasterContainer()};
     scheduler.allocate(masterInfo.getMaster().getApplicationId(), 
         EMPTY_ASK, Arrays.asList(containers));
-  }
-  
-  private static class SNAppContext implements AppContext {
-    private final ApplicationId appID;
-    private final Container container;
-    private final UnsupportedOperationException notImplementedException;
-    
-    public SNAppContext(ApplicationId appID, Container container) {
-      this.appID = appID;
-      this.container = container;
-      this.notImplementedException = new UnsupportedOperationException("Not Implemented");
-    }
-    
-    @Override
-    public ApplicationSubmissionContext getSubmissionContext() {
-      throw notImplementedException;
-    }
-
-    @Override
-    public Resource getResource() {
-     throw notImplementedException;
-    }
-
-    @Override
-    public ApplicationId getApplicationID() {
-      return appID;
-    }
-
-    @Override
-    public ApplicationStatus getStatus() {
-      throw notImplementedException;
-    }
-   
-    @Override
-    public ApplicationMaster getMaster() {
-      throw notImplementedException;
-    }
-
-    @Override
-    public Container getMasterContainer() {
-      return container;
-    }
-
-    @Override
-    public String getUser() {
-      throw notImplementedException;
-    }
-
-    @Override
-    public String getName() {
-      throw notImplementedException;
-    }
-
-    @Override
-    public String getQueue() {
-      throw notImplementedException;
-    }
-
-    @Override
-    public int getFailedCount() {
-      throw notImplementedException;
-    }
-
-    @Override
-    public ApplicationStore getStore() {
-      throw notImplementedException;
-    }
-
-    @Override
-    public long getStartTime() {
-      throw notImplementedException;
-    }
-
-    @Override
-    public long getFinishTime() {
-      throw notImplementedException;
-    }
-  }
+  }  
 }

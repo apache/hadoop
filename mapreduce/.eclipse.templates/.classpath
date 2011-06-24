@@ -57,11 +57,12 @@
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/slf4j-api-1.5.8.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/slf4j-simple-1.5.8.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/xmlenc-0.52.jar"/>
-        <classpathentry kind="lib" path="build/ivy/lib/Hadoop/test/mockito-all-1.8.0.jar"/>
+	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/test/mockito-all-1.8.0.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/index/common/lucene-core-2.3.1.jar"/>
 	<classpathentry kind="lib" path="build/test/classes"/>
 	<classpathentry kind="lib" path="build/classes"/>
 	<classpathentry kind="lib" path="conf"/>
 	<classpathentry kind="lib" path="build/ivy/lib/sqoop/common/commons-io-1.4.jar"/>
+	<classpathentry kind="var" path="M2_REPO"/>
 	<classpathentry kind="output" path="build/eclipse-classes"/>
 </classpath>
