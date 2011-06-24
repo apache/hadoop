@@ -1,16 +1,6 @@
 Hadoop Change Log
 
-Release 0.20.4 - Unreleased
-
-  NEW FEATURES
-
-  BUG FIXES
-
-    MAPREDUCE-2317. Fix a NPE in HadoopArchives.  (Devaraj K via szetszwo)
-
-  IMPROVEMENTS
-
-Release 0.20.3 - 2011-1-5
+Release 0.20.3 - Unreleased
 
   NEW FEATURES
 
@@ -93,6 +83,8 @@ Release 0.20.3 - 2011-1-5
 
     HADOOP-7116. Increase the heap size for the contrib unit tests to 512mb.
     (omalley)
+
+    MAPREDUCE-2317. Fix a NPE in HadoopArchives.  (Devaraj K via szetszwo)
 
   IMPROVEMENTS
 

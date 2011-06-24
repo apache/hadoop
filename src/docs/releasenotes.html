@@ -2,7 +2,7 @@
 <html>
 <head>
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Hadoop 0.20.3 Release Notes</title>
+<title>Hadoop 0.20.2 Release Notes</title>
 <STYLE type="text/css">
 		H1 {font-family: sans-serif}
 		H2 {font-family: sans-serif; margin-left: 7mm}
@@ -10,69 +10,11 @@
 	</STYLE>
 </head>
 <body>
-<h1>Hadoop 0.20.3 Release Notes</h1>
+<h1>Hadoop 0.20.2 Release Notes</h1>
 		These release notes include new developer and user-facing incompatibilities, features, and major improvements. The table below is sorted by Component.
 
 
 <a name="changes"></a>
-<h2>Changes Since Hadoop 0.20.2</h2>
-            
-<h3>Bug</h3>
-<ul>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6625'>HADOOP-6625</a>] - Hadoop 0.20 doesn't generate hadoop-test pom, existing pom has bad dependencies, doesnt build javadoc,sources jar</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6665'>HADOOP-6665</a>] - DFSadmin commands setQuota and setSpaceQuota allowed when NameNode is in safemode.  </li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6701'>HADOOP-6701</a>] -  Commands chmod, chown and chgrp now returns non zero exit code and an error message on failure instead of returning zero.</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6702'>HADOOP-6702</a>] - Incorrect exit codes for "dfs -chown", "dfs -chgrp"  when input is given in wildcard format.</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6724'>HADOOP-6724</a>] - IPC doesn't properly handle IOEs thrown by socket factory</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6760'>HADOOP-6760</a>] - WebServer shouldn't increase port number in case of negative port setting caused by Jetty's race</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6833'>HADOOP-6833</a>] - IPC leaks call parameters when exceptions thrown</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6881'>HADOOP-6881</a>] - The efficient comparators aren't always used except for BytesWritable and Text</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6923'>HADOOP-6923</a>] - Native Libraries do not load if a different platform signature is returned from org.apache.hadoop.util.PlatformName</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6928'>HADOOP-6928</a>] - Fix BooleanWritable comparator in 0.20</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-7116'>HADOOP-7116</a>] - raise contrib junit test jvm memory size to 512mb</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-15'>HDFS-15</a>] - Rack replication policy can be violated for over replicated blocks </li>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-132'>HDFS-132</a>] - With this incompatible change, under metrics context "dfs", the record name "FSDirectory" is no longer available. The metrics "files_deleted" from the deleted record "FSDirectory" is now available in metrics context "dfs", record name "namenode" with the metrics name "FilesDeleted".
-</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-727'>HDFS-727</a>] - bug setting block size hdfsOpenFile </li>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-908'>HDFS-908</a>] - TestDistributedFileSystem fails with Wrong FS on weird hosts</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-909'>HDFS-909</a>] - Race condition between rollEditLog or rollFSImage ant FSEditsLog.write operations  corrupts edits log</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-955'>HDFS-955</a>] - FSImage.saveFSImage can lose edits</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1041'>HDFS-1041</a>] - DFSClient does not retry in getFileChecksum(..)</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1098'>HDFS-1098</a>] - Fix Javadoc for DistributedCache usage</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1240'>HDFS-1240</a>] - TestDFSShell failing in branch-20</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1258'>HDFS-1258</a>] - Clearing namespace quota on "/" corrupts FS image</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1377'>HDFS-1377</a>] - Quota bug for partial blocks allows quotas to be violated </li>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1404'>HDFS-1404</a>] - TestNodeCount logic incorrect in branch-0.20</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1406'>HDFS-1406</a>] - TestCLI fails on Ubuntu with default /etc/hosts</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-118'>MAPREDUCE-118</a>] - Job.getJobID() will always return null</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1280'>MAPREDUCE-1280</a>] - Eclipse Plugin does not work with Eclipse Ganymede (3.4)</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1372'>MAPREDUCE-1372</a>] - ConcurrentModificationException in JobInProgress</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1407'>MAPREDUCE-1407</a>] - Invalid example in the documentation of org.apache.hadoop.mapreduce.{Mapper,Reducer}</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1442'>MAPREDUCE-1442</a>] - StackOverflowError when JobHistory parses a really long line</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1522'>MAPREDUCE-1522</a>] - FileInputFormat may change the file system of an input path</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1880'>MAPREDUCE-1880</a>] - "java.lang.ArithmeticException: Non-terminating decimal expansion; no exact representable decimal result." while running "hadoop jar hadoop-0.20.1+169.89-examples.jar pi 4 30"</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-2262'>MAPREDUCE-2262</a>] - Capacity Scheduler unit tests fail with class not found</li>
-</ul>
-    
-<h3>Improvement</h3>
-<ul>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6882'>HADOOP-6882</a>] - Update the patch level of Jetty</li>
-<li>[<a href='https://issues.apache.org/jira/browse/HDFS-1182'>HDFS-1182</a>] - Support for file sizes less than 1MB in DFSIO benchmark.</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1361'>MAPREDUCE-1361</a>] - In the pools with minimum slots, new job will always receive slots even if the minimum slots limit has been fulfilled</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1734'>MAPREDUCE-1734</a>] - Un-deprecate the old MapReduce API in the 0.20 branch</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-1832'>MAPREDUCE-1832</a>] - Support for file sizes less than 1MB in DFSIO benchmark.</li>
-<li>[<a href='https://issues.apache.org/jira/browse/MAPREDUCE-2003'>MAPREDUCE-2003</a>] - It should be able to specify different jvm settings for map and reduce child process (via mapred.child.map.java.opts and mapred.child.reduce.java.opts options) </li>
-</ul>
-    
-<h3>New Feature</h3>
-<ul>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6382'>HADOOP-6382</a>] - The hadoop jars are renamed  from previous hadoop-<version>-<name>.jar to hadoop-<name>-<version>.jar. Applications and documentation need to be updated to use the new file naming scheme. </li>
-</ul>
-                            
-<h3>Test</h3>
-<ul>
-<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6637'>HADOOP-6637</a>] - Benchmark overhead of RPC session establishment </li>
-</ul>
 
 <h3>Task</h3>
 <ul>
