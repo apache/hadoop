@@ -832,7 +832,7 @@ public class NNStorage extends Storage implements Closeable {
    * @param sds A list of storage directories to mark as errored.
    * @throws IOException
    */
-  void reportErrorsOnDirectories(List<StorageDirectory> sds) throws IOException {
+  void reportErrorsOnDirectories(List<StorageDirectory> sds) {
     for (StorageDirectory sd : sds) {
       reportErrorsOnDirectory(sd);
     }
@@ -846,8 +846,7 @@ public class NNStorage extends Storage implements Closeable {
    * @param sd A storage directory to mark as errored.
    * @throws IOException
    */
-  void reportErrorsOnDirectory(StorageDirectory sd)
-      throws IOException {
+  void reportErrorsOnDirectory(StorageDirectory sd) {
     LOG.warn("Error reported on storage directory " + sd);
 
     String lsd = listStorageDirectories();
@@ -902,6 +901,29 @@ public class NNStorage extends Storage implements Closeable {
       }
       LOG.info("Using clusterid: " + getClusterID());
     }
+  }
+  
+  /**
+   * Report that an IOE has occurred on some file which may
+   * or may not be within one of the NN image storage directories.
+   */
+  void reportErrorOnFile(File f) {
+    // We use getAbsolutePath here instead of getCanonicalPath since we know
+    // that there is some IO problem on that drive.
+    // getCanonicalPath may need to call stat() or readlink() and it's likely
+    // those calls would fail due to the same underlying IO problem.
+    String absPath = f.getAbsolutePath();
+    for (StorageDirectory sd : storageDirs) {
+      String dirPath = sd.getRoot().getAbsolutePath();
+      if (!dirPath.endsWith("/")) {
+        dirPath += "/";
+      }
+      if (absPath.startsWith(dirPath)) {
+        reportErrorsOnDirectory(sd);
+        return;
+      }
+    }
+    
   }
   
   /**

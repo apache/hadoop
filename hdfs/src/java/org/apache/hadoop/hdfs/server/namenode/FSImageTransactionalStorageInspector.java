@@ -34,6 +34,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
@@ -74,8 +75,16 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
     }
     
     File currentDir = sd.getCurrentDir();
+    File filesInStorage[];
+    try {
+      filesInStorage = FileUtil.listFiles(currentDir);
+    } catch (IOException ioe) {
+      LOG.warn("Unable to inspect storage directory " + currentDir,
+          ioe);
+      return;
+    }
 
-    for (File f : currentDir.listFiles()) {
+    for (File f : filesInStorage) {
       LOG.debug("Checking file " + f);
       String name = f.getName();
       

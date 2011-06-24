@@ -1380,6 +1380,66 @@ public class TestCheckpoint extends TestCase {
     }  
   }
 
+  /**
+   * Test that, if a storage directory is failed when a checkpoint occurs,
+   * the non-failed storage directory receives the checkpoint.
+   */
+  @SuppressWarnings("deprecation")
+  public void testCheckpointWithFailedStorageDir() throws Exception {
+    MiniDFSCluster cluster = null;
+    SecondaryNameNode secondary = null;
+    File currentDir = null;
+    
+    Configuration conf = new HdfsConfiguration();
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+          .format(true).build();
+  
+      secondary = startSecondaryNameNode(conf);
+
+      // Checkpoint once
+      secondary.doCheckpoint();
+
+      // Now primary NN experiences failure of a volume -- fake by
+      // setting its current dir to a-x permissions
+      NameNode nn = cluster.getNameNode();
+      NNStorage storage = nn.getFSImage().getStorage();
+      StorageDirectory sd0 = storage.getStorageDir(0);
+      StorageDirectory sd1 = storage.getStorageDir(1);
+      
+      currentDir = sd0.getCurrentDir();
+      currentDir.setExecutable(false);
+
+      // Upload checkpoint when NN has a bad storage dir. This should
+      // succeed and create the checkpoint in the good dir.
+      secondary.doCheckpoint();
+      
+      GenericTestUtils.assertExists(
+          new File(sd1.getCurrentDir(), NNStorage.getImageFileName(2)));
+      
+      // Restore the good dir
+      currentDir.setExecutable(true);
+      nn.restoreFailedStorage("true");
+      nn.rollEditLog();
+
+      // Checkpoint again -- this should upload to both dirs
+      secondary.doCheckpoint();
+      
+      assertNNHasCheckpoints(cluster, ImmutableList.of(8));
+      assertParallelFilesInvariant(cluster, ImmutableList.of(secondary));
+    } finally {
+      if (currentDir != null) {
+        currentDir.setExecutable(true);
+      }
+      if (secondary != null) {
+        secondary.shutdown();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 
   @SuppressWarnings("deprecation")
   private void cleanup(SecondaryNameNode snn) {

@@ -69,7 +69,7 @@ class TransferFsImage implements FSConstants {
       throw new IOException("No targets in destination storage!");
     }
     
-    MD5Hash hash = getFileClient(fsName, fileid, dstFiles, needDigest);
+    MD5Hash hash = getFileClient(fsName, fileid, dstFiles, dstStorage, needDigest);
     LOG.info("Downloaded file " + dstFiles.get(0).getName() + " size " +
         dstFiles.get(0).length() + " bytes.");
     return hash;
@@ -85,7 +85,7 @@ class TransferFsImage implements FSConstants {
     List<File> dstFiles = dstStorage.getFiles(NameNodeDirType.EDITS, fileName);
     assert !dstFiles.isEmpty() : "No checkpoint targets.";
 
-    getFileClient(fsName, fileid, dstFiles, false);
+    getFileClient(fsName, fileid, dstFiles, dstStorage, false);
     LOG.info("Downloaded file " + dstFiles.get(0).getName() + " size " +
         dstFiles.get(0).length() + " bytes.");
   }
@@ -107,7 +107,7 @@ class TransferFsImage implements FSConstants {
         txid, imageListenAddress, storage);
     // this doesn't directly upload an image, but rather asks the NN
     // to connect back to the 2NN to download the specified image.
-    TransferFsImage.getFileClient(fsName, fileid, null, false);
+    TransferFsImage.getFileClient(fsName, fileid, null, null, false);
     LOG.info("Uploaded image with txid " + txid + " to namenode at " +
     		fsName);
   }
@@ -168,12 +168,13 @@ class TransferFsImage implements FSConstants {
   /**
    * Client-side Method to fetch file from a server
    * Copies the response from the URL to a list of local files.
-   * 
+   * @param dstStorage if an error occurs writing to one of the files,
+   *                   this storage object will be notified. 
    * @Return a digest of the received file if getChecksum is true
    */
   static MD5Hash getFileClient(String nnHostPort,
       String queryString, List<File> localPaths,
-      boolean getChecksum) throws IOException {
+      NNStorage dstStorage, boolean getChecksum) throws IOException {
     byte[] buf = new byte[BUFFER_SIZE];
     String proto = UserGroupInformation.isSecurityEnabled() ? "https://" : "http://";
     StringBuilder str = new StringBuilder(proto+nnHostPort+"/getimage?");
@@ -215,20 +216,29 @@ class TransferFsImage implements FSConstants {
     }
     boolean finishedReceiving = false;
 
-    if (localPaths == null) {
-      localPaths = Collections.emptyList(); 
-    }
-    
     List<FileOutputStream> outputStreams = Lists.newArrayList();
 
     try {
-      for (File f : localPaths) {
-        if (f.exists()) {
-          LOG.warn("Overwriting existing file " + f
-              + " with file downloaded from " + str);
+      if (localPaths != null) {
+        for (File f : localPaths) {
+          try {
+            if (f.exists()) {
+              LOG.warn("Overwriting existing file " + f
+                  + " with file downloaded from " + str);
+            }
+            outputStreams.add(new FileOutputStream(f));
+          } catch (IOException ioe) {
+            LOG.warn("Unable to download file " + f, ioe);
+            dstStorage.reportErrorOnFile(f);
+          }
         }
-        outputStreams.add(new FileOutputStream(f));
+        
+        if (outputStreams.isEmpty()) {
+          throw new IOException(
+              "Unable to download to any storage directory");
+        }
       }
+      
       int num = 1;
       while (num > 0) {
         num = stream.read(buf);

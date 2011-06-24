@@ -55,3 +55,5 @@ HDFS-2074. Determine edit log validity by truly reading and validating
 HDFS-2085. Finalize in-progress edit logs at startup. (todd)
 HDFS-2026. SecondaryNameNode should properly handle the case where the
            NameNode is reformatted. (todd)
+HDFS-2077. Address checkpoint upload when one of the storage dirs is failed
+           (todd)

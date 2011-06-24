@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.test;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.junit.Assert;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -37,6 +39,13 @@ public abstract class GenericTestUtils {
    */
   public static String getMethodName() {
     return Thread.currentThread().getStackTrace()[2].getMethodName();
+  }
+  
+  /**
+   * Assert that a given file exists.
+   */
+  public static void assertExists(File f) {
+    Assert.assertTrue("File " + f + " should exist", f.exists());
   }
   
   /**
