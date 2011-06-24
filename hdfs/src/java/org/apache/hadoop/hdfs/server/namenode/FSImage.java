@@ -95,7 +95,8 @@ public class FSImage implements Closeable {
   /**
    * Can fs-image be rolled?
    */
-  volatile protected CheckpointStates ckptState = FSImage.CheckpointStates.START; 
+  volatile protected CheckpointStates ckptState = FSImage.CheckpointStates.START;
+  private final NNStorageArchivalManager archivalManager; 
 
   /**
    * Construct an FSImage.
@@ -152,6 +153,8 @@ public class FSImage implements Closeable {
 
     this.editLog = new FSEditLog(storage);
     setFSNamesystem(ns);
+    
+    archivalManager = new NNStorageArchivalManager(conf, storage, editLog);
   }
 
   protected FSNamesystem getFSNamesystem() {
@@ -825,7 +828,19 @@ public class FSImage implements Closeable {
     
     // Since we now have a new checkpoint, we can clean up some
     // old edit logs and checkpoints.
-    storage.archiveOldStorage();
+    archiveOldStorage();
+  }
+
+  /**
+   * Archive any files in the storage directories that are no longer
+   * necessary.
+   */
+  public void archiveOldStorage() {
+    try {
+      archivalManager.archiveOldStorage();
+    } catch (Exception e) {
+      LOG.warn("Unable to archive old storage", e);
+    }
   }
 
   /**

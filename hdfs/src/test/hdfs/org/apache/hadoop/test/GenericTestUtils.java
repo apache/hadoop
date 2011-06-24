@@ -19,15 +19,22 @@ package org.apache.hadoop.test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import com.google.common.base.Joiner;
+import com.google.common.collect.Sets;
 
 /**
  * Test provides some very generic helpers which might be used across the tests
@@ -48,7 +55,28 @@ public abstract class GenericTestUtils {
   public static void assertExists(File f) {
     Assert.assertTrue("File " + f + " should exist", f.exists());
   }
-
+    
+  /**
+   * List all of the files in 'dir' that match the regex 'pattern'.
+   * Then check that this list is identical to 'expectedMatches'.
+   * @throws IOException if the dir is inaccessible
+   */
+  public static void assertGlobEquals(File dir, String pattern,
+      String ... expectedMatches) throws IOException {
+    
+    Set<String> found = Sets.newTreeSet();
+    for (File f : FileUtil.listFiles(dir)) {
+      if (f.getName().matches(pattern)) {
+        found.add(f.getName());
+      }
+    }
+    Set<String> expectedSet = Sets.newTreeSet(
+        Arrays.asList(expectedMatches));
+    Assert.assertEquals("Bad files matching " + pattern + " in " + dir,
+        Joiner.on(",").join(found),
+        Joiner.on(",").join(expectedSet));
+  }
+  
   public static void assertExceptionContains(String string, IOException ioe) {
     String msg = ioe.getMessage();
     Assert.assertTrue(

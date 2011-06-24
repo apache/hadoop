@@ -169,7 +169,8 @@ public class TestNNStorageArchivalManager {
       ArgumentCaptor.forClass(FoundEditLog.class);    
 
     // Ask the manager to archive files we don't need any more
-    new NNStorageArchivalManager(conf, tc.mockStorage(), mockArchiver)
+    new NNStorageArchivalManager(conf,
+        tc.mockStorage(), tc.mockEditLog(), mockArchiver)
       .archiveOldStorage();
     
     // Verify that it asked the archiver to remove the correct files
@@ -208,6 +209,12 @@ public class TestNNStorageArchivalManager {
         this.type = type;
         files = Lists.newArrayList();
       }
+
+      StorageDirectory mockStorageDir() {
+        return TestFSImageStorageInspector.mockDirectory(
+            type, false,
+            files.toArray(new String[0]));
+      }
     }
 
     void addRoot(String root, NameNodeDirType dir) {
@@ -239,12 +246,39 @@ public class TestNNStorageArchivalManager {
     NNStorage mockStorage() throws IOException {
       List<StorageDirectory> sds = Lists.newArrayList();
       for (FakeRoot root : dirRoots.values()) {
-        StorageDirectory mockDir = TestFSImageStorageInspector.mockDirectory(
-            root.type, false,
-            root.files.toArray(new String[0]));
-        sds.add(mockDir);
+        sds.add(root.mockStorageDir());
       }
       return mockStorageForDirs(sds.toArray(new StorageDirectory[0]));
+    }
+    
+    public FSEditLog mockEditLog() {
+      final List<JournalManager> jms = Lists.newArrayList();
+      for (FakeRoot root : dirRoots.values()) {
+        if (!root.type.isOfType(NameNodeDirType.EDITS)) continue;
+        
+        FileJournalManager fjm = new FileJournalManager(
+            root.mockStorageDir());
+        jms.add(fjm);
+      }
+
+      FSEditLog mockLog = Mockito.mock(FSEditLog.class);
+      Mockito.doAnswer(new Answer<Void>() {
+
+        @Override
+        public Void answer(InvocationOnMock invocation) throws Throwable {
+          Object[] args = invocation.getArguments();
+          assert args.length == 2;
+          long txId = (Long) args[0];
+          StorageArchiver archiver = (StorageArchiver) args[1];
+          
+          for (JournalManager jm : jms) {
+            jm.archiveLogsOlderThan(txId, archiver);
+          }
+          return null;
+        }
+      }).when(mockLog).archiveLogsOlderThan(
+          Mockito.anyLong(), (StorageArchiver) Mockito.anyObject());
+      return mockLog;
     }
   }
 

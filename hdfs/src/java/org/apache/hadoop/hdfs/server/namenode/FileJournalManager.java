@@ -22,8 +22,12 @@ import org.apache.commons.logging.LogFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.FoundEditLog;
+import org.apache.hadoop.hdfs.server.namenode.NNStorageArchivalManager.StorageArchiver;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -85,4 +89,19 @@ public class FileJournalManager implements JournalManager {
   public void setOutputBufferCapacity(int size) {
     this.outputBufferCapacity = size;
   }
+
+  @Override
+  public void archiveLogsOlderThan(long minTxIdToKeep, StorageArchiver archiver)
+      throws IOException {
+    File[] files = FileUtil.listFiles(sd.getCurrentDir());
+    List<FoundEditLog> editLogs = 
+      FSImageTransactionalStorageInspector.matchEditLogs(files);
+    for (FoundEditLog log : editLogs) {
+      if (log.getStartTxId() < minTxIdToKeep &&
+          log.getLastTxId() < minTxIdToKeep) {
+        archiver.archiveLog(log);
+      }
+    }
+  }
+
 }

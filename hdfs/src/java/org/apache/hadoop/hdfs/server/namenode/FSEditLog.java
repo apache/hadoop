@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
+import org.apache.hadoop.hdfs.server.namenode.NNStorageArchivalManager.StorageArchiver;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
@@ -842,6 +843,25 @@ public class FSEditLog  {
     state = State.BETWEEN_LOG_SEGMENTS;
   }
 
+  /**
+   * Archive any log files that are older than the given txid.
+   */
+  public void archiveLogsOlderThan(
+      final long minTxIdToKeep, final StorageArchiver archiver) {
+    assert curSegmentTxId == FSConstants.INVALID_TXID || // on format this is no-op
+      minTxIdToKeep <= curSegmentTxId :
+      "cannot archive logs older than txid " + minTxIdToKeep +
+      " when current segment starts at " + curSegmentTxId;
+    
+    mapJournalsAndReportErrors(new JournalClosure() {
+      @Override
+      public void apply(JournalAndStream jas) throws IOException {
+        jas.manager.archiveLogsOlderThan(minTxIdToKeep, archiver);
+      }
+    }, "archiving logs older than " + minTxIdToKeep);
+  }
+
+  
   /**
    * The actual sync activity happens while not synchronized on this object.
    * Thus, synchronized activities that require that they are not concurrent

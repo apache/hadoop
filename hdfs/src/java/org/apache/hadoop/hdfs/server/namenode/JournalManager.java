@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hdfs.server.namenode.NNStorageArchivalManager.StorageArchiver;
+
 /**
  * A JournalManager is responsible for managing a single place of storing
  * edit logs. It may correspond to multiple files, a backup node, etc.
@@ -38,4 +40,16 @@ public interface JournalManager {
    * Set the amount of memory that this stream should use to buffer edits
    */
   void setOutputBufferCapacity(int size);
+
+  /**
+   * The JournalManager may archive/purge any logs for transactions less than
+   * or equal to minImageTxId.
+   *
+   * @param minTxIdToKeep the earliest txid that must be retained after purging
+   *                      old logs
+   * @param archiver the archival implementation to use
+   * @throws IOException if purging fails
+   */
+  void archiveLogsOlderThan(long minTxIdToKeep, StorageArchiver archiver)
+    throws IOException;
 }

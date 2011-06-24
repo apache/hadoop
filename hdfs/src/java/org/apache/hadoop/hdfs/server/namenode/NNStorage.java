@@ -123,8 +123,6 @@ public class NNStorage extends Storage implements Closeable {
   private UpgradeManager upgradeManager = null;
   protected String blockpoolID = ""; // id of the block pool
   
-  private final NNStorageArchivalManager archivalManager;
-
   /**
    * flag that controls if we try to restore failed storages
    */
@@ -167,8 +165,6 @@ public class NNStorage extends Storage implements Closeable {
     storageDirs = new CopyOnWriteArrayList<StorageDirectory>();
     
     setStorageDirectories(imageDirs, editsDirs);
-    
-    archivalManager = new NNStorageArchivalManager(conf, this);
   }
 
   @Override // Storage
@@ -529,19 +525,6 @@ public class NNStorage extends Storage implements Closeable {
       format(sd);
     }
   }
-
-  /**
-   * Archive any files in the storage directories that are no longer
-   * necessary.
-   */
-  public void archiveOldStorage() {
-    try {
-      archivalManager.archiveOldStorage();
-    } catch (Exception e) {
-      LOG.warn("Unable to archive old storage", e);
-    }
-  }
-
 
   /**
    * Generate new namespaceID.

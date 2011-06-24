@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
@@ -105,45 +106,7 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
                    "not configured to contain images.");
         }
       }
-      
-      // Check for edits
-      Matcher editsMatch = EDITS_REGEX.matcher(name);
-      if (editsMatch.matches()) {
-        if (sd.getStorageDirType().isOfType(NameNodeDirType.EDITS)) {
-          try {
-            long startTxId = Long.valueOf(editsMatch.group(1));
-            long endTxId = Long.valueOf(editsMatch.group(2));
-            addEditLog(new FoundEditLog(sd, f, startTxId, endTxId));
-          } catch (NumberFormatException nfe) {
-            LOG.error("Edits file " + f + " has improperly formatted " +
-                      "transaction ID");
-            // skip
-          }          
-        } else {
-          LOG.warn("Found edits file at " + f + " but storage directory is " +
-                   "not configured to contain edits.");
-        }
-      }
-      
-      // Check for in-progress edits
-      Matcher inProgressEditsMatch = EDITS_INPROGRESS_REGEX.matcher(name);
-      if (inProgressEditsMatch.matches()) {
-        if (sd.getStorageDirType().isOfType(NameNodeDirType.EDITS)) {
-          try {
-            long startTxId = Long.valueOf(inProgressEditsMatch.group(1));
-            addEditLog(
-              new FoundEditLog(sd, f, startTxId, FoundEditLog.UNKNOWN_END));
-          } catch (NumberFormatException nfe) {
-            LOG.error("In-progress edits file " + f + " has improperly " +
-                      "formatted transaction ID");
-            // skip
-          }          
-        } else {
-          LOG.warn("Found in-progress edits file at " + f + " but " +
-                   "storage directory is not configured to contain edits.");
-        }
-      }
-      
+
       // Check for a seen_txid file, which marks a minimum transaction ID that
       // must be included in our load plan.
       try {
@@ -151,13 +114,58 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
       } catch (IOException ioe) {
         LOG.warn("Unable to determine the max transaction ID seen by " + sd, ioe);
       }
-      
     }
-
+    
+    List<FoundEditLog> editLogs = matchEditLogs(filesInStorage);
+    if (sd.getStorageDirType().isOfType(NameNodeDirType.EDITS)) {
+      for (FoundEditLog log : editLogs) {
+        addEditLog(log);
+      }
+    } else if (!editLogs.isEmpty()){
+      LOG.warn("Found the following edit log file(s) in " + sd +
+          " even though it was not configured to store edits:\n" +
+          "  " + Joiner.on("\n  ").join(editLogs));
+          
+    }
+    
     // set finalized flag
     isUpgradeFinalized = isUpgradeFinalized && !sd.getPreviousDir().exists();
   }
 
+  static List<FoundEditLog> matchEditLogs(File[] filesInStorage) {
+    List<FoundEditLog> ret = Lists.newArrayList();
+    for (File f : filesInStorage) {
+      String name = f.getName();
+      // Check for edits
+      Matcher editsMatch = EDITS_REGEX.matcher(name);
+      if (editsMatch.matches()) {
+        try {
+          long startTxId = Long.valueOf(editsMatch.group(1));
+          long endTxId = Long.valueOf(editsMatch.group(2));
+          ret.add(new FoundEditLog(f, startTxId, endTxId));
+        } catch (NumberFormatException nfe) {
+          LOG.error("Edits file " + f + " has improperly formatted " +
+                    "transaction ID");
+          // skip
+        }          
+      }
+      
+      // Check for in-progress edits
+      Matcher inProgressEditsMatch = EDITS_INPROGRESS_REGEX.matcher(name);
+      if (inProgressEditsMatch.matches()) {
+        try {
+          long startTxId = Long.valueOf(inProgressEditsMatch.group(1));
+          ret.add(
+            new FoundEditLog(f, startTxId, FoundEditLog.UNKNOWN_END));
+        } catch (NumberFormatException nfe) {
+          LOG.error("In-progress edits file " + f + " has improperly " +
+                    "formatted transaction ID");
+          // skip
+        }          
+      }
+    }
+    return ret;
+  }
 
   private void addEditLog(FoundEditLog foundEditLog) {
     foundEditLogs.add(foundEditLog);
@@ -484,7 +492,6 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
    * Record of an edit log that has been located and had its filename parsed.
    */
   static class FoundEditLog {
-    final StorageDirectory sd;
     File file;
     final long startTxId;
     long lastTxId;
@@ -494,13 +501,12 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
     
     static final long UNKNOWN_END = -1;
     
-    FoundEditLog(StorageDirectory sd, File file,
+    FoundEditLog(File file,
         long startTxId, long endTxId) {
       assert endTxId == UNKNOWN_END || endTxId >= startTxId;
       assert startTxId > 0;
       assert file != null;
       
-      this.sd = sd;
       this.startTxId = startTxId;
       this.lastTxId = endTxId;
       this.file = file;

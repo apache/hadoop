@@ -48,20 +48,24 @@ public class NNStorageArchivalManager {
   private static final Log LOG = LogFactory.getLog(NNStorageArchivalManager.class);
   private final NNStorage storage;
   private final StorageArchiver archiver;
+  private final FSEditLog editLog;
   
   public NNStorageArchivalManager(
       Configuration conf,
       NNStorage storage,
+      FSEditLog editLog,
       StorageArchiver archiver) {
     this.numCheckpointsToRetain = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_NUM_CHECKPOINTS_RETAINED_KEY,
         DFSConfigKeys.DFS_NAMENODE_NUM_CHECKPOINTS_RETAINED_DEFAULT);
     this.storage = storage;
+    this.editLog = editLog;
     this.archiver = archiver;
   }
   
-  public NNStorageArchivalManager(Configuration conf, NNStorage storage) {
-    this(conf, storage, new DeletionStorageArchiver());
+  public NNStorageArchivalManager(Configuration conf, NNStorage storage,
+      FSEditLog editLog) {
+    this(conf, storage, editLog, new DeletionStorageArchiver());
   }
 
   public void archiveOldStorage() throws IOException {
@@ -71,20 +75,12 @@ public class NNStorageArchivalManager {
 
     long minImageTxId = getImageTxIdToRetain(inspector);
     archiveCheckpointsOlderThan(inspector, minImageTxId);
-    archiveLogsOlderThan(inspector, minImageTxId);
+    // If fsimage_N is the image we want to keep, then we need to keep
+    // all txns > N. We can remove anything < N+1, since fsimage_N
+    // reflects the state up to and including N.
+    editLog.archiveLogsOlderThan(minImageTxId + 1, archiver);
   }
   
-  private void archiveLogsOlderThan(
-      FSImageTransactionalStorageInspector inspector,
-      long minImageTxId) {
-    for (FoundEditLog log : inspector.getFoundEditLogs()) {
-      if (log.getStartTxId() < minImageTxId) {
-        LOG.info("Purging old edit log " + log);
-        archiver.archiveLog(log);
-      }
-    }
-  }
-
   private void archiveCheckpointsOlderThan(
       FSImageTransactionalStorageInspector inspector,
       long minTxId) {
