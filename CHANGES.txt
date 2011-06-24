@@ -129,6 +129,8 @@ Release 0.91.0 - Unreleased
    HBASE-3889  NPE in Distributed Log Splitting (Anirudh Todi)
    HBASE-4000  You can't specify split points when you create a table in
                the shell (Joey Echeverria)
+   HBASE-4020  "testWritesWhileGetting" unit test needs to be fixed.
+               (Vandana Ayyalasomayajula via Ted Yu)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

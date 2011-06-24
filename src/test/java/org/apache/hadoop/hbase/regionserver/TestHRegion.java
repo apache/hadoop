@@ -2670,7 +2670,7 @@ public class TestHRegion extends HBaseTestCase {
       qualifiers[i] = Bytes.toBytes("qual" + i);
     }
 
-    String method = "testWritesWhileScanning";
+    String method = "testWritesWhileGetting";
     initHRegion(tableName, method, families);
     PutThread putThread = new PutThread(numRows, families, qualifiers);
     putThread.start();
