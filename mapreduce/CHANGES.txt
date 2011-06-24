@@ -310,6 +310,8 @@ Trunk (unreleased changes)
     MAPREDUCE-2550. Fix bin/mapred to work properly from within a source
     checkout (Eric Yang via todd)
 
+    MAPREDUCE-2620. Update RAID for HDFS-2087.  (szetszwo)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
