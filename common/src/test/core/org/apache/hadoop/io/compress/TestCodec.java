@@ -102,12 +102,6 @@ public class TestCodec {
     codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.DeflateCodec");
     codecTest(conf, seed, count, "org.apache.hadoop.io.compress.DeflateCodec");
   }
-  
-  @Test
-  public void testSnappyCodec() throws IOException {
-    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.SnappyCodec");
-    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.SnappyCodec");
-  }
 
   @Test
   public void testGzipCodecWithParam() throws IOException {
