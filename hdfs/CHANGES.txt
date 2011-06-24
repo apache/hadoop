@@ -772,8 +772,10 @@ Trunk (unreleased changes)
     HDFS-1734. 'Chunk size to view' option is not working in Name Node UI.
     (Uma Maheswara Rao G via jitendra)
 
-   HDFS-2086. If the include hosts list contains host names, after restarting
-   namenode, data nodes registration is denied.  Contributed by Tanping Wang.
+    HDFS-2086. If the include hosts list contains host names, after restarting
+    namenode, data nodes registration is denied.  Contributed by Tanping Wang.
+
+    HDFS-2082. SecondaryNameNode web interface doesn't show the right info. (atm)
 
 Release 0.22.0 - Unreleased
 
