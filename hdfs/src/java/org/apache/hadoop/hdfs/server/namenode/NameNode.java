@@ -437,12 +437,41 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     // The rpc-server port can be ephemeral... ensure we have the correct info
     this.rpcAddress = this.server.getListenerAddress(); 
     setRpcServerAddress(conf);
+    
+    try {
+      validateConfigurationSettings(conf);
+    } catch (IOException e) {
+      LOG.fatal(e.toString());
+      throw e;
+    }
 
     activate(conf);
     LOG.info(getRole() + " up at: " + rpcAddress);
     if (serviceRPCAddress != null) {
       LOG.info(getRole() + " service server is up at: " + serviceRPCAddress); 
     }
+  }
+  
+  /**
+   * Verifies that the final Configuration Settings look ok for the NameNode to
+   * properly start up
+   * Things to check for include:
+   * - HTTP Server Port does not equal the RPC Server Port
+   * @param conf
+   * @throws IOException
+   */
+  protected void validateConfigurationSettings(final Configuration conf) 
+      throws IOException {
+    // check to make sure the web port and rpc port do not match 
+    if(getHttpServerAddress(conf).getPort() 
+        == getRpcServerAddress(conf).getPort()) {
+      String errMsg = "dfs.namenode.rpc-address " +
+          "("+ getRpcServerAddress(conf) + ") and " +
+          "dfs.namenode.http-address ("+ getHttpServerAddress(conf) + ") " +
+          "configuration keys are bound to the same port, unable to start " +
+          "NameNode. Port: " + getRpcServerAddress(conf).getPort();
+      throw new IOException(errMsg);
+    } 
   }
 
   /**
