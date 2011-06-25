@@ -114,6 +114,11 @@ public class FSTableDescriptors implements TableDescriptors {
       cachehits++;
       return HTableDescriptor.META_TABLEDESC;
     }
+    // .META. and -ROOT- is already handled. If some one tries to get the descriptor for
+    // .logs, .oldlogs or .corrupt throw an exception.
+    if (HConstants.HBASE_NON_USER_TABLE_DIRS.contains(tablename)) {
+       throw new IOException("No descriptor found for table = " + tablename);
+    }
 
     // Look in cache of descriptors.
     TableDescriptorModtime tdm = this.cache.get(tablename);
@@ -159,6 +164,9 @@ public class FSTableDescriptors implements TableDescriptors {
       throw new NotImplementedException();
     }
     if (Bytes.equals(HConstants.META_TABLE_NAME, htd.getName())) {
+      throw new NotImplementedException();
+    }
+    if (HConstants.HBASE_NON_USER_TABLE_DIRS.contains(htd.getNameAsString())) {
       throw new NotImplementedException();
     }
     if (!this.fsreadonly) FSUtils.updateHTableDescriptor(this.fs, this.rootdir, htd);

@@ -292,6 +292,8 @@ Release 0.91.0 - Unreleased
    HBASE-3970  Address HMaster crash/failure half way through meta migration
                (Subbu M Iyer)
    HBASE-4013  Make ZooKeeperListener Abstract (Akash Ashok via Ted Yu)
+   HBASE-4025  Server startup fails during startup due to failure in loading
+               all table descriptors. (Subbu Iyer via Ted Yu)
 
   NEW FEATURES
    HBASE-2001  Coprocessors: Colocate user code with regions (Mingjie Lai via

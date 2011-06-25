@@ -22,6 +22,10 @@ package org.apache.hadoop.hbase;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * HConstants holds a bunch of HBase-related constants
  */
@@ -142,7 +146,7 @@ public final class HConstants {
 
   /** Default value for thread wake frequency */
   public static final int DEFAULT_THREAD_WAKE_FREQUENCY = 10 * 1000;
-  
+
   /** Parameter name for how often a region should should perform a major compaction */
   public static final String MAJOR_COMPACTION_PERIOD = "hbase.hregion.majorcompaction";
 
@@ -456,7 +460,7 @@ public final class HConstants {
    * timeout for each RPC
    */
   public static String HBASE_RPC_TIMEOUT_KEY = "hbase.rpc.timeout";
-  
+
   /**
    * Default value of {@link #HBASE_RPC_TIMEOUT_KEY}
    */
@@ -481,6 +485,10 @@ public final class HConstants {
     * Minimum percentage of free heap necessary for a successful cluster startup.
     */
   public static final float HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD = 0.2f;
+
+  public static final List<String> HBASE_NON_USER_TABLE_DIRS = new ArrayList<String>(
+      Arrays.asList(new String[]{".logs", ".oldlogs",
+          ".corrupt", ".META.", "-ROOT-"}));
 
   private HConstants() {
     // Can't be instantiated with this ctor.
