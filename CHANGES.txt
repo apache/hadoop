@@ -133,6 +133,8 @@ Release 0.91.0 - Unreleased
                the shell (Joey Echeverria)
    HBASE-4020  "testWritesWhileGetting" unit test needs to be fixed.
                (Vandana Ayyalasomayajula via Ted Yu)
+   HBASE-4029  Inappropriate checking of Logging Mode in HRegionServer
+               (Akash Ashok via Ted Yu)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

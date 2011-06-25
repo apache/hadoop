@@ -626,7 +626,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             this.stopping = true;
             LOG.info("Closing user regions");
             closeUserRegions(this.abortRequested);
-          } else if (this.stopping && LOG.isDebugEnabled()) {
+          } else if (this.stopping) {
             LOG.info("Only meta regions remain open");
             if (!onlyMetaRegionsRemaining) {
               onlyMetaRegionsRemaining = isOnlyMetaRegionsRemaining();
