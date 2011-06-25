@@ -814,19 +814,20 @@ public class HLogSplitter {
       HLogKey key = entry.getKey();
 
       RegionEntryBuffer buffer;
+      long incrHeap;
       synchronized (this) {
         buffer = buffers.get(key.getEncodedRegionName());
         if (buffer == null) {
           buffer = new RegionEntryBuffer(key.getTablename(), key.getEncodedRegionName());
           buffers.put(key.getEncodedRegionName(), buffer);
         }
-        long incrHeap = buffer.appendEntry(entry);
-        totalBuffered += incrHeap;
+        incrHeap= buffer.appendEntry(entry);        
       }
 
       // If we crossed the chunk threshold, wait for more space to be available
       synchronized (dataAvailable) {
-        while (totalBuffered > maxHeapUsage && thrown == null) {
+        totalBuffered += incrHeap;
+        while (totalBuffered > maxHeapUsage && thrown.get() == null) {
           LOG.debug("Used " + totalBuffered + " bytes of buffered edits, waiting for IO threads...");
           dataAvailable.wait(3000);
         }
