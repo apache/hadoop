@@ -21,8 +21,11 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * Utility class to build a table of multiple regions.
@@ -82,6 +85,12 @@ public class MultiRegionTable extends HBaseClusterTestCase {
   protected void preHBaseClusterSetup() throws Exception {
     try {
       // Create a bunch of regions
+      FileSystem filesystem = FileSystem.get(conf);
+      Path rootdir = filesystem.makeQualified(
+          new Path(conf.get(HConstants.HBASE_DIR)));
+      filesystem.mkdirs(rootdir);
+      FSUtils.createTableDescriptor(fs, rootdir, desc);
+      
       HRegion[] regions = new HRegion[KEYS.length];
       for (int i = 0; i < regions.length; i++) {
         int j = (i + 1) % regions.length;

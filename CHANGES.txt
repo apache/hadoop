@@ -11,6 +11,8 @@ Release 0.91.0 - Unreleased
    HBASE-3629  Update our thrift to 0.6 (Moaz Reyad)
    HBASE-1502  Remove need for heartbeats in HBase
    HBASE-451   Remove HTableDescriptor from HRegionInfo (Subbu M Iyer)
+   HBASE-451   Remove HTableDescriptor from HRegionInfo
+               addendum that fixes TestTableMapReduce
 
   BUG FIXES
    HBASE-3280  YouAreDeadException being swallowed in HRS getMaster
