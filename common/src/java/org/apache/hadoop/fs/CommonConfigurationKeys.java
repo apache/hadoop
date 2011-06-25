@@ -85,5 +85,13 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
    */
   public static final String  NET_TOPOLOGY_CONFIGURED_NODE_MAPPING_KEY =
     "net.topology.configured.node.mapping";
+
+  /** Internal buffer size for Snappy compressor/decompressors */
+  public static final String IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_KEY =
+      "io.compression.codec.snappy.buffersize";
+
+  /** Default value for IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_KEY */
+  public static final int IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_DEFAULT =
+      256 * 1024;
 }
 

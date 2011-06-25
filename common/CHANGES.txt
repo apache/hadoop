@@ -47,6 +47,9 @@ Trunk (unreleased changes)
     HADOOP-7379. Add the ability to serialize and deserialize protocol buffers
     in ObjectWritable. (todd)
 
+    HADOOP-7206. Support Snappy compression. (Issei Yoshida and
+    Alejandro Abdelnur via eli)
+	 
   IMPROVEMENTS
 
     HADOOP-7042. Updates to test-patch.sh to include failed test names and
