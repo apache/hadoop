@@ -780,6 +780,9 @@ Trunk (unreleased changes)
     HDFS-1321. If service port and main port are the same, there is no clear
     log message explaining the issue. (Jim Plush via atm)
 
+    HDFS-1381. HDFS javadocs hard-code references to dfs.namenode.name.dir and
+    dfs.datanode.data.dir parameters (Jim Plush via atm)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

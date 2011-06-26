@@ -181,8 +181,9 @@ public class UpgradeUtilities {
   }
   
   /**
-   * Initialize dfs.namenode.name.dir and dfs.datanode.data.dir with the specified number of
-   * directory entries. Also initialize dfs.blockreport.intervalMsec.
+   * Initialize {@link DFSConfigKeys#DFS_NAMENODE_NAME_DIR_KEY} and 
+   * {@link DFSConfigKeys#DFS_DATANODE_DATA_DIR_KEY} with the specified 
+   * number of directory entries. Also initialize dfs.blockreport.intervalMsec.
    */
   public static Configuration initializeStorageStateConf(int numDirs,
                                                          Configuration conf) {
@@ -306,7 +307,8 @@ public class UpgradeUtilities {
   }
   
   /**
-   * Simulate the <code>dfs.namenode.name.dir</code> of a populated DFS filesystem.
+   * Simulate the {@link DFSConfigKeys#DFS_NAMENODE_NAME_DIR_KEY} of a populated 
+   * DFS filesystem.
    * This method populates for each parent directory, <code>parent/dirName</code>
    * with the content of namenode storage directory that comes from a singleton
    * namenode master (that contains edits, fsimage, version and time files). 
@@ -333,7 +335,8 @@ public class UpgradeUtilities {
   }  
   
   /**
-   * Simulate the <code>dfs.datanode.data.dir</code> of a populated DFS filesystem.
+   * Simulate the {@link DFSConfigKeys#DFS_DATANODE_DATA_DIR_KEY} of a 
+   * populated DFS filesystem.
    * This method populates for each parent directory, <code>parent/dirName</code>
    * with the content of datanode storage directory that comes from a singleton
    * datanode master (that contains version and block files). If the destination
@@ -360,7 +363,8 @@ public class UpgradeUtilities {
   }
   
   /**
-   * Simulate the <code>dfs.datanode.data.dir</code> of a populated DFS filesystem.
+   * Simulate the {@link DFSConfigKeys#DFS_DATANODE_DATA_DIR_KEY} of a 
+   * populated DFS filesystem.
    * This method populates for each parent directory, <code>parent/dirName</code>
    * with the content of block pool storage directory that comes from a singleton
    * datanode master (that contains version and block files). If the destination
