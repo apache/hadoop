@@ -137,6 +137,8 @@ Release 0.91.0 - Unreleased
                (Akash Ashok via Ted Yu)
    HBASE-4028  Hmaster crashes caused by splitting log.
                (gaojinchao via Ted Yu)
+   HBASE-4035  Fix local-master-backup.sh - parameter order wrong
+               (Lars George via Ted Yu)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
