@@ -49,7 +49,10 @@ Trunk (unreleased changes)
 
     HADOOP-7206. Support Snappy compression. (Issei Yoshida and
     Alejandro Abdelnur via eli)
-	 
+
+    HADOOP-7329. Add the capability of getting invividual attribute of a mbean
+    using JMXProxyServlet. (tanping)
+
   IMPROVEMENTS
 
     HADOOP-7042. Updates to test-patch.sh to include failed test names and
