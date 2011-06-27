@@ -54,6 +54,23 @@ public class TestQuota {
     }
   }
   
+  /**
+   * Tests to make sure we're getting human readable Quota exception messages
+   * Test for @link{ NSQuotaExceededException, DSQuotaExceededException}
+   * @throws Exception
+   */
+  @Test
+  public void testDSQuotaExceededExceptionIsHumanReadable() throws Exception {
+    Integer bytes = 1024;
+    try {
+      throw new DSQuotaExceededException(bytes, bytes);
+    } catch(DSQuotaExceededException e) {
+      
+      assertEquals("The DiskSpace quota is exceeded: quota=1.0k " +
+          "diskspace consumed=1.0k", e.getMessage());
+    }
+  }
+  
   /** Test quota related commands: 
    *    setQuota, clrQuota, setSpaceQuota, clrSpaceQuota, and count 
    */

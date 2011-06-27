@@ -529,6 +529,9 @@ Trunk (unreleased changes)
     HDFS-2087. Declare methods in DataTransferProtocol interface, and change
     Sender and Receiver to implement the interface.  (szetszwo)
 
+    HDFS-1723. quota errors messages should use the same scale. (Jim Plush via
+    atm)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
