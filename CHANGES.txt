@@ -131,14 +131,8 @@ Release 0.91.0 - Unreleased
    HBASE-3889  NPE in Distributed Log Splitting (Anirudh Todi)
    HBASE-4000  You can't specify split points when you create a table in
                the shell (Joey Echeverria)
-   HBASE-4020  "testWritesWhileGetting" unit test needs to be fixed.
-               (Vandana Ayyalasomayajula via Ted Yu)
    HBASE-4029  Inappropriate checking of Logging Mode in HRegionServer
                (Akash Ashok via Ted Yu)
-   HBASE-4028  Hmaster crashes caused by splitting log.
-               (gaojinchao via Ted Yu)
-   HBASE-4035  Fix local-master-backup.sh - parameter order wrong
-               (Lars George via Ted Yu)
    HBASE-4037  Add timeout annotations to preempt surefire killing
                all tests
 
@@ -367,6 +361,12 @@ Release 0.90.4 - Unreleased
    HBASE-2077  NullPointerException with an open scanner that expired causing
                an immediate region server shutdown -- part 2.
    HBASE-4005  close_region bugs
+   HBASE-4028  Hmaster crashes caused by splitting log.
+               (gaojinchao via Ted Yu)
+   HBASE-4035  Fix local-master-backup.sh - parameter order wrong
+               (Lars George via Ted Yu)
+   HBASE-4020  "testWritesWhileGetting" unit test needs to be fixed.
+               (Vandana Ayyalasomayajula via Ted Yu)
 
 
   IMPROVEMENT
