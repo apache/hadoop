@@ -23,6 +23,8 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 
 import java.util.Date;
 
+import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.webapp.SubView;
@@ -68,7 +70,9 @@ public class NodePage extends NMView {
           ._("LastNodeHealthTime", new Date(
                 this.context.getNodeHealthStatus().getLastHealthReportTime()))
           ._("NodeHealthReport",
-              this.context.getNodeHealthStatus().getHealthReport());
+              this.context.getNodeHealthStatus().getHealthReport())
+          ._("Node Manger Version:", YarnVersionInfo.getBuildVersion())
+          ._("Hadoop Version:", VersionInfo.getBuildVersion());
       html._(InfoBlock.class);
     }
   }

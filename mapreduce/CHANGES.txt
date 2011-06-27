@@ -5,6 +5,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    MAPREDUCE-2625. Add version info to nodemanager info page.
+    (Jonathan Eagles via llu)
+
     MAPREDUCE-2618. Fix NPE in 0 map 0 reduce jobs. (Jeffrey Naisbitt via llu)
 
     Fix some invalid transitions in the RM. (vinodkv via ddas)
