@@ -98,7 +98,7 @@ public class TestSplitTransactionOnCluster {
    * @throws NodeExistsException
    * @throws KeeperException
    */
-  @Test (timeout = 600000) public void testRSSplitEphemeralsDisappearButDaughtersAreOnlinedAfterShutdownHandling()
+  @Test (timeout = 300000) public void testRSSplitEphemeralsDisappearButDaughtersAreOnlinedAfterShutdownHandling()
   throws IOException, InterruptedException, NodeExistsException, KeeperException {
     final byte [] tableName =
       Bytes.toBytes("ephemeral");
@@ -170,7 +170,7 @@ public class TestSplitTransactionOnCluster {
     }
   }
 
-  @Test (timeout = 600000) public void testExistingZnodeBlocksSplitAndWeRollback()
+  @Test (timeout = 300000) public void testExistingZnodeBlocksSplitAndWeRollback()
   throws IOException, InterruptedException, NodeExistsException, KeeperException {
     final byte [] tableName =
       Bytes.toBytes("testExistingZnodeBlocksSplitAndWeRollback");
@@ -230,7 +230,7 @@ public class TestSplitTransactionOnCluster {
    * @throws IOException
    * @throws InterruptedException
    */
-  @Test (timeout = 600000) public void testShutdownSimpleFixup()
+  @Test (timeout = 300000) public void testShutdownSimpleFixup()
   throws IOException, InterruptedException {
     final byte [] tableName = Bytes.toBytes("testShutdownSimpleFixup");
 
@@ -289,7 +289,7 @@ public class TestSplitTransactionOnCluster {
    * @throws IOException
    * @throws InterruptedException
    */
-  @Test public void testShutdownFixupWhenDaughterHasSplit()
+  @Test (timeout=300000) public void testShutdownFixupWhenDaughterHasSplit()
   throws IOException, InterruptedException {
     final byte [] tableName =
       Bytes.toBytes("testShutdownFixupWhenDaughterHasSplit");

@@ -630,7 +630,7 @@
     <jersey.version>1.4</jersey.version>
     <jruby.version>1.6.0</jruby.version>
     <jsr311.version>1.1.1</jsr311.version>
-    <junit.version>4.8.1</junit.version>
+    <junit.version>4.8.2</junit.version>
     <log4j.version>1.2.16</log4j.version>
     <mockito-all.version>1.8.5</mockito-all.version>
     <protobuf.version>2.3.0</protobuf.version>

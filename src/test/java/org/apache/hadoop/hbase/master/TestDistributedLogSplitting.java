@@ -105,7 +105,7 @@ public class TestDistributedLogSplitting {
     cluster.shutdown();
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testThreeRSAbort() throws Exception {
     LOG.info("testThreeRSAbort");
     final int NUM_REGIONS_TO_CREATE = 40;
@@ -146,7 +146,7 @@ public class TestDistributedLogSplitting {
         TEST_UTIL.countRows(ht));
   }
 
-  @Test(expected=OrphanHLogAfterSplitException.class)
+  @Test(expected=OrphanHLogAfterSplitException.class, timeout=300000)
   public void testOrphanLogCreation() throws Exception {
     LOG.info("testOrphanLogCreation");
     startCluster(NUM_RS);
@@ -191,7 +191,7 @@ public class TestDistributedLogSplitting {
     }
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testRecoveredEdits() throws Exception {
     LOG.info("testRecoveredEdits");
     startCluster(NUM_RS);
@@ -242,7 +242,7 @@ public class TestDistributedLogSplitting {
     assertEquals(NUM_LOG_LINES, count);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testWorkerAbort() throws Exception {
     LOG.info("testWorkerAbort");
     startCluster(1);
