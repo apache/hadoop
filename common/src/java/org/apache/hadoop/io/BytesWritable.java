@@ -51,8 +51,19 @@ public class BytesWritable extends BinaryComparable
    * @param bytes This array becomes the backing storage for the object.
    */
   public BytesWritable(byte[] bytes) {
+    this(bytes, bytes.length);
+  }
+
+  /**
+   * Create a BytesWritable using the byte array as the initial value
+   * and length as the length. Use this constructor if the array is larger
+   * than the value it represents.
+   * @param bytes This array becomes the backing storage for the object.
+   * @param length The number of bytes to use from array.
+   */
+  public BytesWritable(byte[] bytes, int length) {
     this.bytes = bytes;
-    this.size = bytes.length;
+    this.size = length;
   }
   
   /**
