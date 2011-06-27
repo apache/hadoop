@@ -59,10 +59,10 @@ public class TestMRApp {
   }
   
   @Test
-  public void testZeroMapReduces() throws Exception {
+  public void testZeroMapReduces() throws Exception{
     MRApp app = new MRApp(0, 0, true, this.getClass().getName(), true);
     Job job = app.submit(new Configuration());
-    app.waitForState(job, JobState.FAILED);
+    app.waitForState(job, JobState.SUCCEEDED);
   }
   
   @Test

@@ -35,6 +35,9 @@ public enum JobEventType {
   JOB_MAP_TASK_RESCHEDULED,
   JOB_TASK_ATTEMPT_COMPLETED,
 
+  //Producer:Job
+  JOB_COMPLETED,
+
   //Producer:Any component
   JOB_DIAGNOSTIC_UPDATE,
   INTERNAL_ERROR,

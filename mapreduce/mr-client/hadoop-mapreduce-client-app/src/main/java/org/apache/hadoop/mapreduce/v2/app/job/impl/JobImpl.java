@@ -230,6 +230,11 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
               EnumSet.of(JobState.RUNNING, JobState.SUCCEEDED, JobState.FAILED),
               JobEventType.JOB_TASK_COMPLETED,
               new TaskCompletedTransition())
+          .addTransition
+              (JobState.RUNNING,
+              EnumSet.of(JobState.RUNNING, JobState.SUCCEEDED, JobState.FAILED),
+              JobEventType.JOB_COMPLETED,
+              new JobNoTasksCompletedTransition())
           .addTransition(JobState.RUNNING, JobState.KILL_WAIT,
               JobEventType.JOB_KILL, new KillTasksTransition())
           .addTransition(JobState.RUNNING, JobState.RUNNING,
@@ -391,6 +396,19 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   @Override
   public JobId getID() {
     return jobId;
+  }
+
+  // Getter methods that make unit testing easier (package-scoped)
+  OutputCommitter getCommitter() {
+    return this.committer;
+  }
+
+  EventHandler getEventHandler() {
+    return this.eventHandler;
+  }
+
+  JobContext getJobContext() {
+    return this.jobContext;
   }
 
   @Override
@@ -687,11 +705,34 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     metrics.waitingTask(task);
   }
 
-  private void setFinishTime() {
+  void setFinishTime() {
     finishTime = clock.getTime();
   }
+
+  void logJobHistoryFinishedEvent() {
+    this.setFinishTime();
+    JobFinishedEvent jfe = createJobFinishedEvent(this);
+    LOG.info("Calling handler for JobFinishedEvent ");
+    this.getEventHandler().handle(new JobHistoryEvent(this.jobId, jfe));    
+  }
   
-  private JobState finished(JobState finalState) {
+  static JobState checkJobCompleteSuccess(JobImpl job) {
+    // check for Job success
+    if (job.completedTaskCount == job.getTasks().size()) {
+      try {
+        // Commit job & do cleanup
+        job.getCommitter().commitJob(job.getJobContext());
+      } catch (IOException e) {
+        LOG.warn("Could not do commit for Job", e);
+      }
+      
+      job.logJobHistoryFinishedEvent();
+      return job.finished(JobState.SUCCEEDED);
+    }
+    return null;
+  }
+
+  JobState finished(JobState finalState) {
     if (getState() == JobState.RUNNING) {
       metrics.endRunningJob(this);
     }
@@ -759,10 +800,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         TaskSplitMetaInfo[] taskSplitMetaInfo = createSplits(job, job.jobId);
         job.numMapTasks = taskSplitMetaInfo.length;
         job.numReduceTasks = job.conf.getInt(MRJobConfig.NUM_REDUCES, 0);
-        
+
         if (job.numMapTasks == 0 && job.numReduceTasks == 0) {
           job.addDiagnostic("No of maps and reduces are 0 " + job.jobId);
-          return job.finished(JobState.FAILED);
         }
 
         checkTaskLimits();
@@ -1064,6 +1104,11 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           job.submitTime, job.startTime);
       job.eventHandler.handle(new JobHistoryEvent(job.jobId, jice));
       job.metrics.runningJob(job);
+
+			// If we have no tasks, just transition to job completed
+      if (job.numReduceTasks == 0 && job.numMapTasks == 0) {
+        job.eventHandler.handle(new JobEvent(job.jobId, JobEventType.JOB_COMPLETED));
+      }
     }
   }
 
@@ -1237,19 +1282,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         return job.finished(JobState.FAILED);
       }
       
-      //check for Job success
-      if (job.completedTaskCount == job.tasks.size()) {
-        try {
-          job.committer.commitJob(job.jobContext);
-        } catch (IOException e) {
-          LOG.warn("Could not do commit for Job", e);
-        }
-       // Log job-history
-        job.setFinishTime();
-        JobFinishedEvent jfe = createJobFinishedEvent(job);
-        LOG.info("Calling handler for JobFinishedEvent ");
-        job.eventHandler.handle(new JobHistoryEvent(job.jobId, jfe));
-        return job.finished(JobState.SUCCEEDED);
+      JobState jobCompleteSuccess = JobImpl.checkJobCompleteSuccess(job);
+      if (jobCompleteSuccess != null) {
+        return jobCompleteSuccess;
       }
       
       //return the current state, Job not finished yet
@@ -1282,6 +1317,22 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         job.killedReduceTaskCount++;
       }
       job.metrics.killedTask(task);
+    }
+  }
+
+  // Transition class for handling jobs with no tasks
+  static class JobNoTasksCompletedTransition implements
+  MultipleArcTransition<JobImpl, JobEvent, JobState> {
+
+    @Override
+    public JobState transition(JobImpl job, JobEvent event) {
+      JobState jobCompleteSuccess = JobImpl.checkJobCompleteSuccess(job);
+      if (jobCompleteSuccess != null) {
+        return jobCompleteSuccess;
+      }
+      
+      // Return the current state, Job not finished yet
+      return job.getState();
     }
   }
 
