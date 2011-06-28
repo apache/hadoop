@@ -788,6 +788,9 @@ Trunk (unreleased changes)
     HDFS-1381. HDFS javadocs hard-code references to dfs.namenode.name.dir and
     dfs.datanode.data.dir parameters (Jim Plush via atm)
 
+    HDFS-2053. Bug in INodeDirectory#computeContentSummary warning.
+    (Michael Noll via eli)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

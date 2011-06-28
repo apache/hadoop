@@ -712,7 +712,57 @@ public class TestQuota {
       // verify increase in space
       c = dfs.getContentSummary(dstPath);
       assertEquals(c.getSpaceConsumed(), 5 * fileSpace + file2Len);
-      
+
+      // Test HDFS-2053 :
+
+      // Create directory /hdfs-2053
+      final Path quotaDir2053 = new Path("/hdfs-2053");
+      assertTrue(dfs.mkdirs(quotaDir2053));
+
+      // Create subdirectories /hdfs-2053/{A,B,C}
+      final Path quotaDir2053_A = new Path(quotaDir2053, "A");
+      assertTrue(dfs.mkdirs(quotaDir2053_A));
+      final Path quotaDir2053_B = new Path(quotaDir2053, "B");
+      assertTrue(dfs.mkdirs(quotaDir2053_B));
+      final Path quotaDir2053_C = new Path(quotaDir2053, "C");
+      assertTrue(dfs.mkdirs(quotaDir2053_C));
+
+      // Factors to vary the sizes of test files created in each subdir.
+      // The actual factors are not really important but they allow us to create
+      // identifiable file sizes per subdir, which helps during debugging.
+      int sizeFactorA = 1;
+      int sizeFactorB = 2;
+      int sizeFactorC = 4;
+
+      // Set space quota for subdirectory C
+      dfs.setQuota(quotaDir2053_C, FSConstants.QUOTA_DONT_SET,
+          (sizeFactorC + 1) * fileSpace);
+      c = dfs.getContentSummary(quotaDir2053_C);
+      assertEquals(c.getSpaceQuota(), (sizeFactorC + 1) * fileSpace);
+
+      // Create a file under subdirectory A
+      DFSTestUtil.createFile(dfs, new Path(quotaDir2053_A, "fileA"),
+          sizeFactorA * fileLen, replication, 0);
+      c = dfs.getContentSummary(quotaDir2053_A);
+      assertEquals(c.getSpaceConsumed(), sizeFactorA * fileSpace);
+
+      // Create a file under subdirectory B
+      DFSTestUtil.createFile(dfs, new Path(quotaDir2053_B, "fileB"),
+          sizeFactorB * fileLen, replication, 0);
+      c = dfs.getContentSummary(quotaDir2053_B);
+      assertEquals(c.getSpaceConsumed(), sizeFactorB * fileSpace);
+
+      // Create a file under subdirectory C (which has a space quota)
+      DFSTestUtil.createFile(dfs, new Path(quotaDir2053_C, "fileC"),
+          sizeFactorC * fileLen, replication, 0);
+      c = dfs.getContentSummary(quotaDir2053_C);
+      assertEquals(c.getSpaceConsumed(), sizeFactorC * fileSpace);
+
+      // Check space consumed for /hdfs-2053
+      c = dfs.getContentSummary(quotaDir2053);
+      assertEquals(c.getSpaceConsumed(),
+          (sizeFactorA + sizeFactorB + sizeFactorC) * fileSpace);
+
     } finally {
       cluster.shutdown();
     }
