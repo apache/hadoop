@@ -971,8 +971,8 @@ public class Store implements HeapSize {
     }
 
     // major compact on user action or age (caveat: we have too many files)
-    boolean majorcompaction = (forcemajor || isMajorCompaction(filesToCompact))
-      && filesToCompact.size() < this.maxFilesToCompact;
+    boolean majorcompaction = filesToCompact.size() < this.maxFilesToCompact
+      && (forcemajor || isMajorCompaction(filesToCompact));
 
     if (!majorcompaction && !hasReferences(filesToCompact)) {
       // we're doing a minor compaction, let's see what files are applicable
