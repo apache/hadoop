@@ -135,8 +135,9 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
         throw new IOException(path.toString() + ": not a jar file?");
       }
       FileSystem fs = path.getFileSystem(HBaseConfiguration.create());
-      Path dst = new Path("/tmp/." + pathPrefix +
-        "." + className + "." + System.currentTimeMillis() + ".jar");
+      Path dst = new Path(System.getProperty("java.io.tmpdir") +
+          java.io.File.separator +"." + pathPrefix +
+          "." + className + "." + System.currentTimeMillis() + ".jar");
       fs.copyToLocalFile(path, dst);
       fs.deleteOnExit(dst);
 
