@@ -534,7 +534,7 @@ Trunk (unreleased changes)
 
     HDFS-2110. StreamFile and ByteRangeInputStream cleanup. (eli)
 
-    HDFS-2106. Move block management code from o.a.h.h.s.namenode to a new
+    HDFS-2107. Move block management code from o.a.h.h.s.namenode to a new
     package o.a.h.h.s.blockmanagement.  (szetszwo)
 
   OPTIMIZATIONS
