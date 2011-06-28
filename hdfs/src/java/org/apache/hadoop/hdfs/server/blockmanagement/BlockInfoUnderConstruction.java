@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -24,12 +24,13 @@ import java.util.List;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 
 /**
  * Represents a block that is currently being constructed.<br>
  * This is usually the last block of a file opened for write or append.
  */
-class BlockInfoUnderConstruction extends BlockInfo {
+public class BlockInfoUnderConstruction extends BlockInfo {
   /** Block state. See {@link BlockUCState} */
   private BlockUCState blockUCState;
 
@@ -128,11 +129,14 @@ class BlockInfoUnderConstruction extends BlockInfo {
    * Create block and set its state to
    * {@link BlockUCState#UNDER_CONSTRUCTION}.
    */
-  BlockInfoUnderConstruction(Block blk, int replication) {
+  public BlockInfoUnderConstruction(Block blk, int replication) {
     this(blk, replication, BlockUCState.UNDER_CONSTRUCTION, null);
   }
 
-  BlockInfoUnderConstruction(Block blk, int replication,
+  /**
+   * Create a block that is currently being constructed.
+   */
+  public BlockInfoUnderConstruction(Block blk, int replication,
                              BlockUCState state,
                              DatanodeDescriptor[] targets) {
     super(blk, replication);
@@ -160,7 +164,8 @@ class BlockInfoUnderConstruction extends BlockInfo {
     return new BlockInfo(this);
   }
 
-  void setExpectedLocations(DatanodeDescriptor[] targets) {
+  /** Set expected locations */
+  public void setExpectedLocations(DatanodeDescriptor[] targets) {
     int numLocations = targets == null ? 0 : targets.length;
     this.replicas = new ArrayList<ReplicaUnderConstruction>(numLocations);
     for(int i = 0; i < numLocations; i++)
@@ -172,7 +177,7 @@ class BlockInfoUnderConstruction extends BlockInfo {
    * Create array of expected replica locations
    * (as has been assigned by chooseTargets()).
    */
-  DatanodeDescriptor[] getExpectedLocations() {
+  public DatanodeDescriptor[] getExpectedLocations() {
     int numLocations = replicas == null ? 0 : replicas.size();
     DatanodeDescriptor[] locations = new DatanodeDescriptor[numLocations];
     for(int i = 0; i < numLocations; i++)
@@ -180,7 +185,8 @@ class BlockInfoUnderConstruction extends BlockInfo {
     return locations;
   }
 
-  int getNumExpectedLocations() {
+  /** Get the number of expected locations */
+  public int getNumExpectedLocations() {
     return replicas == null ? 0 : replicas.size();
   }
 
@@ -189,7 +195,7 @@ class BlockInfoUnderConstruction extends BlockInfo {
    * @see BlockUCState
    */
   @Override // BlockInfo
-  BlockUCState getBlockUCState() {
+  public BlockUCState getBlockUCState() {
     return blockUCState;
   }
 
@@ -197,7 +203,8 @@ class BlockInfoUnderConstruction extends BlockInfo {
     blockUCState = s;
   }
 
-  long getBlockRecoveryId() {
+  /** Get block recovery ID */
+  public long getBlockRecoveryId() {
     return blockRecoveryId;
   }
 
@@ -220,7 +227,7 @@ class BlockInfoUnderConstruction extends BlockInfo {
    * Find the first alive data-node starting from the previous primary and
    * make it primary.
    */
-  void initializeBlockRecovery(long recoveryId) {
+  public void initializeBlockRecovery(long recoveryId) {
     setBlockUCState(BlockUCState.UNDER_RECOVERY);
     blockRecoveryId = recoveryId;
     if (replicas.size() == 0) {

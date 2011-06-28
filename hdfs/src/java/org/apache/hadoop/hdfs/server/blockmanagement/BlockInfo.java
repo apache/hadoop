@@ -15,16 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.util.LightWeightGSet;
 
 /**
  * Internal class for block metadata.
  */
-class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
+public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
   private INodeFile inode;
 
   /** For implementing {@link LightWeightGSet.LinkedElement} interface */
@@ -44,12 +45,12 @@ class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    * Construct an entry for blocksmap
    * @param replication the block's replication factor
    */
-  protected BlockInfo(int replication) {
+  public BlockInfo(int replication) {
     this.triplets = new Object[3*replication];
     this.inode = null;
   }
   
-  protected BlockInfo(Block blk, int replication) {
+  public BlockInfo(Block blk, int replication) {
     super(blk);
     this.triplets = new Object[3*replication];
     this.inode = null;
@@ -65,11 +66,11 @@ class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     this.inode = from.inode;
   }
 
-  INodeFile getINode() {
+  public INodeFile getINode() {
     return inode;
   }
 
-  void setINode(INodeFile inode) {
+  public void setINode(INodeFile inode) {
     this.inode = inode;
   }
 
@@ -162,7 +163,7 @@ class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
   /**
    * Add data-node this block belongs to.
    */
-  boolean addNode(DatanodeDescriptor node) {
+  public boolean addNode(DatanodeDescriptor node) {
     if(findDatanode(node) >= 0) // the node is already there
       return false;
     // find the last null node
@@ -176,7 +177,7 @@ class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
   /**
    * Remove data-node from the block.
    */
-  boolean removeNode(DatanodeDescriptor node) {
+  public boolean removeNode(DatanodeDescriptor node) {
     int dnIndex = findDatanode(node);
     if(dnIndex < 0) // the node is not found
       return false;
@@ -218,7 +219,7 @@ class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    * If the head is null then form a new list.
    * @return current block as the new head of the list.
    */
-  BlockInfo listInsert(BlockInfo head, DatanodeDescriptor dn) {
+  public BlockInfo listInsert(BlockInfo head, DatanodeDescriptor dn) {
     int dnIndex = this.findDatanode(dn);
     assert dnIndex >= 0 : "Data node is not found: current";
     assert getPrevious(dnIndex) == null && getNext(dnIndex) == null : 
@@ -238,7 +239,7 @@ class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    * @return the new head of the list or null if the list becomes
    * empty after deletion.
    */
-  BlockInfo listRemove(BlockInfo head, DatanodeDescriptor dn) {
+  public BlockInfo listRemove(BlockInfo head, DatanodeDescriptor dn) {
     if(head == null)
       return null;
     int dnIndex = this.findDatanode(dn);
@@ -284,7 +285,7 @@ class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    * to {@link BlockInfoUnderConstruction}.
    * @return {@link BlockUCState#COMPLETE}
    */
-  BlockUCState getBlockUCState() {
+  public BlockUCState getBlockUCState() {
     return BlockUCState.COMPLETE;
   }
 
@@ -293,7 +294,7 @@ class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    * 
    * @return true if the state of the block is {@link BlockUCState#COMPLETE}
    */
-  boolean isComplete() {
+  public boolean isComplete() {
     return getBlockUCState().equals(BlockUCState.COMPLETE);
   }
 
@@ -302,7 +303,7 @@ class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    * 
    * @return BlockInfoUnderConstruction -  an under construction block.
    */
-  BlockInfoUnderConstruction convertToBlockUnderConstruction(
+  public BlockInfoUnderConstruction convertToBlockUnderConstruction(
       BlockUCState s, DatanodeDescriptor[] targets) {
     if(isComplete()) {
       return new BlockInfoUnderConstruction(

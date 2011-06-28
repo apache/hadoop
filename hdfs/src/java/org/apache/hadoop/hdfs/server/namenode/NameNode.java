@@ -247,7 +247,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   /** Return the {@link FSNamesystem} object.
    * @return {@link FSNamesystem} object.
    */
-  FSNamesystem getNamesystem() {
+  public FSNamesystem getNamesystem() {
     return namesystem;
   }
 

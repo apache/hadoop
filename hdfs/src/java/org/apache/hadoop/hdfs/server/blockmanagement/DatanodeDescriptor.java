@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.DataInput;
 import java.io.IOException;
@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.io.WritableUtils;
@@ -44,7 +45,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   
   // Stores status of decommissioning.
   // If node is not decommissioning, do not use this object for anything.
-  DecommissioningStatus decommissioningStatus = new DecommissioningStatus();
+  public DecommissioningStatus decommissioningStatus = new DecommissioningStatus();
   
   /** Block and targets pair */
   @InterfaceAudience.Private
@@ -96,8 +97,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
   private int numBlocks = 0;
   // isAlive == heartbeats.contains(this)
   // This is an optimization, because contains takes O(n) time on Arraylist
-  protected boolean isAlive = false;
-  protected boolean needKeyUpdate = false;
+  public boolean isAlive = false;
+  public boolean needKeyUpdate = false;
 
   /** A queue of blocks to be replicated by this datanode */
   private BlockQueue<BlockTargetPair> replicateBlocks = new BlockQueue<BlockTargetPair>();
@@ -204,7 +205,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * Add datanode to the block.
    * Add block to the head of the list of blocks belonging to the data-node.
    */
-  boolean addBlock(BlockInfo b) {
+  public boolean addBlock(BlockInfo b) {
     if(!b.addNode(this))
       return false;
     // add to the head of the data-node list
@@ -217,7 +218,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * Remove block from the list of blocks belonging to the data-node.
    * Remove datanode from the block.
    */
-  boolean removeBlock(BlockInfo b) {
+  public boolean removeBlock(BlockInfo b) {
     blockList = b.listRemove(blockList, this);
     if ( b.removeNode(this) ) {
       numBlocks--;
@@ -242,7 +243,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @param newBlock - a replacement block
    * @return the new block
    */
-  BlockInfo replaceBlock(BlockInfo oldBlock, BlockInfo newBlock) {
+  public BlockInfo replaceBlock(BlockInfo oldBlock, BlockInfo newBlock) {
     boolean done = removeBlock(oldBlock);
     assert done : "Old block should belong to the data-node when replacing";
     done = addBlock(newBlock);
@@ -250,7 +251,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return newBlock;
   }
 
-  void resetBlocks() {
+  public void resetBlocks() {
     this.capacity = 0;
     this.remaining = 0;
     this.blockPoolUsed = 0;
@@ -268,7 +269,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    * Updates stats from datanode heartbeat.
    */
-  void updateHeartbeat(long capacity, long dfsUsed, long remaining,
+  public void updateHeartbeat(long capacity, long dfsUsed, long remaining,
       long blockPoolUsed, int xceiverCount, int volFailures) {
     this.capacity = capacity;
     this.dfsUsed = dfsUsed;
@@ -283,7 +284,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    * Iterates over the list of blocks belonging to the datanode.
    */
-  static class BlockIterator implements Iterator<BlockInfo> {
+  public static class BlockIterator implements Iterator<BlockInfo> {
     private BlockInfo current;
     private DatanodeDescriptor node;
       
@@ -307,7 +308,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
   }
 
-  Iterator<BlockInfo> getBlockIterator() {
+  public Iterator<BlockInfo> getBlockIterator() {
     return new BlockIterator(this.blockList, this);
   }
   
@@ -361,11 +362,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
   }
   
-  List<BlockTargetPair> getReplicationCommand(int maxTransfers) {
+  public List<BlockTargetPair> getReplicationCommand(int maxTransfers) {
     return replicateBlocks.poll(maxTransfers);
   }
 
-  BlockInfoUnderConstruction[] getLeaseRecoveryCommand(int maxTransfers) {
+  public BlockInfoUnderConstruction[] getLeaseRecoveryCommand(int maxTransfers) {
     List<BlockInfoUnderConstruction> blocks = recoverBlocks.poll(maxTransfers);
     if(blocks == null)
       return null;
@@ -375,7 +376,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    * Remove the specified number of blocks to be invalidated
    */
-  Block[] getInvalidateBlocks(int maxblocks) {
+  public Block[] getInvalidateBlocks(int maxblocks) {
     return getBlockArray(invalidateBlocks, maxblocks); 
   }
 
@@ -418,7 +419,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /** Serialization for FSEditLog */
-  void readFieldsFromFSEditLog(DataInput in) throws IOException {
+  public void readFieldsFromFSEditLog(DataInput in) throws IOException {
     this.name = DeprecatedUTF8.readString(in);
     this.storageID = DeprecatedUTF8.readString(in);
     this.infoPort = in.readShort() & 0x0000ffff;
@@ -445,7 +446,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    * Increments counter for number of blocks scheduled. 
    */
-  void incBlocksScheduled() {
+  public void incBlocksScheduled() {
     currApproxBlocksScheduled++;
   }
   
@@ -485,12 +486,13 @@ public class DatanodeDescriptor extends DatanodeInfo {
     // by DatanodeID
     return (this == obj) || super.equals(obj);
   }
-  
-  class DecommissioningStatus {
-    int underReplicatedBlocks;
-    int decommissionOnlyReplicas;
-    int underReplicatedInOpenFiles;
-    long startTime;
+
+  /** Decommissioning status */
+  public class DecommissioningStatus {
+    private int underReplicatedBlocks;
+    private int decommissionOnlyReplicas;
+    private int underReplicatedInOpenFiles;
+    private long startTime;
     
     synchronized void set(int underRep,
         int onlyRep, int underConstruction) {
@@ -501,32 +503,34 @@ public class DatanodeDescriptor extends DatanodeInfo {
       decommissionOnlyReplicas = onlyRep;
       underReplicatedInOpenFiles = underConstruction;
     }
-    
-    synchronized int getUnderReplicatedBlocks() {
+
+    /** @return the number of under-replicated blocks */
+    public synchronized int getUnderReplicatedBlocks() {
       if (isDecommissionInProgress() == false) {
         return 0;
       }
       return underReplicatedBlocks;
     }
-    synchronized int getDecommissionOnlyReplicas() {
+    /** @return the number of decommission-only replicas */
+    public synchronized int getDecommissionOnlyReplicas() {
       if (isDecommissionInProgress() == false) {
         return 0;
       }
       return decommissionOnlyReplicas;
     }
-
-    synchronized int getUnderReplicatedInOpenFiles() {
+    /** @return the number of under-replicated blocks in open files */
+    public synchronized int getUnderReplicatedInOpenFiles() {
       if (isDecommissionInProgress() == false) {
         return 0;
       }
       return underReplicatedInOpenFiles;
     }
-
-    synchronized void setStartTime(long time) {
+    /** Set start time */
+    public synchronized void setStartTime(long time) {
       startTime = time;
     }
-    
-    synchronized long getStartTime() {
+    /** @return start time */
+    public synchronized long getStartTime() {
       if (isDecommissionInProgress() == false) {
         return 0;
       }
@@ -538,11 +542,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * Set the flag to indicate if this datanode is disallowed from communicating
    * with the namenode.
    */
-  void setDisallowed(boolean flag) {
+  public void setDisallowed(boolean flag) {
     disallowed = flag;
   }
-  
-  boolean isDisallowed() {
+  /** Is the datanode disallowed from communicating with the namenode? */
+  public boolean isDisallowed() {
     return disallowed;
   }
 
