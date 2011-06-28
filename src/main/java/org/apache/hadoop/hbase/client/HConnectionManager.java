@@ -1404,7 +1404,7 @@ public class HConnectionManager {
               actionsByServer.put(loc, actions);
             }
 
-            Action<R> action = new Action<R>(regionName, row, i);
+            Action<R> action = new Action<R>(row, i);
             lastServers[i] = loc;
             actions.add(regionName, action);
           }

@@ -137,6 +137,7 @@ Release 0.91.0 - Unreleased
                all tests
    HBASE-4024 Major compaction may not be triggered, even though region
               server log says it is triggered (Ted Yu)
+   HBASE-3534 Action should not store or serialize regionName (Ted Yu)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

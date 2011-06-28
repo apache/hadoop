@@ -34,7 +34,6 @@ import org.apache.hadoop.io.Writable;
  */
 public class Action<R> implements Writable, Comparable {
 
-  private byte[] regionName;
   private Row action;
   private int originalIndex;
   private R result;
@@ -43,19 +42,27 @@ public class Action<R> implements Writable, Comparable {
     super();
   }
 
+  /*
+   * This constructor is replaced by {@link #Action(Row, int)}
+   */
+  @Deprecated
   public Action(byte[] regionName, Row action, int originalIndex) {
+    this(action, originalIndex);
+  }
+
+  public Action(Row action, int originalIndex) {
     super();
-    this.regionName = regionName;
     this.action = action;
-    this.originalIndex = originalIndex;
+    this.originalIndex = originalIndex;    
   }
-
+  
+  @Deprecated
   public byte[] getRegionName() {
-    return regionName;
+    return null;
   }
 
+  @Deprecated
   public void setRegionName(byte[] regionName) {
-    this.regionName = regionName;
   }
 
   public R getResult() {
@@ -84,7 +91,6 @@ public class Action<R> implements Writable, Comparable {
   // ///////////////////////////////////////////////////////////////////////////
 
   public void write(final DataOutput out) throws IOException {
-    Bytes.writeByteArray(out, regionName);
     HbaseObjectWritable.writeObject(out, action, Row.class, null);
     out.writeInt(originalIndex);
     HbaseObjectWritable.writeObject(out, result,
@@ -92,7 +98,6 @@ public class Action<R> implements Writable, Comparable {
   }
 
   public void readFields(final DataInput in) throws IOException {
-    this.regionName = Bytes.readByteArray(in);
     this.action = (Row) HbaseObjectWritable.readObject(in, null);
     this.originalIndex = in.readInt();
     this.result = (R) HbaseObjectWritable.readObject(in, null);
