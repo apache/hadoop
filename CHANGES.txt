@@ -138,6 +138,9 @@ Release 0.91.0 - Unreleased
                all tests
    HBASE-4024 Major compaction may not be triggered, even though region
               server log says it is triggered (Ted Yu)
+   HBASE-4016 HRegion.incrementColumnValue() doesn't have a consistent
+              behavior when the field that we are incrementing is less
+              than 8 bytes long (Li Pi)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

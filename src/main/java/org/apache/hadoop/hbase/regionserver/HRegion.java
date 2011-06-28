@@ -3515,6 +3515,7 @@ public class HRegion implements HeapSize { // , Writable{
   throws IOException {
     checkRow(row);
     boolean flush = false;
+    boolean wrongLength = false;
     // Lock row
     long result = amount;
     startRegionOperation();
@@ -3535,32 +3536,38 @@ public class HRegion implements HeapSize { // , Writable{
 
         if (!results.isEmpty()) {
           KeyValue kv = results.get(0);
-          byte [] buffer = kv.getBuffer();
-          int valueOffset = kv.getValueOffset();
-          result += Bytes.toLong(buffer, valueOffset, Bytes.SIZEOF_LONG);
+          if(kv.getValueLength() == 8){
+        	  byte [] buffer = kv.getBuffer();
+        	  int valueOffset = kv.getValueOffset();
+        	  result += Bytes.toLong(buffer, valueOffset, Bytes.SIZEOF_LONG);
+          }
+          else{
+        	  wrongLength = true;
+          }
         }
-
-        // build the KeyValue now:
-        KeyValue newKv = new KeyValue(row, family,
+        if(!wrongLength){
+        	// build the KeyValue now:
+        	KeyValue newKv = new KeyValue(row, family,
             qualifier, EnvironmentEdgeManager.currentTimeMillis(),
             Bytes.toBytes(result));
 
-        // now log it:
-        if (writeToWAL) {
-          long now = EnvironmentEdgeManager.currentTimeMillis();
-          WALEdit walEdit = new WALEdit();
-          walEdit.add(newKv);
-          this.log.append(regionInfo, this.htableDescriptor.getName(),
-              walEdit, now, this.htableDescriptor);
+        	// now log it:
+        	if (writeToWAL) {
+        		long now = EnvironmentEdgeManager.currentTimeMillis();
+        		WALEdit walEdit = new WALEdit();
+        		walEdit.add(newKv);
+        		this.log.append(regionInfo, this.htableDescriptor.getName(),
+        				walEdit, now, this.htableDescriptor);
+        	}
+
+        	// Now request the ICV to the store, this will set the timestamp
+        	// appropriately depending on if there is a value in memcache or not.
+        	// returns the change in the size of the memstore from operation
+        	long size = store.updateColumnValue(row, family, qualifier, result);
+
+        	size = this.addAndGetGlobalMemstoreSize(size);
+        	flush = isFlushSize(size);
         }
-
-        // Now request the ICV to the store, this will set the timestamp
-        // appropriately depending on if there is a value in memcache or not.
-        // returns the change in the size of the memstore from operation
-        long size = store.updateColumnValue(row, family, qualifier, result);
-
-        size = this.addAndGetGlobalMemstoreSize(size);
-        flush = isFlushSize(size);
       } finally {
         this.updatesLock.readLock().unlock();
         releaseRowLock(lid);
@@ -3573,7 +3580,9 @@ public class HRegion implements HeapSize { // , Writable{
       // Request a cache flush.  Do it outside update lock.
       requestFlush();
     }
-
+    if(wrongLength){
+    	throw new IOException("Attempted to increment field that isn't 64 bits wide");
+    }
     return result;
   }
 

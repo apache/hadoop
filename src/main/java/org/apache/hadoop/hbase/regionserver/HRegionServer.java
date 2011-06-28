@@ -279,7 +279,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   private Replication replicationHandler;
 
   private final RegionServerAccounting regionServerAccounting;
-  
+
   /**
    * The server name the Master sees us as.  Its made from the hostname the
    * master passes us, port, and server startcode. Gets set after registration
