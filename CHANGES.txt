@@ -86,6 +86,9 @@ Release 0.20.3 - Unreleased
 
     MAPREDUCE-2317. Fix a NPE in HadoopArchives.  (Devaraj K via szetszwo)
 
+    HDFS-2053. Bug in INodeDirectory#computeContentSummary warning.
+    (Michael Noll via eli)
+
   IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match

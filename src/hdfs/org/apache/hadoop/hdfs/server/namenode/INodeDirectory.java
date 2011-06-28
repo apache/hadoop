@@ -315,20 +315,31 @@ class INodeDirectory extends INode {
 
   /** {@inheritDoc} */
   long[] computeContentSummary(long[] summary) {
+    // Walk through the children of this node, using a new summary array
+    // for the (sub)tree rooted at this node
+    assert 4 == summary.length;
+    long[] subtreeSummary = new long[]{0,0,0,0};
     if (children != null) {
       for (INode child : children) {
-        child.computeContentSummary(summary);
+        child.computeContentSummary(subtreeSummary);
       }
     }
     if (this instanceof INodeDirectoryWithQuota) {
       // Warn if the cached and computed diskspace values differ
       INodeDirectoryWithQuota node = (INodeDirectoryWithQuota)this;
       long space = node.diskspaceConsumed();
-      if (-1 != node.getDsQuota() && space != summary[3]) {
+      assert -1 == node.getDsQuota() || space == subtreeSummary[3];
+      if (-1 != node.getDsQuota() && space != subtreeSummary[3]) {
         NameNode.LOG.warn("Inconsistent diskspace for directory "
-          +getLocalName()+". Cached: "+space+" Computed: "+summary[3]);
+          +getLocalName()+". Cached: "+space+" Computed: "+subtreeSummary[3]);
       }
     }
+
+    // update the passed summary array with the values for this node's subtree
+    for (int i = 0; i < summary.length; i++) {
+      summary[i] += subtreeSummary[i];
+    }
+
     summary[2]++;
     return summary;
   }
