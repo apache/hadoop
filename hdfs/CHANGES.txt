@@ -532,6 +532,8 @@ Trunk (unreleased changes)
     HDFS-1723. quota errors messages should use the same scale. (Jim Plush via
     atm)
 
+    HDFS-2110. StreamFile and ByteRangeInputStream cleanup. (eli)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

@@ -219,7 +219,7 @@ public class TestStreamFile extends TestCase {
     assertTrue("Pairs array must be even", pairs.length % 2 == 0);
     
     for (int i = 0; i < pairs.length; i+=2) {
-      StreamFile.writeTo(fsin, os, pairs[i], pairs[i+1]);
+      StreamFile.copyFromOffset(fsin, os, pairs[i], pairs[i+1]);
       assertArrayEquals("Reading " + pairs[i+1]
                         + " bytes from offset " + pairs[i],
                         getOutputArray(pairs[i], pairs[i+1]),
