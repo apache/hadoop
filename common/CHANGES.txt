@@ -237,6 +237,8 @@ Trunk (unreleased changes)
     HADOOP-310. Additional constructor requested in BytesWritable. (Brock
     Noland via atm)
 
+    HADOOP-7429. Add another IOUtils#copyBytes method. (eli)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
