@@ -19,23 +19,31 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.RawComparator;
-import org.apache.hadoop.io.WritableComparator;
-import org.apache.hadoop.io.WritableUtils;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Field;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Comparator;
 import java.util.Iterator;
-import java.math.BigDecimal;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.io.WritableComparator;
+import org.apache.hadoop.io.WritableUtils;
+
+import sun.misc.Unsafe;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Utility class that handles byte arrays, conversions to/from other types,
@@ -109,7 +117,8 @@ public class Bytes {
       return compareTo(left, right);
     }
     public int compare(byte [] b1, int s1, int l1, byte [] b2, int s2, int l2) {
-      return compareTo(b1, s1, l1, b2, s2, l2);
+      return LexicographicalComparerHolder.BEST_COMPARER.
+        compareTo(b1, s1, l1, b2, s2, l2);
     }
   }
 
@@ -927,11 +936,12 @@ public class Bytes {
    * @return 0 if equal, < 0 if left is less than right, etc.
    */
   public static int compareTo(final byte [] left, final byte [] right) {
-    return compareTo(left, 0, left.length, right, 0, right.length);
+    return LexicographicalComparerHolder.BEST_COMPARER.
+      compareTo(left, 0, left.length, right, 0, right.length);
   }
 
   /**
-   * Lexographically compare two arrays.
+   * Lexicographically compare two arrays.
    *
    * @param buffer1 left operand
    * @param buffer2 right operand
@@ -943,23 +953,205 @@ public class Bytes {
    */
   public static int compareTo(byte[] buffer1, int offset1, int length1,
       byte[] buffer2, int offset2, int length2) {
-    // Short circuit equal case
-    if (buffer1 == buffer2 &&
-        offset1 == offset2 &&
-        length1 == length2) {
-      return 0;
-    }
-    // Bring WritableComparator code local
-    int end1 = offset1 + length1;
-    int end2 = offset2 + length2;
-    for (int i = offset1, j = offset2; i < end1 && j < end2; i++, j++) {
-      int a = (buffer1[i] & 0xff);
-      int b = (buffer2[j] & 0xff);
-      if (a != b) {
-        return a - b;
+    return LexicographicalComparerHolder.BEST_COMPARER.
+      compareTo(buffer1, offset1, length1, buffer2, offset2, length2);
+  }
+  
+  /**
+   * The number of bytes required to represent a primitive {@code long}
+   * value.
+   */
+  public static final int LONG_BYTES = Long.SIZE / Byte.SIZE;
+ 
+  interface Comparer<T> {
+    abstract public int compareTo(T buffer1, int offset1, int length1,
+        T buffer2, int offset2, int length2);
+  }
+
+  @VisibleForTesting
+  static Comparer<byte[]> lexicographicalComparerJavaImpl() {
+    return LexicographicalComparerHolder.PureJavaComparer.INSTANCE;
+  }
+
+  /**
+   * Provides a lexicographical comparer implementation; either a Java
+   * implementation or a faster implementation based on {@link Unsafe}.
+   *
+   * <p>Uses reflection to gracefully fall back to the Java implementation if
+   * {@code Unsafe} isn't available.
+   */
+  @VisibleForTesting
+  static class LexicographicalComparerHolder {
+    static final String UNSAFE_COMPARER_NAME =
+        LexicographicalComparerHolder.class.getName() + "$UnsafeComparer";
+    
+    static final Comparer<byte[]> BEST_COMPARER = getBestComparer();
+    /**
+     * Returns the Unsafe-using Comparer, or falls back to the pure-Java
+     * implementation if unable to do so.
+     */
+    static Comparer<byte[]> getBestComparer() {
+      try {
+        Class<?> theClass = Class.forName(UNSAFE_COMPARER_NAME);
+
+        // yes, UnsafeComparer does implement Comparer<byte[]>
+        @SuppressWarnings("unchecked")
+        Comparer<byte[]> comparer =
+          (Comparer<byte[]>) theClass.getEnumConstants()[0];
+        return comparer;
+      } catch (Throwable t) { // ensure we really catch *everything*
+        return lexicographicalComparerJavaImpl();
       }
     }
-    return length1 - length2;
+    
+    enum PureJavaComparer implements Comparer<byte[]> {
+      INSTANCE;
+
+      @Override
+      public int compareTo(byte[] buffer1, int offset1, int length1,
+          byte[] buffer2, int offset2, int length2) {
+        // Short circuit equal case
+        if (buffer1 == buffer2 &&
+            offset1 == offset2 &&
+            length1 == length2) {
+          return 0;
+        }
+        // Bring WritableComparator code local
+        int end1 = offset1 + length1;
+        int end2 = offset2 + length2;
+        for (int i = offset1, j = offset2; i < end1 && j < end2; i++, j++) {
+          int a = (buffer1[i] & 0xff);
+          int b = (buffer2[j] & 0xff);
+          if (a != b) {
+            return a - b;
+          }
+        }
+        return length1 - length2;
+      }
+    }
+    
+    @VisibleForTesting
+    enum UnsafeComparer implements Comparer<byte[]> {
+      INSTANCE;
+
+      static final Unsafe theUnsafe;
+
+      /** The offset to the first element in a byte array. */
+      static final int BYTE_ARRAY_BASE_OFFSET;
+
+      static {
+        theUnsafe = (Unsafe) AccessController.doPrivileged(
+            new PrivilegedAction<Object>() {
+              @Override
+              public Object run() {
+                try {
+                  Field f = Unsafe.class.getDeclaredField("theUnsafe");
+                  f.setAccessible(true);
+                  return f.get(null);
+                } catch (NoSuchFieldException e) {
+                  // It doesn't matter what we throw;
+                  // it's swallowed in getBestComparer().
+                  throw new Error();
+                } catch (IllegalAccessException e) {
+                  throw new Error();
+                }
+              }
+            });
+
+        BYTE_ARRAY_BASE_OFFSET = theUnsafe.arrayBaseOffset(byte[].class);
+
+        // sanity check - this should never fail
+        if (theUnsafe.arrayIndexScale(byte[].class) != 1) {
+          throw new AssertionError();
+        }
+      }
+
+      static final boolean littleEndian =
+        ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN);
+
+      /**
+       * Returns true if x1 is less than x2, when both values are treated as
+       * unsigned.
+       */
+      static boolean lessThanUnsigned(long x1, long x2) {
+        return (x1 + Long.MIN_VALUE) < (x2 + Long.MIN_VALUE);
+      }
+
+      /**
+       * Lexicographically compare two arrays.
+       *
+       * @param buffer1 left operand
+       * @param buffer2 right operand
+       * @param offset1 Where to start comparing in the left buffer
+       * @param offset2 Where to start comparing in the right buffer
+       * @param length1 How much to compare from the left buffer
+       * @param length2 How much to compare from the right buffer
+       * @return 0 if equal, < 0 if left is less than right, etc.
+       */
+      @Override
+      public int compareTo(byte[] buffer1, int offset1, int length1,
+          byte[] buffer2, int offset2, int length2) {
+        // Short circuit equal case
+        if (buffer1 == buffer2 &&
+            offset1 == offset2 &&
+            length1 == length2) {
+          return 0;
+        }
+        int minLength = Math.min(length1, length2);
+        int minWords = minLength / LONG_BYTES;
+        int offset1Adj = offset1 + BYTE_ARRAY_BASE_OFFSET;
+        int offset2Adj = offset2 + BYTE_ARRAY_BASE_OFFSET;
+
+        /*
+         * Compare 8 bytes at a time. Benchmarking shows comparing 8 bytes at a
+         * time is no slower than comparing 4 bytes at a time even on 32-bit.
+         * On the other hand, it is substantially faster on 64-bit.
+         */
+        for (int i = 0; i < minWords * LONG_BYTES; i += LONG_BYTES) {
+          long lw = theUnsafe.getLong(buffer1, offset1Adj + (long) i);
+          long rw = theUnsafe.getLong(buffer2, offset2Adj + (long) i);
+          long diff = lw ^ rw;
+
+          if (diff != 0) {
+            if (!littleEndian) {
+              return lessThanUnsigned(lw, rw) ? -1 : 1;
+            }
+
+            // Use binary search
+            int n = 0;
+            int y;
+            int x = (int) diff;
+            if (x == 0) {
+              x = (int) (diff >>> 32);
+              n = 32;
+            }
+
+            y = x << 16;
+            if (y == 0) {
+              n += 16;
+            } else {
+              x = y;
+            }
+
+            y = x << 8;
+            if (y == 0) {
+              n += 8;
+            }
+            return (int) (((lw >>> n) & 0xFFL) - ((rw >>> n) & 0xFFL));
+          }
+        }
+
+        // The epilogue to cover the last (minLength % 8) elements.
+        for (int i = minWords * LONG_BYTES; i < minLength; i++) {
+          int a = (buffer1[offset1 + i] & 0xff);
+          int b = (buffer2[offset2 + i] & 0xff);
+          if (a != b) {
+            return a - b;
+          }
+        }
+        return length1 - length2;
+      }
+    }
   }
 
   /**
@@ -1004,8 +1196,8 @@ public class Bytes {
     // so check that first
     if (left[leftOffset + leftLen - 1] != right[rightOffset + rightLen - 1]) return false;
 
-    return compareTo(left, leftOffset, leftLen,
-                     right, rightOffset, rightLen) == 0;
+    return LexicographicalComparerHolder.BEST_COMPARER.
+      compareTo(left, leftOffset, leftLen, right, rightOffset, rightLen) == 0;
   }
   
 
@@ -1016,7 +1208,8 @@ public class Bytes {
   public static boolean startsWith(byte[] bytes, byte[] prefix) {
     return bytes != null && prefix != null &&
       bytes.length >= prefix.length &&
-      compareTo(bytes, 0, prefix.length, prefix, 0, prefix.length) == 0;      
+      LexicographicalComparerHolder.BEST_COMPARER.
+        compareTo(bytes, 0, prefix.length, prefix, 0, prefix.length) == 0;      
   }
 
   /**

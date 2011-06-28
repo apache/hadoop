@@ -141,6 +141,7 @@ Release 0.91.0 - Unreleased
    HBASE-4016 HRegion.incrementColumnValue() doesn't have a consistent
               behavior when the field that we are incrementing is less
               than 8 bytes long (Li Pi)
+   HBASE-4012 Further optimize byte comparison methods (Ted Yu)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
