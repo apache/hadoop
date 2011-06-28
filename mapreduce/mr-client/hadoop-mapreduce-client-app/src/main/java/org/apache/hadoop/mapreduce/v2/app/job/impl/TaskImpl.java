@@ -432,17 +432,6 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     if (getState() == TaskState.RUNNING) {
       metrics.endRunningTask(this);
     }
-    switch (finalState) {
-      case FAILED:
-        metrics.failedTask(this);
-        break;
-      case KILLED:
-        metrics.killedTask(this);
-        break;
-      case SUCCEEDED:
-        metrics.completedTask(this);
-        break;
-    }
     return finalState;
   }
 
