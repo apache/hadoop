@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.server.namenode.*;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.raid.RaidNode;
@@ -105,7 +106,7 @@ public class BlockPlacementPolicyRaid extends BlockPlacementPolicy {
   }
 
   @Override
-  DatanodeDescriptor[] chooseTarget(String srcPath, int numOfReplicas,
+  public DatanodeDescriptor[] chooseTarget(String srcPath, int numOfReplicas,
       DatanodeDescriptor writer, List<DatanodeDescriptor> chosenNodes,
       boolean returnChosenNodes,
       HashMap<Node, Node> excludedNodes, long blocksize) {
@@ -477,8 +478,8 @@ public class BlockPlacementPolicyRaid extends BlockPlacementPolicy {
     }
     @Override
     public List<LocatedBlock> getDirectly(String file) throws IOException {
-      long len = namesystem.getFileInfo(file, true).getLen();
-      List<LocatedBlock> result = namesystem.getBlockLocations(
+      long len = NameNodeRaidUtil.getFileInfo(namesystem, file, true).getLen();
+      List<LocatedBlock> result = NameNodeRaidUtil.getBlockLocations(namesystem,
           file, 0L, len, false, false).getLocatedBlocks();
       if (result == null || result.isEmpty()) {
         result = new ArrayList<LocatedBlock>();
@@ -542,7 +543,7 @@ public class BlockPlacementPolicyRaid extends BlockPlacementPolicy {
     }
     // remove the prefix
     String src = parity.substring(prefix.length());
-    if (namesystem.dir.getFileInfo(src, true) == null) {
+    if (NameNodeRaidUtil.getFileInfo(namesystem.dir, src, true) == null) {
       return null;
     }
     return src;
@@ -574,7 +575,7 @@ public class BlockPlacementPolicyRaid extends BlockPlacementPolicy {
   private String getParityFile(String parityPrefix, String src)
       throws IOException {
     String parity = parityPrefix + src;
-    if (namesystem.dir.getFileInfo(parity, true) == null) {
+    if (NameNodeRaidUtil.getFileInfo(namesystem.dir, parity, true) == null) {
       return null;
     }
     return parity;

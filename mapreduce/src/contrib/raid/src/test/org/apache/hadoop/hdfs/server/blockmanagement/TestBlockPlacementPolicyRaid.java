@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -40,9 +40,10 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.server.namenode.BlockPlacementPolicyRaid.CachedFullPathNames;
-import org.apache.hadoop.hdfs.server.namenode.BlockPlacementPolicyRaid.CachedLocatedBlocks;
-import org.apache.hadoop.hdfs.server.namenode.BlockPlacementPolicyRaid.FileType;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRaid.CachedFullPathNames;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRaid.CachedLocatedBlocks;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRaid.FileType;
+import org.apache.hadoop.hdfs.server.namenode.*;
 import org.apache.hadoop.raid.RaidNode;
 import org.junit.Test;
 
@@ -233,12 +234,12 @@ public class TestBlockPlacementPolicyRaid {
           new CachedFullPathNames(namesystem);
       FSInodeInfo inode1 = null;
       FSInodeInfo inode2 = null;
-      namesystem.dir.readLock();
+      NameNodeRaidTestUtil.readLock(namesystem.dir);
       try {
-        inode1 = namesystem.dir.rootDir.getNode(file1, true);
-        inode2 = namesystem.dir.rootDir.getNode(file2, true);
+        inode1 = NameNodeRaidTestUtil.getNode(namesystem.dir, file1, true);
+        inode2 = NameNodeRaidTestUtil.getNode(namesystem.dir, file2, true);
       } finally {
-        namesystem.dir.readUnlock();
+        NameNodeRaidTestUtil.readUnLock(namesystem.dir);
       }
       verifyCachedFullPathNameResult(cachedFullPathNames, inode1);
       verifyCachedFullPathNameResult(cachedFullPathNames, inode1);
@@ -335,7 +336,7 @@ public class TestBlockPlacementPolicyRaid {
       setBlockPlacementPolicy(namesystem, new BlockPlacementPolicyDefault(
           conf, namesystem, namesystem.clusterMap));
       DatanodeDescriptor datanode1 =
-        namesystem.datanodeMap.values().iterator().next();
+        NameNodeRaidTestUtil.getDatanodeMap(namesystem).values().iterator().next();
       String source = "/dir/file";
       String parity = xorPrefix + source;
 
@@ -346,7 +347,7 @@ public class TestBlockPlacementPolicyRaid {
       // start one more datanode
       cluster.startDataNodes(conf, 1, true, null, rack2, host2, null);
       DatanodeDescriptor datanode2 = null;
-      for (DatanodeDescriptor d : namesystem.datanodeMap.values()) {
+      for (DatanodeDescriptor d : NameNodeRaidTestUtil.getDatanodeMap(namesystem).values()) {
         if (!d.getName().equals(datanode1.getName())) {
           datanode2 = d;
         }
@@ -483,8 +484,8 @@ public class TestBlockPlacementPolicyRaid {
 
   private void verifyCachedBlocksResult(CachedLocatedBlocks cachedBlocks,
       FSNamesystem namesystem, String file) throws IOException{
-    long len = namesystem.getFileInfo(file, true).getLen();
-    List<LocatedBlock> res1 = namesystem.getBlockLocations(
+    long len = NameNodeRaidUtil.getFileInfo(namesystem, file, true).getLen();
+    List<LocatedBlock> res1 = NameNodeRaidUtil.getBlockLocations(namesystem,
         file, 0L, len, false, false).getLocatedBlocks();
     List<LocatedBlock> res2 = cachedBlocks.get(file);
     for (int i = 0; i < res1.size(); i++) {
@@ -506,8 +507,8 @@ public class TestBlockPlacementPolicyRaid {
 
   private List<LocatedBlock> getBlocks(FSNamesystem namesystem, String file) 
       throws IOException {
-    long len = namesystem.getFileInfo(file, true).getLen();
-    return namesystem.getBlockLocations(
+    long len = NameNodeRaidUtil.getFileInfo(namesystem, file, true).getLen();
+    return NameNodeRaidUtil.getBlockLocations(namesystem,
                file, 0, len, false, false).getLocatedBlocks();
   }
 }
