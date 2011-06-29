@@ -15,12 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.blockmanagement;
+package org.apache.hadoop.hdfs.server.namenode;
 
 import java.util.Iterator;
 
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.util.GSet;
 import org.apache.hadoop.hdfs.util.LightWeightGSet;
 
@@ -29,7 +28,7 @@ import org.apache.hadoop.hdfs.util.LightWeightGSet;
  * block's metadata currently includes INode it belongs to and
  * the datanodes that store the block.
  */
-public class BlocksMap {
+class BlocksMap {
   private static class NodeIterator implements Iterator<DatanodeDescriptor> {
     private BlockInfo blockInfo;
     private int nextIdx = 0;
@@ -101,7 +100,7 @@ public class BlocksMap {
   /**
    * Add block b belonging to the specified file inode to the map.
    */
-  public BlockInfo addINode(BlockInfo b, INodeFile iNode) {
+  BlockInfo addINode(BlockInfo b, INodeFile iNode) {
     BlockInfo info = blocks.get(b);
     if (info != b) {
       info = b;
@@ -137,7 +136,7 @@ public class BlocksMap {
    * Searches for the block in the BlocksMap and 
    * returns Iterator that iterates through the nodes the block belongs to.
    */
-  public Iterator<DatanodeDescriptor> nodeIterator(Block b) {
+  Iterator<DatanodeDescriptor> nodeIterator(Block b) {
     return nodeIterator(blocks.get(b));
   }
 
@@ -186,7 +185,7 @@ public class BlocksMap {
   /**
    * Check if the block exists in map
    */
-  public boolean contains(Block block) {
+  boolean contains(Block block) {
     return blocks.contains(block);
   }
   

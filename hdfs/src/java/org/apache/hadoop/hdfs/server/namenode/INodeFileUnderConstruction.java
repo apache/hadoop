@@ -21,15 +21,10 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 
-/**
- * I-node for file being written.
- */
-public class INodeFileUnderConstruction extends INodeFile {
+
+class INodeFileUnderConstruction extends INodeFile {
   private  String clientName;         // lease holder
   private final String clientMachine;
   private final DatanodeDescriptor clientNode; // if client is a cluster node too.
@@ -48,7 +43,7 @@ public class INodeFileUnderConstruction extends INodeFile {
     this.clientNode = clientNode;
   }
 
-  INodeFileUnderConstruction(byte[] name,
+  public INodeFileUnderConstruction(byte[] name,
                              short blockReplication,
                              long modificationTime,
                              long preferredBlockSize,
@@ -85,7 +80,7 @@ public class INodeFileUnderConstruction extends INodeFile {
    * Is this inode being constructed?
    */
   @Override
-  public boolean isUnderConstruction() {
+  boolean isUnderConstruction() {
     return true;
   }
 
@@ -127,7 +122,7 @@ public class INodeFileUnderConstruction extends INodeFile {
    * Convert the last block of the file to an under-construction block.
    * Set its locations.
    */
-  public BlockInfoUnderConstruction setLastBlock(BlockInfo lastBlock,
+  BlockInfoUnderConstruction setLastBlock(BlockInfo lastBlock,
                                           DatanodeDescriptor[] targets)
   throws IOException {
     if (blocks == null || blocks.length == 0) {

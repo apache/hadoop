@@ -59,9 +59,19 @@
 %>
 <%@ page
   contentType="application/xml"
+  import="java.io.IOException"
+  import="java.util.Iterator"
+  import="org.apache.hadoop.conf.Configuration"
+  import="org.apache.hadoop.hdfs.protocol.Block"
+  import="org.apache.hadoop.hdfs.server.namenode.INode"
+  import="org.apache.hadoop.hdfs.server.namenode.BlocksMap"
+  import="org.apache.hadoop.hdfs.server.namenode.BlockInfo"
+  import="org.apache.hadoop.hdfs.server.namenode.DatanodeDescriptor"
   import="org.apache.hadoop.hdfs.server.namenode.NamenodeJspHelper.XMLBlockInfo"
   import="org.apache.hadoop.hdfs.server.common.JspHelper"
+  import="org.apache.hadoop.util.ServletUtil"
   import="org.znerd.xmlenc.*"
+  
 %>
 <%!
   //for java.io.Serializable

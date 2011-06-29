@@ -24,11 +24,8 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 
-/** I-node for closed file. */
-public class INodeFile extends INode {
+class INodeFile extends INode {
   static final FsPermission UMASK = FsPermission.createImmutable((short)0111);
 
   //Number of bits for Block size
@@ -109,7 +106,7 @@ public class INodeFile extends INode {
    * Get file blocks 
    * @return file blocks
    */
-  public BlockInfo[] getBlocks() {
+  BlockInfo[] getBlocks() {
     return this.blocks;
   }
 
@@ -152,7 +149,7 @@ public class INodeFile extends INode {
   /**
    * Set file block
    */
-  public void setBlock(int idx, BlockInfo blk) {
+  void setBlock(int idx, BlockInfo blk) {
     this.blocks[idx] = blk;
   }
 
@@ -240,7 +237,7 @@ public class INodeFile extends INode {
    * Get the last block of the file.
    * Make sure it has the right type.
    */
-  public <T extends BlockInfo> T getLastBlock() throws IOException {
+  <T extends BlockInfo> T getLastBlock() throws IOException {
     if (blocks == null || blocks.length == 0)
       return null;
     T returnBlock = null;
@@ -255,8 +252,7 @@ public class INodeFile extends INode {
     return returnBlock;
   }
 
-  /** @return the number of blocks */ 
-  public int numBlocks() {
+  int numBlocks() {
     return blocks == null ? 0 : blocks.length;
   }
 }

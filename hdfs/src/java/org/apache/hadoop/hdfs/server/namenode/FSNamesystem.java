@@ -97,20 +97,15 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
-import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlocks;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.Util;
+import org.apache.hadoop.hdfs.server.namenode.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
+import org.apache.hadoop.hdfs.server.namenode.UnderReplicatedBlocks.BlockIterator;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
@@ -240,7 +235,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   // Stores the correct file name hierarchy
   //
   public FSDirectory dir;
-  public BlockManager blockManager;
+  BlockManager blockManager;
   
   // Block pool ID used by this namenode
   String blockPoolId;
@@ -275,10 +270,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    * Stores a set of DatanodeDescriptor objects.
    * This is a subset of {@link #datanodeMap}, containing nodes that are 
    * considered alive.
-   * The HeartbeatMonitor periodically checks for out-dated entries,
+   * The {@link HeartbeatMonitor} periodically checks for outdated entries,
    * and removes them from the list.
    */
-  public ArrayList<DatanodeDescriptor> heartbeats = new ArrayList<DatanodeDescriptor>();
+  ArrayList<DatanodeDescriptor> heartbeats = new ArrayList<DatanodeDescriptor>();
 
   public LeaseManager leaseManager = new LeaseManager(this); 
 
@@ -319,8 +314,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   private volatile SafeModeInfo safeMode;  // safe mode information
   private Host2NodesMap host2DataNodeMap = new Host2NodesMap();
     
-  /** datanode network toplogy */
-  public NetworkTopology clusterMap = new NetworkTopology();
+  // datanode networktoplogy
+  NetworkTopology clusterMap = new NetworkTopology();
   private DNSToSwitchMapping dnsToSwitchMapping;
 
   private HostsFileReader hostsReader; 
@@ -334,7 +329,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   private final GenerationStamp generationStamp = new GenerationStamp();
 
   // Ask Datanode only up to this many blocks to delete.
-  public int blockInvalidateLimit = DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_DEFAULT;
+  int blockInvalidateLimit = DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_DEFAULT;
 
   // precision of access times.
   private long accessTimePrecision = 0;
@@ -477,23 +472,23 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   }
 
   // utility methods to acquire and release read lock and write lock
-  public void readLock() {
+  void readLock() {
     this.fsLock.readLock().lock();
   }
 
-  public void readUnlock() {
+  void readUnlock() {
     this.fsLock.readLock().unlock();
   }
 
-  public void writeLock() {
+  void writeLock() {
     this.fsLock.writeLock().lock();
   }
 
-  public void writeUnlock() {
+  void writeUnlock() {
     this.fsLock.writeLock().unlock();
   }
 
-  public boolean hasWriteLock() {
+  boolean hasWriteLock() {
     return this.fsLock.isWriteLockedByCurrentThread();
   }
 
@@ -1019,7 +1014,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   }
 
   /** Create a LocatedBlock. */
-  public LocatedBlock createLocatedBlock(final Block b, final DatanodeInfo[] locations,
+  LocatedBlock createLocatedBlock(final Block b, final DatanodeInfo[] locations,
       final long offset, final boolean corrupt) throws IOException {
     return new LocatedBlock(getExtendedBlock(b), locations, offset, corrupt);
   }
@@ -3018,7 +3013,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    * @return an array of datanode commands 
    * @throws IOException
    */
-  public DatanodeCommand[] handleHeartbeat(DatanodeRegistration nodeReg,
+  DatanodeCommand[] handleHeartbeat(DatanodeRegistration nodeReg,
       long capacity, long dfsUsed, long remaining, long blockPoolUsed,
       int xceiverCount, int xmitsInProgress, int failedVolumes) 
         throws IOException {
@@ -3526,7 +3521,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    * If no such a node is available,
    * then pick a node with least free space
    */
-  public void chooseExcessReplicates(Collection<DatanodeDescriptor> nonExcess, 
+  void chooseExcessReplicates(Collection<DatanodeDescriptor> nonExcess, 
                               Block b, short replication,
                               DatanodeDescriptor addedNode,
                               DatanodeDescriptor delNodeHint,
@@ -3984,6 +3979,45 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     return replication;
   }
     
+  /**
+   * A immutable object that stores the number of live replicas and
+   * the number of decommissined Replicas.
+   */
+  static class NumberReplicas {
+    private int liveReplicas;
+    int decommissionedReplicas;
+    private int corruptReplicas;
+    private int excessReplicas;
+
+    NumberReplicas() {
+      initialize(0, 0, 0, 0);
+    }
+
+    NumberReplicas(int live, int decommissioned, int corrupt, int excess) {
+      initialize(live, decommissioned, corrupt, excess);
+    }
+
+    void initialize(int live, int decommissioned, int corrupt, int excess) {
+      liveReplicas = live;
+      decommissionedReplicas = decommissioned;
+      corruptReplicas = corrupt;
+      excessReplicas = excess;
+    }
+
+    int liveReplicas() {
+      return liveReplicas;
+    }
+    int decommissionedReplicas() {
+      return decommissionedReplicas;
+    }
+    int corruptReplicas() {
+      return corruptReplicas;
+    }
+    int excessReplicas() {
+      return excessReplicas;
+    }
+  } 
+
   /**
    * Change, if appropriate, the admin state of a datanode to 
    * decommission completed. Return true if decommission is complete.
@@ -4641,7 +4675,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    * Check whether the name node is in safe mode.
    * @return true if safe mode is ON, false otherwise
    */
-  public boolean isInSafeMode() {
+  boolean isInSafeMode() {
     // safeMode is volatile, and may be set to null at any time
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode == null)
@@ -4652,7 +4686,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   /**
    * Check whether the name node is in startup mode.
    */
-  public boolean isInStartupSafeMode() {
+  boolean isInStartupSafeMode() {
     // safeMode is volatile, and may be set to null at any time
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode == null)
@@ -4663,7 +4697,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   /**
    * Check whether replication queues are populated.
    */
-  public boolean isPopulatingReplQueues() {
+  boolean isPopulatingReplQueues() {
     // safeMode is volatile, and may be set to null at any time
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode == null)
@@ -4675,7 +4709,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    * Increment number of blocks that reached minimal replication.
    * @param replication current replication 
    */
-  public void incrementSafeBlockCount(int replication) {
+  void incrementSafeBlockCount(int replication) {
     // safeMode is volatile, and may be set to null at any time
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode == null)
@@ -4686,7 +4720,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   /**
    * Decrement number of blocks that reached minimal replication.
    */
-  public void decrementSafeBlockCount(Block b) {
+  void decrementSafeBlockCount(Block b) {
     // safeMode is volatile, and may be set to null at any time
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode == null) // mostly true
@@ -5008,13 +5042,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   @Override // FSNamesystemMBean
   @Metric
   public long getPendingReplicationBlocks() {
-    return blockManager.getPendingReplicationBlocksCount();
+    return blockManager.pendingReplicationBlocksCount;
   }
 
   @Override // FSNamesystemMBean
   @Metric
   public long getUnderReplicatedBlocks() {
-    return blockManager.getUnderReplicatedBlocksCount();
+    return blockManager.underReplicatedBlocksCount;
   }
 
   /** Return number of under-replicated but not missing blocks */
@@ -5025,23 +5059,23 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   /** Returns number of blocks with corrupt replicas */
   @Metric({"CorruptBlocks", "Number of blocks with corrupt replicas"})
   public long getCorruptReplicaBlocks() {
-    return blockManager.getCorruptReplicaBlocksCount();
+    return blockManager.corruptReplicaBlocksCount;
   }
 
   @Override // FSNamesystemMBean
   @Metric
   public long getScheduledReplicationBlocks() {
-    return blockManager.getScheduledReplicationBlocksCount();
+    return blockManager.scheduledReplicationBlocksCount;
   }
 
   @Metric
   public long getPendingDeletionBlocks() {
-    return blockManager.getPendingDeletionBlocksCount();
+    return blockManager.pendingDeletionBlocksCount;
   }
 
   @Metric
   public long getExcessBlocks() {
-    return blockManager.getExcessBlocksCount();
+    return blockManager.excessBlocksCount;
   }
   
   @Metric
@@ -5410,7 +5444,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   }
 
   /** Get a datanode descriptor given corresponding storageID */
-  public DatanodeDescriptor getDatanode(String nodeID) {
+  DatanodeDescriptor getDatanode(String nodeID) {
     assert hasReadOrWriteLock();
     return datanodeMap.get(nodeID);
   }
@@ -5474,7 +5508,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       if (startBlockAfter != null) {
         startBlockId = Block.filename2id(startBlockAfter);
       }
-      UnderReplicatedBlocks.BlockIterator blkIterator = blockManager.getCorruptReplicaBlockIterator();
+      BlockIterator blkIterator = blockManager.getCorruptReplicaBlockIterator();
       while (blkIterator.hasNext()) {
         Block blk = blkIterator.next();
         INode inode = blockManager.getINode(blk);

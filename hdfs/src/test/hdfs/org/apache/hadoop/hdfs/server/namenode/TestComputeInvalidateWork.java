@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
+
+import junit.framework.TestCase;
 
 /**
  * Test if FSNamesystem handles heartbeat right
