@@ -288,7 +288,7 @@ public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortabl
    * @return All regions online on this region server
    * @throws IOException e
    */
-  public List<HRegionInfo> getOnlineRegions();
+  public List<HRegionInfo> getOnlineRegions() throws IOException;
 
   /**
    * Method used when a master is taking the place of another failed one.

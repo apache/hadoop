@@ -53,7 +53,8 @@ public class TestHMasterRPCException {
       inf.isMasterRunning();
       fail();
     } catch (RemoteException ex) {
-      assertTrue(ex.getMessage().startsWith("org.apache.hadoop.hbase.ipc.ServerNotRunningException: Server is not running yet"));
+      assertTrue(ex.getMessage().startsWith(
+          "org.apache.hadoop.hbase.ipc.ServerNotRunningYetException: Server is not running yet"));
     } catch (Throwable t) {
       fail("Unexpected throwable: " + t);
     }

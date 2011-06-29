@@ -1061,7 +1061,7 @@ public abstract class HBaseServer implements RpcServer {
           CurCall.set(call);
           try {
             if (!started)
-              throw new ServerNotRunningException("Server is not running yet");
+              throw new ServerNotRunningYetException("Server is not running yet");
             value = call(call.connection.protocol, call.param, call.timestamp);             // make the call
           } catch (Throwable e) {
             LOG.debug(getName()+", call "+call+": error: " + e, e);
@@ -1238,7 +1238,7 @@ public abstract class HBaseServer implements RpcServer {
 
   /**
    * Starts the service threads but does not allow requests to be responded yet.
-   * Client will get {@link ServerNotRunningException} instead.
+   * Client will get {@link ServerNotRunningYetException} instead.
    */
   @Override
   public synchronized void startThreads() {

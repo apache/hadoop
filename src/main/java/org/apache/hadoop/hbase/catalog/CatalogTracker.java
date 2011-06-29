@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MetaNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
@@ -490,7 +491,7 @@ public class CatalogTracker {
       connection = waitForRootServerConnection(timeout);
     } catch (NotAllMetaRegionsOnlineException e) {
       // Pass
-    } catch (org.apache.hadoop.hbase.ipc.ServerNotRunningException e) {
+    } catch (ServerNotRunningYetException e) {
       // Pass -- remote server is not up so can't be carrying root
     } catch (IOException e) {
       // Unexpected exception

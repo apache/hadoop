@@ -64,13 +64,18 @@ public class TestSplitTransactionOnCluster {
     LogFactory.getLog(TestSplitTransactionOnCluster.class);
   private HBaseAdmin admin = null;
   private MiniHBaseCluster cluster = null;
+  private static final int NB_SERVERS = 2;
 
   private static final HBaseTestingUtility TESTING_UTIL =
     new HBaseTestingUtility();
 
   @BeforeClass public static void before() throws Exception {
     TESTING_UTIL.getConfiguration().setInt("hbase.balancer.period", 60000);
-    TESTING_UTIL.startMiniCluster(2);
+    // Needed because some tests have splits happening on RS that are killed
+    // We don't want to wait 3min for the master to figure it out
+    TESTING_UTIL.getConfiguration().setInt(
+        "hbase.master.assignment.timeoutmonitor.timeout", 4000);
+    TESTING_UTIL.startMiniCluster(NB_SERVERS);
   }
 
   @AfterClass public static void after() throws Exception {
@@ -78,7 +83,7 @@ public class TestSplitTransactionOnCluster {
   }
 
   @Before public void setup() throws IOException {
-    TESTING_UTIL.ensureSomeRegionServersAvailable(2);
+    TESTING_UTIL.ensureSomeRegionServersAvailable(NB_SERVERS);
     this.admin = new HBaseAdmin(TESTING_UTIL.getConfiguration());
     this.cluster = TESTING_UTIL.getMiniHBaseCluster();
   }
@@ -144,10 +149,8 @@ public class TestSplitTransactionOnCluster {
         rtd.getEventType().equals(EventType.RS_ZK_REGION_SPLITTING));
       // Now crash the server
       cluster.abortRegionServer(tableRegionIndex);
-      while(server.getOnlineRegions().size() > 0) {
-        LOG.info("Waiting on server to go down");
-        Thread.sleep(100);
-      }
+      waitUntilRegionServerDead();
+
       // Wait till regions are back on line again.
       while(cluster.getRegions(tableName).size() < daughters.size()) {
         LOG.info("Waiting for repair to happen");
@@ -263,10 +266,7 @@ public class TestSplitTransactionOnCluster {
       removeDaughterFromMeta(daughters.get(0).getRegionName());
       // Now crash the server
       cluster.abortRegionServer(tableRegionIndex);
-      while(server.getOnlineRegions().size() > 0) {
-        LOG.info("Waiting on server to go down");
-        Thread.sleep(100);
-      }
+      waitUntilRegionServerDead();
       // Wait till regions are back on line again.
       while(cluster.getRegions(tableName).size() < daughters.size()) {
         LOG.info("Waiting for repair to happen");
@@ -339,10 +339,7 @@ public class TestSplitTransactionOnCluster {
       daughters = cluster.getRegions(tableName);
       // Now crash the server
       cluster.abortRegionServer(tableRegionIndex);
-      while(server.getOnlineRegions().size() > 0) {
-        LOG.info("Waiting on server to go down");
-        Thread.sleep(100);
-      }
+      waitUntilRegionServerDead();
       // Wait till regions are back on line again.
       while(cluster.getRegions(tableName).size() < daughters.size()) {
         LOG.info("Waiting for repair to happen");
@@ -445,10 +442,20 @@ public class TestSplitTransactionOnCluster {
     return null;
   }
 
-  private void printOutRegions(final HRegionServer hrs, final String prefix) {
+  private void printOutRegions(final HRegionServer hrs, final String prefix)
+      throws IOException {
     List<HRegionInfo> regions = hrs.getOnlineRegions();
     for (HRegionInfo region: regions) {
       LOG.info(prefix + region.getRegionNameAsString());
+    }
+  }
+
+  private void waitUntilRegionServerDead() throws InterruptedException {
+    // Wait until the master processes the RS shutdown
+    while (cluster.getMaster().getClusterStatus().
+        getServers().size() == NB_SERVERS) {
+      LOG.info("Waiting on server to go down");
+      Thread.sleep(100);
     }
   }
 }

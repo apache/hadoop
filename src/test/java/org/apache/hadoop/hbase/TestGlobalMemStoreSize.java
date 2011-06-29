@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.*;
+
+import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
 import org.apache.commons.logging.Log;
@@ -100,7 +102,7 @@ public class TestGlobalMemStoreSize {
   }
   
   /** figure out how many regions are currently being served. */
-  private int getRegionCount() {
+  private int getRegionCount() throws IOException {
     int total = 0;
     for (HRegionServer server : getOnlineRegionServers()) {
       total += server.getOnlineRegions().size();
@@ -122,7 +124,7 @@ public class TestGlobalMemStoreSize {
   /**
    * Wait until all the regions are assigned.
    */
-  private void waitForAllRegionsAssigned() {
+  private void waitForAllRegionsAssigned() throws IOException {
     while (getRegionCount() < totalRegionNum) {
       LOG.debug("Waiting for there to be "+totalRegionNum+" regions, but there are " + getRegionCount() + " right now.");
       try {

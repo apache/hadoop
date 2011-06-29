@@ -56,11 +56,13 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
+import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
 import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.SplitRegionHandler;
+import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
@@ -1030,6 +1032,9 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   void assign(final ServerName destination,
       final List<HRegionInfo> regions) {
+    if (regions.size() == 0) {
+      return;
+    }
     LOG.debug("Bulk assigning " + regions.size() + " region(s) to " +
       destination.toString());
 
@@ -1063,10 +1068,8 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     // Move on to open regions.
     try {
-      // Send OPEN RPC. This can fail if the server on other end is is not up.
-      // If we fail, fail the startup by aborting the server.  There is one
-      // exception we will tolerate: ServerNotRunningException.  This is thrown
-      // between report of regionserver being up and
+      // Send OPEN RPC. If it fails on a IOE or RemoteException, the
+      // TimeoutMonitor will pick up the pieces.
       long maxWaitTime = System.currentTimeMillis() +
         this.master.getConfiguration().
           getLong("hbase.regionserver.rpc.startup.waittime", 60000);
@@ -1074,18 +1077,29 @@ public class AssignmentManager extends ZooKeeperListener {
         try {
           this.serverManager.sendRegionOpen(destination, regions);
           break;
-        } catch (org.apache.hadoop.hbase.ipc.ServerNotRunningException e) {
-          // This is the one exception to retry.  For all else we should just fail
-          // the startup.
-          long now = System.currentTimeMillis();
-          if (now > maxWaitTime) throw e;
-          LOG.debug("Server is not yet up; waiting up to " +
-              (maxWaitTime - now) + "ms", e);
-          Thread.sleep(1000);
+        } catch (RemoteException e) {
+          IOException decodedException = e.unwrapRemoteException();
+          if (decodedException instanceof RegionServerStoppedException) {
+            LOG.warn("The region server was shut down, ", decodedException);
+            // No need to retry, the region server is a goner.
+            return;
+          } else if (decodedException instanceof ServerNotRunningYetException) {
+            // This is the one exception to retry.  For all else we should just fail
+            // the startup.
+            long now = System.currentTimeMillis();
+            if (now > maxWaitTime) throw e;
+            LOG.debug("Server is not yet up; waiting up to " +
+                (maxWaitTime - now) + "ms", e);
+            Thread.sleep(1000);
+          }
+
+          throw decodedException;
         }
       }
     } catch (IOException e) {
-      throw new RuntimeException(e);
+      // Can be a socket timeout, EOF, NoRouteToHost, etc
+      LOG.info("Unable to communicate with the region server in order" +
+          " to assign regions", e);
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }

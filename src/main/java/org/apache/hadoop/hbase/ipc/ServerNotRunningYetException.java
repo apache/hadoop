@@ -22,8 +22,8 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 
-public class ServerNotRunningException extends IOException {
-  public ServerNotRunningException(String s) {
+public class ServerNotRunningYetException extends IOException {
+  public ServerNotRunningYetException(String s) {
     super(s);
   }
 }

@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.*;
+
+import java.io.IOException;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Set;
@@ -323,16 +325,18 @@ public class TestRollingRestart {
     LOG.debug("\n\nTRR: " + msg + "\n");
   }
 
-  private RegionServerThread getServerHostingMeta(MiniHBaseCluster cluster) {
+  private RegionServerThread getServerHostingMeta(MiniHBaseCluster cluster)
+      throws IOException {
     return getServerHosting(cluster, HRegionInfo.FIRST_META_REGIONINFO);
   }
 
-  private RegionServerThread getServerHostingRoot(MiniHBaseCluster cluster) {
+  private RegionServerThread getServerHostingRoot(MiniHBaseCluster cluster)
+      throws IOException {
     return getServerHosting(cluster, HRegionInfo.ROOT_REGIONINFO);
   }
 
   private RegionServerThread getServerHosting(MiniHBaseCluster cluster,
-      HRegionInfo region) {
+      HRegionInfo region) throws IOException {
     for (RegionServerThread rst : cluster.getRegionServerThreads()) {
       if (rst.getRegionServer().getOnlineRegions().contains(region)) {
         return rst;
@@ -342,7 +346,7 @@ public class TestRollingRestart {
   }
 
   private void assertRegionsAssigned(MiniHBaseCluster cluster,
-      Set<String> expectedRegions) {
+      Set<String> expectedRegions) throws IOException {
     int numFound = 0;
     for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
       numFound += rst.getRegionServer().getNumberOfOnlineRegions();
@@ -371,7 +375,8 @@ public class TestRollingRestart {
     }
   }
 
-  private NavigableSet<String> getAllOnlineRegions(MiniHBaseCluster cluster) {
+  private NavigableSet<String> getAllOnlineRegions(MiniHBaseCluster cluster)
+      throws IOException {
     NavigableSet<String> online = new TreeSet<String>();
     for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
       for (HRegionInfo region : rst.getRegionServer().getOnlineRegions()) {
@@ -382,7 +387,7 @@ public class TestRollingRestart {
   }
 
   private NavigableSet<String> getDoubleAssignedRegions(
-      MiniHBaseCluster cluster) {
+      MiniHBaseCluster cluster) throws IOException {
     NavigableSet<String> online = new TreeSet<String>();
     NavigableSet<String> doubled = new TreeSet<String>();
     for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {

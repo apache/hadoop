@@ -152,7 +152,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
   }
 
   /** figure out how many regions are currently being served. */
-  private int getRegionCount() {
+  private int getRegionCount() throws IOException {
     int total = 0;
     for (HRegionServer server : getOnlineRegionServers()) {
       total += server.getOnlineRegions().size();
@@ -165,7 +165,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
    * number of online servers, then test if each server is +/- 1 of average
    * rounded up.
    */
-  private void assertRegionsAreBalanced() {
+  private void assertRegionsAreBalanced() throws IOException {
     // TODO: Fix this test.  Old balancer used to run with 'slop'.  New
     // balancer does not.
     boolean success = false;
@@ -229,7 +229,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
   /**
    * Wait until all the regions are assigned.
    */
-  private void waitForAllRegionsAssigned() {
+  private void waitForAllRegionsAssigned() throws IOException {
     while (getRegionCount() < 22) {
     // while (!cluster.getMaster().allRegionsAssigned()) {
       LOG.debug("Waiting for there to be 22 regions, but there are " + getRegionCount() + " right now.");

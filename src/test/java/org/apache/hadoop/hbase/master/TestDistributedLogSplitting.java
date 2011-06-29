@@ -413,7 +413,8 @@ public class TestDistributedLogSplitting {
     }
   }
 
-  private NavigableSet<String> getAllOnlineRegions(MiniHBaseCluster cluster) {
+  private NavigableSet<String> getAllOnlineRegions(MiniHBaseCluster cluster)
+      throws IOException {
     NavigableSet<String> online = new TreeSet<String>();
     for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
       for (HRegionInfo region : rst.getRegionServer().getOnlineRegions()) {

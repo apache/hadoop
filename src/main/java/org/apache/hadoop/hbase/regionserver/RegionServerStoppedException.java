@@ -19,14 +19,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.DoNotRetryIOException;
+import java.io.IOException;
 
 /**
- * Thrown by the region server when it is shutting down state.
- *
- * Should NEVER be thrown to HBase clients, they will abort the call chain
- * and not retry even though regions will transition to new servers.
+ * Thrown by the region server when it is in shutting down state.
  */
 @SuppressWarnings("serial")
-public class RegionServerStoppedException extends DoNotRetryIOException {
+public class RegionServerStoppedException extends IOException {
+
+  public RegionServerStoppedException(String s) {
+    super(s);
+  }
 }
