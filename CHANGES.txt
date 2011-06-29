@@ -142,6 +142,8 @@ Release 0.91.0 - Unreleased
                behavior when the field that we are incrementing is less
                than 8 bytes long (Li Pi)
    HBASE-4012  Further optimize byte comparison methods (Ted Yu)
+   HBASE-4037  Add timeout annotations to preempt surefire killing
+               all tests - TestFullLogReconstruction
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

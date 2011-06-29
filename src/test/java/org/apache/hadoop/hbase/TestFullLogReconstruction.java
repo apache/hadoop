@@ -88,7 +88,7 @@ public class TestFullLogReconstruction {
    * see all the rows.
    * @throws Exception
    */
-  @Test
+  @Test (timeout=300000)
   public void testReconstruction() throws Exception {
 
     HTable table = TEST_UTIL.createTable(TABLE_NAME, FAMILY);
