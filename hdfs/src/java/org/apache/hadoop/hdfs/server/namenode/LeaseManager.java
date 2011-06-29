@@ -163,7 +163,7 @@ public class LeaseManager {
   /**
    * Finds the pathname for the specified pendingFile
    */
-  synchronized String findPath(INodeFileUnderConstruction pendingFile)
+  public synchronized String findPath(INodeFileUnderConstruction pendingFile)
       throws IOException {
     Lease lease = getLease(pendingFile.getClientName());
     if (lease != null) {

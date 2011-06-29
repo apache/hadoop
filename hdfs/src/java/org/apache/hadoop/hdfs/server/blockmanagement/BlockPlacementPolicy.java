@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -26,6 +26,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.server.namenode.FSClusterStats;
+import org.apache.hadoop.hdfs.server.namenode.FSInodeInfo;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -94,7 +96,7 @@ public abstract class BlockPlacementPolicy {
    * @return array of DatanodeDescriptor instances chosen as target
    * and sorted as a pipeline.
    */
-  abstract DatanodeDescriptor[] chooseTarget(String srcPath,
+  public abstract DatanodeDescriptor[] chooseTarget(String srcPath,
                                              int numOfReplicas,
                                              DatanodeDescriptor writer,
                                              List<DatanodeDescriptor> chosenNodes,
@@ -222,11 +224,11 @@ public abstract class BlockPlacementPolicy {
    * @param numOfReplicas number of replicas wanted.
    * @param writer the writer's machine, null if not in the cluster.
    * @param blocksize size of the data to be written.
-   * @param excludedNodes: datanodes that should not be considered as targets.
+   * @param excludedNodes datanodes that should not be considered as targets.
    * @return array of DatanodeDescriptor instances chosen as targets
    * and sorted as a pipeline.
    */
-  DatanodeDescriptor[] chooseTarget(String srcPath,
+  public DatanodeDescriptor[] chooseTarget(String srcPath,
                                     int numOfReplicas,
                                     DatanodeDescriptor writer,
                                     HashMap<Node, Node> excludedNodes,
