@@ -617,7 +617,6 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       task.eventHandler
           .handle(new JobHistoryEvent(task.taskId.getJobId(), tse));
       task.historyTaskStartGenerated = true;
-      task.metrics.launchedTask(task);
     }
     
     private String splitsAsString(String[] splits) {
@@ -882,6 +881,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       implements SingleArcTransition<TaskImpl, TaskEvent> {
     @Override
     public void transition(TaskImpl task, TaskEvent event) {
+      task.metrics.launchedTask(task);
       task.metrics.runningTask(task);
     }
   }
