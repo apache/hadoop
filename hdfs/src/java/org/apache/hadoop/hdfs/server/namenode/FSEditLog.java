@@ -17,10 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.zip.Checksum;
 
@@ -104,6 +101,10 @@ public class FSEditLog  {
 
   // is an automatic sync scheduled?
   private volatile boolean isAutoSyncScheduled = false;
+  
+  // Used to exit in the event of a failure to sync to all journals. It's a
+  // member variable so it can be swapped out for testing.
+  private Runtime runtime = Runtime.getRuntime();
 
   // these are statistics counters.
   private long numTransactions;        // number of transactions
@@ -394,7 +395,7 @@ public class FSEditLog  {
     // Fetch the transactionId of this thread. 
     long mytxid = myTransactionId.get().txid;
     
-    List<JournalAndStream> stillGoodJournals =
+    List<JournalAndStream> candidateJournals =
       Lists.newArrayListWithCapacity(journals.size());
     List<JournalAndStream> badJournals = Lists.newArrayList();
     
@@ -434,7 +435,7 @@ public class FSEditLog  {
           if (!jas.isActive()) continue;
           try {
             jas.getCurrentStream().setReadyToFlush();
-            stillGoodJournals.add(jas);
+            candidateJournals.add(jas);
           } catch (IOException ie) {
             LOG.error("Unable to get ready to flush.", ie);
             badJournals.add(jas);
@@ -448,7 +449,7 @@ public class FSEditLog  {
   
       // do the sync
       long start = now();
-      for (JournalAndStream jas : stillGoodJournals) {
+      for (JournalAndStream jas : candidateJournals) {
         if (!jas.isActive()) continue;
         try {
           jas.getCurrentStream().flush();
@@ -463,8 +464,15 @@ public class FSEditLog  {
       long elapsed = now() - start;
       disableAndReportErrorOnJournals(badJournals);
   
-      if (metrics != null) // Metrics non-null only when used inside name node
+      if (metrics != null) { // Metrics non-null only when used inside name node
         metrics.addSync(elapsed);
+      }
+      
+      if (badJournals.size() >= journals.size()) {
+        LOG.fatal("Could not sync any journal to persistent storage. " +
+            "Unsynced transactions: " + (txid - synctxid));
+        runtime.exit(1);
+      }
     } finally {
       // Prevent RuntimeException from blocking other log edit sync 
       synchronized (this) {
@@ -753,6 +761,14 @@ public class FSEditLog  {
   @VisibleForTesting
   List<JournalAndStream> getJournals() {
     return journals;
+  }
+  
+  /**
+   * Used only by unit tests.
+   */
+  @VisibleForTesting
+  void setRuntimeForTesting(Runtime runtime) {
+    this.runtime = runtime;
   }
   
   /**

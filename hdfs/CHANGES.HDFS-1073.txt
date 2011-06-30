@@ -64,3 +64,5 @@ HDFS-2093. Handle case where an entirely empty log is left during NN crash
            (todd)
 HDFS-2102. Zero-pad edits filename to make them lexically sortable. (Ivan
            Kelly via todd)
+HDFS-2010. Fix NameNode to exit if all edit streams become inaccessible. (atm
+           via todd)
