@@ -125,7 +125,7 @@ class DataXceiver extends Receiver implements Runnable, FSConstants {
   DataNode getDataNode() {return datanode;}
 
   /**
-   * Read/write data from/to the DataXceiveServer.
+   * Read/write data from/to the DataXceiverServer.
    */
   public void run() {
     updateCurrentThreadName("Waiting for operation");
