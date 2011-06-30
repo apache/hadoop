@@ -115,24 +115,32 @@ public class IOUtils {
    * @param in InputStream to read from
    * @param out OutputStream to write to
    * @param count number of bytes to copy
+   * @param close whether to close the streams
    * @throws IOException if bytes can not be read or written
    */
-  public static void copyBytes(InputStream in, OutputStream out, long count)
-      throws IOException {
+  public static void copyBytes(InputStream in, OutputStream out, long count,
+      boolean close) throws IOException {
     byte buf[] = new byte[4096];
     long bytesRemaining = count;
     int bytesRead;
 
-    while (bytesRemaining > 0) {
-      int bytesToRead = (int)
-        (bytesRemaining < buf.length ? bytesRemaining : buf.length);
+    try {
+      while (bytesRemaining > 0) {
+        int bytesToRead = (int)
+          (bytesRemaining < buf.length ? bytesRemaining : buf.length);
 
-      bytesRead = in.read(buf, 0, bytesToRead);
-      if (bytesRead == -1)
-        break;
+        bytesRead = in.read(buf, 0, bytesToRead);
+        if (bytesRead == -1)
+          break;
 
-      out.write(buf, 0, bytesRead);
-      bytesRemaining -= bytesRead;
+        out.write(buf, 0, bytesRead);
+        bytesRemaining -= bytesRead;
+      }
+    } finally {
+      if (close) {
+        closeStream(out);
+        closeStream(in);
+      }
     }
   }
   
