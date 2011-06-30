@@ -397,7 +397,12 @@ public class FSImage implements NNStorageListener, Closeable {
       LOG.info("Upgrade of " + sd.getRoot() + " is complete.");
     }
     isUpgradeFinalized = false;
-    storage.reportErrorsOnDirectories(errorSDs);
+    if (!errorSDs.isEmpty()) {
+      storage.reportErrorsOnDirectories(errorSDs);
+      //during upgrade, it's a fatal error to fail any storage directory
+      throw new IOException("Upgrade failed in " + errorSDs.size()
+          + " storage directory(ies), previously logged.");
+    }
     storage.initializeDistributedUpgrade();
     editLog.open();
   }

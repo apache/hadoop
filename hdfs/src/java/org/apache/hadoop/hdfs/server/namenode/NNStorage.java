@@ -905,7 +905,7 @@ public class NNStorage extends Storage implements Closeable {
    */
   void reportErrorsOnDirectory(StorageDirectory sd)
       throws IOException {
-    LOG.warn("Error reported on storage directory " + sd);
+    LOG.error("Error reported on storage directory " + sd);
 
     String lsd = listStorageDirectories();
     LOG.debug("current list of storage dirs:" + lsd);
@@ -914,12 +914,12 @@ public class NNStorage extends Storage implements Closeable {
       listener.errorOccurred(sd);
     }
 
-    LOG.info("About to remove corresponding storage: "
+    LOG.warn("About to remove corresponding storage: "
              + sd.getRoot().getAbsolutePath());
     try {
       sd.unlock();
     } catch (Exception e) {
-      LOG.info("Unable to unlock bad storage directory: "
+      LOG.warn("Unable to unlock bad storage directory: "
                +  sd.getRoot().getPath(), e);
     }
 

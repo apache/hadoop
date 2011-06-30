@@ -554,6 +554,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HDFS-1955. FSImage.doUpgrade() was made too fault-tolerant by HDFS-1826.
+    (mattf)
+
     HDFS-2061. Two minor bugs in BlockManager block report processing. (mattf)
 
     HDFS-1449. Fix test failures - ExtendedBlock must return 

@@ -1228,6 +1228,11 @@ public class FSEditLog implements NNStorageListener {
   @Override // NNStorageListener
   public synchronized void errorOccurred(StorageDirectory sd)
       throws IOException {
+    if (editStreams == null) {
+      //errors can occur on storage directories 
+      //before edit streams have been set up
+      return;
+    }
     ArrayList<EditLogOutputStream> errorStreams
       = new ArrayList<EditLogOutputStream>();
 
