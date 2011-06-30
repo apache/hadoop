@@ -337,6 +337,9 @@ Trunk (unreleased changes)
 
     HADOOP-7402. TestConfiguration doesn't clean up after itself. (atm via eli)
 
+    HADOOP-7428. IPC connection is orphaned with null 'out' member.
+    (todd via eli)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

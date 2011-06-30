@@ -583,8 +583,12 @@ public class Client {
           start();
           return;
         }
-      } catch (IOException e) {
-        markClosed(e);
+      } catch (Throwable t) {
+        if (t instanceof IOException) {
+          markClosed((IOException)t);
+        } else {
+          markClosed(new IOException("Couldn't set up IO streams", t));
+        }
         close();
       }
     }
