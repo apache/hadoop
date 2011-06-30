@@ -511,6 +511,12 @@ public class NNStorage extends Storage implements Closeable {
         // Close any edits stream associated with this dir and remove directory
         LOG.warn("incrementCheckpointTime failed on "
                  + sd.getRoot().getPath() + ";type="+sd.getStorageDirType());
+        try {
+          reportErrorsOnDirectory(sd);
+        } catch (IOException ioe) {
+            LOG.error("Failed to report and remove NN storage directory "
+                      + sd.getRoot().getPath(), ioe);
+        }
       }
     }
   }

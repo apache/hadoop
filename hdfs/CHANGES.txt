@@ -556,6 +556,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HDFS-2011. Removal and restoration of storage directories on checkpointing
+    failure doesn't work properly. (Ravi Prakash via mattf)
+
     HDFS-1955. FSImage.doUpgrade() was made too fault-tolerant by HDFS-1826.
     (mattf)
 

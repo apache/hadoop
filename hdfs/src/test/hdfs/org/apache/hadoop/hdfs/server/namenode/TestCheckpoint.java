@@ -21,6 +21,7 @@ import junit.framework.TestCase;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Iterator;
@@ -135,6 +136,72 @@ public class TestCheckpoint extends TestCase {
       // no nothing
     }
     resurrectNameDir(first); // put back namedir
+  }
+
+  /**
+   * Tests EditLogFileOutputStream doesn't throw NullPointerException on being
+   * closed twice.
+   * See https://issues.apache.org/jira/browse/HDFS-2011
+   */
+  public void testEditLogFileOutputStreamCloses()
+    throws IOException,NullPointerException {
+    System.out.println("Testing EditLogFileOutputStream doesn't throw " +
+                       "NullPointerException on being closed twice");
+    File editLogStreamFile = null;
+    try {
+      editLogStreamFile = new File(System.getProperty("test.build.data","/tmp"),
+                                   "editLogStream.dat");
+      EditLogFileOutputStream editLogStream =
+                             new EditLogFileOutputStream(editLogStreamFile, 0);
+      editLogStream.close();
+      //Closing an twice should not throw a NullPointerException
+      editLogStream.close();
+    } finally {
+      if (editLogStreamFile != null)
+        // Cleanup the editLogStream.dat file we created
+          editLogStreamFile.delete();
+    }
+    System.out.println("Successfully tested EditLogFileOutputStream doesn't " +
+           "throw NullPointerException on being closed twice");
+  }
+
+  /**
+   * Checks that an IOException in NNStorage.setCheckpointTimeInStorage is handled
+   * correctly (by removing the storage directory)
+   * See https://issues.apache.org/jira/browse/HDFS-2011
+   */
+  public void testSetCheckpointTimeInStorageHandlesIOException() throws Exception {
+    System.out.println("Check IOException handled correctly by setCheckpointTimeInStorage");
+    NNStorage nnStorage = new NNStorage(new HdfsConfiguration());
+    ArrayList<URI> fsImageDirs = new ArrayList<URI>();
+    ArrayList<URI> editsDirs = new ArrayList<URI>();
+    File filePath =
+      new File(System.getProperty("test.build.data","/tmp"), "storageDirToCheck");
+    assertTrue("Couldn't create directory storageDirToCheck",
+               filePath.exists() || filePath.mkdirs());
+    try {
+      fsImageDirs.add(filePath.toURI());
+      editsDirs.add(filePath.toURI());
+      // Initialize NNStorage
+      nnStorage.setStorageDirectories(fsImageDirs, editsDirs);
+      assertTrue("List of storage directories didn't have storageDirToCheck.",
+                 nnStorage.getEditsDirectories().iterator().next().
+                 toString().indexOf("storageDirToCheck") != -1);
+      assertTrue("List of removed storage directories wasn't empty",
+                 nnStorage.getRemovedStorageDirs().isEmpty());
+    } finally {
+      // Delete storage directory to cause IOException in setCheckpointTimeInStorage
+      assertTrue("Couldn't remove directory " + filePath.getAbsolutePath(),
+                 filePath.delete());
+    }
+    // Just call setCheckpointTimeInStorage using any random number
+    nnStorage.setCheckpointTimeInStorage(1);
+    List<StorageDirectory> listRsd = nnStorage.getRemovedStorageDirs();
+    assertTrue("Removed directory wasn't what was expected",
+               listRsd.size() > 0 && listRsd.get(listRsd.size() - 1).getRoot().
+               toString().indexOf("storageDirToCheck") != -1);
+    System.out.println("Successfully checked IOException is handled correctly "
+                       + "by setCheckpointTimeInStorage");
   }
 
   /*
