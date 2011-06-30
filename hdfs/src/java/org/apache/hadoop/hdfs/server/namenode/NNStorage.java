@@ -626,7 +626,7 @@ public class NNStorage extends Storage implements Closeable {
   
   static File getStorageFile(StorageDirectory sd, NameNodeFile type, long imageTxId) {
     return new File(sd.getCurrentDir(),
-        type.getName() + "_" + imageTxId);
+                    String.format("%s_%019d", type.getName(), imageTxId));
   }
   
   /**
@@ -637,16 +637,22 @@ public class NNStorage extends Storage implements Closeable {
     return new File(sd.getCurrentDir(), type.getName());
   }
 
-  static String getCheckpointImageFileName(long txid) {
-    return NameNodeFile.IMAGE_NEW.getName() + "_" + txid;
+  @VisibleForTesting
+  public static String getCheckpointImageFileName(long txid) {
+    return String.format("%s_%019d",
+                         NameNodeFile.IMAGE_NEW.getName(), txid);
   }
 
-  static String getImageFileName(long txid) {
-    return NameNodeFile.IMAGE.getName() + "_" + txid;
+  @VisibleForTesting
+  public static String getImageFileName(long txid) {
+    return String.format("%s_%019d",
+                         NameNodeFile.IMAGE.getName(), txid);
   }
   
-  static String getInProgressEditsFileName(long startTxId) {
-    return NameNodeFile.EDITS_INPROGRESS.getName() + "_" + startTxId;
+  @VisibleForTesting
+  public static String getInProgressEditsFileName(long startTxId) {
+    return String.format("%s_%019d", NameNodeFile.EDITS_INPROGRESS.getName(),
+                         startTxId);
   }
   
   static File getInProgressEditsFile(StorageDirectory sd, long startTxId) {
@@ -664,8 +670,10 @@ public class NNStorage extends Storage implements Closeable {
         getImageFileName(txid));
   }
   
-  static String getFinalizedEditsFileName(long startTxId, long endTxId) {
-    return NameNodeFile.EDITS.getName() + "_" + startTxId + "-" + endTxId;
+  @VisibleForTesting
+  public static String getFinalizedEditsFileName(long startTxId, long endTxId) {
+    return String.format("%s_%019d-%019d", NameNodeFile.EDITS.getName(),
+                         startTxId, endTxId);
   }
   
   /**

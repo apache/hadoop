@@ -34,6 +34,9 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.TestParallelImageWrite;
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEditsFileName;
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
+
 import org.junit.Test;
 
 import com.google.common.base.Joiner;
@@ -79,8 +82,10 @@ public class TestDFSUpgrade {
       
       assertTrue(new File(baseDir,"current").isDirectory());
       assertTrue(new File(baseDir,"current/VERSION").isFile());
-      assertTrue(new File(baseDir,"current/edits_inprogress_" + (imageTxId + 1)).isFile());
-      assertTrue(new File(baseDir,"current/fsimage_" + imageTxId).isFile());
+      assertTrue(new File(baseDir,"current/" 
+                          + getInProgressEditsFileName(imageTxId + 1)).isFile());
+      assertTrue(new File(baseDir,"current/" 
+                          + getImageFileName(imageTxId)).isFile());
       assertTrue(new File(baseDir,"current/seen_txid").isFile());
       
       File previous = new File(baseDir, "previous");

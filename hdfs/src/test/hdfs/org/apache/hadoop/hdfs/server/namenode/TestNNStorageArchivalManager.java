@@ -27,6 +27,10 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.FoundEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.FoundFSImage;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEditsFileName;
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getFinalizedEditsFileName;
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
+
 import org.apache.hadoop.hdfs.server.namenode.NNStorageArchivalManager.StorageArchiver;
 import org.junit.Assert;
 import org.junit.Test;
@@ -51,14 +55,14 @@ public class TestNNStorageArchivalManager {
   public void testArchiveEasyCase() throws IOException {
     TestCaseDescription tc = new TestCaseDescription();
     tc.addRoot("/foo1", NameNodeDirType.IMAGE_AND_EDITS);
-    tc.addImage("/foo1/current/fsimage_100", true);
-    tc.addImage("/foo1/current/fsimage_200", true);
-    tc.addImage("/foo1/current/fsimage_300", false);
-    tc.addImage("/foo1/current/fsimage_400", false);
-    tc.addLog("/foo1/current/edits_101-200", true);
-    tc.addLog("/foo1/current/edits_201-300", true);
-    tc.addLog("/foo1/current/edits_301-400", false);
-    tc.addLog("/foo1/current/edits_inprogress_401", false);
+    tc.addImage("/foo1/current/" + getImageFileName(100), true);
+    tc.addImage("/foo1/current/" + getImageFileName(200), true);
+    tc.addImage("/foo1/current/" + getImageFileName(300), false);
+    tc.addImage("/foo1/current/" + getImageFileName(400), false);
+    tc.addLog("/foo1/current/" + getFinalizedEditsFileName(101,200), true);
+    tc.addLog("/foo1/current/" + getFinalizedEditsFileName(201,300), true);
+    tc.addLog("/foo1/current/" + getFinalizedEditsFileName(301,400), false);
+    tc.addLog("/foo1/current/" + getInProgressEditsFileName(401), false);
     
     // Test that other files don't get archived
     tc.addLog("/foo1/current/VERSION", false);
@@ -73,17 +77,17 @@ public class TestNNStorageArchivalManager {
     TestCaseDescription tc = new TestCaseDescription();
     tc.addRoot("/foo1", NameNodeDirType.IMAGE_AND_EDITS);
     tc.addRoot("/foo2", NameNodeDirType.IMAGE_AND_EDITS);
-    tc.addImage("/foo1/current/fsimage_100", true);
-    tc.addImage("/foo1/current/fsimage_200", true);
-    tc.addImage("/foo2/current/fsimage_200", true);
-    tc.addImage("/foo1/current/fsimage_300", false);
-    tc.addImage("/foo1/current/fsimage_400", false);
-    tc.addLog("/foo1/current/edits_101-200", true);
-    tc.addLog("/foo1/current/edits_201-300", true);
-    tc.addLog("/foo2/current/edits_201-300", true);
-    tc.addLog("/foo1/current/edits_301-400", false);
-    tc.addLog("/foo2/current/edits_301-400", false);
-    tc.addLog("/foo1/current/edits_inprogress_401", false);
+    tc.addImage("/foo1/current/" + getImageFileName(100), true);
+    tc.addImage("/foo1/current/" + getImageFileName(200), true);
+    tc.addImage("/foo2/current/" + getImageFileName(200), true);
+    tc.addImage("/foo1/current/" + getImageFileName(300), false);
+    tc.addImage("/foo1/current/" + getImageFileName(400), false);
+    tc.addLog("/foo1/current/" + getFinalizedEditsFileName(101, 200), true);
+    tc.addLog("/foo1/current/" + getFinalizedEditsFileName(201, 300), true);
+    tc.addLog("/foo2/current/" + getFinalizedEditsFileName(201, 300), true);
+    tc.addLog("/foo1/current/" + getFinalizedEditsFileName(301, 400), false);
+    tc.addLog("/foo2/current/" + getFinalizedEditsFileName(301, 400), false);
+    tc.addLog("/foo1/current/" + getInProgressEditsFileName(401), false);
     runTest(tc);
   }
   
@@ -95,11 +99,11 @@ public class TestNNStorageArchivalManager {
   public void testArchiveLessThanRetention() throws IOException {
     TestCaseDescription tc = new TestCaseDescription();
     tc.addRoot("/foo1", NameNodeDirType.IMAGE_AND_EDITS);
-    tc.addImage("/foo1/current/fsimage_100", false);
-    tc.addLog("/foo1/current/edits_101-200", false);
-    tc.addLog("/foo1/current/edits_201-300", false);
-    tc.addLog("/foo1/current/edits_301-400", false);
-    tc.addLog("/foo1/current/edits_inprogress_401", false);
+    tc.addImage("/foo1/current/" + getImageFileName(100), false);
+    tc.addLog("/foo1/current/" + getFinalizedEditsFileName(101,200), false);
+    tc.addLog("/foo1/current/" + getFinalizedEditsFileName(201,300), false);
+    tc.addLog("/foo1/current/" + getFinalizedEditsFileName(301,400), false);
+    tc.addLog("/foo1/current/" + getInProgressEditsFileName(401), false);
     runTest(tc);
   }
 
@@ -110,10 +114,10 @@ public class TestNNStorageArchivalManager {
   public void testNoLogs() throws IOException {
     TestCaseDescription tc = new TestCaseDescription();
     tc.addRoot("/foo1", NameNodeDirType.IMAGE_AND_EDITS);
-    tc.addImage("/foo1/current/fsimage_100", true);
-    tc.addImage("/foo1/current/fsimage_200", true);
-    tc.addImage("/foo1/current/fsimage_300", false);
-    tc.addImage("/foo1/current/fsimage_400", false);
+    tc.addImage("/foo1/current/" + getImageFileName(100), true);
+    tc.addImage("/foo1/current/" + getImageFileName(200), true);
+    tc.addImage("/foo1/current/" + getImageFileName(300), false);
+    tc.addImage("/foo1/current/" + getImageFileName(400), false);
     runTest(tc);
   }
   
@@ -134,11 +138,11 @@ public class TestNNStorageArchivalManager {
   public void testOldInProgress() throws IOException {
     TestCaseDescription tc = new TestCaseDescription();
     tc.addRoot("/foo1", NameNodeDirType.IMAGE_AND_EDITS);
-    tc.addImage("/foo1/current/fsimage_100", true);
-    tc.addImage("/foo1/current/fsimage_200", true);
-    tc.addImage("/foo1/current/fsimage_300", false);
-    tc.addImage("/foo1/current/fsimage_400", false);
-    tc.addLog("/foo1/current/edits_inprogress_101", true);
+    tc.addImage("/foo1/current/" + getImageFileName(100), true);
+    tc.addImage("/foo1/current/" + getImageFileName(200), true);
+    tc.addImage("/foo1/current/" + getImageFileName(300), false);
+    tc.addImage("/foo1/current/" + getImageFileName(400), false);
+    tc.addLog("/foo1/current/" + getInProgressEditsFileName(101), true);
     runTest(tc);
   }
 
@@ -147,14 +151,15 @@ public class TestNNStorageArchivalManager {
     TestCaseDescription tc = new TestCaseDescription();
     tc.addRoot("/foo1", NameNodeDirType.IMAGE);
     tc.addRoot("/foo2", NameNodeDirType.EDITS);
-    tc.addImage("/foo1/current/fsimage_100", true);
-    tc.addImage("/foo1/current/fsimage_200", true);
-    tc.addImage("/foo1/current/fsimage_300", false);
-    tc.addImage("/foo1/current/fsimage_400", false);
-    tc.addLog("/foo2/current/edits_101-200", true);
-    tc.addLog("/foo2/current/edits_201-300", true);
-    tc.addLog("/foo2/current/edits_301-400", false);
-    tc.addLog("/foo2/current/edits_inprogress_401", false);
+    tc.addImage("/foo1/current/" + getImageFileName(100), true);
+    tc.addImage("/foo1/current/" + getImageFileName(200), true);
+    tc.addImage("/foo1/current/" + getImageFileName(300), false);
+    tc.addImage("/foo1/current/" + getImageFileName(400), false);
+
+    tc.addLog("/foo2/current/" + getFinalizedEditsFileName(101, 200), true);
+    tc.addLog("/foo2/current/" + getFinalizedEditsFileName(201, 300), true);
+    tc.addLog("/foo2/current/" + getFinalizedEditsFileName(301, 400), false);
+    tc.addLog("/foo2/current/" + getInProgressEditsFileName(401), false);
     runTest(tc);    
   }
   

@@ -799,7 +799,9 @@ public class TestCheckpoint extends TestCase {
       Collection<URI> editsDirs = cluster.getNameEditsDirs(0);
       for(URI uri : editsDirs) {
         File ed = new File(uri.getPath());
-        assertTrue(new File(ed, "current/edits_inprogress_1").length() > Integer.SIZE/Byte.SIZE);
+        assertTrue(new File(ed, "current/"
+                            + NNStorage.getInProgressEditsFileName(1))
+                   .length() > Integer.SIZE/Byte.SIZE);
       }
 
       // Saving image in safe mode should succeed
@@ -821,19 +823,23 @@ public class TestCheckpoint extends TestCase {
         System.err.println("Files in " + curDir + ":\n  " +
             Joiner.on("\n  ").join(curDir.list()));
         // Verify that the first edits file got finalized
-        File originalEdits = new File(curDir, "edits_inprogress_1");
+        File originalEdits = new File(curDir,
+                                      NNStorage.getInProgressEditsFileName(1));
         assertFalse(originalEdits.exists());
-        File finalizedEdits = new File(curDir, "edits_1-8");
+        File finalizedEdits = new File(curDir,
+            NNStorage.getFinalizedEditsFileName(1,8));
         assertTrue(finalizedEdits.exists());
         assertTrue(finalizedEdits.length() > Integer.SIZE/Byte.SIZE);
 
-        assertTrue(new File(ed, "current/edits_inprogress_9").exists());
+        assertTrue(new File(ed, "current/"
+                       + NNStorage.getInProgressEditsFileName(9)).exists());
       }
       
       Collection<URI> imageDirs = cluster.getNameDirs(0);
       for (URI uri : imageDirs) {
         File imageDir = new File(uri.getPath());
-        File savedImage = new File(imageDir, "current/fsimage_8");
+        File savedImage = new File(imageDir, "current/"
+                                   + NNStorage.getImageFileName(8));
         assertTrue("Should have saved image at " + savedImage,
             savedImage.exists());        
       }
@@ -1025,9 +1031,9 @@ public class TestCheckpoint extends TestCase {
       .getStorage().getMostRecentCheckpointTxId();
 
       File secondaryFsImageBefore = new File(secondaryCurrent,
-          "fsimage_" + expectedTxIdToDownload);
+          NNStorage.getImageFileName(expectedTxIdToDownload));
       File secondaryFsImageAfter = new File(secondaryCurrent,
-          "fsimage_" + (expectedTxIdToDownload + 2));
+          NNStorage.getImageFileName(expectedTxIdToDownload + 2));
       
       assertFalse("Secondary should start with empty current/ dir " +
           "but " + secondaryFsImageBefore + " exists",
@@ -1541,7 +1547,8 @@ public class TestCheckpoint extends TestCase {
     for (File nameDir : getNameNodeCurrentDirs(cluster)) {
       // Should have fsimage_N for the three checkpoints
       for (long checkpointTxId : txids) {
-        File image = new File(nameDir, "fsimage_" + checkpointTxId);
+        File image = new File(nameDir,
+                              NNStorage.getImageFileName(checkpointTxId));
         assertTrue("Expected non-empty " + image, image.length() > 0);
       }
     }

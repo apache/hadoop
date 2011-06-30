@@ -455,7 +455,7 @@ public class TestStartup extends TestCase {
         cluster = null;
 
         // Corrupt the md5 file to all 0s
-        File imageFile = new File(nameDir, "current/fsimage_0");
+        File imageFile = new File(nameDir, "current/" + NNStorage.getImageFileName(0));
         MD5FileUtils.saveMD5File(imageFile, new MD5Hash(new byte[16]));
         
         // Try to start a new cluster

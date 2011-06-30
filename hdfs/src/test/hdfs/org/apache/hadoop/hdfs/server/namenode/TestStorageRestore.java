@@ -50,6 +50,9 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEditsFileName;
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getFinalizedEditsFileName;
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 
@@ -190,12 +193,12 @@ public class TestStorageRestore extends TestCase {
     // We did another edit, so the still-active directory at 'path1'
     // should now differ from the others
     FSImageTestUtil.assertFileContentsDifferent(2,
-        new File(path1, "current/edits_inprogress_1"),
-        new File(path2, "current/edits_inprogress_1"),
-        new File(path3, "current/edits_inprogress_1"));
+        new File(path1, "current/" + getInProgressEditsFileName(1)),
+        new File(path2, "current/" + getInProgressEditsFileName(1)),
+        new File(path3, "current/" + getInProgressEditsFileName(1)));
     FSImageTestUtil.assertFileContentsSame(
-        new File(path2, "current/edits_inprogress_1"),
-        new File(path3, "current/edits_inprogress_1"));
+        new File(path2, "current/" + getInProgressEditsFileName(1)),
+        new File(path3, "current/" + getInProgressEditsFileName(1)));
         
     System.out.println("****testStorageRestore: checkfiles(false) run");
     
@@ -204,34 +207,34 @@ public class TestStorageRestore extends TestCase {
     // We should have a checkpoint through txid 4 in the two image dirs
     // (txid=4 for BEGIN, mkdir, mkdir, END)
     FSImageTestUtil.assertFileContentsSame(
-        new File(path1, "current/fsimage_4"),
-        new File(path2, "current/fsimage_4"));
+        new File(path1, "current/" + getImageFileName(4)),
+        new File(path2, "current/" + getImageFileName(4)));
     assertFalse("Should not have any image in an edits-only directory",
-        new File(path3, "current/fsimage_4").exists());
+        new File(path3, "current/" + getImageFileName(4)).exists());
 
     // Should have finalized logs in the directory that didn't fail
     assertTrue("Should have finalized logs in the directory that didn't fail",
-        new File(path1, "current/edits_1-4").exists());
+        new File(path1, "current/" + getFinalizedEditsFileName(1,4)).exists());
     // Should not have finalized logs in the failed directories
     assertFalse("Should not have finalized logs in the failed directories",
-        new File(path2, "current/edits_1-4").exists());
+        new File(path2, "current/" + getFinalizedEditsFileName(1,4)).exists());
     assertFalse("Should not have finalized logs in the failed directories",
-        new File(path3, "current/edits_1-4").exists());
+        new File(path3, "current/" + getFinalizedEditsFileName(1,4)).exists());
     
     // The new log segment should be in all of the directories.
     FSImageTestUtil.assertFileContentsSame(
-        new File(path1, "current/edits_inprogress_5"),
-        new File(path2, "current/edits_inprogress_5"),
-        new File(path3, "current/edits_inprogress_5"));
+        new File(path1, "current/" + getInProgressEditsFileName(5)),
+        new File(path2, "current/" + getInProgressEditsFileName(5)),
+        new File(path3, "current/" + getInProgressEditsFileName(5)));
     String md5BeforeEdit = FSImageTestUtil.getFileMD5(
-        new File(path1, "current/edits_inprogress_5"));
+        new File(path1, "current/" + getInProgressEditsFileName(5)));
     
     // The original image should still be the previously failed image
     // directory after it got restored, since it's still useful for
     // a recovery!
     FSImageTestUtil.assertFileContentsSame(
-            new File(path1, "current/fsimage_0"),
-            new File(path2, "current/fsimage_0"));
+            new File(path1, "current/" + getImageFileName(0)),
+            new File(path2, "current/" + getImageFileName(0)));
     
     // Do another edit to verify that all the logs are active.
     path = new Path("/", "test2");
@@ -239,23 +242,23 @@ public class TestStorageRestore extends TestCase {
 
     // Logs should be changed by the edit.
     String md5AfterEdit =  FSImageTestUtil.getFileMD5(
-        new File(path1, "current/edits_inprogress_5"));
+        new File(path1, "current/" + getInProgressEditsFileName(5)));
     assertFalse(md5BeforeEdit.equals(md5AfterEdit));
 
     // And all logs should be changed.
     FSImageTestUtil.assertFileContentsSame(
-        new File(path1, "current/edits_inprogress_5"),
-        new File(path2, "current/edits_inprogress_5"),
-        new File(path3, "current/edits_inprogress_5"));
+        new File(path1, "current/" + getInProgressEditsFileName(5)),
+        new File(path2, "current/" + getInProgressEditsFileName(5)),
+        new File(path3, "current/" + getInProgressEditsFileName(5)));
 
     secondary.shutdown();
     cluster.shutdown();
     
     // All logs should be finalized by clean shutdown
     FSImageTestUtil.assertFileContentsSame(
-        new File(path1, "current/edits_5-7"),
-        new File(path2, "current/edits_5-7"),        
-        new File(path3, "current/edits_5-7"));
+        new File(path1, "current/" + getFinalizedEditsFileName(5,7)),
+        new File(path2, "current/" + getFinalizedEditsFileName(5,7)),        
+        new File(path3, "current/" + getFinalizedEditsFileName(5,7)));
   }
   
   /**

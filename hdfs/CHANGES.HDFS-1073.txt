@@ -62,3 +62,5 @@ HDFS-2078. NameNode should not clear directory when restoring removed storage.
 HDFS-2088. Move edits log archiving logic into FSEditLog/JournalManager (todd)
 HDFS-2093. Handle case where an entirely empty log is left during NN crash
            (todd)
+HDFS-2102. Zero-pad edits filename to make them lexically sortable. (Ivan
+           Kelly via todd)

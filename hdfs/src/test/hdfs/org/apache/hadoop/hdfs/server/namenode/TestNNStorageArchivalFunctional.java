@@ -27,12 +27,14 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 import com.google.common.base.Joiner;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertGlobEquals;
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEditsFileName;
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getFinalizedEditsFileName;
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
 
 
 /**
@@ -77,18 +79,30 @@ public class TestNNStorageArchivalFunctional {
 
       doSaveNamespace(nn);
       LOG.info("After first save, images 0 and 2 should exist in both dirs");
-      assertGlobEquals(cd0, "fsimage_\\d*", "fsimage_0", "fsimage_2");
-      assertGlobEquals(cd1, "fsimage_\\d*", "fsimage_0", "fsimage_2");
-      assertGlobEquals(cd0, "edits_.*", "edits_1-2", "edits_inprogress_3");
-      assertGlobEquals(cd1, "edits_.*", "edits_1-2", "edits_inprogress_3");
+      assertGlobEquals(cd0, "fsimage_\\d*", 
+          getImageFileName(0), getImageFileName(2));
+      assertGlobEquals(cd1, "fsimage_\\d*",
+          getImageFileName(0), getImageFileName(2));
+      assertGlobEquals(cd0, "edits_.*",
+          getFinalizedEditsFileName(1, 2),
+          getInProgressEditsFileName(3));
+      assertGlobEquals(cd1, "edits_.*",
+          getFinalizedEditsFileName(1, 2),
+          getInProgressEditsFileName(3));
       
       doSaveNamespace(nn);
       LOG.info("After second save, image 0 should be archived, " +
           "and image 4 should exist in both.");
-      assertGlobEquals(cd0, "fsimage_\\d*", "fsimage_2", "fsimage_4");
-      assertGlobEquals(cd1, "fsimage_\\d*", "fsimage_2", "fsimage_4");
-      assertGlobEquals(cd0, "edits_.*", "edits_3-4", "edits_inprogress_5");
-      assertGlobEquals(cd1, "edits_.*", "edits_3-4", "edits_inprogress_5");
+      assertGlobEquals(cd0, "fsimage_\\d*",
+          getImageFileName(2), getImageFileName(4));
+      assertGlobEquals(cd1, "fsimage_\\d*",
+          getImageFileName(2), getImageFileName(4));
+      assertGlobEquals(cd0, "edits_.*",
+          getFinalizedEditsFileName(3, 4),
+          getInProgressEditsFileName(5));
+      assertGlobEquals(cd1, "edits_.*",
+          getFinalizedEditsFileName(3, 4),
+          getInProgressEditsFileName(5));
       
       LOG.info("Failing first storage dir by chmodding it");
       sd0.setExecutable(false);
@@ -97,23 +111,31 @@ public class TestNNStorageArchivalFunctional {
       sd0.setExecutable(true);
 
       LOG.info("nothing should have been archived in first storage dir");
-      assertGlobEquals(cd0, "fsimage_\\d*", "fsimage_2", "fsimage_4");
-      assertGlobEquals(cd0, "edits_.*", "edits_3-4", "edits_inprogress_5");
+      assertGlobEquals(cd0, "fsimage_\\d*",
+          getImageFileName(2), getImageFileName(4));
+      assertGlobEquals(cd0, "edits_.*",
+          getFinalizedEditsFileName(3, 4),
+          getInProgressEditsFileName(5));
 
       LOG.info("fsimage_2 should be archived in second storage dir");
-      assertGlobEquals(cd1, "fsimage_\\d*", "fsimage_4", "fsimage_6");
-      assertGlobEquals(cd1, "edits_.*", "edits_5-6", "edits_inprogress_7");
+      assertGlobEquals(cd1, "fsimage_\\d*",
+          getImageFileName(4), getImageFileName(6));
+      assertGlobEquals(cd1, "edits_.*",
+          getFinalizedEditsFileName(5, 6),
+          getInProgressEditsFileName(7));
 
       LOG.info("On next save, we should archive logs from the failed dir," +
           " but not images, since the image directory is in failed state.");
       doSaveNamespace(nn);
-      assertGlobEquals(cd1, "fsimage_\\d*", "fsimage_6", "fsimage_8");
-      assertGlobEquals(cd1, "edits_.*", "edits_7-8", "edits_inprogress_9");
-      assertGlobEquals(cd0, "fsimage_\\d*", "fsimage_2", "fsimage_4");
-      assertGlobEquals(cd0, "edits_.*", "edits_inprogress_9");
-      
-
-
+      assertGlobEquals(cd1, "fsimage_\\d*",
+          getImageFileName(6), getImageFileName(8));
+      assertGlobEquals(cd1, "edits_.*",
+          getFinalizedEditsFileName(7, 8),
+          getInProgressEditsFileName(9));
+      assertGlobEquals(cd0, "fsimage_\\d*",
+          getImageFileName(2), getImageFileName(4));
+      assertGlobEquals(cd0, "edits_.*",
+          getInProgressEditsFileName(9));
     } finally {
       sd0.setExecutable(true);
 

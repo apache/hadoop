@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -194,7 +195,8 @@ public class TestEditLog extends TestCase {
       final FSEditLog editLog = fsimage.getEditLog();
       
       assertExistsInStorageDirs(
-          cluster, NameNodeDirType.EDITS, "edits_inprogress_1");
+          cluster, NameNodeDirType.EDITS, 
+          NNStorage.getInProgressEditsFileName(1));
       
 
       editLog.logSetReplication("fakefile", (short) 1);
@@ -203,9 +205,11 @@ public class TestEditLog extends TestCase {
       editLog.rollEditLog();
 
       assertExistsInStorageDirs(
-          cluster, NameNodeDirType.EDITS, "edits_1-3");
+          cluster, NameNodeDirType.EDITS,
+          NNStorage.getFinalizedEditsFileName(1,3));
       assertExistsInStorageDirs(
-          cluster, NameNodeDirType.EDITS, "edits_inprogress_4");
+          cluster, NameNodeDirType.EDITS,
+          NNStorage.getInProgressEditsFileName(4));
 
       
       editLog.logSetReplication("fakefile", (short) 2);
@@ -569,13 +573,14 @@ public class TestEditLog extends TestCase {
         File currentDir = new File(nameDir, "current");
 
         // We should see the file as in-progress
-        File editsFile = new File(currentDir, "edits_inprogress_1");
+        File editsFile = new File(currentDir,
+            NNStorage.getInProgressEditsFileName(1));
         assertTrue("Edits file " + editsFile + " should exist", editsFile.exists());        
         
         File imageFile = FSImageTestUtil.findNewestImageFile(
             currentDir.getAbsolutePath());
         assertNotNull("No image found in " + nameDir, imageFile);
-        assertEquals("fsimage_0", imageFile.getName());
+        assertEquals(NNStorage.getImageFileName(0), imageFile.getName());
         
         // Try to start a new cluster
         LOG.info("\n===========================================\n" +
@@ -598,7 +603,8 @@ public class TestEditLog extends TestCase {
         imageFile = FSImageTestUtil.findNewestImageFile(
             currentDir.getAbsolutePath());
         assertNotNull("No image found in " + nameDir, imageFile);
-        assertEquals("fsimage_" + expectedTxId, imageFile.getName());
+        assertEquals(NNStorage.getImageFileName(expectedTxId),
+                     imageFile.getName());
         
         // Started successfully
         cluster.shutdown();    
@@ -645,7 +651,7 @@ public class TestEditLog extends TestCase {
       File currentDir = new File(dir, "current");
       // We should start with only the finalized edits_1-2
       GenericTestUtils.assertGlobEquals(currentDir, "edits_.*",
-          "edits_1-2");
+          NNStorage.getFinalizedEditsFileName(1, 2));
       // Make a truncated edits_3_inprogress
       File log = new File(currentDir,
           NNStorage.getInProgressEditsFileName(3));

@@ -32,6 +32,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEditsFileName;
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getFinalizedEditsFileName;
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
+
 import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.FoundEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.FoundFSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.TransactionalLoadPlan;
@@ -55,14 +59,14 @@ public class TestFSImageStorageInspector {
     StorageDirectory mockDir = mockDirectory(
         NameNodeDirType.IMAGE_AND_EDITS,
         false,
-        "/foo/current/fsimage_123",
-        "/foo/current/edits_123-456",
-        "/foo/current/fsimage_456",
-        "/foo/current/edits_inprogress_457");
+        "/foo/current/" + getImageFileName(123),
+        "/foo/current/" + getFinalizedEditsFileName(123, 456),
+        "/foo/current/" + getImageFileName(456),
+        "/foo/current/" + getInProgressEditsFileName(457));
 
     inspector.inspectDirectory(mockDir);
     mockLogValidation(inspector,
-        "/foo/current/edits_inprogress_457", 10);
+        "/foo/current/" + getInProgressEditsFileName(457), 10);
     
     assertEquals(2, inspector.foundEditLogs.size());
     assertEquals(2, inspector.foundImages.size());
@@ -76,9 +80,10 @@ public class TestFSImageStorageInspector {
     LoadPlan plan = inspector.createLoadPlan();
     LOG.info("Plan: " + plan);
     
-    assertEquals(new File("/foo/current/fsimage_456"), plan.getImageFile());
+    assertEquals(new File("/foo/current/"+getImageFileName(456)), 
+                 plan.getImageFile());
     assertArrayEquals(new File[] {
-        new File("/foo/current/edits_inprogress_457") },
+        new File("/foo/current/" + getInProgressEditsFileName(457)) },
         plan.getEditsFiles().toArray(new File[0]));
   }
   
@@ -93,11 +98,11 @@ public class TestFSImageStorageInspector {
     StorageDirectory mockDir = mockDirectory(
         NameNodeDirType.IMAGE_AND_EDITS,
         false,
-        "/foo/current/fsimage_123",
-        "/foo/current/fsimage_456",
-        "/foo/current/edits_457-900",
-        "/foo/current/edits_901-950",
-        "/foo/current/edits_952-1000"); // <-- missing edit 951!
+        "/foo/current/" + getImageFileName(123),
+        "/foo/current/" + getImageFileName(456),
+        "/foo/current/" + getFinalizedEditsFileName(457,900),
+        "/foo/current/" + getFinalizedEditsFileName(901,950),
+        "/foo/current/" + getFinalizedEditsFileName(952,1000)); // <-- missing edit 951!
 
     inspector.inspectDirectory(mockDir);
     try {
@@ -121,24 +126,25 @@ public class TestFSImageStorageInspector {
     StorageDirectory mockDir = mockDirectory(
         NameNodeDirType.IMAGE_AND_EDITS,
         false,
-        "/foo/current/fsimage_123",
-        "/foo/current/fsimage_456",
-        "/foo/current/edits_457-900",
-        "/foo/current/edits_inprogress_901", // <-- inprogress in middle
-        "/foo/current/edits_952-1000");
+        "/foo/current/" + getImageFileName(123),
+        "/foo/current/" + getImageFileName(456),
+        "/foo/current/" + getFinalizedEditsFileName(457,900),
+        "/foo/current/" + getInProgressEditsFileName(901), // <-- inprogress in middle
+        "/foo/current/" + getFinalizedEditsFileName(952,1000));
 
     inspector.inspectDirectory(mockDir);
     mockLogValidation(inspector,
-        "/foo/current/edits_inprogress_901", 51);
+        "/foo/current/" + getInProgressEditsFileName(901), 51);
 
     LoadPlan plan = inspector.createLoadPlan();
     LOG.info("Plan: " + plan);
     
-    assertEquals(new File("/foo/current/fsimage_456"), plan.getImageFile());
+    assertEquals(new File("/foo/current/" + getImageFileName(456)), 
+                 plan.getImageFile());
     assertArrayEquals(new File[] {
-        new File("/foo/current/edits_457-900"),
-        new File("/foo/current/edits_inprogress_901"),
-        new File("/foo/current/edits_952-1000") },
+        new File("/foo/current/" + getFinalizedEditsFileName(457,900)),
+        new File("/foo/current/" + getInProgressEditsFileName(901)),
+        new File("/foo/current/" + getFinalizedEditsFileName(952,1000)) },
         plan.getEditsFiles().toArray(new File[0]));
 
   }
@@ -154,12 +160,14 @@ public class TestFSImageStorageInspector {
         new FSImageTransactionalStorageInspector();
 
     inspector.inspectDirectory(
-        mockDirectoryWithEditLogs("/foo1/current/edits_123-456"));
+        mockDirectoryWithEditLogs("/foo1/current/" 
+                                  + getFinalizedEditsFileName(123,456)));
     inspector.inspectDirectory(
-        mockDirectoryWithEditLogs("/foo2/current/edits_123-456"));
+        mockDirectoryWithEditLogs("/foo2/current/"
+                                  + getFinalizedEditsFileName(123,456)));
     inspector.inspectDirectory(
-        mockDirectoryWithEditLogs("/foo3/current/edits_123-456"));
-
+        mockDirectoryWithEditLogs("/foo3/current/"
+                                  + getFinalizedEditsFileName(123,456)));
     LogGroup lg = inspector.logGroups.get(123L);
     assertEquals(3, lg.logs.size());
     
@@ -180,15 +188,18 @@ public class TestFSImageStorageInspector {
         new FSImageTransactionalStorageInspector();
 
     inspector.inspectDirectory(
-        mockDirectoryWithEditLogs("/foo1/current/edits_123-456"));
+        mockDirectoryWithEditLogs("/foo1/current/"
+                                  + getFinalizedEditsFileName(123,456)));
     inspector.inspectDirectory(
-        mockDirectoryWithEditLogs("/foo2/current/edits_123-456"));
+        mockDirectoryWithEditLogs("/foo2/current/"
+                                  + getFinalizedEditsFileName(123,456)));
     inspector.inspectDirectory(
-        mockDirectoryWithEditLogs("/foo3/current/edits_inprogress_123"));
+        mockDirectoryWithEditLogs("/foo3/current/"
+                                  + getInProgressEditsFileName(123)));
     inspector.inspectDirectory(mockDirectory(
         NameNodeDirType.IMAGE,
         false,
-        "/foo4/current/fsimage_122"));
+        "/foo4/current/" + getImageFileName(122)));
 
     LogGroup lg = inspector.logGroups.get(123L);
     assertEquals(3, lg.logs.size());
@@ -221,9 +232,11 @@ public class TestFSImageStorageInspector {
     FSImageTransactionalStorageInspector inspector =
         new FSImageTransactionalStorageInspector();
     inspector.inspectDirectory(
-        mockDirectoryWithEditLogs("/foo1/current/edits_123-456"));
+        mockDirectoryWithEditLogs("/foo1/current/"
+                                  + getFinalizedEditsFileName(123,456)));
     inspector.inspectDirectory(
-        mockDirectoryWithEditLogs("/foo2/current/edits_123-678"));
+        mockDirectoryWithEditLogs("/foo2/current/"
+                                  + getFinalizedEditsFileName(123,678)));
 
     LogGroup lg = inspector.logGroups.get(123L);
     assertEquals(2, lg.logs.size());
@@ -243,9 +256,9 @@ public class TestFSImageStorageInspector {
   @Test
   public void testLogGroupRecoveryInProgress() throws IOException {
     String paths[] = new String[] {
-        "/foo1/current/edits_inprogress_123",
-        "/foo2/current/edits_inprogress_123",
-        "/foo3/current/edits_inprogress_123"
+        "/foo1/current/" + getInProgressEditsFileName(123),
+        "/foo2/current/" + getInProgressEditsFileName(123),
+        "/foo3/current/" + getInProgressEditsFileName(123)
     };
     FSImageTransactionalStorageInspector inspector =
         new FSImageTransactionalStorageInspector();
@@ -317,23 +330,23 @@ public class TestFSImageStorageInspector {
     StorageDirectory mockImageDir = mockDirectory(
         NameNodeDirType.IMAGE,
         false,
-        "/foo/current/fsimage_123");
+        "/foo/current/" + getImageFileName(123));
     StorageDirectory mockImageDir2 = mockDirectory(
         NameNodeDirType.IMAGE,
         false,
-        "/foo2/current/fsimage_456");
+        "/foo2/current/" + getImageFileName(456));
     StorageDirectory mockEditsDir = mockDirectory(
         NameNodeDirType.EDITS,
         false,
-        "/foo3/current/edits_123-456",
-        "/foo3/current/edits_inprogress_457");
+        "/foo3/current/" + getFinalizedEditsFileName(123, 456),
+        "/foo3/current/" + getInProgressEditsFileName(457));
     
     inspector.inspectDirectory(mockImageDir);
     inspector.inspectDirectory(mockEditsDir);
     inspector.inspectDirectory(mockImageDir2);
     
     mockLogValidation(inspector,
-        "/foo3/current/edits_inprogress_457", 2);
+        "/foo3/current/" + getInProgressEditsFileName(457), 2);
 
     assertEquals(2, inspector.foundEditLogs.size());
     assertEquals(2, inspector.foundImages.size());
@@ -346,9 +359,10 @@ public class TestFSImageStorageInspector {
     FoundFSImage pickedImage = plan.image;
     assertEquals(456, pickedImage.txId);
     assertSame(mockImageDir2, pickedImage.sd);
-    assertEquals(new File("/foo2/current/fsimage_456"), plan.getImageFile());
+    assertEquals(new File("/foo2/current/" + getImageFileName(456)),
+                 plan.getImageFile());
     assertArrayEquals(new File[] {
-        new File("/foo3/current/edits_inprogress_457")
+        new File("/foo3/current/" + getInProgressEditsFileName(457))
       }, plan.getEditsFiles().toArray(new File[0]));
 
     // Check log manifest
@@ -362,14 +376,20 @@ public class TestFSImageStorageInspector {
     FSImageTransactionalStorageInspector inspector =
         new FSImageTransactionalStorageInspector();
     inspector.inspectDirectory(
-        mockDirectoryWithEditLogs("/foo1/current/edits_1-1",
-                                  "/foo1/current/edits_2-200"));
+        mockDirectoryWithEditLogs("/foo1/current/" 
+                                  + getFinalizedEditsFileName(1,1),
+                                  "/foo1/current/"
+                                  + getFinalizedEditsFileName(2,200)));
     inspector.inspectDirectory(
-        mockDirectoryWithEditLogs("/foo2/current/edits_inprogress_1",
-                                  "/foo2/current/edits_201-400"));
+        mockDirectoryWithEditLogs("/foo2/current/" 
+                                  + getInProgressEditsFileName(1),
+                                  "/foo2/current/"
+                                  + getFinalizedEditsFileName(201, 400)));
     inspector.inspectDirectory(
-        mockDirectoryWithEditLogs("/foo3/current/edits_1-1",
-                                  "/foo3/current/edits_2-200"));
+        mockDirectoryWithEditLogs("/foo3/current/"
+                                  + getFinalizedEditsFileName(1, 1),
+                                  "/foo3/current/"
+                                  + getFinalizedEditsFileName(2,200)));
     
     assertEquals("[[1,1], [2,200], [201,400]]",
                  inspector.getEditLogManifest(1).toString());
@@ -391,14 +411,21 @@ public class TestFSImageStorageInspector {
     FSImageTransactionalStorageInspector inspector =
         new FSImageTransactionalStorageInspector();
     inspector.inspectDirectory(
-        mockDirectoryWithEditLogs("/foo1/current/edits_2622-2623",
-                                  "/foo1/current/edits_2624-2625",
-                                  "/foo1/current/edits_inprogress_2626"));
+        mockDirectoryWithEditLogs("/foo1/current/" 
+                                  + getFinalizedEditsFileName(2622,2623),
+                                  "/foo1/current/"
+                                  + getFinalizedEditsFileName(2624,2625),
+                                  "/foo1/current/"
+                                  + getInProgressEditsFileName(2626)));
     inspector.inspectDirectory(
-        mockDirectoryWithEditLogs("/foo2/current/edits_2622-2623",
-                                  "/foo2/current/edits_2624-2625",
-                                  "/foo2/current/edits_2626-2627",
-                                  "/foo2/current/edits_2628-2629"));
+        mockDirectoryWithEditLogs("/foo2/current/"
+                                  + getFinalizedEditsFileName(2622,2623),
+                                  "/foo2/current/"
+                                  + getFinalizedEditsFileName(2624,2625),
+                                  "/foo2/current/"
+                                  + getFinalizedEditsFileName(2626,2627),
+                                  "/foo2/current/"
+                                  + getFinalizedEditsFileName(2628,2629)));
     
     assertEquals("[[2622,2623], [2624,2625], [2626,2627], [2628,2629]]",
                  inspector.getEditLogManifest(2621).toString());
