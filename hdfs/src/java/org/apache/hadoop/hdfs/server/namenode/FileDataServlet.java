@@ -117,7 +117,7 @@ public class FileDataServlet extends DfsServlet {
               .getParameter(JspHelper.DELEGATION_PARAMETER_NAME);
 
           HdfsFileStatus info = nn.getFileInfo(path);
-          if ((info != null) && !info.isDir()) {
+          if (info != null && !info.isDir()) {
             try {
               response.sendRedirect(createUri(path, info, ugi, nn, request,
                   delegationToken).toURL().toString());

@@ -146,7 +146,7 @@ public class TestByteRangeInputStream {
     is.seek(101);
     is.read();
 
-    assertNull("Seek to 101 should not result in another request", null);
+    assertNull("Seek to 101 should not result in another request", r.getMsg());
 
     r.setMsg(null);
     is.seek(2500);

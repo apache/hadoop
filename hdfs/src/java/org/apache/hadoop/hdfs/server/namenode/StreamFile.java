@@ -48,7 +48,7 @@ public class StreamFile extends DfsServlet {
 
   public static final String CONTENT_LENGTH = "Content-Length";
 
-  /** getting a client for connecting to dfs */
+  /* Return a DFS client to use to make the given HTTP request */
   protected DFSClient getDFSClient(HttpServletRequest request)
       throws IOException, InterruptedException {
     final Configuration conf =
@@ -59,6 +59,7 @@ public class StreamFile extends DfsServlet {
     return DatanodeJspHelper.getDFSClient(request, datanode, conf, ugi);
   }
   
+  @SuppressWarnings("unchecked")
   public void doGet(HttpServletRequest request, HttpServletResponse response)
     throws ServletException, IOException {
     final String path = request.getPathInfo() != null ? 
@@ -71,9 +72,10 @@ public class StreamFile extends DfsServlet {
       return;
     }
     
-    Enumeration<?> reqRanges = request.getHeaders("Range");
-    if (reqRanges != null && !reqRanges.hasMoreElements())
+    Enumeration<String> reqRanges = request.getHeaders("Range");
+    if (reqRanges != null && !reqRanges.hasMoreElements()) {
       reqRanges = null;
+    }
 
     DFSClient dfs;
     try {
@@ -89,29 +91,24 @@ public class StreamFile extends DfsServlet {
 
     try {
       if (reqRanges != null) {
-        List<?> ranges = InclusiveByteRange.satisfiableRanges(reqRanges,
-                                                           fileLen);
-        StreamFile.sendPartialData(in, os, response, fileLen, ranges);
+        List<InclusiveByteRange> ranges = 
+          InclusiveByteRange.satisfiableRanges(reqRanges, fileLen);
+        StreamFile.sendPartialData(in, os, response, fileLen, ranges, true);
       } else {
         // No ranges, so send entire file
         response.setHeader("Content-Disposition", "attachment; filename=\"" + 
                            filename + "\"");
         response.setContentType("application/octet-stream");
         response.setHeader(CONTENT_LENGTH, "" + fileLen);
-        StreamFile.copyFromOffset(in, os, 0L, fileLen);
+        StreamFile.copyFromOffset(in, os, 0L, fileLen, true);
       }
-    } catch(IOException e) {
+    } catch (IOException e) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("response.isCommitted()=" + response.isCommitted(), e);
       }
       throw e;
     } finally {
-      try {
-        in.close();
-        os.close();
-      } finally {
-        dfs.close();
-      }
+      dfs.close();
     }      
   }
   
@@ -125,13 +122,15 @@ public class StreamFile extends DfsServlet {
    * @param response http response to use
    * @param contentLength for the response header
    * @param ranges to write to respond with
+   * @param close whether to close the streams
    * @throws IOException on error sending the response
    */
   static void sendPartialData(FSInputStream in,
                               OutputStream out,
                               HttpServletResponse response,
                               long contentLength,
-                              List<?> ranges)
+                              List<InclusiveByteRange> ranges,
+                              boolean close)
       throws IOException {
     if (ranges == null || ranges.size() != 1) {
       response.setContentLength(0);
@@ -139,22 +138,21 @@ public class StreamFile extends DfsServlet {
       response.setHeader("Content-Range",
                 InclusiveByteRange.to416HeaderRangeString(contentLength));
     } else {
-      InclusiveByteRange singleSatisfiableRange =
-        (InclusiveByteRange)ranges.get(0);
+      InclusiveByteRange singleSatisfiableRange = ranges.get(0);
       long singleLength = singleSatisfiableRange.getSize(contentLength);
       response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
       response.setHeader("Content-Range", 
         singleSatisfiableRange.toHeaderRangeString(contentLength));
       copyFromOffset(in, out,
                      singleSatisfiableRange.getFirst(contentLength),
-                     singleLength);
+                     singleLength, close);
     }
   }
 
   /* Copy count bytes at the given offset from one stream to another */
   static void copyFromOffset(FSInputStream in, OutputStream out, long offset,
-      long count) throws IOException {
+      long count, boolean close) throws IOException {
     in.seek(offset);
-    IOUtils.copyBytes(in, out, count);
+    IOUtils.copyBytes(in, out, count, close);
   }
 }

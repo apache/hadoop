@@ -70,9 +70,8 @@ import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.DefaultHandler;
 import org.xml.sax.helpers.XMLReaderFactory;
 
-
-
-/** An implementation of a protocol for accessing filesystems over HTTP.
+/**
+ * An implementation of a protocol for accessing filesystems over HTTP.
  * The following implementation provides a limited, read-only interface
  * to a filesystem over HTTP.
  * @see org.apache.hadoop.hdfs.server.namenode.ListPathsServlet
@@ -314,7 +313,7 @@ public class HftpFileSystem extends FileSystem {
     try {
       connection.setRequestMethod("GET");
       connection.connect();
-    } catch(IOException ioe) {
+    } catch (IOException ioe) {
       throwIOExceptionFromConnection(connection, ioe);
     }
     return connection;

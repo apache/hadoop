@@ -28,7 +28,8 @@ import java.util.Vector;
 
 import javax.servlet.http.HttpServletResponse;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 import org.apache.hadoop.fs.FSInputStream;
 import org.mortbay.jetty.InclusiveByteRange;
@@ -186,8 +187,7 @@ class MockHttpServletResponse implements HttpServletResponse {
 }
 
 
-
-public class TestStreamFile extends TestCase {
+public class TestStreamFile {
   
   // return an array matching the output of mockfsinputstream
   private static byte[] getOutputArray(int start, int count) {
@@ -200,6 +200,7 @@ public class TestStreamFile extends TestCase {
     return a;
   }
   
+  @Test
   public void testWriteTo() throws IOException, InterruptedException {
 
     FSInputStream fsin = new MockFSInputStream();
@@ -219,7 +220,7 @@ public class TestStreamFile extends TestCase {
     assertTrue("Pairs array must be even", pairs.length % 2 == 0);
     
     for (int i = 0; i < pairs.length; i+=2) {
-      StreamFile.copyFromOffset(fsin, os, pairs[i], pairs[i+1]);
+      StreamFile.copyFromOffset(fsin, os, pairs[i], pairs[i+1], false);
       assertArrayEquals("Reading " + pairs[i+1]
                         + " bytes from offset " + pairs[i],
                         getOutputArray(pairs[i], pairs[i+1]),
@@ -228,22 +229,24 @@ public class TestStreamFile extends TestCase {
     }
     
   }
-  
-  private List<?> strToRanges(String s, int contentLength) {
+
+  @SuppressWarnings("unchecked")
+  private List<InclusiveByteRange> strToRanges(String s, int contentLength) {
     List<String> l = Arrays.asList(new String[]{"bytes="+s});
     Enumeration<?> e = (new Vector<String>(l)).elements();
     return InclusiveByteRange.satisfiableRanges(e, contentLength);
   }
   
+  @Test
   public void testSendPartialData() throws IOException, InterruptedException {
     FSInputStream in = new MockFSInputStream();
     ByteArrayOutputStream os = new ByteArrayOutputStream();
 
     // test if multiple ranges, then 416
     { 
-      List<?> ranges = strToRanges("0-,10-300", 500);
+      List<InclusiveByteRange> ranges = strToRanges("0-,10-300", 500);
       MockHttpServletResponse response = new MockHttpServletResponse();
-      StreamFile.sendPartialData(in, os, response, 500, ranges);
+      StreamFile.sendPartialData(in, os, response, 500, ranges, false);
       assertEquals("Multiple ranges should result in a 416 error",
                    416, response.getStatus());
     }
@@ -252,16 +255,16 @@ public class TestStreamFile extends TestCase {
     { 
       os.reset();
       MockHttpServletResponse response = new MockHttpServletResponse();
-      StreamFile.sendPartialData(in, os, response, 500, null);
+      StreamFile.sendPartialData(in, os, response, 500, null, false);
       assertEquals("No ranges should result in a 416 error",
                    416, response.getStatus());
     }
 
     // test if invalid single range (out of bounds), then 416
     { 
-      List<?> ranges = strToRanges("600-800", 500);
+      List<InclusiveByteRange> ranges = strToRanges("600-800", 500);
       MockHttpServletResponse response = new MockHttpServletResponse();
-      StreamFile.sendPartialData(in, os, response, 500, ranges);
+      StreamFile.sendPartialData(in, os, response, 500, ranges, false);
       assertEquals("Single (but invalid) range should result in a 416",
                    416, response.getStatus());
     }
@@ -269,9 +272,9 @@ public class TestStreamFile extends TestCase {
       
     // test if one (valid) range, then 206
     { 
-      List<?> ranges = strToRanges("100-300", 500);
+      List<InclusiveByteRange> ranges = strToRanges("100-300", 500);
       MockHttpServletResponse response = new MockHttpServletResponse();
-      StreamFile.sendPartialData(in, os, response, 500, ranges);
+      StreamFile.sendPartialData(in, os, response, 500, ranges, false);
       assertEquals("Single (valid) range should result in a 206",
                    206, response.getStatus());
       assertArrayEquals("Byte range from 100-300",
