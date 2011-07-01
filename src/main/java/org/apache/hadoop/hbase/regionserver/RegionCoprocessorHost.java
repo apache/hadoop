@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.*;
@@ -66,10 +67,10 @@ public class RegionCoprocessorHost
      * @param impl the coprocessor instance
      * @param priority chaining priority
      */
-    public RegionEnvironment(final Coprocessor impl,
-        final Coprocessor.Priority priority, final int seq, final HRegion region,
+    public RegionEnvironment(final Coprocessor impl, final int priority,
+        final int seq, final Configuration conf, final HRegion region,
         final RegionServerServices services) {
-      super(impl, priority, seq);
+      super(impl, priority, seq, conf);
       this.region = region;
       this.rsServices = services;
     }
@@ -91,7 +92,9 @@ public class RegionCoprocessorHost
     }
   }
 
-  static final Pattern attrSpecMatch = Pattern.compile("(.+):(.+):(.+)");
+  static final Pattern attrSpecMatch1 = Pattern.compile("(.+)\\|(.+)\\|(.+)\\|(.+)");
+  static final Pattern attrSpecMatch2 = Pattern.compile("(.+)\\|(.+)\\|(.+)");
+  static final Pattern cfgSpecMatch = Pattern.compile("([^=]+)=([^,]+),?");
 
   /** The region server services */
   RegionServerServices rsServices;
@@ -117,32 +120,51 @@ public class RegionCoprocessorHost
     loadTableCoprocessors();
   }
 
-  void loadTableCoprocessors () {
+  void loadTableCoprocessors() {
     // scan the table attributes for coprocessor load specifications
     // initialize the coprocessors
     List<RegionEnvironment> configured = new ArrayList<RegionEnvironment>();
     for (Map.Entry<ImmutableBytesWritable,ImmutableBytesWritable> e:
         region.getTableDesc().getValues().entrySet()) {
       String key = Bytes.toString(e.getKey().get());
+      String spec = Bytes.toString(e.getValue().get());
       if (key.startsWith("COPROCESSOR")) {
         // found one
         try {
-          String spec = Bytes.toString(e.getValue().get());
-          Matcher matcher = attrSpecMatch.matcher(spec);
+          Matcher matcher = attrSpecMatch1.matcher(spec);
+          if (!matcher.matches()) {
+            matcher = attrSpecMatch2.matcher(spec);
+          }
           if (matcher.matches()) {
             Path path = new Path(matcher.group(1));
             String className = matcher.group(2);
-            Coprocessor.Priority priority =
-              Coprocessor.Priority.valueOf(matcher.group(3));
-            configured.add(load(path, className, priority));
+            int priority = Integer.valueOf(matcher.group(3));
+            String cfgSpec = null;
+            try {
+              cfgSpec = matcher.group(4);
+            } catch (IndexOutOfBoundsException ex) {
+              // ignore
+            }
+            if (cfgSpec != null) {
+              Configuration newConf = HBaseConfiguration.create();
+              Matcher m = cfgSpecMatch.matcher(cfgSpec);
+              while (m.find()) {
+                newConf.set(m.group(1), m.group(2));
+              }
+              configured.add(load(path, className, priority, newConf));
+            } else {
+              configured.add(load(path, className, priority, conf));
+            }
             LOG.info("Load coprocessor " + className + " from HTD of " +
-                Bytes.toString(region.getTableDesc().getName()) +
+              Bytes.toString(region.getTableDesc().getName()) +
                 " successfully.");
           } else {
-            LOG.warn("attribute '" + key + "' has invalid coprocessor spec");
+            throw new RuntimeException("specification does not match pattern");
           }
-        } catch (IOException ex) {
-            LOG.warn(StringUtils.stringifyException(ex));
+        } catch (Exception ex) {
+          LOG.warn("attribute '" + key +
+            "' has invalid coprocessor specification '" + spec + "'");
+          LOG.warn(StringUtils.stringifyException(ex));
         }
       }
     }
@@ -151,8 +173,8 @@ public class RegionCoprocessorHost
   }
 
   @Override
-  public RegionEnvironment createEnvironment(
-      Class<?> implClass, Coprocessor instance, Coprocessor.Priority priority, int seq) {
+  public RegionEnvironment createEnvironment(Class<?> implClass,
+      Coprocessor instance, int priority, int seq, Configuration conf) {
     // Check if it's an Endpoint.
     // Due to current dynamic protocol design, Endpoint
     // uses a different way to be registered and executed.
@@ -164,8 +186,8 @@ public class RegionCoprocessorHost
         break;
       }
     }
-
-    return new RegionEnvironment(instance, priority, seq, region, rsServices);
+    return new RegionEnvironment(instance, priority, seq, conf, region,
+        rsServices);
   }
 
   /**

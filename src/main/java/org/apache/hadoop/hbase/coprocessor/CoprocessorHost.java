@@ -79,7 +79,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     if (defaultCPClasses == null || defaultCPClasses.length() == 0)
       return;
     StringTokenizer st = new StringTokenizer(defaultCPClasses, ",");
-    int priority = Coprocessor.Priority.SYSTEM.intValue();
+    int priority = Coprocessor.PRIORITY_SYSTEM;
     List<E> configured = new ArrayList<E>();
     while (st.hasMoreTokens()) {
       String className = st.nextToken();
@@ -90,7 +90,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       Thread.currentThread().setContextClassLoader(cl);
       try {
         implClass = cl.loadClass(className);
-        configured.add(loadInstance(implClass, Coprocessor.Priority.SYSTEM));
+        configured.add(loadInstance(implClass, Coprocessor.PRIORITY_SYSTEM, conf));
         LOG.info("System coprocessor " + className + " was loaded " +
             "successfully with priority (" + priority++ + ").");
       } catch (ClassNotFoundException e) {
@@ -111,11 +111,12 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * @param path path to implementation jar
    * @param className the main class name
    * @param priority chaining priority
+   * @param conf configuration for coprocessor
    * @throws java.io.IOException Exception
    */
   @SuppressWarnings("deprecation")
-  public E load(Path path, String className, Coprocessor.Priority priority)
-      throws IOException {
+  public E load(Path path, String className, int priority,
+      Configuration conf) throws IOException {
     Class<?> implClass = null;
 
     // Have we already loaded the class, perhaps from an earlier region open
@@ -169,21 +170,28 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       }
     }
 
-    return loadInstance(implClass, priority);
+    return loadInstance(implClass, priority, conf);
   }
 
   /**
    * @param implClass Implementation class
    * @param priority priority
+   * @param conf configuration
    * @throws java.io.IOException Exception
    */
-  public void load(Class<?> implClass, Coprocessor.Priority priority)
+  public void load(Class<?> implClass, int priority, Configuration conf)
       throws IOException {
-    E env = loadInstance(implClass, priority);
+    E env = loadInstance(implClass, priority, conf);
     coprocessors.add(env);
   }
 
-  public E loadInstance(Class<?> implClass, Coprocessor.Priority priority)
+  /**
+   * @param implClass Implementation class
+   * @param priority priority
+   * @param conf configuration
+   * @throws java.io.IOException Exception
+   */
+  public E loadInstance(Class<?> implClass, int priority, Configuration conf)
       throws IOException {
     // create the instance
     Coprocessor impl;
@@ -197,7 +205,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       throw new IOException(e);
     }
     // create the environment
-    E env = createEnvironment(implClass, impl, priority, ++loadSequence);
+    E env = createEnvironment(implClass, impl, priority, ++loadSequence, conf);
     if (env instanceof Environment) {
       ((Environment)env).startup();
     }
@@ -208,7 +216,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * Called when a new Coprocessor class is loaded
    */
   public abstract E createEnvironment(Class<?> implClass, Coprocessor instance,
-      Coprocessor.Priority priority, int sequence);
+      int priority, int sequence, Configuration conf);
 
   public void shutdown(CoprocessorEnvironment e) {
     if (e instanceof Environment) {
@@ -236,14 +244,32 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   }
 
   /**
+   * Find a coprocessor environment by class name
+   * @param className the class name
+   * @return the coprocessor, or null if not found
+   */
+  public CoprocessorEnvironment findCoprocessorEnvironment(String className) {
+    // initialize the coprocessors
+    for (E env: coprocessors) {
+      if (env.getInstance().getClass().getName().equals(className) ||
+          env.getInstance().getClass().getSimpleName().equals(className)) {
+        return env;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Environment priority comparator.
    * Coprocessors are chained in sorted order.
    */
-  static class EnvironmentPriorityComparator implements Comparator<CoprocessorEnvironment> {
-    public int compare(CoprocessorEnvironment env1, CoprocessorEnvironment env2) {
-      if (env1.getPriority().intValue() < env2.getPriority().intValue()) {
+  static class EnvironmentPriorityComparator
+      implements Comparator<CoprocessorEnvironment> {
+    public int compare(final CoprocessorEnvironment env1,
+        final CoprocessorEnvironment env2) {
+      if (env1.getPriority() < env2.getPriority()) {
         return -1;
-      } else if (env1.getPriority().intValue() > env2.getPriority().intValue()) {
+      } else if (env1.getPriority() > env2.getPriority()) {
         return 1;
       }
       if (env1.getLoadSequence() < env2.getLoadSequence()) {
@@ -437,24 +463,27 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     /** The coprocessor */
     public Coprocessor impl;
     /** Chaining priority */
-    protected Coprocessor.Priority priority = Coprocessor.Priority.USER;
+    protected int priority = Coprocessor.PRIORITY_USER;
     /** Current coprocessor state */
     Coprocessor.State state = Coprocessor.State.UNINSTALLED;
     /** Accounting for tables opened by the coprocessor */
     protected List<HTableInterface> openTables =
       Collections.synchronizedList(new ArrayList<HTableInterface>());
     private int seq;
+    private Configuration conf;
 
     /**
      * Constructor
      * @param impl the coprocessor instance
      * @param priority chaining priority
      */
-    public Environment(final Coprocessor impl, Coprocessor.Priority priority, int seq) {
+    public Environment(final Coprocessor impl, final int priority,
+        final int seq, final Configuration conf) {
       this.impl = impl;
       this.priority = priority;
       this.state = Coprocessor.State.INSTALLED;
       this.seq = seq;
+      this.conf = conf;
     }
 
     /** Initialize the environment */
@@ -506,7 +535,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     }
 
     @Override
-    public Coprocessor.Priority getPriority() {
+    public int getPriority() {
       return priority;
     }
 
@@ -525,6 +554,11 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     @Override
     public String getHBaseVersion() {
       return VersionInfo.getVersion();
+    }
+
+    @Override
+    public Configuration getConfiguration() {
+      return conf;
     }
 
     /**

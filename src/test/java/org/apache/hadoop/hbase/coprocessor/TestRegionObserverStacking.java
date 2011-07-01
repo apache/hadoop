@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.coprocessor.Coprocessor.Priority;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -109,12 +108,13 @@ public class TestRegionObserverStacking extends TestCase {
     byte[] A = Bytes.toBytes("A");
     byte[][] FAMILIES = new byte[][] { A } ;
 
+    Configuration conf = HBaseConfiguration.create();
     HRegion region = initHRegion(TABLE, getClass().getName(),
-      HBaseConfiguration.create(), FAMILIES);
+      conf, FAMILIES);
     RegionCoprocessorHost h = region.getCoprocessorHost();
-    h.load(ObserverA.class, Priority.HIGHEST);
-    h.load(ObserverB.class, Priority.USER);
-    h.load(ObserverC.class, Priority.LOWEST);
+    h.load(ObserverA.class, Coprocessor.PRIORITY_HIGHEST, conf);
+    h.load(ObserverB.class, Coprocessor.PRIORITY_USER, conf);
+    h.load(ObserverC.class, Coprocessor.PRIORITY_LOWEST, conf);
 
     Put put = new Put(ROW);
     put.add(A, A, A);
@@ -133,4 +133,3 @@ public class TestRegionObserverStacking extends TestCase {
     assertTrue(idB < idC);
   }
 }
-

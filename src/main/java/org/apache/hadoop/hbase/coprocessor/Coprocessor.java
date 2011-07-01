@@ -22,28 +22,16 @@ import java.io.IOException;
  * Coprocess interface.
  */
 public interface Coprocessor {
-  public static final int VERSION = 1;
+  static final int VERSION = 1;
 
-  /**
-   * Installation priority. Coprocessors will be executed in sequence
-   * by the order of coprocessor priority.
-   */
-  public enum Priority {
-    HIGHEST(0),
-    SYSTEM(Integer.MAX_VALUE/4),
-    USER(Integer.MAX_VALUE/2),
-    LOWEST(Integer.MAX_VALUE);
-
-    private int prio;
-
-    Priority(int prio) {
-      this.prio = prio;
-    }
-
-    public int intValue() {
-      return prio;
-    }
-  }
+  /** Highest installation priority */
+  static final int PRIORITY_HIGHEST = 0;
+  /** High (system) installation priority */
+  static final int PRIORITY_SYSTEM = Integer.MAX_VALUE / 4;
+  /** Default installation priority for user coprocessors */
+  static final int PRIORITY_USER = Integer.MAX_VALUE / 2;
+  /** Lowest installation priority */
+  static final int PRIORITY_LOWEST = Integer.MAX_VALUE;
 
   /**
    * Lifecycle state of a given coprocessor instance.

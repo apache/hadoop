@@ -42,9 +42,10 @@ public class MasterCoprocessorHost
       implements MasterCoprocessorEnvironment {
     private MasterServices masterServices;
 
-    public MasterEnvironment(Class<?> implClass, Coprocessor impl,
-        Coprocessor.Priority priority, int seq, MasterServices services) {
-      super(impl, priority, seq);
+    public MasterEnvironment(final Class<?> implClass, final Coprocessor impl,
+        final int priority, final int seq, final Configuration conf,
+        final MasterServices services) {
+      super(impl, priority, seq, conf);
       this.masterServices = services;
     }
 
@@ -57,14 +58,15 @@ public class MasterCoprocessorHost
 
   MasterCoprocessorHost(final MasterServices services, final Configuration conf) {
     this.masterServices = services;
-
     loadSystemCoprocessors(conf, MASTER_COPROCESSOR_CONF_KEY);
   }
 
   @Override
-  public MasterEnvironment createEnvironment(Class<?> implClass,
-      Coprocessor instance, Coprocessor.Priority priority, int seq) {
-    return new MasterEnvironment(implClass, instance, priority, seq, masterServices);
+  public MasterEnvironment createEnvironment(final Class<?> implClass,
+      final Coprocessor instance, final int priority, final int seq,
+      final Configuration conf) {
+    return new MasterEnvironment(implClass, instance, priority, seq, conf,
+        masterServices);
   }
 
   /* Implementation of hooks for invoking MasterObservers */

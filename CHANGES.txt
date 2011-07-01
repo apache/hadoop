@@ -13,7 +13,7 @@ Release 0.91.0 - Unreleased
    HBASE-451   Remove HTableDescriptor from HRegionInfo (Subbu M Iyer)
    HBASE-451   Remove HTableDescriptor from HRegionInfo
                addendum that fixes TestTableMapReduce
-   HBASE-3534 Action should not store or serialize regionName (Ted Yu)
+   HBASE-3534  Action should not store or serialize regionName (Ted Yu)
 
   BUG FIXES
    HBASE-3280  YouAreDeadException being swallowed in HRS getMaster
@@ -295,6 +295,7 @@ Release 0.91.0 - Unreleased
    HBASE-3516  Coprocessors: add test cases for loading coprocessor jars
                (Mingjie Lai via garyh)
    HBASE-4036  Implementing a MultipleColumnPrefixFilter (Anirudh Todi)
+   HBASE-4048  [Coprocessors] Support configuration of coprocessor at load time
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

@@ -18,6 +18,7 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTableInterface;
 
 /**
@@ -35,10 +36,13 @@ public interface CoprocessorEnvironment {
   public Coprocessor getInstance();
 
   /** @return the priority assigned to the loaded coprocessor */
-  public Coprocessor.Priority getPriority();
+  public int getPriority();
 
   /** @return the load sequence number */
   public int getLoadSequence();
+
+  /** @return the configuration */
+  public Configuration getConfiguration();
 
   /**
    * @return an interface for accessing the given table

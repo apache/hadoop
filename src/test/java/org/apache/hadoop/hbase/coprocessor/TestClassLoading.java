@@ -52,19 +52,15 @@ public class TestClassLoading {
   private static Configuration conf;
   private static MiniDFSCluster cluster;
 
-  public static int BUFFER_SIZE = 4096;
-
-  @Before
-  public void setUp() throws Exception {
-  }
-  @After
-  public void tearDown() throws Exception {
-  }
+  static final int BUFFER_SIZE = 4096;
+  static final String tableName = "TestClassLoading";
+  static final String cpName1 = "TestCP1";
+  static final String cpName2 = "TestCP2";
+  static final String cpName3 = "TestCP3";
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(1);
-
     conf = TEST_UTIL.getConfiguration();
     cluster = TEST_UTIL.getDFSCluster();
   }
@@ -113,25 +109,15 @@ public class TestClassLoading {
     }
   }
 
-  @Test
-  // HBASE-3516: Test CP Class loading from HDFS
-  public void testClassLoadingFromHDFS() throws Exception {
-    FileSystem fs = cluster.getFileSystem();
-    String className = "TestCP";
-
+  private File buildCoprocessorJar(String className) throws Exception {
     // compose a java source file.
     String javaCode = "import org.apache.hadoop.hbase.coprocessor.*;" +
-        "public class " + className + " extends BaseRegionObserver {}";
-
-    Path baseDire = TEST_UTIL.getTestDir();
-    Path srcDire = new Path(TEST_UTIL.getTestDir(), "src");
-
-    File srcDirePath = new File(srcDire.toString());
-    srcDirePath.mkdirs();
-
-    File sourceCodeFile = new File(srcDire.toString(),
-        className + ".java");
-
+      "public class " + className + " extends BaseRegionObserver {}";
+    Path baseDir = HBaseTestingUtility.getTestDir();
+    Path srcDir = new Path(HBaseTestingUtility.getTestDir(), "src");
+    File srcDirPath = new File(srcDir.toString());
+    srcDirPath.mkdirs();
+    File sourceCodeFile = new File(srcDir.toString(), className + ".java");
     BufferedWriter bw = new BufferedWriter(new FileWriter(sourceCodeFile));
     bw.write(javaCode);
     bw.close();
@@ -140,129 +126,107 @@ public class TestClassLoading {
     JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
     ArrayList<String> srcFileNames = new ArrayList<String>();
     srcFileNames.add(sourceCodeFile.toString());
-
     StandardJavaFileManager fm = compiler.getStandardFileManager(null, null,
-        null);
+      null);
     Iterable<? extends JavaFileObject> cu =
-        fm.getJavaFileObjects(sourceCodeFile);
-
+      fm.getJavaFileObjects(sourceCodeFile);
     List<String> options = new ArrayList<String>();
     options.add("-classpath");
-
     // only add hbase classes to classpath. This is a little bit tricky: assume
     // the classpath is {hbaseSrc}/target/classes.
     String currentDir = new File(".").getAbsolutePath();
     options.add(currentDir + Path.SEPARATOR + "target"+ Path.SEPARATOR +
-        "classes");
-
-    JavaCompiler.CompilationTask task = compiler.getTask(
-        null, fm, null, options, null, cu);
-
+      "classes");
+    JavaCompiler.CompilationTask task = compiler.getTask(null, fm, null,
+      options, null, cu);
     assertTrue("Compile file " + sourceCodeFile + " failed.", task.call());
 
     // build a jar file by the classes files
     String jarFileName = className + ".jar";
-    File jarFile = new File(baseDire.toString(), jarFileName);
+    File jarFile = new File(baseDir.toString(), jarFileName);
     if (!createJarArchive(jarFile,
-        new File[]{new File(srcDire.toString(), className + ".class")})){
+        new File[]{new File(srcDir.toString(), className + ".class")})){
       assertTrue("Build jar file failed.", false);
     }
 
-    // copy the jar into dfs
-    fs.copyFromLocalFile(new Path(jarFile.getPath()),
-        new Path(fs.getUri().toString() + Path.SEPARATOR));
-    String jarFileOnHDFS = fs.getUri().toString() + Path.SEPARATOR +
-        jarFileName;
+    return jarFile;
+  }
 
+  @Test
+  // HBASE-3516: Test CP Class loading from HDFS
+  public void testClassLoadingFromHDFS() throws Exception {
+    FileSystem fs = cluster.getFileSystem();
+
+    File jarFile1 = buildCoprocessorJar(cpName1);
+    File jarFile2 = buildCoprocessorJar(cpName2);
+
+    // copy the jars into dfs
+    fs.copyFromLocalFile(new Path(jarFile1.getPath()),
+      new Path(fs.getUri().toString() + Path.SEPARATOR));
+    String jarFileOnHDFS1 = fs.getUri().toString() + Path.SEPARATOR +
+      jarFile1.getName();
     assertTrue("Copy jar file to HDFS failed.",
-        fs.exists(new Path(jarFileOnHDFS)));
+      fs.exists(new Path(jarFileOnHDFS1)));
+    LOG.info("Copied jar file to HDFS: " + jarFileOnHDFS1);
 
-    LOG.info("Copied jar file to HDFS: " + jarFileOnHDFS);
+    fs.copyFromLocalFile(new Path(jarFile2.getPath()),
+      new Path(fs.getUri().toString() + Path.SEPARATOR));
+    String jarFileOnHDFS2 = fs.getUri().toString() + Path.SEPARATOR +
+      jarFile2.getName();
+    assertTrue("Copy jar file to HDFS failed.",
+      fs.exists(new Path(jarFileOnHDFS2)));
+    LOG.info("Copied jar file to HDFS: " + jarFileOnHDFS2);
 
-    // create a table that references the jar
-    HTableDescriptor htd = new HTableDescriptor(className);
-
+    // create a table that references the coprocessors
+    HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor("test"));
-    htd.setValue("COPROCESSOR$1",
-      jarFileOnHDFS.toString() +
-      ":" + className + ":" + Coprocessor.Priority.USER);
+      // without configuration values
+    htd.setValue("COPROCESSOR$1", jarFileOnHDFS1.toString() + "|" + cpName1 +
+      "|" + Coprocessor.PRIORITY_USER);
+      // with configuration values
+    htd.setValue("COPROCESSOR$2", jarFileOnHDFS2.toString() + "|" + cpName2 +
+      "|" + Coprocessor.PRIORITY_USER + "|k1=v1,k2=v2,k3=v3");
     HBaseAdmin admin = new HBaseAdmin(this.conf);
     admin.createTable(htd);
 
-    // verify that the coprocessor was loaded
-    boolean found = false;
+    // verify that the coprocessors were loaded
+    boolean found1 = false, found2 = false, found2_k1 = false, found2_k2 = false,
+      found2_k3 = false;
     MiniHBaseCluster hbase = TEST_UTIL.getHBaseCluster();
     for (HRegion region: hbase.getRegionServer(0).getOnlineRegionsLocalContext()) {
-      if (region.getRegionNameAsString().startsWith(className)) {
-        Coprocessor c = region.getCoprocessorHost().findCoprocessor(className);
-        found = (c != null);
+      if (region.getRegionNameAsString().startsWith(tableName)) {
+        CoprocessorEnvironment env;
+        env = region.getCoprocessorHost().findCoprocessorEnvironment(cpName1);
+        if (env != null) {
+          found1 = true;
+        }
+        env = region.getCoprocessorHost().findCoprocessorEnvironment(cpName2);
+        if (env != null) {
+          found2 = true;
+          Configuration conf = env.getConfiguration();
+          found2_k1 = conf.get("k1") != null;
+          found2_k2 = conf.get("k2") != null;
+          found2_k3 = conf.get("k3") != null;
+        }
       }
     }
-    assertTrue("Class " + className + " cannot be loaded.", found);
+    assertTrue("Class " + cpName1 + " was missing on a region", found1);
+    assertTrue("Class " + cpName2 + " was missing on a region", found2);
+    assertTrue("Configuration key 'k1' was missing on a region", found2_k1);
+    assertTrue("Configuration key 'k2' was missing on a region", found2_k2);
+    assertTrue("Configuration key 'k3' was missing on a region", found2_k3);
   }
 
   @Test
   // HBASE-3516: Test CP Class loading from local file system
   public void testClassLoadingFromLocalFS() throws Exception {
-    FileSystem fs = cluster.getFileSystem();
-    String className = "TestCP2";
-
-    // compose a java source file.
-    String javaCode = "import org.apache.hadoop.hbase.coprocessor.*;" +
-        "public class " + className + " extends BaseRegionObserver {}";
-
-    Path baseDire = TEST_UTIL.getTestDir();
-    Path srcDire = new Path(TEST_UTIL.getTestDir(), "src");
-
-    File srcDirePath = new File(srcDire.toString());
-    srcDirePath.mkdirs();
-
-    File sourceCodeFile = new File(srcDire.toString(),
-        className + ".java");
-
-    BufferedWriter bw = new BufferedWriter(new FileWriter(sourceCodeFile));
-    bw.write(javaCode);
-    bw.close();
-
-    // compile it by JavaCompiler
-    JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-    ArrayList<String> srcFileNames = new ArrayList<String>();
-    srcFileNames.add(sourceCodeFile.toString());
-
-    StandardJavaFileManager fm = compiler.getStandardFileManager(null, null,
-        null);
-    Iterable<? extends JavaFileObject> cu =
-        fm.getJavaFileObjects(sourceCodeFile);
-
-    List<String> options = new ArrayList<String>();
-    options.add("-classpath");
-
-    // only add hbase classes to classpath. This is a little bit tricky: assume
-    // the classpath is {hbaseSrc}/target/classes.
-    String currentDir = new File(".").getAbsolutePath();
-    options.add(currentDir + Path.SEPARATOR + "target"+ Path.SEPARATOR +
-        "classes");
-
-    JavaCompiler.CompilationTask task = compiler.getTask(
-        null, fm, null, options, null, cu);
-
-    assertTrue("Compile file " + sourceCodeFile + " failed.", task.call());
-
-    // build a jar file by the classes files
-    String jarFileName = className + ".jar";
-    File jarFile = new File(baseDire.toString(), jarFileName);
-    if (!createJarArchive(jarFile,
-        new File[]{new File(srcDire.toString(), className + ".class")})){
-      assertTrue("Build jar file failed.", false);
-    }
+    File jarFile = buildCoprocessorJar(cpName3);
 
     // create a table that references the jar
-    HTableDescriptor htd = new HTableDescriptor(className);
-
+    HTableDescriptor htd = new HTableDescriptor(cpName3);
     htd.addFamily(new HColumnDescriptor("test"));
-    htd.setValue("COPROCESSOR$1",
-      jarFile.toString() +
-      ":" + className + ":" + Coprocessor.Priority.USER);
+    htd.setValue("COPROCESSOR$1", jarFile.toString() + "|" + cpName3 + "|" +
+      Coprocessor.PRIORITY_USER);
     HBaseAdmin admin = new HBaseAdmin(this.conf);
     admin.createTable(htd);
 
@@ -270,11 +234,10 @@ public class TestClassLoading {
     boolean found = false;
     MiniHBaseCluster hbase = TEST_UTIL.getHBaseCluster();
     for (HRegion region: hbase.getRegionServer(0).getOnlineRegionsLocalContext()) {
-      if (region.getRegionNameAsString().startsWith(className)) {
-        Coprocessor c = region.getCoprocessorHost().findCoprocessor(className);
-        found = (c != null);
+      if (region.getRegionNameAsString().startsWith(cpName3)) {
+        found = (region.getCoprocessorHost().findCoprocessor(cpName3) != null);
       }
     }
-    assertTrue("Class " + className + " cannot be loaded.", found);
+    assertTrue("Class " + cpName3 + " was missing on a region", found);
   }
 }
