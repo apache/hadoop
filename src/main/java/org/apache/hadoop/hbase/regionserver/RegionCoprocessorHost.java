@@ -172,7 +172,6 @@ public class RegionCoprocessorHost
    * Invoked before a region open
    */
   public void preOpen() {
-    loadTableCoprocessors();
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
