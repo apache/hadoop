@@ -23,6 +23,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -119,6 +121,21 @@ public class HLogKey implements WritableComparable<HLogKey> {
   public String toString() {
     return Bytes.toString(tablename) + "/" + Bytes.toString(encodedRegionName) + "/" +
       logSeqNum;
+  }
+
+  /**
+   * Produces a string map for this key. Useful for programmatic use and
+   * manipulation of the data stored in an HLogKey, for example, printing 
+   * as JSON.
+   * 
+   * @return a Map containing data from this key
+   */
+  public Map<String, Object> toStringMap() {
+    Map<String, Object> stringMap = new HashMap<String, Object>();
+    stringMap.put("table", Bytes.toStringBinary(tablename));
+    stringMap.put("region", Bytes.toStringBinary(encodedRegionName));
+    stringMap.put("sequence", logSeqNum);
+    return stringMap;
   }
 
   @Override
