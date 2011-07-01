@@ -236,12 +236,11 @@ public class ServerShutdownHandler extends EventHandler {
    */
   static void fixupDaughters(final Result result,
       final AssignmentManager assignmentManager,
-      final CatalogTracker catalogTracker)
-  throws IOException {
+      final CatalogTracker catalogTracker) throws IOException {
     fixupDaughter(result, HConstants.SPLITA_QUALIFIER, assignmentManager,
-      catalogTracker);
+        catalogTracker);
     fixupDaughter(result, HConstants.SPLITB_QUALIFIER, assignmentManager,
-      catalogTracker);
+        catalogTracker);
   }
 
   /**
@@ -282,8 +281,8 @@ public class ServerShutdownHandler extends EventHandler {
   }
 
   /**
-   * Look for presence of the daughter OR of a split of the daughter in .META.
-   * Daughter could have been split over on regionserver before a run of the
+   * Look for presence of the daughter OR of a split of the daughter. Daughter
+   * could have been split over on regionserver before a run of the
    * catalogJanitor had chance to clear reference from parent.
    * @param daughter Daughter region to search for.
    * @throws IOException 

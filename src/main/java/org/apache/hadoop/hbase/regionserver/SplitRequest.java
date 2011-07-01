@@ -62,20 +62,15 @@ class SplitRequest implements Runnable {
         st.execute(this.server, this.server);
       } catch (Exception e) {
         try {
-          LOG.info("Running rollback/cleanup of failed split of " +
-            parent.getRegionNameAsString() + "; " + e.getMessage());
-          if (st.rollback(this.server, this.server)) {
-            LOG.info("Successful rollback of failed split of " +
-              parent.getRegionNameAsString());
-          } else {
-            this.server.abort("Abort; we got an error after point-of-no-return");
-          }
+          LOG.info("Running rollback of failed split of " + parent + "; "
+              + e.getMessage());
+          st.rollback(this.server, this.server);
+          LOG.info("Successful rollback of failed split of " + parent);
         } catch (RuntimeException ee) {
-          String msg = "Failed rollback of failed split of " +
-            parent.getRegionNameAsString() + " -- aborting server";
-          // If failed rollback, kill this server to avoid having a hole in table.
-          LOG.info(msg, ee);
-          this.server.abort(msg);
+          // If failed rollback, kill server to avoid having a hole in table.
+          LOG.info("Failed rollback of failed split of "
+              + parent.getRegionNameAsString() + " -- aborting server", ee);
+          this.server.abort("Failed split");
         }
         return;
       }
