@@ -247,8 +247,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     }
   }
 
-  protected void startStatusUpdater() throws InterruptedException,
-    YarnRemoteException {
+  protected void startStatusUpdater() {
 
     new Thread() {
       @Override
@@ -280,11 +279,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               dispatcher.getEventHandler().handle(
                   new CMgrCompletedAppsEvent(appsToCleanup));
             }
-          } catch (YarnRemoteException e) {
+          } catch (Throwable e) {
             LOG.error("Caught exception in status-updater", e);
-            break;
-          } catch (InterruptedException e) {
-            LOG.error("Status-updater interrupted", e);
             break;
           }
         }

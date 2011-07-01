@@ -234,7 +234,7 @@ public class ContainerImpl implements Container {
 
     // From DONE
     .addTransition(ContainerState.DONE, ContainerState.DONE,
-        ContainerEventType.KILL_CONTAINER, CONTAINER_DONE_TRANSITION)
+        ContainerEventType.KILL_CONTAINER)
     .addTransition(ContainerState.DONE, ContainerState.DONE,
        ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
        UPDATE_DIAGNOSTICS_TRANSITION)
@@ -599,6 +599,8 @@ public class ContainerImpl implements Container {
           new ContainerLocalizationEvent(
             LocalizationEventType.CLEANUP_CONTAINER_RESOURCES, container));
       container.metrics.endInitingContainer();
+      ContainerKillEvent killEvent = (ContainerKillEvent) event;
+      container.diagnostics.append(killEvent.getDiagnostic()).append("\n");
     }
   }
 
@@ -629,6 +631,8 @@ public class ContainerImpl implements Container {
       container.dispatcher.getEventHandler().handle(
           new ContainersLauncherEvent(container,
               ContainersLauncherEventType.CLEANUP_CONTAINER));
+      ContainerKillEvent killEvent = (ContainerKillEvent) event;
+      container.diagnostics.append(killEvent.getDiagnostic()).append("\n");
     }
   }
 

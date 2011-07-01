@@ -78,7 +78,10 @@ public class ClientServiceDelegate {
   private RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
   ClientServiceDelegate(Configuration conf, ResourceMgrDelegate rm) {
-    this.conf = conf;
+    this.conf = new Configuration(conf); // Cloning for modifying.
+    // For faster redirects from AM to HS.
+    this.conf.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 3);
     this.rm = rm;
   }
 

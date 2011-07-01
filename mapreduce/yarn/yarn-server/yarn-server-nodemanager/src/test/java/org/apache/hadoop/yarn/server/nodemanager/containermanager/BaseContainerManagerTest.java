@@ -102,8 +102,7 @@ public abstract class BaseContainerManagerTest {
     };
 
     @Override
-    protected void startStatusUpdater() throws InterruptedException,
-        YarnRemoteException {
+    protected void startStatusUpdater() {
       return; // Don't start any updating thread.
     }
   };

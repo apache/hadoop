@@ -507,7 +507,8 @@ public class LeafQueue implements Queue {
         continue;
       }
       
-      LOG.info("DEBUG --- pre-assignContainers");
+      LOG.info("DEBUG --- pre-assignContainers for application "
+          + application.getApplicationId());
       application.showRequests();
 
       synchronized (application) {
@@ -569,7 +570,8 @@ public class LeafQueue implements Queue {
         }
       }
 
-      LOG.info("DEBUG --- post-assignContainers");
+      LOG.info("DEBUG --- post-assignContainers for application "
+          + application.getApplicationId());
       application.showRequests();
     }
   

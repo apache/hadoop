@@ -215,9 +215,9 @@ public class ContainerLauncherImpl extends AbstractService implements
           context.getEventHandler().handle(
               new TaskAttemptEvent(taskAttemptID,
                   TaskAttemptEventType.TA_CONTAINER_LAUNCHED));
-        } catch (Exception e) {
+        } catch (Throwable t) {
           String message = "Container launch failed for " + containerID
-              + " : " + StringUtils.stringifyException(e);
+              + " : " + StringUtils.stringifyException(t);
           LOG.error(message);
           context.getEventHandler().handle(
               new TaskAttemptDiagnosticsUpdateEvent(taskAttemptID, message));
@@ -249,10 +249,10 @@ public class ContainerLauncherImpl extends AbstractService implements
             stopRequest.setContainerId(event.getContainerID());
             proxy.stopContainer(stopRequest);
 
-          } catch (Exception e) {
+          } catch (Throwable t) {
             //ignore the cleanup failure
             LOG.warn("cleanup failed for container " + event.getContainerID() ,
-                e);
+                t);
           }
 
           // after killing, send killed event to taskattempt

@@ -16,11 +16,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NMConfig;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
@@ -450,12 +446,9 @@ public class ContainersMonitorImpl extends AbstractService implements
                 LOG.error("Killed container process with PID " + pId
                     + " but it is not a process group leader.");
               }
-              eventDispatcher.getEventHandler().handle(
-                  new ContainerDiagnosticsUpdateEvent(containerId, msg));
               // kill the container
               eventDispatcher.getEventHandler().handle(
-                  new ContainerEvent(containerId,
-                      ContainerEventType.KILL_CONTAINER));
+                  new ContainerKillEvent(containerId, msg));
               it.remove();
               LOG.info("Removed ProcessTree with root " + pId);
             } else {

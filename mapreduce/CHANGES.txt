@@ -5,6 +5,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    (1) Faster retries from AM to HistoryServer (2) Correct diagnostics for
+    containers. (vinodkv)
+
     MAPREDUCE-2625. Add version info to nodemanager info page.
     (Jonathan Eagles via llu)
 

@@ -72,10 +72,10 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationInitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncher;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncherEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
@@ -301,10 +301,8 @@ public class ContainerManagerImpl extends CompositeService implements
       return response; // Return immediately.
     }
     dispatcher.getEventHandler().handle(
-        new ContainerDiagnosticsUpdateEvent(containerID,
+        new ContainerKillEvent(containerID,
             "Container killed by the ApplicationMaster."));
-    dispatcher.getEventHandler().handle(
-        new ContainerEvent(containerID, ContainerEventType.KILL_CONTAINER));
 
     // TODO: Move this code to appropriate place once kill_container is
     // implemented.
@@ -380,11 +378,8 @@ public class ContainerManagerImpl extends CompositeService implements
       for (org.apache.hadoop.yarn.api.records.Container container :
             containersFinishedEvent.getContainersToCleanup()) {
         this.dispatcher.getEventHandler().handle(
-            new ContainerDiagnosticsUpdateEvent(container.getId(),
+            new ContainerKillEvent(container.getId(),
                 "Container Killed by ResourceManager"));
-        this.dispatcher.getEventHandler().handle(
-            new ContainerEvent(container.getId(),
-                ContainerEventType.KILL_CONTAINER));
       }
       break;
     default:

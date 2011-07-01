@@ -30,9 +30,8 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerInitEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ApplicationLocalizationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.ContainerLogsRetentionPolicy;
@@ -258,11 +257,8 @@ public class ApplicationImpl implements Application {
       // application.
       for (ContainerId containerID : app.containers.keySet()) {
         app.dispatcher.getEventHandler().handle(
-            new ContainerDiagnosticsUpdateEvent(containerID,
+            new ContainerKillEvent(containerID,
                 "Container killed on application-finish event from RM."));
-        app.dispatcher.getEventHandler().handle(
-            new ContainerEvent(containerID,
-                ContainerEventType.KILL_CONTAINER));
       }
       return ApplicationState.FINISHING_CONTAINERS_WAIT;
     }

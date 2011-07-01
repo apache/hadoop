@@ -143,9 +143,9 @@ public class RMContainerAllocator extends RMContainerRequestor
 
   @Override
   protected synchronized void heartbeat() throws Exception {
-    LOG.info("Before Allocation: " + getStat());
+    LOG.info("Before Scheduling: " + getStat());
     List<Container> allocatedContainers = getResources();
-    LOG.info("After Allocation: " + getStat());
+    LOG.info("After Scheduling: " + getStat());
     if (allocatedContainers.size() > 0) {
       LOG.info("Before Assign: " + getStat());
       scheduledRequests.assign(allocatedContainers);
