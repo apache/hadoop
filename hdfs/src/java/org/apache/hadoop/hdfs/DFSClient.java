@@ -156,6 +156,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     final long prefetchSize;
     final short defaultReplication;
     final String taskId;
+    final FsPermission uMask;
 
     Conf(Configuration conf) {
       maxBlockAcquireFailures = conf.getInt(
@@ -201,6 +202,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
               .DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY,
               DFSConfigKeys
               .DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_DEFAULT);
+      uMask = FsPermission.getUMask(conf);
     }
   }
  
@@ -789,7 +791,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     if (permission == null) {
       permission = FsPermission.getDefault();
     }
-    FsPermission masked = permission.applyUMask(FsPermission.getUMask(conf));
+    FsPermission masked = permission.applyUMask(dfsClientConf.uMask);
     if(LOG.isDebugEnabled()) {
       LOG.debug(src + ": masked=" + masked);
     }
@@ -856,7 +858,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       throws IOException {
     try {
       FsPermission dirPerm = 
-          FsPermission.getDefault().applyUMask(FsPermission.getUMask(conf)); 
+          FsPermission.getDefault().applyUMask(dfsClientConf.uMask); 
       namenode.createSymlink(target, link, dirPerm, createParent);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
@@ -1424,7 +1426,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     if (permission == null) {
       permission = FsPermission.getDefault();
     }
-    FsPermission masked = permission.applyUMask(FsPermission.getUMask(conf));
+    FsPermission masked = permission.applyUMask(dfsClientConf.uMask);
     if(LOG.isDebugEnabled()) {
       LOG.debug(src + ": masked=" + masked);
     }
@@ -1451,7 +1453,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     checkOpen();
     if (absPermission == null) {
       absPermission = 
-        FsPermission.getDefault().applyUMask(FsPermission.getUMask(conf));
+        FsPermission.getDefault().applyUMask(dfsClientConf.uMask);
     } 
 
     if(LOG.isDebugEnabled()) {

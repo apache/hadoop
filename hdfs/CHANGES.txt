@@ -537,6 +537,9 @@ Trunk (unreleased changes)
     HDFS-2107. Move block management code from o.a.h.h.s.namenode to a new
     package o.a.h.h.s.blockmanagement.  (szetszwo)
 
+    HDFS-2109. Store uMask as member variable to DFSClient.Conf.  (Bharath
+    Mundlapudi via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
