@@ -60,7 +60,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Executes region split as a "transaction".  Call {@link #prepare()} to setup
- * the transaction, {@link #execute(OnlineRegions)} to run the transaction and
+ * the transaction, {@link #execute(Server, RegionServerServices)} to run the transaction and
  * {@link #rollback(OnlineRegions)} to cleanup if execute fails.
  *
  * <p>Here is an example of how you would use this class:
@@ -68,10 +68,10 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  *  SplitTransaction st = new SplitTransaction(this.conf, parent, midKey)
  *  if (!st.prepare()) return;
  *  try {
- *    st.execute(myOnlineRegions);
+ *    st.execute(server, services);
  *  } catch (IOException ioe) {
  *    try {
- *      st.rollback(myOnlineRegions);
+ *      st.rollback(server, services);
  *      return;
  *    } catch (RuntimeException e) {
  *      myAbortable.abort("Failed split, abort");
@@ -127,7 +127,12 @@ public class SplitTransaction {
     /**
      * Started in on the creation of the second daughter region.
      */
-    STARTED_REGION_B_CREATION
+    STARTED_REGION_B_CREATION,
+    /**
+     * Point of no return.
+     * If we got here, then transaction is not recoverable.
+     */
+    PONR
   }
 
   /*
@@ -284,9 +289,13 @@ public class SplitTransaction {
         this.parent.getRegionInfo(), a.getRegionInfo(), b.getRegionInfo());
     }
 
-    // This is the point of no return.  We are committed to the split now.  We
-    // have still the daughter regions to open but meta has been changed.
-    // If we fail from here on out, we cannot rollback so, we'll just abort.
+    // This is the point of no return.  Adding edits to .META. can fail in
+    // various interesting ways the most interesting of which is a timeout
+    // BUT the edits all went through (See HBASE-3872).
+    this.journal.add(JournalEntry.PONR);
+
+    // TODO: Could we be smarter about the sequence in which we do these steps?
+
     if (!testing) {
       // Open daughters in parallel.
       DaughterOpener aOpener = new DaughterOpener(server, services, a);
@@ -297,7 +306,8 @@ public class SplitTransaction {
         aOpener.join();
         bOpener.join();
       } catch (InterruptedException e) {
-        server.abort("Exception running daughter opens", e);
+        Thread.currentThread().interrupt();
+        throw new IOException("Interrupted " + e.getMessage());
       }
     }
 
@@ -598,13 +608,15 @@ public class SplitTransaction {
   }
 
   /**
-   * @param or Object that can online/offline parent region.  Can be passed null
-   * by unit tests.
-   * @return The region we were splitting
+   * @param server Hosting server instance.
+   * @param services
    * @throws IOException If thrown, rollback failed.  Take drastic action.
+   * @return True if we successfully rolled back, false if we got to the point
+   * of no return and so now need to abort the server to minimize damage.
    */
-  public void rollback(final Server server, final OnlineRegions or)
+  public boolean rollback(final Server server, final RegionServerServices services)
   throws IOException {
+    boolean result = true;
     FileSystem fs = this.parent.getFilesystem();
     ListIterator<JournalEntry> iterator =
       this.journal.listIterator(this.journal.size());
@@ -642,13 +654,19 @@ public class SplitTransaction {
         break;
 
       case OFFLINED_PARENT:
-        if (or != null) or.addToOnlineRegions(this.parent);
+        services.addToOnlineRegions(this.parent);
+        break;
+
+      case PONR:
+        // We got to the point-of-no-return so we need to abort after cleanup
+        result = false;
         break;
 
       default:
         throw new RuntimeException("Unhandled journal entry: " + je);
       }
     }
+    return result;
   }
 
   HRegionInfo getFirstDaughter() {

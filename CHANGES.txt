@@ -296,6 +296,7 @@ Release 0.91.0 - Unreleased
                (Mingjie Lai via garyh)
    HBASE-4036  Implementing a MultipleColumnPrefixFilter (Anirudh Todi)
    HBASE-4048  [Coprocessors] Support configuration of coprocessor at load time
+   HBASE-3968  HLog Pretty Printer (Riley Patterson)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
