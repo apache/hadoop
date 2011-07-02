@@ -615,7 +615,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   public String toString() {
     return "REGION => {" + HConstants.NAME + " => '" +
       this.regionNameStr
-      + " TableName => " +  this.tableName
+      + " TableName => " +  Bytes.toStringBinary(this.tableName)
       + "', STARTKEY => '" +
       Bytes.toStringBinary(this.startKey) + "', ENDKEY => '" +
       Bytes.toStringBinary(this.endKey) +
