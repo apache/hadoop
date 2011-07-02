@@ -385,6 +385,8 @@ Release 0.90.4 - Unreleased
    HBASE-3984  CT.verifyRegionLocation isn't doing a very good check,
                can delay cluster recovery
    HBASE-4045  [replication] NPE in ReplicationSource when ZK is gone
+   HBASE-4034  HRegionServer should be stopped even if no META regions
+               are hosted by the HRegionServer (Akash Ashok)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the

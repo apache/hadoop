@@ -615,7 +615,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
       // We registered with the Master.  Go into run mode.
       long lastMsg = 0;
-      boolean onlyMetaRegionsRemaining = false;
       long oldRequestCount = -1;
       // The main run loop.
       while (!this.stopped && isHealthy()) {
@@ -627,11 +626,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             LOG.info("Closing user regions");
             closeUserRegions(this.abortRequested);
           } else if (this.stopping) {
-            LOG.info("Only meta regions remain open");
-            if (!onlyMetaRegionsRemaining) {
-              onlyMetaRegionsRemaining = isOnlyMetaRegionsRemaining();
-            }
-            if (onlyMetaRegionsRemaining) {
+            LOG.info("Stopping meta regions, if the HRegionServer hosts any");
+            
+            boolean allUserRegionsOffline = areAllUserRegionsOffline();
+            
+            if (allUserRegionsOffline) {
               // Set stopped if no requests since last time we went around the loop.
               // The remaining meta regions will be closed on our way out.
               if (oldRequestCount == this.requestCount.get()) {
@@ -721,17 +720,16 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     LOG.info(Thread.currentThread().getName() + " exiting");
   }
 
-  private boolean isOnlyMetaRegionsRemaining() {
+  private boolean areAllUserRegionsOffline() {
     if (getNumberOfOnlineRegions() > 2) return false;
-    boolean onlyMetaRegionsRemaining = false;
+    boolean allUserRegionsOffline = true;
     for (Map.Entry<String, HRegion> e: this.onlineRegions.entrySet()) {
       if (!e.getValue().getRegionInfo().isMetaRegion()) {
-        onlyMetaRegionsRemaining = false;
+        allUserRegionsOffline = false;
         break;
       }
-      onlyMetaRegionsRemaining = true;
     }
-    return onlyMetaRegionsRemaining;
+    return allUserRegionsOffline;
   }
 
   void tryRegionServerReport()
