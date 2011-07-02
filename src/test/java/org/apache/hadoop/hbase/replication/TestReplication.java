@@ -202,7 +202,7 @@ public class TestReplication {
    * Add a row, check it's replicated, delete it, check's gone
    * @throws Exception
    */
-  @Test
+  @Test(timeout=300000)
   public void testSimplePutDelete() throws Exception {
     LOG.info("testSimplePutDelete");
     Put put = new Put(row);
@@ -248,7 +248,7 @@ public class TestReplication {
    * Try a small batch upload using the write buffer, check it's replicated
    * @throws Exception
    */
-  @Test
+  @Test(timeout=300000)
   public void testSmallBatch() throws Exception {
     LOG.info("testSmallBatch");
     Put put;
@@ -292,7 +292,7 @@ public class TestReplication {
    * replicated, enable it, try replicating and it should work
    * @throws Exception
    */
-  @Test
+  @Test(timeout=300000)
   public void testStartStop() throws Exception {
 
     // Test stopping replication
@@ -361,7 +361,7 @@ public class TestReplication {
    * cluster
    * @throws Exception
    */
-  @Test
+  @Test(timeout=300000)
   public void testAddAndRemoveClusters() throws Exception {
     LOG.info("testAddAndRemoveClusters");
     admin.removePeer("2");
@@ -414,7 +414,7 @@ public class TestReplication {
    * hlog rolling and other non-trivial code paths
    * @throws Exception
    */
-  @Test
+  @Test(timeout=300000)
   public void loadTesting() throws Exception {
     htable1.setWriteBufferSize(1024);
     htable1.setAutoFlush(false);
@@ -469,7 +469,7 @@ public class TestReplication {
    * comparison where all the cells are different.
    * @throws Exception
    */
-  @Test
+  @Test(timeout=300000)
   public void testVerifyRepJob() throws Exception {
     // Populate the tables, at the same time it guarantees that the tables are
     // identical since it does the check
@@ -521,7 +521,7 @@ public class TestReplication {
    *
    * @throws Exception
    */
-  @Test
+  @Test(timeout=300000)
   public void queueFailover() throws Exception {
     utility1.createMultiRegions(htable1, famName);
 
