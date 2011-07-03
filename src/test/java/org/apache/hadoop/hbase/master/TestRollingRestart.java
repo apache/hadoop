@@ -50,7 +50,7 @@ import org.junit.Test;
 public class TestRollingRestart {
   private static final Log LOG = LogFactory.getLog(TestRollingRestart.class);
 
-  @Test
+  @Test (timeout=300000)
   public void testBasicRollingRestart() throws Exception {
 
     // Start a cluster with 2 masters and 4 regionservers
