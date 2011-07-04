@@ -136,6 +136,12 @@ public class IOUtils {
         out.write(buf, 0, bytesRead);
         bytesRemaining -= bytesRead;
       }
+      if (close) {
+        out.close();
+        out = null;
+        in.close();
+        in = null;
+      }
     } finally {
       if (close) {
         closeStream(out);

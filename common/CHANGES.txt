@@ -340,6 +340,9 @@ Trunk (unreleased changes)
     HADOOP-7428. IPC connection is orphaned with null 'out' member.
     (todd via eli)
 
+    HADOOP-7437. IOUtils.copybytes will suppress the stream closure exceptions.
+    (Uma Maheswara Rao G via szetszwo)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
