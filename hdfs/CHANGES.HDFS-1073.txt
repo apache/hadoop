@@ -66,3 +66,4 @@ HDFS-2102. Zero-pad edits filename to make them lexically sortable. (Ivan
            Kelly via todd)
 HDFS-2010. Fix NameNode to exit if all edit streams become inaccessible. (atm
            via todd)
+HDFS-2123. Checkpoint interval should be based on txn count, not size. (todd)

@@ -4795,8 +4795,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     }
   }
 
-  long getEditLogSize() throws IOException {
-    return getEditLog().getEditLogSize();
+  public long getTransactionID() {
+    return getEditLog().getSyncTxId();
   }
 
   CheckpointSignature rollEditLog() throws IOException {

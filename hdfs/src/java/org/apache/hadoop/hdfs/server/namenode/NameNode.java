@@ -738,13 +738,6 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   }
 
   @Override // NamenodeProtocol
-  public long journalSize(NamenodeRegistration registration)
-  throws IOException {
-    verifyRequest(registration);
-    return namesystem.getEditLogSize();
-  }
-
-  @Override // NamenodeProtocol
   public void journal(NamenodeRegistration registration,
                       int jAction,
                       int length,
@@ -1124,9 +1117,9 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     namesystem.refreshNodes(new HdfsConfiguration());
   }
 
-  @Deprecated // NamenodeProtocol
-  public long getEditLogSize() throws IOException {
-    return namesystem.getEditLogSize();
+  @Override // NamenodeProtocol
+  public long getTransactionID() {
+    return namesystem.getTransactionID();
   }
 
   @Deprecated

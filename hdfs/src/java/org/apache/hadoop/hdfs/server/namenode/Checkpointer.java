@@ -60,7 +60,7 @@ class Checkpointer extends Daemon {
   private BackupNode backupNode;
   volatile boolean shouldRun;
   private long checkpointPeriod;    // in seconds
-  private long checkpointSize;    // size (in MB) of current Edit Log
+  private long checkpointTxnCount;    // size (in MB) of current Edit Log
 
   private String infoBindAddress;
 
@@ -95,8 +95,9 @@ class Checkpointer extends Daemon {
     // Initialize other scheduling parameters from the configuration
     checkpointPeriod = conf.getLong(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 
                                     DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_DEFAULT);
-    checkpointSize = conf.getLong(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_SIZE_KEY, 
-                                  DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_SIZE_DEFAULT);
+    checkpointTxnCount = conf.getLong(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 
+                                  DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT);
+    SecondaryNameNode.warnForDeprecatedConfigs(conf);
 
     // Pull out exact http address for posting url to avoid ip aliasing issues
     String fullInfoAddr = conf.get(DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, 
@@ -110,8 +111,7 @@ class Checkpointer extends Daemon {
 
     LOG.info("Checkpoint Period : " + checkpointPeriod + " secs " +
              "(" + checkpointPeriod/60 + " min)");
-    LOG.info("Log Size Trigger  : " + checkpointSize + " bytes " +
-             "(" + checkpointSize/1024 + " KB)");
+    LOG.info("Log Size Trigger  : " + checkpointTxnCount + " txns ");
   }
 
   /**
@@ -143,8 +143,8 @@ class Checkpointer extends Daemon {
         if(now >= lastCheckpointTime + periodMSec) {
           shouldCheckpoint = true;
         } else {
-          long size = getJournalSize();
-          if(size >= checkpointSize)
+          long txns = countUncheckpointedTxns();
+          if(txns >= checkpointTxnCount)
             shouldCheckpoint = true;
         }
         if(shouldCheckpoint) {
@@ -166,14 +166,12 @@ class Checkpointer extends Daemon {
     }
   }
 
-  private long getJournalSize() throws IOException {
-    // If BACKUP node has been loaded
-    // get edits size from the local file. ACTIVE has the same.
-    if(backupNode.isRole(NamenodeRole.BACKUP)
-        && getFSImage().getEditLog().isOpen())
-      return backupNode.journalSize();
-    // Go to the ACTIVE node for its size
-    return getNamenode().journalSize(backupNode.getRegistration());
+  private long countUncheckpointedTxns() throws IOException {
+    long curTxId = getNamenode().getTransactionID();
+    long uncheckpointedTxns = curTxId -
+      getFSImage().getStorage().getMostRecentCheckpointTxId();
+    assert uncheckpointedTxns >= 0;
+    return uncheckpointedTxns;
   }
 
   /**

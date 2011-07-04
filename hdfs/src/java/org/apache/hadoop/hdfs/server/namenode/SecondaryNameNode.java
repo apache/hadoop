@@ -108,8 +108,16 @@ public class SecondaryNameNode implements Runnable {
 
   private Collection<URI> checkpointDirs;
   private Collection<URI> checkpointEditsDirs;
+  
+  /** How often to checkpoint regardless of number of txns */
   private long checkpointPeriod;    // in seconds
-  private long checkpointSize;    // size (in bytes) of current Edit Log
+  
+  /** How often to poll the NN to check checkpointTxnCount */
+  private long checkpointCheckPeriod; // in seconds
+  
+  /** checkpoint once every this many transactions, regardless of time */
+  private long checkpointTxnCount;
+
 
   /** {@inheritDoc} */
   public String toString() {
@@ -118,8 +126,8 @@ public class SecondaryNameNode implements Runnable {
       + "\nStart Time           : " + new Date(starttime)
       + "\nLast Checkpoint Time : " + (lastCheckpointTime == 0? "--": new Date(lastCheckpointTime))
       + "\nCheckpoint Period    : " + checkpointPeriod + " seconds"
-      + "\nCheckpoint Size      : " + StringUtils.byteDesc(checkpointSize)
-                                    + " (= " + checkpointSize + " bytes)" 
+      + "\nCheckpoint Size      : " + StringUtils.byteDesc(checkpointTxnCount)
+                                    + " (= " + checkpointTxnCount + " bytes)" 
       + "\nCheckpoint Dirs      : " + checkpointDirs
       + "\nCheckpoint Edits Dirs: " + checkpointEditsDirs;
   }
@@ -205,10 +213,15 @@ public class SecondaryNameNode implements Runnable {
     checkpointImage.recoverCreate();
 
     // Initialize other scheduling parameters from the configuration
+    checkpointCheckPeriod = conf.getLong(
+        DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY,
+        DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_DEFAULT);
+        
     checkpointPeriod = conf.getLong(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 
                                     DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_DEFAULT);
-    checkpointSize = conf.getLong(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_SIZE_KEY, 
-                                  DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_SIZE_DEFAULT);
+    checkpointTxnCount = conf.getLong(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 
+                                  DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT);
+    warnForDeprecatedConfigs(conf);
 
     // initialize the webserver for uploading files.
     // Kerberized SSL servers must be run from the host principal...
@@ -264,10 +277,21 @@ public class SecondaryNameNode implements Runnable {
     conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, infoBindAddress + ":" +infoPort); 
     LOG.info("Secondary Web-server up at: " + infoBindAddress + ":" +infoPort);
     LOG.info("Secondary image servlet up at: " + infoBindAddress + ":" + imagePort);
-    LOG.warn("Checkpoint Period   :" + checkpointPeriod + " secs " +
+    LOG.info("Checkpoint Period   :" + checkpointPeriod + " secs " +
              "(" + checkpointPeriod/60 + " min)");
-    LOG.warn("Log Size Trigger    :" + checkpointSize + " bytes " +
-             "(" + checkpointSize/1024 + " KB)");
+    LOG.info("Log Size Trigger    :" + checkpointTxnCount + " txns");
+  }
+
+  static void warnForDeprecatedConfigs(Configuration conf) {
+    for (String key : ImmutableList.of(
+          "fs.checkpoint.size",
+          "dfs.namenode.checkpoint.size")) {
+      if (conf.get(key) != null) {
+        LOG.warn("Configuration key " + key + " is deprecated! Ignoring..." +
+            " Instead please specify a value for " +
+            DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY);
+      }
+    }
   }
 
   /**
@@ -315,13 +339,10 @@ public class SecondaryNameNode implements Runnable {
   public void doWork() {
 
     //
-    // Poll the Namenode (once every 5 minutes) to find the size of the
-    // pending edit log.
+    // Poll the Namenode (once every checkpointCheckPeriod seconds) to find the
+    // number of transactions in the edit log that haven't yet been checkpointed.
     //
-    long period = 5 * 60;              // 5 minutes
-    if (checkpointPeriod < period) {
-      period = checkpointPeriod;
-    }
+    long period = Math.min(checkpointCheckPeriod, checkpointPeriod);
 
     while (shouldRun) {
       try {
@@ -339,8 +360,7 @@ public class SecondaryNameNode implements Runnable {
         
         long now = System.currentTimeMillis();
 
-        long size = namenode.getEditLogSize();
-        if (size >= checkpointSize || 
+        if (shouldCheckpointBasedOnCount() ||
             now >= lastCheckpointTime + 1000 * checkpointPeriod) {
           doCheckpoint();
           lastCheckpointTime = now;
@@ -551,19 +571,20 @@ public class SecondaryNameNode implements Runnable {
     exitCode = 0;
     try {
       if ("-checkpoint".equals(cmd)) {
-        long size = namenode.getEditLogSize();
-        if (size >= checkpointSize || 
+        long count = countUncheckpointedTxns();
+        if (count > checkpointTxnCount ||
             argv.length == 2 && "force".equals(argv[i])) {
           doCheckpoint();
         } else {
-          System.err.println("EditLog size " + size + " bytes is " +
+          System.err.println("EditLog size " + count + " transactions is " +
                              "smaller than configured checkpoint " +
-                             "size " + checkpointSize + " bytes.");
+                             "interval " + checkpointTxnCount + " transactions.");
           System.err.println("Skipping checkpoint.");
         }
       } else if ("-geteditsize".equals(cmd)) {
-        long size = namenode.getEditLogSize();
-        System.out.println("EditLog size is " + size + " bytes");
+        long uncheckpointed = countUncheckpointedTxns();
+        System.out.println("NameNode has " + uncheckpointed +
+            " uncheckpointed transactions");
       } else {
         exitCode = -1;
         LOG.error(cmd.substring(1) + ": Unknown command");
@@ -594,6 +615,18 @@ public class SecondaryNameNode implements Runnable {
       // Does the RPC connection need to be closed?
     }
     return exitCode;
+  }
+
+  private long countUncheckpointedTxns() throws IOException {
+    long curTxId = namenode.getTransactionID();
+    long uncheckpointedTxns = curTxId -
+      checkpointImage.getStorage().getMostRecentCheckpointTxId();
+    assert uncheckpointedTxns >= 0;
+    return uncheckpointedTxns;
+  }
+
+  boolean shouldCheckpointBasedOnCount() throws IOException {
+    return countUncheckpointedTxns() >= checkpointTxnCount;
   }
 
   /**

@@ -331,15 +331,6 @@ public class BackupNode extends NameNode {
     ((BackupImage)getFSImage()).reset();
   }
 
-  /**
-   * Get size of the local journal (edit log).
-   * @return size of the current journal
-   * @throws IOException
-   */
-  long journalSize() throws IOException {
-    return namesystem.getEditLogSize();
-  }
-
   // TODO: move to a common with DataNode util class
   private static NamespaceInfo handshake(NamenodeProtocol namenode)
   throws IOException, SocketTimeoutException {

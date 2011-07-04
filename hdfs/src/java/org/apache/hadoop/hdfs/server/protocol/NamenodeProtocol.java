@@ -82,14 +82,11 @@ public interface NamenodeProtocol extends VersionedProtocol {
   public ExportedBlockKeys getBlockKeys() throws IOException;
 
   /**
-   * Get the size of the current edit log (in bytes).
-   * @return The number of bytes in the current edit log.
+   * @return The most recent transaction ID that has been synced to
+   * persistent storage.
    * @throws IOException
-   * @deprecated 
-   *    See {@link org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode}
    */
-  @Deprecated
-  public long getEditLogSize() throws IOException;
+  public long getTransactionID() throws IOException;
 
   /**
    * Closes the current edit log and opens a new one. The 
@@ -170,15 +167,6 @@ public interface NamenodeProtocol extends VersionedProtocol {
    */
   public RemoteEditLogManifest getEditLogManifest(long sinceTxId)
     throws IOException;
-
-  /**
-   * Get the size of the active name-node journal (edit log) in bytes.
-   * 
-   * @param registration the requesting node
-   * @return The number of bytes in the journal.
-   * @throws IOException
-   */
-  public long journalSize(NamenodeRegistration registration) throws IOException;
 
   /**
    * Journal edit records.

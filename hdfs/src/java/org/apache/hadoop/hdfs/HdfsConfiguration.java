@@ -85,7 +85,6 @@ public class HdfsConfiguration extends Configuration {
     deprecate("fs.checkpoint.dir", DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY);
     deprecate("fs.checkpoint.edits.dir", DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY);
     deprecate("fs.checkpoint.period", DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY);
-    deprecate("fs.checkpoint.size", DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_SIZE_KEY);
     deprecate("dfs.upgrade.permission", DFSConfigKeys.DFS_NAMENODE_UPGRADE_PERMISSION_KEY);
     deprecate("heartbeat.recheck.interval", DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY);
     deprecate("StorageId", DFSConfigKeys.DFS_DATANODE_STORAGEID_KEY);

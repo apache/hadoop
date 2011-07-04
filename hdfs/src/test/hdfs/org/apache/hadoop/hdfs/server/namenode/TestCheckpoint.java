@@ -65,6 +65,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -1525,6 +1526,57 @@ public class TestCheckpoint extends TestCase {
       }
     }
   }
+  
+  /**
+   * Test that the 2NN triggers a checkpoint after the configurable interval
+   */
+  @SuppressWarnings("deprecation")
+  public void testCheckpointTriggerOnTxnCount() throws Exception {
+    MiniDFSCluster cluster = null;
+    SecondaryNameNode secondary = null;
+    Configuration conf = new HdfsConfiguration();
+
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 10);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY, 1);
+    
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+          .format(true).build();
+      FileSystem fs = cluster.getFileSystem();
+      secondary = startSecondaryNameNode(conf);
+      Thread t = new Thread(secondary);
+      t.start();
+      final NNStorage storage = secondary.getFSImage().getStorage();
+
+      // 2NN should checkpoint at startup
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          LOG.info("Waiting for checkpoint txn id to go to 2");
+          return storage.getMostRecentCheckpointTxId() == 2;
+        }
+      }, 200, 15000);
+
+      // If we make 10 transactions, it should checkpoint again
+      for (int i = 0; i < 10; i++) {
+        fs.mkdirs(new Path("/test" + i));
+      }
+      
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          LOG.info("Waiting for checkpoint txn id to go > 2");
+          return storage.getMostRecentCheckpointTxId() > 2;
+        }
+      }, 200, 15000);
+    } finally {
+      cleanup(secondary);
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
 
   @SuppressWarnings("deprecation")
   private void cleanup(SecondaryNameNode snn) {

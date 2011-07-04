@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.FileUtil;
@@ -34,6 +35,8 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Sets;
 
 /**
@@ -84,6 +87,23 @@ public abstract class GenericTestUtils {
         msg.contains(string));    
   }  
 
+  public static void waitFor(Supplier<Boolean> check,
+      int checkEveryMillis, int waitForMillis)
+      throws TimeoutException, InterruptedException
+  {
+    long st = System.currentTimeMillis();
+    do {
+      boolean result = check.get();
+      if (result) {
+        return;
+      }
+      
+      Thread.sleep(checkEveryMillis);
+    } while (System.currentTimeMillis() - st < waitForMillis);
+    throw new TimeoutException("Timed out waiting for condition");
+  }
+  
+  
   /**
    * Mockito answer helper that triggers one latch as soon as the
    * method is called, then waits on another before continuing.
