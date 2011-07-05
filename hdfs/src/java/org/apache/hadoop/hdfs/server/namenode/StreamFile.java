@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.Enumeration;
@@ -85,31 +84,41 @@ public class StreamFile extends DfsServlet {
       return;
     }
     
-    final DFSInputStream in = dfs.open(filename);
-    final long fileLen = in.getFileLength();
-    OutputStream os = response.getOutputStream();
+    DFSInputStream in = null;
+    OutputStream out = null;
 
     try {
+      in = dfs.open(filename);
+      out = response.getOutputStream();
+      final long fileLen = in.getFileLength();
       if (reqRanges != null) {
         List<InclusiveByteRange> ranges = 
           InclusiveByteRange.satisfiableRanges(reqRanges, fileLen);
-        StreamFile.sendPartialData(in, os, response, fileLen, ranges, true);
+        StreamFile.sendPartialData(in, out, response, fileLen, ranges);
       } else {
         // No ranges, so send entire file
         response.setHeader("Content-Disposition", "attachment; filename=\"" + 
                            filename + "\"");
         response.setContentType("application/octet-stream");
         response.setHeader(CONTENT_LENGTH, "" + fileLen);
-        StreamFile.copyFromOffset(in, os, 0L, fileLen, true);
+        StreamFile.copyFromOffset(in, out, 0L, fileLen);
       }
-    } catch (IOException e) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("response.isCommitted()=" + response.isCommitted(), e);
-      }
-      throw e;
-    } finally {
+      in.close();
+      in = null;
+      out.close();
+      out = null;
       dfs.close();
-    }      
+      dfs = null;
+    } catch (IOException ioe) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("response.isCommitted()=" + response.isCommitted(), ioe);
+      }
+      throw ioe;
+    } finally {
+      IOUtils.cleanup(LOG, in);
+      IOUtils.cleanup(LOG, out);
+      IOUtils.cleanup(LOG, dfs);
+    }
   }
   
   /**
@@ -122,15 +131,13 @@ public class StreamFile extends DfsServlet {
    * @param response http response to use
    * @param contentLength for the response header
    * @param ranges to write to respond with
-   * @param close whether to close the streams
    * @throws IOException on error sending the response
    */
   static void sendPartialData(FSInputStream in,
                               OutputStream out,
                               HttpServletResponse response,
                               long contentLength,
-                              List<InclusiveByteRange> ranges,
-                              boolean close)
+                              List<InclusiveByteRange> ranges)
       throws IOException {
     if (ranges == null || ranges.size() != 1) {
       response.setContentLength(0);
@@ -145,14 +152,14 @@ public class StreamFile extends DfsServlet {
         singleSatisfiableRange.toHeaderRangeString(contentLength));
       copyFromOffset(in, out,
                      singleSatisfiableRange.getFirst(contentLength),
-                     singleLength, close);
+                     singleLength);
     }
   }
 
   /* Copy count bytes at the given offset from one stream to another */
   static void copyFromOffset(FSInputStream in, OutputStream out, long offset,
-      long count, boolean close) throws IOException {
+      long count) throws IOException {
     in.seek(offset);
-    IOUtils.copyBytes(in, out, count, close);
+    IOUtils.copyBytes(in, out, count, false);
   }
 }

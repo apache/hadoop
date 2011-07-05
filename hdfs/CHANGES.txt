@@ -862,6 +862,8 @@ Release 0.22.0 - Unreleased
     HDFS-528. Add ability for safemode to wait for a minimum number of 
     live datanodes (Todd Lipcon via eli)
 
+    HDFS-1753. Resource Leak in StreamFile. (Uma Maheswara Rao G via eli)
+
   IMPROVEMENTS
 
     HDFS-1304. Add a new unit test for HftpFileSystem.open(..).  (szetszwo)
