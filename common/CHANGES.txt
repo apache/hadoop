@@ -343,6 +343,9 @@ Trunk (unreleased changes)
     HADOOP-7437. IOUtils.copybytes will suppress the stream closure exceptions.
     (Uma Maheswara Rao G via szetszwo)
 
+    HADOOP-7090. Fix resource leaks in s3.INode, BloomMapFile, WritableUtils
+    and CBZip2OutputStream.  (Uma Maheswara Rao G via szetszwo)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
