@@ -231,6 +231,9 @@ class BlockReceiver implements Closeable, FSConstants {
     } catch(IOException e) {
       ioe = e;
     }
+    finally {
+      IOUtils.closeStream(checksumOut);
+    }
     // close block file
     try {
       if (out != null) {
@@ -243,6 +246,9 @@ class BlockReceiver implements Closeable, FSConstants {
       }
     } catch (IOException e) {
       ioe = e;
+    }
+    finally{
+      IOUtils.closeStream(out);
     }
     // disk check
     if(ioe != null) {
