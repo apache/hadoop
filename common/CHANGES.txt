@@ -346,6 +346,9 @@ Trunk (unreleased changes)
     HADOOP-7090. Fix resource leaks in s3.INode, BloomMapFile, WritableUtils
     and CBZip2OutputStream.  (Uma Maheswara Rao G via szetszwo)
 
+    HADOOP-7440. HttpServer.getParameterValues throws NPE for missing
+    parameters. (Uma Maheswara Rao G and todd via todd)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.http;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
+
+import javax.servlet.http.HttpServletRequest;
 
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class TestHtmlQuoting {
 
@@ -61,5 +62,29 @@ public class TestHtmlQuoting {
       buffer.append(ch);
     }
     runRoundTrip(buffer.toString());
+  }
+  
+
+  @Test
+  public void testRequestQuoting() throws Exception {
+    HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
+    HttpServer.QuotingInputFilter.RequestQuoter quoter =
+      new HttpServer.QuotingInputFilter.RequestQuoter(mockReq);
+    
+    Mockito.doReturn("a<b").when(mockReq).getParameter("x");
+    assertEquals("Test simple param quoting",
+        "a&lt;b", quoter.getParameter("x"));
+    
+    Mockito.doReturn(null).when(mockReq).getParameter("x");
+    assertEquals("Test that missing parameters dont cause NPE",
+        null, quoter.getParameter("x"));
+
+    Mockito.doReturn(new String[]{"a<b", "b"}).when(mockReq).getParameterValues("x");
+    assertArrayEquals("Test escaping of an array",
+        new String[]{"a&lt;b", "b"}, quoter.getParameterValues("x"));
+
+    Mockito.doReturn(null).when(mockReq).getParameterValues("x");
+    assertArrayEquals("Test that missing parameters dont cause NPE for array",
+        null, quoter.getParameterValues("x"));
   }
 }
