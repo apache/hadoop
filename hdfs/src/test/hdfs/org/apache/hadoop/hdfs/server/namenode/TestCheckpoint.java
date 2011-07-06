@@ -1578,6 +1578,50 @@ public class TestCheckpoint extends TestCase {
   }
 
 
+  /**
+   * Test case where the secondary does a checkpoint, then stops for a while.
+   * In the meantime, the NN saves its image several times, so that the
+   * logs that connect the 2NN's old checkpoint to the current txid
+   * get archived. Then, the 2NN tries to checkpoint again.
+   */
+  @SuppressWarnings("deprecation")
+  public void testSecondaryHasVeryOutOfDateImage() throws IOException {
+    MiniDFSCluster cluster = null;
+    SecondaryNameNode secondary = null;
+    
+    Configuration conf = new HdfsConfiguration();
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
+          .format(true).build();
+  
+      secondary = startSecondaryNameNode(conf);
+
+      // Checkpoint once
+      secondary.doCheckpoint();
+
+      // Now primary NN saves namespace 3 times
+      NameNode nn = cluster.getNameNode();
+      nn.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      for (int i = 0; i < 3; i++) {
+        nn.saveNamespace();
+      }
+      nn.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      
+      // Now the secondary tries to checkpoint again with its
+      // old image in memory.
+      secondary.doCheckpoint();
+      
+    } finally {
+      if (secondary != null) {
+        secondary.shutdown();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   @SuppressWarnings("deprecation")
   private void cleanup(SecondaryNameNode snn) {
     if (snn != null) {
