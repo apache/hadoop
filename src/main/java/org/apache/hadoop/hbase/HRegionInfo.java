@@ -708,7 +708,15 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     }
 
     // Compare end keys.
-    return Bytes.compareTo(this.endKey, o.endKey);
+    result = Bytes.compareTo(this.endKey, o.endKey);
+    if (result != 0) {
+      return result;
+    }
+    if (this.offLine == o.offLine)
+        return 0;
+    if (this.offLine == true) return -1;
+        
+    return 1;
   }
 
   /**

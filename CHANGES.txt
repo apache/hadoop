@@ -150,6 +150,7 @@ Release 0.91.0 - Unreleased
                regions are NOT made online by master
    HBASE-3904  HBA.createTable(final HTableDescriptor desc, byte [][] splitKeys)
                should be synchronous
+   HBASE-4053  Most of the regions were added into AssignmentManager#servers twice
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

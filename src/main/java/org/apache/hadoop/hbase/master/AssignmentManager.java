@@ -24,7 +24,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -36,6 +35,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -53,9 +53,9 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
 import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
@@ -125,8 +125,8 @@ public class AssignmentManager extends ZooKeeperListener {
    * with the other under a lock on {@link #regions}
    * @see #regions
    */
-  private final NavigableMap<ServerName, List<HRegionInfo>> servers =
-    new TreeMap<ServerName, List<HRegionInfo>>();
+  private final NavigableMap<ServerName, Set<HRegionInfo>> servers =
+    new TreeMap<ServerName, Set<HRegionInfo>>();
 
   /**
    * Region to server assignment map.
@@ -182,7 +182,7 @@ public class AssignmentManager extends ZooKeeperListener {
     // Sync on this.regions because access to this.servers always synchronizes
     // in this order.
     synchronized (this.regions) {
-      for (Map.Entry<ServerName, List<HRegionInfo>> e: servers.entrySet()) {
+      for (Map.Entry<ServerName, Set<HRegionInfo>> e: servers.entrySet()) {
         numServers++;
         totalLoad += e.getValue().size();
       }
@@ -710,7 +710,7 @@ public class AssignmentManager extends ZooKeeperListener {
   private HRegionInfo findHRegionInfo(final ServerName sn,
       final String encodedName) {
     if (!this.serverManager.isServerOnline(sn)) return null;
-    List<HRegionInfo> hris = this.servers.get(sn);
+    Set<HRegionInfo> hris = this.servers.get(sn);
     HRegionInfo foundHri = null;
     for (HRegionInfo hri: hris) {
       if (hri.getEncodedName().equals(encodedName)) {
@@ -954,7 +954,7 @@ public class AssignmentManager extends ZooKeeperListener {
     synchronized (this.regions) {
       ServerName sn = this.regions.remove(regionInfo);
       if (sn == null) return;
-      List<HRegionInfo> serverRegions = this.servers.get(sn);
+      Set<HRegionInfo> serverRegions = this.servers.get(sn);
       if (!serverRegions.remove(regionInfo)) {
         LOG.warn("No " + regionInfo + " on " + sn);
       }
@@ -1818,12 +1818,12 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param hri
    */
   private void addToServers(final ServerName sn, final HRegionInfo hri) {
-    List<HRegionInfo> hris = servers.get(sn);
+    Set<HRegionInfo> hris = servers.get(sn);
     if (hris == null) {
-      hris = new ArrayList<HRegionInfo>();
+      hris = new ConcurrentSkipListSet<HRegionInfo>();
       servers.put(sn, hris);
     }
-    hris.add(hri);
+    if (!hris.contains(hri)) hris.add(hri);
   }
 
   /**
@@ -1865,13 +1865,8 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     synchronized (this.regions) {
       this.regions.remove(hri);
-      for (List<HRegionInfo> regions : this.servers.values()) {
-        for (int i=0;i<regions.size();i++) {
-          if (regions.get(i).equals(hri)) {
-            regions.remove(i);
-            break;
-          }
-        }
+      for (Set<HRegionInfo> regions : this.servers.values()) {
+        regions.remove(hri);
       }
     }
     clearRegionPlan(hri);
@@ -2124,7 +2119,7 @@ public class AssignmentManager extends ZooKeeperListener {
     Set<HRegionInfo> deadRegions = null;
     List<RegionState> rits = new ArrayList<RegionState>();
     synchronized (this.regions) {
-      List<HRegionInfo> assignedRegions = this.servers.remove(sn);
+      Set<HRegionInfo> assignedRegions = this.servers.remove(sn);
       if (assignedRegions == null || assignedRegions.isEmpty()) {
         // No regions on this server, we are done, return empty list of RITs
         return rits;
@@ -2184,7 +2179,7 @@ public class AssignmentManager extends ZooKeeperListener {
     Map<ServerName, List<HRegionInfo>> result = null;
     synchronized (this.regions) {
       result = new HashMap<ServerName, List<HRegionInfo>>(this.servers.size());
-      for (Map.Entry<ServerName, List<HRegionInfo>> e: this.servers.entrySet()) {
+      for (Map.Entry<ServerName, Set<HRegionInfo>> e: this.servers.entrySet()) {
         result.put(e.getKey(), new ArrayList<HRegionInfo>(e.getValue()));
       }
     }
@@ -2224,8 +2219,8 @@ public class AssignmentManager extends ZooKeeperListener {
   void unassignCatalogRegions() {
     this.servers.entrySet();
     synchronized (this.regions) {
-      for (Map.Entry<ServerName, List<HRegionInfo>> e: this.servers.entrySet()) {
-        List<HRegionInfo> regions = e.getValue();
+      for (Map.Entry<ServerName, Set<HRegionInfo>> e: this.servers.entrySet()) {
+        Set<HRegionInfo> regions = e.getValue();
         if (regions == null || regions.isEmpty()) continue;
         for (HRegionInfo hri: regions) {
           if (hri.isMetaRegion()) {
@@ -2234,30 +2229,6 @@ public class AssignmentManager extends ZooKeeperListener {
         }
       }
     }
-  }
-
-  /**
-   * Assigns list of user regions in round-robin fashion, if any.
-   * @param sync True if we are to wait on all assigns.
-   * @param startup True if this is server startup time.
-   * @throws InterruptedException
-   * @throws IOException
-   */
-  void bulkAssignUserRegions(final HRegionInfo [] regions,
-      final List<ServerName> servers, final boolean sync)
-  throws IOException {
-    Map<ServerName, List<HRegionInfo>> bulkPlan =
-      LoadBalancer.roundRobinAssignment(Arrays.asList(regions), servers);
-    LOG.info("Bulk assigning " + regions.length + " region(s) " +
-      "round-robin across " + servers.size() + " server(s)");
-    // Use fixed count thread pool assigning.
-    BulkAssigner ba = new GeneralBulkAssigner(this.master, bulkPlan, this);
-    try {
-      ba.bulkAssign(sync);
-    } catch (InterruptedException e) {
-      throw new IOException("InterruptedException bulk assigning", e);
-    }
-    LOG.info("Bulk assigning done");
   }
 
   /**
