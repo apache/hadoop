@@ -31,6 +31,8 @@ Trunk (unreleased changes)
     deployment layout to be consistent across the binary tgz, rpm, and deb.
     (Eric Yang via omalley)
 
+    MAPREDUCE-2323. Add metrics to the fair scheduler. (todd)
+
   IMPROVEMENTS
 
     MAPREDUCE-2563. [Gridmix]  Add High-Ram emulation system tests to 

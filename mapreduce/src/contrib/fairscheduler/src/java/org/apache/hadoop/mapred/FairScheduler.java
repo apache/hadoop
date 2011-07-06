@@ -38,6 +38,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
+import org.apache.hadoop.metrics.MetricsContext;
+import org.apache.hadoop.metrics.MetricsUtil;
+import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
@@ -71,6 +74,7 @@ public class FairScheduler extends TaskScheduler {
   protected Map<JobInProgress, JobInfo> infos = // per-job scheduling variables
     new HashMap<JobInProgress, JobInfo>();
   protected long lastUpdateTime;           // Time when we last updated infos
+  protected long lastPreemptionUpdateTime; // Time when we last updated preemption vars
   protected boolean initialized;  // Are we initialized?
   protected volatile boolean running; // Are we running?
   protected boolean assignMultiple; // Simultaneously assign map and reduce?
@@ -210,6 +214,9 @@ public class FairScheduler extends TaskScheduler {
         infoServer.addServlet("scheduler", "/scheduler",
             FairSchedulerServlet.class);
       }
+      
+      initMetrics();
+      
       eventLog.log("INITIALIZED");
     } catch (Exception e) {
       // Can't load one of the managers - crash the JobTracker now while it is
@@ -219,11 +226,23 @@ public class FairScheduler extends TaskScheduler {
     LOG.info("Successfully configured FairScheduler");
   }
 
+  private MetricsUpdater metricsUpdater; // responsible for pushing hadoop metrics
+
   /**
    * Returns the LoadManager object used by the Fair Share scheduler
    */
   LoadManager getLoadManager() {
     return loadMgr;
+  }
+
+  /**
+   * Register metrics for the fair scheduler, and start a thread
+   * to update them periodically.
+   */
+  private void initMetrics() {
+    MetricsContext context = MetricsUtil.getContext("fairscheduler");
+    metricsUpdater = new MetricsUpdater();
+    context.registerUpdater(metricsUpdater);
   }
 
   @Override
@@ -236,6 +255,11 @@ public class FairScheduler extends TaskScheduler {
       taskTrackerManager.removeJobInProgressListener(jobListener);
     if (eventLog != null)
       eventLog.shutdown();
+    if (metricsUpdater != null) {
+      MetricsContext context = MetricsUtil.getContext("fairscheduler");
+      context.unregisterUpdater(metricsUpdater);
+      metricsUpdater = null;
+    }
   }
  
 
@@ -298,8 +322,7 @@ public class FairScheduler extends TaskScheduler {
     public void jobRemoved(JobInProgress job) {
       synchronized (FairScheduler.this) {
         eventLog.log("JOB_REMOVED", job.getJobID());
-        poolMgr.removeJob(job);
-        infos.remove(job);
+        jobNoLongerRunning(job);
       }
     }
   
@@ -330,6 +353,20 @@ public class FairScheduler extends TaskScheduler {
         }
       }
     }
+  }
+
+  /**
+   * Responsible for updating metrics when the metrics context requests it.
+   */
+  private class MetricsUpdater implements Updater {
+    @Override
+    public void doUpdates(MetricsContext context) {
+      updateMetrics();
+    }    
+  }
+  
+  synchronized void updateMetrics() {
+    poolMgr.updateMetrics();
   }
   
   @Override
@@ -617,8 +654,7 @@ public class FairScheduler extends TaskScheduler {
         }
       }
       for (JobInProgress job: toRemove) {
-        infos.remove(job);
-        poolMgr.removeJob(job);
+        jobNoLongerRunning(job);
       }
       
       updateRunnability(); // Set job runnability based on user/pool limits 
@@ -646,6 +682,16 @@ public class FairScheduler extends TaskScheduler {
       if (preemptionEnabled)
         updatePreemptionVariables();
     }
+  }
+
+  private void jobNoLongerRunning(JobInProgress job) {
+    assert Thread.holdsLock(this);
+    JobInfo info = infos.remove(job);
+    if (info != null) {
+      info.mapSchedulable.cleanupMetrics();
+      info.reduceSchedulable.cleanupMetrics();
+    }
+    poolMgr.removeJob(job);
   }
   
   public List<PoolSchedulable> getPoolSchedulables(TaskType type) {
@@ -744,6 +790,7 @@ public class FairScheduler extends TaskScheduler {
    */
   private void updatePreemptionVariables() {
     long now = clock.getTime();
+    lastPreemptionUpdateTime = now;
     for (TaskType type: MAP_AND_REDUCE) {
       for (PoolSchedulable sched: getPoolSchedulables(type)) {
         if (!isStarvedForMinShare(sched)) {
@@ -1043,5 +1090,12 @@ public class FairScheduler extends TaskScheduler {
 
   public JobInfo getJobInfo(JobInProgress job) {
     return infos.get(job);
+  }
+  
+  boolean isPreemptionEnabled() {
+    return preemptionEnabled;
+  }
+  long getLastPreemptionUpdateTime() {
+    return lastPreemptionUpdateTime;
   }
 }

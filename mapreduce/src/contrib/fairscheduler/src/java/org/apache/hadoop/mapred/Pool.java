@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.metrics.MetricsContext;
 
 /**
  * A schedulable pool of jobs.
@@ -90,5 +91,10 @@ public class Pool {
   
   public PoolSchedulable getSchedulable(TaskType type) {
     return type == TaskType.MAP ? mapSchedulable : reduceSchedulable;
+  }
+
+  public void updateMetrics() {
+    mapSchedulable.updateMetrics();
+    reduceSchedulable.updateMetrics();
   }
 }

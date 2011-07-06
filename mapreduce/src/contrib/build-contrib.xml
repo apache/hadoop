@@ -307,6 +307,7 @@
       errorProperty="tests.failed" failureProperty="tests.failed"
       timeout="${test.timeout}">
       
+      <assertions><enable/></assertions>
       <sysproperty key="test.build.data" value="${build.test}/data"/>
       <sysproperty key="build.test" value="${build.test}"/>
       <sysproperty key="test.build.extraconf" value="${test.build.extraconf}" />

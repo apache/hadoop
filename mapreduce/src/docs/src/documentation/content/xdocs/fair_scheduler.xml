@@ -517,6 +517,24 @@
      <em>NewJobWeightBooster</em> are enabled.</li>
      </ul>
     </section>
+    <section>
+      <title>Metrics</title>
+      <p>
+        The fair scheduler can export metrics using the Hadoop metrics interface.
+        This can be enabled by adding an entry to <code>hadoop-metrics.properties</code>
+        to enable the <code>fairscheduler</code> metrics context. For example, to
+        simply retain the metrics in memory so they may be viewed in the <code>/metrics</code>
+        servlet:
+      </p>
+      <p>
+        <code>fairscheduler.class=org.apache.hadoop.metrics.spi.NoEmitMetricsContext</code>
+      </p>
+      <p>
+        Metrics are generated for each pool and job, and contain the same information that
+        is visible on the <code>/scheduler</code> web page.
+      </p>
+    </section>
+
     <!--
     <section>
     <title>Implementation</title>

@@ -35,6 +35,13 @@ public class JobSchedulable extends Schedulable {
     this.scheduler = scheduler;
     this.job = job;
     this.taskType = taskType;
+    
+    initMetrics();
+  }
+  
+  @Override
+  public TaskType getTaskType() {
+    return taskType;
   }
   
   @Override
@@ -150,5 +157,19 @@ public class JobSchedulable extends Schedulable {
     } else {
       return null;
     }
+  }
+
+  
+  @Override
+  protected String getMetricsContextName() {
+    return "jobs";
+  }
+  
+  @Override
+  void updateMetrics() {
+    assert metrics != null;
+    
+    super.setMetricValues(metrics);
+    metrics.update();
   }
 }

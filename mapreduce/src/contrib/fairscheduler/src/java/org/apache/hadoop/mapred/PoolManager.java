@@ -37,6 +37,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.metrics.MetricsContext;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -535,5 +536,11 @@ public class PoolManager {
    */
   public long getFairSharePreemptionTimeout() {
     return fairSharePreemptionTimeout;
+  }
+
+  synchronized void updateMetrics() {
+    for (Pool pool : pools.values()) {
+      pool.updateMetrics();
+    }
   }
 }

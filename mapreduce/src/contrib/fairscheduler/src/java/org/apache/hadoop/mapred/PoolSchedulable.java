@@ -54,6 +54,8 @@ public class PoolSchedulable extends Schedulable {
     long currentTime = scheduler.getClock().getTime();
     this.lastTimeAtMinShare = currentTime;
     this.lastTimeAtHalfFairShare = currentTime;
+    
+    initMetrics();
   }
 
   public void addJob(JobInProgress job) {
@@ -171,6 +173,7 @@ public class PoolSchedulable extends Schedulable {
     return pool;
   }
 
+  @Override
   public TaskType getTaskType() {
     return taskType;
   }
@@ -193,5 +196,26 @@ public class PoolSchedulable extends Schedulable {
   
   public void setLastTimeAtHalfFairShare(long lastTimeAtHalfFairShare) {
     this.lastTimeAtHalfFairShare = lastTimeAtHalfFairShare;
+  }
+
+  protected String getMetricsContextName() {
+    return "pools";
+  }
+  
+  @Override
+  public void updateMetrics() {
+    super.setMetricValues(metrics);
+    
+    if (scheduler.isPreemptionEnabled()) {
+      // These won't be set if preemption is off
+      long lastCheck = scheduler.getLastPreemptionUpdateTime();
+      metrics.setMetric("millisSinceAtMinShare", lastCheck - lastTimeAtMinShare);
+      metrics.setMetric("millisSinceAtHalfFairShare", lastCheck - lastTimeAtHalfFairShare);
+    }
+    metrics.update();
+
+    for (JobSchedulable job : jobScheds) {
+      job.updateMetrics();
+    }
   }
 }

@@ -21,6 +21,11 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.util.Collection;
 
+import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.metrics.MetricsContext;
+import org.apache.hadoop.metrics.MetricsRecord;
+import org.apache.hadoop.metrics.MetricsUtil;
+
 /**
  * A Schedulable represents an entity that can launch tasks, such as a job
  * or a pool. It provides a common interface so that algorithms such as fair
@@ -53,12 +58,18 @@ import java.util.Collection;
 abstract class Schedulable {
   /** Fair share assigned to this Schedulable */
   private double fairShare = 0;
-
+  protected MetricsRecord metrics;
+  
   /**
    * Name of job/pool, used for debugging as well as for breaking ties in
    * scheduling order deterministically. 
    */
   public abstract String getName();
+  
+  /**
+   * @return the type of tasks that this pool schedules
+   */
+  public abstract TaskType getTaskType();
   
   /**
    * Maximum number of tasks required by this Schedulable. This is defined as
@@ -121,6 +132,35 @@ abstract class Schedulable {
   public double getFairShare() {
     return fairShare;
   }
+  
+  /** Return the name of the metrics context for this schedulable */
+  protected abstract String getMetricsContextName();
+  
+  /**
+   * Set up metrics context
+   */
+  protected void initMetrics() {
+    MetricsContext metricsContext = MetricsUtil.getContext("fairscheduler");
+    this.metrics = MetricsUtil.createRecord(metricsContext,
+        getMetricsContextName());
+    metrics.setTag("name", getName());
+    metrics.setTag("taskType", getTaskType().toString());
+  }
+
+  void cleanupMetrics() {
+    metrics.remove();
+    metrics = null;
+  }
+
+  protected void setMetricValues(MetricsRecord metrics) {
+    metrics.setMetric("fairShare", (float)getFairShare());
+    metrics.setMetric("minShare", getMinShare());
+    metrics.setMetric("demand", getDemand());
+    metrics.setMetric("weight", (float)getWeight());
+    metrics.setMetric("runningTasks", getRunningTasks());
+  }
+  
+  abstract void updateMetrics();
   
   /** Convenient toString implementation for debugging. */
   @Override

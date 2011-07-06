@@ -21,6 +21,8 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.util.Collection;
 
+import org.apache.hadoop.mapreduce.TaskType;
+
 /**
  * Dummy implementation of Schedulable for unit testing.
  */
@@ -105,4 +107,18 @@ public class FakeSchedulable extends Schedulable {
 
   @Override
   public void updateDemand() {}
+
+  @Override
+  public TaskType getTaskType() {
+    return TaskType.MAP;
+  }
+
+  @Override
+  protected String getMetricsContextName() {
+    return "fake";
+  }
+
+  @Override
+  void updateMetrics() {
+  }
 }
