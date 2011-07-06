@@ -254,11 +254,13 @@ public class ImportTsv {
       "column name is either a simple column family, or a columnfamily:qualifier. The special\n" +
       "column name HBASE_ROW_KEY is used to designate that this column should be used\n" +
       "as the row key for each imported record. You must specify exactly one column\n" +
-      "to be the row key.\n" +
+      "to be the row key, and you must specify a column name for every column that exists in the\n" +
+      "input data.\n" +
       "\n" +
       "By default importtsv will load data directly into HBase. To instead generate\n" +
       "HFiles of data to prepare for a bulk data load, pass the option:\n" +
       "  -D" + BULK_OUTPUT_CONF_KEY + "=/path/for/output\n" +
+      "  Note: if you do not use this option, then the target table must already exist in HBase\n" +
       "\n" +
       "Other options that may be specified with -D include:\n" +
       "  -D" + SKIP_LINES_CONF_KEY + "=false - fail if encountering an invalid line\n" +
