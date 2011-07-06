@@ -285,7 +285,7 @@ if [ -d "${HADOOP_HDFS_HOME}" ]; then
     CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME
   fi
   
-  if [ -d "${HADOOP_HDFS_HOME}/conf" ]; then
+  if [ ! -d "${HADOOP_CONF_DIR}" ] && [ -d "${HADOOP_HDFS_HOME}/conf" ]; then
     CLASSPATH=${CLASSPATH}:${HADOOP_HDFS_HOME}/conf
   fi
   
@@ -323,7 +323,7 @@ if [ -d "${HADOOP_MAPRED_HOME}" ]; then
     CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME
   fi
 
-  if [ -d "${HADOOP_MAPRED_HOME}/conf" ]; then
+  if [ ! -d "${HADOOP_CONF_DIR}" ] && [ -d "${HADOOP_MAPRED_HOME}/conf" ]; then
     CLASSPATH=${CLASSPATH}:${HADOOP_MAPRED_HOME}/conf
   fi
   

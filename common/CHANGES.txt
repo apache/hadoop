@@ -355,6 +355,9 @@ Trunk (unreleased changes)
     HADOOP-7442. Docs in core-default.xml still reference deprecated config
     "topology.script.file.name" (atm)
 
+    HADOOP-7419. new hadoop-config.sh doesn't manage classpath for
+    HADOOP_CONF_DIR correctly. (Bing Zheng and todd via todd)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
