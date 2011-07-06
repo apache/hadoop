@@ -246,6 +246,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-7327. FileSystem.listStatus() throws NullPointerException instead of
+    IOException upon access permission failure. (mattf)
+
     HADOOP-7015. RawLocalFileSystem#listStatus does not deal with a directory
     whose entries are changing (e.g. in a multi-thread or multi-process
     environment). (Sanjay Radia via eli)
