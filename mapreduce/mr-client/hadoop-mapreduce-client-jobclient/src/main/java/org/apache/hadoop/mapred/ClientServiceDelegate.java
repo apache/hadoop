@@ -53,7 +53,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationMaster;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -106,30 +106,30 @@ public class ClientServiceDelegate {
     //TODO RM NPEs for unknown jobs. History may still be aware.
     // Possibly allow nulls through the PB tunnel, otherwise deal with an exception
     // and redirect to the history server.
-    ApplicationMaster appMaster = rm.getApplicationMaster(currentAppId);
-    while (!ApplicationState.COMPLETED.equals(appMaster.getState()) &&
-        !ApplicationState.FAILED.equals(appMaster.getState()) && 
-        !ApplicationState.KILLED.equals(appMaster.getState()) &&
-        !ApplicationState.ALLOCATING.equals(appMaster.getState())) {
+    ApplicationReport application = rm.getApplicationReport(currentAppId);
+    while (!ApplicationState.COMPLETED.equals(application.getState()) &&
+        !ApplicationState.FAILED.equals(application.getState()) && 
+        !ApplicationState.KILLED.equals(application.getState()) &&
+        !ApplicationState.ALLOCATING.equals(application.getState())) {
       try {
-        if (appMaster.getHost() == null || "".equals(appMaster.getHost())) {
+        if (application.getHost() == null || "".equals(application.getHost())) {
           LOG.debug("AM not assigned to Job. Waiting to get the AM ...");
           Thread.sleep(2000);
    
-          LOG.debug("Application state is " + appMaster.getState());
-          appMaster = rm.getApplicationMaster(currentAppId);
+          LOG.debug("Application state is " + application.getState());
+          application = rm.getApplicationReport(currentAppId);
           continue;
         }
-        serviceAddr = appMaster.getHost() + ":" + appMaster.getRpcPort();
-        serviceHttpAddr = appMaster.getTrackingUrl();
-        currentAppState = appMaster.getState();
+        serviceAddr = application.getHost() + ":" + application.getRpcPort();
+        serviceHttpAddr = application.getTrackingUrl();
+        currentAppState = application.getState();
         if (UserGroupInformation.isSecurityEnabled()) {
-          String clientTokenEncoded = appMaster.getClientToken();
+          String clientTokenEncoded = application.getClientToken();
           Token<ApplicationTokenIdentifier> clientToken =
             new Token<ApplicationTokenIdentifier>();
           clientToken.decodeFromUrlString(clientTokenEncoded);
-          clientToken.setService(new Text(appMaster.getHost() + ":"
-              + appMaster.getRpcPort()));
+          clientToken.setService(new Text(application.getHost() + ":"
+              + application.getRpcPort()));
           UserGroupInformation.getCurrentUser().addToken(clientToken);
         }
         LOG.info("Connecting to " + serviceAddr);
@@ -146,11 +146,11 @@ public class ClientServiceDelegate {
           Thread.sleep(2000);
         } catch (InterruptedException e1) {
         }
-        appMaster = rm.getApplicationMaster(currentAppId);
+        application = rm.getApplicationReport(currentAppId);
       }
     }
 
-    currentAppState = appMaster.getState();
+    currentAppState = application.getState();
     /** we just want to return if its allocating, so that we dont 
      * block on it. This is to be able to return job status 
      * on a allocating Application.

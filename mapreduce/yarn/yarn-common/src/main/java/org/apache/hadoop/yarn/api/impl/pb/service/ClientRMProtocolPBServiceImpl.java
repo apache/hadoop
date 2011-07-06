@@ -3,7 +3,7 @@ package org.apache.hadoop.yarn.api.impl.pb.service;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdResponse;
@@ -14,8 +14,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.FinishApplicationReque
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.FinishApplicationResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetAllApplicationsRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetAllApplicationsResponsePBImpl;
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetApplicationMasterRequestPBImpl;
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetApplicationMasterResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetApplicationReportRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetApplicationReportResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetClusterMetricsRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetClusterMetricsResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetClusterNodesRequestPBImpl;
@@ -34,8 +34,8 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.FinishApplicationRequestPr
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.FinishApplicationResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetAllApplicationsRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetAllApplicationsResponseProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationMasterRequestProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationMasterResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationReportRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationReportResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterMetricsRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterMetricsResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterNodesRequestProto;
@@ -73,13 +73,13 @@ public class ClientRMProtocolPBServiceImpl implements BlockingInterface {
   }
 
   @Override
-  public GetApplicationMasterResponseProto getApplicationMaster(
-      RpcController arg0, GetApplicationMasterRequestProto proto)
+  public GetApplicationReportResponseProto getApplicationReport(
+      RpcController arg0, GetApplicationReportRequestProto proto)
       throws ServiceException {
-    GetApplicationMasterRequestPBImpl request = new GetApplicationMasterRequestPBImpl(proto);
+    GetApplicationReportRequestPBImpl request = new GetApplicationReportRequestPBImpl(proto);
     try {
-      GetApplicationMasterResponse response = real.getApplicationMaster(request);
-      return ((GetApplicationMasterResponsePBImpl)response).getProto();
+      GetApplicationReportResponse response = real.getApplicationReport(request);
+      return ((GetApplicationReportResponsePBImpl)response).getProto();
     } catch (YarnRemoteException e) {
       throw new ServiceException(e);
     }

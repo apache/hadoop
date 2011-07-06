@@ -29,7 +29,6 @@ import org.apache.avro.ipc.Server;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.mapreduce.ClientFactory;
 import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
@@ -70,8 +69,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationMasterRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
@@ -85,7 +84,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationMaster;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -220,22 +219,26 @@ public class TestClientRedirect {
     }
     
     @Override
-    public GetApplicationMasterResponse getApplicationMaster(GetApplicationMasterRequest request) throws YarnRemoteException {
+    public GetApplicationReportResponse getApplicationReport(
+        GetApplicationReportRequest request) throws YarnRemoteException {
       ApplicationId applicationId = request.getApplicationId();
-      ApplicationMaster master = recordFactory.newRecordInstance(ApplicationMaster.class);
-      master.setApplicationId(applicationId);
-      master.setStatus(recordFactory.newRecordInstance(ApplicationStatus.class));
-      master.getStatus().setApplicationId(applicationId);
+      ApplicationReport application = recordFactory
+          .newRecordInstance(ApplicationReport.class);
+      application.setApplicationId(applicationId);
+      application.setStatus(recordFactory
+          .newRecordInstance(ApplicationStatus.class));
+      application.getStatus().setApplicationId(applicationId);
       if (amRunning) {
-        master.setState(ApplicationState.RUNNING);
+        application.setState(ApplicationState.RUNNING);
       } else {
-        master.setState(ApplicationState.COMPLETED);
+        application.setState(ApplicationState.COMPLETED);
       }
       String[] split = AMHOSTADDRESS.split(":");
-      master.setHost(split[0]);
-      master.setRpcPort(Integer.parseInt(split[1]));
-      GetApplicationMasterResponse response = recordFactory.newRecordInstance(GetApplicationMasterResponse.class);
-      response.setApplicationMaster(master);
+      application.setHost(split[0]);
+      application.setRpcPort(Integer.parseInt(split[1]));
+      GetApplicationReportResponse response = recordFactory
+          .newRecordInstance(GetApplicationReportResponse.class);
+      response.setApplicationReport(application);
       return response;
     }
 

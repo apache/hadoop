@@ -28,8 +28,10 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -43,13 +45,15 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.AMLauncherEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationTrackerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationTrackerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
@@ -67,6 +71,7 @@ public class TestAMLaunchFailure {
   YarnScheduler scheduler = new DummyYarnScheduler();
   ApplicationTokenSecretManager applicationTokenSecretManager = 
     new ApplicationTokenSecretManager();
+  private ClientRMService clientService;
 
   private RMContext context;
 
@@ -131,7 +136,7 @@ public class TestAMLaunchFailure {
 
     private  class DummyApplicationMasterLauncher implements EventHandler<ASMEvent<AMLauncherEventType>> {
       private AtomicInteger notify = new AtomicInteger();
-      private AppContext app;
+      private Application app;
 
       public DummyApplicationMasterLauncher(RMContext context) {
         context.getDispatcher().register(AMLauncherEventType.class, this);
@@ -142,7 +147,7 @@ public class TestAMLaunchFailure {
         switch(appEvent.getType()) {
         case LAUNCH:
           LOG.info("LAUNCH called ");
-          app = appEvent.getAppContext();
+          app = appEvent.getApplication();
           synchronized (notify) {
             notify.addAndGet(1);
             notify.notify();
@@ -162,7 +167,7 @@ public class TestAMLaunchFailure {
               e.printStackTrace();
             }
             context.getDispatcher().getEventHandler().handle(
-                new ApplicationMasterInfoEvent(ApplicationEventType.LAUNCHED,
+                new ApplicationEvent(ApplicationEventType.LAUNCHED,
                     app.getApplicationID()));
           }
         }
@@ -187,9 +192,18 @@ public class TestAMLaunchFailure {
   public void setUp() {
     context = new ResourceManager.RMContextImpl(new MemStore());
     Configuration conf = new Configuration();
+
+    context.getDispatcher().register(ApplicationEventType.class,
+        new ResourceManager.ApplicationEventDispatcher(context));
+
     context.getDispatcher().init(conf);
     context.getDispatcher().start();
+
     asmImpl = new ExtApplicationsManagerImpl(applicationTokenSecretManager, scheduler);
+    clientService = new ClientRMService(context, asmImpl
+        .getAmLivelinessMonitor(), asmImpl.getClientToAMSecretManager(),
+        null, scheduler);
+    clientService.init(conf);
     new DummyApplicationTracker();
     conf.setLong(YarnConfiguration.AM_EXPIRY_INTERVAL, 3000L);
     conf.setInt(RMConfig.AM_MAX_RETRIES, 1);
@@ -210,17 +224,20 @@ public class TestAMLaunchFailure {
 
   @Test
   public void testAMLaunchFailure() throws Exception {
-    ApplicationId appID = asmImpl.getNewApplicationID();
-    ApplicationSubmissionContext context = createDummyAppContext(appID);
-    asmImpl.submitApplication(context);
-    ApplicationMaster master = asmImpl.getApplicationMaster(appID);
+    ApplicationId appID = clientService.getNewApplicationId();
+    ApplicationSubmissionContext submissionContext = createDummyAppContext(appID);
+    SubmitApplicationRequest request = recordFactory
+        .newRecordInstance(SubmitApplicationRequest.class);
+    request.setApplicationSubmissionContext(submissionContext);
+    clientService.submitApplication(request);
+    Application application = context.getApplications().get(appID); 
 
-    while (master.getState() != ApplicationState.FAILED) {
+    while (application.getState() != ApplicationState.FAILED) {
       LOG.info("Waiting for application to go to FAILED state."
-          + " Current state is " + master.getState());
+          + " Current state is " + application.getState());
       Thread.sleep(200);
-      master = asmImpl.getApplicationMaster(appID);
+      application = context.getApplications().get(appID);
     }
-    Assert.assertEquals(ApplicationState.FAILED, master.getState());
+    Assert.assertEquals(ApplicationState.FAILED, application.getState());
   }
 }

@@ -35,9 +35,11 @@ import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.AMLauncherEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMFinishEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.junit.After;
@@ -65,9 +67,9 @@ public class TestApplicationMasterLauncher {
 
   private Configuration conf = new Configuration();
   
-  private class DummyASM implements EventHandler<ApplicationMasterInfoEvent> {
+  private class DummyASM implements EventHandler<ApplicationEvent> {
     @Override
-    public void handle(ApplicationMasterInfoEvent appEvent) {
+    public void handle(ApplicationEvent appEvent) {
       ApplicationEventType event = appEvent.getType();
       switch (event) {
       case FINISH:
@@ -96,8 +98,8 @@ public class TestApplicationMasterLauncher {
     }
     public void run() {
       cleanedUp.incrementAndGet();
-      asmHandle.handle(new ApplicationFinishEvent(null,
-          ApplicationState.COMPLETED));
+      asmHandle.handle(new AMFinishEvent(null,
+          ApplicationState.COMPLETED, "", ""));
     }
   }
 
@@ -112,7 +114,7 @@ public class TestApplicationMasterLauncher {
     }
 
     @Override
-    protected Runnable createRunnableLauncher(AppContext masterInfo, 
+    protected Runnable createRunnableLauncher(Application masterInfo, 
         AMLauncherEventType event) {
       Runnable r = null;
       switch (event) {
@@ -152,7 +154,7 @@ public class TestApplicationMasterLauncher {
     submissionContext.getApplicationId().setClusterTimestamp(System.currentTimeMillis());
     submissionContext.getApplicationId().setId(1);
     submissionContext.setUser("dummyuser");
-    ApplicationMasterInfo masterInfo = new ApplicationMasterInfo(this.context,
+    ApplicationImpl masterInfo = new ApplicationImpl(this.context,
         this.conf, "dummyuser", submissionContext, "dummyclienttoken",
         StoreFactory.createVoidAppStore(), new AMLivelinessMonitor(context
             .getDispatcher().getEventHandler()));

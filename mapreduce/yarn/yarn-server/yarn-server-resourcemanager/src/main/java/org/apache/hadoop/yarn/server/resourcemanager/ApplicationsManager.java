@@ -16,22 +16,24 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events;
+package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.hadoop.yarn.api.records.ApplicationState;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.AppContext;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationEventType;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.AMLivelinessMonitor;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
+import org.apache.hadoop.yarn.service.Service;
 
-public class ApplicationFinishEvent extends ASMEvent<ApplicationEventType> {
-  private final ApplicationState finalState;
+/**
+ * This interface defines the interface for ApplicationsManager.
+ */
+@Private
+@Evolving
+public interface ApplicationsManager extends Recoverable, Service{
 
-  public ApplicationFinishEvent(AppContext context,
-      ApplicationState finalState) {
-    super(ApplicationEventType.FINISH, context);
-    this.finalState = finalState;
-  }
+  AMLivelinessMonitor getAmLivelinessMonitor();
 
-  public ApplicationState getFinalApplicationState() {
-    return this.finalState;
-  }
+  ClientToAMSecretManager getClientToAMSecretManager();
+
 }

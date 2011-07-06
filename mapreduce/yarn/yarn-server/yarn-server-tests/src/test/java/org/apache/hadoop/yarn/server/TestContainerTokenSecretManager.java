@@ -52,7 +52,8 @@ import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
-import org.apache.hadoop.yarn.api.records.Application;
+import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
@@ -79,6 +80,7 @@ import org.apache.hadoop.yarn.security.ContainerManagerSecurityInfo;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.SchedulerSecurityInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.Application;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -154,18 +156,20 @@ public class TestContainerTokenSecretManager {
     rsrc.setType(LocalResourceType.FILE);
     rsrc.setVisibility(LocalResourceVisibility.PRIVATE);
     appSubmissionContext.setResourceTodo("testFile", rsrc);
-    resourceManager.getApplicationsManager().submitApplication(
-        appSubmissionContext);
+    SubmitApplicationRequest submitRequest = recordFactory
+        .newRecordInstance(SubmitApplicationRequest.class);
+    submitRequest.setApplicationSubmissionContext(appSubmissionContext);
+    resourceManager.getClientRMService().submitApplication(submitRequest);
 
     // Wait till container gets allocated for AM
     int waitCounter = 0;
     Application app =
-        resourceManager.getApplicationsManager().getApplication(appID);
+        resourceManager.getRMContext().getApplications().get(appID);
     while (app.getState() != ApplicationState.LAUNCHED && waitCounter <= 20) {
       Thread.sleep(1000);
       LOG.info("Waiting for AM to be allocated a container. Current state is "
           + app.getState());
-      app = resourceManager.getApplicationsManager().getApplication(appID);
+      app = resourceManager.getRMContext().getApplications().get(appID);
     }
 
     Assert.assertTrue(ApplicationState.PENDING != app.getState());

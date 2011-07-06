@@ -47,12 +47,12 @@ message GetNewApplicationIdResponseProto {
   optional ApplicationIdProto application_id = 1;
 }
 
-message GetApplicationMasterRequestProto {
+message GetApplicationReportRequestProto {
   optional ApplicationIdProto application_id = 1;
 }
 
-message GetApplicationMasterResponseProto {
-  optional ApplicationMasterProto application_master = 1;
+message GetApplicationReportResponseProto {
+  optional ApplicationReportProto application_report = 1;
 }
 
 message SubmitApplicationRequestProto {
@@ -80,7 +80,7 @@ message GetAllApplicationsRequestProto {
 }
 
 message GetAllApplicationsResponseProto {
-  repeated ApplicationProto applications = 1;
+  repeated ApplicationReportProto applications = 1;
 }
 
 message GetClusterNodesRequestProto {

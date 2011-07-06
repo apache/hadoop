@@ -68,7 +68,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationMaster;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -240,8 +240,8 @@ public class YARNRunner implements ClientProtocol {
     // Submit to ResourceManager
     ApplicationId applicationId = resMgrDelegate.submitApplication(appContext);
     
-    ApplicationMaster appMaster = 
-      resMgrDelegate.getApplicationMaster(applicationId);
+    ApplicationReport appMaster = resMgrDelegate
+        .getApplicationReport(applicationId);
     if (appMaster.getState() == ApplicationState.FAILED || appMaster.getState() ==
       ApplicationState.KILLED) {
       throw RPCUtil.getRemoteException("failed to run job");

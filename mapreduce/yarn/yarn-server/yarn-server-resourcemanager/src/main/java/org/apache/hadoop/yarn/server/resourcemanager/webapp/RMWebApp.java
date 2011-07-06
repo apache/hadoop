@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import org.apache.hadoop.yarn.server.resourcemanager.ApplicationsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.ApplicationsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.ClusterTracker;
 import org.apache.hadoop.yarn.webapp.WebApp;
 
@@ -42,6 +43,7 @@ public class RMWebApp extends WebApp {
   public void setup() {
     if (rm != null) {
       bind(ResourceManager.class).toInstance(rm);
+      bind(RMContext.class).toInstance(rm.getRMContext());
       bind(ApplicationsManager.class).toInstance(rm.getApplicationsManager());
       bind(ClusterTracker.class).toInstance(rm.getResourceTracker());
     }

@@ -1,34 +1,35 @@
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
-import org.apache.hadoop.yarn.api.records.Application;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
-public class ApplicationPBImpl extends ProtoBase<ApplicationProto> 
-implements Application {
-  ApplicationProto proto = ApplicationProto.getDefaultInstance();
-  ApplicationProto.Builder builder = null;
+public class ApplicationReportPBImpl extends ProtoBase<ApplicationReportProto> 
+implements ApplicationReport {
+  ApplicationReportProto proto = ApplicationReportProto.getDefaultInstance();
+  ApplicationReportProto.Builder builder = null;
   boolean viaProto = false;
 
   ApplicationId applicationId;
   ApplicationStatus status;
   Container masterContainer = null;
 
-  public ApplicationPBImpl() {
-    builder = ApplicationProto.newBuilder();
+  public ApplicationReportPBImpl() {
+    builder = ApplicationReportProto.newBuilder();
   }
   
-  public ApplicationPBImpl(ApplicationProto proto) {
+  public ApplicationReportPBImpl(ApplicationReportProto proto) {
     this.proto = proto;
     viaProto = true;
   }
@@ -39,7 +40,7 @@ implements Application {
       return this.applicationId;
     }
 
-    ApplicationProtoOrBuilder p = viaProto ? proto : builder;
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasApplicationId()) {
       return null;
     }
@@ -53,7 +54,7 @@ implements Application {
       return this.masterContainer;
     }
 
-    ApplicationProtoOrBuilder p = viaProto ? proto : builder;
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasMasterContainer()) {
       return null;
     }
@@ -63,7 +64,7 @@ implements Application {
 
   @Override
   public String getTrackingUrl() {
-    ApplicationProtoOrBuilder p = viaProto ? proto : builder;
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasTrackingUrl()) {
       return null;
     }
@@ -72,7 +73,7 @@ implements Application {
 
   @Override
   public String getName() {
-    ApplicationProtoOrBuilder p = viaProto ? proto : builder;
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasName()) {
       return null;
     }
@@ -81,7 +82,7 @@ implements Application {
 
   @Override
   public String getQueue() {
-    ApplicationProtoOrBuilder p = viaProto ? proto : builder;
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasQueue()) {
       return null;
     }
@@ -90,11 +91,35 @@ implements Application {
 
   @Override
   public ApplicationState getState() {
-    ApplicationProtoOrBuilder p = viaProto ? proto : builder;
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasState()) {
       return null;
     }
     return convertFromProtoFormat(p.getState());
+  }
+
+  @Override
+  public String getHost() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasHost()) {
+      return null;
+    }
+    return (p.getHost());
+  }
+
+  @Override
+  public int getRpcPort() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.getRpcPort());
+  }
+
+  @Override
+  public String getClientToken() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasClientToken()) {
+      return null;
+    }
+    return (p.getClientToken());
   }
 
   @Override
@@ -103,7 +128,7 @@ implements Application {
       return this.status;
     }
 
-    ApplicationProtoOrBuilder p = viaProto ? proto : builder;
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasStatus()) {
       return null;
     }
@@ -113,7 +138,7 @@ implements Application {
 
   @Override
   public String getUser() {
-    ApplicationProtoOrBuilder p = viaProto ? proto : builder;
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasUser()) {
       return null;
     }
@@ -123,7 +148,7 @@ implements Application {
 
   @Override
   public String getDiagnostics() {
-    ApplicationProtoOrBuilder p = viaProto ? proto : builder;
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasDiagnostics()) {
       return null;
     }
@@ -187,6 +212,32 @@ implements Application {
   }
 
   @Override
+  public void setHost(String host) {
+    maybeInitBuilder();
+    if (host == null) {
+      builder.clearHost();
+      return;
+    }
+    builder.setHost((host));
+  }
+
+  @Override
+  public void setRpcPort(int rpcPort) {
+    maybeInitBuilder();
+    builder.setRpcPort((rpcPort));
+  }
+
+  @Override
+  public void setClientToken(String clientToken) {
+    maybeInitBuilder();
+    if (clientToken == null) {
+      builder.clearClientToken();
+      return;
+    }
+    builder.setClientToken((clientToken));
+  }
+
+  @Override
   public void setStatus(ApplicationStatus status) {
     maybeInitBuilder();
     if (status == null)
@@ -215,7 +266,7 @@ implements Application {
   }
 
   @Override
-  public ApplicationProto getProto() {
+  public ApplicationReportProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -245,7 +296,7 @@ implements Application {
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = ApplicationProto.newBuilder(proto);
+      builder = ApplicationReportProto.newBuilder(proto);
     }
     viaProto = false;
   }

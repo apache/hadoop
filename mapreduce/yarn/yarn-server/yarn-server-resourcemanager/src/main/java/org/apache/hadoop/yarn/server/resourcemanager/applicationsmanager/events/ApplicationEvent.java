@@ -16,23 +16,23 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
+package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events;
 
-import org.apache.hadoop.yarn.api.records.ApplicationStatus;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationEventType;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.event.AbstractEvent;
 
-public class ApplicationMasterStatusUpdateEvent extends
-    ApplicationMasterInfoEvent {
+public class ApplicationEvent extends
+    AbstractEvent<ApplicationEventType> {
 
-  private final ApplicationStatus applicationStatus;
+  private final ApplicationId applicationId;
 
-  public ApplicationMasterStatusUpdateEvent(ApplicationStatus applicationStatus) {
-    super(ApplicationEventType.STATUSUPDATE, applicationStatus
-        .getApplicationId());
-    this.applicationStatus = applicationStatus;
+  public ApplicationEvent(ApplicationEventType type,
+      ApplicationId applicationId) {
+    super(type);
+    this.applicationId = applicationId;
   }
 
-  public ApplicationStatus getApplicationStatus() {
-    return this.applicationStatus;
+  public ApplicationId getApplicationId() {
+    return this.applicationId;
   }
 }

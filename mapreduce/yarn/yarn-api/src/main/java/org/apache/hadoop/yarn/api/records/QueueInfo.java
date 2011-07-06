@@ -18,8 +18,8 @@ public interface QueueInfo {
   List<QueueInfo> getChildQueues();
   void setChildQueues(List<QueueInfo> childQueues);
   
-  List<Application> getApplications();
-  void setApplications(List<Application> applications);
+  List<ApplicationReport> getApplications();
+  void setApplications(List<ApplicationReport> applications);
   
   QueueState getQueueState();
   void setQueueState(QueueState queueState);

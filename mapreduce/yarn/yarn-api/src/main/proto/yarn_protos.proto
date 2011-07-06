@@ -107,16 +107,19 @@ message LocalResourceProto {
   optional LocalResourceVisibilityProto visibility= 5;
 }
 
-message ApplicationProto {
+message ApplicationReportProto {
   optional ApplicationIdProto applicationId = 1;
   optional string user = 2;
   optional string queue = 3;
   optional string name = 4;
-  optional ApplicationStatusProto status = 5;
-  optional ApplicationStateProto state = 6;
-  optional ContainerProto masterContainer = 7;
-  optional string trackingUrl = 8;
-  optional string diagnostics = 9 [default = "N/A"];
+  optional string host = 5;
+  optional int32 rpc_port = 6;
+  optional string client_token = 7;
+  optional ApplicationStatusProto status = 8;
+  optional ApplicationStateProto state = 9;
+  optional ContainerProto masterContainer = 10;
+  optional string trackingUrl = 11;
+  optional string diagnostics = 12 [default = "N/A"];
 }
 
 message NodeIdProto {
@@ -186,7 +189,7 @@ message QueueInfoProto {
   optional float currentCapacity = 4;
   optional QueueStateProto state = 5;
   repeated QueueInfoProto childQueues = 6;
-  repeated ApplicationProto applications = 7;
+  repeated ApplicationReportProto applications = 7;
 }
 
 enum QueueACLProto {

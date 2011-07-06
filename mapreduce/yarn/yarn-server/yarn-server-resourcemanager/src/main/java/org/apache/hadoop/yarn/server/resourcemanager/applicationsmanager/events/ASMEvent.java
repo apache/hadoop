@@ -19,21 +19,21 @@
 package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events;
 
 import org.apache.hadoop.yarn.event.AbstractEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.AppContext;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.Application;
 
 public class ASMEvent<T extends Enum<T>> extends AbstractEvent<T> {
-  private final AppContext context;
+  private final Application application;
   
-  public ASMEvent(T type, AppContext context) {
+  public ASMEvent(T type, Application app) {
     super(type);
-    this.context = context;
+    this.application = app;
   }
   
   /** 
    * return the application context.
    * @return the application context for this event.
    */
-  public AppContext getAppContext() {
-    return this.context;
+  public Application getApplication() {
+    return this.application;
   }
 }

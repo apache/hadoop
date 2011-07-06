@@ -27,6 +27,7 @@ import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
@@ -42,8 +43,10 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
+import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
@@ -57,6 +60,7 @@ public class TestAMRMRPCResponseId {
   ApplicationMasterService amService = null;
   ApplicationTokenSecretManager appTokenManager = new ApplicationTokenSecretManager();
   DummyApplicationsManager applicationsManager;
+  private ClientRMService clientService;
   DummyScheduler scheduler;
   private final static Container[] EMPTY_CONTAINER_ARRAY = new Container[] {};
   private final static List<Container> EMPTY_CONTAINER_LIST = Arrays.asList(EMPTY_CONTAINER_ARRAY);
@@ -67,18 +71,6 @@ public class TestAMRMRPCResponseId {
         ApplicationTokenSecretManager applicationTokenSecretManager,
         YarnScheduler scheduler, RMContext asmContext) {
       super(applicationTokenSecretManager, scheduler, asmContext);      
-    }
-    @Override
-    public void registerApplicationMaster(ApplicationMaster applicationMaster)
-    throws IOException {
-    }
-    @Override
-    public void applicationHeartbeat(ApplicationStatus status)
-    throws IOException {      
-    }
-    @Override
-    public void finishApplicationMaster(ApplicationMaster applicationMaster)
-    throws IOException {  
     }
   }
   
@@ -130,12 +122,20 @@ public class TestAMRMRPCResponseId {
   @Before
   public void setUp() {
     context = new ResourceManager.RMContextImpl(new MemStore());
+
+    context.getDispatcher().register(ApplicationEventType.class,
+        new ResourceManager.ApplicationEventDispatcher(context));
+
     scheduler = new DummyScheduler();
     applicationsManager = new DummyApplicationsManager(new 
         ApplicationTokenSecretManager(), scheduler, context);
-    amService = new ApplicationMasterService(
-        appTokenManager, applicationsManager, scheduler, context);
     Configuration conf = new Configuration();
+    this.clientService = new ClientRMService(context, applicationsManager
+        .getAmLivelinessMonitor(), applicationsManager
+        .getClientToAMSecretManager(), null, scheduler);
+    this.clientService.init(conf);
+    amService = new ApplicationMasterService(appTokenManager, scheduler,
+        context);
     applicationsManager.init(conf);
     amService.init(conf);
     context.getDispatcher().init(conf);
@@ -149,10 +149,13 @@ public class TestAMRMRPCResponseId {
 
   @Test
   public void testARRMResponseId() throws Exception {
-    ApplicationId applicationID = applicationsManager.getNewApplicationID();
+    ApplicationId applicationID = clientService.getNewApplicationId();
     ApplicationSubmissionContext context = recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
     context.setApplicationId(applicationID);
-    applicationsManager.submitApplication(context);
+    SubmitApplicationRequest submitRequest = recordFactory
+        .newRecordInstance(SubmitApplicationRequest.class);
+    submitRequest.setApplicationSubmissionContext(context);
+    clientService.submitApplication(submitRequest);
     ApplicationMaster applicationMaster = recordFactory.newRecordInstance(ApplicationMaster.class);
     applicationMaster.setApplicationId(applicationID);
     applicationMaster.setStatus(recordFactory.newRecordInstance(ApplicationStatus.class));

@@ -16,34 +16,22 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.api.records;
+package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events;
 
-public interface Application {
+import org.apache.hadoop.yarn.api.records.ApplicationMaster;
 
-  ApplicationId getApplicationId();
-  void setApplicationId(ApplicationId applicationId);
+public class AMRegistrationEvent extends
+    ApplicationEvent {
 
-  String getUser();
-  void setUser(String user);
+  private final ApplicationMaster applicationMaster;
 
-  String getQueue();
-  void setQueue(String queue);
+  public AMRegistrationEvent(ApplicationMaster applicationMaster) {
+    super(ApplicationEventType.REGISTERED, applicationMaster
+        .getApplicationId());
+    this.applicationMaster = applicationMaster;
+  }
 
-  String getName();
-  void setName(String name);
-
-  ApplicationStatus getStatus();
-  void setStatus(ApplicationStatus status);
-
-  ApplicationState getState();
-  void setState(ApplicationState state);
-
-  Container getMasterContainer();
-  void setMasterContainer(Container masterContainer);
-
-  String getDiagnostics();
-  void setDiagnostics(String diagnostics);
-
-  String getTrackingUrl();
-  void setTrackingUrl(String url);
+  public ApplicationMaster getApplicationMaster() {
+    return this.applicationMaster;
+  }
 }

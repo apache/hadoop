@@ -64,43 +64,47 @@ import org.apache.hadoop.yarn.security.ContainerManagerSecurityInfo;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.AMLauncherEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMFinishEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMLauncherEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
 
+/**
+ * The launch of the AM itself.
+ */
 public class AMLauncher implements Runnable {
 
   private static final Log LOG = LogFactory.getLog(AMLauncher.class);
 
   private ContainerManager containerMgrProxy;
 
-  private final AppContext master;
+  private final Application application;
   private final Configuration conf;
   private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-  private ApplicationTokenSecretManager applicationTokenSecretManager;
-  private ClientToAMSecretManager clientToAMSecretManager;
-  private AMLauncherEventType event;
+  private final ApplicationTokenSecretManager applicationTokenSecretManager;
+  private final ClientToAMSecretManager clientToAMSecretManager;
+  private final AMLauncherEventType eventType;
   
   @SuppressWarnings("rawtypes")
-  private EventHandler handler;
+  private final EventHandler handler;
   
   @SuppressWarnings("unchecked")
-  public AMLauncher(RMContext asmContext, AppContext master,
-      AMLauncherEventType event,ApplicationTokenSecretManager applicationTokenSecretManager,
+  public AMLauncher(RMContext asmContext, Application application,
+      AMLauncherEventType eventType,ApplicationTokenSecretManager applicationTokenSecretManager,
       ClientToAMSecretManager clientToAMSecretManager, Configuration conf) {
-    this.master = master;
+    this.application = application;
     this.conf = new Configuration(conf); // Just not to touch the sec-info class
     this.applicationTokenSecretManager = applicationTokenSecretManager;
     this.clientToAMSecretManager = clientToAMSecretManager;
     this.conf.setClass(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_INFO_CLASS_NAME,
         ContainerManagerSecurityInfo.class, SecurityInfo.class);
-    this.event = event;
+    this.eventType = eventType;
     this.handler = asmContext.getDispatcher().getEventHandler();
   }
   
   private void connect() throws IOException {
-    ContainerId masterContainerID = master.getMasterContainer().getId();
+    ContainerId masterContainerID = application.getMasterContainer().getId();
     
     containerMgrProxy =
         getContainerMgrProxy(masterContainerID.getAppId());
@@ -108,23 +112,23 @@ public class AMLauncher implements Runnable {
   
   private void launch() throws IOException {
     connect();
-    ContainerId masterContainerID = master.getMasterContainer().getId();
+    ContainerId masterContainerID = application.getMasterContainer().getId();
     ApplicationSubmissionContext applicationContext =
-      master.getSubmissionContext();
-    LOG.info("Setting up container " + master.getMasterContainer() 
-        + " for AM " + master.getMaster());  
+      application.getSubmissionContext();
+    LOG.info("Setting up container " + application.getMasterContainer() 
+        + " for AM " + application.getMaster());  
     ContainerLaunchContext launchContext =
         createAMContainerLaunchContext(applicationContext, masterContainerID);
     StartContainerRequest request = recordFactory.newRecordInstance(StartContainerRequest.class);
     request.setContainerLaunchContext(launchContext);
     containerMgrProxy.startContainer(request);
-    LOG.info("Done launching container " + master.getMasterContainer() 
-        + " for AM " + master.getMaster());
+    LOG.info("Done launching container " + application.getMasterContainer() 
+        + " for AM " + application.getMaster());
   }
   
   private void cleanup() throws IOException {
     connect();
-    ContainerId containerId = master.getMasterContainer().getId();
+    ContainerId containerId = application.getMasterContainer().getId();
     StopContainerRequest stopRequest = recordFactory.newRecordInstance(StopContainerRequest.class);
     stopRequest.setContainerId(containerId);
     containerMgrProxy.stopContainer(stopRequest);
@@ -133,7 +137,7 @@ public class AMLauncher implements Runnable {
   private ContainerManager getContainerMgrProxy(
       final ApplicationId applicationID) throws IOException {
 
-    Container container = master.getMasterContainer();
+    Container container = application.getMasterContainer();
 
     final String containerManagerBindAddress = container.getContainerManagerAddress();
 
@@ -168,9 +172,10 @@ public class AMLauncher implements Runnable {
     ContainerLaunchContext container = recordFactory.newRecordInstance(ContainerLaunchContext.class);
     container.addAllCommands(applicationMasterContext.getCommandList());
     StringBuilder mergedCommand = new StringBuilder();
-    String failCount = Integer.toString(master.getFailedCount());
+    String failCount = Integer.toString(application.getFailedCount());
     List<String> commandList = new ArrayList<String>();
     for (String str : container.getCommandList()) {
+      // This is out-right wrong. AM FAIL count should be passed via env.
       String result =
           str.replaceFirst(ApplicationConstants.AM_FAIL_COUNT_STRING,
               failCount);
@@ -213,8 +218,8 @@ public class AMLauncher implements Runnable {
         credentials.readTokenStorageStream(dibb);
       }
 
-      ApplicationTokenIdentifier id =
-          new ApplicationTokenIdentifier(master.getMasterContainer().getId().getAppId());
+      ApplicationTokenIdentifier id = new ApplicationTokenIdentifier(
+          application.getApplicationID());
       Token<ApplicationTokenIdentifier> token =
           new Token<ApplicationTokenIdentifier>(id,
               this.applicationTokenSecretManager);
@@ -238,9 +243,8 @@ public class AMLauncher implements Runnable {
       credentials.writeTokenStorageToStream(dob);
       asc.setFsTokensTodo(ByteBuffer.wrap(dob.getData(), 0, dob.getLength()));
 
-      ApplicationTokenIdentifier identifier =
-          new ApplicationTokenIdentifier(
-              this.master.getMaster().getApplicationId());
+      ApplicationTokenIdentifier identifier = new ApplicationTokenIdentifier(
+          this.application.getApplicationID());
       SecretKey clientSecretKey =
           this.clientToAMSecretManager.getMasterKey(identifier);
       String encoded =
@@ -253,35 +257,30 @@ public class AMLauncher implements Runnable {
   
   @SuppressWarnings("unchecked")
   public void run() {
-    switch (event) {
+    switch (eventType) {
     case LAUNCH:
-      ApplicationEventType eventType = ApplicationEventType.LAUNCHED;
+      ApplicationEventType targetEventType = ApplicationEventType.LAUNCHED;
       try {
-        LOG.info("Launching master" + master.getMaster());
+        LOG.info("Launching master" + application.getMaster());
         launch();
       } catch(Exception ie) {
         LOG.info("Error launching ", ie);
-        eventType = ApplicationEventType.LAUNCH_FAILED;
+        targetEventType = ApplicationEventType.LAUNCH_FAILED;
       }
-      handler.handle(new ApplicationMasterInfoEvent(eventType, master
+      handler.handle(new ApplicationEvent(targetEventType, application
           .getApplicationID()));
       break;
     case CLEANUP:
       try {
-        LOG.info("Cleaning master " + master.getMaster());
+        LOG.info("Cleaning master " + application.getMaster());
         cleanup();
       } catch(IOException ie) {
         LOG.info("Error cleaning master ", ie);
       }
-      handler.handle(new ApplicationFinishEvent(master.getApplicationID(),
-          ApplicationState.COMPLETED)); // Doesn't matter what state you send :) :(
       break;
     default:
+      LOG.warn("Received unknown event-type " + eventType + ". Ignoring.");
       break;
     }
-  }
-
-  public AppContext getApplicationContext() {
-   return master;
   }
 }

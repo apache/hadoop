@@ -470,9 +470,9 @@ public class Application {
     return new ArrayList<NodeInfo>(applicationOnNodes);
   }
 
-  synchronized public org.apache.hadoop.yarn.api.records.Application getApplicationInfo() {
-    org.apache.hadoop.yarn.api.records.Application application = recordFactory
-        .newRecordInstance(org.apache.hadoop.yarn.api.records.Application.class);
+  synchronized public org.apache.hadoop.yarn.api.records.ApplicationReport getApplicationInfo() {
+    org.apache.hadoop.yarn.api.records.ApplicationReport application = recordFactory
+        .newRecordInstance(org.apache.hadoop.yarn.api.records.ApplicationReport.class);
     application.setApplicationId(applicationId);
     application.setName("");
     application.setQueue(queue.getQueueName());

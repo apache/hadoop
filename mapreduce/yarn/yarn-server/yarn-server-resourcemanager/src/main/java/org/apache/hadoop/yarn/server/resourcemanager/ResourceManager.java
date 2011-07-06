@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 
 import java.io.IOException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.avro.AvroRuntimeException;
@@ -30,12 +32,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.ApplicationsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.Application;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.ApplicationImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.ApplicationsManagerImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.
-  ApplicationMasterEvents.ApplicationTrackerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationTrackerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NodeStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
@@ -61,7 +67,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   public static final long clusterTimeStamp = System.currentTimeMillis();
   private YarnConfiguration conf;
   
-  private ApplicationsManagerImpl applicationsManager;
+  private ApplicationsManager applicationsManager;
   
   private ContainerTokenSecretManager containerTokenSecretManager =
       new ContainerTokenSecretManager();
@@ -69,7 +75,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
   private ApplicationTokenSecretManager appTokenSecretManager =
       new ApplicationTokenSecretManager();
 
-  
   private ResourceScheduler scheduler;
   private ResourceTrackerService resourceTracker;
   private ClientRMService clientRM;
@@ -93,12 +98,15 @@ public class ResourceManager extends CompositeService implements Recoverable {
     public RMDispatcherImpl getDispatcher();
     public NodeStore getNodeStore();
     public ApplicationsStore getApplicationsStore();
+    public ConcurrentMap<ApplicationId, Application> getApplications();
   }
   
   public static class RMContextImpl implements RMContext {
     private final RMDispatcherImpl asmEventDispatcher;
     private final Store store;
-    
+    private final ConcurrentMap<ApplicationId, Application> applications = 
+      new ConcurrentHashMap<ApplicationId, Application>();
+
     public RMContextImpl(Store store) {
       this.asmEventDispatcher = new RMDispatcherImpl();
       this.store = store;
@@ -118,6 +126,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
     public ApplicationsStore getApplicationsStore() {
       return store;
     }
+
+    @Override
+    public ConcurrentMap<ApplicationId, Application> getApplications() {
+      return this.applications;
+    }
   }
   
   
@@ -134,13 +147,17 @@ public class ResourceManager extends CompositeService implements Recoverable {
           conf.getClass(RMConfig.RESOURCE_SCHEDULER, 
               FifoScheduler.class, ResourceScheduler.class), 
           this.conf);
-  
+
+    // Register event handler for ApplicationEvents.
+    this.rmContext.getDispatcher().register(ApplicationEventType.class,
+        new ApplicationEventDispatcher(this.rmContext));
+
     this.rmContext.getDispatcher().register(ApplicationTrackerEventType.class, scheduler);
     //TODO change this to be random
     this.appTokenSecretManager.setMasterKey(ApplicationTokenSecretManager
         .createSecretKey("Dummy".getBytes()));
 
-    applicationsManager = createApplicationsManagerImpl();
+    applicationsManager = createApplicationsManager();
     addService(applicationsManager);
     
     resourceTracker = createResourceTrackerService();
@@ -166,7 +183,30 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     super.init(conf);
   }
-  
+
+  public static final class ApplicationEventDispatcher implements
+      EventHandler<ApplicationEvent> {
+
+    private final RMContext rmContext;
+
+    public ApplicationEventDispatcher(RMContext rmContext) {
+      this.rmContext = rmContext;
+    }
+
+    @Override
+    public void handle(ApplicationEvent event) {
+      ApplicationId appID = event.getApplicationId();
+      ApplicationImpl application = (ApplicationImpl) this.rmContext
+          .getApplications().get(appID);
+      try {
+        application.handle(event);
+      } catch (Throwable t) {
+        LOG.error("Error in handling event type " + event.getType()
+            + " for application " + event.getApplicationId(), t);
+      }
+    }
+  }
+
   @Override
   public void start() {
     try {
@@ -222,25 +262,32 @@ public class ResourceManager extends CompositeService implements Recoverable {
             this.rmContext));
   }
   
-  protected ApplicationsManagerImpl createApplicationsManagerImpl() {
+  protected ApplicationsManager createApplicationsManager() {
     return new ApplicationsManagerImpl(
         this.appTokenSecretManager, this.scheduler, this.rmContext);
   }
 
   protected ClientRMService createClientRMService() {
-    return new ClientRMService(applicationsManager, 
-        resourceTracker.getResourceTracker(), scheduler);
+    return new ClientRMService(this.rmContext, this.applicationsManager
+        .getAmLivelinessMonitor(), this.applicationsManager
+        .getClientToAMSecretManager(), resourceTracker.getResourceTracker(),
+        scheduler);
   }
 
   protected ApplicationMasterService createApplicationMasterService() {
-    return new ApplicationMasterService(
-      this.appTokenSecretManager, applicationsManager, scheduler, this.rmContext);
+    return new ApplicationMasterService(this.appTokenSecretManager,
+        scheduler, this.rmContext);
   }
   
 
   protected AdminService createAdminService(Configuration conf, 
       ResourceScheduler scheduler, NodeTracker nodesTracker) {
     return new AdminService(conf, scheduler, nodesTracker);
+  }
+
+  @Private
+  public ClientRMService getClientRMService() {
+    return this.clientRM;
   }
 
   /**

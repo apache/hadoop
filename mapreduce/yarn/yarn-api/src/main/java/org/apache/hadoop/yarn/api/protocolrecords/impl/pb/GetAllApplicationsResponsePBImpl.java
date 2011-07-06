@@ -5,10 +5,10 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
-import org.apache.hadoop.yarn.api.records.Application;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
-import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationPBImpl;
-import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationProto;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationReportPBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetAllApplicationsResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetAllApplicationsResponseProtoOrBuilder;
 
@@ -21,7 +21,7 @@ GetAllApplicationsResponse {
   GetAllApplicationsResponseProto.Builder builder = null;
   boolean viaProto = false;
 
-  List<Application> applicationList;
+  List<ApplicationReport> applicationList;
   
   public GetAllApplicationsResponsePBImpl() {
     builder = GetAllApplicationsResponseProto.newBuilder();
@@ -33,13 +33,13 @@ GetAllApplicationsResponse {
   }
 
   @Override
-  public List<Application> getApplicationList() {    
+  public List<ApplicationReport> getApplicationList() {    
     initLocalApplicationsList();
     return this.applicationList;
   }
 
   @Override
-  public void setApplicationList(List<Application> applications) {
+  public void setApplicationList(List<ApplicationReport> applications) {
     maybeInitBuilder();
     if (applications == null) 
       builder.clearApplications();
@@ -81,10 +81,10 @@ GetAllApplicationsResponse {
       return;
     }
     GetAllApplicationsResponseProtoOrBuilder p = viaProto ? proto : builder;
-    List<ApplicationProto> list = p.getApplicationsList();
-    applicationList = new ArrayList<Application>();
+    List<ApplicationReportProto> list = p.getApplicationsList();
+    applicationList = new ArrayList<ApplicationReport>();
 
-    for (ApplicationProto a : list) {
+    for (ApplicationReportProto a : list) {
       applicationList.add(convertFromProtoFormat(a));
     }
   }
@@ -94,12 +94,12 @@ GetAllApplicationsResponse {
     builder.clearApplications();
     if (applicationList == null)
       return;
-    Iterable<ApplicationProto> iterable = new Iterable<ApplicationProto>() {
+    Iterable<ApplicationReportProto> iterable = new Iterable<ApplicationReportProto>() {
       @Override
-      public Iterator<ApplicationProto> iterator() {
-        return new Iterator<ApplicationProto>() {
+      public Iterator<ApplicationReportProto> iterator() {
+        return new Iterator<ApplicationReportProto>() {
 
-          Iterator<Application> iter = applicationList.iterator();
+          Iterator<ApplicationReport> iter = applicationList.iterator();
 
           @Override
           public boolean hasNext() {
@@ -107,7 +107,7 @@ GetAllApplicationsResponse {
           }
 
           @Override
-          public ApplicationProto next() {
+          public ApplicationReportProto next() {
             return convertToProtoFormat(iter.next());
           }
 
@@ -123,12 +123,12 @@ GetAllApplicationsResponse {
     builder.addAllApplications(iterable);
   }
 
-  private ApplicationPBImpl convertFromProtoFormat(ApplicationProto p) {
-    return new ApplicationPBImpl(p);
+  private ApplicationReportPBImpl convertFromProtoFormat(ApplicationReportProto p) {
+    return new ApplicationReportPBImpl(p);
   }
 
-  private ApplicationProto convertToProtoFormat(Application t) {
-    return ((ApplicationPBImpl)t).getProto();
+  private ApplicationReportProto convertToProtoFormat(ApplicationReport t) {
+    return ((ApplicationReportPBImpl)t).getProto();
   }
 
 }

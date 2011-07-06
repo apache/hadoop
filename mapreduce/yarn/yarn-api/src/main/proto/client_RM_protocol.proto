@@ -7,7 +7,7 @@ import "yarn_service_protos.proto";
 
 service ClientRMProtocolService {
   rpc getNewApplicationId (GetNewApplicationIdRequestProto) returns (GetNewApplicationIdResponseProto);
-  rpc getApplicationMaster (GetApplicationMasterRequestProto) returns (GetApplicationMasterResponseProto);
+  rpc getApplicationReport (GetApplicationReportRequestProto) returns (GetApplicationReportResponseProto);
   rpc submitApplication (SubmitApplicationRequestProto) returns (SubmitApplicationResponseProto);
   rpc finishApplication (FinishApplicationRequestProto) returns (FinishApplicationResponseProto);
   rpc getClusterMetrics (GetClusterMetricsRequestProto) returns (GetClusterMetricsResponseProto);

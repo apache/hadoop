@@ -42,10 +42,11 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.AMLauncherEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationTrackerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationTrackerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
@@ -67,7 +68,7 @@ public class TestSchedulerNegotiator {
   private final int testNum = 99999;
   
   private final RMContext context = new ResourceManager.RMContextImpl(new MemStore());
-  ApplicationMasterInfo masterInfo;
+  ApplicationImpl masterInfo;
   private EventHandler handler;
   private Configuration conf = new Configuration();
   private class DummyScheduler implements ResourceScheduler {
@@ -166,7 +167,7 @@ public class TestSchedulerNegotiator {
     schedulerNegotiator.stop();
   }
   
-  public void waitForState(ApplicationState state, ApplicationMasterInfo info) {
+  public void waitForState(ApplicationState state, ApplicationImpl info) {
     int count = 0;
     while (info.getState() != state && count < 100) {
       try {
@@ -192,7 +193,7 @@ public class TestSchedulerNegotiator {
     submissionContext.getApplicationId().setClusterTimestamp(System.currentTimeMillis());
     submissionContext.getApplicationId().setId(1);
     
-    masterInfo = new ApplicationMasterInfo(this.context, this.conf, "dummy",
+    masterInfo = new ApplicationImpl(this.context, this.conf, "dummy",
         submissionContext, "dummyClientToken", StoreFactory
             .createVoidAppStore(), new AMLivelinessMonitor(context
             .getDispatcher().getEventHandler()));
@@ -200,7 +201,7 @@ public class TestSchedulerNegotiator {
     context.getDispatcher().register(ApplicationTrackerEventType.class, scheduler);
     context.getDispatcher().register(AMLauncherEventType.class,
         new DummyEventHandler());
-    handler.handle(new ApplicationMasterInfoEvent(
+    handler.handle(new ApplicationEvent(
         ApplicationEventType.ALLOCATE, submissionContext.getApplicationId()));
     waitForState(ApplicationState.LAUNCHING, masterInfo); // LAUNCHING because ALLOCATED automatically movesto LAUNCHING for now.
     Container container = masterInfo.getMasterContainer();

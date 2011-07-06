@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import com.google.inject.Inject;
 
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.AppContext;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.Application;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.*;
@@ -52,7 +52,7 @@ class AppsBlock extends HtmlBlock {
             th(".note", "Note")._()._().
         tbody();
     int i = 0;
-    for (AppContext app : list.apps) {
+    for (Application app : list.apps.values()) {
       String appId = Apps.toString(app.getApplicationID());
       String trackingUrl = app.getMaster().getTrackingUrl();
       String ui = trackingUrl == null || trackingUrl.isEmpty() ? "UNASSIGNED" :

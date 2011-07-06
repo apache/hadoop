@@ -36,6 +36,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -99,7 +100,7 @@ public class Application {
     this.queue = queue;
     this.resourceManager = resourceManager;
     this.applicationId =
-      this.resourceManager.getApplicationsManager().getNewApplicationID();
+      this.resourceManager.getClientRMService().getNewApplicationId();
   }
 
   public String getUser() {
@@ -131,7 +132,10 @@ public class Application {
     context.setApplicationId(this.applicationId);
     context.setUser(this.user);
     context.setQueue(this.queue);
-    resourceManager.getApplicationsManager().submitApplication(context);
+    SubmitApplicationRequest request = recordFactory
+        .newRecordInstance(SubmitApplicationRequest.class);
+    request.setApplicationSubmissionContext(context);
+    resourceManager.getClientRMService().submitApplication(request);
   }
   
   public synchronized void addResourceRequestSpec(

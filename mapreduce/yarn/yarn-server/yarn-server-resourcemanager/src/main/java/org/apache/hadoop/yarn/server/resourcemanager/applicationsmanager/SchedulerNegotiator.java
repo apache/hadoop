@@ -31,21 +31,18 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationMaster;
-import org.apache.hadoop.yarn.api.records.ApplicationStatus;
-import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMAllocatedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.SNEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.SNEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.service.AbstractService;
@@ -54,7 +51,7 @@ import org.apache.hadoop.yarn.service.AbstractService;
  * Negotiates with the scheduler for allocation of application master container.
  *
  */
-class SchedulerNegotiator extends AbstractService implements EventHandler<ASMEvent<SNEventType>> {
+public class SchedulerNegotiator extends AbstractService implements EventHandler<ASMEvent<SNEventType>> {
 
   private static final Log LOG = LogFactory.getLog(SchedulerNegotiator.class);
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
@@ -72,8 +69,8 @@ class SchedulerNegotiator extends AbstractService implements EventHandler<ASMEve
 
   private final SchedulerThread schedulerThread;
   private final YarnScheduler scheduler;
-  private final List<AppContext> pendingApplications = 
-    new ArrayList<AppContext>();
+  private final List<Application> pendingApplications = 
+    new ArrayList<Application>();
 
   @SuppressWarnings("unchecked")
   public SchedulerNegotiator(RMContext context, 
@@ -114,11 +111,10 @@ class SchedulerNegotiator extends AbstractService implements EventHandler<ASMEve
     
       @Override
     public void run() {
-      List<AppContext> toSubmit = 
-        new ArrayList<AppContext>();
-      List<AppContext> submittedApplications =
-        new ArrayList<AppContext>();
-      Map<ApplicationId, List<Container>> firstAllocate = new HashMap<ApplicationId, List<Container>>();
+      List<Application> toSubmit = new ArrayList<Application>();
+      List<Application> submittedApplications = new ArrayList<Application>();
+      Map<ApplicationId, List<Container>> firstAllocate 
+              = new HashMap<ApplicationId, List<Container>>();
       while (!shutdown && !isInterrupted()) {
         try {
           toSubmit.addAll(getPendingApplications());
@@ -127,7 +123,7 @@ class SchedulerNegotiator extends AbstractService implements EventHandler<ASMEve
 
             submittedApplications.addAll(toSubmit);
 
-            for (AppContext masterInfo: toSubmit) {
+            for (Application masterInfo: toSubmit) {
               // Register request for the ApplicationMaster container
               ResourceRequest request = 
                 org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceRequest.create(
@@ -150,10 +146,10 @@ class SchedulerNegotiator extends AbstractService implements EventHandler<ASMEve
 
           List<Container> containers = null;
 
-          for (Iterator<AppContext> it=submittedApplications.iterator(); 
+          for (Iterator<Application> it=submittedApplications.iterator(); 
           it.hasNext();) {
-            AppContext masterInfo = it.next();
-            ApplicationId appId = masterInfo.getMaster().getApplicationId();
+            Application application = it.next();
+            ApplicationId appId = application.getMaster().getApplicationId();
             containers = scheduler.allocate(appId, 
                 EMPTY_ASK, EMPTY_RELEASE).getContainers();
             if (firstAllocate.containsKey(appId)) {
@@ -167,12 +163,13 @@ class SchedulerNegotiator extends AbstractService implements EventHandler<ASMEve
               Container container = containers.get(0);
               
               LOG.info("Found container " + container + " for AM of "
-                  + masterInfo.getMaster());
-              handler.handle(new ApplicationMasterAllocatedEvent(masterInfo
+                  + application.getMaster());
+              handler.handle(new AMAllocatedEvent(application
                   .getApplicationID(), container));
             }
           }
 
+          // TODO: This can be detrimental. Use wait/notify.
           Thread.sleep(1000);
         } catch(Exception e) {
           LOG.info("Exception in submitting applications ", e);
@@ -189,8 +186,8 @@ class SchedulerNegotiator extends AbstractService implements EventHandler<ASMEve
     }
   }
 
-  private Collection<? extends AppContext> getPendingApplications() {
-    List<AppContext> pending = new ArrayList<AppContext>();
+  private Collection<? extends Application> getPendingApplications() {
+    List<Application> pending = new ArrayList<Application>();
     synchronized (pendingApplications) {
       pending.addAll(pendingApplications);
       pendingApplications.clear();
@@ -198,52 +195,45 @@ class SchedulerNegotiator extends AbstractService implements EventHandler<ASMEve
     return pending;
   }
 
-  private void addPending(AppContext masterInfo) {
-    LOG.info("Adding to pending " + masterInfo.getMaster());
+  private void addPending(Application application) {
+    LOG.info("Adding to pending " + application.getApplicationID());
     synchronized(pendingApplications) {
-      pendingApplications.add(masterInfo);
+      pendingApplications.add(application);
     }
+  }
+
+  private void finishApplication(Application application)  
+  throws IOException {
+    LOG.info("Finishing application: cleaning up container " +
+        application.getMasterContainer());
+    //TODO we should release the container but looks like we just 
+    // wait for update from NodeManager
+    Container[] containers = new Container[] {application.getMasterContainer()};
+    scheduler.allocate(application.getApplicationID(), 
+        EMPTY_ASK, Arrays.asList(containers));
   }
 
   @Override
   public void handle(ASMEvent<SNEventType> appEvent)  {
-    SNEventType event = appEvent.getType();
-    AppContext appContext = appEvent.getAppContext();
-    switch (event) {
+    SNEventType eventType = appEvent.getType();
+    Application application = appEvent.getApplication();
+    switch (eventType) {
     case SCHEDULE:
-      addPending(appContext);
+      addPending(application);
       break;
     case RELEASE:
       try {
-      scheduler.allocate(appContext.getApplicationID(), 
-          EMPTY_ASK, Collections.singletonList(appContext.getMasterContainer()));
+        finishApplication(application);
       } catch(IOException ie) {
         //TODO remove IOException from the scheduler.
-        LOG.error("Error while releasing container for AM " + appContext.getApplicationID());
+        LOG.error("Error while releasing container for AM " + application.getApplicationID());
       }
-      handler.handle(new ApplicationMasterInfoEvent(
-          ApplicationEventType.RELEASED, appContext.getApplicationID()));
-      break;
-    case CLEANUP:
-      try {
-        finishApplication(appContext);
-      } catch (IOException ie) {
-        LOG.info("Error finishing application", ie);
-      }
+      handler.handle(new ApplicationEvent(
+          ApplicationEventType.RELEASED, application.getApplicationID()));
       break;
     default:
+      LOG.warn("Unknown event " + eventType + " received. Ignoring.");
       break;
     }
   }
-  
-  private void finishApplication(AppContext masterInfo)  
-  throws IOException {
-    LOG.info("Finishing application: cleaning up container " +
-        masterInfo.getMasterContainer());
-    //TODO we should release the container but looks like we just 
-    // wait for update from NodeManager
-    Container[] containers = new Container[] {masterInfo.getMasterContainer()};
-    scheduler.allocate(masterInfo.getMaster().getApplicationId(), 
-        EMPTY_ASK, Arrays.asList(containers));
-  }  
 }

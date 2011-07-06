@@ -18,30 +18,40 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import com.google.inject.Injector;
+import static org.apache.hadoop.test.MockitoMaker.make;
+import static org.apache.hadoop.test.MockitoMaker.stub;
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNodes.newResource;
+import static org.apache.hadoop.yarn.webapp.Params.TITLE;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 
-import static org.apache.hadoop.test.MockitoMaker.*;
-import static org.apache.hadoop.yarn.server.resourcemanager.MockNodes.*;
-import static org.apache.hadoop.yarn.webapp.Params.*;
-
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.server.resourcemanager.ApplicationsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.ApplicationsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContextImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.Application;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.MockAsm;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
+import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.ClusterTracker;
 import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.RMResourceTrackerImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.ClusterTracker;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
-
 import org.junit.Test;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.inject.Injector;
 
 public class TestRMWebApp {
   static final int GiB = 1024; // MiB
@@ -54,8 +64,8 @@ public class TestRMWebApp {
   }
 
   @Test public void testView() {
-    Injector injector = WebAppTests.createMockInjector(ApplicationsManager.class,
-                                                       MockAsm.create(3));
+    Injector injector = WebAppTests.createMockInjector(RMContext.class,
+                                                       mockRMContext(3));
     injector.getInstance(RmView.class).render();
     WebAppTests.flushOutput(injector);
   }
@@ -73,16 +83,33 @@ public class TestRMWebApp {
         getAllNodeInfo());
   }
 
+  public static RMContext mockRMContext(int n) {
+    final List<Application> apps = MockAsm.newApplications(n);
+    final ConcurrentMap<ApplicationId, Application> map = Maps
+        .newConcurrentMap();
+    for (Application app : apps) {
+      map.put(app.getApplicationID(), app);
+    }
+    return new RMContextImpl(new MemStore()) {
+      @Override
+      public ConcurrentMap<ApplicationId, Application> getApplications() {
+        return map;
+      }
+    };
+  }
+
   public static ResourceManager mockRm(int apps, int racks, int nodes,
                                        int mbsPerNode)
   throws Exception {
     ResourceManager rm = mock(ResourceManager.class);
-    ApplicationsManager asm = MockAsm.create(apps);
+    ApplicationsManager asm = MockAsm.create();
+    RMContext rmContext = mockRMContext(apps);
     RMResourceTrackerImpl rt = mockResource(racks, nodes, mbsPerNode);
     ResourceScheduler rs = mockCapacityScheduler();
     when(rm.getApplicationsManager()).thenReturn(asm);
     when(rm.getResourceTracker()).thenReturn(rt);
     when(rm.getResourceScheduler()).thenReturn(rs);
+    when(rm.getRMContext()).thenReturn(rmContext);
     return rm;
   }
 

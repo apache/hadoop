@@ -43,11 +43,16 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.AMLauncherEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationTrackerEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.SNEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMFinishEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMAllocatedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMRegistrationEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMStatusUpdateEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationTrackerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.SNEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
@@ -63,9 +68,9 @@ import org.apache.hadoop.yarn.state.StateMachineFactory;
  */
 @Private
 @Unstable
-public class ApplicationMasterInfo implements AppContext,
-    EventHandler<ApplicationMasterInfoEvent> {
-  private static final Log LOG = LogFactory.getLog(ApplicationMasterInfo.class);
+public class ApplicationImpl implements Application,
+    EventHandler<ApplicationEvent> {
+  private static final Log LOG = LogFactory.getLog(ApplicationImpl.class);
   private final ApplicationSubmissionContext submissionContext;
   private ApplicationMaster master;
   private final EventHandler handler;
@@ -103,12 +108,12 @@ public class ApplicationMasterInfo implements AppContext,
   private final FailedLaunchTransition failedLaunchTransition = new FailedLaunchTransition();
   
   private final StateMachine<ApplicationState,
-                ApplicationEventType, ApplicationMasterInfoEvent> stateMachine;
+                ApplicationEventType, ApplicationEvent> stateMachine;
 
-  private final StateMachineFactory<ApplicationMasterInfo, ApplicationState,
-    ApplicationEventType, ApplicationMasterInfoEvent> stateMachineFactory
-          = new StateMachineFactory<ApplicationMasterInfo, ApplicationState,
-    ApplicationEventType, ApplicationMasterInfoEvent>(ApplicationState.PENDING)
+  private final StateMachineFactory<ApplicationImpl, ApplicationState,
+    ApplicationEventType, ApplicationEvent> stateMachineFactory
+          = new StateMachineFactory<ApplicationImpl, ApplicationState,
+    ApplicationEventType, ApplicationEvent>(ApplicationState.PENDING)
 
   // Transitions from PENDING State
   .addTransition(ApplicationState.PENDING, ApplicationState.ALLOCATING,
@@ -213,7 +218,7 @@ public class ApplicationMasterInfo implements AppContext,
 
 
 
-  public ApplicationMasterInfo(RMContext context, Configuration conf,
+  public ApplicationImpl(RMContext context, Configuration conf,
       String user, ApplicationSubmissionContext submissionContext,
       String clientToken, ApplicationStore appStore,
       AMLivelinessMonitor amLivelinessMonitor) {
@@ -264,15 +269,12 @@ public class ApplicationMasterInfo implements AppContext,
     return master.getStatus();
   }
 
-  public synchronized void updateStatus(ApplicationStatus status) {
-    this.master.setStatus(status);
-  }
-
   @Override
   public synchronized ApplicationMaster getMaster() {
     return master;
   }
 
+  @Override
   /* make sure the master state is in sync with statemachine state */
   public synchronized ApplicationState getState() {
     return master.getState();
@@ -323,141 +325,143 @@ public class ApplicationMasterInfo implements AppContext,
   /* the applicaiton master completed successfully */
   private static class DoneTransition
       implements
-      MultipleArcTransition<ApplicationMasterInfo, ApplicationMasterInfoEvent, ApplicationState> {
+      MultipleArcTransition<ApplicationImpl, ApplicationEvent, ApplicationState> {
 
     @Override
-    public ApplicationState transition(ApplicationMasterInfo masterInfo,
-        ApplicationMasterInfoEvent event) {
-      masterInfo.handler.handle(new ASMEvent<SNEventType>(
-        SNEventType.CLEANUP, masterInfo));
-      masterInfo.handler.handle(new ASMEvent<AMLauncherEventType>(
-        AMLauncherEventType.CLEANUP, masterInfo));
-      masterInfo.handler.handle(new ASMEvent<ApplicationTrackerEventType>(
-      ApplicationTrackerEventType.REMOVE, masterInfo));
-      masterInfo.finishTime = System.currentTimeMillis();
+    public ApplicationState transition(ApplicationImpl application,
+        ApplicationEvent event) {
+      application.handler.handle(new ASMEvent<SNEventType>(
+        SNEventType.RELEASE, application));
+      application.handler.handle(new ASMEvent<AMLauncherEventType>(
+        AMLauncherEventType.CLEANUP, application));
+      application.handler.handle(new ASMEvent<ApplicationTrackerEventType>(
+      ApplicationTrackerEventType.REMOVE, application));
+      application.finishTime = System.currentTimeMillis();
 
-      masterInfo.amLivelinessMonitor.unRegister(event.getApplicationId());
+      application.amLivelinessMonitor.unRegister(event.getApplicationId());
 
-      ApplicationFinishEvent finishEvent = (ApplicationFinishEvent) event;
+      AMFinishEvent finishEvent = (AMFinishEvent) event;
+      application.master.setTrackingUrl(finishEvent.getTrackingUrl());
+      application.master.setDiagnostics(finishEvent.getDiagnostics());
       return finishEvent.getFinalApplicationState();
     }
   }
   
   private static class AllocatingKillTransition implements
-      SingleArcTransition<ApplicationMasterInfo, ApplicationMasterInfoEvent> {
+      SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override
-    public void transition(ApplicationMasterInfo masterInfo,
-        ApplicationMasterInfoEvent event) {
-      masterInfo.handler.handle(new ASMEvent<ApplicationTrackerEventType>(ApplicationTrackerEventType.REMOVE,
-          masterInfo));
+    public void transition(ApplicationImpl application,
+        ApplicationEvent event) {
+      application.handler.handle(new ASMEvent<ApplicationTrackerEventType>(ApplicationTrackerEventType.REMOVE,
+          application));
     }
   }
   
   private static class KillTransition implements
-      SingleArcTransition<ApplicationMasterInfo, ApplicationMasterInfoEvent> {
+      SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override
-    public void transition(ApplicationMasterInfo masterInfo,
-        ApplicationMasterInfoEvent event) {
-      masterInfo.finishTime = System.currentTimeMillis();
-      masterInfo.getMaster().setDiagnostics(DIAGNOSTIC_KILL_APPLICATION);
-      masterInfo.handler.handle(new ASMEvent<SNEventType>(SNEventType.CLEANUP, masterInfo));
-      masterInfo.handler.handle(new ASMEvent<AMLauncherEventType>(AMLauncherEventType.CLEANUP, masterInfo));
-      masterInfo.handler.handle(new ASMEvent<ApplicationTrackerEventType>(ApplicationTrackerEventType.REMOVE,
-          masterInfo));
+    public void transition(ApplicationImpl application,
+        ApplicationEvent event) {
+      application.finishTime = System.currentTimeMillis();
+      application.getMaster().setDiagnostics(DIAGNOSTIC_KILL_APPLICATION);
+      application.handler.handle(new ASMEvent<SNEventType>(SNEventType.RELEASE, application));
+      application.handler.handle(new ASMEvent<AMLauncherEventType>(AMLauncherEventType.CLEANUP, application));
+      application.handler.handle(new ASMEvent<ApplicationTrackerEventType>(ApplicationTrackerEventType.REMOVE,
+          application));
     }
   }
 
   private static class RecoverLaunchTransition implements
-      SingleArcTransition<ApplicationMasterInfo, ApplicationMasterInfoEvent> {
+      SingleArcTransition<ApplicationImpl, ApplicationEvent> {
 
     @Override
-    public void transition(ApplicationMasterInfo masterInfo,
-        ApplicationMasterInfoEvent event) {
-      masterInfo.syncHandler.handle(new ASMEvent<ApplicationTrackerEventType>(
-          ApplicationTrackerEventType.ADD, masterInfo));
+    public void transition(ApplicationImpl application,
+        ApplicationEvent event) {
+      application.syncHandler.handle(new ASMEvent<ApplicationTrackerEventType>(
+          ApplicationTrackerEventType.ADD, application));
         
-      masterInfo.handler.handle(new ASMEvent<AMLauncherEventType>(
-          AMLauncherEventType.LAUNCH, masterInfo));
+      application.handler.handle(new ASMEvent<AMLauncherEventType>(
+          AMLauncherEventType.LAUNCH, application));
     }
   }
   
   private static class FailedLaunchTransition implements
-      SingleArcTransition<ApplicationMasterInfo, ApplicationMasterInfoEvent> {
+      SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override
-    public void transition(ApplicationMasterInfo masterInfo,
-        ApplicationMasterInfoEvent event) {
-      masterInfo.finishTime = System.currentTimeMillis();
-      masterInfo.getMaster().setDiagnostics(DIAGNOSTIC_AM_LAUNCH_FAILED);
-      masterInfo.handler.handle(new ASMEvent<SNEventType>(
-      SNEventType.RELEASE, masterInfo));
+    public void transition(ApplicationImpl application,
+        ApplicationEvent event) {
+      application.finishTime = System.currentTimeMillis();
+      application.getMaster().setDiagnostics(DIAGNOSTIC_AM_LAUNCH_FAILED);
+      application.handler.handle(new ASMEvent<SNEventType>(
+      SNEventType.RELEASE, application));
     }
   }
   
   private static class LaunchTransition implements
-      SingleArcTransition<ApplicationMasterInfo, ApplicationMasterInfoEvent> {
+      SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override
-    public void transition(ApplicationMasterInfo masterInfo,
-        ApplicationMasterInfoEvent event) {
-      masterInfo.handler.handle(new ASMEvent<AMLauncherEventType>(
-      AMLauncherEventType.LAUNCH, masterInfo));
+    public void transition(ApplicationImpl application,
+        ApplicationEvent event) {
+      application.handler.handle(new ASMEvent<AMLauncherEventType>(
+      AMLauncherEventType.LAUNCH, application));
     }
   }
   
   private static class RecoverRunningTransition implements
-      SingleArcTransition<ApplicationMasterInfo, ApplicationMasterInfoEvent> {
+      SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override
-    public void transition(ApplicationMasterInfo masterInfo,
-        ApplicationMasterInfoEvent event) {
-      masterInfo.syncHandler.handle(new ASMEvent<ApplicationTrackerEventType>(
-          ApplicationTrackerEventType.ADD, masterInfo));
+    public void transition(ApplicationImpl application,
+        ApplicationEvent event) {
+      application.syncHandler.handle(new ASMEvent<ApplicationTrackerEventType>(
+          ApplicationTrackerEventType.ADD, application));
       /* make sure the time stamp is update else expiry thread will expire this */
-      masterInfo.amLivelinessMonitor.receivedPing(event.getApplicationId());
+      application.amLivelinessMonitor.receivedPing(event.getApplicationId());
     }
   }
   
   private static class RecoverLaunchedTransition implements
-      SingleArcTransition<ApplicationMasterInfo, ApplicationMasterInfoEvent> {
+      SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override
-    public void transition(ApplicationMasterInfo masterInfo,
-        ApplicationMasterInfoEvent event) {
-      masterInfo.syncHandler.handle(new ASMEvent<ApplicationTrackerEventType>(
-          ApplicationTrackerEventType.ADD, masterInfo));
+    public void transition(ApplicationImpl application,
+        ApplicationEvent event) {
+      application.syncHandler.handle(new ASMEvent<ApplicationTrackerEventType>(
+          ApplicationTrackerEventType.ADD, application));
         
-      masterInfo.amLivelinessMonitor.register(event.getApplicationId());
+      application.amLivelinessMonitor.register(event.getApplicationId());
     }
   }
 
 
   private static class LaunchedTransition implements
-      SingleArcTransition<ApplicationMasterInfo, ApplicationMasterInfoEvent> {
+      SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override
-    public void transition(ApplicationMasterInfo masterInfo,
-        ApplicationMasterInfoEvent event) {
-      masterInfo.amLivelinessMonitor.register(event.getApplicationId());
+    public void transition(ApplicationImpl application,
+        ApplicationEvent event) {
+      application.amLivelinessMonitor.register(event.getApplicationId());
     }
   }
 
   private static class ExpireTransition implements
-      SingleArcTransition<ApplicationMasterInfo, ApplicationMasterInfoEvent> {
+      SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override
-    public void transition(ApplicationMasterInfo masterInfo,
-        ApplicationMasterInfoEvent event) {
+    public void transition(ApplicationImpl application,
+        ApplicationEvent event) {
       /* for now this is the same as killed transition but will change later */
-      masterInfo.handler.handle(new ASMEvent<SNEventType>(SNEventType.CLEANUP,
-        masterInfo));
-      masterInfo.handler.handle(new ASMEvent<AMLauncherEventType>(
-        AMLauncherEventType.CLEANUP, masterInfo));
-      masterInfo.handler.handle(new ASMEvent<ApplicationTrackerEventType>(
-          ApplicationTrackerEventType.EXPIRE, masterInfo));
-      masterInfo.numFailed++;
+      application.handler.handle(new ASMEvent<SNEventType>(SNEventType.RELEASE,
+        application));
+      application.handler.handle(new ASMEvent<AMLauncherEventType>(
+        AMLauncherEventType.CLEANUP, application));
+      application.handler.handle(new ASMEvent<ApplicationTrackerEventType>(
+          ApplicationTrackerEventType.EXPIRE, application));
+      application.numFailed++;
 
       /* check to see if the number of retries are reached or not */
-      if (masterInfo.getFailedCount() < masterInfo.amMaxRetries) {
-        masterInfo.handler.handle(new ApplicationMasterInfoEvent(
+      if (application.getFailedCount() < application.amMaxRetries) {
+        application.handler.handle(new ApplicationEvent(
             ApplicationEventType.ALLOCATE, event.getApplicationId()));
       } else {
-        masterInfo.handler.handle(new ApplicationMasterInfoEvent(
-            ApplicationEventType.FAILED_MAX_RETRIES, masterInfo
+        application.handler.handle(new ApplicationEvent(
+            ApplicationEventType.FAILED_MAX_RETRIES, application
                 .getApplicationID()));
       }
     }
@@ -466,75 +470,75 @@ public class ApplicationMasterInfo implements AppContext,
 
   /* Transition to schedule again on a container launch failure for AM */
   private static class ScheduleTransition implements 
-  SingleArcTransition<ApplicationMasterInfo, ApplicationMasterInfoEvent> {
+  SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override
-    public void transition(ApplicationMasterInfo masterInfo,
-        ApplicationMasterInfoEvent event) {
-      masterInfo.masterContainer = null;
+    public void transition(ApplicationImpl application,
+        ApplicationEvent event) {
+      application.masterContainer = null;
       /* schedule for a slot */
-      masterInfo.handler.handle(new ASMEvent<SNEventType>(SNEventType.SCHEDULE,
-      masterInfo));
+      application.handler.handle(new ASMEvent<SNEventType>(SNEventType.SCHEDULE,
+      application));
     }
   }
   
   /* Transition to start the process of allocating for the AM container */
   private static class AllocateTransition implements
-      SingleArcTransition<ApplicationMasterInfo, ApplicationMasterInfoEvent> {
+      SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override
-    public void transition(ApplicationMasterInfo masterInfo,
-        ApplicationMasterInfoEvent event) {
+    public void transition(ApplicationImpl application,
+        ApplicationEvent event) {
       /* notify tracking applications that an applicaiton has been added */
       // TODO: For now, changing to synchHandler. Instead we should use register/deregister.
-      masterInfo.syncHandler.handle(new ASMEvent<ApplicationTrackerEventType>(
-        ApplicationTrackerEventType.ADD, masterInfo));
+      application.syncHandler.handle(new ASMEvent<ApplicationTrackerEventType>(
+        ApplicationTrackerEventType.ADD, application));
       
       /* schedule for a slot */
-      masterInfo.handler.handle(new ASMEvent<SNEventType>(
-          SNEventType.SCHEDULE, masterInfo));
+      application.handler.handle(new ASMEvent<SNEventType>(
+          SNEventType.SCHEDULE, application));
     }
   }
   
   /* Transition on a container allocated for a container */
   private static class AllocatedTransition
       implements
-      SingleArcTransition<ApplicationMasterInfo, ApplicationMasterInfoEvent> {
+      SingleArcTransition<ApplicationImpl, ApplicationEvent> {
 
     @Override
-    public void transition(ApplicationMasterInfo masterInfo,
-        ApplicationMasterInfoEvent event) {
+    public void transition(ApplicationImpl application,
+        ApplicationEvent event) {
       /* set the container that was generated by the scheduler negotiator */
-      ApplicationMasterAllocatedEvent allocatedEvent = 
-         (ApplicationMasterAllocatedEvent) event;
-      masterInfo.masterContainer = allocatedEvent.getMasterContainer();
+      AMAllocatedEvent allocatedEvent = 
+         (AMAllocatedEvent) event;
+      application.masterContainer = allocatedEvent.getMasterContainer();
       try {
-        masterInfo.appStore.storeMasterContainer(masterInfo.masterContainer);
+        application.appStore.storeMasterContainer(application.masterContainer);
       } catch(IOException ie) {
         //TODO ignore for now fix later.
       }
 
       /* we need to launch the applicaiton master on allocated transition */
-      masterInfo.handler.handle(new ApplicationMasterInfoEvent(
-          ApplicationEventType.LAUNCH, masterInfo.getApplicationID()));
+      application.handler.handle(new ApplicationEvent(
+          ApplicationEventType.LAUNCH, application.getApplicationID()));
     }    
   }
 
   private static class RegisterTransition implements
-      SingleArcTransition<ApplicationMasterInfo, ApplicationMasterInfoEvent> {
+      SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override
-    public void transition(ApplicationMasterInfo masterInfo,
-        ApplicationMasterInfoEvent event) {
-      ApplicationMasterRegistrationEvent registrationEvent =
-        (ApplicationMasterRegistrationEvent) event;
+    public void transition(ApplicationImpl application,
+        ApplicationEvent event) {
+      AMRegistrationEvent registrationEvent =
+        (AMRegistrationEvent) event;
       ApplicationMaster registeredMaster = registrationEvent
           .getApplicationMaster();
-      masterInfo.master.setHost(registeredMaster.getHost());
-      masterInfo.master.setTrackingUrl(registeredMaster.getTrackingUrl());
-      masterInfo.master.setRpcPort(registeredMaster.getRpcPort());
-      masterInfo.master.setStatus(registeredMaster.getStatus());
-      masterInfo.master.getStatus().setProgress(0.0f);
-      masterInfo.amLivelinessMonitor.receivedPing(event.getApplicationId());
+      application.master.setHost(registeredMaster.getHost());
+      application.master.setTrackingUrl(registeredMaster.getTrackingUrl());
+      application.master.setRpcPort(registeredMaster.getRpcPort());
+      application.master.setStatus(registeredMaster.getStatus());
+      application.master.getStatus().setProgress(0.0f);
+      application.amLivelinessMonitor.receivedPing(event.getApplicationId());
       try {
-        masterInfo.appStore.updateApplicationState(masterInfo.master);
+        application.appStore.updateApplicationState(application.master);
       } catch(IOException ie) {
         //TODO fix this later. on error we should exit
       }
@@ -544,32 +548,32 @@ public class ApplicationMasterInfo implements AppContext,
   /* transition to finishing state on a cleanup, for now its not used, but will need it 
    * later */
   private static class FailedTransition implements
-      SingleArcTransition<ApplicationMasterInfo, ApplicationMasterInfoEvent> {
+      SingleArcTransition<ApplicationImpl, ApplicationEvent> {
 
     @Override
-    public void transition(ApplicationMasterInfo masterInfo,
-        ApplicationMasterInfoEvent event) {
-      LOG.info("Failed application: " + masterInfo.getApplicationID());
+    public void transition(ApplicationImpl application,
+        ApplicationEvent event) {
+      LOG.info("Failed application: " + application.getApplicationID());
     } 
   }
 
 
   /* Just a status update transition */
   private static class StatusUpdateTransition implements
-      SingleArcTransition<ApplicationMasterInfo, ApplicationMasterInfoEvent> {
+      SingleArcTransition<ApplicationImpl, ApplicationEvent> {
 
     @Override
-    public void transition(ApplicationMasterInfo masterInfo,
-        ApplicationMasterInfoEvent event) {
-      ApplicationMasterStatusUpdateEvent statusUpdateEvent = 
-        (ApplicationMasterStatusUpdateEvent) event;
-      masterInfo.master.setStatus(statusUpdateEvent.getApplicationStatus());
-      masterInfo.amLivelinessMonitor.receivedPing(event.getApplicationId());
+    public void transition(ApplicationImpl application,
+        ApplicationEvent event) {
+      AMStatusUpdateEvent statusUpdateEvent = 
+        (AMStatusUpdateEvent) event;
+      application.master.setStatus(statusUpdateEvent.getApplicationStatus());
+      application.amLivelinessMonitor.receivedPing(event.getApplicationId());
     }
   }
 
   @Override
-  public synchronized void handle(ApplicationMasterInfoEvent event) {
+  public synchronized void handle(ApplicationEvent event) {
 
     this.writeLock.lock();
 

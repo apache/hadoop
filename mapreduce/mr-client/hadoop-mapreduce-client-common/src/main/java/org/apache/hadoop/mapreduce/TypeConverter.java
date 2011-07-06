@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.mapreduce;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -42,8 +40,8 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.yarn.YarnException;
-import org.apache.hadoop.yarn.api.records.Application;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.NodeManagerInfo;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -404,7 +402,7 @@ public class TypeConverter {
     return taskTrackers.toArray(new TaskTrackerInfo[nodes.size()]);
   }
 
-  public static JobStatus fromYarn(Application application) {
+  public static JobStatus fromYarn(ApplicationReport application) {
     String trackingUrl = application.getTrackingUrl();
     trackingUrl = trackingUrl == null ? "" : trackingUrl;
 
@@ -421,9 +419,9 @@ public class TypeConverter {
     return jobStatus;
   }
 
-  public static JobStatus[] fromYarnApps(List<Application> applications) {
+  public static JobStatus[] fromYarnApps(List<ApplicationReport> applications) {
     List<JobStatus> jobStatuses = new ArrayList<JobStatus>();
-    for (Application application : applications) {
+    for (ApplicationReport application : applications) {
       jobStatuses.add(TypeConverter.fromYarn(application));
     }
     return jobStatuses.toArray(new JobStatus[jobStatuses.size()]);

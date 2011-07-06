@@ -56,9 +56,11 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.security.SchedulerSecurityInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.ApplicationMasterHandler;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMFinishEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMRegistrationEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMStatusUpdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationTrackerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationTrackerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.service.AbstractService;
@@ -67,7 +69,6 @@ import org.apache.hadoop.yarn.service.AbstractService;
 public class ApplicationMasterService extends AbstractService implements 
 AMRMProtocol, EventHandler<ASMEvent<ApplicationTrackerEventType>> {
   private static final Log LOG = LogFactory.getLog(ApplicationMasterService.class);
-  private ApplicationMasterHandler applicationsManager;
   private YarnScheduler rScheduler;
   private ApplicationTokenSecretManager appTokenManager;
   private InetSocketAddress masterServiceAddress;
@@ -76,17 +77,17 @@ AMRMProtocol, EventHandler<ASMEvent<ApplicationTrackerEventType>> {
   private final Map<ApplicationId, AMResponse> responseMap =
       new HashMap<ApplicationId, AMResponse>();
   private final AMResponse reboot = recordFactory.newRecordInstance(AMResponse.class);
-  private final RMContext asmContext;
+  private final RMContext context;
   
-  public ApplicationMasterService(ApplicationTokenSecretManager appTokenManager,
-      ApplicationMasterHandler applicationsManager, YarnScheduler scheduler, RMContext asmContext) {
+  public ApplicationMasterService(
+      ApplicationTokenSecretManager appTokenManager, YarnScheduler scheduler,
+      RMContext asmContext) {
     super(ApplicationMasterService.class.getName());
     this.appTokenManager = appTokenManager;
-    this.applicationsManager = applicationsManager;
     this.rScheduler = scheduler;
     this.reboot.setReboot(true);
 //    this.reboot.containers = new ArrayList<Container>();
-    this.asmContext = asmContext;
+    this.context = asmContext;
   }
 
   @Override
@@ -95,7 +96,7 @@ AMRMProtocol, EventHandler<ASMEvent<ApplicationTrackerEventType>> {
       conf.get(YarnConfiguration.SCHEDULER_ADDRESS,
           YarnConfiguration.DEFAULT_SCHEDULER_BIND_ADDRESS);
     masterServiceAddress =  NetUtils.createSocketAddr(bindAddress);
-    this.asmContext.getDispatcher().register(ApplicationTrackerEventType.class, this);
+    this.context.getDispatcher().register(ApplicationTrackerEventType.class, this);
     super.init(conf);
   }
 
@@ -118,13 +119,11 @@ AMRMProtocol, EventHandler<ASMEvent<ApplicationTrackerEventType>> {
   @Override
   public RegisterApplicationMasterResponse registerApplicationMaster(RegisterApplicationMasterRequest request) throws YarnRemoteException {
     // TODO: What if duplicate register due to lost RPCs
+
     ApplicationMaster applicationMaster = request.getApplicationMaster();
-    try {
-      applicationsManager.registerApplicationMaster(applicationMaster);
-    } catch(IOException ie) {
-      LOG.info("Exception registering application ", ie);
-      throw RPCUtil.getRemoteException(ie);
-    }
+    LOG.info("AM registration " + applicationMaster.getApplicationId());
+    context.getDispatcher().getEventHandler().handle(
+        new AMRegistrationEvent(applicationMaster));
     
     // Pick up min/max resource from scheduler...
     RegisterApplicationMasterResponse response = 
@@ -137,16 +136,16 @@ AMRMProtocol, EventHandler<ASMEvent<ApplicationTrackerEventType>> {
   }
 
   @Override
-  public FinishApplicationMasterResponse finishApplicationMaster(FinishApplicationMasterRequest request) throws YarnRemoteException {
+  public FinishApplicationMasterResponse finishApplicationMaster(
+      FinishApplicationMasterRequest request) throws YarnRemoteException {
     // TODO: What if duplicate finish due to lost RPCs
     ApplicationMaster applicationMaster = request.getApplicationMaster();
-    try {
-      applicationsManager.finishApplicationMaster(applicationMaster);
-    } catch(IOException ie) {
-      LOG.info("Exception finishing application", ie);
-      throw RPCUtil.getRemoteException(ie);
-    }
-    FinishApplicationMasterResponse response = recordFactory.newRecordInstance(FinishApplicationMasterResponse.class);
+    context.getDispatcher().getEventHandler().handle(
+        new AMFinishEvent(applicationMaster.getApplicationId(),
+            applicationMaster.getState(), applicationMaster.getTrackingUrl(),
+            applicationMaster.getDiagnostics()));
+    FinishApplicationMasterResponse response = recordFactory
+        .newRecordInstance(FinishApplicationMasterResponse.class);
     return response;
   }
 
@@ -180,7 +179,11 @@ AMRMProtocol, EventHandler<ASMEvent<ApplicationTrackerEventType>> {
           allocateResponse.setAMResponse(reboot);
           return allocateResponse;
         }
-        applicationsManager.applicationHeartbeat(status);
+
+        // Send the heart-beat to the application.
+        context.getDispatcher().getEventHandler().handle(
+            new AMStatusUpdateEvent(status));
+
         Allocation allocation = 
           rScheduler.allocate(status.getApplicationId(), ask, release); 
         AMResponse  response = recordFactory.newRecordInstance(AMResponse.class);
@@ -208,7 +211,7 @@ AMRMProtocol, EventHandler<ASMEvent<ApplicationTrackerEventType>> {
   @Override
   public void handle(ASMEvent<ApplicationTrackerEventType> appEvent) {
     ApplicationTrackerEventType event = appEvent.getType();
-    ApplicationId id = appEvent.getAppContext().getApplicationID();
+    ApplicationId id = appEvent.getApplication().getApplicationID();
     synchronized(responseMap) {
       switch (event) {
       case ADD:

@@ -51,7 +51,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationTrackerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationTrackerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.ApplicationInfo;
@@ -586,7 +586,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
       break;
     case REMOVE:
       try {
-        doneApplication(event.getAppContext().getApplicationID(), true);
+        doneApplication(event.getApplication().getApplicationID(), true);
       } catch(IOException ie) {
         LOG.error("Error in removing 'done' application", ie);
         //TODO have to be shutdown the RM in case of this.
@@ -598,7 +598,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
         /** do not remove the application. Just do everything else exception 
          * removing the application
          */
-        doneApplication(event.getAppContext().getApplicationID(), false);
+        doneApplication(event.getApplication().getApplicationID(), false);
       } catch(IOException ie) {
         LOG.error("Error in removing 'expired' application", ie);
         //TODO have to be shutdown the RM in case of this.

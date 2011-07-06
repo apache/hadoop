@@ -34,14 +34,15 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
 import org.apache.hadoop.yarn.service.AbstractService;
 
 /**
  * This class runs continuosly to track the application masters
  * that might be dead.
  */
-class AMLivelinessMonitor extends AbstractService {
+public class AMLivelinessMonitor extends AbstractService {
   private volatile boolean stop = false;
   long monitoringInterval =
       RMConfig.DEFAULT_AMLIVELINESS_MONITORING_INTERVAL;
@@ -156,7 +157,7 @@ class AMLivelinessMonitor extends AbstractService {
   private void expireAMs(List<ApplicationId> toExpire) {
     for (ApplicationId applicationId: toExpire) {
       LOG.info("Expiring the Application " + applicationId);
-      handler.handle(new ApplicationMasterInfoEvent(
+      handler.handle(new ApplicationEvent(
           ApplicationEventType.EXPIRE, applicationId));
     }
   }

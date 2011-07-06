@@ -16,24 +16,33 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
+package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationEventType;
+import org.apache.hadoop.yarn.api.records.ApplicationState;
 
-public class ApplicationMasterAllocatedEvent extends
-    ApplicationMasterInfoEvent {
+public class AMFinishEvent extends ApplicationEvent {
+  private final ApplicationState finalState;
+  private final String trackingUrl;
+  private final String diagnostics;
 
-  private final Container masterContainer;
-
-  public ApplicationMasterAllocatedEvent(ApplicationId applicationId,
-      Container masterContainer) {
-    super(ApplicationEventType.ALLOCATED, applicationId);
-    this.masterContainer = masterContainer;
+  public AMFinishEvent(ApplicationId applicationId,
+      ApplicationState finalState, String trackingUrl, String diagnostics) {
+    super(ApplicationEventType.FINISH, applicationId);
+    this.finalState = finalState;
+    this.trackingUrl = trackingUrl;
+    this.diagnostics = diagnostics;
   }
 
-  public Container getMasterContainer() {
-    return this.masterContainer;
+  public ApplicationState getFinalApplicationState() {
+    return this.finalState;
+  }
+
+  public String getTrackingUrl() {
+    return this.trackingUrl;
+  }
+
+  public String getDiagnostics() {
+    return this.diagnostics;
   }
 }

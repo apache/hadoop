@@ -4,11 +4,11 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.hadoop.yarn.api.records.Application;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
-import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueInfoProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueInfoProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueStateProto;
@@ -21,7 +21,7 @@ public class QueueInfoPBImpl extends ProtoBase<QueueInfoProto> implements
   QueueInfoProto.Builder builder = null;
   boolean viaProto = false;
 
-  List<Application> applicationsList;
+  List<ApplicationReport> applicationsList;
   List<QueueInfo> childQueuesList;
   
   public QueueInfoPBImpl() {
@@ -34,7 +34,7 @@ public class QueueInfoPBImpl extends ProtoBase<QueueInfoProto> implements
   }
 
   @Override
-  public List<Application> getApplications() {
+  public List<ApplicationReport> getApplications() {
     initLocalApplicationsList();
     return this.applicationsList;
   }
@@ -79,7 +79,7 @@ public class QueueInfoPBImpl extends ProtoBase<QueueInfoProto> implements
   }
 
   @Override
-  public void setApplications(List<Application> applications) {
+  public void setApplications(List<ApplicationReport> applications) {
     if (applications == null) {
       builder.clearApplications();
     }
@@ -144,10 +144,10 @@ public class QueueInfoPBImpl extends ProtoBase<QueueInfoProto> implements
       return;
     }
     QueueInfoProtoOrBuilder p = viaProto ? proto : builder;
-    List<ApplicationProto> list = p.getApplicationsList();
-    applicationsList = new ArrayList<Application>();
+    List<ApplicationReportProto> list = p.getApplicationsList();
+    applicationsList = new ArrayList<ApplicationReport>();
 
-    for (ApplicationProto a : list) {
+    for (ApplicationReportProto a : list) {
       applicationsList.add(convertFromProtoFormat(a));
     }
   }
@@ -157,12 +157,12 @@ public class QueueInfoPBImpl extends ProtoBase<QueueInfoProto> implements
     builder.clearApplications();
     if (applicationsList == null)
       return;
-    Iterable<ApplicationProto> iterable = new Iterable<ApplicationProto>() {
+    Iterable<ApplicationReportProto> iterable = new Iterable<ApplicationReportProto>() {
       @Override
-      public Iterator<ApplicationProto> iterator() {
-        return new Iterator<ApplicationProto>() {
+      public Iterator<ApplicationReportProto> iterator() {
+        return new Iterator<ApplicationReportProto>() {
   
-          Iterator<Application> iter = applicationsList.iterator();
+          Iterator<ApplicationReport> iter = applicationsList.iterator();
   
           @Override
           public boolean hasNext() {
@@ -170,7 +170,7 @@ public class QueueInfoPBImpl extends ProtoBase<QueueInfoProto> implements
           }
   
           @Override
-          public ApplicationProto next() {
+          public ApplicationReportProto next() {
             return convertToProtoFormat(iter.next());
           }
   
@@ -258,12 +258,12 @@ public class QueueInfoPBImpl extends ProtoBase<QueueInfoProto> implements
   }
 
 
-  private ApplicationPBImpl convertFromProtoFormat(ApplicationProto a) {
-    return new ApplicationPBImpl(a);
+  private ApplicationReportPBImpl convertFromProtoFormat(ApplicationReportProto a) {
+    return new ApplicationReportPBImpl(a);
   }
 
-  private ApplicationProto convertToProtoFormat(Application t) {
-    return ((ApplicationPBImpl)t).getProto();
+  private ApplicationReportProto convertToProtoFormat(ApplicationReport t) {
+    return ((ApplicationReportPBImpl)t).getProto();
   }
 
   private QueueInfoPBImpl convertFromProtoFormat(QueueInfoProto a) {

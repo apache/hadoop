@@ -86,7 +86,7 @@ public class ParentQueue implements Queue {
   private final QueueMetrics metrics;
 
   private QueueInfo queueInfo; 
-  private Map<ApplicationId, org.apache.hadoop.yarn.api.records.Application> 
+  private Map<ApplicationId, org.apache.hadoop.yarn.api.records.ApplicationReport> 
   applicationInfos;
 
   private Map<QueueACL, AccessControlList> acls = 
@@ -146,7 +146,7 @@ public class ParentQueue implements Queue {
 
     this.applicationInfos = 
       new HashMap<ApplicationId, 
-      org.apache.hadoop.yarn.api.records.Application>();
+      org.apache.hadoop.yarn.api.records.ApplicationReport>();
 
 
     LOG.info("Initialized parent-queue " + queueName + 
@@ -292,11 +292,11 @@ public class ParentQueue implements Queue {
 
     if (includeApplications) {
       queueInfo.setApplications( 
-        new ArrayList<org.apache.hadoop.yarn.api.records.Application>(
+        new ArrayList<org.apache.hadoop.yarn.api.records.ApplicationReport>(
             applicationInfos.values()));
     } else {
       queueInfo.setApplications(
-          new ArrayList<org.apache.hadoop.yarn.api.records.Application>());
+          new ArrayList<org.apache.hadoop.yarn.api.records.ApplicationReport>());
     }
 
     List<QueueInfo> childQueuesInfo = new ArrayList<QueueInfo>();

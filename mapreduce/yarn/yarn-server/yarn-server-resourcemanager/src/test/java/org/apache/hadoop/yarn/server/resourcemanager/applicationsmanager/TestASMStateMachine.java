@@ -34,11 +34,16 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.AMLauncherEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationTrackerEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.SNEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMFinishEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMAllocatedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMRegistrationEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMStatusUpdateEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationTrackerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.SNEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.junit.After;
@@ -75,7 +80,7 @@ public class TestASMStateMachine {
   }
 
   private class DummyAMLaunchEventHandler implements EventHandler<ASMEvent<AMLauncherEventType>> {
-    AppContext appcontext;
+    Application application;
     AtomicInteger amsync = new AtomicInteger(0);
 
     public DummyAMLaunchEventHandler() {
@@ -87,10 +92,10 @@ public class TestASMStateMachine {
       switch(event.getType()) {
       case LAUNCH:
         launchCalled = true;
-        appcontext = event.getAppContext();
+        application = event.getApplication();
         context.getDispatcher().getEventHandler().handle(
-            new ApplicationMasterInfoEvent(ApplicationEventType.LAUNCHED,
-                appcontext.getApplicationID()));
+            new ApplicationEvent(ApplicationEventType.LAUNCHED,
+                application.getApplicationID()));
         break;
       case CLEANUP:
         launchCleanupCalled = true;
@@ -100,7 +105,7 @@ public class TestASMStateMachine {
   }
 
   private class DummySNEventHandler implements EventHandler<ASMEvent<SNEventType>> {
-    AppContext appContext;
+    Application application;
     AtomicInteger snsync = new AtomicInteger(0);
 
     public DummySNEventHandler() {
@@ -110,15 +115,15 @@ public class TestASMStateMachine {
     @Override
     public void handle(ASMEvent<SNEventType> event) {
       switch(event.getType()) {
-      case CLEANUP:
+      case RELEASE:
         snreceivedCleanUp = true;
         break;
       case SCHEDULE:
         snAllocateReceived = true;
-        appContext = event.getAppContext();
+        application = event.getApplication();
         context.getDispatcher().getEventHandler().handle(
-            new ApplicationMasterAllocatedEvent(appContext.getApplicationID(),
-                appContext.getMasterContainer()));
+            new AMAllocatedEvent(application.getApplicationID(),
+                application.getMasterContainer()));
         break;
       }
     }
@@ -144,19 +149,19 @@ public class TestASMStateMachine {
   }
 
   private class MockAppplicationMasterInfo implements
-      EventHandler<ApplicationMasterInfoEvent> {
+      EventHandler<ApplicationEvent> {
 
     MockAppplicationMasterInfo() {
       context.getDispatcher().register(ApplicationEventType.class, this);
     }
     @Override
-    public void handle(ApplicationMasterInfoEvent event) {
+    public void handle(ApplicationEvent event) {
       LOG.info("The event type is " + event.getType());
     }
   }
 
   private void waitForState( ApplicationState 
-      finalState, ApplicationMasterInfo masterInfo) throws Exception {
+      finalState, ApplicationImpl masterInfo) throws Exception {
     int count = 0;
     while(masterInfo.getState() != finalState && count < 10) {
       Thread.sleep(500);
@@ -175,13 +180,13 @@ public class TestASMStateMachine {
     submissioncontext.getApplicationId().setId(1);
     submissioncontext.getApplicationId().setClusterTimestamp(System.currentTimeMillis());
 
-    ApplicationMasterInfo masterInfo = new ApplicationMasterInfo(context,
+    ApplicationImpl masterInfo = new ApplicationImpl(context,
         conf, "dummyuser", submissioncontext, "dummyToken", StoreFactory
             .createVoidAppStore(), new AMLivelinessMonitor(context
             .getDispatcher().getEventHandler()));
 
     context.getDispatcher().register(ApplicationEventType.class, masterInfo);
-    handler.handle(new ApplicationMasterInfoEvent(
+    handler.handle(new ApplicationEvent(
         ApplicationEventType.ALLOCATE, submissioncontext.getApplicationId()));
 
     waitForState(ApplicationState.LAUNCHED, masterInfo);
@@ -189,21 +194,21 @@ public class TestASMStateMachine {
     Assert.assertTrue(launchCalled);
     Assert.assertTrue(addedApplication);
     handler
-        .handle(new ApplicationMasterRegistrationEvent(masterInfo.getMaster()));
+        .handle(new AMRegistrationEvent(masterInfo.getMaster()));
     waitForState(ApplicationState.RUNNING, masterInfo);
     Assert.assertEquals(ApplicationState.RUNNING, masterInfo.getState());
 
     ApplicationStatus status = recordFactory
         .newRecordInstance(ApplicationStatus.class);
     status.setApplicationId(masterInfo.getApplicationID());
-    handler.handle(new ApplicationMasterStatusUpdateEvent(status));
+    handler.handle(new AMStatusUpdateEvent(status));
 
     /* check if the state is still RUNNING */
 
     Assert.assertEquals(ApplicationState.RUNNING, masterInfo.getState());
 
-    handler.handle(new ApplicationFinishEvent(masterInfo.getApplicationID(),
-        ApplicationState.COMPLETED));
+    handler.handle(new AMFinishEvent(masterInfo.getApplicationID(),
+        ApplicationState.COMPLETED, "", ""));
     waitForState(ApplicationState.COMPLETED, masterInfo);
     Assert.assertEquals(ApplicationState.COMPLETED, masterInfo.getState());
     /* check if clean up is called for everyone */
@@ -212,7 +217,7 @@ public class TestASMStateMachine {
     Assert.assertTrue(removedApplication);
 
     /* check if expiry doesnt make it failed */
-    handler.handle(new ApplicationMasterInfoEvent(ApplicationEventType.EXPIRE,
+    handler.handle(new ApplicationEvent(ApplicationEventType.EXPIRE,
         masterInfo.getApplicationID()));
     Assert.assertEquals(ApplicationState.COMPLETED, masterInfo.getState());   
   }

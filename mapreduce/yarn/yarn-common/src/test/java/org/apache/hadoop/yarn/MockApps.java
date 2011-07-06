@@ -24,7 +24,7 @@ import com.google.common.collect.Lists;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.hadoop.yarn.api.records.Application;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationStatus;
@@ -65,15 +65,15 @@ public class MockApps {
     }
   }
 
-  public static List<Application> genApps(int n) {
-    List<Application> list = Lists.newArrayList();
+  public static List<ApplicationReport> genApps(int n) {
+    List<ApplicationReport> list = Lists.newArrayList();
     for (int i = 0; i < n; ++i) {
       list.add(newApp(i));
     }
     return list;
   }
 
-  public static Application newApp(int i) {
+  public static ApplicationReport newApp(int i) {
     final ApplicationId id = newAppID(i);
     final ApplicationStatus status = newAppStatus();
     final ApplicationState state = newAppState();
@@ -81,7 +81,7 @@ public class MockApps {
     final String name = newAppName();
     final String queue = newQueue();
     final Container masterContainer = null;
-    return new Application() {
+    return new ApplicationReport() {
       @Override public ApplicationId getApplicationId() { return id; }
       @Override public String getUser() { return user; }
       @Override public String getName() { return name; }
@@ -139,6 +139,36 @@ public class MockApps {
       }
       @Override
       public void setDiagnostics(String diagnostics) {
+        // TODO Auto-generated method stub
+        
+      }
+      @Override
+      public String getHost() {
+        // TODO Auto-generated method stub
+        return null;
+      }
+      @Override
+      public void setHost(String host) {
+        // TODO Auto-generated method stub
+        
+      }
+      @Override
+      public int getRpcPort() {
+        // TODO Auto-generated method stub
+        return 0;
+      }
+      @Override
+      public void setRpcPort(int rpcPort) {
+        // TODO Auto-generated method stub
+        
+      }
+      @Override
+      public String getClientToken() {
+        // TODO Auto-generated method stub
+        return null;
+      }
+      @Override
+      public void setClientToken(String clientToken) {
         // TODO Auto-generated method stub
         
       }

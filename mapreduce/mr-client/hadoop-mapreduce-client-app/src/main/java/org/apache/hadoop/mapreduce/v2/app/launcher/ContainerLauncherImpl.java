@@ -138,6 +138,7 @@ public class ContainerLauncherImpl extends AbstractService implements
 
     UserGroupInformation user = UserGroupInformation.getCurrentUser();
 
+    // TODO: Synchronization problems!!
     if (UserGroupInformation.isSecurityEnabled()) {
       if(!ugiMap.containsKey(containerManagerBindAddr)) {
         Token<ContainerTokenIdentifier> token =

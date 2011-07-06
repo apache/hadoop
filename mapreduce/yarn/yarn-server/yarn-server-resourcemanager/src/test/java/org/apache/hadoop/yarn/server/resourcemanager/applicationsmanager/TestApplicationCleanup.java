@@ -34,6 +34,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -46,13 +47,16 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.AMLauncherEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationTrackerEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.SNEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMAllocatedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationTrackerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.SNEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.NodeInfoTracker;
@@ -83,6 +87,7 @@ public class TestApplicationCleanup {
   private static final int memoryNeeded = 100;
 
   private final RMContext context = new ResourceManager.RMContextImpl(new MemStore());
+  private ClientRMService clientService;
   private TestRMResourceTrackerImpl clusterTracker;
 
   private class TestRMResourceTrackerImpl extends RMResourceTrackerImpl {
@@ -115,6 +120,9 @@ public class TestApplicationCleanup {
     context.getDispatcher().start();
     asm = new ExtASM(new ApplicationTokenSecretManager(), scheduler);
     asm.init(conf);
+    clientService = new ClientRMService(context,
+        asm.getAmLivelinessMonitor(), asm.getClientToAMSecretManager(),
+        clusterTracker, scheduler);
   }
 
   @After
@@ -142,7 +150,7 @@ public class TestApplicationCleanup {
 
     private class DummyApplicationMasterLauncher implements EventHandler<ASMEvent<AMLauncherEventType>> {
       private AtomicInteger notify = new AtomicInteger(0);
-      private AppContext appContext;
+      private Application application;
 
       public DummyApplicationMasterLauncher(RMContext context) {
         context.getDispatcher().register(AMLauncherEventType.class, this);
@@ -158,10 +166,10 @@ public class TestApplicationCleanup {
         case LAUNCH:
           LOG.info("Launcher Launch called");
           launcherLaunchCalled = true;
-          appContext = appEvent.getAppContext();
+          application = appEvent.getApplication();
           context.getDispatcher().getEventHandler().handle(
-              new ApplicationMasterInfoEvent(ApplicationEventType.LAUNCHED,
-                  appContext.getApplicationID()));
+              new ApplicationEvent(ApplicationEventType.LAUNCHED,
+                  application.getApplicationID()));
           break;
         default:
           break;
@@ -171,7 +179,7 @@ public class TestApplicationCleanup {
 
     private class DummySchedulerNegotiator implements EventHandler<ASMEvent<SNEventType>> {
       private AtomicInteger snnotify = new AtomicInteger(0);
-      AppContext acontext;
+      Application application;
       public  DummySchedulerNegotiator(RMContext context) {
         context.getDispatcher().register(SNEventType.class, this);
       }
@@ -180,15 +188,15 @@ public class TestApplicationCleanup {
       public void handle(ASMEvent<SNEventType> appEvent) {
         SNEventType event = appEvent.getType();
         switch (event) {
-        case CLEANUP:
+        case RELEASE:
           schedulerCleanupCalled = true;
           break;
         case SCHEDULE:
           schedulerScheduleCalled = true;
-          acontext = appEvent.getAppContext();
+          application = appEvent.getApplication();
           context.getDispatcher().getEventHandler().handle(
-              new ApplicationMasterAllocatedEvent(acontext.getApplicationID(),
-                  acontext.getMasterContainer()));
+              new AMAllocatedEvent(application.getApplicationID(),
+                  application.getMasterContainer()));
         default:
           break;
         }
@@ -215,13 +223,13 @@ public class TestApplicationCleanup {
   }
 
   private void waitForState(ApplicationState 
-      finalState, ApplicationMasterInfo masterInfo) throws Exception {
+      finalState, Application application) throws Exception {
     int count = 0;
-    while(masterInfo.getState() != finalState && count < 10) {
+    while(application.getState() != finalState && count < 10) {
       Thread.sleep(500);
       count++;
     }
-    Assert.assertEquals(finalState, masterInfo.getState());
+    Assert.assertEquals(finalState, application.getState());
   }
 
 
@@ -249,13 +257,17 @@ public class TestApplicationCleanup {
 
   @Test
   public void testApplicationCleanUp() throws Exception {
-    ApplicationId appID = asm.getNewApplicationID();
-    ApplicationSubmissionContext context = recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
-    context.setApplicationId(appID);
-    context.setQueue("queuename");
-    context.setUser("dummyuser");
-    asm.submitApplication(context);
-    waitForState(ApplicationState.LAUNCHED, asm.getApplicationMasterInfo(appID));
+    ApplicationId appID = clientService.getNewApplicationId();
+    ApplicationSubmissionContext submissionContext = recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
+    submissionContext.setApplicationId(appID);
+    submissionContext.setQueue("queuename");
+    submissionContext.setUser("dummyuser");
+    SubmitApplicationRequest request = recordFactory
+        .newRecordInstance(SubmitApplicationRequest.class);
+    request.setApplicationSubmissionContext(submissionContext);
+    clientService.submitApplication(request);
+    waitForState(ApplicationState.LAUNCHED, context.getApplications().get(
+        appID));
     List<ResourceRequest> reqs = new ArrayList<ResourceRequest>();
     ResourceRequest req = createNewResourceRequest(100, 1);
     reqs.add(req);
@@ -279,8 +291,8 @@ public class TestApplicationCleanup {
     /* only allocate the containers to the first node */
     Assert.assertEquals((firstNodeMemory - (2 * memoryNeeded)), firstNode
         .getAvailableResource().getMemory());
-    ApplicationMasterInfo masterInfo = asm.getApplicationMasterInfo(appID);
-    asm.finishApplication(appID, UserGroupInformation.getCurrentUser());
+    context.getDispatcher().getEventHandler().handle(
+        new ApplicationEvent(ApplicationEventType.KILL, appID));
     while (asm.launcherCleanupCalled != true) {
       Thread.sleep(500);
     }

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
+import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -30,7 +31,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.
  * The context of an application. 
  *
  */
-public interface AppContext {
+public interface Application {
   
   /**
    * the application submission context for this application.
@@ -110,4 +111,6 @@ public interface AppContext {
    * @return the finish time of the application
    */
   public long getFinishTime();
+
+  ApplicationState getState();
 }

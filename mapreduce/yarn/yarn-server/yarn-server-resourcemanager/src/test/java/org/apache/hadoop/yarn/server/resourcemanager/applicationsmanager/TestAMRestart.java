@@ -12,6 +12,7 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
@@ -29,13 +30,15 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.AMLauncherEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationTrackerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationTrackerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
@@ -61,6 +64,7 @@ public class TestAMRestart {
   ApplicationTokenSecretManager appTokenSecretManager = 
     new ApplicationTokenSecretManager();
   DummyResourceScheduler scheduler;
+  private ClientRMService clientRMService;
   int count = 0;
   ApplicationId appID;
   final int maxFailures = 3;
@@ -71,7 +75,6 @@ public class TestAMRestart {
   int schedulerRemoveApplication = 0;
   int launcherLaunchCalled = 0;
   int launcherCleanupCalled = 0;
-  ApplicationMasterInfo masterInfo;
   private final static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   
   private class ExtApplicationsManagerImpl extends ApplicationsManagerImpl {
@@ -104,7 +107,7 @@ public class TestAMRestart {
                 }
               }
               asmContext.getDispatcher().getEventHandler().handle(
-                  new ApplicationMasterInfoEvent(
+                  new ApplicationEvent(
                       ApplicationEventType.LAUNCHED, appID));
               launchNotify.addAndGet(-1);
             }
@@ -226,6 +229,10 @@ public class TestAMRestart {
 
   @Before
   public void setUp() {
+
+    asmContext.getDispatcher().register(ApplicationEventType.class,
+        new ResourceManager.ApplicationEventDispatcher(asmContext));
+
     appID = recordFactory.newRecordInstance(ApplicationId.class);
     appID.setClusterTimestamp(System.currentTimeMillis());
     appID.setId(1);
@@ -240,20 +247,25 @@ public class TestAMRestart {
     conf.setInt(RMConfig.AM_MAX_RETRIES, maxFailures);
     appImpl.init(conf);
     appImpl.start();
+
+    this.clientRMService = new ClientRMService(asmContext, appImpl
+        .getAmLivelinessMonitor(), appImpl.getClientToAMSecretManager(),
+        null, scheduler); 
+    this.clientRMService.init(conf);
   }
 
   @After
   public void tearDown() {
   }
 
-  private void waitForFailed(ApplicationMasterInfo masterInfo, ApplicationState 
+  private void waitForFailed(Application application, ApplicationState 
       finalState) throws Exception {
     int count = 0;
-    while(masterInfo.getState() != finalState && count < 10) {
+    while(application.getState() != finalState && count < 10) {
       Thread.sleep(500);
       count++;
     }
-    Assert.assertEquals(finalState, masterInfo.getState());
+    Assert.assertEquals(finalState, application.getState());
   }
 
   @Test
@@ -265,8 +277,11 @@ public class TestAMRestart {
 //    subContext.environment = new HashMap<String, String>();
 //    subContext.fsTokens = new ArrayList<String>();
     subContext.setFsTokensTodo(ByteBuffer.wrap(new byte[0]));
-    appImpl.submitApplication(subContext);
-    masterInfo = appImpl.getApplicationMasterInfo(appID);
+    SubmitApplicationRequest request = recordFactory
+        .newRecordInstance(SubmitApplicationRequest.class);
+    request.setApplicationSubmissionContext(subContext);
+    clientRMService.submitApplication(request);
+    Application application = asmContext.getApplications().get(appID); 
     synchronized (schedulerNotify) {
       while(schedulerNotify.get() == 0) {
         schedulerNotify.wait();
@@ -276,8 +291,8 @@ public class TestAMRestart {
     Assert.assertEquals(maxFailures, launcherLaunchCalled);
     Assert.assertEquals(maxFailures, schedulerAddApplication);
     Assert.assertEquals(maxFailures, schedulerRemoveApplication);
-    Assert.assertEquals(maxFailures, masterInfo.getFailedCount());
-    waitForFailed(masterInfo, ApplicationState.FAILED);
+    Assert.assertEquals(maxFailures, application.getFailedCount());
+    waitForFailed(application, ApplicationState.FAILED);
     stop = true;
   }
 }

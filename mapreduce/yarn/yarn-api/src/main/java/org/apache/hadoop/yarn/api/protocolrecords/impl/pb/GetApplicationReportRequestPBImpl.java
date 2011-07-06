@@ -1,34 +1,34 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationMasterRequestProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationMasterRequestProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationReportRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationReportRequestProtoOrBuilder;
 
 
     
-public class GetApplicationMasterRequestPBImpl extends ProtoBase<GetApplicationMasterRequestProto> implements GetApplicationMasterRequest {
-  GetApplicationMasterRequestProto proto = GetApplicationMasterRequestProto.getDefaultInstance();
-  GetApplicationMasterRequestProto.Builder builder = null;
+public class GetApplicationReportRequestPBImpl extends ProtoBase<GetApplicationReportRequestProto> implements GetApplicationReportRequest {
+  GetApplicationReportRequestProto proto = GetApplicationReportRequestProto.getDefaultInstance();
+  GetApplicationReportRequestProto.Builder builder = null;
   boolean viaProto = false;
   
   private ApplicationId applicationId = null;
   
   
-  public GetApplicationMasterRequestPBImpl() {
-    builder = GetApplicationMasterRequestProto.newBuilder();
+  public GetApplicationReportRequestPBImpl() {
+    builder = GetApplicationReportRequestProto.newBuilder();
   }
 
-  public GetApplicationMasterRequestPBImpl(GetApplicationMasterRequestProto proto) {
+  public GetApplicationReportRequestPBImpl(GetApplicationReportRequestProto proto) {
     this.proto = proto;
     viaProto = true;
   }
   
-  public GetApplicationMasterRequestProto getProto() {
+  public GetApplicationReportRequestProto getProto() {
       mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -51,7 +51,7 @@ public class GetApplicationMasterRequestPBImpl extends ProtoBase<GetApplicationM
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = GetApplicationMasterRequestProto.newBuilder(proto);
+      builder = GetApplicationReportRequestProto.newBuilder(proto);
     }
     viaProto = false;
   }
@@ -59,7 +59,7 @@ public class GetApplicationMasterRequestPBImpl extends ProtoBase<GetApplicationM
   
   @Override
   public ApplicationId getApplicationId() {
-    GetApplicationMasterRequestProtoOrBuilder p = viaProto ? proto : builder;
+    GetApplicationReportRequestProtoOrBuilder p = viaProto ? proto : builder;
     if (this.applicationId != null) {
       return this.applicationId;
     }

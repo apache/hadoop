@@ -16,24 +16,23 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
+package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.event.AbstractEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationEventType;
+import org.apache.hadoop.yarn.api.records.Container;
 
-public class ApplicationMasterInfoEvent extends
-    AbstractEvent<ApplicationEventType> {
+public class AMAllocatedEvent extends
+    ApplicationEvent {
 
-  private final ApplicationId applicationId;
+  private final Container masterContainer;
 
-  public ApplicationMasterInfoEvent(ApplicationEventType type,
-      ApplicationId applicationId) {
-    super(type);
-    this.applicationId = applicationId;
+  public AMAllocatedEvent(ApplicationId applicationId,
+      Container masterContainer) {
+    super(ApplicationEventType.ALLOCATED, applicationId);
+    this.masterContainer = masterContainer;
   }
 
-  public ApplicationId getApplicationId() {
-    return this.applicationId;
+  public Container getMasterContainer() {
+    return this.masterContainer;
   }
 }

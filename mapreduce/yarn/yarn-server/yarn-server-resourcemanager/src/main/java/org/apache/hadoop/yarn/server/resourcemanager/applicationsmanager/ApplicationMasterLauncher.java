@@ -28,12 +28,12 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.AMLauncherEventType;
 import org.apache.hadoop.yarn.service.AbstractService;
 
 
-class ApplicationMasterLauncher extends AbstractService implements EventHandler<ASMEvent<AMLauncherEventType>> {
+public class ApplicationMasterLauncher extends AbstractService implements EventHandler<ASMEvent<AMLauncherEventType>> {
   private static final Log LOG = LogFactory.getLog(
       ApplicationMasterLauncher.class);
   private final ThreadPoolExecutor launcherPool;
@@ -67,14 +67,14 @@ class ApplicationMasterLauncher extends AbstractService implements EventHandler<
     super.start();
   }
   
-  protected Runnable createRunnableLauncher(AppContext masterInfo, AMLauncherEventType event) {
-    Runnable launcher = new AMLauncher(context, masterInfo, event,
+  protected Runnable createRunnableLauncher(Application application, AMLauncherEventType event) {
+    Runnable launcher = new AMLauncher(context, application, event,
         applicationTokenSecretManager, clientToAMSecretManager, getConfig());
     return launcher;
   }
   
-  private void launch(AppContext appContext) {
-    Runnable launcher = createRunnableLauncher(appContext, AMLauncherEventType.LAUNCH);
+  private void launch(Application application) {
+    Runnable launcher = createRunnableLauncher(application, AMLauncherEventType.LAUNCH);
     masterEvents.add(launcher);
   }
   
@@ -106,21 +106,21 @@ class ApplicationMasterLauncher extends AbstractService implements EventHandler<
     }
   }    
 
-  private void cleanup(AppContext appContext) {
-    Runnable launcher = createRunnableLauncher(appContext, AMLauncherEventType.CLEANUP);
+  private void cleanup(Application application) {
+    Runnable launcher = createRunnableLauncher(application, AMLauncherEventType.CLEANUP);
     masterEvents.add(launcher);
   } 
   
   @Override
   public synchronized void  handle(ASMEvent<AMLauncherEventType> appEvent) {
     AMLauncherEventType event = appEvent.getType();
-    AppContext appContext = appEvent.getAppContext();
+    Application application = appEvent.getApplication();
     switch (event) {
     case LAUNCH:
-      launch(appContext);
+      launch(application);
       break;
     case CLEANUP:
-      cleanup(appContext);
+      cleanup(application);
     default:
       break;
     }

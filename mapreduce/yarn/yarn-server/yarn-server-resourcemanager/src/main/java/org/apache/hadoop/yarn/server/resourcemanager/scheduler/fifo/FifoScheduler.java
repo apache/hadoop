@@ -53,7 +53,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationTrackerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationTrackerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.ApplicationInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
@@ -135,7 +135,7 @@ public class FifoScheduler implements ResourceScheduler {
         queueInfo.setApplications(getApplications());
       } else {
         queueInfo.setApplications(
-            new ArrayList<org.apache.hadoop.yarn.api.records.Application>());
+            new ArrayList<org.apache.hadoop.yarn.api.records.ApplicationReport>());
       }
       return queueInfo;
     }
@@ -577,16 +577,16 @@ public class FifoScheduler implements ResourceScheduler {
       break;
     case REMOVE:
       try {
-        doneApplication(event.getAppContext().getApplicationID(), true);
+        doneApplication(event.getApplication().getApplicationID(), true);
       } catch(IOException ie) {
-        LOG.error("Unable to remove application " + event.getAppContext().getApplicationID(), ie);
+        LOG.error("Unable to remove application " + event.getApplication().getApplicationID(), ie);
       }
       break;  
     case EXPIRE:
       try {
-        doneApplication(event.getAppContext().getApplicationID(), false);
+        doneApplication(event.getApplication().getApplicationID(), false);
       } catch(IOException ie) {
-        LOG.error("Unable to remove application " + event.getAppContext().getApplicationID(), ie);
+        LOG.error("Unable to remove application " + event.getApplication().getApplicationID(), ie);
       }
       break;
     }
@@ -618,10 +618,10 @@ public class FifoScheduler implements ResourceScheduler {
     return DEFAULT_QUEUE.getQueueUserAclInfo(null); 
   }
 
-  private synchronized List<org.apache.hadoop.yarn.api.records.Application> 
+  private synchronized List<org.apache.hadoop.yarn.api.records.ApplicationReport> 
   getApplications() {
-    List<org.apache.hadoop.yarn.api.records.Application> applications = 
-      new ArrayList<org.apache.hadoop.yarn.api.records.Application>();
+    List<org.apache.hadoop.yarn.api.records.ApplicationReport> applications = 
+      new ArrayList<org.apache.hadoop.yarn.api.records.ApplicationReport>();
     for (Application application : this.applications.values()) {
       applications.add(application.getApplicationInfo());
     }

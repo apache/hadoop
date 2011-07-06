@@ -22,23 +22,23 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp.APP_
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp.QUEUE_NAME;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
-import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.ApplicationsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.Application;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Times;
+import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.webapp.Controller;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
 
 import com.google.inject.Inject;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.AppContext;
 
 // Do NOT rename/refactor this to RMView as it will wreak havoc
 // on Mac OS HFS as its case-insensitive!
@@ -70,8 +70,8 @@ public class RmController extends Controller {
       return;
     }
     ApplicationId appID = Apps.toAppID(aid);
-    ApplicationsManager asm = getInstance(ApplicationsManager.class);
-    AppContext app = asm.getAppContext(appID);
+    RMContext context = getInstance(RMContext.class);
+    Application app = context.getApplications().get(appID);
     if (app == null) {
       // TODO: handle redirect to jobhistory server
       setStatus(response().SC_NOT_FOUND);

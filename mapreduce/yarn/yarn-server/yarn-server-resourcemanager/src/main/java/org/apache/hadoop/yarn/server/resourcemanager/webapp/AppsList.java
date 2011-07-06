@@ -18,38 +18,43 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import com.google.inject.Inject;
-import com.google.inject.servlet.RequestScoped;
+import static org.apache.commons.lang.StringEscapeUtils.escapeHtml;
+import static org.apache.commons.lang.StringEscapeUtils.escapeJavaScript;
+import static org.apache.hadoop.yarn.webapp.view.Jsons._SEP;
+import static org.apache.hadoop.yarn.webapp.view.Jsons.appendLink;
+import static org.apache.hadoop.yarn.webapp.view.Jsons.appendProgressBar;
+import static org.apache.hadoop.yarn.webapp.view.Jsons.appendSortable;
 
 import java.io.PrintWriter;
-import java.util.List;
+import java.util.concurrent.ConcurrentMap;
 
-import static org.apache.commons.lang.StringEscapeUtils.*;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
-import static org.apache.hadoop.yarn.webapp.view.Jsons.*;
-
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.AppContext;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.ApplicationsManager;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.Application;
 import org.apache.hadoop.yarn.util.Apps;
-import org.apache.hadoop.yarn.webapp.ToJSON;
 import org.apache.hadoop.yarn.webapp.Controller.RequestContext;
+import org.apache.hadoop.yarn.webapp.ToJSON;
+import org.apache.hadoop.yarn.webapp.view.JQueryUI.Render;
+
+import com.google.inject.Inject;
+import com.google.inject.servlet.RequestScoped;
 
 // So we only need to do asm.getApplications once in a request
 @RequestScoped
 class AppsList implements ToJSON {
   final RequestContext rc;
-  final List<AppContext> apps;
+  final ConcurrentMap<ApplicationId, Application> apps;
   Render rendering;
 
-  @Inject AppsList(RequestContext ctx, ApplicationsManager asm) {
+  @Inject AppsList(RequestContext ctx, RMContext rmContext) {
     rc = ctx;
-    apps = asm.getAllAppContexts();
+    apps = rmContext.getApplications();
   }
 
   void toDataTableArrays(PrintWriter out) {
     out.append('[');
     boolean first = true;
-    for (AppContext app : apps) {
+    for (Application app : apps.values()) {
       if (first) {
         first = false;
       } else {

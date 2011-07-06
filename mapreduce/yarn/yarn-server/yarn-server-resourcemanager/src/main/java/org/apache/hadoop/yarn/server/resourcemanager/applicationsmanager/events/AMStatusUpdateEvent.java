@@ -16,22 +16,22 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
+package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events;
 
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationState;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationMasterEvents.ApplicationEventType;
+import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 
-public class ApplicationFinishEvent extends ApplicationMasterInfoEvent {
-  private final ApplicationState finalState;
+public class AMStatusUpdateEvent extends
+    ApplicationEvent {
 
-  public ApplicationFinishEvent(ApplicationId applicationId,
-      ApplicationState finalState) {
-    super(ApplicationEventType.FINISH, applicationId);
-    this.finalState = finalState;
+  private final ApplicationStatus applicationStatus;
+
+  public AMStatusUpdateEvent(ApplicationStatus applicationStatus) {
+    super(ApplicationEventType.STATUSUPDATE, applicationStatus
+        .getApplicationId());
+    this.applicationStatus = applicationStatus;
   }
 
-  public ApplicationState getFinalApplicationState() {
-    return this.finalState;
+  public ApplicationStatus getApplicationStatus() {
+    return this.applicationStatus;
   }
 }

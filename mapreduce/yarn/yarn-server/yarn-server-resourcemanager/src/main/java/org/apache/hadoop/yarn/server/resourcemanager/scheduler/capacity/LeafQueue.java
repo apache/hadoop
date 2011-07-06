@@ -90,7 +90,7 @@ public class LeafQueue implements Queue {
   private final QueueMetrics metrics;
 
   private QueueInfo queueInfo; 
-  private Map<ApplicationId, org.apache.hadoop.yarn.api.records.Application> 
+  private Map<ApplicationId, org.apache.hadoop.yarn.api.records.ApplicationReport> 
   applicationInfos;
 
   private QueueState state;
@@ -141,7 +141,7 @@ public class LeafQueue implements Queue {
 
     this.applicationInfos = 
       new HashMap<ApplicationId, 
-      org.apache.hadoop.yarn.api.records.Application>();
+      org.apache.hadoop.yarn.api.records.ApplicationReport>();
 
     QueueState state = cs.getConfiguration().getState(getQueuePath());
 
@@ -298,11 +298,11 @@ public class LeafQueue implements Queue {
 
     if (includeApplications) {
       queueInfo.setApplications( 
-          new ArrayList<org.apache.hadoop.yarn.api.records.Application>(
+          new ArrayList<org.apache.hadoop.yarn.api.records.ApplicationReport>(
               applicationInfos.values()));
     } else {
       queueInfo.setApplications(
-          new ArrayList<org.apache.hadoop.yarn.api.records.Application>());
+          new ArrayList<org.apache.hadoop.yarn.api.records.ApplicationReport>());
     }
 
     return queueInfo;

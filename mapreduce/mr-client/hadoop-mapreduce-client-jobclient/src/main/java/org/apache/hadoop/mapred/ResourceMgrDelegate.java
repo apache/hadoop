@@ -48,8 +48,8 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationMasterRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
@@ -60,6 +60,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
@@ -301,13 +302,16 @@ public class ResourceMgrDelegate {
     LOG.info("Killing application " + applicationId);
   }
 
-  public ApplicationMaster getApplicationMaster(ApplicationId appId) 
-    throws YarnRemoteException {
-    GetApplicationMasterRequest request = recordFactory.newRecordInstance(GetApplicationMasterRequest.class);
+
+  public ApplicationReport getApplicationReport(ApplicationId appId)
+      throws YarnRemoteException {
+    GetApplicationReportRequest request = recordFactory
+        .newRecordInstance(GetApplicationReportRequest.class);
     request.setApplicationId(appId);
-    GetApplicationMasterResponse response = applicationsManager.getApplicationMaster(request);
-    ApplicationMaster appMaster = response.getApplicationMaster(); 
-    return appMaster;
+    GetApplicationReportResponse response = applicationsManager
+        .getApplicationReport(request);
+    ApplicationReport applicationReport = response.getApplicationReport();
+    return applicationReport;
   }
 
   public ApplicationId getApplicationId() {

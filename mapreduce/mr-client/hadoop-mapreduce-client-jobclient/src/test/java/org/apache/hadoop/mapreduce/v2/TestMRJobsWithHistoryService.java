@@ -116,8 +116,8 @@ public class TestMRJobsWithHistoryService {
     ApplicationId appID = TypeConverter.toYarn(job.getJobID()).getAppId();
     while (true) {
       Thread.sleep(1000);
-      if (mrCluster.getResourceManager().getApplicationsManager()
-          .getApplication(appID).getState().equals(ApplicationState.COMPLETED))
+      if (mrCluster.getResourceManager().getRMContext().getApplications()
+          .get(appID).getState().equals(ApplicationState.COMPLETED))
         break;
     }
     Counters counterHS = job.getCounters();
