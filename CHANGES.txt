@@ -152,6 +152,8 @@ Release 0.91.0 - Unreleased
                should be synchronous
    HBASE-4053  Most of the regions were added into AssignmentManager#servers twice
    HBASE-4061  getTableDirs is missing directories to skip
+   HBASE-3867  when cluster is stopped and server which hosted meta region is
+               removed from cluster, master breaks down after restarting cluster.
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

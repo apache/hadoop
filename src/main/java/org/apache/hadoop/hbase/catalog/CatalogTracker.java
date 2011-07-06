@@ -22,8 +22,9 @@ package org.apache.hadoop.hbase.catalog;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.ConnectException;
-import java.net.SocketTimeoutException;
+import java.net.NoRouteToHostException;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -311,6 +312,7 @@ public class CatalogTracker {
       if (newLocation == null) {
         return null;
       }
+
       HRegionInterface newConnection = getCachedConnection(newLocation);
       if (verifyRegionLocation(newConnection, this.metaLocation, META_REGION)) {
         setMetaLocation(newLocation);
@@ -420,10 +422,10 @@ public class CatalogTracker {
         throw e;
       }
     } catch (SocketTimeoutException e) {
-      // Return 'protocol' == null.
       LOG.debug("Timed out connecting to " + sn);
+    } catch (NoRouteToHostException e) {
+      LOG.debug("Connecting to " + sn, e);
     } catch (SocketException e) {
-      // Return 'protocol' == null.
       LOG.debug("Exception connecting to " + sn);
     } catch (IOException ioe) {
       Throwable cause = ioe.getCause();
