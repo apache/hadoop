@@ -211,7 +211,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
     clusterIdZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.clusterId", "hbaseid"));
     splitLogZNode = ZKUtil.joinZNode(baseZNode,
-        conf.get("zookeeper.znode.splitlog", "splitlog"));
+        conf.get("zookeeper.znode.splitlog", HConstants.SPLIT_LOGDIR_NAME));
   }
 
   /**

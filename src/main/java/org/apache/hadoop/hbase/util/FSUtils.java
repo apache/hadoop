@@ -710,13 +710,17 @@ public class FSUtils {
     }
 
     public boolean accept(Path p) {
-      boolean isdir = false;
+      boolean isValid = false;
       try {
-        isdir = this.fs.getFileStatus(p).isDir();
+        if (HConstants.HBASE_NON_USER_TABLE_DIRS.contains(p)) {
+          isValid = false;
+        } else {
+            isValid = this.fs.getFileStatus(p).isDir();
+        }
       } catch (IOException e) {
         e.printStackTrace();
       }
-      return isdir;
+      return isValid;
     }
   }
 
