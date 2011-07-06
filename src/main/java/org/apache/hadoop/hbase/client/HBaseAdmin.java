@@ -21,9 +21,13 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
@@ -49,11 +53,13 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 
@@ -319,16 +325,47 @@ public class HBaseAdmin implements Abortable, Closeable {
    * and attempt-at-creation).
    * @throws IOException
    */
-  public void createTable(HTableDescriptor desc, byte [][] splitKeys)
+  public void createTable(final HTableDescriptor desc, byte [][] splitKeys)
   throws IOException {
     HTableDescriptor.isLegalTableName(desc.getName());
-    createTableAsync(desc, splitKeys);
+    try {
+      createTableAsync(desc, splitKeys);
+    } catch (SocketTimeoutException ste) {
+      LOG.warn("Creating " + desc.getNameAsString() + " took too long", ste);
+    }
+    int numRegs = splitKeys == null ? 1 : splitKeys.length+1;
     for (int tries = 0; tries < numRetries; tries++) {
       try {
         // Wait for new table to come on-line
-        connection.locateRegion(desc.getName(), HConstants.EMPTY_START_ROW);
-        break;
+        final AtomicInteger actualRegCount = new AtomicInteger(0);
 
+        MetaScannerVisitor visitor = new MetaScannerVisitor() {
+          public boolean processRow(Result rowResult) throws IOException {
+            HRegionInfo info = Writables.getHRegionInfo(
+                rowResult.getValue(HConstants.CATALOG_FAMILY,
+                    HConstants.REGIONINFO_QUALIFIER));
+
+            if (!(Bytes.equals(info.getTableName(), desc.getName()))) {
+              return false;
+            }
+
+            String hostAndPort = null;
+            byte [] value = rowResult.getValue(HConstants.CATALOG_FAMILY,
+                HConstants.SERVER_QUALIFIER);
+            if (value != null && value.length > 0) {
+              hostAndPort = Bytes.toString(value);
+            }
+
+            if (!(info.isOffline() || info.isSplit()) && hostAndPort != null) {
+              actualRegCount.incrementAndGet();
+            }
+            return true;
+          }
+
+        };
+        MetaScanner.metaScan(conf, visitor, desc.getName());
+        if (actualRegCount.get() == numRegs)
+          break;
       } catch (RegionException e) {
         if (tries == numRetries - 1) {
           // Ran out of tries

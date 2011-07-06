@@ -148,6 +148,8 @@ Release 0.91.0 - Unreleased
                initialized
    HBASE-4059  If a region is split during RS shutdown process, the daughter
                regions are NOT made online by master
+   HBASE-3904  HBA.createTable(final HTableDescriptor desc, byte [][] splitKeys)
+               should be synchronous
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
