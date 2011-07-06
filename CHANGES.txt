@@ -146,6 +146,8 @@ Release 0.91.0 - Unreleased
                all tests - TestFullLogReconstruction
    HBASE-4051  [Coprocessors] Table coprocessor loaded twice when region is
                initialized
+   HBASE-4059  If a region is split during RS shutdown process, the daughter
+               regions are NOT made online by master
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

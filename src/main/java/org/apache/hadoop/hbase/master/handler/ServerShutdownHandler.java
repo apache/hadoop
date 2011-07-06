@@ -173,7 +173,7 @@ public class ServerShutdownHandler extends EventHandler {
         throw new IOException("Interrupted", e);
       } catch (IOException ioe) {
         LOG.info("Received exception accessing META during server shutdown of " +
-            serverName + ", retrying META read");
+            serverName + ", retrying META read", ioe);
       }
     }
 
@@ -327,6 +327,11 @@ public class ServerShutdownHandler extends EventHandler {
         LOG.warn("No serialized HRegionInfo in " + r);
         return true;
       }
+      byte [] value = r.getValue(HConstants.CATALOG_FAMILY,
+          HConstants.SERVER_QUALIFIER);
+      // See if daughter is assigned to some server
+      if (value == null) return false;
+
       // Now see if we have gone beyond the daughter's startrow.
       if (!Bytes.equals(daughter.getTableName(),
           hri.getTableName())) {
