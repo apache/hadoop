@@ -17,13 +17,17 @@
  */
 package org.apache.hadoop.io;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 
 /**
  * This is the unit test for BytesWritable.
  */
-public class TestBytesWritable extends TestCase {
+public class TestBytesWritable {
 
+  @Test
   public void testSizeChange() throws Exception {
     byte[] hadoop = "hadoop".getBytes();
     BytesWritable buf = new BytesWritable(hadoop);
@@ -50,6 +54,7 @@ public class TestBytesWritable extends TestCase {
     assertEquals(hadoop[0], buf.getBytes()[0]);
   }
   
+  @Test
   public void testHash() throws Exception {
     byte[] owen = "owen".getBytes();
     BytesWritable buf = new BytesWritable(owen);
@@ -60,6 +65,7 @@ public class TestBytesWritable extends TestCase {
     assertEquals(1, buf.hashCode());
   }
   
+  @Test
   public void testCompare() throws Exception {
     byte[][] values = new byte[][]{"abc".getBytes(), 
                                    "ad".getBytes(),
@@ -88,10 +94,44 @@ public class TestBytesWritable extends TestCase {
     assertEquals(expected, actual);
   }
 
+  @Test
   public void testToString() {
     checkToString(new byte[]{0,1,2,0x10}, "00 01 02 10");
     checkToString(new byte[]{-0x80, -0x7f, -0x1, -0x2, 1, 0}, 
                   "80 81 ff fe 01 00");
+  }
+  /**
+   * This test was written as result of adding the new zero
+   * copy constructor and set method to BytesWritable. These
+   * methods allow users to specify the backing buffer of the
+   * BytesWritable instance and a length. 
+   */
+  @Test
+  public void testZeroCopy() {
+    byte[] bytes = "brock".getBytes();
+    BytesWritable zeroBuf = new BytesWritable(bytes, bytes.length); // new
+    BytesWritable copyBuf = new BytesWritable(bytes); // old
+    // using zero copy constructor shouldn't result in a copy
+    assertTrue("copy took place, backing array != array passed to constructor",
+      bytes == zeroBuf.getBytes());
+    assertTrue("length of BW should backing byte array", zeroBuf.getLength() == bytes.length);
+    assertEquals("objects with same backing array should be equal", zeroBuf, copyBuf);
+    assertEquals("string repr of objects with same backing array should be equal", 
+        zeroBuf.toString(), copyBuf.toString());
+    assertTrue("compare order objects with same backing array should be equal", 
+        zeroBuf.compareTo(copyBuf) == 0);
+    assertTrue("hash of objects with same backing array should be equal",
+        zeroBuf.hashCode() == copyBuf.hashCode());
+    
+    // ensure expanding buffer is handled correctly
+    // for buffers created with zero copy api
+    byte[] buffer = new byte[bytes.length * 5];
+    zeroBuf.set(buffer, 0, buffer.length); // expand internal buffer
+    zeroBuf.set(bytes, 0, bytes.length); // set back to normal contents
+    assertEquals("buffer created with (array, len) has bad contents", 
+        zeroBuf, copyBuf);
+    assertTrue("buffer created with (array, len) has bad length",
+        zeroBuf.getLength() == copyBuf.getLength());
   }
 }
 

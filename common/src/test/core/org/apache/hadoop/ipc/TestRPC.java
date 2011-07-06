@@ -40,6 +40,10 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
 import org.apache.hadoop.security.AccessControlException;
+
+import com.google.protobuf.DescriptorProtos;
+import com.google.protobuf.DescriptorProtos.EnumDescriptorProto;
+
 import static org.apache.hadoop.test.MetricsAsserts.*;
 
 import static org.mockito.Mockito.*;
@@ -71,6 +75,9 @@ public class TestRPC extends TestCase {
     int error() throws IOException;
     void testServerGet() throws IOException;
     int[] exchange(int[] values) throws IOException;
+    
+    DescriptorProtos.EnumDescriptorProto exchangeProto(
+        DescriptorProtos.EnumDescriptorProto arg);
   }
 
   public static class TestImpl implements TestProtocol {
@@ -135,6 +142,11 @@ public class TestRPC extends TestCase {
         values[i] = i;
       }
       return values;
+    }
+
+    @Override
+    public EnumDescriptorProto exchangeProto(EnumDescriptorProto arg) {
+      return arg;
     }
   }
 
@@ -314,6 +326,13 @@ public class TestRPC extends TestCase {
 
     intResult = proxy.add(new int[] {1, 2});
     assertEquals(intResult, 3);
+    
+    // Test protobufs
+    EnumDescriptorProto sendProto =
+      EnumDescriptorProto.newBuilder().setName("test").build();
+    EnumDescriptorProto retProto = proxy.exchangeProto(sendProto);
+    assertEquals(sendProto, retProto);
+    assertNotSame(sendProto, retProto);
 
     boolean caught = false;
     try {

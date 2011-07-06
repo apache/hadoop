@@ -373,8 +373,7 @@ extends AbstractDelegationTokenIdentifier>
               rollMasterKey();
               lastMasterKeyUpdate = now;
             } catch (IOException e) {
-              LOG.error("Master key updating failed. "
-                  + StringUtils.stringifyException(e));
+              LOG.error("Master key updating failed: ", e);
             }
           }
           if (lastTokenCacheCleanup + tokenRemoverScanInterval < now) {

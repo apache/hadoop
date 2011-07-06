@@ -142,8 +142,7 @@ public abstract class ChecksumFs extends FilterFs {
         set(fs.verifyChecksum, null, 1, 0);
       } catch (IOException e) {                   // loudly ignore
         LOG.warn("Problem opening checksum file: "+ file + 
-                 ".  Ignoring exception: " + 
-                 StringUtils.stringifyException(e));
+                 ".  Ignoring exception: " , e); 
         set(fs.verifyChecksum, null, 1, 0);
       }
     }

@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.shell;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -378,7 +379,7 @@ abstract public class Command extends Configured {
   public String getName() {
     return (name == null)
       ? getCommandField("NAME")
-      : name.startsWith("-") ? name.substring(1) : name; // this is a historical method
+      : name.startsWith("-") ? name.substring(1) : name;
   }
 
   /**
@@ -433,7 +434,9 @@ abstract public class Command extends Configured {
   private String getCommandField(String field) {
     String value;
     try {
-      value = this.getClass().getField(field).get(this).toString();
+      Field f = this.getClass().getDeclaredField(field);
+      f.setAccessible(true);
+      value = f.get(this).toString();
     } catch (Exception e) {
       throw new RuntimeException(
           "failed to get " + this.getClass().getSimpleName()+"."+field, e);

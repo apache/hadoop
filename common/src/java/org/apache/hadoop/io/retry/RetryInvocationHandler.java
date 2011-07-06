@@ -61,7 +61,7 @@ class RetryInvocationHandler implements InvocationHandler {
         if (!policy.shouldRetry(e, retries++)) {
           LOG.info("Exception while invoking " + method.getName()
                    + " of " + implementation.getClass() + ". Not retrying."
-                   + StringUtils.stringifyException(e));
+                   , e);
           if (!method.getReturnType().equals(Void.TYPE)) {
             throw e; // non-void methods can't fail without an exception
           }
@@ -70,7 +70,7 @@ class RetryInvocationHandler implements InvocationHandler {
         if(LOG.isDebugEnabled()) {
           LOG.debug("Exception while invoking " + method.getName()
               + " of " + implementation.getClass() + ". Retrying."
-              + StringUtils.stringifyException(e));
+              , e);
         }
       }
     }

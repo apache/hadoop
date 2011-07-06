@@ -164,7 +164,7 @@ public class TestDelegationToken {
       action.run();
       Assert.fail("action did not throw " + except);
     } catch (Throwable th) {
-      LOG.info("Caught an exception: " + StringUtils.stringifyException(th));
+      LOG.info("Caught an exception: ", th);
       assertEquals("action threw wrong exception", except, th.getClass());
     }
   }

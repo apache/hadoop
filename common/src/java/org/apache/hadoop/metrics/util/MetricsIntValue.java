@@ -97,8 +97,7 @@ public class MetricsIntValue extends MetricsBase {
       try {
         mr.setMetric(getName(), value);
       } catch (Exception e) {
-        LOG.info("pushMetric failed for " + getName() + "\n" +
-            StringUtils.stringifyException(e));
+        LOG.info("pushMetric failed for " + getName() + "\n", e);
       }
     }
     changed = false;

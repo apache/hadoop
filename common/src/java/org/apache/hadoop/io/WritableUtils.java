@@ -62,8 +62,13 @@ public final class WritableUtils  {
     if (bytes != null) {
       ByteArrayOutputStream bos =  new ByteArrayOutputStream();
       GZIPOutputStream gzout = new GZIPOutputStream(bos);
-      gzout.write(bytes, 0, bytes.length);
-      gzout.close();
+      try {
+        gzout.write(bytes, 0, bytes.length);
+        gzout.close();
+        gzout = null;
+      } finally {
+        IOUtils.closeStream(gzout);
+      }
       byte[] buffer = bos.toByteArray();
       int len = buffer.length;
       out.writeInt(len);

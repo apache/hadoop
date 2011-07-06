@@ -40,7 +40,6 @@ import java.util.zip.GZIPOutputStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -52,8 +51,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
-import org.apache.hadoop.io.compress.CompressionOutputStream;
-import org.apache.hadoop.io.compress.CompressorStream;
+import org.apache.hadoop.io.compress.snappy.LoadSnappy;
 import org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor;
 import org.apache.hadoop.io.compress.zlib.BuiltInZlibDeflater;
 import org.apache.hadoop.io.compress.zlib.BuiltInZlibInflater;
@@ -68,6 +66,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.junit.Assert;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -95,6 +94,19 @@ public class TestCodec {
   public void testBZip2Codec() throws IOException {
     codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.BZip2Codec");
     codecTest(conf, seed, count, "org.apache.hadoop.io.compress.BZip2Codec");
+  }
+  
+  @Test
+  public void testSnappyCodec() throws IOException {
+    if (LoadSnappy.isAvailable()) {
+      if (LoadSnappy.isLoaded()) {
+        codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.SnappyCodec");
+        codecTest(conf, seed, count, "org.apache.hadoop.io.compress.SnappyCodec");
+      }
+      else {
+        Assert.fail("Snappy native available but Hadoop native not");
+      }
+    }
   }
 
   @Test

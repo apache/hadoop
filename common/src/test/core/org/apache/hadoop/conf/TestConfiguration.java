@@ -33,6 +33,7 @@ import java.util.regex.Pattern;
 import junit.framework.TestCase;
 import static org.junit.Assert.assertArrayEquals;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.codehaus.jackson.map.ObjectMapper; 
 
@@ -246,7 +247,12 @@ public class TestConfiguration extends TestCase {
 
   public void testGetLocalPath() throws IOException {
     Configuration conf = new Configuration();
-    conf.set("dirs", "a, b, c ");
+    String[] dirs = new String[]{"a", "b", "c"};
+    for (int i = 0; i < dirs.length; i++) {
+      dirs[i] = new Path(System.getProperty("test.build.data"), dirs[i])
+          .toString();
+    }
+    conf.set("dirs", StringUtils.join(dirs, ","));
     for (int i = 0; i < 1000; i++) {
       String localPath = conf.getLocalPath("dirs", "dir" + i).toString();
       assertTrue("Path doesn't end in specified dir: " + localPath,
@@ -258,7 +264,12 @@ public class TestConfiguration extends TestCase {
   
   public void testGetFile() throws IOException {
     Configuration conf = new Configuration();
-    conf.set("dirs", "a, b, c ");
+    String[] dirs = new String[]{"a", "b", "c"};
+    for (int i = 0; i < dirs.length; i++) {
+      dirs[i] = new Path(System.getProperty("test.build.data"), dirs[i])
+          .toString();
+    }
+    conf.set("dirs", StringUtils.join(dirs, ","));
     for (int i = 0; i < 1000; i++) {
       String localPath = conf.getFile("dirs", "dir" + i).toString();
       assertTrue("Path doesn't end in specified dir: " + localPath,

@@ -1151,6 +1151,9 @@ public abstract class FileSystem extends Configured implements Closeable {
   private void listStatus(ArrayList<FileStatus> results, Path f,
       PathFilter filter) throws FileNotFoundException, IOException {
     FileStatus listing[] = listStatus(f);
+    if (listing == null) {
+      throw new IOException("Error accessing " + f);
+    }
 
     for (int i = 0; i < listing.length; i++) {
       if (filter.accept(listing[i].getPath())) {

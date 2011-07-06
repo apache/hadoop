@@ -27,6 +27,7 @@ import java.io.InputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.io.IOUtils;
 
 /**
  * Holds file metadata including type (regular file, or directory),
@@ -82,15 +83,20 @@ public class INode {
   public InputStream serialize() throws IOException {
     ByteArrayOutputStream bytes = new ByteArrayOutputStream();
     DataOutputStream out = new DataOutputStream(bytes);
-    out.writeByte(fileType.ordinal());
-    if (isFile()) {
-      out.writeInt(blocks.length);
-      for (int i = 0; i < blocks.length; i++) {
-        out.writeLong(blocks[i].getId());
-        out.writeLong(blocks[i].getLength());
+    try {
+      out.writeByte(fileType.ordinal());
+      if (isFile()) {
+        out.writeInt(blocks.length);
+        for (int i = 0; i < blocks.length; i++) {
+          out.writeLong(blocks[i].getId());
+          out.writeLong(blocks[i].getLength());
+        }
       }
+      out.close();
+      out = null;
+    } finally {
+      IOUtils.closeStream(out);
     }
-    out.close();
     return new ByteArrayInputStream(bytes.toByteArray());
   }
   

@@ -44,6 +44,15 @@ Trunk (unreleased changes)
     HADOOP-7144. Expose JMX metrics via JSON servlet. (Robert Joseph Evans via
     cdouglas)
 
+    HADOOP-7379. Add the ability to serialize and deserialize protocol buffers
+    in ObjectWritable. (todd)
+
+    HADOOP-7206. Support Snappy compression. (Issei Yoshida and
+    Alejandro Abdelnur via eli)
+
+    HADOOP-7329. Add the capability of getting invividual attribute of a mbean
+    using JMXProxyServlet. (tanping)
+
   IMPROVEMENTS
 
     HADOOP-7042. Updates to test-patch.sh to include failed test names and
@@ -212,12 +221,33 @@ Trunk (unreleased changes)
     HADOOP-7374. Don't add tools.jar to the classpath when running Hadoop.
     (eli)
 
+    HADOOP-7106. Reorganize project SVN layout to "unsplit" the projects.
+    (todd, nigel)
+
+    HADOOP-6605. Add JAVA_HOME detection to hadoop-config. (eli)
+
+    HADOOP-7384. Allow test-patch to be more flexible about patch format. (todd)
+
+    HADOOP-6929. RPC should have a way to pass Security information other than 
+    protocol annotations. (sharad and omalley via mahadev)
+
+    HADOOP-7385. Remove StringUtils.stringifyException(ie) in logger functions.
+    (Bharath Mundlapudi via Tanping Wang).
+
+    HADOOP-310. Additional constructor requested in BytesWritable. (Brock
+    Noland via atm)
+
+    HADOOP-7429. Add another IOUtils#copyBytes method. (eli)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
     via todd)
 
   BUG FIXES
+
+    HADOOP-7327. FileSystem.listStatus() throws NullPointerException instead of
+    IOException upon access permission failure. (mattf)
 
     HADOOP-7015. RawLocalFileSystem#listStatus does not deal with a directory
     whose entries are changing (e.g. in a multi-thread or multi-process
@@ -298,6 +328,35 @@ Trunk (unreleased changes)
 
     HADOOP-7356. RPM packages broke bin/hadoop script in developer environment.
     (Eric Yang via todd)
+
+    HADOOP-7389. Use of TestingGroups by tests causes subsequent tests to fail.
+    (atm via tomwhite)
+
+    HADOOP-7390. VersionInfo not generated properly in git after unsplit. (todd
+    via atm)
+
+    HADOOP-7377. Fix command name handling affecting DFSAdmin. (Daryn Sharp
+    via mattf)
+
+    HADOOP-7402. TestConfiguration doesn't clean up after itself. (atm via eli)
+
+    HADOOP-7428. IPC connection is orphaned with null 'out' member.
+    (todd via eli)
+
+    HADOOP-7437. IOUtils.copybytes will suppress the stream closure exceptions.
+    (Uma Maheswara Rao G via szetszwo)
+
+    HADOOP-7090. Fix resource leaks in s3.INode, BloomMapFile, WritableUtils
+    and CBZip2OutputStream.  (Uma Maheswara Rao G via szetszwo)
+
+    HADOOP-7440. HttpServer.getParameterValues throws NPE for missing
+    parameters. (Uma Maheswara Rao G and todd via todd)
+
+    HADOOP-7442. Docs in core-default.xml still reference deprecated config
+    "topology.script.file.name" (atm)
+
+    HADOOP-7419. new hadoop-config.sh doesn't manage classpath for
+    HADOOP_CONF_DIR correctly. (Bing Zheng and todd via todd)
 
 Release 0.22.0 - Unreleased
 

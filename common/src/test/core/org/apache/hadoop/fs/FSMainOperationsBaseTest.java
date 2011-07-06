@@ -25,6 +25,7 @@ import java.io.InputStream;
 
 
 import org.apache.hadoop.fs.Options.Rename;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -252,8 +253,9 @@ public abstract class FSMainOperationsBaseTest  {
     }
   } 
   
+  @Test
   public void testListStatusThrowsExceptionForNonExistentFile()
-                                                    throws Exception {
+  throws Exception {
     try {
       fSys.listStatus(getTestRootPath(fSys, "test/hadoop/file"));
       Assert.fail("Should throw FileNotFoundException");
@@ -262,6 +264,27 @@ public abstract class FSMainOperationsBaseTest  {
     }
   }
   
+  // TODO: update after fixing HADOOP-7352
+  @Test
+  public void testListStatusThrowsExceptionForUnreadableDir()
+  throws Exception {
+    Path testRootDir = getTestRootPath(fSys, "test/hadoop/dir");
+    Path obscuredDir = new Path(testRootDir, "foo");
+    Path subDir = new Path(obscuredDir, "bar"); //so foo is non-empty
+    fSys.mkdirs(subDir);
+    fSys.setPermission(obscuredDir, new FsPermission((short)0)); //no access
+    try {
+      fSys.listStatus(obscuredDir);
+      Assert.fail("Should throw IOException");
+    } catch (IOException ioe) {
+      // expected
+    } finally {
+      // make sure the test directory can be deleted
+      fSys.setPermission(obscuredDir, new FsPermission((short)0755)); //default
+    }
+  }
+
+
   @Test
   public void testListStatus() throws Exception {
     Path[] testDirs = {
@@ -315,6 +338,7 @@ public abstract class FSMainOperationsBaseTest  {
     
   }
   
+  @Test
   public void testListStatusFilterWithSomeMatches() throws Exception {
     Path[] testDirs = {
         getTestRootPath(fSys, TEST_DIR_AAA),
@@ -919,12 +943,13 @@ public abstract class FSMainOperationsBaseTest  {
 
   @Test
   public void testRenameDirectoryAsNonExistentDirectory() throws Exception {
-    testRenameDirectoryAsNonExistentDirectory(Rename.NONE);
+    doTestRenameDirectoryAsNonExistentDirectory(Rename.NONE);
     tearDown();
-    testRenameDirectoryAsNonExistentDirectory(Rename.OVERWRITE);
+    doTestRenameDirectoryAsNonExistentDirectory(Rename.OVERWRITE);
   }
 
-  private void testRenameDirectoryAsNonExistentDirectory(Rename... options) throws Exception {
+  private void doTestRenameDirectoryAsNonExistentDirectory(Rename... options) 
+  throws Exception {
     if (!renameSupported()) return;
     
     Path src = getTestRootPath(fSys, "test/hadoop/dir");

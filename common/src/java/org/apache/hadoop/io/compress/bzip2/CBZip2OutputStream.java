@@ -27,6 +27,8 @@ package org.apache.hadoop.io.compress.bzip2;
 import java.io.OutputStream;
 import java.io.IOException;
 
+import org.apache.hadoop.io.IOUtils;
+
 /**
  * An output stream that compresses into the BZip2 format (without the file
  * header chars) into another stream.
@@ -727,8 +729,13 @@ public class CBZip2OutputStream extends OutputStream implements BZip2Constants {
   public void close() throws IOException {
     if (out != null) {
       OutputStream outShadow = this.out;
-      finish();
-      outShadow.close();
+      try {
+        finish();
+        outShadow.close();
+        outShadow = null;
+      } finally {
+        IOUtils.closeStream(outShadow);
+      }
     }
   }
   

@@ -1501,7 +1501,7 @@ public abstract class Server {
                   );
             }
           } catch (Throwable e) {
-            LOG.info(getName()+", call "+call+": error: " + e, e);
+            LOG.info(getName() + ", call: " + call + ", error: ", e);
             errorClass = e.getClass().getName();
             error = StringUtils.stringifyException(e);
             // Remove redundant error class name from the beginning of the stack trace

@@ -138,6 +138,6 @@ public class TestMetricsConfig {
    * @return the filename
    */
   public static String getTestFilename(String basename) {
-    return "build/classes/"+ basename +".properties";
+    return "build/test/"+ basename +".properties";
   }
 }
