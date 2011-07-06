@@ -1567,7 +1567,7 @@ public class TestCheckpoint extends TestCase {
         fail("Did not fail to checkpoint when there are no valid storage dirs");
       } catch (IOException ioe) {
         GenericTestUtils.assertExceptionContains(
-            "Unable to download to any storage dir", ioe);
+            "No targets in destination storage", ioe);
       }
       
       // Restore the good dir
