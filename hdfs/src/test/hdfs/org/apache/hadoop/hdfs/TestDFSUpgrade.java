@@ -22,14 +22,12 @@ import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.NAME_N
 
 import java.io.File;
 import java.io.IOException;
-
-import junit.framework.TestCase;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
@@ -37,6 +35,9 @@ import org.apache.hadoop.hdfs.server.namenode.TestParallelImageWrite;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEditsFileName;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
 
+import org.apache.hadoop.util.StringUtils;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.common.base.Joiner;
@@ -51,8 +52,7 @@ import static org.junit.Assert.*;
 public class TestDFSUpgrade {
  
   private static final int EXPECTED_TXID = 17;
-  private static final Log LOG = LogFactory.getLog(
-                                                   "org.apache.hadoop.hdfs.TestDFSUpgrade");
+  private static final Log LOG = LogFactory.getLog(TestDFSUpgrade.class.getName());
   private Configuration conf;
   private int testCounter = 0;
   private MiniDFSCluster cluster = null;
@@ -125,11 +125,27 @@ public class TestDFSUpgrade {
       
     }
   }
+
   /**
    * Attempts to start a NameNode with the given operation.  Starting
    * the NameNode should throw an exception.
    */
   void startNameNodeShouldFail(StartupOption operation) {
+    startNameNodeShouldFail(operation, null, null);
+  }
+
+  /**
+   * Attempts to start a NameNode with the given operation.  Starting
+   * the NameNode should throw an exception.
+   * @param operation - NameNode startup operation
+   * @param exceptionClass - if non-null, will check that the caught exception
+   *     is assignment-compatible with exceptionClass
+   * @param messagePattern - if non-null, will check that a substring of the 
+   *     message from the caught exception matches this pattern, via the
+   *     {@link Matcher#find()} method.
+   */
+  void startNameNodeShouldFail(StartupOption operation,
+      Class<? extends Exception> exceptionClass, Pattern messagePattern) {
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
                                                 .startupOption(operation)
@@ -137,9 +153,23 @@ public class TestDFSUpgrade {
                                                 .manageDataDfsDirs(false)
                                                 .manageNameDfsDirs(false)
                                                 .build(); // should fail
-      throw new AssertionError("NameNode should have failed to start");
-    } catch (Exception expected) {
-      // expected
+      fail("NameNode should have failed to start");
+      
+    } catch (Exception e) {
+      // expect exception
+      if (exceptionClass != null) {
+        assertTrue("Caught exception is not of expected class "
+            + exceptionClass.getSimpleName() + ": "
+            + StringUtils.stringifyException(e), 
+            exceptionClass.isInstance(e));
+      }
+      if (messagePattern != null) {
+        assertTrue("Caught exception message string does not match expected pattern \""
+            + messagePattern.pattern() + "\" : "
+            + StringUtils.stringifyException(e), 
+            messagePattern.matcher(e.getMessage()).find());
+      }
+      LOG.info("Successfully detected expected NameNode startup failure.");
     }
   }
   
@@ -169,6 +199,11 @@ public class TestDFSUpgrade {
                                            .build();
   }
   
+  @BeforeClass
+  public static void initialize() throws Exception {
+    UpgradeUtilities.initialize();
+  }
+  
   /**
    * This test attempts to upgrade the NameNode and DataNode under
    * a number of valid and invalid conditions.
@@ -176,8 +211,6 @@ public class TestDFSUpgrade {
   @Test
   public void testUpgrade() throws Exception {
     File[] baseDirs;
-    UpgradeUtilities.initialize();
-    
     StorageInfo storageInfo = null;
     for (int numDirs = 1; numDirs <= 2; numDirs++) {
       conf = new HdfsConfiguration();
@@ -320,6 +353,30 @@ public class TestDFSUpgrade {
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
     }
   }
+  
+  /*
+   * Stand-alone test to detect failure of one SD during parallel upgrade.
+   * At this time, can only be done with manual hack of {@link FSImage.doUpgrade()}
+   */
+  @Ignore
+  public void testUpgrade4() throws Exception {
+    int numDirs = 4;
+    conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);      
+    conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
+    String[] nameNodeDirs = conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
+
+    log("NameNode upgrade with one bad storage dir", numDirs);
+    UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
+    try {
+      // assert("storage dir has been prepared for failure before reaching this point");
+      startNameNodeShouldFail(StartupOption.UPGRADE, IOException.class,
+          Pattern.compile("failed in 1 storage"));
+    } finally {
+      // assert("storage dir shall be returned to normal state before exiting");
+      UpgradeUtilities.createEmptyDirs(nameNodeDirs);
+    }
+  }
  
   private void deleteStorageFilesWithPrefix(String[] nameNodeDirs, String prefix)
   throws Exception {
@@ -342,6 +399,7 @@ public class TestDFSUpgrade {
     fail("Expected IOException is not thrown");
   }
   
+  @Ignore
   public void test203LayoutVersion() {
     for (int lv : Storage.LAYOUT_VERSIONS_203) {
       assertTrue(Storage.is203LayoutVersion(lv));
@@ -349,7 +407,9 @@ public class TestDFSUpgrade {
   }
   
   public static void main(String[] args) throws Exception {
-    new TestDFSUpgrade().testUpgrade();
+    TestDFSUpgrade t = new TestDFSUpgrade();
+    TestDFSUpgrade.initialize();
+    t.testUpgrade();
   }
 }
 

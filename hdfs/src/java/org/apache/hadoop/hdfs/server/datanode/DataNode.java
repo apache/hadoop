@@ -1977,8 +1977,8 @@ public class DataNode extends Configured
               EnumSet.of(BlockTokenSecretManager.AccessMode.WRITE));
         }
 
-        Sender.opWriteBlock(out,
-            b, 0, stage, 0, 0, 0, clientname, srcNode, targets, accessToken);
+        new Sender(out).writeBlock(b, accessToken, clientname, targets, srcNode,
+            stage, 0, 0, 0, 0);
 
         // send data & checksum
         blockSender.sendBlock(out, baseStream, null);
@@ -2186,20 +2186,21 @@ public class DataNode extends Configured
         continue;
       }
       // drop any (illegal) authority in the URI for backwards compatibility
-      File data = new File(dirURI.getPath());
+      File dir = new File(dirURI.getPath());
       try {
-        DiskChecker.checkDir(localFS, new Path(data.toURI()), permission);
-        dirs.add(data);
-      } catch (IOException e) {
-        LOG.warn("Invalid directory in: "
-                 + DFS_DATANODE_DATA_DIR_KEY + ": ", e);
-        invalidDirs.append("\"").append(data.getCanonicalPath()).append("\" ");
+        DiskChecker.checkDir(localFS, new Path(dir.toURI()), permission);
+        dirs.add(dir);
+      } catch (IOException ioe) {
+        LOG.warn("Invalid " + DFS_DATANODE_DATA_DIR_KEY + " "
+            + dir + " : ", ioe);
+        invalidDirs.append("\"").append(dir.getCanonicalPath()).append("\" ");
       }
     }
-    if (dirs.size() == 0)
+    if (dirs.size() == 0) {
       throw new IOException("All directories in "
           + DFS_DATANODE_DATA_DIR_KEY + " are invalid: "
           + invalidDirs);
+    }
     return dirs;
   }
 

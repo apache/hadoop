@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -31,7 +30,6 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -67,7 +65,6 @@ public class TestDFSPermission extends TestCase {
     FsPermission.createImmutable((short) 0777);
   final static private int NUM_TEST_PERMISSIONS = 
     conf.getInt("test.dfs.permission.num", 10) * (MAX_PERMISSION + 1) / 100;
-
 
   final private static String PATH_NAME = "xx";
   final private static Path FILE_DIR_PATH = new Path("/", PATH_NAME);
@@ -115,44 +112,66 @@ public class TestDFSPermission extends TestCase {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     try {
       cluster.waitActive();
-      fs = FileSystem.get(conf);
-      LOG.info("ROOT=" + fs.getFileStatus(new Path("/")));
       testPermissionSetting(OpType.CREATE); // test file creation
       testPermissionSetting(OpType.MKDIRS); // test directory creation
     } finally {
-      fs.close();
       cluster.shutdown();
     }
   }
 
+  private void initFileSystem(short umask) throws Exception {
+    // set umask in configuration, converting to padded octal
+    conf.set(FsPermission.UMASK_LABEL, String.format("%1$03o", umask));
+    fs = FileSystem.get(conf);
+  }
+
+  private void closeFileSystem() throws Exception {
+    fs.close();
+  }
+  
   /* check permission setting works correctly for file or directory */
   private void testPermissionSetting(OpType op) throws Exception {
+    short uMask = DEFAULT_UMASK;
     // case 1: use default permission but all possible umasks
     PermissionGenerator generator = new PermissionGenerator(r);
+    FsPermission permission = new FsPermission(DEFAULT_PERMISSION);
     for (short i = 0; i < NUM_TEST_PERMISSIONS; i++) {
-      createAndCheckPermission(op, FILE_DIR_PATH, generator.next(),
-          new FsPermission(DEFAULT_PERMISSION), true);
+      uMask = generator.next();
+      initFileSystem(uMask);
+      createAndCheckPermission(op, FILE_DIR_PATH, uMask, permission, true);
+      closeFileSystem();
     }
-
     // case 2: use permission 0643 and the default umask
-    createAndCheckPermission(op, FILE_DIR_PATH, DEFAULT_UMASK,
-        new FsPermission((short) 0643), true);
+    uMask = DEFAULT_UMASK;
+    initFileSystem(uMask);
+    createAndCheckPermission(op, FILE_DIR_PATH, uMask, new FsPermission(
+        (short) 0643), true);
+    closeFileSystem();
 
     // case 3: use permission 0643 and umask 0222
-    createAndCheckPermission(op, FILE_DIR_PATH, (short) 0222, 
-        new FsPermission((short) 0643), false);
+    uMask = (short) 0222;
+    initFileSystem(uMask);
+    createAndCheckPermission(op, FILE_DIR_PATH, uMask, new FsPermission(
+        (short) 0643), false);
+    closeFileSystem();
 
     // case 4: set permission
-    fs.setPermission(FILE_DIR_PATH, new FsPermission((short) 0111));
+    uMask = (short) 0111;
+    initFileSystem(uMask);
+    fs.setPermission(FILE_DIR_PATH, new FsPermission(uMask));
     short expectedPermission = (short) ((op == OpType.CREATE) ? 0 : 0111);
     checkPermission(FILE_DIR_PATH, expectedPermission, true);
+    closeFileSystem();
 
     // case 5: test non-existent parent directory
-    assertFalse(fs.exists(NON_EXISTENT_PATH));
-    createAndCheckPermission(op, NON_EXISTENT_PATH, DEFAULT_UMASK,
-        new FsPermission(DEFAULT_PERMISSION), false);
+    uMask = DEFAULT_UMASK;
+    initFileSystem(uMask);
+    assertFalse("File shouldn't exists", fs.exists(NON_EXISTENT_PATH));
+    createAndCheckPermission(op, NON_EXISTENT_PATH, uMask, new FsPermission(
+        DEFAULT_PERMISSION), false);
     Path parent = NON_EXISTENT_PATH.getParent();
     checkPermission(parent, getPermission(parent.getParent()), true);
+    closeFileSystem();
   }
 
   /* get the permission of a file/directory */

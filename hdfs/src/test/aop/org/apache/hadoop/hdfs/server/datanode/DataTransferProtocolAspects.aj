@@ -46,7 +46,7 @@ public aspect DataTransferProtocolAspects {
   */
 
   pointcut receiverOp(DataXceiver dataxceiver):
-    call(Op Receiver.readOp(DataInputStream)) && target(dataxceiver);
+    call(Op Receiver.readOp()) && target(dataxceiver);
 
   after(DataXceiver dataxceiver) returning(Op op): receiverOp(dataxceiver) {
     LOG.info("FI: receiverOp " + op + ", datanode="

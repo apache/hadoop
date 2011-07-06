@@ -41,7 +41,8 @@ public class DSQuotaExceededException extends QuotaExceededException {
     String msg = super.getMessage();
     if (msg == null) {
       return "The DiskSpace quota" + (pathName==null?"":(" of " + pathName)) + 
-          " is exceeded: quota=" + quota + " diskspace consumed=" + StringUtils.humanReadableInt(count);
+          " is exceeded: quota=" + StringUtils.humanReadableInt(quota) + 
+          " diskspace consumed=" + StringUtils.humanReadableInt(count);
     } else {
       return msg;
     }

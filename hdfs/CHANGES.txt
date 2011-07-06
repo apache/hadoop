@@ -291,6 +291,8 @@ Trunk (unreleased changes)
     (todd)
 
     HDFS-2055. Add hflush support to libhdfs. (Travis Crawford via eli)
+   
+    HDFS-2083. Query JMX statistics over http via JMXJsonServlet. (tanping)
 
   IMPROVEMENTS
 
@@ -519,6 +521,25 @@ Trunk (unreleased changes)
     HDFS-1568. Improve the log messages in DataXceiver.  (Joey Echeverria via
     szetszwo)
 
+    HDFS-2100. Improve TestStorageRestore. (atm)
+
+    HDFS-2092. Remove some object references to Configuration in DFSClient.
+    (Bharath Mundlapudi via szetszwo)
+
+    HDFS-2087. Declare methods in DataTransferProtocol interface, and change
+    Sender and Receiver to implement the interface.  (szetszwo)
+
+    HDFS-1723. quota errors messages should use the same scale. (Jim Plush via
+    atm)
+
+    HDFS-2110. StreamFile and ByteRangeInputStream cleanup. (eli)
+
+    HDFS-2107. Move block management code from o.a.h.h.s.namenode to a new
+    package o.a.h.h.s.blockmanagement.  (szetszwo)
+
+    HDFS-2109. Store uMask as member variable to DFSClient.Conf.  (Bharath
+    Mundlapudi via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
@@ -534,7 +555,15 @@ Trunk (unreleased changes)
 
     HDFS-2056. Update fetchdt usage. (Tanping Wang via jitendra)
 
+    HDFS-2118. Couple dfs data dir improvements. (eli)
+
   BUG FIXES
+
+    HDFS-2011. Removal and restoration of storage directories on checkpointing
+    failure doesn't work properly. (Ravi Prakash via mattf)
+
+    HDFS-1955. FSImage.doUpgrade() was made too fault-tolerant by HDFS-1826.
+    (mattf)
 
     HDFS-2061. Two minor bugs in BlockManager block report processing. (mattf)
 
@@ -762,6 +791,23 @@ Trunk (unreleased changes)
     HDFS-1734. 'Chunk size to view' option is not working in Name Node UI.
     (Uma Maheswara Rao G via jitendra)
 
+    HDFS-2086. If the include hosts list contains host names, after restarting
+    namenode, data nodes registration is denied.  Contributed by Tanping Wang.
+
+    HDFS-2082. SecondaryNameNode web interface doesn't show the right info. (atm)
+
+    HDFS-1321. If service port and main port are the same, there is no clear
+    log message explaining the issue. (Jim Plush via atm)
+
+    HDFS-1381. HDFS javadocs hard-code references to dfs.namenode.name.dir and
+    dfs.datanode.data.dir parameters (Jim Plush via atm)
+
+    HDFS-2053. Bug in INodeDirectory#computeContentSummary warning.
+    (Michael Noll via eli)
+
+    HDFS-1990. Fix  resource leaks in BlockReceiver.close().  (Uma Maheswara
+    Rao G via szetszwo)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -818,6 +864,8 @@ Release 0.22.0 - Unreleased
 
     HDFS-528. Add ability for safemode to wait for a minimum number of 
     live datanodes (Todd Lipcon via eli)
+
+    HDFS-1753. Resource Leak in StreamFile. (Uma Maheswara Rao G via eli)
 
   IMPROVEMENTS
 

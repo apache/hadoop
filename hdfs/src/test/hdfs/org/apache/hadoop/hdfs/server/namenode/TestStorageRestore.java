@@ -18,6 +18,10 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.File;
@@ -28,22 +32,23 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
+import java.util.Set;
 
 import static org.mockito.Matchers.anyByte;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.cli.CLITestCmdDFS;
-import org.apache.hadoop.cli.util.*;
+import org.apache.hadoop.cli.util.CLICommandDFSAdmin;
+import org.apache.hadoop.cli.util.CommandExecutor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -55,12 +60,16 @@ import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getFinalizedEdits
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
+import com.google.common.collect.ImmutableSet;
 /**
  * Startup and checkpoint tests
  * 
  */
-public class TestStorageRestore extends TestCase {
+public class TestStorageRestore {
   public static final String NAME_NODE_HOST = "localhost:";
   public static final String NAME_NODE_HTTP_HOST = "0.0.0.0:";
   private static final Log LOG =
@@ -72,8 +81,8 @@ public class TestStorageRestore extends TestCase {
   static final int fileSize = 8192;
   private File path1, path2, path3;
   private MiniDFSCluster cluster;  
- 
-  protected void setUp() throws Exception {
+  @Before
+  public void setUpNameDirs() throws Exception {
     config = new HdfsConfiguration();
     hdfsDir = new File(MiniDFSCluster.getBaseDirectory()).getCanonicalFile();
     if ( hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir) ) {
@@ -110,12 +119,13 @@ public class TestStorageRestore extends TestCase {
   /**
    * invalidate storage by removing the second and third storage directories
    */
-  public void invalidateStorage(FSImage fi) throws IOException {
+  public void invalidateStorage(FSImage fi, Set<File> filesToInvalidate) throws IOException {
     ArrayList<StorageDirectory> al = new ArrayList<StorageDirectory>(2);
     Iterator<StorageDirectory> it = fi.getStorage().dirIterator();
     while(it.hasNext()) {
       StorageDirectory sd = it.next();
-      if(sd.getRoot().equals(path2) || sd.getRoot().equals(path3)) {
+      if(filesToInvalidate.contains(sd.getRoot())) {
+        LOG.info("causing IO error on " + sd.getRoot());
         al.add(sd);
       }
     }
@@ -140,7 +150,7 @@ public class TestStorageRestore extends TestCase {
    * test
    */
   public void printStorages(FSImage fs) {
-    LOG.info("current storages and corresoponding sizes:");
+    LOG.info("current storages and corresponding sizes:");
     for(Iterator<StorageDirectory> it = fs.getStorage().dirIterator(); it.hasNext(); ) {
       StorageDirectory sd = it.next();
 
@@ -164,6 +174,7 @@ public class TestStorageRestore extends TestCase {
    * 8. verify that all the image and edits files are the same.
    */
   @SuppressWarnings("deprecation")
+  @Test
   public void testStorageRestore() throws Exception {
     int numDatanodes = 0;
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(numDatanodes)
@@ -181,7 +192,7 @@ public class TestStorageRestore extends TestCase {
     
     System.out.println("****testStorageRestore: dir 'test' created, invalidating storage...");
   
-    invalidateStorage(cluster.getNameNode().getFSImage());
+    invalidateStorage(cluster.getNameNode().getFSImage(), ImmutableSet.of(path2, path3));
     printStorages(cluster.getNameNode().getFSImage());
     System.out.println("****testStorageRestore: storage invalidated");
 
@@ -265,6 +276,7 @@ public class TestStorageRestore extends TestCase {
    * Test dfsadmin -restoreFailedStorage command
    * @throws Exception
    */
+  @Test
   public void testDfsAdminCmd() throws Exception {
     cluster = new MiniDFSCluster.Builder(config).
                                  numDataNodes(2).
@@ -296,7 +308,7 @@ public class TestStorageRestore extends TestCase {
       restore = fsi.getStorage().getRestoreFailedStorage();
       assertTrue("After set false call restore is " + restore, restore);
       
-   // run one more time - no change in value
+      // run one more time - no change in value
       cmd = "-fs NAMENODE -restoreFailedStorage check";
       CommandExecutor.Result cmdResult = executor.executeCommand(cmd);
       restore = fsi.getStorage().getRestoreFailedStorage();
@@ -308,6 +320,69 @@ public class TestStorageRestore extends TestCase {
 
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  /**
+   * Test to simulate interleaved checkpointing by 2 2NNs after a storage
+   * directory has been taken offline. The first will cause the directory to
+   * come back online, but it won't have any valid contents. The second 2NN will
+   * then try to perform a checkpoint. The NN should not serve up the image or
+   * edits from the restored (empty) dir.
+   */
+  @SuppressWarnings("deprecation")
+  @Test
+  public void testMultipleSecondaryCheckpoint() throws IOException {
+    
+    SecondaryNameNode secondary = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(config).numDataNodes(1)
+          .manageNameDfsDirs(false).build();
+      cluster.waitActive();
+      
+      secondary = new SecondaryNameNode(config);
+  
+      FSImage fsImage = cluster.getNameNode().getFSImage();
+      printStorages(fsImage);
+      
+      FileSystem fs = cluster.getFileSystem();
+      Path testPath = new Path("/", "test");
+      assertTrue(fs.mkdirs(testPath));
+      
+      printStorages(fsImage);
+  
+      // Take name1 offline
+      invalidateStorage(fsImage, ImmutableSet.of(path1));
+      
+      // Simulate a 2NN beginning a checkpoint, but not finishing. This will
+      // cause name1 to be restored.
+      cluster.getNameNode().rollEditLog();
+      
+      printStorages(fsImage);
+      
+      // Now another 2NN comes along to do a full checkpoint.
+      secondary.doCheckpoint();
+      
+      printStorages(fsImage);
+      
+      // The created file should still exist in the in-memory FS state after the
+      // checkpoint.
+      assertTrue("path exists before restart", fs.exists(testPath));
+      
+      secondary.shutdown();
+      
+      // Restart the NN so it reloads the edits from on-disk.
+      cluster.restartNameNode();
+  
+      // The created file should still exist after the restart.
+      assertTrue("path should still exist after restart", fs.exists(testPath));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      if (secondary != null) {
+        secondary.shutdown();
+      }
     }
   }
 }

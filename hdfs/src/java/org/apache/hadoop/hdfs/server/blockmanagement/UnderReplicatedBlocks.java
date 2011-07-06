@@ -15,17 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.*;
 
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 
 /* Class for keeping track of under replication blocks
  * Blocks have replication priority, with priority 0 indicating the highest
  * Blocks have only one replicas has the highest
  */
-class UnderReplicatedBlocks implements Iterable<Block> {
+public class UnderReplicatedBlocks implements Iterable<Block> {
   static final int LEVEL = 5;
   static public final int QUEUE_WITH_CORRUPT_BLOCKS = 4;
   private List<TreeSet<Block>> priorityQueues = new ArrayList<TreeSet<Block>>();
@@ -47,7 +48,7 @@ class UnderReplicatedBlocks implements Iterable<Block> {
   }
 
   /* Return the total number of under replication blocks */
-  synchronized int size() {
+  public synchronized int size() {
     int size = 0;
     for (int i=0; i<LEVEL; i++) {
       size += priorityQueues.get(i).size();
@@ -70,7 +71,7 @@ class UnderReplicatedBlocks implements Iterable<Block> {
   }
   
   /* Check if a block is in the neededReplication queue */
-  synchronized boolean contains(Block block) {
+  public synchronized boolean contains(Block block) {
     for(TreeSet<Block> set:priorityQueues) {
       if(set.contains(block)) { return true; }
     }
@@ -218,7 +219,7 @@ class UnderReplicatedBlocks implements Iterable<Block> {
     return new BlockIterator();
   }
   
-  class BlockIterator implements Iterator<Block> {
+  public class BlockIterator implements Iterator<Block> {
     private int level;
     private boolean isIteratorForLevel = false;
     private List<Iterator<Block>> iterators = new ArrayList<Iterator<Block>>();

@@ -133,17 +133,17 @@ public class TestDataNodeVolumeFailureToleration {
   }
 
   /** 
-   * Restart the cluster with a new volume tolerated value.
-   * @param volTolerated
-   * @param manageCluster
+   * Restart the datanodes with a new volume tolerated value.
+   * @param volTolerated number of dfs data dir failures to tolerate
+   * @param manageDfsDirs whether the mini cluster should manage data dirs
    * @throws IOException
    */
-  private void restartCluster(int volTolerated, boolean manageCluster)
+  private void restartDatanodes(int volTolerated, boolean manageDfsDirs)
       throws IOException {
     //Make sure no datanode is running
     cluster.shutdownDataNodes();
     conf.setInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, volTolerated);
-    cluster.startDataNodes(conf, 1, manageCluster, null, null);
+    cluster.startDataNodes(conf, 1, manageDfsDirs, null, null);
     cluster.waitActive();
   }
 
@@ -174,19 +174,14 @@ public class TestDataNodeVolumeFailureToleration {
 
   /**
    * Tests for a given volumes to be tolerated and volumes failed.
-   * 
-   * @param volumesTolerated
-   * @param volumesFailed
-   * @param expectedBPServiceState
-   * @param clusterManaged
-   * @throws IOException
-   * @throws InterruptedException
    */
   private void testVolumeConfig(int volumesTolerated, int volumesFailed,
-      boolean expectedBPServiceState, boolean clusterManaged)
+      boolean expectedBPServiceState, boolean manageDfsDirs)
       throws IOException, InterruptedException {
     assumeTrue(!System.getProperty("os.name").startsWith("Windows"));
     final int dnIndex = 0;
+    // Fail the current directory since invalid storage directory perms
+    // get fixed up automatically on datanode startup.
     File[] dirs = {
         new File(MiniDFSCluster.getStorageDir(dnIndex, 0), "current"),
         new File(MiniDFSCluster.getStorageDir(dnIndex, 1), "current") };
@@ -195,11 +190,10 @@ public class TestDataNodeVolumeFailureToleration {
       for (int i = 0; i < volumesFailed; i++) {
         prepareDirToFail(dirs[i]);
       }
-      restartCluster(volumesTolerated, clusterManaged);
+      restartDatanodes(volumesTolerated, manageDfsDirs);
       assertEquals(expectedBPServiceState, cluster.getDataNodes().get(0)
           .isBPServiceAlive(cluster.getNamesystem().getBlockPoolId()));
     } finally {
-      // restore its old permission
       for (File dir : dirs) {
         FileUtil.chmod(dir.toString(), "755");
       }
@@ -215,8 +209,7 @@ public class TestDataNodeVolumeFailureToleration {
   private void prepareDirToFail(File dir) throws IOException,
       InterruptedException {
     dir.mkdirs();
-    assertTrue("Couldn't chmod local vol", FileUtil
-        .chmod(dir.toString(), "000") == 0);
+    assertEquals("Couldn't chmod local vol", 0,
+        FileUtil.chmod(dir.toString(), "000"));
   }
-
 }

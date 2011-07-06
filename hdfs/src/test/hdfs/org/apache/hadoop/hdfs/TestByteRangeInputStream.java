@@ -23,11 +23,12 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import junit.framework.TestCase;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.hdfs.ByteRangeInputStream;
 import org.apache.hadoop.hdfs.ByteRangeInputStream.URLOpener;
+
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 class MockHttpURLConnection extends HttpURLConnection {
   MockURL m;
@@ -101,13 +102,9 @@ class MockURL extends URLOpener {
   }
 }
 
-
-
-public class TestByteRangeInputStream extends TestCase {
+public class TestByteRangeInputStream {
   
-  private static final Log LOG = 
-                           LogFactory.getLog(TestByteRangeInputStream.class);
-  
+  @Test
   public void testByteRange() throws IOException, InterruptedException {
     MockURL o = new MockURL("http://test/");
     MockURL r =  new MockURL((URL)null);
@@ -149,7 +146,7 @@ public class TestByteRangeInputStream extends TestCase {
     is.seek(101);
     is.read();
 
-    assertNull("Seek to 101 should not result in another request", null);
+    assertNull("Seek to 101 should not result in another request", r.getMsg());
 
     r.setMsg(null);
     is.seek(2500);
@@ -168,7 +165,7 @@ public class TestByteRangeInputStream extends TestCase {
            + "but 206 is expected");
     } catch (IOException e) {
       assertEquals("Should fail because incorrect response code was sent",
-                   "206 expected, but received 200", e.getMessage());
+                   "HTTP_PARTIAL expected, received 200", e.getMessage());
     }
 
     r.responseCode = 206;
@@ -180,10 +177,7 @@ public class TestByteRangeInputStream extends TestCase {
            + "but 200 is expected");
     } catch (IOException e) {
       assertEquals("Should fail because incorrect response code was sent",
-                   "200 expected, but received 206", e.getMessage());
+                   "HTTP_OK expected, received 206", e.getMessage());
     }
-
-
-
   }
 }

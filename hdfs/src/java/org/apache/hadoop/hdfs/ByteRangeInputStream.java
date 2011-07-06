@@ -26,7 +26,6 @@ import java.net.URL;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.hdfs.server.namenode.StreamFile;
 
-
 /**
  * To support HTTP byte streams, a new connection to an HTTP server needs to be
  * created each time. This class hides the complexity of those multiple 
@@ -60,7 +59,9 @@ class ByteRangeInputStream extends FSInputStream {
     }  
   }
   
-  
+  enum StreamStatus {
+    NORMAL, SEEK
+  }
   protected InputStream in;
   protected URLOpener originalURL;
   protected URLOpener resolvedURL;
@@ -68,9 +69,7 @@ class ByteRangeInputStream extends FSInputStream {
   protected long currentPos = 0;
   protected long filelength;
 
-  protected int status = STATUS_SEEK;
-  protected static final int STATUS_NORMAL = 0;
-  protected static final int STATUS_SEEK = 1;
+  StreamStatus status = StreamStatus.SEEK;
 
   ByteRangeInputStream(final URL url) {
     this(new URLOpener(url), new URLOpener(null));
@@ -82,18 +81,19 @@ class ByteRangeInputStream extends FSInputStream {
   }
   
   private InputStream getInputStream() throws IOException {
-    if (status != STATUS_NORMAL) {
+    if (status != StreamStatus.NORMAL) {
       
       if (in != null) {
         in.close();
         in = null;
       }
       
-      // use the original url  if no resolved url exists (e.g., if it's 
-      // the first time a request is made)
-      final URLOpener o = resolvedURL.getURL() == null? originalURL: resolvedURL;
+      // Use the original url if no resolved url exists, eg. if
+      // it's the first time a request is made.
+      final URLOpener opener =
+        (resolvedURL.getURL() == null) ? originalURL : resolvedURL;
 
-      final HttpURLConnection connection = o.openConnection();
+      final HttpURLConnection connection = opener.openConnection();
       try {
         connection.setRequestMethod("GET");
         if (startPos != 0) {
@@ -101,36 +101,35 @@ class ByteRangeInputStream extends FSInputStream {
         }
         connection.connect();
         final String cl = connection.getHeaderField(StreamFile.CONTENT_LENGTH);
-        filelength = cl == null? -1: Long.parseLong(cl);
+        filelength = (cl == null) ? -1 : Long.parseLong(cl);
         if (HftpFileSystem.LOG.isDebugEnabled()) {
           HftpFileSystem.LOG.debug("filelength = " + filelength);
         }
         in = connection.getInputStream();
-      } catch(IOException ioe) {
+      } catch (IOException ioe) {
         HftpFileSystem.throwIOExceptionFromConnection(connection, ioe);
       }
       
-      if (startPos != 0 && connection.getResponseCode() != 206) {
-        // we asked for a byte range but did not receive a partial content
+      int respCode = connection.getResponseCode();
+      if (startPos != 0 && respCode != HttpURLConnection.HTTP_PARTIAL) {
+        // We asked for a byte range but did not receive a partial content
         // response...
-        throw new IOException("206 expected, but received "
-                              + connection.getResponseCode());
-      } else if(startPos == 0 && connection.getResponseCode() != 200) {
-        // we asked for all bytes from the beginning but didn't receive a 200
+        throw new IOException("HTTP_PARTIAL expected, received " + respCode);
+      } else if (startPos == 0 && respCode != HttpURLConnection.HTTP_OK) {
+        // We asked for all bytes from the beginning but didn't receive a 200
         // response (none of the other 2xx codes are valid here)
-        throw new IOException("200 expected, but received "
-                              + connection.getResponseCode());
+        throw new IOException("HTTP_OK expected, received " + respCode);
       }
-      
+
       resolvedURL.setURL(connection.getURL());
-      status = STATUS_NORMAL;
+      status = StreamStatus.NORMAL;
     }
     
     return in;
   }
   
-  private void update(final boolean isEOF, final int n
-      ) throws IOException {
+  private void update(final boolean isEOF, final int n)
+      throws IOException {
     if (!isEOF) {
       currentPos += n;
     } else if (currentPos < filelength) {
@@ -154,7 +153,7 @@ class ByteRangeInputStream extends FSInputStream {
     if (pos != currentPos) {
       startPos = pos;
       currentPos = pos;
-      status = STATUS_SEEK;
+      status = StreamStatus.SEEK;
     }
   }
 
@@ -162,7 +161,7 @@ class ByteRangeInputStream extends FSInputStream {
    * Return the current offset from the start of the file
    */
   public long getPos() throws IOException {
-    return currentPos; // keep total count?
+    return currentPos;
   }
 
   /**
@@ -172,7 +171,4 @@ class ByteRangeInputStream extends FSInputStream {
   public boolean seekToNewSource(long targetPos) throws IOException {
     return false;
   }
-
 }
-
-

@@ -15,17 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
 import junit.framework.TestCase;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.namenode.CorruptReplicasMap;
-import org.apache.hadoop.hdfs.server.namenode.DatanodeDescriptor;
 
 
 /**
@@ -79,7 +82,6 @@ public class TestCorruptReplicaInfo extends TestCase {
       
       DatanodeDescriptor dn1 = new DatanodeDescriptor();
       DatanodeDescriptor dn2 = new DatanodeDescriptor();
-      DatanodeDescriptor dn3 = new DatanodeDescriptor();
       
       crm.addToCorruptReplicasMap(getBlock(0), dn1);
       assertEquals("Number of corrupt blocks not returning correctly",
