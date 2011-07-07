@@ -1349,12 +1349,14 @@ public class HRegion implements HeapSize { // , Writable{
       // If we did not pass an existing row lock, obtain a new one
       lid = getLock(lockid, row, true);
 
-      // All edits for the given row (across all column families) must happen atomically.
-      prepareDelete(delete);
-      delete(delete.getFamilyMap(), writeToWAL);
-
+      try {
+          // All edits for the given row (across all column families) must happen atomically.
+          prepareDelete(delete);
+          delete(delete.getFamilyMap(), writeToWAL);
+      } finally {
+          if(lockid == null) releaseRowLock(lid);
+      }
     } finally {
-      if(lockid == null) releaseRowLock(lid);
       closeRegionOperation();
     }
   }
