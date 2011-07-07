@@ -882,9 +882,15 @@ public class AssignmentManager extends ZooKeeperListener {
       ServerName oldSn = this.regions.get(regionInfo);
       if (oldSn != null) LOG.warn("Overwriting " + regionInfo.getEncodedName() +
         " on " + oldSn + " with " + sn);
-      this.regions.put(regionInfo, sn);
-      addToServers(sn, regionInfo);
-      this.regions.notifyAll();
+      
+      if (isServerOnline(sn)) {
+        this.regions.put(regionInfo, sn);
+        addToServers(sn, regionInfo);
+        this.regions.notifyAll();
+      } else {
+        LOG.info("The server is not in online servers, ServerName=" + 
+          sn.getServerName() + ", region=" + regionInfo.getEncodedName());
+      }
     }
     // Remove plan if one.
     clearRegionPlan(regionInfo);
@@ -2363,5 +2369,12 @@ public class AssignmentManager extends ZooKeeperListener {
 
   public void stop() {
     this.timeoutMonitor.interrupt();
+  }
+  
+  /**
+   * Check whether the RegionServer is online.
+   */
+  public boolean isServerOnline(ServerName serverName) {
+    return this.serverManager.isServerOnline(serverName);
   }
 }
