@@ -239,6 +239,8 @@ Trunk (unreleased changes)
 
     HADOOP-7429. Add another IOUtils#copyBytes method. (eli)
 
+    HADOOP-7451. Generalize StringUtils#join. (Chris Douglas via mattf)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
