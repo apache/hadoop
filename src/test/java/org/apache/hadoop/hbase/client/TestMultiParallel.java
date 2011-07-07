@@ -116,7 +116,8 @@ public class TestMultiParallel {
    * @throws NoSuchFieldException
    * @throws SecurityException
    */
-  @Test public void testActiveThreadsCount() throws Exception{
+  @Test(timeout=300000) 
+  public void testActiveThreadsCount() throws Exception{
     HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
     List<Row> puts = constructPutRequests(); // creates a Put for every region
     table.batch(puts);
@@ -126,7 +127,8 @@ public class TestMultiParallel {
     assertEquals(slaves, tExecutor.getLargestPoolSize());
   }
 
-  @Test public void testBatchWithGet() throws Exception {
+  @Test(timeout=300000) 
+  public void testBatchWithGet() throws Exception {
     LOG.info("test=testBatchWithGet");
     HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
 
@@ -199,12 +201,14 @@ public class TestMultiParallel {
    *
    * @throws Exception
    */
-  @Test public void testFlushCommitsWithAbort() throws Exception {
+  @Test (timeout=300000) 
+  public void testFlushCommitsWithAbort() throws Exception {
     LOG.info("test=testFlushCommitsWithAbort");
     doTestFlushCommits(true);
   }
 
-  @Test public void testFlushCommitsNoAbort() throws Exception {
+  @Test (timeout=300000) 
+  public void testFlushCommitsNoAbort() throws Exception {
     LOG.info("test=testFlushCommitsNoAbort");
     doTestFlushCommits(false);
   }
@@ -257,7 +261,8 @@ public class TestMultiParallel {
     LOG.info("done");
   }
 
-  @Test public void testBatchWithPut() throws Exception {
+  @Test (timeout=300000) 
+  public void testBatchWithPut() throws Exception {
     LOG.info("test=testBatchWithPut");
     HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
 
@@ -278,7 +283,8 @@ public class TestMultiParallel {
     validateLoadedData(table);
   }
 
-  @Test public void testBatchWithDelete() throws Exception {
+  @Test(timeout=300000) 
+  public void testBatchWithDelete() throws Exception {
     LOG.info("test=testBatchWithDelete");
     HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
 
@@ -306,7 +312,8 @@ public class TestMultiParallel {
 
   }
 
-  @Test public void testHTableDeleteWithList() throws Exception {
+  @Test(timeout=300000) 
+  public void testHTableDeleteWithList() throws Exception {
     LOG.info("test=testHTableDeleteWithList");
     HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
 
@@ -334,7 +341,8 @@ public class TestMultiParallel {
 
   }
 
-  @Test public void testBatchWithManyColsInOneRowGetAndPut() throws Exception {
+  @Test(timeout=300000) 
+  public void testBatchWithManyColsInOneRowGetAndPut() throws Exception {
     LOG.info("test=testBatchWithManyColsInOneRowGetAndPut");
     HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
 
@@ -370,7 +378,8 @@ public class TestMultiParallel {
 
   }
 
-  @Test public void testBatchWithMixedActions() throws Exception {
+  @Test(timeout=300000) 
+  public void testBatchWithMixedActions() throws Exception {
     LOG.info("test=testBatchWithMixedActions");
     HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
 
