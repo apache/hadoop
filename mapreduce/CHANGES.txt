@@ -5,6 +5,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    Reinstate resolve path fixes for viewfs. (Siddharth Seth via llu)
+
     Major ASM cleanup. Streamlining classes, interface and events. (vinodkv)
 
     (1) Faster retries from AM to HistoryServer (2) Correct diagnostics for

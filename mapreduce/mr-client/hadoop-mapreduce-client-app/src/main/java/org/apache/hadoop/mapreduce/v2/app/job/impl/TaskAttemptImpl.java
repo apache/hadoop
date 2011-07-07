@@ -488,7 +488,8 @@ public abstract class TaskAttemptImpl implements
     FileStatus fstat = fc.getFileStatus(file);
     LocalResource resource =
         recordFactory.newRecordInstance(LocalResource.class);
-    resource.setResource(ConverterUtils.getYarnUrlFromPath(fstat.getPath()));
+    resource.setResource(ConverterUtils.getYarnUrlFromPath(fc.resolvePath(fstat
+        .getPath())));
     resource.setType(type);
     resource.setVisibility(visibility);
     resource.setSize(fstat.getLen());
@@ -678,14 +679,16 @@ public abstract class TaskAttemptImpl implements
       Map<String, Path> classPaths = new HashMap<String, Path>();
       if (pathsToPutOnClasspath != null) {
         for (Path p : pathsToPutOnClasspath) {
-          p = p.makeQualified(remoteFS.getUri(),remoteFS.getWorkingDirectory());
+          p = remoteFS.resolvePath(p.makeQualified(remoteFS.getUri(),
+              remoteFS.getWorkingDirectory()));
           classPaths.put(p.toUri().getPath().toString(), p);
         }
       }
       for (int i = 0; i < uris.length; ++i) {
         URI u = uris[i];
         Path p = new Path(u);
-        p = p.makeQualified(remoteFS.getUri(), remoteFS.getWorkingDirectory());
+        p = remoteFS.resolvePath(p.makeQualified(remoteFS.getUri(),
+            remoteFS.getWorkingDirectory()));
         // Add URI fragment or just the filename
         Path name = new Path((null == u.getFragment())
           ? p.getName()
