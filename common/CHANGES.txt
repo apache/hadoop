@@ -241,6 +241,10 @@ Trunk (unreleased changes)
 
     HADOOP-7451. Generalize StringUtils#join. (Chris Douglas via mattf)
 
+    HADOOP-7449. Add Data(In,Out)putByteBuffer to work with ByteBuffer similar 
+    to Data(In,Out)putBuffer for byte[].  Merge from yahoo-merge branch,
+    -r 1079163.  Fix missing Apache license headers. (Chris Douglas via mattf)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
