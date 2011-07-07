@@ -184,7 +184,8 @@ public class ServerName implements Comparable<ServerName> {
 
   @Override
   public int compareTo(ServerName other) {
-    int compare = this.getHostname().compareTo(other.getHostname());
+    int compare = this.getHostname().toLowerCase().
+      compareTo(other.getHostname().toLowerCase());
     if (compare != 0) return compare;
     compare = this.getPort() - other.getPort();
     if (compare != 0) return compare;
