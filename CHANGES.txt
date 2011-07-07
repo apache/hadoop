@@ -311,6 +311,7 @@ Release 0.91.0 - Unreleased
    HBASE-4048  [Coprocessors] Support configuration of coprocessor at load time
    HBASE-3240  Improve documentation of importtsv and bulk loads.
                (Aaron T. Myers via todd)
+   HBASE-4054  Usability improvement to HTablePool (Daniel Iancu)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

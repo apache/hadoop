@@ -37,221 +37,300 @@ import org.junit.Test;
  * Tests HTablePool.
  */
 public class TestHTablePool {
-  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private final static byte[] TABLENAME = Bytes.toBytes("TestHTablePool");
+	private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+	private final static byte[] TABLENAME = Bytes.toBytes("TestHTablePool");
 
-  public abstract static class TestHTablePoolType extends TestCase {
-    protected void setUp() throws Exception {
-      TEST_UTIL.startMiniCluster(1);
-      TEST_UTIL.createTable(TABLENAME, HConstants.CATALOG_FAMILY);
-    }
+	public abstract static class TestHTablePoolType extends TestCase {
+		protected void setUp() throws Exception {
+			TEST_UTIL.startMiniCluster(1);
+			TEST_UTIL.createTable(TABLENAME, HConstants.CATALOG_FAMILY);
+		}
 
-    protected void tearDown() throws IOException {
-      TEST_UTIL.shutdownMiniCluster();
-    }
+		protected void tearDown() throws IOException {
+			TEST_UTIL.shutdownMiniCluster();
+		}
 
-    protected abstract PoolType getPoolType();
+		protected abstract PoolType getPoolType();
 
-    @Test
-    public void testTableWithStringName() throws Exception {
-      HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
-          Integer.MAX_VALUE, getPoolType());
-      String tableName = Bytes.toString(TABLENAME);
+		@Test
+		public void testTableWithStringName() throws Exception {
+			HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
+					Integer.MAX_VALUE, getPoolType());
+			String tableName = Bytes.toString(TABLENAME);
 
-      // Request a table from an empty pool
-      HTableInterface table = pool.getTable(tableName);
-      Assert.assertNotNull(table);
+			// Request a table from an empty pool
+			HTableInterface table = pool.getTable(tableName);
+			Assert.assertNotNull(table);
 
-      // Return the table to the pool
-      pool.putTable(table);
+			// Close table (returns table to the pool)
+			table.close();
 
-      // Request a table of the same name
-      HTableInterface sameTable = pool.getTable(tableName);
-      Assert.assertSame(table, sameTable);
-    }
+			// Request a table of the same name
+			HTableInterface sameTable = pool.getTable(tableName);
+			Assert.assertSame(
+					((HTablePool.PooledHTable) table).getWrappedTable(),
+					((HTablePool.PooledHTable) sameTable).getWrappedTable());
+		}
 
-    @Test
-    public void testTableWithByteArrayName() throws IOException {
-      HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
-          Integer.MAX_VALUE, getPoolType());
+		@Test
+		public void testTableWithByteArrayName() throws IOException {
+			HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
+					Integer.MAX_VALUE, getPoolType());
 
-      // Request a table from an empty pool
-      HTableInterface table = pool.getTable(TABLENAME);
-      Assert.assertNotNull(table);
+			// Request a table from an empty pool
+			HTableInterface table = pool.getTable(TABLENAME);
+			Assert.assertNotNull(table);
 
-      // Return the table to the pool
-      pool.putTable(table);
+			// Close table (returns table to the pool)
+			table.close();
 
-      // Request a table of the same name
-      HTableInterface sameTable = pool.getTable(TABLENAME);
-      Assert.assertSame(table, sameTable);
-    }
+			// Request a table of the same name
+			HTableInterface sameTable = pool.getTable(TABLENAME);
+			Assert.assertSame(
+					((HTablePool.PooledHTable) table).getWrappedTable(),
+					((HTablePool.PooledHTable) sameTable).getWrappedTable());
+		}
 
-    @Test
-    public void testTablesWithDifferentNames() throws IOException {
-      HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
-          Integer.MAX_VALUE, getPoolType());
-      byte[] otherTable = Bytes.toBytes("OtherTable");
-      TEST_UTIL.createTable(otherTable, HConstants.CATALOG_FAMILY);
+		@Test
+		public void testTablesWithDifferentNames() throws IOException {
+			HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
+					Integer.MAX_VALUE, getPoolType());
+			byte[] otherTable = Bytes.toBytes("OtherTable");
+			TEST_UTIL.createTable(otherTable, HConstants.CATALOG_FAMILY);
 
-      // Request a table from an empty pool
-      HTableInterface table1 = pool.getTable(TABLENAME);
-      HTableInterface table2 = pool.getTable(otherTable);
-      Assert.assertNotNull(table2);
+			// Request a table from an empty pool
+			HTableInterface table1 = pool.getTable(TABLENAME);
+			HTableInterface table2 = pool.getTable(otherTable);
+			Assert.assertNotNull(table2);
 
-      // Return the tables to the pool
-      pool.putTable(table1);
-      pool.putTable(table2);
+			// Close tables (returns tables to the pool)
+			table1.close();
+			table2.close();
 
-      // Request tables of the same names
-      HTableInterface sameTable1 = pool.getTable(TABLENAME);
-      HTableInterface sameTable2 = pool.getTable(otherTable);
-      Assert.assertSame(table1, sameTable1);
-      Assert.assertSame(table2, sameTable2);
-    }
+			// Request tables of the same names
+			HTableInterface sameTable1 = pool.getTable(TABLENAME);
+			HTableInterface sameTable2 = pool.getTable(otherTable);
+			Assert.assertSame(
+					((HTablePool.PooledHTable) table1).getWrappedTable(),
+					((HTablePool.PooledHTable) sameTable1).getWrappedTable());
+			Assert.assertSame(
+					((HTablePool.PooledHTable) table2).getWrappedTable(),
+					((HTablePool.PooledHTable) sameTable2).getWrappedTable());
+		}
 
-  }
+	}
 
-  public static class TestHTableReusablePool extends TestHTablePoolType {
-    @Override
-    protected PoolType getPoolType() {
-      return PoolType.Reusable;
-    }
+	public static class TestHTableReusablePool extends TestHTablePoolType {
+		@Override
+		protected PoolType getPoolType() {
+			return PoolType.Reusable;
+		}
 
-    @Test
-    public void testTableWithMaxSize() throws Exception {
-      HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(), 2,
-          getPoolType());
+		@Test
+		public void testTableWithMaxSize() throws Exception {
+			HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(), 2,
+					getPoolType());
 
-      // Request tables from an empty pool
-      HTableInterface table1 = pool.getTable(TABLENAME);
-      HTableInterface table2 = pool.getTable(TABLENAME);
-      HTableInterface table3 = pool.getTable(TABLENAME);
+			// Request tables from an empty pool
+			HTableInterface table1 = pool.getTable(TABLENAME);
+			HTableInterface table2 = pool.getTable(TABLENAME);
+			HTableInterface table3 = pool.getTable(TABLENAME);
 
-      // Return the tables to the pool
-      pool.putTable(table1);
-      pool.putTable(table2);
-      // The pool should reject this one since it is already full
-      pool.putTable(table3);
+			// Close tables (returns tables to the pool)
+			table1.close();
+			table2.close();
+			// The pool should reject this one since it is already full
+			table3.close();
 
-      // Request tables of the same name
-      HTableInterface sameTable1 = pool.getTable(TABLENAME);
-      HTableInterface sameTable2 = pool.getTable(TABLENAME);
-      HTableInterface sameTable3 = pool.getTable(TABLENAME);
-      Assert.assertSame(table1, sameTable1);
-      Assert.assertSame(table2, sameTable2);
-      Assert.assertNotSame(table3, sameTable3);
-    }
+			// Request tables of the same name
+			HTableInterface sameTable1 = pool.getTable(TABLENAME);
+			HTableInterface sameTable2 = pool.getTable(TABLENAME);
+			HTableInterface sameTable3 = pool.getTable(TABLENAME);
+			Assert.assertSame(
+					((HTablePool.PooledHTable) table1).getWrappedTable(),
+					((HTablePool.PooledHTable) sameTable1).getWrappedTable());
+			Assert.assertSame(
+					((HTablePool.PooledHTable) table2).getWrappedTable(),
+					((HTablePool.PooledHTable) sameTable2).getWrappedTable());
+			Assert.assertNotSame(
+					((HTablePool.PooledHTable) table3).getWrappedTable(),
+					((HTablePool.PooledHTable) sameTable3).getWrappedTable());
+		}
 
-    @Test
-    public void testCloseTablePool() throws IOException {
-      HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(), 4,
-          getPoolType());
-      HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+		@Test
+		public void testCloseTablePool() throws IOException {
+			HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(), 4,
+					getPoolType());
+			HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
 
-      if (admin.tableExists(TABLENAME)) {
-        admin.disableTable(TABLENAME);
-        admin.deleteTable(TABLENAME);
-      }
+			if (admin.tableExists(TABLENAME)) {
+				admin.disableTable(TABLENAME);
+				admin.deleteTable(TABLENAME);
+			}
 
-      HTableDescriptor tableDescriptor = new HTableDescriptor(TABLENAME);
-      tableDescriptor.addFamily(new HColumnDescriptor("randomFamily"));
-      admin.createTable(tableDescriptor);
+			HTableDescriptor tableDescriptor = new HTableDescriptor(TABLENAME);
+			tableDescriptor.addFamily(new HColumnDescriptor("randomFamily"));
+			admin.createTable(tableDescriptor);
 
-      // Request tables from an empty pool
-      HTableInterface[] tables = new HTableInterface[4];
-      for (int i = 0; i < 4; ++i) {
-        tables[i] = pool.getTable(TABLENAME);
-      }
+			// Request tables from an empty pool
+			HTableInterface[] tables = new HTableInterface[4];
+			for (int i = 0; i < 4; ++i) {
+				tables[i] = pool.getTable(TABLENAME);
+			}
 
-      pool.closeTablePool(TABLENAME);
+			pool.closeTablePool(TABLENAME);
 
-      for (int i = 0; i < 4; ++i) {
-        pool.putTable(tables[i]);
-      }
+			for (int i = 0; i < 4; ++i) {
+				tables[i].close();
+			}
 
-      Assert
-          .assertEquals(4, pool.getCurrentPoolSize(Bytes.toString(TABLENAME)));
+			Assert.assertEquals(4,
+					pool.getCurrentPoolSize(Bytes.toString(TABLENAME)));
 
-      pool.closeTablePool(TABLENAME);
+			pool.closeTablePool(TABLENAME);
 
-      Assert
-          .assertEquals(0, pool.getCurrentPoolSize(Bytes.toString(TABLENAME)));
-    }
-  }
+			Assert.assertEquals(0,
+					pool.getCurrentPoolSize(Bytes.toString(TABLENAME)));
+		}
+	}
 
-  public static class TestHTableThreadLocalPool extends TestHTablePoolType {
-    @Override
-    protected PoolType getPoolType() {
-      return PoolType.ThreadLocal;
-    }
+	public static class TestHTableThreadLocalPool extends TestHTablePoolType {
+		@Override
+		protected PoolType getPoolType() {
+			return PoolType.ThreadLocal;
+		}
 
-    @Test
-    public void testTableWithMaxSize() throws Exception {
-      HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(), 2,
-          getPoolType());
+		@Test
+		public void testTableWithMaxSize() throws Exception {
+			HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(), 2,
+					getPoolType());
 
-      // Request tables from an empty pool
-      HTableInterface table1 = pool.getTable(TABLENAME);
-      HTableInterface table2 = pool.getTable(TABLENAME);
-      HTableInterface table3 = pool.getTable(TABLENAME);
+			// Request tables from an empty pool
+			HTableInterface table1 = pool.getTable(TABLENAME);
+			HTableInterface table2 = pool.getTable(TABLENAME);
+			HTableInterface table3 = pool.getTable(TABLENAME);
 
-      // Return the tables to the pool
-      pool.putTable(table1);
-      pool.putTable(table2);
-      // The pool should not reject this one since the number of threads <= 2
-      pool.putTable(table3);
+			// Close tables (returns tables to the pool)
+			table1.close();
+			table2.close();
+			// The pool should not reject this one since the number of threads
+			// <= 2
+			table3.close();
 
-      // Request tables of the same name
-      HTableInterface sameTable1 = pool.getTable(TABLENAME);
-      HTableInterface sameTable2 = pool.getTable(TABLENAME);
-      HTableInterface sameTable3 = pool.getTable(TABLENAME);
-      Assert.assertSame(table3, sameTable1);
-      Assert.assertSame(table3, sameTable2);
-      Assert.assertSame(table3, sameTable3);
-    }
+			// Request tables of the same name
+			HTableInterface sameTable1 = pool.getTable(TABLENAME);
+			HTableInterface sameTable2 = pool.getTable(TABLENAME);
+			HTableInterface sameTable3 = pool.getTable(TABLENAME);
+			Assert.assertSame(
+					((HTablePool.PooledHTable) table3).getWrappedTable(),
+					((HTablePool.PooledHTable) sameTable1).getWrappedTable());
+			Assert.assertSame(
+					((HTablePool.PooledHTable) table3).getWrappedTable(),
+					((HTablePool.PooledHTable) sameTable2).getWrappedTable());
+			Assert.assertSame(
+					((HTablePool.PooledHTable) table3).getWrappedTable(),
+					((HTablePool.PooledHTable) sameTable3).getWrappedTable());
+		}
 
-    @Test
-    public void testCloseTablePool() throws IOException {
-      HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(), 4,
-          getPoolType());
-      HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+		@Test
+		public void testCloseTablePool() throws IOException {
+			HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(), 4,
+					getPoolType());
+			HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
 
-      if (admin.tableExists(TABLENAME)) {
-        admin.disableTable(TABLENAME);
-        admin.deleteTable(TABLENAME);
-      }
+			if (admin.tableExists(TABLENAME)) {
+				admin.disableTable(TABLENAME);
+				admin.deleteTable(TABLENAME);
+			}
 
-      HTableDescriptor tableDescriptor = new HTableDescriptor(TABLENAME);
-      tableDescriptor.addFamily(new HColumnDescriptor("randomFamily"));
-      admin.createTable(tableDescriptor);
+			HTableDescriptor tableDescriptor = new HTableDescriptor(TABLENAME);
+			tableDescriptor.addFamily(new HColumnDescriptor("randomFamily"));
+			admin.createTable(tableDescriptor);
 
-      // Request tables from an empty pool
-      HTableInterface[] tables = new HTableInterface[4];
-      for (int i = 0; i < 4; ++i) {
-        tables[i] = pool.getTable(TABLENAME);
-      }
+			// Request tables from an empty pool
+			HTableInterface[] tables = new HTableInterface[4];
+			for (int i = 0; i < 4; ++i) {
+				tables[i] = pool.getTable(TABLENAME);
+			}
 
-      pool.closeTablePool(TABLENAME);
+			pool.closeTablePool(TABLENAME);
 
-      for (int i = 0; i < 4; ++i) {
-        pool.putTable(tables[i]);
-      }
+			for (int i = 0; i < 4; ++i) {
+				tables[i].close();
+			}
 
-      Assert
-          .assertEquals(1, pool.getCurrentPoolSize(Bytes.toString(TABLENAME)));
+			Assert.assertEquals(1,
+					pool.getCurrentPoolSize(Bytes.toString(TABLENAME)));
 
-      pool.closeTablePool(TABLENAME);
+			pool.closeTablePool(TABLENAME);
 
-      Assert
-          .assertEquals(0, pool.getCurrentPoolSize(Bytes.toString(TABLENAME)));
-    }
-  }
+			Assert.assertEquals(0,
+					pool.getCurrentPoolSize(Bytes.toString(TABLENAME)));
+		}
+	}
 
-  public static junit.framework.Test suite() {
-    TestSuite suite = new TestSuite();
-    suite.addTestSuite(TestHTableReusablePool.class);
-    suite.addTestSuite(TestHTableThreadLocalPool.class);
-    return suite;
-  }
+	public static junit.framework.Test suite() {
+		TestSuite suite = new TestSuite();
+		suite.addTestSuite(TestHTableReusablePool.class);
+		suite.addTestSuite(TestHTableThreadLocalPool.class);
+		return suite;
+	}
+	@Test
+	public void testProxyImplementationReturned() {
+		HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
+				Integer.MAX_VALUE);
+		String tableName = Bytes.toString(TABLENAME);// Request a table from
+														// an
+														// empty pool
+		HTableInterface table = pool.getTable(tableName);
+
+		// Test if proxy implementation is returned
+		Assert.assertTrue(table instanceof HTablePool.PooledHTable);
+	}
+
+	@Test
+	public void testDeprecatedUsagePattern() throws IOException {
+		HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
+				Integer.MAX_VALUE);
+		String tableName = Bytes.toString(TABLENAME);// Request a table from
+														// an
+														// empty pool
+
+		// get table will return proxy implementation
+		HTableInterface table = pool.getTable(tableName);
+
+		// put back the proxy implementation instead of closing it
+		pool.putTable(table);
+
+		// Request a table of the same name
+		HTableInterface sameTable = pool.getTable(tableName);
+
+		// test no proxy over proxy created
+		Assert.assertSame(((HTablePool.PooledHTable) table).getWrappedTable(),
+				((HTablePool.PooledHTable) sameTable).getWrappedTable());
+	}
+
+	@Test
+	public void testReturnDifferentTable() throws IOException {
+		HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
+				Integer.MAX_VALUE);
+		String tableName = Bytes.toString(TABLENAME);// Request a table from
+														// an
+														// empty pool
+
+		// get table will return proxy implementation
+		final HTableInterface table = pool.getTable(tableName);
+		HTableInterface alienTable = new HTable(TABLENAME) {
+			// implementation doesn't matter as long the table is not from
+			// pool
+		};
+		try {
+			// put the wrong table in pool
+			pool.putTable(alienTable);
+			Assert.fail("alien table accepted in pool");
+		} catch (IllegalArgumentException e) {
+			Assert.assertTrue("alien table rejected", true);
+		}
+
+	}
 }
