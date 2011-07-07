@@ -358,6 +358,11 @@ Trunk (unreleased changes)
     HADOOP-7419. new hadoop-config.sh doesn't manage classpath for
     HADOOP_CONF_DIR correctly. (Bing Zheng and todd via todd)
 
+    HADOOP-7448. merge from yahoo-merge branch (via mattf):
+    -r 1079157: Fix content type for /stacks servlet to be 
+    plain text (Luke Lu)
+    -r 1079164: No need to escape plain text (Luke Lu)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
