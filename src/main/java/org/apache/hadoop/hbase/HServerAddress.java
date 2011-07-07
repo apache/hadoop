@@ -72,7 +72,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
    * @param port Port number
    */
   public HServerAddress(final String hostname, final int port) {
-    this(new InetSocketAddress(hostname, port));
+    this(getResolvedAddress(new InetSocketAddress(hostname, port)));
   }
 
   /**
@@ -80,21 +80,33 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
    * @param other HServerAddress to copy from
    */
   public HServerAddress(HServerAddress other) {
-    this(new InetSocketAddress(other.getHostname(), other.getPort()));
+    this(getResolvedAddress(new InetSocketAddress(other.getHostname(), other.getPort())));
   }
 
+   private static InetSocketAddress getResolvedAddress(InetSocketAddress address) {
+     String bindAddress = getBindAddressInternal(address);
+     int port = address.getPort();
+     return new InetSocketAddress(bindAddress, port);
+   }
+  
   /** @return Bind address -- the raw IP, the result of a call to
    * {@link InetSocketAddress#getAddress()#getHostAddress()} --
    * or null if cannot resolve */
   public String getBindAddress() {
-    // This returns null if the address is not resolved.
-    final InetAddress addr = this.address.getAddress();
-    if (addr != null) return addr.getHostAddress();
-    LogFactory.getLog(HServerAddress.class).error("Could not resolve the"
-      + " DNS name of " + this.address.toString());
-    return null;
+    return getBindAddressInternal(address);
   }
 
+  private static String getBindAddressInternal(InetSocketAddress address) {
+    final InetAddress addr = address.getAddress();
+    if (addr != null) {
+      return addr.getHostAddress();
+    } else {
+      LogFactory.getLog(HServerAddress.class).error("Could not resolve the"
+          + " DNS name of " + address.getHostName());
+      return null;
+    }
+  }
+  
   private void checkBindAddressCanBeResolved() {
     if (getBindAddress() == null) {
       throw new IllegalArgumentException("Could not resolve the"
@@ -155,7 +167,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
     String hostname = in.readUTF();
     int port = in.readInt();
     if (hostname != null && hostname.length() > 0) {
-      this.address = new InetSocketAddress(hostname, port);
+      this.address = getResolvedAddress(new InetSocketAddress(hostname, port));
       checkBindAddressCanBeResolved();
       createCachedToString();
     }
