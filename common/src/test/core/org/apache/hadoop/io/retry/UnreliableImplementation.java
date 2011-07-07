@@ -15,16 +15,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.io.retry;
 
+import java.io.IOException;
+
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.StandbyException;
 
 public class UnreliableImplementation implements UnreliableInterface {
 
   private int failsOnceInvocationCount,
     failsOnceWithValueInvocationCount,
-    failsTenTimesInvocationCount;
+    failsTenTimesInvocationCount,
+    succeedsOnceThenFailsCount,
+    succeedsOnceThenFailsIdempotentCount,
+    succeedsTenTimesThenFailsCount;
+  
+  private String identifier;
+  private TypeOfExceptionToFailWith exceptionToFailWith;
+  
+  public static enum TypeOfExceptionToFailWith {
+    UNRELIABLE_EXCEPTION,
+    STANDBY_EXCEPTION,
+    IO_EXCEPTION
+  }
+  
+  public UnreliableImplementation() {
+    this(null);
+  }
+  
+  public UnreliableImplementation(String identifier) {
+    this(identifier, TypeOfExceptionToFailWith.UNRELIABLE_EXCEPTION);
+  }
+  
+  public UnreliableImplementation(String identifier,
+      TypeOfExceptionToFailWith exceptionToFailWith) {
+    this.identifier = identifier;
+    this.exceptionToFailWith = exceptionToFailWith;
+  }
   
   public void alwaysSucceeds() {
     // do nothing
@@ -54,6 +82,62 @@ public class UnreliableImplementation implements UnreliableInterface {
   public void failsTenTimesThenSucceeds() throws UnreliableException {
     if (failsTenTimesInvocationCount++ < 10) {
       throw new UnreliableException();
+    }
+  }
+
+  @Override
+  public String succeedsOnceThenFailsReturningString()
+      throws UnreliableException, IOException, StandbyException {
+    if (succeedsOnceThenFailsCount++ < 1) {
+      return identifier;
+    } else {
+      switch (exceptionToFailWith) {
+      case STANDBY_EXCEPTION:
+        throw new StandbyException(identifier);
+      case UNRELIABLE_EXCEPTION:
+        throw new UnreliableException(identifier);
+      case IO_EXCEPTION:
+        throw new IOException(identifier);
+      }
+      return null;
+    }
+  }
+
+  @Override
+  public String succeedsTenTimesThenFailsReturningString()
+      throws UnreliableException, IOException, StandbyException {
+    if (succeedsTenTimesThenFailsCount++ < 10) {
+      return identifier;
+    } else {
+      switch (exceptionToFailWith) {
+      case STANDBY_EXCEPTION:
+        throw new StandbyException(identifier);
+      case UNRELIABLE_EXCEPTION:
+        throw new UnreliableException(identifier);
+      case IO_EXCEPTION:
+        throw new IOException(identifier);
+      default:
+        throw new RuntimeException(identifier);
+      }
+    }
+  }
+
+  @Override
+  public String succeedsOnceThenFailsReturningStringIdempotent()
+      throws UnreliableException, StandbyException, IOException {
+    if (succeedsOnceThenFailsIdempotentCount++ < 1) {
+      return identifier;
+    } else {
+      switch (exceptionToFailWith) {
+      case STANDBY_EXCEPTION:
+        throw new StandbyException(identifier);
+      case UNRELIABLE_EXCEPTION:
+        throw new UnreliableException(identifier);
+      case IO_EXCEPTION:
+        throw new IOException(identifier);
+      default:
+        throw new RuntimeException(identifier);
+      }
     }
   }
 

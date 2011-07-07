@@ -17,13 +17,28 @@
  */
 package org.apache.hadoop.io.retry;
 
+import org.apache.hadoop.classification.InterfaceStability;
+
+
 /**
  * <p>
  * Specifies a policy for retrying method failures.
  * Implementations of this interface should be immutable.
  * </p>
  */
+@InterfaceStability.Evolving
 public interface RetryPolicy {
+  
+  /**
+   * Returned by {@link RetryPolicy#shouldRetry(Exception, int, int, boolean)}.
+   */
+  @InterfaceStability.Evolving
+  public enum RetryAction {
+    FAIL,
+    RETRY,
+    FAILOVER_AND_RETRY
+  }
+  
   /**
    * <p>
    * Determines whether the framework should retry a
@@ -31,13 +46,19 @@ public interface RetryPolicy {
    * of retries that have been made for that operation
    * so far.
    * </p>
-   * @param e The exception that caused the method to fail.
-   * @param retries The number of times the method has been retried.
+   * @param e The exception that caused the method to fail
+   * @param retries The number of times the method has been retried
+   * @param failovers The number of times the method has failed over to a
+   *   different backend implementation
+   * @param isMethodIdempotent <code>true</code> if the method is idempotent
+   *   and so can reasonably be retried on failover when we don't know if the
+   *   previous attempt reached the server or not
    * @return <code>true</code> if the method should be retried,
    *   <code>false</code> if the method should not be retried
-   *   but shouldn't fail with an exception (only for void methods).
+   *   but shouldn't fail with an exception (only for void methods)
    * @throws Exception The re-thrown exception <code>e</code> indicating
-   *   that the method failed and should not be retried further. 
+   *   that the method failed and should not be retried further
    */
-  public boolean shouldRetry(Exception e, int retries) throws Exception;
+  public RetryAction shouldRetry(Exception e, int retries, int failovers,
+      boolean isMethodIdempotent) throws Exception;
 }

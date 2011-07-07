@@ -53,6 +53,9 @@ Trunk (unreleased changes)
     HADOOP-7329. Add the capability of getting invividual attribute of a mbean
     using JMXProxyServlet. (tanping)
 
+    HADOOP-7380. Add client failover functionality to o.a.h.io.(ipc|retry).
+    (atm via eli)
+
   IMPROVEMENTS
 
     HADOOP-7042. Updates to test-patch.sh to include failed test names and
