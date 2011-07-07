@@ -98,6 +98,8 @@ Release 0.20.204.0 - unreleased
     scripts for easy one node cluster configuration and user creation.
     (Eric Yang via omalley)
 
+    HADOOP-7324. Ganglia plugins for metrics v2. (Priyo Mustafi via llu)
+
   BUG FIXES
 
     HADOOP-7373. Fix {start,stop}-{dfs,mapred} and hadoop-daemons.sh from
