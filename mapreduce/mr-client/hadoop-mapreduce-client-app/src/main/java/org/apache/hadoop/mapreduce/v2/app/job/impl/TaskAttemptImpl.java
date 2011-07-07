@@ -946,43 +946,25 @@ public abstract class TaskAttemptImpl implements
             (int) (now - start));
       }
 
-      // TODO Fix the Counter API
-      CounterGroup cpuCounterGroup = counters
-          .getCounterGroup(TaskCounter.CPU_MILLISECONDS.getDeclaringClass()
-              .getName());
-      if (cpuCounterGroup != null) {
-        Counter cpuCounter = cpuCounterGroup
-            .getCounter(TaskCounter.CPU_MILLISECONDS.name());
-        if (cpuCounter != null && cpuCounter.getValue() <= Integer.MAX_VALUE) {
-          splitsBlock.getProgressCPUTime().extend(newProgress,
-              (int) cpuCounter.getValue());
-        }
+      Counter cpuCounter = counters.getCounter(
+          TaskCounter.CPU_MILLISECONDS);
+      if (cpuCounter != null && cpuCounter.getValue() <= Integer.MAX_VALUE) {
+        splitsBlock.getProgressCPUTime().extend(newProgress,
+            (int) cpuCounter.getValue());
       }
 
-      // TODO Fix the Counter API
-      CounterGroup vbCounterGroup = counters
-          .getCounterGroup(TaskCounter.VIRTUAL_MEMORY_BYTES.getDeclaringClass()
-              .getName());
-      if (vbCounterGroup != null) {
-        Counter virtualBytes = vbCounterGroup
-            .getCounter(TaskCounter.VIRTUAL_MEMORY_BYTES.name());
-        if (virtualBytes != null) {
-          splitsBlock.getProgressVirtualMemoryKbytes().extend(newProgress,
-              (int) (virtualBytes.getValue() / (MEMORY_SPLITS_RESOLUTION)));
-        }
+      Counter virtualBytes = counters.getCounter(
+          TaskCounter.VIRTUAL_MEMORY_BYTES);
+      if (virtualBytes != null) {
+        splitsBlock.getProgressVirtualMemoryKbytes().extend(newProgress,
+            (int) (virtualBytes.getValue() / (MEMORY_SPLITS_RESOLUTION)));
       }
 
-      // TODO Fix the Counter API
-      CounterGroup pbCounterGroup = counters
-          .getCounterGroup(TaskCounter.PHYSICAL_MEMORY_BYTES
-              .getDeclaringClass().getName());
-      if (pbCounterGroup != null) {
-        Counter physicalBytes = pbCounterGroup
-            .getCounter(TaskCounter.PHYSICAL_MEMORY_BYTES.name());
-        if (physicalBytes != null) {
-          splitsBlock.getProgressPhysicalMemoryKbytes().extend(newProgress,
-              (int) (physicalBytes.getValue() / (MEMORY_SPLITS_RESOLUTION)));
-        }
+      Counter physicalBytes = counters.getCounter(
+          TaskCounter.PHYSICAL_MEMORY_BYTES);
+      if (physicalBytes != null) {
+        splitsBlock.getProgressPhysicalMemoryKbytes().extend(newProgress,
+            (int) (physicalBytes.getValue() / (MEMORY_SPLITS_RESOLUTION)));
       }
     }
   }

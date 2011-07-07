@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.mapreduce.v2.api.records.Counter;
 import org.apache.hadoop.mapreduce.v2.api.records.CounterGroup;
 import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.proto.MRProtos.CounterGroupProto;
@@ -20,9 +21,9 @@ public class CountersPBImpl extends ProtoBase<CountersProto> implements Counters
   CountersProto proto = CountersProto.getDefaultInstance();
   CountersProto.Builder builder = null;
   boolean viaProto = false;
-  
+
   private Map<String, CounterGroup> counterGroups = null;
-  
+
   
   public CountersPBImpl() {
     builder = CountersProto.newBuilder();
@@ -72,7 +73,12 @@ public class CountersPBImpl extends ProtoBase<CountersProto> implements Counters
     initCounterGroups();
     return this.counterGroups.get(key);
   }
-  
+  @Override
+  public Counter getCounter(Enum<?> key) {
+    CounterGroup group = getCounterGroup(key.getDeclaringClass().getName());
+    return group == null ? null : group.getCounter(key.name());
+  }
+ 
   private void initCounterGroups() {
     if (this.counterGroups != null) {
       return;

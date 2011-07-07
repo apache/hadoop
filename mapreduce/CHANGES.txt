@@ -5,6 +5,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    MAPREDUCE-2633. Add a getCounter(Enum) method to the Counters record. 
+    (Josh Wills via sharad)
+
     Reinstate resolve path fixes for viewfs. (Siddharth Seth via llu)
 
     Major ASM cleanup. Streamlining classes, interface and events. (vinodkv)
