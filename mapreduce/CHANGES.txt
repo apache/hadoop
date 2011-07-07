@@ -5,6 +5,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    MAPREDUCE-2645. Updates to MRv2 INSTALL and README documentation.
+    (Josh Wills via vinodkv)
+
     MAPREDUCE-2633. Add a getCounter(Enum) method to the Counters record. 
     (Josh Wills via sharad)
 

@@ -8,9 +8,6 @@ Maven: Maven 2
 
 Setup
 -----
-Install the Avro maven plugin in local maven repository:
-mvn install:install-file -Dfile=./avro-maven-plugin/avro-maven-plugin-1.4.0-SNAPSHOT.jar -DpomFile=./avro-maven-plugin/avro-maven-plugin-1.4.0-SNAPSHOT.pom
-
 Install protobuf 2.4.0a or higher (Download from http://code.google.com/p/protobuf/downloads/list)
  - install the protoc executable (configure, make, make install)
  - install the maven artifact (cd java; mvn install)
@@ -72,32 +69,5 @@ yarn-common - Utilities which can be used by yarn clients and server
 
 yarn-server - Implementation of the yarn-api
 	yarn-server-common - APIs shared between resourcemanager and nodemanager
-	yarn-server-nodemanager
-	yarn-server-resourcemanager
-
-yarn-prototype - AppMaster (Prototype) to launch TTs via nodemanager
-
-yarn-mapreduce - Mapreduce specific parts
-	yarn-mapreduce-common - Mapreduce utilities and interfae shared between client and mapreduce AppMaster
-	yarn-mapreduce-client - Mapreduce client (uses JobClient)
-	yarn-mapreduce-app - Mapreduce AppMaster
-
-yarn-master-worker - master-worker AppMaster
-
-General instructions for starting Yarn and MapReduce
-----------------------------------------------------
-At yarn project root,
-
-	mvn clean install
-
-ResourceManager:
-	cd yarn-server/yarn-server-resourcemanager
-	mvn exec:java -Dexec.mainClass=org.apache.hadoop.yarn.server.resourcemanager.ResourceManager
-
-NodeManager:
-	cd yarn-server/yarn-server-nodemanager
-	mvn exec:java -Dexec.mainClass=org.apache.hadoop.yarn.server.nodemanager.NodeManager
-
-MRAppMaster
-	cd yarn-mapreduce/yarn-mapreduce-app
-	mvn exec:java -Dexec.mainClass=org.apache.hadoop.yarn.mapreduce.app.MRAppMaster -Dexec.args="<clusterts> <appid>"
+	yarn-server-nodemanager (TaskTracker replacement)
+	yarn-server-resourcemanager (JobTracker replacement)
