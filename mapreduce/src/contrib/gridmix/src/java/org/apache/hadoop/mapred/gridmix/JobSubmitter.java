@@ -126,7 +126,7 @@ class JobSubmitter implements Gridmix.Component<GridmixJob> {
         monitor.submissionFailed(job.getJob());
       } catch(Exception e) {
         //Due to some exception job wasnt submitted.
-        LOG.info(" Job " + job.getJob() + " submission failed " , e);
+        LOG.info(" Job " + job.getJob().getJobID() + " submission failed " , e);
         monitor.submissionFailed(job.getJob());
       } finally {
         sem.release();

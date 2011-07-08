@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.mapred.gridmix.GenerateData.DataStatistics;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -113,10 +114,19 @@ public class Gridmix extends Configured implements Tool {
   private JobSubmitter submitter;
   private JobMonitor monitor;
   private Statistics statistics;
+  private Summarizer summarizer;
 
   // Shutdown hook
   private final Shutdown sdh = new Shutdown();
 
+  Gridmix(String[] args) {
+    summarizer = new Summarizer(args);
+  }
+  
+  Gridmix() {
+    summarizer = new Summarizer();
+  }
+  
   // Get the input data directory for Gridmix. Input directory is 
   // <io-path>/input
   static Path getGridmixInputDataPath(Path ioPath) {
@@ -205,6 +215,13 @@ public class Gridmix extends Configured implements Tool {
     return new ZombieJobProducer(new Path(traceIn), null, conf);
   }
 
+  // get the gridmix job submission policy
+  protected static GridmixJobSubmissionPolicy getJobSubmissionPolicy(
+                                                Configuration conf) {
+    return GridmixJobSubmissionPolicy.getPolicy(conf, 
+                                        GridmixJobSubmissionPolicy.STRESS);
+  }
+  
   /**
    * Create each component in the pipeline and start it.
    * @param conf Configuration data, no keys specific to this context
@@ -221,8 +238,7 @@ public class Gridmix extends Configured implements Tool {
       throws IOException {
     try {
       Path inputDir = getGridmixInputDataPath(ioPath);
-      GridmixJobSubmissionPolicy policy = GridmixJobSubmissionPolicy.getPolicy(
-        conf, GridmixJobSubmissionPolicy.STRESS);
+      GridmixJobSubmissionPolicy policy = getJobSubmissionPolicy(conf);
       LOG.info(" Submission policy is " + policy.name());
       statistics = new Statistics(conf, policy.getPollingInterval(), startFlag);
       monitor = createJobMonitor(statistics);
@@ -248,6 +264,10 @@ public class Gridmix extends Configured implements Tool {
         statistics.addClusterStatsObservers(factory);
       }
 
+      // add the gridmix run summarizer to the statistics
+      statistics.addJobStatsListeners(summarizer.getExecutionSummarizer());
+      statistics.addClusterStatsObservers(summarizer.getClusterSummarizer());
+      
       monitor.start();
       submitter.start();
     }catch(Exception e) {
@@ -293,6 +313,10 @@ public class Gridmix extends Configured implements Tool {
         return runJob(conf, argv);
       }
     });
+    
+    // print the run summary
+    System.out.print("\n\n");
+    System.out.println(summarizer.toString());
     return val; 
   }
 
@@ -373,6 +397,7 @@ public class Gridmix extends Configured implements Tool {
   int start(Configuration conf, String traceIn, Path ioPath, long genbytes,
       UserResolver userResolver, boolean generate)
       throws IOException, InterruptedException {
+    DataStatistics stats = null;
     InputStream trace = null;
     ioPath = ioPath.makeQualified(ioPath.getFileSystem(conf));
 
@@ -395,7 +420,7 @@ public class Gridmix extends Configured implements Tool {
         }
         
         // publish the data statistics
-        GenerateData.publishDataStatistics(inputDir, genbytes, conf);
+        stats = GenerateData.publishDataStatistics(inputDir, genbytes, conf);
         
         // scan input dir contents
         submitter.refreshFilePool();
@@ -407,6 +432,9 @@ public class Gridmix extends Configured implements Tool {
           return exitCode;
         }
 
+        // start the summarizer
+        summarizer.start(conf);
+        
         factory.start();
         statistics.start();
       } catch (Throwable e) {
@@ -436,6 +464,10 @@ public class Gridmix extends Configured implements Tool {
 
       }
     } finally {
+      if (factory != null) {
+        summarizer.finalize(factory, traceIn, genbytes, userResolver, stats, 
+                            conf);
+      }
       IOUtils.cleanup(LOG, trace);
     }
     return 0;
@@ -567,7 +599,7 @@ public class Gridmix extends Configured implements Tool {
   public static void main(String[] argv) throws Exception {
     int res = -1;
     try {
-      res = ToolRunner.run(new Configuration(), new Gridmix(), argv);
+      res = ToolRunner.run(new Configuration(), new Gridmix(argv), argv);
     } finally {
       System.exit(res);
     }

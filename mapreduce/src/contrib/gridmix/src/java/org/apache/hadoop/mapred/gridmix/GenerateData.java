@@ -100,20 +100,48 @@ class GenerateData extends GridmixJob {
   }
 
   /**
-   * Publish the data statistics.
+   * Represents the input data characteristics.
    */
-  static void publishDataStatistics(Path inputDir, long genBytes, 
-                                    Configuration conf) 
-  throws IOException {
-    if (CompressionEmulationUtil.isCompressionEmulationEnabled(conf)) {
-      CompressionEmulationUtil.publishCompressedDataStatistics(inputDir, 
-                                                               conf, genBytes);
-    } else {
-      publishPlainDataStatistics(conf, inputDir);
+  static class DataStatistics {
+    private long dataSize;
+    private long numFiles;
+    private boolean isDataCompressed;
+    
+    DataStatistics(long dataSize, long numFiles, boolean isCompressed) {
+      this.dataSize = dataSize;
+      this.numFiles = numFiles;
+      this.isDataCompressed = isCompressed;
+    }
+    
+    long getDataSize() {
+      return dataSize;
+    }
+    
+    long getNumFiles() {
+      return numFiles;
+    }
+    
+    boolean isDataCompressed() {
+      return isDataCompressed;
     }
   }
   
-  static void publishPlainDataStatistics(Configuration conf, Path inputDir) 
+  /**
+   * Publish the data statistics.
+   */
+  static DataStatistics publishDataStatistics(Path inputDir, long genBytes, 
+                                              Configuration conf) 
+  throws IOException {
+    if (CompressionEmulationUtil.isCompressionEmulationEnabled(conf)) {
+      return CompressionEmulationUtil.publishCompressedDataStatistics(inputDir, 
+                                        conf, genBytes);
+    } else {
+      return publishPlainDataStatistics(conf, inputDir);
+    }
+  }
+  
+  static DataStatistics publishPlainDataStatistics(Configuration conf, 
+                                                   Path inputDir) 
   throws IOException {
     FileSystem fs = inputDir.getFileSystem(conf);
 
@@ -134,6 +162,8 @@ class GenerateData extends GridmixJob {
     LOG.info("Total size of input data : " 
              + StringUtils.humanReadableInt(dataSize));
     LOG.info("Total number of input data files : " + fileCount);
+    
+    return new DataStatistics(dataSize, fileCount, false);
   }
   
   @Override

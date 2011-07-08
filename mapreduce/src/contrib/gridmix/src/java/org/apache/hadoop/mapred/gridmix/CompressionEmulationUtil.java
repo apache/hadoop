@@ -43,6 +43,7 @@ import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Utils;
+import org.apache.hadoop.mapred.gridmix.GenerateData.DataStatistics;
 import org.apache.hadoop.mapred.gridmix.GenerateData.GenDataFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -307,8 +308,8 @@ class CompressionEmulationUtil {
    *   <li>Random text word size</li>
    * </ul>
    */
-  static void publishCompressedDataStatistics(Path inputDir, Configuration conf,
-                                              long uncompressedDataSize) 
+  static DataStatistics publishCompressedDataStatistics(Path inputDir, 
+                          Configuration conf, long uncompressedDataSize) 
   throws IOException {
     FileSystem fs = inputDir.getFileSystem(conf);
     CompressionCodecFactory compressionCodecs = 
@@ -356,6 +357,8 @@ class CompressionEmulationUtil {
       // publish the compression ratio
       LOG.info("Input Data Compression Ratio : " + ratio);
     }
+    
+    return new DataStatistics(compressedDataSize, numCompressedFiles, true);
   }
   
   /**

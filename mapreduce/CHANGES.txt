@@ -35,7 +35,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
-    MAPREDUCE-2563. [Gridmix]  Add High-Ram emulation system tests to 
+    MAPREDUCE-2596. [Gridmix] Summarize Gridmix runs. (amarrk)
+
+    MAPREDUCE-2563. [Gridmix] Add High-Ram emulation system tests to 
     Gridmix. (Vinay Kumar Thota via amarrk)
 
     MAPREDUCE-2104. [Rumen] Add Cpu, Memory and Heap usages to 
