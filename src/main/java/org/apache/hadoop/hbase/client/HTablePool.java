@@ -175,8 +175,11 @@ public class HTablePool implements Closeable {
     HTableInterface table = findOrCreateTable(tableName);
     // return a proxy table so when user closes the proxy, the actual table
     // will be returned to the pool
-    return new PooledHTable(table);
-
+    try {
+      return new PooledHTable(table);
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
   }
 
   /**
@@ -317,11 +320,12 @@ public class HTablePool implements Closeable {
    * wrapped table back to the table pool
    * 
    */
-  class PooledHTable implements HTableInterface {
+  class PooledHTable extends HTable {
 
     private HTableInterface table; // actual table implementation
 
-    public PooledHTable(HTableInterface table) {
+    public PooledHTable(HTableInterface table) throws IOException {
+      super(table.getConfiguration(), table.getTableName());
       this.table = table;
     }
 
