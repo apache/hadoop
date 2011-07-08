@@ -945,7 +945,7 @@ public class HTable implements HTableInterface, Closeable {
    * lost.
    * <p>
    * When you turn {@link #autoFlush} off, you should also consider the
-   * {@link #clearBufferOnFail} option. By default, asynchronous {@link Put)
+   * {@link #clearBufferOnFail} option. By default, asynchronous {@link Put}
    * requests will be retried on failure until successful. However, this can
    * pollute the writeBuffer and slow down batching performance. Additionally,
    * you may want to issue a number of Put requests and call
