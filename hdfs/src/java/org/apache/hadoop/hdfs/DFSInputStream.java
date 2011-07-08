@@ -294,8 +294,8 @@ public class DFSInputStream extends FSInputStream {
 
   /**
    * Get blocks in the specified range.
-   * Fetch them from the namenode if not cached.
-   * 
+   * Fetch them from the namenode if not cached. This function
+   * will not get a read request beyond the EOF.
    * @param offset
    * @param length
    * @return consequent segment of located blocks
@@ -304,28 +304,31 @@ public class DFSInputStream extends FSInputStream {
   private synchronized List<LocatedBlock> getBlockRange(long offset, 
                                                         long length) 
                                                       throws IOException {
-    final List<LocatedBlock> blocks;
-    if (locatedBlocks.isLastBlockComplete()) {
-      blocks = getFinalizedBlockRange(offset, length);
+    // getFileLength(): returns total file length
+    // locatedBlocks.getFileLength(): returns length of completed blocks
+    if (offset >= getFileLength()) {
+      throw new IOException("Offset: " + offset +
+        " exceeds file length: " + getFileLength());
     }
-    else {
-      final boolean readPastEnd = offset + length > locatedBlocks.getFileLength();
-      /* if requested length is greater than current file length
-       * then, it could possibly be from the current block being
-       * written to. First get the finalized block range and then
-       * if necessary, get the length of last block being written
-       * to.
-       */
-      if (readPastEnd)
-        length = locatedBlocks.getFileLength() - offset;
 
-      blocks = getFinalizedBlockRange(offset, length);
-      /* requested length is greater than what finalized blocks 
-       * have.
-       */
-      if (readPastEnd)
-        blocks.add(locatedBlocks.getLastLocatedBlock());
+    final List<LocatedBlock> blocks;
+    final long lengthOfCompleteBlk = locatedBlocks.getFileLength();
+    final boolean readOffsetWithinCompleteBlk = offset < lengthOfCompleteBlk;
+    final boolean readLengthPastCompleteBlk = offset + length > lengthOfCompleteBlk;
+
+    if (readOffsetWithinCompleteBlk) {
+      //get the blocks of finalized (completed) block range
+      blocks = getFinalizedBlockRange(offset, 
+        Math.min(length, lengthOfCompleteBlk - offset));
+    } else {
+      blocks = new ArrayList<LocatedBlock>(1);
     }
+
+    // get the blocks from incomplete block range
+    if (readLengthPastCompleteBlk) {
+       blocks.add(locatedBlocks.getLastLocatedBlock());
+    }
+
     return blocks;
   }
 

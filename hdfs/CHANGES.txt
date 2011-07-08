@@ -808,8 +808,12 @@ Trunk (unreleased changes)
     HDFS-2053. Bug in INodeDirectory#computeContentSummary warning.
     (Michael Noll via eli)
 
-    HDFS-1990. Fix  resource leaks in BlockReceiver.close().  (Uma Maheswara
+    HDFS-1990. Fix resource leaks in BlockReceiver.close().  (Uma Maheswara
     Rao G via szetszwo)
+
+    HDFS-2034. Length in DFSInputStream.getBlockRange(..) becomes -ve when
+    reading only from a currently being written block. (John George via
+    szetszwo)
 
 Release 0.22.0 - Unreleased
 
