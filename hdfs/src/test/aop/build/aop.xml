@@ -16,12 +16,6 @@
 -->
 <project name="aspects"
   xmlns:artifact="urn:maven-artifact-ant">
-  <!-- The followng are duplications and have to be customized elsewhere too -->
-  <!-- TODO this version has to be updated synchronously with Ivy -->
-  <property name="aspectversion" value="1.6.5"/>
-  <!-- TODO this has to be changed synchronously with build.xml version prop.-->
-  <!-- this workarounds of test-patch setting its own 'version' -->
-  <property name="project.version" value="0.22.0-SNAPSHOT"/>
 
   <!-- Properties common for all fault injections -->
   <property name="build-fi.dir" value="${basedir}/build-fi"/>
@@ -69,7 +63,7 @@
       resource="org/aspectj/tools/ant/taskdefs/aspectjTaskdefs.properties">
       <classpath>
         <pathelement
-          location="${common.ivy.lib.dir}/aspectjtools-${aspectversion}.jar"/>
+          location="${common.ivy.lib.dir}/aspectjtools-${aspectj.version}.jar"/>
       </classpath>
     </taskdef>
     <echo message="Start weaving aspects in place"/>
@@ -143,7 +137,7 @@
     <delete file="${compile-inject.output}"/>
     <weave-injectfault-aspects dest.dir="${build-fi.dir}/classes"
                                src.dir="${test.src.dir}/aop"
-      aspects.jar="${build-fi.dir}/ivy/lib/${ant.project.name}/common/hadoop-common-${project.version}.jar">
+      aspects.jar="${build-fi.dir}/ivy/lib/${ant.project.name}/common/hadoop-common-${hadoop-common.version}.jar">
     </weave-injectfault-aspects>
   </target>
 
@@ -218,7 +212,7 @@
     </subant>
     <weave-injectfault-aspects dest.dir="${system-test-build-dir}/classes"
                                src.dir="${test.src.dir}/system/java;${test.src.dir}/system/aop"
-      aspects.jar="${build-fi.dir}/ivy/lib/${ant.project.name}/system/hadoop-common-${herriot.suffix}-${project.version}.jar">
+      aspects.jar="${build-fi.dir}/ivy/lib/${ant.project.name}/system/hadoop-common-${herriot.suffix}-${hadoop-common.version}.jar">
     </weave-injectfault-aspects>
   </target>
 

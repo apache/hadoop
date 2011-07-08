@@ -396,6 +396,10 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    
+    HDFS-2138. Fix aop.xm to point to the right hadoop-common.version
+    variable. (gkesavan)
+
     HDFS-1449. Fix test failures - ExtendedBlock must return 
     block file name in #getBlockName(). (suresh)
 
