@@ -24,7 +24,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -91,6 +90,54 @@ public class TestDataNodeVolumeFailureToleration {
       new File(dataDir, "data"+(2*i+2)).setExecutable(true);
     }
     cluster.shutdown();
+  }
+
+  /**
+   * Test the DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY configuration
+   * option, ie the DN tolerates a failed-to-use scenario during
+   * its start-up.
+   */
+  @Test
+  public void testValidVolumesAtStartup() throws Exception {
+    assumeTrue(!System.getProperty("os.name").startsWith("Windows"));
+
+    // Make sure no DNs are running.
+    cluster.shutdownDataNodes();
+
+    // Bring up a datanode with two default data dirs, but with one bad one.
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, 1);
+
+    // We use subdirectories 0 and 1 in order to have only a single
+    // data dir's parent inject a failure.
+    File tld = new File(MiniDFSCluster.getBaseDirectory(), "badData");
+    File dataDir1 = new File(tld, "data1");
+    File dataDir1Actual = new File(dataDir1, "1");
+    dataDir1Actual.mkdirs();
+    // Force an IOE to occur on one of the dfs.data.dir.
+    File dataDir2 = new File(tld, "data2");
+    prepareDirToFail(dataDir2);
+    File dataDir2Actual = new File(dataDir2, "2");
+
+    // Start one DN, with manually managed DN dir
+    conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
+        dataDir1Actual.getPath() + "," + dataDir2Actual.getPath());
+    cluster.startDataNodes(conf, 1, false, null, null);
+    cluster.waitActive();
+
+    try {
+      assertTrue("The DN should have started up fine.",
+          cluster.isDataNodeUp());
+      DataNode dn = cluster.getDataNodes().get(0);
+      String si = dn.getFSDataset().getStorageInfo();
+      assertTrue("The DN should have started with this directory",
+          si.contains(dataDir1Actual.getPath()));
+      assertFalse("The DN shouldn't have a bad directory.",
+          si.contains(dataDir2Actual.getPath()));
+    } finally {
+      cluster.shutdownDataNodes();
+      FileUtil.chmod(dataDir2.toString(), "755");
+    }
+
   }
 
   /**

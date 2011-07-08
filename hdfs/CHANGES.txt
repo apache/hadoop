@@ -540,6 +540,9 @@ Trunk (unreleased changes)
     HDFS-2109. Store uMask as member variable to DFSClient.Conf.  (Bharath
     Mundlapudi via szetszwo)
 
+    HDFS-2111. Add tests for ensuring that the DN will start with a few bad
+    data directories. (Harsh J Chouraria via todd)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
