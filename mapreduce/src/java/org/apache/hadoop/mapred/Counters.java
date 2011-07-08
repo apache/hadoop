@@ -271,10 +271,16 @@ public class Counters implements Writable, Iterable<Counters.Group> {
      * Checks for (content) equality of Groups
      */
     @Override
-    public synchronized boolean equals(Object obj) {
+    public boolean equals(Object obj) {
+      if (this == obj) {
+        return true;
+      }
+      if (obj == null || obj.getClass() != getClass()) {
+        return false;
+      }
       boolean isEqual = false;
-      if (obj != null && obj instanceof Group) {
-        Group g = (Group) obj;
+      Group g = (Group) obj;
+      synchronized (this) {
         if (size() == g.size()) {
           isEqual = true;
           for (Map.Entry<String, Counter> entry : subcounters.entrySet()) {
@@ -769,10 +775,16 @@ public class Counters implements Writable, Iterable<Counters.Group> {
   }
 
   @Override
-  public synchronized boolean equals(Object obj) {
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null || obj.getClass() != getClass()) {
+      return false;
+    }
     boolean isEqual = false;
-    if (obj != null && obj instanceof Counters) {
-      Counters other = (Counters) obj;
+    Counters other = (Counters) obj;
+    synchronized (this) {
       if (size() == other.size()) {
         isEqual = true;
         for (Map.Entry<String, Group> entry : this.counters.entrySet()) {

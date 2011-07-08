@@ -180,6 +180,9 @@ Trunk (unreleased changes)
     HADOOP-7106. Reorganize project SVN layout to "unsplit" the projects.
     (todd, nigel)
 
+    MAPREDUCE-2249. Check the reflexive property of Counters objects when
+    comparing equality. (Devaraj K via todd)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
