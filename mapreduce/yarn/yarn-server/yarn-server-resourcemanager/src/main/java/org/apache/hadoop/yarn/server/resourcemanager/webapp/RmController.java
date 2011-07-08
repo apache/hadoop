@@ -57,8 +57,10 @@ public class RmController extends Controller {
       _("Cluster ID:", ts).
       _("ResourceManager state:", rm.getServiceState()).
       _("ResourceManager started on:", Times.format(ts)).
-      _("ResourceManager version:", YarnVersionInfo.getBuildVersion()).
-      _("Hadoop version:", VersionInfo.getBuildVersion());
+      _("ResourceManager version:", YarnVersionInfo.getBuildVersion() +
+          " on " + YarnVersionInfo.getDate()).
+      _("Hadoop version:", VersionInfo.getBuildVersion() +
+          " on " + VersionInfo.getDate());
     render(InfoPage.class);
   }
 
