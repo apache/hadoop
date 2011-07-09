@@ -1437,7 +1437,9 @@ false
     </title>
     <para>
         If snappy is installed, HBase can make use of it (courtesy of
-        <link xlink:href="http://code.google.com/p/hadoop-snappy/">hadoop-snappy</link>).
+        <link xlink:href="http://code.google.com/p/hadoop-snappy/">hadoop-snappy</link>
+        <footnote><para>See <link xlink:href="http://search-hadoop.com/m/Ds8d51c263B1/%2522Hadoop-Snappy+in+synch+with+Hadoop+trunk%2522&amp;subj=Hadoop+Snappy+in+synch+with+Hadoop+trunk">Alejandro's note</link> up on the list on difference between Snappy in Hadoop
+        and Snappy in HBase</para></footnote>).
 
         <orderedlist>
             <listitem>
