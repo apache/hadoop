@@ -96,6 +96,7 @@ import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
@@ -670,7 +671,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       }
     }
     // Send cache a shutdown.
-    LruBlockCache c = (LruBlockCache) StoreFile.getBlockCache(this.conf);
+    BlockCache c = StoreFile.getBlockCache(this.conf);
     if (c != null) {
       c.shutdown();
     }
@@ -1216,19 +1217,19 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.metrics.flushQueueSize.set(cacheFlusher
         .getFlushQueueSize());
 
-    LruBlockCache lruBlockCache = (LruBlockCache) StoreFile.getBlockCache(conf);
-    if (lruBlockCache != null) {
-      this.metrics.blockCacheCount.set(lruBlockCache.size());
-      this.metrics.blockCacheFree.set(lruBlockCache.getFreeSize());
-      this.metrics.blockCacheSize.set(lruBlockCache.getCurrentSize());
-      CacheStats cacheStats = lruBlockCache.getStats();
+    BlockCache blockCache = StoreFile.getBlockCache(conf);
+    if (blockCache != null) {
+      this.metrics.blockCacheCount.set(blockCache.size());
+      this.metrics.blockCacheFree.set(blockCache.getFreeSize());
+      this.metrics.blockCacheSize.set(blockCache.getCurrentSize());
+      CacheStats cacheStats = blockCache.getStats();
       this.metrics.blockCacheHitCount.set(cacheStats.getHitCount());
       this.metrics.blockCacheMissCount.set(cacheStats.getMissCount());
-      this.metrics.blockCacheEvictedCount.set(lruBlockCache.getEvictedCount());
-      double ratio = lruBlockCache.getStats().getHitRatio();
+      this.metrics.blockCacheEvictedCount.set(blockCache.getEvictedCount());
+      double ratio = blockCache.getStats().getHitRatio();
       int percent = (int) (ratio * 100);
       this.metrics.blockCacheHitRatio.set(percent);
-      ratio = lruBlockCache.getStats().getHitCachingRatio();
+      ratio = blockCache.getStats().getHitCachingRatio();
       percent = (int) (ratio * 100);
       this.metrics.blockCacheHitCachingRatio.set(percent);
     }

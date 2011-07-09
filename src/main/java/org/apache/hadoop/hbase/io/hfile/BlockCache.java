@@ -68,4 +68,12 @@ public interface BlockCache {
    * Shutdown the cache.
    */
   public void shutdown();
+
+  public long size();
+
+  public long getFreeSize();
+
+  public long getCurrentSize();
+
+  public long getEvictedCount();
 }

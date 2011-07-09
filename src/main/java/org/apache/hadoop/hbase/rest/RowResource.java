@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.ws.rs.Consumes;
@@ -158,8 +159,7 @@ public class RowResource extends ResourceBase {
     HTableInterface table = null;
     try {
       List<RowModel> rows = model.getRows();
-      table = pool.getTable(tableResource.getName());
-      ((HTable)table).setAutoFlush(false);
+      List<Put> puts = new ArrayList<Put>();
       for (RowModel row: rows) {
         byte[] key = row.getKey();
         if (key == null) {
@@ -191,12 +191,13 @@ public class RowResource extends ResourceBase {
                 Transform.Direction.IN));
           }
         }
-        table.put(put);
+        puts.add(put);
         if (LOG.isDebugEnabled()) {
           LOG.debug("PUT " + put.toString());
         }
       }
-      ((HTable)table).setAutoFlush(true);
+      table = pool.getTable(tableResource.getName());
+      table.put(puts);
       table.flushCommits();
       ResponseBuilder response = Response.ok();
       return response.build();

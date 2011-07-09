@@ -63,7 +63,7 @@ public class SimpleBlockCache implements BlockCache {
   /**
    * @return the size
    */
-  public synchronized int size() {
+  public synchronized long size() {
     processQueue();
     return cache.size();
   }
@@ -98,5 +98,23 @@ public class SimpleBlockCache implements BlockCache {
   public CacheStats getStats() {
     // TODO: implement this if we ever actually use this block cache
     return null;
+  }
+
+  @Override
+  public long getFreeSize() {
+    // TODO: implement this if we ever actually use this block cache
+    return 0;
+  }
+
+  @Override
+  public long getCurrentSize() {
+    // TODO: implement this if we ever actually use this block cache
+    return 0;
+  }
+
+  @Override
+  public long getEvictedCount() {
+    // TODO: implement this if we ever actually use this block cache
+    return 0;
   }
 }

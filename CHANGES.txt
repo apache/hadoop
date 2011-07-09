@@ -324,6 +324,7 @@ Release 0.91.0 - Unreleased
    HBASE-4013  Make ZooKeeperListener Abstract (Akash Ashok via Ted Yu)
    HBASE-4025  Server startup fails during startup due to failure in loading
                all table descriptors. (Subbu Iyer via Ted Yu)
+   HBASE-4017  BlockCache interface should be truly modular (Li Pi)
 
   NEW FEATURES
    HBASE-2001  Coprocessors: Colocate user code with regions (Mingjie Lai via
