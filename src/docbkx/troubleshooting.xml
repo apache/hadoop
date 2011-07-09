@@ -468,6 +468,37 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
             <para><programlisting>hadoop fs -dus /hbase/myTable</programlisting> ...returns the summarized disk utilization for the HBase table 'myTable'. </para>
             <para><programlisting>hadoop fs -du /hbase/myTable</programlisting> ...returns a list of the regions under the HBase table 'myTable' and their disk utilization. </para>
        </section>    
+       <section xml:id="trouble.namenode.hbase.objects">
+            <title>Browsing HDFS for HBase Objects</title>
+            <para>Somtimes it will be necessary to explore the HBase objects that exist on HDFS.  These objects could include the WALs (Write Ahead Logs), tables, regions, StoreFiles, etc.
+            The easiest way to do this is with the NameNode web application that runs on port 50070.  The NameNode web application will provide links to the all the DataNodes in the cluster so that
+            they can be browsed seamlessly. </para>
+            <para>The HDFS directory structure of HBase tables in the cluster is...
+            <programlisting>
+<filename>/hbase</filename>
+     <filename>/&lt;Table&gt;</filename>             (Tables in the cluster)
+          <filename>/&lt;Region&gt;</filename>           (Regions for the table)
+               <filename>/&lt;ColumnFamiy&gt;</filename>      (ColumnFamilies for the Region for the table)
+                    <filename>/&lt;StoreFile&gt;</filename>        (StoreFiles for the ColumnFamily for the Regions for the table)
+            </programlisting>
+            </para>
+            <para>The HDFS directory structure of HBase WAL is..
+            <programlisting>
+<filename>/hbase</filename>
+     <filename>/.logs</filename>     
+          <filename>/&lt;RegionServer&gt;</filename>    (RegionServers)
+               <filename>/&lt;HLog&gt;</filename>           (WAL HLog files for the RegionServer)
+            </programlisting>
+            </para>
+          <section xml:id="trouble.namenode.uncompaction">
+            <title>Use Cases</title>
+              <para>Two common use-cases for querying HDFS for HBase objects is research the degree of uncompaction of a table.  If there are a large number of StoreFiles for each ColumnFamily it could 
+              indicate the need for a major compaction.  Additionally, after a major compaction if the resulting StoreFile is "small" it could indicate the need for a reduction of ColumnFamilies for
+              the table.
+		    </para>
+		  </section>
+
+       </section>    
      </section>
         
     <section xml:id="trouble.rs">
