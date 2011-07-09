@@ -88,7 +88,7 @@ public class TestScannerTimeout {
    * Test that we do get a ScannerTimeoutException
    * @throws Exception
    */
-  @Test
+  @Test(timeout=300000)
   public void test2481() throws Exception {
     LOG.info("START ************ test2481");
     Scan scan = new Scan();
@@ -119,7 +119,7 @@ public class TestScannerTimeout {
    * from failed. Before 2772, it reused the same scanner id.
    * @throws Exception
    */
-  @Test
+  @Test(timeout=300000)
   public void test2772() throws Exception {
     LOG.info("START************ test2772");
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME);
@@ -147,7 +147,7 @@ public class TestScannerTimeout {
    * from failed. Before 3686, it would skip rows in the scan.
    * @throws Exception
    */
-  @Test
+  @Test(timeout=300000)
   public void test3686a() throws Exception {
     LOG.info("START ************ TEST3686A---1");
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME);
@@ -183,7 +183,7 @@ public class TestScannerTimeout {
    * client.
    * @throws Exception
    */
-  @Test
+  @Test(timeout=300000)
   public void test3686b() throws Exception {
     LOG.info("START ************ test3686b");
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME);
