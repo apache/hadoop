@@ -248,6 +248,9 @@ Trunk (unreleased changes)
     to Data(In,Out)putBuffer for byte[].  Merge from yahoo-merge branch,
     -r 1079163.  Fix missing Apache license headers. (Chris Douglas via mattf)
 
+    HADOOP-7361. Provide an option, -overwrite/-f, in put and copyFromLocal
+    shell commands.  (Uma Maheswara Rao G via szetszwo)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

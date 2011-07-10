@@ -38,7 +38,12 @@ abstract class CommandWithDestination extends FsCommand {
   protected PathData dst;
   protected boolean overwrite = false;
   
-  // TODO: commands should implement a -f to enable this
+  /**
+   * 
+   * This method is used to enable the force(-f)  option while copying the files.
+   * 
+   * @param flag true/false
+   */
   protected void setOverwrite(boolean flag) {
     overwrite = flag;
   }
