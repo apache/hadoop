@@ -266,7 +266,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    * <p>
    * Mapping: StorageID -> DatanodeDescriptor
    */
-  NavigableMap<String, DatanodeDescriptor> datanodeMap = 
+  public final NavigableMap<String, DatanodeDescriptor> datanodeMap = 
     new TreeMap<String, DatanodeDescriptor>();
 
   Random r = new Random();
@@ -324,7 +324,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   private DNSToSwitchMapping dnsToSwitchMapping;
 
   private HostsFileReader hostsReader; 
-  private Daemon dnthread = null;
 
   private long maxFsObjects = 0;          // maximum number of fs objects
 
@@ -404,7 +403,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    */
   void activate(Configuration conf) throws IOException {
     setBlockTotal();
-    blockManager.activate();
+    blockManager.activate(conf);
     this.hbthread = new Daemon(new HeartbeatMonitor());
     this.lmthread = new Daemon(leaseManager.new Monitor());
     this.replthread = new Daemon(new ReplicationMonitor());
@@ -414,13 +413,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
 
     this.nnrmthread = new Daemon(new NameNodeResourceMonitor());
     nnrmthread.start();
-
-    this.dnthread = new Daemon(new DecommissionManager(this).new Monitor(
-        conf.getInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 
-                    DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_DEFAULT),
-        conf.getInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_NODES_PER_INTERVAL_KEY, 
-                    DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_NODES_PER_INTERVAL_DEFAULT)));
-    dnthread.start();
 
     this.dnsToSwitchMapping = ReflectionUtils.newInstance(
         conf.getClass(DFSConfigKeys.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY, 
@@ -636,7 +628,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       if (blockManager != null) blockManager.close();
       if (hbthread != null) hbthread.interrupt();
       if (replthread != null) replthread.interrupt();
-      if (dnthread != null) dnthread.interrupt();
       if (smmthread != null) smmthread.interrupt();
       if (dtSecretManager != null) dtSecretManager.stopThreads();
       if (nnrmthread != null) nnrmthread.interrupt();
@@ -661,7 +652,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   }
 
   /** Is this name system running? */
-  boolean isRunning() {
+  public boolean isRunning() {
     return fsRunning;
   }
 
@@ -3988,7 +3979,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    * Change, if appropriate, the admin state of a datanode to 
    * decommission completed. Return true if decommission is complete.
    */
-  boolean checkDecommissionStateInternal(DatanodeDescriptor node) {
+  public boolean checkDecommissionStateInternal(DatanodeDescriptor node) {
     assert hasWriteLock();
     //
     // Check to see if all blocks in this decommissioned

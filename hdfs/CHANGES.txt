@@ -543,6 +543,9 @@ Trunk (unreleased changes)
     HDFS-2111. Add tests for ensuring that the DN will start with a few bad
     data directories. (Harsh J Chouraria via todd)
 
+    HDFS-2134. Move DecommissionManager to the blockmanagement package.
+    (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
