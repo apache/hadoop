@@ -5,6 +5,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    MAPREDUCE-2663. Refactoring StateMachineFactory inner classes. (ahmed 
+    radwan via mahadev)
+
     MAPREDUCE-2400. Remove Cluster's dependency on JobTracker via a 
     ServiceProvider for the actual implementation. (tomwhite via acmurthy) 
  

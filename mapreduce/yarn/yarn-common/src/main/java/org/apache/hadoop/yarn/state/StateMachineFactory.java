@@ -102,7 +102,7 @@ final public class StateMachineFactory
     }
   }
 
-  static private class ApplicableSingleTransition
+  static private class ApplicableSingleOrMultipleTransition
              <OPERAND, STATE extends Enum<STATE>,
               EVENTTYPE extends Enum<EVENTTYPE>, EVENT>
           implements ApplicableTransition<OPERAND, STATE, EVENTTYPE, EVENT> {
@@ -110,7 +110,7 @@ final public class StateMachineFactory
     final EVENTTYPE eventType;
     final Transition<OPERAND, STATE, EVENTTYPE, EVENT> transition;
 
-    ApplicableSingleTransition
+    ApplicableSingleOrMultipleTransition
         (STATE preState, EVENTTYPE eventType,
          Transition<OPERAND, STATE, EVENTTYPE, EVENT> transition) {
       this.preState = preState;
@@ -121,42 +121,6 @@ final public class StateMachineFactory
     @Override
     public void apply
              (StateMachineFactory<OPERAND, STATE, EVENTTYPE, EVENT> subject) {
-      Map<EVENTTYPE, Transition<OPERAND, STATE, EVENTTYPE, EVENT>> transitionMap
-        = subject.stateMachineTable.get(preState);
-      if (transitionMap == null) {
-        // I use HashMap here because I would expect most EVENTTYPE's to not
-        //  apply out of a particular state, so FSM sizes would be 
-        //  quadratic if I use EnumMap's here as I do at the top level.
-        transitionMap = new HashMap<EVENTTYPE,
-          Transition<OPERAND, STATE, EVENTTYPE, EVENT>>();
-        subject.stateMachineTable.put(preState, transitionMap);
-      }
-      transitionMap.put(eventType, transition);
-    }
-  }
-
-  static private class ApplicableMultipleTransition
-             <OPERAND, STATE extends Enum<STATE>,
-              EVENTTYPE extends Enum<EVENTTYPE>, EVENT>
-          implements ApplicableTransition<OPERAND, STATE, EVENTTYPE, EVENT> {
-    final STATE preState;
-    final Set<STATE> postStates;
-    final EVENTTYPE eventType;
-    final Transition<OPERAND, STATE, EVENTTYPE, EVENT> transition;
-
-    ApplicableMultipleTransition
-        (STATE preState, Set<STATE> postStates, EVENTTYPE eventType,
-         Transition<OPERAND, STATE, EVENTTYPE, EVENT> transition) {
-      this.preState = preState;
-      this.postStates = postStates;
-      this.eventType = eventType;
-      this.transition = transition;
-    }
-
-    @Override
-    public void apply
-             (StateMachineFactory<OPERAND, STATE, EVENTTYPE, EVENT> subject) {
-
       Map<EVENTTYPE, Transition<OPERAND, STATE, EVENTTYPE, EVENT>> transitionMap
         = subject.stateMachineTable.get(preState);
       if (transitionMap == null) {
@@ -258,7 +222,7 @@ final public class StateMachineFactory
                         EVENTTYPE eventType,
                         SingleArcTransition<OPERAND, EVENT> hook){
     return new StateMachineFactory
-        (this, new ApplicableSingleTransition
+        (this, new ApplicableSingleOrMultipleTransition
            (preState, eventType, new SingleInternalArc(postState, hook)));
   }
 
@@ -282,9 +246,8 @@ final public class StateMachineFactory
                         MultipleArcTransition<OPERAND, EVENT, STATE> hook){
     return new StateMachineFactory
         (this,
-         new ApplicableMultipleTransition
-           (preState, postStates,
-            eventType, new MultipleInternalArc(postStates, hook)));
+         new ApplicableSingleOrMultipleTransition
+           (preState, eventType, new MultipleInternalArc(postStates, hook)));
   }
 
   /**
