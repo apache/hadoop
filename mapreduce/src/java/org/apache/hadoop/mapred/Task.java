@@ -1097,7 +1097,7 @@ abstract public class Task implements Writable, Configurable {
     
     // delete the staging area for the job
     JobConf conf = new JobConf(jobContext.getConfiguration());
-    if (!supportIsolationRunner(conf)) {
+    if (!keepTaskFiles(conf)) {
       String jobTempDir = conf.get("mapreduce.job.dir");
       Path jobTempDirPath = new Path(jobTempDir);
       FileSystem fs = jobTempDirPath.getFileSystem(conf);
@@ -1106,7 +1106,7 @@ abstract public class Task implements Writable, Configurable {
     done(umbilical, reporter);
   }
   
-  protected boolean supportIsolationRunner(JobConf conf) {
+  protected boolean keepTaskFiles(JobConf conf) {
     return (conf.getKeepTaskFilesPattern() != null || conf
         .getKeepFailedTaskFiles());
   }

@@ -106,23 +106,6 @@ class MapTask extends Task {
   public void localizeConfiguration(JobConf conf)
       throws IOException {
     super.localizeConfiguration(conf);
-    // split.dta/split.info files are used only by IsolationRunner.
-    // Write the split file to the local disk if it is a normal map task (not a
-    // job-setup or a job-cleanup task) and if the user wishes to run
-    // IsolationRunner either by setting keep.failed.tasks.files to true or by
-    // using keep.tasks.files.pattern
-    if (supportIsolationRunner(conf) && isMapOrReduce()) {
-      // localize the split meta-information 
-      Path localSplitMeta =
-          new LocalDirAllocator(MRConfig.LOCAL_DIR).getLocalPathForWrite(
-              TaskTracker.getLocalSplitMetaFile(conf.getUser(), 
-                getJobID().toString(), getTaskID()
-                  .toString()), conf);
-      LOG.debug("Writing local split to " + localSplitMeta);
-      DataOutputStream out = FileSystem.getLocal(conf).create(localSplitMeta);
-      splitMetaInfo.write(out);
-      out.close();
-    }
   }
   
   

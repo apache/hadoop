@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
@@ -53,7 +54,6 @@ import org.apache.hadoop.util.ReflectionUtils;
  *  TestTaskReporter instead of TaskReporter and call mapTask.run().
  *  Similar to LocalJobRunner, we set up splits and call mapTask.run()
  *  directly. No job is run, only map task is run.
- *  We use IsolationRunner.FakeUmbilical.
  *  As the reporter's setProgress() validates progress after
  *  every record is read, we are done with the validation of map phase progress
  *  once mapTask.run() is finished. Sort phase progress in map task is not
@@ -63,12 +63,90 @@ public class TestMapProgress extends TestCase {
   public static final Log LOG = LogFactory.getLog(TestMapProgress.class);
   private static String TEST_ROOT_DIR = new File(System.getProperty(
            "test.build.data", "/tmp")).getAbsolutePath() + "/mapPahseprogress";
+
+  static class FakeUmbilical implements TaskUmbilicalProtocol {
+
+    public long getProtocolVersion(String protocol, long clientVersion) {
+      return TaskUmbilicalProtocol.versionID;
+    }
+    
+    @Override
+    public ProtocolSignature getProtocolSignature(String protocol,
+        long clientVersion, int clientMethodsHash) throws IOException {
+      return ProtocolSignature.getProtocolSignature(
+          this, protocol, clientVersion, clientMethodsHash);
+    }
+
+    public void done(TaskAttemptID taskid) throws IOException {
+      LOG.info("Task " + taskid + " reporting done.");
+    }
+
+    public void fsError(TaskAttemptID taskId, String message) throws IOException {
+      LOG.info("Task " + taskId + " reporting file system error: " + message);
+    }
+
+    public void shuffleError(TaskAttemptID taskId, String message) throws IOException {
+      LOG.info("Task " + taskId + " reporting shuffle error: " + message);
+    }
+
+    public void fatalError(TaskAttemptID taskId, String msg) throws IOException {
+      LOG.info("Task " + taskId + " reporting fatal error: " + msg);
+    }
+
+    public JvmTask getTask(JvmContext context) throws IOException {
+      return null;
+    }
+
+    public boolean ping(TaskAttemptID taskid) throws IOException {
+      return true;
+    }
+
+    public void commitPending(TaskAttemptID taskId, TaskStatus taskStatus) 
+    throws IOException, InterruptedException {
+      statusUpdate(taskId, taskStatus);
+    }
+    
+    public boolean canCommit(TaskAttemptID taskid) throws IOException {
+      return true;
+    }
+    
+    public boolean statusUpdate(TaskAttemptID taskId, TaskStatus taskStatus) 
+    throws IOException, InterruptedException {
+      StringBuffer buf = new StringBuffer("Task ");
+      buf.append(taskId);
+      buf.append(" making progress to ");
+      buf.append(taskStatus.getProgress());
+      String state = taskStatus.getStateString();
+      if (state != null) {
+        buf.append(" and state of ");
+        buf.append(state);
+      }
+      LOG.info(buf.toString());
+      // ignore phase
+      // ignore counters
+      return true;
+    }
+
+    public void reportDiagnosticInfo(TaskAttemptID taskid, String trace) throws IOException {
+      LOG.info("Task " + taskid + " has problem " + trace);
+    }
+    
+    public MapTaskCompletionEventsUpdate getMapCompletionEvents(JobID jobId, 
+        int fromEventId, int maxLocs, TaskAttemptID id) throws IOException {
+      return new MapTaskCompletionEventsUpdate(TaskCompletionEvent.EMPTY_ARRAY, 
+                                               false);
+    }
+
+    public void reportNextRecordRange(TaskAttemptID taskid, 
+        SortedRanges.Range range) throws IOException {
+      LOG.info("Task " + taskid + " reportedNextRecordRange " + range);
+    }
+  }
   
   private FileSystem fs = null;
   private TestMapTask map = null;
   private JobID jobId = null;
-  private IsolationRunner.FakeUmbilical fakeUmbilical =
-                                        new IsolationRunner.FakeUmbilical();
+  private FakeUmbilical fakeUmbilical = new FakeUmbilical();
 
   /**
    *  Task Reporter that validates map phase progress after each record is

@@ -187,7 +187,6 @@ See http://forrest.apache.org/docs/linking.html for more info.
               <filesplit href="FileSplit.html" />
               <inputformat href="InputFormat.html" />
               <inputsplit href="InputSplit.html" />
-              <isolationrunner href="IsolationRunner.html" />
               <jobclient href="JobClient.html">
                 <runjob href="#runJob(org.apache.hadoop.mapred.JobConf)" />
                 <submitjob href="#submitJob(org.apache.hadoop.mapred.JobConf)" />

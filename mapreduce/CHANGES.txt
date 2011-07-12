@@ -9,6 +9,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-2430. Remove mrunit contrib. (nigel via eli)
 
+    MAPREDUCE-2606. Remove IsolationRunner. (Alejandro Abdelnur via eli)
+
   NEW FEATURES
 
     MAPREDUCE-2107. [Gridmix] Total heap usage emulation in Gridmix.

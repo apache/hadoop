@@ -552,8 +552,7 @@
       and others.</p>
       
       <p>Finally, we will wrap up by discussing some useful features of the
-      framework such as the <code>DistributedCache</code>, 
-      <code>IsolationRunner</code> etc.</p>
+      framework such as the <code>DistributedCache</code>.
 
       <section>
         <title>Payload</title>
@@ -2307,31 +2306,6 @@
           </p>
         </section>
         
-        <section>
-          <title>IsolationRunner</title>
-          
-          <p><a href="ext:api/org/apache/hadoop/mapred/isolationrunner">
-          IsolationRunner</a> is a utility to help debug MapReduce programs.</p>
-          
-          <p>To use the <code>IsolationRunner</code>, first set 
-          <code>keep.failed.tasks.files</code> to <code>true</code> 
-          (also see <code>keep.tasks.files.pattern</code>).</p>
-          
-          <p>
-            Next, go to the node on which the failed task ran and go to the 
-            <code>TaskTracker</code>'s local directory and run the 
-            <code>IsolationRunner</code>:<br/>
-            <code>$ cd &lt;local path&gt;
-            /taskTracker/$user/jobcache/$jobid/${taskid}/work</code><br/>
-            <code>
-              $ bin/hadoop org.apache.hadoop.mapred.IsolationRunner ../job.xml
-            </code>
-          </p>
-          
-          <p><code>IsolationRunner</code> will run the failed task in a single 
-          jvm, which can be in the debugger, over precisely the same input.</p>
-        </section>
-
         <section>
           <title>Profiling</title>
           <p>Profiling is a utility to get a representative (2 or 3) sample
