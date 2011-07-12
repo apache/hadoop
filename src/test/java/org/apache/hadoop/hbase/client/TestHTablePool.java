@@ -117,8 +117,80 @@ public class TestHTablePool {
 					((HTablePool.PooledHTable) table2).getWrappedTable(),
 					((HTablePool.PooledHTable) sameTable2).getWrappedTable());
 		}
+    @Test
+    public void testProxyImplementationReturned() {
+      HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
+          Integer.MAX_VALUE);
+      String tableName = Bytes.toString(TABLENAME);// Request a table from
+                              // an
+                              // empty pool
+      HTableInterface table = pool.getTable(tableName);
 
-	}
+      // Test if proxy implementation is returned
+      Assert.assertTrue(table instanceof HTablePool.PooledHTable);
+    }
+
+    @Test
+    public void testDeprecatedUsagePattern() throws IOException {
+      HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
+          Integer.MAX_VALUE);
+      String tableName = Bytes.toString(TABLENAME);// Request a table from
+                              // an
+                              // empty pool
+
+      // get table will return proxy implementation
+      HTableInterface table = pool.getTable(tableName);
+
+      // put back the proxy implementation instead of closing it
+      pool.putTable(table);
+
+      // Request a table of the same name
+      HTableInterface sameTable = pool.getTable(tableName);
+
+      // test no proxy over proxy created
+      Assert.assertSame(((HTablePool.PooledHTable) table).getWrappedTable(),
+          ((HTablePool.PooledHTable) sameTable).getWrappedTable());
+    }
+
+    @Test
+    public void testReturnDifferentTable() throws IOException {
+      HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
+          Integer.MAX_VALUE);
+      String tableName = Bytes.toString(TABLENAME);// Request a table from
+                              // an
+                              // empty pool
+
+      // get table will return proxy implementation
+      final HTableInterface table = pool.getTable(tableName);
+      HTableInterface alienTable = new HTable(TABLENAME) {
+        // implementation doesn't matter as long the table is not from
+        // pool
+      };
+      try {
+        // put the wrong table in pool
+        pool.putTable(alienTable);
+        Assert.fail("alien table accepted in pool");
+      } catch (IllegalArgumentException e) {
+        Assert.assertTrue("alien table rejected", true);
+      }
+    }
+
+    @Test
+    public void testClassCastException() {
+      //this test makes sure that client code that
+      //casts the table it got from pool to HTable won't break
+      HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
+        Integer.MAX_VALUE);
+      String tableName = Bytes.toString(TABLENAME);
+      try {
+        // get table and check if type is HTable
+        HTable table = (HTable) pool.getTable(tableName);
+        Assert.assertTrue("return type is HTable as expected", true);
+      } catch (ClassCastException e) {
+        Assert.fail("return type is not HTable");
+      }
+    }
+  }
 
 	public static class TestHTableReusablePool extends TestHTablePoolType {
 		@Override
@@ -275,62 +347,5 @@ public class TestHTablePool {
 		suite.addTestSuite(TestHTableThreadLocalPool.class);
 		return suite;
 	}
-	@Test
-	public void testProxyImplementationReturned() {
-		HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
-				Integer.MAX_VALUE);
-		String tableName = Bytes.toString(TABLENAME);// Request a table from
-														// an
-														// empty pool
-		HTableInterface table = pool.getTable(tableName);
 
-		// Test if proxy implementation is returned
-		Assert.assertTrue(table instanceof HTablePool.PooledHTable);
-	}
-
-	@Test
-	public void testDeprecatedUsagePattern() throws IOException {
-		HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
-				Integer.MAX_VALUE);
-		String tableName = Bytes.toString(TABLENAME);// Request a table from
-														// an
-														// empty pool
-
-		// get table will return proxy implementation
-		HTableInterface table = pool.getTable(tableName);
-
-		// put back the proxy implementation instead of closing it
-		pool.putTable(table);
-
-		// Request a table of the same name
-		HTableInterface sameTable = pool.getTable(tableName);
-
-		// test no proxy over proxy created
-		Assert.assertSame(((HTablePool.PooledHTable) table).getWrappedTable(),
-				((HTablePool.PooledHTable) sameTable).getWrappedTable());
-	}
-
-	@Test
-	public void testReturnDifferentTable() throws IOException {
-		HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
-				Integer.MAX_VALUE);
-		String tableName = Bytes.toString(TABLENAME);// Request a table from
-														// an
-														// empty pool
-
-		// get table will return proxy implementation
-		final HTableInterface table = pool.getTable(tableName);
-		HTableInterface alienTable = new HTable(TABLENAME) {
-			// implementation doesn't matter as long the table is not from
-			// pool
-		};
-		try {
-			// put the wrong table in pool
-			pool.putTable(alienTable);
-			Assert.fail("alien table accepted in pool");
-		} catch (IllegalArgumentException e) {
-			Assert.assertTrue("alien table rejected", true);
-		}
-
-	}
 }
