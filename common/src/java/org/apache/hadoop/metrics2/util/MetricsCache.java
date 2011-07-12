@@ -23,9 +23,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.common.base.Objects;
-import com.google.common.collect.Maps;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -33,6 +30,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsTag;
+
+import com.google.common.base.Objects;
+import com.google.common.collect.Maps;
 
 /**
  * A metrics cache for sinks that don't support sparse updates.
@@ -68,7 +68,7 @@ public class MetricsCache {
    */
   public static class Record {
     final Map<String, String> tags = Maps.newHashMap();
-    final Map<String, Number> metrics = Maps.newHashMap();
+    final Map<String, AbstractMetric> metrics = Maps.newHashMap();
 
     /**
      * Lookup a tag value
@@ -85,6 +85,16 @@ public class MetricsCache {
      * @return the metric value
      */
     public Number getMetric(String key) {
+      AbstractMetric metric = metrics.get(key);
+      return metric != null ? metric.value() : null;
+    }
+
+    /**
+     * Lookup a metric instance
+     * @param key name of the metric
+     * @return the metric instance
+     */
+    public AbstractMetric getMetricInstance(String key) {
       return metrics.get(key);
     }
 
@@ -96,9 +106,23 @@ public class MetricsCache {
     }
 
     /**
-     * @return entry set of the metrics of the record
+     * @deprecated use metricsEntrySet() instead
+     * @return entry set of metrics
      */
+    @Deprecated
     public Set<Map.Entry<String, Number>> metrics() {
+      Map<String, Number> map = new LinkedHashMap<String, Number>(
+          metrics.size());
+      for (Map.Entry<String, AbstractMetric> mapEntry : metrics.entrySet()) {
+        map.put(mapEntry.getKey(), mapEntry.getValue().value());
+      }
+      return map.entrySet();
+    }
+
+    /**
+     * @return entry set of metrics
+     */
+    public Set<Map.Entry<String, AbstractMetric>> metricsEntrySet() {
       return metrics.entrySet();
     }
 
@@ -141,7 +165,7 @@ public class MetricsCache {
       recordCache.put(tags, record);
     }
     for (AbstractMetric m : mr.metrics()) {
-      record.metrics.put(m.name(), m.value());
+      record.metrics.put(m.name(), m);
     }
     if (includingTags) {
       // mostly for some sinks that include tags as part of a dense schema

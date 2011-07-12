@@ -12,6 +12,8 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    HADOOP-7324. Ganglia plugins for metrics v2. (Priyo Mustafi via llu)
+
     HADOOP-7342. Add an utility API in FileUtil for JDK File.list
     avoid NPEs on File.list() (Bharath Mundlapudi via mattf)
 
