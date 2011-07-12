@@ -270,6 +270,10 @@ Release 0.22.0 - Unreleased
     HADOOP-7106. Reorganize project SVN layout to "unsplit" the projects.
     (todd, nigel)
 
+    HDFS-2054  BlockSender.sendChunk() prints ERROR for connection closures
+    encountered during transferToFully() (Kihwal Lee via stack)
+
+
   OPTIMIZATIONS
 
     HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)
