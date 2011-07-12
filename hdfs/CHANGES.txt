@@ -546,9 +546,6 @@ Trunk (unreleased changes)
     HDFS-2134. Move DecommissionManager to the blockmanagement package.
     (szetszwo)
 
-    HDFS-2054  BlockSender.sendChunk() prints ERROR for connection closures
-    encountered during transferToFully() (Kihwal Lee via stack)
-
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
@@ -1080,6 +1077,9 @@ Release 0.22.0 - Unreleased
     HDFS-1409. BackupNode registration throwing  
     UnsupportedActionException("register") instead of "journal".
     (Ching-Shen Chen via shv)
+
+    HDFS-2054  BlockSender.sendChunk() prints ERROR for connection closures
+    encountered during transferToFully() (Kihwal Lee via stack)
 
   OPTIMIZATIONS
 
