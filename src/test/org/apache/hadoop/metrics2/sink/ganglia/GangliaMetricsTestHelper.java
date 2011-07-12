@@ -23,7 +23,7 @@ import java.net.DatagramSocket;
 /**
  * Helper class in the same package as ganglia sinks to be used by unit tests
  */
-public class TestGangliaMetricsHelper {
+public class GangliaMetricsTestHelper {
 
   /**
    * Helper method to access package private method to set DatagramSocket

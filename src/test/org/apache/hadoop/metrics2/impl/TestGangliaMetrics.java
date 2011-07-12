@@ -36,7 +36,7 @@ import org.apache.hadoop.metrics2.lib.MetricMutableStat;
 import org.apache.hadoop.metrics2.sink.ganglia.AbstractGangliaSink;
 import org.apache.hadoop.metrics2.sink.ganglia.GangliaSink30;
 import org.apache.hadoop.metrics2.sink.ganglia.GangliaSink31;
-import org.apache.hadoop.metrics2.sink.ganglia.TestGangliaMetricsHelper;
+import org.apache.hadoop.metrics2.sink.ganglia.GangliaMetricsTestHelper;
 import org.junit.Test;
 
 public class TestGangliaMetrics {
@@ -61,12 +61,12 @@ public class TestGangliaMetrics {
     AbstractGangliaSink gsink30 = new GangliaSink30();
     gsink30.init(cb.subset("test"));
     MockDatagramSocket mockds30 = new MockDatagramSocket();
-    TestGangliaMetricsHelper.setDatagramSocket(gsink30, mockds30);
+    GangliaMetricsTestHelper.setDatagramSocket(gsink30, mockds30);
 
     AbstractGangliaSink gsink31 = new GangliaSink31();
     gsink31.init(cb.subset("test"));
     MockDatagramSocket mockds31 = new MockDatagramSocket();
-    TestGangliaMetricsHelper.setDatagramSocket(gsink31, mockds31);
+    GangliaMetricsTestHelper.setDatagramSocket(gsink31, mockds31);
 
     ms.register("gsink30", "gsink30 desc", gsink30);
     ms.register("gsink31", "gsink31 desc", gsink31);

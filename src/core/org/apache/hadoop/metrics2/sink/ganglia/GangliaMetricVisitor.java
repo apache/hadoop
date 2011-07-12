@@ -51,18 +51,14 @@ class GangliaMetricVisitor implements MetricsVisitor {
     return slope;
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.metrics2.MetricsVisitor#gauge(org.apache.hadoop.metrics2.MetricGauge, int)
-   */
+  @Override
   public void gauge(MetricGauge<Integer> metric, int value) {
     // MetricGaugeInt.class ==> "int32"
     type = INT32;
     slope = null; // set to null as cannot figure out from Metric
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.metrics2.MetricsVisitor#counter(org.apache.hadoop.metrics2.MetricCounter, int)
-   */
+  @Override
   public void counter(MetricCounter<Integer> metric, int value) {
     // MetricCounterInt.class ==> "int32"
     type = INT32;
@@ -71,18 +67,14 @@ class GangliaMetricVisitor implements MetricsVisitor {
     slope = GangliaSlope.positive;
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.metrics2.MetricsVisitor#gauge(org.apache.hadoop.metrics2.MetricGauge, long)
-   */
+  @Override
   public void gauge(MetricGauge<Long> metric, long value) {
     // MetricGaugeLong.class ==> "float"
     type = FLOAT;
     slope = null; // set to null as cannot figure out from Metric
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.metrics2.MetricsVisitor#counter(org.apache.hadoop.metrics2.MetricCounter, long)
-   */
+  @Override
   public void counter(MetricCounter<Long> metric, long value) {
     // MetricCounterLong.class ==> "float"
     type = FLOAT;
@@ -91,18 +83,14 @@ class GangliaMetricVisitor implements MetricsVisitor {
     slope = GangliaSlope.positive;
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.metrics2.MetricsVisitor#gauge(org.apache.hadoop.metrics2.MetricGauge, float)
-   */
+  @Override
   public void gauge(MetricGauge<Float> metric, float value) {
     // MetricGaugeFloat.class ==> "float"
     type = FLOAT;
     slope = null; // set to null as cannot figure out from Metric
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.metrics2.MetricsVisitor#gauge(org.apache.hadoop.metrics2.MetricGauge, double)
-   */
+  @Override
   public void gauge(MetricGauge<Double> metric, double value) {
     // MetricGaugeDouble.class ==> "double"
     type = DOUBLE;
