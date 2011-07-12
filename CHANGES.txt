@@ -313,6 +313,7 @@ Release 0.91.0 - Unreleased
                (Aaron T. Myers via todd)
    HBASE-4054  Usability improvement to HTablePool (Daniel Iancu)
    HBASE-4079  HTableUtil - helper class for loading data (Doug Meil via Ted Yu)
+   HBASE-3871  Speedup LoadIncrementalHFiles by parallelizing HFile splitting
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
