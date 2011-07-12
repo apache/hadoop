@@ -167,11 +167,9 @@ public class HBaseClient {
     Writable value;                               // value, null if error
     IOException error;                            // exception, null if value
     boolean done;                                 // true when call is done
-    long startTime;
 
     protected Call(Writable param) {
       this.param = param;
-      this.startTime = System.currentTimeMillis();
       synchronized (HBaseClient.this) {
         this.id = counter++;
       }
@@ -202,10 +200,6 @@ public class HBaseClient {
     public synchronized void setValue(Writable value) {
       this.value = value;
       callComplete();
-    }
-
-    public long getStartTime() {
-      return this.startTime;
     }
   }
 
@@ -580,7 +574,7 @@ public class HBaseClient {
           // since we expect certain responses to not make it by the specified
           // {@link ConnectionId#rpcTimeout}.
           closeException = ste;
-          cleanupCalls(remoteId.rpcTimeout);
+          cleanupCalls();
         } else {
           // Since the server did not respond within the default ping interval
           // time, treat this as a fatal condition and close this connection
@@ -641,21 +635,15 @@ public class HBaseClient {
 
     /* Cleanup all calls and mark them as done */
     private void cleanupCalls() {
-      cleanupCalls(0);
-    }
-
-    private synchronized void cleanupCalls(long rpcTimeout) {
       Iterator<Entry<Integer, Call>> itor = calls.entrySet().iterator() ;
       while (itor.hasNext()) {
         Call c = itor.next().getValue();
-        if (System.currentTimeMillis() - c.getStartTime() > rpcTimeout) {
-          c.setException(closeException); // local exception
-          // Notify the open calls, so they are aware of what just happened
-          synchronized (c) {
-            c.notifyAll();
-          }
-          itor.remove();
+        c.setException(closeException); // local exception
+        // Notify the open calls, so they are aware of what just happened
+        synchronized (c) {
+          c.notifyAll();
         }
+        itor.remove();
       }
     }
   }

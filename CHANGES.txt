@@ -304,7 +304,6 @@ Release 0.91.0 - Unreleased
    HBASE-4010  HMaster.createTable could be heavily optimized
    HBASE-3506  Ability to disable, drop and enable tables using regex expression
                (Joey Echeverria via Ted Yu)
-   HBASE-4003  Cleanup Calls Conservatively On Timeout (Karthick Sankarachary)
    HBASE-3516  Coprocessors: add test cases for loading coprocessor jars
                (Mingjie Lai via garyh)
    HBASE-4036  Implementing a MultipleColumnPrefixFilter (Anirudh Todi)
