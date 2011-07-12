@@ -37,6 +37,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    MAPREDUCE-2400. Remove Cluster's dependency on JobTracker via a 
+    ServiceProvider for the actual implementation. (tomwhite via acmurthy) 
+ 
     MAPREDUCE-2596. [Gridmix] Summarize Gridmix runs. (amarrk)
 
     MAPREDUCE-2563. [Gridmix] Add High-Ram emulation system tests to 

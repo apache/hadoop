@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ServiceLoader;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -30,14 +31,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.JobTracker;
-import org.apache.hadoop.mapred.LocalJobRunner;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistory;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
+import org.apache.hadoop.mapreduce.protocol.ClientProtocolProvider;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.mapreduce.server.jobtracker.State;
 import org.apache.hadoop.mapreduce.util.ConfigUtil;
 import org.apache.hadoop.net.NetUtils;
@@ -56,6 +56,7 @@ public class Cluster {
   @InterfaceStability.Evolving
   public static enum JobTrackerStatus {INITIALIZING, RUNNING};
   
+  private ClientProtocolProvider clientProtocolProvider;
   private ClientProtocol client;
   private UserGroupInformation ugi;
   private Configuration conf;
@@ -71,35 +72,30 @@ public class Cluster {
   public Cluster(Configuration conf) throws IOException {
     this.conf = conf;
     this.ugi = UserGroupInformation.getCurrentUser();
-    client = createClient(conf);
+    for (ClientProtocolProvider provider : ServiceLoader.load(ClientProtocolProvider.class)) {
+      ClientProtocol clientProtocol = provider.create(conf);
+      if (clientProtocol != null) {
+        clientProtocolProvider = provider;
+        client = clientProtocol;
+        break;
+      }
+    }
   }
 
   public Cluster(InetSocketAddress jobTrackAddr, Configuration conf) 
       throws IOException {
     this.conf = conf;
     this.ugi = UserGroupInformation.getCurrentUser();
-    client = createRPCProxy(jobTrackAddr, conf);
-  }
-
-  private ClientProtocol createRPCProxy(InetSocketAddress addr,
-      Configuration conf) throws IOException {
-    return (ClientProtocol) RPC.getProxy(ClientProtocol.class,
-      ClientProtocol.versionID, addr, ugi, conf,
-      NetUtils.getSocketFactory(conf, ClientProtocol.class));
-  }
-
-  private ClientProtocol createClient(Configuration conf) throws IOException {
-    ClientProtocol client;
-    String tracker = conf.get("mapreduce.jobtracker.address", "local");
-    if ("local".equals(tracker)) {
-      conf.setInt("mapreduce.job.maps", 1);
-      client = new LocalJobRunner(conf);
-    } else {
-      client = createRPCProxy(JobTracker.getAddress(conf), conf);
+    for (ClientProtocolProvider provider : ServiceLoader.load(ClientProtocolProvider.class)) {
+      ClientProtocol clientProtocol = provider.create(jobTrackAddr, conf);
+      if (clientProtocol != null) {
+        clientProtocolProvider = provider;
+        client = clientProtocol;
+        break;
+      }
     }
-    return client;
   }
-  
+
   ClientProtocol getClient() {
     return client;
   }
@@ -112,9 +108,7 @@ public class Cluster {
    * Close the <code>Cluster</code>.
    */
   public synchronized void close() throws IOException {
-    if (!(client instanceof LocalJobRunner)) {
-      RPC.stopProxy(client);
-    }
+    clientProtocolProvider.close(client);
   }
 
   private Job[] getJobs(JobStatus[] stats) throws IOException {
@@ -353,7 +347,8 @@ public class Cluster {
       getDelegationToken(Text renewer) throws IOException, InterruptedException{
     Token<DelegationTokenIdentifier> result =
       client.getDelegationToken(renewer);
-    InetSocketAddress addr = JobTracker.getAddress(conf);
+    InetSocketAddress addr = NetUtils.createSocketAddr(
+        conf.get(JTConfig.JT_IPC_ADDRESS, "localhost:8012"));
     StringBuilder service = new StringBuilder();
     service.append(NetUtils.normalizeHostName(addr.getAddress().
                                               getHostAddress()));

@@ -57,4 +57,6 @@ public interface MRConfig {
     "mapreduce.cluster.delegation.token.max-lifetime";
   public static final long    DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT = 
     7*24*60*60*1000; // 7 days
+  
+  public static final String FRAMEWORK_NAME  = "mapreduce.framework.name";
 }
