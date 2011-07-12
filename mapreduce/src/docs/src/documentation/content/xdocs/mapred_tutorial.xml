@@ -552,7 +552,7 @@
       and others.</p>
       
       <p>Finally, we will wrap up by discussing some useful features of the
-      framework such as the <code>DistributedCache</code>.
+      framework such as the <code>DistributedCache</code>.</p>
 
       <section>
         <title>Payload</title>
