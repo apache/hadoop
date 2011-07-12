@@ -45,7 +45,7 @@ public class MetricsCache {
    */
   public static class Record {
     final Map<String, String> tags = new LinkedHashMap<String, String>();
-    final Map<String, Number> metrics = new LinkedHashMap<String, Number>();
+    final Map<String, Metric> metrics = new LinkedHashMap<String, Metric>();
 
     /**
      * Get the tag value
@@ -62,6 +62,16 @@ public class MetricsCache {
      * @return the metric value
      */
     public Number getMetric(String key) {
+      Metric metric = metrics.get(key);
+      return metric != null ? metric.value() : null;
+    }
+
+    /**
+     * Get the metric value
+     * @param key name of the metric
+     * @return the metric value
+     */
+    public Metric getMetricInstance(String key) {
       return metrics.get(key);
     }
 
@@ -69,6 +79,18 @@ public class MetricsCache {
      * @return entry set of metrics
      */
     public Set<Map.Entry<String, Number>> metrics() {
+      Map<String, Number> map =
+        new LinkedHashMap<String,Number>(metrics.size());
+      for (Map.Entry<String, Metric> mapEntry : metrics.entrySet()) {
+        map.put(mapEntry.getKey(), mapEntry.getValue().value());
+      }
+      return map.entrySet();
+    }
+
+    /**
+     * @return entry set of metrics
+     */
+    public Set<Map.Entry<String, Metric>> metricsEntrySet() {
       return metrics.entrySet();
     }
   }
@@ -93,7 +115,7 @@ public class MetricsCache {
       recMap.put(tags, rec);
     }
     for (Metric m : mr.metrics()) {
-      rec.metrics.put(m.name(), m.value());
+      rec.metrics.put(m.name(), m);
     }
     if (includingTags) {
       // mostly for some sinks that include tags as part of a dense schema
@@ -119,5 +141,4 @@ public class MetricsCache {
     if (tmap == null) return null;
     return tmap.get(tags);
   }
-
 }

@@ -9,6 +9,8 @@ Release 0.20.204.0 - unreleased
     scripts for easy one node cluster configuration and user creation.
     (Eric Yang via omalley)
 
+    HADOOP-7324. Ganglia plugins for metrics v2. (Priyo Mustafi via llu)
+
   BUG FIXES
 
     MAPREDUCE-2495. exit() the TaskTracker when the distributed cache cleanup

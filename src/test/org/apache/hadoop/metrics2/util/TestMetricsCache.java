@@ -47,6 +47,9 @@ public class TestMetricsCache {
     assertEquals("same record size", cr.metrics.size(),
                  ((Collection<Metric>)mr.metrics()).size());
     assertEquals("same metric value", 0, cr.getMetric("m"));
+    assertNotNull("metric not null", cr.getMetricInstance("m"));
+    assertEquals("new metric value", 0, cr.getMetricInstance("m").value());
+
 
     MetricsRecord mr2 = makeRecord("r",
         Arrays.asList(makeTag("t", "tv")),
@@ -54,8 +57,16 @@ public class TestMetricsCache {
     cr = cache.update(mr2);
     assertEquals("contains 3 metric", 3, cr.metrics.size());
     assertEquals("updated metric value", 2, cr.getMetric("m"));
+    assertNotNull("metric not null", cr.getMetricInstance("m"));
+    assertEquals("new metric value", 2, cr.getMetricInstance("m").value());
+
     assertEquals("old metric value", 1, cr.getMetric("m1"));
+    assertNotNull("metric not null", cr.getMetricInstance("m1"));
+    assertEquals("new metric value", 1, cr.getMetricInstance("m1").value());
+
     assertEquals("new metric value", 42, cr.getMetric("m2"));
+    assertNotNull("metric not null", cr.getMetricInstance("m2"));
+    assertEquals("new metric value", 42, cr.getMetricInstance("m2").value());
 
     MetricsRecord mr3 = makeRecord("r",
         Arrays.asList(makeTag("t", "tv3")), // different tag value
@@ -63,6 +74,9 @@ public class TestMetricsCache {
     cr = cache.update(mr3); // should get a new record
     assertEquals("contains 1 metric", 1, cr.metrics.size());
     assertEquals("updated metric value", 3, cr.getMetric("m3"));
+    assertNotNull("metric not null", cr.getMetricInstance("m3"));
+    assertEquals("new metric value", 3, cr.getMetricInstance("m3").value());
+
     // tags cache should be empty so far
     assertEquals("no tags", 0, cr.tags.size());
     // until now
@@ -70,6 +84,8 @@ public class TestMetricsCache {
     assertEquals("Got 1 tag", 1, cr.tags.size());
     assertEquals("Tag value", "tv3", cr.getTag("t"));
     assertEquals("Metric value", 3, cr.getMetric("m3"));
+    assertNotNull("metric not null", cr.getMetricInstance("m3"));
+    assertEquals("new metric value", 3, cr.getMetricInstance("m3").value());
   }
 
   @Test public void testGet() {
@@ -85,6 +101,8 @@ public class TestMetricsCache {
     assertNotNull("Got record", cr);
     assertEquals("contains 1 metric", 1, cr.metrics.size());
     assertEquals("new metric value", 1, cr.getMetric("m"));
+    assertNotNull("metric not null", cr.getMetricInstance("m"));
+    assertEquals("new metric value", 1, cr.getMetricInstance("m").value());
   }
 
   private MetricsRecord makeRecord(String name, Collection<MetricsTag> tags,
