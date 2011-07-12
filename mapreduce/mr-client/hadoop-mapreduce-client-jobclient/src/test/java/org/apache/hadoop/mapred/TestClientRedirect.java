@@ -29,8 +29,8 @@ import org.apache.avro.ipc.Server;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.ClientFactory;
 import org.apache.hadoop.mapreduce.Cluster;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptResponse;
@@ -116,8 +116,7 @@ public class TestClientRedirect {
   public void testRedirect() throws Exception {
     
     Configuration conf = new YarnConfiguration();
-    conf.setClass("mapreduce.clientfactory.class.name",
-        YarnClientFactory.class, ClientFactory.class);
+    conf.set(MRConfig.FRAMEWORK_NAME, "yarn");
     conf.set(YarnConfiguration.APPSMANAGER_ADDRESS, RMADDRESS);
     conf.set(JHConfig.HS_BIND_ADDRESS, HSHOSTADDRESS);
     RMService rmService = new RMService("test");

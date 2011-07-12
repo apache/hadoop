@@ -384,6 +384,7 @@
     
     <copy todir="${build.classes}">
       <fileset dir="${mapred.src.dir}" includes="**/*.properties"/>
+      <fileset dir="${mapred.src.dir}" includes="**/META-INF/services/*"/>
       <fileset dir="${mapred.src.dir}" includes="mapred-default.xml"/>
       <fileset dir="${mapred.src.dir}" includes="mapred-queues-default.xml"/>
     </copy>

@@ -25,8 +25,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.ShuffleHandler;
-import org.apache.hadoop.mapred.YarnClientFactory;
-import org.apache.hadoop.mapreduce.ClientFactory;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer;
@@ -62,8 +60,7 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
 
   @Override
   public void init(Configuration conf) {
-    conf.setClass("mapreduce.clientfactory.class.name",
-        YarnClientFactory.class, ClientFactory.class);
+    conf.set(MRConfig.FRAMEWORK_NAME, "yarn");
     conf.setStrings(MRConstants.NM_HOSTS_CONF_KEY,
         new String[] { NMConfig.DEFAULT_NM_BIND_ADDRESS });
     conf.set(MRJobConfig.USER_NAME, System.getProperty("user.name"));

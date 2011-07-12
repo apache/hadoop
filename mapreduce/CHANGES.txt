@@ -5,6 +5,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    MAPREDUCE-2400. Remove Cluster's dependency on JobTracker via a 
+    ServiceProvider for the actual implementation. (tomwhite via acmurthy) 
+ 
     MAPREDUCE-2628. Add compiled on date to NM and RM info/about page.
  
     MAPREDUCE-2645. Updates to MRv2 INSTALL and README documentation.

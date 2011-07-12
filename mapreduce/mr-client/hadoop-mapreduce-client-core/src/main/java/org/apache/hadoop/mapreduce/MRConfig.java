@@ -72,4 +72,6 @@ public interface MRConfig {
   public static final String MASTER_USER_NAME = 
     "mapreduce.jobtracker.kerberos.principal";
 
+  public static final String FRAMEWORK_NAME  = "mapreduce.framework.name";
+
 }
