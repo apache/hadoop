@@ -818,6 +818,8 @@ Trunk (unreleased changes)
     reading only from a currently being written block. (John George via
     szetszwo)
 
+    HDFS-2132. Potential resource leak in EditLogFileOutputStream.close. (atm)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
