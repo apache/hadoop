@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -29,6 +30,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * Regression test for HBASE-613
@@ -51,10 +53,12 @@ public class TestScanMultipleVersions extends HBaseClusterTestCase {
   protected void preHBaseClusterSetup() throws Exception {
     testDir = new Path(conf.get(HConstants.HBASE_DIR));
 
-    // Create table description
-
+    // Create table description in
     this.desc = new HTableDescriptor(TABLE_NAME);
     this.desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+    // Write the table schema to the fs
+    FSUtils.createTableDescriptor(FileSystem.get(this.conf), this.testDir,
+      this.desc);
 
     // Region 0 will contain the key range [,row_0500)
     INFOS[0] = new HRegionInfo(desc.getName(), HConstants.EMPTY_START_ROW,
