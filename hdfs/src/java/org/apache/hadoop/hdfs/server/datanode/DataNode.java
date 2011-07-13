@@ -1143,7 +1143,26 @@ public class DataNode extends Configured
     void register() throws IOException {
       LOG.info("in register: sid=" + bpRegistration.getStorageID() + ";SI="
           + bpRegistration.storageInfo); 
-                
+
+      // build and layout versions should match
+      String nsBuildVer = bpNamenode.versionRequest().getBuildVersion();
+      String stBuildVer = Storage.getBuildVersion();
+
+      if (!nsBuildVer.equals(stBuildVer)) {
+        LOG.warn("Data-node and name-node Build versions must be " +
+          "the same. Namenode build version: " + nsBuildVer + "Datanode " +
+          "build version: " + stBuildVer);
+        throw new IncorrectVersionException(nsBuildVer, "namenode", stBuildVer);
+      }
+
+      if (FSConstants.LAYOUT_VERSION != bpNSInfo.getLayoutVersion()) {
+        LOG.warn("Data-node and name-node layout versions must be " +
+          "the same. Expected: "+ FSConstants.LAYOUT_VERSION +
+          " actual "+ bpNSInfo.getLayoutVersion());
+        throw new IncorrectVersionException
+          (bpNSInfo.getLayoutVersion(), "namenode");
+      }
+
       while(shouldRun && shouldServiceRun) {
         try {
           // Use returned registration from namenode with updated machine name.

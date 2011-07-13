@@ -45,4 +45,11 @@ public class IncorrectVersionException extends IOException {
           + versionReported + ". Expecting = " + versionExpected + ".");
   }
 
+  public IncorrectVersionException(String versionReported,
+                                   String ofWhat,
+                                   String versionExpected) {
+    super("Unexpected version " 
+          + (ofWhat==null ? "" : "of " + ofWhat) + ". Reported: "
+          + versionReported + ". Expecting = " + versionExpected + ".");
+  }
 }

@@ -828,6 +828,9 @@ Trunk (unreleased changes)
 
     HDFS-2132. Potential resource leak in EditLogFileOutputStream.close. (atm)
 
+    HDFS-2120. on reconnect, DN can connect to NN even with different source
+    versions. (John George via atm)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
