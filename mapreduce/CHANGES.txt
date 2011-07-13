@@ -13,6 +13,9 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    MAPREDUCE-2682. Add "mapred classpath" command to print classpath
+    for MR applications. (vinodkv via acmurthy) 
+
     MAPREDUCE-2107. [Gridmix] Total heap usage emulation in Gridmix.
     (Amar Kamat and Ravi Gummadi via amarrk)
 
