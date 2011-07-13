@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.shell;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.LinkedList;
 
@@ -85,7 +86,13 @@ class Delete extends FsCommand {
     private boolean moveToTrash(PathData item) throws IOException {
       boolean success = false;
       if (!skipTrash) {
-        success = Trash.moveToAppropriateTrash(item.fs, item.path, getConf());
+        try {
+          success = Trash.moveToAppropriateTrash(item.fs, item.path, getConf());
+        } catch(FileNotFoundException fnfe) {
+          throw fnfe;
+        } catch (IOException ioe) {
+            throw new IOException(ioe.getMessage() + ". Consider using -skipTrash option", ioe);
+        }
       }
       return success;
     }
