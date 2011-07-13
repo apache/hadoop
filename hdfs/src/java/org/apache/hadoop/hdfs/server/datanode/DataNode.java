@@ -861,8 +861,8 @@ public class DataNode extends Configured
         /* One common reason is that NameNode could be in safe mode.
          * Should we keep on retrying in that case?
          */
-        LOG.warn("Failed to report bad block " + block + " to namenode : " +
-                 " Exception : " + StringUtils.stringifyException(e));
+        LOG.warn("Failed to report bad block " + block + " to namenode : "
+            + " Exception", e);
       }
       
     }
@@ -1111,12 +1111,11 @@ public class DataNode extends Configured
           if (UnregisteredNodeException.class.getName().equals(reClass) ||
               DisallowedDatanodeException.class.getName().equals(reClass) ||
               IncorrectVersionException.class.getName().equals(reClass)) {
-            LOG.warn("blockpool " + blockPoolId + " is shutting down: " + 
-                StringUtils.stringifyException(re));
+            LOG.warn("blockpool " + blockPoolId + " is shutting down", re);
             shouldServiceRun = false;
             return;
           }
-          LOG.warn(StringUtils.stringifyException(re));
+          LOG.warn("RemoteException in offerService", re);
           try {
             long sleepTime = Math.min(1000, heartBeatInterval);
             Thread.sleep(sleepTime);
@@ -1124,7 +1123,7 @@ public class DataNode extends Configured
             Thread.currentThread().interrupt();
           }
         } catch (IOException e) {
-          LOG.warn(StringUtils.stringifyException(e));
+          LOG.warn("IOException in offerService", e);
         }
       } // while (shouldRun && shouldServiceRun)
     } // offerService
@@ -1241,18 +1240,18 @@ public class DataNode extends Configured
             startDistributedUpgradeIfNeeded();
             offerService();
           } catch (Exception ex) {
-            LOG.error("Exception: " + StringUtils.stringifyException(ex));
+            LOG.error("Exception in BPOfferService", ex);
             if (shouldRun && shouldServiceRun) {
               try {
                 Thread.sleep(5000);
               } catch (InterruptedException ie) {
-                LOG.warn("Received exception: ", ie);
+                LOG.warn("Received exception", ie);
               }
             }
           }
         }
       } catch (Throwable ex) {
-        LOG.warn("Unexpected exception ", ex);
+        LOG.warn("Unexpected exception", ex);
       } finally {
         LOG.warn(bpRegistration + " ending block pool service for: " 
             + blockPoolId);
@@ -1737,8 +1736,7 @@ public class DataNode extends Configured
       try {
         nn.errorReport(bpos.bpRegistration, dpError, errMsgr);
       } catch(IOException e) {
-        LOG.warn("Error reporting disk failure to NameNode: " + 
-            StringUtils.stringifyException(e));
+        LOG.warn("Error reporting disk failure to NameNode", e);
       }
     }
     
@@ -2007,8 +2005,9 @@ public class DataNode extends Configured
           }
         }
       } catch (IOException ie) {
-        LOG.warn(bpReg + ":Failed to transfer " + b + " to " + targets[0].getName()
-            + " got " + StringUtils.stringifyException(ie));
+        LOG.warn(
+            bpReg + ":Failed to transfer " + b + " to " + targets[0].getName()
+                + " got ", ie);
         // check if there are any disk problem
         checkDiskError();
         
@@ -2279,7 +2278,7 @@ public class DataNode extends Configured
       if (datanode != null)
         datanode.join();
     } catch (Throwable e) {
-      LOG.error(StringUtils.stringifyException(e));
+      LOG.error("Exception in secureMain", e);
       System.exit(-1);
     } finally {
       // We need to add System.exit here because either shutdown was called or

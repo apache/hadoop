@@ -3216,7 +3216,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
             lastBlockKeyUpdate = now;
           }
         } catch (Exception e) {
-          FSNamesystem.LOG.error(StringUtils.stringifyException(e));
+          FSNamesystem.LOG.error("Exception while checking heartbeat", e);
         }
         try {
           Thread.sleep(5000);  // 5 seconds
@@ -4294,7 +4294,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
         try {
           needUpgrade = startDistributedUpgradeIfNeeded();
         } catch(IOException e) {
-          FSNamesystem.LOG.error(StringUtils.stringifyException(e));
+          FSNamesystem.LOG.error("IOException in startDistributedUpgradeIfNeeded", e);
         }
         if(needUpgrade) {
           // switch to manual safe mode

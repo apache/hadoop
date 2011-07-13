@@ -546,6 +546,9 @@ Trunk (unreleased changes)
     HDFS-2134. Move DecommissionManager to the blockmanagement package.
     (szetszwo)
 
+    HDFS-1977. Stop using StringUtils.stringifyException(). 
+    (Bharath Mundlapudi via jitendra)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

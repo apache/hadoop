@@ -75,8 +75,6 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.PureJavaCrc32;
-import org.apache.hadoop.util.StringUtils;
-
 
 
 /****************************************************************
@@ -548,8 +546,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
             Thread.sleep(artificialSlowdown); 
           }
         } catch (Throwable e) {
-          DFSClient.LOG.warn("DataStreamer Exception: " + 
-              StringUtils.stringifyException(e));
+          DFSClient.LOG.warn("DataStreamer Exception", e);
           if (e instanceof IOException) {
             setLastException((IOException)e);
           }
@@ -698,9 +695,8 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
               synchronized (dataQueue) {
                 dataQueue.notifyAll();
               }
-              DFSClient.LOG.warn("DFSOutputStream ResponseProcessor exception " + 
-                  " for block " + block +
-                  StringUtils.stringifyException(e));
+              DFSClient.LOG.warn("DFSOutputStream ResponseProcessor exception "
+                  + " for block " + block, e);
               responderClosed = true;
             }
           }
@@ -1101,7 +1097,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
                 throw e;
               } else {
                 --retries;
-                DFSClient.LOG.info(StringUtils.stringifyException(e));
+                DFSClient.LOG.info("Exception while adding a block", e);
                 if (System.currentTimeMillis() - localstart > 5000) {
                   DFSClient.LOG.info("Waiting for replication for "
                       + (System.currentTimeMillis() - localstart) / 1000

@@ -38,7 +38,6 @@ import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.SocketOutputStream;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * Reads a block from the disk and sends it to a recipient.
@@ -328,9 +327,8 @@ class BlockSender implements java.io.Closeable, FSConstants {
       try {
         checksumIn.readFully(buf, checksumOff, checksumLen);
       } catch (IOException e) {
-        LOG.warn(" Could not read or failed to veirfy checksum for data" +
-                 " at offset " + offset + " for block " + block + " got : "
-                 + StringUtils.stringifyException(e));
+        LOG.warn(" Could not read or failed to veirfy checksum for data"
+            + " at offset " + offset + " for block " + block, e);
         IOUtils.closeStream(checksumIn);
         checksumIn = null;
         if (corruptChecksumOk) {

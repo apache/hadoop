@@ -254,7 +254,7 @@ public class SecondaryNameNode implements Runnable {
     try {
       if (checkpointImage != null) checkpointImage.close();
     } catch(IOException e) {
-      LOG.warn(StringUtils.stringifyException(e));
+      LOG.warn("Exception while closing CheckpointStorage", e);
     }
   }
 
@@ -264,7 +264,7 @@ public class SecondaryNameNode implements Runnable {
       try { 
         ugi = UserGroupInformation.getLoginUser();
       } catch (IOException e) {
-        LOG.error(StringUtils.stringifyException(e));
+        LOG.error("Exception while getting login user", e);
         e.printStackTrace();
         Runtime.getRuntime().exit(-1);
       }
@@ -316,13 +316,11 @@ public class SecondaryNameNode implements Runnable {
           lastCheckpointTime = now;
         }
       } catch (IOException e) {
-        LOG.error("Exception in doCheckpoint: ");
-        LOG.error(StringUtils.stringifyException(e));
+        LOG.error("Exception in doCheckpoint", e);
         e.printStackTrace();
         checkpointImage.getStorage().imageDigest = null;
       } catch (Throwable e) {
-        LOG.error("Throwable Exception in doCheckpoint: ");
-        LOG.error(StringUtils.stringifyException(e));
+        LOG.error("Throwable Exception in doCheckpoint", e);
         e.printStackTrace();
         Runtime.getRuntime().exit(-1);
       }

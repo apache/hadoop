@@ -49,7 +49,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.PureJavaCrc32;
-import org.apache.hadoop.util.StringUtils;
 
 /** A class that receives a block and writes to its own disk, meanwhile
  * may copies it to another site. If a throttler is provided,
@@ -276,9 +275,8 @@ class BlockReceiver implements Closeable, FSConstants {
    */
   private void handleMirrorOutError(IOException ioe) throws IOException {
     String bpid = block.getBlockPoolId();
-    LOG.info(datanode.getDNRegistrationForBP(bpid) + ":Exception writing block " +
-             block + " to mirror " + mirrorAddr + "\n" +
-             StringUtils.stringifyException(ioe));
+    LOG.info(datanode.getDNRegistrationForBP(bpid)
+        + ":Exception writing block " + block + " to mirror " + mirrorAddr, ioe);
     if (Thread.interrupted()) { // shut down if the thread is interrupted
       throw ioe;
     } else { // encounter an error while writing to mirror

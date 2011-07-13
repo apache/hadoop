@@ -24,7 +24,6 @@ import org.apache.hadoop.hdfs.server.common.UpgradeObject;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
-import org.apache.hadoop.util.StringUtils;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 
@@ -110,7 +109,7 @@ public abstract class UpgradeObjectDatanode extends UpgradeObject implements Run
       try {
         doUpgrade();
       } catch(Exception e) {
-        DataNode.LOG.error(StringUtils.stringifyException(e));
+        DataNode.LOG.error("Exception in doUpgrade", e);
       }
       break;
     }
@@ -129,7 +128,7 @@ public abstract class UpgradeObjectDatanode extends UpgradeObject implements Run
       if(upgradeManager != null)
         upgradeManager.completeUpgrade();
     } catch(IOException e) {
-      DataNode.LOG.error(StringUtils.stringifyException(e));
+      DataNode.LOG.error("Exception in completeUpgrade", e);
     }
   }
 

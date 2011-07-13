@@ -47,7 +47,6 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.StringUtils;
 
 /****************************************************************
  * DFSInputStream provides bytes from a named file.  It handles 
@@ -499,7 +498,7 @@ public class DFSInputStream extends FSInputStream {
         if (!retryCurrentNode) {
           DFSClient.LOG.warn("Exception while reading from "
               + getCurrentBlock() + " of " + src + " from "
-              + currentNode + ": " + StringUtils.stringifyException(e));
+              + currentNode, e);
         }
         ioe = e;
       }
@@ -557,7 +556,7 @@ public class DFSInputStream extends FSInputStream {
           throw ce;            
         } catch (IOException e) {
           if (retries == 1) {
-            DFSClient.LOG.warn("DFS Read: " + StringUtils.stringifyException(e));
+            DFSClient.LOG.warn("DFS Read", e);
           }
           blockEnd = -1;
           if (currentNode != null) { addToDeadNodes(currentNode); }
@@ -931,9 +930,8 @@ public class DFSInputStream extends FSInputStream {
         } catch (IOException e) {//make following read to retry
           if(DFSClient.LOG.isDebugEnabled()) {
             DFSClient.LOG.debug("Exception while seek to " + targetPos
-                + " from " + getCurrentBlock() + " of " + src
-                + " from " + currentNode + ": "
-                + StringUtils.stringifyException(e));
+                + " from " + getCurrentBlock() + " of " + src + " from "
+                + currentNode, e);
           }
         }
       }

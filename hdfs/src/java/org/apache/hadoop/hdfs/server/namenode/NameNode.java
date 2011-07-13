@@ -691,7 +691,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     try {
       if (httpServer != null) httpServer.stop();
     } catch (Exception e) {
-      LOG.error(StringUtils.stringifyException(e));
+      LOG.error("Exception while stopping httpserver", e);
     }
     if(namesystem != null) namesystem.close();
     if(emptier != null) emptier.interrupt();
@@ -1702,7 +1702,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
       if (namenode != null)
         namenode.join();
     } catch (Throwable e) {
-      LOG.error(StringUtils.stringifyException(e));
+      LOG.error("Exception in namenode join", e);
       System.exit(-1);
     }
   }
