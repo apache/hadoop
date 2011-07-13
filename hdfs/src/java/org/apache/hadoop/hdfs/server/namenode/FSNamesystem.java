@@ -317,7 +317,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       ReplaceDatanodeOnFailure.DEFAULT;
 
   private volatile SafeModeInfo safeMode;  // safe mode information
-  private Host2NodesMap host2DataNodeMap = new Host2NodesMap();
     
   /** datanode network toplogy */
   public NetworkTopology clusterMap = new NetworkTopology();
@@ -878,8 +877,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     LocatedBlocks blocks = getBlockLocations(src, offset, length, true, true);
     if (blocks != null) {
       //sort the blocks
-      DatanodeDescriptor client = host2DataNodeMap.getDatanodeByHost(
-          clientMachine);
+      final DatanodeDescriptor client = 
+          blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
       for (LocatedBlock b : blocks.getLocatedBlocks()) {
         clusterMap.pseudoSortByDistance(client, b.getLocations());
         
@@ -1490,8 +1489,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
         }
       }
 
-      DatanodeDescriptor clientNode = 
-        host2DataNodeMap.getDatanodeByHost(clientMachine);
+      final DatanodeDescriptor clientNode = 
+          blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
 
       if (append && myFile != null) {
         //
@@ -2842,7 +2841,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
                                  + " storage " + nodeReg.getStorageID());
 
     DatanodeDescriptor nodeS = datanodeMap.get(nodeReg.getStorageID());
-    DatanodeDescriptor nodeN = host2DataNodeMap.getDatanodeByName(nodeReg.getName());
+    DatanodeDescriptor nodeN =
+        blockManager.getDatanodeManager().getDatanodeByHost(nodeReg.getName());
       
     if (nodeN != null && nodeN != nodeS) {
       NameNode.LOG.info("BLOCK* NameSystem.registerDatanode: "
@@ -2851,7 +2851,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       // which is not served by anybody anymore.
       removeDatanode(nodeN);
       // physically remove node from datanodeMap
-      wipeDatanode(nodeN);
+      blockManager.getDatanodeManager().wipeDatanode(nodeN);
       nodeN = null;
     }
 
@@ -2918,7 +2918,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     DatanodeDescriptor nodeDescr 
       = new DatanodeDescriptor(nodeReg, NetworkTopology.DEFAULT_RACK, hostName);
     resolveNetworkLocation(nodeDescr);
-    unprotectedAddDatanode(nodeDescr);
+    blockManager.getDatanodeManager().addDatanode(nodeDescr);
     clusterMap.add(nodeDescr);
     checkDecommissioning(nodeDescr, dnAddress);
     
@@ -3354,44 +3354,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       NameNode.stateChangeLog.debug(
           "BLOCK* NameSystem.unprotectedRemoveDatanode: "
           + nodeDescr.getName() + " is out of service now.");
-    }
-  }
-    
-  void unprotectedAddDatanode(DatanodeDescriptor nodeDescr) {
-    assert hasWriteLock();
-    // To keep host2DataNodeMap consistent with datanodeMap,
-    // remove  from host2DataNodeMap the datanodeDescriptor removed
-    // from datanodeMap before adding nodeDescr to host2DataNodeMap.
-    synchronized (datanodeMap) {
-      host2DataNodeMap.remove(
-                            datanodeMap.put(nodeDescr.getStorageID(), nodeDescr));
-    }
-    host2DataNodeMap.add(nodeDescr);
-      
-    if(NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug(
-          "BLOCK* NameSystem.unprotectedAddDatanode: "
-          + "node " + nodeDescr.getName() + " is added to datanodeMap.");
-    }
-  }
-
-  /**
-   * Physically remove node from datanodeMap.
-   *
-   * @param nodeID node
-   * @throws IOException
-   */
-  void wipeDatanode(DatanodeID nodeID) throws IOException {
-    assert hasWriteLock();
-    String key = nodeID.getStorageID();
-    synchronized (datanodeMap) {
-      host2DataNodeMap.remove(datanodeMap.remove(key));
-    }
-    if(NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug(
-          "BLOCK* NameSystem.wipeDatanode: "
-          + nodeID.getName() + " storage " + key 
-          + " is removed from datanodeMap.");
     }
   }
 

@@ -221,6 +221,11 @@ public class BlockManager {
     datanodeManager.close();
   }
 
+  /** @return the datanodeManager */
+  public DatanodeManager getDatanodeManager() {
+    return datanodeManager;
+  }
+
   public void metaSave(PrintWriter out) {
     //
     // Dump contents of neededReplication

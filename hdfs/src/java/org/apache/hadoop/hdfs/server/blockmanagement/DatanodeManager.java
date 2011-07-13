@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.util.Daemon;
 
@@ -35,6 +38,8 @@ public class DatanodeManager {
   static final Log LOG = LogFactory.getLog(DatanodeManager.class);
 
   final FSNamesystem namesystem;
+
+  private final Host2NodesMap host2DatanodeMap = new Host2NodesMap();
   
   DatanodeManager(final FSNamesystem namesystem) {
     this.namesystem = namesystem;
@@ -53,5 +58,40 @@ public class DatanodeManager {
 
   void close() {
     if (decommissionthread != null) decommissionthread.interrupt();
+  }
+
+  /** @return the datanode descriptor for the host. */
+  public DatanodeDescriptor getDatanodeByHost(final String host) {
+    return host2DatanodeMap.getDatanodeByHost(host);
+  }
+
+  /** Add a datanode. */
+  public void addDatanode(final DatanodeDescriptor node) {
+    // To keep host2DatanodeMap consistent with datanodeMap,
+    // remove  from host2DatanodeMap the datanodeDescriptor removed
+    // from datanodeMap before adding node to host2DatanodeMap.
+    synchronized (namesystem.datanodeMap) {
+      host2DatanodeMap.remove(
+          namesystem.datanodeMap.put(node.getStorageID(), node));
+    }
+    host2DatanodeMap.add(node);
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(getClass().getSimpleName() + ".unprotectedAddDatanode: "
+          + "node " + node.getName() + " is added to datanodeMap.");
+    }
+  }
+
+  /** Physically remove node from datanodeMap. */
+  public void wipeDatanode(final DatanodeID node) throws IOException {
+    final String key = node.getStorageID();
+    synchronized (namesystem.datanodeMap) {
+      host2DatanodeMap.remove(namesystem.datanodeMap.remove(key));
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(getClass().getSimpleName() + ".wipeDatanode("
+          + node.getName() + "): storage " + key 
+          + " is removed from datanodeMap.");
+    }
   }
 }
