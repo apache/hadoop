@@ -100,6 +100,7 @@ public class FifoScheduler implements ResourceScheduler {
   public static final String MAXIMUM_ALLOCATION = 
     FIFO_PREFIX + "maximum-allocation-mb";
 
+  private boolean initialized;
   private Resource minimumAllocation;
   private Resource maximumAllocation;
 
@@ -187,14 +188,19 @@ public class FifoScheduler implements ResourceScheduler {
       ClusterTracker clusterTracker) 
   throws IOException 
   {
-    this.conf = conf;
-    this.containerTokenSecretManager = containerTokenSecretManager;
-    this.clusterTracker = clusterTracker;
-    if (clusterTracker != null) this.clusterTracker.addListener(this);
-    this.minimumAllocation = 
-      Resources.createResource(conf.getInt(MINIMUM_ALLOCATION, MINIMUM_MEMORY));
-    this.maximumAllocation = 
-      Resources.createResource(conf.getInt(MAXIMUM_ALLOCATION, MAXIMUM_MEMORY));
+    if (!this.initialized) {
+      this.conf = conf;
+      this.containerTokenSecretManager = containerTokenSecretManager;
+      this.clusterTracker = clusterTracker;
+      if (clusterTracker != null) this.clusterTracker.addListener(this);
+      this.minimumAllocation = 
+        Resources.createResource(conf.getInt(MINIMUM_ALLOCATION, MINIMUM_MEMORY));
+      this.maximumAllocation = 
+        Resources.createResource(conf.getInt(MAXIMUM_ALLOCATION, MAXIMUM_MEMORY));
+      this.initialized = true;
+    } else {
+      this.conf = conf;
+    }
   }
 
   @Override

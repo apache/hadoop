@@ -4,7 +4,10 @@ Trunk (unreleased changes)
 
 
     MAPREDUCE-279
-
+   
+    MAPREDUCE-2630. refreshQueues leads to NPEs when used w/FifoScheduler. 
+    (Josh Willis via mahadev)
+ 
     MAPREDUCE-2678. minimum-user-limit-percent no longer honored. (naisbitt 
     via mahadev)
 
