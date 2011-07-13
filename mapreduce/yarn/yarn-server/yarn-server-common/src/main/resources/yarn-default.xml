@@ -53,6 +53,11 @@
   </property>
 
   <property>
+    <name>yarn.server.nodemanager.log.dir</name>
+    <value>/tmp/logs</value>
+  </property>
+
+  <property>
     <name>yarn.apps.stagingDir</name>
     <value>/tmp/hadoop-yarn/${user.name}/staging</value>
    </property>
