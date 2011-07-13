@@ -42,9 +42,10 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormatCounter;
 
 /**
  * This is an wordcount application that tests the count of records
@@ -57,6 +58,26 @@ import org.apache.hadoop.mapreduce.TaskType;
  *
  */
 public class TestJobCounters {
+
+  private void validateFileCounters(Counters counter, long fileBytesRead,
+      long fileBytesWritten, long mapOutputBytes,
+      long mapOutputMaterializedBytes) {
+    assertTrue(counter.findCounter(FileInputFormatCounter.BYTES_READ)
+        .getValue() != 0);
+    assertEquals(fileBytesRead,
+        counter.findCounter(FileInputFormatCounter.BYTES_READ).getValue());
+
+    assertTrue(counter.findCounter(FileOutputFormatCounter.BYTES_WRITTEN)
+        .getValue() != 0);
+
+    if (mapOutputBytes >= 0) {
+      assertTrue(counter.findCounter(TaskCounter.MAP_OUTPUT_BYTES).getValue() != 0);
+    }
+    if (mapOutputMaterializedBytes >= 0) {
+      assertTrue(counter.findCounter(TaskCounter.MAP_OUTPUT_MATERIALIZED_BYTES)
+          .getValue() != 0);
+    }
+  }
 
   private void validateCounters(Counters counter, long spillRecCnt,
                                 long mapInputRecords, long mapOutputRecords) {
@@ -108,6 +129,19 @@ public class TestJobCounters {
   private static Path OUT_DIR = null;
   private static Path testdir = null;
 
+  private static Path[] inFiles = new Path[5];
+
+  private static long getFileSize(Path path) throws IOException {
+    FileSystem fs = FileSystem.getLocal(new Configuration());
+    long len = 0;
+    len += fs.getFileStatus(path).getLen();
+    Path crcPath = new Path(path.getParent(), "." + path.getName() + ".crc");
+    if (fs.exists(crcPath)) {
+      len += fs.getFileStatus(crcPath).getLen();
+    }
+    return len;
+  }
+
   @BeforeClass
   public static void initPaths() throws IOException {
     final Configuration conf = new Configuration();
@@ -125,11 +159,15 @@ public class TestJobCounters {
     if (!fs.mkdirs(IN_DIR)) {
       throw new IOException("Mkdirs failed to create " + IN_DIR);
     }
-    // create 3 input files each with 5*2k words
-    createWordsFile(new Path(IN_DIR, "input5_2k_1"), conf);
-    createWordsFile(new Path(IN_DIR, "input5_2k_2"), conf);
-    createWordsFile(new Path(IN_DIR, "input5_2k_3"), conf);
 
+    for (int i = 0; i < inFiles.length; i++) {
+      inFiles[i] = new Path(IN_DIR, "input5_2k_" + i);
+    }
+
+    // create 3 input files each with 5*2k words
+    createWordsFile(inFiles[0], conf);
+    createWordsFile(inFiles[1], conf);
+    createWordsFile(inFiles[2], conf);
   }
 
   @AfterClass
@@ -181,8 +219,12 @@ public class TestJobCounters {
     JobConf conf = createConfiguration();
     conf.setNumMapTasks(3);
     conf.setInt(JobContext.IO_SORT_FACTOR, 2);
-    removeWordsFile(new Path(IN_DIR, "input5_2k_4"), conf);
-    removeWordsFile(new Path(IN_DIR, "input5_2k_5"), conf);
+    removeWordsFile(inFiles[3], conf);
+    removeWordsFile(inFiles[4], conf);
+    long inputSize = 0;
+    inputSize += getFileSize(inFiles[0]);
+    inputSize += getFileSize(inFiles[1]);
+    inputSize += getFileSize(inFiles[2]);
     FileInputFormat.setInputPaths(conf, IN_DIR);
     FileOutputFormat.setOutputPath(conf, new Path(OUT_DIR, "outputO0"));
 
@@ -211,6 +253,7 @@ public class TestJobCounters {
     // 3 files, 5120 = 5 * 1024 rec/file = 15360 input records
     // 4 records/line = 61440 output records
     validateCounters(c1, 90112, 15360, 61440);
+    validateFileCounters(c1, inputSize, 0, 0, 0);
 
   }
 
@@ -218,8 +261,13 @@ public class TestJobCounters {
   public void testOldCounterB() throws Exception {
 
     JobConf conf = createConfiguration();
-    createWordsFile(new Path(IN_DIR, "input5_2k_4"), conf);
-    removeWordsFile(new Path(IN_DIR, "input5_2k_5"), conf);
+    createWordsFile(inFiles[3], conf);
+    removeWordsFile(inFiles[4], conf);
+    long inputSize = 0;
+    inputSize += getFileSize(inFiles[0]);
+    inputSize += getFileSize(inFiles[1]);
+    inputSize += getFileSize(inFiles[2]);
+    inputSize += getFileSize(inFiles[3]);
     conf.setNumMapTasks(4);
     conf.setInt(JobContext.IO_SORT_FACTOR, 2);
     FileInputFormat.setInputPaths(conf, IN_DIR);
@@ -239,13 +287,20 @@ public class TestJobCounters {
     // 4 files, 5120 = 5 * 1024 rec/file = 15360 input records
     // 4 records/line = 81920 output records
     validateCounters(c1, 131072, 20480, 81920);
+    validateFileCounters(c1, inputSize, 0, 0, 0);
   }
 
   @Test
   public void testOldCounterC() throws Exception {
     JobConf conf = createConfiguration();
-    createWordsFile(new Path(IN_DIR, "input5_2k_4"), conf);
-    createWordsFile(new Path(IN_DIR, "input5_2k_5"), conf);
+    createWordsFile(inFiles[3], conf);
+    createWordsFile(inFiles[4], conf);
+    long inputSize = 0;
+    inputSize += getFileSize(inFiles[0]);
+    inputSize += getFileSize(inFiles[1]);
+    inputSize += getFileSize(inFiles[2]);
+    inputSize += getFileSize(inFiles[3]);
+    inputSize += getFileSize(inFiles[4]);
     conf.setNumMapTasks(4);
     conf.setInt(JobContext.IO_SORT_FACTOR, 3);
     FileInputFormat.setInputPaths(conf, IN_DIR);
@@ -260,6 +315,31 @@ public class TestJobCounters {
     // 5 files, 5120 = 5 * 1024 rec/file = 15360 input records
     // 4 records/line = 102400 output records
     validateCounters(c1, 147456, 25600, 102400);
+    validateFileCounters(c1, inputSize, 0, 0, 0);
+  }
+
+  @Test
+  public void testOldCounterD() throws Exception {
+    JobConf conf = createConfiguration();
+    conf.setNumMapTasks(3);
+    conf.setInt(JobContext.IO_SORT_FACTOR, 2);
+    conf.setNumReduceTasks(0);
+    removeWordsFile(inFiles[3], conf);
+    removeWordsFile(inFiles[4], conf);
+    long inputSize = 0;
+    inputSize += getFileSize(inFiles[0]);
+    inputSize += getFileSize(inFiles[1]);
+    inputSize += getFileSize(inFiles[2]);
+    FileInputFormat.setInputPaths(conf, IN_DIR);
+    FileOutputFormat.setOutputPath(conf, new Path(OUT_DIR, "outputO3"));
+
+    RunningJob myJob = JobClient.runJob(conf);
+    Counters c1 = myJob.getCounters();
+
+    // No Reduces. Will go through the direct output collector. Spills=0
+
+    validateCounters(c1, 0, 15360, 61440);
+    validateFileCounters(c1, inputSize, 0, -1, -1);
   }
 
   @Test
@@ -267,8 +347,12 @@ public class TestJobCounters {
     final Job job = createJob();
     final Configuration conf = job.getConfiguration();
     conf.setInt(JobContext.IO_SORT_FACTOR, 2);
-    removeWordsFile(new Path(IN_DIR, "input5_2k_4"), conf);
-    removeWordsFile(new Path(IN_DIR, "input5_2k_5"), conf);
+    removeWordsFile(inFiles[3], conf);
+    removeWordsFile(inFiles[4], conf);
+    long inputSize = 0;
+    inputSize += getFileSize(inFiles[0]);
+    inputSize += getFileSize(inFiles[1]);
+    inputSize += getFileSize(inFiles[2]);
     org.apache.hadoop.mapreduce.lib.input.FileInputFormat.setInputPaths(
         job, IN_DIR);
     org.apache.hadoop.mapreduce.lib.output.FileOutputFormat.setOutputPath(
@@ -276,6 +360,7 @@ public class TestJobCounters {
     assertTrue(job.waitForCompletion(true));
     final Counters c1 = Counters.downgrade(job.getCounters());
     validateCounters(c1, 90112, 15360, 61440);
+    validateFileCounters(c1, inputSize, 0, 0, 0);    
   }
 
   @Test
@@ -283,8 +368,13 @@ public class TestJobCounters {
     final Job job = createJob();
     final Configuration conf = job.getConfiguration();
     conf.setInt(JobContext.IO_SORT_FACTOR, 2);
-    createWordsFile(new Path(IN_DIR, "input5_2k_4"), conf);
-    removeWordsFile(new Path(IN_DIR, "input5_2k_5"), conf);
+    createWordsFile(inFiles[3], conf);
+    removeWordsFile(inFiles[4], conf);
+    long inputSize = 0;
+    inputSize += getFileSize(inFiles[0]);
+    inputSize += getFileSize(inFiles[1]);
+    inputSize += getFileSize(inFiles[2]);
+    inputSize += getFileSize(inFiles[3]);
     org.apache.hadoop.mapreduce.lib.input.FileInputFormat.setInputPaths(
         job, IN_DIR);
     org.apache.hadoop.mapreduce.lib.output.FileOutputFormat.setOutputPath(
@@ -292,6 +382,7 @@ public class TestJobCounters {
     assertTrue(job.waitForCompletion(true));
     final Counters c1 = Counters.downgrade(job.getCounters());
     validateCounters(c1, 131072, 20480, 81920);
+    validateFileCounters(c1, inputSize, 0, 0, 0);
   }
 
   @Test
@@ -299,8 +390,14 @@ public class TestJobCounters {
     final Job job = createJob();
     final Configuration conf = job.getConfiguration();
     conf.setInt(JobContext.IO_SORT_FACTOR, 3);
-    createWordsFile(new Path(IN_DIR, "input5_2k_4"), conf);
-    createWordsFile(new Path(IN_DIR, "input5_2k_5"), conf);
+    createWordsFile(inFiles[3], conf);
+    createWordsFile(inFiles[4], conf);
+    long inputSize = 0;
+    inputSize += getFileSize(inFiles[0]);
+    inputSize += getFileSize(inFiles[1]);
+    inputSize += getFileSize(inFiles[2]);
+    inputSize += getFileSize(inFiles[3]);
+    inputSize += getFileSize(inFiles[4]);
     org.apache.hadoop.mapreduce.lib.input.FileInputFormat.setInputPaths(
         job, IN_DIR);
     org.apache.hadoop.mapreduce.lib.output.FileOutputFormat.setOutputPath(
@@ -308,6 +405,29 @@ public class TestJobCounters {
     assertTrue(job.waitForCompletion(true));
     final Counters c1 = Counters.downgrade(job.getCounters());
     validateCounters(c1, 147456, 25600, 102400);
+    validateFileCounters(c1, inputSize, 0, 0, 0);
+  }
+
+  @Test
+  public void testNewCounterD() throws Exception {
+    final Job job = createJob();
+    final Configuration conf = job.getConfiguration();
+    conf.setInt(JobContext.IO_SORT_FACTOR, 2);
+    job.setNumReduceTasks(0);
+    removeWordsFile(inFiles[3], conf);
+    removeWordsFile(inFiles[4], conf);
+    long inputSize = 0;
+    inputSize += getFileSize(inFiles[0]);
+    inputSize += getFileSize(inFiles[1]);
+    inputSize += getFileSize(inFiles[2]);
+    org.apache.hadoop.mapreduce.lib.input.FileInputFormat.setInputPaths(job,
+        IN_DIR);
+    org.apache.hadoop.mapreduce.lib.output.FileOutputFormat.setOutputPath(job,
+        new Path(OUT_DIR, "outputN3"));
+    assertTrue(job.waitForCompletion(true));
+    final Counters c1 = Counters.downgrade(job.getCounters());
+    validateCounters(c1, 0, 15360, 61440);
+    validateFileCounters(c1, inputSize, 0, -1, -1);
   }
 
   /** 

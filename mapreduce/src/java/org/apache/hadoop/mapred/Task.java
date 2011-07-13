@@ -290,6 +290,28 @@ abstract public class Task implements Writable, Configurable {
   }
 
   /**
+   * Gets a handle to the Statistics instance based on the scheme associated
+   * with path.
+   * 
+   * @param path the path.
+   * @param conf the configuration to extract the scheme from if not part of 
+   *   the path.
+   * @return a Statistics instance, or null if none is found for the scheme.
+   */
+  protected static Statistics getFsStatistics(Path path, Configuration conf) throws IOException {
+    Statistics matchedStats = null;
+    path = path.getFileSystem(conf).makeQualified(path);
+    String scheme = path.toUri().getScheme();
+    for (Statistics stats : FileSystem.getAllStatistics()) {
+      if (stats.getScheme().equals(scheme)) {
+        matchedStats = stats;
+        break;
+      }
+    }
+    return matchedStats;
+  }
+
+  /**
    * Get skipRanges.
    */
   public SortedRanges getSkipRanges() {

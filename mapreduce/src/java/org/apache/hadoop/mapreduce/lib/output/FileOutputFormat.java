@@ -150,7 +150,9 @@ public static final String OUTDIR = "mapreduce.output.fileoutputformat.outputdir
    * @param outputDir the {@link Path} of the output directory for 
    * the map-reduce job.
    */
-  public static void setOutputPath(Job job, Path outputDir) {
+  public static void setOutputPath(Job job, Path outputDir) throws IOException {
+    outputDir = outputDir.getFileSystem(job.getConfiguration()).makeQualified(
+        outputDir);
     job.getConfiguration().set(FileOutputFormat.OUTDIR, outputDir.toString());
   }
 

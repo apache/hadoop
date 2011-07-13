@@ -54,9 +54,6 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
-  public static final String COUNTER_GROUP = 
-                                "FileInputFormatCounters";
-  public static final String BYTES_READ = "BYTES_READ";
   public static final String INPUT_DIR = 
     "mapreduce.input.fileinputformat.inputdir";
   public static final String SPLIT_MAXSIZE = 

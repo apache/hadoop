@@ -35,7 +35,6 @@ import org.apache.hadoop.io.compress.SplitCompressionInputStream;
 import org.apache.hadoop.io.compress.SplittableCompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.io.compress.Decompressor;
-import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -63,7 +62,6 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
   private int maxLineLength;
   private LongWritable key = null;
   private Text value = null;
-  private Counter inputByteCounter;
   private CompressionCodec codec;
   private Decompressor decompressor;
   private byte[] recordDelimiterBytes;
@@ -78,8 +76,6 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
   public void initialize(InputSplit genericSplit,
                          TaskAttemptContext context) throws IOException {
     FileSplit split = (FileSplit) genericSplit;
-    inputByteCounter = context.getCounter(
-      FileInputFormat.COUNTER_GROUP, FileInputFormat.BYTES_READ);
     Configuration job = context.getConfiguration();
     this.maxLineLength = job.getInt(MAX_LINE_LENGTH, Integer.MAX_VALUE);
     start = split.getStart();
@@ -174,7 +170,6 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
         break;
       }
       pos += newSize;
-      inputByteCounter.increment(newSize);
       if (newSize < maxLineLength) {
         break;
       }

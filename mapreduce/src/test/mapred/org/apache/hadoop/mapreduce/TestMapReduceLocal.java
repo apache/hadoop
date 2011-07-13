@@ -38,6 +38,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
 import org.apache.hadoop.mapreduce.lib.input.LineRecordReader;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -147,8 +148,7 @@ public class TestMapReduceLocal extends TestCase {
                  out);
     Counters ctrs = job.getCounters();
     System.out.println("Counters: " + ctrs);
-    long mapIn = ctrs.findCounter(FileInputFormat.COUNTER_GROUP, 
-                                  FileInputFormat.BYTES_READ).getValue();
+    long mapIn = ctrs.findCounter(FileInputFormatCounter.BYTES_READ).getValue();
     assertTrue(mapIn != 0);    
     long combineIn = ctrs.findCounter(COUNTER_GROUP,
                                       "COMBINE_INPUT_RECORDS").getValue();
