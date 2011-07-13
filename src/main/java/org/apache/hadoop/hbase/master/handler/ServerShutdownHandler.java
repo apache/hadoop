@@ -186,7 +186,8 @@ public class ServerShutdownHandler extends EventHandler {
       }
     }
 
-    LOG.info("Reassigning " + hris.size() + " region(s) that " + serverName +
+    LOG.info("Reassigning " + (hris == null? 0: hris.size()) +
+      " region(s) that " + serverName +
       " was carrying (skipping " + regionsInTransition.size() +
       " regions(s) that are already in transition)");
 
