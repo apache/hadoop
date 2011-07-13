@@ -345,7 +345,7 @@ public class HBaseAdmin implements Abortable, Closeable {
           HRegionInfo info = Writables.getHRegionInfo(
               rowResult.getValue(HConstants.CATALOG_FAMILY,
                   HConstants.REGIONINFO_QUALIFIER));
-          if (!(Bytes.equals(info.getTableDesc().getName(), desc.getName()))) {
+          if (!(Bytes.equals(info.getTableName(), desc.getName()))) {
             return false;
           }
           String hostAndPort = null;
