@@ -1113,13 +1113,17 @@ public class Job extends JobContextImpl implements JobContext {
       eventCounter += events.length;
       printTaskEvents(events, filter, profiling, mapRanges, reduceRanges);
     }
+    boolean success = isSuccessful();
+    if (success) {
+      LOG.info("Job " + jobId + " completed successfully");
+    } else {
+      LOG.info("Job " + jobId + " failed with state " + status.getState());
+    }
     Counters counters = getCounters();
     if (counters != null) {
       LOG.info(counters.toString());
     }
-    LOG.info("Job " + jobId + " completed with status: "
-          + getStatus().getState());
-    return isSuccessful();
+    return success;
   }
 
   /**

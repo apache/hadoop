@@ -66,8 +66,9 @@ class EventWriter {
     out.writeBytes("\n");
   }
   
-  void flush() throws IOException { 
+  void flush() throws IOException {
     encoder.flush();
+    out.flush();
   }
 
   void close() throws IOException {

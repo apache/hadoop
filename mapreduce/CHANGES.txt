@@ -37,6 +37,8 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    MAPREDUCE-2679. Minor changes to sync trunk with MR-279 branch. (acmurthy) 
+ 
     MAPREDUCE-2400. Remove Cluster's dependency on JobTracker via a 
     ServiceProvider for the actual implementation. (tomwhite via acmurthy) 
  

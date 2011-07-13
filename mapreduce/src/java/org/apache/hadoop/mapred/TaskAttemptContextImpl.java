@@ -34,7 +34,7 @@ public class TaskAttemptContextImpl
        implements TaskAttemptContext {
   private Reporter reporter;
 
-  TaskAttemptContextImpl(JobConf conf, TaskAttemptID taskid) {
+  public TaskAttemptContextImpl(JobConf conf, TaskAttemptID taskid) {
     this(conf, taskid, Reporter.NULL);
   }
   

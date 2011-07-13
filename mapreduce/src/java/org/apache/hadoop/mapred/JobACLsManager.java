@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.security.AccessControlException;
@@ -30,9 +31,9 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 @InterfaceAudience.Private
 class JobACLsManager {
 
-  JobConf conf;
+  Configuration conf;
 
-  public JobACLsManager(JobConf conf) {
+  public JobACLsManager(Configuration conf) {
     this.conf = conf;
   }
 
@@ -47,7 +48,7 @@ class JobACLsManager {
    * 
    * @return JobACL to AccessControlList map.
    */
-  Map<JobACL, AccessControlList> constructJobACLs(JobConf conf) {
+  Map<JobACL, AccessControlList> constructJobACLs(Configuration conf) {
 
     Map<JobACL, AccessControlList> acls =
         new HashMap<JobACL, AccessControlList>();
