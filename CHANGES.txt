@@ -159,6 +159,7 @@ Release 0.91.0 - Unreleased
    HBASE-4077  Deadlock if WrongRegionException is thrown from getLock in
                HRegion.delete (Adam Warrington via Ted Yu)
    HBASE-3893  HRegion.internalObtainRowLock shouldn't wait forever
+   HBASE-4075  A bug in TestZKBasedOpenCloseRegion (Jieshan Bean via Ted Yu)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
