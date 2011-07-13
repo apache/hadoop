@@ -42,9 +42,11 @@ public class DataChecksum implements Checksum {
   // checksum types
   public static final int CHECKSUM_NULL    = 0;
   public static final int CHECKSUM_CRC32   = 1;
+  public static final int CHECKSUM_CRC32C  = 2;
   
   private static final int CHECKSUM_NULL_SIZE  = 0;
   private static final int CHECKSUM_CRC32_SIZE = 4;
+  private static final int CHECKSUM_CRC32C_SIZE = 4;
   
   
   public static DataChecksum newDataChecksum( int type, int bytesPerChecksum ) {
@@ -59,6 +61,9 @@ public class DataChecksum implements Checksum {
     case CHECKSUM_CRC32 :
       return new DataChecksum( CHECKSUM_CRC32, new PureJavaCrc32(), 
                                CHECKSUM_CRC32_SIZE, bytesPerChecksum );
+    case CHECKSUM_CRC32C:
+      return new DataChecksum( CHECKSUM_CRC32C, new PureJavaCrc32C(),
+                               CHECKSUM_CRC32C_SIZE, bytesPerChecksum);
     default:
       return null;  
     }
@@ -128,7 +133,7 @@ public class DataChecksum implements Checksum {
        return 0;
      }
 
-     if ( type == CHECKSUM_CRC32 ) {
+     if ( size == 4 ) {
        out.writeInt( (int) summer.getValue() );
      } else {
        throw new IOException( "Unknown Checksum " + type );
@@ -152,7 +157,7 @@ public class DataChecksum implements Checksum {
         return 0;
       }
 
-      if ( type == CHECKSUM_CRC32 ) {
+      if ( size == 4 ) {
         int checksum = (int) summer.getValue();
         buf[offset+0] = (byte) ((checksum >>> 24) & 0xff);
         buf[offset+1] = (byte) ((checksum >>> 16) & 0xff);
@@ -174,7 +179,7 @@ public class DataChecksum implements Checksum {
     * @return true if the checksum matches and false otherwise.
     */
    public boolean compare( byte buf[], int offset ) {
-     if ( size > 0 && type == CHECKSUM_CRC32 ) {
+     if ( size == 4 ) {
        int checksum = ( (buf[offset+0] & 0xff) << 24 ) | 
                       ( (buf[offset+1] & 0xff) << 16 ) |
                       ( (buf[offset+2] & 0xff) << 8 )  |

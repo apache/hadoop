@@ -33,23 +33,29 @@ public class TestDataChecksum {
   private static final int SUMS_OFFSET_IN_BUFFER = 3;
   private static final int DATA_OFFSET_IN_BUFFER = 3;
   private static final int DATA_TRAILER_IN_BUFFER = 3;
-
+  
   private static final int BYTES_PER_CHUNK = 512;
-  private static final DataChecksum checksum =
-    DataChecksum.newDataChecksum(
-        DataChecksum.CHECKSUM_CRC32, BYTES_PER_CHUNK);
-
+  private static final int CHECKSUM_TYPES[] = new int[] {
+    DataChecksum.CHECKSUM_CRC32, DataChecksum.CHECKSUM_CRC32C
+  };
+  
   @Test
   public void testBulkOps() throws Exception {
-    for (boolean useDirect : new boolean[]{false, true}) {
-      doBulkTest(1023, useDirect);
-      doBulkTest(1024, useDirect);
-      doBulkTest(1025, useDirect);
+    for (int type : CHECKSUM_TYPES) {
+      System.err.println(
+          "---- beginning tests with checksum type " + type  + "----");
+      DataChecksum checksum = DataChecksum.newDataChecksum(
+          type, BYTES_PER_CHUNK);
+      for (boolean useDirect : new boolean[]{false, true}) {
+        doBulkTest(checksum, 1023, useDirect);
+        doBulkTest(checksum, 1024, useDirect);
+        doBulkTest(checksum, 1025, useDirect);
+      }
     }
   }
   
-  private void doBulkTest(int dataLength, boolean useDirect)
-      throws Exception {
+  private void doBulkTest(DataChecksum checksum, int dataLength,
+      boolean useDirect) throws Exception {
     System.err.println("Testing bulk checksums of length " + 
         dataLength + " with " +
         (useDirect ? "direct" : "array-backed") + " buffers");

@@ -262,6 +262,8 @@ Trunk (unreleased changes)
     HADOOP-7444. Add Checksum API to verify and calculate checksums "in bulk"
     (todd)
 
+    HADOOP-7443. Add CRC32C as another DataChecksum implementation (todd)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

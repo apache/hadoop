@@ -101,11 +101,10 @@ public class TestPureJavaCrc32 {
    * that java.util.zip.CRC32 uses.
    */
   public static class Table {
-    private static final int polynomial = 0xEDB88320;
-
     private final int[][] tables;
 
-    private Table(final int nBits, final int nTables) {
+    private Table(final int nBits, final int nTables,
+        long polynomial) {
       tables = new int[nTables][];
       final int size = 1 << nBits;
       for(int i = 0; i < tables.length; i++) {
@@ -169,10 +168,17 @@ public class TestPureJavaCrc32 {
 
     /** Generate CRC-32 lookup tables */
     public static void main(String[] args) throws FileNotFoundException {
+      if (args.length != 1) {
+        System.err.println("Usage: " + Table.class.getName() +
+            " <polynomial>");
+        System.exit(1);
+      }
+      long polynomial = Long.parseLong(args[0], 16);
+      
       int i = 8;
       final PrintStream out = new PrintStream(
           new FileOutputStream("table" + i + ".txt"), true);
-      final Table t = new Table(i, 16);
+      final Table t = new Table(i, 16, polynomial);
       final String s = t.toString();
       System.out.println(s);
       out.println(s);
