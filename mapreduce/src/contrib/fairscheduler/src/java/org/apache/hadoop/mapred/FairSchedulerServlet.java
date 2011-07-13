@@ -130,7 +130,7 @@ public class FairSchedulerServlet extends HttpServlet {
     String hostname = StringUtils.simpleHostname(
         jobTracker.getJobTrackerMachine());
     out.print("<html><head>");
-    out.printf("<title>%s Fair Scheduler Admininstration</title>\n", hostname);
+    out.printf("<title>%s Fair Scheduler Administration</title>\n", hostname);
     out.print("<link rel=\"stylesheet\" type=\"text/css\" " + 
         "href=\"/static/hadoop.css\">\n");
     out.print("</head><body>\n");

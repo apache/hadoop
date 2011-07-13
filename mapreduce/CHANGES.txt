@@ -333,6 +333,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-2624. Update RAID for HDFS-2107.  (szetszwo)
 
+    MAPREDUCE-2670. Fixing spelling mistake in FairSchedulerServlet.java. (eli)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
