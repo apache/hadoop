@@ -224,11 +224,23 @@ public class Cluster {
    * @return array of {@link Job}
    * @throws IOException
    * @throws InterruptedException
+   * @deprecated Use {@link #getAllJobStatuses()} instead.
    */
+  @Deprecated
   public Job[] getAllJobs() throws IOException, InterruptedException {
     return getJobs(client.getAllJobs());
   }
-  
+
+  /**
+   * Get job status for all jobs in the cluster.
+   * @return job status for all jobs in cluster
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public JobStatus[] getAllJobStatuses() throws IOException, InterruptedException {
+    return client.getAllJobs();
+  }
+
   /**
    * Grab the jobtracker system directory path where 
    * job-specific files will  be placed.

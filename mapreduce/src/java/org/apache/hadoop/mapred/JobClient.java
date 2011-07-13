@@ -755,10 +755,10 @@ public class JobClient extends CLI {
    */
   public JobStatus[] getAllJobs() throws IOException {
     try {
-      Job jobs[] = cluster.getAllJobs();
+      org.apache.hadoop.mapreduce.JobStatus[] jobs = cluster.getAllJobStatuses();
       JobStatus[] stats = new JobStatus[jobs.length];
       for (int i = 0; i < jobs.length; i++) {
-        stats[i] = JobStatus.downgrade(jobs[i].getStatus());
+        stats[i] = JobStatus.downgrade(jobs[i]);
       }
       return stats;
     } catch (InterruptedException ie) {
@@ -870,10 +870,10 @@ public class JobClient extends CLI {
   }
   
   void displayJobList(JobStatus[] jobs) {
-    System.out.printf("JobId\tState\tStartTime\tUserName\tPriority\tSchedulingInfo\n");
+    System.out.printf("JobId\tState\tStartTime\tUserName\tQueue\tPriority\tSchedulingInfo\n");
     for (JobStatus job : jobs) {
-      System.out.printf("%s\t%d\t%d\t%s\t%s\t%s\n", job.getJobID(), job.getRunState(),
-          job.getStartTime(), job.getUsername(), 
+      System.out.printf("%s\t%d\t%d\t%s\t%s\t%s\t%s\n", job.getJobID(), job.getRunState(),
+          job.getStartTime(), job.getUsername(), job.getQueue(), 
           job.getJobPriority().name(), job.getSchedulingInfo());
     }
   }

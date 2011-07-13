@@ -78,6 +78,7 @@ public class JobStatus implements Writable, Cloneable {
   private State runState;
   private long startTime;
   private String user;
+  private String queue;
   private JobPriority priority;
   private String schedulingInfo="NA";
 
@@ -115,22 +116,48 @@ public class JobStatus implements Writable, Cloneable {
                     float reduceProgress, float cleanupProgress, 
                     State runState, JobPriority jp, String user, String jobName, 
                     String jobFile, String trackingUrl) {
-     this.jobid = jobid;
-     this.setupProgress = setupProgress;
-     this.mapProgress = mapProgress;
-     this.reduceProgress = reduceProgress;
-     this.cleanupProgress = cleanupProgress;
-     this.runState = runState;
-     this.user = user;
-     if (jp == null) {
-       throw new IllegalArgumentException("Job Priority cannot be null.");
-     }
-     priority = jp;
-     this.jobName = jobName;
-     this.jobFile = jobFile;
-     this.trackingUrl = trackingUrl;
+     this(jobid, setupProgress, mapProgress, reduceProgress, cleanupProgress, 
+         runState, jp, user, jobName, "default", jobFile, trackingUrl);
    }
-   
+           
+   /**
+    * Create a job status object for a given jobid.
+    * @param jobid The jobid of the job
+    * @param setupProgress The progress made on the setup
+    * @param mapProgress The progress made on the maps
+    * @param reduceProgress The progress made on the reduces
+    * @param cleanupProgress The progress made on the cleanup
+    * @param runState The current state of the job
+    * @param jp Priority of the job.
+    * @param user userid of the person who submitted the job.
+    * @param jobName user-specified job name.
+    * @param queue queue name
+    * @param jobFile job configuration file. 
+    * @param trackingUrl link to the web-ui for details of the job.
+    */
+    public JobStatus(JobID jobid, float setupProgress, float mapProgress,
+                     float reduceProgress, float cleanupProgress, 
+                     State runState, JobPriority jp, 
+                     String user, String jobName, String queue, 
+                     String jobFile, String trackingUrl) {
+      this.jobid = jobid;
+      this.setupProgress = setupProgress;
+      this.mapProgress = mapProgress;
+      this.reduceProgress = reduceProgress;
+      this.cleanupProgress = cleanupProgress;
+      this.runState = runState;
+      this.user = user;
+      this.queue = queue;
+      if (jp == null) {
+        throw new IllegalArgumentException("Job Priority cannot be null.");
+      }
+      priority = jp;
+      this.jobName = jobName;
+      this.jobFile = jobFile;
+      this.trackingUrl = trackingUrl;
+    }
+    
+
   /**
    * Sets the map progress of this job
    * @param p The value of map progress to set to
@@ -241,6 +268,22 @@ public class JobStatus implements Writable, Cloneable {
    */
   protected synchronized void setJobACLs(Map<JobACL, AccessControlList> acls) {
     this.jobACLs = acls;
+  }
+
+  /**
+   * Set queue name
+   * @param queue queue name
+   */
+  protected synchronized void setQueue(String queue) {
+    this.queue = queue;
+  }
+
+  /**
+   * Get queue name
+   * @return queue name
+   */
+  public synchronized String getQueue() {
+    return queue;
   }
 
   /**
