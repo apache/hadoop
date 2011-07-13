@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -262,6 +263,9 @@ public class TestMasterFailover {
     FileSystem filesystem = FileSystem.get(conf);
     Path rootdir = filesystem.makeQualified(
         new Path(conf.get(HConstants.HBASE_DIR)));
+    // Write the .tableinfo
+    FSUtils.createTableDescriptor(filesystem, rootdir, htdEnabled);
+
     HRegionInfo hriEnabled = new HRegionInfo(htdEnabled.getName(), null, null);
     HRegion.createHRegion(hriEnabled, rootdir, conf, htdEnabled);
 
@@ -271,6 +275,8 @@ public class TestMasterFailover {
     byte [] disabledTable = Bytes.toBytes("disabledTable");
     HTableDescriptor htdDisabled = new HTableDescriptor(disabledTable);
     htdDisabled.addFamily(new HColumnDescriptor(FAMILY));
+    // Write the .tableinfo
+    FSUtils.createTableDescriptor(filesystem, rootdir, htdDisabled);
     HRegionInfo hriDisabled = new HRegionInfo(htdDisabled.getName(), null, null);
     HRegion.createHRegion(hriDisabled, rootdir, conf, htdDisabled);
     List<HRegionInfo> disabledRegions = TEST_UTIL.createMultiRegionsInMeta(
@@ -574,7 +580,8 @@ public class TestMasterFailover {
     FileSystem filesystem = FileSystem.get(conf);
     Path rootdir = filesystem.makeQualified(
            new Path(conf.get(HConstants.HBASE_DIR)));
-
+    // Write the .tableinfo
+    FSUtils.createTableDescriptor(filesystem, rootdir, htdEnabled);
     HRegionInfo hriEnabled = new HRegionInfo(htdEnabled.getName(),
         null, null);
     HRegion.createHRegion(hriEnabled, rootdir, conf, htdEnabled);
@@ -585,6 +592,8 @@ public class TestMasterFailover {
     byte [] disabledTable = Bytes.toBytes("disabledTable");
     HTableDescriptor htdDisabled = new HTableDescriptor(disabledTable);
     htdDisabled.addFamily(new HColumnDescriptor(FAMILY));
+    // Write the .tableinfo
+    FSUtils.createTableDescriptor(filesystem, rootdir, htdDisabled);
     HRegionInfo hriDisabled = new HRegionInfo(htdDisabled.getName(), null, null);
     HRegion.createHRegion(hriDisabled, rootdir, conf, htdDisabled);
 
@@ -811,7 +820,7 @@ public class TestMasterFailover {
     log("Starting up a new master");
     master = cluster.startMaster().getMaster();
     log("Waiting for master to be ready");
-    cluster.waitForActiveAndReadyMaster();
+    assertTrue(cluster.waitForActiveAndReadyMaster());
     log("Master is ready");
 
     // Let's add some weird states to master in-memory state
@@ -871,8 +880,12 @@ public class TestMasterFailover {
     // Grab all the regions that are online across RSs
     Set<HRegionInfo> onlineRegions = new TreeSet<HRegionInfo>();
     for (JVMClusterUtil.RegionServerThread rst :
-      cluster.getRegionServerThreads()) {
-      onlineRegions.addAll(rst.getRegionServer().getOnlineRegions());
+        cluster.getRegionServerThreads()) {
+      try {
+        onlineRegions.addAll(rst.getRegionServer().getOnlineRegions());
+      } catch (org.apache.hadoop.hbase.regionserver.RegionServerStoppedException e) {
+        LOG.info("Got RegionServerStoppedException", e);
+      }
     }
 
     // Now, everything that should be online should be online

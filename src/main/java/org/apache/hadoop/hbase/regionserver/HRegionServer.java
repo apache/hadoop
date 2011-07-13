@@ -2620,8 +2620,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   protected void checkOpen() throws IOException {
     if (this.stopped || this.abortRequested) {
-      throw new RegionServerStoppedException("Server not running"
-          + (this.abortRequested ? ", aborting" : ""));
+      throw new RegionServerStoppedException("Server " + getServerName() +
+        " not running" + (this.abortRequested ? ", aborting" : ""));
     }
     if (!fsOk) {
       throw new RegionServerStoppedException("File system not available");
