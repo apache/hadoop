@@ -59,7 +59,7 @@ public class CapacitySchedulerConfiguration extends Configuration {
   public static final String MAXIMUM_CAPACITY = "maximum-capacity";
   
   @Private
-  public static final String USER_LIMIT = "minimum-user-limit";
+  public static final String USER_LIMIT = "minimum-user-limit-percent";
   
   @Private
   public static final String USER_LIMIT_FACTOR = "user-limit-factor";

@@ -5,6 +5,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    MAPREDUCE-2678. minimum-user-limit-percent no longer honored. (naisbitt 
+    via mahadev)
+
     MAPREDUCE-2663. Refactoring StateMachineFactory inner classes. (ahmed 
     radwan via mahadev)
 
