@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -333,49 +334,52 @@ public class HBaseAdmin implements Abortable, Closeable {
     } catch (SocketTimeoutException ste) {
       LOG.warn("Creating " + desc.getNameAsString() + " took too long", ste);
     }
-    int numRegs = splitKeys == null ? 1 : splitKeys.length+1;
-    for (int tries = 0; tries < numRetries; tries++) {
-      try {
-        // Wait for new table to come on-line
-        final AtomicInteger actualRegCount = new AtomicInteger(0);
-
-        MetaScannerVisitor visitor = new MetaScannerVisitor() {
-          public boolean processRow(Result rowResult) throws IOException {
-            HRegionInfo info = Writables.getHRegionInfo(
-                rowResult.getValue(HConstants.CATALOG_FAMILY,
-                    HConstants.REGIONINFO_QUALIFIER));
-
-            if (!(Bytes.equals(info.getTableName(), desc.getName()))) {
-              return false;
-            }
-
-            String hostAndPort = null;
-            byte [] value = rowResult.getValue(HConstants.CATALOG_FAMILY,
-                HConstants.SERVER_QUALIFIER);
-            if (value != null && value.length > 0) {
-              hostAndPort = Bytes.toString(value);
-            }
-
-            if (!(info.isOffline() || info.isSplit()) && hostAndPort != null) {
-              actualRegCount.incrementAndGet();
-            }
-            return true;
+    int numRegs = splitKeys == null ? 1 : splitKeys.length + 1;
+    int prevRegCount = 0;
+    for (int tries = 0; tries < numRetries; ++tries) {
+      // Wait for new table to come on-line
+      final AtomicInteger actualRegCount = new AtomicInteger(0);
+      MetaScannerVisitor visitor = new MetaScannerVisitor() {
+        @Override
+        public boolean processRow(Result rowResult) throws IOException {
+          HRegionInfo info = Writables.getHRegionInfo(
+              rowResult.getValue(HConstants.CATALOG_FAMILY,
+                  HConstants.REGIONINFO_QUALIFIER));
+          if (!(Bytes.equals(info.getTableName(), desc.getName()))) {
+            return false;
           }
-
-        };
-        MetaScanner.metaScan(conf, visitor, desc.getName());
-        if (actualRegCount.get() == numRegs)
-          break;
-      } catch (RegionException e) {
-        if (tries == numRetries - 1) {
-          // Ran out of tries
-          throw e;
+          String hostAndPort = null;
+          byte [] value = rowResult.getValue(HConstants.CATALOG_FAMILY,
+              HConstants.SERVER_QUALIFIER);
+          // Make sure that regions are assigned to server
+          if (value != null && value.length > 0) {
+            hostAndPort = Bytes.toString(value);
+          }
+          if (!(info.isOffline() || info.isSplit()) && hostAndPort != null) {
+            actualRegCount.incrementAndGet();
+          }
+          return true;
         }
-      }
-      try {
-        Thread.sleep(getPauseTime(tries));
-      } catch (InterruptedException e) {
-        // Just continue; ignore the interruption.
+      };
+      MetaScanner.metaScan(conf, visitor, desc.getName());
+      if (actualRegCount.get() != numRegs) {
+        if (tries == numRetries - 1) {
+          throw new RegionOfflineException("Only " + actualRegCount.get() + 
+              " of " + numRegs + " regions are online; retries exhausted.");
+        }
+        try { // Sleep
+          Thread.sleep(getPauseTime(tries));
+        } catch (InterruptedException e) {
+          throw new InterruptedIOException("Interrupted when opening" +
+              " regions; " + actualRegCount.get() + " of " + numRegs + 
+              " regions processed so far");
+        }
+        if (actualRegCount.get() > prevRegCount) { // Making progress
+          prevRegCount = actualRegCount.get();
+          tries = -1;
+        }
+      } else {
+        return;
       }
     }
   }
