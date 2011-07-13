@@ -1354,4 +1354,73 @@ public class TestDFSShell extends TestCase {
     int res = admin.run(new String[] {"-refreshNodes"});
     assertEquals("expected to fail -1", res , -1);
   }
+
+  // force Copy Option is -f
+  public void testCopyCommandsWithForceOption() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
+        .format(true).build();
+    FsShell shell = null;
+    FileSystem fs = null;
+    File localFile = new File("testFileForPut");
+    Path hdfsTestDir = new Path("ForceTestDir");
+    try {
+      fs = cluster.getFileSystem();
+      fs.mkdirs(hdfsTestDir);
+      localFile.createNewFile();
+      writeFile(fs, new Path("testFileForPut"));
+      shell = new FsShell();
+
+      // Tests for put
+      String[] argv = new String[] { "-put", "-f", localFile.getName(),
+          "ForceTestDir" };
+      int res = ToolRunner.run(shell, argv);
+      int SUCCESS = 0;
+      int ERROR = 1;
+      assertEquals("put -f is not working", SUCCESS, res);
+
+      argv = new String[] { "-put", localFile.getName(), "ForceTestDir" };
+      res = ToolRunner.run(shell, argv);
+      assertEquals("put command itself is able to overwrite the file", ERROR,
+          res);
+
+      // Tests for copyFromLocal
+      argv = new String[] { "-copyFromLocal", "-f", localFile.getName(),
+          "ForceTestDir" };
+      res = ToolRunner.run(shell, argv);
+      assertEquals("copyFromLocal -f is not working", SUCCESS, res);
+
+      argv = new String[] { "-copyFromLocal", localFile.getName(),
+          "ForceTestDir" };
+      res = ToolRunner.run(shell, argv);
+      assertEquals(
+          "copyFromLocal command itself is able to overwrite the file", ERROR,
+          res);
+
+      // Tests for cp
+      argv = new String[] { "-cp", "-f", localFile.getName(), "ForceTestDir" };
+      res = ToolRunner.run(shell, argv);
+      assertEquals("cp -f is not working", SUCCESS, res);
+
+      argv = new String[] { "-cp", localFile.getName(),
+          "ForceTestDir" };
+      res = ToolRunner.run(shell, argv);
+      assertEquals("cp command itself is able to overwrite the file", ERROR,
+          res);
+    } finally {
+      if (null != shell)
+        shell.close();
+
+      if (localFile.exists())
+        localFile.delete();
+
+      if (null != fs) {
+        fs.delete(hdfsTestDir, true);
+        fs.close();
+      }
+      cluster.shutdown();
+    }
+
+  }
+
 }

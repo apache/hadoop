@@ -2671,6 +2671,24 @@
     </test>
 
     <test> <!-- TESTED -->
+       <description>cp: putting file into an already existing destination with -f option(absolute path)</description>
+      <test-commands>
+        <command>-fs NAMENODE -touchz /user/file0</command>
+        <command>-fs NAMENODE -cp -f CLITEST_DATA/data120bytes /user/file0</command>
+        <command>-fs NAMENODE -cat /user/file0</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /user</command>
+      </cleanup-commands>
+     <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>12345678901234</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
       <description>cp: copying directory to directory in hdfs:// path</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir hdfs:///dir0</command>
@@ -4077,6 +4095,24 @@
     </test>
     
     <test> <!-- TESTED -->
+      <description>put: putting file into an already existing destination with -f option(absolute path)</description>
+      <test-commands>
+        <command>-fs NAMENODE -touchz /user/file0</command>
+        <command>-fs NAMENODE -put -f CLITEST_DATA/data120bytes /user/file0</command>
+        <command>-fs NAMENODE -cat /user/file0</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /user</command>
+     </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>12345678901234</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+    
+    <test> <!-- TESTED -->
       <description>put: putting file into an already existing destination(relative path)</description>
       <test-commands>
         <command>-fs NAMENODE -touchz file0</command>
@@ -4593,6 +4629,25 @@
     </test>
     
     <test> <!-- TESTED -->
+      <description>copyFromLocal: copying file into an already existing destination with -f option(absolute path)</description>
+      <test-commands>
+        <command>-fs NAMENODE -touchz /user/file0</command>
+        <command>-fs NAMENODE -copyFromLocal -f CLITEST_DATA/data120bytes /user/file0</command>
+        <command>-fs NAMENODE -cat /user/file0</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /user</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>12345678901234</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+    
+    <test> <!-- TESTED -->
+    
       <description>copyFromLocal: copying file into an already existing destination(relative path)</description>
       <test-commands>
         <command>-fs NAMENODE -touchz file0</command>
