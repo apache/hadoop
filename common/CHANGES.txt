@@ -256,6 +256,9 @@ Trunk (unreleased changes)
     HADOOP-7430. Improve error message when moving to trash fails due to 
     quota issue. (Ravi Prakash via mattf)
 
+    HADOOP-7457. Remove out-of-date Chinese language documentation.
+    (Jakob Homan via eli)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
