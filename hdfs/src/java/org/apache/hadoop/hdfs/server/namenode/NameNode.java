@@ -744,8 +744,9 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   public NamenodeRegistration register(NamenodeRegistration registration)
   throws IOException {
     verifyVersion(registration.getVersion());
-    namesystem.registerBackupNode(registration);
-    return setRegistration();
+    NamenodeRegistration myRegistration = setRegistration();
+    namesystem.registerBackupNode(registration, myRegistration);
+    return myRegistration;
   }
 
   @Override // NamenodeProtocol
@@ -764,15 +765,6 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     if(!isRole(NamenodeRole.ACTIVE))
       throw new IOException("Only an ACTIVE node can invoke endCheckpoint.");
     namesystem.endCheckpoint(registration, sig);
-  }
-
-  @Override // NamenodeProtocol
-  public void journal(NamenodeRegistration registration,
-                      int jAction,
-                      int length,
-                      byte[] args) throws IOException {
-    // Active name-node cannot journal.
-    throw new UnsupportedActionException("journal");
   }
 
   @Override // ClientProtocol
@@ -1151,7 +1143,6 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     return namesystem.getTransactionID();
   }
 
-  @Deprecated
   @Override // NamenodeProtocol
   public CheckpointSignature rollEditLog() throws IOException {
     return namesystem.rollEditLog();

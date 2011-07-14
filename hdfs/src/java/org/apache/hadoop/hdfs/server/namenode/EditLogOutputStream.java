@@ -19,8 +19,11 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.zip.Checksum;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
+
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -135,5 +138,25 @@ implements JournalStream {
     return getName();
   }
 
-
+  /**
+   * Write the given operation to the specified buffer, including
+   * the transaction ID and checksum.
+   */
+  protected static void writeChecksummedOp(
+      DataOutputBuffer buf, byte op, long txid, Writable... writables)
+      throws IOException {
+    int start = buf.getLength();
+    buf.write(op);
+    buf.writeLong(txid);
+    for (Writable w : writables) {
+      w.write(buf);
+    }
+    // write transaction checksum
+    int end = buf.getLength();
+    Checksum checksum = FSEditLog.getChecksum();
+    checksum.reset();
+    checksum.update(buf.getData(), start, end-start);
+    int sum = (int)checksum.getValue();
+    buf.writeInt(sum);
+  }
 }

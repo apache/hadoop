@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.BackupNodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Writable;
@@ -42,7 +42,7 @@ import org.apache.hadoop.net.NetUtils;
 class EditLogBackupOutputStream extends EditLogOutputStream {
   static int DEFAULT_BUFFER_SIZE = 256;
 
-  private NamenodeProtocol backupNode;          // RPC proxy to backup node
+  private BackupNodeProtocol backupNode;        // RPC proxy to backup node
   private NamenodeRegistration bnRegistration;  // backup node registration
   private NamenodeRegistration nnRegistration;  // active node registration
   private ArrayList<JournalRecord> bufCurrent;  // current buffer for writing
@@ -60,13 +60,8 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
       this.args = writables;
     }
 
-    void write(DataOutputStream out) throws IOException {
-      out.write(op);
-      out.writeLong(txid);
-      if(args == null)
-        return;
-      for(Writable w : args)
-        w.write(out);
+    void write(DataOutputBuffer out) throws IOException {
+      writeChecksummedOp(out, op, txid, args);
     }
   }
 
@@ -81,8 +76,8 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
     Storage.LOG.info("EditLogBackupOutputStream connects to: " + bnAddress);
     try {
       this.backupNode =
-        (NamenodeProtocol) RPC.getProxy(NamenodeProtocol.class,
-            NamenodeProtocol.versionID, bnAddress, new HdfsConfiguration());
+        (BackupNodeProtocol) RPC.getProxy(BackupNodeProtocol.class,
+            BackupNodeProtocol.versionID, bnAddress, new HdfsConfiguration());
     } catch(IOException e) {
       Storage.LOG.error("Error connecting to: " + bnAddress, e);
       throw e;
@@ -91,7 +86,7 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
     this.bufReady = new ArrayList<JournalRecord>();
     this.out = new DataOutputBuffer(DEFAULT_BUFFER_SIZE);
   }
-
+  
   @Override // JournalStream
   public String getName() {
     return bnRegistration.getAddress();
@@ -156,23 +151,14 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
   @Override // EditLogOutputStream
   protected void flushAndSync() throws IOException {
     assert out.size() == 0 : "Output buffer is not empty";
-    int bufReadySize = bufReady.size();
-    for(int idx = 0; idx < bufReadySize; idx++) {
-      JournalRecord jRec = null;
-      for(; idx < bufReadySize; idx++) {
-        jRec = bufReady.get(idx);
-        if(jRec.op >= FSEditLogOpCodes.OP_JSPOOL_START.getOpCode())
-          break;  // special operation should be sent in a separate call to BN
-        jRec.write(out);
-      }
-      if(out.size() > 0)
-        send(NamenodeProtocol.JA_JOURNAL);
-      if(idx == bufReadySize)
-        break;
-      // operation like start journal spool or increment checkpoint time
-      // is a separate call to BN
+    for (JournalRecord jRec : bufReady) {
       jRec.write(out);
-      send(jRec.op);
+    }
+    if (out.size() > 0) {
+      byte[] data = Arrays.copyOf(out.getData(), out.getLength());
+      backupNode.journal(nnRegistration,
+          bufReady.get(0).txid, bufReady.size(),
+          data);
     }
     bufReady.clear();         // erase all data in the buffer
     out.reset();              // reset buffer to the start position
@@ -188,16 +174,6 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
     return 0;
   }
 
-  private void send(int ja) throws IOException {
-    try {
-      int length = out.getLength();
-      out.write(FSEditLogOpCodes.OP_INVALID.getOpCode());
-      backupNode.journal(nnRegistration, ja, length, out.getData());
-    } finally {
-      out.reset();
-    }
-  }
-
   /**
    * Get backup node registration.
    */
@@ -205,17 +181,7 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
     return bnRegistration;
   }
 
-  /**
-   * Verify that the backup node is alive.
-   */
-  boolean isAlive() {
-    try {
-      send(NamenodeProtocol.JA_IS_ALIVE);
-    } catch(IOException ei) {
-      Storage.LOG.info(bnRegistration.getRole() + " "
-                      + bnRegistration.getAddress() + " is not alive. ", ei);
-      return false;
-    }
-    return true;
+  void startLogSegment(long txId) throws IOException {
+    backupNode.startLogSegment(nnRegistration, txId);
   }
 }

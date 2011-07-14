@@ -72,5 +72,10 @@ class EditLogFileInputStream extends EditLogInputStream {
     // file size + size of both buffers
     return file.length();
   }
+  
+  @Override
+  public String toString() {
+    return getName();
+  }
 
 }

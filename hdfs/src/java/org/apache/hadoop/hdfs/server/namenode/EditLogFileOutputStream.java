@@ -111,21 +111,9 @@ class EditLogFileOutputStream extends EditLogOutputStream {
     if (fp == null) {
       throw new IOException("Trying to use aborted output stream");
     }
-    int start = bufCurrent.getLength();
-    write(op);
-    bufCurrent.writeLong(txid);
-    for (Writable w : writables) {
-      w.write(bufCurrent);
-    }
-    // write transaction checksum
-    int end = bufCurrent.getLength();
-    Checksum checksum = FSEditLog.getChecksum();
-    checksum.reset();
-    checksum.update(bufCurrent.getData(), start, end-start);
-    int sum = (int)checksum.getValue();
-    bufCurrent.writeInt(sum);
+    writeChecksummedOp(bufCurrent, op, txid, writables);
   }
-  
+
   @Override
   void write(final byte[] data, int off, int len) throws IOException {
     bufCurrent.write(data, off, len);
@@ -151,7 +139,7 @@ class EditLogFileOutputStream extends EditLogOutputStream {
 
     setReadyToFlush();
     flush();
-    
+
     // close should have been called after all pending transactions
     // have been flushed & synced.
     // if already closed, just skip

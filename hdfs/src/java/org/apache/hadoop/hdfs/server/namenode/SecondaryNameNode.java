@@ -28,8 +28,6 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.jws.soap.SOAPBinding.Use;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -45,7 +43,6 @@ import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageState;
-import org.apache.hadoop.hdfs.server.namenode.NNStorageArchivalManager.StorageArchiver;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
@@ -390,6 +387,20 @@ public class SecondaryNameNode implements Runnable {
       final CheckpointSignature sig,
       final RemoteEditLogManifest manifest
   ) throws IOException {
+    
+    // Sanity check manifest - these could happen if, eg, someone on the
+    // NN side accidentally rmed the storage directories
+    if (manifest.getLogs().isEmpty()) {
+      throw new IOException("Found no edit logs to download on NN since txid " 
+          + sig.mostRecentCheckpointTxId);
+    }
+    
+    long expectedTxId = sig.mostRecentCheckpointTxId + 1;
+    if (manifest.getLogs().get(0).getStartTxId() != expectedTxId) {
+      throw new IOException("Bad edit log manifest (expected txid = " +
+          expectedTxId + ": " + manifest);
+    }
+
     try {
         Boolean b = UserGroupInformation.getCurrentUser().doAs(
             new PrivilegedExceptionAction<Boolean>() {
@@ -469,6 +480,7 @@ public class SecondaryNameNode implements Runnable {
    */
   boolean doCheckpoint() throws IOException {
     checkpointImage.ensureCurrentDirExists();
+    NNStorage dstStorage = checkpointImage.getStorage();
     
     // Tell the namenode to start logging transactions in a new edit file
     // Returns a token that would be used to upload the merged image.
@@ -482,7 +494,9 @@ public class SecondaryNameNode implements Runnable {
     } else {
       // if we're a fresh 2NN, just take the storage info from the server
       // we first talk to.
-      checkpointImage.getStorage().setStorageInfo(sig);
+      dstStorage.setStorageInfo(sig);
+      dstStorage.setClusterID(sig.getClusterID());
+      dstStorage.setBlockPoolID(sig.getBlockpoolID());
     }
 
     // error simulation code for junit test
@@ -494,28 +508,17 @@ public class SecondaryNameNode implements Runnable {
     RemoteEditLogManifest manifest =
       namenode.getEditLogManifest(sig.mostRecentCheckpointTxId + 1);
 
-    // Sanity check manifest - these could happen if, eg, someone on the
-    // NN side accidentally rmed the storage directories
-    if (manifest.getLogs().isEmpty()) {
-      throw new IOException("Found no edit logs to download on NN since txid " 
-          + sig.mostRecentCheckpointTxId);
-    }
-    if (manifest.getLogs().get(0).getStartTxId() != sig.mostRecentCheckpointTxId + 1) {
-      throw new IOException("Bad edit log manifest (expected txid = " +
-          (sig.mostRecentCheckpointTxId + 1) + ": " + manifest);
-    }
-    
     boolean loadImage = downloadCheckpointFiles(
         fsName, checkpointImage, sig, manifest);   // Fetch fsimage and edits
-    doMerge(conf, sig, manifest, loadImage, checkpointImage);
+    doMerge(sig, manifest, loadImage, checkpointImage);
     
     //
     // Upload the new image into the NameNode. Then tell the Namenode
     // to make this new uploaded image as the most current image.
     //
-    long txid = checkpointImage.getStorage().getMostRecentCheckpointTxId();
+    long txid = checkpointImage.getLastAppliedTxId();
     TransferFsImage.uploadImageFromStorage(fsName, getImageListenAddress(),
-        checkpointImage.getStorage(), txid);
+        dstStorage, txid);
 
     // error simulation code for junit test
     if (ErrorSimulator.getErrorSimulation(1)) {
@@ -524,7 +527,7 @@ public class SecondaryNameNode implements Runnable {
     }
 
     LOG.warn("Checkpoint done. New Image Size: " 
-             + checkpointImage.getStorage().getFsImageName(txid).length());
+             + dstStorage.getFsImageName(txid).length());
     
     // Since we've successfully checkpointed, we can remove some old
     // image files
@@ -678,6 +681,12 @@ public class SecondaryNameNode implements Runnable {
                       Collection<URI> imageDirs,
                       Collection<URI> editsDirs) throws IOException {
       super(conf, (FSNamesystem)null, imageDirs, editsDirs);
+      setFSNamesystem(new FSNamesystem(this, conf));
+      
+      // the 2NN never writes edits -- it only downloads them. So
+      // we shouldn't have any editLog instance. Setting to null
+      // makes sure we don't accidentally depend on it.
+      editLog = null;
     }
 
     /**
@@ -749,45 +758,42 @@ public class SecondaryNameNode implements Runnable {
     }
   }
     
-  static void doMerge(Configuration conf, 
+  static void doMerge(
       CheckpointSignature sig, RemoteEditLogManifest manifest,
       boolean loadImage, FSImage dstImage) throws IOException {   
     NNStorage dstStorage = dstImage.getStorage();
     
     dstStorage.setStorageInfo(sig);
     if (loadImage) {
-      // TODO: dstImage.namesystem.close(); ??
-      dstImage.namesystem = new FSNamesystem(dstImage, conf);
-      dstImage.editLog = new FSEditLog(dstStorage);
-
       File file = dstStorage.findImageFile(sig.mostRecentCheckpointTxId);
       if (file == null) {
         throw new IOException("Couldn't find image file at txid " + 
             sig.mostRecentCheckpointTxId + " even though it should have " +
             "just been downloaded");
       }
-      LOG.debug("2NN loading image from " + file);
-      dstImage.loadFSImage(file);
+      dstImage.reloadFromImageFile(file);
     }
+    
+    rollForwardByApplyingLogs(manifest, dstImage);
+    dstImage.saveFSImageInAllDirs(dstImage.getLastAppliedTxId());
+    dstStorage.writeAll();
+  }
+  
+  static void rollForwardByApplyingLogs(
+      RemoteEditLogManifest manifest,
+      FSImage dstImage) throws IOException {
+    NNStorage dstStorage = dstImage.getStorage();
+
     List<File> editsFiles = Lists.newArrayList();
     for (RemoteEditLog log : manifest.getLogs()) {
       File f = dstStorage.findFinalizedEditsFile(
           log.getStartTxId(), log.getEndTxId());
-      editsFiles.add(f);
+      if (log.getStartTxId() > dstImage.getLastAppliedTxId()) {
+        editsFiles.add(f);
+      }
     }
     LOG.info("SecondaryNameNode about to load edits from " +
         editsFiles.size() + " file(s).");
     dstImage.loadEdits(editsFiles);
-    
-    // TODO: why do we need the following two lines? We shouldn't have even
-    // been able to download an image from a NN that had a different
-    // cluster ID or blockpool ID! this should only be done for the
-    // very first checkpoint.
-    dstStorage.setClusterID(sig.getClusterID());
-    dstStorage.setBlockPoolID(sig.getBlockpoolID());
-    
-    sig.validateStorageInfo(dstImage);
-    dstImage.saveFSImageInAllDirs(dstImage.getEditLog().getLastWrittenTxId());
-    dstStorage.writeAll();
   }
 }

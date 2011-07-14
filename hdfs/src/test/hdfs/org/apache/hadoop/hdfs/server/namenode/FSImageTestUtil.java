@@ -25,8 +25,11 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.net.URI;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -34,6 +37,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.FoundEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.FoundFSImage;
@@ -44,6 +48,7 @@ import org.apache.hadoop.io.MD5Hash;
 import org.mockito.Mockito;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -255,6 +260,31 @@ public abstract class FSImageTestUtil {
   }
 
   /**
+   * Assert that the NameNode has checkpoints at the expected
+   * transaction IDs.
+   */
+  static void assertNNHasCheckpoints(MiniDFSCluster cluster,
+      List<Integer> txids) {
+
+    for (File nameDir : getNameNodeCurrentDirs(cluster)) {
+      // Should have fsimage_N for the three checkpoints
+      for (long checkpointTxId : txids) {
+        File image = new File(nameDir,
+                              NNStorage.getImageFileName(checkpointTxId));
+        assertTrue("Expected non-empty " + image, image.length() > 0);
+      }
+    }
+  }
+
+  static List<File> getNameNodeCurrentDirs(MiniDFSCluster cluster) {
+    List<File> nameDirs = Lists.newArrayList();
+    for (URI u : cluster.getNameDirs(0)) {
+      nameDirs.add(new File(u.getPath(), "current"));
+    }
+    return nameDirs;
+  }
+
+  /**
    * @return the latest edits log, finalized or otherwise, from the given
    * storage directory.
    */
@@ -264,7 +294,17 @@ public abstract class FSImageTestUtil {
       new FSImageTransactionalStorageInspector();
     inspector.inspectDirectory(sd);
     
-    return inspector.foundEditLogs.get(inspector.foundEditLogs.size() - 1);
+    List<FoundEditLog> foundEditLogs = Lists.newArrayList(
+        inspector.getFoundEditLogs());
+    return Collections.max(foundEditLogs, new Comparator<FoundEditLog>() {
+      @Override
+      public int compare(FoundEditLog a, FoundEditLog b) {
+        return ComparisonChain.start()
+          .compare(a.getStartTxId(), b.getStartTxId())
+          .compare(a.getLastTxId(), b.getLastTxId())
+          .result();
+      }
+    });
   }
 
   /**

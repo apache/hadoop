@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.protocol.BackupNodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
@@ -51,7 +52,7 @@ import org.apache.hadoop.net.NetUtils;
  * </ol>
  */
 @InterfaceAudience.Private
-public class BackupNode extends NameNode {
+public class BackupNode extends NameNode implements BackupNodeProtocol {
   private static final String BN_ADDRESS_NAME_KEY = DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY;
   private static final String BN_ADDRESS_DEFAULT = DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_DEFAULT;
   private static final String BN_HTTP_ADDRESS_NAME_KEY = DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY;
@@ -176,6 +177,17 @@ public class BackupNode extends NameNode {
     super.stop();
   }
 
+  
+  @Override
+  public long getProtocolVersion(String protocol, long clientVersion)
+      throws IOException {
+    if (protocol.equals(BackupNodeProtocol.class.getName())) {
+      return BackupNodeProtocol.versionID;
+    } else {
+      return super.getProtocolVersion(protocol, clientVersion);
+    }
+  }
+
   /////////////////////////////////////////////////////
   // NamenodeProtocol implementation for backup node.
   /////////////////////////////////////////////////////
@@ -202,30 +214,36 @@ public class BackupNode extends NameNode {
   public void endCheckpoint(NamenodeRegistration registration,
                             CheckpointSignature sig) throws IOException {
     throw new UnsupportedActionException("endCheckpoint");
-  }
+  }  
 
-  @Override // NamenodeProtocol
+  /////////////////////////////////////////////////////
+  // BackupNodeProtocol implementation for backup node.
+  /////////////////////////////////////////////////////
+
+  @Override
   public void journal(NamenodeRegistration nnReg,
-                      int jAction,
-                      int length,
-                      byte[] args) throws IOException {
+      long firstTxId, int numTxns,
+      byte[] records) throws IOException {
     verifyRequest(nnReg);
     if(!nnRpcAddress.equals(nnReg.getAddress()))
       throw new IOException("Journal request from unexpected name-node: "
           + nnReg.getAddress() + " expecting " + nnRpcAddress);
-    BackupImage bnImage = (BackupImage)getFSImage();
-    switch(jAction) {
-      case (int)JA_IS_ALIVE:
-        return;
-      case (int)JA_JOURNAL:
-        bnImage.journal(length, args);
-        return;
-      case (int)JA_JSPOOL_START:
-        bnImage.startJournalSpool(nnReg);
-        return;
-      default:
-        throw new IOException("Unexpected journal action: " + jAction);
-    }
+    getBNImage().journal(firstTxId, numTxns, records);
+  }
+
+  @Override
+  public void startLogSegment(NamenodeRegistration registration, long txid)
+      throws IOException {
+    verifyRequest(registration);
+  
+    getBNImage().namenodeStartedLogSegment(txid);
+  }
+
+  //////////////////////////////////////////////////////
+  
+  
+  BackupImage getBNImage() {
+    return (BackupImage)getFSImage();
   }
 
   boolean shouldCheckpointAtStartup() {
@@ -234,9 +252,9 @@ public class BackupNode extends NameNode {
       assert fsImage.getStorage().getNumStorageDirs() > 0;
       return ! fsImage.getStorage().getStorageDir(0).getVersionFile().exists();
     }
-    if(namesystem == null || namesystem.dir == null || getFSImage() == null)
-      return true;
-    return false; // TODO fsImage.getEditLog().getNumJournals() == 0;
+    
+    // BN always checkpoints on startup in order to get in sync with namespace
+    return true;
   }
 
   private NamespaceInfo handshake(Configuration conf) throws IOException {
@@ -287,14 +305,15 @@ public class BackupNode extends NameNode {
    */
   private void registerWith(NamespaceInfo nsInfo) throws IOException {
     BackupImage bnImage = (BackupImage)getFSImage();
+    NNStorage storage = bnImage.getStorage();
     // verify namespaceID
-    if(bnImage.getStorage().getNamespaceID() == 0) // new backup storage
-      bnImage.getStorage().setStorageInfo(nsInfo);
-    else if(bnImage.getStorage().getNamespaceID() != nsInfo.getNamespaceID())
-      throw new IOException("Incompatible namespaceIDs"
-          + ": active node namespaceID = " + nsInfo.getNamespaceID() 
-          + "; backup node namespaceID = " + bnImage.getStorage().getNamespaceID());
-
+    if (storage.getNamespaceID() == 0) { // new backup storage
+      storage.setStorageInfo(nsInfo);
+      storage.setBlockPoolID(nsInfo.getBlockPoolID());
+      storage.setClusterID(nsInfo.getClusterID());
+    } else {
+      nsInfo.validateStorage(storage);
+    }
     setRegistration();
     NamenodeRegistration nnReg = null;
     while(!isStopRequested()) {
@@ -321,14 +340,6 @@ public class BackupNode extends NameNode {
       throw new IOException(msg); // stop the node
     }
     nnRpcAddress = nnReg.getAddress();
-  }
-
-  /**
-   * Reset node namespace state in memory and in storage directories.
-   * @throws IOException
-   */
-  void resetNamespace() throws IOException {
-    ((BackupImage)getFSImage()).reset();
   }
 
   // TODO: move to a common with DataNode util class

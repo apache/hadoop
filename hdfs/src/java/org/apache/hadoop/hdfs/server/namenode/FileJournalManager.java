@@ -104,4 +104,11 @@ public class FileJournalManager implements JournalManager {
     }
   }
 
+  @Override
+  public EditLogInputStream getInProgressInputStream(long segmentStartsAtTxId)
+      throws IOException {
+    File f = NNStorage.getInProgressEditsFile(sd, segmentStartsAtTxId);
+    return new EditLogFileInputStream(f);
+  }
+
 }

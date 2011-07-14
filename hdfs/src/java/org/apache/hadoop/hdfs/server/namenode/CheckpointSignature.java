@@ -110,7 +110,6 @@ public class CheckpointSignature extends StorageInfo
        || cTime != si.getStorage().cTime
        || !clusterID.equals(si.getClusterID())
        || !blockpoolID.equals(si.getBlockPoolID())) {
-      // checkpointTime can change when the image is saved - do not compare
       throw new IOException("Inconsistent checkpoint fields.\n"
           + "LV = " + layoutVersion + " namespaceID = " + namespaceID
           + " cTime = " + cTime

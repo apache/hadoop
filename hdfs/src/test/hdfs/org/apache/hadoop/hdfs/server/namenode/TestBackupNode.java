@@ -19,9 +19,12 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -29,14 +32,28 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
-import org.apache.hadoop.hdfs.server.namenode.FSImage.CheckpointStates;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.FoundEditLog;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.log4j.Level;
+
+import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 
 import junit.framework.TestCase;
 
 public class TestBackupNode extends TestCase {
   public static final Log LOG = LogFactory.getLog(TestBackupNode.class);
 
+  
+  static {
+    ((Log4JLogger)Checkpointer.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)BackupImage.LOG).getLogger().setLevel(Level.ALL);
+  }
+  
   static final String BASE_DIR = MiniDFSCluster.getBaseDirectory();
 
   protected void setUp() throws Exception {
@@ -53,73 +70,185 @@ public class TestBackupNode extends TestCase {
     dirB.mkdirs();
   }
 
-  protected void tearDown() throws Exception {
-    super.tearDown();
-    File baseDir = new File(BASE_DIR);
-    if(!(FileUtil.fullyDelete(baseDir)))
-      throw new IOException("Cannot remove directory: " + baseDir);
-  }
-
-  static void writeFile(FileSystem fileSys, Path name, int repl)
-  throws IOException {
-    TestCheckpoint.writeFile(fileSys, name, repl);
-  }
-
-
-  static void checkFile(FileSystem fileSys, Path name, int repl)
-  throws IOException {
-    TestCheckpoint.checkFile(fileSys, name, repl);
-  }
-
-  void cleanupFile(FileSystem fileSys, Path name)
-  throws IOException {
-    TestCheckpoint.cleanupFile(fileSys, name);
-  }
-
-  static String getBackupNodeDir(StartupOption t, int i) {
-    return BASE_DIR + "name" + t.getName() + i + "/";
+  static String getBackupNodeDir(StartupOption t, int idx) {
+    return BASE_DIR + "name" + t.getName() + idx + "/";
   }
 
   BackupNode startBackupNode(Configuration conf,
-                             StartupOption t, int i) throws IOException {
+                             StartupOption startupOpt,
+                             int idx) throws IOException {
     Configuration c = new HdfsConfiguration(conf);
-    String dirs = getBackupNodeDir(t, i);
+    String dirs = getBackupNodeDir(startupOpt, idx);
     c.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, dirs);
     c.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
         "${" + DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY + "}");
-    return (BackupNode)NameNode.createNameNode(new String[]{t.getName()}, c);
+    c.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY,
+        "127.0.0.1:0");
+
+    return (BackupNode)NameNode.createNameNode(new String[]{startupOpt.getName()}, c);
   }
 
-  void waitCheckpointDone(BackupNode backup) {
-/*    do {
+  void waitCheckpointDone(
+      MiniDFSCluster cluster, BackupNode backup, long txid) {
+    long thisCheckpointTxId;
+    do {
       try {
-        LOG.info("Waiting checkpoint to complete...");
+        LOG.info("Waiting checkpoint to complete... " +
+            "checkpoint txid should increase above " + txid);
         Thread.sleep(1000);
       } catch (Exception e) {}
-    } while(backup.getCheckpointState() != CheckpointStates.START); */
+      thisCheckpointTxId = backup.getFSImage().getStorage()
+        .getMostRecentCheckpointTxId();
+
+    } while (thisCheckpointTxId < txid);
+    
+    // Check that the checkpoint got uploaded to NN successfully
+    FSImageTestUtil.assertNNHasCheckpoints(cluster,
+        Collections.singletonList((int)thisCheckpointTxId));
   }
 
-  public void testCheckpoint() throws IOException {
+  public void testCheckpointNode() throws Exception {
     testCheckpoint(StartupOption.CHECKPOINT);
-    testCheckpoint(StartupOption.BACKUP);
   }
-
-  void testCheckpoint(StartupOption op) throws IOException {
-    Path file1 = new Path("checkpoint.dat");
-    Path file2 = new Path("checkpoint2.dat");
-
+  
+  /**
+   * Ensure that the backupnode will tail edits from the NN
+   * and keep in sync, even while the NN rolls, checkpoints
+   * occur, etc.
+   */
+  public void testBackupNodeTailsEdits() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    short replication = (short)conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
-    conf.set(DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY, "0");
-    conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1); // disable block scanner
-    int numDatanodes = Math.max(3, replication);
     MiniDFSCluster cluster = null;
     FileSystem fileSys = null;
     BackupNode backup = null;
 
     try {
       cluster = new MiniDFSCluster.Builder(conf)
-                                  .numDataNodes(numDatanodes).build();
+                                  .numDataNodes(0).build();
+      fileSys = cluster.getFileSystem();
+      backup = startBackupNode(conf, StartupOption.BACKUP, 1);
+      
+      BackupImage bnImage = backup.getBNImage();
+      testBNInSync(cluster, backup, 1);
+      
+      // Force a roll -- BN should roll with NN.
+      NameNode nn = cluster.getNameNode();
+      nn.rollEditLog();
+      assertEquals(bnImage.getEditLog().getCurSegmentTxId(),
+          nn.getFSImage().getEditLog().getCurSegmentTxId());
+      
+      // BN should stay in sync after roll
+      testBNInSync(cluster, backup, 2);
+      
+      long nnImageBefore =
+        nn.getFSImage().getStorage().getMostRecentCheckpointTxId();
+      // BN checkpoint
+      backup.doCheckpoint();
+      
+      // NN should have received a new image
+      long nnImageAfter =
+        nn.getFSImage().getStorage().getMostRecentCheckpointTxId();
+      
+      assertTrue("nn should have received new checkpoint. before: " +
+          nnImageBefore + " after: " + nnImageAfter,
+          nnImageAfter > nnImageBefore);
+
+      // BN should stay in sync after checkpoint
+      testBNInSync(cluster, backup, 3);
+
+      // Stop BN
+      StorageDirectory sd = bnImage.getStorage().getStorageDir(0);
+      backup.stop();
+      backup = null;
+      
+      // When shutting down the BN, it shouldn't finalize logs that are
+      // still open on the NN
+      FoundEditLog editsLog = FSImageTestUtil.findLatestEditsLog(sd);
+      assertEquals(editsLog.getStartTxId(),
+          nn.getFSImage().getEditLog().getCurSegmentTxId());
+      assertTrue("Should not have finalized " + editsLog,
+          editsLog.isInProgress());
+      
+      // do some edits
+      assertTrue(fileSys.mkdirs(new Path("/edit-while-bn-down")));
+      
+      // start a new backup node
+      backup = startBackupNode(conf, StartupOption.BACKUP, 1);
+
+      testBNInSync(cluster, backup, 4);
+      assertNotNull(backup.getNamesystem().getFileInfo("/edit-while-bn-down", false));
+    } finally {
+      LOG.info("Shutting down...");
+      if (backup != null) backup.stop();
+      if (fileSys != null) fileSys.close();
+      if (cluster != null) cluster.shutdown();
+    }
+    
+    assertStorageDirsMatch(cluster.getNameNode(), backup);
+  }
+
+  private void testBNInSync(MiniDFSCluster cluster, final BackupNode backup,
+      int testIdx) throws Exception {
+    
+    final NameNode nn = cluster.getNameNode();
+    final FileSystem fs = cluster.getFileSystem();
+
+    // Do a bunch of namespace operations, make sure they're replicated
+    // to the BN.
+    for (int i = 0; i < 10; i++) {
+      final String src = "/test_" + testIdx + "_" + i;
+      LOG.info("Creating " + src + " on NN");
+      Path p = new Path(src);
+      assertTrue(fs.mkdirs(p));
+      
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          LOG.info("Checking for " + src + " on BN");
+          try {
+            boolean hasFile = backup.getNamesystem().getFileInfo(src, false) != null;
+            boolean txnIdMatch = backup.getTransactionID() == nn.getTransactionID();
+            return hasFile && txnIdMatch;
+          } catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        }
+      }, 30, 10000);
+    }
+    
+    assertStorageDirsMatch(nn, backup);
+  }
+
+  private void assertStorageDirsMatch(final NameNode nn, final BackupNode backup)
+      throws Exception {
+    // Check that the stored files in the name dirs are identical
+    List<File> dirs = Lists.newArrayList(
+        FSImageTestUtil.getCurrentDirs(nn.getFSImage().getStorage(),
+            null));
+    dirs.addAll(FSImageTestUtil.getCurrentDirs(backup.getFSImage().getStorage(),
+        null));
+    FSImageTestUtil.assertParallelFilesAreIdentical(dirs, ImmutableSet.of("VERSION"));
+  }
+  
+  public void testBackupNode() throws Exception {
+    testCheckpoint(StartupOption.BACKUP);
+  }  
+
+  void testCheckpoint(StartupOption op) throws Exception {
+    Path file1 = new Path("checkpoint.dat");
+    Path file2 = new Path("checkpoint2.dat");
+
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY, "0");
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1); // disable block scanner
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 1);
+    MiniDFSCluster cluster = null;
+    FileSystem fileSys = null;
+    BackupNode backup = null;
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf)
+                                  .numDataNodes(0).build();
       fileSys = cluster.getFileSystem();
       //
       // verify that 'format' really blew away all pre-existing files
@@ -130,14 +259,14 @@ public class TestBackupNode extends TestCase {
       //
       // Create file1
       //
-      writeFile(fileSys, file1, replication);
-      checkFile(fileSys, file1, replication);
+      assertTrue(fileSys.mkdirs(file1));
 
       //
       // Take a checkpoint
       //
+      long txid = cluster.getNameNode().getTransactionID();
       backup = startBackupNode(conf, op, 1);
-      waitCheckpointDone(backup);
+      waitCheckpointDone(cluster, backup, txid);
     } catch(IOException e) {
       LOG.error("Error in TestBackupNode:", e);
       assertTrue(e.getLocalizedMessage(), false);
@@ -146,39 +275,45 @@ public class TestBackupNode extends TestCase {
       if(fileSys != null) fileSys.close();
       if(cluster != null) cluster.shutdown();
     }
-    File imageFileNN = new File(BASE_DIR, "name1/current/fsimage");
-    File imageFileBN = new File(getBackupNodeDir(op, 1), "/current/fsimage");
-    LOG.info("NameNode fsimage length = " + imageFileNN.length());
-    LOG.info("Backup Node fsimage length = " + imageFileBN.length());
-    assertTrue(imageFileNN.length() == imageFileBN.length());
+    File nnCurDir = new File(BASE_DIR, "name1/current/");
+    File bnCurDir = new File(getBackupNodeDir(op, 1), "/current/");
 
+    FSImageTestUtil.assertParallelFilesAreIdentical(
+        ImmutableList.of(bnCurDir, nnCurDir),
+        ImmutableSet.<String>of("VERSION"));
+    
     try {
       //
       // Restart cluster and verify that file1 still exist.
       //
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
                                                 .format(false).build();
       fileSys = cluster.getFileSystem();
       // check that file1 still exists
-      checkFile(fileSys, file1, replication);
-      cleanupFile(fileSys, file1);
+      assertTrue(fileSys.exists(file1));
+      fileSys.delete(file1, true);
 
       // create new file file2
-      writeFile(fileSys, file2, replication);
-      checkFile(fileSys, file2, replication);
+      fileSys.mkdirs(file2);
 
       //
       // Take a checkpoint
       //
       backup = startBackupNode(conf, op, 1);
-      waitCheckpointDone(backup);
+      long txid = cluster.getNameNode().getTransactionID();
+      waitCheckpointDone(cluster, backup, txid);
 
       for (int i = 0; i < 10; i++) {
-        writeFile(fileSys, new Path("file_" + i), replication);
+        fileSys.mkdirs(new Path("file_" + i));
       }
 
+      txid = cluster.getNameNode().getTransactionID();
       backup.doCheckpoint();
-      waitCheckpointDone(backup);
+      waitCheckpointDone(cluster, backup, txid);
+
+      txid = cluster.getNameNode().getTransactionID();
+      backup.doCheckpoint();
+      waitCheckpointDone(cluster, backup, txid);
 
     } catch(IOException e) {
       LOG.error("Error in TestBackupNode:", e);
@@ -188,76 +323,28 @@ public class TestBackupNode extends TestCase {
       if(fileSys != null) fileSys.close();
       if(cluster != null) cluster.shutdown();
     }
-    LOG.info("NameNode fsimage length = " + imageFileNN.length());
-    LOG.info("Backup Node fsimage length = " + imageFileBN.length());
-    assertTrue(imageFileNN.length() == imageFileBN.length());
+    FSImageTestUtil.assertParallelFilesAreIdentical(
+        ImmutableList.of(bnCurDir, nnCurDir),
+        ImmutableSet.<String>of("VERSION"));
 
     try {
       //
       // Restart cluster and verify that file2 exists and
       // file1 does not exist.
       //
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes).format(false).build();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).format(false).build();
       fileSys = cluster.getFileSystem();
 
       assertTrue(!fileSys.exists(file1));
 
       // verify that file2 exists
-      checkFile(fileSys, file2, replication);
+      assertTrue(fileSys.exists(file2));
     } catch(IOException e) {
       LOG.error("Error in TestBackupNode:", e);
       assertTrue(e.getLocalizedMessage(), false);
     } finally {
       fileSys.close();
       cluster.shutdown();
-    }
-  }
-
-  /**
-   * Test that only one backup node can register.
-   * @throws IOException
-   */
-  public void testBackupRegistration() throws IOException {
-    Configuration conf1 = new HdfsConfiguration();
-    Configuration conf2 = null;
-    MiniDFSCluster cluster = null;
-    BackupNode backup1 = null;
-    BackupNode backup2 = null;
-    try {
-      // start name-node and backup node 1
-      cluster = new MiniDFSCluster.Builder(conf1).numDataNodes(0).build();
-      conf1.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY, "0.0.0.0:7771");
-      conf1.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, "0.0.0.0:7775");
-      backup1 = startBackupNode(conf1, StartupOption.BACKUP, 1);
-      // try to start backup node 2
-      conf2 = new HdfsConfiguration(conf1);
-      conf2.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY, "0.0.0.0:7772");
-      conf2.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, "0.0.0.0:7776");
-      try {
-        backup2 = startBackupNode(conf2, StartupOption.BACKUP, 2);
-        backup2.stop();
-        backup2 = null;
-        assertTrue("Only one backup node should be able to start", false);
-      } catch(IOException e) {
-        assertTrue(
-            e.getLocalizedMessage().contains("Registration is not allowed"));
-        // should fail - doing good
-      }
-      // stop backup node 1; backup node 2 should be able to start
-      backup1.stop();
-      backup1 = null;
-      try {
-        backup2 = startBackupNode(conf2, StartupOption.BACKUP, 2);
-      } catch(IOException e) {
-        assertTrue("Backup node 2 should be able to start", false);
-      }
-    } catch(IOException e) {
-      LOG.error("Error in TestBackupNode:", e);
-      assertTrue(e.getLocalizedMessage(), false);
-    } finally {
-      if(backup1 != null) backup1.stop();
-      if(backup2 != null) backup2.stop();
-      if(cluster != null) cluster.shutdown();
     }
   }
 }

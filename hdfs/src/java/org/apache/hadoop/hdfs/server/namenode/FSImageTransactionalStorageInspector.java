@@ -106,14 +106,15 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
                    "not configured to contain images.");
         }
       }
+    }
+    
 
-      // Check for a seen_txid file, which marks a minimum transaction ID that
-      // must be included in our load plan.
-      try {
-        maxSeenTxId = Math.max(maxSeenTxId, NNStorage.readTransactionIdFile(sd));
-      } catch (IOException ioe) {
-        LOG.warn("Unable to determine the max transaction ID seen by " + sd, ioe);
-      }
+    // Check for a seen_txid file, which marks a minimum transaction ID that
+    // must be included in our load plan.
+    try {
+      maxSeenTxId = Math.max(maxSeenTxId, NNStorage.readTransactionIdFile(sd));
+    } catch (IOException ioe) {
+      LOG.warn("Unable to determine the max transaction ID seen by " + sd, ioe);
     }
     
     List<FoundEditLog> editLogs = matchEditLogs(filesInStorage);
@@ -215,14 +216,45 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
     }
 
     FoundFSImage recoveryImage = getLatestImage();
-    long expectedTxId = recoveryImage.txId + 1;
+    LogLoadPlan logPlan = createLogLoadPlan(recoveryImage.txId, Long.MAX_VALUE);
+
+    return new TransactionalLoadPlan(recoveryImage,
+        logPlan);
+  }
+  
+  /**
+   * Plan which logs to load in order to bring the namespace up-to-date.
+   * Transactions will be considered in the range (sinceTxId, maxTxId]
+   * 
+   * @param sinceTxId the highest txid that is already loaded 
+   *                  (eg from the image checkpoint)
+   * @param maxStartTxId ignore any log files that start after this txid
+   */
+  LogLoadPlan createLogLoadPlan(long sinceTxId, long maxStartTxId) throws IOException {
+    long expectedTxId = sinceTxId + 1;
     
     List<FoundEditLog> recoveryLogs = new ArrayList<FoundEditLog>();
     
-    SortedMap<Long, LogGroup> usefulGroups = logGroups.tailMap(expectedTxId);
-    LOG.debug("Excluded " + (logGroups.size() - usefulGroups.size()) + 
-        " groups of logs because they start with a txid less than image " +
-        "txid " + recoveryImage.txId);
+    SortedMap<Long, LogGroup> tailGroups = logGroups.tailMap(expectedTxId);
+    if (logGroups.size() > tailGroups.size()) {
+      LOG.debug("Excluded " + (logGroups.size() - tailGroups.size()) + 
+          " groups of logs because they start with a txid less than image " +
+          "txid " + sinceTxId);
+    }
+    
+    SortedMap<Long, LogGroup> usefulGroups;
+    if (maxStartTxId > sinceTxId) {
+      usefulGroups = tailGroups.headMap(maxStartTxId);
+    } else {
+      usefulGroups = new TreeMap<Long, LogGroup>();
+    }
+    
+    if (usefulGroups.size() > tailGroups.size()) {
+      LOG.debug("Excluded " + (tailGroups.size() - usefulGroups.size()) + 
+        " groups of logs because they start with a txid higher than max " +
+        "txid " + sinceTxId);
+    }
+
 
     for (Map.Entry<Long, LogGroup> entry : usefulGroups.entrySet()) {
       long logStartTxId = entry.getKey();
@@ -251,7 +283,7 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
     
     long lastLogGroupStartTxId = usefulGroups.isEmpty() ?
         0 : usefulGroups.lastKey();
-    if (maxSeenTxId > recoveryImage.txId &&
+    if (maxSeenTxId > sinceTxId &&
         maxSeenTxId > lastLogGroupStartTxId) {
       String msg = "At least one storage directory indicated it has seen a " +
         "log segment starting at txid " + maxSeenTxId;
@@ -263,9 +295,10 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
       }
       throw new IOException(msg);
     }
-
-    return new TransactionalLoadPlan(recoveryImage, recoveryLogs,
+    
+    return new LogLoadPlan(recoveryLogs,
         Lists.newArrayList(usefulGroups.values()));
+
   }
 
   @Override
@@ -595,23 +628,18 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
 
   static class TransactionalLoadPlan extends LoadPlan {
     final FoundFSImage image;
-    final List<FoundEditLog> editLogs;
-    final List<LogGroup> logGroupsToRecover;
+    final LogLoadPlan logPlan;
     
     public TransactionalLoadPlan(FoundFSImage image,
-        List<FoundEditLog> editLogs,
-        List<LogGroup> logGroupsToRecover) {
+        LogLoadPlan logPlan) {
       super();
       this.image = image;
-      this.editLogs = editLogs;
-      this.logGroupsToRecover = logGroupsToRecover;
+      this.logPlan = logPlan;
     }
 
     @Override
     boolean doRecovery() throws IOException {
-      for (LogGroup g : logGroupsToRecover) {
-        g.recover();
-      }
+      logPlan.doRecovery();
       return false;
     }
 
@@ -622,16 +650,37 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
 
     @Override
     List<File> getEditsFiles() {
-      List<File> ret = new ArrayList<File>();
-      for (FoundEditLog log : editLogs) {
-        ret.add(log.getFile());
-      }
-      return ret;
+      return logPlan.getEditsFiles();
     }
 
     @Override
     StorageDirectory getStorageDirectoryForProperties() {
       return image.sd;
+    }
+  }
+  
+  static class LogLoadPlan {
+    final List<FoundEditLog> editLogs;
+    final List<LogGroup> logGroupsToRecover;
+    
+    LogLoadPlan(List<FoundEditLog> editLogs,
+        List<LogGroup> logGroupsToRecover) {
+      this.editLogs = editLogs;
+      this.logGroupsToRecover = logGroupsToRecover;
+    }
+
+    public void doRecovery() throws IOException {
+      for (LogGroup g : logGroupsToRecover) {
+        g.recover();
+      }
+    }
+
+    public List<File> getEditsFiles() {
+      List<File> ret = new ArrayList<File>();
+      for (FoundEditLog log : editLogs) {
+        ret.add(log.getFile());
+      }
+      return ret;
     }
   }
 }

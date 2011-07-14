@@ -21,16 +21,13 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -45,7 +42,6 @@ import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageState;
-import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.Util;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
@@ -74,14 +70,17 @@ import com.google.common.collect.Lists;
 public class FSImage implements Closeable {
   protected static final Log LOG = LogFactory.getLog(FSImage.class.getName());
 
-  // checkpoint states
-  enum CheckpointStates{START, ROLLED_EDITS, UPLOAD_START, UPLOAD_DONE; }
-
   protected FSNamesystem namesystem = null;
   protected FSEditLog editLog = null;
   private boolean isUpgradeFinalized = false;
 
   protected NNStorage storage;
+  
+  /**
+   * The last transaction ID that was either loaded from an image
+   * or loaded by loading edits files.
+   */
+  protected long lastAppliedTxId = 0;
 
   /**
    * URIs for importing an image from a checkpoint. In the default case,
@@ -92,10 +91,6 @@ public class FSImage implements Closeable {
 
   final private Configuration conf;
 
-  /**
-   * Can fs-image be rolled?
-   */
-  volatile protected CheckpointStates ckptState = FSImage.CheckpointStates.START;
   private final NNStorageArchivalManager archivalManager; 
 
   /**
@@ -559,6 +554,18 @@ public class FSImage implements Closeable {
     editLog.open();
     storage.writeTransactionIdFileToStorage(editLog.getCurSegmentTxId());
   };
+  
+  /**
+   * Toss the current image and namesystem, reloading from the specified
+   * file.
+   */
+  void reloadFromImageFile(File file) throws IOException {
+    // TODO: namesystem.close(); ??
+    namesystem.dir.reset();
+
+    LOG.debug("Reloading namespace from " + file);
+    loadFSImage(file);
+  }
 
   /**
    * Choose latest image from one of the directories,
@@ -626,8 +633,12 @@ public class FSImage implements Closeable {
     } catch (IOException ioe) {
       throw new IOException("Failed to load image from " + loadPlan.getImageFile(), ioe);
     }
-
-    needToSave |= loadEdits(loadPlan.getEditsFiles());
+    
+    long numLoaded = loadEdits(loadPlan.getEditsFiles());
+    needToSave |= numLoaded > 0;
+    
+    // update the txid for the edit log
+    editLog.setNextTxId(storage.getMostRecentCheckpointTxId() + numLoaded + 1);
 
     /* TODO(todd) Need to discuss whether we should force a re-save
      * of the image if one of the edits or images has an old format
@@ -640,13 +651,14 @@ public class FSImage implements Closeable {
 
   /**
    * Load the specified list of edit files into the image.
-   * @return true if the image should be re-saved
+   * @return the number of transactions loaded
    */
-  protected boolean loadEdits(List<File> editLogs) throws IOException {
+  protected long loadEdits(List<File> editLogs) throws IOException {
     LOG.debug("About to load edits:\n  " + Joiner.on("\n  ").join(editLogs));
-      
+
+    long startingTxId = getLastAppliedTxId() + 1;
+    
     FSEditLogLoader loader = new FSEditLogLoader(namesystem);
-    long startingTxId = storage.getMostRecentCheckpointTxId() + 1;
     int numLoaded = 0;
     // Load latest edits
     for (File edits : editLogs) {
@@ -655,17 +667,13 @@ public class FSImage implements Closeable {
       int thisNumLoaded = loader.loadFSEdits(editIn, startingTxId);
       startingTxId += thisNumLoaded;
       numLoaded += thisNumLoaded;
+      lastAppliedTxId += thisNumLoaded;
       editIn.close();
     }
 
     // update the counts
     getFSNamesystem().dir.updateCountForINodeWithQuota();    
-    
-    // update the txid for the edit log
-    editLog.setNextTxId(storage.getMostRecentCheckpointTxId() + numLoaded + 1);
-
-    // If we loaded any edits, need to save.
-    return numLoaded > 0;
+    return numLoaded;
   }
 
 
@@ -673,7 +681,7 @@ public class FSImage implements Closeable {
    * Load the image namespace from the given image file, verifying
    * it against the MD5 sum stored in its associated .md5 file.
    */
-  void loadFSImage(File imageFile) throws IOException {
+  private void loadFSImage(File imageFile) throws IOException {
     MD5Hash expectedMD5 = MD5FileUtils.readStoredMd5ForFile(imageFile);
     if (expectedMD5 == null) {
       throw new IOException("No MD5 file found corresponding to image file "
@@ -687,7 +695,7 @@ public class FSImage implements Closeable {
    * filenames and blocks.  Return whether we should
    * "re-save" and consolidate the edit-logs
    */
-  void loadFSImage(File curFile, MD5Hash expectedMd5) throws IOException {
+  private void loadFSImage(File curFile, MD5Hash expectedMd5) throws IOException {
     FSImageFormat.Loader loader = new FSImageFormat.Loader(
         conf, getFSNamesystem());
     loader.load(curFile);
@@ -704,8 +712,9 @@ public class FSImage implements Closeable {
     }
 
     long txId = loader.getLoadedImageTxId();
+    LOG.info("Loaded image for txid " + txId + " from " + curFile);
+    lastAppliedTxId = txId;
     storage.setMostRecentCheckpointTxId(txId);
-    editLog.setNextTxId(txId + 1);
   }
 
 
@@ -718,10 +727,10 @@ public class FSImage implements Closeable {
     
     FSImageFormat.Saver saver = new FSImageFormat.Saver();
     FSImageCompression compression = FSImageCompression.createCompression(conf);
-    saver.save(newFile, getFSNamesystem(), compression);
+    saver.save(newFile, txid, getFSNamesystem(), compression);
     
     MD5FileUtils.saveMD5File(dstFile, saver.getSavedDigest());
-    storage.setMostRecentCheckpointTxId(editLog.getLastWrittenTxId());
+    storage.setMostRecentCheckpointTxId(txid);
   }
 
   /**
@@ -784,7 +793,7 @@ public class FSImage implements Closeable {
     boolean editLogWasOpen = editLog.isOpen();
     
     if (editLogWasOpen) {
-      editLog.endCurrentLogSegment();
+      editLog.endCurrentLogSegment(true);
     }
     long imageTxId = editLog.getLastWrittenTxId();
     try {
@@ -793,7 +802,7 @@ public class FSImage implements Closeable {
       
     } finally {
       if (editLogWasOpen) {
-        editLog.startLogSegment(imageTxId + 1);
+        editLog.startLogSegment(imageTxId + 1, true);
         // Take this opportunity to note the current transaction
         storage.writeTransactionIdFileToStorage(imageTxId + 1);
       }
@@ -951,7 +960,6 @@ public class FSImage implements Closeable {
       // do not return image if there are no image directories
       needToReturnImg = false;
     CheckpointSignature sig = rollEditLog();
-    getEditLog().logJSpoolStart(bnReg, nnReg);
     return new CheckpointCommand(sig, isImgObsolete, needToReturnImg);
   }
 
@@ -1003,7 +1011,9 @@ public class FSImage implements Closeable {
   }
 
   synchronized public void close() throws IOException {
-    getEditLog().close();
+    if (editLog != null) { // 2NN doesn't have any edit log
+      getEditLog().close();
+    }
     storage.close();
   }
 
@@ -1053,5 +1063,9 @@ public class FSImage implements Closeable {
   
   public String getBlockPoolID() {
     return storage.getBlockPoolID();
+  }
+
+  public synchronized long getLastAppliedTxId() {
+    return lastAppliedTxId;
   }
 }

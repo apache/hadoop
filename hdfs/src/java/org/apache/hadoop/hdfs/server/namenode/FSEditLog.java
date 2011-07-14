@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.zip.Checksum;
 
@@ -31,6 +32,7 @@ import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
@@ -151,7 +153,7 @@ public class FSEditLog  {
   /**
    * Initialize the list of edit journals
    */
-  private void initJournals() {
+  synchronized void initJournals() {
     assert journals.isEmpty();
     Preconditions.checkState(state == State.UNINITIALIZED,
         "Bad state: %s", state);
@@ -167,10 +169,6 @@ public class FSEditLog  {
     state = State.BETWEEN_LOG_SEGMENTS;
   }
   
-  private int getNumEditsDirs() {
-   return storage.getNumStorageDirs(NameNodeDirType.EDITS);
-  }
-
   /**
    * Initialize the output stream for logging, opening the first
    * log segment.
@@ -179,7 +177,7 @@ public class FSEditLog  {
     Preconditions.checkState(state == State.UNINITIALIZED);
     initJournals();
 
-    startLogSegment(getLastWrittenTxId() + 1);
+    startLogSegment(getLastWrittenTxId() + 1, true);
     assert state == State.IN_SEGMENT : "Bad state: " + state;
   }
   
@@ -199,7 +197,7 @@ public class FSEditLog  {
     if (state == State.IN_SEGMENT) {
       assert !journals.isEmpty();
       waitForSyncToFinish();
-      endCurrentLogSegment();
+      endCurrentLogSegment(true);
     }
 
     state = State.CLOSED;
@@ -335,11 +333,12 @@ public class FSEditLog  {
    * Set the transaction ID to use for the next transaction written.
    */
   synchronized void setNextTxId(long nextTxId) {
-    assert synctxid <= txid &&
-       nextTxId >= txid : "May not decrease txid." +
-      " synctxid=" + synctxid +
-      " txid=" + txid +
-      " nextTxid=" + nextTxId;
+    Preconditions.checkArgument(synctxid <= txid &&
+       nextTxId >= txid,
+       "May not decrease txid." +
+      " synctxid=%s txid=%s nextTxId=%s",
+      synctxid, txid, nextTxId);
+      
     txid = nextTxId - 1;
   }
     
@@ -470,7 +469,8 @@ public class FSEditLog  {
       
       if (badJournals.size() >= journals.size()) {
         LOG.fatal("Could not sync any journal to persistent storage. " +
-            "Unsynced transactions: " + (txid - synctxid));
+            "Unsynced transactions: " + (txid - synctxid),
+            new Exception());
         runtime.exit(1);
       }
     } finally {
@@ -726,36 +726,6 @@ public class FSEditLog  {
   }
 
   /**
-   * Return the size of the current EditLog
-   */
-  // TODO who uses this, does it make sense with transactions?
-  synchronized long getEditLogSize() throws IOException {
-    assert getNumEditsDirs() <= journals.size() :
-        "Number of edits directories should not exceed the number of streams.";
-    long size = -1;
-        
-    List<JournalAndStream> badJournals = Lists.newArrayList();
-    
-    for (JournalAndStream j : journals) {
-      if (!j.isActive()) continue;
-      EditLogOutputStream es = j.getCurrentStream();
-      try {
-        long curSize = es.length();
-        assert (size == 0 || size == curSize || curSize ==0) :
-          "Wrong streams size";
-        size = Math.max(size, curSize);
-      } catch (IOException e) {
-        LOG.error("getEditLogSize: editstream.length failed. removing journal " + j, e);
-        badJournals.add(j);
-      }
-    }
-    disableAndReportErrorOnJournals(badJournals);
-    
-    assert size != -1;
-    return size;
-  }
-  
-  /**
    * Used only by unit tests.
    */
   @VisibleForTesting
@@ -793,10 +763,10 @@ public class FSEditLog  {
    */
   synchronized long rollEditLog() throws IOException {
     LOG.info("Rolling edit logs.");
-    endCurrentLogSegment();
+    endCurrentLogSegment(true);
     
     long nextTxId = getLastWrittenTxId() + 1;
-    startLogSegment(nextTxId);
+    startLogSegment(nextTxId, true);
     
     assert curSegmentTxId == nextTxId;
     return nextTxId;
@@ -806,14 +776,20 @@ public class FSEditLog  {
    * Start writing to the log segment with the given txid.
    * Transitions from BETWEEN_LOG_SEGMENTS state to IN_LOG_SEGMENT state. 
    */
-  synchronized void startLogSegment(final long txId) {
-    LOG.info("Starting log segment at " + txId);
+  synchronized void startLogSegment(final long segmentTxId,
+      boolean writeHeaderTxn) {
+    LOG.info("Starting log segment at " + segmentTxId);
+    Preconditions.checkArgument(segmentTxId > 0,
+        "Bad txid: %s", segmentTxId);
     Preconditions.checkState(state == State.BETWEEN_LOG_SEGMENTS,
         "Bad state: %s", state);
-    Preconditions.checkState(txId > curSegmentTxId,
-        "Cannot start writing to log segment " + txId +
+    Preconditions.checkState(segmentTxId > curSegmentTxId,
+        "Cannot start writing to log segment " + segmentTxId +
         " when previous log segment started at " + curSegmentTxId);
-    curSegmentTxId = txId;
+    Preconditions.checkArgument(segmentTxId == txid + 1,
+        "Cannot start log segment at txid %s when next expected " +
+        "txid is %s", segmentTxId, txid + 1);
+    curSegmentTxId = segmentTxId;
     
     numTransactions = totalTimeTransactions = numTransactionsBatchedInSync = 0;
 
@@ -823,26 +799,32 @@ public class FSEditLog  {
     mapJournalsAndReportErrors(new JournalClosure() {
       @Override
       public void apply(JournalAndStream jas) throws IOException {
-        jas.startLogSegment(txId);
+        jas.startLogSegment(segmentTxId);
       }
-    }, "starting log segment " + txId);
+    }, "starting log segment " + segmentTxId);
 
     state = State.IN_SEGMENT;
 
-    logEdit(FSEditLogOpCodes.OP_START_LOG_SEGMENT);
-    logSync();    
+    if (writeHeaderTxn) {
+      logEdit(FSEditLogOpCodes.OP_START_LOG_SEGMENT);
+      logSync();
+    }
   }
 
   /**
    * Finalize the current log segment.
    * Transitions from IN_SEGMENT state to BETWEEN_LOG_SEGMENTS state.
    */
-  synchronized void endCurrentLogSegment() {
+  synchronized void endCurrentLogSegment(boolean writeEndTxn) {
     LOG.info("Ending log segment " + curSegmentTxId);
     Preconditions.checkState(state == State.IN_SEGMENT,
         "Bad state: %s", state);
-    logEdit(FSEditLogOpCodes.OP_END_LOG_SEGMENT);
-    waitForSyncToFinish();
+    
+    if (writeEndTxn) {
+      logEdit(FSEditLogOpCodes.OP_END_LOG_SEGMENT);
+      logSync();
+    }
+
     printStatistics(true);
     
     final long lastTxId = getLastWrittenTxId();
@@ -856,6 +838,20 @@ public class FSEditLog  {
       }
     }, "ending log segment");
     
+    state = State.BETWEEN_LOG_SEGMENTS;
+  }
+  
+  /**
+   * Abort all current logs. Called from the backup node.
+   */
+  synchronized void abortCurrentLogSegment() {
+    mapJournalsAndReportErrors(new JournalClosure() {
+      
+      @Override
+      public void apply(JournalAndStream jas) throws IOException {
+        jas.abort();
+      }
+    }, "aborting all streams");
     state = State.BETWEEN_LOG_SEGMENTS;
   }
 
@@ -910,36 +906,62 @@ public class FSEditLog  {
   /**
    * Create (or find if already exists) an edit output stream, which
    * streams journal records (edits) to the specified backup node.<br>
-   * Send a record, prescribing to start journal spool.<br>
-   * This should be sent via regular stream of journal records so that
-   * the backup node new exactly after which record it should start spooling.
+   * 
+   * The new BackupNode will start receiving edits the next time this
+   * NameNode's logs roll.
    * 
    * @param bnReg the backup node registration information.
    * @param nnReg this (active) name-node registration.
    * @throws IOException
    */
-  synchronized void logJSpoolStart(NamenodeRegistration bnReg, // backup node
-                      NamenodeRegistration nnReg) // active name-node
+  synchronized void registerBackupNode(
+      NamenodeRegistration bnReg, // backup node
+      NamenodeRegistration nnReg) // active name-node
   throws IOException {
-    /*
     if(bnReg.isRole(NamenodeRole.CHECKPOINT))
       return; // checkpoint node does not stream edits
-    if(editStreams == null)
-      editStreams = new ArrayList<EditLogOutputStream>();
-    EditLogOutputStream boStream = null;
-    for(EditLogOutputStream eStream : editStreams) {
-      if(eStream.getName().equals(bnReg.getAddress())) {
-        boStream = eStream; // already there
-        break;
+    
+    JournalAndStream jas = findBackupJournalAndStream(bnReg);
+    if (jas != null) {
+      // already registered
+      LOG.info("Backup node " + bnReg + " re-registers");
+      return;
+    }
+    
+    LOG.info("Registering new backup node: " + bnReg);
+    BackupJournalManager bjm = new BackupJournalManager(bnReg, nnReg);
+    journals.add(new JournalAndStream(bjm));
+  }
+  
+  synchronized void releaseBackupStream(NamenodeRegistration registration) {
+    for (Iterator<JournalAndStream> iter = journals.iterator();
+         iter.hasNext();) {
+      JournalAndStream jas = iter.next();
+      if (jas.manager instanceof BackupJournalManager &&
+          ((BackupJournalManager)jas.manager).matchesRegistration(
+              registration)) {
+        jas.abort();        
+        LOG.info("Removing backup journal " + jas);
+        iter.remove();
       }
     }
-    if(boStream == null) {
-      boStream = new EditLogBackupOutputStream(bnReg, nnReg);
-      editStreams.add(boStream);
+  }
+  
+  /**
+   * Find the JournalAndStream associated with this BackupNode.
+   * @return null if it cannot be found
+   */
+  private synchronized JournalAndStream findBackupJournalAndStream(
+      NamenodeRegistration bnReg) {
+    for (JournalAndStream jas : journals) {
+      if (jas.manager instanceof BackupJournalManager) {
+        BackupJournalManager bjm = (BackupJournalManager)jas.manager;
+        if (bjm.matchesRegistration(bnReg)) {
+          return jas;
+        }
+      }
     }
-    logEdit(OP_JSPOOL_START, (Writable[])null);
-    TODO: backupnode is disabled
-    */
+    return null;
   }
 
   /**
@@ -961,62 +983,6 @@ public class FSEditLog  {
     endTransaction(start);
   }
 
-  synchronized void releaseBackupStream(NamenodeRegistration registration) {
-    /*
-    Iterator<EditLogOutputStream> it =
-                                  getOutputStreamIterator(JournalType.BACKUP);
-    ArrayList<EditLogOutputStream> errorStreams = null;
-    NamenodeRegistration backupNode = null;
-    while(it.hasNext()) {
-      EditLogBackupOutputStream eStream = (EditLogBackupOutputStream)it.next();
-      backupNode = eStream.getRegistration();
-      if(backupNode.getAddress().equals(registration.getAddress()) &&
-            backupNode.isRole(registration.getRole())) {
-        errorStreams = new ArrayList<EditLogOutputStream>(1);
-        errorStreams.add(eStream);
-        break;
-      }
-    }
-    assert backupNode == null || backupNode.isRole(NamenodeRole.BACKUP) :
-      "Not a backup node corresponds to a backup stream";
-    disableAndReportErrorOnJournals(errorStreams);
-    TODO BN currently disabled
-    */
-  }
-
-  synchronized boolean checkBackupRegistration(
-      NamenodeRegistration registration) {
-    /*
-    Iterator<EditLogOutputStream> it =
-                                  getOutputStreamIterator(JournalType.BACKUP);
-    boolean regAllowed = !it.hasNext();
-    NamenodeRegistration backupNode = null;
-    ArrayList<EditLogOutputStream> errorStreams = null;
-    while(it.hasNext()) {
-      EditLogBackupOutputStream eStream = (EditLogBackupOutputStream)it.next();
-      backupNode = eStream.getRegistration();
-      if(backupNode.getAddress().equals(registration.getAddress()) &&
-          backupNode.isRole(registration.getRole())) {
-        regAllowed = true; // same node re-registers
-        break;
-      }
-      if(!eStream.isAlive()) {
-        if(errorStreams == null)
-          errorStreams = new ArrayList<EditLogOutputStream>(1);
-        errorStreams.add(eStream);
-        regAllowed = true; // previous backup node failed
-      }
-    }
-    assert backupNode == null || backupNode.isRole(NamenodeRole.BACKUP) :
-      "Not a backup node corresponds to a backup stream";
-    disableAndReportErrorOnJournals(errorStreams);
-    return regAllowed;
-    
-    TODO BN currently disabled
-    */
-    return false;
-  }
-  
   static BytesWritable toBytesWritable(Options.Rename... options) {
     byte[] bytes = new byte[options.length];
     for (int i = 0; i < options.length; i++) {
@@ -1061,12 +1027,7 @@ public class FSEditLog  {
  
     for (JournalAndStream j : badJournals) {
       LOG.error("Disabling journal " + j);
-      try {
-        j.abort();
-      } catch (IOException ioe) {
-        LOG.warn("Failed to abort faulty journal " + j
-                 + " before removing it (might be OK)", ioe);
-      }
+      j.abort();
     }
   }
 
@@ -1093,13 +1054,17 @@ public class FSEditLog  {
     }
 
     public void close(long lastTxId) throws IOException {
+      Preconditions.checkArgument(lastTxId >= segmentStartsAtTxId,
+          "invalid segment: lastTxId %s >= " +
+          "segment starting txid %s", lastTxId, segmentStartsAtTxId);
+          
       if (stream == null) return;
       stream.close();
       manager.finalizeLogSegment(segmentStartsAtTxId, lastTxId);
       stream = null;
     }
     
-    public void abort() throws IOException {
+    public void abort() {
       if (stream == null) return;
       try {
         stream.abort();
@@ -1133,5 +1098,30 @@ public class FSEditLog  {
     JournalManager getManager() {
       return manager;
     }
+
+    public EditLogInputStream getInProgressInputStream() throws IOException {
+      return manager.getInProgressInputStream(segmentStartsAtTxId);
+    }
+  }
+
+  /**
+   * @return an EditLogInputStream that reads from the same log that
+   * the edit log is currently writing. This is used from the BackupNode
+   * during edits synchronization.
+   * @throws IOException if no valid logs are available.
+   */
+  synchronized EditLogInputStream getInProgressFileInputStream()
+      throws IOException {
+    for (JournalAndStream jas : journals) {
+      if (!jas.isActive()) continue;
+      try {
+        EditLogInputStream in = jas.getInProgressInputStream();
+        if (in != null) return in;
+      } catch (IOException ioe) {
+        LOG.warn("Unable to get the in-progress input stream from " + jas,
+            ioe);
+      }
+    }
+    throw new IOException("No in-progress stream provided edits");
   }
 }

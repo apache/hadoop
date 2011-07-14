@@ -19,31 +19,21 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.List;
-import java.util.zip.CheckedInputStream;
 import java.util.zip.Checksum;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.LayoutVersion;
-import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageState;
-import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
-import static org.apache.hadoop.hdfs.server.common.Util.now;
+import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.LogLoadPlan;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.StringUtils;
 
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.LogHeader;
-import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
-import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
-import org.apache.hadoop.hdfs.util.MD5FileUtils;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.MD5Hash;
-import org.apache.hadoop.conf.Configuration;
+import com.google.common.base.Preconditions;
 
 /**
  * Extension of FSImage for the backup node.
@@ -52,30 +42,39 @@ import org.apache.hadoop.conf.Configuration;
  */
 @InterfaceAudience.Private
 public class BackupImage extends FSImage {
-  // Names of the journal spool directory and the spool file
-  private static final String STORAGE_JSPOOL_DIR = "jspool";
-  private static final String STORAGE_JSPOOL_FILE =
-    NNStorage.NameNodeFile.EDITS_NEW.getName();
-
   /** Backup input stream for loading edits into memory */
-  private EditLogBackupInputStream backupInputStream;
-
-  /** Is journal spooling in progress */
-  volatile JSpoolState jsState;
-  private long lastAppliedTxId = 0;
-
-  static enum JSpoolState {
-    OFF,
-    INPROGRESS,
-    WAIT;
+  private EditLogBackupInputStream backupInputStream =
+    new EditLogBackupInputStream("Data from remote NameNode");
+  
+  /**
+   * Current state of the BackupNode. The BackupNode's state
+   * transitions are as follows:
+   * 
+   * Initial: DROP_UNTIL_NEXT_ROLL
+   * - Transitions to JOURNAL_ONLY the next time the log rolls
+   * - Transitions to IN_SYNC in convergeJournalSpool
+   * - Transitions back to JOURNAL_ONLY if the log rolls while
+   *   stopApplyingOnNextRoll is true.
+   */
+  BNState bnState;
+  static enum BNState {
+    // Edits from the NN should be dropped. On the next log roll,
+    // transition to JOURNAL_ONLY state
+    DROP_UNTIL_NEXT_ROLL,
+    // Edits from the NN should be written to the local edits log
+    // but not applied to the namespace.
+    JOURNAL_ONLY,
+    // Edits should be written to the local edits log and applied
+    // to the local namespace.
+    IN_SYNC;
   }
 
-
   /**
-   * Place-holder for a txid that still needs to be addressed
-   * in HDFS-1073 branch before merging into trunk.
+   * Flag to indicate that the next time the NN rolls, the BN
+   * should transition from to JOURNAL_ONLY state.
+   * {@see #freezeNamespaceAtNextRoll()}
    */
-  private static final long TODO_TXID = 0xDEADBEEF;
+  private boolean stopApplyingEditsOnNextRoll = false;
 
   /**
    * Construct a backup image.
@@ -85,7 +84,8 @@ public class BackupImage extends FSImage {
   BackupImage(Configuration conf) throws IOException {
     super(conf);
     storage.setDisablePreUpgradableLayoutCheck(true);
-    jsState = JSpoolState.OFF;
+    bnState = BNState.DROP_UNTIL_NEXT_ROLL;
+    editLog.initJournals();
   }
 
   /**
@@ -130,74 +130,6 @@ public class BackupImage extends FSImage {
   }
 
   /**
-   * Reset storage directories.
-   * <p>
-   * Unlock the storage.
-   * Rename <code>current</code> to <code>lastcheckpoint.tmp</code>
-   * and recreate empty <code>current</code>.
-   * @throws IOException
-   */
-  synchronized void reset() throws IOException {
-    /* TODO: BackupNode
-    // reset NameSpace tree
-    FSDirectory fsDir = getFSNamesystem().dir;
-    fsDir.reset();
-
-    // unlock, close and rename storage directories
-    storage.unlockAll();
-    
-    // recover from unsuccessful checkpoint if necessary
-    recoverCreateRead();
-    // rename and recreate
-    for (Iterator<StorageDirectory> it = storage.dirIterator(); it.hasNext();) {
-      StorageDirectory sd = it.next();
-      // rename current to lastcheckpoint.tmp
-      storage.moveCurrent(sd);
-    }
-    */
-  }
-
-  /**
-   * Load checkpoint from local files only if the memory state is empty.<br>
-   * Set new checkpoint time received from the name-node.<br>
-   * Move <code>lastcheckpoint.tmp</code> to <code>previous.checkpoint</code>.
-   * @throws IOException
-   */
-  void loadCheckpoint(CheckpointSignature sig) throws IOException {
-    // load current image and journal if it is not in memory already
-    if(!editLog.isOpen())
-      editLog.startLogSegment(TODO_TXID);
-
-    // set storage fields
-    storage.setStorageInfo(sig);
-
-    FSDirectory fsDir = getFSNamesystem().dir;
-    if(fsDir.isEmpty()) {
-      Iterator<StorageDirectory> itImage
-        = storage.dirIterator(NameNodeDirType.IMAGE);
-      Iterator<StorageDirectory> itEdits
-        = storage.dirIterator(NameNodeDirType.EDITS);
-      if(!itImage.hasNext() || ! itEdits.hasNext())
-        throw new IOException("Could not locate checkpoint directories");
-      StorageDirectory sdName = itImage.next();
-      StorageDirectory sdEdits = itEdits.next();
-
-      getFSDirectoryRootLock().writeLock();
-      try { // load image under rootDir lock
-        File imageFile = null; // TODO
-        MD5Hash expectedMD5 = MD5FileUtils.readStoredMd5ForFile(imageFile);
-        loadFSImage(imageFile, expectedMD5);
-      } finally {
-        getFSDirectoryRootLock().writeUnlock();
-      }
-      List<File> editsFiles =
-        FSImageOldStorageInspector.getEditsInStorageDir(sdEdits);
-      loadEdits(editsFiles);
-      lastAppliedTxId = getEditLog().getLastWrittenTxId();
-    }
-  }
-
-  /**
    * Save meta-data into fsimage files.
    * and create empty edits.
    */
@@ -205,204 +137,252 @@ public class BackupImage extends FSImage {
     saveNamespace();
   }
 
-  private FSDirectory getFSDirectoryRootLock() {
-    return getFSNamesystem().dir;
-  }
-
-  static File getJSpoolDir(StorageDirectory sd) {
-    return new File(sd.getRoot(), STORAGE_JSPOOL_DIR);
-  }
-
-  static File getJSpoolFile(StorageDirectory sd) {
-    return new File(getJSpoolDir(sd), STORAGE_JSPOOL_FILE);
-  }
-
   /**
-   * Journal writer journals new meta-data state.
-   * <ol>
-   * <li> If Journal Spool state is OFF then journal records (edits)
-   * are applied directly to meta-data state in memory and are written
-   * to the edits file(s).</li>
-   * <li> If Journal Spool state is INPROGRESS then records are only
-   * written to edits.new file, which is called Spooling.</li>
-   * <li> Journal Spool state WAIT blocks journaling until the
-   * Journal Spool reader finalizes merging of the spooled data and
-   * switches to applying journal to memory.</li>
-   * </ol>
-   * @param length length of data.
+   * Receive a batch of edits from the NameNode.
+   * 
+   * Depending on bnState, different actions are taken. See
+   * {@link BackupImage.BNState}
+   * 
+   * @param firstTxId first txid in batch
+   * @param numTxns number of transactions
    * @param data serialized journal records.
    * @throws IOException
    * @see #convergeJournalSpool()
    */
-  synchronized void journal(int length, byte[] data) throws IOException {
+  synchronized void journal(long firstTxId, int numTxns, byte[] data) throws IOException {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Got journal, " +
+          "state = " + bnState +
+          "; firstTxId = " + firstTxId +
+          "; numTxns = " + numTxns);
+    }
+    
+    switch(bnState) {
+      case DROP_UNTIL_NEXT_ROLL:
+        return;
+
+      case IN_SYNC:
+        // update NameSpace in memory
+        applyEdits(firstTxId, numTxns, data);
+        break;
+      
+      case JOURNAL_ONLY:
+        break;
+      
+      default:
+        throw new AssertionError("Unhandled state: " + bnState);
+    }
+    
+    // write to BN's local edit log.
+    logEditsLocally(firstTxId, numTxns, data);
+  }
+
+  /**
+   * Write the batch of edits to the local copy of the edit logs.
+   */
+  private void logEditsLocally(long firstTxId, int numTxns, byte[] data) {
+    long expectedTxId = editLog.getLastWrittenTxId() + 1;
+    Preconditions.checkState(firstTxId == expectedTxId,
+        "received txid batch starting at %s but expected txn %s",
+        firstTxId, expectedTxId);
+    editLog.setNextTxId(firstTxId + numTxns - 1);
+    editLog.logEdit(data.length, data);
+    editLog.logSync();
+  }
+
+  /**
+   * Apply the batch of edits to the local namespace.
+   */
+  private synchronized void applyEdits(long firstTxId, int numTxns, byte[] data)
+      throws IOException {
+    Preconditions.checkArgument(firstTxId == lastAppliedTxId + 1,
+        "Received txn batch starting at %s but expected %s",
+        firstTxId, lastAppliedTxId + 1);
     assert backupInputStream.length() == 0 : "backup input stream is not empty";
     try {
-      switch(jsState) {
-        case WAIT:
-        case OFF:
-          // wait until spooling is off
-          waitSpoolEnd();
-          // update NameSpace in memory
-          backupInputStream.setBytes(data);
-          FSEditLogLoader logLoader = new FSEditLogLoader(namesystem);
-          int logVersion = storage.getLayoutVersion();
-          BufferedInputStream bin = new BufferedInputStream(backupInputStream);
-          DataInputStream in = new DataInputStream(bin);
-          Checksum checksum = null;
-          if (LayoutVersion.supports(Feature.EDITS_CHESKUM, logVersion)) {
-            checksum = FSEditLog.getChecksum();
-            in = new DataInputStream(new CheckedInputStream(bin, checksum));
-          }
-          logLoader.loadEditRecords(logVersion, in, checksum, true,
-                                    lastAppliedTxId + 1);
-          getFSNamesystem().dir.updateCountForINodeWithQuota(); // inefficient!
-          break;
-        case INPROGRESS:
-          break;
+      if (LOG.isTraceEnabled()) {
+        LOG.debug("data:" + StringUtils.byteToHexString(data));
       }
-      // write to files
-      editLog.logEdit(length, data);
-      editLog.logSync();
+      backupInputStream.setBytes(data);
+      FSEditLogLoader logLoader = new FSEditLogLoader(namesystem);
+      int logVersion = storage.getLayoutVersion();
+      BufferedInputStream bin = new BufferedInputStream(backupInputStream);
+      DataInputStream in = new DataInputStream(bin);
+      Checksum checksum = FSEditLog.getChecksum();
+      int numLoaded = logLoader.loadEditRecords(logVersion, in, checksum, true,
+                                lastAppliedTxId + 1);
+      if (numLoaded != numTxns) {
+        throw new IOException("Batch of txns starting at txnid " +
+            firstTxId + " was supposed to contain " + numTxns +
+            " transactions but only was able to apply " + numLoaded);
+      }
+      lastAppliedTxId += numTxns;
+      
+      getFSNamesystem().dir.updateCountForINodeWithQuota(); // inefficient!
     } finally {
       backupInputStream.clear();
     }
   }
 
-  private synchronized void waitSpoolEnd() {
-    while(jsState == JSpoolState.WAIT) {
-      try {
-        wait();
-      } catch (InterruptedException  e) {}
-    }
-    // now spooling should be off, verifying just in case
-    assert jsState == JSpoolState.OFF : "Unexpected JSpool state: " + jsState;
-  }
-
   /**
-   * Start journal spool.
-   * Switch to writing into edits.new instead of edits.
-   *
-   * edits.new for spooling is in separate directory "spool" rather than in
-   * "current" because the two directories should be independent.
-   * While spooling a checkpoint can happen and current will first
-   * move to lastcheckpoint.tmp and then to previous.checkpoint
-   * spool/edits.new will remain in place during that.
-   */
-  synchronized void startJournalSpool(NamenodeRegistration nnReg)
-  throws IOException {
-    switch(jsState) {
-      case OFF:
-        break;
-      case INPROGRESS:
-        return;
-      case WAIT:
-        waitSpoolEnd();
-    }
-
-    // create journal spool directories
-    for (Iterator<StorageDirectory> it
-           = storage.dirIterator(NameNodeDirType.EDITS); it.hasNext();) {
-      StorageDirectory sd = it.next();
-      File jsDir = getJSpoolDir(sd);
-      if (!jsDir.exists() && !jsDir.mkdirs()) {
-        throw new IOException("Mkdirs failed to create "
-                              + jsDir.getCanonicalPath());
-      }
-      // create edit file if missing
-      /*File eFile = storage.getEditFile(sd); TODO
-      if(!eFile.exists()) {
-        editLog.createEditLogFile(eFile);
-      }*/
-    }
-
-    if(!editLog.isOpen())
-      editLog.startLogSegment(TODO_TXID);
-
-    // create streams pointing to the journal spool files
-    // subsequent journal records will go directly to the spool
-// TODO    editLog.divertFileStreams(STORAGE_JSPOOL_DIR + "/" + STORAGE_JSPOOL_FILE);
-
-    // set up spooling
-    if(backupInputStream == null)
-      backupInputStream = new EditLogBackupInputStream(nnReg.getAddress());
-    jsState = JSpoolState.INPROGRESS;
-  }
-
-  /**
-   * Merge Journal Spool to memory.<p>
-   * Journal Spool reader reads journal records from edits.new.
-   * When it reaches the end of the file it sets {@link JSpoolState} to WAIT.
-   * This blocks journaling (see {@link #journal(int,byte[])}.
-   * The reader
-   * <ul>
-   * <li> reads remaining journal records if any,</li>
-   * <li> renames edits.new to edits,</li>
-   * <li> sets {@link JSpoolState} to OFF,</li>
-   * <li> and notifies the journaling thread.</li>
-   * </ul>
-   * Journaling resumes with applying new journal records to the memory state,
-   * and writing them into edits file(s).
+   * Transition the BackupNode from JOURNAL_ONLY state to IN_SYNC state.
+   * This is done by repeated invocations of tryConvergeJournalSpool until
+   * we are caught up to the latest in-progress edits file.
    */
   void convergeJournalSpool() throws IOException {
-    Iterator<StorageDirectory> itEdits
-      = storage.dirIterator(NameNodeDirType.EDITS);
-    if(! itEdits.hasNext())
-      throw new IOException("Could not locate checkpoint directories");
-    StorageDirectory sdEdits = itEdits.next();
-    int numEdits = 0;
-    File jSpoolFile = getJSpoolFile(sdEdits);
-    long startTime = now();
-    if(jSpoolFile.exists()) {
-      // load edits.new
-      EditLogFileInputStream edits = new EditLogFileInputStream(jSpoolFile);
-      BufferedInputStream bin = new BufferedInputStream(edits);
-      DataInputStream in = new DataInputStream(bin);
-      FSEditLogLoader logLoader = new FSEditLogLoader(namesystem);
+    Preconditions.checkState(bnState == BNState.JOURNAL_ONLY,
+        "bad state: %s", bnState);
 
-      LogHeader header = FSEditLogOp.LogHeader.read(in);
-      int loaded = logLoader.loadEditRecords(
-          header.logVersion, in, header.checksum, false,
-          lastAppliedTxId + 1);
-
-      lastAppliedTxId += loaded;
-      numEdits += loaded;
-
-      // first time reached the end of spool
-      jsState = JSpoolState.WAIT;
-      loaded = logLoader.loadEditRecords(
-          header.logVersion, in, header.checksum,
-          true, lastAppliedTxId + 1);
-      numEdits += loaded;
-      lastAppliedTxId += loaded;
-
-      getFSNamesystem().dir.updateCountForINodeWithQuota();
-      edits.close();
+    while (!tryConvergeJournalSpool()) {
+      ;
     }
+    assert bnState == BNState.IN_SYNC;
+  }
+  
+  private boolean tryConvergeJournalSpool() throws IOException {
+    Preconditions.checkState(bnState == BNState.JOURNAL_ONLY,
+        "bad state: %s", bnState);
+    
+    // This section is unsynchronized so we can continue to apply
+    // ahead of where we're reading, concurrently. Since the state
+    // is JOURNAL_ONLY at this point, we know that lastAppliedTxId
+    // doesn't change, and curSegmentTxId only increases
 
-    FSImage.LOG.info("Edits file " + jSpoolFile.getCanonicalPath()
-        + " of size " + jSpoolFile.length() + " edits # " + numEdits
-        + " loaded in " + (now()-startTime)/1000 + " seconds.");
+    while (lastAppliedTxId < editLog.getCurSegmentTxId() - 1) {
+      long target = editLog.getCurSegmentTxId();
+      LOG.info("Loading edits into backupnode to try to catch up from txid "
+          + lastAppliedTxId + " to " + target);
+      FSImageTransactionalStorageInspector inspector =
+        new FSImageTransactionalStorageInspector();
+      
+      storage.inspectStorageDirs(inspector);
+      LogLoadPlan logLoadPlan = inspector.createLogLoadPlan(lastAppliedTxId,
+          target - 1);
+  
+      logLoadPlan.doRecovery();
+      loadEdits(logLoadPlan.getEditsFiles());
+    }
+    
+    // now, need to load the in-progress file
+    synchronized (this) {
+      if (lastAppliedTxId != editLog.getCurSegmentTxId() - 1) {
+        LOG.debug("Logs rolled while catching up to current segment");
+        return false; // drop lock and try again to load local logs
+      }
+      
+      EditLogInputStream stream = getEditLog().getInProgressFileInputStream();
+      try {
+        long remainingTxns = getEditLog().getLastWrittenTxId() - lastAppliedTxId;
+        
+        LOG.info("Going to finish converging with remaining " + remainingTxns
+            + " txns from in-progress stream " + stream);
+        
+        FSEditLogLoader loader = new FSEditLogLoader(namesystem);
+        int numLoaded = loader.loadFSEdits(stream, lastAppliedTxId + 1);
+        lastAppliedTxId += numLoaded;
+        assert numLoaded == remainingTxns :
+          "expected to load " + remainingTxns + " but loaded " +
+          numLoaded + " from " + stream;
+      } finally {
+        IOUtils.closeStream(stream);
+      }
 
-    // rename spool edits.new to edits making it in sync with the active node
-    // subsequent journal records will go directly to edits
-    // TODO editLog.revertFileStreams(STORAGE_JSPOOL_DIR + "/" + STORAGE_JSPOOL_FILE);
+      LOG.info("Successfully synced BackupNode with NameNode at txnid " +
+          lastAppliedTxId);
+      setState(BNState.IN_SYNC);
+    }
+    return true;
+  }
 
-    // write version file
-    // TODO resetVersion(storage.getImageDigest());
+  /**
+   * Transition edit log to a new state, logging as necessary.
+   */
+  private synchronized void setState(BNState newState) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("State transition " + bnState + " -> " + newState,
+          new Exception("trace"));
+    }
+    bnState = newState;
+  }
 
-    // wake up journal writer
-    synchronized(this) {
-      jsState = JSpoolState.OFF;
+  /**
+   * Receive a notification that the NameNode has begun a new edit log.
+   * This causes the BN to also start the new edit log in its local
+   * directories.
+   */
+  synchronized void namenodeStartedLogSegment(long txid) {
+    LOG.info("NameNode started a new log segment at txid " + txid);
+    if (editLog.isOpen()) {
+      if (editLog.getLastWrittenTxId() == txid - 1) {
+        // We are in sync with the NN, so end and finalize the current segment
+        editLog.endCurrentLogSegment(false);
+      } else {
+        // We appear to have missed some transactions -- the NN probably
+        // lost contact with us temporarily. So, mark the current segment
+        // as aborted.
+        LOG.warn("NN started new log segment at txid " + txid +
+            ", but BN had only written up to txid " +
+            editLog.getLastWrittenTxId() +
+            "in the log segment starting at " + 
+        		editLog.getCurSegmentTxId() + ". Aborting this " +
+        		"log segment.");
+        editLog.abortCurrentLogSegment();
+      }
+    }
+    editLog.setNextTxId(txid);
+    editLog.startLogSegment(txid, false);
+    if (bnState == BNState.DROP_UNTIL_NEXT_ROLL) {
+      setState(BNState.JOURNAL_ONLY);
+    }
+    
+    if (stopApplyingEditsOnNextRoll) {
+      if (bnState == BNState.IN_SYNC) {
+        LOG.info("Stopped applying edits to prepare for checkpoint.");
+        setState(BNState.JOURNAL_ONLY);
+      }
+      stopApplyingEditsOnNextRoll = false;
       notifyAll();
     }
+  }
 
-    /*
-     * TODO: bn
-    // Rename lastcheckpoint.tmp to previous.checkpoint
-    for (Iterator<StorageDirectory> it = storage.dirIterator(); it.hasNext();) {
-      StorageDirectory sd = it.next();
-      storage.moveLastCheckpoint(sd);
+  /**
+   * Request that the next time the BN receives a log roll, it should
+   * stop applying the edits log to the local namespace. This is
+   * typically followed on by a call to {@link #waitUntilNamespaceFrozen()}
+   */
+  synchronized void freezeNamespaceAtNextRoll() {
+    stopApplyingEditsOnNextRoll = true;
+  }
+
+  /**
+   * After {@link #freezeNamespaceAtNextRoll()} has been called, wait until
+   * the BN receives notification of the next log roll.
+   */
+  synchronized void waitUntilNamespaceFrozen() throws IOException {
+    if (bnState != BNState.IN_SYNC) return;
+
+    LOG.info("Waiting until the NameNode rolls its edit logs in order " +
+        "to freeze the BackupNode namespace.");
+    while (bnState == BNState.IN_SYNC) {
+      Preconditions.checkState(stopApplyingEditsOnNextRoll,
+        "If still in sync, we should still have the flag set to " +
+        "freeze at next roll");
+      try {
+        wait();
+      } catch (InterruptedException ie) {
+        LOG.warn("Interrupted waiting for namespace to freeze", ie);
+        throw new IOException(ie);
+      }
     }
-    */
+    LOG.info("BackupNode namespace frozen.");
+  }
+
+  /**
+   * Override close() so that we don't finalize edit logs.
+   */
+  @Override
+  public synchronized void close() throws IOException {
+    editLog.abortCurrentLogSegment();
+    storage.close();
   }
 }

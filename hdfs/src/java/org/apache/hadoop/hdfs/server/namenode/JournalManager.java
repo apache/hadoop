@@ -52,4 +52,12 @@ public interface JournalManager {
    */
   void archiveLogsOlderThan(long minTxIdToKeep, StorageArchiver archiver)
     throws IOException;
+
+  /**
+   * @return an EditLogInputStream that reads from the same log that
+   * the edit log is currently writing. May return null if this journal
+   * manager does not support this operation.
+   */  
+  EditLogInputStream getInProgressInputStream(long segmentStartsAtTxId)
+    throws IOException;
 }

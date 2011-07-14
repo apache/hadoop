@@ -84,6 +84,16 @@ class TransferFsImage implements FSConstants {
 
     List<File> dstFiles = dstStorage.getFiles(NameNodeDirType.EDITS, fileName);
     assert !dstFiles.isEmpty() : "No checkpoint targets.";
+    
+    for (File f : dstFiles) {
+      if (f.exists() && f.canRead()) {
+        LOG.info("Skipping download of remote edit log " +
+            log + " since it already is stored locally at " + f);
+        return;
+      } else {
+        LOG.debug("Dest file: " + f);
+      }
+    }
 
     getFileClient(fsName, fileid, dstFiles, dstStorage, false);
     LOG.info("Downloaded file " + dstFiles.get(0).getName() + " size " +

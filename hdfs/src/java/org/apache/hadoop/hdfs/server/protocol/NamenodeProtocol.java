@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.KerberosInfo;
 
@@ -49,11 +50,6 @@ public interface NamenodeProtocol extends VersionedProtocol {
   // Error codes passed by errorReport().
   final static int NOTIFY = 0;
   final static int FATAL = 1;
-
-  // Journal action codes. See journal().
-  public static byte JA_IS_ALIVE = 100; // check whether the journal is alive
-  public static byte JA_JOURNAL      = 101; // just journal
-  public static byte JA_JSPOOL_START = 102;  // = FSEditLogOpCodes.OP_JSPOOL_START
 
   public final static int ACT_UNKNOWN = 0;    // unknown action   
   public final static int ACT_SHUTDOWN = 50;   // shutdown node
@@ -167,22 +163,5 @@ public interface NamenodeProtocol extends VersionedProtocol {
    */
   public RemoteEditLogManifest getEditLogManifest(long sinceTxId)
     throws IOException;
-
-  /**
-   * Journal edit records.
-   * This message is sent by the active name-node to the backup node
-   * via {@code EditLogBackupOutputStream} in order to synchronize meta-data
-   * changes with the backup namespace image.
-   * 
-   * @param registration active node registration
-   * @param jAction journal action
-   * @param length length of the byte array
-   * @param records byte array containing serialized journal records
-   * @throws IOException
-   */
-  public void journal(NamenodeRegistration registration,
-                      int jAction,
-                      int length,
-                      byte[] records) throws IOException;
 }
 

@@ -539,6 +539,7 @@ class FSImageFormat {
     }
 
     void save(File newFile,
+              long txid,
               FSNamesystem sourceNamesystem,
               FSImageCompression compression)
       throws IOException {
@@ -559,7 +560,6 @@ class FSImageFormat {
                      .getStorage().getNamespaceID()); // TODO bad dependency
         out.writeLong(fsDir.rootDir.numItemsInTree());
         out.writeLong(sourceNamesystem.getGenerationStamp());
-        long txid = sourceNamesystem.getEditLog().getLastWrittenTxId();
         out.writeLong(txid);
 
         // write compression info and set up compressed stream

@@ -106,6 +106,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTar
 import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlocks;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
@@ -5337,31 +5338,29 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   }
 
   /**
-   * Register a name-node.
-   * <p>
-   * Registration is allowed if there is no ongoing streaming to
-   * another backup node.
-   * We currently allow only one backup node, but multiple chackpointers 
-   * if there are no backups.
+   * Register a Backup name-node, verifying that it belongs
+   * to the correct namespace, and adding it to the set of
+   * active journals if necessary.
    * 
-   * @param registration
-   * @throws IOException
+   * @param bnReg registration of the new BackupNode
+   * @param nnReg registration of this NameNode
+   * @throws IOException if the namespace IDs do not match
    */
-  void registerBackupNode(NamenodeRegistration registration)
-    throws IOException {
+  void registerBackupNode(NamenodeRegistration bnReg,
+      NamenodeRegistration nnReg) throws IOException {
     writeLock();
     try {
       if(getFSImage().getStorage().getNamespaceID() 
-         != registration.getNamespaceID())
+         != bnReg.getNamespaceID())
         throw new IOException("Incompatible namespaceIDs: "
             + " Namenode namespaceID = "
             + getFSImage().getStorage().getNamespaceID() + "; "
-            + registration.getRole() +
-            " node namespaceID = " + registration.getNamespaceID());
-      boolean regAllowed = getEditLog().checkBackupRegistration(registration);
-      if(!regAllowed)
-        throw new IOException("Registration is not allowed. " +
-                              "Another node is registered as a backup.");
+            + bnReg.getRole() +
+            " node namespaceID = " + bnReg.getNamespaceID());
+      if (bnReg.getRole() == NamenodeRole.BACKUP) {
+        getFSImage().getEditLog().registerBackupNode(
+            bnReg, nnReg);
+      }
     } finally {
       writeUnlock();
     }
@@ -5943,4 +5942,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       }
     }
   }
+
+
 }

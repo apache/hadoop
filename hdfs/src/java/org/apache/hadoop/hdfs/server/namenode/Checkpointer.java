@@ -17,30 +17,27 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.IOException;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.server.common.Util.now;
+
 import java.io.File;
+import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Collection;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
-import static org.apache.hadoop.hdfs.server.common.Util.now;
-import org.apache.hadoop.hdfs.server.namenode.FSImage.CheckpointStates;
-import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
-import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
-import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
+import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.util.Daemon;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_DEFAULT;
 
 /**
  * The Checkpointer is responsible for supporting periodic checkpoints 
@@ -80,6 +77,7 @@ class Checkpointer extends Daemon {
     try {
       initialize(conf);
     } catch(IOException e) {
+      LOG.warn("Checkpointer got exception", e);
       shutdown();
       throw e;
     }
@@ -134,8 +132,9 @@ class Checkpointer extends Daemon {
     periodMSec *= 1000;
 
     long lastCheckpointTime = 0;
-    if(!backupNode.shouldCheckpointAtStartup())
+    if (!backupNode.shouldCheckpointAtStartup()) {
       lastCheckpointTime = now();
+    }
     while(shouldRun) {
       try {
         long now = now();
@@ -175,44 +174,15 @@ class Checkpointer extends Daemon {
   }
 
   /**
-   * Download <code>fsimage</code> and <code>edits</code>
-   * files from the remote name-node.
-   */
-  private void downloadCheckpoint(CheckpointSignature sig) throws IOException {
-    String nnHttpAddr = backupNode.nnHttpAddress;
-
-    // Retrieve image file
-    MD5Hash hash = TransferFsImage.downloadImageToStorage(
-        nnHttpAddr, sig.mostRecentCheckpointTxId,
-        getFSImage().getStorage(), true);
-    getFSImage().saveDigestAndRenameCheckpointImage(sig.mostRecentCheckpointTxId, hash);
-    
-    // Retrieve edits file
-    // TODO!
-  }
-
-  /**
-   * Copy the new image into remote name-node.
-   */
-  private void uploadCheckpoint(CheckpointSignature sig) throws IOException {
-    // TODO: checkpoint node disabled in 1073 branch
-/*    // Use the exact http addr as specified in config to deal with ip aliasing
-    InetSocketAddress httpSocAddr = backupNode.getHttpAddress();
-    int httpPort = httpSocAddr.getPort();
-    String fileid = "putimage=1&port=" + httpPort +
-      "&machine=" + infoBindAddress +
-      "&token=" + sig.toString();
-    LOG.info("Posted URL " + backupNode.nnHttpAddress + fileid);
-    TransferFsImage.getFileClient(backupNode.nnHttpAddress, 
-        fileid, null, false);
-        */
-  }
-
-  /**
    * Create a new checkpoint
    */
   void doCheckpoint() throws IOException {
+    BackupImage bnImage = getFSImage();
+    NNStorage bnStorage = bnImage.getStorage();
+
     long startTime = now();
+    bnImage.freezeNamespaceAtNextRoll();
+    
     NamenodeCommand cmd = 
       getNamenode().startCheckpoint(backupNode.getRegistration());
     CheckpointCommand cpCmd = null;
@@ -228,36 +198,76 @@ class Checkpointer extends Daemon {
         throw new IOException("Unsupported NamenodeCommand: "+cmd.getAction());
     }
 
+    bnImage.waitUntilNamespaceFrozen();
+    
     CheckpointSignature sig = cpCmd.getSignature();
-    assert FSConstants.LAYOUT_VERSION == sig.getLayoutVersion() :
-      "Signature should have current layout version. Expected: "
-      + FSConstants.LAYOUT_VERSION + " actual "+ sig.getLayoutVersion();
-    assert !backupNode.isRole(NamenodeRole.CHECKPOINT) ||
-      cpCmd.isImageObsolete() : "checkpoint node should always download image.";
-    if(cpCmd.isImageObsolete()) {
-      // First reset storage on disk and memory state
-      backupNode.resetNamespace();
-      downloadCheckpoint(sig);
+
+    // Make sure we're talking to the same NN!
+    sig.validateStorageInfo(bnImage);
+
+    long lastApplied = bnImage.getLastAppliedTxId();
+    LOG.debug("Doing checkpoint. Last applied: " + lastApplied);
+    RemoteEditLogManifest manifest =
+      getNamenode().getEditLogManifest(bnImage.getLastAppliedTxId());
+
+    if (!manifest.getLogs().isEmpty()) {
+      RemoteEditLog firstRemoteLog = manifest.getLogs().get(0);
+      // we don't have enough logs to roll forward using only logs. Need
+      // to download and load the image.
+      if (firstRemoteLog.getStartTxId() > lastApplied + 1) {
+        LOG.info("Unable to roll forward using only logs. Downloading " +
+            "image with txid " + sig.mostRecentCheckpointTxId);
+        MD5Hash downloadedHash = TransferFsImage.downloadImageToStorage(
+            backupNode.nnHttpAddress, sig.mostRecentCheckpointTxId,
+            bnStorage, true);
+        bnImage.saveDigestAndRenameCheckpointImage(
+            sig.mostRecentCheckpointTxId, downloadedHash);
+        
+        LOG.info("Loading image with txid " + sig.mostRecentCheckpointTxId);
+        File file = bnStorage.findImageFile(sig.mostRecentCheckpointTxId);
+        bnImage.reloadFromImageFile(file);
+      }
+      
+      lastApplied = bnImage.getLastAppliedTxId();
+      if (firstRemoteLog.getStartTxId() > lastApplied + 1) {
+        throw new IOException("No logs to roll forward from " + lastApplied);
+      }
+  
+      // get edits files
+      for (RemoteEditLog log : manifest.getLogs()) {
+        TransferFsImage.downloadEditsToStorage(
+            backupNode.nnHttpAddress, log, bnStorage);
+      }
+  
+      SecondaryNameNode.rollForwardByApplyingLogs(manifest, bnImage);
     }
 
-    BackupImage bnImage = getFSImage();
-    bnImage.getStorage().setBlockPoolID(backupNode.getBlockPoolId());
-    bnImage.getStorage().setClusterID(backupNode.getClusterId());
-    bnImage.loadCheckpoint(sig);
-    sig.validateStorageInfo(bnImage);
-    bnImage.saveCheckpoint();
+    long txid = bnImage.getLastAppliedTxId();
+    bnImage.saveFSImageInAllDirs(txid);
+    bnStorage.writeAll();
 
-    if(cpCmd.needToReturnImage())
-      uploadCheckpoint(sig);
+    if(cpCmd.needToReturnImage()) {
+      TransferFsImage.uploadImageFromStorage(
+          backupNode.nnHttpAddress, getImageListenAddress(),
+          bnStorage, txid);
+    }
 
     getNamenode().endCheckpoint(backupNode.getRegistration(), sig);
 
-    bnImage.convergeJournalSpool();
+    if (backupNode.getRole() == NamenodeRole.BACKUP) {
+      bnImage.convergeJournalSpool();
+    }
     backupNode.setRegistration(); // keep registration up to date
-    if(backupNode.isRole(NamenodeRole.CHECKPOINT))
-        getFSImage().getEditLog().close();
+    
+    long imageSize = bnImage.getStorage().getFsImageName(txid).length();
     LOG.info("Checkpoint completed in "
         + (now() - startTime)/1000 + " seconds."
-        + " New Image Size: " + bnImage.getStorage().getFsImageName(0 /* TODO */).length());
+        + " New Image Size: " + imageSize);
+  }
+
+  private InetSocketAddress getImageListenAddress() {
+    InetSocketAddress httpSocAddr = backupNode.getHttpAddress();
+    int httpPort = httpSocAddr.getPort();
+    return new InetSocketAddress(infoBindAddress, httpPort);
   }
 }

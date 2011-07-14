@@ -46,8 +46,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
-import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
@@ -56,7 +54,6 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
-import org.apache.hadoop.ipc.WritableRpcEngine;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.util.StringUtils;
@@ -70,6 +67,9 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+
+import static org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil.assertNNHasCheckpoints;
+import static org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil.getNameNodeCurrentDirs;
 
 /**
  * This class tests the creation and validation of a checkpoint.
@@ -1699,22 +1699,6 @@ public class TestCheckpoint extends TestCase {
     }
   }
 
-  /**
-   * Assert that the NameNode has checkpoints at the expected
-   * transaction IDs.
-   */
-  private void assertNNHasCheckpoints(MiniDFSCluster cluster,
-      List<Integer> txids) {
-
-    for (File nameDir : getNameNodeCurrentDirs(cluster)) {
-      // Should have fsimage_N for the three checkpoints
-      for (long checkpointTxId : txids) {
-        File image = new File(nameDir,
-                              NNStorage.getImageFileName(checkpointTxId));
-        assertTrue("Expected non-empty " + image, image.length() > 0);
-      }
-    }
-  }
 
   /**
    * Assert that if any two files have the same name across the 2NNs
@@ -1732,14 +1716,6 @@ public class TestCheckpoint extends TestCase {
         ImmutableSet.of("VERSION"));    
   }
   
-  private List<File> getNameNodeCurrentDirs(MiniDFSCluster cluster) {
-    List<File> nameDirs = Lists.newArrayList();
-    for (URI u : cluster.getNameDirs(0)) {
-      nameDirs.add(new File(u.getPath(), "current"));
-    }
-    return nameDirs;
-  }
-
   @SuppressWarnings("deprecation")
   private List<File> getCheckpointCurrentDirs(SecondaryNameNode secondary) {
     List<File> ret = Lists.newArrayList();
