@@ -28,6 +28,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
@@ -1660,6 +1661,41 @@ public class TestCheckpoint extends TestCase {
         cluster.shutdown();
       }
     }
+  }
+  
+  @SuppressWarnings("deprecation")
+  public void testCommandLineParsing() throws ParseException {
+    SecondaryNameNode.CommandLineOpts opts =
+      new SecondaryNameNode.CommandLineOpts();
+    opts.parse();
+    assertNull(opts.getCommand());
+
+    opts.parse("-checkpoint");
+    assertEquals(SecondaryNameNode.CommandLineOpts.Command.CHECKPOINT,
+        opts.getCommand());
+    assertFalse(opts.shouldForceCheckpoint());
+
+    opts.parse("-checkpoint", "force");
+    assertEquals(SecondaryNameNode.CommandLineOpts.Command.CHECKPOINT,
+        opts.getCommand());
+    assertTrue(opts.shouldForceCheckpoint());
+
+    opts.parse("-geteditsize");
+    assertEquals(SecondaryNameNode.CommandLineOpts.Command.GETEDITSIZE,
+        opts.getCommand());
+    
+    opts.parse("-format");
+    assertTrue(opts.shouldFormat());
+    
+    try {
+      opts.parse("-geteditsize", "-checkpoint");
+      fail("Should have failed bad parsing for two actions");
+    } catch (ParseException e) {}
+    
+    try {
+      opts.parse("-checkpoint", "xx");
+      fail("Should have failed for bad checkpoint arg");
+    } catch (ParseException e) {}
   }
 
   @SuppressWarnings("deprecation")

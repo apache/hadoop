@@ -28,6 +28,14 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.PosixParser;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -158,9 +166,14 @@ public class SecondaryNameNode implements Runnable {
    * Create a connection to the primary namenode.
    */
   public SecondaryNameNode(Configuration conf)  throws IOException {
+    this(conf, new CommandLineOpts());
+  }
+  
+  public SecondaryNameNode(Configuration conf,
+      CommandLineOpts commandLineOpts) throws IOException {
     try {
       NameNode.initializeGenericKeys(conf);
-      initialize(conf);
+      initialize(conf, commandLineOpts);
     } catch(IOException e) {
       shutdown();
       throw e;
@@ -175,8 +188,10 @@ public class SecondaryNameNode implements Runnable {
   
   /**
    * Initialize SecondaryNameNode.
+   * @param commandLineOpts 
    */
-  private void initialize(final Configuration conf) throws IOException {
+  private void initialize(final Configuration conf,
+      CommandLineOpts commandLineOpts) throws IOException {
     final InetSocketAddress infoSocAddr = getHttpAddress(conf);
     infoBindAddress = infoSocAddr.getHostName();
     UserGroupInformation.setConfiguration(conf);
@@ -207,7 +222,7 @@ public class SecondaryNameNode implements Runnable {
     checkpointEditsDirs = FSImage.getCheckpointEditsDirs(conf, 
                                   "/tmp/hadoop/dfs/namesecondary");    
     checkpointImage = new CheckpointStorage(conf, checkpointDirs, checkpointEditsDirs);
-    checkpointImage.recoverCreate();
+    checkpointImage.recoverCreate(commandLineOpts.shouldFormat());
 
     // Initialize other scheduling parameters from the configuration
     checkpointCheckPeriod = conf.getLong(
@@ -535,48 +550,27 @@ public class SecondaryNameNode implements Runnable {
     
     return loadImage;
   }
-
+  
+  
   /**
    * @param argv The parameters passed to this program.
    * @exception Exception if the filesystem does not exist.
    * @return 0 on success, non zero on error.
    */
-  private int processArgs(String[] argv) throws Exception {
-
-    if (argv.length < 1) {
-      printUsage("");
-      return -1;
+  private int processStartupCommand(CommandLineOpts opts) throws Exception {
+    if (opts.getCommand() == null) {
+      return 0;
     }
-
-    int exitCode = -1;
-    int i = 0;
-    String cmd = argv[i++];
-
-    //
-    // verify that we have enough command line parameters
-    //
-    if ("-geteditsize".equals(cmd)) {
-      if (argv.length != 1) {
-        printUsage(cmd);
-        return exitCode;
-      }
-    } else if ("-checkpoint".equals(cmd)) {
-      if (argv.length != 1 && argv.length != 2) {
-        printUsage(cmd);
-        return exitCode;
-      }
-      if (argv.length == 2 && !"force".equals(argv[i])) {
-        printUsage(cmd);
-        return exitCode;
-      }
-    }
-
-    exitCode = 0;
+    
+    String cmd = opts.getCommand().toString().toLowerCase();
+    
+    int exitCode = 0;
     try {
-      if ("-checkpoint".equals(cmd)) {
+      switch (opts.getCommand()) {
+      case CHECKPOINT:
         long count = countUncheckpointedTxns();
         if (count > checkpointTxnCount ||
-            argv.length == 2 && "force".equals(argv[i])) {
+            opts.shouldForceCheckpoint()) {
           doCheckpoint();
         } else {
           System.err.println("EditLog size " + count + " transactions is " +
@@ -584,15 +578,16 @@ public class SecondaryNameNode implements Runnable {
                              "interval " + checkpointTxnCount + " transactions.");
           System.err.println("Skipping checkpoint.");
         }
-      } else if ("-geteditsize".equals(cmd)) {
+        break;
+      case GETEDITSIZE:
         long uncheckpointed = countUncheckpointedTxns();
         System.out.println("NameNode has " + uncheckpointed +
             " uncheckpointed transactions");
-      } else {
-        exitCode = -1;
-        LOG.error(cmd.substring(1) + ": Unknown command");
-        printUsage("");
+        break;
+      default:
+        throw new AssertionError("bad command enum: " + opts.getCommand());
       }
+      
     } catch (RemoteException e) {
       //
       // This is a error returned by hadoop server. Print
@@ -601,19 +596,16 @@ public class SecondaryNameNode implements Runnable {
       try {
         String[] content;
         content = e.getLocalizedMessage().split("\n");
-        LOG.error(cmd.substring(1) + ": "
-                  + content[0]);
+        LOG.error(cmd + ": " + content[0]);
       } catch (Exception ex) {
-        LOG.error(cmd.substring(1) + ": "
-                  + ex.getLocalizedMessage());
+        LOG.error(cmd + ": " + ex.getLocalizedMessage());
       }
     } catch (IOException e) {
       //
       // IO exception encountered locally.
       //
       exitCode = -1;
-      LOG.error(cmd.substring(1) + ": "
-                + e.getLocalizedMessage());
+      LOG.error(cmd + ": " + e.getLocalizedMessage());
     } finally {
       // Does the RPC connection need to be closed?
     }
@@ -633,42 +625,125 @@ public class SecondaryNameNode implements Runnable {
   }
 
   /**
-   * Displays format of commands.
-   * @param cmd The command that is being executed.
-   */
-  private void printUsage(String cmd) {
-    if ("-geteditsize".equals(cmd)) {
-      System.err.println("Usage: java SecondaryNameNode"
-                         + " [-geteditsize]");
-    } else if ("-checkpoint".equals(cmd)) {
-      System.err.println("Usage: java SecondaryNameNode"
-                         + " [-checkpoint [force]]");
-    } else {
-      System.err.println("Usage: java SecondaryNameNode " +
-                         "[-checkpoint [force]] " +
-                         "[-geteditsize] ");
-    }
-  }
-
-  /**
    * main() has some simple utility methods.
    * @param argv Command line parameters.
    * @exception Exception if the filesystem does not exist.
    */
   public static void main(String[] argv) throws Exception {
+    CommandLineOpts opts = SecondaryNameNode.parseArgs(argv);
+    if (opts == null) {
+      System.exit(-1);
+    }
+    
     StringUtils.startupShutdownMessage(SecondaryNameNode.class, argv, LOG);
     Configuration tconf = new HdfsConfiguration();
-    if (argv.length >= 1) {
-      SecondaryNameNode secondary = new SecondaryNameNode(tconf);
-      int ret = secondary.processArgs(argv);
+    SecondaryNameNode secondary = new SecondaryNameNode(tconf, opts);
+
+    if (opts.getCommand() != null) {
+      int ret = secondary.processStartupCommand(opts);
       System.exit(ret);
     }
 
     // Create a never ending deamon
-    Daemon checkpointThread = new Daemon(new SecondaryNameNode(tconf)); 
+    Daemon checkpointThread = new Daemon(secondary);
     checkpointThread.start();
   }
+  
+  
+  /**
+   * Container for parsed command-line options.
+   */
+  @SuppressWarnings("static-access")
+  static class CommandLineOpts {
+    private final Options options = new Options();
+    
+    private final Option geteditsizeOpt;
+    private final Option checkpointOpt;
+    private final Option formatOpt;
 
+
+    Command cmd;
+    enum Command {
+      GETEDITSIZE,
+      CHECKPOINT;
+    }
+    
+    private boolean shouldForce;
+    private boolean shouldFormat;
+
+    CommandLineOpts() {
+      geteditsizeOpt = new Option("geteditsize",
+        "return the number of uncheckpointed transactions on the NameNode");
+      checkpointOpt = OptionBuilder.withArgName("force")
+        .hasOptionalArg().withDescription("checkpoint on startup").create("checkpoint");;
+      formatOpt = new Option("format", "format the local storage during startup");
+      
+      options.addOption(geteditsizeOpt);
+      options.addOption(checkpointOpt);
+      options.addOption(formatOpt);
+    }
+    
+    public boolean shouldFormat() {
+      return shouldFormat;
+    }
+
+    public void parse(String ... argv) throws ParseException {
+      CommandLineParser parser = new PosixParser();
+      CommandLine cmdLine = parser.parse(options, argv);
+      
+      boolean hasGetEdit = cmdLine.hasOption(geteditsizeOpt.getOpt());
+      boolean hasCheckpoint = cmdLine.hasOption(checkpointOpt.getOpt()); 
+      if (hasGetEdit && hasCheckpoint) {
+        throw new ParseException("May not pass both "
+            + geteditsizeOpt.getOpt() + " and "
+            + checkpointOpt.getOpt());
+      }
+      
+      if (hasGetEdit) {
+        cmd = Command.GETEDITSIZE;
+      } else if (hasCheckpoint) {
+        cmd = Command.CHECKPOINT;
+        
+        String arg = cmdLine.getOptionValue(checkpointOpt.getOpt());
+        if ("force".equals(arg)) {
+          shouldForce = true;
+        } else if (arg != null) {
+          throw new ParseException("-checkpoint may only take 'force' as an "
+              + "argument");
+        }
+      }
+      
+      if (cmdLine.hasOption(formatOpt.getOpt())) {
+        shouldFormat = true;
+      }
+    }
+    
+    public Command getCommand() {
+      return cmd;
+    }
+    
+    public boolean shouldForceCheckpoint() {
+      return shouldForce;
+    }
+    
+    void usage() {
+      HelpFormatter formatter = new HelpFormatter();
+      formatter.printHelp("secondarynamenode", options);
+    }
+  }
+
+  private static CommandLineOpts parseArgs(String[] argv) {
+    CommandLineOpts opts = new CommandLineOpts();
+    try {
+      opts.parse(argv);
+    } catch (ParseException pe) {
+      LOG.error(pe.getMessage());
+      opts.usage();
+      return null;
+    }
+    return opts;
+  }
+  
   static class CheckpointStorage extends FSImage {
     /**
      * Construct a checkpoint image.
@@ -696,7 +771,7 @@ public class SecondaryNameNode implements Runnable {
      *
      * @throws IOException
      */
-    void recoverCreate() throws IOException {
+    void recoverCreate(boolean format) throws IOException {
       storage.attemptRestoreRemovedStorage();
       storage.unlockAll();
 
@@ -714,6 +789,13 @@ public class SecondaryNameNode implements Runnable {
         if(!isAccessible)
           throw new InconsistentFSStateException(sd.getRoot(),
               "cannot access checkpoint directory.");
+        
+        if (format) {
+          // Don't confirm, since this is just the secondary namenode.
+          LOG.info("Formatting storage directory " + sd);
+          sd.clearDirectory();
+        }
+        
         StorageState curState;
         try {
           curState = sd.analyzeStorage(HdfsConstants.StartupOption.REGULAR);
