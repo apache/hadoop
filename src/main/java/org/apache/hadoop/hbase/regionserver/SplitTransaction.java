@@ -375,7 +375,8 @@ public class SplitTransaction {
 
     DaughterOpener(final Server s, final RegionServerServices services,
         final HRegion r) {
-      super(s.getServerName() + "-daughterOpener=" + r.getRegionInfo().getEncodedName());
+      super((s == null? "null-services": s.getServerName()) +
+        "-daughterOpener=" + r.getRegionInfo().getEncodedName());
       setDaemon(true);
       this.services = services;
       this.server = s;
@@ -411,8 +412,9 @@ public class SplitTransaction {
   void openDaughterRegion(final Server server,
       final RegionServerServices services, final HRegion daughter)
   throws IOException, KeeperException {
+    boolean stopped = server != null && server.isStopped();
     boolean stopping = services != null && services.isStopping();
-    if (server.isStopped() || stopping) {
+    if (stopped || stopping) {
       MetaEditor.addDaughter(server.getCatalogTracker(),
         daughter.getRegionInfo(), null);
       LOG.info("Not opening daughter " +
@@ -421,7 +423,7 @@ public class SplitTransaction {
       return;
     }
     HRegionInfo hri = daughter.getRegionInfo();
-    LoggingProgressable reporter =
+    LoggingProgressable reporter = server == null? null:
       new LoggingProgressable(hri, server.getConfiguration());
     HRegion r = daughter.openHRegion(reporter);
     if (services != null) {
