@@ -417,7 +417,7 @@ public class UpgradeUtilities {
       storage = new NNStorage(conf, 
                               Collections.<URI>emptyList(), 
                               Collections.<URI>emptyList());
-
+      storage.setStorageInfo(version);
       StorageDirectory sd = storage.new StorageDirectory(parent[i].getParentFile());
       sd.write(versionFile);
       versionFiles[i] = versionFile;

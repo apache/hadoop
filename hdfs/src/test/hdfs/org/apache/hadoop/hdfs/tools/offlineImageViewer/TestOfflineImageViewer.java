@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 
 /**
@@ -128,11 +129,10 @@ public class TestOfflineImageViewer extends TestCase {
       cluster.getNameNode().saveNamespace();
       
       // Determine location of fsimage file
-      URI [] files = cluster.getNameDirs(0).toArray(new URI[0]);
-      orig =  new File(files[0].getPath(), "current/fsimage");
-      
-      if (!orig.exists()) {
-        fail("Didn't generate or can't find fsimage.");
+      orig = FSImageTestUtil.findLatestImageFile(
+          cluster.getNameNode().getFSImage().getStorage().getStorageDir(0));
+      if (orig == null) {
+        fail("Didn't generate or can't find fsimage");
       }
     } finally {
       if(cluster != null)

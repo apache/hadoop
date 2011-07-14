@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.junit.Assert.*;
 import junit.framework.Assert;
 import java.io.*;
 import java.net.URI;
@@ -29,6 +30,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.FoundEditLog;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.io.Text;
@@ -47,20 +50,6 @@ public class TestCheckPointForSecurityTokens {
   short replication = 3;
   MiniDFSCluster cluster = null;
 
-  NameNode startNameNode( Configuration conf,
-                          String imageDirs,
-                          String editsDirs,
-                          StartupOption start) throws IOException {
-    conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "hdfs://localhost:0");
-    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");  
-    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, imageDirs);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, editsDirs);
-    String[] args = new String[]{start.getName()};
-    NameNode nn = NameNode.createNameNode(args, conf);
-    Assert.assertTrue(nn.isInSafeMode());
-    return nn;
-  }
-  
   private void cancelToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
     cluster.getNamesystem().cancelDelegationToken(token);
@@ -95,10 +84,12 @@ public class TestCheckPointForSecurityTokens {
       String[] args = new String[]{"-saveNamespace"};
 
       // verify that the edits file is NOT empty
-      Collection<URI> editsDirs = cluster.getNameEditsDirs(0);
-      for(URI uri : editsDirs) {
-        File ed = new File(uri.getPath());
-        Assert.assertTrue(new File(ed, "current/edits").length() > Integer.SIZE/Byte.SIZE);
+      NameNode nn = cluster.getNameNode();
+      for (StorageDirectory sd : nn.getFSImage().getStorage().dirIterable(null)) {
+        FoundEditLog log = FSImageTestUtil.findLatestEditsLog(sd);
+        assertTrue(log.isInProgress());
+        assertEquals("In-progress log " + log + " should have 5 transactions",
+            5, log.validateLog().numTransactions);
       }
 
       // Saving image in safe mode should succeed
@@ -108,10 +99,12 @@ public class TestCheckPointForSecurityTokens {
       } catch(Exception e) {
         throw new IOException(e.getMessage());
       }
-      // verify that the edits file is empty
-      for(URI uri : editsDirs) {
-        File ed = new File(uri.getPath());
-        Assert.assertTrue(new File(ed, "current/edits").length() == Integer.SIZE/Byte.SIZE);
+      // verify that the edits file is empty except for the START txn
+      for (StorageDirectory sd : nn.getFSImage().getStorage().dirIterable(null)) {
+        FoundEditLog log = FSImageTestUtil.findLatestEditsLog(sd);
+        assertTrue(log.isInProgress());
+        assertEquals("In-progress log " + log + " should only have START txn",
+            1, log.validateLog().numTransactions);
       }
 
       // restart cluster

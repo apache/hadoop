@@ -171,7 +171,12 @@ public abstract class FSImageTestUtil {
     }
     
     for (List<File> sameNameList : groupedByName.values()) {
-      assertFileContentsSame(sameNameList.toArray(new File[0]));
+      if (sameNameList.get(0).isDirectory()) {
+        // recurse
+        assertParallelFilesAreIdentical(sameNameList, ignoredFileNames);
+      } else {
+        assertFileContentsSame(sameNameList.toArray(new File[0]));
+      }
     }  
   }
   
@@ -332,6 +337,15 @@ public abstract class FSImageTestUtil {
     } finally {
       IOUtils.cleanup(null, fis, out);
     }    
+  }
+
+  public static void assertReasonableNameCurrentDir(File curDir)
+      throws IOException {
+    assertTrue(curDir.isDirectory());
+    assertTrue(new File(curDir, "VERSION").isFile());
+    assertTrue(new File(curDir, "seen_txid").isFile());
+    File image = findNewestImageFile(curDir.toString());
+    assertNotNull(image);
   }
 
 

@@ -22,6 +22,8 @@ import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.NAME_N
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 
 import junit.framework.TestCase;
 
@@ -32,7 +34,10 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.util.StringUtils;
+
+import com.google.common.collect.Lists;
 
 /**
 * This test ensures the appropriate response (successful or failure) from
@@ -61,26 +66,26 @@ public class TestDFSRollback extends TestCase {
    * Verify that the new current directory is the old previous.  
    * It is assumed that the server has recovered and rolled back.
    */
-  void checkResult(NodeType nodeType, String[] baseDirs) throws IOException {
-    switch (nodeType) {
-    case NAME_NODE:
-      for (int i = 0; i < baseDirs.length; i++) {
-        assertTrue(new File(baseDirs[i],"current").isDirectory());
-        assertTrue(new File(baseDirs[i],"current/VERSION").isFile());
-        assertTrue(new File(baseDirs[i],"current/edits").isFile());
-        assertTrue(new File(baseDirs[i],"current/fsimage").isFile());
-        assertTrue(new File(baseDirs[i],"current/fstime").isFile());
-      }
-      break;
-    case DATA_NODE:
-      for (int i = 0; i < baseDirs.length; i++) {
+  void checkResult(NodeType nodeType, String[] baseDirs) throws Exception {
+    List<File> curDirs = Lists.newArrayList();
+    for (String baseDir : baseDirs) {
+      File curDir = new File(baseDir, "current");
+      curDirs.add(curDir);
+      switch (nodeType) {
+      case NAME_NODE:
+        FSImageTestUtil.assertReasonableNameCurrentDir(curDir);
+        break;
+      case DATA_NODE:
         assertEquals(
-                     UpgradeUtilities.checksumContents(
-                                                       nodeType, new File(baseDirs[i],"current")),
-                     UpgradeUtilities.checksumMasterDataNodeContents());
+            UpgradeUtilities.checksumContents(nodeType, curDir),
+            UpgradeUtilities.checksumMasterDataNodeContents());
+        break;
       }
-      break;
     }
+    
+    FSImageTestUtil.assertParallelFilesAreIdentical(
+        curDirs, Collections.<String>emptySet());
+
     for (int i = 0; i < baseDirs.length; i++) {
       assertFalse(new File(baseDirs[i],"previous").isDirectory());
     }
@@ -241,21 +246,17 @@ public class TestDFSRollback extends TestCase {
       log("NameNode rollback with no edits file", numDirs);
       UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       baseDirs = UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "previous");
-      for (File f : baseDirs) { 
-        FileUtil.fullyDelete(new File(f,"edits"));
-      }
+      deleteMatchingFiles(baseDirs, "edits.*");
       startNameNodeShouldFail(StartupOption.ROLLBACK,
-          "Edits file is not found");
+          "but there are no logs to load");
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       
       log("NameNode rollback with no image file", numDirs);
       UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       baseDirs = UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "previous");
-      for (File f : baseDirs) { 
-        FileUtil.fullyDelete(new File(f,"fsimage")); 
-      }
+      deleteMatchingFiles(baseDirs, "fsimage_.*");
       startNameNodeShouldFail(StartupOption.ROLLBACK,
-          "Image file is not found");
+          "No valid image files found");
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       
       log("NameNode rollback with corrupt version file", numDirs);
@@ -284,6 +285,16 @@ public class TestDFSRollback extends TestCase {
     } // end numDir loop
   }
  
+  private void deleteMatchingFiles(File[] baseDirs, String regex) {
+    for (File baseDir : baseDirs) {
+      for (File f : baseDir.listFiles()) {
+        if (f.getName().matches(regex)) {
+          f.delete();
+        }
+      }
+    }
+  }
+
   protected void tearDown() throws Exception {
     LOG.info("Shutting down MiniDFSCluster");
     if (cluster != null) cluster.shutdown();
