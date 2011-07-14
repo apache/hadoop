@@ -318,7 +318,7 @@ public class SplitTransaction {
     }
     if (bOpener.getException() != null) {
       throw new IOException("Failed " +
-        bOpener.Name(), bOpener.getException());
+        bOpener.getName(), bOpener.getException());
     }
 
     // Tell master about split by updating zk.  If we fail, abort.
