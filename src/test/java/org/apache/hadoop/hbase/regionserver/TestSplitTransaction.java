@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PairOfSameType;
+import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -82,6 +83,46 @@ public class TestSplitTransaction {
     }
     if (this.wal != null) this.wal.closeAndDelete();
     this.fs.delete(this.testdir, true);
+  }
+
+  @Test public void testFailAfterPONR() throws IOException, KeeperException {
+    final int rowcount = TEST_UTIL.loadRegion(this.parent, CF);
+    assertTrue(rowcount > 0);
+    int parentRowCount = countRows(this.parent);
+    assertEquals(rowcount, parentRowCount);
+
+    // Start transaction.
+    SplitTransaction st = prepareGOOD_SPLIT_ROW();
+    SplitTransaction spiedUponSt = spy(st);
+    Mockito.doThrow(new MockedFailedDaughterOpen()).
+      when(spiedUponSt).openDaughterRegion((Server)Mockito.anyObject(),
+        (RegionServerServices)Mockito.anyObject(), (HRegion)Mockito.anyObject());
+
+    // Run the execute.  Look at what it returns.
+    boolean expectedException = false;
+    Server mockServer = Mockito.mock(Server.class);
+    when(mockServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
+    try {
+      spiedUponSt.execute(mockServer, null);
+    } catch (IOException e) {
+      if (e.getCause() != null &&
+          e.getCause() instanceof MockedFailedDaughterOpen) {
+        expectedException = true;
+      }
+    }
+    assertTrue(expectedException);
+    // Run rollback returns that we should restart.
+    assertFalse(spiedUponSt.rollback(null, null));
+    // Make sure that region a and region b are still in the filesystem, that
+    // they have not been removed; this is supposed to be the case if we go
+    // past point of no return.
+    Path tableDir =  this.parent.getRegionDir().getParent();
+    Path daughterADir =
+      new Path(tableDir, spiedUponSt.getFirstDaughter().getEncodedName());
+    Path daughterBDir =
+      new Path(tableDir, spiedUponSt.getSecondDaughter().getEncodedName());
+    assertTrue(TEST_UTIL.getTestFileSystem().exists(daughterADir));
+    assertTrue(TEST_UTIL.getTestFileSystem().exists(daughterBDir));
   }
 
   /**
@@ -190,7 +231,7 @@ public class TestSplitTransaction {
     }
     assertTrue(expectedException);
     // Run rollback
-    spiedUponSt.rollback(null, null);
+    assertTrue(spiedUponSt.rollback(null, null));
 
     // Assert I can scan parent.
     int parentRowCount2 = countRows(this.parent);
@@ -228,6 +269,7 @@ public class TestSplitTransaction {
    */
   @SuppressWarnings("serial")
   private class MockedFailedDaughterCreation extends IOException {}
+  private class MockedFailedDaughterOpen extends IOException {}
 
   private int countRows(final HRegion r) throws IOException {
     int rowcount = 0;

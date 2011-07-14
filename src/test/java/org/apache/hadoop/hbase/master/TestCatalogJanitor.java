@@ -293,6 +293,14 @@ public class TestCatalogJanitor {
     assertFalse(janitor.cleanParent(parent, r));
     // Remove the reference file and try again.
     assertTrue(fs.delete(p, true));
+    // We will fail!!! Because split b is empty, which is right... we should
+    // not remove parent if daughters do not exist in fs.
+    assertFalse(janitor.cleanParent(parent, r));
+    // Put in place daughter dir for b... that should make it so parent gets
+    // cleaned up.
+    storedir = Store.getStoreHomedir(tabledir, splitb.getEncodedName(),
+      htd.getColumnFamilies()[0].getName());
+    assertTrue(fs.mkdirs(storedir));
     assertTrue(janitor.cleanParent(parent, r));
   }
 }

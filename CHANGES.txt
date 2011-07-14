@@ -409,6 +409,8 @@ Release 0.90.4 - Unreleased
    HBASE-4033  The shutdown RegionServer could be added to
                AssignmentManager.servers again (Jieshan Bean)
    HBASE-4088  npes in server shutdown
+   HBASE-3872  Hole in split transaction rollback; edits to .META. need
+               to be rolled back even if it seems like they didn't make it
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the
