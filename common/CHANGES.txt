@@ -264,6 +264,8 @@ Trunk (unreleased changes)
 
     HADOOP-7443. Add CRC32C as another DataChecksum implementation (todd)
 
+    HADOOP-7305. Eclipse project files are incomplete. (Niels Basjes via eli)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
