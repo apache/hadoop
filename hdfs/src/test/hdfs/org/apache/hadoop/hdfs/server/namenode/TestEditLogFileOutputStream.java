@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DU;
 import org.apache.hadoop.fs.Path;
@@ -32,13 +33,22 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TestEditLogFileOutputStream {
   
   private final static int HEADER_LEN = 17;
   private final static int MKDIR_LEN = 59;
+  private static final File TEST_EDITS =
+    new File(System.getProperty("test.build.data","/tmp"),
+             "editLogStream.dat");
 
+  @Before
+  public void deleteEditsFile() {
+    TEST_EDITS.delete();
+  }
+  
   @Test
   public void testPreallocation() throws IOException {
     Configuration conf = new HdfsConfiguration();
@@ -71,6 +81,50 @@ public class TestEditLogFileOutputStream {
     // 256 blocks for the 1MB of preallocation space
     assertTrue("Edit log disk space used should be at least 257 blocks",
         256 * 4096 <= new DU(editLog, conf).getUsed());
+  }
+
+  /**
+   * Tests EditLogFileOutputStream doesn't throw NullPointerException on
+   * close/abort sequence. See HDFS-2011.
+   */
+  @Test
+  public void testEditLogFileOutputStreamCloseAbort() throws IOException {
+    // abort after a close should just ignore
+    EditLogFileOutputStream editLogStream =
+      new EditLogFileOutputStream(TEST_EDITS, 0);
+    editLogStream.close();
+    editLogStream.abort();
+  }
+
+  /**
+   * Tests EditLogFileOutputStream doesn't throw NullPointerException on
+   * close/close sequence. See HDFS-2011.
+   */
+  @Test
+  public void testEditLogFileOutputStreamCloseClose() throws IOException {
+    // close after a close should result in an IOE
+    EditLogFileOutputStream editLogStream =
+      new EditLogFileOutputStream(TEST_EDITS, 0);
+    editLogStream.close();
+    try {
+      editLogStream.close();
+    } catch (IOException ioe) {
+      String msg = StringUtils.stringifyException(ioe);
+      assertTrue(msg, msg.contains("Trying to use aborted output stream"));
+    }
+  }
+  
+  /**
+   * Tests EditLogFileOutputStream doesn't throw NullPointerException on being
+   * abort/abort sequence. See HDFS-2011.
+   */
+  @Test
+  public void testEditLogFileOutputStreamAbortAbort() throws IOException {
+    // abort after a close should just ignore
+    EditLogFileOutputStream editLogStream =
+      new EditLogFileOutputStream(TEST_EDITS, 0);
+    editLogStream.abort();
+    editLogStream.abort();
   }
 
 }

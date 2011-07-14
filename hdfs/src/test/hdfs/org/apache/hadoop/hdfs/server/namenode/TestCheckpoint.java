@@ -174,32 +174,6 @@ public class TestCheckpoint extends TestCase {
     resurrectNameDir(first); // put back namedir
   }
 
-  /**
-   * Tests EditLogFileOutputStream doesn't throw NullPointerException on being
-   * closed twice.
-   * See https://issues.apache.org/jira/browse/HDFS-2011
-   */
-  public void testEditLogFileOutputStreamCloses()
-    throws IOException,NullPointerException {
-    System.out.println("Testing EditLogFileOutputStream doesn't throw " +
-                       "NullPointerException on being closed twice");
-    File editLogStreamFile = null;
-    try {
-      editLogStreamFile = new File(System.getProperty("test.build.data","/tmp"),
-                                   "editLogStream.dat");
-      EditLogFileOutputStream editLogStream =
-                             new EditLogFileOutputStream(editLogStreamFile, 0);
-      editLogStream.close();
-      //Closing an twice should not throw a NullPointerException
-      editLogStream.close();
-    } finally {
-      if (editLogStreamFile != null)
-        // Cleanup the editLogStream.dat file we created
-          editLogStreamFile.delete();
-    }
-    System.out.println("Successfully tested EditLogFileOutputStream doesn't " +
-           "throw NullPointerException on being closed twice");
-  }
 
   /**
    * Checks that an IOException in NNStorage.writeTransactionIdFile is handled
