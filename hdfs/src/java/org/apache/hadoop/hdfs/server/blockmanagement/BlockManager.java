@@ -99,6 +99,8 @@ public class BlockManager {
    */
   public final BlocksMap blocksMap;
 
+  private final DatanodeManager datanodeManager;
+
   //
   // Store blocks-->datanodedescriptor(s) map of corrupt replicas
   //
@@ -164,6 +166,7 @@ public class BlockManager {
       DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_DEFAULT) * 1000L);
     setConfigurationParameters(conf);
     blocksMap = new BlocksMap(capacity, DEFAULT_MAP_LOAD_FACTOR);
+    datanodeManager = new DatanodeManager(fsn);
   }
 
   void setConfigurationParameters(Configuration conf) throws IOException {
@@ -207,13 +210,20 @@ public class BlockManager {
     FSNamesystem.LOG.info("shouldCheckForEnoughRacks = " + shouldCheckForEnoughRacks);
   }
 
-  public void activate() {
+  public void activate(Configuration conf) {
     pendingReplications.start();
+    datanodeManager.activate(conf);
   }
 
   public void close() {
     if (pendingReplications != null) pendingReplications.stop();
     blocksMap.close();
+    datanodeManager.close();
+  }
+
+  /** @return the datanodeManager */
+  public DatanodeManager getDatanodeManager() {
+    return datanodeManager;
   }
 
   public void metaSave(PrintWriter out) {

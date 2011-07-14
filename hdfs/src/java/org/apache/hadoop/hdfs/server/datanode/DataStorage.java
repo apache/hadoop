@@ -173,8 +173,8 @@ public class DataStorage extends Storage {
         }
       } catch (IOException ioe) {
         sd.unlock();
-        LOG.warn("Ignoring storage directory "+ dataDir
-        		+ " due to an exception: " + StringUtils.stringifyException(ioe));
+        LOG.warn("Ignoring storage directory " + dataDir
+            + " due to an exception", ioe);
         //continue with other good dirs
         continue;
       }

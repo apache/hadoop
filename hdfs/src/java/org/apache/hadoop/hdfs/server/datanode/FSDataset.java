@@ -62,7 +62,6 @@ import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlo
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -2377,8 +2376,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       try {
         datanode.reportBadBlocks(new ExtendedBlock(bpid, corruptBlock));  
       } catch (IOException e) {
-        DataNode.LOG.warn("Failed to repot bad block " + corruptBlock
-            + "Exception:" + StringUtils.stringifyException(e));
+        DataNode.LOG.warn("Failed to repot bad block " + corruptBlock, e);
       }
     }
   }

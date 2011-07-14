@@ -62,7 +62,6 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.hadoop.util.StringUtils;
 
 import com.google.protobuf.ByteString;
 
@@ -268,10 +267,8 @@ class DataXceiver extends Receiver implements Runnable, FSConstants {
       /* What exactly should we do here?
        * Earlier version shutdown() datanode if there is disk error.
        */
-      LOG.warn(dnR +  ":Got exception while serving " + 
-          block + " to " +
-                remoteAddress + ":\n" + 
-                StringUtils.stringifyException(ioe) );
+      LOG.warn(dnR + ":Got exception while serving " + block + " to "
+          + remoteAddress, ioe);
       throw ioe;
     } finally {
       IOUtils.closeStream(blockSender);
@@ -424,8 +421,7 @@ class DataXceiver extends Receiver implements Runnable, FSConstants {
           } else {
             LOG.info(datanode + ":Exception transfering block " +
                      block + " to mirror " + mirrorNode +
-                     ". continuing without the mirror.\n" +
-                     StringUtils.stringifyException(e));
+                     ". continuing without the mirror.", e);
           }
         }
       }

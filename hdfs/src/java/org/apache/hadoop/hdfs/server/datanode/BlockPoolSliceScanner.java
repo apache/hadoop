@@ -49,7 +49,6 @@ import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * Performs two types of scanning:
@@ -434,9 +433,8 @@ class BlockPoolSliceScanner {
           return;
         }
 
-        LOG.warn((second ? "Second " : "First ") + 
-                 "Verification failed for " + block + ". Exception : " +
-                 StringUtils.stringifyException(e));
+        LOG.warn((second ? "Second " : "First ") + "Verification failed for "
+            + block, e);
         
         if (second) {
           totalScanErrors++;
@@ -512,8 +510,7 @@ class BlockPoolSliceScanner {
         logReader[1] = log.getPreviousFileReader();
       }
     } catch (IOException e) {
-      LOG.warn("Could not read previous verification times : " +
-               StringUtils.stringifyException(e));
+      LOG.warn("Could not read previous verification times", e);
     }
     
     try {
@@ -645,8 +642,7 @@ class BlockPoolSliceScanner {
         }
       }
     } catch (RuntimeException e) {
-      LOG.warn("RuntimeException during BlockPoolScanner.scan() : " +
-               StringUtils.stringifyException(e));
+      LOG.warn("RuntimeException during BlockPoolScanner.scan()", e);
       throw e;
     } finally {
       cleanUp();
@@ -910,8 +906,7 @@ class BlockPoolSliceScanner {
         try {
           readNext();
         } catch (IOException e) {
-          LOG.info("Could not reade next line in LogHandler : " +
-                   StringUtils.stringifyException(e));
+          LOG.info("Could not read next line in LogHandler", e);
         }
         return curLine;
       }

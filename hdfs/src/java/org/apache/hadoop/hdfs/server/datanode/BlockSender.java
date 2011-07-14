@@ -38,7 +38,6 @@ import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.SocketOutputStream;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * Reads a block from the disk and sends it to a recipient.
@@ -328,9 +327,8 @@ class BlockSender implements java.io.Closeable, FSConstants {
       try {
         checksumIn.readFully(buf, checksumOff, checksumLen);
       } catch (IOException e) {
-        LOG.warn(" Could not read or failed to veirfy checksum for data" +
-                 " at offset " + offset + " for block " + block + " got : "
-                 + StringUtils.stringifyException(e));
+        LOG.warn(" Could not read or failed to veirfy checksum for data"
+            + " at offset " + offset + " for block " + block, e);
         IOUtils.closeStream(checksumIn);
         checksumIn = null;
         if (corruptChecksumOk) {
@@ -401,10 +399,19 @@ class BlockSender implements java.io.Closeable, FSConstants {
       }
       
     } catch (IOException e) {
-      /* exception while writing to the client (well, with transferTo(),
-       * it could also be while reading from the local file).
+      /* Exception while writing to the client. Connection closure from
+       * the other end is mostly the case and we do not care much about
+       * it. But other things can go wrong, especially in transferTo(),
+       * which we do not want to ignore.
+       *
+       * The message parsing below should not be considered as a good
+       * coding example. NEVER do it to drive a program logic. NEVER.
+       * It was done here because the NIO throws an IOException for EPIPE.
        */
-      LOG.error("BlockSender.sendChunks() exception: " + StringUtils.stringifyException(e));
+      String ioem = e.getMessage();
+      if (!ioem.startsWith("Broken pipe") && !ioem.startsWith("Connection reset")) {
+        LOG.error("BlockSender.sendChunks() exception: ", e);
+      }
       throw ioeToSocketException(e);
     }
 

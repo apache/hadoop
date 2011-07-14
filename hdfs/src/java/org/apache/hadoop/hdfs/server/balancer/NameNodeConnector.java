@@ -52,7 +52,6 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * The class provides utilities for {@link Balancer} to access a NameNode
@@ -222,7 +221,7 @@ class NameNodeConnector {
         try {
           blockTokenSecretManager.setKeys(namenode.getBlockKeys());
         } catch (Exception e) {
-          LOG.error(StringUtils.stringifyException(e));
+          LOG.error("Failed to set keys", e);
         }
         try {
           Thread.sleep(keyUpdaterInterval);

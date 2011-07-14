@@ -101,7 +101,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.util.StringUtils;
 
 /********************************************************
  * DFSClient can connect to a Hadoop Filesystem and 
@@ -489,8 +488,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     try {
       return namenode.getPreferredBlockSize(f);
     } catch (IOException ie) {
-      LOG.warn("Problem getting block size: " + 
-          StringUtils.stringifyException(ie));
+      LOG.warn("Problem getting block size", ie);
       throw ie;
     }
   }
@@ -1578,9 +1576,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     try {
       reportBadBlocks(lblocks);
     } catch (IOException ie) {
-      LOG.info("Found corruption while reading " + file 
-               + ".  Error repairing corrupt blocks.  Bad blocks remain. " 
-               + StringUtils.stringifyException(ie));
+      LOG.info("Found corruption while reading " + file
+          + ".  Error repairing corrupt blocks.  Bad blocks remain.", ie);
     }
   }
 

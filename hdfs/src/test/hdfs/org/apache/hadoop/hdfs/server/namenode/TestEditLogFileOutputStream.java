@@ -20,9 +20,11 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.channels.FileChannel;
 
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -35,6 +37,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class TestEditLogFileOutputStream {
   
@@ -81,6 +84,30 @@ public class TestEditLogFileOutputStream {
     // 256 blocks for the 1MB of preallocation space
     assertTrue("Edit log disk space used should be at least 257 blocks",
         256 * 4096 <= new DU(editLog, conf).getUsed());
+  }
+  
+  @Test
+  public void testClose() throws IOException {
+    String errorMessage = "TESTING: fc.truncate() threw IOE";
+    
+    File testDir = new File(System.getProperty("test.build.data", "/tmp"));
+    assertTrue("could not create test directory", testDir.exists() || testDir.mkdirs());
+    File f = new File(testDir, "edits");
+    assertTrue("could not create test file", f.createNewFile());
+    EditLogFileOutputStream elos = new EditLogFileOutputStream(f, 0);
+    
+    FileChannel mockFc = Mockito.spy(elos.getFileChannelForTesting());
+    Mockito.doThrow(new IOException(errorMessage)).when(mockFc).truncate(Mockito.anyLong());
+    elos.setFileChannelForTesting(mockFc);
+    
+    try {
+      elos.close();
+      fail("elos.close() succeeded, but should have thrown");
+    } catch (IOException e) {
+      assertEquals("wrong IOE thrown from elos.close()", e.getMessage(), errorMessage);
+    }
+    
+    assertEquals("fc was not nulled when elos.close() failed", elos.getFileChannelForTesting(), null);
   }
 
   /**

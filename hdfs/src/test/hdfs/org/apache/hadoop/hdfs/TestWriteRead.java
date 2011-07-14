@@ -44,6 +44,7 @@ public class TestWriteRead {
 
   private static final int BUFFER_SIZE = 8192 * 100;
   private static final String ROOT_DIR = "/tmp/";
+  private static final long blockSize = 1024*100;
 
   // command-line options. Different defaults for unit test vs real cluster
   String filenameOption = ROOT_DIR + "fileX1";
@@ -69,8 +70,8 @@ public class TestWriteRead {
     LOG.info("initJunitModeTest");
 
     conf = new HdfsConfiguration();
-    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024 * 100); // 100K
-                                                                // blocksize
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize); // 100K
+                                                              // blocksize
 
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();
@@ -99,15 +100,14 @@ public class TestWriteRead {
   }
 
   /** Junit Test reading while writing. */
-  
   @Test
   public void testWriteReadSeq() throws IOException {
     useFCOption = false; 
     positionReadOption = false;
     String fname = filenameOption;
-    
+    long rdBeginPos = 0;
     // need to run long enough to fail: takes 25 to 35 seec on Mac
-    int stat = testWriteAndRead(fname, WR_NTIMES, WR_CHUNK_SIZE);
+    int stat = testWriteAndRead(fname, WR_NTIMES, WR_CHUNK_SIZE, rdBeginPos);
     LOG.info("Summary status from test1: status= " + stat);
     Assert.assertEquals(0, stat);
   }
@@ -117,14 +117,27 @@ public class TestWriteRead {
   public void testWriteReadPos() throws IOException {
     String fname = filenameOption;
     positionReadOption = true;   // position read
-    int stat = testWriteAndRead(fname, WR_NTIMES, WR_CHUNK_SIZE);
+    long rdBeginPos = 0;
+    int stat = testWriteAndRead(fname, WR_NTIMES, WR_CHUNK_SIZE, rdBeginPos);
     Assert.assertEquals(0, stat);
   }
 
+  /** Junit Test position read of the current block being written. */
+  @Test
+  public void testReadPosCurrentBlock() throws IOException {
+    String fname = filenameOption;
+    positionReadOption = true;   // position read
+    int wrChunkSize = (int)(blockSize) + (int)(blockSize/2);
+    long rdBeginPos = blockSize+1;
+    int numTimes=5;
+    int stat = testWriteAndRead(fname, numTimes, wrChunkSize, rdBeginPos);
+    Assert.assertEquals(0, stat);
+  }
    
   // equivalent of TestWriteRead1
   private int clusterTestWriteRead1() throws IOException {
-    int stat = testWriteAndRead(filenameOption, loopOption, chunkSizeOption);
+    long rdBeginPos = 0;
+    int stat = testWriteAndRead(filenameOption, loopOption, chunkSizeOption, rdBeginPos);
     return stat;
   }
 
@@ -133,10 +146,9 @@ public class TestWriteRead {
    * Return number of bytes read. 
    * Support both sequential read and position read.
    */
-  private long readData(String fname, byte[] buffer, long byteExpected)
+  private long readData(String fname, byte[] buffer, long byteExpected, long beginPosition)
       throws IOException {
     long totalByteRead = 0;
-    long beginPosition = 0;
     Path path = getFullyQualifiedPath(fname);
 
     FSDataInputStream in = null;
@@ -263,7 +275,7 @@ public class TestWriteRead {
    * After each iteration of write, do a read of the file from begin to end. 
    * Return 0 on success, else number of failure.
    */
-  private int testWriteAndRead(String fname, int loopN, int chunkSize)
+  private int testWriteAndRead(String fname, int loopN, int chunkSize, long readBeginPosition)
       throws IOException {
 
     int countOfFailures = 0;
@@ -324,7 +336,7 @@ public class TestWriteRead {
               + ". TotalByteVisible = " + totalByteVisible + " to file "
               + fname);
         }
-        byteVisibleToRead = readData(fname, inBuffer, totalByteVisible);
+        byteVisibleToRead = readData(fname, inBuffer, totalByteVisible, readBeginPosition);
 
         String readmsg = "Written=" + totalByteWritten + " ; Expected Visible="
             + totalByteVisible + " ; Got Visible=" + byteVisibleToRead
@@ -353,7 +365,7 @@ public class TestWriteRead {
 
       out.close();
 
-      byteVisibleToRead = readData(fname, inBuffer, totalByteVisible);
+      byteVisibleToRead = readData(fname, inBuffer, totalByteVisible, readBeginPosition);
 
       String readmsg2 = "Written=" + totalByteWritten + " ; Expected Visible="
           + totalByteVisible + " ; Got Visible=" + byteVisibleToRead

@@ -540,6 +540,20 @@ Trunk (unreleased changes)
     HDFS-2109. Store uMask as member variable to DFSClient.Conf.  (Bharath
     Mundlapudi via szetszwo)
 
+    HDFS-2111. Add tests for ensuring that the DN will start with a few bad
+    data directories. (Harsh J Chouraria via todd)
+
+    HDFS-2134. Move DecommissionManager to the blockmanagement package.
+    (szetszwo)
+
+    HDFS-1977. Stop using StringUtils.stringifyException(). 
+    (Bharath Mundlapudi via jitendra)
+
+    HDFS-2131. Add new tests for the -overwrite/-f option in put and
+    copyFromLocal by HADOOP-7361.  (Uma Maheswara Rao G via szetszwo)
+
+    HDFS-2140. Move Host2NodesMap to the blockmanagement package.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
@@ -805,8 +819,17 @@ Trunk (unreleased changes)
     HDFS-2053. Bug in INodeDirectory#computeContentSummary warning.
     (Michael Noll via eli)
 
-    HDFS-1990. Fix  resource leaks in BlockReceiver.close().  (Uma Maheswara
+    HDFS-1990. Fix resource leaks in BlockReceiver.close().  (Uma Maheswara
     Rao G via szetszwo)
+
+    HDFS-2034. Length in DFSInputStream.getBlockRange(..) becomes -ve when
+    reading only from a currently being written block. (John George via
+    szetszwo)
+
+    HDFS-2132. Potential resource leak in EditLogFileOutputStream.close. (atm)
+
+    HDFS-2120. on reconnect, DN can connect to NN even with different source
+    versions. (John George via atm)
 
 Release 0.22.0 - Unreleased
 
@@ -1065,6 +1088,9 @@ Release 0.22.0 - Unreleased
     HDFS-1409. BackupNode registration throwing  
     UnsupportedActionException("register") instead of "journal".
     (Ching-Shen Chen via shv)
+
+    HDFS-2054  BlockSender.sendChunk() prints ERROR for connection closures
+    encountered during transferToFully() (Kihwal Lee via stack)
 
   OPTIMIZATIONS
 

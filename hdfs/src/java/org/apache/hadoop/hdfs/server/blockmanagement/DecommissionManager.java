@@ -15,18 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.util.CyclicIteration;
 
 /**
  * Manage node decommissioning.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 class DecommissionManager {
   static final Log LOG = LogFactory.getLog(DecommissionManager.class);
 
@@ -56,6 +60,7 @@ class DecommissionManager {
      * Check decommission status of numNodesPerCheck nodes
      * for every recheckInterval milliseconds.
      */
+    @Override
     public void run() {
       for(; fsnamesystem.isRunning(); ) {
         fsnamesystem.writeLock();

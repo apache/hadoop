@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.server.balancer.Balancer;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
-import org.apache.hadoop.util.StringUtils;
 
 
 /**
@@ -157,7 +156,7 @@ class DataXceiverServer implements Runnable, FSConstants {
       ss.close();
     } catch (IOException ie) {
       LOG.warn(datanode.getMachineName()
-          + ":DataXceiverServer: Close exception due to: ", ie);
+          + " :DataXceiverServer: close exception", ie);
     }
   }
   
@@ -167,8 +166,7 @@ class DataXceiverServer implements Runnable, FSConstants {
     try {
       this.ss.close();
     } catch (IOException ie) {
-      LOG.warn(datanode.getMachineName() + ":DataXceiverServer.kill(): "
-                              + StringUtils.stringifyException(ie));
+      LOG.warn(datanode.getMachineName() + ":DataXceiverServer.kill(): ", ie);
     }
 
     // close all the sockets that were accepted earlier

@@ -47,7 +47,6 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.StringUtils;
 
 /****************************************************************
  * DFSInputStream provides bytes from a named file.  It handles 
@@ -294,8 +293,8 @@ public class DFSInputStream extends FSInputStream {
 
   /**
    * Get blocks in the specified range.
-   * Fetch them from the namenode if not cached.
-   * 
+   * Fetch them from the namenode if not cached. This function
+   * will not get a read request beyond the EOF.
    * @param offset
    * @param length
    * @return consequent segment of located blocks
@@ -304,28 +303,31 @@ public class DFSInputStream extends FSInputStream {
   private synchronized List<LocatedBlock> getBlockRange(long offset, 
                                                         long length) 
                                                       throws IOException {
-    final List<LocatedBlock> blocks;
-    if (locatedBlocks.isLastBlockComplete()) {
-      blocks = getFinalizedBlockRange(offset, length);
+    // getFileLength(): returns total file length
+    // locatedBlocks.getFileLength(): returns length of completed blocks
+    if (offset >= getFileLength()) {
+      throw new IOException("Offset: " + offset +
+        " exceeds file length: " + getFileLength());
     }
-    else {
-      final boolean readPastEnd = offset + length > locatedBlocks.getFileLength();
-      /* if requested length is greater than current file length
-       * then, it could possibly be from the current block being
-       * written to. First get the finalized block range and then
-       * if necessary, get the length of last block being written
-       * to.
-       */
-      if (readPastEnd)
-        length = locatedBlocks.getFileLength() - offset;
 
-      blocks = getFinalizedBlockRange(offset, length);
-      /* requested length is greater than what finalized blocks 
-       * have.
-       */
-      if (readPastEnd)
-        blocks.add(locatedBlocks.getLastLocatedBlock());
+    final List<LocatedBlock> blocks;
+    final long lengthOfCompleteBlk = locatedBlocks.getFileLength();
+    final boolean readOffsetWithinCompleteBlk = offset < lengthOfCompleteBlk;
+    final boolean readLengthPastCompleteBlk = offset + length > lengthOfCompleteBlk;
+
+    if (readOffsetWithinCompleteBlk) {
+      //get the blocks of finalized (completed) block range
+      blocks = getFinalizedBlockRange(offset, 
+        Math.min(length, lengthOfCompleteBlk - offset));
+    } else {
+      blocks = new ArrayList<LocatedBlock>(1);
     }
+
+    // get the blocks from incomplete block range
+    if (readLengthPastCompleteBlk) {
+       blocks.add(locatedBlocks.getLastLocatedBlock());
+    }
+
     return blocks;
   }
 
@@ -496,7 +498,7 @@ public class DFSInputStream extends FSInputStream {
         if (!retryCurrentNode) {
           DFSClient.LOG.warn("Exception while reading from "
               + getCurrentBlock() + " of " + src + " from "
-              + currentNode + ": " + StringUtils.stringifyException(e));
+              + currentNode, e);
         }
         ioe = e;
       }
@@ -554,7 +556,7 @@ public class DFSInputStream extends FSInputStream {
           throw ce;            
         } catch (IOException e) {
           if (retries == 1) {
-            DFSClient.LOG.warn("DFS Read: " + StringUtils.stringifyException(e));
+            DFSClient.LOG.warn("DFS Read", e);
           }
           blockEnd = -1;
           if (currentNode != null) { addToDeadNodes(currentNode); }
@@ -928,9 +930,8 @@ public class DFSInputStream extends FSInputStream {
         } catch (IOException e) {//make following read to retry
           if(DFSClient.LOG.isDebugEnabled()) {
             DFSClient.LOG.debug("Exception while seek to " + targetPos
-                + " from " + getCurrentBlock() + " of " + src
-                + " from " + currentNode + ": "
-                + StringUtils.stringifyException(e));
+                + " from " + getCurrentBlock() + " of " + src + " from "
+                + currentNode, e);
           }
         }
       }

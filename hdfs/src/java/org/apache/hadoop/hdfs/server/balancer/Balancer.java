@@ -729,7 +729,7 @@ public class Balancer {
             blocksToReceive -= getBlockList();
             continue;
           } catch (IOException e) {
-            LOG.warn(StringUtils.stringifyException(e));
+            LOG.warn("Exception while getting block list", e);
             return;
           }
         } 
@@ -1553,7 +1553,7 @@ public class Balancer {
     try {
       System.exit(ToolRunner.run(null, new Cli(), args));
     } catch (Throwable e) {
-      LOG.error(StringUtils.stringifyException(e));
+      LOG.error("Exiting balancer due an exception", e);
       System.exit(-1);
     }
   }
