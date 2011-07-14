@@ -303,7 +303,9 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
 
   @Override
   public boolean needToSave() {
-    return false; // TODO do we need to do this ever?
+    // No need to save at startup - it's OK to have outstanding
+    // logs - better to wait until next 2NN-based checkpoint
+    return false;
   }
   
   

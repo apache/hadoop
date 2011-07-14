@@ -217,10 +217,7 @@ public class NNStorage extends Storage implements Closeable {
 
   /**
    * See if any of removed storages is "writable" again, and can be returned
-   * into service. If saveNamespace is set, then this method is being
-   * called from saveNamespace.
-   *
-   * @param saveNamespace Whether method is being called from saveNamespace()
+   * into service.
    */
   void attemptRestoreRemovedStorage() {
     // if directory is "alive" - copy the images there...

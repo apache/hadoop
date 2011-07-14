@@ -30,10 +30,15 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorageArchivalManager.StorageAr
  */
 public interface JournalManager {
   /**
-   * TODO
+   * Begin writing to a new segment of the log stream, which starts at
+   * the given transaction ID.
    */
   EditLogOutputStream startLogSegment(long txId) throws IOException;
-  
+
+  /**
+   * Mark the log segment that spans from firstTxId to lastTxId
+   * as finalized and complete.
+   */
   void finalizeLogSegment(long firstTxId, long lastTxId) throws IOException;
 
   /**

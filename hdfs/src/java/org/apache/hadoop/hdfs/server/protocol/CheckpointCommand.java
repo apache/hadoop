@@ -47,19 +47,16 @@ import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 @InterfaceStability.Evolving
 public class CheckpointCommand extends NamenodeCommand {
   private CheckpointSignature cSig;
-  private boolean isImageObsolete;
   private boolean needToReturnImage;
 
   public CheckpointCommand() {
-    this(null, false, false);
+    this(null, false);
   }
 
   public CheckpointCommand(CheckpointSignature sig,
-                           boolean isImgObsolete,
                            boolean needToReturnImg) {
     super(NamenodeProtocol.ACT_CHECKPOINT);
     this.cSig = sig;
-    this.isImageObsolete = isImgObsolete;
     this.needToReturnImage = needToReturnImg;
   }
 
@@ -69,16 +66,6 @@ public class CheckpointCommand extends NamenodeCommand {
    */
   public CheckpointSignature getSignature() {
     return cSig;
-  }
-
-  /**
-   * Indicates whether current backup image is obsolete, and therefore
-   * need to be discarded?
-   * 
-   * @return true if current image should be discarded.
-   */
-  public boolean isImageObsolete() {
-    return isImageObsolete;
   }
 
   /**
@@ -104,7 +91,6 @@ public class CheckpointCommand extends NamenodeCommand {
   public void write(DataOutput out) throws IOException {
     super.write(out);
     cSig.write(out);
-    out.writeBoolean(isImageObsolete);
     out.writeBoolean(needToReturnImage);
   }
   
@@ -112,7 +98,6 @@ public class CheckpointCommand extends NamenodeCommand {
     super.readFields(in);
     cSig = new CheckpointSignature();
     cSig.readFields(in);
-    isImageObsolete = in.readBoolean();
     needToReturnImage = in.readBoolean();
   }
 }

@@ -137,9 +137,6 @@ class EditLogFileOutputStream extends EditLogOutputStream {
       throw new IOException("Trying to use aborted output stream");
     }
 
-    setReadyToFlush();
-    flush();
-
     // close should have been called after all pending transactions
     // have been flushed & synced.
     // if already closed, just skip

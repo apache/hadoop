@@ -560,7 +560,6 @@ public class FSImage implements Closeable {
    * file.
    */
   void reloadFromImageFile(File file) throws IOException {
-    // TODO: namesystem.close(); ??
     namesystem.dir.reset();
 
     LOG.debug("Reloading namespace from " + file);
@@ -603,8 +602,6 @@ public class FSImage implements Closeable {
     //
     StorageDirectory sdForProperties =
       loadPlan.getStorageDirectoryForProperties();
-    // TODO need to discuss what the correct logic is for determing which
-    // storage directory to read properties from
     sdForProperties.read();
     File imageFile = loadPlan.getImageFile();
 
@@ -798,8 +795,7 @@ public class FSImage implements Closeable {
     long imageTxId = editLog.getLastWrittenTxId();
     try {
       saveFSImageInAllDirs(imageTxId);
-      storage.writeAll(); // TODO is this a good spot for this?
-      
+      storage.writeAll();
     } finally {
       if (editLogWasOpen) {
         editLog.startLogSegment(imageTxId + 1, true);
@@ -934,33 +930,23 @@ public class FSImage implements Closeable {
             + " role " + bnReg.getRole() + ": checkpoint is not allowed.";
     else if(bnReg.getLayoutVersion() < storage.getLayoutVersion()
         || (bnReg.getLayoutVersion() == storage.getLayoutVersion()
-            && bnReg.getCTime() > storage.getCTime())
-        || (bnReg.getLayoutVersion() == storage.getLayoutVersion()
-            && bnReg.getCTime() == storage.getCTime()
-            && bnReg.getCheckpointTxId() > storage.getMostRecentCheckpointTxId()))
+            && bnReg.getCTime() > storage.getCTime()))
       // remote node has newer image age
       msg = "Name node " + bnReg.getAddress()
             + " has newer image layout version: LV = " +bnReg.getLayoutVersion()
             + " cTime = " + bnReg.getCTime()
-            + " checkpointTxId = " + bnReg.getCheckpointTxId()
             + ". Current version: LV = " + storage.getLayoutVersion()
-            + " cTime = " + storage.getCTime()
-            + " checkpointTxId = " + storage.getMostRecentCheckpointTxId();
+            + " cTime = " + storage.getCTime();
     if(msg != null) {
       LOG.error(msg);
       return new NamenodeCommand(NamenodeProtocol.ACT_SHUTDOWN);
     }
-    boolean isImgObsolete = true;
-    if(bnReg.getLayoutVersion() == storage.getLayoutVersion()
-        && bnReg.getCTime() == storage.getCTime()
-        && bnReg.getCheckpointTxId() == storage.getMostRecentCheckpointTxId())
-      isImgObsolete = false;
     boolean needToReturnImg = true;
     if(storage.getNumStorageDirs(NameNodeDirType.IMAGE) == 0)
       // do not return image if there are no image directories
       needToReturnImg = false;
     CheckpointSignature sig = rollEditLog();
-    return new CheckpointCommand(sig, isImgObsolete, needToReturnImg);
+    return new CheckpointCommand(sig, needToReturnImg);
   }
 
   /**

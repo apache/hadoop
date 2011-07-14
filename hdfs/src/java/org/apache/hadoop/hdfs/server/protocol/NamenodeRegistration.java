@@ -44,10 +44,6 @@ implements NodeRegistration {
   String rpcAddress;          // RPC address of the node
   String httpAddress;         // HTTP address of the node
   NamenodeRole role;          // node role
-  
-  // TODO: is the below used by anything?
-  long checkpointTxId = FSConstants.INVALID_TXID;
-                              // the age of the image
 
   public NamenodeRegistration() {
     super();
@@ -56,14 +52,12 @@ implements NodeRegistration {
   public NamenodeRegistration(String address,
                               String httpAddress,
                               StorageInfo storageInfo,
-                              NamenodeRole role,
-                              long checkpointTxId) {
+                              NamenodeRole role) {
     super();
     this.rpcAddress = address;
     this.httpAddress = httpAddress;
     this.setStorageInfo(storageInfo);
     this.role = role;
-    this.checkpointTxId= checkpointTxId;
   }
 
   @Override // NodeRegistration
@@ -100,13 +94,6 @@ implements NodeRegistration {
     return role.equals(that);
   }
 
-  /**
-   * Get the age of the image.
-   */
-  public long getCheckpointTxId() {
-    return checkpointTxId;
-  }
-
   /////////////////////////////////////////////////
   // Writable
   /////////////////////////////////////////////////
@@ -124,7 +111,6 @@ implements NodeRegistration {
     Text.writeString(out, httpAddress);
     Text.writeString(out, role.name());
     super.write(out);
-    out.writeLong(checkpointTxId);
   }
 
   @Override // Writable
@@ -133,6 +119,5 @@ implements NodeRegistration {
     httpAddress = Text.readString(in);
     role = NamenodeRole.valueOf(Text.readString(in));
     super.readFields(in);
-    checkpointTxId = in.readLong();
   }
 }

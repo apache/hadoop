@@ -69,3 +69,5 @@ HDFS-2010. Fix NameNode to exit if all edit streams become inaccessible. (atm
 HDFS-2123. Checkpoint interval should be based on txn count, not size. (todd)
 HDFS-1979. Fix backupnode for new edits/image layout. (todd)
 HDFS-2101. Fix remaining unit tests for new storage filenames. (todd)
+HDFS-2133. Address remaining TODOs and pre-merge cleanup on HDFS-1073 branch.
+           (todd)
