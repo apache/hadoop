@@ -632,20 +632,34 @@ public class FSImage implements Closeable {
     }
     
     long numLoaded = loadEdits(loadPlan.getEditsFiles());
-    needToSave |= numLoaded > 0;
+    needToSave |= needsResaveBasedOnStaleCheckpoint(imageFile, numLoaded);
     
     // update the txid for the edit log
     editLog.setNextTxId(storage.getMostRecentCheckpointTxId() + numLoaded + 1);
-
-    /* TODO(todd) Need to discuss whether we should force a re-save
-     * of the image if one of the edits or images has an old format
-     * version. We used to do:
-     *
-     * needToSave |= (editsVersion != FSConstants.LAYOUT_VERSION 
-                    || imageVersion != FSConstants.LAYOUT_VERSION); */
     return needToSave;
   }
 
+
+  /**
+   * @param imageFile the image file that was loaded
+   * @param numEditsLoaded the number of edits loaded from edits logs
+   * @return true if the NameNode should automatically save the namespace
+   * when it is started, due to the latest checkpoint being too old.
+   */
+  private boolean needsResaveBasedOnStaleCheckpoint(
+      File imageFile, long numEditsLoaded) {
+    final long checkpointPeriod = conf.getLong(
+        DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 
+        DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_DEFAULT);
+    final long checkpointTxnCount = conf.getLong(
+        DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 
+        DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT);
+    long checkpointAge = System.currentTimeMillis() - imageFile.lastModified();
+
+    return (checkpointAge > checkpointPeriod * 1000) ||
+           (numEditsLoaded > checkpointTxnCount);
+  }
+  
   /**
    * Load the specified list of edit files into the image.
    * @return the number of transactions loaded

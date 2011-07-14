@@ -71,3 +71,4 @@ HDFS-1979. Fix backupnode for new edits/image layout. (todd)
 HDFS-2101. Fix remaining unit tests for new storage filenames. (todd)
 HDFS-2133. Address remaining TODOs and pre-merge cleanup on HDFS-1073 branch.
            (todd)
+HDFS-1780. Reduce need to rewrite FSImage on startup. (todd)

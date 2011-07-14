@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.*;
 
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -107,6 +108,8 @@ public class TestEditLog extends TestCase {
 
   
   static final byte TRAILER_BYTE = FSEditLogOpCodes.OP_INVALID.getOpCode();
+
+  private static final int CHECKPOINT_ON_STARTUP_MIN_TXNS = 100;
   //
   // an object that does a bunch of transactions
   //
@@ -522,7 +525,7 @@ public class TestEditLog extends TestCase {
    * had a few transactions written
    */
   public void testCrashRecoveryWithTransactions() throws Exception {
-    testCrashRecovery(3);
+    testCrashRecovery(150);
   }
   
   /**
@@ -534,6 +537,8 @@ public class TestEditLog extends TestCase {
   private void testCrashRecovery(int numTransactions) throws Exception {
     MiniDFSCluster cluster = null;
     Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY,
+        CHECKPOINT_ON_STARTUP_MIN_TXNS);
     
     try {
         LOG.info("\n===========================================\n" +
@@ -597,18 +602,30 @@ public class TestEditLog extends TestCase {
           assertTrue(fs.exists(new Path("/test" + i)));
         }
 
-        // It should have saved a checkpoint on startup since there
-        // were unfinalized edits
-        long expectedTxId = numTransactions + 1;
+        long expectedTxId;
+        if (numTransactions > CHECKPOINT_ON_STARTUP_MIN_TXNS) {
+          // It should have saved a checkpoint on startup since there
+          // were more unfinalized edits than configured
+          expectedTxId = numTransactions + 1;
+        } else {
+          // otherwise, it shouldn't have made a checkpoint
+          expectedTxId = 0;
+        }
         imageFile = FSImageTestUtil.findNewestImageFile(
             currentDir.getAbsolutePath());
         assertNotNull("No image found in " + nameDir, imageFile);
         assertEquals(NNStorage.getImageFileName(expectedTxId),
                      imageFile.getName());
         
-        // Started successfully
+        // Started successfully. Shut it down and make sure it can restart.
         cluster.shutdown();    
         cluster = null;
+        
+        cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(NUM_DATA_NODES)
+        .format(false)
+        .build();
+        cluster.waitActive();
     } finally {
       if (cluster != null) {
         cluster.shutdown();
