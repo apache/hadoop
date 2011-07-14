@@ -21,8 +21,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-
 
 /**
  * An implementation of the abstract class {@link EditLogInputStream}, which

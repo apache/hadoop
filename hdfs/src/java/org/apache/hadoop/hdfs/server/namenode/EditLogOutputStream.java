@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.zip.Checksum;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
@@ -55,7 +54,14 @@ implements JournalStream {
    */
   abstract void write(byte op, long txid, Writable ... writables)
   throws IOException;
-  abstract void write(byte[] data, int i, int length) throws IOException;
+  
+  /**
+   * Write raw data to an edit log. This data should already have
+   * the transaction ID, checksum, etc included. It is for use
+   * within the BackupNode when replicating edits from the
+   * NameNode.
+   */
+  abstract void write(byte[] data, int offset, int length) throws IOException;
   
   /**
    * Create and initialize underlying persistent edits log storage.

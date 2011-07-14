@@ -21,11 +21,8 @@ import static org.apache.hadoop.hdfs.server.common.Util.now;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.DataInputStream;
-import java.io.FileInputStream;
 import java.io.Closeable;
 import java.io.OutputStream;
 import java.net.URI;
@@ -50,8 +47,6 @@ import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.UpgradeManager;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
@@ -63,10 +58,8 @@ import org.apache.hadoop.hdfs.util.AtomicFileOutputStream;
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.net.DNS;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
 
