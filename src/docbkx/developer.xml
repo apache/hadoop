@@ -9,17 +9,100 @@
       xmlns:db="http://docbook.org/ns/docbook">
     <title>Developing HBase</title>
     <para>This chapter will be of interest only to those developing HBase (i.e., as opposed to using it).
+    See the HBase wiki <link xlink:href="http://wiki.apache.org/hadoop/Hbase/HowToContribute">How To Contribute</link>
     </para>
+    <section xml:id="repos">
+      <title>HBase Repositories</title>
+      <section xml:id="svn">
+        <title>SVN</title>
+        <programlisting>
+svn co http://svn.apache.org/repos/asf/hbase/trunk hbase-core-trunk 
+        </programlisting>
+      </section>         
+      <section xml:id="git">
+        <title>Git</title>
+        <programlisting>
+git clone git://git.apache.org/hbase.git
+        </programlisting>
+      </section>         
+    </section>         
     <section xml:id="ides"> 
         <title>IDEs</title>
         <section xml:id="eclipse">
           <title>Eclipse</title>
-          <para>See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3678">HBASE-3678 Add Eclipse-based Apache Formatter to HBase Wiki</link>
+            <section xml:id="eclipse.code.formatting">
+            <title>Code Formatting</title>
+            <para>See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3678">HBASE-3678 Add Eclipse-based Apache Formatter to HBase Wiki</link>
               for an Eclipse formatter to help ensure your code conforms to HBase'y coding conventsion.
-          The issue includes instructions for loading the attached formatter.</para>
-          
+            The issue includes instructions for loading the attached formatter.</para>
+            </section>         
+            <section xml:id="eclipse.svn">
+            <title>Subversive Plugin</title>
+            <para>Download and install the Subversive plugin.</para>
+            <para>Set up an SVN Repository target from <xref linkend="svn"/>, then check out the code.</para>
+            </section>         
+            <section xml:id="eclipse.maven.setup">
+            <title>HBase Project Setup</title>
+            To set up your Eclipse environment for HBase, close Eclipse and execute...
+            <programlisting>
+mvn eclipse:eclipse
+            </programlisting>
+            ... from your local HBase project directory in your workspace to generate a new <filename>.project</filename> file.  Then reopen Eclipse.
+            </section>         
+            <section xml:id="eclipse.maven.plugin">
+            <title>Maven Plugin</title>
+            <para>Download and install the Maven plugin.  For example, Help -&gt; Install New Software -&gt; (search for Maven Plugin)</para>
+            </section>         
+            <section xml:id="eclipse.maven.class">
+            <title>Maven Classpath Variable</title>
+            <para>The <varname>M2_REPO</varname> classpath variable needs to be set up for the project.  This needs to be set to 
+            your local Maven repository, which is usually <filename>~/.m2/repository</filename></para>
+            If this classpath variable is not configured, you will see compile errors in Eclipse like this...
+            <programlisting>
+Description	Resource	Path	Location	Type
+The project cannot be built until build path errors are resolved	hbase		Unknown	Java Problem 
+Unbound classpath variable: 'M2_REPO/asm/asm/3.1/asm-3.1.jar' in project 'hbase'	hbase		Build path	Build Path Problem
+Unbound classpath variable: 'M2_REPO/com/github/stephenc/high-scale-lib/high-scale-lib/1.1.1/high-scale-lib-1.1.1.jar' in project 'hbase'	hbase		Build path	Build Path Problem 
+Unbound classpath variable: 'M2_REPO/com/google/guava/guava/r09/guava-r09.jar' in project 'hbase'	hbase		Build path	Build Path Problem
+Unbound classpath variable: 'M2_REPO/com/google/protobuf/protobuf-java/2.3.0/protobuf-java-2.3.0.jar' in project 'hbase'	hbase		Build path	Build Path Problem Unbound classpath variable:
+            </programlisting>            
+            </section>     
+            <section xml:id="eclipse.issues">
+            <title>Eclipse Known Issues</title>
+            <para>Eclipse will currently complain about <filename>Bytes.java</filename>.  It is not possible to turn these errors off.</para>
+            <programlisting>            
+Description	Resource	Path	Location	Type
+Access restriction: The method arrayBaseOffset(Class) from the type Unsafe is not accessible due to restriction on required library /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Classes/classes.jar	Bytes.java	/hbase/src/main/java/org/apache/hadoop/hbase/util	line 1061	Java Problem
+Access restriction: The method arrayIndexScale(Class) from the type Unsafe is not accessible due to restriction on required library /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Classes/classes.jar	Bytes.java	/hbase/src/main/java/org/apache/hadoop/hbase/util	line 1064	Java Problem
+Access restriction: The method getLong(Object, long) from the type Unsafe is not accessible due to restriction on required library /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Classes/classes.jar	Bytes.java	/hbase/src/main/java/org/apache/hadoop/hbase/util	line 1111	Java Problem
+             </programlisting>   
+             </section>
         </section>
     </section> 
+    <section xml:id="maven.build.commands"> 
+       <title>Maven Build Commands</title>
+       <para>All commands executed from the local HBase project directory.
+       </para>
+       <section xml:id="maven.build.commands.compile"> 
+          <title>Compile</title>
+          <programlisting>
+mvn compile
+          </programlisting>
+       </section>       
+       <section xml:id="maven.build.commands.unitall"> 
+          <title>Run all Unit Tests</title>
+          <programlisting>
+mvn test
+          </programlisting>
+       </section>       
+       <section xml:id="maven.build.commands.unit"> 
+          <title>Run a Single Unit Test</title>
+          <programlisting>
+mvn test -Dtest=TestXYZ
+          </programlisting>
+       </section>       
+           
+    </section>
     <section xml:id="unit.tests"> 
         <title>Unit Tests</title>
         <para>In HBase we use <link xlink:href="http://junit.org">JUnit</link> 4.
