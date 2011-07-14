@@ -74,3 +74,4 @@ HDFS-2133. Address remaining TODOs and pre-merge cleanup on HDFS-1073 branch.
 HDFS-1780. Reduce need to rewrite FSImage on startup. (todd)
 HDFS-2104. Add a flag to the 2NN to format its checkpoint dirs on startup.
            (todd)
+HDFS-2135. Fix regression of HDFS-1955 in HDFS-1073 branch. (todd)

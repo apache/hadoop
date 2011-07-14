@@ -408,11 +408,13 @@ public class FSImage implements Closeable {
       }
       LOG.info("Upgrade of " + sd.getRoot() + " is complete.");
     }
+    storage.reportErrorsOnDirectories(errorSDs);
+
     isUpgradeFinalized = false;
-    if (!errorSDs.isEmpty()) {
-      storage.reportErrorsOnDirectories(errorSDs);
+    if (!storage.getRemovedStorageDirs().isEmpty()) {
       //during upgrade, it's a fatal error to fail any storage directory
-      throw new IOException("Upgrade failed in " + errorSDs.size()
+      throw new IOException("Upgrade failed in "
+          + storage.getRemovedStorageDirs().size()
           + " storage directory(ies), previously logged.");
     }
     storage.initializeDistributedUpgrade();
