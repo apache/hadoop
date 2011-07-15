@@ -266,6 +266,9 @@ Trunk (unreleased changes)
 
     HADOOP-7305. Eclipse project files are incomplete. (Niels Basjes via eli)
 
+    HADOOP-7314. Add support for throwing UnknownHostException when a host doesn't 
+    resolve. (Jeffrey Naisbitt via jitendra)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
