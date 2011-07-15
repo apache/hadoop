@@ -78,7 +78,7 @@ Prefix: %{_conf_dir}
 Prefix: %{_log_dir}
 Prefix: %{_pid_dir}
 Buildroot: %{_build_dir}
-Requires: sh-utils, textutils, /usr/sbin/useradd, /usr/sbin/usermod, /sbin/chkconfig, /sbin/service, jdk >= 1.6
+Requires: sh-utils, textutils, /usr/sbin/useradd, /usr/sbin/usermod, /sbin/chkconfig, /sbin/service
 AutoReqProv: no
 Provides: hadoop
 

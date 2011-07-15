@@ -162,6 +162,8 @@ Release 0.20.204.0 - unreleased
 
     MAPREDUCE-1251. c++ utils doesn't compile. (Eli Collins via shv)
 
+    HADOOP-7459. Remove jdk-1.6.0 dependency check from rpm. (omalley)
+
 Release 0.20.203.1 - Unreleased
 
     HADOOP-7330. Fix MetricsSourceAdapter to use the value instead of the 
