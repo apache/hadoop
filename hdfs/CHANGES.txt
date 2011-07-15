@@ -554,6 +554,9 @@ Trunk (unreleased changes)
 
     HDFS-2140. Move Host2NodesMap to the blockmanagement package.  (szetszwo)
 
+    HDFS-2154. In TestDFSShell, use TEST_ROOT_DIR and fix some deprecated
+    warnings.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

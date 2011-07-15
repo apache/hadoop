@@ -43,7 +43,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.shell.Count;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset;
@@ -701,10 +700,10 @@ public class TestDFSShell extends TestCase {
       String root = createTree(dfs, "count");
 
       // Verify the counts
-      runCount(root, 2, 4, conf);
-      runCount(root + "2", 2, 1, conf);
-      runCount(root + "2/f1", 0, 1, conf);
-      runCount(root + "2/sub", 1, 0, conf);
+      runCount(root, 2, 4, shell);
+      runCount(root + "2", 2, 1, shell);
+      runCount(root + "2/f1", 0, 1, shell);
+      runCount(root + "2/sub", 1, 0, shell);
 
       final FileSystem localfs = FileSystem.getLocal(conf);
       Path localpath = new Path(TEST_ROOT_DIR, "testcount");
@@ -714,8 +713,8 @@ public class TestDFSShell extends TestCase {
       
       final String localstr = localpath.toString();
       System.out.println("localstr=" + localstr);
-      runCount(localstr, 1, 0, conf);
-      assertEquals(0, new Count(new String[]{root, localstr}, 0, conf).runAll());
+      runCount(localstr, 1, 0, shell);
+      assertEquals(0, runCmd(shell, "-count", root, localstr));
     } finally {
       try {
         dfs.close();
@@ -724,7 +723,7 @@ public class TestDFSShell extends TestCase {
       cluster.shutdown();
     }
   }
-  private void runCount(String path, long dirs, long files, Configuration conf
+  private static void runCount(String path, long dirs, long files, FsShell shell
     ) throws IOException {
     ByteArrayOutputStream bytes = new ByteArrayOutputStream(); 
     PrintStream out = new PrintStream(bytes);
@@ -733,7 +732,7 @@ public class TestDFSShell extends TestCase {
     Scanner in = null;
     String results = null;
     try {
-      new Count(new String[]{path}, 0, conf).runAll();
+      runCmd(shell, "-count", path);
       results = bytes.toString();
       in = new Scanner(results);
       assertEquals(dirs, in.nextLong());
@@ -747,7 +746,7 @@ public class TestDFSShell extends TestCase {
   }
 
   //throws IOException instead of Exception as shell.run() does.
-  private int runCmd(FsShell shell, String... args) throws IOException {
+  private static int runCmd(FsShell shell, String... args) throws IOException {
     StringBuilder cmdline = new StringBuilder("RUN:");
     for (String arg : args) cmdline.append(" " + arg);
     LOG.info(cmdline.toString());
@@ -1362,48 +1361,46 @@ public class TestDFSShell extends TestCase {
         .format(true).build();
     FsShell shell = null;
     FileSystem fs = null;
-    File localFile = new File("testFileForPut");
-    Path hdfsTestDir = new Path("ForceTestDir");
+    final File localFile = new File(TEST_ROOT_DIR, "testFileForPut");
+    final String localfilepath = localFile.getAbsolutePath();
+    final String testdir = TEST_ROOT_DIR + "/ForceTestDir";
+    final Path hdfsTestDir = new Path(testdir);
     try {
       fs = cluster.getFileSystem();
       fs.mkdirs(hdfsTestDir);
       localFile.createNewFile();
-      writeFile(fs, new Path("testFileForPut"));
+      writeFile(fs, new Path(TEST_ROOT_DIR, "testFileForPut"));
       shell = new FsShell();
 
       // Tests for put
-      String[] argv = new String[] { "-put", "-f", localFile.getName(),
-          "ForceTestDir" };
+      String[] argv = new String[] { "-put", "-f", localfilepath, testdir };
       int res = ToolRunner.run(shell, argv);
       int SUCCESS = 0;
       int ERROR = 1;
       assertEquals("put -f is not working", SUCCESS, res);
 
-      argv = new String[] { "-put", localFile.getName(), "ForceTestDir" };
+      argv = new String[] { "-put", localfilepath, testdir };
       res = ToolRunner.run(shell, argv);
       assertEquals("put command itself is able to overwrite the file", ERROR,
           res);
 
       // Tests for copyFromLocal
-      argv = new String[] { "-copyFromLocal", "-f", localFile.getName(),
-          "ForceTestDir" };
+      argv = new String[] { "-copyFromLocal", "-f", localfilepath, testdir };
       res = ToolRunner.run(shell, argv);
       assertEquals("copyFromLocal -f is not working", SUCCESS, res);
 
-      argv = new String[] { "-copyFromLocal", localFile.getName(),
-          "ForceTestDir" };
+      argv = new String[] { "-copyFromLocal", localfilepath, testdir };
       res = ToolRunner.run(shell, argv);
       assertEquals(
           "copyFromLocal command itself is able to overwrite the file", ERROR,
           res);
 
       // Tests for cp
-      argv = new String[] { "-cp", "-f", localFile.getName(), "ForceTestDir" };
+      argv = new String[] { "-cp", "-f", localfilepath, testdir };
       res = ToolRunner.run(shell, argv);
       assertEquals("cp -f is not working", SUCCESS, res);
 
-      argv = new String[] { "-cp", localFile.getName(),
-          "ForceTestDir" };
+      argv = new String[] { "-cp", localfilepath, testdir };
       res = ToolRunner.run(shell, argv);
       assertEquals("cp command itself is able to overwrite the file", ERROR,
           res);
