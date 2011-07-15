@@ -112,10 +112,12 @@ public class TestFSTableDescriptors {
       assertTrue(htds.get(Bytes.toBytes(name + i)) !=  null);
     }
     assertEquals(count * 4, htds.invocations);
-    assertTrue(count * 2 >= htds.cachehits);
+    assertTrue("expected=" + (count * 2) + ", actual=" + htds.cachehits,
+      htds.cachehits >= (count * 2));
     assertTrue(htds.get(HConstants.ROOT_TABLE_NAME) != null);
     assertEquals(htds.invocations, count * 4 + 1);
-    assertTrue(htds.cachehits >= count * 2 + 1);
+    assertTrue("expected=" + ((count * 2) + 1) + ", actual=" + htds.cachehits,
+      htds.cachehits >= ((count * 2) + 1));
   }
 
   @Test (expected=java.io.FileNotFoundException.class)
