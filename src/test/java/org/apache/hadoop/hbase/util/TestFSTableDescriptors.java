@@ -116,7 +116,7 @@ public class TestFSTableDescriptors {
     }
     assertEquals(count * 4, htds.invocations);
     assertTrue("expected=" + (count * 2) + ", actual=" + htds.cachehits,
-      htds.cachehits == (count * 2));
+      htds.cachehits >= (count * 2));
     assertTrue(htds.get(HConstants.ROOT_TABLE_NAME) != null);
     assertEquals(htds.invocations, count * 4 + 1);
     assertTrue("expected=" + ((count * 2) + 1) + ", actual=" + htds.cachehits,
