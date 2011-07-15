@@ -19,8 +19,7 @@
   or <link xlink:href="http://wiki.apache.org/hadoop/Hbase">wiki</link> where
   the pertinent information can be found.</para>
 
-  <para>This book is a work in progress. It is lacking in many areas but we
-  hope to fill in the holes with time. Feel free to add to this book by adding
+  <para>This book is a work in progress.  Feel free to add to this book by adding
   a patch to an issue up in the HBase <link
   xlink:href="https://issues.apache.org/jira/browse/HBASE">JIRA</link>.</para>
 

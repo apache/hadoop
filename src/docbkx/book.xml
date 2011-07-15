@@ -759,7 +759,7 @@ which is usually what you want.  For example, this is preferred:
 		<programlisting>HBaseConfiguration conf = HBaseConfiguration.create();
 HTable table1 = new HTable(conf, "myTable");
 HTable table2 = new HTable(conf, "myTable");</programlisting>
-		a s opposed to this:
+		as opposed to this:
         <programlisting>HBaseConfiguration conf1 = HBaseConfiguration.create();
 HTable table1 = new HTable(conf1, "myTable");
 HBaseConfiguration conf2 = HBaseConfiguration.create();
