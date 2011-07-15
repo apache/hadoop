@@ -1550,38 +1550,21 @@ When I build, why do I always get <code>Unable to find resource 'VM_global_libra
     <qandadiv><title>Runtime</title>
         <qandaentry>
             <question><para>
-                    Loading, why do I see pauses when loading HBase?
+                    I'm having problems with my HBase cluster, how can I troubleshoot it?
             </para></question>
             <answer>
                 <para>
-                    If compression is enabled, see this thread up on the user list,
-                    <link xlink:href="http://search-hadoop.com/m/WUnLM6ojHm1/Long+client+pauses+with+compression&amp;subj=Long+client+pauses+with+compression">Long client pauses with compression</link>.
+                See <xref linkend="trouble" />.
                 </para>
             </answer>
         </qandaentry>
         <qandaentry>
             <question><para>
-                    Why does my RegionServer hang inexplicitly?
+                   How can I improve HBase cluster performance?
             </para></question>
             <answer>
                 <para>
-                Are you running an old JVM (&lt; 1.6.0_u21?)?  When you look at a thread dump,
-                does it look like threads are BLOCKED but no one holds the lock all are
-                blocked on?  See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3622">HBASE 3622 Deadlock in HBaseServer (JVM bug?)</link>.
-                Adding <code>-XX:+UseMembar</code> to the HBase <varname>HBASE_OPTS</varname> in <filename>conf/hbase-env.sh</filename>
-                may fix it.
-                </para>
-            </answer>
-        </qandaentry>
-        <qandaentry>
-            <question><para>
-                    Why do I see double the actual count of regionservers, once by domain name and then by IP?
-            </para></question>
-            <answer>
-                <para>
-                    Fix your DNS.  In versions of HBase before 0.92.x, reverse DNS needs to give same answer
-                    as forward lookup. See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3431">HBASE 3431
-                        Regionserver is not using the name given it by the master; double entry in master listing of servers</link> for gorey details.
+                See <xref linkend="performance" />.
                 </para>
             </answer>
         </qandaentry>

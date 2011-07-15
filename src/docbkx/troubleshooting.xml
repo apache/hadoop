@@ -455,6 +455,9 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
             more data is packed into the same region, but performance is achieved by being able to write larger files - which is why HBase waits until the flushize before writing a new StoreFile.  And smaller StoreFiles
             become targets for compaction.  Without compression the files are much bigger and don't need as much compaction, however this is at the expense of I/O.   
             </para>
+            <para>
+            For additional information, see this thread on <link xlink:href="http://search-hadoop.com/m/WUnLM6ojHm1/Long+client+pauses+with+compression&amp;subj=Long+client+pauses+with+compression">Long client pauses with compression</link>.
+            </para>
             
        </section>    
 
@@ -545,7 +548,17 @@ java.lang.UnsatisfiedLinkError: no gplcompression in java.library.path
       </section>    
       <section xml:id="trouble.rs.runtime">
         <title>Runtime Errors</title>
-        
+
+        <section xml:id="trouble.rs.runtime.hang">
+           <title>RegionServer Hanging</title>
+           <para>
+            Are you running an old JVM (&lt; 1.6.0_u21?)?  When you look at a thread dump,
+            does it look like threads are BLOCKED but no one holds the lock all are
+            blocked on?  See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3622">HBASE 3622 Deadlock in HBaseServer (JVM bug?)</link>.
+            Adding <code>-XX:+UseMembar</code> to the HBase <varname>HBASE_OPTS</varname> in <filename>conf/hbase-env.sh</filename>
+            may fix it.
+            </para>
+        </section>
         <section xml:id="trouble.rs.runtime.filehandles">
            <title>java.io.IOException...(Too many open files)</title>
            <para>
@@ -649,6 +662,14 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
            and then the client goes back to .META. to find the new location of the moved region.</para>
            <para>However, if the NotServingRegionException is logged ERROR, then the client ran out of retries and something probably wrong.</para>
         </section>
+        <section xml:id="trouble.rs.runtime.double_listed_regions">
+           <title>Regions listed by domain name, then IP</title>
+           <para>
+           Fix your DNS.  In versions of HBase before 0.92.x, reverse DNS needs to give same answer
+           as forward lookup. See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3431">HBASE 3431
+           RegionServer is not using the name given it by the master; double entry in master listing of servers</link> for gorey details.
+          </para>
+          </section>
 
       </section>    
       <section xml:id="trouble.rs.shutdown">
