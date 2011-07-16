@@ -20,12 +20,10 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.NavigableSet;
-import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
@@ -35,9 +33,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -48,7 +44,7 @@ import org.junit.Test;
 
 public class TestMasterRestartAfterDisablingTable {
 
-  private static final Log LOG = LogFactory.getLog(TestRollingRestart.class);
+  private static final Log LOG = LogFactory.getLog(TestMasterRestartAfterDisablingTable.class);
 
   @Test
   public void testForCheckingIfEnableAndDisableWorksFineAfterSwitch()
@@ -56,8 +52,6 @@ public class TestMasterRestartAfterDisablingTable {
     final int NUM_MASTERS = 2;
     final int NUM_RS = 1;
     final int NUM_REGIONS_TO_CREATE = 4;
-
-    int expectedNumRS = 1;
 
     // Start the cluster
     log("Starting cluster");
@@ -69,8 +63,7 @@ public class TestMasterRestartAfterDisablingTable {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     log("Waiting for active/ready master");
     cluster.waitForActiveAndReadyMaster();
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "testmasterRestart",
-        null);
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "testmasterRestart", null);
     HMaster master = cluster.getMaster();
 
     // Create a table with regions
@@ -85,11 +78,12 @@ public class TestMasterRestartAfterDisablingTable {
     blockUntilNoRIT(zkw, master);
     log("Disabling table\n");
     TEST_UTIL.getHBaseAdmin().disableTable(table);
-    
+
     NavigableSet<String> regions = getAllOnlineRegions(cluster);
-    assertEquals("The number of regions for the table tableRestart should be 0 and only" +
-    		"the catalog tables should be present.", 2, regions.size());
-    
+    assertEquals(
+        "The number of regions for the table tableRestart should be 0 and only"
+            + "the catalog tables should be present.", 2, regions.size());
+
     List<MasterThread> masterThreads = cluster.getMasterThreads();
     MasterThread activeMaster = null;
     if (masterThreads.get(0).getMaster().isActiveMaster()) {
@@ -100,22 +94,17 @@ public class TestMasterRestartAfterDisablingTable {
     activeMaster.getMaster().stop(
         "stopping the active master so that the backup can become active");
     cluster.hbaseCluster.waitOnMaster(activeMaster);
-    
+    cluster.waitForActiveAndReadyMaster();
+
     log("Enabling table\n");
     TEST_UTIL.getHBaseAdmin().enableTable(table);
     log("Waiting for no more RIT\n");
     blockUntilNoRIT(zkw, master);
     log("Verifying there are " + numRegions + " assigned on cluster\n");
-    try {
-      Scan s = new Scan();
-      ht.getScanner(s);
-    } catch (NotServingRegionException e) {
-      fail("NotServingRegionException should not be thrown after enabling the table.  Hence failing"
-          + "the test case");
-    }
     regions = getAllOnlineRegions(cluster);
-    assertRegionsAssigned(cluster, regions);
-    assertEquals("All the regions are not onlined.",expectedNumRS, cluster.getRegionServerThreads().size());
+    assertEquals(
+        "The assigned regions were not onlined after master switch except for the catalog tables.",
+        6, regions.size());
   }
 
   private void log(String msg) {
@@ -128,52 +117,8 @@ public class TestMasterRestartAfterDisablingTable {
     master.assignmentManager.waitUntilNoRegionsInTransition(60000);
   }
 
-  private void assertRegionsAssigned(MiniHBaseCluster cluster,
-      Set<String> expectedRegions) throws IOException {
-    int numFound = 0;
-    for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
-      numFound += rst.getRegionServer().getNumberOfOnlineRegions();
-    }
-    if (expectedRegions.size() > numFound) {
-      log("Expected to find " + expectedRegions.size() + " but only found"
-          + " " + numFound);
-      NavigableSet<String> foundRegions = getAllOnlineRegions(cluster);
-      for (String region : expectedRegions) {
-        if (!foundRegions.contains(region)) {
-          log("Missing region: " + region);
-        }
-      }
-      assertEquals(expectedRegions.size(), numFound);
-    } else if (expectedRegions.size() < numFound) {
-      int doubled = numFound - expectedRegions.size();
-      log("Expected to find " + expectedRegions.size() + " but found" + " "
-          + numFound + " (" + doubled + " double assignments?)");
-      NavigableSet<String> doubleRegions = getDoubleAssignedRegions(cluster);
-      for (String region : doubleRegions) {
-        log("Region is double assigned: " + region);
-      }
-      assertEquals(expectedRegions.size(), numFound);
-    } else {
-      log("Success!  Found expected number of " + numFound + " regions");
-    }
-  }
-
-  private NavigableSet<String> getDoubleAssignedRegions(MiniHBaseCluster cluster)
-  throws IOException {
-    NavigableSet<String> online = new TreeSet<String>();
-    NavigableSet<String> doubled = new TreeSet<String>();
-    for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
-      for (HRegionInfo region : rst.getRegionServer().getOnlineRegions()) {
-        if (!online.add(region.getRegionNameAsString())) {
-          doubled.add(region.getRegionNameAsString());
-        }
-      }
-    }
-    return doubled;
-  }
-
   private NavigableSet<String> getAllOnlineRegions(MiniHBaseCluster cluster)
-  throws IOException {
+      throws IOException {
     NavigableSet<String> online = new TreeSet<String>();
     for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
       for (HRegionInfo region : rst.getRegionServer().getOnlineRegions()) {
