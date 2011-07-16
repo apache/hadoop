@@ -815,33 +815,27 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
-   * Called by compaction thread and after region is opened to compact the
-   * HStores if necessary.
-   *
-   * <p>This operation could block for a long time, so don't call it from a
-   * time-sensitive thread.
-   *
-   * Note that no locking is necessary at this level because compaction only
-   * conflicts with a region split, and that cannot happen because the region
-   * server does them sequentially and not in parallel.
+   * This is a helper function that compact all the stores synchronously
+   * It is used by utilities and testing
    *
    * @param majorCompaction True to force a major compaction regardless of thresholds
-   * @return split row if split is needed
    * @throws IOException e
    */
-  byte [] compactStores(final boolean majorCompaction)
+  void compactStores(final boolean majorCompaction)
   throws IOException {
     if (majorCompaction) {
       this.triggerMajorCompaction();
     }
-    return compactStores();
+    compactStores();
   }
 
   /**
-   * Compact all the stores and return the split key of the first store that needs
-   * to be split.
+   * This is a helper function that compact all the stores synchronously
+   * It is used by utilities and testing
+   *
+   * @throws IOException e
    */
-  public byte[] compactStores() throws IOException {
+  public void compactStores() throws IOException {
     for(Store s : getStores().values()) {
       CompactionRequest cr = s.requestCompaction();
       if(cr != null) {
@@ -851,12 +845,7 @@ public class HRegion implements HeapSize { // , Writable{
           s.finishRequest(cr);
         }
       }
-      byte[] splitRow = s.checkSplit();
-      if (splitRow != null) {
-        return splitRow;
-      }
     }
-    return null;
   }
 
   /*
@@ -3829,7 +3818,7 @@ public class HRegion implements HeapSize { // , Writable{
     // nothing
   }
 
-  byte[] checkSplit() {
+  public byte[] checkSplit() {
     if (this.splitPoint != null) {
       return this.splitPoint;
     }

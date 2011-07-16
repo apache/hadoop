@@ -146,7 +146,11 @@ public class TestCoprocessorInterface extends HBaseTestCase {
       addContent(region, fam3);
       region.flushcache();
     }
-    byte [] splitRow = region.compactStores();
+    
+    region.compactStores();
+
+    byte [] splitRow = region.checkSplit();
+    
     assertNotNull(splitRow);
     HRegion [] regions = split(region, splitRow);
     for (int i = 0; i < regions.length; i++) {

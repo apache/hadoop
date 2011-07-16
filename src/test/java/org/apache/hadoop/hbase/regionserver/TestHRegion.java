@@ -1290,7 +1290,8 @@ public class TestHRegion extends HBaseTestCase {
     try {
       LOG.info("" + addContent(region, fam3));
       region.flushcache();
-      byte [] splitRow = region.compactStores();
+      region.compactStores();
+      byte [] splitRow = region.checkSplit();      
       assertNotNull(splitRow);
       LOG.info("SplitRow: " + Bytes.toString(splitRow));
       HRegion [] subregions = splitRegion(region, splitRow);
@@ -2295,7 +2296,8 @@ public class TestHRegion extends HBaseTestCase {
     try {
       LOG.info("" + addContent(region, fam3));
       region.flushcache();
-      byte [] splitRow = region.compactStores();
+      region.compactStores();
+      byte [] splitRow = region.checkSplit();      
       assertNotNull(splitRow);
       LOG.info("SplitRow: " + Bytes.toString(splitRow));
       HRegion [] regions = splitRegion(region, splitRow);
@@ -2329,7 +2331,8 @@ public class TestHRegion extends HBaseTestCase {
         byte [][] midkeys = new byte [regions.length][];
         // To make regions splitable force compaction.
         for (int i = 0; i < regions.length; i++) {
-          midkeys[i] = regions[i].compactStores();
+          regions[i].compactStores();
+          midkeys[i] = regions[i].checkSplit();          
         }
 
         TreeMap<String, HRegion> sortedMap = new TreeMap<String, HRegion>();
