@@ -160,6 +160,7 @@ Release 0.91.0 - Unreleased
                HRegion.delete (Adam Warrington via Ted Yu)
    HBASE-3893  HRegion.internalObtainRowLock shouldn't wait forever
    HBASE-4075  A bug in TestZKBasedOpenCloseRegion (Jieshan Bean via Ted Yu)
+   HBASE-4087  HBaseAdmin should perform validation of connection it holds
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

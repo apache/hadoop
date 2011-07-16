@@ -1,5 +1,5 @@
 /**
- * Copyright 2010 The Apache Software Foundation
+ * Copyright 2011 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -22,12 +22,11 @@ package org.apache.hadoop.hbase.client;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.net.SocketTimeoutException;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
@@ -76,7 +75,7 @@ import org.apache.hadoop.util.StringUtils;
 public class HBaseAdmin implements Abortable, Closeable {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
 //  private final HConnection connection;
-  private final HConnection connection;
+  private HConnection connection;
   private volatile Configuration conf;
   private final long pause;
   private final int numRetries;
@@ -84,7 +83,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   // numRetries is for 'normal' stuff... Mutliply by this factor when
   // want to wait a long time.
   private final int retryLongerMultiplier;
-
+  
   /**
    * Constructor
    *
@@ -95,11 +94,30 @@ public class HBaseAdmin implements Abortable, Closeable {
   public HBaseAdmin(Configuration c)
   throws MasterNotRunningException, ZooKeeperConnectionException {
     this.conf = HBaseConfiguration.create(c);
-    this.connection = HConnectionManager.getConnection(this.conf);
+      this.connection = HConnectionManager.getConnection(this.conf);
     this.pause = this.conf.getLong("hbase.client.pause", 1000);
     this.numRetries = this.conf.getInt("hbase.client.retries.number", 10);
-    this.retryLongerMultiplier = this.conf.getInt("hbase.client.retries.longer.multiplier", 10);
-    this.connection.getMaster();
+    this.retryLongerMultiplier = this.conf.getInt(
+        "hbase.client.retries.longer.multiplier", 10);
+    int tries = 0;
+    for (; tries < numRetries; ++tries) {
+      try {
+        this.connection.getMaster();
+        break;
+      } catch (UndeclaredThrowableException ute) {
+        HConnectionManager.deleteStaleConnection(this.connection);
+        this.connection = HConnectionManager.getConnection(this.conf);        
+      }
+      try { // Sleep
+        Thread.sleep(getPauseTime(tries));
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new MasterNotRunningException("Interrupted");
+      }
+    }
+    if (tries >= numRetries) {
+      throw new MasterNotRunningException("Retried " + numRetries + " times");
+    }
   }
 
   /**
