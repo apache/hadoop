@@ -221,7 +221,7 @@ public class OfflineEditsViewerHelper {
     // OP_REASSIGN_LEASE 22
     String filePath = "/hard-lease-recovery-test";
     byte[] bytes = "foo-bar-baz".getBytes();
-    DFSClientAdapter.stopLeaseRenewer(dfs.getClient());
+    DFSClientAdapter.stopLeaseRenewer(dfs);
     FSDataOutputStream leaseRecoveryPath = dfs.create(new Path(filePath));
     leaseRecoveryPath.write(bytes);
     leaseRecoveryPath.hflush();

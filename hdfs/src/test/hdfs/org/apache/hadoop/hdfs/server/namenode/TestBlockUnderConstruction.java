@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSClientAdapter;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -72,7 +73,7 @@ public class TestBlockUnderConstruction {
     // wait until the block is allocated by DataStreamer
     BlockLocation[] locatedBlocks;
     while(blocksAfter <= blocksBefore) {
-      locatedBlocks = hdfs.getClient().getBlockLocations(
+      locatedBlocks = DFSClientAdapter.getDFSClient(hdfs).getBlockLocations(
           file.toString(), 0L, BLOCK_SIZE*NUM_BLOCKS);
       blocksAfter = locatedBlocks == null ? 0 : locatedBlocks.length;
     }

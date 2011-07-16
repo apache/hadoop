@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFormat;
-import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -95,7 +94,7 @@ public class DFSAdmin extends FsShell {
     /** Constructor */
     ClearQuotaCommand(String[] args, int pos, FileSystem fs) {
       super(fs);
-      CommandFormat c = new CommandFormat(NAME, 1, Integer.MAX_VALUE);
+      CommandFormat c = new CommandFormat(1, Integer.MAX_VALUE);
       List<String> parameters = c.parse(args, pos);
       this.args = parameters.toArray(new String[parameters.size()]);
     }
@@ -140,7 +139,7 @@ public class DFSAdmin extends FsShell {
     /** Constructor */
     SetQuotaCommand(String[] args, int pos, FileSystem fs) {
       super(fs);
-      CommandFormat c = new CommandFormat(NAME, 2, Integer.MAX_VALUE);
+      CommandFormat c = new CommandFormat(2, Integer.MAX_VALUE);
       List<String> parameters = c.parse(args, pos);
       this.quota = Long.parseLong(parameters.remove(0));
       this.args = parameters.toArray(new String[parameters.size()]);
@@ -180,7 +179,7 @@ public class DFSAdmin extends FsShell {
     /** Constructor */
     ClearSpaceQuotaCommand(String[] args, int pos, FileSystem fs) {
       super(fs);
-      CommandFormat c = new CommandFormat(NAME, 1, Integer.MAX_VALUE);
+      CommandFormat c = new CommandFormat(1, Integer.MAX_VALUE);
       List<String> parameters = c.parse(args, pos);
       this.args = parameters.toArray(new String[parameters.size()]);
     }
@@ -228,7 +227,7 @@ public class DFSAdmin extends FsShell {
     /** Constructor */
     SetSpaceQuotaCommand(String[] args, int pos, FileSystem fs) {
       super(fs);
-      CommandFormat c = new CommandFormat(NAME, 2, Integer.MAX_VALUE);
+      CommandFormat c = new CommandFormat(2, Integer.MAX_VALUE);
       List<String> parameters = c.parse(args, pos);
       String str = parameters.remove(0).trim();
       quota = StringUtils.TraditionalBinaryPrefix.string2long(str);
@@ -327,10 +326,8 @@ public class DFSAdmin extends FsShell {
 
       System.out.println("-------------------------------------------------");
       
-      DatanodeInfo[] live = dfs.getClient().datanodeReport(
-                                                   DatanodeReportType.LIVE);
-      DatanodeInfo[] dead = dfs.getClient().datanodeReport(
-                                                   DatanodeReportType.DEAD);
+      DatanodeInfo[] live = dfs.getDataNodeStats(DatanodeReportType.LIVE);
+      DatanodeInfo[] dead = dfs.getDataNodeStats(DatanodeReportType.DEAD);
       System.out.println("Datanodes available: " + live.length +
                          " (" + (live.length + dead.length) + " total, " + 
                          dead.length + " dead)\n");
@@ -691,9 +688,8 @@ public class DFSAdmin extends FsShell {
    */
   public int printTopology() throws IOException {
       DistributedFileSystem dfs = getDFS();
-      DFSClient client = dfs.getClient();
-      DatanodeInfo[] report = client.datanodeReport(DatanodeReportType.ALL);
-      
+      final DatanodeInfo[] report = dfs.getDataNodeStats();
+
       // Build a map of rack -> nodes from the datanode report
       HashMap<String, TreeSet<String> > tree = new HashMap<String, TreeSet<String>>();
       for(DatanodeInfo dni : report) {

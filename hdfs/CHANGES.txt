@@ -560,6 +560,9 @@ Trunk (unreleased changes)
     HDFS-2153. Move DFSClientAdapter to test and fix some javac warnings in
     OfflineEditsViewerHelper.  (szetszwo)
 
+    HDFS-2159. Deprecate DistributedFileSystem.getClient() and fixed the
+    deprecated warnings in DFSAdmin.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

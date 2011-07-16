@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSClientAdapter;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -84,10 +85,11 @@ public class TestInterDatanodeProtocol {
       String filestr = "/foo";
       Path filepath = new Path(filestr);
       DFSTestUtil.createFile(dfs, filepath, 1024L, (short)3, 0L);
-      assertTrue(dfs.getClient().exists(filestr));
+      assertTrue(dfs.exists(filepath));
 
       //get block info
-      LocatedBlock locatedblock = getLastLocatedBlock(dfs.getClient().getNamenode(), filestr);
+      LocatedBlock locatedblock = getLastLocatedBlock(
+          DFSClientAdapter.getDFSClient(dfs).getNamenode(), filestr);
       DatanodeInfo[] datanodeinfo = locatedblock.getLocations();
       assertTrue(datanodeinfo.length > 0);
 
@@ -236,7 +238,7 @@ public class TestInterDatanodeProtocol {
 
       //get block info
       final LocatedBlock locatedblock = getLastLocatedBlock(
-          dfs.getClient().getNamenode(), filestr);
+          DFSClientAdapter.getDFSClient(dfs).getNamenode(), filestr);
       final DatanodeInfo[] datanodeinfo = locatedblock.getLocations();
       Assert.assertTrue(datanodeinfo.length > 0);
 
