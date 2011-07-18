@@ -78,7 +78,8 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
           conf.set((String) entry.getKey(), (String) entry.getValue());
         }
       }
-      dfsCluster = new MiniDFSCluster(conf, 2, reformatDFS, null);
+      dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
+      .format(reformatDFS).racks(null).build();
 
       ConfigurableMiniMRCluster.setConfiguration(props);
       //noinspection deprecation
