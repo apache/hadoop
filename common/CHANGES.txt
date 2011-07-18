@@ -402,6 +402,9 @@ Trunk (unreleased changes)
     HADOOP-7471. The saveVersion.sh script sometimes fails to extract SVN URL.
     (Alejandro Abdelnur via eli)
 
+    HADOOP-2081. Configuration getInt, getLong, and getFloat replace
+    invalid numbers with the default value. (Harsh J via eli)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
