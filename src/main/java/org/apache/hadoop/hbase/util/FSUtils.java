@@ -886,7 +886,9 @@ public class FSUtils {
   throws IOException {
     Path p = getTableInfoPath(rootdir, tablename);
     FileStatus [] status = fs.listStatus(p);
-    if (status.length < 1) throw new FileNotFoundException("No status for " + p.toString());
+    if (status == null || status.length < 1) {
+        throw new FileNotFoundException("No status for " + p.toString());
+    }
     return status[0].getModificationTime();
   }
 
