@@ -142,8 +142,12 @@ public class LogLevel {
     private static void process(org.apache.log4j.Logger log, String level,
         PrintWriter out) throws IOException {
       if (level != null) {
-        log.setLevel(org.apache.log4j.Level.toLevel(level));
-        out.println(MARKER + "Setting Level to " + level + " ...<br />");
+        if (!level.equals(org.apache.log4j.Level.toLevel(level).toString())) {
+          out.println(MARKER + "Bad level : <b>" + level + "</b><br />");
+        } else {
+          log.setLevel(org.apache.log4j.Level.toLevel(level));
+          out.println(MARKER + "Setting Level to " + level + " ...<br />");
+        }
       }
       out.println(MARKER
           + "Effective level: <b>" + log.getEffectiveLevel() + "</b><br />");
