@@ -13,6 +13,9 @@ Release 0.20.204.0 - unreleased
 
   BUG FIXES
 
+    HADOOP-7045. TestDU fails on systems with local file systems with 
+    extended attributes. (eli)
+
     MAPREDUCE-2495. exit() the TaskTracker when the distributed cache cleanup
     thread dies. (Robert Joseph Evans via cdouglas)
 
