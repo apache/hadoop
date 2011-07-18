@@ -106,9 +106,7 @@ elif [ "$COMMAND" = "getconf" ] ; then
 elif [ "$COMMAND" = "groups" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.GetGroups
 else
-  echo $COMMAND - invalid command
-  print_usage
-  exit
+  CLASS="$COMMAND"
 fi
 
 # for developers, add hdfs classes to CLASSPATH

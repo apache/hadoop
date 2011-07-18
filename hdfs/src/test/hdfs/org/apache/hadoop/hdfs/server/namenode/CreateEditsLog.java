@@ -195,13 +195,9 @@ public class CreateEditsLog {
     }
     
 
-    FSImage fsImage = null;
-    /* TODO new FSImage(editsLogDir.getAbsoluteFile().toURI());*/
     FileNameGenerator nameGenerator = new FileNameGenerator(BASE_PATH, 100);
-
-    FSEditLog editLog = fsImage.getEditLog();
-    // TODO editLog.reset();
-    // TODOeditLog.open();
+    FSEditLog editLog = FSImageTestUtil.createStandaloneEditLog(editsLogDir);
+    editLog.open();
     addFiles(editLog, numFiles, replication, numBlocksPerFile, startingBlockId,
              nameGenerator);
     editLog.logSync();
