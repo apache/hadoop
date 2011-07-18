@@ -232,7 +232,7 @@ public class LocalDirAllocator {
                 dirs.add(localDirs[i]);
                 dfList.add(new DF(new File(localDirs[i]), 30000));
               } catch (DiskErrorException de) {
-                LOG.warn( localDirs[i] + "is not writable\n", de);
+                LOG.warn( localDirs[i] + " is not writable\n", de);
               }
             } else {
               LOG.warn( "Failed to create " + localDirs[i]);

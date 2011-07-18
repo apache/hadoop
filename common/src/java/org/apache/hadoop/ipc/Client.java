@@ -245,7 +245,7 @@ public class Client {
       this.doPing = remoteId.getDoPing();
       this.pingInterval = remoteId.getPingInterval();
       if (LOG.isDebugEnabled()) {
-        LOG.debug("The ping interval is" + this.pingInterval + "ms.");
+        LOG.debug("The ping interval is " + this.pingInterval + " ms.");
       }
 
       UserGroupInformation ticket = remoteId.getTicket();

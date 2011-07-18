@@ -269,6 +269,9 @@ Trunk (unreleased changes)
     HADOOP-7314. Add support for throwing UnknownHostException when a host doesn't 
     resolve. (Jeffrey Naisbitt via jitendra)
 
+    HADOOP-7465. A several tiny improvements for the LOG format.
+    (Xie Xianshan via eli)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
