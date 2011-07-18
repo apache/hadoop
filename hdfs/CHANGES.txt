@@ -566,6 +566,9 @@ Trunk (unreleased changes)
     HDFS-2159. Deprecate DistributedFileSystem.getClient() and fixed the
     deprecated warnings in DFSAdmin.  (szetszwo)
 
+    HDFS-2157. Improve header comment in o.a.h.hdfs.server.namenode.NameNode.
+    (atm via eli)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
