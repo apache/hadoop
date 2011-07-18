@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
+
 import java.io.OutputStream;
 import org.junit.Test;
 
@@ -35,15 +37,25 @@ public class TestWriteConfigurationToDFS {
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096);
     System.out.println("Setting conf in: " + System.identityHashCode(conf));
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    FileSystem fs = cluster.getFileSystem();
-    Path filePath = new Path("/testWriteConf.xml");
-    OutputStream os = fs.create(filePath);
-    StringBuilder longString = new StringBuilder();
-    for (int i = 0; i < 100000; i++) {
-      longString.append("hello");
-    } // 500KB
-    conf.set("foobar", longString.toString());
-    conf.writeXml(os);
-    os.close();
+    FileSystem fs = null;
+    OutputStream os = null;
+    try {
+      fs = cluster.getFileSystem();
+      Path filePath = new Path("/testWriteConf.xml");
+      os = fs.create(filePath);
+      StringBuilder longString = new StringBuilder();
+      for (int i = 0; i < 100000; i++) {
+        longString.append("hello");
+      } // 500KB
+      conf.set("foobar", longString.toString());
+      conf.writeXml(os);
+      os.close();
+      os = null;
+      fs.close();
+      fs = null;
+    } finally {
+      IOUtils.cleanup(null, os, fs);
+      cluster.shutdown();
+    }
   }
 }

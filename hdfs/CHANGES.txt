@@ -840,6 +840,9 @@ Trunk (unreleased changes)
     HDFS-2120. on reconnect, DN can connect to NN even with different source
     versions. (John George via atm)
 
+    HDFS-2152. TestWriteConfigurationToDFS causing the random failures. (Uma
+    Maheswara Rao G via atm)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
