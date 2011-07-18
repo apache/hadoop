@@ -1449,23 +1449,26 @@ public class AssignmentManager extends ZooKeeperListener {
       // Presume that master has stale data.  Presume remote side just split.
       // Presume that the split message when it comes in will fix up the master's
       // in memory cluster state.
-      if (checkIfRegionBelongsToDisabling(region)) {
-        // Remove from the regionsinTransition map
-        LOG.info("While trying to recover the table:"
-            + region.getTableNameAsString()
-            + " from DISABLING state to DISABLED state, the region:" + region
-            + " was already offlined.");
-        synchronized (this.regionsInTransition) {
-          this.regionsInTransition.remove(region.getEncodedName());
-        }
-        // Remove from the regionsMap
-        synchronized (this.regions) {
-          this.regions.remove(region);
-        }
-      }
+      return;
     } catch (Throwable t) {
       if (t instanceof RemoteException) {
         t = ((RemoteException)t).unwrapRemoteException();
+        if (t instanceof NotServingRegionException) {
+          if (checkIfRegionBelongsToDisabling(region)) {
+            // Remove from the regionsinTransition map
+            LOG.info("While trying to recover the table "
+                + region.getTableNameAsString()
+                + " to DISABLED state the region " + region
+                + " was offlined but the table was in DISABLING state");
+            synchronized (this.regionsInTransition) {
+              this.regionsInTransition.remove(region.getEncodedName());
+            }
+            // Remove from the regionsMap
+            synchronized (this.regions) {
+              this.regions.remove(region);
+            }
+          }
+        }        
       }
       LOG.info("Server " + server + " returned " + t + " for " +
         region.getEncodedName());
