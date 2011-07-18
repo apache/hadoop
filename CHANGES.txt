@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 0.20.206.0 - unreleased
+Release 0.20.205.0 - unreleased
 
   NEW FEATURES
 
@@ -17,78 +17,6 @@ Release 0.20.206.0 - unreleased
     HDFS-1836. Thousand of CLOSE_WAIT socket. Contributed by Todd Lipcon,
     ported to security branch by Bharath Mundlapudi. (via mattf)
 
-Release 0.20.205.0 - unreleased
-
-  BUG FIXES
-
-    HDFS-1878. TestHDFSServerPorts unit test failure - race condition 
-    in FSNamesystem.close() causes NullPointerException without serious
-    consequence. (mattf)
-
-    MAPREDUCE-2452. Moves the cancellation of delegation tokens to a separate
-    thread. (ddas)
-
-    HDFS-1377. Quota bug for partial blocks allows quotas to be violated. (eli)
-
-    MAPREDUCE-2451. Log the details from health check script at the
-    JobTracker. (Thomas Graves via cdouglas)
-
-    MAPREDUCE-2456. Log the reduce taskID and associated TaskTrackers with
-    failed fetch notifications in the JobTracker log.
-    (Jeffrey Naisbitt via cdouglas)
-
-    HADOOP-7248. Update eclipse target to generate .classpath from ivy config.
-    (Thomas Graves and Tom White via cdouglas)
-
-    HADOOP-7277. Add generation of run configurations to eclipse target.
-    (Jeffrey Naisbitt and Philip Zeyliger via cdouglas)
-
-    HADOOP-7274. Fix typos in IOUtils. (Jonathan Eagles via cdouglas)
-
-    MAPREDUCE-2479. Move distributed cache cleanup to a background task,
-    backporting MAPREDUCE-1568. (Robert Joseph Evans via cdouglas)
-
-    HADOOP-7272. Remove unnecessary security related info logs. (suresh)
-
-    HDFS-1906. Remove logging exception stack trace in client logs when one of
-    the datanode targets to read from is not reachable. (suresh)
-
-    MAPREDUCE-2514. Fix typo in TaskTracker ReinitTrackerAction log message.
-    (Jonathan Eagles via cdouglas)
-
-    MAPREDUCE-2490. Add logging to graylist and blacklist activity to aid
-    diagnosis of related issues. (Jonathan Eagles via cdouglas)
-
-    MAPREDUCE-2495. exit() the TaskTracker when the distributed cache cleanup
-    thread dies. (Robert Joseph Evans via cdouglas)
-
-    MAPREDUCE-2555. Avoid sprious logging from completedtasks. (Thomas Graves
-    via cdouglas)
-
-    MAPREDUCE-2558. Add JobTracker metrics for scheduling queues. (Jeffrey
-    Naisbitt via cdouglas)
-
-    MAPREDUCE-2535. Fix NPE in JobClient caused by retirement. (Robert Joseph
-    Evans via cdouglas)
-
-    HADOOP-7144. Expose JMX metrics via JSON servlet. (Robert Joseph Evans via
-    cdouglas)
-
-    MAPREDUCE-2524. Port reduce failure reporting semantics from trunk, to
-    fail faulty maps more aggressively. (Thomas Graves via cdouglas)
-
-    MAPREDUCE-2529. Add support for regex-based shuffle metric counting
-    exceptions. (Thomas Graves via cdouglas)
-
-    HDFS-2044. TestQueueProcessingStatistics failing automatic test due to 
-    timing issues. (mattf)
-
-    MAPREDUCE-2558. Add queue-level metrics 0.20-security branch (test fixes)
-    (Jeffrey Naisbitt via mahadev) 
-
-    HADOOP-7364. TestMiniMRDFSCaching fails if test.build.dir is set to 
-    something other than build/test (Thomas Graves via mahadev)
-
 Release 0.20.204.0 - unreleased
 
   NEW FEATURES
@@ -102,14 +30,69 @@ Release 0.20.204.0 - unreleased
 
   BUG FIXES
 
+    HADOOP-7045. TestDU fails on systems with local file systems with 
+    extended attributes. (eli)
+
+    MAPREDUCE-2495. exit() the TaskTracker when the distributed cache cleanup
+    thread dies. (Robert Joseph Evans via cdouglas)
+
+    HDFS-1878. TestHDFSServerPorts unit test failure - race condition 
+    in FSNamesystem.close() causes NullPointerException without serious
+    consequence. (mattf)
+
+    MAPREDUCE-2452. Moves the cancellation of delegation tokens to a separate
+    thread. (ddas)
+
+    MAPREDUCE-2555. Avoid sprious logging from completedtasks. (Thomas Graves
+    via cdouglas)
+
+    MAPREDUCE-2451. Log the details from health check script at the
+    JobTracker. (Thomas Graves via cdouglas)
+
+    MAPREDUCE-2535. Fix NPE in JobClient caused by retirement. (Robert Joseph
+    Evans via cdouglas)
+
+    MAPREDUCE-2456. Log the reduce taskID and associated TaskTrackers with
+    failed fetch notifications in the JobTracker log.
+    (Jeffrey Naisbitt via cdouglas)
+
+    HDFS-2044. TestQueueProcessingStatistics failing automatic test due to 
+    timing issues. (mattf)
+
+    HADOOP-7248. Update eclipse target to generate .classpath from ivy config.
+    (Thomas Graves and Tom White via cdouglas)
+
+    MAPREDUCE-2558. Add queue-level metrics 0.20-security branch (test fixes)
+    (Jeffrey Naisbitt via mahadev)
+    
+    HADOOP-7364. TestMiniMRDFSCaching fails if test.build.dir is set to 
+    something other than build/test. (Thomas Graves via mahadev)
+
+    HADOOP-7277. Add generation of run configurations to eclipse target.
+    (Jeffrey Naisbitt and Philip Zeyliger via cdouglas)
+
     HADOOP-7373. Fix {start,stop}-{dfs,mapred} and hadoop-daemons.sh from
     trying to use the wrong bin directory. (omalley)
 
+    HADOOP-7274. Fix typos in IOUtils. (Jonathan Eagles via cdouglas)
+
     HADOOP-7369. Fix permissions in tarball for sbin/* and libexec/* (omalley)
+
+    MAPREDUCE-2479. Move distributed cache cleanup to a background task,
+    backporting MAPREDUCE-1568. (Robert Joseph Evans via cdouglas)
 
     HADOOP-7356. Fix bin/hadoop scripts (eyang via omalley)
 
-    MAPREDUCE-2316. Updated CapacityScheduler documentation. (acmurthy) 
+    HADOOP-7272. Remove unnecessary security related info logs. (suresh)
+
+    MAPREDUCE-2514. Fix typo in TaskTracker ReinitTrackerAction log message.
+    (Jonathan Eagles via cdouglas)
+
+    HDFS-1906. Remove logging exception stack trace in client logs when one of
+    the datanode targets to read from is not reachable. (suresh)
+
+    MAPREDUCE-2490. Add logging to graylist and blacklist activity to aid
+    diagnosis of related issues. (Jonathan Eagles via cdouglas)
 
     MAPREDUCE-2447. Fix Child.java to set Task.jvmContext sooner to avoid
     corner cases in error handling. (Siddharth Seth via acmurthy) 
@@ -147,9 +130,6 @@ Release 0.20.204.0 - unreleased
     HDFS-1258. Clearing namespace quota on "/" corrupts fs image.  
     (Aaron T. Myers via szetszwo)
 
-    HADOOP-7215. RPC clients must use network interface corresponding to 
-    the host in the client's kerberos principal key. (suresh)
-
     HDFS-1189. Quota counts missed between clear quota and set quota.
     (John George via szetszwo)
 
@@ -166,10 +146,21 @@ Release 0.20.204.0 - unreleased
     by throwing an error to indicate the editlog needs to be empty.
     (suresh)
 
+    HDFS-1377. Quota bug for partial blocks allows quotas to be violated. (eli)
+
     HDFS-2057. Wait time to terminate the threads causes unit tests to
     take longer time. (Bharath Mundlapudi via suresh)
 
   IMPROVEMENTS
+
+    HADOOP-7144. Expose JMX metrics via JSON servlet. (Robert Joseph Evans via
+    cdouglas)
+
+    MAPREDUCE-2524. Port reduce failure reporting semantics from trunk, to
+    fail faulty maps more aggressively. (Thomas Graves via cdouglas)
+
+    MAPREDUCE-2529. Add support for regex-based shuffle metric counting
+    exceptions. (Thomas Graves via cdouglas)
 
     HADOOP-7398. Add mechanism to suppress warnings about use of HADOOP_HOME.
     (omalley)
@@ -216,6 +207,8 @@ Release 0.20.203.0 - 2011-5-11
     package. (Luke Lu via omalley)
 
     HADOOP-7143. Restore HadoopArchives. (Joep Rottinghuis via omalley)
+
+    MAPREDUCE-2316. Updated CapacityScheduler documentation. (acmurthy) 
 
     HADOOP-7243. Fix contrib unit tests missing dependencies. (omalley)
 
@@ -270,6 +263,9 @@ Release 0.20.203.0 - 2011-5-11
 
     HADOOP-6879. Provide SSH based (Jsch) remote execution API for system
     tests. (cos)
+
+    HADOOP-7215. RPC clients must use network interface corresponding to 
+    the host in the client's kerberos principal key. (suresh)
 
     HADOOP-7232. Fix Javadoc warnings. (omalley)
 
