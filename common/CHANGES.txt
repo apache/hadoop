@@ -399,6 +399,9 @@ Trunk (unreleased changes)
     plain text (Luke Lu)
     -r 1079164: No need to escape plain text (Luke Lu)
 
+    HADOOP-7471. The saveVersion.sh script sometimes fails to extract SVN URL.
+    (Alejandro Abdelnur via eli)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

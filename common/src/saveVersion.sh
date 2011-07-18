@@ -33,7 +33,7 @@ if git rev-parse HEAD 2>/dev/null > /dev/null ; then
   url="git://${hostname}${cwd}"
 elif [ -d .svn ]; then
   revision=`svn info | sed -n -e 's/Last Changed Rev: \(.*\)/\1/p'`
-  url=`svn info | sed -n -e 's/URL: \(.*\)/\1/p'`
+  url=`svn info | sed -n -e 's/^URL: \(.*\)/\1/p'`
   # Get canonical branch (branches/X, tags/X, or trunk)
   branch=`echo $url | sed -n -e 's,.*\(branches/.*\)$,\1,p' \
                              -e 's,.*\(tags/.*\)$,\1,p' \
