@@ -726,6 +726,19 @@ public class FSEditLog  {
   }
 
   /**
+   * @return the number of active (non-failed) journals
+   */
+  private int countActiveJournals() {
+    int count = 0;
+    for (JournalAndStream jas : journals) {
+      if (jas.isActive()) {
+        count++;
+      }
+    }
+    return count;
+  }
+  
+  /**
    * Used only by unit tests.
    */
   @VisibleForTesting
@@ -777,7 +790,7 @@ public class FSEditLog  {
    * Transitions from BETWEEN_LOG_SEGMENTS state to IN_LOG_SEGMENT state. 
    */
   synchronized void startLogSegment(final long segmentTxId,
-      boolean writeHeaderTxn) {
+      boolean writeHeaderTxn) throws IOException {
     LOG.info("Starting log segment at " + segmentTxId);
     Preconditions.checkArgument(segmentTxId > 0,
         "Bad txid: %s", segmentTxId);
@@ -789,7 +802,6 @@ public class FSEditLog  {
     Preconditions.checkArgument(segmentTxId == txid + 1,
         "Cannot start log segment at txid %s when next expected " +
         "txid is %s", segmentTxId, txid + 1);
-    curSegmentTxId = segmentTxId;
     
     numTransactions = totalTimeTransactions = numTransactionsBatchedInSync = 0;
 
@@ -803,6 +815,12 @@ public class FSEditLog  {
       }
     }, "starting log segment " + segmentTxId);
 
+    if (countActiveJournals() == 0) {
+      throw new IOException("Unable to start log segment " +
+          segmentTxId + ": no journals successfully started.");
+    }
+    
+    curSegmentTxId = segmentTxId;
     state = State.IN_SEGMENT;
 
     if (writeHeaderTxn) {

@@ -310,7 +310,8 @@ public class BackupImage extends FSImage {
    * This causes the BN to also start the new edit log in its local
    * directories.
    */
-  synchronized void namenodeStartedLogSegment(long txid) {
+  synchronized void namenodeStartedLogSegment(long txid)
+      throws IOException {
     LOG.info("NameNode started a new log segment at txid " + txid);
     if (editLog.isOpen()) {
       if (editLog.getLastWrittenTxId() == txid - 1) {

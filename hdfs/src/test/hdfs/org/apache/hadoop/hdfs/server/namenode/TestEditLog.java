@@ -726,55 +726,20 @@ public class TestEditLog extends TestCase {
     }
   }
 
-  /*
-   * TODO: need to re-enable this test in HDFS-1073 branch!
   public void testFailedOpen() throws Exception {
-    Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = null;
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).build();
-    cluster.waitActive();
-    final FSNamesystem fsn = cluster.getNamesystem();
-
-    // Set up spys
-    final FSImage originalImage = fsn.getFSImage();
-    NNStorage storage = originalImage.getStorage();
-    NNStorage spyStorage = spy(storage);
-    originalImage.storage = spyStorage;
-    
-    final FSEditLog editLog = originalImage.getEditLog();
-    FSEditLog spyLog = spy(editLog);
-
-    FSImage spyImage = spy(originalImage);
-    fsn.dir.fsImage = spyImage;
-    spyImage.storage.setStorageDirectories(
-        FSNamesystem.getNamespaceDirs(conf), 
-        FSNamesystem.getNamespaceEditsDirs(conf));
-        
-    // Fail every attempt to open a new edit file
-    doThrow(new IOException("Injected fault: open")).
-      when(spyLog).addNewEditLogStream((File)anyObject());
-    
+    File logDir = new File(TEST_DIR, "testFailedOpen");
+    logDir.mkdirs();
+    FSEditLog log = FSImageTestUtil.createStandaloneEditLog(logDir);
     try {
-      spyLog.close();
-      spyLog.open();
-      fail("open did not fail even when all directories failed!");
-    } catch(IOException ioe) {
-      LOG.info("Got expected exception", ioe);
+      logDir.setWritable(false);
+      log.open();
+      fail("Did no throw exception on only having a bad dir");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains(
+          "no journals successfully started", ioe);
     } finally {
-      spyLog.close();
+      logDir.setWritable(true);
+      log.close();
     }
-    
-    // Reset and try it with a working open
-    Mockito.reset(spyLog);
-    spyImage.storage.setStorageDirectories(
-        FSNamesystem.getNamespaceDirs(conf), 
-        FSNamesystem.getNamespaceEditsDirs(conf));
-    spyLog.open();
-    
-    // Close everything off
-    spyLog.close();
-    originalImage.close();
-    fsn.close();
   }
-  */
 }
