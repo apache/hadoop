@@ -220,12 +220,8 @@ public class TestEditLog extends TestCase {
       
       editLog.close();
     } finally {
-      try {
-        if(fileSys != null) fileSys.close();
-        if(cluster != null) cluster.shutdown();
-      } catch (Throwable t) {
-        LOG.error("Couldn't shut down", t);
-      }
+      if(fileSys != null) fileSys.close();
+      if(cluster != null) cluster.shutdown();
     }
   }
 
