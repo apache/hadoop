@@ -26,6 +26,7 @@ import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.*;
+import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell;
@@ -529,8 +530,13 @@ public class RawLocalFileSystem extends FileSystem {
   
   private void execSetPermission(File f, FsPermission permission) 
   throws IOException {
-    execCommand(f, Shell.SET_PERMISSION_COMMAND,
-        String.format("%04o", permission.toShort()));
+    if (NativeIO.isAvailable()) {
+      NativeIO.chmod(f.getCanonicalPath(),
+      permission.toShort());
+    } else {
+      execCommand(f, Shell.SET_PERMISSION_COMMAND,
+          String.format("%04o", permission.toShort()));
+    }
   }
   
   private static String execCommand(File f, String... cmd) throws IOException {

@@ -28,7 +28,11 @@ import static org.junit.Assert.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.NativeCodeLoader;
 
 public class TestNativeIO {
@@ -134,6 +138,36 @@ public class TestNativeIO {
       fos.write("foo".getBytes());
       fos.close();
     }
+  }
+
+  /**
+   * Test basic chmod operation
+   */
+  @Test
+  public void testChmod() throws Exception {
+    try {
+      NativeIO.chmod("/this/file/doesnt/exist", 777);
+      fail("Chmod of non-existent file didn't fail");
+    } catch (NativeIOException nioe) {
+      assertEquals(Errno.ENOENT, nioe.getErrno());
+    }
+
+    File toChmod = new File(TEST_DIR, "testChmod");
+    assertTrue("Create test subject",
+               toChmod.exists() || toChmod.mkdir());
+    NativeIO.chmod(toChmod.getAbsolutePath(), 0777);
+    assertPermissions(toChmod, 0777);
+    NativeIO.chmod(toChmod.getAbsolutePath(), 0000);
+    assertPermissions(toChmod, 0000);
+    NativeIO.chmod(toChmod.getAbsolutePath(), 0644);
+    assertPermissions(toChmod, 0644);
+  }
+
+  private void assertPermissions(File f, int expected) throws IOException {
+    FileSystem localfs = FileSystem.getLocal(new Configuration());
+    FsPermission perms = localfs.getFileStatus(
+      new Path(f.getAbsolutePath())).getPermission();
+    assertEquals(expected, perms.toShort());
   }
 
 }
