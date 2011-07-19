@@ -39,6 +39,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -553,7 +554,6 @@ public class NamenodeFsck {
    * Pick the best node from which to stream the data.
    * That's the local one, if available.
    */
-  Random r = new Random();
   private DatanodeInfo bestNode(DFSClient dfs, DatanodeInfo[] nodes,
                                 TreeSet<DatanodeInfo> deadNodes) throws IOException {
     if ((nodes == null) ||
@@ -562,7 +562,7 @@ public class NamenodeFsck {
     }
     DatanodeInfo chosenNode;
     do {
-      chosenNode = nodes[r.nextInt(nodes.length)];
+      chosenNode = nodes[DFSUtil.getRandom().nextInt(nodes.length)];
     } while (deadNodes.contains(chosenNode));
     return chosenNode;
   }

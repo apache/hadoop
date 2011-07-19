@@ -57,7 +57,7 @@ public class BlocksMap {
   
   private GSet<Block, BlockInfo> blocks;
 
-  BlocksMap(int initialCapacity, float loadFactor) {
+  BlocksMap(final float loadFactor) {
     this.capacity = computeCapacity();
     this.blocks = new LightWeightGSet<Block, BlockInfo>(capacity);
   }

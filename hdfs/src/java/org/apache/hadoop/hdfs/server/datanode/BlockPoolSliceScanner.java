@@ -43,6 +43,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
@@ -98,8 +99,6 @@ class BlockPoolSliceScanner {
   private long totalBytesToScan = 0;
   
   private LogFileHandler verificationLog;
-  
-  private Random random = new Random();
   
   private DataTransferThrottler throttler = null;
   
@@ -254,7 +253,7 @@ class BlockPoolSliceScanner {
     long period = Math.min(scanPeriod, 
                            Math.max(blockMap.size(),1) * 600 * 1000L);
     return System.currentTimeMillis() - scanPeriod + 
-           random.nextInt((int)period);    
+        DFSUtil.getRandom().nextInt((int)period);    
   }
 
   /** Adds block to list of blocks */

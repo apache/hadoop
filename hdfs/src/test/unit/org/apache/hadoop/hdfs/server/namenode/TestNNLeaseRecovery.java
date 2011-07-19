@@ -79,7 +79,7 @@ public class TestNNLeaseRecovery {
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, NAME_DIR);
     // avoid stubbing access control
     conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false); 
-    NameNode.initMetrics(conf, NamenodeRole.ACTIVE);
+    NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
 
     FileSystem.setDefaultUri(conf, "hdfs://localhost:0");
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");

@@ -35,13 +35,13 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.UnresolvedLinkException;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -157,7 +157,7 @@ public class DFSInputStream extends FSInputStream {
       ClientDatanodeProtocol cdp = null;
       
       try {
-        cdp = DFSClient.createClientDatanodeProtocolProxy(
+        cdp = DFSUtil.createClientDatanodeProtocolProxy(
         datanode, dfsClient.conf, dfsClient.getConf().socketTimeout, locatedblock);
         
         final long n = cdp.getReplicaVisibleLength(locatedblock.getBlock());
@@ -625,7 +625,7 @@ public class DFSInputStream extends FSInputStream {
           // will wait 6000ms grace period before retry and the waiting window is
           // expanded to 9000ms. 
           double waitTime = timeWindow * failures +       // grace period for the last round of attempt
-            timeWindow * (failures + 1) * dfsClient.r.nextDouble(); // expanding time window for each failure
+            timeWindow * (failures + 1) * DFSUtil.getRandom().nextDouble(); // expanding time window for each failure
           DFSClient.LOG.warn("DFS chooseDataNode: got # " + (failures + 1) + " IOException, will wait for " + waitTime + " msec.");
           Thread.sleep((long)waitTime);
         } catch (InterruptedException iex) {

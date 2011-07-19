@@ -23,10 +23,13 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 
 public class DFSClientAdapter {
+  public static DFSClient getDFSClient(DistributedFileSystem dfs) {
+    return dfs.dfs;
+  }
   
-  public static void stopLeaseRenewer(DFSClient dfsClient) throws IOException {
+  public static void stopLeaseRenewer(DistributedFileSystem dfs) throws IOException {
     try {
-      dfsClient.leaserenewer.interruptAndJoin();
+      dfs.dfs.leaserenewer.interruptAndJoin();
     } catch (InterruptedException e) {
       throw new IOException(e);
     }

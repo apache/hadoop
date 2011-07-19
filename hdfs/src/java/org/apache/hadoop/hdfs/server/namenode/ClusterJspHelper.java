@@ -584,12 +584,12 @@ class ClusterJspHelper {
         toXmlItemBlock(doc, "Blocks", Long.toString(nn.blocksCount));
         toXmlItemBlock(doc, "Missing Blocks",
             Long.toString(nn.missingBlocksCount));
-        toXmlItemBlock(doc, "Live Datanode (Decommissioned)",
-            Integer.toString(nn.liveDatanodeCount) + " ("
-                + Integer.toString(nn.liveDecomCount) + ")");
-        toXmlItemBlock(doc, "Dead Datanode (Decommissioned)",
-            Integer.toString(nn.deadDatanodeCount) + " ("
-                + Integer.toString(nn.deadDecomCount) + ")");
+        toXmlItemBlockWithLink(doc, nn.liveDatanodeCount + " (" +
+          nn.liveDecomCount + ")", nn.httpAddress+"/dfsnodelist.jsp?whatNodes=LIVE",
+          "Live Datanode (Decommissioned)");
+        toXmlItemBlockWithLink(doc, nn.deadDatanodeCount + " (" +
+          nn.deadDecomCount + ")", nn.httpAddress+"/dfsnodelist.jsp?whatNodes=DEAD"
+          , "Dead Datanode (Decommissioned)");
         doc.endTag(); // node
       }
       doc.endTag(); // namenodes
@@ -812,11 +812,11 @@ class ClusterJspHelper {
    * Generate a XML block as such, <item label="Node" value="hostname"
    * link="http://hostname:50070" />
    */
-  private static void toXmlItemBlockWithLink(XMLOutputter doc, String host,
-      String url, String nodetag) throws IOException {
+  private static void toXmlItemBlockWithLink(XMLOutputter doc, String value,
+      String url, String label) throws IOException {
     doc.startTag("item");
-    doc.attribute("label", nodetag);
-    doc.attribute("value", host);
+    doc.attribute("label", label);
+    doc.attribute("value", value);
     doc.attribute("link", "http://" + url);
     doc.endTag(); // item
   }

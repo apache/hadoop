@@ -317,6 +317,9 @@ Trunk (unreleased changes)
 
     HDFS-1547. Improve decommission mechanism. (suresh)
 
+    HDFS-2143. Federation: In cluster web console, add link to namenode page
+    that displays live and dead datanodes. (Ravi Prakash via suresh)
+
     HDFS-1588. Remove hardcoded strings for configuration keys, "dfs.hosts"
     and "dfs.hosts.exlude". (Erik Steffl via suresh)
 
@@ -553,6 +556,28 @@ Trunk (unreleased changes)
     copyFromLocal by HADOOP-7361.  (Uma Maheswara Rao G via szetszwo)
 
     HDFS-2140. Move Host2NodesMap to the blockmanagement package.  (szetszwo)
+
+    HDFS-2154. In TestDFSShell, use TEST_ROOT_DIR and fix some deprecated
+    warnings.  (szetszwo)
+
+    HDFS-2153. Move DFSClientAdapter to test and fix some javac warnings in
+    OfflineEditsViewerHelper.  (szetszwo)
+
+    HDFS-2159. Deprecate DistributedFileSystem.getClient() and fixed the
+    deprecated warnings in DFSAdmin.  (szetszwo)
+
+    HDFS-2157. Improve header comment in o.a.h.hdfs.server.namenode.NameNode.
+    (atm via eli)
+
+    HDFS-2147. Move cluster network topology to block management and fix some
+    javac warnings.  (szetszwo)
+
+    HDFS-2141. Remove NameNode roles Active and Standby (they become
+    states of the namenode). (suresh)
+
+    HDFS-2161. Move createNamenode(..), createClientDatanodeProtocolProxy(..)
+    and Random object creation to DFSUtil; move DFSClient.stringifyToken(..)
+    to DelegationTokenIdentifier.  (szetszwo)
 
   OPTIMIZATIONS
 
@@ -830,6 +855,9 @@ Trunk (unreleased changes)
 
     HDFS-2120. on reconnect, DN can connect to NN even with different source
     versions. (John George via atm)
+
+    HDFS-2152. TestWriteConfigurationToDFS causing the random failures. (Uma
+    Maheswara Rao G via atm)
 
 Release 0.22.0 - Unreleased
 

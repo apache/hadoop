@@ -80,7 +80,7 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
       String filestr = "/foo";
       Path filepath = new Path(filestr);
       DFSTestUtil.createFile(dfs, filepath, ORG_FILE_SIZE, REPLICATION_NUM, 0L);
-      assertTrue(dfs.dfs.exists(filestr));
+      assertTrue(dfs.exists(filepath));
       DFSTestUtil.waitReplication(dfs, filepath, REPLICATION_NUM);
 
       //get block info for the last block

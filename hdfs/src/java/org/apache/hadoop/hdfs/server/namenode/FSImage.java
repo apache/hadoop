@@ -941,7 +941,7 @@ public class FSImage implements Closeable {
       msg = "Name node " + bnReg.getAddress()
             + " has incompatible namespace id: " + bnReg.getNamespaceID()
             + " expected: " + storage.getNamespaceID();
-    else if(bnReg.isRole(NamenodeRole.ACTIVE))
+    else if(bnReg.isRole(NamenodeRole.NAMENODE))
       msg = "Name node " + bnReg.getAddress()
             + " role " + bnReg.getRole() + ": checkpoint is not allowed.";
     else if(bnReg.getLayoutVersion() < storage.getLayoutVersion()

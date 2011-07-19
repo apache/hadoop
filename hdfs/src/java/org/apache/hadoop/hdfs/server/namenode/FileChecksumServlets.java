@@ -32,14 +32,14 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeJspHelper;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.znerd.xmlenc.XMLOutputter;
@@ -61,7 +61,7 @@ public class FileChecksumServlets {
         (Configuration) context.getAttribute(JspHelper.CURRENT_CONF);
       final UserGroupInformation ugi = getUGI(request, conf);
       final NameNode namenode = (NameNode)context.getAttribute("name.node");
-      final DatanodeID datanode = namenode.getNamesystem().getRandomDatanode();
+      final DatanodeID datanode = NamenodeJspHelper.getRandomDatanode(namenode);
       try {
         final URI uri = createRedirectUri("/getFileChecksum", ugi, datanode, 
                                           request, namenode); 

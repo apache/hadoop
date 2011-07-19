@@ -18,8 +18,13 @@
 
 package org.apache.hadoop.hdfs.security.token.delegation;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 
 /**
@@ -51,4 +56,23 @@ public class DelegationTokenIdentifier
     return HDFS_DELEGATION_KIND;
   }
 
+  @Override
+  public String toString() {
+    return getKind() + " token " + getSequenceNumber()
+        + " for " + getUser().getShortUserName();
+  }
+
+  /** @return a string representation of the token */
+  public static String stringifyToken(final Token<?> token) throws IOException {
+    DelegationTokenIdentifier ident = new DelegationTokenIdentifier();
+    ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
+    DataInputStream in = new DataInputStream(buf);  
+    ident.readFields(in);
+
+    if (token.getService().getLength() > 0) {
+      return ident + " on " + token.getService();
+    } else {
+      return ident.toString();
+    }
+  }
 }

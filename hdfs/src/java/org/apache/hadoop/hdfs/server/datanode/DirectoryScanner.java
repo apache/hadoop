@@ -26,7 +26,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -41,11 +40,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
 import org.apache.hadoop.util.Daemon;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * Periodically scans the data directories for block and block metadata files.
@@ -240,8 +239,7 @@ public class DirectoryScanner implements Runnable {
 
   void start() {
     shouldRun = true;
-    Random rand = new Random();
-    long offset = rand.nextInt((int) (scanPeriodMsecs/1000L)) * 1000L; //msec
+    long offset = DFSUtil.getRandom().nextInt((int) (scanPeriodMsecs/1000L)) * 1000L; //msec
     long firstScanTime = System.currentTimeMillis() + offset;
     LOG.info("Periodic Directory Tree Verification scan starting at " 
         + firstScanTime + " with interval " + scanPeriodMsecs);

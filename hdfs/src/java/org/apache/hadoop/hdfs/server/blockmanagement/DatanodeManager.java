@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -25,8 +27,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.util.Daemon;
 
 /**
@@ -39,6 +44,10 @@ public class DatanodeManager {
 
   final FSNamesystem namesystem;
 
+  /** Cluster network topology */
+  private final NetworkTopology networktopology = new NetworkTopology();
+
+  /** Host names to datanode descriptors mapping. */
   private final Host2NodesMap host2DatanodeMap = new Host2NodesMap();
   
   DatanodeManager(final FSNamesystem namesystem) {
@@ -60,6 +69,24 @@ public class DatanodeManager {
     if (decommissionthread != null) decommissionthread.interrupt();
   }
 
+  /** @return the network topology. */
+  public NetworkTopology getNetworkTopology() {
+    return networktopology;
+  }
+  
+  /** Sort the located blocks by the distance to the target host. */
+  public void sortLocatedBlocks(final String targethost,
+      final List<LocatedBlock> locatedblocks) {
+    //sort the blocks
+    final DatanodeDescriptor client = getDatanodeByHost(targethost);
+    for (LocatedBlock b : locatedblocks) {
+      networktopology.pseudoSortByDistance(client, b.getLocations());
+      
+      // Move decommissioned datanodes to the bottom
+      Arrays.sort(b.getLocations(), DFSUtil.DECOM_COMPARATOR);
+    }    
+  }
+  
   /** @return the datanode descriptor for the host. */
   public DatanodeDescriptor getDatanodeByHost(final String host) {
     return host2DatanodeMap.getDatanodeByHost(host);
@@ -74,10 +101,12 @@ public class DatanodeManager {
       host2DatanodeMap.remove(
           namesystem.datanodeMap.put(node.getStorageID(), node));
     }
+
     host2DatanodeMap.add(node);
+    networktopology.add(node);
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug(getClass().getSimpleName() + ".unprotectedAddDatanode: "
+      LOG.debug(getClass().getSimpleName() + ".addDatanode: "
           + "node " + node.getName() + " is added to datanodeMap.");
     }
   }

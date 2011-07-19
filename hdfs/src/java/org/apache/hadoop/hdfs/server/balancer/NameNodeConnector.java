@@ -32,7 +32,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -79,7 +79,7 @@ class NameNodeConnector {
       ) throws IOException {
     this.namenodeAddress = namenodeAddress;
     this.namenode = createNamenode(namenodeAddress, conf);
-    this.client = DFSClient.createNamenode(conf);
+    this.client = DFSUtil.createNamenode(conf);
     this.fs = FileSystem.get(NameNode.getUri(namenodeAddress), conf);
 
     final NamespaceInfo namespaceinfo = namenode.versionRequest();

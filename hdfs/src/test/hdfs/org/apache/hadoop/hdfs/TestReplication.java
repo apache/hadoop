@@ -74,7 +74,7 @@ public class TestReplication extends TestCase {
   private void checkFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
     Configuration conf = fileSys.getConf();
-    ClientProtocol namenode = DFSClient.createNamenode(conf);
+    ClientProtocol namenode = DFSUtil.createNamenode(conf);
       
     waitForBlockReplication(name.toString(), namenode, 
                             Math.min(numDatanodes, repl), -1);
@@ -255,7 +255,6 @@ public class TestReplication extends TestCase {
     
     //wait for all the blocks to be replicated;
     LOG.info("Checking for block replication for " + filename);
-    int iters = 0;
     while (true) {
       boolean replOk = true;
       LocatedBlocks blocks = namenode.getBlockLocations(filename, 0, 
@@ -266,11 +265,8 @@ public class TestReplication extends TestCase {
         LocatedBlock block = iter.next();
         int actual = block.getLocations().length;
         if ( actual < expected ) {
-          if (true || iters > 0) {
-            LOG.info("Not enough replicas for " + block.getBlock() +
-                               " yet. Expecting " + expected + ", got " + 
-                               actual + ".");
-          }
+          LOG.info("Not enough replicas for " + block.getBlock()
+              + " yet. Expecting " + expected + ", got " + actual + ".");
           replOk = false;
           break;
         }
@@ -279,8 +275,6 @@ public class TestReplication extends TestCase {
       if (replOk) {
         return;
       }
-      
-      iters++;
       
       if (maxWaitSec > 0 && 
           (System.currentTimeMillis() - start) > (maxWaitSec * 1000)) {

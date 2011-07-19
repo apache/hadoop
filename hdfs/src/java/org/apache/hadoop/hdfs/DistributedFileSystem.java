@@ -532,6 +532,9 @@ public class DistributedFileSystem extends FileSystem {
     return "DFS[" + dfs + "]";
   }
 
+  /** @deprecated DFSClient should not be accessed directly. */
+  @InterfaceAudience.Private
+  @Deprecated
   public DFSClient getClient() {
     return dfs;
   }        
@@ -624,9 +627,15 @@ public class DistributedFileSystem extends FileSystem {
     return new CorruptFileBlockIterator(dfs, path);
   }
 
-  /** Return statistics for each datanode. */
+  /** @return datanode statistics. */
   public DatanodeInfo[] getDataNodeStats() throws IOException {
-    return dfs.datanodeReport(DatanodeReportType.ALL);
+    return getDataNodeStats(DatanodeReportType.ALL);
+  }
+
+  /** @return datanode statistics for the given type. */
+  public DatanodeInfo[] getDataNodeStats(final DatanodeReportType type
+      ) throws IOException {
+    return dfs.datanodeReport(type);
   }
 
   /**

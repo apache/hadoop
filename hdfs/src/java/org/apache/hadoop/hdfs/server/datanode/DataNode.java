@@ -71,7 +71,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -397,8 +396,6 @@ public class DataNode extends Configured
   
   /** Activated plug-ins. */
   private List<ServicePlugin> plugins;
-  
-  private static final Random R = new Random();
   
   // For InterDataNodeProtocol
   public Server ipcServer;
@@ -844,7 +841,7 @@ public class DataNode extends Configured
     void scheduleBlockReport(long delay) {
       if (delay > 0) { // send BR after random delay
         lastBlockReport = System.currentTimeMillis()
-        - ( blockReportInterval - R.nextInt((int)(delay)));
+        - ( blockReportInterval - DFSUtil.getRandom().nextInt((int)(delay)));
       } else { // send at next heartbeat
         lastBlockReport = lastHeartbeat - blockReportInterval;
       }
@@ -965,7 +962,7 @@ public class DataNode extends Configured
         // If we have sent the first block report, then wait a random
         // time before we start the periodic block reports.
         if (resetBlockReportTime) {
-          lastBlockReport = startTime - R.nextInt((int)(blockReportInterval));
+          lastBlockReport = startTime - DFSUtil.getRandom().nextInt((int)(blockReportInterval));
           resetBlockReportTime = false;
         } else {
           /* say the last block report was at 8:20:14. The current report

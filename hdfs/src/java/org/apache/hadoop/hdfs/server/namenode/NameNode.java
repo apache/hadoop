@@ -90,7 +90,6 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Groups;
@@ -111,35 +110,38 @@ import org.apache.hadoop.util.StringUtils;
  * NameNode serves as both directory namespace manager and
  * "inode table" for the Hadoop DFS.  There is a single NameNode
  * running in any DFS deployment.  (Well, except when there
- * is a second backup/failover NameNode.)
+ * is a second backup/failover NameNode, or when using federated NameNodes.)
  *
  * The NameNode controls two critical tables:
  *   1)  filename->blocksequence (namespace)
  *   2)  block->machinelist ("inodes")
  *
  * The first table is stored on disk and is very precious.
- * The second table is rebuilt every time the NameNode comes
- * up.
+ * The second table is rebuilt every time the NameNode comes up.
  *
  * 'NameNode' refers to both this class as well as the 'NameNode server'.
  * The 'FSNamesystem' class actually performs most of the filesystem
  * management.  The majority of the 'NameNode' class itself is concerned
- * with exposing the IPC interface and the http server to the outside world,
+ * with exposing the IPC interface and the HTTP server to the outside world,
  * plus some configuration management.
  *
- * NameNode implements the ClientProtocol interface, which allows
- * clients to ask for DFS services.  ClientProtocol is not
- * designed for direct use by authors of DFS client code.  End-users
- * should instead use the org.apache.nutch.hadoop.fs.FileSystem class.
+ * NameNode implements the
+ * {@link org.apache.hadoop.hdfs.protocol.ClientProtocol} interface, which
+ * allows clients to ask for DFS services.
+ * {@link org.apache.hadoop.hdfs.protocol.ClientProtocol} is not designed for
+ * direct use by authors of DFS client code.  End-users should instead use the
+ * {@link org.apache.hadoop.fs.FileSystem} class.
  *
- * NameNode also implements the DatanodeProtocol interface, used by
- * DataNode programs that actually store DFS data blocks.  These
+ * NameNode also implements the
+ * {@link org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol} interface,
+ * used by DataNodes that actually store DFS data blocks.  These
  * methods are invoked repeatedly and automatically by all the
  * DataNodes in a DFS deployment.
  *
- * NameNode also implements the NamenodeProtocol interface, used by
- * secondary namenodes or rebalancing processes to get partial namenode's
- * state, for example partial blocksMap etc.
+ * NameNode also implements the
+ * {@link org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol} interface,
+ * used by secondary namenodes or rebalancing processes to get partial
+ * NameNode state, for example partial blocksMap etc.
  **********************************************************/
 @InterfaceAudience.Private
 public class NameNode implements NamenodeProtocols, FSConstants {
@@ -479,7 +481,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
    * Activate name-node servers and threads.
    */
   void activate(Configuration conf) throws IOException {
-    if ((isRole(NamenodeRole.ACTIVE))
+    if ((isRole(NamenodeRole.NAMENODE))
         && (UserGroupInformation.isSecurityEnabled())) {
       namesystem.activateSecretManager();
     }
@@ -645,7 +647,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
    * @throws IOException
    */
   public NameNode(Configuration conf) throws IOException {
-    this(conf, NamenodeRole.ACTIVE);
+    this(conf, NamenodeRole.NAMENODE);
   }
 
   protected NameNode(Configuration conf, NamenodeRole role) 
@@ -752,7 +754,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   public NamenodeCommand startCheckpoint(NamenodeRegistration registration)
   throws IOException {
     verifyRequest(registration);
-    if(!isRole(NamenodeRole.ACTIVE))
+    if(!isRole(NamenodeRole.NAMENODE))
       throw new IOException("Only an ACTIVE node can invoke startCheckpoint.");
     return namesystem.startCheckpoint(registration, setRegistration());
   }
@@ -761,7 +763,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   public void endCheckpoint(NamenodeRegistration registration,
                             CheckpointSignature sig) throws IOException {
     verifyRequest(registration);
-    if(!isRole(NamenodeRole.ACTIVE))
+    if(!isRole(NamenodeRole.NAMENODE))
       throw new IOException("Only an ACTIVE node can invoke endCheckpoint.");
     namesystem.endCheckpoint(registration, sig);
   }
@@ -1389,10 +1391,6 @@ public class NameNode implements NamenodeProtocols, FSConstants {
    */
   public InetSocketAddress getHttpAddress() {
     return httpAddress;
-  }
-
-  NetworkTopology getNetworkTopology() {
-    return this.namesystem.clusterMap;
   }
 
   /**

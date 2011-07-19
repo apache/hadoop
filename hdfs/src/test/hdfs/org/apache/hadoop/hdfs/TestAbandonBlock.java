@@ -71,7 +71,7 @@ public class TestAbandonBlock {
     fout.hflush();
 
     // Now abandon the last block
-    DFSClient dfsclient = ((DistributedFileSystem)fs).getClient();
+    DFSClient dfsclient = DFSClientAdapter.getDFSClient((DistributedFileSystem)fs);
     LocatedBlocks blocks = dfsclient.getNamenode().getBlockLocations(src, 0, 1);
     LocatedBlock b = blocks.getLastLocatedBlock();
     dfsclient.getNamenode().abandonBlock(b.getBlock(), src, dfsclient.clientName);

@@ -30,12 +30,12 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.znerd.xmlenc.XMLOutputter;
@@ -82,7 +82,7 @@ abstract class DfsServlet extends HttpServlet {
     InetSocketAddress nnAddr = (InetSocketAddress)context.getAttribute("name.node.address");
     Configuration conf = new HdfsConfiguration(
         (Configuration)context.getAttribute(JspHelper.CURRENT_CONF));
-    return DFSClient.createNamenode(nnAddr, conf);
+    return DFSUtil.createNamenode(nnAddr, conf);
   }
 
   /** Create a URI for redirecting request to a datanode */

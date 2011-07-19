@@ -22,18 +22,21 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportIterator;
@@ -47,6 +50,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.net.Node;
 
 /**
  * Keeps information related to the blocks stored in the Hadoop cluster.
@@ -55,8 +59,9 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
  */
 @InterfaceAudience.Private
 public class BlockManager {
-  // Default initial capacity and load factor of map
-  public static final int DEFAULT_INITIAL_MAP_CAPACITY = 16;
+  static final Log LOG = LogFactory.getLog(BlockManager.class);
+
+  /** Default load factor of map */
   public static final float DEFAULT_MAP_LOAD_FACTOR = 0.75f;
 
   private final FSNamesystem namesystem;
@@ -104,7 +109,7 @@ public class BlockManager {
   //
   // Store blocks-->datanodedescriptor(s) map of corrupt replicas
   //
-  CorruptReplicasMap corruptReplicas = new CorruptReplicasMap();
+  private final CorruptReplicasMap corruptReplicas = new CorruptReplicasMap();
 
   //
   // Keeps a Collection for every named machine containing
@@ -112,7 +117,7 @@ public class BlockManager {
   // on the machine in question.
   // Mapping: StorageID -> ArrayList<Block>
   //
-  Map<String, Collection<Block>> recentInvalidateSets =
+  private final Map<String, Collection<Block>> recentInvalidateSets =
     new TreeMap<String, Collection<Block>>();
 
   //
@@ -128,52 +133,41 @@ public class BlockManager {
   // Store set of Blocks that need to be replicated 1 or more times.
   // We also store pending replication-orders.
   //
-  public UnderReplicatedBlocks neededReplications = new UnderReplicatedBlocks();
-  private PendingReplicationBlocks pendingReplications;
+  public final UnderReplicatedBlocks neededReplications = new UnderReplicatedBlocks();
+  private final PendingReplicationBlocks pendingReplications;
 
   //  The maximum number of replicas allowed for a block
-  public int maxReplication;
+  public final int maxReplication;
   //  How many outgoing replication streams a given node should have at one time
   public int maxReplicationStreams;
   // Minimum copies needed or else write is disallowed
-  public int minReplication;
+  public final int minReplication;
   // Default number of replicas
-  public int defaultReplication;
+  public final int defaultReplication;
   // How many entries are returned by getCorruptInodes()
-  int maxCorruptFilesReturned;
+  final int maxCorruptFilesReturned;
   
   // variable to enable check for enough racks 
-  boolean shouldCheckForEnoughRacks = true;
+  final boolean shouldCheckForEnoughRacks;
 
   /**
    * Last block index used for replication work.
    */
   private int replIndex = 0;
-  Random r = new Random();
 
   // for block replicas placement
-  public BlockPlacementPolicy replicator;
+  public final BlockPlacementPolicy replicator;
 
   public BlockManager(FSNamesystem fsn, Configuration conf) throws IOException {
-    this(fsn, conf, DEFAULT_INITIAL_MAP_CAPACITY);
-  }
-  
-  BlockManager(FSNamesystem fsn, Configuration conf, int capacity)
-      throws IOException {
     namesystem = fsn;
+    datanodeManager = new DatanodeManager(fsn);
+
+    blocksMap = new BlocksMap(DEFAULT_MAP_LOAD_FACTOR);
+    replicator = BlockPlacementPolicy.getInstance(
+        conf, namesystem, datanodeManager.getNetworkTopology());
     pendingReplications = new PendingReplicationBlocks(conf.getInt(
       DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
       DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_DEFAULT) * 1000L);
-    setConfigurationParameters(conf);
-    blocksMap = new BlocksMap(capacity, DEFAULT_MAP_LOAD_FACTOR);
-    datanodeManager = new DatanodeManager(fsn);
-  }
-
-  void setConfigurationParameters(Configuration conf) throws IOException {
-    this.replicator = BlockPlacementPolicy.getInstance(
-                         conf,
-                         namesystem,
-                         namesystem.clusterMap);
 
     this.maxCorruptFilesReturned = conf.getInt(
       DFSConfigKeys.DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED_KEY,
@@ -541,6 +535,22 @@ public class BlockManager {
                             minReplication);
   }
 
+  /** Remove a datanode. */
+  public void removeDatanode(final DatanodeDescriptor node) {
+    final Iterator<? extends Block> it = node.getBlockIterator();
+    while(it.hasNext()) {
+      removeStoredBlock(it.next(), node);
+    }
+
+    node.resetBlocks();
+    removeFromInvalidates(node.getStorageID());
+    datanodeManager.getNetworkTopology().remove(node);
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("remove datanode " + node.getName());
+    }
+  }
+  
   void removeFromInvalidates(String storageID, Block block) {
     Collection<Block> v = recentInvalidateSets.get(storageID);
     if (v != null && v.remove(block)) {
@@ -741,12 +751,12 @@ public class BlockManager {
     int remainingNodes = numOfNodes - nodesToProcess;
     if (nodesToProcess < remainingNodes) {
       for(int i=0; i<nodesToProcess; i++) {
-        int keyIndex = r.nextInt(numOfNodes-i)+i;
+        int keyIndex = DFSUtil.getRandom().nextInt(numOfNodes-i)+i;
         Collections.swap(keyArray, keyIndex, i); // swap to front
       }
     } else {
       for(int i=0; i<remainingNodes; i++) {
-        int keyIndex = r.nextInt(numOfNodes-i);
+        int keyIndex = DFSUtil.getRandom().nextInt(numOfNodes-i);
         Collections.swap(keyArray, keyIndex, numOfNodes-i-1); // swap to end
       }
     }
@@ -1002,6 +1012,29 @@ public class BlockManager {
   }
 
   /**
+   * Choose target datanodes according to the replication policy.
+   * @throws IOException if the number of targets < minimum replication.
+   * @see BlockPlacementPolicy#chooseTarget(String, int, DatanodeDescriptor, HashMap, long)
+   */
+  public DatanodeDescriptor[] chooseTarget(final String src,
+      final int numOfReplicas, final DatanodeDescriptor client,
+      final HashMap<Node, Node> excludedNodes,
+      final long blocksize) throws IOException {
+    // choose targets for the new block to be allocated.
+    final DatanodeDescriptor targets[] = replicator.chooseTarget(
+        src, numOfReplicas, client, excludedNodes, blocksize);
+    if (targets.length < minReplication) {
+      throw new IOException("File " + src + " could only be replicated to " +
+                            targets.length + " nodes, instead of " +
+                            minReplication + ". There are "
+                            + getDatanodeManager().getNetworkTopology().getNumOfLeaves()
+                            + " datanode(s) running but "+excludedNodes.size() +
+                            " node(s) are excluded in this operation.");
+    }
+    return targets;
+  }
+
+  /**
    * Parse the data-nodes the block belongs to and choose one,
    * which will be the replication source.
    *
@@ -1062,7 +1095,7 @@ public class BlockManager {
       // switch to a different node randomly
       // this to prevent from deterministically selecting the same node even
       // if the node failed to replicate the block on previous iterations
-      if(r.nextBoolean())
+      if(DFSUtil.getRandom().nextBoolean())
         srcNode = node;
     }
     if(numReplicas != null)
