@@ -780,6 +780,7 @@ public class Client {
         } else if (state == Status.ERROR.state) {
           call.setException(new RemoteException(WritableUtils.readString(in),
                                                 WritableUtils.readString(in)));
+          calls.remove(id);
         } else if (state == Status.FATAL.state) {
           // Close the connection
           markClosed(new RemoteException(WritableUtils.readString(in), 
