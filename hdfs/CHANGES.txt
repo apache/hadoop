@@ -575,6 +575,10 @@ Trunk (unreleased changes)
     HDFS-2141. Remove NameNode roles Active and Standby (they become
     states of the namenode). (suresh)
 
+    HDFS-2161. Move createNamenode(..), createClientDatanodeProtocolProxy(..)
+    and Random object creation to DFSUtil; move DFSClient.stringifyToken(..)
+    to DelegationTokenIdentifier.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

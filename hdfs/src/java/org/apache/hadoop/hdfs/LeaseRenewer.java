@@ -155,7 +155,7 @@ class LeaseRenewer {
     }
   }
 
-  private final String clienNamePostfix = DFSClient.r.nextInt()
+  private final String clienNamePostfix = DFSUtil.getRandom().nextInt()
       + "_" + Thread.currentThread().getId();
 
   /** The time in milliseconds that the map became empty. */

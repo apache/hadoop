@@ -36,9 +36,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
@@ -50,24 +49,25 @@ import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.DU;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
+import org.apache.hadoop.hdfs.server.common.GenerationStamp;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
-import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.hdfs.server.common.GenerationStamp;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
-import org.apache.hadoop.io.IOUtils;
 
 /**************************************************
  * FSDataset manages a set of data blocks.  Each block
@@ -136,7 +136,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
             
       if (lastChildIdx < 0 && resetIdx) {
         //reset so that all children will be checked
-        lastChildIdx = random.nextInt(children.length);              
+        lastChildIdx = DFSUtil.getRandom().nextInt(children.length);              
       }
             
       if (lastChildIdx >= 0 && children != null) {
@@ -164,7 +164,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       }
             
       //now pick a child randomly for creating a new set of subdirs.
-      lastChildIdx = random.nextInt(children.length);
+      lastChildIdx = DFSUtil.getRandom().nextInt(children.length);
       return children[ lastChildIdx ].addBlock(b, src, true, false); 
     }
 
@@ -1122,7 +1122,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   final FSVolumeSet volumes;
   private final int maxBlocksPerDir;
   final ReplicasMap volumeMap;
-  static final Random random = new Random();
   final FSDatasetAsyncDiskService asyncDiskService;
   private final int validVolsRequired;
 
@@ -2178,7 +2177,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   }
 
   private ObjectName mbeanName;
-  private Random rand = new Random();
   
   /**
    * Register the FSDataset MBean using the name
@@ -2191,7 +2189,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     StandardMBean bean;
     String storageName;
     if (storageId == null || storageId.equals("")) {// Temp fix for the uninitialized storage
-      storageName = "UndefinedStorageId" + rand.nextInt();
+      storageName = "UndefinedStorageId" + DFSUtil.getRandom().nextInt();
     } else {
       storageName = storageId;
     }

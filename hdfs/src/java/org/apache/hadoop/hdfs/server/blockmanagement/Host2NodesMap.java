@@ -18,12 +18,12 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.HashMap;
-import java.util.Random;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.DFSUtil;
 
 /** A map from host names to datanode descriptors. */
 @InterfaceAudience.Private
@@ -31,9 +31,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 class Host2NodesMap {
   private HashMap<String, DatanodeDescriptor[]> map
     = new HashMap<String, DatanodeDescriptor[]>();
-  private Random r = new Random();
   private ReadWriteLock hostmapLock = new ReentrantReadWriteLock();
-                      
+
   /** Check if node is already in the map. */
   boolean contains(DatanodeDescriptor node) {
     if (node==null) {
@@ -151,7 +150,7 @@ class Host2NodesMap {
         return nodes[0];
       }
       // more than one node
-      return nodes[r.nextInt(nodes.length)];
+      return nodes[DFSUtil.getRandom().nextInt(nodes.length)];
     } finally {
       hostmapLock.readLock().unlock();
     }

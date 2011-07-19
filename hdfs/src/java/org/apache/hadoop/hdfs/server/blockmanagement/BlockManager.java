@@ -28,7 +28,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -37,6 +36,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportIterator;
@@ -154,7 +154,6 @@ public class BlockManager {
    * Last block index used for replication work.
    */
   private int replIndex = 0;
-  Random r = new Random();
 
   // for block replicas placement
   public final BlockPlacementPolicy replicator;
@@ -752,12 +751,12 @@ public class BlockManager {
     int remainingNodes = numOfNodes - nodesToProcess;
     if (nodesToProcess < remainingNodes) {
       for(int i=0; i<nodesToProcess; i++) {
-        int keyIndex = r.nextInt(numOfNodes-i)+i;
+        int keyIndex = DFSUtil.getRandom().nextInt(numOfNodes-i)+i;
         Collections.swap(keyArray, keyIndex, i); // swap to front
       }
     } else {
       for(int i=0; i<remainingNodes; i++) {
-        int keyIndex = r.nextInt(numOfNodes-i);
+        int keyIndex = DFSUtil.getRandom().nextInt(numOfNodes-i);
         Collections.swap(keyArray, keyIndex, numOfNodes-i-1); // swap to end
       }
     }
@@ -1096,7 +1095,7 @@ public class BlockManager {
       // switch to a different node randomly
       // this to prevent from deterministically selecting the same node even
       // if the node failed to replicate the block on previous iterations
-      if(r.nextBoolean())
+      if(DFSUtil.getRandom().nextBoolean())
         srcNode = node;
     }
     if(numReplicas != null)

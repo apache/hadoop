@@ -186,7 +186,6 @@ public class Balancer {
   private final NameNodeConnector nnc;
   private final BalancingPolicy policy;
   private final double threshold;
-  private final static Random rnd = new Random();
   
   // all data node lists
   private Collection<Source> overUtilizedDatanodes
@@ -780,7 +779,7 @@ public class Balancer {
   /* Shuffle datanode array */
   static private void shuffleArray(DatanodeInfo[] datanodes) {
     for (int i=datanodes.length; i>1; i--) {
-      int randomIndex = rnd.nextInt(i);
+      int randomIndex = DFSUtil.getRandom().nextInt(i);
       DatanodeInfo tmp = datanodes[randomIndex];
       datanodes[randomIndex] = datanodes[i-1];
       datanodes[i-1] = tmp;

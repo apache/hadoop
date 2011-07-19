@@ -19,13 +19,14 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
+import java.io.Closeable;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.DataInputStream;
-import java.io.FileInputStream;
-import java.io.Closeable;
+import java.io.RandomAccessFile;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
@@ -34,29 +35,26 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 import java.util.Properties;
 import java.util.UUID;
-import java.io.RandomAccessFile;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.UpgradeManager;
 import org.apache.hadoop.hdfs.server.common.Util;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
-import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
-
 import org.apache.hadoop.hdfs.server.namenode.JournalStream.JournalType;
-import org.apache.hadoop.conf.Configuration;
-
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.net.DNS;
 
@@ -620,11 +618,9 @@ public class NNStorage extends Storage implements Closeable {
    * @return new namespaceID
    */
   private int newNamespaceID() {
-    Random r = new Random();
-    r.setSeed(now());
     int newID = 0;
     while(newID == 0)
-      newID = r.nextInt(0x7FFFFFFF);  // use 31 bits only
+      newID = DFSUtil.getRandom().nextInt(0x7FFFFFFF);  // use 31 bits only
     return newID;
   }
 
@@ -1040,9 +1036,8 @@ public class NNStorage extends Storage implements Closeable {
     try {
       rand = SecureRandom.getInstance("SHA1PRNG").nextInt(Integer.MAX_VALUE);
     } catch (NoSuchAlgorithmException e) {
-      final Random R = new Random();
       LOG.warn("Could not use SecureRandom");
-      rand = R.nextInt(Integer.MAX_VALUE);
+      rand = DFSUtil.getRandom().nextInt(Integer.MAX_VALUE);
     }
     String bpid = "BP-" + rand + "-"+ ip + "-" + System.currentTimeMillis();
     return bpid;

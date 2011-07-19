@@ -32,9 +32,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -99,7 +99,7 @@ public class TestBalancer extends TestCase {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numNodes).build();
     try {
       cluster.waitActive();
-      client = DFSClient.createNamenode(conf);
+      client = DFSUtil.createNamenode(conf);
 
       short replicationFactor = (short)(numNodes-1);
       long fileLen = size/replicationFactor;
@@ -193,7 +193,7 @@ public class TestBalancer extends TestCase {
                                               .simulatedCapacities(capacities)
                                               .build();
     cluster.waitActive();
-    client = DFSClient.createNamenode(conf);
+    client = DFSUtil.createNamenode(conf);
 
     for(int i = 0; i < blocksDN.length; i++)
       cluster.injectBlocks(i, Arrays.asList(blocksDN[i]));
@@ -305,7 +305,7 @@ public class TestBalancer extends TestCase {
                                 .build();
     try {
       cluster.waitActive();
-      client = DFSClient.createNamenode(conf);
+      client = DFSUtil.createNamenode(conf);
 
       long totalCapacity = sum(capacities);
       
@@ -396,7 +396,7 @@ public class TestBalancer extends TestCase {
                                 .build();
     try {
       cluster.waitActive();
-      client = DFSClient.createNamenode(conf);
+      client = DFSUtil.createNamenode(conf);
 
       long totalCapacity = sum(capacities);
 

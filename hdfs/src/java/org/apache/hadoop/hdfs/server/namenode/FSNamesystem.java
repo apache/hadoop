@@ -45,7 +45,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
-import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
@@ -267,8 +266,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    */
   public final NavigableMap<String, DatanodeDescriptor> datanodeMap = 
     new TreeMap<String, DatanodeDescriptor>();
-
-  Random r = new Random();
 
   /**
    * Stores a set of DatanodeDescriptor objects.
@@ -737,7 +734,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
         return new BlocksWithLocations(new BlockWithLocations[0]);
       }
       Iterator<BlockInfo> iter = node.getBlockIterator();
-      int startBlock = r.nextInt(numBlocks); // starting from a random block
+      int startBlock = DFSUtil.getRandom().nextInt(numBlocks); // starting from a random block
       // skip blocks
       for(int i=0; i<startBlock; i++) {
         iter.next();
@@ -1976,8 +1973,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       blockManager.checkReplication(pendingBlocks[i], numExpectedReplicas);
     }
   }
-
-  static Random randBlockId = new Random();
     
   /**
    * Allocate a block at the given pending filename
@@ -1991,9 +1986,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   private Block allocateBlock(String src, INode[] inodes,
       DatanodeDescriptor targets[]) throws QuotaExceededException {
     assert hasWriteLock();
-    Block b = new Block(FSNamesystem.randBlockId.nextLong(), 0, 0); 
+    Block b = new Block(DFSUtil.getRandom().nextLong(), 0, 0); 
     while(isValidBlock(b)) {
-      b.setBlockId(FSNamesystem.randBlockId.nextLong());
+      b.setBlockId(DFSUtil.getRandom().nextLong());
     }
     b.setGenerationStamp(getGenerationStamp());
     b = dir.addBlock(src, inodes, b, targets);
@@ -2963,7 +2958,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   private String newStorageID() {
     String newID = null;
     while(newID == null) {
-      newID = "DS" + Integer.toString(r.nextInt());
+      newID = "DS" + Integer.toString(DFSUtil.getRandom().nextInt());
       if (datanodeMap.get(newID) != null)
         newID = null;
     }

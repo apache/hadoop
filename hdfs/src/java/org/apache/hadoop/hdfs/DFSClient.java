@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
@@ -31,8 +30,6 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.TimeUnit;
 
 import javax.net.SocketFactory;
 
@@ -56,12 +53,9 @@ import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
-import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -89,9 +83,6 @@ import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.retry.RetryPolicies;
-import org.apache.hadoop.io.retry.RetryPolicy;
-import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -124,7 +115,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   volatile boolean clientRunning = true;
   private volatile FsServerDefaults serverDefaults;
   private volatile long serverDefaultsLastUpdate;
-  static Random r = new Random();
   final String clientName;
   Configuration conf;
   SocketFactory socketFactory;
@@ -216,79 +206,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    */
   private final Map<String, DFSOutputStream> filesBeingWritten
       = new HashMap<String, DFSOutputStream>();
-
-  /** Create a {@link NameNode} proxy */
-  public static ClientProtocol createNamenode(Configuration conf) throws IOException {
-    return createNamenode(NameNode.getAddress(conf), conf);
-  }
-
-  public static ClientProtocol createNamenode( InetSocketAddress nameNodeAddr,
-      Configuration conf) throws IOException {
-    return createNamenode(createRPCNamenode(nameNodeAddr, conf,
-        UserGroupInformation.getCurrentUser()));
-    
-  }
-
-  private static ClientProtocol createRPCNamenode(InetSocketAddress nameNodeAddr,
-      Configuration conf, UserGroupInformation ugi) 
-    throws IOException {
-    return (ClientProtocol)RPC.getProxy(ClientProtocol.class,
-        ClientProtocol.versionID, nameNodeAddr, ugi, conf,
-        NetUtils.getSocketFactory(conf, ClientProtocol.class));
-  }
-
-  private static ClientProtocol createNamenode(ClientProtocol rpcNamenode)
-    throws IOException {
-    RetryPolicy createPolicy = RetryPolicies.retryUpToMaximumCountWithFixedSleep(
-        5, LEASE_SOFTLIMIT_PERIOD, TimeUnit.MILLISECONDS);
-    
-    Map<Class<? extends Exception>,RetryPolicy> remoteExceptionToPolicyMap =
-      new HashMap<Class<? extends Exception>, RetryPolicy>();
-    remoteExceptionToPolicyMap.put(AlreadyBeingCreatedException.class, createPolicy);
-
-    Map<Class<? extends Exception>,RetryPolicy> exceptionToPolicyMap =
-      new HashMap<Class<? extends Exception>, RetryPolicy>();
-    exceptionToPolicyMap.put(RemoteException.class, 
-        RetryPolicies.retryByRemoteException(
-            RetryPolicies.TRY_ONCE_THEN_FAIL, remoteExceptionToPolicyMap));
-    RetryPolicy methodPolicy = RetryPolicies.retryByException(
-        RetryPolicies.TRY_ONCE_THEN_FAIL, exceptionToPolicyMap);
-    Map<String,RetryPolicy> methodNameToPolicyMap = new HashMap<String,RetryPolicy>();
-    
-    methodNameToPolicyMap.put("create", methodPolicy);
-
-    return (ClientProtocol) RetryProxy.create(ClientProtocol.class,
-        rpcNamenode, methodNameToPolicyMap);
-  }
-
-  static ClientDatanodeProtocol createClientDatanodeProtocolProxy(
-      DatanodeID datanodeid, Configuration conf, int socketTimeout,
-      LocatedBlock locatedBlock)
-      throws IOException {
-    InetSocketAddress addr = NetUtils.createSocketAddr(
-      datanodeid.getHost() + ":" + datanodeid.getIpcPort());
-    if (ClientDatanodeProtocol.LOG.isDebugEnabled()) {
-      ClientDatanodeProtocol.LOG.debug("ClientDatanodeProtocol addr=" + addr);
-    }
-    
-    // Since we're creating a new UserGroupInformation here, we know that no
-    // future RPC proxies will be able to re-use the same connection. And
-    // usages of this proxy tend to be one-off calls.
-    //
-    // This is a temporary fix: callers should really achieve this by using
-    // RPC.stopProxy() on the resulting object, but this is currently not
-    // working in trunk. See the discussion on HDFS-1965.
-    Configuration confWithNoIpcIdle = new Configuration(conf);
-    confWithNoIpcIdle.setInt(CommonConfigurationKeysPublic
-        .IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY, 0);
-
-    UserGroupInformation ticket = UserGroupInformation
-        .createRemoteUser(locatedBlock.getBlock().getLocalBlock().toString());
-    ticket.addToken(locatedBlock.getBlockToken());
-    return (ClientDatanodeProtocol)RPC.getProxy(ClientDatanodeProtocol.class,
-        ClientDatanodeProtocol.versionID, addr, ticket, confWithNoIpcIdle,
-        NetUtils.getDefaultSocketFactory(conf), socketTimeout);
-  }
         
   /**
    * Same as this(NameNode.getAddress(conf), conf);
@@ -342,8 +259,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     this.clientName = leaserenewer.getClientName(dfsClientConf.taskId);
     this.socketCache = new SocketCache(dfsClientConf.socketCacheCapacity);
     if (nameNodeAddr != null && rpcNamenode == null) {
-      this.rpcNamenode = createRPCNamenode(nameNodeAddr, conf, ugi);
-      this.namenode = createNamenode(this.rpcNamenode);
+      this.rpcNamenode = DFSUtil.createRPCNamenode(nameNodeAddr, conf, ugi);
+      this.namenode = DFSUtil.createNamenode(this.rpcNamenode);
     } else if (nameNodeAddr == null && rpcNamenode != null) {
       //This case is used for testing.
       this.namenode = this.rpcNamenode = rpcNamenode;
@@ -505,27 +422,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     }
     return serverDefaults;
   }
-
-  /**
-   *  A test method for printing out tokens 
-   *  @param token
-   *  @return Stringify version of the token
-   */
-  public static String stringifyToken(Token<DelegationTokenIdentifier> token)
-  throws IOException {
-    DelegationTokenIdentifier ident = new DelegationTokenIdentifier();
-    ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
-    DataInputStream in = new DataInputStream(buf);  
-    ident.readFields(in);
-    String str = ident.getKind() + " token " + ident.getSequenceNumber() + 
-    " for " + ident.getUser().getShortUserName();
-    if (token.getService().getLength() > 0) {
-      return (str + " on " + token.getService());
-    } else {
-      return str;
-    }
-  }
-
   
   /**
    * @see ClientProtocol#getDelegationToken(Text)
@@ -534,7 +430,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       throws IOException {
     Token<DelegationTokenIdentifier> result =
       namenode.getDelegationToken(renewer);
-    LOG.info("Created " + stringifyToken(result));
+    LOG.info("Created " + DelegationTokenIdentifier.stringifyToken(result));
     return result;
   }
 
@@ -543,7 +439,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    */
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
-    LOG.info("Renewing " + stringifyToken(token));
+    LOG.info("Renewing " + DelegationTokenIdentifier.stringifyToken(token));
     try {
       return namenode.renewDelegationToken(token);
     } catch (RemoteException re) {
@@ -557,7 +453,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    */
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
-    LOG.info("Cancelling " + stringifyToken(token));
+    LOG.info("Cancelling " + DelegationTokenIdentifier.stringifyToken(token));
     try {
       namenode.cancelDelegationToken(token);
     } catch (RemoteException re) {

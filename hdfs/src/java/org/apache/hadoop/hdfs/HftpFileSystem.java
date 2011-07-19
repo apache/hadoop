@@ -31,7 +31,6 @@ import java.security.PrivilegedExceptionAction;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Random;
 import java.util.TimeZone;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
@@ -49,7 +48,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -88,7 +86,6 @@ public class HftpFileSystem extends FileSystem {
   private URI hdfsURI;
   protected InetSocketAddress nnAddr;
   protected UserGroupInformation ugi; 
-  protected final Random ran = new Random();
 
   public static final String HFTP_TIMEZONE = "UTC";
   public static final String HFTP_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";

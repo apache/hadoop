@@ -31,7 +31,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Random;
 import java.util.TreeSet;
 
 import javax.servlet.ServletContext;
@@ -71,8 +70,6 @@ public class JspHelper {
   static final String SET_DELEGATION = "&" + DELEGATION_PARAMETER_NAME +
                                               "=";
   private static final Log LOG = LogFactory.getLog(JspHelper.class);
-
-  static final Random rand = new Random();
 
   /** Private constructor for preventing creating JspHelper object. */
   private JspHelper() {} 
@@ -152,7 +149,7 @@ public class JspHelper {
       if (chosenNode == null) {
         do {
           if (doRandom) {
-            index = rand.nextInt(nodes.length);
+            index = DFSUtil.getRandom().nextInt(nodes.length);
           } else {
             index++;
           }
