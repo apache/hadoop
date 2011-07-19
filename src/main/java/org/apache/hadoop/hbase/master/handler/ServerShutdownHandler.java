@@ -93,6 +93,43 @@ public class ServerShutdownHandler extends EventHandler {
   }
   
   /**
+   * Failed many times, shutdown processing
+   * @throws IOException
+   */
+  private void verifyAndAssignRootWithRetries() throws IOException {
+    int iTimes = this.server.getConfiguration().getInt(
+        "hbase.catalog.verification.retries", 10);
+
+    long waitTime = this.server.getConfiguration().getLong(
+        "hbase.catalog.verification.timeout", 1000);
+
+    int iFlag = 0;
+    while (true) {
+      try {
+        verifyAndAssignRoot();
+        break;
+      } catch (KeeperException e) {
+        this.server.abort("In server shutdown processing, assigning root", e);
+        throw new IOException("Aborting", e);
+      } catch (Exception e) {
+        if (iFlag >= iTimes) {
+          this.server.abort("verifyAndAssignRoot failed after" + iTimes
+              + " times retries, aborting", e);
+          throw new IOException("Aborting", e);
+        }
+        try {
+          Thread.sleep(waitTime);
+        } catch (InterruptedException e1) {
+          LOG.warn("Interrupted when is the thread sleep", e1);
+          Thread.currentThread().interrupt();
+          throw new IOException("Interrupted", e1);
+        }
+        iFlag++;
+      }
+    }
+  }
+  
+  /**
    * @return True if the server we are processing was carrying <code>-ROOT-</code>
    */
   boolean isCarryingRoot() {
@@ -131,16 +168,7 @@ public class ServerShutdownHandler extends EventHandler {
 
     // Assign root and meta if we were carrying them.
     if (isCarryingRoot()) { // -ROOT-
-      try {
-        verifyAndAssignRoot();
-      } catch (KeeperException e) {
-        this.server.abort("In server shutdown processing, assigning root", e);
-        throw new IOException("Aborting", e);
-      } catch (InterruptedException e1) {
-        LOG.warn("Interrupted while verifying root region's location", e1);
-        Thread.currentThread().interrupt();
-        throw new IOException(e1);  
-      }
+      verifyAndAssignRootWithRetries();
     }
 
     // Carrying meta?
