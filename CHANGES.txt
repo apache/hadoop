@@ -163,6 +163,7 @@ Release 0.91.0 - Unreleased
    HBASE-4087  HBaseAdmin should perform validation of connection it holds
    HBASE-4052  Enabling a table after master switch does not allow table scan,
                throwing NotServingRegionException (ramkrishna via Ted Yu)
+   HBASE-4112  Creating table may throw NullPointerException (Jinchao via Ted Yu)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

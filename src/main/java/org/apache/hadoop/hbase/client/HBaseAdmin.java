@@ -360,9 +360,13 @@ public class HBaseAdmin implements Abortable, Closeable {
       MetaScannerVisitor visitor = new MetaScannerVisitor() {
         @Override
         public boolean processRow(Result rowResult) throws IOException {
-          HRegionInfo info = Writables.getHRegionInfo(
+          HRegionInfo info = Writables.getHRegionInfoOrNull(
               rowResult.getValue(HConstants.CATALOG_FAMILY,
                   HConstants.REGIONINFO_QUALIFIER));
+          //If regioninfo is null, skip this row
+          if (null == info) {
+            return true;
+          }
           if (!(Bytes.equals(info.getTableName(), desc.getName()))) {
             return false;
           }
