@@ -421,6 +421,8 @@ Release 0.90.4 - Unreleased
    HBASE-3872  Hole in split transaction rollback; edits to .META. need
                to be rolled back even if it seems like they didn't make it
    HBASE-4101  Regionserver Deadlock (ramkrishna.s.vasudevan)
+   HBASE-4115  HBase shell assign and unassign unusable if region name
+               includes binary-encoded data (Ryan Brush)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the

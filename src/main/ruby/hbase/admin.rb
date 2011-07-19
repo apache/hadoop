@@ -219,13 +219,13 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Assign a region
     def assign(region_name, force)
-      @admin.assign(org.apache.hadoop.hbase.util.Bytes.toBytes(region_name), java.lang.Boolean::valueOf(force))
+      @admin.assign(region_name.to_java_bytes, java.lang.Boolean::valueOf(force))
     end
 
     #----------------------------------------------------------------------------------------------
     # Unassign a region
     def unassign(region_name, force)
-      @admin.unassign(org.apache.hadoop.hbase.util.Bytes.toBytes(region_name), java.lang.Boolean::valueOf(force))
+      @admin.unassign(region_name.to_java_bytes, java.lang.Boolean::valueOf(force))
     end
 
     #----------------------------------------------------------------------------------------------
