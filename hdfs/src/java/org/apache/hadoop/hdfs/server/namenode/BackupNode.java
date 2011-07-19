@@ -327,7 +327,7 @@ public class BackupNode extends NameNode {
     String msg = null;
     if(nnReg == null) // consider as a rejection
       msg = "Registration rejected by " + nnRpcAddress;
-    else if(!nnReg.isRole(NamenodeRole.ACTIVE)) {
+    else if(!nnReg.isRole(NamenodeRole.NAMENODE)) {
       msg = "Name-node " + nnRpcAddress + " is not active";
     }
     if(msg != null) {

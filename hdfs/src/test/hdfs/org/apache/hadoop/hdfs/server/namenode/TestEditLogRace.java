@@ -320,7 +320,7 @@ public class TestEditLogRace {
   @Test
   public void testSaveImageWhileSyncInProgress() throws Exception {
     Configuration conf = getConf();
-    NameNode.initMetrics(conf, NamenodeRole.ACTIVE);
+    NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
     final FSNamesystem namesystem = new FSNamesystem(conf);
 
@@ -410,7 +410,7 @@ public class TestEditLogRace {
   @Test
   public void testSaveRightBeforeSync() throws Exception {
     Configuration conf = getConf();
-    NameNode.initMetrics(conf, NamenodeRole.ACTIVE);
+    NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
     final FSNamesystem namesystem = new FSNamesystem(conf);
 

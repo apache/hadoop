@@ -480,7 +480,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
    * Activate name-node servers and threads.
    */
   void activate(Configuration conf) throws IOException {
-    if ((isRole(NamenodeRole.ACTIVE))
+    if ((isRole(NamenodeRole.NAMENODE))
         && (UserGroupInformation.isSecurityEnabled())) {
       namesystem.activateSecretManager();
     }
@@ -646,7 +646,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
    * @throws IOException
    */
   public NameNode(Configuration conf) throws IOException {
-    this(conf, NamenodeRole.ACTIVE);
+    this(conf, NamenodeRole.NAMENODE);
   }
 
   protected NameNode(Configuration conf, NamenodeRole role) 
@@ -752,7 +752,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   public NamenodeCommand startCheckpoint(NamenodeRegistration registration)
   throws IOException {
     verifyRequest(registration);
-    if(!isRole(NamenodeRole.ACTIVE))
+    if(!isRole(NamenodeRole.NAMENODE))
       throw new IOException("Only an ACTIVE node can invoke startCheckpoint.");
     return namesystem.startCheckpoint(registration, setRegistration());
   }
@@ -761,7 +761,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   public void endCheckpoint(NamenodeRegistration registration,
                             CheckpointSignature sig) throws IOException {
     verifyRequest(registration);
-    if(!isRole(NamenodeRole.ACTIVE))
+    if(!isRole(NamenodeRole.NAMENODE))
       throw new IOException("Only an ACTIVE node can invoke endCheckpoint.");
     namesystem.endCheckpoint(registration, sig);
   }

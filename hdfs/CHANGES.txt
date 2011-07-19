@@ -572,6 +572,9 @@ Trunk (unreleased changes)
     HDFS-2147. Move cluster network topology to block management and fix some
     javac warnings.  (szetszwo)
 
+    HDFS-2141. Remove NameNode roles Active and Standby (they become
+    states of the namenode). (suresh)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

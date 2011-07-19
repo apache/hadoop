@@ -65,7 +65,7 @@ public interface HdfsConstants {
       case CHECKPOINT: 
         return NamenodeRole.CHECKPOINT;
       default:
-        return NamenodeRole.ACTIVE;
+        return NamenodeRole.NAMENODE;
       }
     }
     
@@ -89,10 +89,9 @@ public interface HdfsConstants {
    * Defines the NameNode role.
    */
   static public enum NamenodeRole {
-    ACTIVE    ("NameNode"),
+    NAMENODE  ("NameNode"),
     BACKUP    ("Backup Node"),
-    CHECKPOINT("Checkpoint Node"),
-    STANDBY   ("Standby Node");
+    CHECKPOINT("Checkpoint Node");
 
     private String description = null;
     private NamenodeRole(String arg) {this.description = arg;}

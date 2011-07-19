@@ -101,7 +101,7 @@ public class TestSaveNamespace {
 
   private void saveNamespaceWithInjectedFault(Fault fault) throws IOException {
     Configuration conf = getConf();
-    NameNode.initMetrics(conf, NamenodeRole.ACTIVE);
+    NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
     FSNamesystem fsn = new FSNamesystem(conf);
 
@@ -178,7 +178,7 @@ public class TestSaveNamespace {
     Configuration conf = getConf();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_RESTORE_KEY, true);
 
-    NameNode.initMetrics(conf, NamenodeRole.ACTIVE);
+    NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
     FSNamesystem fsn = new FSNamesystem(conf);
 
@@ -295,7 +295,7 @@ public class TestSaveNamespace {
   public void doTestFailedSaveNamespace(boolean restoreStorageAfterFailure)
   throws Exception {
     Configuration conf = getConf();
-    NameNode.initMetrics(conf, NamenodeRole.ACTIVE);
+    NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
     FSNamesystem fsn = new FSNamesystem(conf);
 
@@ -356,7 +356,7 @@ public class TestSaveNamespace {
   @Test
   public void testSaveWhileEditsRolled() throws Exception {
     Configuration conf = getConf();
-    NameNode.initMetrics(conf, NamenodeRole.ACTIVE);
+    NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
     FSNamesystem fsn = new FSNamesystem(conf);
 
