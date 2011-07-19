@@ -4,7 +4,10 @@ Trunk (unreleased changes)
 
 
     MAPREDUCE-279
-   
+    
+    MAPREDUCE-2661. Fix TaskImpl to not access MapTaskImpl. (Ahmed Radwan 
+    via sharad)  
+ 
     MAPREDUCE-2644. NodeManager fails to create containers when NM_LOG_DIR
     is not explicitly set in the Configuration. (Josh Wills via vinodkv)
 

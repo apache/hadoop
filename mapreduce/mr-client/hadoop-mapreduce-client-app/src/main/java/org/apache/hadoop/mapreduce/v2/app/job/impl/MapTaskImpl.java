@@ -78,4 +78,20 @@ public class MapTaskImpl extends TaskImpl {
   protected TaskSplitMetaInfo getTaskSplitMetaInfo() {
     return this.taskSplitMetaInfo;
   }
+
+  /**
+   * @return a String formatted as a comma-separated list of splits.
+   */
+  @Override
+  protected String getSplitsAsString() {
+    String[] splits = getTaskSplitMetaInfo().getLocations();
+    if (splits == null || splits.length == 0)
+    return "";
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < splits.length; i++) {
+      if (i != 0) sb.append(",");
+      sb.append(splits[i]);
+    }
+    return sb.toString();
+  }
 }

@@ -601,7 +601,18 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
         taId == null ? null : TypeConverter.fromYarn(taId));
     return taskFailedEvent;
   }
-  
+
+  /**
+  * @return a String representation of the splits.
+  *
+  * Subclasses can override this method to provide their own representations
+  * of splits (if any).
+  *
+  */
+  protected String getSplitsAsString(){
+	  return "";
+  }
+
   private static class InitialScheduleTransition
     implements SingleArcTransition<TaskImpl, TaskEvent> {
 
@@ -612,22 +623,10 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       TaskStartedEvent tse = new TaskStartedEvent(
           TypeConverter.fromYarn(task.taskId), task.getLaunchTime(),
           TypeConverter.fromYarn(task.taskId.getTaskType()),
-          task instanceof MapTaskImpl ? splitsAsString(((MapTaskImpl) task) //TODO Should not be accessing MapTaskImpl
-              .getTaskSplitMetaInfo().getLocations()) : "");
+          task.getSplitsAsString());
       task.eventHandler
           .handle(new JobHistoryEvent(task.taskId.getJobId(), tse));
       task.historyTaskStartGenerated = true;
-    }
-    
-    private String splitsAsString(String[] splits) {
-      if (splits == null || splits.length == 0)
-        return "";
-      StringBuilder sb = new StringBuilder();
-      for (int i = 0; i < splits.length; i++) {
-        if (i != 0) sb.append(",");
-        sb.append(splits[i]);
-      }
-      return sb.toString();
     }
   }
 
