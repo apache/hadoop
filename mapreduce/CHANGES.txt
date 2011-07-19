@@ -341,6 +341,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-2670. Fixing spelling mistake in FairSchedulerServlet.java. (eli)
 
+    MAPREDUCE-2710. Update JobSubmitter.printTokens(..) for HDFS-2161.
+    (szetszwo)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
