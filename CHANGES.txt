@@ -23,6 +23,9 @@ Release 0.20.205.0 - unreleased
     HADOOP-7432. Back-port HADOOP-7110 to 0.20-security: Implement chmod
     in NativeIO library. (Sherry Chen via mattf)
 
+    HADOOP-7314. Add support for throwing UnknownHostException when a host
+    doesn't resolve. Needed for MAPREDUCE-2489. (Jeffrey Naisbitt via mattf)
+
 Release 0.20.204.0 - unreleased
 
   NEW FEATURES

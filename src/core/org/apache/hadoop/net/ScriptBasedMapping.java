@@ -20,6 +20,7 @@ package org.apache.hadoop.net;
 
 import java.util.*;
 import java.io.*;
+import java.net.UnknownHostException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -113,6 +114,17 @@ implements Configurable
     }
     
     return m;
+  }
+  
+  public List<String> resolveValidHosts(List<String> names) 
+    throws UnknownHostException {
+    List<String> result = this.resolve(names);
+    if (result != null) {
+      return result;
+    } else {
+      throw new UnknownHostException(
+          "Unknown host(s) returned from ScriptBasedMapping");
+    }
   }
   
   private String runResolveCommand(List<String> args) {
