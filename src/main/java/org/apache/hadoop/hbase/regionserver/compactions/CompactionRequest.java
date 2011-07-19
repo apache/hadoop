@@ -53,7 +53,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
     private final long totalSize;
     private final boolean isMajor;
     private int p;
-    private final Date date;
+    private final Long timeInNanos;
     private HRegionServer server = null;
 
     public CompactionRequest(HRegion r, Store s,
@@ -71,7 +71,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
       this.totalSize = sz;
       this.isMajor = isMajor;
       this.p = p;
-      this.date = new Date();
+      this.timeInNanos = System.nanoTime();
     }
 
     /**
@@ -98,7 +98,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
         return compareVal;
       }
 
-      compareVal = date.compareTo(request.date);
+      compareVal = timeInNanos.compareTo(request.timeInNanos);
       if (compareVal != 0) {
         return compareVal;
       }
@@ -164,7 +164,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
         ", fileCount=" + files.size() +
         ", fileSize=" + StringUtils.humanReadableInt(totalSize) +
           ((fsList.isEmpty()) ? "" : " (" + fsList + ")") +
-        ", priority=" + p + ", date=" + date;
+        ", priority=" + p + ", time=" + timeInNanos;
     }
 
     @Override

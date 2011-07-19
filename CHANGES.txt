@@ -420,6 +420,7 @@ Release 0.90.4 - Unreleased
    HBASE-4088  npes in server shutdown
    HBASE-3872  Hole in split transaction rollback; edits to .META. need
                to be rolled back even if it seems like they didn't make it
+   HBASE-4101  Regionserver Deadlock (ramkrishna.s.vasudevan)
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the
