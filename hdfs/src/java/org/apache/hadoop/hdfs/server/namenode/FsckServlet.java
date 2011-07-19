@@ -66,7 +66,8 @@ public class FsckServlet extends DfsServlet {
             namesystem.getNumberOfDatanodes(DatanodeReportType.LIVE); 
           final short minReplication = namesystem.getMinReplication();
 
-          new NamenodeFsck(conf, nn, nn.getNetworkTopology(), pmap, out,
+          new NamenodeFsck(conf, nn,
+              NamenodeJspHelper.getNetworkTopology(nn), pmap, out,
               totalDatanodes, minReplication, remoteAddress).fsck();
           
           return null;

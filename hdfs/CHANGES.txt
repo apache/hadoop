@@ -569,6 +569,9 @@ Trunk (unreleased changes)
     HDFS-2157. Improve header comment in o.a.h.hdfs.server.namenode.NameNode.
     (atm via eli)
 
+    HDFS-2147. Move cluster network topology to block management and fix some
+    javac warnings.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

@@ -86,7 +86,7 @@ public class FileDataServlet extends DfsServlet {
     if (i.getLen() == 0 || blks.getLocatedBlocks().size() <= 0) {
       // pick a random datanode
       NameNode nn = (NameNode)getServletContext().getAttribute("name.node");
-      return nn.getNamesystem().getRandomDatanode();
+      return NamenodeJspHelper.getRandomDatanode(nn);
     }
     return JspHelper.bestNode(blks);
   }

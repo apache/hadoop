@@ -89,7 +89,6 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Groups;
@@ -1422,10 +1421,6 @@ public class NameNode implements NamenodeProtocols, FSConstants {
    */
   public InetSocketAddress getHttpAddress() {
     return httpAddress;
-  }
-
-  NetworkTopology getNetworkTopology() {
-    return this.namesystem.clusterMap;
   }
 
   /**

@@ -48,6 +48,8 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ServletUtil;
@@ -368,13 +370,25 @@ class NamenodeJspHelper {
     return token == null ? null : token.encodeToUrlString();
   }
 
+  /** @return the network topology. */
+  static NetworkTopology getNetworkTopology(final NameNode namenode) {
+    return namenode.getNamesystem().getBlockManager().getDatanodeManager(
+        ).getNetworkTopology();
+  }
+
+  /** @return a randomly chosen datanode. */
+  static DatanodeDescriptor getRandomDatanode(final NameNode namenode) {
+    return (DatanodeDescriptor)getNetworkTopology(namenode).chooseRandom(
+        NodeBase.ROOT);
+  }
+  
   static void redirectToRandomDataNode(ServletContext context,
       HttpServletRequest request, HttpServletResponse resp) throws IOException,
       InterruptedException {
     final NameNode nn = (NameNode) context.getAttribute("name.node");
     final Configuration conf = (Configuration) context
         .getAttribute(JspHelper.CURRENT_CONF);
-    final DatanodeID datanode = nn.getNamesystem().getRandomDatanode();
+    final DatanodeID datanode = getRandomDatanode(nn);
     UserGroupInformation ugi = JspHelper.getUGI(context, request, conf);
     String tokenString = getDelegationToken(nn, request, conf, ugi);
     // if the user is defined, get a delegation token and stringify it

@@ -27,7 +27,6 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 
 public class TestUnderReplicatedBlocks extends TestCase {
   public void testSetrepIncWithUnderReplicatedBlocks() throws Exception {
@@ -44,11 +43,11 @@ public class TestUnderReplicatedBlocks extends TestCase {
       
       // remove one replica from the blocksMap so block becomes under-replicated
       // but the block does not get put into the under-replicated blocks queue
-      final FSNamesystem namesystem = cluster.getNamesystem();
+      final BlockManager bm = cluster.getNamesystem().getBlockManager();
       ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
-      DatanodeDescriptor dn = namesystem.blockManager.blocksMap.nodeIterator(b.getLocalBlock()).next();
-      namesystem.blockManager.addToInvalidates(b.getLocalBlock(), dn);
-      namesystem.blockManager.blocksMap.removeNode(b.getLocalBlock(), dn);
+      DatanodeDescriptor dn = bm.blocksMap.nodeIterator(b.getLocalBlock()).next();
+      bm.addToInvalidates(b.getLocalBlock(), dn);
+      bm.blocksMap.removeNode(b.getLocalBlock(), dn);
       
       // increment this file's replication factor
       FsShell shell = new FsShell(conf);

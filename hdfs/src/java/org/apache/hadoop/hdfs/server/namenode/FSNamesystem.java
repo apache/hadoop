@@ -138,7 +138,6 @@ import org.apache.hadoop.net.CachedDNSToSwitchMapping;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
-import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -240,7 +239,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   // Stores the correct file name hierarchy
   //
   public FSDirectory dir;
-  public BlockManager blockManager;
+  BlockManager blockManager;
   
   // Block pool ID used by this namenode
   String blockPoolId;
@@ -318,8 +317,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
 
   private volatile SafeModeInfo safeMode;  // safe mode information
     
-  /** datanode network toplogy */
-  public NetworkTopology clusterMap = new NetworkTopology();
   private DNSToSwitchMapping dnsToSwitchMapping;
 
   private HostsFileReader hostsReader; 
@@ -876,15 +873,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       FileNotFoundException, UnresolvedLinkException, IOException {
     LocatedBlocks blocks = getBlockLocations(src, offset, length, true, true);
     if (blocks != null) {
-      //sort the blocks
-      final DatanodeDescriptor client = 
-          blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
-      for (LocatedBlock b : blocks.getLocatedBlocks()) {
-        clusterMap.pseudoSortByDistance(client, b.getLocations());
-        
-        // Move decommissioned datanodes to the bottom
-        Arrays.sort(b.getLocations(), DFSUtil.DECOM_COMPARATOR);
-      }
+      blockManager.getDatanodeManager().sortLocatedBlocks(
+          clientMachine, blocks.getLocatedBlocks());
     }
     return blocks;
   }
@@ -1774,16 +1764,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     }
 
     // choose targets for the new block to be allocated.
-    DatanodeDescriptor targets[] = blockManager.replicator.chooseTarget(
+    final DatanodeDescriptor targets[] = blockManager.chooseTarget(
         src, replication, clientNode, excludedNodes, blockSize);
-    if (targets.length < blockManager.minReplication) {
-      throw new IOException("File " + src + " could only be replicated to " +
-                            targets.length + " nodes, instead of " +
-                            blockManager.minReplication + ". There are "
-                            +clusterMap.getNumOfLeaves()+" datanode(s) running"
-                            +" but "+excludedNodes.size() +
-                            " node(s) are excluded in this operation.");
-    }
 
     // Allocate a new block and record it in the INode. 
     writeLock();
@@ -2881,14 +2863,14 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
                                       nodeReg.getStorageID());
       }
       // update cluster map
-      clusterMap.remove(nodeS);
+      blockManager.getDatanodeManager().getNetworkTopology().remove(nodeS);
       nodeS.updateRegInfo(nodeReg);
       nodeS.setHostName(hostName);
       nodeS.setDisallowed(false); // Node is in the include list
       
       // resolve network location
       resolveNetworkLocation(nodeS);
-      clusterMap.add(nodeS);
+      blockManager.getDatanodeManager().getNetworkTopology().add(nodeS);
         
       // also treat the registration message as a heartbeat
       synchronized(heartbeats) {
@@ -2919,7 +2901,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       = new DatanodeDescriptor(nodeReg, NetworkTopology.DEFAULT_RACK, hostName);
     resolveNetworkLocation(nodeDescr);
     blockManager.getDatanodeManager().addDatanode(nodeDescr);
-    clusterMap.add(nodeDescr);
     checkDecommissioning(nodeDescr, dnAddress);
     
     // also treat the registration message as a heartbeat
@@ -3336,25 +3317,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       }
     }
 
-    Iterator<? extends Block> it = nodeInfo.getBlockIterator();
-    while(it.hasNext()) {
-      blockManager.removeStoredBlock(it.next(), nodeInfo);
-    }
-    unprotectedRemoveDatanode(nodeInfo);
-    clusterMap.remove(nodeInfo);
+    blockManager.removeDatanode(nodeInfo);
 
     checkSafeMode();
-  }
-
-  void unprotectedRemoveDatanode(DatanodeDescriptor nodeDescr) {
-    assert hasWriteLock();
-    nodeDescr.resetBlocks();
-    blockManager.removeFromInvalidates(nodeDescr.getStorageID());
-    if(NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug(
-          "BLOCK* NameSystem.unprotectedRemoveDatanode: "
-          + nodeDescr.getName() + " is out of service now.");
-    }
   }
 
   FSImage getFSImage() {
@@ -4104,14 +4069,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     return node;
   }
 
-  /** Choose a random datanode
-   * 
-   * @return a randomly chosen datanode
-   */
-  DatanodeDescriptor getRandomDatanode() {
-    return (DatanodeDescriptor)clusterMap.chooseRandom(NodeBase.ROOT);
-  }
-
   /**
    * SafeModeInfo contains information related to the safe mode.
    * <p>
@@ -4278,9 +4235,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       }
       reached = -1;
       safeMode = null;
+      final NetworkTopology nt = blockManager.getDatanodeManager().getNetworkTopology();
       NameNode.stateChangeLog.info("STATE* Network topology has "
-                                   +clusterMap.getNumOfRacks()+" racks and "
-                                   +clusterMap.getNumOfLeaves()+ " datanodes");
+          + nt.getNumOfRacks() + " racks and "
+          + nt.getNumOfLeaves() + " datanodes");
       NameNode.stateChangeLog.info("STATE* UnderReplicatedBlocks has "
                                    +blockManager.neededReplications.size()+" blocks");
     }
@@ -5864,6 +5822,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   @Override  // NameNodeMXBean
   public String getBlockPoolId() {
     return blockPoolId;
+  }
+
+  /** @return the block manager. */
+  public BlockManager getBlockManager() {
+    return blockManager;
   }
 
   /**

@@ -32,7 +32,6 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
@@ -68,9 +67,9 @@ public class TestReplicationPolicy extends TestCase {
       e.printStackTrace();
       throw (RuntimeException)new RuntimeException().initCause(e);
     }
-    FSNamesystem fsNamesystem = namenode.getNamesystem();
-    replicator = fsNamesystem.blockManager.replicator;
-    cluster = fsNamesystem.clusterMap;
+    final BlockManager bm = namenode.getNamesystem().getBlockManager();
+    replicator = bm.replicator;
+    cluster = bm.getDatanodeManager().getNetworkTopology();
     // construct network topology
     for(int i=0; i<NUM_OF_DATANODES; i++) {
       cluster.add(dataNodes[i]);
