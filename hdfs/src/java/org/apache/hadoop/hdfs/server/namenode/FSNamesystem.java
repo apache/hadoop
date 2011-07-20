@@ -3870,6 +3870,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
         node.stopDecommission();
         updateStats(node, true);
       }
+      blockManager.processOverReplicatedBlocksOnReCommission(node);
     }
   }
 

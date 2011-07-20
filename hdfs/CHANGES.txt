@@ -861,6 +861,9 @@ Trunk (unreleased changes)
     HDFS-2152. TestWriteConfigurationToDFS causing the random failures. (Uma
     Maheswara Rao G via atm)
 
+    HDFS-2114. re-commission of a decommissioned node does not delete 
+    excess replicas. (John George via mattf)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

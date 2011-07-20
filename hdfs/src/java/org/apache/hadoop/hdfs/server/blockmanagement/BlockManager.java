@@ -1878,6 +1878,25 @@ public class BlockManager {
   }
   
   /**
+   * On stopping decommission, check if the node has excess replicas.
+   * If there are any excess replicas, call processOverReplicatedBlock()
+   */
+  public void processOverReplicatedBlocksOnReCommission(DatanodeDescriptor srcNode) {
+    final Iterator<? extends Block> it = srcNode.getBlockIterator();
+    while(it.hasNext()) {
+      final Block block = it.next();
+      INodeFile fileINode = blocksMap.getINode(block);
+      short expectedReplication = fileINode.getReplication();
+      NumberReplicas num = countNodes(block);
+      int numCurrentReplica = num.liveReplicas();
+      if (numCurrentReplica > expectedReplication) {
+        // over-replicated block 
+        processOverReplicatedBlock(block, expectedReplication, null, null);
+      }
+    }
+  }
+
+  /**
    * Return true if there are any blocks on this node that have not
    * yet reached their replication factor. Otherwise returns false.
    */
