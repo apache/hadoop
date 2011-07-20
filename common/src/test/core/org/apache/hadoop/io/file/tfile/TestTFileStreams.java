@@ -383,7 +383,7 @@ public class TestTFileStreams extends TestCase {
       boolean knownValueLength, boolean close) throws IOException {
     long rawDataSize = 0;
     for (int nx = 0; nx < count; nx++) {
-      String key = TestTFileByteArrays.composeSortedKey("key", count, nx);
+      String key = TestTFileByteArrays.composeSortedKey("key", nx);
       DataOutputStream outKey =
           writer.prepareAppendKey(knownKeyLength ? key.length() : -1);
       outKey.write(key.getBytes());

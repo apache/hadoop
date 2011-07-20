@@ -405,6 +405,9 @@ Trunk (unreleased changes)
     HADOOP-2081. Configuration getInt, getLong, and getFloat replace
     invalid numbers with the default value. (Harsh J via eli)
 
+    HADOOP-7111. Several TFile tests failing when native libraries are
+    present. (atm)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
