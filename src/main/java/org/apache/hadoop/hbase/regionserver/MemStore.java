@@ -458,25 +458,22 @@ public class MemStore implements HeapSize {
         KeyValue kv = it.next();
 
         // if this isnt the row we are interested in, then bail:
-        if (!firstKv.matchingColumn(family,qualifier) || !firstKv.matchingRow(kv) ) {
+        if (!kv.matchingColumn(family,qualifier) || !kv.matchingRow(firstKv) ) {
           break; // rows dont match, bail.
         }
 
         // if the qualifier matches and it's a put, just RM it out of the kvset.
-        if (firstKv.matchingQualifier(kv)) {
-          // to be extra safe we only remove Puts that have a memstoreTS==0
-          if (kv.getType() == KeyValue.Type.Put.getCode()) {
-            now = Math.max(now, kv.getTimestamp());
-          }
+        if (kv.getType() == KeyValue.Type.Put.getCode() &&
+            kv.getTimestamp() > now && firstKv.matchingQualifier(kv)) {
+          now = kv.getTimestamp();
         }
       }
 
       // create or update (upsert) a new KeyValue with
       // 'now' and a 0 memstoreTS == immediately visible
-      return upsert(Arrays.asList(new KeyValue [] {
-          new KeyValue(row, family, qualifier, now,
-              Bytes.toBytes(newValue))
-      }));
+      return upsert(Arrays.asList(
+          new KeyValue(row, family, qualifier, now, Bytes.toBytes(newValue)))
+      );
     } finally {
       this.lock.readLock().unlock();
     }
