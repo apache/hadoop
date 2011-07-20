@@ -30,17 +30,12 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
-import org.apache.hadoop.util.PureJavaCrc32;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
-import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
-import java.util.ArrayList;
 
 import java.io.File;
-import java.io.FileInputStream;
 
 /**
  * A JUnit test for checking if restarting DFS preserves integrity.
@@ -85,6 +80,10 @@ public class TestParallelImageWrite extends TestCase {
       if (cluster != null) { cluster.shutdown(); }
     }
     try {
+      // Force the NN to save its images on startup so long as
+      // there are any uncheckpointed txns
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 1);
+
       // Here we restart the MiniDFScluster without formatting namenode
       cluster = new MiniDFSCluster.Builder(conf).format(false)
           .numDataNodes(NUM_DATANODES).build();
@@ -111,12 +110,9 @@ public class TestParallelImageWrite extends TestCase {
       fsn.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       cluster.getNameNode().saveNamespace();
       final String checkAfterModify = checkImages(fsn, numNamenodeDirs);
-      /**
-       * TODO the following assertion is no longer valid since the fsimage
-       * includes a transaction ID in its header.
-      assertFalse("Modified namespace doesn't change fsimage contents",
-          !checkAfterRestart.equals(checkAfterModify));
-       */
+      assertFalse("Modified namespace should change fsimage contents. " +
+          "was: " + checkAfterRestart + " now: " + checkAfterModify,
+          checkAfterRestart.equals(checkAfterModify));
       fsn.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
       files.cleanup(fs, dir);
     } finally {
@@ -155,7 +151,8 @@ public class TestParallelImageWrite extends TestCase {
     // Return the hash of the newest image file
     StorageDirectory firstSd = stg.dirIterator(NameNodeDirType.IMAGE).next();
     File latestImage = FSImageTestUtil.findLatestImageFile(firstSd);
-    String md5 = FSImageTestUtil.getFileMD5(latestImage);
+    String md5 = FSImageTestUtil.getImageFileMD5IgnoringTxId(latestImage);
+    System.err.println("md5 of " + latestImage + ": " + md5);
     return md5;
   }
 }

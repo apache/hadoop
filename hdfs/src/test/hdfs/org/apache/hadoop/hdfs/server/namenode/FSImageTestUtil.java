@@ -24,6 +24,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.math.BigInteger;
 import java.net.URI;
 import java.security.MessageDigest;
@@ -63,7 +64,12 @@ import static org.mockito.Mockito.mock;
  */
 public abstract class FSImageTestUtil {
   
-  
+  /**
+   * The position in the fsimage header where the txid is
+   * written.
+   */
+  private static final long IMAGE_TXID_POS = 24;
+
   /**
    * This function returns a md5 hash of a file.
    * 
@@ -72,6 +78,30 @@ public abstract class FSImageTestUtil {
    */
   public static String getFileMD5(File file) throws IOException {
     return MD5FileUtils.computeMd5ForFile(file).toString();
+  }
+  
+  /**
+   * Calculate the md5sum of an image after zeroing out the transaction ID
+   * field in the header. This is useful for tests that want to verify
+   * that two checkpoints have identical namespaces.
+   */
+  public static String getImageFileMD5IgnoringTxId(File imageFile)
+      throws IOException {
+    File tmpFile = File.createTempFile("hadoop_imagefile_tmp", "fsimage");
+    tmpFile.deleteOnExit();
+    try {
+      Files.copy(imageFile, tmpFile);
+      RandomAccessFile raf = new RandomAccessFile(tmpFile, "rw");
+      try {
+        raf.seek(IMAGE_TXID_POS);
+        raf.writeLong(0);
+      } finally {
+        IOUtils.closeStream(raf);
+      }
+      return getFileMD5(tmpFile);
+    } finally {
+      tmpFile.delete();
+    }
   }
   
   public static StorageDirectory mockStorageDirectory(

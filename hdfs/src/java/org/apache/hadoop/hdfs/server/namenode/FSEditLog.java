@@ -806,6 +806,7 @@ public class FSEditLog  {
     numTransactions = totalTimeTransactions = numTransactionsBatchedInSync = 0;
 
     // TODO no need to link this back to storage anymore!
+    // See HDFS-2174.
     storage.attemptRestoreRemovedStorage();
     
     mapJournalsAndReportErrors(new JournalClosure() {

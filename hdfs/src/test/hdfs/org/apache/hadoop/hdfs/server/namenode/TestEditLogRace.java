@@ -303,8 +303,6 @@ public class TestEditLogRace {
         
         // The checkpoint id should be 1 less than the last written ID, since
         // the log roll writes the "BEGIN" transaction to the new log.
-        // TODO: consider making enterSafeMode actually close the edit log
-        // at that point?
         assertEquals(fsimage.getStorage().getMostRecentCheckpointTxId(),
                      editLog.getLastWrittenTxId() - 1);
 

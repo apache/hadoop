@@ -848,7 +848,6 @@ public class FSImage implements Closeable {
       throw new IOException(
         "Failed to save in any storage directories while saving namespace.");
     }
-    // TODO Double-check for regressions against HDFS-1505 and HDFS-1921.
 
     renameCheckpoint(txid);
     

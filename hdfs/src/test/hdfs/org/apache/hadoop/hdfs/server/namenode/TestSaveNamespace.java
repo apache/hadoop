@@ -152,7 +152,9 @@ public class TestSaveNamespace {
           storage, 1);
       doThrow(new RuntimeException("Injected"))
         .when(dir).write();
-      shouldFail = true; // TODO: unfortunately this fails -- should be improved
+      // TODO: unfortunately this fails -- should be improved.
+      // See HDFS-2173.
+      shouldFail = true;
       break;
     }
 
