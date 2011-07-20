@@ -346,7 +346,7 @@ public class HLog implements Syncable {
     this.optionalFlushInterval =
       conf.getLong("hbase.regionserver.optionallogflushinterval", 1 * 1000);
     this.cacheFlushLockWaitTime = 
-        conf.getLong("hbase.regionserver.cacheFlushLock.waittime", 5000);
+        conf.getLong("hbase.regionserver.cacheFlushLock.waittime", 25000);
     if (failIfLogDirExists && fs.exists(dir)) {
       throw new IOException("Target HLog directory already exists: " + dir);
     }

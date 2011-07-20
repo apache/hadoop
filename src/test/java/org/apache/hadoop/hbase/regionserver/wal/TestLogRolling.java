@@ -314,7 +314,8 @@ public class TestLogRolling  {
     writeData(table, 2);
     long newFilenum = log.getFilenum();
 
-    assertTrue("Missing datanode should've triggered a log roll",
+    assertTrue("Missing datanode should've triggered a log roll: " + newFilenum
+                    + " " + oldFilenum + " " + curTime,
         newFilenum > oldFilenum && newFilenum > curTime);
 
     // write some more log data (this should use a new hdfs_out)
