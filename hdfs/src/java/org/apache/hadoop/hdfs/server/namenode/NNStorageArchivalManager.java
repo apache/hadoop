@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -38,7 +39,7 @@ import com.google.common.collect.Sets;
  * directories of the NN and enforcing a retention policy on checkpoints
  * and edit logs.
  * 
- * It delegates the actual removal of files to a {@link #StorageArchiver}
+ * It delegates the actual removal of files to a StorageArchiver
  * implementation, which might delete the files or instead copy them to
  * a filer or HDFS for later analysis.
  */
@@ -129,13 +130,21 @@ public class NNStorageArchivalManager {
   static class DeletionStorageArchiver implements StorageArchiver {
     @Override
     public void archiveLog(FoundEditLog log) {
-      log.getFile().delete();
+      deleteOrWarn(log.getFile());
     }
 
     @Override
     public void archiveImage(FoundFSImage image) {
-      image.getFile().delete();
-      MD5FileUtils.getDigestFileForFile(image.getFile()).delete();
+      deleteOrWarn(image.getFile());
+      deleteOrWarn(MD5FileUtils.getDigestFileForFile(image.getFile()));
+    }
+
+    private static void deleteOrWarn(File file) {
+      if (!file.delete()) {
+        // It's OK if we fail to delete something -- we'll catch it
+        // next time we swing through this directory.
+        LOG.warn("Could not delete " + file);
+      }      
     }
   }
 }

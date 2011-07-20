@@ -409,7 +409,6 @@ public class NNStorage extends Storage implements Closeable {
     Preconditions.checkArgument(txid >= 0, "bad txid: " + txid);
     
     File txIdFile = getStorageFile(sd, NameNodeFile.SEEN_TXID);
-    LOG.info("===> writing txid " + txid + " to " + txIdFile);
     OutputStream fos = new AtomicFileOutputStream(txIdFile);
     try {
       fos.write(String.valueOf(txid).getBytes());
@@ -439,8 +438,8 @@ public class NNStorage extends Storage implements Closeable {
    * 
    * This is used when the image is loaded to avoid accidental rollbacks
    * in the case where an edit log is fully deleted but there is no
-   * checkpoint. See {@link TestNameEditsConfigs#testNameEditsConfigsFailure()}
-   * @param newCpT the txid that has been reached
+   * checkpoint. See TestNameEditsConfigs.testNameEditsConfigsFailure()
+   * @param txid the txid that has been reached
    */
   public void writeTransactionIdFileToStorage(long txid) {
     // Write txid marker in all storage directories

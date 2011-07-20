@@ -293,8 +293,9 @@ public class GetImageServlet extends HttpServlet {
       remoteport = 0;
       machineName = null;
 
-      for (Iterator<String> it = pmap.keySet().iterator(); it.hasNext();) {
-        String key = it.next();
+      for (Map.Entry<String, String[]> entry : pmap.entrySet()) {
+        String key = entry.getKey();
+        String[] val = entry.getValue();
         if (key.equals("getimage")) { 
           isGetImage = true;
           txId = parseLongParam(request, TXID_PARAM);
@@ -306,11 +307,11 @@ public class GetImageServlet extends HttpServlet {
           isPutImage = true;
           txId = parseLongParam(request, TXID_PARAM);
         } else if (key.equals("port")) { 
-          remoteport = new Integer(pmap.get("port")[0]).intValue();
+          remoteport = new Integer(val[0]).intValue();
         } else if (key.equals("machine")) { 
-          machineName = pmap.get("machine")[0];
+          machineName = val[0];
         } else if (key.equals(STORAGEINFO_PARAM)) {
-          storageInfoString = pmap.get(key)[0];
+          storageInfoString = val[0];
         }
       }
 

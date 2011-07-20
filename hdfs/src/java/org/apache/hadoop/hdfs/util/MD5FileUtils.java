@@ -81,7 +81,9 @@ public abstract class MD5FileUtils {
     BufferedReader reader =
       new BufferedReader(new FileReader(md5File));
     try {
-      md5Line = reader.readLine().trim();
+      md5Line = reader.readLine();
+      if (md5Line == null) { md5Line = ""; }
+      md5Line = md5Line.trim();
     } catch (IOException ioe) {
       throw new IOException("Error reading md5 file at " + md5File, ioe);
     } finally {
@@ -136,32 +138,9 @@ public abstract class MD5FileUtils {
         digest.getDigest());
     String md5Line = digestString + " *" + dataFile.getName() + "\n";
     
-    File md5FileTmp = new File(md5File.getParentFile(),
-        md5File.getName() + ".tmp");
-    
-    boolean success = false;
-    
-    // Write to tmp file
-    FileWriter writer = new FileWriter(md5FileTmp);
-    try {
-      writer.write(md5Line);
-      success = true;
-    } finally {
-      IOUtils.cleanup(LOG, writer);
-      if (!success) {
-        md5FileTmp.delete();
-      }
-    }
-    
-    // Move tmp file into place
-    if (!md5FileTmp.renameTo(md5File)) {
-      if (!md5File.delete() || !md5FileTmp.renameTo(md5File)) {
-        md5FileTmp.delete();
-        throw new IOException(
-            "Unable to rename " + md5FileTmp + " to " + md5File);
-      }
-    }
-    
+    AtomicFileOutputStream afos = new AtomicFileOutputStream(md5File);
+    afos.write(md5Line.getBytes());
+    afos.close();
     LOG.debug("Saved MD5 " + digest + " to " + md5File);
   }
 

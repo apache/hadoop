@@ -208,9 +208,9 @@ public class FSEditLog  {
    * store yet.
    */
   void logEdit(final FSEditLogOpCodes opCode, final Writable ... writables) {
-    assert state != State.CLOSED;
-    
     synchronized (this) {
+      assert state != State.CLOSED;
+      
       // wait if an automatic sync is scheduled
       waitIfAutoSyncScheduled();
       
@@ -467,16 +467,17 @@ public class FSEditLog  {
         metrics.addSync(elapsed);
       }
       
-      if (badJournals.size() >= journals.size()) {
-        LOG.fatal("Could not sync any journal to persistent storage. " +
-            "Unsynced transactions: " + (txid - synctxid),
-            new Exception());
-        runtime.exit(1);
-      }
     } finally {
       // Prevent RuntimeException from blocking other log edit sync 
       synchronized (this) {
         if (sync) {
+          if (badJournals.size() >= journals.size()) {
+            LOG.fatal("Could not sync any journal to persistent storage. " +
+                "Unsynced transactions: " + (txid - synctxid),
+                new Exception());
+            runtime.exit(1);
+          }
+
           synctxid = syncStart;
           isSyncRunning = false;
         }
@@ -750,7 +751,7 @@ public class FSEditLog  {
    * Used only by unit tests.
    */
   @VisibleForTesting
-  void setRuntimeForTesting(Runtime runtime) {
+  synchronized void setRuntimeForTesting(Runtime runtime) {
     this.runtime = runtime;
   }
   
@@ -879,10 +880,15 @@ public class FSEditLog  {
    */
   public void archiveLogsOlderThan(
       final long minTxIdToKeep, final StorageArchiver archiver) {
-    assert curSegmentTxId == FSConstants.INVALID_TXID || // on format this is no-op
-      minTxIdToKeep <= curSegmentTxId :
-      "cannot archive logs older than txid " + minTxIdToKeep +
-      " when current segment starts at " + curSegmentTxId;
+    synchronized (this) {
+      // synchronized to prevent findbugs warning about inconsistent
+      // synchronization. This will be JIT-ed out if asserts are
+      // off.
+      assert curSegmentTxId == FSConstants.INVALID_TXID || // on format this is no-op
+        minTxIdToKeep <= curSegmentTxId :
+        "cannot archive logs older than txid " + minTxIdToKeep +
+        " when current segment starts at " + curSegmentTxId;
+    }
     
     mapJournalsAndReportErrors(new JournalClosure() {
       @Override

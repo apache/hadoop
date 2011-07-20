@@ -23,6 +23,8 @@ import java.io.FileOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.IOUtils;
 
 /**
@@ -41,6 +43,10 @@ import org.apache.hadoop.io.IOUtils;
 public class AtomicFileOutputStream extends FilterOutputStream {
 
   private static final String TMP_EXTENSION = ".tmp";
+  
+  private final static Log LOG = LogFactory.getLog(
+      AtomicFileOutputStream.class);
+  
   private final File origFile;
   private final File tmpFile;
   
@@ -67,8 +73,7 @@ public class AtomicFileOutputStream extends FilterOutputStream {
         boolean renamed = tmpFile.renameTo(origFile);
         if (!renamed) {
           // On windows, renameTo does not replace.
-          origFile.delete();
-          if (!tmpFile.renameTo(origFile)) {
+          if (!origFile.delete() || !tmpFile.renameTo(origFile)) {
             throw new IOException("Could not rename temporary file " +
                 tmpFile + " to " + origFile);
           }
@@ -79,7 +84,9 @@ public class AtomicFileOutputStream extends FilterOutputStream {
           IOUtils.closeStream(out);
         }
         // close wasn't successful, try to delete the tmp file
-        tmpFile.delete();
+        if (!tmpFile.delete()) {
+          LOG.warn("Unable to delete tmp file " + tmpFile);
+        }
       }
     }
   }

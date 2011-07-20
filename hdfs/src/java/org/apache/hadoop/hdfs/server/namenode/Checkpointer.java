@@ -86,6 +86,7 @@ class Checkpointer extends Daemon {
   /**
    * Initialize checkpoint.
    */
+  @SuppressWarnings("deprecation")
   private void initialize(Configuration conf) throws IOException {
     // Create connection to the namenode.
     shouldRun = true;

@@ -76,7 +76,7 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
     Storage.LOG.info("EditLogBackupOutputStream connects to: " + bnAddress);
     try {
       this.backupNode =
-        (BackupNodeProtocol) RPC.getProxy(BackupNodeProtocol.class,
+        RPC.getProxy(BackupNodeProtocol.class,
             BackupNodeProtocol.versionID, bnAddress, new HdfsConfiguration());
     } catch(IOException e) {
       Storage.LOG.error("Error connecting to: " + bnAddress, e);

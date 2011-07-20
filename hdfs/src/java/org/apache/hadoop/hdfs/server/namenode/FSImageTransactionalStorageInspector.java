@@ -461,7 +461,9 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
       long maxValidTxnCount = Long.MIN_VALUE;
       for (FoundEditLog log : logs) {
         long validTxnCount = log.validateLog().numTransactions;
-        LOG.warn("  Log " + log.getFile() + " valid txns=" + validTxnCount);
+        LOG.warn("  Log " + log.getFile() +
+            " valid txns=" + validTxnCount +
+            " valid len=" + log.validateLog().validLength);
         maxValidTxnCount = Math.max(maxValidTxnCount, validTxnCount);
       }        
 
