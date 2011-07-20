@@ -164,8 +164,6 @@ Release 0.91.0 - Unreleased
    HBASE-4052  Enabling a table after master switch does not allow table scan,
                throwing NotServingRegionException (ramkrishna via Ted Yu)
    HBASE-4112  Creating table may throw NullPointerException (Jinchao via Ted Yu)
-   HBASE-4095  Hlog may not be rolled in a long time if checkLowReplication's
-               request of LogRoll is blocked (Jieshan via Ted Yu)
    HBASE-4093  When verifyAndAssignRoot throws exception, the deadServers state
                cannot be changed (fulin wang via Ted Yu)
 
