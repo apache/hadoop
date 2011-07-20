@@ -501,18 +501,13 @@ public class HLog implements Syncable {
           this.filenum = System.currentTimeMillis();
           Path newPath = computeFilename();
           HLog.Writer nextWriter = this.createWriterInstance(fs, newPath, conf);
+          int nextInitialReplication = fs.getFileStatus(newPath).getReplication();
+
           //This method get expect but not the actual replicas of the Hlog file
           int nextExpectReplicas = fs.getFileStatus(newPath).getReplication();
           
           //Get the current replicas of the Hlog file
           int nextActualReplicas = -1;
-          try
-          {
-            nextActualReplicas = getLogReplication();
-          } catch (Exception e) {
-            LOG.warn("Unable to invoke DFSOutputStream.getNumCurrentReplicas" + e +
-                " still proceeding ahead...");
-          }
           // Can we get at the dfsclient outputstream?  If an instance of
           // SFLW, it'll have done the necessary reflection to get at the
           // protected field name.
@@ -531,9 +526,8 @@ public class HLog implements Syncable {
             // Clean up current writer.
             Path oldFile = cleanupCurrentWriter(currentFilenum);
             this.writer = nextWriter;
-            this.initialReplication = nextActualReplicas == -1 ? 
-              nextExpectReplicas : nextActualReplicas;
             this.hdfs_out = nextHdfsOut;
+            this.initialReplication = nextInitialReplication;
     
             LOG.info((oldFile != null?
                 "Roll " + FSUtils.getPath(oldFile) + ", entries=" +
@@ -562,7 +556,9 @@ public class HLog implements Syncable {
         } finally {
           this.cacheFlushLock.unlock();
         }
-      } 
+      } else {
+          LOG.debug("Didn't obtain cacheFlushLock in time");
+      }
     } catch (InterruptedException e) {
       LOG.warn("Interrupted rollWriter", e);
       Thread.currentThread().interrupt();
