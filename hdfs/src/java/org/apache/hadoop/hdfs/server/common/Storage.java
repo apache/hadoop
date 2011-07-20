@@ -640,13 +640,17 @@ public abstract class Storage extends StorageInfo {
         LOG.info("Locking is disabled");
         return;
       }
-      this.lock = tryLock();
-      if (lock == null) {
+      FileLock newLock = tryLock();
+      if (newLock == null) {
         String msg = "Cannot lock storage " + this.root 
           + ". The directory is already locked.";
         LOG.info(msg);
         throw new IOException(msg);
       }
+      // Don't overwrite lock until success - this way if we accidentally
+      // call lock twice, the internal state won't be cleared by the second
+      // (failed) lock attempt
+      lock = newLock;
     }
 
     /**
@@ -690,6 +694,40 @@ public abstract class Storage extends StorageInfo {
     @Override
     public String toString() {
       return "Storage Directory " + this.root;
+    }
+
+    /**
+     * Check whether underlying file system supports file locking.
+     * 
+     * @return <code>true</code> if exclusive locks are supported or
+     *         <code>false</code> otherwise.
+     * @throws IOException
+     * @see StorageDirectory#lock()
+     */
+    public boolean isLockSupported() throws IOException {
+      FileLock firstLock = null;
+      FileLock secondLock = null;
+      try {
+        firstLock = lock;
+        if(firstLock == null) {
+          firstLock = tryLock();
+          if(firstLock == null)
+            return true;
+        }
+        secondLock = tryLock();
+        if(secondLock == null)
+          return true;
+      } finally {
+        if(firstLock != null && firstLock != lock) {
+          firstLock.release();
+          firstLock.channel().close();
+        }
+        if(secondLock != null) {
+          secondLock.release();
+          secondLock.channel().close();
+        }
+      }
+      return false;
     }
   }
 
@@ -835,41 +873,6 @@ public abstract class Storage extends StorageInfo {
     for (Iterator<StorageDirectory> it = storageDirs.iterator(); it.hasNext();) {
       it.next().unlock();
     }
-  }
-
-  /**
-   * Check whether underlying file system supports file locking.
-   * 
-   * @return <code>true</code> if exclusive locks are supported or
-   *         <code>false</code> otherwise.
-   * @throws IOException
-   * @see StorageDirectory#lock()
-   */
-  public boolean isLockSupported(int idx) throws IOException {
-    StorageDirectory sd = storageDirs.get(idx);
-    FileLock firstLock = null;
-    FileLock secondLock = null;
-    try {
-      firstLock = sd.lock;
-      if(firstLock == null) {
-        firstLock = sd.tryLock();
-        if(firstLock == null)
-          return true;
-      }
-      secondLock = sd.tryLock();
-      if(secondLock == null)
-        return true;
-    } finally {
-      if(firstLock != null && firstLock != sd.lock) {
-        firstLock.release();
-        firstLock.channel().close();
-      }
-      if(secondLock != null) {
-        secondLock.release();
-        secondLock.channel().close();
-      }
-    }
-    return false;
   }
 
   public static String getBuildVersion() {
