@@ -579,6 +579,8 @@ Trunk (unreleased changes)
     and Random object creation to DFSUtil; move DFSClient.stringifyToken(..)
     to DelegationTokenIdentifier.  (szetszwo)
 
+    HDFS-1774. Small optimization to FSDataset. (Uma Maheswara Rao G via eli)
+    
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
