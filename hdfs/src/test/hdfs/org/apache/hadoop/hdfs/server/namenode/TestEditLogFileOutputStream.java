@@ -42,7 +42,6 @@ import org.mockito.Mockito;
 public class TestEditLogFileOutputStream {
   
   private final static int HEADER_LEN = 17;
-  private final static int MKDIR_LEN = 59;
   private static final File TEST_EDITS =
     new File(System.getProperty("test.build.data","/tmp"),
              "editLogStream.dat");
@@ -73,10 +72,11 @@ public class TestEditLogFileOutputStream {
     cluster.getFileSystem().mkdirs(new Path("/tmp"),
         new FsPermission((short)777));
 
+    long oldLength = validation.validLength;
     validation = FSEditLogLoader.validateEditLog(editLog);
-    assertEquals("Edit log should have more valid data after writing a txn",
-        MKDIR_LEN + HEADER_LEN,
-        validation.validLength);
+    assertTrue("Edit log should have more valid data after writing a txn " +
+        "(was: " + oldLength + " now: " + validation.validLength + ")",
+        validation.validLength > oldLength);
     assertEquals(2, validation.numTransactions);
 
     assertEquals("Edit log should be 1MB long",
