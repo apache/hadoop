@@ -51,10 +51,14 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.filecache.TaskDistributedCacheManager;
 import org.apache.hadoop.mapreduce.filecache.TrackerDistributedCacheManager;
+import org.apache.hadoop.mapreduce.filecache.TrackerDistributedCacheManager.CacheStatus;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.mortbay.log.Log;
+
+import org.mockito.Matchers;
+import static org.mockito.Mockito.*;
 
 public class TestTrackerDistributedCacheManager extends TestCase {
 
@@ -251,7 +255,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     handle.release();
     for (TaskDistributedCacheManager.CacheFile c : handle.getCacheFiles()) {
       assertEquals(0, manager.getReferenceCount(c.uri, conf1, c.timestamp,
-          c.owner));
+          c.owner, false));
     }
     
     Path thirdCacheFile = new Path(TEST_ROOT_DIR, "thirdcachefile");
@@ -289,7 +293,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     for (TaskDistributedCacheManager.CacheFile c : handle.getCacheFiles()) {
       try {
         assertEquals(0, manager.getReferenceCount(c.uri, conf2, c.timestamp,
-            c.owner));
+            c.owner, false));
       } catch (IOException ie) {
         th = ie;
         Log.info("Exception getting reference count for " + c.uri, ie);
@@ -609,15 +613,15 @@ public class TestTrackerDistributedCacheManager extends TestCase {
 
     manager.releaseCache(thirdCacheFile.toUri(), conf2,
         getFileStamp(thirdCacheFile),
-        TrackerDistributedCacheManager.getLocalizedCacheOwner(false));
+        TrackerDistributedCacheManager.getLocalizedCacheOwner(false), false);
 
     manager.releaseCache(secondCacheFile.toUri(), conf2,
         getFileStamp(secondCacheFile),
-        TrackerDistributedCacheManager.getLocalizedCacheOwner(false));
+        TrackerDistributedCacheManager.getLocalizedCacheOwner(false), false);
 
     manager.releaseCache(firstCacheFile.toUri(), conf2,
         getFileStamp(firstCacheFile),
-        TrackerDistributedCacheManager.getLocalizedCacheOwner(false));
+        TrackerDistributedCacheManager.getLocalizedCacheOwner(false), false);
 
 
     // Getting the fourth cache will make the number of sub directories becomes
@@ -645,6 +649,47 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     manager.stopCleanupThread();
   }
 
+  public void testSameNameFileArchiveCache() throws IOException,
+      URISyntaxException, InterruptedException {
+    if (!canRun()) {
+      return;
+    }
+    TrackerDistributedCacheManager manager =
+        spy(new TrackerDistributedCacheManager(conf, taskController));
+    URI rsrc = new URI("file://foo/bar/yak");
+    Path cacheDir = new Path("file:///localcache");
+    Path archivePath = new Path(cacheDir, "archive");
+    Path filePath = new Path(cacheDir, "file");
+    doReturn(archivePath).when(manager).localizeCache(eq(conf), eq(rsrc),
+        anyLong(), Matchers.<CacheStatus> anyObject(), eq(true), anyBoolean());
+    doReturn(filePath).when(manager).localizeCache(eq(conf), eq(rsrc),
+        anyLong(), Matchers.<CacheStatus> anyObject(), eq(false), anyBoolean());
+    // could fail, but check match instead
+    doNothing().when(manager).checkCacheStatusValidity(
+        Matchers.<Configuration> anyObject(), eq(rsrc), anyLong(),
+        Matchers.<CacheStatus> anyObject(), Matchers.<FileStatus> anyObject(),
+        anyBoolean());
+    // localizeCache initializes mtime of cached rsrc; set to uninitialized val
+    doReturn(-1L).when(manager).checkStampSinceJobStarted(
+        Matchers.<Configuration> anyObject(),
+        Matchers.<FileSystem> anyObject(), eq(rsrc), anyLong(),
+        Matchers.<CacheStatus> anyObject(), Matchers.<FileStatus> anyObject());
+    doReturn(-1L).when(manager).getTimestamp(
+        Matchers.<Configuration> anyObject(), eq(rsrc));
+    FileStatus rsrcStatus = mock(FileStatus.class);
+    when(rsrcStatus.getLen()).thenReturn(4344L);
+
+    Path localizedPathForFile =
+        manager.getLocalCache(rsrc, conf, "sub", rsrcStatus, false, 20L,
+            new Path("file:///tmp"), false, true);
+    Path localizedPathForArchive =
+        manager.getLocalCache(rsrc, conf, "sub", rsrcStatus, true, 20L,
+            new Path("file:///tmp"), false, true);
+    assertNotSame("File and Archive resolve to the same path: "
+        + localizedPathForFile + ". Should differ.", localizedPathForFile,
+        localizedPathForArchive);
+  }
+  
   /** test delete cache */
   public void testDeleteCache() throws Exception {
     if (!canRun()) {
@@ -676,7 +721,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
         getFileStamp(firstCacheFile), new Path(TEST_ROOT_DIR), false, false);
     manager.releaseCache(firstCacheFile.toUri(), conf2,
         getFileStamp(firstCacheFile), 
-        TrackerDistributedCacheManager.getLocalizedCacheOwner(false));
+        TrackerDistributedCacheManager.getLocalizedCacheOwner(false), false);
     //in above code,localized a file of size 4K and then release the cache 
     // which will cause the cache be deleted when the limit goes out. 
     // The below code localize another cache which's designed to
@@ -702,7 +747,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     // Release the third cache so that it can be deleted while sweeping
     manager.releaseCache(thirdCacheFile.toUri(), conf2,
         getFileStamp(thirdCacheFile), 
-        TrackerDistributedCacheManager.getLocalizedCacheOwner(false));
+        TrackerDistributedCacheManager.getLocalizedCacheOwner(false), false);
     // Getting the fourth cache will make the number of sub directories becomes
     // 3 which is greater than 2. So the released cache will be deleted.
     manager.getLocalCache(fourthCacheFile.toUri(), conf2, 

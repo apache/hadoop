@@ -344,6 +344,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2710. Update JobSubmitter.printTokens(..) for HDFS-2161.
     (szetszwo)
 
+    MAPREDUCE-2409. DistributedCache maps files and archives to the same path,
+    despite semantic incompatibility. (Siddharth Seth via cdouglas)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

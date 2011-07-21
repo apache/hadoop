@@ -158,9 +158,9 @@ public class TrackerDistributedCacheManager {
       Path currentWorkDir, boolean honorSymLinkConf, boolean isPublic)
       throws IOException {
     String key;
-    key = getKey(cache, conf, confFileStamp, getLocalizedCacheOwner(isPublic));
+    key = getKey(cache, conf, confFileStamp, getLocalizedCacheOwner(isPublic),
+        isArchive);
     CacheStatus lcacheStatus;
-    Path localizedPath = null;
     synchronized (cachedArchives) {
       lcacheStatus = cachedArchives.get(key);
       if (lcacheStatus == null) {
@@ -187,18 +187,18 @@ public class TrackerDistributedCacheManager {
           FileSystem fs = FileSystem.get(cache, conf);
           checkStampSinceJobStarted(conf, fs, cache, confFileStamp,
               lcacheStatus, fileStatus);
-          localizedPath = localizeCache(conf, cache, confFileStamp,
+          localizeCache(conf, cache, confFileStamp,
               lcacheStatus, isArchive, isPublic);
           lcacheStatus.initComplete();
         } else {
-          localizedPath = checkCacheStatusValidity(conf, cache, confFileStamp,
+          checkCacheStatusValidity(conf, cache, confFileStamp,
               lcacheStatus, fileStatus, isArchive);
         }
         createSymlink(conf, cache, lcacheStatus, isArchive, currentWorkDir,
             honorSymLinkConf);
       }
       initSuccessful = true;
-      return localizedPath;
+      return lcacheStatus.localizedLoadPath;
     } finally {
       if (!initSuccessful) {
         lcacheStatus.decRefCount();
@@ -217,8 +217,8 @@ public class TrackerDistributedCacheManager {
    * @throws IOException
    */
   void releaseCache(URI cache, Configuration conf, long timeStamp,
-      String owner) throws IOException {
-    String key = getKey(cache, conf, timeStamp, owner);
+      String owner, boolean isArchive) throws IOException {
+    String key = getKey(cache, conf, timeStamp, owner, isArchive);
     synchronized (cachedArchives) {
       CacheStatus lcacheStatus = cachedArchives.get(key);
       if (lcacheStatus == null) {
@@ -236,8 +236,8 @@ public class TrackerDistributedCacheManager {
    * This method is called from unit tests. 
    */
   int getReferenceCount(URI cache, Configuration conf, long timeStamp,
-      String owner) throws IOException {
-    String key = getKey(cache, conf, timeStamp, owner);
+      String owner, boolean isArchive) throws IOException {
+    String key = getKey(cache, conf, timeStamp, owner, isArchive);
     synchronized (cachedArchives) {
       CacheStatus lcacheStatus = cachedArchives.get(key);
       if (lcacheStatus == null) {
@@ -315,9 +315,10 @@ public class TrackerDistributedCacheManager {
     return path;
   }
 
-  String getKey(URI cache, Configuration conf, long timeStamp, String user)
-      throws IOException {
-    return makeRelative(cache, conf) + String.valueOf(timeStamp) + user;
+  String getKey(URI cache, Configuration conf, long timeStamp, String user,
+      boolean isArchive) throws IOException {
+    return (isArchive ? "a" : "f") + "^" + makeRelative(cache, conf) 
+      + String.valueOf(timeStamp) + user;
   }
   
   /**
@@ -341,12 +342,11 @@ public class TrackerDistributedCacheManager {
    * @return mtime of a given cache file on hdfs
    * @throws IOException
    */
-  static long getTimestamp(Configuration conf, URI cache)
-    throws IOException {
+  long getTimestamp(Configuration conf, URI cache) throws IOException {
     return getFileStatus(conf, cache).getModificationTime();
   }
 
-  private Path checkCacheStatusValidity(Configuration conf,
+  void checkCacheStatusValidity(Configuration conf,
       URI cache, long confFileStamp,
       CacheStatus cacheStatus,
       FileStatus fileStatus,
@@ -362,7 +362,6 @@ public class TrackerDistributedCacheManager {
 
     LOG.info(String.format("Using existing cache of %s->%s",
         cache.toString(), cacheStatus.localizedLoadPath));
-    return cacheStatus.localizedLoadPath;
   }
   
   private void createSymlink(Configuration conf, URI cache,
@@ -472,7 +471,7 @@ public class TrackerDistributedCacheManager {
   }
   
   // ensure that the file on hdfs hasn't been modified since the job started
-  private long checkStampSinceJobStarted(Configuration conf, FileSystem fs,
+  long checkStampSinceJobStarted(Configuration conf, FileSystem fs,
                                           URI cache, long confFileStamp,
                                           CacheStatus lcacheStatus,
                                           FileStatus fileStatus)

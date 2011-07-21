@@ -241,7 +241,7 @@ public class TaskDistributedCacheManager {
     for (CacheFile c : cacheFiles) {
       if (c.getLocalized()) {
         distributedCacheManager.releaseCache(c.uri, taskConf, c.timestamp,
-            c.owner);
+            c.owner, CacheFile.FileType.ARCHIVE == c.type);
       }
     }
   }
