@@ -233,10 +233,10 @@ rm -f hdfs-site.xml >/dev/null
 rm -f mapred-site.xml >/dev/null
 rm -f hadoop-env.sh >/dev/null
 
-template_generator ${HADOOP_HOME}/templates/conf/core-site.xml core-site.xml
-template_generator ${HADOOP_HOME}/templates/conf/hdfs-site.xml hdfs-site.xml
-template_generator ${HADOOP_HOME}/templates/conf/mapred-site.xml mapred-site.xml
-template_generator ${HADOOP_HOME}/templates/conf/hadoop-env.sh hadoop-env.sh
+template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/core-site.xml core-site.xml
+template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/hdfs-site.xml hdfs-site.xml
+template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/mapred-site.xml mapred-site.xml
+template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/hadoop-env.sh hadoop-env.sh
 
 chown root:hadoop hadoop-env.sh
 chmod 755 hadoop-env.sh

@@ -13,6 +13,9 @@ Release 0.20.204.0 - unreleased
 
   BUG FIXES
 
+    HADOOP-7475. Fix hadoop-setup-single-node.sh to reflect new layout. (eyang
+    via omalley)
+
     HADOOP-7045. TestDU fails on systems with local file systems with 
     extended attributes. (eli)
 
@@ -45,8 +48,8 @@ Release 0.20.204.0 - unreleased
     HADOOP-7248. Update eclipse target to generate .classpath from ivy config.
     (Thomas Graves and Tom White via cdouglas)
 
-    MAPREDUCE-2558. Add queue-level metrics 0.20-security branch - test fix
-    (jeffrey nasbit via mahadev)
+    MAPREDUCE-2558. Add queue-level metrics 0.20-security branch (test fixes)
+    (Jeffrey Naisbitt via mahadev)
     
     HADOOP-7364. TestMiniMRDFSCaching fails if test.build.dir is set to 
     something other than build/test. (Thomas Graves via mahadev)
