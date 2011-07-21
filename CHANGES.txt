@@ -39,6 +39,9 @@ Release 0.20.204.0 - unreleased
 
   BUG FIXES
 
+    HADOOP-7475. Fix hadoop-setup-single-node.sh to reflect new layout. (eyang
+    via omalley)
+
     HADOOP-7045. TestDU fails on systems with local file systems with 
     extended attributes. (eli)
 

@@ -171,7 +171,7 @@ else
   HADOOP_LOG_DIR=${LOG_DIR}
   HADOOP_PID_DIR=${PID_DIR}
   HADOOP_PREFIX=${PREFIX}
-  HADOOP_HOME=${PREFIX}/share/hadoop
+  HADOOP_HOME=${PREFIX}
   template_generator ${PREFIX}/share/hadoop/templates/conf/hadoop-env.sh $TFILE
   cp ${TFILE} ${CONF_DIR}/hadoop-env.sh
   rm -f ${TFILE}
