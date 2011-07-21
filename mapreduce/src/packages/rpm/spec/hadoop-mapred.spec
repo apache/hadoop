@@ -17,9 +17,10 @@
 # RPM Spec file for Hadoop version @version@
 #
 
-%define name         hadoop-mapreduce
-%define version      @version@
-%define release      @package.release@
+%define name          hadoop-mapreduce
+%define version       @version@
+%define release       @package.release@
+%define major_version %(echo %{version} | cut -d. -f -2)
 
 # Installation Locations
 %define _prefix      @package.prefix@
@@ -76,7 +77,7 @@ Prefix: %{_conf_dir}
 Prefix: %{_log_dir}
 Prefix: %{_pid_dir}
 Buildroot: %{_build_dir}
-Requires: sh-utils, textutils, /usr/sbin/useradd, /usr/sbin/usermod, /sbin/chkconfig, /sbin/service, jdk >= 1.6, hadoop-common >= %{version}, hadoop-hdfs >= %{version}
+Requires: sh-utils, textutils, /usr/sbin/useradd, /usr/sbin/usermod, /sbin/chkconfig, /sbin/service, hadoop-common >= %{major_version}, , hadoop-common <= %{major_version}.9999, hadoop-hdfs >= %{major_version}, hadoop-hdfs <= %{major_version}.9999
 AutoReqProv: no
 Provides: hadoop-mapreduce
 

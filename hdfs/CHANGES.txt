@@ -294,6 +294,9 @@ Trunk (unreleased changes)
    
     HDFS-2083. Query JMX statistics over http via JMXJsonServlet. (tanping)
 
+    HDFS-2156. Make hdfs and mapreduce rpm only depend on the same major 
+    version for common and hdfs. (eyang via omalley)
+
   IMPROVEMENTS
 
     HDFS-1875. MiniDFSCluster hard-codes dfs.datanode.address to localhost
