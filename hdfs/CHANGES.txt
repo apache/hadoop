@@ -583,6 +583,9 @@ Trunk (unreleased changes)
     to DelegationTokenIdentifier.  (szetszwo)
 
     HDFS-1774. Small optimization to FSDataset. (Uma Maheswara Rao G via eli)
+
+    HDFS-2167.  Move dnsToSwitchMapping and hostsReader from FSNamesystem to
+    DatanodeManager.  (szetszwo)
     
   OPTIMIZATIONS
 

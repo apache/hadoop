@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.hdfs.server.common.Util.now;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -33,6 +35,7 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -106,10 +109,8 @@ public class BlockManager {
 
   private final DatanodeManager datanodeManager;
 
-  //
-  // Store blocks-->datanodedescriptor(s) map of corrupt replicas
-  //
-  private final CorruptReplicasMap corruptReplicas = new CorruptReplicasMap();
+  /** Store blocks -> datanodedescriptor(s) map of corrupt replicas */
+  final CorruptReplicasMap corruptReplicas = new CorruptReplicasMap();
 
   //
   // Keeps a Collection for every named machine containing
@@ -136,34 +137,34 @@ public class BlockManager {
   public final UnderReplicatedBlocks neededReplications = new UnderReplicatedBlocks();
   private final PendingReplicationBlocks pendingReplications;
 
-  //  The maximum number of replicas allowed for a block
+  /** The maximum number of replicas allowed for a block */
   public final int maxReplication;
-  //  How many outgoing replication streams a given node should have at one time
+  /** The maximum number of outgoing replication streams
+   *  a given node should have at one time 
+   */
   public int maxReplicationStreams;
-  // Minimum copies needed or else write is disallowed
+  /** Minimum copies needed or else write is disallowed */
   public final int minReplication;
-  // Default number of replicas
+  /** Default number of replicas */
   public final int defaultReplication;
-  // How many entries are returned by getCorruptInodes()
+  /** The maximum number of entries returned by getCorruptInodes() */
   final int maxCorruptFilesReturned;
   
-  // variable to enable check for enough racks 
+  /** variable to enable check for enough racks */
   final boolean shouldCheckForEnoughRacks;
 
-  /**
-   * Last block index used for replication work.
-   */
+  /** Last block index used for replication work. */
   private int replIndex = 0;
 
-  // for block replicas placement
-  public final BlockPlacementPolicy replicator;
+  /** for block replicas placement */
+  private BlockPlacementPolicy blockplacement;
 
   public BlockManager(FSNamesystem fsn, Configuration conf) throws IOException {
     namesystem = fsn;
-    datanodeManager = new DatanodeManager(fsn);
+    datanodeManager = new DatanodeManager(fsn, conf);
 
     blocksMap = new BlocksMap(DEFAULT_MAP_LOAD_FACTOR);
-    replicator = BlockPlacementPolicy.getInstance(
+    blockplacement = BlockPlacementPolicy.getInstance(
         conf, namesystem, datanodeManager.getNetworkTopology());
     pendingReplications = new PendingReplicationBlocks(conf.getInt(
       DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
@@ -218,6 +219,19 @@ public class BlockManager {
   /** @return the datanodeManager */
   public DatanodeManager getDatanodeManager() {
     return datanodeManager;
+  }
+
+  /** @return the BlockPlacementPolicy */
+  public BlockPlacementPolicy getBlockPlacementPolicy() {
+    return blockplacement;
+  }
+
+  /** Set BlockPlacementPolicy */
+  public void setBlockPlacementPolicy(BlockPlacementPolicy newpolicy) {
+    if (newpolicy == null) {
+      throw new HadoopIllegalArgumentException("newpolicy == null");
+    }
+    this.blockplacement = newpolicy;
   }
 
   public void metaSave(PrintWriter out) {
@@ -551,7 +565,7 @@ public class BlockManager {
     }
   }
   
-  void removeFromInvalidates(String storageID, Block block) {
+  private void removeFromInvalidates(String storageID, Block block) {
     Collection<Block> v = recentInvalidateSets.get(storageID);
     if (v != null && v.remove(block)) {
       pendingDeletionBlocksCount--;
@@ -921,7 +935,7 @@ public class BlockManager {
     // It is costly to extract the filename for which chooseTargets is called,
     // so for now we pass in the Inode itself.
     DatanodeDescriptor targets[] = 
-                       replicator.chooseTarget(fileINode, additionalReplRequired,
+                       blockplacement.chooseTarget(fileINode, additionalReplRequired,
                        srcNode, containingNodes, block.getNumBytes());
     if(targets.length == 0)
       return false;
@@ -1021,7 +1035,7 @@ public class BlockManager {
       final HashMap<Node, Node> excludedNodes,
       final long blocksize) throws IOException {
     // choose targets for the new block to be allocated.
-    final DatanodeDescriptor targets[] = replicator.chooseTarget(
+    final DatanodeDescriptor targets[] = blockplacement.chooseTarget(
         src, numOfReplicas, client, excludedNodes, blocksize);
     if (targets.length < minReplication) {
       throw new IOException("File " + src + " could only be replicated to " +
@@ -1240,7 +1254,7 @@ public class BlockManager {
     }
   }
 
-  void reportDiff(DatanodeDescriptor dn, 
+  private void reportDiff(DatanodeDescriptor dn, 
       BlockListAsLongs newReport, 
       Collection<BlockInfo> toAdd,              // add to DatanodeDescriptor
       Collection<Block> toRemove,           // remove from DatanodeDescriptor
@@ -1670,7 +1684,7 @@ public class BlockManager {
       }
     }
     namesystem.chooseExcessReplicates(nonExcess, block, replication, 
-        addedNode, delNodeHint, replicator);
+        addedNode, delNodeHint, blockplacement);
   }
 
   public void addToExcessReplicate(DatanodeInfo dn, Block block) {
@@ -1694,7 +1708,7 @@ public class BlockManager {
    * Modify (block-->datanode) map. Possibly generate replication tasks, if the
    * removed block is still valid.
    */
-  public void removeStoredBlock(Block block, DatanodeDescriptor node) {
+  private void removeStoredBlock(Block block, DatanodeDescriptor node) {
     if(NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("BLOCK* NameSystem.removeStoredBlock: "
           + block + " from " + node.getName());
@@ -1881,7 +1895,8 @@ public class BlockManager {
    * On stopping decommission, check if the node has excess replicas.
    * If there are any excess replicas, call processOverReplicatedBlock()
    */
-  public void processOverReplicatedBlocksOnReCommission(DatanodeDescriptor srcNode) {
+  private void processOverReplicatedBlocksOnReCommission(
+      final DatanodeDescriptor srcNode) {
     final Iterator<? extends Block> it = srcNode.getBlockIterator();
     while(it.hasNext()) {
       final Block block = it.next();
@@ -1900,7 +1915,7 @@ public class BlockManager {
    * Return true if there are any blocks on this node that have not
    * yet reached their replication factor. Otherwise returns false.
    */
-  public boolean isReplicationInProgress(DatanodeDescriptor srcNode) {
+  boolean isReplicationInProgress(DatanodeDescriptor srcNode) {
     boolean status = false;
     int underReplicatedBlocks = 0;
     int decommissionOnlyReplicas = 0;
@@ -2022,7 +2037,7 @@ public class BlockManager {
   }
 
   /** Remove a datanode from the invalidatesSet */
-  public void removeFromInvalidates(String storageID) {
+  private void removeFromInvalidates(String storageID) {
     Collection<Block> blocks = recentInvalidateSets.remove(storageID);
     if (blocks != null) {
       pendingDeletionBlocksCount -= blocks.size();
@@ -2085,28 +2100,6 @@ public class BlockManager {
     } finally {
       namesystem.writeUnlock();
     }
-  }
-  
-  //Returns the number of racks over which a given block is replicated
-  //decommissioning/decommissioned nodes are not counted. corrupt replicas 
-  //are also ignored
-  public int getNumberOfRacks(Block b) {
-    HashSet<String> rackSet = new HashSet<String>(0);
-    Collection<DatanodeDescriptor> corruptNodes = 
-                                  corruptReplicas.getNodes(b);
-    for (Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(b); 
-         it.hasNext();) {
-      DatanodeDescriptor cur = it.next();
-      if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
-        if ((corruptNodes == null ) || !corruptNodes.contains(cur)) {
-          String rackName = cur.getNetworkLocation();
-          if (!rackSet.contains(rackName)) {
-            rackSet.add(rackName);
-          }
-        }
-      }
-    }
-    return rackSet.size();
   }
 
   boolean blockHasEnoughRacks(Block b) {
@@ -2208,5 +2201,51 @@ public class BlockManager {
   public BlockIterator getCorruptReplicaBlockIterator() {
     return neededReplications
         .iterator(UnderReplicatedBlocks.QUEUE_WITH_CORRUPT_BLOCKS);
+  }
+
+  /**
+   * Change, if appropriate, the admin state of a datanode to 
+   * decommission completed. Return true if decommission is complete.
+   */
+  boolean checkDecommissionStateInternal(DatanodeDescriptor node) {
+    // Check to see if all blocks in this decommissioned
+    // node has reached their target replication factor.
+    if (node.isDecommissionInProgress()) {
+      if (!isReplicationInProgress(node)) {
+        node.setDecommissioned();
+        LOG.info("Decommission complete for node " + node.getName());
+      }
+    }
+    return node.isDecommissioned();
+  }
+
+  /** Start decommissioning the specified datanode. */
+  void startDecommission(DatanodeDescriptor node) throws IOException {
+    if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
+      LOG.info("Start Decommissioning node " + node.getName() + " with " + 
+          node.numBlocks() +  " blocks.");
+      synchronized (namesystem.heartbeats) {
+        namesystem.updateStats(node, false);
+        node.startDecommission();
+        namesystem.updateStats(node, true);
+      }
+      node.decommissioningStatus.setStartTime(now());
+      
+      // all the blocks that reside on this node have to be replicated.
+      checkDecommissionStateInternal(node);
+    }
+  }
+
+  /** Stop decommissioning the specified datanodes. */
+  void stopDecommission(DatanodeDescriptor node) throws IOException {
+    if (node.isDecommissionInProgress() || node.isDecommissioned()) {
+      LOG.info("Stop Decommissioning node " + node.getName());
+      synchronized (namesystem.heartbeats) {
+        namesystem.updateStats(node, false);
+        node.stopDecommission();
+        namesystem.updateStats(node, true);
+      }
+      processOverReplicatedBlocksOnReCommission(node);
+    }
   }
 }
