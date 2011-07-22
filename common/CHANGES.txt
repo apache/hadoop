@@ -58,6 +58,8 @@ Trunk (unreleased changes)
     HADOOP-7380. Add client failover functionality to o.a.h.io.(ipc|retry).
     (atm via eli)
 
+    HADOOP-7460. Support pluggable trash policies. (Usman Masoon via suresh)
+
   IMPROVEMENTS
 
     HADOOP-7042. Updates to test-patch.sh to include failed test names and
