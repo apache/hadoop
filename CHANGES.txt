@@ -168,6 +168,7 @@ Release 0.91.0 - Unreleased
                cannot be changed (fulin wang via Ted Yu)
    HBASE-4118  method regionserver.MemStore#updateColumnValue: the check for 
                qualifier and family is missing (N Keywal via Ted Yu)
+   HBASE-4127  Don't modify table's name away in HBaseAdmin
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
