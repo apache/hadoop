@@ -17,25 +17,30 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 
-import org.apache.hadoop.hdfs.ByteRangeInputStream;
 import org.apache.hadoop.hdfs.ByteRangeInputStream.URLOpener;
-
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 class MockHttpURLConnection extends HttpURLConnection {
-  MockURL m;
-  
-  public MockHttpURLConnection(URL u, MockURL m) {
-    super(u); 
-    this.m = m;
+  private int responseCode = -1;
+  URL m;
+
+  public MockHttpURLConnection(URL u) {
+    super(u);
+    m = u;
   }
   
   public boolean usingProxy(){
@@ -46,7 +51,6 @@ class MockHttpURLConnection extends HttpURLConnection {
   }
   
   public void connect() throws IOException {
-    m.setMsg("Connect: "+url+", Range: "+getRequestProperty("Range"));
   }
   
   public InputStream getInputStream() throws IOException {
@@ -64,8 +68,8 @@ class MockHttpURLConnection extends HttpURLConnection {
   }
   
   public int getResponseCode() {
-    if (m.responseCode != -1) {
-      return m.responseCode;
+    if (responseCode != -1) {
+      return responseCode;
     } else {
       if (getRequestProperty("Range") == null) {
         return 200;
@@ -74,89 +78,67 @@ class MockHttpURLConnection extends HttpURLConnection {
       }
     }
   }
-  
-}
 
-class MockURL extends URLOpener {
-  String msg;
-  public int responseCode = -1;
-  
-  public MockURL(URL u) {
-    super(u);
+  public void setResponseCode(int resCode) {
+    responseCode = resCode;
   }
 
-  public MockURL(String s) throws MalformedURLException {
-    this(new URL(s));
-  }
-
-  public HttpURLConnection openConnection() throws IOException {
-    return new MockHttpURLConnection(url, this);
-  }    
-
-  public void setMsg(String s) {
-    msg = s;
-  }
-  
-  public String getMsg() {
-    return msg;
-  }
 }
 
 public class TestByteRangeInputStream {
   
   @Test
-  public void testByteRange() throws IOException, InterruptedException {
-    MockURL o = new MockURL("http://test/");
-    MockURL r =  new MockURL((URL)null);
-    ByteRangeInputStream is = new ByteRangeInputStream(o, r);
+  public void testByteRange() throws IOException {
+    URLOpener ospy = spy(new URLOpener(new URL("http://test/")));
+    doReturn(new MockHttpURLConnection(ospy.getURL())).when(ospy)
+        .openConnection();
+    URLOpener rspy = spy(new URLOpener((URL) null));
+    doReturn(new MockHttpURLConnection(rspy.getURL())).when(rspy)
+        .openConnection();
+    ByteRangeInputStream is = new ByteRangeInputStream(ospy, rspy);
 
     assertEquals("getPos wrong", 0, is.getPos());
 
     is.read();
 
-    assertEquals("Initial call made incorrectly", 
-                 "Connect: http://test/, Range: null",
-                 o.getMsg());
+    assertNull("Initial call made incorrectly (Range Check)", ospy
+        .openConnection().getRequestProperty("Range"));
 
     assertEquals("getPos should be 1 after reading one byte", 1, is.getPos());
-
-    o.setMsg(null);
 
     is.read();
 
     assertEquals("getPos should be 2 after reading two bytes", 2, is.getPos());
 
-    assertNull("No additional connections should have been made (no seek)",
-               o.getMsg());
+    // No additional connections should have been made (no seek)
 
-    r.setMsg(null);
-    r.setURL(new URL("http://resolvedurl/"));
-    
+    rspy.setURL(new URL("http://resolvedurl/"));
+
     is.seek(100);
     is.read();
 
-    assertEquals("Seek to 100 bytes made incorrectly", 
-                 "Connect: http://resolvedurl/, Range: bytes=100-",
-                 r.getMsg());
+    assertEquals("Seek to 100 bytes made incorrectly (Range Check)",
+        "bytes=100-", rspy.openConnection().getRequestProperty("Range"));
 
-    assertEquals("getPos should be 101 after reading one byte", 101, is.getPos());
+    assertEquals("getPos should be 101 after reading one byte", 101,
+        is.getPos());
 
-    r.setMsg(null);
+    verify(rspy, times(2)).openConnection();
 
     is.seek(101);
     is.read();
 
-    assertNull("Seek to 101 should not result in another request", r.getMsg());
+    verify(rspy, times(2)).openConnection();
 
-    r.setMsg(null);
+    // Seek to 101 should not result in another request"
+
     is.seek(2500);
     is.read();
 
-    assertEquals("Seek to 2500 bytes made incorrectly", 
-                 "Connect: http://resolvedurl/, Range: bytes=2500-",
-                 r.getMsg());
+    assertEquals("Seek to 2500 bytes made incorrectly (Range Check)",
+        "bytes=2500-", rspy.openConnection().getRequestProperty("Range"));
 
-    r.responseCode = 200;
+    ((MockHttpURLConnection) rspy.openConnection()).setResponseCode(200);
     is.seek(500);
     
     try {
@@ -168,7 +150,7 @@ public class TestByteRangeInputStream {
                    "HTTP_PARTIAL expected, received 200", e.getMessage());
     }
 
-    r.responseCode = 206;
+    ((MockHttpURLConnection) rspy.openConnection()).setResponseCode(206);
     is.seek(0);
 
     try {

@@ -586,7 +586,10 @@ Trunk (unreleased changes)
 
     HDFS-2167.  Move dnsToSwitchMapping and hostsReader from FSNamesystem to
     DatanodeManager.  (szetszwo)
-    
+
+    HDFS-2116. Use Mokito in TestStreamFile and TestByteRangeInputStream.
+    (Plamen Jeliazkov via shv)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
