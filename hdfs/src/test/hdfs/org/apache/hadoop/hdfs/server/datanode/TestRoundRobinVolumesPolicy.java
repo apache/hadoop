@@ -24,6 +24,7 @@ import java.util.List;
 import junit.framework.Assert;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -61,6 +62,34 @@ public class TestRoundRobinVolumesPolicy {
       Assert.fail();
     } catch (IOException e) {
       // Passed.
+    }
+  }
+  
+  // ChooseVolume should throw DiskOutOfSpaceException with volume and block sizes in exception message.
+  @Test
+  public void testRRPolicyExceptionMessage()
+      throws Exception {
+    final List<FSVolume> volumes = new ArrayList<FSVolume>();
+
+    // First volume, with 500 bytes of space.
+    volumes.add(Mockito.mock(FSVolume.class));
+    Mockito.when(volumes.get(0).getAvailable()).thenReturn(500L);
+
+    // Second volume, with 600 bytes of space.
+    volumes.add(Mockito.mock(FSVolume.class));
+    Mockito.when(volumes.get(1).getAvailable()).thenReturn(600L);
+
+    RoundRobinVolumesPolicy policy = new RoundRobinVolumesPolicy();
+    int blockSize = 700;
+    try {
+      policy.chooseVolume(volumes, blockSize);
+      Assert.fail("expected to throw DiskOutOfSpaceException");
+    } catch (DiskOutOfSpaceException e) {
+      Assert
+          .assertEquals(
+              "Not returnig the expected message",
+              "Insufficient space for an additional block. Volume with the most available space has 600 bytes free, configured block size is " + blockSize, e
+                  .getMessage());
     }
   }
 

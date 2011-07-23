@@ -593,6 +593,9 @@ Trunk (unreleased changes)
     HDFS-2112.  Move ReplicationMonitor to block management.  (Uma Maheswara
     Rao G via szetszwo)
 
+    HDFS-1739.  Add available volume size to the error message when datanode
+    throws DiskOutOfSpaceException.  (Uma Maheswara Rao G via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
