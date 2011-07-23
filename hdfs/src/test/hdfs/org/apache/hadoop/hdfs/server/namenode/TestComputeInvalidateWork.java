@@ -51,23 +51,23 @@ public class TestComputeInvalidateWork extends TestCase {
           for(int j=0; j<3*namesystem.blockInvalidateLimit+1; j++) {
             Block block = new Block(i*(namesystem.blockInvalidateLimit+1)+j, 0, 
                 GenerationStamp.FIRST_VALID_STAMP);
-            namesystem.blockManager.addToInvalidates(block, nodes[i]);
+            namesystem.getBlockManager().addToInvalidates(block, nodes[i]);
           }
         }
         
         assertEquals(namesystem.blockInvalidateLimit*NUM_OF_DATANODES, 
-            namesystem.blockManager.computeInvalidateWork(NUM_OF_DATANODES+1));
+            namesystem.getBlockManager().computeInvalidateWork(NUM_OF_DATANODES+1));
         assertEquals(namesystem.blockInvalidateLimit*NUM_OF_DATANODES, 
-            namesystem.blockManager.computeInvalidateWork(NUM_OF_DATANODES));
+            namesystem.getBlockManager().computeInvalidateWork(NUM_OF_DATANODES));
         assertEquals(namesystem.blockInvalidateLimit*(NUM_OF_DATANODES-1), 
-            namesystem.blockManager.computeInvalidateWork(NUM_OF_DATANODES-1));
-        int workCount = namesystem.blockManager.computeInvalidateWork(1);
+            namesystem.getBlockManager().computeInvalidateWork(NUM_OF_DATANODES-1));
+        int workCount = namesystem.getBlockManager().computeInvalidateWork(1);
         if (workCount == 1) {
           assertEquals(namesystem.blockInvalidateLimit+1, 
-              namesystem.blockManager.computeInvalidateWork(2));
+              namesystem.getBlockManager().computeInvalidateWork(2));
         } else {
           assertEquals(workCount, namesystem.blockInvalidateLimit);
-          assertEquals(2, namesystem.blockManager.computeInvalidateWork(2));
+          assertEquals(2, namesystem.getBlockManager().computeInvalidateWork(2));
         }
       } finally {
         namesystem.writeUnlock();

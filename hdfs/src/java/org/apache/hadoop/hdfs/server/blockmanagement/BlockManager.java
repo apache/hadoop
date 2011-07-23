@@ -42,9 +42,9 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
-import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportIterator;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportIterator;
 import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlocks.BlockIterator;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
@@ -54,6 +54,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.util.Daemon;
 
 /**
  * Keeps information related to the blocks stored in the Hadoop cluster.
@@ -101,6 +102,9 @@ public class BlockManager {
     return excessBlocksCount;
   }
 
+  /**replicationRecheckInterval is how often namenode checks for new replication work*/
+  private final long replicationRecheckInterval;
+  
   /**
    * Mapping: Block -> { INode, datanodes, self ref }
    * Updated only in response to client-sent information.
@@ -108,7 +112,10 @@ public class BlockManager {
   public final BlocksMap blocksMap;
 
   private final DatanodeManager datanodeManager;
-
+  
+  /** Replication thread. */
+  final Daemon replicationThread = new Daemon(new ReplicationMonitor());
+  
   /** Store blocks -> datanodedescriptor(s) map of corrupt replicas */
   final CorruptReplicasMap corruptReplicas = new CorruptReplicasMap();
 
@@ -162,7 +169,6 @@ public class BlockManager {
   public BlockManager(FSNamesystem fsn, Configuration conf) throws IOException {
     namesystem = fsn;
     datanodeManager = new DatanodeManager(fsn, conf);
-
     blocksMap = new BlocksMap(DEFAULT_MAP_LOAD_FACTOR);
     blockplacement = BlockPlacementPolicy.getInstance(
         conf, namesystem, datanodeManager.getNetworkTopology());
@@ -198,22 +204,29 @@ public class BlockManager {
                                              DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_DEFAULT);
     this.shouldCheckForEnoughRacks = conf.get(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY) == null ? false
                                                                              : true;
+    
+    this.replicationRecheckInterval = 
+      conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 
+                  DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_DEFAULT) * 1000L;
     FSNamesystem.LOG.info("defaultReplication = " + defaultReplication);
     FSNamesystem.LOG.info("maxReplication = " + maxReplication);
     FSNamesystem.LOG.info("minReplication = " + minReplication);
     FSNamesystem.LOG.info("maxReplicationStreams = " + maxReplicationStreams);
     FSNamesystem.LOG.info("shouldCheckForEnoughRacks = " + shouldCheckForEnoughRacks);
+    FSNamesystem.LOG.info("replicationRecheckInterval = " + replicationRecheckInterval);
   }
 
   public void activate(Configuration conf) {
     pendingReplications.start();
     datanodeManager.activate(conf);
+    this.replicationThread.start();
   }
 
   public void close() {
     if (pendingReplications != null) pendingReplications.stop();
     blocksMap.close();
     datanodeManager.close();
+    if (replicationThread != null) replicationThread.interrupt();
   }
 
   /** @return the datanodeManager */
@@ -2248,4 +2261,72 @@ public class BlockManager {
       processOverReplicatedBlocksOnReCommission(node);
     }
   }
+
+  /**
+   * Periodically calls computeReplicationWork().
+   */
+  private class ReplicationMonitor implements Runnable {
+    static final int INVALIDATE_WORK_PCT_PER_ITERATION = 32;
+    static final float REPLICATION_WORK_MULTIPLIER_PER_ITERATION = 2;
+
+    @Override
+    public void run() {
+      while (namesystem.isRunning()) {
+        try {
+          computeDatanodeWork();
+          processPendingReplications();
+          Thread.sleep(replicationRecheckInterval);
+        } catch (InterruptedException ie) {
+          LOG.warn("ReplicationMonitor thread received InterruptedException.", ie);
+          break;
+        } catch (IOException ie) {
+          LOG.warn("ReplicationMonitor thread received exception. " , ie);
+        } catch (Throwable t) {
+          LOG.warn("ReplicationMonitor thread received Runtime exception. ", t);
+          Runtime.getRuntime().exit(-1);
+        }
+      }
+    }
+  }
+
+
+  /**
+   * Compute block replication and block invalidation work that can be scheduled
+   * on data-nodes. The datanode will be informed of this work at the next
+   * heartbeat.
+   * 
+   * @return number of blocks scheduled for replication or removal.
+   * @throws IOException
+   */
+  int computeDatanodeWork() throws IOException {
+    int workFound = 0;
+    int blocksToProcess = 0;
+    int nodesToProcess = 0;
+    // Blocks should not be replicated or removed if in safe mode.
+    // It's OK to check safe mode here w/o holding lock, in the worst
+    // case extra replications will be scheduled, and these will get
+    // fixed up later.
+    if (namesystem.isInSafeMode())
+      return workFound;
+
+    synchronized (namesystem.heartbeats) {
+      blocksToProcess = (int) (namesystem.heartbeats.size() * ReplicationMonitor.REPLICATION_WORK_MULTIPLIER_PER_ITERATION);
+      nodesToProcess = (int) Math.ceil((double) namesystem.heartbeats.size()
+          * ReplicationMonitor.INVALIDATE_WORK_PCT_PER_ITERATION / 100);
+    }
+
+    workFound = this.computeReplicationWork(blocksToProcess);
+
+    // Update FSNamesystemMetrics counters
+    namesystem.writeLock();
+    try {
+      this.updateState();
+      this.scheduledReplicationBlocksCount = workFound;
+    } finally {
+      namesystem.writeUnlock();
+    }
+    workFound += this.computeInvalidateWork(nodesToProcess);
+    return workFound;
+  }
+
 }

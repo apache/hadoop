@@ -724,7 +724,7 @@ class NamenodeJspHelper {
         this.inode = null;
       } else {
         this.block = new Block(blockId);
-        this.inode = fsn.blockManager.getINode(block);
+        this.inode = fsn.getBlockManager().getINode(block);
       }
     }
 
@@ -799,9 +799,9 @@ class NamenodeJspHelper {
 
         doc.startTag("replicas");
        
-        if (fsn.blockManager.blocksMap.contains(block)) {
+        if (fsn.getBlockManager().blocksMap.contains(block)) {
           Iterator<DatanodeDescriptor> it =
-            fsn.blockManager.blocksMap.nodeIterator(block);
+            fsn.getBlockManager().blocksMap.nodeIterator(block);
 
           while (it.hasNext()) {
             doc.startTag("replica");

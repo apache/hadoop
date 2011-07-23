@@ -50,7 +50,7 @@ public class NameNodeAdapter {
    * @param namenode to proxy the invocation to
    */
   public static void refreshBlockCounts(NameNode namenode) {
-    namenode.getNamesystem().blockManager.updateState();
+    namenode.getNamesystem().getBlockManager().updateState();
   }
 
   /**

@@ -78,7 +78,7 @@ public class TestLargeDirectoryDelete {
     Assert.assertNotNull("No Namenode in cluster", mc.getNameNode());
     FSNamesystem namesystem = mc.getNamesystem();
     Assert.assertNotNull("Null Namesystem in cluster", namesystem);
-    Assert.assertNotNull("Null Namesystem.blockmanager", namesystem.blockManager);
+    Assert.assertNotNull("Null Namesystem.blockmanager", namesystem.getBlockManager());
     return (int) namesystem.getBlocksTotal();
   }
 

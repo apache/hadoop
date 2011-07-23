@@ -590,6 +590,9 @@ Trunk (unreleased changes)
     HDFS-2116. Use Mokito in TestStreamFile and TestByteRangeInputStream.
     (Plamen Jeliazkov via shv)
 
+    HDFS-2112.  Move ReplicationMonitor to block management.  (Uma Maheswara
+    Rao G via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

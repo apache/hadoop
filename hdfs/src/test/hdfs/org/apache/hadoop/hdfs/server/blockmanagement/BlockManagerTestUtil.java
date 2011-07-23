@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -24,7 +25,7 @@ import java.util.Set;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.util.Daemon;
 
 public class BlockManagerTestUtil {
   /**
@@ -48,12 +49,12 @@ public class BlockManagerTestUtil {
    * decommissioning/decommissioned nodes are not counted. corrupt replicas 
    * are also ignored
    */
-  private static int getNumberOfRacks(final BlockManager blockmanager,
+  private static int getNumberOfRacks(final BlockManager blockManager,
       final Block b) {
     final Set<String> rackSet = new HashSet<String>(0);
     final Collection<DatanodeDescriptor> corruptNodes = 
-        blockmanager.corruptReplicas.getNodes(b);
-    for (Iterator<DatanodeDescriptor> it = blockmanager.blocksMap.nodeIterator(b); 
+       getCorruptReplicas(blockManager).getNodes(b);
+    for (Iterator<DatanodeDescriptor> it = blockManager.blocksMap.nodeIterator(b); 
          it.hasNext();) {
       DatanodeDescriptor cur = it.next();
       if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
@@ -68,4 +69,33 @@ public class BlockManagerTestUtil {
     return rackSet.size();
   }
 
+  /**
+   * @param blockManager
+   * @return replication monitor thread instance from block manager.
+   */
+  public static Daemon getReplicationThread(final BlockManager blockManager)
+  {
+    return blockManager.replicationThread;
+  }
+  
+  /**
+   * @param blockManager
+   * @return corruptReplicas from block manager
+   */
+  public static  CorruptReplicasMap getCorruptReplicas(final BlockManager blockManager){
+    return blockManager.corruptReplicas;
+    
+  }
+
+  /**
+   * @param blockManager
+   * @return computed block replication and block invalidation work that can be
+   *         scheduled on data-nodes.
+   * @throws IOException
+   */
+  public static int getComputedDatanodeWork(final BlockManager blockManager) throws IOException
+  {
+    return blockManager.computeDatanodeWork();
+  }
+  
 }

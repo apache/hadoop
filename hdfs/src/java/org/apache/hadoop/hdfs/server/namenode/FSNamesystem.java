@@ -233,7 +233,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   // Stores the correct file name hierarchy
   //
   public FSDirectory dir;
-  BlockManager blockManager;
+  private BlockManager blockManager;
   
   // Block pool ID used by this namenode
   String blockPoolId;
@@ -280,7 +280,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   Daemon hbthread = null;   // HeartbeatMonitor thread
   public Daemon lmthread = null;   // LeaseMonitor thread
   Daemon smmthread = null;  // SafeModeMonitor thread
-  public Daemon replthread = null;  // Replication thread
+  
   Daemon nnrmthread = null; // NamenodeResourceMonitor thread
 
   private volatile boolean hasResourcesAvailable = false;
@@ -292,8 +292,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   // heartbeatExpireInterval is how long namenode waits for datanode to report
   // heartbeat
   private long heartbeatExpireInterval;
-  //replicationRecheckInterval is how often namenode checks for new replication work
-  private long replicationRecheckInterval;
 
   //resourceRecheckInterval is how often namenode checks for the disk space availability
   private long resourceRecheckInterval;
@@ -387,10 +385,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     blockManager.activate(conf);
     this.hbthread = new Daemon(new HeartbeatMonitor());
     this.lmthread = new Daemon(leaseManager.new Monitor());
-    this.replthread = new Daemon(new ReplicationMonitor());
+    
     hbthread.start();
     lmthread.start();
-    replthread.start();
 
     this.nnrmthread = new Daemon(new NameNodeResourceMonitor());
     nnrmthread.start();
@@ -524,9 +521,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
         DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT); // 5 minutes
     this.heartbeatExpireInterval = 2 * heartbeatRecheckInterval +
       10 * heartbeatInterval;
-    this.replicationRecheckInterval = 
-      conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 
-                  DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_DEFAULT) * 1000L;
+    
     this.serverDefaults = new FsServerDefaults(
         conf.getLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE),
         conf.getInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, DEFAULT_BYTES_PER_CHECKSUM),
@@ -595,7 +590,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     try {
       if (blockManager != null) blockManager.close();
       if (hbthread != null) hbthread.interrupt();
-      if (replthread != null) replthread.interrupt();
       if (smmthread != null) smmthread.interrupt();
       if (dtSecretManager != null) dtSecretManager.stopThreads();
       if (nnrmthread != null) nnrmthread.interrupt();
@@ -3009,77 +3003,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     }
   }
 
-  /**
-   * Periodically calls computeReplicationWork().
-   */
-  class ReplicationMonitor implements Runnable {
-    static final int INVALIDATE_WORK_PCT_PER_ITERATION = 32;
-    static final float REPLICATION_WORK_MULTIPLIER_PER_ITERATION = 2;
-    public void run() {
-      while (fsRunning) {
-        try {
-          computeDatanodeWork();
-          blockManager.processPendingReplications();
-          Thread.sleep(replicationRecheckInterval);
-        } catch (InterruptedException ie) {
-          LOG.warn("ReplicationMonitor thread received InterruptedException." + ie);
-          break;
-        } catch (IOException ie) {
-          LOG.warn("ReplicationMonitor thread received exception. " + ie);
-        } catch (Throwable t) {
-          LOG.warn("ReplicationMonitor thread received Runtime exception. " + t);
-          Runtime.getRuntime().exit(-1);
-        }
-      }
-    }
-  }
-
-  /////////////////////////////////////////////////////////
-  //
-  // These methods are called by the Namenode system, to see
-  // if there is any work for registered datanodes.
-  //
-  /////////////////////////////////////////////////////////
-  /**
-   * Compute block replication and block invalidation work 
-   * that can be scheduled on data-nodes.
-   * The datanode will be informed of this work at the next heartbeat.
-   * 
-   * @return number of blocks scheduled for replication or removal.
-   * @throws IOException
-   */
-  public int computeDatanodeWork() throws IOException {
-    int workFound = 0;
-    int blocksToProcess = 0;
-    int nodesToProcess = 0;
-    // Blocks should not be replicated or removed if in safe mode.
-    // It's OK to check safe mode here w/o holding lock, in the worst
-    // case extra replications will be scheduled, and these will get
-    // fixed up later.
-    if (isInSafeMode())
-      return workFound;
-
-    synchronized (heartbeats) {
-      blocksToProcess = (int)(heartbeats.size() 
-          * ReplicationMonitor.REPLICATION_WORK_MULTIPLIER_PER_ITERATION);
-      nodesToProcess = (int)Math.ceil((double)heartbeats.size() 
-          * ReplicationMonitor.INVALIDATE_WORK_PCT_PER_ITERATION / 100);
-    }
-
-    workFound = blockManager.computeReplicationWork(blocksToProcess);
-    
-    // Update FSNamesystemMetrics counters
-    writeLock();
-    try {
-      blockManager.updateState();
-      blockManager.scheduledReplicationBlocksCount = workFound;
-    } finally {
-      writeUnlock();
-    }
-    workFound += blockManager.computeInvalidateWork(nodesToProcess);
-    return workFound;
-  }
-
+ 
   public void setNodeReplicationLimit(int limit) {
     blockManager.maxReplicationStreams = limit;
   }
