@@ -29,7 +29,7 @@ import javax.servlet.http.HttpServletResponseWrapper;
 
 public class GZIPResponseWrapper extends HttpServletResponseWrapper {
   private HttpServletResponse response;
-  private GZIPResponseStream os;
+  private ServletOutputStream os;
   private PrintWriter writer;
   private boolean compress = true;
 
@@ -40,6 +40,7 @@ public class GZIPResponseWrapper extends HttpServletResponseWrapper {
 
   @Override
   public void setStatus(int status) {
+    super.setStatus(status);
     if (status < 200 || status >= 300) {
       compress = false;
     }
@@ -76,8 +77,8 @@ public class GZIPResponseWrapper extends HttpServletResponseWrapper {
     if (writer != null) {
       writer.flush();
     }
-    if (os != null) {
-      os.finish();
+    if (os != null && (os instanceof GZIPResponseStream)) {
+      ((GZIPResponseStream)os).finish();
     } else {
       getResponse().flushBuffer();
     }
@@ -86,8 +87,8 @@ public class GZIPResponseWrapper extends HttpServletResponseWrapper {
   @Override
   public void reset() {
     super.reset();
-    if (os != null) {
-      os.resetBuffer();
+    if (os != null && (os instanceof GZIPResponseStream)) {
+      ((GZIPResponseStream)os).resetBuffer();
     }
     writer = null;
     os = null;
@@ -97,8 +98,8 @@ public class GZIPResponseWrapper extends HttpServletResponseWrapper {
   @Override
   public void resetBuffer() {
     super.resetBuffer();
-    if (os != null) {
-      os.resetBuffer();
+    if (os != null && (os instanceof GZIPResponseStream)) {
+      ((GZIPResponseStream)os).resetBuffer();
     }
     writer = null;
     os = null;
@@ -124,14 +125,14 @@ public class GZIPResponseWrapper extends HttpServletResponseWrapper {
 
   @Override
   public ServletOutputStream getOutputStream() throws IOException {
-    if (!response.isCommitted() && compress) {
-      if (os == null) {
-        os = new GZIPResponseStream(response);
+    if (os == null) {
+      if (!response.isCommitted() && compress) {
+        os = (ServletOutputStream)new GZIPResponseStream(response);
+      } else {
+        os = response.getOutputStream();
       }
-      return os;
-    } else {
-      return response.getOutputStream();
     }
+    return os;
   }
 
   @Override

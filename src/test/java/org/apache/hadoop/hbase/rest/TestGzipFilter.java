@@ -132,4 +132,21 @@ public class TestGzipFilter {
     contentEncoding = response.getHeader("Content-Encoding");
     assertTrue(contentEncoding == null || !contentEncoding.contains("gzip"));
   }
+
+  @Test
+  public void testScannerResultCodes() throws Exception {
+    Header[] headers = new Header[3];
+    headers[0] = new Header("Content-Type", Constants.MIMETYPE_XML);
+    headers[1] = new Header("Accept", Constants.MIMETYPE_JSON);
+    headers[2] = new Header("Accept-Encoding", "gzip");
+    Response response = client.post("/" + TABLE + "/scanner", headers,
+        "<Scanner/>".getBytes());
+    assertEquals(response.getCode(), 201);
+    String scannerUrl = response.getLocation();
+    assertNotNull(scannerUrl);
+    response = client.get(scannerUrl);
+    assertEquals(response.getCode(), 200);
+    response = client.get(scannerUrl);
+    assertEquals(response.getCode(), 204);
+  }
 }
