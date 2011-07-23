@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import static org.junit.Assert.*;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -136,6 +137,20 @@ public class TestRowResource {
     path.append(table);
     path.append('/');
     path.append(row);
+    path.append('/');
+    path.append(column);
+    return getValueXML(path.toString());
+  }
+
+  private static Response getValueXML(String table, String startRow,
+      String endRow, String column) throws IOException {
+    StringBuilder path = new StringBuilder();
+    path.append('/');
+    path.append(table);
+    path.append('/');
+    path.append(startRow);
+    path.append(",");
+    path.append(endRow);
     path.append('/');
     path.append(column);
     return getValueXML(path.toString());
@@ -482,5 +497,33 @@ public class TestRowResource {
     assertEquals(response.getCode(), 200);
     response = deleteRow(TABLE, ROW_2);
     assertEquals(response.getCode(), 200);
+  }
+
+  @Test
+  public void testStartEndRowGetPutXML() throws IOException, JAXBException {
+    String[] rows = { ROW_1, ROW_2, ROW_3 };
+    String[] values = { VALUE_1, VALUE_2, VALUE_3 }; 
+    Response response = null;
+    for (int i = 0; i < rows.length; i++) {
+      response = putValueXML(TABLE, rows[i], COLUMN_1, values[i]);
+      assertEquals(200, response.getCode());
+      checkValueXML(TABLE, rows[i], COLUMN_1, values[i]);
+    }
+    response = getValueXML(TABLE, rows[0], rows[2], COLUMN_1);
+    assertEquals(200, response.getCode());
+    CellSetModel cellSet = (CellSetModel)
+      unmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
+    assertEquals(2, cellSet.getRows().size());
+    for (int i = 0; i < cellSet.getRows().size()-1; i++) {
+      RowModel rowModel = cellSet.getRows().get(i);
+      for (CellModel cell: rowModel.getCells()) {
+        assertEquals(COLUMN_1, Bytes.toString(cell.getColumn()));
+        assertEquals(values[i], Bytes.toString(cell.getValue()));
+      }   
+    }
+    for (String row : rows) {
+      response = deleteRow(TABLE, row);
+      assertEquals(200, response.getCode());
+    }
   }
 }

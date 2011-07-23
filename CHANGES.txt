@@ -171,6 +171,8 @@ Release 0.91.0 - Unreleased
    HBASE-4127  Don't modify table's name away in HBaseAdmin
    HBASE-4105  Stargate does not support Content-Type: application/json and
                Content-Encoding: gzip in parallel
+   HBASE-4116  [stargate] StringIndexOutOfBoundsException in row spec parse
+               (Allan Yan)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

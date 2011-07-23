@@ -70,15 +70,15 @@ public class RowSpec {
         i++;
       }
       i++;
-      startRow = sb.toString();
+      String row = startRow = sb.toString();
       int idx = startRow.indexOf(',');
       if (idx != -1) {
-        startRow = URLDecoder.decode(startRow.substring(0, idx),
+        startRow = URLDecoder.decode(row.substring(0, idx),
           HConstants.UTF8_ENCODING);
-        endRow = URLDecoder.decode(startRow.substring(idx + 1),
+        endRow = URLDecoder.decode(row.substring(idx + 1),
           HConstants.UTF8_ENCODING);
       } else {
-        startRow = URLDecoder.decode(startRow, HConstants.UTF8_ENCODING);
+        startRow = URLDecoder.decode(row, HConstants.UTF8_ENCODING);
       }
     } catch (IndexOutOfBoundsException e) {
       throw new IllegalArgumentException(e);
