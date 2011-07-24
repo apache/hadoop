@@ -4,6 +4,8 @@ Trunk (unreleased changes)
 
 
     MAPREDUCE-279
+    
+    HADOOP-6929. Making Security Info abstract and not an interface (mahadev)
 
     HADOOP-6929. Backport changes to MR-279 (mahadev and owen)
     

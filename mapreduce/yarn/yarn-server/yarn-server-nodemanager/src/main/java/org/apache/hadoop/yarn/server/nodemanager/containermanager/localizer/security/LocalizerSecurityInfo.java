@@ -27,7 +27,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.TokenSelector;
 
-public class LocalizerSecurityInfo implements SecurityInfo {
+public class LocalizerSecurityInfo extends SecurityInfo {
 
   @Override
   public KerberosInfo getKerberosInfo(Class<?> protocol, Configuration conf) {

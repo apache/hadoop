@@ -191,7 +191,7 @@ public class TestSaslRPC {
     }
   }
 
-  public static class CustomSecurityInfo  implements SecurityInfo {
+  public static class CustomSecurityInfo  extends SecurityInfo {
 
     @Override
     public KerberosInfo getKerberosInfo(Class<?> protocol, Configuration conf) {

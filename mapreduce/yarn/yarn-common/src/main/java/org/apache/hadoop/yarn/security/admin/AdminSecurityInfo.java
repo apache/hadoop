@@ -8,7 +8,7 @@ import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
-public class AdminSecurityInfo implements SecurityInfo {
+public class AdminSecurityInfo extends SecurityInfo {
 
   @Override
   public KerberosInfo getKerberosInfo(Class<?> protocol, Configuration conf) {

@@ -26,7 +26,7 @@ import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.token.TokenInfo;
 
-public class ClientHSSecurityInfo implements SecurityInfo {
+public class ClientHSSecurityInfo extends SecurityInfo {
 
   @Override
   public KerberosInfo getKerberosInfo(Class<?> protocol, Configuration conf) {

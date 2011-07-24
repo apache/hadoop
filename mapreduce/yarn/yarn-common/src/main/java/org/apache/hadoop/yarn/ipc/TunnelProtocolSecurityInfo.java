@@ -10,7 +10,7 @@ import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.ipc.ProtoOverHadoopRpcEngine.TunnelProtocol;
 
-public class TunnelProtocolSecurityInfo implements SecurityInfo {
+public class TunnelProtocolSecurityInfo extends SecurityInfo {
   public static final Log LOG = LogFactory.getLog(TunnelProtocolSecurityInfo.class);
   
   @Override

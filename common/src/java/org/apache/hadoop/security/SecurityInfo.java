@@ -29,7 +29,7 @@ import org.apache.hadoop.security.token.TokenInfo;
  * Interface used by RPC to get the Security information for a given 
  * protocol.
  */
-public interface SecurityInfo {
+public abstract class SecurityInfo {
 
   /**
    * Get the KerberosInfo for a given protocol.
@@ -37,7 +37,7 @@ public interface SecurityInfo {
    * @param conf configuration object
    * @return KerberosInfo
    */
-  KerberosInfo getKerberosInfo(Class<?> protocol, Configuration conf);
+  public abstract KerberosInfo getKerberosInfo(Class<?> protocol, Configuration conf);
 
   /**
    * Get the TokenInfo for a given protocol.
@@ -45,6 +45,6 @@ public interface SecurityInfo {
    * @param conf configuration object
    * @return TokenInfo instance
    */
-  TokenInfo getTokenInfo(Class<?> protocol, Configuration conf);
+  public abstract TokenInfo getTokenInfo(Class<?> protocol, Configuration conf);
 
 }
