@@ -879,6 +879,8 @@ Trunk (unreleased changes)
     HDFS-2114. re-commission of a decommissioned node does not delete 
     excess replicas. (John George via mattf)
 
+    HDFS-1776. Bug in Concat code. (Bharath Mundlapudi via Dmytro Molkov)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

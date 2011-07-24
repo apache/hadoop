@@ -127,7 +127,7 @@ public class INodeFile extends INode {
       size += in.blocks.length;
     }
     
-    for(BlockInfo bi: this.blocks) {
+    for(BlockInfo bi: newlist) {
       bi.setINode(this);
     }
     this.blocks = newlist;
