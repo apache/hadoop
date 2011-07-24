@@ -195,11 +195,34 @@ function append_path() {
   fi
 }
 
-# setup 'java.library.path' for native-hadoop code if necessary
-JAVA_LIBRARY_PATH="$HBASE_LIBRARY_PATH"
-if [ -d "${HBASE_HOME}/build/native" -o -d "${HBASE_HOME}/lib/native" ]; then
-  JAVA_PLATFORM=`CLASSPATH=${CLASSPATH} ${JAVA} org.apache.hadoop.util.PlatformName | sed -e "s/ /_/g"`
+JAVA_PLATFORM=""
 
+#If avail, add Hadoop to the CLASSPATH and to the JAVA_LIBRARY_PATH
+if [ ! -z $HADOOP_HOME ]; then
+  HADOOPCPPATH=""
+  if [ -z $HADOOP_CONF_DIR ]; then
+    HADOOPCPPATH=$(append_path "${HADOOPCPPATH}" "${HADOOP_HOME}/conf")
+  else
+    HADOOPCPPATH=$(append_path "${HADOOPCPPATH}" "${HADOOP_CONF_DIR}")
+  fi
+  HADOOPCPPATH=$(append_path "${HADOOPCPPATH}" `ls ${HADOOP_HOME}/hadoop-core*.jar`)
+  for i in "${HADOOP_HOME}/lib/"*.jar; do
+    HADOOPCPPATH="${HADOOPCPPATH}:$i"
+  done
+  CLASSPATH=$(append_path "${HADOOPCPPATH}" "${CLASSPATH}")
+  
+  if [ -d "${HADOOP_HOME}/lib/native" ]; then
+    JAVA_PLATFORM=`CLASSPATH=${HADOOPCPPATH} ${JAVA} org.apache.hadoop.util.PlatformName | sed -e "s/ /_/g"`
+    if [ -d "${HADOOP_HOME}/lib/native/${JAVA_PLATFORM}" ]; then
+      JAVA_LIBRARY_PATH=$(append_path "${JAVA_LIBRARY_PATH}" "${HADOOP_HOME}/lib/native/${JAVA_PLATFORM}")
+    fi
+  fi
+fi
+
+if [ -d "${HBASE_HOME}/build/native" -o -d "${HBASE_HOME}/lib/native" ]; then
+  if [ -z $JAVA_PLATFORM ]; then
+    JAVA_PLATFORM=`CLASSPATH=${CLASSPATH} ${JAVA} org.apache.hadoop.util.PlatformName | sed -e "s/ /_/g"`
+  fi
   if [ -d "$HBASE_HOME/build/native" ]; then
     JAVA_LIBRARY_PATH=$(append_path "$JAVA_LIBRARY_PATH" ${HBASE_HOME}/build/native/${JAVA_PLATFORM}/lib)
   fi
