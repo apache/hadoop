@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import junit.framework.TestCase;
 import java.io.*;
 import java.net.URI;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.concurrent.Callable;
@@ -37,18 +36,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.*;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
-import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
-import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
@@ -56,14 +50,7 @@ import org.aspectj.util.FileUtil;
 
 import org.mockito.Mockito;
 
-import com.google.common.collect.Lists;
-
 import static org.apache.hadoop.test.MetricsAsserts.*;
-import static org.junit.Assert.fail;
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.spy;
 
 /**
  * This class tests the creation and validation of a checkpoint.

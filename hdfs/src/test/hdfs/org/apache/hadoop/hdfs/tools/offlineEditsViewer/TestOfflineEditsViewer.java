@@ -20,8 +20,6 @@ package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
 import java.io.IOException;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.DataInputStream;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.HashMap;
@@ -32,15 +30,11 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
 import org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer;
 import org.apache.hadoop.hdfs.tools.offlineEditsViewer.TokenizerFactory;
 import org.apache.hadoop.hdfs.tools.offlineEditsViewer.EditsVisitorFactory;
-import org.apache.hadoop.hdfs.tools.offlineEditsViewer.EditsVisitor;
-import org.apache.hadoop.hdfs.tools.offlineEditsViewer.XmlEditsVisitor;
-import org.apache.hadoop.hdfs.tools.offlineEditsViewer.BinaryEditsVisitor;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 
 import org.apache.hadoop.hdfs.server.namenode.OfflineEditsViewerHelper;

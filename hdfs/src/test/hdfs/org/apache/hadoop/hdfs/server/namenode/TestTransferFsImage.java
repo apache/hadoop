@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.junit.Assert.*;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -33,7 +32,6 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 
 
 public class TestTransferFsImage {

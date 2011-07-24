@@ -17,22 +17,16 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.DataInputStream;
-import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.math.BigInteger;
 import java.net.URI;
-import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -45,7 +39,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspect
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.MD5Hash;
 import org.mockito.Mockito;
 
 import com.google.common.base.Joiner;

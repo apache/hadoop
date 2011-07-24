@@ -24,12 +24,10 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
-import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableUtils;
 
 import com.google.common.collect.ComparisonChain;
-import com.google.common.collect.Ordering;
 
 /**
  * A unique signature intended to identify checkpoint transactions.

@@ -19,10 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
-import java.util.Collections;
-import java.net.URI;
-import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;

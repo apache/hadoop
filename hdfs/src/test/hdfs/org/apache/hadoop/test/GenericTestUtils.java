@@ -20,22 +20,18 @@ package org.apache.hadoop.test;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
-import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Sets;
 

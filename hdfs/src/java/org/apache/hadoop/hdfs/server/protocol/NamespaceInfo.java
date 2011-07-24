@@ -34,8 +34,6 @@ import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.io.WritableUtils;
 
-import com.google.common.collect.ImmutableMap;
-
 /**
  * NamespaceInfo is returned by the name-node in reply 
  * to a data-node handshake.

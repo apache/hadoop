@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
@@ -26,14 +25,11 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.NAME_NODE;
 import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.DATA_NODE;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
-import org.apache.hadoop.test.GenericTestUtils;
 
 import com.google.common.collect.Lists;
-import com.google.common.io.Files;
 
 /**
  * This test ensures the appropriate response from the system when 
