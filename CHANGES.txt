@@ -429,6 +429,9 @@ Release 0.90.4 - Unreleased
    HBASE-4115  HBase shell assign and unassign unusable if region name
                includes binary-encoded data (Ryan Brush)
    HBASE-4126  Make timeoutmonitor timeout after 30 minutes instead of 3
+   HBASE-4129  HBASE-3872 added a warn message 'CatalogJanitor: Daughter regiondir
+               does not exist' that is triggered though its often legit that daughter
+               is not present
 
   IMPROVEMENT
    HBASE-3882  hbase-config.sh needs to be updated so it can auto-detects the

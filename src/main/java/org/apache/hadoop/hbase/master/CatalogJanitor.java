@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
@@ -103,8 +105,28 @@ class CatalogJanitor extends Chore {
     // TODO: Only works with single .META. region currently.  Fix.
     final AtomicInteger count = new AtomicInteger(0);
     // Keep Map of found split parents.  There are candidates for cleanup.
+    // Use a comparator that has split parents come before its daughters.
     final Map<HRegionInfo, Result> splitParents =
-      new TreeMap<HRegionInfo, Result>();
+      new TreeMap<HRegionInfo, Result>(new Comparator<HRegionInfo> () {
+        @Override
+        public int compare(HRegionInfo left, HRegionInfo right) {
+          // This comparator differs from the one HRegionInfo in that it sorts
+          // parent before daughters.
+          if (left == null) return -1;
+          if (right == null) return 1;
+          // Same table name.
+          int result = Bytes.compareTo(left.getTableDesc().getName(),
+            right.getTableDesc().getName());
+          if (result != 0) return result;
+          // Compare start keys.
+          result = Bytes.compareTo(left.getStartKey(), right.getStartKey());
+          if (result != 0) return result;
+          // Compare end keys.
+          result = Bytes.compareTo(left.getEndKey(), right.getEndKey());
+          if (result != 0) return -result; // Flip the result so parent comes first.
+          return result;
+        }
+      });
     // This visitor collects split parents and counts rows in the .META. table
     MetaReader.Visitor visitor = new MetaReader.Visitor() {
       @Override
@@ -253,9 +275,7 @@ class CatalogJanitor extends Chore {
 
   /**
    * Checks if a daughter region -- either splitA or splitB -- still holds
-   * references to parent.  If not, removes reference to the split from
-   * the parent meta region row so we don't check it any more.  Also checks
-   * daughter region exists in the filesytem.
+   * references to parent.
    * @param parent Parent region name. 
    * @param rowContent Keyed content of the parent row in meta region.
    * @param split Which column family.
