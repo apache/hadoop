@@ -51,6 +51,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -118,7 +119,7 @@ public class ContainerLocalizer {
     YarnRPC rpc = YarnRPC.create(localizerConf);
     if (UserGroupInformation.isSecurityEnabled()) {
       localizerConf.setClass(
-          CommonConfigurationKeys.HADOOP_SECURITY_INFO_CLASS_NAME,
+          YarnConfiguration.YARN_SECURITY_INFO,
           LocalizerSecurityInfo.class, SecurityInfo.class);
     }
     return (LocalizationProtocol)

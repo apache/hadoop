@@ -136,7 +136,7 @@ public class MRClientService extends AbstractService
           new ApplicationTokenIdentifier(this.appContext.getApplicationID());
       secretManager.setMasterKey(identifier, bytes);
       conf.setClass(
-          CommonConfigurationKeysPublic.HADOOP_SECURITY_INFO_CLASS_NAME,
+          YarnConfiguration.YARN_SECURITY_INFO,
           SchedulerSecurityInfo.class, SecurityInfo.class); // Same for now.
     }
     server =

@@ -191,10 +191,10 @@ public class TestSaslRPC {
     }
   }
 
-  public static class CustomSecurityInfo implements SecurityInfo {
+  public static class CustomSecurityInfo  implements SecurityInfo {
 
     @Override
-    public KerberosInfo getKerborosInfo(Class<?> protocol) {
+    public KerberosInfo getKerberosInfo(Class<?> protocol, Configuration conf) {
       return new KerberosInfo() {
         @Override
         public Class<? extends Annotation> annotationType() {
@@ -212,7 +212,7 @@ public class TestSaslRPC {
     }
 
     @Override
-    public TokenInfo getTokenInfo(Class<?> protocol) {
+    public TokenInfo getTokenInfo(Class<?> protocol, Configuration conf) {
       return new TokenInfo() {
         @Override
         public Class<? extends TokenSelector<? extends 
@@ -233,19 +233,24 @@ public class TestSaslRPC {
     final Server server = RPC.getServer(TestSaslProtocol.class,
         new TestSaslImpl(), ADDRESS, 0, 5, true, conf, sm);
 
-    doDigestRpc(server, sm, conf);
+    doDigestRpc(server, sm);
   }
 
   @Test
   public void testDigestRpcWithoutAnnotation() throws Exception {
     TestTokenSecretManager sm = new TestTokenSecretManager();
     Configuration conf1 = new Configuration(conf);
-    conf1.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_INFO_CLASS_NAME,
-        CustomSecurityInfo.class.getName());
-    final Server server = RPC.getServer(TestSaslProtocol.class,
-        new TestSaslImpl(), ADDRESS, 0, 5, true, conf1, sm);
+    try {
+      SecurityUtil.setSecurityInfoProviders(new SecurityInfo[] {
+        new CustomSecurityInfo()
+      });
+      final Server server = RPC.getServer(TestSaslProtocol.class,
+          new TestSaslImpl(), ADDRESS, 0, 5, true, conf, sm);
 
-    doDigestRpc(server, sm, conf1);
+      doDigestRpc(server, sm);
+    } finally {
+      SecurityUtil.setSecurityInfoProviders(new SecurityInfo[0]);
+    }
   }
 
   @Test
@@ -254,7 +259,7 @@ public class TestSaslRPC {
         new TestSaslImpl(), ADDRESS, 0, 5, true, conf, null);
     server.disableSecurity();
     TestTokenSecretManager sm = new TestTokenSecretManager();
-    doDigestRpc(server, sm, conf);
+    doDigestRpc(server, sm);
   }
   
   @Test
@@ -265,7 +270,7 @@ public class TestSaslRPC {
 
     boolean succeeded = false;
     try {
-      doDigestRpc(server, sm, conf);
+      doDigestRpc(server, sm);
     } catch (RemoteException e) {
       LOG.info("LOGGING MESSAGE: " + e.getLocalizedMessage());
       assertTrue(ERROR_MESSAGE.equals(e.getLocalizedMessage()));
@@ -275,9 +280,8 @@ public class TestSaslRPC {
     assertTrue(succeeded);
   }
   
-  private void doDigestRpc(Server server, TestTokenSecretManager sm, 
-      Configuration config)
-      throws Exception {
+  private void doDigestRpc(Server server, TestTokenSecretManager sm
+                           ) throws Exception {
     server.start();
 
     final UserGroupInformation current = UserGroupInformation.getCurrentUser();
@@ -295,7 +299,7 @@ public class TestSaslRPC {
     TestSaslProtocol proxy = null;
     try {
       proxy = (TestSaslProtocol) RPC.getProxy(TestSaslProtocol.class,
-          TestSaslProtocol.versionID, addr, config);
+          TestSaslProtocol.versionID, addr, conf);
       //QOP must be auth
       Assert.assertEquals(SaslRpcServer.SASL_PROPS.get(Sasl.QOP), "auth");
       proxy.ping();

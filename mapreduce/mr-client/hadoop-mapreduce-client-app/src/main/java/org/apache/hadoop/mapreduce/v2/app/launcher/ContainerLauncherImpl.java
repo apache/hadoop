@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -89,7 +90,7 @@ public class ContainerLauncherImpl extends AbstractService implements
     // doesn't affect the original configuration
     Configuration myLocalConfig = new Configuration(conf);
     myLocalConfig.setClass(
-        CommonConfigurationKeysPublic.HADOOP_SECURITY_INFO_CLASS_NAME,
+        YarnConfiguration.YARN_SECURITY_INFO,
         ContainerManagerSecurityInfo.class, SecurityInfo.class);
     this.recordFactory = RecordFactoryProvider.getRecordFactory(conf);
     super.init(myLocalConfig);

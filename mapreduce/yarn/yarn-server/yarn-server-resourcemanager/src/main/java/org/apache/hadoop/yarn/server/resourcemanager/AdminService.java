@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.Refresh
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshSuperUserGroupsConfigurationResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -93,7 +94,7 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
     YarnRPC rpc = YarnRPC.create(getConfig());
     Configuration serverConf = new Configuration(getConfig());
     serverConf.setClass(
-        CommonConfigurationKeys.HADOOP_SECURITY_INFO_CLASS_NAME,
+        YarnConfiguration.YARN_SECURITY_INFO,
         SchedulerSecurityInfo.class, SecurityInfo.class);
     this.server =
       rpc.getServer(RMAdminProtocol.class, this, masterServiceAddress,

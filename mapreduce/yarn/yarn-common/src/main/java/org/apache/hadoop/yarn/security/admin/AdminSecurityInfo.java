@@ -2,6 +2,7 @@ package org.apache.hadoop.yarn.security.admin;
 
 import java.lang.annotation.Annotation;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.token.TokenInfo;
@@ -10,7 +11,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 public class AdminSecurityInfo implements SecurityInfo {
 
   @Override
-  public KerberosInfo getKerborosInfo(Class<?> protocol) {
+  public KerberosInfo getKerberosInfo(Class<?> protocol, Configuration conf) {
     return new KerberosInfo() {
 
       @Override
@@ -31,7 +32,7 @@ public class AdminSecurityInfo implements SecurityInfo {
   }
 
   @Override
-  public TokenInfo getTokenInfo(Class<?> protocol) {
+  public TokenInfo getTokenInfo(Class<?> protocol, Configuration conf) {
     return null;
   }
 

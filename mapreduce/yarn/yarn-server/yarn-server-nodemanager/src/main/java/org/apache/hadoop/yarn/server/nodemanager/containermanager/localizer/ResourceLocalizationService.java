@@ -46,6 +46,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
@@ -236,7 +237,7 @@ public class ResourceLocalizationService extends AbstractService
                                                          // sec-info classes
     LocalizerTokenSecretManager secretManager = null;
     if (UserGroupInformation.isSecurityEnabled()) {
-      conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_INFO_CLASS_NAME,
+      conf.setClass(YarnConfiguration.YARN_SECURITY_INFO,
           LocalizerSecurityInfo.class, SecurityInfo.class);
       secretManager = new LocalizerTokenSecretManager();
     }

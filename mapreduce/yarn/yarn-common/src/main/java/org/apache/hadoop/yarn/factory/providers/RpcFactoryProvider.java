@@ -2,7 +2,6 @@ package org.apache.hadoop.yarn.factory.providers;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.security.InvalidParameterException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.YarnException;

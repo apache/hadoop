@@ -41,8 +41,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 @InterfaceStability.Evolving
 public class ServiceAuthorizationManager {
   private static final String HADOOP_POLICY_FILE = "hadoop-policy.xml";
-  private static final Log LOG = LogFactory
-  .getLog(ServiceAuthorizationManager.class);
 
   private Map<Class<?>, AccessControlList> protocolToAcl =
     new IdentityHashMap<Class<?>, AccessControlList>();
@@ -86,13 +84,7 @@ public class ServiceAuthorizationManager {
     }
     
     // get client principal key to verify (if available)
-    KerberosInfo krbInfo;
-    try {
-      krbInfo = SecurityUtil.getSecurityInfo(
-          conf).getKerborosInfo(protocol);
-    } catch (IOException e1) {
-      throw new AuthorizationException(e1);
-    }
+    KerberosInfo krbInfo = SecurityUtil.getKerberosInfo(protocol, conf);
     String clientPrincipal = null; 
     if (krbInfo != null) {
       String clientKey = krbInfo.clientPrincipal();

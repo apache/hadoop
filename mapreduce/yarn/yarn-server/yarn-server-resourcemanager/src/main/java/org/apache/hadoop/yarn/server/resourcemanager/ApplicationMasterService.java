@@ -105,7 +105,7 @@ AMRMProtocol, EventHandler<ASMEvent<ApplicationTrackerEventType>> {
     YarnRPC rpc = YarnRPC.create(getConfig());
     Configuration serverConf = new Configuration(getConfig());
     serverConf.setClass(
-        CommonConfigurationKeys.HADOOP_SECURITY_INFO_CLASS_NAME,
+        YarnConfiguration.YARN_SECURITY_INFO,
         SchedulerSecurityInfo.class, SecurityInfo.class);
     this.server =
       rpc.getServer(AMRMProtocol.class, this, masterServiceAddress,

@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
@@ -206,7 +207,7 @@ public class ContainerManagerImpl extends CompositeService implements
           this.nodeStatusUpdater.getRMNMSharedSecret());
     }
     Configuration cmConf = new Configuration(getConfig());
-    cmConf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_INFO_CLASS_NAME,
+    cmConf.setClass(YarnConfiguration.YARN_SECURITY_INFO,
         ContainerManagerSecurityInfo.class, SecurityInfo.class);
     server =
         rpc.getServer(ContainerManager.class, this, cmBindAddressStr, cmConf,

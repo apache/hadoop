@@ -10,6 +10,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factory.providers.RpcFactoryProvider;
 
 /**
@@ -29,7 +30,7 @@ public class HadoopYarnProtoRPC extends YarnRPC {
     Configuration myConf = new Configuration(conf);
     LOG.info("Creating a HadoopYarnProtoRpc proxy for protocol " + protocol);
     LOG.debug("Configured SecurityInfo class name is "
-        + myConf.get(CommonConfigurationKeys.HADOOP_SECURITY_INFO_CLASS_NAME));
+        + myConf.get(YarnConfiguration.YARN_SECURITY_INFO));
     
     return RpcFactoryProvider.getClientFactory(myConf).getClient(protocol, 1, addr, myConf);
   }
@@ -42,7 +43,7 @@ public class HadoopYarnProtoRPC extends YarnRPC {
     LOG.info("Creating a HadoopYarnProtoRpc server for protocol " + protocol + 
         " with " + numHandlers + " handlers");
     LOG.info("Configured SecurityInfo class name is "
-        + conf.get(CommonConfigurationKeys.HADOOP_SECURITY_INFO_CLASS_NAME));
+        + conf.get(YarnConfiguration.YARN_SECURITY_INFO));
     
     final RPC.Server hadoopServer;
     hadoopServer = 

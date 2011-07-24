@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -152,7 +153,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     InetSocketAddress rmAddress = NetUtils.createSocketAddr(this.rmAddress);
     Configuration rmClientConf = new Configuration(getConfig());
     rmClientConf.setClass(
-        CommonConfigurationKeys.HADOOP_SECURITY_INFO_CLASS_NAME,
+        YarnConfiguration.YARN_SECURITY_INFO,
         RMNMSecurityInfoClass.class, SecurityInfo.class);
     return (ResourceTracker) rpc.getProxy(ResourceTracker.class, rmAddress,
         rmClientConf);

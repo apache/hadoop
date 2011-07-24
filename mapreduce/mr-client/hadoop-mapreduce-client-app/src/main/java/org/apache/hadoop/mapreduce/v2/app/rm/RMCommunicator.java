@@ -246,7 +246,7 @@ public class RMCommunicator extends AbstractService  {
     }
 
     if (UserGroupInformation.isSecurityEnabled()) {
-      conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_INFO_CLASS_NAME,
+      conf.setClass(YarnConfiguration.YARN_SECURITY_INFO,
           SchedulerSecurityInfo.class, SecurityInfo.class);
 
       String tokenURLEncodedStr = System.getenv().get(

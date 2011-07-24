@@ -454,6 +454,11 @@
     <property name="jar.properties.list" value="commons-logging.properties, log4j.properties, hadoop-metrics.properties" />
     <jar jarfile="${build.dir}/${final.name}.jar"
          basedir="${build.classes}">
+      <service type="org.apache.hadoop.security.SecurityInfo">
+        <provider 
+           classname="org.apache.hadoop.security.AnnotatedSecurityInfo"/>
+      </service>
+
       <manifest>
         <section name="org/apache/hadoop">
           <attribute name="Implementation-Title" value="${ant.project.name}"/>

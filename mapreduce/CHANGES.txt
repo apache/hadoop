@@ -4,6 +4,8 @@ Trunk (unreleased changes)
 
 
     MAPREDUCE-279
+
+    HADOOP-6929. Backport changes to MR-279 (mahadev and owen)
     
     MAPREDUCE-2661. Fix TaskImpl to not access MapTaskImpl. (Ahmed Radwan 
     via sharad)  

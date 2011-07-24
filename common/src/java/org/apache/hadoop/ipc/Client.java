@@ -58,10 +58,8 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.AnnotatedSecurityInfo;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SaslRpcClient;
-import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -257,8 +255,7 @@ public class Client {
       this.useSasl = UserGroupInformation.isSecurityEnabled();
       LOG.debug("Protocol is " + protocol + " useSasl is " + useSasl);
       if (useSasl && protocol != null) {
-        TokenInfo tokenInfo = SecurityUtil.getSecurityInfo(
-            remoteId.conf).getTokenInfo(protocol);
+        TokenInfo tokenInfo = SecurityUtil.getTokenInfo(protocol, remoteId.conf);
         if (tokenInfo != null) {
           TokenSelector<? extends TokenIdentifier> tokenSelector = null;
           try {
@@ -273,10 +270,7 @@ public class Client {
               .getHostAddress() + ":" + addr.getPort()), 
               ticket.getTokens());
         }
-        KerberosInfo krbInfo = SecurityUtil.getSecurityInfo(
-            remoteId.conf).getKerborosInfo(protocol);
-        LOG.debug("securityinfo class is " + SecurityUtil.getSecurityInfo(
-            remoteId.conf).getClass().getCanonicalName());
+        KerberosInfo krbInfo = SecurityUtil.getKerberosInfo(protocol, remoteId.conf);
         LOG.debug("KerberosInfo object's class is " + krbInfo);
         if (krbInfo != null) {
           serverPrincipal = remoteId.getServerPrincipal();
@@ -1295,8 +1289,7 @@ public class Client {
       if (!UserGroupInformation.isSecurityEnabled() || protocol == null) {
         return null;
       }
-      KerberosInfo krbInfo = SecurityUtil.getSecurityInfo(
-          conf).getKerborosInfo(protocol);
+      KerberosInfo krbInfo = SecurityUtil.getKerberosInfo(protocol, conf);
       if (krbInfo != null) {
         String serverKey = krbInfo.serverPrincipal();
         if (serverKey == null) {

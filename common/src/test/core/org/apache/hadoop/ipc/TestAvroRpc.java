@@ -40,6 +40,8 @@ import org.apache.hadoop.ipc.TestSaslRPC.TestTokenIdentifier;
 import org.apache.hadoop.ipc.TestSaslRPC.TestTokenSecretManager;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SaslRpcServer;
+import org.apache.hadoop.security.SecurityInfo;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
@@ -129,6 +131,7 @@ public class TestAvroRpc extends TestCase {
       assertTrue(caught);
 
     } finally {
+      clearSecure();
       server.stop();
     }
   }
@@ -138,8 +141,13 @@ public class TestAvroRpc extends TestCase {
     conf.set("hadoop.rpc.socket.factory.class.default", "");
     //Avro doesn't work with security annotations on protocol.
     //Avro works ONLY with custom security context
-    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_INFO_CLASS_NAME,
-        CustomSecurityInfo.class.getName());
+    SecurityUtil.setSecurityInfoProviders(new SecurityInfo[] {
+        new CustomSecurityInfo()
+    });
+  }
+
+  private void clearSecure() {
+    SecurityUtil.setSecurityInfoProviders(new SecurityInfo[0]);
   }
 
   private void addToken(TestTokenSecretManager sm, 
@@ -191,6 +199,7 @@ public class TestAvroRpc extends TestCase {
       assertEquals(3, intResult);
 
     } finally {
+      clearSecure();
       server.stop();
     }
   }

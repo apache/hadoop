@@ -69,6 +69,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -103,7 +104,7 @@ public class HistoryClientService extends AbstractService {
     YarnRPC rpc = YarnRPC.create(getConfig());
     Configuration conf = new Configuration(getConfig());
     conf.setClass(
-        CommonConfigurationKeys.HADOOP_SECURITY_INFO_CLASS_NAME,
+        YarnConfiguration.YARN_SECURITY_INFO,
         ClientHSSecurityInfo.class, SecurityInfo.class);
     initializeWebApp(getConfig());
     String serviceAddr = conf.get(JHConfig.HS_BIND_ADDRESS,

@@ -22,6 +22,7 @@ import java.net.URI;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.security.AccessController;
+import java.util.ServiceLoader;
 import java.util.Set;
 
 import javax.security.auth.Subject;
@@ -33,8 +34,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.token.TokenInfo;
 
 import sun.security.jgss.krb5.Krb5Util;
 import sun.security.krb5.Credentials;
@@ -283,26 +284,63 @@ public class SecurityUtil {
     return sb.toString();
   }
 
-  @SuppressWarnings("unchecked")
-  /**
-   * Construct the SecurityInfo instance from the given conf for a 
-   * protocol.
-   * @param conf Configuration object with which the protocol is registered.
-   */
-  public static SecurityInfo getSecurityInfo(Configuration conf)
-      throws IOException {
-    try {
-      Class<SecurityInfo> secInfoClass = (Class<SecurityInfo>) 
-      conf.getClass(
-        CommonConfigurationKeysPublic.HADOOP_SECURITY_INFO_CLASS_NAME, 
-        AnnotatedSecurityInfo.class);
-      SecurityInfo secInfo = secInfoClass.newInstance();
-      return secInfo;
-    } catch (Exception e) {
-      throw new IOException("Can't create the SecurityInfo instance", e);
-    }
-  }
+  private static ServiceLoader<SecurityInfo> securityInfoProviders = 
+      ServiceLoader.load(SecurityInfo.class);
+  private static SecurityInfo[] testProviders = new SecurityInfo[0];
 
+  /**
+   * Test setup method to register additional providers.
+   * @param providers a list of high priority providers to use
+   */
+  @InterfaceAudience.Private
+  public static void setSecurityInfoProviders(SecurityInfo... providers) {
+    testProviders = providers;
+  }
+  
+  /**
+   * Look up the KerberosInfo for a given protocol. It searches all known
+   * SecurityInfo providers.
+   * @param protocol the protocol class to get the information for
+   * @return the KerberosInfo or null if it has no KerberosInfo defined
+   */
+  public static KerberosInfo getKerberosInfo(Class<?> protocol, Configuration conf) {
+    for(SecurityInfo provider: testProviders) {
+      KerberosInfo result = provider.getKerberosInfo(protocol, conf);
+      if (result != null) {
+        return result;
+      }
+    }
+    for(SecurityInfo provider: securityInfoProviders) {
+      KerberosInfo result = provider.getKerberosInfo(protocol, conf);
+      if (result != null) {
+        return result;
+      }
+    }
+    return null;
+  }
+ 
+  /**
+   * Look up the TokenInfo for a given protocol. It searches all known
+   * SecurityInfo providers.
+   * @param protocol The protocol class to get the information for.
+   * @param conf configuration object
+   * @return the TokenInfo or null if it has no KerberosInfo defined
+   */
+  public static TokenInfo getTokenInfo(Class<?> protocol, Configuration conf) {
+    for(SecurityInfo provider: testProviders) {
+      TokenInfo result = provider.getTokenInfo(protocol, conf);
+      if (result != null) {
+        return result;
+      }      
+    }
+    for(SecurityInfo provider: securityInfoProviders) {
+      TokenInfo result = provider.getTokenInfo(protocol, conf);
+      if (result != null) {
+        return result;
+      }
+    } 
+    return null;
+  }
   
   /**
    * Get the host name from the principal name of format <service>/host@realm.

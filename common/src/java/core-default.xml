@@ -98,15 +98,6 @@
 </property>
 
 <property>
-  <name>hadoop.security.info.class.name</name>
-  <value>org.apache.hadoop.security.AnnotatedSecurityInfo</value>
-  <description>
-    Implementation of org.apache.hadoop.security.SecurityInfo interface to 
-    be used by RPC for a given protocol.
-  </description>
-</property>
-
-<property>
   <name>hadoop.rpc.protection</name>
   <value>authentication</value>
   <description>This field sets the quality of protection for secured sasl 

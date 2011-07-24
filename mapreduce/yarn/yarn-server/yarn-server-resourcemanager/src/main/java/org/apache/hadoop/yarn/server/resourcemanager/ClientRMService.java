@@ -144,7 +144,7 @@ public class ClientRMService extends AbstractService implements
     YarnRPC rpc = YarnRPC.create(getConfig());
     Configuration clientServerConf = new Configuration(getConfig());
     clientServerConf.setClass(
-        CommonConfigurationKeys.HADOOP_SECURITY_INFO_CLASS_NAME,
+        YarnConfiguration.YARN_SECURITY_INFO,
         ClientRMSecurityInfo.class, SecurityInfo.class);
     this.server =   
       rpc.getServer(ClientRMProtocol.class, this,

@@ -133,7 +133,7 @@ public class RMAdmin extends Configured implements Tool {
     final YarnRPC rpc = YarnRPC.create(conf);
     
     if (UserGroupInformation.isSecurityEnabled()) {
-      conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_INFO_CLASS_NAME,
+      conf.setClass(YarnConfiguration.YARN_SECURITY_INFO,
           AdminSecurityInfo.class, SecurityInfo.class);
     }
     

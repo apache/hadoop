@@ -39,6 +39,9 @@ public class YarnConfiguration extends Configuration {
 
   public static final String APPSMANAGER_ADDRESS = RM_PREFIX
       + "appsManager.address";
+  
+  public static final String YARN_SECURITY_INFO = 
+      "yarn.security.info.class.name";
 
   public static final String DEFAULT_APPSMANAGER_BIND_ADDRESS =
       "0.0.0.0:8040";

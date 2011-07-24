@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -191,7 +192,7 @@ public class ClientServiceDelegate {
       public MRClientProtocol run() {
         Configuration myConf = new Configuration(conf);
         myConf.setClass(
-            CommonConfigurationKeysPublic.HADOOP_SECURITY_INFO_CLASS_NAME,
+            YarnConfiguration.YARN_SECURITY_INFO,
             SchedulerSecurityInfo.class, SecurityInfo.class); 
         YarnRPC rpc = YarnRPC.create(myConf);
         return (MRClientProtocol) rpc.getProxy(MRClientProtocol.class,
@@ -206,7 +207,7 @@ public class ClientServiceDelegate {
     LOG.trace("Connecting to HistoryServer at: " + serviceAddr);
     Configuration myConf = new Configuration(conf);
     //TODO This should ideally be using it's own class (instead of ClientRMSecurityInfo)
-    myConf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_INFO_CLASS_NAME,
+    myConf.setClass(YarnConfiguration.YARN_SECURITY_INFO,
         ClientRMSecurityInfo.class, SecurityInfo.class);
     YarnRPC rpc = YarnRPC.create(myConf);
     realProxy = (MRClientProtocol) rpc.getProxy(MRClientProtocol.class,

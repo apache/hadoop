@@ -91,7 +91,7 @@ public class ResourceMgrDelegate {
     LOG.info("Connecting to ResourceManager at " + rmAddress);
     Configuration appsManagerServerConf = new Configuration(this.conf);
     appsManagerServerConf.setClass(
-        CommonConfigurationKeys.HADOOP_SECURITY_INFO_CLASS_NAME,
+        YarnConfiguration.YARN_SECURITY_INFO,
         ClientRMSecurityInfo.class, SecurityInfo.class);
     applicationsManager =
         (ClientRMProtocol) rpc.getProxy(ClientRMProtocol.class,

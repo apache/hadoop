@@ -44,7 +44,7 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
   private static final RpcEngine ENGINE = new WritableRpcEngine();
 
   /** Tunnel a Proto RPC request and response through Hadoop's RPC. */
-  private static interface TunnelProtocol extends VersionedProtocol {
+  public static interface TunnelProtocol extends VersionedProtocol {
     /** WritableRpcEngine requires a versionID */
     public static final long versionID = 1L;
 
@@ -249,13 +249,13 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
   /**
    * Writable Wrapper for Protocol Buffer Responses
    */
-  private static class ProtoSpecificResponseWritable implements Writable {
+  public static class ProtoSpecificResponseWritable implements Writable {
     ProtoSpecificRpcResponse message;
 
     public ProtoSpecificResponseWritable() {
     }
     
-    ProtoSpecificResponseWritable(ProtoSpecificRpcResponse message) {
+    public ProtoSpecificResponseWritable(ProtoSpecificRpcResponse message) {
       this.message = message;
     }
 
@@ -279,13 +279,13 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
   /**
    * Writable Wrapper for Protocol Buffer Requests
    */
-  private static class ProtoSpecificRequestWritable implements Writable {
+  public static class ProtoSpecificRequestWritable implements Writable {
     ProtoSpecificRpcRequest message;
 
     public ProtoSpecificRequestWritable() {
     }
     
-    ProtoSpecificRequestWritable(ProtoSpecificRpcRequest message) {
+    public ProtoSpecificRequestWritable(ProtoSpecificRpcRequest message) {
       this.message = message;
     }
 

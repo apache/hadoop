@@ -97,7 +97,7 @@ public class AMLauncher implements Runnable {
     this.applicationTokenSecretManager = applicationTokenSecretManager;
     this.clientToAMSecretManager = clientToAMSecretManager;
     this.conf.setClass(
-        CommonConfigurationKeysPublic.HADOOP_SECURITY_INFO_CLASS_NAME,
+        YarnConfiguration.YARN_SECURITY_INFO,
         ContainerManagerSecurityInfo.class, SecurityInfo.class);
     this.eventType = eventType;
     this.handler = asmContext.getDispatcher().getEventHandler();
