@@ -24,6 +24,7 @@ import static org.apache.hadoop.hdfs.server.common.Util.now;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,6 +39,8 @@ import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.util.Daemon;
+
+import com.google.common.collect.Lists;
 
 /**
  * The Checkpointer is responsible for supporting periodic checkpoints 
@@ -240,7 +243,7 @@ class Checkpointer extends Daemon {
             backupNode.nnHttpAddress, log, bnStorage);
       }
   
-      SecondaryNameNode.rollForwardByApplyingLogs(manifest, bnImage);
+      rollForwardByApplyingLogs(manifest, bnImage);
     }
 
     long txid = bnImage.getLastAppliedTxId();
@@ -270,5 +273,23 @@ class Checkpointer extends Daemon {
     InetSocketAddress httpSocAddr = backupNode.getHttpAddress();
     int httpPort = httpSocAddr.getPort();
     return new InetSocketAddress(infoBindAddress, httpPort);
+  }
+
+  static void rollForwardByApplyingLogs(
+      RemoteEditLogManifest manifest,
+      FSImage dstImage) throws IOException {
+    NNStorage dstStorage = dstImage.getStorage();
+  
+    List<File> editsFiles = Lists.newArrayList();
+    for (RemoteEditLog log : manifest.getLogs()) {
+      File f = dstStorage.findFinalizedEditsFile(
+          log.getStartTxId(), log.getEndTxId());
+      if (log.getStartTxId() > dstImage.getLastAppliedTxId()) {
+        editsFiles.add(f);
+      }
+    }
+    LOG.info("Checkpointer about to load edits from " +
+        editsFiles.size() + " file(s).");
+    dstImage.loadEdits(editsFiles);
   }
 }

@@ -42,10 +42,6 @@ class EditLogBackupInputStream extends EditLogInputStream {
       super(new byte[0]);
     }
 
-    byte[] getData() {
-      return super.buf;
-    }
-
     void setData(byte[] newBytes) {
       super.buf = newBytes;
       super.count = newBytes == null ? 0 : newBytes.length;
