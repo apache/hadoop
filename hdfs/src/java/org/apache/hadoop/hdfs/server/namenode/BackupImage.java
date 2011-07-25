@@ -58,14 +58,20 @@ public class BackupImage extends FSImage {
    */
   volatile BNState bnState;
   static enum BNState {
-    // Edits from the NN should be dropped. On the next log roll,
-    // transition to JOURNAL_ONLY state
+    /**
+     * Edits from the NN should be dropped. On the next log roll,
+     * transition to JOURNAL_ONLY state
+     */
     DROP_UNTIL_NEXT_ROLL,
-    // Edits from the NN should be written to the local edits log
-    // but not applied to the namespace.
+    /**
+     * Edits from the NN should be written to the local edits log
+     * but not applied to the namespace.
+     */
     JOURNAL_ONLY,
-    // Edits should be written to the local edits log and applied
-    // to the local namespace.
+    /**
+     * Edits should be written to the local edits log and applied
+     * to the local namespace.
+     */
     IN_SYNC;
   }
 
