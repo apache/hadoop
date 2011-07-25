@@ -45,12 +45,15 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.io.Writable;
+
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEditsFileName;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getFinalizedEditsFileName;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import com.google.common.collect.ImmutableSet;
 /**
@@ -128,7 +131,8 @@ public class TestStorageRestore {
           EditLogOutputStream mockStream = spy(j.getCurrentStream());
           j.setCurrentStreamForTests(mockStream);
           doThrow(new IOException("Injected fault: write")).
-            when(mockStream).write(anyByte());
+            when(mockStream).write(Mockito.anyByte(),
+                Mockito.anyLong(), (Writable[]) Mockito.anyVararg());
         }
       }
     }

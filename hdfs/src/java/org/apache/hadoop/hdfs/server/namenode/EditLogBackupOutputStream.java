@@ -97,11 +97,6 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
     return JournalType.BACKUP;
   }
 
-  @Override // EditLogOutputStream
-  public void write(int b) throws IOException {
-    throw new IOException("Not implemented");
-  }
-
   @Override
   void write(byte[] data, int i, int length) throws IOException {
     throw new IOException("Not implemented");

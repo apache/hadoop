@@ -90,9 +90,11 @@ class EditLogFileOutputStream extends EditLogOutputStream {
     return JournalType.FILE;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void write(int b) throws IOException {
+  /**
+   * Write a single byte to the output stream.
+   * @param b the byte to write
+   */
+  private void write(int b) throws IOException {
     if (fp == null) {
       throw new IOException("Trying to use aborted output stream");
     }
