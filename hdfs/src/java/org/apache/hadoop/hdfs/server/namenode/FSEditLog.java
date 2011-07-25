@@ -1060,17 +1060,17 @@ public class FSEditLog  {
     private EditLogOutputStream stream;
     private long segmentStartsAtTxId = FSConstants.INVALID_TXID;
     
-    public JournalAndStream(JournalManager manager) {
+    private JournalAndStream(JournalManager manager) {
       this.manager = manager;
     }
 
-    public void startLogSegment(long txId) throws IOException {
+    private void startLogSegment(long txId) throws IOException {
       Preconditions.checkState(stream == null);
       stream = manager.startLogSegment(txId);
       segmentStartsAtTxId = txId;
     }
 
-    public void close(long lastTxId) throws IOException {
+    private void close(long lastTxId) throws IOException {
       Preconditions.checkArgument(lastTxId >= segmentStartsAtTxId,
           "invalid segment: lastTxId %s >= " +
           "segment starting txid %s", lastTxId, segmentStartsAtTxId);
@@ -1081,7 +1081,7 @@ public class FSEditLog  {
       stream = null;
     }
     
-    public void abort() {
+    private void abort() {
       if (stream == null) return;
       try {
         stream.abort();
@@ -1092,10 +1092,11 @@ public class FSEditLog  {
       segmentStartsAtTxId = FSConstants.INVALID_TXID;
     }
 
-    boolean isActive() {
+    private boolean isActive() {
       return stream != null;
     }
-    
+
+    @VisibleForTesting
     EditLogOutputStream getCurrentStream() {
       return stream;
     }
@@ -1116,7 +1117,7 @@ public class FSEditLog  {
       return manager;
     }
 
-    public EditLogInputStream getInProgressInputStream() throws IOException {
+    private EditLogInputStream getInProgressInputStream() throws IOException {
       return manager.getInProgressInputStream(segmentStartsAtTxId);
     }
   }
