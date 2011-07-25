@@ -4,6 +4,9 @@ Trunk (unreleased changes)
 
 
     MAPREDUCE-279
+
+    MAPREDUCE-2667. mapred job -kill leaves application in RUNNING state 
+    (thomas graves via mahadev)
     
     HADOOP-6929. Making Security Info abstract and not an interface (mahadev)
 

@@ -174,9 +174,9 @@ public class ApplicationImpl implements Application,
       ApplicationState.EXPIRED_PENDING, ApplicationEventType.EXPIRE,
       expireTransition)
   .addTransition(ApplicationState.RUNNING,
-      EnumSet.of(ApplicationState.COMPLETED, ApplicationState.FAILED),
+      EnumSet.of(ApplicationState.COMPLETED, ApplicationState.FAILED,
+          ApplicationState.KILLED),
       ApplicationEventType.FINISH, new DoneTransition())
-      // TODO: For now, no KILLED above. As all kills come to RM directly.
   .addTransition(ApplicationState.RUNNING, ApplicationState.RUNNING,
       ApplicationEventType.STATUSUPDATE, statusUpdatetransition)
   .addTransition(ApplicationState.RUNNING, ApplicationState.KILLED,
