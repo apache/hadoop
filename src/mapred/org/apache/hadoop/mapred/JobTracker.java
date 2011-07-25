@@ -2165,6 +2165,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     this(conf, generateNewIdentifier());
   }
 
+  JobTracker(JobConf conf, QueueManager qm) 
+  throws IOException, InterruptedException {
+    this(conf, generateNewIdentifier(), new Clock(), qm);
+  }
+
   JobTracker(JobConf conf, Clock clock) 
   throws IOException, InterruptedException {
     this(conf, generateNewIdentifier(), clock);
@@ -2178,9 +2183,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   throws IOException, InterruptedException {   
     this(conf, identifier, new Clock());
   }
-  
+
   JobTracker(final JobConf conf, String identifier, Clock clock) 
   throws IOException, InterruptedException { 
+
+    this(conf, identifier, clock, new QueueManager(new Configuration(conf)));
+  } 
+  
+  JobTracker(final JobConf conf, String identifier, Clock clock, QueueManager qm) 
+  throws IOException, InterruptedException { 
+    this.queueManager = qm;
     this.clock = clock;
     // Set ports, start RPC servers, setup security policy etc.
     InetSocketAddress addr = getAddress(conf);
@@ -2271,10 +2283,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     // Read the hosts/exclude files to restrict access to the jobtracker.
     this.hostsReader = new HostsFileReader(conf.get("mapred.hosts", ""),
                                            conf.get("mapred.hosts.exclude", ""));
-
-    Configuration queuesConf = new Configuration(this.conf);
-    queueManager = new QueueManager(queuesConf);
-
     aclsManager = new ACLsManager(conf, new JobACLsManager(conf), queueManager);
 
     LOG.info("Starting jobtracker with owner as " +

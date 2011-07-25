@@ -1,5 +1,8 @@
 Hadoop Change Log
 
+    MAPREDUCE-2621. TestCapacityScheduler fails with "Queue "q1" does not exist".
+    (Sherry Chen via mahadev)
+
 Release 0.20.204.0 - unreleased
 
   NEW FEATURES

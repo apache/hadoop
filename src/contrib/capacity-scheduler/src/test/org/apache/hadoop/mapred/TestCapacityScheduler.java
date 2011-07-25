@@ -794,7 +794,7 @@ public class TestCapacityScheduler extends TestCase {
     FakeJobInProgress job =
         new FakeJobInProgress(new JobID("test", ++jobCounter),
             (jobConf == null ? new JobConf(conf) : jobConf), taskTrackerManager,
-            jobConf.getUser(), UtilsForTests.getJobTracker());
+            jobConf.getUser(), UtilsForTests.getJobTracker(taskTrackerManager.getQueueManager()));
     job.getStatus().setRunState(state);
     taskTrackerManager.submitJob(job);
     return job;
