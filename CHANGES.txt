@@ -1,8 +1,5 @@
 Hadoop Change Log
 
-    MAPREDUCE-2621. TestCapacityScheduler fails with "Queue "q1" does not exist".
-    (Sherry Chen via mahadev)
-
 Release 0.20.204.0 - unreleased
 
   NEW FEATURES
@@ -15,6 +12,9 @@ Release 0.20.204.0 - unreleased
     HADOOP-7324. Ganglia plugins for metrics v2. (Priyo Mustafi via llu)
 
   BUG FIXES
+
+    MAPREDUCE-2621. TestCapacityScheduler fails with "Queue "q1" does not exist".
+    (Sherry Chen via mahadev)
 
     HADOOP-7475. Fix hadoop-setup-single-node.sh to reflect new layout. (eyang
     via omalley)
