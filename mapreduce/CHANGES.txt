@@ -350,6 +350,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2575. TestMiniMRDFSCaching fails if test.build.dir is set 
     to something other than build/test (Thomas Graves via mahadev)
 
+    MAPREDUCE-2622. Remove the last remaining reference to the deprecated
+    configuration "io.sort.mb". (Harsh J Chouraria via todd)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

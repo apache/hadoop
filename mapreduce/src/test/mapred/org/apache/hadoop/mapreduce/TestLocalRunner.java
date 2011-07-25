@@ -264,7 +264,7 @@ public class TestLocalRunner extends TestCase {
     Job job = Job.getInstance();
     job.setMapperClass(GCMapper.class);
     job.setNumReduceTasks(0);
-    job.getConfiguration().set("io.sort.mb", "25");
+    job.getConfiguration().set(MRJobConfig.IO_SORT_MB, "25");
     FileInputFormat.addInputPath(job, inputPath);
     FileOutputFormat.setOutputPath(job, outputPath);
 
@@ -303,8 +303,7 @@ public class TestLocalRunner extends TestCase {
     job.setReducerClass(CountingReducer.class);
     job.setNumReduceTasks(1);
     LocalJobRunner.setLocalMaxRunningMaps(job, 6);
-    job.getConfiguration().set("io.sort.record.pct", "0.50");
-    job.getConfiguration().set("io.sort.mb", "25");
+    job.getConfiguration().set(MRJobConfig.IO_SORT_MB, "25");
     FileInputFormat.addInputPath(job, inputPath);
     FileOutputFormat.setOutputPath(job, outputPath);
 
