@@ -137,7 +137,19 @@ case $startStop in
     hadoop_rotate_log $log
     echo starting $command, logging to $log
     cd "$HADOOP_PREFIX"
-    nohup nice -n $HADOOP_NICENESS $hadoopScript --config $HADOOP_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
+    case $command in
+      namenode|secondarynamenode|datanode|dfs|dfsadmin|fsck|balancer)
+        if [ -z "$HADOOP_HDFS_HOME" ]; then
+          hdfsScript="$HADOOP_PREFIX"/bin/hdfs
+        else
+          hdfsScript="$HADOOP_HDFS_HOME"/bin/hdfs
+        fi
+        nohup nice -n $HADOOP_NICENESS $hdfsScript --config $HADOOP_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
+      ;;
+      (*)
+        nohup nice -n $HADOOP_NICENESS $hadoopScript --config $HADOOP_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
+      ;;
+    esac
     echo $! > $pid
     sleep 1; head "$log"
     sleep 3;
