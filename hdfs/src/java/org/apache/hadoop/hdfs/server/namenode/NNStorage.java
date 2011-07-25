@@ -1047,7 +1047,7 @@ public class NNStorage extends Storage implements Closeable {
         FSImage.LOG.warn("Ignoring one or more storage directories with old layouts");
       }
     } else {
-      inspector = new FSImageOldStorageInspector();
+      inspector = new FSImagePreTransactionalStorageInspector();
     }
     
     inspectStorageDirs(inspector);

@@ -46,9 +46,9 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-class FSImageOldStorageInspector extends FSImageStorageInspector {
+class FSImagePreTransactionalStorageInspector extends FSImageStorageInspector {
   private static final Log LOG =
-    LogFactory.getLog(FSImageOldStorageInspector.class);
+    LogFactory.getLog(FSImagePreTransactionalStorageInspector.class);
   
   /* Flag if there is at least one storage dir that doesn't contain the newest
    * fstime */
@@ -169,7 +169,7 @@ class FSImageOldStorageInspector extends FSImageStorageInspector {
                       "edits checkpoint time = " + latestEditsCheckpointTime);
     }
     
-    return new OldLoadPlan();
+    return new PreTransactionalLoadPlan();
   }
   
   @Override
@@ -180,7 +180,7 @@ class FSImageOldStorageInspector extends FSImageStorageInspector {
 
   }
   
-  private class OldLoadPlan extends LoadPlan {
+  private class PreTransactionalLoadPlan extends LoadPlan {
 
     @Override
     boolean doRecovery() throws IOException {
