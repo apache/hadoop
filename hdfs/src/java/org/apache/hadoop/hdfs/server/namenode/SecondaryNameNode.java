@@ -130,6 +130,7 @@ public class SecondaryNameNode implements Runnable {
       initialize(conf);
     } catch(IOException e) {
       shutdown();
+      LOG.fatal("Failed to start secondary namenode. ", e);
       throw e;
     }
   }

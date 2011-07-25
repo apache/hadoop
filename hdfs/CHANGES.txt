@@ -596,6 +596,9 @@ Trunk (unreleased changes)
     HDFS-1739.  Add available volume size to the error message when datanode
     throws DiskOutOfSpaceException.  (Uma Maheswara Rao G via szetszwo)
 
+    HDFS-2144. If SNN shuts down during initialization it does not log the
+    cause. (Ravi Prakash via atm)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
