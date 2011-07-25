@@ -522,6 +522,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7349. HADOOP-7121 accidentally disabled some tests in TestIPC.
     (todd)
 
+    HADOOP-7252. JUnit shows up as a compile time dependency in 0.22.
+    (Harsh J Chouraria via todd)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

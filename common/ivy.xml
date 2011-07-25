@@ -219,7 +219,7 @@
     <dependency org="junit"
       name="junit"
       rev="${junit.version}"
-      conf="common->default"/>
+      conf="test->default"/>
     <dependency org="org.apache.rat"
       name="apache-rat-tasks"
       rev="${rats-lib.version}"
