@@ -203,6 +203,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2623. Update ClusterMapReduceTestCase to use
     MiniDFSCluster.Builder (Harsh J Chouraria via eli)
 
+    MAPREDUCE-2602. Allow setting of end-of-record delimiter for
+    TextInputFormat for the old API. (Ahmed Radwan via todd)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

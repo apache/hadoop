@@ -59,6 +59,10 @@ public class TextInputFormat extends FileInputFormat<LongWritable, Text>
     throws IOException {
     
     reporter.setStatus(genericSplit.toString());
-    return new LineRecordReader(job, (FileSplit) genericSplit);
+    String delimiter = job.get("textinputformat.record.delimiter");
+    byte[] recordDelimiterBytes = null;
+    if (null != delimiter) recordDelimiterBytes = delimiter.getBytes();
+    return new LineRecordReader(job, (FileSplit) genericSplit,
+        recordDelimiterBytes);
   }
 }
