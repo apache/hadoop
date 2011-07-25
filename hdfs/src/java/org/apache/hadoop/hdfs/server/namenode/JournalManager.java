@@ -28,7 +28,7 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorageArchivalManager.StorageAr
  * each conceptual place of storage corresponds to exactly one instance of
  * this class, which is created when the EditLog is first opened.
  */
-public interface JournalManager {
+interface JournalManager {
   /**
    * Begin writing to a new segment of the log stream, which starts at
    * the given transaction ID.

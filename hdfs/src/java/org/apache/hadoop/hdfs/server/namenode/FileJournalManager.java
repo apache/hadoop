@@ -39,7 +39,7 @@ import com.google.common.base.Preconditions;
  * Note: this class is not thread-safe and should be externally
  * synchronized.
  */
-public class FileJournalManager implements JournalManager {
+class FileJournalManager implements JournalManager {
   private static final Log LOG = LogFactory.getLog(FileJournalManager.class);
 
   private final StorageDirectory sd;

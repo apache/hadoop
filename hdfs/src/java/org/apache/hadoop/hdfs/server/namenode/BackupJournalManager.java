@@ -22,7 +22,11 @@ import java.io.IOException;
 import org.apache.hadoop.hdfs.server.namenode.NNStorageArchivalManager.StorageArchiver;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 
-public class BackupJournalManager implements JournalManager {
+/**
+ * A JournalManager implementation that uses RPCs to log transactions
+ * to a BackupNode.
+ */
+class BackupJournalManager implements JournalManager {
 
   private final NamenodeRegistration nnReg;
   private final NamenodeRegistration bnReg;
