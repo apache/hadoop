@@ -55,10 +55,7 @@ public enum FSEditLogOpCodes {
   OP_UPDATE_MASTER_KEY          ((byte) 21),
   OP_REASSIGN_LEASE             ((byte) 22),
   OP_END_LOG_SEGMENT            ((byte) 23),
-  OP_START_LOG_SEGMENT          ((byte) 24),
-
-  // must be same as NamenodeProtocol.JA_JSPOOL_START
-  OP_JSPOOL_START               ((byte)102);
+  OP_START_LOG_SEGMENT          ((byte) 24);
 
   private byte opCode;
 

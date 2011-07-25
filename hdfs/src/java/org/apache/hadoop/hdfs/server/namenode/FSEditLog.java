@@ -218,21 +218,13 @@ public class FSEditLog  {
         throw new java.lang.IllegalStateException(NO_JOURNAL_STREAMS_WARNING);
       }
       
-      // Only start a new transaction for OPs which will be persisted to disk.
-      // Obviously this excludes control op codes.
-      long start = now();
-      if (opCode.getOpCode() < FSEditLogOpCodes.OP_JSPOOL_START.getOpCode()) {
-        start = beginTransaction();
-      }
+      long start = beginTransaction();
 
       mapJournalsAndReportErrors(new JournalClosure() {
         @Override 
         public void apply(JournalAndStream jas) throws IOException {
           if (!jas.isActive()) return;
-          EditLogOutputStream stream = jas.stream;
-          if(!stream.isOperationSupported(opCode.getOpCode()))
-            return;
-          stream.write(opCode.getOpCode(), txid, writables);
+          jas.stream.write(opCode.getOpCode(), txid, writables);
         }
       }, "logging edit");
 

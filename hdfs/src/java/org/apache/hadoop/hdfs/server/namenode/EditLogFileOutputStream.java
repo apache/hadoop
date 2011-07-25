@@ -254,15 +254,6 @@ class EditLogFileOutputStream extends EditLogOutputStream {
   }
 
   /**
-   * Operations like OP_JSPOOL_START and OP_CHECKPOINT_TIME should not be
-   * written into edits file.
-   */
-  @Override
-  boolean isOperationSupported(byte op) {
-    return op < FSEditLogOpCodes.OP_JSPOOL_START.getOpCode() - 1;
-  }
-
-  /**
    * Returns the file associated with this stream.
    */
   File getFile() {

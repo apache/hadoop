@@ -121,10 +121,6 @@ abstract class EditLogOutputStream implements JournalStream {
     return false;
   }
   
-  boolean isOperationSupported(byte op) {
-    return true;
-  }
-
   /**
    * Return total time spent in {@link #flushAndSync()}
    */
