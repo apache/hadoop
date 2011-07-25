@@ -347,6 +347,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2409. DistributedCache maps files and archives to the same path,
     despite semantic incompatibility. (Siddharth Seth via cdouglas)
 
+    MAPREDUCE-2575. TestMiniMRDFSCaching fails if test.build.dir is set 
+    to something other than build/test (Thomas Graves via mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -191,7 +191,7 @@ public class MRCaching {
 
   static void setupCache(String cacheDir, FileSystem fs) 
   throws IOException {
-    Path localPath = new Path("build/test/cache");
+    Path localPath = new Path(System.getProperty("test.cache.data", "build/test/cache"));
     Path txtPath = new Path(localPath, new Path("test.txt"));
     Path jarPath = new Path(localPath, new Path("test.jar"));
     Path zipPath = new Path(localPath, new Path("test.zip"));
