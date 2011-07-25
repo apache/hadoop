@@ -310,17 +310,18 @@ public class SecurityUtil {
    * Look up the KerberosInfo for a given protocol. It searches all known
    * SecurityInfo providers.
    * @param protocol the protocol class to get the information for
+   * @param conf configuration object
    * @return the KerberosInfo or null if it has no KerberosInfo defined
    */
-  public static KerberosInfo getKerberosInfo(Class<?> protocol) {
+  public static KerberosInfo getKerberosInfo(Class<?> protocol, Configuration conf) {
     for(SecurityInfo provider: testProviders) {
-      KerberosInfo result = provider.getKerberosInfo(protocol);
+      KerberosInfo result = provider.getKerberosInfo(protocol, conf);
       if (result != null) {
         return result;
       }
     }
     for(SecurityInfo provider: securityInfoProviders) {
-      KerberosInfo result = provider.getKerberosInfo(protocol);
+      KerberosInfo result = provider.getKerberosInfo(protocol, conf);
       if (result != null) {
         return result;
       }
@@ -332,17 +333,18 @@ public class SecurityUtil {
    * Look up the TokenInfo for a given protocol. It searches all known
    * SecurityInfo providers.
    * @param protocol The protocol class to get the information for.
+   * @conf conf Configuration object
    * @return the TokenInfo or null if it has no KerberosInfo defined
    */
-  public static TokenInfo getTokenInfo(Class<?> protocol) {
+  public static TokenInfo getTokenInfo(Class<?> protocol, Configuration conf) {
     for(SecurityInfo provider: testProviders) {
-      TokenInfo result = provider.getTokenInfo(protocol);
+      TokenInfo result = provider.getTokenInfo(protocol, conf);
       if (result != null) {
         return result;
       }      
     }
     for(SecurityInfo provider: securityInfoProviders) {
-      TokenInfo result = provider.getTokenInfo(protocol);
+      TokenInfo result = provider.getTokenInfo(protocol, conf);
       if (result != null) {
         return result;
       }

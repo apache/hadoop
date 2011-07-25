@@ -252,7 +252,7 @@ public class Client {
       Class<?> protocol = remoteId.getProtocol();
       this.useSasl = UserGroupInformation.isSecurityEnabled();
       if (useSasl && protocol != null) {
-        TokenInfo tokenInfo = SecurityUtil.getTokenInfo(protocol);
+        TokenInfo tokenInfo = SecurityUtil.getTokenInfo(protocol, conf);
         if (tokenInfo != null) {
           TokenSelector<? extends TokenIdentifier> tokenSelector = null;
           try {
@@ -267,7 +267,7 @@ public class Client {
               .getHostAddress() + ":" + addr.getPort()), 
               ticket.getTokens());
         }
-        KerberosInfo krbInfo = SecurityUtil.getKerberosInfo(protocol);
+        KerberosInfo krbInfo = SecurityUtil.getKerberosInfo(protocol, conf);
         if (krbInfo != null) {
           serverPrincipal = remoteId.getServerPrincipal();
           if (LOG.isDebugEnabled()) {
@@ -1285,7 +1285,7 @@ public class Client {
       if (!UserGroupInformation.isSecurityEnabled() || protocol == null) {
         return null;
       }
-      KerberosInfo krbInfo = SecurityUtil.getKerberosInfo(protocol);
+      KerberosInfo krbInfo = SecurityUtil.getKerberosInfo(protocol, conf);
       if (krbInfo != null) {
         String serverKey = krbInfo.serverPrincipal();
         if (serverKey == null) {

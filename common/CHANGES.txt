@@ -277,6 +277,9 @@ Trunk (unreleased changes)
     HADOOP-7434. Display error when using "daemonlog -setlevel" with
     illegal level. (yanjinshuang via eli)
 
+    HADOOP-7463. Adding a configuration parameter to SecurityInfo interface.
+    (mahadev)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
