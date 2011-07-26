@@ -5,6 +5,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    MAPREDUCE-2664. Implement JobCounters for MRv2. (Siddharth Seth via 
+    sharad)
+
     MAPREDUCE-2667. mapred job -kill leaves application in RUNNING state 
     (thomas graves via mahadev)
     

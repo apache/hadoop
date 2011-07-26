@@ -469,7 +469,9 @@ public class TestRMContainerAllocator {
         return new EventHandler() {
           @Override
           public void handle(Event event) {
-            events.add((TaskAttemptContainerAssignedEvent) event);
+            if (event instanceof TaskAttemptContainerAssignedEvent) {
+              events.add((TaskAttemptContainerAssignedEvent) event);
+            } //Ignoring JobCounterUpdateEvents
           }
         };
       }

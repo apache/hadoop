@@ -46,6 +46,7 @@ public class ContainerRequestEvent extends ContainerAllocatorEvent {
   public static ContainerRequestEvent createContainerRequestEventForFailedContainer(
       TaskAttemptId attemptID, 
       Resource capability) {
+    //ContainerRequest for failed events does not consider rack / node locality?
     return new ContainerRequestEvent(attemptID, capability);
   }
 

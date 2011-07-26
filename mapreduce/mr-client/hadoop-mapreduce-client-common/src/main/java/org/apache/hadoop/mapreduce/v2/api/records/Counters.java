@@ -11,4 +11,6 @@ public interface Counters {
   public abstract void setCounterGroup(String key, CounterGroup value);
   public abstract void removeCounterGroup(String key);
   public abstract void clearCounterGroups();
+  
+  public abstract void incrCounter(Enum<?> key, long amount);
 }

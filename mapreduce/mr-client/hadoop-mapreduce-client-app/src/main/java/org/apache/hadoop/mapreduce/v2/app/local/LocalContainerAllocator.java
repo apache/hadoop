@@ -22,11 +22,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.mapreduce.JobCounter;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobCounterUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssignedEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
+import org.apache.hadoop.mapreduce.v2.app.rm.ContainerRequestEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMCommunicator;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -74,6 +78,15 @@ public class LocalContainerAllocator extends RMCommunicator
       container.setContainerToken(null);
       container.setNodeHttpAddress("localhost:9999");
       // send the container-assigned event to task attempt
+
+      if (event.getAttemptID().getTaskId().getTaskType() == TaskType.MAP) {
+        JobCounterUpdateEvent jce =
+            new JobCounterUpdateEvent(event.getAttemptID().getTaskId()
+                .getJobId());
+        // TODO Setting OTHER_LOCAL_MAP for now.
+        jce.addCounterUpdate(JobCounter.OTHER_LOCAL_MAPS, 1);
+        eventHandler.handle(jce);
+      }
       eventHandler.handle(new TaskAttemptContainerAssignedEvent(
           event.getAttemptID(), container));
     }

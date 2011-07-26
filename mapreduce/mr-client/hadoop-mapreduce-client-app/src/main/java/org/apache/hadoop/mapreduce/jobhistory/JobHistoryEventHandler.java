@@ -36,6 +36,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.mapreduce.JobCounter;
+import org.apache.hadoop.mapreduce.v2.api.records.Counter;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
@@ -462,6 +464,7 @@ public class JobHistoryEventHandler extends AbstractService
                 .toString());
       // TODO JOB_FINISHED does not have state. Effectively job history does not
       // have state about the finished job.
+      setSummarySlotSeconds(summary, jobId);
       break;
     case JOB_FAILED:
     case JOB_KILLED:
@@ -470,7 +473,23 @@ public class JobHistoryEventHandler extends AbstractService
       summary.setNumFinishedMaps(context.getJob(jobId).getTotalMaps());
       summary.setNumFinishedReduces(context.getJob(jobId).getTotalReduces());
       summary.setJobFinishTime(juce.getFinishTime());
+      setSummarySlotSeconds(summary, jobId);
       break;
+    }
+  }
+
+  private void setSummarySlotSeconds(JobSummary summary, JobId jobId) {
+    Counter slotMillisMapCounter =
+        context.getJob(jobId).getCounters()
+            .getCounter(JobCounter.SLOTS_MILLIS_MAPS);
+    if (slotMillisMapCounter != null) {
+      summary.setMapSlotSeconds(slotMillisMapCounter.getValue());
+    }
+    Counter slotMillisReduceCounter =
+        context.getJob(jobId).getCounters()
+            .getCounter(JobCounter.SLOTS_MILLIS_REDUCES);
+    if (slotMillisReduceCounter != null) {
+      summary.setMapSlotSeconds(slotMillisReduceCounter.getValue());
     }
   }
 

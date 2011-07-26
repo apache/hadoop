@@ -25,7 +25,9 @@ import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
@@ -55,11 +57,48 @@ public class TestUberAM extends TestMRJobs {
     }
     super.testSleepJob();
   }
+  
+  @Override
+  protected void verifySleepJobCounters(Job job) throws InterruptedException,
+      IOException {
+    Counters counters = job.getCounters();
+
+    Assert.assertEquals(3, counters.findCounter(JobCounter.OTHER_LOCAL_MAPS)
+        .getValue());
+    Assert.assertEquals(3, counters.findCounter(JobCounter.TOTAL_LAUNCHED_MAPS)
+        .getValue());
+    Assert.assertEquals(1,
+        counters.findCounter(JobCounter.TOTAL_LAUNCHED_REDUCES).getValue());
+    Assert
+        .assertTrue(counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS) != null
+            && counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS).getValue() != 0);
+    Assert
+        .assertTrue(counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS) != null
+            && counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS).getValue() != 0);
+
+    Assert.assertEquals(3, counters.findCounter(JobCounter.NUM_UBER_SUBMAPS)
+        .getValue());
+    Assert.assertEquals(1, counters.findCounter(JobCounter.NUM_UBER_SUBREDUCES)
+        .getValue());
+    Assert.assertEquals(4,
+        counters.findCounter(JobCounter.TOTAL_LAUNCHED_UBERTASKS).getValue());
+  }
 
   @Override
   public void testRandomWriter()
   throws IOException, InterruptedException, ClassNotFoundException {
     super.testRandomWriter();
+  }
+
+  @Override
+  protected void verifyRandomWriterCounters(Job job)
+      throws InterruptedException, IOException {
+    super.verifyRandomWriterCounters(job);
+    Counters counters = job.getCounters();
+    Assert.assertEquals(3, counters.findCounter(JobCounter.NUM_UBER_SUBMAPS)
+        .getValue());
+    Assert.assertEquals(3,
+        counters.findCounter(JobCounter.TOTAL_LAUNCHED_UBERTASKS).getValue());
   }
 
   @Override
@@ -100,8 +139,33 @@ public class TestUberAM extends TestMRJobs {
     Assert.assertEquals(TaskCompletionEvent.Status.FAILED,
         events[0].getStatus().FAILED);
     Assert.assertEquals(JobStatus.State.FAILED, job.getJobState());
+    
+    //Disabling till UberAM honors MRJobConfig.MAP_MAX_ATTEMPTS
+    //verifyFailingMapperCounters(job);
 
     // TODO later:  add explicit "isUber()" checks of some sort
+  }
+  
+  @Override
+  protected void verifyFailingMapperCounters(Job job)
+      throws InterruptedException, IOException {
+    Counters counters = job.getCounters();
+    Assert.assertEquals(2, counters.findCounter(JobCounter.OTHER_LOCAL_MAPS)
+        .getValue());
+    Assert.assertEquals(2, counters.findCounter(JobCounter.TOTAL_LAUNCHED_MAPS)
+        .getValue());
+    Assert.assertEquals(2, counters.findCounter(JobCounter.NUM_FAILED_MAPS)
+        .getValue());
+    Assert
+        .assertTrue(counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS) != null
+            && counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS).getValue() != 0);
+
+    Assert.assertEquals(2,
+        counters.findCounter(JobCounter.TOTAL_LAUNCHED_UBERTASKS).getValue());
+    Assert.assertEquals(2, counters.findCounter(JobCounter.NUM_UBER_SUBMAPS)
+        .getValue());
+    Assert.assertEquals(2, counters
+        .findCounter(JobCounter.NUM_FAILED_UBERTASKS).getValue());
   }
 
 //@Test  //FIXME:  if/when the corresponding TestMRJobs test gets enabled, do so here as well (potentially with mods for ubermode)

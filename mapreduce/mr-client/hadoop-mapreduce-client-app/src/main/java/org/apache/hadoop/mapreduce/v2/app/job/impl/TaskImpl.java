@@ -254,7 +254,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     this.jobToken = jobToken;
     this.metrics = metrics;
 
-    if (completedTasksFromPreviousRun != null 
+    if (completedTasksFromPreviousRun != null
         && completedTasksFromPreviousRun.contains(taskId)) {
       LOG.info("Task is from previous run " + taskId);
       startCount = startCount - 1;

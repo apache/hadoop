@@ -79,6 +79,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobCounterUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
@@ -149,12 +150,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private boolean lazyTasksCopyNeeded = false;
   private volatile Map<TaskId, Task> tasks = new LinkedHashMap<TaskId, Task>();
   private Counters jobCounters = newCounters();
-    // FIXME:  support job-level counters
+    // FIXME:  
     //
-    // Presumably want to define new event type that job-related entities
-    // (e.g., MRAppMaster or LocalContainerLauncher) can emit with some sort
-    // of payload (maybe just Counters?); then define new Job state-machine
-    // transition to handle the event and update jobCounters with payload data.
     // Can then replace task-level uber counters (MR-2424) with job-level ones
     // sent from LocalContainerLauncher, and eventually including a count of
     // of uber-AM attempts (probably sent from MRAppMaster).
@@ -184,6 +181,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private static final TaskAttemptCompletedEventTransition
       TASK_ATTEMPT_COMPLETED_EVENT_TRANSITION =
           new TaskAttemptCompletedEventTransition();
+  private static final CounterUpdateTransition COUNTER_UPDATE_TRANSITION =
+      new CounterUpdateTransition();
 
   protected static final
     StateMachineFactory<JobImpl, JobState, JobEventType, JobEvent> 
@@ -195,6 +194,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           .addTransition(JobState.NEW, JobState.NEW,
               JobEventType.JOB_DIAGNOSTIC_UPDATE,
               DIAGNOSTIC_UPDATE_TRANSITION)
+          .addTransition(JobState.NEW, JobState.NEW,
+              JobEventType.JOB_COUNTER_UPDATE, COUNTER_UPDATE_TRANSITION)
           .addTransition
               (JobState.NEW,
               EnumSet.of(JobState.INITED, JobState.FAILED),
@@ -211,6 +212,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           .addTransition(JobState.INITED, JobState.INITED,
               JobEventType.JOB_DIAGNOSTIC_UPDATE,
               DIAGNOSTIC_UPDATE_TRANSITION)
+          .addTransition(JobState.INITED, JobState.INITED,
+              JobEventType.JOB_COUNTER_UPDATE, COUNTER_UPDATE_TRANSITION)
           .addTransition(JobState.INITED, JobState.RUNNING,
               JobEventType.JOB_START,
               new StartTransition())
@@ -244,6 +247,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
               JobEventType.JOB_DIAGNOSTIC_UPDATE,
               DIAGNOSTIC_UPDATE_TRANSITION)
           .addTransition(JobState.RUNNING, JobState.RUNNING,
+              JobEventType.JOB_COUNTER_UPDATE, COUNTER_UPDATE_TRANSITION)
+          .addTransition(JobState.RUNNING, JobState.RUNNING,
               JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE,
               new TaskAttemptFetchFailureTransition())
           .addTransition(
@@ -263,6 +268,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           .addTransition(JobState.KILL_WAIT, JobState.KILL_WAIT,
               JobEventType.JOB_DIAGNOSTIC_UPDATE,
               DIAGNOSTIC_UPDATE_TRANSITION)
+          .addTransition(JobState.KILL_WAIT, JobState.KILL_WAIT,
+              JobEventType.JOB_COUNTER_UPDATE, COUNTER_UPDATE_TRANSITION)
           .addTransition(
               JobState.KILL_WAIT,
               JobState.ERROR, JobEventType.INTERNAL_ERROR,
@@ -277,6 +284,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           .addTransition(JobState.SUCCEEDED, JobState.SUCCEEDED,
               JobEventType.JOB_DIAGNOSTIC_UPDATE,
               DIAGNOSTIC_UPDATE_TRANSITION)
+          .addTransition(JobState.SUCCEEDED, JobState.SUCCEEDED,
+              JobEventType.JOB_COUNTER_UPDATE, COUNTER_UPDATE_TRANSITION)
           .addTransition(
               JobState.SUCCEEDED,
               JobState.ERROR, JobEventType.INTERNAL_ERROR,
@@ -290,6 +299,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           .addTransition(JobState.FAILED, JobState.FAILED,
               JobEventType.JOB_DIAGNOSTIC_UPDATE,
               DIAGNOSTIC_UPDATE_TRANSITION)
+          .addTransition(JobState.FAILED, JobState.FAILED,
+              JobEventType.JOB_COUNTER_UPDATE, COUNTER_UPDATE_TRANSITION)
           .addTransition(
               JobState.FAILED,
               JobState.ERROR, JobEventType.INTERNAL_ERROR,
@@ -303,6 +314,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           .addTransition(JobState.KILLED, JobState.KILLED,
               JobEventType.JOB_DIAGNOSTIC_UPDATE,
               DIAGNOSTIC_UPDATE_TRANSITION)
+          .addTransition(JobState.KILLED, JobState.KILLED,
+              JobEventType.JOB_COUNTER_UPDATE, COUNTER_UPDATE_TRANSITION)
           .addTransition(
               JobState.KILLED,
               JobState.ERROR, JobEventType.INTERNAL_ERROR,
@@ -460,7 +473,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   @Override
   public Counters getCounters() {
     Counters counters = newCounters();
-    // TODO: compute job-level counters
     readLock.lock();
     try {
       incrAllCounters(counters, jobCounters);
@@ -500,7 +512,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   public static Counters newCounters() {
     Counters counters = RecordFactoryProvider.getRecordFactory(null)
         .newRecordInstance(Counters.class);
-//    counters.groups = new HashMap<String, CounterGroup>();
     return counters;
   }
 
@@ -519,7 +530,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         if (group == null) {
           group = RecordFactoryProvider.getRecordFactory(null)
               .newRecordInstance(CounterGroup.class);
-//          group.counters = new HashMap<CharSequence, Counter>();
           group.setName(otherGroup.getName());
           counters.setCounterGroup(group.getName(), group);
         }
@@ -1363,13 +1373,25 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private void addDiagnostic(String diag) {
     diagnostics.add(diag);
   }
-
+  
   private static class DiagnosticsUpdateTransition implements
       SingleArcTransition<JobImpl, JobEvent> {
     @Override
     public void transition(JobImpl job, JobEvent event) {
       job.addDiagnostic(((JobDiagnosticsUpdateEvent) event)
           .getDiagnosticUpdate());
+    }
+  }
+  
+  private static class CounterUpdateTransition implements
+      SingleArcTransition<JobImpl, JobEvent> {
+    @Override
+    public void transition(JobImpl job, JobEvent event) {
+      JobCounterUpdateEvent jce = (JobCounterUpdateEvent) event;
+      for (JobCounterUpdateEvent.CounterIncrementalUpdate ci : jce
+          .getCounterUpdates()) {
+        job.jobCounters.incrCounter(ci.getCounterKey(), ci.getIncrementValue());
+      }
     }
   }
 

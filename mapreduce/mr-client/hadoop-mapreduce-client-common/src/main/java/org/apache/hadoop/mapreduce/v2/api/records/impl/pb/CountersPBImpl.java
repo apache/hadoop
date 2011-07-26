@@ -78,6 +78,26 @@ public class CountersPBImpl extends ProtoBase<CountersProto> implements Counters
     CounterGroup group = getCounterGroup(key.getDeclaringClass().getName());
     return group == null ? null : group.getCounter(key.name());
   }
+
+  @Override
+  public void incrCounter(Enum<?> key, long amount) {
+    String groupName = key.getDeclaringClass().getName();
+    if (getCounterGroup(groupName) == null) {
+      CounterGroup cGrp = new CounterGroupPBImpl();
+      cGrp.setName(groupName);
+      cGrp.setDisplayName(groupName);
+      setCounterGroup(groupName, cGrp);
+    }
+    if (getCounterGroup(groupName).getCounter(key.name()) == null) {
+      Counter c = new CounterPBImpl();
+      c.setName(key.name());
+      c.setDisplayName(key.name());
+      c.setValue(0l);
+      getCounterGroup(groupName).setCounter(key.name(), c);
+    }
+    Counter counter = getCounterGroup(groupName).getCounter(key.name());
+    counter.setValue(counter.getValue() + amount);
+  }
  
   private void initCounterGroups() {
     if (this.counterGroups != null) {

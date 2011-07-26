@@ -49,6 +49,7 @@ import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.TaskAttemptContextImpl;
 import org.apache.hadoop.mapred.WrappedJvmID;
 import org.apache.hadoop.mapred.WrappedProgressSplitsBlock;
+import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -73,6 +74,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobCounterUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
@@ -131,6 +133,8 @@ public abstract class TaskAttemptImpl implements
 
   private static final Log LOG = LogFactory.getLog(TaskAttemptImpl.class);
   private static final long MEMORY_SPLITS_RESOLUTION = 1024; //TODO Make configurable?
+  private static final int MAP_MEMORY_MB_DEFAULT = 1024;
+  private static final int REDUCE_MEMORY_MB_DEFAULT = 1024;
   private final static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
   protected final Configuration conf;
@@ -470,9 +474,9 @@ public abstract class TaskAttemptImpl implements
   private int getMemoryRequired(Configuration conf, TaskType taskType) {
     int memory = 1024;
     if (taskType == TaskType.MAP)  {
-      memory = conf.getInt(MRJobConfig.MAP_MEMORY_MB, 1024);
+      memory = conf.getInt(MRJobConfig.MAP_MEMORY_MB, MAP_MEMORY_MB_DEFAULT);
     } else if (taskType == TaskType.REDUCE) {
-      memory = conf.getInt(MRJobConfig.REDUCE_MEMORY_MB, 1024);
+      memory = conf.getInt(MRJobConfig.REDUCE_MEMORY_MB, REDUCE_MEMORY_MB_DEFAULT);
     }
     
     return memory;
@@ -903,6 +907,42 @@ public abstract class TaskAttemptImpl implements
       finishTime = clock.getTime();
     }
   }
+  
+  private static long computeSlotMillis(TaskAttemptImpl taskAttempt) {
+    TaskType taskType = taskAttempt.getID().getTaskId().getTaskType();
+    int slotMemoryReq =
+        taskAttempt.getMemoryRequired(taskAttempt.conf, taskType);
+    int simSlotsRequired =
+        slotMemoryReq
+            / (taskType == TaskType.MAP ? MAP_MEMORY_MB_DEFAULT
+                : REDUCE_MEMORY_MB_DEFAULT);
+    // Simulating MRv1 slots for counters by assuming *_MEMORY_MB_DEFAULT
+    // corresponds to a MrV1 slot.
+    // Fallow slot millis is not applicable in MRv2 - since a container is
+    // either assigned with the required memory or is not. No partial
+    // reserveations
+    long slotMillisIncrement =
+        simSlotsRequired
+            * (taskAttempt.getFinishTime() - taskAttempt.getLaunchTime());
+    return slotMillisIncrement;
+  }
+  
+  private static JobCounterUpdateEvent createJobCounterUpdateEventTAFailed(
+      TaskAttemptImpl taskAttempt) {
+    TaskType taskType = taskAttempt.getID().getTaskId().getTaskType();
+    JobCounterUpdateEvent jce = new JobCounterUpdateEvent(taskAttempt.getID().getTaskId().getJobId());
+    
+    long slotMillisIncrement = computeSlotMillis(taskAttempt);
+    
+    if (taskType == TaskType.MAP) {
+      jce.addCounterUpdate(JobCounter.NUM_FAILED_MAPS, 1);
+      jce.addCounterUpdate(JobCounter.SLOTS_MILLIS_MAPS, slotMillisIncrement);
+    } else {
+      jce.addCounterUpdate(JobCounter.NUM_FAILED_REDUCES, 1);
+      jce.addCounterUpdate(JobCounter.SLOTS_MILLIS_REDUCES, slotMillisIncrement);
+    }
+    return jce;
+  }
 
   private static TaskAttemptUnsuccessfulCompletionEvent createTaskAttemptUnsuccessfulCompletionEvent(
       TaskAttemptImpl taskAttempt, TaskAttemptState attemptState) {
@@ -1080,8 +1120,11 @@ public abstract class TaskAttemptImpl implements
           break;
       }
       if (taskAttempt.getLaunchTime() != 0) {
-      TaskAttemptUnsuccessfulCompletionEvent tauce = createTaskAttemptUnsuccessfulCompletionEvent(
-          taskAttempt, finalState);
+        TaskAttemptUnsuccessfulCompletionEvent tauce =
+            createTaskAttemptUnsuccessfulCompletionEvent(taskAttempt,
+                finalState);
+        taskAttempt.eventHandler
+            .handle(createJobCounterUpdateEventTAFailed(taskAttempt));
         taskAttempt.eventHandler.handle(new JobHistoryEvent(
             taskAttempt.attemptId.getTaskId().getJobId(), tauce));
       } else {
@@ -1106,6 +1149,15 @@ public abstract class TaskAttemptImpl implements
       InetSocketAddress nodeHttpInetAddr =
           NetUtils.createSocketAddr(taskAttempt.nodeHttpAddress); // TODO:
                                                                   // Costly?
+      JobCounterUpdateEvent jce =
+          new JobCounterUpdateEvent(taskAttempt.attemptId.getTaskId()
+              .getJobId());
+      jce.addCounterUpdate(
+          taskAttempt.attemptId.getTaskId().getTaskType() == TaskType.MAP ? 
+              JobCounter.TOTAL_LAUNCHED_MAPS: JobCounter.TOTAL_LAUNCHED_REDUCES
+              , 1);
+      taskAttempt.eventHandler.handle(jce);
+      
       TaskAttemptStartedEvent tase =
         new TaskAttemptStartedEvent(TypeConverter.fromYarn(taskAttempt.attemptId),
             TypeConverter.fromYarn(taskAttempt.attemptId.getTaskId().getTaskType()),
@@ -1163,24 +1215,22 @@ public abstract class TaskAttemptImpl implements
       String taskType = 
           TypeConverter.fromYarn(taskAttempt.attemptId.getTaskId().getTaskType()).toString();
       LOG.info("In TaskAttemptImpl taskType: " + taskType);
+      long slotMillis = computeSlotMillis(taskAttempt);
+      JobCounterUpdateEvent jce =
+          new JobCounterUpdateEvent(taskAttempt.attemptId.getTaskId()
+              .getJobId());
+      jce.addCounterUpdate(
+        taskAttempt.attemptId.getTaskId().getTaskType() == TaskType.MAP ? 
+          JobCounter.SLOTS_MILLIS_MAPS : JobCounter.SLOTS_MILLIS_REDUCES,
+          slotMillis);
+      taskAttempt.eventHandler.handle(jce);
       taskAttempt.logAttemptFinishedEvent(TaskAttemptState.SUCCEEDED);
-          /*
-      TaskAttemptFinishedEvent tfe =
-          new TaskAttemptFinishedEvent(TypeConverter.fromYarn(taskAttempt.attemptId),
-          TypeConverter.fromYarn(taskAttempt.attemptId.taskID.taskType),
-          TaskAttemptState.SUCCEEDED.toString(), 
-          taskAttempt.reportedStatus.finishTime, "hostname", 
-          TaskAttemptState.SUCCEEDED.toString(), 
-          TypeConverter.fromYarn(taskAttempt.getCounters()));
-      taskAttempt.eventHandler.handle(new JobHistoryEvent(taskAttempt.attemptId.taskID.jobID, tfe));
-      */
       taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
           taskAttempt.attemptId,
           TaskEventType.T_ATTEMPT_SUCCEEDED));
       taskAttempt.eventHandler.handle
       (new SpeculatorEvent
           (taskAttempt.reportedStatus, taskAttempt.clock.getTime()));
-
    }
   }
 
@@ -1190,9 +1240,13 @@ public abstract class TaskAttemptImpl implements
     public void transition(TaskAttemptImpl taskAttempt, TaskAttemptEvent event) {
       // set the finish time
       taskAttempt.setFinishTime();
+      
       if (taskAttempt.getLaunchTime() != 0) {
-      TaskAttemptUnsuccessfulCompletionEvent tauce = createTaskAttemptUnsuccessfulCompletionEvent(
-          taskAttempt, TaskAttemptState.FAILED);
+        taskAttempt.eventHandler
+            .handle(createJobCounterUpdateEventTAFailed(taskAttempt));
+        TaskAttemptUnsuccessfulCompletionEvent tauce =
+            createTaskAttemptUnsuccessfulCompletionEvent(taskAttempt,
+                TaskAttemptState.FAILED);
         taskAttempt.eventHandler.handle(new JobHistoryEvent(
             taskAttempt.attemptId.getTaskId().getJobId(), tauce));
         // taskAttempt.logAttemptFinishedEvent(TaskAttemptState.FAILED); Not
@@ -1245,9 +1299,13 @@ public abstract class TaskAttemptImpl implements
       taskAttempt.addDiagnosticInfo("Too Many fetch failures.Failing the attempt");
       //set the finish time
       taskAttempt.setFinishTime();
+      
       if (taskAttempt.getLaunchTime() != 0) {
-      TaskAttemptUnsuccessfulCompletionEvent tauce = createTaskAttemptUnsuccessfulCompletionEvent(
-          taskAttempt, TaskAttemptState.FAILED);
+        taskAttempt.eventHandler
+            .handle(createJobCounterUpdateEventTAFailed(taskAttempt));
+        TaskAttemptUnsuccessfulCompletionEvent tauce =
+            createTaskAttemptUnsuccessfulCompletionEvent(taskAttempt,
+                TaskAttemptState.FAILED);
         taskAttempt.eventHandler.handle(new JobHistoryEvent(
             taskAttempt.attemptId.getTaskId().getJobId(), tauce));
       }else {
@@ -1268,8 +1326,11 @@ public abstract class TaskAttemptImpl implements
       //set the finish time
       taskAttempt.setFinishTime();
       if (taskAttempt.getLaunchTime() != 0) {
-      TaskAttemptUnsuccessfulCompletionEvent tauce = createTaskAttemptUnsuccessfulCompletionEvent(
-          taskAttempt, TaskAttemptState.KILLED);
+        taskAttempt.eventHandler
+            .handle(createJobCounterUpdateEventTAFailed(taskAttempt));
+        TaskAttemptUnsuccessfulCompletionEvent tauce =
+            createTaskAttemptUnsuccessfulCompletionEvent(taskAttempt,
+                TaskAttemptState.KILLED);
         taskAttempt.eventHandler.handle(new JobHistoryEvent(
             taskAttempt.attemptId.getTaskId().getJobId(), tauce));
       }else {

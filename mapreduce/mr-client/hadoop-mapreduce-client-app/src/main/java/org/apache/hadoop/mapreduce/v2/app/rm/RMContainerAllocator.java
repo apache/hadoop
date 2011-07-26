@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.app.rm;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -34,12 +36,14 @@ import java.util.Map.Entry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AMConstants;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobCounterUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
@@ -456,6 +460,7 @@ public class RMContainerAllocator extends RMContainerRequestor
     private final LinkedList<TaskAttemptId> earlierFailedMaps = 
       new LinkedList<TaskAttemptId>();
     
+    /** Maps from a host to a list of Map tasks with data on the host */
     private final Map<String, LinkedList<TaskAttemptId>> mapsHostMapping = 
       new HashMap<String, LinkedList<TaskAttemptId>>();
     private final Map<String, LinkedList<TaskAttemptId>> mapsRackMapping = 
@@ -501,6 +506,18 @@ public class RMContainerAllocator extends RMContainerRequestor
         request = new ContainerRequest(event, PRIORITY_FAST_FAIL_MAP);
       } else {
         for (String host : event.getHosts()) {
+          //host comes from data splitLocations which are hostnames. Containers
+          // use IP addresses.
+          //TODO Temporary fix for locality. Use resolvers from h-common. 
+          // Cache to make this more efficient ?
+          InetAddress addr = null;
+          try {
+            addr = InetAddress.getByName(host);
+          } catch (UnknownHostException e) {
+            LOG.warn("Unable to resolve host to IP for host [: " + host + "]");
+          }
+          if (addr != null) //Fallback to host if resolve fails.
+            host = addr.getHostAddress();
           LinkedList<TaskAttemptId> list = mapsHostMapping.get(host);
           if (list == null) {
             list = new LinkedList<TaskAttemptId>();
@@ -585,6 +602,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       //try to assign to earlierFailedMaps if present
       assigned = assignToFailedMap(allocated);
       
+      //Assign to reduces before assigning to maps ?
       if (assigned == null) {
         assigned = assignToReduce(allocated);
       }
@@ -606,6 +624,10 @@ public class RMContainerAllocator extends RMContainerRequestor
         TaskAttemptId tId = earlierFailedMaps.removeFirst();
         if (maps.containsKey(tId)) {
           assigned = maps.remove(tId);
+          JobCounterUpdateEvent jce =
+            new JobCounterUpdateEvent(assigned.attemptID.getTaskId().getJobId());
+          jce.addCounterUpdate(JobCounter.OTHER_LOCAL_MAPS, 1);
+          eventHandler.handle(jce);
           LOG.info("Assigned from earlierFailedMaps");
           break;
         }
@@ -638,6 +660,10 @@ public class RMContainerAllocator extends RMContainerRequestor
           TaskAttemptId tId = list.removeFirst();
           if (maps.containsKey(tId)) {
             assigned = maps.remove(tId);
+            JobCounterUpdateEvent jce =
+              new JobCounterUpdateEvent(assigned.attemptID.getTaskId().getJobId());
+            jce.addCounterUpdate(JobCounter.DATA_LOCAL_MAPS, 1);
+            eventHandler.handle(jce);
             hostLocalAssigned++;
             LOG.info("Assigned based on host match " + host);
             break;
@@ -650,6 +676,10 @@ public class RMContainerAllocator extends RMContainerRequestor
             TaskAttemptId tId = list.removeFirst();
             if (maps.containsKey(tId)) {
               assigned = maps.remove(tId);
+              JobCounterUpdateEvent jce =
+                new JobCounterUpdateEvent(assigned.attemptID.getTaskId().getJobId());
+              jce.addCounterUpdate(JobCounter.RACK_LOCAL_MAPS, 1);
+              eventHandler.handle(jce);
               rackLocalAssigned++;
               LOG.info("Assigned based on rack match " + rack);
               break;
@@ -658,6 +688,10 @@ public class RMContainerAllocator extends RMContainerRequestor
           if (assigned == null && maps.size() > 0) {
             TaskAttemptId tId = maps.keySet().iterator().next();
             assigned = maps.remove(tId);
+            JobCounterUpdateEvent jce =
+              new JobCounterUpdateEvent(assigned.attemptID.getTaskId().getJobId());
+            jce.addCounterUpdate(JobCounter.OTHER_LOCAL_MAPS, 1);
+            eventHandler.handle(jce);
             LOG.info("Assigned based on * match");
             break;
           }

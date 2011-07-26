@@ -48,7 +48,9 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -124,7 +126,6 @@ public class TestMRJobs {
   @Test
   public void testSleepJob() throws IOException, InterruptedException,
       ClassNotFoundException { 
-
     LOG.info("\n\n\nStarting testSleepJob().");
 
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
@@ -148,17 +149,35 @@ public class TestMRJobs {
     boolean succeeded = job.waitForCompletion(true);
     Assert.assertTrue(succeeded);
     Assert.assertEquals(JobStatus.State.SUCCEEDED, job.getJobState());
-
+    verifySleepJobCounters(job);
+    
+    
     // TODO later:  add explicit "isUber()" checks of some sort (extend
     // JobStatus?)--compare against MRJobConfig.JOB_UBERTASK_ENABLE value
+  }
+
+  protected void verifySleepJobCounters(Job job) throws InterruptedException,
+      IOException {
+    Counters counters = job.getCounters();
+    Assert.assertEquals(3, counters.findCounter(JobCounter.OTHER_LOCAL_MAPS)
+        .getValue());
+    Assert.assertEquals(3, counters.findCounter(JobCounter.TOTAL_LAUNCHED_MAPS)
+        .getValue());
+    Assert.assertEquals(2,
+        counters.findCounter(JobCounter.TOTAL_LAUNCHED_REDUCES).getValue());
+    Assert
+        .assertTrue(counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS) != null
+            && counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS).getValue() != 0);
+    Assert
+        .assertTrue(counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS) != null
+            && counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS).getValue() != 0);
   }
 
   @Test
   public void testRandomWriter() throws IOException, InterruptedException,
       ClassNotFoundException {
-
+    
     LOG.info("\n\n\nStarting testRandomWriter().");
-
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
       LOG.info("MRAppJar " + MiniMRYarnCluster.APPJAR
                + " not found. Not running test.");
@@ -169,8 +188,8 @@ public class TestMRJobs {
     mrCluster.getConfig().set(RandomTextWriterJob.TOTAL_BYTES, "3072");
     mrCluster.getConfig().set(RandomTextWriterJob.BYTES_PER_MAP, "1024");
     Job job = randomWriterJob.createJob(mrCluster.getConfig());
-    Path outputDir = new Path(mrCluster.getTestWorkDir().getAbsolutePath(),
-        "random-output");
+    Path outputDir =
+        new Path(mrCluster.getTestWorkDir().getAbsolutePath(), "random-output");
     FileOutputFormat.setOutputPath(job, outputDir);
     job.addFileToClassPath(APP_JAR); // The AppMaster jar itself.
     job.setJarByClass(RandomTextWriterJob.class);
@@ -179,6 +198,7 @@ public class TestMRJobs {
     Assert.assertTrue(succeeded);
     Assert.assertEquals(JobStatus.State.SUCCEEDED, job.getJobState());
     // Make sure there are three files in the output-dir
+    
     RemoteIterator<FileStatus> iterator =
         FileContext.getFileContext(mrCluster.getConfig()).listStatus(
             outputDir);
@@ -191,8 +211,21 @@ public class TestMRJobs {
       }
     }
     Assert.assertEquals("Number of part files is wrong!", 3, count);
+    verifyRandomWriterCounters(job);
 
     // TODO later:  add explicit "isUber()" checks of some sort
+  }
+  
+  protected void verifyRandomWriterCounters(Job job)
+      throws InterruptedException, IOException {
+    Counters counters = job.getCounters();
+    Assert.assertEquals(3, counters.findCounter(JobCounter.OTHER_LOCAL_MAPS)
+        .getValue());
+    Assert.assertEquals(3, counters.findCounter(JobCounter.TOTAL_LAUNCHED_MAPS)
+        .getValue());
+    Assert
+        .assertTrue(counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS) != null
+            && counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS).getValue() != 0);
   }
 
   @Test
@@ -227,8 +260,23 @@ public class TestMRJobs {
     Assert.assertEquals(TaskCompletionEvent.Status.FAILED, 
         events[1].getStatus().FAILED);
     Assert.assertEquals(JobStatus.State.FAILED, job.getJobState());
+    verifyFailingMapperCounters(job);
 
     // TODO later:  add explicit "isUber()" checks of some sort
+  }
+  
+  protected void verifyFailingMapperCounters(Job job)
+      throws InterruptedException, IOException {
+    Counters counters = job.getCounters();
+    Assert.assertEquals(2, counters.findCounter(JobCounter.OTHER_LOCAL_MAPS)
+        .getValue());
+    Assert.assertEquals(2, counters.findCounter(JobCounter.TOTAL_LAUNCHED_MAPS)
+        .getValue());
+    Assert.assertEquals(2, counters.findCounter(JobCounter.NUM_FAILED_MAPS)
+        .getValue());
+    Assert
+        .assertTrue(counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS) != null
+            && counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS).getValue() != 0);
   }
 
   protected Job runFailingMapperJob()

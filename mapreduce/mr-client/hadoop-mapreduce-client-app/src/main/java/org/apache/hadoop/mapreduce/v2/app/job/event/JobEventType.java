@@ -41,6 +41,7 @@ public enum JobEventType {
   //Producer:Any component
   JOB_DIAGNOSTIC_UPDATE,
   INTERNAL_ERROR,
+  JOB_COUNTER_UPDATE,
   
   //Producer:TaskAttemptListener
   JOB_TASK_ATTEMPT_FETCH_FAILURE

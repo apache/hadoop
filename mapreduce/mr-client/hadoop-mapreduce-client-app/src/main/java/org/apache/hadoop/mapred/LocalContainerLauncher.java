@@ -36,12 +36,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.AMConstants;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobCounterUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
@@ -205,9 +207,23 @@ public class LocalContainerLauncher extends AbstractService implements
           }
 
           try {
+            if (remoteTask.isMapOrReduce()) {
+              JobCounterUpdateEvent jce = new JobCounterUpdateEvent(attemptID.getTaskId().getJobId());
+              jce.addCounterUpdate(JobCounter.TOTAL_LAUNCHED_UBERTASKS, 1);
+              if (remoteTask.isMapTask()) {
+                jce.addCounterUpdate(JobCounter.NUM_UBER_SUBMAPS, 1);
+              } else {
+                jce.addCounterUpdate(JobCounter.NUM_UBER_SUBREDUCES, 1);
+              }
+              context.getEventHandler().handle(jce);
+            }
             runSubtask(remoteTask, ytask.getType(), attemptID, numMapTasks,
                        (numReduceTasks > 0));
+            
           } catch (RuntimeException re) {
+            JobCounterUpdateEvent jce = new JobCounterUpdateEvent(attemptID.getTaskId().getJobId());
+            jce.addCounterUpdate(JobCounter.NUM_FAILED_UBERTASKS, 1);
+            context.getEventHandler().handle(jce);
             // this is our signal that the subtask failed in some way, so
             // simulate a failed JVM/container and send a container-completed
             // event to task attempt (i.e., move state machine from RUNNING
