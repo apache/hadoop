@@ -6,6 +6,9 @@ Release 0.20.205.0 - unreleased
 
   BUG FIXES
 
+    MAPREDUCE-2651. Fix race condition in Linux task controller for
+    job log directory creation. (Bharath Mundlapudi via llu)
+
     HADOOP-6833. IPC leaks call parameters when exceptions thrown.
     (Todd Lipcon via Eli Collins)
   
