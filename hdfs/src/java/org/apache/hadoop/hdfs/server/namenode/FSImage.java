@@ -853,18 +853,18 @@ public class FSImage implements Closeable {
     
     // Since we now have a new checkpoint, we can clean up some
     // old edit logs and checkpoints.
-    archiveOldStorage();
+    purgeOldStorage();
   }
 
   /**
-   * Archive any files in the storage directories that are no longer
+   * Purge any files in the storage directories that are no longer
    * necessary.
    */
-  public void archiveOldStorage() {
+  public void purgeOldStorage() {
     try {
-      archivalManager.archiveOldStorage();
+      archivalManager.purgeOldStorage();
     } catch (Exception e) {
-      LOG.warn("Unable to archive old storage", e);
+      LOG.warn("Unable to purge old storage", e);
     }
   }
 

@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.server.namenode.NNStorageArchivalManager.StorageArchiver;
+import org.apache.hadoop.hdfs.server.namenode.NNStorageArchivalManager.StoragePurger;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 
 /**
@@ -54,7 +54,7 @@ class BackupJournalManager implements JournalManager {
   }
 
   @Override
-  public void archiveLogsOlderThan(long minTxIdToKeep, StorageArchiver archiver)
+  public void purgeLogsOlderThan(long minTxIdToKeep, StoragePurger purger)
       throws IOException {
   }
 

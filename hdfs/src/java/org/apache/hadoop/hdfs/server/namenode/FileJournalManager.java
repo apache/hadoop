@@ -27,7 +27,7 @@ import java.util.List;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.FoundEditLog;
-import org.apache.hadoop.hdfs.server.namenode.NNStorageArchivalManager.StorageArchiver;
+import org.apache.hadoop.hdfs.server.namenode.NNStorageArchivalManager.StoragePurger;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -91,7 +91,7 @@ class FileJournalManager implements JournalManager {
   }
 
   @Override
-  public void archiveLogsOlderThan(long minTxIdToKeep, StorageArchiver archiver)
+  public void purgeLogsOlderThan(long minTxIdToKeep, StoragePurger purger)
       throws IOException {
     File[] files = FileUtil.listFiles(sd.getCurrentDir());
     List<FoundEditLog> editLogs = 
@@ -99,7 +99,7 @@ class FileJournalManager implements JournalManager {
     for (FoundEditLog log : editLogs) {
       if (log.getStartTxId() < minTxIdToKeep &&
           log.getLastTxId() < minTxIdToKeep) {
-        archiver.archiveLog(log);
+        purger.purgeLog(log);
       }
     }
   }

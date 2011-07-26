@@ -36,7 +36,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
-import org.apache.hadoop.hdfs.server.namenode.NNStorageArchivalManager.StorageArchiver;
+import org.apache.hadoop.hdfs.server.namenode.NNStorageArchivalManager.StoragePurger;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
@@ -870,24 +870,24 @@ public class FSEditLog  {
   /**
    * Archive any log files that are older than the given txid.
    */
-  public void archiveLogsOlderThan(
-      final long minTxIdToKeep, final StorageArchiver archiver) {
+  public void purgeLogsOlderThan(
+      final long minTxIdToKeep, final StoragePurger purger) {
     synchronized (this) {
       // synchronized to prevent findbugs warning about inconsistent
       // synchronization. This will be JIT-ed out if asserts are
       // off.
       assert curSegmentTxId == FSConstants.INVALID_TXID || // on format this is no-op
         minTxIdToKeep <= curSegmentTxId :
-        "cannot archive logs older than txid " + minTxIdToKeep +
+        "cannot purge logs older than txid " + minTxIdToKeep +
         " when current segment starts at " + curSegmentTxId;
     }
     
     mapJournalsAndReportErrors(new JournalClosure() {
       @Override
       public void apply(JournalAndStream jas) throws IOException {
-        jas.manager.archiveLogsOlderThan(minTxIdToKeep, archiver);
+        jas.manager.purgeLogsOlderThan(minTxIdToKeep, purger);
       }
-    }, "archiving logs older than " + minTxIdToKeep);
+    }, "purging logs older than " + minTxIdToKeep);
   }
 
   

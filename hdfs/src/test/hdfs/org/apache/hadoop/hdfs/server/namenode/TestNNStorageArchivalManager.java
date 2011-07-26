@@ -31,7 +31,7 @@ import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEdit
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getFinalizedEditsFileName;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
 
-import org.apache.hadoop.hdfs.server.namenode.NNStorageArchivalManager.StorageArchiver;
+import org.apache.hadoop.hdfs.server.namenode.NNStorageArchivalManager.StoragePurger;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -48,11 +48,11 @@ import com.google.common.collect.Sets;
 public class TestNNStorageArchivalManager {
   /**
    * Test the "easy case" where we have more images in the
-   * directory than we need to keep. Should archive the
+   * directory than we need to keep. Should purge the
    * old ones.
    */
   @Test
-  public void testArchiveEasyCase() throws IOException {
+  public void testPurgeEasyCase() throws IOException {
     TestCaseDescription tc = new TestCaseDescription();
     tc.addRoot("/foo1", NameNodeDirType.IMAGE_AND_EDITS);
     tc.addImage("/foo1/current/" + getImageFileName(100), true);
@@ -64,7 +64,7 @@ public class TestNNStorageArchivalManager {
     tc.addLog("/foo1/current/" + getFinalizedEditsFileName(301,400), false);
     tc.addLog("/foo1/current/" + getInProgressEditsFileName(401), false);
     
-    // Test that other files don't get archived
+    // Test that other files don't get purged
     tc.addLog("/foo1/current/VERSION", false);
     runTest(tc);
   }
@@ -73,7 +73,7 @@ public class TestNNStorageArchivalManager {
    * Same as above, but across multiple directories
    */
   @Test
-  public void testArchiveMultipleDirs() throws IOException {
+  public void testPurgeMultipleDirs() throws IOException {
     TestCaseDescription tc = new TestCaseDescription();
     tc.addRoot("/foo1", NameNodeDirType.IMAGE_AND_EDITS);
     tc.addRoot("/foo2", NameNodeDirType.IMAGE_AND_EDITS);
@@ -93,10 +93,10 @@ public class TestNNStorageArchivalManager {
   
   /**
    * Test that if we have fewer fsimages than the configured
-   * retention, we don't archive any of them
+   * retention, we don't purge any of them
    */
   @Test
-  public void testArchiveLessThanRetention() throws IOException {
+  public void testPurgeLessThanRetention() throws IOException {
     TestCaseDescription tc = new TestCaseDescription();
     tc.addRoot("/foo1", NameNodeDirType.IMAGE_AND_EDITS);
     tc.addImage("/foo1/current/" + getImageFileName(100), false);
@@ -132,7 +132,7 @@ public class TestNNStorageArchivalManager {
   }
 
   /**
-   * Test that old in-progress logs are properly archived
+   * Test that old in-progress logs are properly purged
    */
   @Test
   public void testOldInProgress() throws IOException {
@@ -166,45 +166,45 @@ public class TestNNStorageArchivalManager {
   private void runTest(TestCaseDescription tc) throws IOException {
     Configuration conf = new Configuration();
 
-    StorageArchiver mockArchiver =
-      Mockito.mock(NNStorageArchivalManager.StorageArchiver.class);
-    ArgumentCaptor<FoundFSImage> imagesArchivedCaptor =
+    StoragePurger mockPurger =
+      Mockito.mock(NNStorageArchivalManager.StoragePurger.class);
+    ArgumentCaptor<FoundFSImage> imagesPurgedCaptor =
       ArgumentCaptor.forClass(FoundFSImage.class);    
-    ArgumentCaptor<FoundEditLog> logsArchivedCaptor =
+    ArgumentCaptor<FoundEditLog> logsPurgedCaptor =
       ArgumentCaptor.forClass(FoundEditLog.class);    
 
-    // Ask the manager to archive files we don't need any more
+    // Ask the manager to purge files we don't need any more
     new NNStorageArchivalManager(conf,
-        tc.mockStorage(), tc.mockEditLog(), mockArchiver)
-      .archiveOldStorage();
+        tc.mockStorage(), tc.mockEditLog(), mockPurger)
+      .purgeOldStorage();
     
-    // Verify that it asked the archiver to remove the correct files
-    Mockito.verify(mockArchiver, Mockito.atLeast(0))
-      .archiveImage(imagesArchivedCaptor.capture());
-    Mockito.verify(mockArchiver, Mockito.atLeast(0))
-      .archiveLog(logsArchivedCaptor.capture());
+    // Verify that it asked the purger to remove the correct files
+    Mockito.verify(mockPurger, Mockito.atLeast(0))
+      .purgeImage(imagesPurgedCaptor.capture());
+    Mockito.verify(mockPurger, Mockito.atLeast(0))
+      .purgeLog(logsPurgedCaptor.capture());
 
     // Check images
-    Set<String> archivedPaths = Sets.newHashSet();
-    for (FoundFSImage archived : imagesArchivedCaptor.getAllValues()) {
-      archivedPaths.add(archived.getFile().toString());
+    Set<String> purgedPaths = Sets.newHashSet();
+    for (FoundFSImage purged : imagesPurgedCaptor.getAllValues()) {
+      purgedPaths.add(purged.getFile().toString());
     }    
-    Assert.assertEquals(Joiner.on(",").join(tc.expectedArchivedImages),
-        Joiner.on(",").join(archivedPaths));
+    Assert.assertEquals(Joiner.on(",").join(tc.expectedPurgedImages),
+        Joiner.on(",").join(purgedPaths));
 
     // Check images
-    archivedPaths.clear();
-    for (FoundEditLog archived : logsArchivedCaptor.getAllValues()) {
-      archivedPaths.add(archived.getFile().toString());
+    purgedPaths.clear();
+    for (FoundEditLog purged : logsPurgedCaptor.getAllValues()) {
+      purgedPaths.add(purged.getFile().toString());
     }    
-    Assert.assertEquals(Joiner.on(",").join(tc.expectedArchivedLogs),
-        Joiner.on(",").join(archivedPaths));
+    Assert.assertEquals(Joiner.on(",").join(tc.expectedPurgedLogs),
+        Joiner.on(",").join(purgedPaths));
   }
   
   private static class TestCaseDescription {
     private Map<String, FakeRoot> dirRoots = Maps.newHashMap();
-    private Set<String> expectedArchivedLogs = Sets.newHashSet();
-    private Set<String> expectedArchivedImages = Sets.newHashSet();
+    private Set<String> expectedPurgedLogs = Sets.newHashSet();
+    private Set<String> expectedPurgedImages = Sets.newHashSet();
     
     private static class FakeRoot {
       NameNodeDirType type;
@@ -234,17 +234,17 @@ public class TestNNStorageArchivalManager {
       }
     }
     
-    void addLog(String path, boolean expectArchive) {
+    void addLog(String path, boolean expectPurge) {
       addFile(path);
-      if (expectArchive) {
-        expectedArchivedLogs.add(path);
+      if (expectPurge) {
+        expectedPurgedLogs.add(path);
       }
     }
     
-    void addImage(String path, boolean expectArchive) {
+    void addImage(String path, boolean expectPurge) {
       addFile(path);
-      if (expectArchive) {
-        expectedArchivedImages.add(path);
+      if (expectPurge) {
+        expectedPurgedImages.add(path);
       }
     }
     
@@ -274,15 +274,15 @@ public class TestNNStorageArchivalManager {
           Object[] args = invocation.getArguments();
           assert args.length == 2;
           long txId = (Long) args[0];
-          StorageArchiver archiver = (StorageArchiver) args[1];
+          StoragePurger purger = (StoragePurger) args[1];
           
           for (JournalManager jm : jms) {
-            jm.archiveLogsOlderThan(txId, archiver);
+            jm.purgeLogsOlderThan(txId, purger);
           }
           return null;
         }
-      }).when(mockLog).archiveLogsOlderThan(
-          Mockito.anyLong(), (StorageArchiver) Mockito.anyObject());
+      }).when(mockLog).purgeLogsOlderThan(
+          Mockito.anyLong(), (StoragePurger) Mockito.anyObject());
       return mockLog;
     }
   }

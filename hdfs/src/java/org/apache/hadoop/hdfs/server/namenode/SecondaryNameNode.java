@@ -544,7 +544,7 @@ public class SecondaryNameNode implements Runnable {
     
     // Since we've successfully checkpointed, we can remove some old
     // image files
-    checkpointImage.archiveOldStorage();
+    checkpointImage.purgeOldStorage();
     
     return loadImage;
   }

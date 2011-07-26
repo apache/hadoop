@@ -91,7 +91,7 @@ public class TestNNStorageArchivalFunctional {
           getInProgressEditsFileName(3));
       
       doSaveNamespace(nn);
-      LOG.info("After second save, image 0 should be archived, " +
+      LOG.info("After second save, image 0 should be purged, " +
           "and image 4 should exist in both.");
       assertGlobEquals(cd0, "fsimage_\\d*",
           getImageFileName(2), getImageFileName(4));
@@ -110,21 +110,21 @@ public class TestNNStorageArchivalFunctional {
       LOG.info("Restoring accessibility of first storage dir");      
       sd0.setExecutable(true);
 
-      LOG.info("nothing should have been archived in first storage dir");
+      LOG.info("nothing should have been purged in first storage dir");
       assertGlobEquals(cd0, "fsimage_\\d*",
           getImageFileName(2), getImageFileName(4));
       assertGlobEquals(cd0, "edits_.*",
           getFinalizedEditsFileName(3, 4),
           getInProgressEditsFileName(5));
 
-      LOG.info("fsimage_2 should be archived in second storage dir");
+      LOG.info("fsimage_2 should be purged in second storage dir");
       assertGlobEquals(cd1, "fsimage_\\d*",
           getImageFileName(4), getImageFileName(6));
       assertGlobEquals(cd1, "edits_.*",
           getFinalizedEditsFileName(5, 6),
           getInProgressEditsFileName(7));
 
-      LOG.info("On next save, we should archive logs from the failed dir," +
+      LOG.info("On next save, we should purge logs from the failed dir," +
           " but not images, since the image directory is in failed state.");
       doSaveNamespace(nn);
       assertGlobEquals(cd1, "fsimage_\\d*",

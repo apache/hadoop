@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.server.namenode.NNStorageArchivalManager.StorageArchiver;
+import org.apache.hadoop.hdfs.server.namenode.NNStorageArchivalManager.StoragePurger;
 
 /**
  * A JournalManager is responsible for managing a single place of storing
@@ -52,10 +52,10 @@ interface JournalManager {
    *
    * @param minTxIdToKeep the earliest txid that must be retained after purging
    *                      old logs
-   * @param archiver the archival implementation to use
+   * @param purger the purging implementation to use
    * @throws IOException if purging fails
    */
-  void archiveLogsOlderThan(long minTxIdToKeep, StorageArchiver archiver)
+  void purgeLogsOlderThan(long minTxIdToKeep, StoragePurger purger)
     throws IOException;
 
   /**
