@@ -84,7 +84,7 @@ public class ServiceAuthorizationManager {
     }
     
     // get client principal key to verify (if available)
-    KerberosInfo krbInfo = SecurityUtil.getKerberosInfo(protocol);
+    KerberosInfo krbInfo = SecurityUtil.getKerberosInfo(protocol, conf);
     String clientPrincipal = null; 
     if (krbInfo != null) {
       String clientKey = krbInfo.clientPrincipal();

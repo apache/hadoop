@@ -29,7 +29,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -49,8 +48,7 @@ public class GetDelegationTokenServlet extends DfsServlet {
       throws ServletException, IOException {
     final UserGroupInformation ugi;
     final ServletContext context = getServletContext();
-    final Configuration conf = 
-      (Configuration) context.getAttribute(JspHelper.CURRENT_CONF);
+    final Configuration conf = NameNodeHttpServer.getConfFromContext(context);
     try {
       ugi = getUGI(req, conf);
     } catch(IOException ioe) {
@@ -61,7 +59,7 @@ public class GetDelegationTokenServlet extends DfsServlet {
       return;
     }
     LOG.info("Sending token: {" + ugi.getUserName() + "," + req.getRemoteAddr() +"}");
-    final NameNode nn = (NameNode) context.getAttribute("name.node");
+    final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
     String renewer = req.getParameter(RENEWER);
     final String renewerFinal = (renewer == null) ? 
         req.getUserPrincipal().getName() : renewer;

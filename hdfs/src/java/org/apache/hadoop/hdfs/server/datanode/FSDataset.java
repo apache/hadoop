@@ -99,23 +99,16 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
         }
       } else {
         File[] files = FileUtil.listFiles(dir); 
-        int numChildren = 0;
+        List<FSDir> dirList = new ArrayList<FSDir>();
         for (int idx = 0; idx < files.length; idx++) {
           if (files[idx].isDirectory()) {
-            numChildren++;
+            dirList.add(new FSDir(files[idx]));
           } else if (Block.isBlockFilename(files[idx])) {
             numBlocks++;
           }
         }
-        if (numChildren > 0) {
-          children = new FSDir[numChildren];
-          int curdir = 0;
-          for (int idx = 0; idx < files.length; idx++) {
-            if (files[idx].isDirectory()) {
-              children[curdir] = new FSDir(files[idx]);
-              curdir++;
-            }
-          }
+        if (dirList.size() > 0) {
+          children = dirList.toArray(new FSDir[dirList.size()]);
         }
       }
     }

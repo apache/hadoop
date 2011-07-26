@@ -43,7 +43,6 @@
   <property name="lib.dir" value="${basedir}/lib"/>
   <property name="conf.dir" value="${basedir}/conf"/>
   <property name="docs.src" value="${basedir}/src/docs"/>
-  <property name="src.docs.cn" value="${basedir}/src/docs/cn"/>
   <property name="changes.src" value="${docs.src}/changes"/>
   <property name="src.webapps" value="${basedir}/src/webapps"/>
 
@@ -64,7 +63,6 @@
             value="${sun.arch.data.model}"/>
   <property name="build.native" value="${build.dir}/native/${build.platform}"/>
   <property name="build.docs" value="${build.dir}/docs"/>
-  <property name="build.docs.cn" value="${build.dir}/docs/cn"/>
   <property name="build.javadoc" value="${build.docs}/api"/>
   <property name="build.javadoc.timestamp" value="${build.javadoc}/index.html" />
   <property name="build.javadoc.dev" value="${build.docs}/dev-api"/>
@@ -321,9 +319,6 @@
        <arg line="src/saveVersion.sh ${version} ${build.dir}"/>
     </exec>
 	
-   <exec executable="sh">
-       <arg line="src/fixFontsPath.sh ${src.docs.cn}"/>
-   </exec>
   </target>
 
   <import file="${test.src.dir}/aop/build/aop.xml"/>
@@ -953,21 +948,6 @@
     </copy>
     <copy file="${docs.src}/releasenotes.html" todir="${build.docs}"/>
     <style basedir="${java.src.dir}" destdir="${build.docs}"
-           includes="core-default.xml" style="conf/configuration.xsl"/>
-    <antcall target="changes-to-html"/>
-    <antcall target="cn-docs"/>
-  </target>
-
-  <target name="cn-docs" depends="forrest.check, init" description="Generate forrest-based Chinese documentation. 
-        To use, specify -Dforrest.home=&lt;base of Apache Forrest installation&gt; on the command line." 
-        if="forrest.home">
-    <exec dir="${src.docs.cn}" executable="${forrest.home}/bin/forrest" failonerror="true">
-      <env key="LANG" value="en_US.utf8"/>
-    </exec>
-    <copy todir="${build.docs.cn}">
-      <fileset dir="${src.docs.cn}/build/site/" />
-    </copy>
-    <style basedir="${java.src.dir}" destdir="${build.docs.cn}"
            includes="core-default.xml" style="conf/configuration.xsl"/>
     <antcall target="changes-to-html"/>
   </target>
@@ -1613,7 +1593,6 @@
     <delete file="${basedir}/ivy/hadoop-common-test-pom.xml"/>
     <delete file="${basedir}/ivy/hadoop-common-${herriot.suffix}.xml"/>
     <delete dir="${docs.src}/build"/>
-    <delete dir="${src.docs.cn}/build"/>
   </target>
 
   <target name="clean-sign" description="Clean.  Delete .asc files">
@@ -1735,10 +1714,29 @@
   <target name="eclipse" 
           depends="init,ant-eclipse-download,ivy-retrieve-common,ivy-retrieve-test,compile-core-test"
           description="Create eclipse project files">
-	     <pathconvert property="eclipse.project">
-	       <path path="${basedir}"/>
-	       <regexpmapper from="^.*/([^/]+)$$" to="\1" handledirsep="yes"/>
-	     </pathconvert>
+
+    <property environment="env"/>
+
+    <!-- Locate the tools.jar which is part of the JDK -->
+    <condition property="jdk.tools.jar" value="${env.JDK_HOME}/lib/tools.jar">
+      <available file="${env.JDK_HOME}/lib/tools.jar"/>
+    </condition>
+    <condition property="jdk.tools.jar" value="${env.JAVA_HOME}/lib/tools.jar">
+      <available file="${env.JAVA_HOME}/lib/tools.jar"/>
+    </condition>
+    <condition property="jdk.tools.jar" value="${java.home}/../lib/tools.jar">
+      <available file="${java.home}/../lib/tools.jar"/>
+    </condition>
+
+    <!-- The tools.jar from the JDK is called classes.jar on OS X. -->
+    <condition property="jdk.tools.jar" value="${java.home}/bundle/Classes/classes.jar">
+      <available file="${java.home}/bundle/Classes/classes.jar"/>
+    </condition>  	
+
+    <pathconvert property="eclipse.project">
+      <path path="${basedir}"/>
+      <regexpmapper from="^.*/([^/]+)$$" to="\1" handledirsep="yes"/>
+    </pathconvert>
     <taskdef name="eclipse"
              classname="prantl.ant.eclipse.EclipseTask"
              classpath="${build.dir}/lib/ant-eclipse-1.0-jvm1.2.jar" />
@@ -1758,7 +1756,7 @@
         <library pathref="ivy-test.classpath" exported="false" />
         <variable path="ANT_HOME/lib/ant.jar" exported="false" />
         <library path="${conf.dir}" exported="false" />
-        <library path="${java.home}/../lib/tools.jar" exported="false" />
+        <library path="${jdk.tools.jar}" exported="false" />
       </classpath>
     </eclipse>
   </target>

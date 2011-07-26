@@ -28,7 +28,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
@@ -46,8 +45,7 @@ public class CancelDelegationTokenServlet extends DfsServlet {
       throws ServletException, IOException {
     final UserGroupInformation ugi;
     final ServletContext context = getServletContext();
-    final Configuration conf = 
-      (Configuration) context.getAttribute(JspHelper.CURRENT_CONF);
+    final Configuration conf = NameNodeHttpServer.getConfFromContext(context);
     try {
       ugi = getUGI(req, conf);
     } catch(IOException ioe) {
@@ -57,7 +55,8 @@ public class CancelDelegationTokenServlet extends DfsServlet {
           "Unable to identify or authenticate user");
       return;
     }
-    final NameNode nn = (NameNode) context.getAttribute("name.node");
+    final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(
+        context);
     String tokenString = req.getParameter(TOKEN);
     if (tokenString == null) {
       resp.sendError(HttpServletResponse.SC_MULTIPLE_CHOICES,

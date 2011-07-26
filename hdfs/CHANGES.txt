@@ -294,6 +294,9 @@ Trunk (unreleased changes)
    
     HDFS-2083. Query JMX statistics over http via JMXJsonServlet. (tanping)
 
+    HDFS-2156. Make hdfs and mapreduce rpm only depend on the same major 
+    version for common and hdfs. (eyang via omalley)
+
   IMPROVEMENTS
 
     HDFS-1875. MiniDFSCluster hard-codes dfs.datanode.address to localhost
@@ -579,6 +582,25 @@ Trunk (unreleased changes)
     and Random object creation to DFSUtil; move DFSClient.stringifyToken(..)
     to DelegationTokenIdentifier.  (szetszwo)
 
+    HDFS-1774. Small optimization to FSDataset. (Uma Maheswara Rao G via eli)
+
+    HDFS-2167.  Move dnsToSwitchMapping and hostsReader from FSNamesystem to
+    DatanodeManager.  (szetszwo)
+
+    HDFS-2116. Use Mokito in TestStreamFile and TestByteRangeInputStream.
+    (Plamen Jeliazkov via shv)
+
+    HDFS-2112.  Move ReplicationMonitor to block management.  (Uma Maheswara
+    Rao G via szetszwo)
+
+    HDFS-1739.  Add available volume size to the error message when datanode
+    throws DiskOutOfSpaceException.  (Uma Maheswara Rao G via szetszwo)
+
+    HDFS-2144. If SNN shuts down during initialization it does not log the
+    cause. (Ravi Prakash via atm)
+
+    HDFS-2180. Refactor NameNode HTTP server into new class. (todd)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
@@ -858,6 +880,11 @@ Trunk (unreleased changes)
 
     HDFS-2152. TestWriteConfigurationToDFS causing the random failures. (Uma
     Maheswara Rao G via atm)
+
+    HDFS-2114. re-commission of a decommissioned node does not delete 
+    excess replicas. (John George via mattf)
+
+    HDFS-1776. Bug in Concat code. (Bharath Mundlapudi via Dmytro Molkov)
 
 Release 0.22.0 - Unreleased
 

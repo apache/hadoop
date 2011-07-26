@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.FileDataServlet;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /** {@inheritDoc} */
@@ -47,7 +48,7 @@ public class ProxyFileDataServlet extends FileDataServlet {
       dtParam=JspHelper.getDelegationTokenUrlParam(dt);
     }
     InetSocketAddress nnAddress = (InetSocketAddress) getServletContext()
-        .getAttribute(NameNode.NAMENODE_ADDRESS_ATTRIBUTE_KEY);
+        .getAttribute(NameNodeHttpServer.NAMENODE_ADDRESS_ATTRIBUTE_KEY);
     String nnHostPort = nnAddress == null ? null : NameNode
         .getHostPortString(nnAddress);
     String addrParam = JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS,

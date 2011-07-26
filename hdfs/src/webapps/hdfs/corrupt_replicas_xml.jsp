@@ -62,7 +62,7 @@
 %>
 <%
 
-  NameNode nn = (NameNode)application.getAttribute("name.node");
+  NameNode nn = NameNodeHttpServer.getNameNodeFromContext(application);
   FSNamesystem fsn = nn.getNamesystem();
 
   Integer numCorruptBlocks = 10;

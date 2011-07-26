@@ -102,12 +102,12 @@ public class TestNodeCount extends TestCase {
       }
       
       // find out a non-excess node
-      Iterator<DatanodeDescriptor> iter = namesystem.blockManager.blocksMap
+      Iterator<DatanodeDescriptor> iter = namesystem.getBlockManager().blocksMap
           .nodeIterator(block.getLocalBlock());
       DatanodeDescriptor nonExcessDN = null;
       while (iter.hasNext()) {
         DatanodeDescriptor dn = iter.next();
-        Collection<Block> blocks = namesystem.blockManager.excessReplicateMap.get(dn.getStorageID());
+        Collection<Block> blocks = namesystem.getBlockManager().excessReplicateMap.get(dn.getStorageID());
         if (blocks == null || !blocks.contains(block) ) {
           nonExcessDN = dn;
           break;
@@ -184,7 +184,7 @@ public class TestNodeCount extends TestCase {
     namesystem.readLock();
     try {
       lastBlock = block;
-      lastNum = namesystem.blockManager.countNodes(block);
+      lastNum = namesystem.getBlockManager().countNodes(block);
       return lastNum;
     }
     finally {

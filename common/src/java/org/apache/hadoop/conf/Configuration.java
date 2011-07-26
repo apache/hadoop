@@ -682,11 +682,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /** 
    * Get the value of the <code>name</code> property as an <code>int</code>.
    *   
-   * If no such property exists, or if the specified value is not a valid
-   * <code>int</code>, then <code>defaultValue</code> is returned.
+   * If no such property exists, the provided default value is returned,
+   * or if the specified value is not a valid <code>int</code>,
+   * then an error is thrown.
    * 
    * @param name property name.
    * @param defaultValue default value.
+   * @throws NumberFormatException when the value is invalid
    * @return property value as an <code>int</code>, 
    *         or <code>defaultValue</code>. 
    */
@@ -694,15 +696,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     String valueString = getTrimmed(name);
     if (valueString == null)
       return defaultValue;
-    try {
-      String hexString = getHexDigits(valueString);
-      if (hexString != null) {
-        return Integer.parseInt(hexString, 16);
-      }
-      return Integer.parseInt(valueString);
-    } catch (NumberFormatException e) {
-      return defaultValue;
+    String hexString = getHexDigits(valueString);
+    if (hexString != null) {
+      return Integer.parseInt(hexString, 16);
     }
+    return Integer.parseInt(valueString);
   }
 
   /** 
@@ -718,11 +716,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   /** 
    * Get the value of the <code>name</code> property as a <code>long</code>.  
-   * If no such property is specified, or if the specified value is not a valid
-   * <code>long</code>, then <code>defaultValue</code> is returned.
+   * If no such property exists, the provided default value is returned,
+   * or if the specified value is not a valid <code>long</code>,
+   * then an error is thrown.
    * 
    * @param name property name.
    * @param defaultValue default value.
+   * @throws NumberFormatException when the value is invalid
    * @return property value as a <code>long</code>, 
    *         or <code>defaultValue</code>. 
    */
@@ -730,15 +730,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     String valueString = getTrimmed(name);
     if (valueString == null)
       return defaultValue;
-    try {
-      String hexString = getHexDigits(valueString);
-      if (hexString != null) {
-        return Long.parseLong(hexString, 16);
-      }
-      return Long.parseLong(valueString);
-    } catch (NumberFormatException e) {
-      return defaultValue;
+    String hexString = getHexDigits(valueString);
+    if (hexString != null) {
+      return Long.parseLong(hexString, 16);
     }
+    return Long.parseLong(valueString);
   }
 
   private String getHexDigits(String value) {
@@ -771,11 +767,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   /** 
    * Get the value of the <code>name</code> property as a <code>float</code>.  
-   * If no such property is specified, or if the specified value is not a valid
-   * <code>float</code>, then <code>defaultValue</code> is returned.
-   * 
+   * If no such property exists, the provided default value is returned,
+   * or if the specified value is not a valid <code>float</code>,
+   * then an error is thrown.
+   *
    * @param name property name.
    * @param defaultValue default value.
+   * @throws NumberFormatException when the value is invalid
    * @return property value as a <code>float</code>, 
    *         or <code>defaultValue</code>. 
    */
@@ -783,11 +781,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     String valueString = getTrimmed(name);
     if (valueString == null)
       return defaultValue;
-    try {
-      return Float.parseFloat(valueString);
-    } catch (NumberFormatException e) {
-      return defaultValue;
-    }
+    return Float.parseFloat(valueString);
   }
   /**
    * Set the value of the <code>name</code> property to a <code>float</code>.

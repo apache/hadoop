@@ -33,25 +33,41 @@ public class RetryProxy {
    * </p>
    * @param iface the interface that the retry will implement
    * @param implementation the instance whose methods should be retried
-   * @param retryPolicy the policy for retirying method call failures
+   * @param retryPolicy the policy for retrying method call failures
    * @return the retry proxy
    */
   public static Object create(Class<?> iface, Object implementation,
                               RetryPolicy retryPolicy) {
+    return RetryProxy.create(iface,
+        new DefaultFailoverProxyProvider(iface, implementation),
+        retryPolicy);
+  }
+
+  /**
+   * Create a proxy for an interface of implementations of that interface using
+   * the given {@link FailoverProxyProvider} and the same retry policy for each
+   * method in the interface.
+   * 
+   * @param iface the interface that the retry will implement
+   * @param proxyProvider provides implementation instances whose methods should be retried
+   * @param retryPolicy the policy for retrying or failing over method call failures
+   * @return the retry proxy
+   */
+  public static Object create(Class<?> iface, FailoverProxyProvider proxyProvider,
+      RetryPolicy retryPolicy) {
     return Proxy.newProxyInstance(
-                                  implementation.getClass().getClassLoader(),
-                                  new Class<?>[] { iface },
-                                  new RetryInvocationHandler(implementation, retryPolicy)
-                                  );
-  }  
+        proxyProvider.getInterface().getClassLoader(),
+        new Class<?>[] { iface },
+        new RetryInvocationHandler(proxyProvider, retryPolicy)
+        );
+  }
   
   /**
-   * <p>
    * Create a proxy for an interface of an implementation class
    * using the a set of retry policies specified by method name.
    * If no retry policy is defined for a method then a default of
    * {@link RetryPolicies#TRY_ONCE_THEN_FAIL} is used.
-   * </p>
+   * 
    * @param iface the interface that the retry will implement
    * @param implementation the instance whose methods should be retried
    * @param methodNameToPolicyMap a map of method names to retry policies
@@ -59,10 +75,28 @@ public class RetryProxy {
    */
   public static Object create(Class<?> iface, Object implementation,
                               Map<String,RetryPolicy> methodNameToPolicyMap) {
+    return RetryProxy.create(iface,
+        new DefaultFailoverProxyProvider(iface, implementation),
+        methodNameToPolicyMap);
+  }
+
+  /**
+   * Create a proxy for an interface of implementations of that interface using
+   * the given {@link FailoverProxyProvider} and the a set of retry policies
+   * specified by method name. If no retry policy is defined for a method then a
+   * default of {@link RetryPolicies#TRY_ONCE_THEN_FAIL} is used.
+   * 
+   * @param iface the interface that the retry will implement
+   * @param proxyProvider provides implementation instances whose methods should be retried
+   * @param methodNameToPolicyMapa map of method names to retry policies
+   * @return the retry proxy
+   */
+  public static Object create(Class<?> iface, FailoverProxyProvider proxyProvider,
+      Map<String,RetryPolicy> methodNameToPolicyMap) {
     return Proxy.newProxyInstance(
-                                  implementation.getClass().getClassLoader(),
-                                  new Class<?>[] { iface },
-                                  new RetryInvocationHandler(implementation, methodNameToPolicyMap)
-                                  );
+        proxyProvider.getInterface().getClassLoader(),
+        new Class<?>[] { iface },
+        new RetryInvocationHandler(proxyProvider, methodNameToPolicyMap)
+        );
   }
 }

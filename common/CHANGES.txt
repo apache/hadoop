@@ -12,6 +12,8 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    HADOOP-7324. Ganglia plugins for metrics v2. (Priyo Mustafi via llu)
+
     HADOOP-7342. Add an utility API in FileUtil for JDK File.list
     avoid NPEs on File.list() (Bharath Mundlapudi via mattf)
 
@@ -52,6 +54,11 @@ Trunk (unreleased changes)
 
     HADOOP-7329. Add the capability of getting invividual attribute of a mbean
     using JMXProxyServlet. (tanping)
+
+    HADOOP-7380. Add client failover functionality to o.a.h.io.(ipc|retry).
+    (atm via eli)
+
+    HADOOP-7460. Support pluggable trash policies. (Usman Masoon via suresh)
 
   IMPROVEMENTS
 
@@ -239,6 +246,43 @@ Trunk (unreleased changes)
 
     HADOOP-7429. Add another IOUtils#copyBytes method. (eli)
 
+    HADOOP-7451. Generalize StringUtils#join. (Chris Douglas via mattf)
+
+    HADOOP-7449. Add Data(In,Out)putByteBuffer to work with ByteBuffer similar 
+    to Data(In,Out)putBuffer for byte[].  Merge from yahoo-merge branch,
+    -r 1079163.  Fix missing Apache license headers. (Chris Douglas via mattf)
+
+    HADOOP-7361. Provide an option, -overwrite/-f, in put and copyFromLocal
+    shell commands.  (Uma Maheswara Rao G via szetszwo)
+
+    HADOOP-7430. Improve error message when moving to trash fails due to 
+    quota issue. (Ravi Prakash via mattf)
+
+    HADOOP-7457. Remove out-of-date Chinese language documentation.
+    (Jakob Homan via eli)
+
+    HADOOP-7444. Add Checksum API to verify and calculate checksums "in bulk"
+    (todd)
+
+    HADOOP-7443. Add CRC32C as another DataChecksum implementation (todd)
+
+    HADOOP-7305. Eclipse project files are incomplete. (Niels Basjes via eli)
+
+    HADOOP-7314. Add support for throwing UnknownHostException when a host doesn't 
+    resolve. (Jeffrey Naisbitt via jitendra)
+
+    HADOOP-7465. A several tiny improvements for the LOG format.
+    (Xie Xianshan via eli)
+
+    HADOOP-7434. Display error when using "daemonlog -setlevel" with
+    illegal level. (yanjinshuang via eli)
+
+    HADOOP-7463. Adding a configuration parameter to SecurityInfo interface.
+    (mahadev)
+
+    HADOOP-7298. Add test utility for writing multi-threaded tests. (todd and
+    Harsh J Chouraria via todd)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
@@ -306,7 +350,8 @@ Trunk (unreleased changes)
     HADOOP-7268. FileContext.getLocalFSFileContext() behavior needs to be fixed
     w.r.t tokens. (jitendra)
 
-    HADOOP-7290. Unit test failure in TestUserGroupInformation.testGetServerSideGroups. (Trevor Robison via eli)
+    HADOOP-7290. Unit test failure in 
+    TestUserGroupInformation.testGetServerSideGroups. (Trevor Robison via eli)
 
     HADOOP-7292. Fix racy test case TestSinkQueue. (Luke Lu via todd)
 
@@ -357,6 +402,23 @@ Trunk (unreleased changes)
 
     HADOOP-7419. new hadoop-config.sh doesn't manage classpath for
     HADOOP_CONF_DIR correctly. (Bing Zheng and todd via todd)
+
+    HADOOP-7448. merge from yahoo-merge branch (via mattf):
+    -r 1079157: Fix content type for /stacks servlet to be 
+    plain text (Luke Lu)
+    -r 1079164: No need to escape plain text (Luke Lu)
+
+    HADOOP-7471. The saveVersion.sh script sometimes fails to extract SVN URL.
+    (Alejandro Abdelnur via eli)
+
+    HADOOP-2081. Configuration getInt, getLong, and getFloat replace
+    invalid numbers with the default value. (Harsh J via eli)
+
+    HADOOP-7111. Several TFile tests failing when native libraries are
+    present. (atm)
+
+    HADOOP-7438. Fix deprecated warnings from hadoop-daemon.sh script.
+    (Ravi Prakash via suresh)
 
 Release 0.22.0 - Unreleased
 

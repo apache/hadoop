@@ -65,7 +65,8 @@ public class FileDataServlet extends DfsServlet {
     }
 
     // Add namenode address to the url params
-    NameNode nn = (NameNode)getServletContext().getAttribute("name.node");
+    NameNode nn = NameNodeHttpServer.getNameNodeFromContext(
+        getServletContext());
     String addr = NameNode.getHostPortString(nn.getNameNodeAddress());
     String addrParam = JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, addr);
     
@@ -85,7 +86,8 @@ public class FileDataServlet extends DfsServlet {
       throws IOException {
     if (i.getLen() == 0 || blks.getLocatedBlocks().size() <= 0) {
       // pick a random datanode
-      NameNode nn = (NameNode)getServletContext().getAttribute("name.node");
+      NameNode nn = NameNodeHttpServer.getNameNodeFromContext(
+          getServletContext());
       return NamenodeJspHelper.getRandomDatanode(nn);
     }
     return JspHelper.bestNode(blks);
@@ -101,8 +103,8 @@ public class FileDataServlet extends DfsServlet {
   public void doGet(final HttpServletRequest request,
       final HttpServletResponse response)
       throws IOException {
-    final Configuration conf = 
-      (Configuration) getServletContext().getAttribute(JspHelper.CURRENT_CONF);
+    final Configuration conf = NameNodeHttpServer.getConfFromContext(
+        getServletContext());
     final UserGroupInformation ugi = getUGI(request, conf);
 
     try {

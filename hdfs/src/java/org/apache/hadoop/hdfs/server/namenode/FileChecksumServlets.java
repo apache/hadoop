@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
-import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeJspHelper;
 import org.apache.hadoop.net.NetUtils;
@@ -57,10 +56,10 @@ public class FileChecksumServlets {
     public void doGet(HttpServletRequest request, HttpServletResponse response
         ) throws ServletException, IOException {
       final ServletContext context = getServletContext();
-      final Configuration conf = 
-        (Configuration) context.getAttribute(JspHelper.CURRENT_CONF);
+      final Configuration conf = NameNodeHttpServer.getConfFromContext(context);
       final UserGroupInformation ugi = getUGI(request, conf);
-      final NameNode namenode = (NameNode)context.getAttribute("name.node");
+      final NameNode namenode = NameNodeHttpServer.getNameNodeFromContext(
+          context);
       final DatanodeID datanode = NamenodeJspHelper.getRandomDatanode(namenode);
       try {
         final URI uri = createRedirectUri("/getFileChecksum", ugi, datanode, 

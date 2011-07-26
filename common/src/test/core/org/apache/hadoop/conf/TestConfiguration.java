@@ -367,6 +367,8 @@ public class TestConfiguration extends TestCase {
     appendProperty("test.hex1", "0x10");
     appendProperty("test.hex2", "0xF");
     appendProperty("test.hex3", "-0x10");
+    // Invalid?
+    appendProperty("test.hex4", "-0x10xyz");
     endConfig();
     Path fileResource = new Path(CONFIG);
     conf.addResource(fileResource);
@@ -376,7 +378,18 @@ public class TestConfiguration extends TestCase {
     assertEquals(15, conf.getLong("test.hex2", 0));
     assertEquals(-16, conf.getInt("test.hex3", 0));
     assertEquals(-16, conf.getLong("test.hex3", 0));
-
+    try {
+      conf.getLong("test.hex4", 0);
+      fail("Property had invalid long value, but was read successfully.");
+    } catch (NumberFormatException e) {
+      // pass
+    }
+    try {
+      conf.getInt("test.hex4", 0);
+      fail("Property had invalid int value, but was read successfully.");
+    } catch (NumberFormatException e) {
+      // pass
+    }
   }
 
   public void testIntegerValues() throws IOException{
@@ -386,6 +399,7 @@ public class TestConfiguration extends TestCase {
     appendProperty("test.int2", "020");
     appendProperty("test.int3", "-20");
     appendProperty("test.int4", " -20 ");
+    appendProperty("test.int5", " -20xyz ");
     endConfig();
     Path fileResource = new Path(CONFIG);
     conf.addResource(fileResource);
@@ -397,6 +411,12 @@ public class TestConfiguration extends TestCase {
     assertEquals(-20, conf.getLong("test.int3", 0));
     assertEquals(-20, conf.getInt("test.int4", 0));
     assertEquals(-20, conf.getLong("test.int4", 0));
+    try {
+      conf.getInt("test.int5", 0);
+      fail("Property had invalid int value, but was read successfully.");
+    } catch (NumberFormatException e) {
+      // pass
+    }
   }
   
   public void testBooleanValues() throws IOException {
@@ -424,6 +444,7 @@ public class TestConfiguration extends TestCase {
     appendProperty("test.float2", "003.1415");
     appendProperty("test.float3", "-3.1415");
     appendProperty("test.float4", " -3.1415 ");
+    appendProperty("test.float5", "xyz-3.1415xyz");
     endConfig();
     Path fileResource = new Path(CONFIG);
     conf.addResource(fileResource);
@@ -431,6 +452,12 @@ public class TestConfiguration extends TestCase {
     assertEquals(3.1415f, conf.getFloat("test.float2", 0.0f));
     assertEquals(-3.1415f, conf.getFloat("test.float3", 0.0f));
     assertEquals(-3.1415f, conf.getFloat("test.float4", 0.0f));
+    try {
+      conf.getFloat("test.float5", 0.0f);
+      fail("Property had invalid float value, but was read successfully.");
+    } catch (NumberFormatException e) {
+      // pass
+    }
   }
   
   public void testGetClass() throws IOException {

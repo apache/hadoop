@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.util.Random;
 
 import junit.framework.Assert;
-import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -35,6 +34,10 @@ import org.apache.hadoop.io.file.tfile.TFile.Reader;
 import org.apache.hadoop.io.file.tfile.TFile.Writer;
 import org.apache.hadoop.io.file.tfile.TFile.Reader.Location;
 import org.apache.hadoop.io.file.tfile.TFile.Reader.Scanner;
+import org.apache.hadoop.util.NativeCodeLoader;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * 
@@ -42,7 +45,7 @@ import org.apache.hadoop.io.file.tfile.TFile.Reader.Scanner;
  * and LZO compression classes.
  * 
  */
-public class TestTFileByteArrays extends TestCase {
+public class TestTFileByteArrays {
   private static String ROOT =
       System.getProperty("test.build.data", "/tmp/tfile-test");
   private final static int BLOCK_SIZE = 512;
@@ -62,25 +65,29 @@ public class TestTFileByteArrays extends TestCase {
   private String compression = Compression.Algorithm.GZ.getName();
   private String comparator = "memcmp";
   private String outputFile = "TFileTestByteArrays";
+
   /*
    * pre-sampled numbers of records in one block, based on the given the
-   * generated key and value strings
+   * generated key and value strings. This is slightly different based on
+   * whether or not the native libs are present.
    */
-  // private int records1stBlock = 4314;
-  // private int records2ndBlock = 4108;
-  private int records1stBlock = 4480;
-  private int records2ndBlock = 4263;
+  private int records1stBlock = NativeCodeLoader.isNativeCodeLoaded() ? 5674 : 4480;
+  private int records2ndBlock = NativeCodeLoader.isNativeCodeLoaded() ? 5574 : 4263;
 
   public void init(String compression, String comparator, String outputFile,
       int numRecords1stBlock, int numRecords2ndBlock) {
-    this.compression = compression;
-    this.comparator = comparator;
-    this.outputFile = outputFile;
+    init(compression, comparator, outputFile);
     this.records1stBlock = numRecords1stBlock;
     this.records2ndBlock = numRecords2ndBlock;
   }
+  
+  public void init(String compression, String comparator, String outputFile) {
+    this.compression = compression;
+    this.comparator = comparator;
+    this.outputFile = outputFile;
+  }
 
-  @Override
+  @Before
   public void setUp() throws IOException {
     conf = new Configuration();
     path = new Path(ROOT, outputFile);
@@ -89,12 +96,13 @@ public class TestTFileByteArrays extends TestCase {
     writer = new Writer(out, BLOCK_SIZE, compression, comparator, conf);
   }
 
-  @Override
+  @After
   public void tearDown() throws IOException {
     if (!skip)
     fs.delete(path, true);
   }
 
+  @Test
   public void testNoDataEntry() throws IOException {
     if (skip) 
       return;
@@ -108,19 +116,21 @@ public class TestTFileByteArrays extends TestCase {
     reader.close();
   }
 
+  @Test
   public void testOneDataEntry() throws IOException {
     if (skip)
       return;
     writeRecords(1);
     readRecords(1);
 
-    checkBlockIndex(1, 0, 0);
-    readValueBeforeKey(1, 0);
-    readKeyWithoutValue(1, 0);
-    readValueWithoutKey(1, 0);
-    readKeyManyTimes(1, 0);
+    checkBlockIndex(0, 0);
+    readValueBeforeKey(0);
+    readKeyWithoutValue(0);
+    readValueWithoutKey(0);
+    readKeyManyTimes(0);
   }
 
+  @Test
   public void testTwoDataEntries() throws IOException {
     if (skip)
       return;
@@ -133,6 +143,7 @@ public class TestTFileByteArrays extends TestCase {
    * 
    * @throws IOException
    */
+  @Test
   public void testOneBlock() throws IOException {
     if (skip)
       return;
@@ -140,7 +151,7 @@ public class TestTFileByteArrays extends TestCase {
     writeRecords(records1stBlock);
     readRecords(records1stBlock);
     // last key should be in the first block (block 0)
-    checkBlockIndex(records1stBlock, records1stBlock - 1, 0);
+    checkBlockIndex(records1stBlock - 1, 0);
   }
 
   /**
@@ -148,68 +159,70 @@ public class TestTFileByteArrays extends TestCase {
    * 
    * @throws IOException
    */
+  @Test
   public void testOneBlockPlusOneEntry() throws IOException {
     if (skip)
       return;
     writeRecords(records1stBlock + 1);
     readRecords(records1stBlock + 1);
-    checkBlockIndex(records1stBlock + 1, records1stBlock - 1, 0);
-    checkBlockIndex(records1stBlock + 1, records1stBlock, 1);
+    checkBlockIndex(records1stBlock - 1, 0);
+    checkBlockIndex(records1stBlock, 1);
   }
 
+  @Test
   public void testTwoBlocks() throws IOException {
     if (skip)
       return;
     writeRecords(records1stBlock + 5);
     readRecords(records1stBlock + 5);
-    checkBlockIndex(records1stBlock + 5, records1stBlock + 4, 1);
+    checkBlockIndex(records1stBlock + 4, 1);
   }
 
+  @Test
   public void testThreeBlocks() throws IOException {
     if (skip) 
       return;
     writeRecords(2 * records1stBlock + 5);
     readRecords(2 * records1stBlock + 5);
 
-    checkBlockIndex(2 * records1stBlock + 5, 2 * records1stBlock + 4, 2);
+    checkBlockIndex(2 * records1stBlock + 4, 2);
     // 1st key in file
-    readValueBeforeKey(2 * records1stBlock + 5, 0);
-    readKeyWithoutValue(2 * records1stBlock + 5, 0);
-    readValueWithoutKey(2 * records1stBlock + 5, 0);
-    readKeyManyTimes(2 * records1stBlock + 5, 0);
+    readValueBeforeKey(0);
+    readKeyWithoutValue(0);
+    readValueWithoutKey(0);
+    readKeyManyTimes(0);
     // last key in file
-    readValueBeforeKey(2 * records1stBlock + 5, 2 * records1stBlock + 4);
-    readKeyWithoutValue(2 * records1stBlock + 5, 2 * records1stBlock + 4);
-    readValueWithoutKey(2 * records1stBlock + 5, 2 * records1stBlock + 4);
-    readKeyManyTimes(2 * records1stBlock + 5, 2 * records1stBlock + 4);
+    readValueBeforeKey(2 * records1stBlock + 4);
+    readKeyWithoutValue(2 * records1stBlock + 4);
+    readValueWithoutKey(2 * records1stBlock + 4);
+    readKeyManyTimes(2 * records1stBlock + 4);
 
     // 1st key in mid block, verify block indexes then read
-    checkBlockIndex(2 * records1stBlock + 5, records1stBlock - 1, 0);
-    checkBlockIndex(2 * records1stBlock + 5, records1stBlock, 1);
-    readValueBeforeKey(2 * records1stBlock + 5, records1stBlock);
-    readKeyWithoutValue(2 * records1stBlock + 5, records1stBlock);
-    readValueWithoutKey(2 * records1stBlock + 5, records1stBlock);
-    readKeyManyTimes(2 * records1stBlock + 5, records1stBlock);
+    checkBlockIndex(records1stBlock - 1, 0);
+    checkBlockIndex(records1stBlock, 1);
+    readValueBeforeKey(records1stBlock);
+    readKeyWithoutValue(records1stBlock);
+    readValueWithoutKey(records1stBlock);
+    readKeyManyTimes(records1stBlock);
 
     // last key in mid block, verify block indexes then read
-    checkBlockIndex(2 * records1stBlock + 5, records1stBlock + records2ndBlock
+    checkBlockIndex(records1stBlock + records2ndBlock
         - 1, 1);
-    checkBlockIndex(2 * records1stBlock + 5, records1stBlock + records2ndBlock,
-        2);
-    readValueBeforeKey(2 * records1stBlock + 5, records1stBlock
+    checkBlockIndex(records1stBlock + records2ndBlock, 2);
+    readValueBeforeKey(records1stBlock
         + records2ndBlock - 1);
-    readKeyWithoutValue(2 * records1stBlock + 5, records1stBlock
+    readKeyWithoutValue(records1stBlock
         + records2ndBlock - 1);
-    readValueWithoutKey(2 * records1stBlock + 5, records1stBlock
+    readValueWithoutKey(records1stBlock
         + records2ndBlock - 1);
-    readKeyManyTimes(2 * records1stBlock + 5, records1stBlock + records2ndBlock
+    readKeyManyTimes(records1stBlock + records2ndBlock
         - 1);
 
     // mid in mid block
-    readValueBeforeKey(2 * records1stBlock + 5, records1stBlock + 10);
-    readKeyWithoutValue(2 * records1stBlock + 5, records1stBlock + 10);
-    readValueWithoutKey(2 * records1stBlock + 5, records1stBlock + 10);
-    readKeyManyTimes(2 * records1stBlock + 5, records1stBlock + 10);
+    readValueBeforeKey(records1stBlock + 10);
+    readKeyWithoutValue(records1stBlock + 10);
+    readValueWithoutKey(records1stBlock + 10);
+    readKeyManyTimes(records1stBlock + 10);
   }
 
   Location locate(Scanner scanner, byte[] key) throws IOException {
@@ -219,27 +232,23 @@ public class TestTFileByteArrays extends TestCase {
     return scanner.endLocation;
   }
   
+  @Test
   public void testLocate() throws IOException {
     if (skip)
       return;
     writeRecords(3 * records1stBlock);
     Reader reader = new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
     Scanner scanner = reader.createScanner();
-    Location loc2 =
-        locate(scanner, composeSortedKey(KEY, 3 * records1stBlock, 2)
-            .getBytes());
-    Location locLastIn1stBlock =
-        locate(scanner, composeSortedKey(KEY, 3 * records1stBlock,
-            records1stBlock - 1).getBytes());
-    Location locFirstIn2ndBlock =
-        locate(scanner, composeSortedKey(KEY, 3 * records1stBlock,
-            records1stBlock).getBytes());
+    locate(scanner, composeSortedKey(KEY, 2).getBytes());
+    locate(scanner, composeSortedKey(KEY, records1stBlock - 1).getBytes());
+    locate(scanner, composeSortedKey(KEY, records1stBlock).getBytes());
     Location locX = locate(scanner, "keyX".getBytes());
     Assert.assertEquals(scanner.endLocation, locX);
     scanner.close();
     reader.close();
   }
 
+  @Test
   public void testFailureWriterNotClosed() throws IOException {
     if (skip)
       return;
@@ -247,17 +256,16 @@ public class TestTFileByteArrays extends TestCase {
     try {
       reader = new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
       Assert.fail("Cannot read before closing the writer.");
-    }
-    catch (IOException e) {
+    } catch (IOException e) {
       // noop, expecting exceptions
-    }
-    finally {
+    } finally {
       if (reader != null) {
         reader.close();
       }
     }
   }
 
+  @Test
   public void testFailureWriteMetaBlocksWithSameName() throws IOException {
     if (skip)
       return;
@@ -271,16 +279,15 @@ public class TestTFileByteArrays extends TestCase {
     outMeta.close();
     // add the same metablock
     try {
-      DataOutputStream outMeta2 =
-          writer.prepareMetaBlock("testX", Compression.Algorithm.GZ.getName());
+      writer.prepareMetaBlock("testX", Compression.Algorithm.GZ.getName());
       Assert.fail("Cannot create metablocks with the same name.");
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       // noop, expecting exceptions
     }
     closeOutput();
   }
 
+  @Test
   public void testFailureGetNonExistentMetaBlock() throws IOException {
     if (skip)
       return;
@@ -300,15 +307,14 @@ public class TestTFileByteArrays extends TestCase {
     mb.close();
     try {
       DataInputStream mbBad = reader.getMetaBlock("testY");
-      Assert.assertNull(mbBad);
       Assert.fail("Error on handling non-existent metablocks.");
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       // noop, expecting exceptions
     }
     reader.close();
   }
 
+  @Test
   public void testFailureWriteRecordAfterMetaBlock() throws IOException {
     if (skip)
       return;
@@ -324,13 +330,13 @@ public class TestTFileByteArrays extends TestCase {
     try {
       writer.append("keyY".getBytes(), "valueY".getBytes());
       Assert.fail("Cannot add key/value after start adding meta blocks.");
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       // noop, expecting exceptions
     }
     closeOutput();
   }
 
+  @Test
   public void testFailureReadValueManyTimes() throws IOException {
     if (skip)
       return;
@@ -346,8 +352,7 @@ public class TestTFileByteArrays extends TestCase {
     try {
       scanner.entry().getValue(vbuf);
       Assert.fail("Cannot get the value mlutiple times.");
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       // noop, expecting exceptions
     }
 
@@ -355,6 +360,7 @@ public class TestTFileByteArrays extends TestCase {
     reader.close();
   }
 
+  @Test
   public void testFailureBadCompressionCodec() throws IOException {
     if (skip)
       return;
@@ -363,13 +369,13 @@ public class TestTFileByteArrays extends TestCase {
     try {
       writer = new Writer(out, BLOCK_SIZE, "BAD", comparator, conf);
       Assert.fail("Error on handling invalid compression codecs.");
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       // noop, expecting exceptions
       // e.printStackTrace();
     }
   }
 
+  @Test
   public void testFailureOpenEmptyFile() throws IOException {
     if (skip)
       return;
@@ -379,15 +385,14 @@ public class TestTFileByteArrays extends TestCase {
     out = fs.create(path);
     out.close();
     try {
-      Reader reader =
-          new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
+      new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
       Assert.fail("Error on handling empty files.");
-    }
-    catch (EOFException e) {
+    } catch (EOFException e) {
       // noop, expecting exceptions
     }
   }
 
+  @Test
   public void testFailureOpenRandomFile() throws IOException {
     if (skip)
       return;
@@ -404,15 +409,14 @@ public class TestTFileByteArrays extends TestCase {
     }
     out.close();
     try {
-      Reader reader =
-          new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
+      new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
       Assert.fail("Error on handling random files.");
-    }
-    catch (IOException e) {
+    } catch (IOException e) {
       // noop, expecting exceptions
     }
   }
 
+  @Test
   public void testFailureKeyLongerThan64K() throws IOException {
     if (skip)
       return;
@@ -421,13 +425,13 @@ public class TestTFileByteArrays extends TestCase {
     rand.nextBytes(buf);
     try {
       writer.append(buf, "valueX".getBytes());
-    }
-    catch (IndexOutOfBoundsException e) {
+    } catch (IndexOutOfBoundsException e) {
       // noop, expecting exceptions
     }
     closeOutput();
   }
 
+  @Test
   public void testFailureOutOfOrderKeys() throws IOException {
     if (skip)
       return;
@@ -435,8 +439,7 @@ public class TestTFileByteArrays extends TestCase {
       writer.append("keyM".getBytes(), "valueM".getBytes());
       writer.append("keyA".getBytes(), "valueA".getBytes());
       Assert.fail("Error on handling out of order keys.");
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       // noop, expecting exceptions
       // e.printStackTrace();
     }
@@ -444,19 +447,20 @@ public class TestTFileByteArrays extends TestCase {
     closeOutput();
   }
 
+  @Test
   public void testFailureNegativeOffset() throws IOException {
     if (skip)
       return;
     try {
       writer.append("keyX".getBytes(), -1, 4, "valueX".getBytes(), 0, 6);
       Assert.fail("Error on handling negative offset.");
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       // noop, expecting exceptions
     }
     closeOutput();
   }
 
+  @Test
   public void testFailureNegativeOffset_2() throws IOException {
     if (skip)
       return;
@@ -467,30 +471,29 @@ public class TestTFileByteArrays extends TestCase {
     try {
       scanner.lowerBound("keyX".getBytes(), -1, 4);
       Assert.fail("Error on handling negative offset.");
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       // noop, expecting exceptions
-    }
-    finally {
+    } finally {
       reader.close();
       scanner.close();
     }
     closeOutput();
   }
 
+  @Test
   public void testFailureNegativeLength() throws IOException {
     if (skip)
       return;
     try {
       writer.append("keyX".getBytes(), 0, -1, "valueX".getBytes(), 0, 6);
       Assert.fail("Error on handling negative length.");
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       // noop, expecting exceptions
     }
     closeOutput();
   }
 
+  @Test
   public void testFailureNegativeLength_2() throws IOException {
     if (skip)
       return;
@@ -501,17 +504,16 @@ public class TestTFileByteArrays extends TestCase {
     try {
       scanner.lowerBound("keyX".getBytes(), 0, -1);
       Assert.fail("Error on handling negative length.");
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       // noop, expecting exceptions
-    }
-    finally {
+    } finally {
       scanner.close();
       reader.close();
     }
     closeOutput();
   }
 
+  @Test
   public void testFailureNegativeLength_3() throws IOException {
     if (skip)
       return;
@@ -542,6 +544,7 @@ public class TestTFileByteArrays extends TestCase {
     }
   }
 
+  @Test
   public void testFailureCompressionNotWorking() throws IOException {
     if (skip)
       return;
@@ -552,6 +555,7 @@ public class TestTFileByteArrays extends TestCase {
     closeOutput();
   }
 
+  @Test
   public void testFailureFileWriteNotAt0Position() throws IOException {
     if (skip)
       return;
@@ -562,8 +566,7 @@ public class TestTFileByteArrays extends TestCase {
     try {
       writer = new Writer(out, BLOCK_SIZE, compression, comparator, conf);
       Assert.fail("Failed to catch file write not at position 0.");
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       // noop, expecting exceptions
     }
     closeOutput();
@@ -585,7 +588,7 @@ public class TestTFileByteArrays extends TestCase {
     long rawDataSize = 0;
     int nx;
     for (nx = 0; nx < count; nx++) {
-      byte[] key = composeSortedKey(KEY, count, nx).getBytes();
+      byte[] key = composeSortedKey(KEY, nx).getBytes();
       byte[] value = (VALUE + nx).getBytes();
       writer.append(key, value);
       rawDataSize +=
@@ -599,26 +602,11 @@ public class TestTFileByteArrays extends TestCase {
    * Insert some leading 0's in front of the value, to make the keys sorted.
    * 
    * @param prefix
-   * @param total
    * @param value
    * @return
    */
-  static String composeSortedKey(String prefix, int total, int value) {
+  static String composeSortedKey(String prefix, int value) {
     return String.format("%s%010d", prefix, value);
-  }
-
-  /**
-   * Calculate how many digits are in the 10-based integer.
-   * 
-   * @param value
-   * @return
-   */
-  private static int numberDigits(int value) {
-    int digits = 0;
-    while ((value = value / 10) > 0) {
-      digits++;
-    }
-    return digits;
   }
 
   private void readRecords(int count) throws IOException {
@@ -640,7 +628,7 @@ public class TestTFileByteArrays extends TestCase {
         int klen = scanner.entry().getKeyLength();
         scanner.entry().getKey(kbuf);
         Assert.assertEquals(new String(kbuf, 0, klen), composeSortedKey(KEY,
-            count, nx));
+            nx));
 
         byte[] vbuf = new byte[BUF_SIZE];
         int vlen = scanner.entry().getValueLength();
@@ -650,30 +638,28 @@ public class TestTFileByteArrays extends TestCase {
 
       Assert.assertTrue(scanner.atEnd());
       Assert.assertFalse(scanner.advance());
-    }
-    finally {
+    } finally {
       scanner.close();
       reader.close();
     }
   }
 
-  private void checkBlockIndex(int count, int recordIndex,
-      int blockIndexExpected) throws IOException {
+  private void checkBlockIndex(int recordIndex, int blockIndexExpected) throws IOException {
     Reader reader = new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
     Scanner scanner = reader.createScanner();
-    scanner.seekTo(composeSortedKey(KEY, count, recordIndex).getBytes());
+    scanner.seekTo(composeSortedKey(KEY, recordIndex).getBytes());
     Assert.assertEquals(blockIndexExpected, scanner.currentLocation
         .getBlockIndex());
     scanner.close();
     reader.close();
   }
 
-  private void readValueBeforeKey(int count, int recordIndex)
+  private void readValueBeforeKey(int recordIndex)
       throws IOException {
     Reader reader =
         new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
     Scanner scanner =
-        reader.createScannerByKey(composeSortedKey(KEY, count, recordIndex)
+        reader.createScannerByKey(composeSortedKey(KEY, recordIndex)
             .getBytes(), null);
 
     try {
@@ -686,19 +672,18 @@ public class TestTFileByteArrays extends TestCase {
       int klen = scanner.entry().getKeyLength();
       scanner.entry().getKey(kbuf);
       Assert.assertEquals(new String(kbuf, 0, klen), composeSortedKey(KEY,
-          count, recordIndex));
-    }
-    finally {
+          recordIndex));
+    } finally {
       scanner.close();
       reader.close();
     }
   }
 
-  private void readKeyWithoutValue(int count, int recordIndex)
+  private void readKeyWithoutValue(int recordIndex)
       throws IOException {
     Reader reader = new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
     Scanner scanner =
-        reader.createScannerByKey(composeSortedKey(KEY, count, recordIndex)
+        reader.createScannerByKey(composeSortedKey(KEY, recordIndex)
             .getBytes(), null);
 
     try {
@@ -707,7 +692,7 @@ public class TestTFileByteArrays extends TestCase {
       int klen1 = scanner.entry().getKeyLength();
       scanner.entry().getKey(kbuf1);
       Assert.assertEquals(new String(kbuf1, 0, klen1), composeSortedKey(KEY,
-          count, recordIndex));
+          recordIndex));
 
       if (scanner.advance() && !scanner.atEnd()) {
         // read the next key following the indexed
@@ -715,21 +700,20 @@ public class TestTFileByteArrays extends TestCase {
         int klen2 = scanner.entry().getKeyLength();
         scanner.entry().getKey(kbuf2);
         Assert.assertEquals(new String(kbuf2, 0, klen2), composeSortedKey(KEY,
-            count, recordIndex + 1));
+            recordIndex + 1));
       }
-    }
-    finally {
+    } finally {
       scanner.close();
       reader.close();
     }
   }
 
-  private void readValueWithoutKey(int count, int recordIndex)
+  private void readValueWithoutKey(int recordIndex)
       throws IOException {
     Reader reader = new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
 
     Scanner scanner =
-        reader.createScannerByKey(composeSortedKey(KEY, count, recordIndex)
+        reader.createScannerByKey(composeSortedKey(KEY, recordIndex)
             .getBytes(), null);
 
     byte[] vbuf1 = new byte[BUF_SIZE];
@@ -749,11 +733,11 @@ public class TestTFileByteArrays extends TestCase {
     reader.close();
   }
 
-  private void readKeyManyTimes(int count, int recordIndex) throws IOException {
+  private void readKeyManyTimes(int recordIndex) throws IOException {
     Reader reader = new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
 
     Scanner scanner =
-        reader.createScannerByKey(composeSortedKey(KEY, count, recordIndex)
+        reader.createScannerByKey(composeSortedKey(KEY, recordIndex)
             .getBytes(), null);
 
     // read the indexed key
@@ -761,17 +745,17 @@ public class TestTFileByteArrays extends TestCase {
     int klen1 = scanner.entry().getKeyLength();
     scanner.entry().getKey(kbuf1);
     Assert.assertEquals(new String(kbuf1, 0, klen1), composeSortedKey(KEY,
-        count, recordIndex));
+        recordIndex));
 
     klen1 = scanner.entry().getKeyLength();
     scanner.entry().getKey(kbuf1);
     Assert.assertEquals(new String(kbuf1, 0, klen1), composeSortedKey(KEY,
-        count, recordIndex));
+        recordIndex));
 
     klen1 = scanner.entry().getKeyLength();
     scanner.entry().getKey(kbuf1);
     Assert.assertEquals(new String(kbuf1, 0, klen1), composeSortedKey(KEY,
-        count, recordIndex));
+        recordIndex));
 
     scanner.close();
     reader.close();

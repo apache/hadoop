@@ -30,7 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -93,7 +93,7 @@ public class TestJspHelper {
     //Set the nnaddr url parameter to null.
     when(request.getParameter(JspHelper.NAMENODE_ADDRESS)).thenReturn(null);
     InetSocketAddress addr = new InetSocketAddress("localhost", 2222);
-    when(context.getAttribute(NameNode.NAMENODE_ADDRESS_ATTRIBUTE_KEY))
+    when(context.getAttribute(NameNodeHttpServer.NAMENODE_ADDRESS_ATTRIBUTE_KEY))
         .thenReturn(addr);
     verifyServiceInToken(context, request, addr.getAddress().getHostAddress()
         + ":2222");
@@ -102,7 +102,7 @@ public class TestJspHelper {
     token.setService(new Text("3.3.3.3:3333"));
     tokenString = token.encodeToUrlString();
     //Set the name.node.address attribute in Servlet context to null
-    when(context.getAttribute(NameNode.NAMENODE_ADDRESS_ATTRIBUTE_KEY))
+    when(context.getAttribute(NameNodeHttpServer.NAMENODE_ADDRESS_ATTRIBUTE_KEY))
         .thenReturn(null);
     when(request.getParameter(JspHelper.DELEGATION_PARAMETER_NAME)).thenReturn(
         tokenString);

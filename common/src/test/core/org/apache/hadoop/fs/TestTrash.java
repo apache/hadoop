@@ -20,9 +20,11 @@ package org.apache.hadoop.fs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.*;
 
+import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.URI;
 import java.util.HashSet;
 import java.util.Set;
@@ -413,6 +415,30 @@ public class TestTrash extends TestCase {
       assertTrue(count==num_runs);
     }
     
+    //Verify skipTrash option is suggested when rm fails due to its absence
+    {
+      String[] args = new String[2];
+      args[0] = "-rmr";
+      args[1] = "/";  //This always contains trash directory
+      PrintStream stdout = System.out;
+      PrintStream stderr = System.err;
+      ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+      PrintStream newOut = new PrintStream(byteStream);
+      System.setOut(newOut);
+      System.setErr(newOut);
+      try {
+        shell.run(args);
+      } catch (Exception e) {
+        System.err.println("Exception raised from Trash.run " +
+            e.getLocalizedMessage());
+      }
+      String output = byteStream.toString();
+      System.setOut(stdout);
+      System.setErr(stderr);
+      assertTrue("skipTrash wasn't suggested as remedy to failed rm command",
+        output.indexOf(("Consider using -skipTrash option")) != -1 );
+    }
+
   }
 
   public static void trashNonDefaultFS(Configuration conf) throws IOException {
@@ -454,6 +480,15 @@ public class TestTrash extends TestCase {
     trashNonDefaultFS(conf);
   }
   
+  public void testPluggableTrash() throws IOException {
+    Configuration conf = new Configuration();
+
+    // Test plugged TrashPolicy
+    conf.setClass("fs.trash.classname", TestTrashPolicy.class, TrashPolicy.class);
+    Trash trash = new Trash(conf);
+    assertTrue(trash.getTrashPolicy().getClass().equals(TestTrashPolicy.class));
+  }
+
   public void testTrashEmptier() throws Exception {
     Configuration conf = new Configuration();
     // Trash with 12 second deletes and 6 seconds checkpoints
@@ -611,5 +646,42 @@ public class TestTrash extends TestCase {
   public static void main(String [] arg) throws IOException{
     // run performance piece as a separate test
     performanceTestDeleteSameFile();
+  }
+
+  // Test TrashPolicy. Don't care about implementation.
+  public static class TestTrashPolicy extends TrashPolicy {
+    public TestTrashPolicy() { }
+
+    @Override
+    public void initialize(Configuration conf, FileSystem fs, Path home) {
+    }
+
+    @Override
+    public boolean isEnabled() {
+      return false;
+    }
+
+    @Override 
+    public boolean moveToTrash(Path path) throws IOException {
+      return false;
+    }
+
+    @Override
+    public void createCheckpoint() throws IOException {
+    }
+
+    @Override
+    public void deleteCheckpoint() throws IOException {
+    }
+
+    @Override
+    public Path getCurrentTrashDir() {
+      return null;
+    }
+
+    @Override
+    public Runnable getEmptier() throws IOException {
+      return null;
+    }
   }
 }

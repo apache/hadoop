@@ -70,7 +70,7 @@ public class GetImageServlet extends HttpServlet {
                     ) throws ServletException, IOException {
     try {
       ServletContext context = getServletContext();
-      final FSImage nnImage = (FSImage)context.getAttribute("name.system.image");
+      final FSImage nnImage = NameNodeHttpServer.getFsImageFromContext(context);
       final GetImageParams parsedParams = new GetImageParams(request, response);
       final Configuration conf = 
         (Configuration)getServletContext().getAttribute(JspHelper.CURRENT_CONF);

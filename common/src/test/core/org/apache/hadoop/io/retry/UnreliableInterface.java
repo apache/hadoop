@@ -18,12 +18,28 @@
 
 package org.apache.hadoop.io.retry;
 
+import java.io.IOException;
+
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.StandbyException;
 
 public interface UnreliableInterface {
   
   public static class UnreliableException extends Exception {
-    // no body
+    private String identifier;
+    
+    public UnreliableException() {
+      // no body
+    }
+    
+    public UnreliableException(String identifier) {
+      this.identifier = identifier;
+    }
+    
+    @Override
+    public String getMessage() {
+      return identifier;
+    }
   }
   
   public static class FatalException extends UnreliableException {
@@ -39,4 +55,12 @@ public interface UnreliableInterface {
   boolean failsOnceThenSucceedsWithReturnValue() throws UnreliableException;
 
   void failsTenTimesThenSucceeds() throws UnreliableException;
+  
+  public String succeedsOnceThenFailsReturningString()
+      throws UnreliableException, StandbyException, IOException;
+  @Idempotent
+  public String succeedsOnceThenFailsReturningStringIdempotent()
+      throws UnreliableException, StandbyException, IOException;
+  public String succeedsTenTimesThenFailsReturningString()
+      throws UnreliableException, StandbyException, IOException;
 }

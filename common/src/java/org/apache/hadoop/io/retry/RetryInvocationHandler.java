@@ -25,25 +25,30 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
 
 class RetryInvocationHandler implements InvocationHandler {
   public static final Log LOG = LogFactory.getLog(RetryInvocationHandler.class);
-  private Object implementation;
+  private FailoverProxyProvider proxyProvider;
   
   private RetryPolicy defaultPolicy;
   private Map<String,RetryPolicy> methodNameToPolicyMap;
+  private Object currentProxy;
   
-  public RetryInvocationHandler(Object implementation, RetryPolicy retryPolicy) {
-    this.implementation = implementation;
+  public RetryInvocationHandler(FailoverProxyProvider proxyProvider,
+      RetryPolicy retryPolicy) {
+    this.proxyProvider = proxyProvider;
     this.defaultPolicy = retryPolicy;
     this.methodNameToPolicyMap = Collections.emptyMap();
+    this.currentProxy = proxyProvider.getProxy();
   }
   
-  public RetryInvocationHandler(Object implementation, Map<String, RetryPolicy> methodNameToPolicyMap) {
-    this.implementation = implementation;
+  public RetryInvocationHandler(FailoverProxyProvider proxyProvider,
+      Map<String, RetryPolicy> methodNameToPolicyMap) {
+    this.proxyProvider = proxyProvider;
     this.defaultPolicy = RetryPolicies.TRY_ONCE_THEN_FAIL;
     this.methodNameToPolicyMap = methodNameToPolicyMap;
+    this.currentProxy = proxyProvider.getProxy();
   }
 
   public Object invoke(Object proxy, Method method, Object[] args)
@@ -53,24 +58,35 @@ class RetryInvocationHandler implements InvocationHandler {
       policy = defaultPolicy;
     }
     
+    int failovers = 0;
     int retries = 0;
     while (true) {
       try {
         return invokeMethod(method, args);
       } catch (Exception e) {
-        if (!policy.shouldRetry(e, retries++)) {
-          LOG.info("Exception while invoking " + method.getName()
-                   + " of " + implementation.getClass() + ". Not retrying."
-                   , e);
+        boolean isMethodIdempotent = proxyProvider.getInterface()
+            .getMethod(method.getName(), method.getParameterTypes())
+            .isAnnotationPresent(Idempotent.class);
+        RetryAction action = policy.shouldRetry(e, retries++, failovers,
+            isMethodIdempotent);
+        if (action == RetryAction.FAIL) {
+          LOG.warn("Exception while invoking " + method.getName()
+                   + " of " + currentProxy.getClass() + ". Not retrying.", e);
           if (!method.getReturnType().equals(Void.TYPE)) {
             throw e; // non-void methods can't fail without an exception
           }
           return null;
+        } else if (action == RetryAction.FAILOVER_AND_RETRY) {
+          LOG.warn("Exception while invoking " + method.getName()
+              + " of " + currentProxy.getClass()
+              + ". Trying to fail over.", e);
+          failovers++;
+          proxyProvider.performFailover(currentProxy);
+          currentProxy = proxyProvider.getProxy();
         }
         if(LOG.isDebugEnabled()) {
           LOG.debug("Exception while invoking " + method.getName()
-              + " of " + implementation.getClass() + ". Retrying."
-              , e);
+              + " of " + currentProxy.getClass() + ". Retrying.", e);
         }
       }
     }
@@ -81,7 +97,7 @@ class RetryInvocationHandler implements InvocationHandler {
       if (!method.isAccessible()) {
         method.setAccessible(true);
       }
-      return method.invoke(implementation, args);
+      return method.invoke(currentProxy, args);
     } catch (InvocationTargetException e) {
       throw e.getCause();
     }

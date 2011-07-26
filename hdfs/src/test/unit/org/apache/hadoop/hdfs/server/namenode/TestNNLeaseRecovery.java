@@ -455,7 +455,7 @@ public class TestNNLeaseRecovery {
     fsn.leaseManager.addLease("mock-lease", file.toString());
     if (setStoredBlock) {
       when(b1.getINode()).thenReturn(iNFmock);
-      fsn.blockManager.blocksMap.addINode(b1, iNFmock);
+      fsn.getBlockManager().blocksMap.addINode(b1, iNFmock);
     }
 
     when(fsDir.getFileINode(anyString())).thenReturn(iNFmock);

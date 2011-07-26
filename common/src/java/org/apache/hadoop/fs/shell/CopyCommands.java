@@ -94,15 +94,16 @@ class CopyCommands {
     
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE);
+      CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE, "f");
       cf.parse(args);
+      setOverwrite(cf.getOpt("f"));
       getRemoteDestination(args);
     }
 
     @Override
     protected void processPath(PathData src, PathData target)
     throws IOException {
-      if (!FileUtil.copy(src.fs, src.path, target.fs, target.path, false, getConf())) {
+      if (!FileUtil.copy(src.fs, src.path, target.fs, target.path, false, overwrite, getConf())) {
         // we have no idea what the error is...  FileUtils masks it and in
         // some cases won't even report an error
         throw new PathIOException(src.toString());
@@ -216,8 +217,9 @@ class CopyCommands {
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(1, Integer.MAX_VALUE);
+      CommandFormat cf = new CommandFormat(1, Integer.MAX_VALUE, "f");
       cf.parse(args);
+      setOverwrite(cf.getOpt("f"));
       getRemoteDestination(args);
     }
 
@@ -246,7 +248,7 @@ class CopyCommands {
     @Override
     protected void processPath(PathData src, PathData target)
     throws IOException {
-      target.fs.copyFromLocalFile(false, false, src.path, target.path);
+      target.fs.copyFromLocalFile(false, overwrite, src.path, target.path);
     }
 
     /** Copies from stdin to the destination file. */

@@ -23,6 +23,7 @@ import static org.junit.Assert.*;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 
 import org.junit.Test;
 
@@ -149,5 +150,57 @@ public class TestINodeFile {
     assertEquals(Path.SEPARATOR, root.getFullPathName());
     assertEquals(Path.SEPARATOR, root.getLocalParentDir());
     
+  }
+  
+  @Test
+  public void testAppendBlocks() {
+    INodeFile origFile = createINodeFiles(1, "origfile")[0];
+    assertEquals("Number of blocks didn't match", origFile.numBlocks(), 1L);
+
+    INodeFile[] appendFiles =   createINodeFiles(4, "appendfile");
+    origFile.appendBlocks(appendFiles, getTotalBlocks(appendFiles));
+    assertEquals("Number of blocks didn't match", origFile.numBlocks(), 5L);
+    
+    for(int i=0; i< origFile.numBlocks(); i++) {
+      assertSame("INodeFiles didn't Match", origFile, origFile.getBlocks()[i].getINode());
+    }
+  }
+
+  /** 
+   * Gives the count of blocks for a given number of files
+   * @param files Array of INode files
+   * @return total count of blocks
+   */
+  private int getTotalBlocks(INodeFile[] files) {
+    int nBlocks=0;
+    for(int i=0; i < files.length; i++) {
+       nBlocks += files[i].numBlocks();
+    }
+    return nBlocks;
+  }
+  
+  /** 
+   * Creates the required number of files with one block each
+   * @param nCount Number of INodes to create
+   * @return Array of INode files
+   */
+  private INodeFile[] createINodeFiles(int nCount, String fileNamePrefix) {
+    if(nCount <= 0)
+      return new INodeFile[1];
+
+    replication = 3;
+    preferredBlockSize = 128 * 1024 * 1024;
+    INodeFile[] iNodes = new INodeFile[nCount];
+    for (int i = 0; i < nCount; i++) {
+      PermissionStatus perms = new PermissionStatus(userName, null,
+          FsPermission.getDefault());
+      iNodes[i] = new INodeFile(perms, null, replication, 0L, 0L,
+          preferredBlockSize);
+      iNodes[i].setLocalName(fileNamePrefix +  Integer.toString(i));
+      BlockInfo newblock = new BlockInfo(replication);
+      iNodes[i].addBlock(newblock);
+    }
+    
+    return iNodes;
   }
 }

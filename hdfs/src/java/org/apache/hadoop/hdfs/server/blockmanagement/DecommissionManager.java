@@ -35,9 +35,11 @@ class DecommissionManager {
   static final Log LOG = LogFactory.getLog(DecommissionManager.class);
 
   private final FSNamesystem fsnamesystem;
+  private final BlockManager blockManager;
 
   DecommissionManager(FSNamesystem namesystem) {
     this.fsnamesystem = namesystem;
+    this.blockManager = fsnamesystem.getBlockManager();
   }
 
   /** Periodically check decommission status. */
@@ -88,7 +90,7 @@ class DecommissionManager {
 
         if (d.isDecommissionInProgress()) {
           try {
-            fsnamesystem.checkDecommissionStateInternal(d);
+            blockManager.checkDecommissionStateInternal(d);
           } catch(Exception e) {
             LOG.warn("entry=" + entry, e);
           }

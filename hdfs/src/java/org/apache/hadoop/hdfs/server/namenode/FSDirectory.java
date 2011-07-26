@@ -152,7 +152,7 @@ public class FSDirectory implements Closeable {
   }
 
   private BlockManager getBlockManager() {
-    return getFSNamesystem().blockManager;
+    return getFSNamesystem().getBlockManager();
   }
 
   /**

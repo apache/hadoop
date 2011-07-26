@@ -41,13 +41,24 @@ public class RoundRobinVolumesPolicy implements BlockVolumeChoosingPolicy {
     }
     
     int startVolume = curVolume;
+    long maxAvailable = 0;
     
     while (true) {
       FSVolume volume = volumes.get(curVolume);
       curVolume = (curVolume + 1) % volumes.size();
-      if (volume.getAvailable() > blockSize) { return volume; }
+      long availableVolumeSize = volume.getAvailable();
+      if (availableVolumeSize > blockSize) { return volume; }
+      
+      if (availableVolumeSize > maxAvailable) {
+        maxAvailable = availableVolumeSize;
+      }
+      
       if (curVolume == startVolume) {
-        throw new DiskOutOfSpaceException("Insufficient space for an additional block");
+        throw new DiskOutOfSpaceException(
+            "Insufficient space for an additional block. Volume with the most available space has "
+                + maxAvailable
+                + " bytes free, configured block size is "
+                + blockSize);
       }
     }
   }

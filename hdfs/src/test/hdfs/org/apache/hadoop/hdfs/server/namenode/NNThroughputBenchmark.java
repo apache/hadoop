@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
@@ -1111,9 +1112,11 @@ public class NNThroughputBenchmark {
       // start data-nodes; create a bunch of files; generate block reports.
       blockReportObject.generateInputs(ignore);
       // stop replication monitor
-      namesystem.replthread.interrupt();
+      BlockManagerTestUtil.getReplicationThread(namesystem.getBlockManager())
+          .interrupt();
       try {
-        namesystem.replthread.join();
+        BlockManagerTestUtil.getReplicationThread(namesystem.getBlockManager())
+            .join();
       } catch(InterruptedException ei) {
         return;
       }
@@ -1156,7 +1159,8 @@ public class NNThroughputBenchmark {
       assert daemonId < numThreads : "Wrong daemonId.";
       long start = System.currentTimeMillis();
       // compute data-node work
-      int work = nameNode.getNamesystem().computeDatanodeWork();
+      int work = BlockManagerTestUtil.getComputedDatanodeWork(nameNode
+          .getNamesystem().getBlockManager());
       long end = System.currentTimeMillis();
       numPendingBlocks += work;
       if(work == 0)

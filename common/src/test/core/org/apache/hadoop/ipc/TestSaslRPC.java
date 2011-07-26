@@ -193,7 +193,7 @@ public class TestSaslRPC {
   public static class CustomSecurityInfo extends SecurityInfo {
 
     @Override
-    public KerberosInfo getKerberosInfo(Class<?> protocol) {
+    public KerberosInfo getKerberosInfo(Class<?> protocol, Configuration conf) {
       return new KerberosInfo() {
         @Override
         public Class<? extends Annotation> annotationType() {
@@ -211,7 +211,7 @@ public class TestSaslRPC {
     }
 
     @Override
-    public TokenInfo getTokenInfo(Class<?> protocol) {
+    public TokenInfo getTokenInfo(Class<?> protocol, Configuration conf) {
       return new TokenInfo() {
         @Override
         public Class<? extends TokenSelector<? extends 

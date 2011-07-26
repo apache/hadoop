@@ -51,7 +51,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
@@ -487,8 +487,8 @@ public class JspHelper {
     if (namenodeAddressInUrl != null) {
       namenodeAddress = DFSUtil.getSocketAddress(namenodeAddressInUrl);
     } else if (context != null) {
-      namenodeAddress = (InetSocketAddress) context
-          .getAttribute(NameNode.NAMENODE_ADDRESS_ATTRIBUTE_KEY);
+      namenodeAddress = NameNodeHttpServer.getNameNodeAddressFromContext(
+          context); 
     }
     if (namenodeAddress != null) {
       return (namenodeAddress.getAddress().getHostAddress() + ":" 

@@ -411,7 +411,7 @@ public class HttpServer implements FilterContainer {
     for (Context ctx : defaultContexts.keySet()) {
       defineFilter(ctx, name, classname, parameters, ALL_URLS);
     }
-    LOG.info("Added global filter" + name + " (class=" + classname + ")");
+    LOG.info("Added global filter '" + name + "' (class=" + classname + ")");
   }
 
   /**
@@ -737,13 +737,12 @@ public class HttpServer implements FilterContainer {
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-
+      response.setContentType("text/plain; charset=UTF-8");
       // Do the authorization
       if (!HttpServer.hasAdministratorAccess(getServletContext(), request,
           response)) {
         return;
       }
-
       PrintWriter out = response.getWriter();
       ReflectionUtils.printThreadInfo(out, "");
       out.close();

@@ -27,7 +27,7 @@
 %>
 <%
 final NamenodeJspHelper.NodeListJsp nodelistjsp = new NamenodeJspHelper.NodeListJsp();
-NameNode nn = (NameNode)application.getAttribute("name.node");
+NameNode nn = NameNodeHttpServer.getNameNodeFromContext(application);
 String namenodeRole = nn.getRole().toString();
 FSNamesystem fsn = nn.getNamesystem();
 String namenodeLabel = nn.getNameNodeAddress().getHostName() + ":" + nn.getNameNodeAddress().getPort();

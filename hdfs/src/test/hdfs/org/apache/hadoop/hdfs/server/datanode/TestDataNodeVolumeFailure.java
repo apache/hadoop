@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -191,7 +192,7 @@ public class TestDataNodeVolumeFailure {
     // now check the number of under-replicated blocks
     FSNamesystem fsn = cluster.getNamesystem();
     // force update of all the metric counts by calling computeDatanodeWork
-    fsn.computeDatanodeWork();
+    BlockManagerTestUtil.getComputedDatanodeWork(fsn.getBlockManager());
     // get all the counts 
     long underRepl = fsn.getUnderReplicatedBlocks();
     long pendRepl = fsn.getPendingReplicationBlocks();
