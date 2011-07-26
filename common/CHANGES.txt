@@ -60,6 +60,9 @@ Trunk (unreleased changes)
 
     HADOOP-7460. Support pluggable trash policies. (Usman Masoon via suresh)
 
+    HADOOP-6385. dfs should support -rmdir (was HDFS-639). (Daryn Sharp
+    via mattf)
+
   IMPROVEMENTS
 
     HADOOP-7042. Updates to test-patch.sh to include failed test names and

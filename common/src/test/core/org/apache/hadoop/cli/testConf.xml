@@ -283,7 +283,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-rm \[-r\|-R\] \[-skipTrash\] &lt;src&gt; \.\.\.:( |\t)*Delete all files that match the specified file pattern.( )*</expected-output>
+          <expected-output>^-rm \[-f\] \[-r\|-R\] \[-skipTrash\] &lt;src&gt; \.\.\.:( |\t)*Delete all files that match the specified file pattern.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -296,6 +296,37 @@
         <comparator>
           <type>RegexpComparator</type>
           <expected-output>^( |\t)*deletes &lt;src&gt;( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s+-f\s+If the file does not exist, do not display a diagnostic</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s+message or modify the exit status to reflect an error\.</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s+-\[rR\]\s+Recursively deletes directories</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>help: help for rmdir</description>
+      <test-commands>
+        <command>-help rmdir</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-rmdir \[--ignore-fail-on-non-empty\] &lt;dir&gt; \.\.\.:\s+Removes the directory entry specified by each directory argument,</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>\s+provided it is empty.</expected-output>
         </comparator>
       </comparators>
     </test>
