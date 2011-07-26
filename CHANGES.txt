@@ -334,6 +334,7 @@ Release 0.91.0 - Unreleased
                (Alejandro Abdelnur)
    HBASE-3899  enhance HBase RPC to support free-ing up server handler threads
                even if response is not ready (Vlad Dogaru)
+   HBASE-4142  Advise against large batches in javadoc for HTable#put(List<Put>)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
