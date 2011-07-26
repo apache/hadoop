@@ -47,6 +47,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -56,6 +57,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.io.WritableWithSize;
 import org.apache.hadoop.hbase.util.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -97,7 +99,18 @@ public abstract class HBaseServer implements RpcServer {
   /** Default value for above param */
   private static final int DEFAULT_WARN_RESPONSE_SIZE = 100 * 1024 * 1024;
 
+  static final int BUFFER_INITIAL_SIZE = 1024;
+
   private final int warnResponseSize;
+
+  private static final String WARN_DELAYED_CALLS =
+      "hbase.ipc.warn.delayedrpc.number";
+
+  private static final int DEFAULT_WARN_DELAYED_CALLS = 1000;
+
+  private final int warnDelayedCalls;
+
+  private AtomicInteger delayedCalls;
 
   public static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.HBaseServer");
@@ -234,20 +247,25 @@ public abstract class HBaseServer implements RpcServer {
   }
 
   /** A call queued for handling. */
-  private static class Call {
+  private class Call implements Delayable {
     protected int id;                             // the client's call id
     protected Writable param;                     // the parameter passed
     protected Connection connection;              // connection to client
     protected long timestamp;      // the time received when response is null
                                    // the time served when response is not null
     protected ByteBuffer response;                // the response for this call
+    protected boolean delayResponse;
+    protected Responder responder;
 
-    public Call(int id, Writable param, Connection connection) {
+    public Call(int id, Writable param, Connection connection,
+        Responder responder) {
       this.id = id;
       this.param = param;
       this.connection = connection;
       this.timestamp = System.currentTimeMillis();
       this.response = null;
+      this.delayResponse = false;
+      this.responder = responder;
     }
 
     @Override
@@ -255,8 +273,98 @@ public abstract class HBaseServer implements RpcServer {
       return param.toString() + " from " + connection.toString();
     }
 
-    public void setResponse(ByteBuffer response) {
-      this.response = response;
+    private synchronized void setResponse(Object value, String errorClass,
+        String error) {
+      Writable result = null;
+      if (value instanceof Writable) {
+        result = (Writable) value;
+      } else {
+        /* We might have a null value and errors. Avoid creating a
+         * HbaseObjectWritable, because the constructor fails on null. */
+        if (value != null) {
+          result = new HbaseObjectWritable(value);
+        }
+      }
+
+      int size = BUFFER_INITIAL_SIZE;
+      if (result instanceof WritableWithSize) {
+        // get the size hint.
+        WritableWithSize ohint = (WritableWithSize) result;
+        long hint = ohint.getWritableSize() + Bytes.SIZEOF_BYTE + Bytes.SIZEOF_INT;
+        if (hint > Integer.MAX_VALUE) {
+          // oops, new problem.
+          IOException ioe =
+            new IOException("Result buffer size too large: " + hint);
+          errorClass = ioe.getClass().getName();
+          error = StringUtils.stringifyException(ioe);
+        } else {
+          size = (int)hint;
+        }
+      }
+
+      ByteBufferOutputStream buf = new ByteBufferOutputStream(size);
+      DataOutputStream out = new DataOutputStream(buf);
+      try {
+        out.writeInt(this.id);                // write call id
+        out.writeBoolean(error != null);      // write error flag
+      } catch (IOException e) {
+        errorClass = e.getClass().getName();
+        error = StringUtils.stringifyException(e);
+      }
+
+      try {
+        if (error == null) {
+          result.write(out);
+        } else {
+          WritableUtils.writeString(out, errorClass);
+          WritableUtils.writeString(out, error);
+        }
+      } catch (IOException e) {
+        LOG.warn("Error sending response to call: ", e);
+      }
+
+      if (buf.size() > warnResponseSize) {
+        LOG.warn("responseTooLarge for: "+this+": Size: "
+            + StringUtils.humanReadableInt(buf.size()));
+      }
+
+      this.response = buf.getByteBuffer();
+    }
+
+    @Override
+    public synchronized void endDelay(Object result) throws IOException {
+      assert this.delayResponse;
+      this.delayResponse = false;
+      delayedCalls.decrementAndGet();
+      this.setResponse(result, null, null);
+      this.responder.doRespond(this);
+    }
+
+    @Override
+    public synchronized void startDelay() {
+      assert !this.delayResponse;
+      this.delayResponse = true;
+      int numDelayed = delayedCalls.incrementAndGet();
+      if (numDelayed > warnDelayedCalls) {
+        LOG.warn("Too many delayed calls: limit " + warnDelayedCalls +
+            " current " + numDelayed);
+      }
+    }
+
+    @Override
+    public synchronized boolean isDelayed() {
+      return this.delayResponse;
+    }
+
+    /**
+     * If we have a response, and delay is not set, then respond
+     * immediately.  Otherwise, do not respond to client.  This is
+     * called the by the RPC code in the context of the Handler thread.
+     */
+    public synchronized void sendResponseIfReady() throws IOException {
+      if (!this.delayResponse) {
+        this.responder.doRespond(this);
+      }
     }
   }
 
@@ -767,19 +875,8 @@ public abstract class HBaseServer implements RpcServer {
             if (inHandler) {
               // set the serve time when the response has to be sent later
               call.timestamp = System.currentTimeMillis();
-
-              incPending();
-              try {
-                // Wakeup the thread blocked on select, only then can the call
-                // to channel.register() complete.
-                writeSelector.wakeup();
-                channel.register(writeSelector, SelectionKey.OP_WRITE, call);
-              } catch (ClosedChannelException e) {
-                //Its ok. channel might be closed else where.
+              if (enqueueInSelector(call))
                 done = true;
-              } finally {
-                decPending();
-              }
             }
             if (LOG.isDebugEnabled()) {
               LOG.debug(getName() + ": responding to #" + call.id + " from " +
@@ -800,14 +897,42 @@ public abstract class HBaseServer implements RpcServer {
     }
 
     //
+    // Enqueue for background thread to send responses out later.
+    //
+    private boolean enqueueInSelector(Call call) throws IOException {
+      boolean done = false;
+      incPending();
+      try {
+        // Wake up the thread blocked on select, only then can the call
+        // to channel.register() complete.
+        SocketChannel channel = call.connection.channel;
+        writeSelector.wakeup();
+        channel.register(writeSelector, SelectionKey.OP_WRITE, call);
+      } catch (ClosedChannelException e) {
+        //It's OK.  Channel might be closed else where.
+        done = true;
+      } finally {
+        decPending();
+      }
+      return done;
+    }
+
+    //
     // Enqueue a response from the application.
     //
     void doRespond(Call call) throws IOException {
+      // set the serve time when the response has to be sent later
+      call.timestamp = System.currentTimeMillis();
+
+      boolean doRegister = false;
       synchronized (call.connection.responseQueue) {
         call.connection.responseQueue.addLast(call);
         if (call.connection.responseQueue.size() == 1) {
-          processResponse(call.connection.responseQueue, true);
+          doRegister = !processResponse(call.connection.responseQueue, false);
         }
+      }
+      if (doRegister) {
+        enqueueInSelector(call);
       }
     }
 
@@ -1003,7 +1128,7 @@ public abstract class HBaseServer implements RpcServer {
       Writable param = ReflectionUtils.newInstance(paramClass, conf);           // read param
       param.readFields(dis);
 
-      Call call = new Call(id, param, this);
+      Call call = new Call(id, param, this, responder);
 
       if (priorityCallQueue != null && getQosLevel(param) > highPriorityLevel) {
         priorityCallQueue.put(call);
@@ -1028,7 +1153,6 @@ public abstract class HBaseServer implements RpcServer {
   /** Handles queued calls . */
   private class Handler extends Thread {
     private final BlockingQueue<Call> myCallQueue;
-    static final int BUFFER_INITIAL_SIZE = 1024;
 
     public Handler(final BlockingQueue<Call> cq, int instanceNumber) {
       this.myCallQueue = cq;
@@ -1070,43 +1194,10 @@ public abstract class HBaseServer implements RpcServer {
           }
           CurCall.set(null);
 
-          int size = BUFFER_INITIAL_SIZE;
-          if (value instanceof WritableWithSize) {
-            // get the size hint.
-            WritableWithSize ohint = (WritableWithSize)value;
-            long hint = ohint.getWritableSize() + Bytes.SIZEOF_BYTE + Bytes.SIZEOF_INT;
-            if (hint > 0) {
-              if ((hint) > Integer.MAX_VALUE) {
-                // oops, new problem.
-                IOException ioe =
-                    new IOException("Result buffer size too large: " + hint);
-                errorClass = ioe.getClass().getName();
-                error = StringUtils.stringifyException(ioe);
-              } else {
-                size = (int)hint;
-              }
-            }
+          if (!call.isDelayed()) {
+            call.setResponse(value, errorClass, error);
           }
-          ByteBufferOutputStream buf = new ByteBufferOutputStream(size);
-          DataOutputStream out = new DataOutputStream(buf);
-          out.writeInt(call.id);                // write call id
-          out.writeBoolean(error != null);      // write error flag
-
-          if (error == null) {
-            value.write(out);
-          } else {
-            WritableUtils.writeString(out, errorClass);
-            WritableUtils.writeString(out, error);
-          }
-
-          if (buf.size() > warnResponseSize) {
-            LOG.warn(getName()+", responseTooLarge for: "+call+": Size: "
-                     + StringUtils.humanReadableInt(buf.size()));
-          }
-
-
-          call.setResponse(buf.getByteBuffer());
-          responder.doRespond(call);
+          call.sendResponseIfReady();
         } catch (InterruptedException e) {
           if (running) {                          // unexpected -- log it
             LOG.info(getName() + " caught: " +
@@ -1201,6 +1292,9 @@ public abstract class HBaseServer implements RpcServer {
 
     this.warnResponseSize = conf.getInt(WARN_RESPONSE_SIZE,
                                         DEFAULT_WARN_RESPONSE_SIZE);
+    this.warnDelayedCalls = conf.getInt(WARN_DELAYED_CALLS,
+                                        DEFAULT_WARN_DELAYED_CALLS);
+    this.delayedCalls = new AtomicInteger(0);
 
 
     // Create the responder here
@@ -1427,5 +1521,9 @@ public abstract class HBaseServer implements RpcServer {
 
     int nBytes = initialRemaining - buf.remaining();
     return (nBytes > 0) ? nBytes : ret;
+  }
+
+  public Delayable getCurrentCall() {
+    return CurCall.get();
   }
 }

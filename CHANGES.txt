@@ -332,6 +332,8 @@ Release 0.91.0 - Unreleased
    HBASE-4081  Issues with HRegion.compactStores methods (Ming Ma)
    HBASE-3465  Hbase should use a HADOOP_HOME environment variable if available
                (Alejandro Abdelnur)
+   HBASE-3899  enhance HBase RPC to support free-ing up server handler threads
+               even if response is not ready (Vlad Dogaru)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
