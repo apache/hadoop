@@ -47,8 +47,7 @@ public class RenewDelegationTokenServlet extends DfsServlet {
       throws ServletException, IOException {
     final UserGroupInformation ugi;
     final ServletContext context = getServletContext();
-    final Configuration conf = 
-      (Configuration) context.getAttribute(JspHelper.CURRENT_CONF);
+    final Configuration conf = NameNodeHttpServer.getConfFromContext(context);
     try {
       ugi = getUGI(req, conf);
     } catch(IOException ioe) {
@@ -58,7 +57,7 @@ public class RenewDelegationTokenServlet extends DfsServlet {
           "Unable to identify or authenticate user");
       return;
     }
-    final NameNode nn = (NameNode) context.getAttribute("name.node");
+    final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
     String tokenString = req.getParameter(TOKEN);
     if (tokenString == null) {
       resp.sendError(HttpServletResponse.SC_MULTIPLE_CHOICES,

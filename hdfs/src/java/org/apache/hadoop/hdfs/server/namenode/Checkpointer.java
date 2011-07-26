@@ -101,11 +101,6 @@ class Checkpointer extends Daemon {
     String fullInfoAddr = conf.get(DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, 
                                    DFS_NAMENODE_BACKUP_HTTP_ADDRESS_DEFAULT);
     infoBindAddress = fullInfoAddr.substring(0, fullInfoAddr.indexOf(":"));
-    
-    HttpServer httpServer = backupNode.httpServer;
-    httpServer.setAttribute("name.system.image", getFSImage());
-    httpServer.setAttribute("name.conf", conf);
-    httpServer.addInternalServlet("getimage", "/getimage", GetImageServlet.class);
 
     LOG.info("Checkpoint Period : " + checkpointPeriod + " secs " +
              "(" + checkpointPeriod/60 + " min)");

@@ -57,7 +57,7 @@ public class GetImageServlet extends HttpServlet {
     Map<String,String[]> pmap = request.getParameterMap();
     try {
       ServletContext context = getServletContext();
-      final FSImage nnImage = (FSImage)context.getAttribute("name.system.image");
+      final FSImage nnImage = NameNodeHttpServer.getFsImageFromContext(context);
       final TransferFsImage ff = new TransferFsImage(pmap, request, response);
       final Configuration conf = 
         (Configuration)getServletContext().getAttribute(JspHelper.CURRENT_CONF);

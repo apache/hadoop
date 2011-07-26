@@ -21,7 +21,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -67,7 +66,6 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
-import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
@@ -81,7 +79,6 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.NodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
-import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ProtocolSignature;
@@ -95,7 +92,6 @@ import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
@@ -208,8 +204,6 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   public static final Log LOG = LogFactory.getLog(NameNode.class.getName());
   public static final Log stateChangeLog = LogFactory.getLog("org.apache.hadoop.hdfs.StateChange");
   
-  public static final String NAMENODE_ADDRESS_ATTRIBUTE_KEY = "name.node.address";
-
   protected FSNamesystem namesystem; 
   protected NamenodeRole role;
   /** RPC server. Package-protected for use in tests. */
@@ -225,9 +219,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   /** RPC server for DN address */
   protected InetSocketAddress serviceRPCAddress = null;
   /** httpServer */
-  protected HttpServer httpServer;
-  /** HTTP server address */
-  protected InetSocketAddress httpAddress = null;
+  protected NameNodeHttpServer httpServer;
   private Thread emptier;
   /** only used for testing purposes  */
   protected boolean stopRequested = false;
@@ -372,9 +364,10 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     return  NetUtils.createSocketAddr(
         conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:50070"));
   }
-
-  protected void setHttpServerAddress(Configuration conf){
-    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, getHostPortString(httpAddress));
+  
+  protected void setHttpServerAddress(Configuration conf) {
+    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY,
+        getHostPortString(getHttpAddress()));
   }
 
   protected void loadNamesystem(Configuration conf) throws IOException {
@@ -388,11 +381,20 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   NamenodeRegistration setRegistration() {
     nodeRegistration = new NamenodeRegistration(
         getHostPortString(rpcAddress),
-        getHostPortString(httpAddress),
+        getHostPortString(getHttpAddress()),
         getFSImage().getStorage(), getRole(), getFSImage().getStorage().getCheckpointTime());
     return nodeRegistration;
   }
 
+  /**
+   * Login as the configured user for the NameNode.
+   */
+  void loginAsNameNodeUser(Configuration conf) throws IOException {
+    InetSocketAddress socAddr = getRpcServerAddress(conf);
+    SecurityUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
+        DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, socAddr.getHostName());
+  }
+  
   /**
    * Initialize name-node.
    * 
@@ -401,8 +403,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   protected void initialize(Configuration conf) throws IOException {
     InetSocketAddress socAddr = getRpcServerAddress(conf);
     UserGroupInformation.setConfiguration(conf);
-    SecurityUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
-        DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, socAddr.getHostName());
+    loginAsNameNodeUser(conf);
     int handlerCount = 
       conf.getInt(DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_KEY, 
                   DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_DEFAULT);
@@ -514,108 +515,9 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   }
   
   private void startHttpServer(final Configuration conf) throws IOException {
-    final InetSocketAddress infoSocAddr = getHttpServerAddress(conf);
-    final String infoHost = infoSocAddr.getHostName();
-    if(UserGroupInformation.isSecurityEnabled()) {
-      String httpsUser = SecurityUtil.getServerPrincipal(conf
-          .get(DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY), infoHost);
-      if (httpsUser == null) {
-        LOG.warn(DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY
-            + " not defined in config. Starting http server as "
-            + SecurityUtil.getServerPrincipal(conf
-                .get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY), rpcAddress
-                .getHostName())
-            + ": Kerberized SSL may be not function correctly.");
-      } else {
-        // Kerberized SSL servers must be run from the host principal...
-        LOG.info("Logging in as " + httpsUser + " to start http server.");
-        SecurityUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
-            DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY, infoHost);
-      }
-    }
-    UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-    try {
-      this.httpServer = ugi.doAs(new PrivilegedExceptionAction<HttpServer>() {
-        @Override
-        public HttpServer run() throws IOException, InterruptedException {
-          int infoPort = infoSocAddr.getPort();
-          httpServer = new HttpServer("hdfs", infoHost, infoPort,
-              infoPort == 0, conf, 
-              new AccessControlList(conf.get(DFSConfigKeys.DFS_ADMIN, " ")));
-
-          boolean certSSL = conf.getBoolean("dfs.https.enable", false);
-          boolean useKrb = UserGroupInformation.isSecurityEnabled();
-          if (certSSL || useKrb) {
-            boolean needClientAuth = conf.getBoolean(
-                DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_KEY,
-                DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT);
-            InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(conf
-                .get(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY,
-                    DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT));
-            Configuration sslConf = new HdfsConfiguration(false);
-            if (certSSL) {
-              sslConf.addResource(conf.get(
-                  "dfs.https.server.keystore.resource", "ssl-server.xml"));
-            }
-            httpServer.addSslListener(secInfoSocAddr, sslConf, needClientAuth,
-                useKrb);
-            // assume same ssl port for all datanodes
-            InetSocketAddress datanodeSslPort = NetUtils.createSocketAddr(conf
-                .get("dfs.datanode.https.address", infoHost + ":" + 50475));
-            httpServer.setAttribute("datanode.https.port", datanodeSslPort
-                .getPort());
-          }
-          httpServer.setAttribute("name.node", NameNode.this);
-          httpServer.setAttribute(NAMENODE_ADDRESS_ATTRIBUTE_KEY,
-              getNameNodeAddress());
-          httpServer.setAttribute("name.system.image", getFSImage());
-          httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
-          httpServer.addInternalServlet("getDelegationToken",
-              GetDelegationTokenServlet.PATH_SPEC, 
-              GetDelegationTokenServlet.class, true);
-          httpServer.addInternalServlet("renewDelegationToken", 
-              RenewDelegationTokenServlet.PATH_SPEC, 
-              RenewDelegationTokenServlet.class, true);
-          httpServer.addInternalServlet("cancelDelegationToken", 
-              CancelDelegationTokenServlet.PATH_SPEC, 
-              CancelDelegationTokenServlet.class, true);
-          httpServer.addInternalServlet("fsck", "/fsck", FsckServlet.class,
-              true);
-          httpServer.addInternalServlet("getimage", "/getimage",
-              GetImageServlet.class, true);
-          httpServer.addInternalServlet("listPaths", "/listPaths/*",
-              ListPathsServlet.class, false);
-          httpServer.addInternalServlet("data", "/data/*",
-              FileDataServlet.class, false);
-          httpServer.addInternalServlet("checksum", "/fileChecksum/*",
-              FileChecksumServlets.RedirectServlet.class, false);
-          httpServer.addInternalServlet("contentSummary", "/contentSummary/*",
-              ContentSummaryServlet.class, false);
-          httpServer.start();
-
-          // The web-server port can be ephemeral... ensure we have the correct
-          // info
-          infoPort = httpServer.getPort();
-          httpAddress = new InetSocketAddress(infoHost, infoPort);
-          setHttpServerAddress(conf);
-          LOG.info(getRole() + " Web-server up at: " + httpAddress);
-          return httpServer;
-        }
-      });
-    } catch (InterruptedException e) {
-      throw new IOException(e);
-    } finally {
-      if(UserGroupInformation.isSecurityEnabled() && 
-          conf.get(DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY) != null) {
-        // Go back to being the correct Namenode principal
-        LOG.info("Logging back in as "
-            + SecurityUtil.getServerPrincipal(conf
-                .get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY), rpcAddress
-                .getHostName()) + " following http server start.");
-        SecurityUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
-            DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, rpcAddress.getHostName());
-      }
-    }
+    httpServer = new NameNodeHttpServer(conf, this, getHttpServerAddress(conf));
+    httpServer.start();
+    setHttpServerAddress(conf);
   }
 
   /**
@@ -1420,7 +1322,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
    * @return the http address.
    */
   public InetSocketAddress getHttpAddress() {
-    return httpAddress;
+    return httpServer.getHttpAddress();
   }
 
   /**

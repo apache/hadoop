@@ -28,7 +28,7 @@
 <%!//for java.io.Serializable
   private static final long serialVersionUID = 1L;%>
 <%
-  NameNode nn = (NameNode) application.getAttribute("name.node");
+  NameNode nn = NameNodeHttpServer.getNameNodeFromContext(application);
   FSNamesystem fsn = nn.getNamesystem();
   String namenodeRole = nn.getRole().toString();
   String namenodeLabel = nn.getNameNodeAddress().getHostName() + ":"

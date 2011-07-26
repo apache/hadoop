@@ -68,7 +68,7 @@
   private static final long serialVersionUID = 1L;  
 %>
 <%
-NameNode nn = (NameNode)application.getAttribute("name.node");
+NameNode nn = NameNodeHttpServer.getNameNodeFromContext(application);
 String namenodeRole = nn.getRole().toString();
 FSNamesystem fsn = nn.getNamesystem();
 

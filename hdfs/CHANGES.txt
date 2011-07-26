@@ -599,6 +599,8 @@ Trunk (unreleased changes)
     HDFS-2144. If SNN shuts down during initialization it does not log the
     cause. (Ravi Prakash via atm)
 
+    HDFS-2180. Refactor NameNode HTTP server into new class. (todd)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

@@ -385,7 +385,7 @@ class NamenodeJspHelper {
   static void redirectToRandomDataNode(ServletContext context,
       HttpServletRequest request, HttpServletResponse resp) throws IOException,
       InterruptedException {
-    final NameNode nn = (NameNode) context.getAttribute("name.node");
+    final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
     final Configuration conf = (Configuration) context
         .getAttribute(JspHelper.CURRENT_CONF);
     final DatanodeID datanode = getRandomDatanode(nn);
@@ -566,12 +566,12 @@ class NamenodeJspHelper {
         HttpServletRequest request) throws IOException {
       ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
       ArrayList<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
-      final NameNode nn = (NameNode)context.getAttribute("name.node");
+      final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
       nn.getNamesystem().DFSNodesStatus(live, dead);
       nn.getNamesystem().removeDecomNodeFromList(live);
       nn.getNamesystem().removeDecomNodeFromList(dead);
       InetSocketAddress nnSocketAddress = (InetSocketAddress) context
-          .getAttribute(NameNode.NAMENODE_ADDRESS_ATTRIBUTE_KEY);
+          .getAttribute(NameNodeHttpServer.NAMENODE_ADDRESS_ATTRIBUTE_KEY);
       String nnaddr = nnSocketAddress.getAddress().getHostAddress() + ":"
           + nnSocketAddress.getPort();
 

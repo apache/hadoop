@@ -33,6 +33,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 
 /**
  * A HTTPS/SSL proxy to HDFS, implementing certificate based access control.
@@ -70,7 +71,7 @@ public class HdfsProxy {
 
     this.server = new ProxyHttpServer(sslAddr, sslConf);
     this.server.setAttribute("proxy.https.port", server.getPort());
-    this.server.setAttribute(NameNode.NAMENODE_ADDRESS_ATTRIBUTE_KEY, nnAddr);
+    this.server.setAttribute(NameNodeHttpServer.NAMENODE_ADDRESS_ATTRIBUTE_KEY, nnAddr);
     this.server.setAttribute(JspHelper.CURRENT_CONF, new HdfsConfiguration());
     this.server.addGlobalFilter("ProxyFilter", ProxyFilter.class.getName(), null);
     this.server.addServlet("listPaths", "/listPaths/*", ProxyListPathsServlet.class);
