@@ -3,6 +3,7 @@ package org.apache.hadoop.hbase.filter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
 
@@ -42,6 +43,15 @@ public class TimestampsFilter extends FilterBase {
   public TimestampsFilter(List<Long> timestamps) {
     this.timestamps = new TreeSet<Long>(timestamps);
     init();
+  }
+
+  /**
+   * @return the list of timestamps
+   */
+  public List<Long> getTimestamps() {
+    List<Long> list = new ArrayList<Long>(timestamps.size());
+    list.addAll(timestamps);
+    return list;
   }
 
   private void init() {

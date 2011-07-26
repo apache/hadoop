@@ -54,6 +54,13 @@ public class BitComparator extends WritableByteArrayComparable {
     this.bitOperator = bitOperator;
   }
 
+  /**
+   * @return the bitwise operator
+   */
+  public BitwiseOp getOperator() {
+    return bitOperator;
+  }
+
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);

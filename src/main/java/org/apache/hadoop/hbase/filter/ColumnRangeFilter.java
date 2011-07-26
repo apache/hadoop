@@ -88,10 +88,24 @@ public class ColumnRangeFilter extends FilterBase {
   }
 
   /**
+   * @return true if min column is inclusive, false otherwise
+   */
+  public boolean getMinColumnInclusive() {
+    return this.minColumnInclusive;
+  }
+
+  /**
    * @return the max column range for the filter
    */
   public byte[] getMaxColumn() {
     return this.maxColumn;
+  }
+
+  /**
+   * @return true if max column is inclusive, false otherwise
+   */
+  public boolean getMaxColumnInclusive() {
+    return this.maxColumnInclusive;
   }
 
   @Override

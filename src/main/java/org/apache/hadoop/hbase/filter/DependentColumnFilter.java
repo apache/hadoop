@@ -98,8 +98,28 @@ public class DependentColumnFilter extends CompareFilter {
       final boolean dropDependentColumn) {
     this(family, qualifier, dropDependentColumn, CompareOp.NO_OP, null);
   }
-  
-  
+
+  /**
+   * @return the column family
+   */
+  public byte[] getFamily() {
+    return this.columnFamily;
+  }
+
+  /**
+   * @return the column qualifier
+   */
+  public byte[] getQualifier() {
+    return this.columnQualifier;
+  }
+
+  /**
+   * @return true if we should drop the dependent column, false otherwise
+   */
+  public boolean dropDependentColumn() {
+    return this.dropDependentColumn;
+  }
+
   @Override
   public boolean filterAllRemaining() {
     return false;

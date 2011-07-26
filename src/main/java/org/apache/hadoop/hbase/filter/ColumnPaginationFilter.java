@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.filter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.List;
 
 import org.apache.hadoop.hbase.KeyValue;
 
@@ -49,6 +48,20 @@ public class ColumnPaginationFilter extends FilterBase
   {
     this.limit = limit;
     this.offset = offset;
+  }
+
+  /**
+   * @return limit
+   */
+  public int getLimit() {
+    return limit;
+  }
+
+  /**
+   * @return offset
+   */
+  public int getOffset() {
+    return offset;
   }
 
   @Override
