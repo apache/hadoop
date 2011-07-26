@@ -594,6 +594,9 @@ Release 0.22.0 - Unreleased
     HDFS-1952. FSEditLog.open() appears to succeed even if all EDITS
     directories fail. (Andrew Wang via mattf)
 
+    HDFS-2189. Add guava-r09 dependency to ivy/hadoop-hdfs-template.xml
+    (Plamen Jeliazkov via shv)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
