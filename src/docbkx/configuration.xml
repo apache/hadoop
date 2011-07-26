@@ -214,7 +214,7 @@ to ensure well-formedness of your document after an edit session.
     needed to add a durable sync. Use the released version of CDH3 at least (They
     have just posted an update).  MapR includes a commercial, reimplementation of HDFS.
     It has a durable sync as well as some other interesting features that are not
-    yet in Apache Hadoop.  Their <link xlink:href="http://www.mapr.com/products/download.html"M3</link>
+    yet in Apache Hadoop.  Their <link xlink:href="http://www.mapr.com/products/download.html">M3</link>
     product is free to use and unlimited.
     </para>
 
