@@ -173,6 +173,8 @@ Release 0.91.0 - Unreleased
                Content-Encoding: gzip in parallel
    HBASE-4116  [stargate] StringIndexOutOfBoundsException in row spec parse
                (Allan Yan)
+   HBASE-3845  data loss because lastSeqWritten can miss memstore edits
+               (Prakash Khemani and ramkrishna.s.vasudevan)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

@@ -469,7 +469,7 @@ public class TestHLog  {
       htd.addFamily(new HColumnDescriptor("column"));
 
       log.append(info, tableName, cols, System.currentTimeMillis(), htd);
-      long logSeqId = log.startCacheFlush();
+      long logSeqId = log.startCacheFlush(info.getEncodedNameAsBytes());
       log.completeCacheFlush(info.getEncodedNameAsBytes(), tableName, logSeqId,
           info.isMetaRegion());
       log.close();
@@ -540,7 +540,7 @@ public class TestHLog  {
       HTableDescriptor htd = new HTableDescriptor();
       htd.addFamily(new HColumnDescriptor("column"));
       log.append(hri, tableName, cols, System.currentTimeMillis(), htd);
-      long logSeqId = log.startCacheFlush();
+      long logSeqId = log.startCacheFlush(hri.getEncodedNameAsBytes());
       log.completeCacheFlush(hri.getEncodedNameAsBytes(), tableName, logSeqId, false);
       log.close();
       Path filename = log.computeFilename();
@@ -651,7 +651,7 @@ public class TestHLog  {
 
     // Flush the first region, we expect to see the first two files getting
     // archived
-    long seqId = log.startCacheFlush();
+    long seqId = log.startCacheFlush(hri.getEncodedNameAsBytes());
     log.completeCacheFlush(hri.getEncodedNameAsBytes(), tableName, seqId, false);
     log.rollWriter();
     assertEquals(2, log.getNumLogFiles());
@@ -659,7 +659,7 @@ public class TestHLog  {
     // Flush the second region, which removes all the remaining output files
     // since the oldest was completely flushed and the two others only contain
     // flush information
-    seqId = log.startCacheFlush();
+    seqId = log.startCacheFlush(hri2.getEncodedNameAsBytes());
     log.completeCacheFlush(hri2.getEncodedNameAsBytes(), tableName2, seqId, false);
     log.rollWriter();
     assertEquals(0, log.getNumLogFiles());
