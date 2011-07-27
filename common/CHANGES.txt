@@ -289,6 +289,9 @@ Trunk (unreleased changes)
     HADOOP-7485. Add -h option to ls to list file sizes in human readable
     format. (XieXianshan via suresh)
 
+    HADOOP-7378. Add -d option to ls to not expand directories.
+    (Daryn Sharp via suresh)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

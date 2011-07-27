@@ -42,7 +42,7 @@ class Ls extends FsCommand {
   }
   
   public static final String NAME = "ls";
-  public static final String USAGE = "[-R] [-h] [<path> ...]";
+  public static final String USAGE = "[-d] [-h] [-R] [<path> ...]";
   public static final String DESCRIPTION =
     "List the contents that match the specified file pattern. If\n" + 
     "path is not specified, the contents of /user/<currentUser>\n" +
@@ -52,15 +52,17 @@ class Ls extends FsCommand {
     "\tfileName(full path) <r n> size \n" +
     "where n is the number of replicas specified for the file \n" + 
     "and size is the size of the file, in bytes.\n" +
-    "  -R  Recursively list the contents of directories.\n" +
+    "  -d  Directories are listed as plain files.\n" +
     "  -h  Formats the sizes of files in a human-readable fashion\n" +
-    "      rather than of bytes.\n\n";
+    "      rather than a number of bytes.\n" +
+    "  -R  Recursively list the contents of directories.";
 
   protected static final SimpleDateFormat dateFormat = 
     new SimpleDateFormat("yyyy-MM-dd HH:mm");
 
   protected int maxRepl = 3, maxLen = 10, maxOwner = 0, maxGroup = 0;
   protected String lineFormat;
+  protected boolean dirRecurse;
 
   protected boolean humanReadable = false;
   protected String formatSize(long size) {
@@ -72,22 +74,27 @@ class Ls extends FsCommand {
   @Override
   protected void processOptions(LinkedList<String> args)
   throws IOException {
-    CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "R", "h");
+    CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "d", "h", "R");
     cf.parse(args);
-    setRecursive(cf.getOpt("R"));
+    dirRecurse = !cf.getOpt("d");
+    setRecursive(cf.getOpt("R") && dirRecurse);
     humanReadable = cf.getOpt("h");
     if (args.isEmpty()) args.add(Path.CUR_DIR);
   }
 
   @Override
+  protected void processPathArgument(PathData item) throws IOException {
+    // implicitly recurse once for cmdline directories
+    if (dirRecurse && item.stat.isDirectory()) {
+      recursePath(item);
+    } else {
+      super.processPathArgument(item);
+    }
+  }
+
+  @Override
   protected void processPaths(PathData parent, PathData ... items)
   throws IOException {
-    // implicitly recurse once for cmdline directories
-    if (parent == null && items[0].stat.isDirectory()) {
-      recursePath(items[0]);
-      return;
-    }
-
     if (!isRecursive() && items.length != 0) {
       out.println("Found " + items.length + " items");
     }

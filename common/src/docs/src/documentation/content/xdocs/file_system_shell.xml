@@ -273,7 +273,7 @@
        <section>
            <title>ls</title>
            <p>
-               <code>Usage: hdfs dfs -ls [-R] [-h] &lt;args&gt;</code>
+               <code>Usage: hdfs dfs -ls [-d] [-h] [-R] &lt;args&gt;</code>
            </p>
            <p>For a file returns stat on the file with the following format:</p>
            <p>
@@ -284,10 +284,11 @@
                <code>permissions userid groupid modification_date modification_time dirname</code>
            </p>
            <p>Options:</p>
-           <ul>
-             <li>The <code>-R</code> option will list subdirectories recursively.</li>
-             <li>The <code>-h</code> option will format file sizes in a &quot;human-readable&quot; fashion (e.g 64.0m instead of 67108864)</li>
-           </ul>
+             <ul>
+               <li><code>-d</code>  Directories are listed as plain files</li>
+               <li><code>-h</code>  Format file sizes in a &quot;human-readable&quot; fashion (e.g 64.0m instead of 67108864)</li>
+               <li><code>-R</code>  Recursively list subdirectories encountered</li>
+             </ul>
            <p>Example:</p>
            <p>
                <code>hdfs dfs -ls /user/hadoop/file1 </code>
