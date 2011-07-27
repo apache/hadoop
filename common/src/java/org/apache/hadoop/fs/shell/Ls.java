@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedList;
+import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -41,7 +42,7 @@ class Ls extends FsCommand {
   }
   
   public static final String NAME = "ls";
-  public static final String USAGE = "[-R] [<path> ...]";
+  public static final String USAGE = "[-R] [-h] [<path> ...]";
   public static final String DESCRIPTION =
     "List the contents that match the specified file pattern. If\n" + 
     "path is not specified, the contents of /user/<currentUser>\n" +
@@ -51,7 +52,9 @@ class Ls extends FsCommand {
     "\tfileName(full path) <r n> size \n" +
     "where n is the number of replicas specified for the file \n" + 
     "and size is the size of the file, in bytes.\n" +
-    "  -R  Recursively list the contents of directories";
+    "  -R  Recursively list the contents of directories.\n" +
+    "  -h  Formats the sizes of files in a human-readable fashion\n" +
+    "      rather than of bytes.\n\n";
 
   protected static final SimpleDateFormat dateFormat = 
     new SimpleDateFormat("yyyy-MM-dd HH:mm");
@@ -59,12 +62,20 @@ class Ls extends FsCommand {
   protected int maxRepl = 3, maxLen = 10, maxOwner = 0, maxGroup = 0;
   protected String lineFormat;
 
+  protected boolean humanReadable = false;
+  protected String formatSize(long size) {
+    return humanReadable
+      ? StringUtils.humanReadableInt(size)
+      : String.valueOf(size);
+  }
+
   @Override
   protected void processOptions(LinkedList<String> args)
   throws IOException {
-    CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "R");
+    CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "R", "h");
     cf.parse(args);
     setRecursive(cf.getOpt("R"));
+    humanReadable = cf.getOpt("h");
     if (args.isEmpty()) args.add(Path.CUR_DIR);
   }
 
@@ -93,7 +104,7 @@ class Ls extends FsCommand {
         (stat.isFile() ? stat.getReplication() : "-"),
         stat.getOwner(),
         stat.getGroup(),
-        stat.getLen(),
+        formatSize(stat.getLen()),
         dateFormat.format(new Date(stat.getModificationTime())),
         item.path.toUri().getPath()
     );
@@ -118,7 +129,7 @@ class Ls extends FsCommand {
     fmt.append("%"  + maxRepl  + "s ");
     fmt.append("%-" + maxOwner + "s ");
     fmt.append("%-" + maxGroup + "s ");
-    fmt.append("%"  + maxLen   + "d ");
+    fmt.append("%"  + maxLen   + "s ");
     fmt.append("%s %s"); // mod time & path
     lineFormat = fmt.toString();
   }

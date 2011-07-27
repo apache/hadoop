@@ -286,6 +286,9 @@ Trunk (unreleased changes)
     HADOOP-7298. Add test utility for writing multi-threaded tests. (todd and
     Harsh J Chouraria via todd)
 
+    HADOOP-7485. Add -h option to ls to list file sizes in human readable
+    format. (XieXianshan via suresh)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

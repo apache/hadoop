@@ -54,7 +54,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-ls \[-R\] \[&lt;path&gt; \.\.\.\]:( |\t)*List the contents that match the specified file pattern. If( )*</expected-output>
+          <expected-output>^-ls \[-R\] \[-h\] \[&lt;path&gt; \.\.\.\]:( |\t)*List the contents that match the specified file pattern. If( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -87,6 +87,18 @@
         <comparator>
           <type>RegexpComparator</type>
           <expected-output>^( |\t)*and size is the size of the file, in bytes.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*-R  Recursively list the contents of directories.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*-h  Formats the sizes of files in a human-readable fashion( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*rather than a number of bytes.( )*</expected-output>
         </comparator>
       </comparators>
     </test>
