@@ -763,7 +763,9 @@ public class FSImage implements NNStorageListener, Closeable {
       numEdits += loader.loadFSEdits(edits);
       edits.close();
     }
-    
+    if (numEdits == 0 && editsNew.exists()) {
+      numEdits++;
+    }
     // update the counts.
     getFSNamesystem().dir.updateCountForINodeWithQuota();    
     
