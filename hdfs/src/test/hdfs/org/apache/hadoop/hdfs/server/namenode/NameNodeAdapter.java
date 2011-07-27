@@ -46,14 +46,6 @@ public class NameNodeAdapter {
   }
 
   /**
-   * Refresh block queue counts on the name-node.
-   * @param namenode to proxy the invocation to
-   */
-  public static void refreshBlockCounts(NameNode namenode) {
-    namenode.getNamesystem().getBlockManager().updateState();
-  }
-
-  /**
    * Get the internal RPC server instance.
    * @return rpc server
    */
@@ -68,12 +60,11 @@ public class NameNodeAdapter {
   /**
    * Return the datanode descriptor for the given datanode.
    */
-  public static DatanodeDescriptor getDatanode(NameNode namenode,
+  public static DatanodeDescriptor getDatanode(final FSNamesystem ns,
       DatanodeID id) throws IOException {
-    FSNamesystem ns = namenode.getNamesystem();
     ns.readLock();
     try {
-      return ns.getDatanode(id);
+      return ns.getBlockManager().getDatanodeManager().getDatanode(id);
     } finally {
       ns.readUnlock();
     }

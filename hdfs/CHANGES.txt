@@ -604,6 +604,9 @@ Trunk (unreleased changes)
     HDFS-2149. Move EditLogOp serialization formats into FsEditLogOp
     implementations. (Ivan Kelly via todd)
 
+    HDFS-2191.  Move datanodeMap from FSNamesystem to DatanodeManager.
+    (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

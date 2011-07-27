@@ -596,7 +596,7 @@ public class TestBlockReport {
   }
 
   private void printStats() {
-    NameNodeAdapter.refreshBlockCounts(cluster.getNameNode());
+    BlockManagerTestUtil.updateState(cluster.getNamesystem().getBlockManager());
     if(LOG.isDebugEnabled()) {
       LOG.debug("Missing " + cluster.getNamesystem().getMissingBlocksCount());
       LOG.debug("Corrupted " + cluster.getNamesystem().getCorruptReplicaBlocks());

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -25,7 +26,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NavigableMap;
 import java.util.Set;
+import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,12 +38,22 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
+import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
 import org.apache.hadoop.ipc.Server;
@@ -48,6 +61,7 @@ import org.apache.hadoop.net.CachedDNSToSwitchMapping;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.ScriptBasedMapping;
+import org.apache.hadoop.util.CyclicIteration;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -62,6 +76,30 @@ public class DatanodeManager {
 
   final FSNamesystem namesystem;
 
+  /**
+   * Stores the datanode -> block map.  
+   * <p>
+   * Done by storing a set of {@link DatanodeDescriptor} objects, sorted by 
+   * storage id. In order to keep the storage map consistent it tracks 
+   * all storages ever registered with the namenode.
+   * A descriptor corresponding to a specific storage id can be
+   * <ul> 
+   * <li>added to the map if it is a new storage id;</li>
+   * <li>updated with a new datanode started as a replacement for the old one 
+   * with the same storage id; and </li>
+   * <li>removed if and only if an existing datanode is restarted to serve a
+   * different storage id.</li>
+   * </ul> <br>
+   * The list of the {@link DatanodeDescriptor}s in the map is checkpointed
+   * in the namespace image file. Only the {@link DatanodeInfo} part is 
+   * persistent, the list of blocks is restored from the datanode block
+   * reports. 
+   * <p>
+   * Mapping: StorageID -> DatanodeDescriptor
+   */
+  private final NavigableMap<String, DatanodeDescriptor> datanodeMap
+      = new TreeMap<String, DatanodeDescriptor>();
+
   /** Cluster network topology */
   private final NetworkTopology networktopology = new NetworkTopology();
 
@@ -71,7 +109,12 @@ public class DatanodeManager {
   private final DNSToSwitchMapping dnsToSwitchMapping;
 
   /** Read include/exclude files*/
-  private final HostsFileReader hostsReader; 
+  private final HostsFileReader hostsReader;
+
+  /** The period to wait for datanode heartbeat.*/
+  private final long heartbeatExpireInterval;
+  /** Ask Datanode only up to this many blocks to delete. */
+  final int blockInvalidateLimit;
   
   DatanodeManager(final FSNamesystem namesystem, final Configuration conf
       ) throws IOException {
@@ -90,6 +133,19 @@ public class DatanodeManager {
     if (dnsToSwitchMapping instanceof CachedDNSToSwitchMapping) {
       dnsToSwitchMapping.resolve(new ArrayList<String>(hostsReader.getHosts()));
     }
+    
+    final long heartbeatIntervalSeconds = conf.getLong(
+        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
+        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT);
+    final int heartbeatRecheckInterval = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 
+        DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT); // 5 minutes
+    this.heartbeatExpireInterval = 2 * heartbeatRecheckInterval
+        + 10 * 1000 * heartbeatIntervalSeconds;
+    this.blockInvalidateLimit = Math.max(20*(int)(heartbeatIntervalSeconds),
+        DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_DEFAULT);
+    LOG.info(DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY
+        + "=" + this.blockInvalidateLimit);
   }
 
   private Daemon decommissionthread = null;
@@ -124,10 +180,79 @@ public class DatanodeManager {
       Arrays.sort(b.getLocations(), DFSUtil.DECOM_COMPARATOR);
     }    
   }
-  
+
+  CyclicIteration<String, DatanodeDescriptor> getDatanodeCyclicIteration(
+      final String firstkey) {
+    return new CyclicIteration<String, DatanodeDescriptor>(
+        datanodeMap, firstkey);
+  }
+
   /** @return the datanode descriptor for the host. */
   public DatanodeDescriptor getDatanodeByHost(final String host) {
     return host2DatanodeMap.getDatanodeByHost(host);
+  }
+
+  /** Get a datanode descriptor given corresponding storageID */
+  DatanodeDescriptor getDatanode(final String storageID) {
+    return datanodeMap.get(storageID);
+  }
+
+  /**
+   * Get data node by storage ID.
+   * 
+   * @param nodeID
+   * @return DatanodeDescriptor or null if the node is not found.
+   * @throws UnregisteredNodeException
+   */
+  public DatanodeDescriptor getDatanode(DatanodeID nodeID
+      ) throws UnregisteredNodeException {
+    final DatanodeDescriptor node = getDatanode(nodeID.getStorageID());
+    if (node == null) 
+      return null;
+    if (!node.getName().equals(nodeID.getName())) {
+      final UnregisteredNodeException e = new UnregisteredNodeException(
+          nodeID, node);
+      NameNode.stateChangeLog.fatal("BLOCK* NameSystem.getDatanode: "
+                                    + e.getLocalizedMessage());
+      throw e;
+    }
+    return node;
+  }
+
+  /** Prints information about all datanodes. */
+  void datanodeDump(final PrintWriter out) {
+    synchronized (datanodeMap) {
+      out.println("Metasave: Number of datanodes: " + datanodeMap.size());
+      for(Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator(); it.hasNext();) {
+        DatanodeDescriptor node = it.next();
+        out.println(node.dumpDatanode());
+      }
+    }
+  }
+
+  /** Remove a dead datanode. */
+  public void removeDeadDatanode(final DatanodeID nodeID) {
+    synchronized(namesystem.heartbeats) {
+      synchronized(datanodeMap) {
+        DatanodeDescriptor d;
+        try {
+          d = getDatanode(nodeID);
+        } catch(IOException e) {
+          d = null;
+        }
+        if (d != null && isDatanodeDead(d)) {
+          NameNode.stateChangeLog.info(
+              "BLOCK* removeDeadDatanode: lost heartbeat from " + d.getName());
+          namesystem.removeDatanode(d);
+        }
+      }
+    }
+  }
+
+  /** Is the datanode dead? */
+  public boolean isDatanodeDead(DatanodeDescriptor node) {
+    return (node.getLastUpdate() <
+            (Util.now() - heartbeatExpireInterval));
   }
 
   /** Add a datanode. */
@@ -135,9 +260,8 @@ public class DatanodeManager {
     // To keep host2DatanodeMap consistent with datanodeMap,
     // remove  from host2DatanodeMap the datanodeDescriptor removed
     // from datanodeMap before adding node to host2DatanodeMap.
-    synchronized (namesystem.datanodeMap) {
-      host2DatanodeMap.remove(
-          namesystem.datanodeMap.put(node.getStorageID(), node));
+    synchronized(datanodeMap) {
+      host2DatanodeMap.remove(datanodeMap.put(node.getStorageID(), node));
     }
 
     host2DatanodeMap.add(node);
@@ -152,8 +276,8 @@ public class DatanodeManager {
   /** Physically remove node from datanodeMap. */
   private void wipeDatanode(final DatanodeID node) throws IOException {
     final String key = node.getStorageID();
-    synchronized (namesystem.datanodeMap) {
-      host2DatanodeMap.remove(namesystem.datanodeMap.remove(key));
+    synchronized (datanodeMap) {
+      host2DatanodeMap.remove(datanodeMap.remove(key));
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug(getClass().getSimpleName() + ".wipeDatanode("
@@ -315,7 +439,7 @@ public class DatanodeManager {
     String newID = null;
     while(newID == null) {
       newID = "DS" + Integer.toString(DFSUtil.getRandom().nextInt());
-      if (namesystem.datanodeMap.get(newID) != null)
+      if (datanodeMap.get(newID) != null)
         newID = null;
     }
     return newID;
@@ -350,7 +474,7 @@ public class DatanodeManager {
         + "node registration from " + nodeReg.getName()
         + " storage " + nodeReg.getStorageID());
 
-    DatanodeDescriptor nodeS = namesystem.datanodeMap.get(nodeReg.getStorageID());
+    DatanodeDescriptor nodeS = datanodeMap.get(nodeReg.getStorageID());
     DatanodeDescriptor nodeN = getDatanodeByHost(nodeReg.getName());
       
     if (nodeN != null && nodeN != nodeS) {
@@ -461,7 +585,7 @@ public class DatanodeManager {
    * 4. Removed from exclude --> stop decommission.
    */
   public void refreshDatanodes() throws IOException {
-    for(DatanodeDescriptor node : namesystem.datanodeMap.values()) {
+    for(DatanodeDescriptor node : datanodeMap.values()) {
       // Check if not include.
       if (!inHostsList(node, null)) {
         node.setDisallowed(true);  // case 2.
@@ -472,6 +596,45 @@ public class DatanodeManager {
           namesystem.getBlockManager().stopDecommission(node);   // case 4.
         }
       }
+    }
+  }
+
+  /** @return the number of live datanodes. */
+  public int getNumLiveDataNodes() {
+    int numLive = 0;
+    synchronized (datanodeMap) {
+      for(DatanodeDescriptor dn : datanodeMap.values()) {
+        if (!isDatanodeDead(dn) ) {
+          numLive++;
+        }
+      }
+    }
+    return numLive;
+  }
+
+  /** @return the number of dead datanodes. */
+  public int getNumDeadDataNodes() {
+    int numDead = 0;
+    synchronized (datanodeMap) {   
+      for(DatanodeDescriptor dn : datanodeMap.values()) {
+        if (isDatanodeDead(dn) ) {
+          numDead++;
+        }
+      }
+    }
+    return numDead;
+  }
+
+  /** Fetch live and dead datanodes. */
+  public void fetchDatanodess(final List<DatanodeDescriptor> live, 
+      final List<DatanodeDescriptor> dead) {
+    final List<DatanodeDescriptor> results =
+        getDatanodeListForReport(DatanodeReportType.ALL);    
+    for(DatanodeDescriptor node : results) {
+      if (isDatanodeDead(node))
+        dead.add(node);
+      else
+        live.add(node);
     }
   }
 
@@ -499,13 +662,13 @@ public class DatanodeManager {
 
     ArrayList<DatanodeDescriptor> nodes = null;
     
-    synchronized (namesystem.datanodeMap) {
-      nodes = new ArrayList<DatanodeDescriptor>(namesystem.datanodeMap.size() + 
+    synchronized(datanodeMap) {
+      nodes = new ArrayList<DatanodeDescriptor>(datanodeMap.size() + 
                                                 mustList.size());
-      Iterator<DatanodeDescriptor> it = namesystem.datanodeMap.values().iterator();
+      Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator();
       while (it.hasNext()) { 
         DatanodeDescriptor dn = it.next();
-        boolean isDead = namesystem.isDatanodeDead(dn);
+        final boolean isDead = isDatanodeDead(dn);
         if ( (isDead && listDeadNodes) || (!isDead && listLiveNodes) ) {
           nodes.add(dn);
         }
@@ -536,5 +699,78 @@ public class DatanodeManager {
       }
     }
     return nodes;
+  }
+  
+  private void setDatanodeDead(DatanodeDescriptor node) throws IOException {
+    node.setLastUpdate(0);
+  }
+
+  /** Handle heartbeat from datanodes. */
+  public DatanodeCommand[] handleHeartbeat(DatanodeRegistration nodeReg,
+      final String blockPoolId,
+      long capacity, long dfsUsed, long remaining, long blockPoolUsed,
+      int xceiverCount, int maxTransfers, int failedVolumes
+      ) throws IOException {
+    synchronized (namesystem.heartbeats) {
+      synchronized (datanodeMap) {
+        DatanodeDescriptor nodeinfo = null;
+        try {
+          nodeinfo = getDatanode(nodeReg);
+        } catch(UnregisteredNodeException e) {
+          return new DatanodeCommand[]{DatanodeCommand.REGISTER};
+        }
+        
+        // Check if this datanode should actually be shutdown instead. 
+        if (nodeinfo != null && nodeinfo.isDisallowed()) {
+          setDatanodeDead(nodeinfo);
+          throw new DisallowedDatanodeException(nodeinfo);
+        }
+         
+        if (nodeinfo == null || !nodeinfo.isAlive) {
+          return new DatanodeCommand[]{DatanodeCommand.REGISTER};
+        }
+
+        namesystem.updateStats(nodeinfo, false);
+        nodeinfo.updateHeartbeat(capacity, dfsUsed, remaining, blockPoolUsed,
+            xceiverCount, failedVolumes);
+        namesystem.updateStats(nodeinfo, true);
+        
+        //check lease recovery
+        BlockInfoUnderConstruction[] blocks = nodeinfo
+            .getLeaseRecoveryCommand(Integer.MAX_VALUE);
+        if (blocks != null) {
+          BlockRecoveryCommand brCommand = new BlockRecoveryCommand(
+              blocks.length);
+          for (BlockInfoUnderConstruction b : blocks) {
+            brCommand.add(new RecoveringBlock(
+                new ExtendedBlock(blockPoolId, b), b.getExpectedLocations(), b
+                    .getBlockRecoveryId()));
+          }
+          return new DatanodeCommand[] { brCommand };
+        }
+
+        final List<DatanodeCommand> cmds = new ArrayList<DatanodeCommand>(3);
+        //check pending replication
+        List<BlockTargetPair> pendingList = nodeinfo.getReplicationCommand(
+              maxTransfers);
+        if (pendingList != null) {
+          cmds.add(new BlockCommand(DatanodeProtocol.DNA_TRANSFER, blockPoolId,
+              pendingList));
+        }
+        //check block invalidation
+        Block[] blks = nodeinfo.getInvalidateBlocks(blockInvalidateLimit);
+        if (blks != null) {
+          cmds.add(new BlockCommand(DatanodeProtocol.DNA_INVALIDATE,
+              blockPoolId, blks));
+        }
+        
+        namesystem.addKeyUpdateCommand(cmds, nodeinfo);
+        if (!cmds.isEmpty()) {
+          return cmds.toArray(new DatanodeCommand[cmds.size()]);
+        }
+      }
+    }
+
+    return null;
   }
 }

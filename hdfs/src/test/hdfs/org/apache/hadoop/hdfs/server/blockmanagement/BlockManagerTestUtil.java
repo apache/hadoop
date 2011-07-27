@@ -25,9 +25,30 @@ import java.util.Set;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.Daemon;
 
 public class BlockManagerTestUtil {
+
+  /** @return the datanode descriptor for the given the given storageID. */
+  public static DatanodeDescriptor getDatanode(final FSNamesystem ns,
+      final String storageID) {
+    ns.readLock();
+    try {
+      return ns.getBlockManager().getDatanodeManager().getDatanode(storageID);
+    } finally {
+      ns.readUnlock();
+    }
+  }
+
+
+  /**
+   * Refresh block queue counts on the name-node.
+   */
+  public static void updateState(final BlockManager blockManager) {
+    blockManager.updateState();
+  }
+
   /**
    * @return a tuple of the replica state (number racks, number live
    * replicas, and number needed replicas) for the given block.

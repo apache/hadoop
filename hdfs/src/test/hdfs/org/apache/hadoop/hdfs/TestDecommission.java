@@ -226,7 +226,7 @@ public class TestDecommission {
     writeConfigFile(excludeFile, nodes);
     cluster.getNamesystem(nnIndex).refreshNodes(conf);
     DatanodeInfo ret = NameNodeAdapter.getDatanode(
-        cluster.getNameNode(nnIndex), info[index]);
+        cluster.getNamesystem(nnIndex), info[index]);
     waitNodeState(ret, waitForState);
     return ret;
   }
@@ -466,7 +466,7 @@ public class TestDecommission {
       // Stop decommissioning and verify stats
       writeConfigFile(excludeFile, null);
       fsn.refreshNodes(conf);
-      DatanodeInfo ret = NameNodeAdapter.getDatanode(namenode, downnode);
+      DatanodeInfo ret = NameNodeAdapter.getDatanode(fsn, downnode);
       waitNodeState(ret, AdminStates.NORMAL);
       verifyStats(namenode, fsn, ret, false);
     }

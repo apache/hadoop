@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
@@ -61,13 +62,8 @@ public class TestDeadDatanode {
     FSNamesystem namesystem = cluster.getNamesystem();
     String state = alive ? "alive" : "dead";
     while (System.currentTimeMillis() < stopTime) {
-      namesystem.readLock();
-      DatanodeDescriptor dd;
-      try {
-        dd = namesystem.getDatanode(nodeID);
-      } finally {
-        namesystem.readUnlock();
-      }
+      final DatanodeDescriptor dd = BlockManagerTestUtil.getDatanode(
+          namesystem, nodeID);
       if (dd.isAlive == alive) {
         LOG.info("datanode " + nodeID + " is " + state);
         return;
