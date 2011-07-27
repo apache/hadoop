@@ -667,7 +667,7 @@ public class TestBlockReport {
 
   private static void initLoggers() {
     ((Log4JLogger) NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) FSNamesystem.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger) LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.ALL);
     ((Log4JLogger) DataNode.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger) TestBlockReport.LOG).getLogger().setLevel(Level.ALL);
   }

@@ -162,7 +162,7 @@ import org.mortbay.util.ajax.JSON;
 @Metrics(context="dfs")
 public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     FSClusterStats, NameNodeMXBean {
-  public static final Log LOG = LogFactory.getLog(FSNamesystem.class);
+  static final Log LOG = LogFactory.getLog(FSNamesystem.class);
 
   private static final ThreadLocal<StringBuilder> auditBuffer =
     new ThreadLocal<StringBuilder>() {

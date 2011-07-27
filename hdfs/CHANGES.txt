@@ -607,6 +607,8 @@ Trunk (unreleased changes)
     HDFS-2191.  Move datanodeMap from FSNamesystem to DatanodeManager.
     (szetszwo)
 
+    HDFS-2200.  Change FSNamesystem.LOG to package private.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

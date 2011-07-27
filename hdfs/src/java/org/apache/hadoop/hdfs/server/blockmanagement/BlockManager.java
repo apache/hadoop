@@ -212,12 +212,12 @@ public class BlockManager {
     this.replicationRecheckInterval = 
       conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 
                   DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_DEFAULT) * 1000L;
-    FSNamesystem.LOG.info("defaultReplication = " + defaultReplication);
-    FSNamesystem.LOG.info("maxReplication = " + maxReplication);
-    FSNamesystem.LOG.info("minReplication = " + minReplication);
-    FSNamesystem.LOG.info("maxReplicationStreams = " + maxReplicationStreams);
-    FSNamesystem.LOG.info("shouldCheckForEnoughRacks = " + shouldCheckForEnoughRacks);
-    FSNamesystem.LOG.info("replicationRecheckInterval = " + replicationRecheckInterval);
+    LOG.info("defaultReplication = " + defaultReplication);
+    LOG.info("maxReplication     = " + maxReplication);
+    LOG.info("minReplication     = " + minReplication);
+    LOG.info("maxReplicationStreams      = " + maxReplicationStreams);
+    LOG.info("shouldCheckForEnoughRacks  = " + shouldCheckForEnoughRacks);
+    LOG.info("replicationRecheckInterval = " + replicationRecheckInterval);
   }
 
   public void activate(Configuration conf) {
@@ -344,9 +344,7 @@ public class BlockManager {
         namesystem.dir.updateSpaceConsumed(path, 0, -diff
             * fileINode.getReplication());
       } catch (IOException e) {
-        FSNamesystem.LOG
-            .warn("Unexpected exception while updating disk space : "
-                + e.getMessage());
+        LOG.warn("Unexpected exception while updating disk space.", e);
       }
     }
   }
@@ -517,7 +515,7 @@ public class BlockManager {
     final int numCorruptNodes = countNodes(blk).corruptReplicas();
     final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk);
     if (numCorruptNodes != numCorruptReplicas) {
-      FSNamesystem.LOG.warn("Inconsistent number of corrupt replicas for "
+      LOG.warn("Inconsistent number of corrupt replicas for "
           + blk + " blockMap has " + numCorruptNodes
           + " but corrupt replicas map has " + numCorruptReplicas);
     }
@@ -915,7 +913,7 @@ public class BlockManager {
           Block block = neededReplicationsIterator.next();
           int priority = neededReplicationsIterator.getPriority();
           if (priority < 0 || priority >= blocksToReplicate.size()) {
-            FSNamesystem.LOG.warn("Unexpected replication priority: "
+            LOG.warn("Unexpected replication priority: "
                 + priority + " " + block);
           } else {
             blocksToReplicate.get(priority).add(block);
@@ -1384,8 +1382,8 @@ public class BlockManager {
       Collection<BlockInfo> toCorrupt,
       Collection<StatefulBlockInfo> toUC) {
     
-    if(FSNamesystem.LOG.isDebugEnabled()) {
-      FSNamesystem.LOG.debug("Reported block " + block
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Reported block " + block
           + " on " + dn.getName() + " size " + block.getNumBytes()
           + " replicaState = " + reportedState);
     }
@@ -1401,8 +1399,8 @@ public class BlockManager {
     BlockUCState ucState = storedBlock.getBlockUCState();
     
     // Block is on the NN
-    if(FSNamesystem.LOG.isDebugEnabled()) {
-      FSNamesystem.LOG.debug("In memory blockUCState = " + ucState);
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("In memory blockUCState = " + ucState);
     }
 
     // Ignore replicas already scheduled to be removed from the DN
@@ -1457,7 +1455,7 @@ public class BlockManager {
     case RUR:       // should not be reported
     case TEMPORARY: // should not be reported
     default:
-      FSNamesystem.LOG.warn("Unexpected replica state " + reportedState
+      LOG.warn("Unexpected replica state " + reportedState
           + " for block: " + storedBlock + 
           " on " + dn.getName() + " size " + storedBlock.getNumBytes());
       return true;
@@ -1625,7 +1623,7 @@ public class BlockManager {
     int corruptReplicasCount = corruptReplicas.numCorruptReplicas(storedBlock);
     int numCorruptNodes = num.corruptReplicas();
     if (numCorruptNodes != corruptReplicasCount) {
-      FSNamesystem.LOG.warn("Inconsistent number of corrupt replicas for " +
+      LOG.warn("Inconsistent number of corrupt replicas for " +
           storedBlock + "blockMap has " + numCorruptNodes + 
           " but corrupt replicas map has " + corruptReplicasCount);
     }
@@ -1708,10 +1706,10 @@ public class BlockManager {
     } finally {
       namesystem.writeUnlock();
     }
-    FSNamesystem.LOG.info("Total number of blocks = " + blocksMap.size());
-    FSNamesystem.LOG.info("Number of invalid blocks = " + nrInvalid);
-    FSNamesystem.LOG.info("Number of under-replicated blocks = " + nrUnderReplicated);
-    FSNamesystem.LOG.info("Number of  over-replicated blocks = " + nrOverReplicated);
+    LOG.info("Total number of blocks            = " + blocksMap.size());
+    LOG.info("Number of invalid blocks          = " + nrInvalid);
+    LOG.info("Number of under-replicated blocks = " + nrUnderReplicated);
+    LOG.info("Number of  over-replicated blocks = " + nrOverReplicated);
   }
 
   /**
@@ -1955,7 +1953,7 @@ public class BlockManager {
       nodeList.append(node.name);
       nodeList.append(" ");
     }
-    FSNamesystem.LOG.info("Block: " + block + ", Expected Replicas: "
+    LOG.info("Block: " + block + ", Expected Replicas: "
         + curExpectedReplicas + ", live replicas: " + curReplicas
         + ", corrupt replicas: " + num.corruptReplicas()
         + ", decommissioned replicas: " + num.decommissionedReplicas()

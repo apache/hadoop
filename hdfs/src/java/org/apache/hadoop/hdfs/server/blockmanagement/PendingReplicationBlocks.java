@@ -17,14 +17,18 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-
 import static org.apache.hadoop.hdfs.server.common.Util.now;
-import org.apache.hadoop.util.*;
-import java.io.*;
-import java.util.*;
+
+import java.io.PrintWriter;
 import java.sql.Time;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+
+import org.apache.commons.logging.Log;
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.util.Daemon;
 
 /***************************************************
  * PendingReplicationBlocks does the bookkeeping of all
@@ -38,6 +42,8 @@ import java.sql.Time;
  *
  ***************************************************/
 class PendingReplicationBlocks {
+  private static final Log LOG = BlockManager.LOG;
+
   private Map<Block, PendingBlockInfo> pendingReplications;
   private ArrayList<Block> timedOutItems;
   Daemon timerThread = null;
@@ -87,9 +93,8 @@ class PendingReplicationBlocks {
     synchronized (pendingReplications) {
       PendingBlockInfo found = pendingReplications.get(block);
       if (found != null) {
-        if(FSNamesystem.LOG.isDebugEnabled()) {
-          FSNamesystem.LOG.debug("Removing pending replication for block" +
-              block);
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("Removing pending replication for " + block);
         }
         found.decrementReplicas();
         if (found.getNumReplicas() <= 0) {
@@ -186,9 +191,8 @@ class PendingReplicationBlocks {
           pendingReplicationCheck();
           Thread.sleep(period);
         } catch (InterruptedException ie) {
-          if(FSNamesystem.LOG.isDebugEnabled()) {
-            FSNamesystem.LOG.debug(
-                "PendingReplicationMonitor thread received exception. " + ie);
+          if(LOG.isDebugEnabled()) {
+            LOG.debug("PendingReplicationMonitor thread is interrupted.", ie);
           }
         }
       }
@@ -202,8 +206,8 @@ class PendingReplicationBlocks {
         Iterator<Map.Entry<Block, PendingBlockInfo>> iter =
                                     pendingReplications.entrySet().iterator();
         long now = now();
-        if(FSNamesystem.LOG.isDebugEnabled()) {
-          FSNamesystem.LOG.debug("PendingReplicationMonitor checking Q");
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("PendingReplicationMonitor checking Q");
         }
         while (iter.hasNext()) {
           Map.Entry<Block, PendingBlockInfo> entry = iter.next();
@@ -213,8 +217,7 @@ class PendingReplicationBlocks {
             synchronized (timedOutItems) {
               timedOutItems.add(block);
             }
-            FSNamesystem.LOG.warn(
-                "PendingReplicationMonitor timed out block " + block);
+            LOG.warn("PendingReplicationMonitor timed out " + block);
             iter.remove();
           }
         }

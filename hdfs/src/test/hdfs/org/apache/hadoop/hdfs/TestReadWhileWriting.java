@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.security.PrivilegedExceptionAction;
 
+import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -38,7 +39,7 @@ import org.junit.Test;
 /** Test reading from hdfs while a file is being written. */
 public class TestReadWhileWriting {
   {
-    ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
   }
 
