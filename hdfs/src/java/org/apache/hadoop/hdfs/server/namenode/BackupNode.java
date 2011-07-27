@@ -29,7 +29,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.protocol.BackupNodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
@@ -52,7 +52,7 @@ import org.apache.hadoop.net.NetUtils;
  * </ol>
  */
 @InterfaceAudience.Private
-public class BackupNode extends NameNode implements BackupNodeProtocol {
+public class BackupNode extends NameNode implements JournalProtocol {
   private static final String BN_ADDRESS_NAME_KEY = DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY;
   private static final String BN_ADDRESS_DEFAULT = DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_DEFAULT;
   private static final String BN_HTTP_ADDRESS_NAME_KEY = DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY;
@@ -181,8 +181,8 @@ public class BackupNode extends NameNode implements BackupNodeProtocol {
   @Override
   public long getProtocolVersion(String protocol, long clientVersion)
       throws IOException {
-    if (protocol.equals(BackupNodeProtocol.class.getName())) {
-      return BackupNodeProtocol.versionID;
+    if (protocol.equals(JournalProtocol.class.getName())) {
+      return JournalProtocol.versionID;
     } else {
       return super.getProtocolVersion(protocol, clientVersion);
     }

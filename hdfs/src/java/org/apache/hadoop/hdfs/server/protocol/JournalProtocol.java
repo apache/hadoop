@@ -24,11 +24,15 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.KerberosInfo;
 
+/**
+ * Protocol used to journal edits to a remote node. Currently,
+ * this is used to publish edits from the NameNode to a BackupNode.
+ */
 @KerberosInfo(
     serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY,
     clientPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
 @InterfaceAudience.Private
-public interface BackupNodeProtocol extends VersionedProtocol {
+public interface JournalProtocol extends VersionedProtocol {
   public static final long versionID = 1L;
 
   /**

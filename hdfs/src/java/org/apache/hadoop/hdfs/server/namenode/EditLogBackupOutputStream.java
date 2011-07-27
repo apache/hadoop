@@ -24,7 +24,7 @@ import java.util.Arrays;
 
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.protocol.BackupNodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Writable;
@@ -42,7 +42,7 @@ import org.apache.hadoop.net.NetUtils;
 class EditLogBackupOutputStream extends EditLogOutputStream {
   static int DEFAULT_BUFFER_SIZE = 256;
 
-  private BackupNodeProtocol backupNode;        // RPC proxy to backup node
+  private JournalProtocol backupNode;        // RPC proxy to backup node
   private NamenodeRegistration bnRegistration;  // backup node registration
   private NamenodeRegistration nnRegistration;  // active node registration
   private ArrayList<JournalRecord> bufCurrent;  // current buffer for writing
@@ -76,8 +76,8 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
     Storage.LOG.info("EditLogBackupOutputStream connects to: " + bnAddress);
     try {
       this.backupNode =
-        RPC.getProxy(BackupNodeProtocol.class,
-            BackupNodeProtocol.versionID, bnAddress, new HdfsConfiguration());
+        RPC.getProxy(JournalProtocol.class,
+            JournalProtocol.versionID, bnAddress, new HdfsConfiguration());
     } catch(IOException e) {
       Storage.LOG.error("Error connecting to: " + bnAddress, e);
       throw e;
