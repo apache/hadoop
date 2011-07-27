@@ -356,6 +356,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2622. Remove the last remaining reference to the deprecated
     configuration "io.sort.mb". (Harsh J Chouraria via todd)
 
+    MAPREDUCE-2723. Remove directly accessing FSNamesystem.LOG from
+    TestCopyFiles and TestDistCh.  (szetszwo)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
