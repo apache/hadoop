@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.master.handler.MetaServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -392,15 +393,15 @@ public class ServerManager {
    * @param server server to open a region
    * @param region region to open
    */
-  public void sendRegionOpen(final ServerName server, HRegionInfo region)
+  public RegionOpeningState sendRegionOpen(final ServerName server, HRegionInfo region)
   throws IOException {
     HRegionInterface hri = getServerConnection(server);
     if (hri == null) {
       LOG.warn("Attempting to send OPEN RPC to server " + server.toString() +
         " failed because no RPC connection found to this server");
-      return;
+      return RegionOpeningState.FAILED_OPENING;
     }
-    hri.openRegion(region);
+    return hri.openRegion(region);
   }
 
   /**

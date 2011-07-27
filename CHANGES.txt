@@ -175,6 +175,8 @@ Release 0.91.0 - Unreleased
                (Allan Yan)
    HBASE-3845  data loss because lastSeqWritten can miss memstore edits
                (Prakash Khemani and ramkrishna.s.vasudevan)
+   HBASE-4083  If Enable table is not completed and is partial, then scanning of
+               the table is not working (ramkrishna.s.vasudevan)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

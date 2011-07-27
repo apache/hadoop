@@ -118,6 +118,7 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenRootHandler;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.WALObserver;
+import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -2287,11 +2288,17 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   @Override
   @QosPriority(priority=HIGH_QOS)
-  public void openRegion(HRegionInfo region)
+  public RegionOpeningState openRegion(HRegionInfo region)
   throws IOException {
     checkOpen();
     if (this.regionsInTransitionInRS.contains(region.getEncodedNameAsBytes())) {
       throw new RegionAlreadyInTransitionException("open", region.getEncodedName());
+    }
+    HRegion onlineRegion = this.getFromOnlineRegions(region.getEncodedName());
+    if (null != onlineRegion) {
+      LOG.warn("Attempted open of " + region.getEncodedName()
+          + " but already online on this server");
+      return RegionOpeningState.ALREADY_OPENED;
     }
     LOG.info("Received request to open region: " +
       region.getRegionNameAsString());
@@ -2303,6 +2310,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     } else {
       this.service.submit(new OpenRegionHandler(this, this, region, htd));
     }
+    return RegionOpeningState.OPENED;
   }
 
   @Override

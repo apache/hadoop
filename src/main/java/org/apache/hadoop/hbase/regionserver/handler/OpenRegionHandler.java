@@ -83,11 +83,6 @@ public class OpenRegionHandler extends EventHandler {
 
       // Check that this region is not already online
       HRegion region = this.rsServices.getFromOnlineRegions(encodedName);
-      if (region != null) {
-        LOG.warn("Attempted open of " + name +
-          " but already online on this server");
-        return;
-      }
 
       // If fails, just return.  Someone stole the region from under us.
       // Calling transitionZookeeperOfflineToOpening initalizes this.version.
