@@ -1110,7 +1110,9 @@ public class FSImage extends Storage {
       numEdits += loader.loadFSEdits(edits);
       edits.close();
     }
-    
+    if (numEdits == 0 && editsNew.exists()) {
+      numEdits++;
+    }
     // update the counts.
     getFSNamesystem().dir.updateCountForINodeWithQuota();    
     
