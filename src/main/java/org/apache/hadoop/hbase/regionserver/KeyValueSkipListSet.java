@@ -24,7 +24,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.NavigableSet;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentNavigableMap;
@@ -55,37 +54,12 @@ class KeyValueSkipListSet implements NavigableSet<KeyValue> {
     this.delegatee = m;
   }
 
-  /**
-   * Iterator that maps Iterator calls to return the value component of the
-   * passed-in Map.Entry Iterator.
-   */
-  static class MapEntryIterator implements Iterator<KeyValue> {
-    private final Iterator<Map.Entry<KeyValue, KeyValue>> iterator;
-
-    MapEntryIterator(final Iterator<Map.Entry<KeyValue, KeyValue>> i) {
-      this.iterator = i;
-    }
-
-    public boolean hasNext() {
-      return this.iterator.hasNext();
-    }
-
-    public KeyValue next() {
-      return this.iterator.next().getValue();
-    }
-
-    public void remove() {
-      this.iterator.remove();
-    }
-  }
-
   public KeyValue ceiling(KeyValue e) {
     throw new UnsupportedOperationException("Not implemented");
   }
 
   public Iterator<KeyValue> descendingIterator() {
-    return new MapEntryIterator(this.delegatee.descendingMap().entrySet().
-      iterator());
+    return this.delegatee.descendingMap().values().iterator();
   }
 
   public NavigableSet<KeyValue> descendingSet() {
@@ -110,7 +84,7 @@ class KeyValueSkipListSet implements NavigableSet<KeyValue> {
   }
 
   public Iterator<KeyValue> iterator() {
-    return new MapEntryIterator(this.delegatee.entrySet().iterator());
+    return this.delegatee.values().iterator();
   }
 
   public KeyValue lower(KeyValue e) {

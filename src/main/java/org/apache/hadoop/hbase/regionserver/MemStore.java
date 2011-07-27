@@ -646,11 +646,15 @@ public class MemStore implements HeapSize {
     private KeyValue snapshotNextRow = null;
 
     // iterator based scanning.
-    Iterator<KeyValue> kvsetIt;
-    Iterator<KeyValue> snapshotIt;
+    private Iterator<KeyValue> kvsetIt;
+    private Iterator<KeyValue> snapshotIt;
 
     // number of iterations in this reseek operation
-    int numIterReseek;
+    private int numIterReseek;
+
+
+    // the pre-calculated KeyValue to be returned by peek() or next()
+    private KeyValue theNext;
     
     /*
     Some notes...
@@ -676,9 +680,9 @@ public class MemStore implements HeapSize {
       //DebugPrint.println(" MS new@" + hashCode());
     }
 
-    protected KeyValue getNext(Iterator<KeyValue> it) {
+    protected KeyValue getNext(Iterator<KeyValue> it, long readPoint) {
       KeyValue ret = null;
-      long readPoint = ReadWriteConsistencyControl.getThreadReadPoint();
+      //long readPoint = ReadWriteConsistencyControl.getThreadReadPoint();
       //DebugPrint.println( " MS@" + hashCode() + ": threadpoint = " + readPoint);
 
       while (ret == null && it.hasNext()) {
@@ -710,9 +714,11 @@ public class MemStore implements HeapSize {
       kvsetIt = kvTail.iterator();
       snapshotIt = snapshotTail.iterator();
 
-      kvsetNextRow = getNext(kvsetIt);
-      snapshotNextRow = getNext(snapshotIt);
+      long readPoint = ReadWriteConsistencyControl.getThreadReadPoint();
+      kvsetNextRow = getNext(kvsetIt, readPoint);
+      snapshotNextRow = getNext(snapshotIt, readPoint);
 
+      theNext = getLowest();
 
       //long readPoint = ReadWriteConsistencyControl.getThreadReadPoint();
       //DebugPrint.println( " MS@" + hashCode() + " kvset seek: " + kvsetNextRow + " with size = " +
@@ -720,19 +726,18 @@ public class MemStore implements HeapSize {
       //DebugPrint.println( " MS@" + hashCode() + " snapshot seek: " + snapshotNextRow + " with size = " +
       //    snapshot.size() + " threadread = " + readPoint);
 
-
-      KeyValue lowest = getLowest();
-
-      // has data := (lowest != null)
-      return lowest != null;
+      // has data
+      return (theNext != null);
     }
 
     @Override
-    public boolean reseek(KeyValue key) {
+    public synchronized boolean reseek(KeyValue key) {
+
       numIterReseek = reseekNumKeys;
       while (kvsetNextRow != null &&
           comparator.compare(kvsetNextRow, key) < 0) {
-        kvsetNextRow = getNext(kvsetIt);
+        kvsetNextRow = getNext(kvsetIt,
+          ReadWriteConsistencyControl.getThreadReadPoint());
         // if we scanned enough entries but still not able to find the
         // kv we are looking for, better cut our costs and do a tree
         // scan using seek.
@@ -743,7 +748,8 @@ public class MemStore implements HeapSize {
 
       while (snapshotNextRow != null &&
           comparator.compare(snapshotNextRow, key) < 0) {
-        snapshotNextRow = getNext(snapshotIt);
+        snapshotNextRow = getNext(snapshotIt,
+          ReadWriteConsistencyControl.getThreadReadPoint());
         // if we scanned enough entries but still not able to find the
         // kv we are looking for, better cut our costs and do a tree
         // scan using seek.
@@ -751,38 +757,48 @@ public class MemStore implements HeapSize {
           return seek(key);
         }
       }
-      return (kvsetNextRow != null || snapshotNextRow != null);
+
+      // Calculate the next value
+      theNext = getLowest();
+
+      return (theNext != null);
     }
 
+    @Override
     public synchronized KeyValue peek() {
       //DebugPrint.println(" MS@" + hashCode() + " peek = " + getLowest());
-      return getLowest();
+      return theNext;
     }
 
 
+    @Override
     public synchronized KeyValue next() {
-      KeyValue theNext = getLowest();
 
       if (theNext == null) {
           return null;
       }
 
+      KeyValue ret = theNext;
+
       // Advance one of the iterators
+      long readPoint = ReadWriteConsistencyControl.getThreadReadPoint();
       if (theNext == kvsetNextRow) {
-        kvsetNextRow = getNext(kvsetIt);
+        kvsetNextRow = getNext(kvsetIt, readPoint);
       } else {
-        snapshotNextRow = getNext(snapshotIt);
+        snapshotNextRow = getNext(snapshotIt, readPoint);
       }
 
-      //long readpoint = ReadWriteConsistencyControl.getThreadReadPoint();
-      //DebugPrint.println(" MS@" + hashCode() + " next: " + theNext + " next_next: " +
-      //    getLowest() + " threadpoint=" + readpoint);
-      return theNext;
+      // Calculate the next value
+      theNext = getLowest();
+
+      //readpoint = ReadWriteConsistencyControl.getThreadReadPoint();
+      //DebugPrint.println(" MS@" + hashCode() + " next: " + theNext +
+      //    " next_next: " + getLowest() + " threadpoint=" + readpoint);
+      return ret;
     }
 
     protected KeyValue getLowest() {
-      return getLower(kvsetNextRow,
-          snapshotNextRow);
+      return getLower(kvsetNextRow, snapshotNextRow);
     }
 
     /*
@@ -791,14 +807,15 @@ public class MemStore implements HeapSize {
      * comparator.
      */
     protected KeyValue getLower(KeyValue first, KeyValue second) {
-      if (first == null && second == null) {
-        return null;
+      if (first == null) {
+        return second;
       }
-      if (first != null && second != null) {
-        int compare = comparator.compare(first, second);
-        return (compare <= 0 ? first : second);
+      if (second == null) {
+        return first;
       }
-      return (first != null ? first : second);
+
+      int compare = comparator.compare(first, second);
+      return (compare <= 0 ? first : second);
     }
 
     public synchronized void close() {

@@ -339,6 +339,7 @@ Release 0.91.0 - Unreleased
    HBASE-4142  Advise against large batches in javadoc for HTable#put(List<Put>)
    HBASE-4139  [stargate] Update ScannerModel with support for filter package
                additions
+   HBASE-1938  Make in-memory table scanning faster (nkeywal)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
