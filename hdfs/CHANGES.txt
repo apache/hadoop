@@ -9,6 +9,8 @@ Trunk (unreleased changes)
 
     HDFS-1536. Improve HDFS WebUI. (hairong)
 
+    HDFS-2210. Remove hdfsproxy. (eli)
+
   NEW FEATURES
 
     HDFS-1359. Add BlockPoolID to Block. (suresh)

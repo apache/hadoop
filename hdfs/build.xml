@@ -1397,7 +1397,6 @@
         <exclude name="src/c++/libhdfs/install-sh" />
         <exclude name="src/c++/libhdfs/ltmain.sh" />
         <exclude name="src/c++/libhdfs/missing" />
-        <exclude name="src/contrib/hdfsproxy/src/test/resources/" />
         <exclude name="src/test/checkstyle-noframes-sorted.xsl" />
         <exclude name="src/test/checkstyle.xml" />
         <exclude name="src/test/findbugsExcludeFile.xml" />

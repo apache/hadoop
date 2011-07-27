@@ -43,7 +43,6 @@ See http://forrest.apache.org/docs/linking.html for more info.
       <hdfs_SLG        		label="Synthetic Load Generator"  href="SLG_user_guide.html" />
       <hdfs_imageviewer	label="Offline Image Viewer"	href="hdfs_imageviewer.html" />
       <hdfs_editsviewer	label="Offline Edits Viewer"	href="hdfs_editsviewer.html" />
-      <hdfsproxy 			    label="HDFS Proxy" href="hdfsproxy.html"/>
       <hftp 			    label="HFTP" href="hftp.html"/>
       <faultinject_framework label="Fault Injection"  href="faultinject_framework.html" /> 
       <hdfs_libhdfs   		label="C API libhdfs" href="libhdfs.html" /> 

@@ -48,12 +48,6 @@
     <subant target="test">
       <fileset dir="." includes="fuse-dfs/build.xml"/>
     </subant> 
-
-    <!-- hdfsproxy tests failing due to HDFS-1666
-    <subant target="test">
-      <fileset dir="." includes="hdfsproxy/build.xml"/>
-    </subant>
-      -->
   </target>
   
   
