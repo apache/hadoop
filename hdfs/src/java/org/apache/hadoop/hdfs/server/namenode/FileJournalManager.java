@@ -27,7 +27,7 @@ import java.util.List;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.FoundEditLog;
-import org.apache.hadoop.hdfs.server.namenode.NNStorageArchivalManager.StoragePurger;
+import org.apache.hadoop.hdfs.server.namenode.NNStorageRetentionManager.StoragePurger;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;

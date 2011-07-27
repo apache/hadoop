@@ -91,7 +91,7 @@ public class FSImage implements Closeable {
 
   final private Configuration conf;
 
-  private final NNStorageArchivalManager archivalManager; 
+  private final NNStorageRetentionManager archivalManager; 
 
   /**
    * Construct an FSImage.
@@ -149,7 +149,7 @@ public class FSImage implements Closeable {
     this.editLog = new FSEditLog(storage);
     setFSNamesystem(ns);
     
-    archivalManager = new NNStorageArchivalManager(conf, storage, editLog);
+    archivalManager = new NNStorageRetentionManager(conf, storage, editLog);
   }
 
   protected FSNamesystem getFSNamesystem() {

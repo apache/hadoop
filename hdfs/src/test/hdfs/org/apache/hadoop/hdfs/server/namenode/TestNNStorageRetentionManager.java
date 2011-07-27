@@ -31,7 +31,7 @@ import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEdit
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getFinalizedEditsFileName;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
 
-import org.apache.hadoop.hdfs.server.namenode.NNStorageArchivalManager.StoragePurger;
+import org.apache.hadoop.hdfs.server.namenode.NNStorageRetentionManager.StoragePurger;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -45,7 +45,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 
-public class TestNNStorageArchivalManager {
+public class TestNNStorageRetentionManager {
   /**
    * Test the "easy case" where we have more images in the
    * directory than we need to keep. Should purge the
@@ -167,14 +167,14 @@ public class TestNNStorageArchivalManager {
     Configuration conf = new Configuration();
 
     StoragePurger mockPurger =
-      Mockito.mock(NNStorageArchivalManager.StoragePurger.class);
+      Mockito.mock(NNStorageRetentionManager.StoragePurger.class);
     ArgumentCaptor<FoundFSImage> imagesPurgedCaptor =
       ArgumentCaptor.forClass(FoundFSImage.class);    
     ArgumentCaptor<FoundEditLog> logsPurgedCaptor =
       ArgumentCaptor.forClass(FoundEditLog.class);    
 
     // Ask the manager to purge files we don't need any more
-    new NNStorageArchivalManager(conf,
+    new NNStorageRetentionManager(conf,
         tc.mockStorage(), tc.mockEditLog(), mockPurger)
       .purgeOldStorage();
     

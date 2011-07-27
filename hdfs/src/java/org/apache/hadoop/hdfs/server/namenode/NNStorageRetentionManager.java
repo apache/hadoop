@@ -35,7 +35,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 /**
- * The NNStorageArchivalManager is responsible for inspecting the storage
+ * The NNStorageRetentionManager is responsible for inspecting the storage
  * directories of the NN and enforcing a retention policy on checkpoints
  * and edit logs.
  * 
@@ -43,15 +43,16 @@ import com.google.common.collect.Sets;
  * implementation, which might delete the files or instead copy them to
  * a filer or HDFS for later analysis.
  */
-public class NNStorageArchivalManager {
+public class NNStorageRetentionManager {
   
   private final int numCheckpointsToRetain;
-  private static final Log LOG = LogFactory.getLog(NNStorageArchivalManager.class);
+  private static final Log LOG = LogFactory.getLog(
+      NNStorageRetentionManager.class);
   private final NNStorage storage;
   private final StoragePurger purger;
   private final FSEditLog editLog;
   
-  public NNStorageArchivalManager(
+  public NNStorageRetentionManager(
       Configuration conf,
       NNStorage storage,
       FSEditLog editLog,
@@ -64,7 +65,7 @@ public class NNStorageArchivalManager {
     this.purger = purger;
   }
   
-  public NNStorageArchivalManager(Configuration conf, NNStorage storage,
+  public NNStorageRetentionManager(Configuration conf, NNStorage storage,
       FSEditLog editLog) {
     this(conf, storage, editLog, new DeletionStoragePurger());
   }

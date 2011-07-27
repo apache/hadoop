@@ -38,26 +38,26 @@ import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
 
 
 /**
- * Functional tests for NNStorageArchivalManager. This differs from
- * {@link TestNNStorageArchivalManager} in that the other test suite
+ * Functional tests for NNStorageRetentionManager. This differs from
+ * {@link TestNNStorageRetentionManager} in that the other test suite
  * is only unit/mock-based tests whereas this suite starts miniclusters,
  * etc.
  */
-public class TestNNStorageArchivalFunctional {
+public class TestNNStorageRetentionFunctional {
 
   private static File TEST_ROOT_DIR =
     new File(MiniDFSCluster.getBaseDirectory());
   private static Log LOG = LogFactory.getLog(
-      TestNNStorageArchivalFunctional.class);
+      TestNNStorageRetentionFunctional.class);
 
  /**
   * Test case where two directories are configured as NAME_AND_EDITS
   * and one of them fails to save storage. Since the edits and image
   * failure states are decoupled, the failure of image saving should
-  * not prevent the archival of logs from that dir.
+  * not prevent the purging of logs from that dir.
   */
   @Test
-  public void testArchivingWithNameEditsDirAfterFailure()
+  public void testPurgingWithNameEditsDirAfterFailure()
       throws IOException {
     MiniDFSCluster cluster = null;    
     Configuration conf = new HdfsConfiguration();
