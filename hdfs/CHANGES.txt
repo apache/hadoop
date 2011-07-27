@@ -600,6 +600,8 @@ Trunk (unreleased changes)
     cause. (Ravi Prakash via atm)
 
     HDFS-2180. Refactor NameNode HTTP server into new class. (todd)
+    
+    HDFS-2198. Remove hardcoded configuration keys. (suresh)
 
     HDFS-2149. Move EditLogOp serialization formats into FsEditLogOp
     implementations. (Ivan Kelly via todd)

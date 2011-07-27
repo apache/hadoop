@@ -43,7 +43,7 @@ import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -156,20 +156,20 @@ public class NameNode implements NamenodeProtocols, FSConstants {
    * Following are nameservice specific keys.
    */
   public static final String[] NAMESERVICE_SPECIFIC_KEYS = {
-    DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY,
-    DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
-    DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
-    DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY,
-    DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY,
-    DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
-    DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY,
-    DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY,
-    DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
-    DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
-    DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY,
-    DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY,
-    DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY,
-    DFSConfigKeys.DFS_NAMENODE_BACKUP_SERVICE_RPC_ADDRESS_KEY
+    DFS_NAMENODE_RPC_ADDRESS_KEY,
+    DFS_NAMENODE_NAME_DIR_KEY,
+    DFS_NAMENODE_EDITS_DIR_KEY,
+    DFS_NAMENODE_CHECKPOINT_DIR_KEY,
+    DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY,
+    DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+    DFS_NAMENODE_HTTP_ADDRESS_KEY,
+    DFS_NAMENODE_HTTPS_ADDRESS_KEY,
+    DFS_NAMENODE_KEYTAB_FILE_KEY,
+    DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
+    DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY,
+    DFS_NAMENODE_BACKUP_ADDRESS_KEY,
+    DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY,
+    DFS_NAMENODE_BACKUP_SERVICE_RPC_ADDRESS_KEY
   };
   
   public long getProtocolVersion(String protocol, 
@@ -264,7 +264,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   public static void setServiceAddress(Configuration conf,
                                            String address) {
     LOG.info("Setting ADDRESS " + address);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, address);
+    conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, address);
   }
   
   /**
@@ -276,7 +276,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
    */
   public static InetSocketAddress getServiceAddress(Configuration conf,
                                                         boolean fallback) {
-    String addr = conf.get(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY);
+    String addr = conf.get(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY);
     if (addr == null || addr.isEmpty()) {
       return fallback ? getAddress(conf) : null;
     }
@@ -362,11 +362,11 @@ public class NameNode implements NamenodeProtocols, FSConstants {
 
   protected InetSocketAddress getHttpServerAddress(Configuration conf) {
     return  NetUtils.createSocketAddr(
-        conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:50070"));
+        conf.get(DFS_NAMENODE_HTTP_ADDRESS_KEY, DFS_NAMENODE_HTTP_ADDRESS_DEFAULT));
   }
   
   protected void setHttpServerAddress(Configuration conf) {
-    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY,
+    conf.set(DFS_NAMENODE_HTTP_ADDRESS_KEY,
         getHostPortString(getHttpAddress()));
   }
 
@@ -391,8 +391,8 @@ public class NameNode implements NamenodeProtocols, FSConstants {
    */
   void loginAsNameNodeUser(Configuration conf) throws IOException {
     InetSocketAddress socAddr = getRpcServerAddress(conf);
-    SecurityUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
-        DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, socAddr.getHostName());
+    SecurityUtil.login(conf, DFS_NAMENODE_KEYTAB_FILE_KEY,
+        DFS_NAMENODE_USER_NAME_KEY, socAddr.getHostName());
   }
   
   /**
@@ -405,8 +405,8 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     UserGroupInformation.setConfiguration(conf);
     loginAsNameNodeUser(conf);
     int handlerCount = 
-      conf.getInt(DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_KEY, 
-                  DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_DEFAULT);
+      conf.getInt(DFS_DATANODE_HANDLER_COUNT_KEY, 
+                  DFS_DATANODE_HANDLER_COUNT_DEFAULT);
 
     NameNode.initMetrics(conf, this.getRole());
     loadNamesystem(conf);
@@ -414,8 +414,8 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     InetSocketAddress dnSocketAddr = getServiceRpcServerAddress(conf);
     if (dnSocketAddr != null) {
       int serviceHandlerCount =
-        conf.getInt(DFSConfigKeys.DFS_NAMENODE_SERVICE_HANDLER_COUNT_KEY,
-                    DFSConfigKeys.DFS_NAMENODE_SERVICE_HANDLER_COUNT_DEFAULT);
+        conf.getInt(DFS_NAMENODE_SERVICE_HANDLER_COUNT_KEY,
+                    DFS_NAMENODE_SERVICE_HANDLER_COUNT_DEFAULT);
       this.serviceRpcServer = RPC.getServer(NamenodeProtocols.class, this,
           dnSocketAddr.getHostName(), dnSocketAddr.getPort(), serviceHandlerCount,
           false, conf, namesystem.getDelegationTokenSecretManager());
@@ -493,7 +493,8 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     }
     startTrashEmptier(conf);
     
-    plugins = conf.getInstances("dfs.namenode.plugins", ServicePlugin.class);
+    plugins = conf.getInstances(DFS_NAMENODE_PLUGINS_KEY,
+        ServicePlugin.class);
     for (ServicePlugin p: plugins) {
       try {
         p.start(this);
@@ -1338,12 +1339,12 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   private static boolean format(Configuration conf,
                                 boolean isConfirmationNeeded)
       throws IOException {
-    if (!conf.getBoolean(DFSConfigKeys.DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY, 
-                         DFSConfigKeys.DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_DEFAULT)) {
-      throw new IOException("The option " + DFSConfigKeys.DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY
+    if (!conf.getBoolean(DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY, 
+                         DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_DEFAULT)) {
+      throw new IOException("The option " + DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY
                              + " is set to false for this filesystem, so it "
                              + "cannot be formatted. You will need to set "
-                             + DFSConfigKeys.DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY +" parameter "
+                             + DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY +" parameter "
                              + "to true in order to format this filesystem");
     }
     
@@ -1490,11 +1491,11 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   }
 
   private static void setStartupOption(Configuration conf, StartupOption opt) {
-    conf.set("dfs.namenode.startup", opt.toString());
+    conf.set(DFS_NAMENODE_STARTUP_KEY, opt.toString());
   }
 
   static StartupOption getStartupOption(Configuration conf) {
-    return StartupOption.valueOf(conf.get("dfs.namenode.startup",
+    return StartupOption.valueOf(conf.get(DFS_NAMENODE_STARTUP_KEY,
                                           StartupOption.REGULAR.toString()));
   }
 
@@ -1586,10 +1587,10 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     
     DFSUtil.setGenericConf(conf, nameserviceId, NAMESERVICE_SPECIFIC_KEYS);
     
-    if (conf.get(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY) != null) {
+    if (conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY) != null) {
       URI defaultUri = URI.create(FSConstants.HDFS_URI_SCHEME + "://"
-          + conf.get(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY));
-      conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, defaultUri.toString());
+          + conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY));
+      conf.set(FS_DEFAULT_NAME_KEY, defaultUri.toString());
     }
   }
     

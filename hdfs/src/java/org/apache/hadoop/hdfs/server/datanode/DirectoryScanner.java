@@ -54,7 +54,6 @@ import org.apache.hadoop.util.Daemon;
 @InterfaceAudience.Private
 public class DirectoryScanner implements Runnable {
   private static final Log LOG = LogFactory.getLog(DirectoryScanner.class);
-  private static final int DEFAULT_SCAN_INTERVAL = 21600;
 
   private final DataNode datanode;
   private final FSDataset dataset;
@@ -225,7 +224,7 @@ public class DirectoryScanner implements Runnable {
     this.datanode = dn;
     this.dataset = dataset;
     int interval = conf.getInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY,
-        DEFAULT_SCAN_INTERVAL);
+        DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_DEFAULT);
     scanPeriodMsecs = interval * 1000L; //msec
     int threads = 
         conf.getInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY,

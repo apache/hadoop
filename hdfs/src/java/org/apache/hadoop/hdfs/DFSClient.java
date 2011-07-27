@@ -53,6 +53,7 @@ import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
@@ -149,48 +150,38 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
     Conf(Configuration conf) {
       maxBlockAcquireFailures = conf.getInt(
-          DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY,
-          DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT);
-      confTime = conf.getInt(
-          DFSConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY,
+          DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY,
+          DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT);
+      confTime = conf.getInt(DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY,
           HdfsConstants.WRITE_TIMEOUT);
       ioBufferSize = conf.getInt(
           CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY,
           CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT);
-      bytesPerChecksum = conf.getInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY,
-          DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT);
-      socketTimeout = conf.getInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY,
+      bytesPerChecksum = conf.getInt(DFS_BYTES_PER_CHECKSUM_KEY,
+          DFS_BYTES_PER_CHECKSUM_DEFAULT);
+      socketTimeout = conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY,
           HdfsConstants.READ_TIMEOUT);
       /** dfs.write.packet.size is an internal config variable */
-      writePacketSize = conf.getInt(
-          DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY,
-          DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
-      defaultBlockSize = conf.getLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
+      writePacketSize = conf.getInt(DFS_CLIENT_WRITE_PACKET_SIZE_KEY,
+          DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
+      defaultBlockSize = conf.getLong(DFS_BLOCK_SIZE_KEY,
           DEFAULT_BLOCK_SIZE);
       defaultReplication = (short) conf.getInt(
-          DFSConfigKeys.DFS_REPLICATION_KEY,
-          DFSConfigKeys.DFS_REPLICATION_DEFAULT);
+          DFS_REPLICATION_KEY, DFS_REPLICATION_DEFAULT);
       taskId = conf.get("mapreduce.task.attempt.id", "NONMAPREDUCE");
-      socketCacheCapacity = conf.getInt(
-          DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY,
-          DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_DEFAULT);
-      prefetchSize = conf.getLong(
-          DFSConfigKeys.DFS_CLIENT_READ_PREFETCH_SIZE_KEY,
+      socketCacheCapacity = conf.getInt(DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY,
+          DFS_CLIENT_SOCKET_CACHE_CAPACITY_DEFAULT);
+      prefetchSize = conf.getLong(DFS_CLIENT_READ_PREFETCH_SIZE_KEY,
           10 * defaultBlockSize);
       timeWindow = conf
-          .getInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 3000);
-      nCachedConnRetry = conf.getInt(
-          DFSConfigKeys.DFS_CLIENT_CACHED_CONN_RETRY_KEY,
-          DFSConfigKeys.DFS_CLIENT_CACHED_CONN_RETRY_DEFAULT);
-      nBlockWriteRetry = conf.getInt(
-          DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_RETRIES_KEY,
-          DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_RETRIES_DEFAULT);
+          .getInt(DFS_CLIENT_RETRY_WINDOW_BASE, 3000);
+      nCachedConnRetry = conf.getInt(DFS_CLIENT_CACHED_CONN_RETRY_KEY,
+          DFS_CLIENT_CACHED_CONN_RETRY_DEFAULT);
+      nBlockWriteRetry = conf.getInt(DFS_CLIENT_BLOCK_WRITE_RETRIES_KEY,
+          DFS_CLIENT_BLOCK_WRITE_RETRIES_DEFAULT);
       nBlockWriteLocateFollowingRetry = conf
-          .getInt(
-              DFSConfigKeys
-              .DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY,
-              DFSConfigKeys
-              .DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_DEFAULT);
+          .getInt(DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY,
+              DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_DEFAULT);
       uMask = FsPermission.getUMask(conf);
     }
   }
