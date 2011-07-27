@@ -41,9 +41,9 @@ public class NameNodeRaidTestUtil {
     return dir.rootDir.getNode(src, resolveLink);
   }
 
-  public static NavigableMap<String, DatanodeDescriptor> getDatanodeMap(
-      final FSNamesystem namesystem) {
-    return namesystem.datanodeMap;
-  }
+//  public static NavigableMap<String, DatanodeDescriptor> getDatanodeMap(
+//      final FSNamesystem namesystem) {
+//    return namesystem.datanodeMap;
+//  }
 }
 
