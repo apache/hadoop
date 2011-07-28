@@ -261,6 +261,17 @@ admin.enableTable(table);
   that includes versioning.  Take that into consideration when making your design, as well as block size for the ColumnFamily.  
   </para>
   </section>
+  <section xml:id="cf.in.memory">
+  <title>
+  In-Memory ColumnFamilies
+  </title>
+  <para>ColumnFamilies can optionally be defined as in-memory.  Data is still persisted to disk, just like any other ColumnFamily.  
+  In-memory blocks have the highest priority in the <xref linkend="block.cache" />, but it is not a guarantee that the entire table
+  will be in memory.
+  </para>
+  <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link> for more information.
+  </para>
+  </section>
 
   </chapter>
 
@@ -984,9 +995,19 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
         </para>
       </section>
 
-
-      </section>
-
+     </section>  <!--  store -->
+     
+  <section xml:id="block.cache">
+     <title>Block Cache</title>
+      <para>The Block Cache contains three levels of block priority to allow for scan-resistance and in-memory ColumnFamilies.  A block is added with an in-memory
+      flag if the containing ColumnFamily is defined in-memory, otherwise a block becomes a single access priority.  Once a block is accessed again, it changes to multiple access. 
+      This is used to prevent scans from thrashing the cache, adding a least-frequently-used element to the eviction algorithm.  Blocks from in-memory ColumnFamilies
+      are the last to be evicted.
+      </para>
+      <para>
+       For more information, see the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/io/hfile/LruBlockCache.html">LruBlockCache source</link>
+       </para>
+  </section>
 
   </section>
       <section xml:id="wal">
