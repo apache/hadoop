@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.*;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.Writable;
@@ -1341,10 +1342,10 @@ public abstract class FSEditLogOp {
    * Class for writing editlog ops
    */
   public static class Writer {
-    private final DataOutputStream out;
+    private final DataOutputBuffer buf;
 
-    public Writer(DataOutputStream out) {
-      this.out = out;
+    public Writer(DataOutputBuffer out) {
+      this.buf = out;
     }
 
     /**
@@ -1354,9 +1355,15 @@ public abstract class FSEditLogOp {
      * @throws IOException if an error occurs during writing.
      */
     public void writeOp(FSEditLogOp op) throws IOException {
-      out.writeByte(op.opCode.getOpCode());
-      
-      op.writeFields(out);
+      int start = buf.getLength();
+      buf.writeByte(op.opCode.getOpCode());
+      op.writeFields(buf);
+      int end = buf.getLength();
+      Checksum checksum = FSEditLog.getChecksum();
+      checksum.reset();
+      checksum.update(buf.getData(), start, end-start);
+      int sum = (int)checksum.getValue();
+      buf.writeInt(sum);
     }
   }
 

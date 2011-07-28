@@ -616,6 +616,9 @@ Trunk (unreleased changes)
     HDFS-2195. Refactor StorageDirectory to not be an non-static inner class.
     (todd via eli)
 
+    HDFS-2212. Refactor double-buffering code out of EditLogOutputStreams.
+    (todd via eli)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
