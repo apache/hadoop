@@ -199,7 +199,21 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
 }</programlisting>
   </para>
   </section>
-  </section>
+  <section xml:id="def.log.flush">
+  <title>
+  Table Creation: Deferred Log Flush
+  </title>
+<para>
+The default behavior for Puts using the Write Ahead Log (WAL) is that <classname>HLog</classname> edits will be written immediately.  If deferred log flush is used, 
+WAL edits are kept in memory until the flush period.  The benefit is aggregated and asynchronous <classname>HLog</classname>- writes, but the potential downside is that if
+ the RegionServer goes down the yet-to-be-flushed edits are lost.  This is safer, however, than not using WAL at all with Puts.
+</para>
+<para>
+Deferred log flush can be configured on tables via <link
+      xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html">HTableDescriptor</link>.  The default value of <varname>hbase.regionserver.optionallogflushinterval</varname> is 1000ms.
+</para>
+  </section>  
+  </section>  <!-- batch loading -->
 
   <section>
     <title>HBase Client</title>
