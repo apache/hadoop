@@ -102,7 +102,7 @@ public class BlockPoolSliceStorage extends Storage {
       StorageDirectory sd = new StorageDirectory(dataDir, null, false);
       StorageState curState;
       try {
-        curState = sd.analyzeStorage(startOpt);
+        curState = sd.analyzeStorage(startOpt, this);
         // sd is locked but not opened
         switch (curState) {
         case NORMAL:
@@ -176,7 +176,7 @@ public class BlockPoolSliceStorage extends Storage {
     this.namespaceID = nsInfo.getNamespaceID();
     this.blockpoolID = nsInfo.getBlockPoolID();
     this.storageType = NodeType.DATA_NODE;
-    bpSdir.write();
+    writeProperties(bpSdir);
   }
 
   /**
@@ -184,7 +184,7 @@ public class BlockPoolSliceStorage extends Storage {
    * VERSION file
    */
   @Override
-  protected void setFields(Properties props, StorageDirectory sd)
+  protected void setPropertiesFromFields(Properties props, StorageDirectory sd)
       throws IOException {
     props.setProperty("layoutVersion", String.valueOf(layoutVersion));
     props.setProperty("namespaceID", String.valueOf(namespaceID));
@@ -208,7 +208,7 @@ public class BlockPoolSliceStorage extends Storage {
   }
   
   @Override
-  protected void getFields(Properties props, StorageDirectory sd)
+  protected void setFieldsFromProperties(Properties props, StorageDirectory sd)
       throws IOException {
     setLayoutVersion(props, sd);
     setNamespaceID(props, sd);
@@ -237,7 +237,7 @@ public class BlockPoolSliceStorage extends Storage {
     if (startOpt == StartupOption.ROLLBACK)
       doRollback(sd, nsInfo); // rollback if applicable
     
-    sd.read();
+    readProperties(sd);
     checkVersionUpgradable(this.layoutVersion);
     assert this.layoutVersion >= FSConstants.LAYOUT_VERSION 
        : "Future version is not allowed";
@@ -331,7 +331,7 @@ public class BlockPoolSliceStorage extends Storage {
     assert this.namespaceID == nsInfo.getNamespaceID() 
         : "Data-node and name-node layout versions must be the same.";
     this.cTime = nsInfo.getCTime();
-    bpSd.write();
+    writeProperties(bpSd);
     
     // 4.rename <SD>/curernt/<bpid>/previous.tmp to <SD>/curernt/<bpid>/previous
     rename(bpTmpDir, bpPrevDir);
@@ -383,8 +383,7 @@ public class BlockPoolSliceStorage extends Storage {
       return;
     // read attributes out of the VERSION file of previous directory
     DataStorage prevInfo = new DataStorage();
-    StorageDirectory prevSD = prevInfo.new StorageDirectory(bpSd.getRoot());
-    prevSD.read(prevSD.getPreviousVersionFile());
+    prevInfo.readPreviousVersionProperties(bpSd);
 
     // We allow rollback to a state, which is either consistent with
     // the namespace state or can be further upgraded to it.
@@ -392,7 +391,7 @@ public class BlockPoolSliceStorage extends Storage {
     // && ( DN.previousCTime <= NN.ctime)
     if (!(prevInfo.getLayoutVersion() >= FSConstants.LAYOUT_VERSION && 
         prevInfo.getCTime() <= nsInfo.getCTime())) { // cannot rollback
-      throw new InconsistentFSStateException(prevSD.getRoot(),
+      throw new InconsistentFSStateException(bpSd.getRoot(),
           "Cannot rollback to a newer state.\nDatanode previous state: LV = "
               + prevInfo.getLayoutVersion() + " CTime = " + prevInfo.getCTime()
               + " is newer than the namespace state: LV = "

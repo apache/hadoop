@@ -645,7 +645,7 @@ public class SecondaryNameNode implements Runnable {
               "cannot access checkpoint directory.");
         StorageState curState;
         try {
-          curState = sd.analyzeStorage(HdfsConstants.StartupOption.REGULAR);
+          curState = sd.analyzeStorage(HdfsConstants.StartupOption.REGULAR, storage);
           // sd is locked but not opened
           switch(curState) {
           case NON_EXISTENT:

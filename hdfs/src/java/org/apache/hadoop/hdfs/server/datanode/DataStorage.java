@@ -56,7 +56,6 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DiskChecker;
-import org.apache.hadoop.util.StringUtils;
 
 /** 
  * Data storage information file.
@@ -153,7 +152,7 @@ public class DataStorage extends Storage {
       StorageDirectory sd = new StorageDirectory(dataDir);
       StorageState curState;
       try {
-        curState = sd.analyzeStorage(startOpt);
+        curState = sd.analyzeStorage(startOpt, this);
         // sd is locked but not opened
         switch(curState) {
         case NORMAL:
@@ -274,7 +273,7 @@ public class DataStorage extends Storage {
     this.namespaceID = nsInfo.getNamespaceID();
     this.cTime = 0;
     // store storageID as it currently is
-    sd.write();
+    writeProperties(sd);
   }
 
   /*
@@ -282,7 +281,7 @@ public class DataStorage extends Storage {
    * DataStorage VERSION file
   */
   @Override
-  protected void setFields(Properties props, 
+  protected void setPropertiesFromFields(Properties props, 
                            StorageDirectory sd 
                            ) throws IOException {
     props.setProperty("storageType", storageType.toString());
@@ -301,7 +300,7 @@ public class DataStorage extends Storage {
    * DataStorage VERSION file and verify them.
    */
   @Override
-  protected void getFields(Properties props, StorageDirectory sd)
+  protected void setFieldsFromProperties(Properties props, StorageDirectory sd)
       throws IOException {
     setLayoutVersion(props, sd);
     setcTime(props, sd);
@@ -373,7 +372,7 @@ public class DataStorage extends Storage {
     if (startOpt == StartupOption.ROLLBACK) {
       doRollback(sd, nsInfo); // rollback if applicable
     }
-    sd.read();
+    readProperties(sd);
     checkVersionUpgradable(this.layoutVersion);
     assert this.layoutVersion >= FSConstants.LAYOUT_VERSION :
       "Future version is not allowed";
@@ -448,7 +447,7 @@ public class DataStorage extends Storage {
     if (LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
       clusterID = nsInfo.getClusterID();
       layoutVersion = nsInfo.getLayoutVersion();
-      sd.write();
+      writeProperties(sd);
       return;
     }
     
@@ -485,7 +484,7 @@ public class DataStorage extends Storage {
     // 4. Write version file under <SD>/current
     layoutVersion = FSConstants.LAYOUT_VERSION;
     clusterID = nsInfo.getClusterID();
-    sd.write();
+    writeProperties(sd);
     
     // 5. Rename <SD>/previous.tmp to <SD>/previous
     rename(tmpDir, prevDir);
@@ -539,14 +538,13 @@ public class DataStorage extends Storage {
     if (!prevDir.exists())
       return;
     DataStorage prevInfo = new DataStorage();
-    StorageDirectory prevSD = prevInfo.new StorageDirectory(sd.getRoot());
-    prevSD.read(prevSD.getPreviousVersionFile());
+    prevInfo.readPreviousVersionProperties(sd);
 
     // We allow rollback to a state, which is either consistent with
     // the namespace state or can be further upgraded to it.
     if (!(prevInfo.getLayoutVersion() >= FSConstants.LAYOUT_VERSION
           && prevInfo.getCTime() <= nsInfo.getCTime()))  // cannot rollback
-      throw new InconsistentFSStateException(prevSD.getRoot(),
+      throw new InconsistentFSStateException(sd.getRoot(),
           "Cannot rollback to a newer state.\nDatanode previous state: LV = "
               + prevInfo.getLayoutVersion() + " CTime = " + prevInfo.getCTime()
               + " is newer than the namespace state: LV = "

@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -252,7 +253,9 @@ public class TestDFSUpgradeFromImage extends TestCase {
         .build();
       fail("Was able to start NN from 0.3.0 image");
     } catch (IOException ioe) {
-      assertTrue(ioe.toString().contains("Old layout version is 'too old'"));
+      if (!ioe.toString().contains("Old layout version is 'too old'")) {
+        throw ioe;
+      }
     }
   }
   

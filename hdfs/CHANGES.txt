@@ -608,10 +608,13 @@ Trunk (unreleased changes)
     HDFS-2149. Move EditLogOp serialization formats into FsEditLogOp
     implementations. (Ivan Kelly via todd)
 
-    HDFS-2191.  Move datanodeMap from FSNamesystem to DatanodeManager.
+    HDFS-2191. Move datanodeMap from FSNamesystem to DatanodeManager.
     (szetszwo)
 
-    HDFS-2200.  Change FSNamesystem.LOG to package private.  (szetszwo)
+    HDFS-2200. Change FSNamesystem.LOG to package private. (szetszwo)
+
+    HDFS-2195. Refactor StorageDirectory to not be an non-static inner class.
+    (todd via eli)
 
   OPTIMIZATIONS
 

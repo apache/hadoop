@@ -582,7 +582,7 @@ public class NNStorage extends Storage implements Closeable {
     for (NNStorageListener listener : listeners) {
       listener.formatOccurred(sd);
     }
-    sd.write();
+    writeProperties(sd);
 
     LOG.info("Storage directory " + sd.getRoot()
              + " has been successfully formatted.");
@@ -669,10 +669,9 @@ public class NNStorage extends Storage implements Closeable {
   }
 
   @Override // Storage
-  protected void getFields(Properties props,
-                           StorageDirectory sd
-                           ) throws IOException {
-    super.getFields(props, sd);
+  protected void setFieldsFromProperties(
+      Properties props, StorageDirectory sd) throws IOException {
+    super.setFieldsFromProperties(props, sd);
     if (layoutVersion == 0) {
       throw new IOException("NameNode directory "
                             + sd.getRoot() + " is not formatted.");
@@ -719,10 +718,10 @@ public class NNStorage extends Storage implements Closeable {
    * @throws IOException
    */
   @Override // Storage
-  protected void setFields(Properties props,
+  protected void setPropertiesFromFields(Properties props,
                            StorageDirectory sd
                            ) throws IOException {
-    super.setFields(props, sd);
+    super.setPropertiesFromFields(props, sd);
     // Set blockpoolID in version with federation support
     if (LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
       props.setProperty("blockpoolID", blockpoolID);
@@ -1003,7 +1002,7 @@ public class NNStorage extends Storage implements Closeable {
     while(sdit.hasNext()) {
       StorageDirectory sd = sdit.next();
       try {
-        Properties props = sd.readFrom(sd.getVersionFile());
+        Properties props = readPropertiesFile(sd.getVersionFile());
         cid = props.getProperty("clusterID");
         LOG.info("current cluster id for sd="+sd.getCurrentDir() + 
             ";lv=" + layoutVersion + ";cid=" + cid);
