@@ -113,7 +113,8 @@ public class HTable implements HTableInterface, Closeable {
   private long maxScannerResultSize;
   private boolean closed;
   private int operationTimeout;
-
+  private static final int DOPUT_WB_CHECK = 10;    // i.e., doPut checks the writebuffer every X Puts.
+  
   /**
    * Creates an object to access a HBase table.
    * Internally it creates a new instance of {@link Configuration} and a new
@@ -706,10 +707,20 @@ public class HTable implements HTableInterface, Closeable {
   }
 
   private void doPut(final List<Put> puts) throws IOException {
+    int n = 0;
     for (Put put : puts) {
       validatePut(put);
       writeBuffer.add(put);
       currentWriteBufferSize += put.heapSize();
+     
+      // we need to periodically see if the writebuffer is full instead of waiting until the end of the List
+      n++;
+      if (n == DOPUT_WB_CHECK) {
+        if (autoFlush || currentWriteBufferSize > writeBufferSize) {
+          flushCommits();
+          n = 0;
+        }
+      }
     }
     if (autoFlush || currentWriteBufferSize > writeBufferSize) {
       flushCommits();

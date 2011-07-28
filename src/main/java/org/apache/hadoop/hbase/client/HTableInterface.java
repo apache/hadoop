@@ -190,8 +190,9 @@ public interface HTableInterface {
    * until the internal buffer is full.
    * <p>
    * This can be used for group commit, or for submitting user defined
-   * batches, but sending large lists of values is not recommended. That may
-   * produce performance problems.
+   * batches.  The writeBuffer will be periodically inspected while the List
+   * is processed, so depending on the List size the writeBuffer may flush
+   * not at all, or more than once.
    * @param puts The list of mutations to apply. The batch put is done by
    * aggregating the iteration of the Puts over the write buffer
    * at the client-side for a single RPC call.
