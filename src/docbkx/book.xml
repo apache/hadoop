@@ -284,7 +284,7 @@ admin.enableTable(table);
           <para>Block cache hit ratio (0 to 100).  TODO:  describe impact to ratio where read requests that have cacheBlocks=false</para>
 		  </section>
           <section xml:id="hbase.regionserver.blockCacheSize"><title><varname>hbase.regionserver.blockCacheSize</varname></title>
-          <para>Block cache size in memory (bytes)</para>
+          <para>Block cache size in memory (bytes).  i.e., memory in use by the BlockCache</para>
 		  </section>
           <section xml:id="hbase.regionserver.compactionQueueSize"><title><varname>hbase.regionserver.compactionQueueSize</varname></title>
           <para>Size of the compaction queue.  This is the number of stores in the region that have been targeted for compaction.</para>
