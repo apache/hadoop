@@ -1145,7 +1145,7 @@ public class AssignmentManager extends ZooKeeperListener {
       LOG.debug("rs=" + (RegionState)ctx + ", server=" + this.destination.toString());
       // Async exists to set a watcher so we'll get triggered when
       // unassigned node changes.
-      this.zkw.getZooKeeper().exists(path, this.zkw,
+      this.zkw.getRecoverableZooKeeper().getZooKeeper().exists(path, this.zkw,
         new ExistsUnassignedAsyncCallback(this.counter, destination), ctx);
     }
   }

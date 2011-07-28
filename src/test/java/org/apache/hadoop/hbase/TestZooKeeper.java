@@ -99,9 +99,8 @@ public class TestZooKeeper {
     int sessionTimeout = 5 * 1000; // 5 seconds
     HConnection connection = HConnectionManager.getConnection(c);
     ZooKeeperWatcher connectionZK = connection.getZooKeeperWatcher();
-    long sessionID = connectionZK.getZooKeeper().getSessionId();
-    byte [] password = connectionZK.getZooKeeper().getSessionPasswd();
-
+    long sessionID = connectionZK.getRecoverableZooKeeper().getSessionId();
+    byte[] password = connectionZK.getRecoverableZooKeeper().getSessionPasswd();
     ZooKeeper zk = new ZooKeeper(quorumServers, sessionTimeout,
         EmptyWatcher.instance, sessionID, password);
     LOG.info("Session timeout=" + zk.getSessionTimeout() +
@@ -116,15 +115,16 @@ public class TestZooKeeper {
 
     // Check that the old ZK connection is closed, means we did expire
     System.err.println("ZooKeeper should have timed out");
-    String state = connectionZK.getZooKeeper().getState().toString();
-    Assert.assertTrue("State=" + state,
-      connectionZK.getZooKeeper().getState().equals(States.CLOSED));
+    String state = connectionZK.getRecoverableZooKeeper().getState().toString();
+    LOG.info("state=" + connectionZK.getRecoverableZooKeeper().getState());
+    Assert.assertTrue(connectionZK.getRecoverableZooKeeper().getState().
+      equals(States.CLOSED));
 
     // Check that the client recovered
     ZooKeeperWatcher newConnectionZK = connection.getZooKeeperWatcher();
-    LOG.info("state=" + newConnectionZK.getZooKeeper().getState());
-    Assert.assertTrue(newConnectionZK.getZooKeeper().getState().equals(
-        States.CONNECTED));
+    LOG.info("state=" + newConnectionZK.getRecoverableZooKeeper().getState());
+    Assert.assertTrue(newConnectionZK.getRecoverableZooKeeper().getState().equals(
+      States.CONNECTED));
   }
   
   @Test

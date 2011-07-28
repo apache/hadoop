@@ -198,7 +198,7 @@ public class TestSplitLogManager {
     LOG.info("TestOrphanTaskAcquisition");
 
     String tasknode = ZKSplitLog.getEncodedNodeName(zkw, "orphan/test/slash");
-    zkw.getZooKeeper().create(tasknode,
+    zkw.getRecoverableZooKeeper().create(tasknode,
         TaskState.TASK_OWNED.get("dummy-worker"), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 
@@ -231,7 +231,7 @@ public class TestSplitLogManager {
         " startup");
     String tasknode = ZKSplitLog.getEncodedNodeName(zkw, "orphan/test/slash");
     //create an unassigned orphan task
-    zkw.getZooKeeper().create(tasknode,
+    zkw.getRecoverableZooKeeper().create(tasknode,
         TaskState.TASK_UNASSIGNED.get("dummy-worker"), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
     int version = ZKUtil.checkExists(zkw, tasknode);
@@ -391,7 +391,7 @@ public class TestSplitLogManager {
 
     // create an orphan task in OWNED state
     String tasknode1 = ZKSplitLog.getEncodedNodeName(zkw, "orphan/1");
-    zkw.getZooKeeper().create(tasknode1,
+    zkw.getRecoverableZooKeeper().create(tasknode1,
         TaskState.TASK_OWNED.get("dummy-worker"), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 

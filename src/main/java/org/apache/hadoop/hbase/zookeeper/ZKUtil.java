@@ -70,20 +70,20 @@ public class ZKUtil {
    * @return connection to zookeeper
    * @throws IOException if unable to connect to zk or config problem
    */
-  public static ZooKeeper connect(Configuration conf, Watcher watcher)
+  public static RecoverableZooKeeper connect(Configuration conf, Watcher watcher)
   throws IOException {
     Properties properties = ZKConfig.makeZKProps(conf);
     String ensemble = ZKConfig.getZKQuorumServersString(properties);
     return connect(conf, ensemble, watcher);
   }
 
-  public static ZooKeeper connect(Configuration conf, String ensemble,
+  public static RecoverableZooKeeper connect(Configuration conf, String ensemble,
       Watcher watcher)
   throws IOException {
     return connect(conf, ensemble, watcher, "");
   }
 
-  public static ZooKeeper connect(Configuration conf, String ensemble,
+  public static RecoverableZooKeeper connect(Configuration conf, String ensemble,
       Watcher watcher, final String descriptor)
   throws IOException {
     if(ensemble == null) {
@@ -92,7 +92,11 @@ public class ZKUtil {
     int timeout = conf.getInt("zookeeper.session.timeout", 180 * 1000);
     LOG.debug(descriptor + " opening connection to ZooKeeper with ensemble (" +
         ensemble + ")");
-    return new ZooKeeper(ensemble, timeout, watcher);
+    int retry = conf.getInt("zookeeper.recovery.retry", 3);
+    int retryIntervalMillis = 
+      conf.getInt("zookeeper.recovery.retry.intervalmill", 1000);
+    return new RecoverableZooKeeper(ensemble, timeout, watcher, 
+        retry, retryIntervalMillis);
   }
 
   //
@@ -214,7 +218,7 @@ public class ZKUtil {
   public static boolean watchAndCheckExists(ZooKeeperWatcher zkw, String znode)
   throws KeeperException {
     try {
-      Stat s = zkw.getZooKeeper().exists(znode, zkw);
+      Stat s = zkw.getRecoverableZooKeeper().exists(znode, zkw);
       LOG.debug(zkw.prefix("Set watcher on existing znode " + znode));
       return s != null ? true : false;
     } catch (KeeperException e) {
@@ -242,7 +246,7 @@ public class ZKUtil {
   public static int checkExists(ZooKeeperWatcher zkw, String znode)
   throws KeeperException {
     try {
-      Stat s = zkw.getZooKeeper().exists(znode, null);
+      Stat s = zkw.getRecoverableZooKeeper().exists(znode, null);
       return s != null ? s.getVersion() : -1;
     } catch (KeeperException e) {
       LOG.warn(zkw.prefix("Unable to set watcher on znode (" + znode + ")"), e);
@@ -279,7 +283,7 @@ public class ZKUtil {
       ZooKeeperWatcher zkw, String znode)
   throws KeeperException {
     try {
-      List<String> children = zkw.getZooKeeper().getChildren(znode, zkw);
+      List<String> children = zkw.getRecoverableZooKeeper().getChildren(znode, zkw);
       return children;
     } catch(KeeperException.NoNodeException ke) {
       LOG.debug(zkw.prefix("Unable to list children of znode " + znode + " " +
@@ -339,7 +343,7 @@ public class ZKUtil {
     List<String> children = null;
     try {
       // List the children without watching
-      children = zkw.getZooKeeper().getChildren(znode, null);
+      children = zkw.getRecoverableZooKeeper().getChildren(znode, null);
     } catch(KeeperException.NoNodeException nne) {
       return null;
     } catch(InterruptedException ie) {
@@ -389,7 +393,7 @@ public class ZKUtil {
   public static boolean nodeHasChildren(ZooKeeperWatcher zkw, String znode)
   throws KeeperException {
     try {
-      return !zkw.getZooKeeper().getChildren(znode, null).isEmpty();
+      return !zkw.getRecoverableZooKeeper().getChildren(znode, null).isEmpty();
     } catch(KeeperException.NoNodeException ke) {
       LOG.debug(zkw.prefix("Unable to list children of znode " + znode + " " +
       "because node does not exist (not an error)"));
@@ -421,7 +425,7 @@ public class ZKUtil {
   public static int getNumberOfChildren(ZooKeeperWatcher zkw, String znode)
   throws KeeperException {
     try {
-      Stat stat = zkw.getZooKeeper().exists(znode, null);
+      Stat stat = zkw.getRecoverableZooKeeper().exists(znode, null);
       return stat == null ? 0 : stat.getNumChildren();
     } catch(KeeperException e) {
       LOG.warn(zkw.prefix("Unable to get children of node " + znode));
@@ -443,7 +447,7 @@ public class ZKUtil {
   public static byte [] getData(ZooKeeperWatcher zkw, String znode)
   throws KeeperException {
     try {
-      byte [] data = zkw.getZooKeeper().getData(znode, null, null);
+      byte [] data = zkw.getRecoverableZooKeeper().getData(znode, null, null);
       logRetrievedMsg(zkw, znode, data, false);
       return data;
     } catch (KeeperException.NoNodeException e) {
@@ -475,7 +479,7 @@ public class ZKUtil {
   public static byte [] getDataAndWatch(ZooKeeperWatcher zkw, String znode)
   throws KeeperException {
     try {
-      byte [] data = zkw.getZooKeeper().getData(znode, zkw, null);
+      byte [] data = zkw.getRecoverableZooKeeper().getData(znode, zkw, null);
       logRetrievedMsg(zkw, znode, data, true);
       return data;
     } catch (KeeperException.NoNodeException e) {
@@ -512,7 +516,7 @@ public class ZKUtil {
       Stat stat)
   throws KeeperException {
     try {
-      byte [] data = zkw.getZooKeeper().getData(znode, null, stat);
+      byte [] data = zkw.getRecoverableZooKeeper().getData(znode, null, stat);
       logRetrievedMsg(zkw, znode, data, false);
       return data;
     } catch (KeeperException.NoNodeException e) {
@@ -549,7 +553,7 @@ public class ZKUtil {
       byte [] data, int expectedVersion)
   throws KeeperException {
     try {
-      zkw.getZooKeeper().setData(znode, data, expectedVersion);
+      zkw.getRecoverableZooKeeper().setData(znode, data, expectedVersion);
     } catch(InterruptedException ie) {
       zkw.interruptedException(ie);
     }
@@ -583,7 +587,7 @@ public class ZKUtil {
       byte [] data, int expectedVersion)
   throws KeeperException, KeeperException.NoNodeException {
     try {
-      return zkw.getZooKeeper().setData(znode, data, expectedVersion) != null;
+      return zkw.getRecoverableZooKeeper().setData(znode, data, expectedVersion) != null;
     } catch (InterruptedException e) {
       zkw.interruptedException(e);
       return false;
@@ -654,7 +658,7 @@ public class ZKUtil {
       String znode, byte [] data)
   throws KeeperException {
     try {
-      zkw.getZooKeeper().create(znode, data, Ids.OPEN_ACL_UNSAFE,
+      zkw.getRecoverableZooKeeper().create(znode, data, Ids.OPEN_ACL_UNSAFE,
           CreateMode.EPHEMERAL);
     } catch (KeeperException.NodeExistsException nee) {
       if(!watchAndCheckExists(zkw, znode)) {
@@ -693,11 +697,11 @@ public class ZKUtil {
       ZooKeeperWatcher zkw, String znode, byte [] data)
   throws KeeperException {
     try {
-      zkw.getZooKeeper().create(znode, data, Ids.OPEN_ACL_UNSAFE,
+      zkw.getRecoverableZooKeeper().create(znode, data, Ids.OPEN_ACL_UNSAFE,
           CreateMode.PERSISTENT);
     } catch (KeeperException.NodeExistsException nee) {
       try {
-        zkw.getZooKeeper().exists(znode, zkw);
+        zkw.getRecoverableZooKeeper().exists(znode, zkw);
       } catch (InterruptedException e) {
         zkw.interruptedException(e);
         return false;
@@ -730,9 +734,9 @@ public class ZKUtil {
       String znode, byte [] data)
   throws KeeperException, KeeperException.NodeExistsException {
     try {
-      zkw.getZooKeeper().create(znode, data, Ids.OPEN_ACL_UNSAFE,
+      zkw.getRecoverableZooKeeper().create(znode, data, Ids.OPEN_ACL_UNSAFE,
           CreateMode.PERSISTENT);
-      return zkw.getZooKeeper().exists(znode, zkw).getVersion();
+      return zkw.getRecoverableZooKeeper().exists(znode, zkw).getVersion();
     } catch (InterruptedException e) {
       zkw.interruptedException(e);
       return -1;
@@ -757,7 +761,7 @@ public class ZKUtil {
   public static void asyncCreate(ZooKeeperWatcher zkw,
       String znode, byte [] data, final AsyncCallback.StringCallback cb,
       final Object ctx) {
-    zkw.getZooKeeper().create(znode, data, Ids.OPEN_ACL_UNSAFE,
+    zkw.getRecoverableZooKeeper().getZooKeeper().create(znode, data, Ids.OPEN_ACL_UNSAFE,
        CreateMode.PERSISTENT, cb, ctx);
   }
 
@@ -775,7 +779,7 @@ public class ZKUtil {
       String znode)
   throws KeeperException {
     try {
-      ZooKeeper zk = zkw.getZooKeeper();
+      RecoverableZooKeeper zk = zkw.getRecoverableZooKeeper();
       if (zk.exists(znode, false) == null) {
         zk.create(znode, new byte[0], Ids.OPEN_ACL_UNSAFE,
             CreateMode.PERSISTENT);
@@ -783,7 +787,7 @@ public class ZKUtil {
     } catch(KeeperException.NodeExistsException nee) {
     } catch(KeeperException.NoAuthException nee){
       try {
-        if (null == zkw.getZooKeeper().exists(znode, false)) {
+        if (null == zkw.getRecoverableZooKeeper().exists(znode, false)) {
           // If we failed to create the file and it does not already exist.
           throw(nee);
         }
@@ -813,7 +817,7 @@ public class ZKUtil {
       if(znode == null) {
         return;
       }
-      zkw.getZooKeeper().create(znode, new byte[0], Ids.OPEN_ACL_UNSAFE,
+      zkw.getRecoverableZooKeeper().create(znode, new byte[0], Ids.OPEN_ACL_UNSAFE,
           CreateMode.PERSISTENT);
     } catch(KeeperException.NodeExistsException nee) {
       return;
@@ -845,7 +849,7 @@ public class ZKUtil {
       int version)
   throws KeeperException {
     try {
-      zkw.getZooKeeper().delete(node, version);
+      zkw.getRecoverableZooKeeper().delete(node, version);
       return true;
     } catch(KeeperException.BadVersionException bve) {
       return false;
@@ -864,7 +868,7 @@ public class ZKUtil {
   public static void deleteNodeFailSilent(ZooKeeperWatcher zkw, String node)
   throws KeeperException {
     try {
-      zkw.getZooKeeper().delete(node, -1);
+      zkw.getRecoverableZooKeeper().delete(node, -1);
     } catch(KeeperException.NoNodeException nne) {
     } catch(InterruptedException ie) {
       zkw.interruptedException(ie);
@@ -886,7 +890,7 @@ public class ZKUtil {
           deleteNodeRecursively(zkw, joinZNode(node, child));
         }
       }
-      zkw.getZooKeeper().delete(node, -1);
+      zkw.getRecoverableZooKeeper().delete(node, -1);
     } catch(InterruptedException ie) {
       zkw.interruptedException(ie);
     }

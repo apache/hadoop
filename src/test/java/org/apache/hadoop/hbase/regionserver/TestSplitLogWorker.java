@@ -129,7 +129,7 @@ public class TestSplitLogWorker {
     LOG.info("testAcquireTaskAtStartup");
     ZKSplitLog.Counters.resetCounters();
 
-    zkw.getZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, "tatas"),
+    zkw.getRecoverableZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, "tatas"),
         TaskState.TASK_UNASSIGNED.get("mgr"), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 
@@ -161,7 +161,7 @@ public class TestSplitLogWorker {
     LOG.info("testRaceForTask");
     ZKSplitLog.Counters.resetCounters();
 
-    zkw.getZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, "trft"),
+    zkw.getRecoverableZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, "trft"),
         TaskState.TASK_UNASSIGNED.get("manager"), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 
@@ -200,7 +200,7 @@ public class TestSplitLogWorker {
       Thread.sleep(100);
 
       // this time create a task node after starting the splitLogWorker
-      zkw.getZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, "tpt_task"),
+      zkw.getRecoverableZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, "tpt_task"),
         TaskState.TASK_UNASSIGNED.get("manager"), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 
@@ -228,7 +228,7 @@ public class TestSplitLogWorker {
       Thread.yield(); // let the worker start
       Thread.sleep(100);
 
-      zkw.getZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, "tmt_task"),
+      zkw.getRecoverableZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, "tmt_task"),
         TaskState.TASK_UNASSIGNED.get("manager"), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 
@@ -236,7 +236,7 @@ public class TestSplitLogWorker {
       // now the worker is busy doing the above task
 
       // create another task
-      zkw.getZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, "tmt_task_2"),
+      zkw.getRecoverableZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, "tmt_task_2"),
         TaskState.TASK_UNASSIGNED.get("manager"), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 
@@ -264,7 +264,7 @@ public class TestSplitLogWorker {
     Thread.yield(); // let the worker start
     Thread.sleep(100);
 
-    zkw.getZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, "task"),
+    zkw.getRecoverableZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, "task"),
         TaskState.TASK_UNASSIGNED.get("manager"), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 
@@ -277,7 +277,7 @@ public class TestSplitLogWorker {
     waitForCounter(tot_wkr_preempt_task, 0, 1, 1000);
 
     // create a RESCAN node
-    zkw.getZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, "RESCAN"),
+    zkw.getRecoverableZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, "RESCAN"),
         TaskState.TASK_UNASSIGNED.get("manager"), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT_SEQUENTIAL);
 

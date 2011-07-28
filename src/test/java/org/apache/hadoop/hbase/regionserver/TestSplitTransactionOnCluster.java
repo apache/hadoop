@@ -139,7 +139,7 @@ public class TestSplitTransactionOnCluster {
       String path = ZKAssign.getNodeName(t.getConnection().getZooKeeperWatcher(),
         hri.getEncodedName());
       Stat stats =
-        t.getConnection().getZooKeeperWatcher().getZooKeeper().exists(path, false);
+        t.getConnection().getZooKeeperWatcher().getRecoverableZooKeeper().exists(path, false);
       LOG.info("EPHEMERAL NODE BEFORE SERVER ABORT, path=" + path + ", stats=" + stats);
       RegionTransitionData rtd =
         ZKAssign.getData(t.getConnection().getZooKeeperWatcher(),
@@ -162,7 +162,7 @@ public class TestSplitTransactionOnCluster {
         assertTrue(daughters.contains(r));
       }
       // Finally assert that the ephemeral SPLIT znode was cleaned up.
-      stats = t.getConnection().getZooKeeperWatcher().getZooKeeper().exists(path, false);
+      stats = t.getConnection().getZooKeeperWatcher().getRecoverableZooKeeper().exists(path, false);
       LOG.info("EPHEMERAL NODE AFTER SERVER ABORT, path=" + path + ", stats=" + stats);
       assertTrue(stats == null);
     } finally {

@@ -1706,8 +1706,8 @@ public class HConnectionManager {
       }
       this.servers.clear();
       if (this.zooKeeper != null) {
-        LOG.info("Closed zookeeper sessionid=0x"
-            + Long.toHexString(this.zooKeeper.getZooKeeper().getSessionId()));
+        LOG.info("Closed zookeeper sessionid=0x" +
+          Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()));
         this.zooKeeper.close();
         this.zooKeeper = null;
       }

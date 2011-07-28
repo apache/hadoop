@@ -310,7 +310,16 @@ public class Bytes {
   public static String toStringBinary(final byte [] b) {
     return toStringBinary(b, 0, b.length);
   }
-
+  
+  /**
+   * The same as {@link #toStringBinary(byte[])}, but returns a string "null"
+   * if given a null argument.
+   */
+  public static String toStringBinarySafe(final byte [] b) {
+    if (b == null)
+      return "null";
+    return toStringBinary(b, 0, b.length);
+  }
   /**
    * Write a printable representation of a byte array. Non-printable
    * characters are hex escaped in the format \\x%02X, eg:

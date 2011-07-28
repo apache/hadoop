@@ -329,7 +329,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
    */
   private boolean ownTask(boolean isFirstTime) {
     try {
-      Stat stat = this.watcher.getZooKeeper().setData(currentTask,
+      Stat stat = this.watcher.getRecoverableZooKeeper().setData(currentTask,
           TaskState.TASK_OWNED.get(serverName), currentVersion);
       if (stat == null) {
         LOG.warn("zk.setData() returned null for path " + currentTask);
@@ -392,8 +392,9 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
   }
 
   void getDataSetWatchAsync() {
-    this.watcher.getZooKeeper().getData(currentTask, this.watcher,
-        new GetDataAsyncCallback(), null);
+    this.watcher.getRecoverableZooKeeper().getZooKeeper().
+      getData(currentTask, this.watcher,
+      new GetDataAsyncCallback(), null);
     tot_wkr_get_data_queued.incrementAndGet();
   }
 

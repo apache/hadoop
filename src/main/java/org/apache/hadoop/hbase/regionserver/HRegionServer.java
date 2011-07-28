@@ -879,7 +879,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       LOG.info("Serving as " + this.serverNameFromMasterPOV +
         ", RPC listening on " + this.isa +
         ", sessionid=0x" +
-        Long.toHexString(this.zooKeeper.getZooKeeper().getSessionId()));
+        Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()));
       isOnline = true;
     } catch (Throwable e) {
       this.isOnline = false;

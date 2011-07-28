@@ -197,6 +197,7 @@ public class SplitLogManager extends ZooKeeperListener {
    * @throws IOException
    *             if there was an error while splitting any log file
    * @return cumulative size of the logfiles split
+   * @throws KeeperException 
    */
   public long splitLogDistributed(final Path logDir) throws IOException {
     List<Path> logDirs = new ArrayList<Path>();
@@ -370,7 +371,8 @@ public class SplitLogManager extends ZooKeeperListener {
 
 
   private void getDataSetWatch(String path, Long retry_count) {
-    this.watcher.getZooKeeper().getData(path, this.watcher,
+    this.watcher.getRecoverableZooKeeper().getZooKeeper().
+        getData(path, this.watcher,
         new GetDataAsyncCallback(), retry_count);
     tot_mgr_get_data_queued.incrementAndGet();
   }
@@ -524,7 +526,8 @@ public class SplitLogManager extends ZooKeeperListener {
 
   private void deleteNode(String path, Long retries) {
     tot_mgr_node_delete_queued.incrementAndGet();
-    this.watcher.getZooKeeper().delete(path, -1, new DeleteAsyncCallback(),
+    this.watcher.getRecoverableZooKeeper().getZooKeeper().
+      delete(path, -1, new DeleteAsyncCallback(),
         retries);
   }
 
@@ -551,9 +554,11 @@ public class SplitLogManager extends ZooKeeperListener {
   /**
    * signal the workers that a task was resubmitted by creating the
    * RESCAN node.
+   * @throws KeeperException 
    */
   private void createRescanNode(long retries) {
-    watcher.getZooKeeper().create(ZKSplitLog.getRescanNode(watcher),
+    this.watcher.getRecoverableZooKeeper().getZooKeeper().
+      create(ZKSplitLog.getRescanNode(watcher),
         TaskState.TASK_UNASSIGNED.get(serverName), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT_SEQUENTIAL,
         new CreateRescanAsyncCallback(), new Long(retries));

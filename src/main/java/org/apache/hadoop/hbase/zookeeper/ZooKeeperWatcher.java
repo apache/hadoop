@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.logging.Log;
@@ -34,7 +33,6 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooKeeper;
 
 /**
  * Acts as the single ZooKeeper Watcher.  One instance of this is instantiated
@@ -58,7 +56,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
   private String quorum;
 
   // zookeeper connection
-  private ZooKeeper zooKeeper;
+  private RecoverableZooKeeper recoverableZooKeeper;
 
   // abortable in case of zk failure
   private Abortable abortable;
@@ -116,51 +114,11 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
     this.identifier = descriptor;
     this.abortable = abortable;
     setNodeNames(conf);
-    this.zooKeeper = ZKUtil.connect(conf, quorum, this, descriptor);
+    this.recoverableZooKeeper = ZKUtil.connect(conf, quorum, this, descriptor);
     try {
       // Create all the necessary "directories" of znodes
       // TODO: Move this to an init method somewhere so not everyone calls it?
-
-      // The first call against zk can fail with connection loss.  Seems common.
-      // Apparently this is recoverable.  Retry a while.
-      // See http://wiki.apache.org/hadoop/ZooKeeper/ErrorHandling
-      // TODO: Generalize out in ZKUtil.
-      long wait = conf.getLong(HConstants.ZOOKEEPER_RECOVERABLE_WAITTIME,
-          HConstants.DEFAULT_ZOOKEPER_RECOVERABLE_WAITIME);
-      long finished = System.currentTimeMillis() + wait;
-      KeeperException ke = null;
-      do {
-        try {
-          ZKUtil.createAndFailSilent(this, baseZNode);
-          ke = null;
-          break;
-        } catch (KeeperException.ConnectionLossException e) {
-          if (LOG.isDebugEnabled() && (isFinishedRetryingRecoverable(finished))) {
-            LOG.debug("Retrying zk create for another " +
-              (finished - System.currentTimeMillis()) +
-              "ms; set 'hbase.zookeeper.recoverable.waittime' to change " +
-              "wait time); " + e.getMessage());
-          }
-          ke = e;
-        }
-      } while (isFinishedRetryingRecoverable(finished));
-      // Convert connectionloss exception to ZKCE.
-      if (ke != null) {
-        try {
-          // If we don't close it, the zk connection managers won't be killed
-          this.zooKeeper.close();
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          LOG.warn("Interrupted while closing", e);
-        }
-        throw new ZooKeeperConnectionException("HBase is able to connect to" +
-            " ZooKeeper but the connection closes immediately. This could be" +
-            " a sign that the server has too many connections (30 is the" +
-            " default). Consider inspecting your ZK server logs for that" +
-            " error and then make sure you are reusing HBaseConfiguration" +
-            " as often as you can. See HTable's javadoc for more information.",
-            ke);
-      }
+      ZKUtil.createAndFailSilent(this, baseZNode);
       ZKUtil.createAndFailSilent(this, assignmentZNode);
       ZKUtil.createAndFailSilent(this, rsZNode);
       ZKUtil.createAndFailSilent(this, tableZNode);
@@ -235,8 +193,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
    * Get the connection to ZooKeeper.
    * @return connection reference to zookeeper
    */
-  public ZooKeeper getZooKeeper() {
-    return zooKeeper;
+  public RecoverableZooKeeper getRecoverableZooKeeper() {
+    return recoverableZooKeeper;
   }
 
   /**
@@ -321,16 +279,16 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
           this.conf.getLong("hbase.zookeeper.watcher.sync.connected.wait", 2000);
         while (System.currentTimeMillis() < finished) {
           Threads.sleep(1);
-          if (this.zooKeeper != null) break;
+          if (this.recoverableZooKeeper != null) break;
         }
-        if (this.zooKeeper == null) {
+        if (this.recoverableZooKeeper == null) {
           LOG.error("ZK is null on connection event -- see stack trace " +
             "for the stack trace when constructor was called on this zkw",
             this.constructorCaller);
           throw new NullPointerException("ZK is null");
         }
         this.identifier = this.identifier + "-0x" +
-          Long.toHexString(this.zooKeeper.getSessionId());
+          Long.toHexString(this.recoverableZooKeeper.getSessionId());
         // Update our identifier.  Otherwise ignore.
         LOG.debug(this.identifier + " connected");
         break;
@@ -365,7 +323,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
    * is up-to-date from when we begin the operation.
    */
   public void sync(String path) {
-    this.zooKeeper.sync(path, null, null);
+    this.recoverableZooKeeper.sync(path, null, null);
   }
 
   /**
@@ -408,8 +366,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
    */
   public void close() {
     try {
-      if (zooKeeper != null) {
-        zooKeeper.close();
+      if (recoverableZooKeeper != null) {
+        recoverableZooKeeper.close();
 //        super.close();
       }
     } catch (InterruptedException e) {

@@ -1126,7 +1126,7 @@ public class HBaseTestingUtility {
     Configuration c = new Configuration(this.conf);
     String quorumServers = ZKConfig.getZKQuorumServersString(c);
     int sessionTimeout = 5 * 1000; // 5 seconds
-    ZooKeeper zk = nodeZK.getZooKeeper();
+    ZooKeeper zk = nodeZK.getRecoverableZooKeeper().getZooKeeper();
     byte[] password = zk.getSessionPasswd();
     long sessionID = zk.getSessionId();
 

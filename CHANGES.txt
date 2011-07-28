@@ -342,6 +342,7 @@ Release 0.91.0 - Unreleased
    HBASE-1938  Make in-memory table scanning faster (nkeywal)
    HBASE-4143  HTable.doPut(List) should check the writebuffer length every so often
                (Doug Meil via Ted Yu)
+   HBASE-3065  Retry all 'retryable' zk operations; e.g. connection loss (Liyin Tang)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

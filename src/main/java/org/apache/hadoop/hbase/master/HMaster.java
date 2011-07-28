@@ -370,7 +370,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
     LOG.info("Server active/primary master; " + this.serverName +
         ", sessionid=0x" +
-        Long.toHexString(this.zooKeeper.getZooKeeper().getSessionId()) +
+        Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()) +
         ", cluster-up flag was=" + wasUp);
   }
 
