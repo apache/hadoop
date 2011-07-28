@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog.TaskState;
@@ -264,29 +265,29 @@ public class TestSplitLogWorker {
     Thread.yield(); // let the worker start
     Thread.sleep(100);
 
-    zkw.getRecoverableZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, "task"),
-        TaskState.TASK_UNASSIGNED.get("manager"), Ids.OPEN_ACL_UNSAFE,
-        CreateMode.PERSISTENT);
+    String task = ZKSplitLog.getEncodedNodeName(zkw, "task");
+    zkw.getRecoverableZooKeeper().create(task,
+      TaskState.TASK_UNASSIGNED.get("manager"), Ids.OPEN_ACL_UNSAFE,
+      CreateMode.PERSISTENT);
 
     waitForCounter(tot_wkr_task_acquired, 0, 1, 1000);
     // now the worker is busy doing the above task
 
     // preempt the task, have it owned by another worker
-    ZKUtil.setData(zkw, ZKSplitLog.getEncodedNodeName(zkw, "task"),
-        TaskState.TASK_UNASSIGNED.get("manager"));
+    ZKUtil.setData(zkw, task, TaskState.TASK_UNASSIGNED.get("manager"));
     waitForCounter(tot_wkr_preempt_task, 0, 1, 1000);
 
     // create a RESCAN node
-    zkw.getRecoverableZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, "RESCAN"),
-        TaskState.TASK_UNASSIGNED.get("manager"), Ids.OPEN_ACL_UNSAFE,
-        CreateMode.PERSISTENT_SEQUENTIAL);
+    String rescan = ZKSplitLog.getEncodedNodeName(zkw, "RESCAN");
+    rescan = zkw.getRecoverableZooKeeper().create(rescan,
+      TaskState.TASK_UNASSIGNED.get("manager"), Ids.OPEN_ACL_UNSAFE,
+      CreateMode.PERSISTENT_SEQUENTIAL);
 
     waitForCounter(tot_wkr_task_acquired, 1, 2, 1000);
     // RESCAN node might not have been processed if the worker became busy
     // with the above task. preempt the task again so that now the RESCAN
     // node is processed
-    ZKUtil.setData(zkw, ZKSplitLog.getEncodedNodeName(zkw, "task"),
-        TaskState.TASK_UNASSIGNED.get("manager"));
+    ZKUtil.setData(zkw, task, TaskState.TASK_UNASSIGNED.get("manager"));
     waitForCounter(tot_wkr_preempt_task, 1, 2, 1000);
     waitForCounter(tot_wkr_task_acquired_rescan, 0, 1, 1000);
 
@@ -296,8 +297,11 @@ public class TestSplitLogWorker {
     for (String node : nodes) {
       num++;
       if (node.startsWith("RESCAN")) {
-        assertTrue(TaskState.TASK_DONE.equals(ZKUtil.getData(zkw,
-            ZKSplitLog.getEncodedNodeName(zkw, node)), "svr"));
+        String name = ZKSplitLog.getEncodedNodeName(zkw, node);
+        String fn = ZKSplitLog.getFileName(name);
+        byte [] data = ZKUtil.getData(zkw, ZKUtil.joinZNode(zkw.splitLogZNode, fn));
+        String datastr = Bytes.toString(data);
+        assertTrue("data=" + datastr, TaskState.TASK_DONE.equals(data, "svr"));
       }
     }
     assertEquals(2, num);

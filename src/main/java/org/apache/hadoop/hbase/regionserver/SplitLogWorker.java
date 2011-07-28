@@ -414,8 +414,8 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
               ! TaskState.TASK_DONE.equals(data, serverName) &&
               ! TaskState.TASK_ERR.equals(data, serverName) &&
               ! TaskState.TASK_RESIGNED.equals(data, serverName)) {
-            LOG.info("task " + taskpath + " preempted from server " +
-                serverName + " ... current task state and owner - " +
+            LOG.info("task " + taskpath + " preempted from " +
+                serverName + ", current task state and owner=" +
                 new String(data));
             stopTask();
           }

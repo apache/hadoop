@@ -51,7 +51,8 @@ public class ZKSplitLog {
   public static final int DEFAULT_UNASSIGNED_TIMEOUT = (3 * 60 * 1000); //3 min
 
   /**
-   * Gets the full path node name for the log file being split
+   * Gets the full path node name for the log file being split.
+   * This method will url encode the filename.
    * @param zkw zk reference
    * @param filename log file name (only the basename)
    */
