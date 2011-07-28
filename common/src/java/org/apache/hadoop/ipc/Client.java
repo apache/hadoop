@@ -1195,7 +1195,9 @@ public class Client {
    * This class holds the address and the user ticket. The client connections
    * to servers are uniquely identified by <remoteAddress, protocol, ticket>
    */
-  static class ConnectionId {
+  @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+  @InterfaceStability.Evolving
+  public static class ConnectionId {
     InetSocketAddress address;
     UserGroupInformation ticket;
     Class<?> protocol;
@@ -1266,7 +1268,17 @@ public class Client {
       return pingInterval;
     }
     
-    static ConnectionId getConnectionId(InetSocketAddress addr,
+    /**
+     * Returns a ConnectionId object. 
+     * @param addr Remote address for the connection.
+     * @param protocol Protocol for RPC.
+     * @param ticket UGI
+     * @param rpcTimeout timeout
+     * @param conf Configuration object
+     * @return A ConnectionId instance
+     * @throws IOException
+     */
+    public static ConnectionId getConnectionId(InetSocketAddress addr,
         Class<?> protocol, UserGroupInformation ticket, int rpcTimeout,
         Configuration conf) throws IOException {
       String remotePrincipal = getRemotePrincipal(conf, addr, protocol);
