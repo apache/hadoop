@@ -76,6 +76,11 @@ public class TestJobHistory extends TestCase {
  
   private static String TEST_ROOT_DIR = new File(System.getProperty(
       "test.build.data", "/tmp")).toURI().toString().replace(' ', '+');
+  
+  private static final String LOG_DIR = System.getProperty("hadoop.log.dir");
+  
+  private static final String LOCAL_LOG_DIR_URI = new File(LOG_DIR).toURI()
+      .toString().replace(' ', '+') + "/history";
 
   private static final String DIGITS = "[0-9]+";
   
@@ -607,15 +612,32 @@ public class TestJobHistory extends TestCase {
     assertTrue(jobInfo.getJobQueueName().equals(conf.getQueueName()));
   }
   
+  /** 
+   * Tests the case where the log directory is on local disk, the done folder is on HDFS, 
+   * and the default FS is local.
+   */
   public void testDoneFolderOnHDFS() throws IOException, InterruptedException {
-    runDoneFolderTest("history_done");
+    runDoneFolderTest("history_done", LOCAL_LOG_DIR_URI);
   }
     
+  /** 
+   * Tests the case where the log directory and done folder is on local disk  
+   * and the default FS is local.
+   */
   public void testDoneFolderNotOnDefaultFileSystem() throws IOException, InterruptedException {
-    runDoneFolderTest("file://" + System.getProperty("test.build.data", "tmp") + "/history_done");
+    runDoneFolderTest(TEST_ROOT_DIR + "/history_done", LOCAL_LOG_DIR_URI);
+  }
+  
+  /** 
+   * Tests the case where the log directory is on HDFS and done folder is on local disk 
+   * and the default FS is local.
+   */
+  public void testHistoryFolderOnHDFS() throws IOException, InterruptedException {
+    String logDir = "hdfs://localhost:%d/history";
+    runDoneFolderTest(TEST_ROOT_DIR + "/done", logDir);
   }
     
-  private void runDoneFolderTest(String doneFolder) throws IOException, InterruptedException {
+  private void runDoneFolderTest(String doneFolder, String historyFolder) throws IOException, InterruptedException {
     MiniMRCluster mr = null;
     MiniDFSCluster dfsCluster = null;
     try {
@@ -627,9 +649,11 @@ public class TestJobHistory extends TestCase {
       //set the done folder location
       conf.set(JTConfig.JT_JOBHISTORY_COMPLETED_LOCATION, doneFolder);
 
-      String logDir =
-        "file:///" + new File(System.getProperty("hadoop.log.dir")).
-        getAbsolutePath() + File.separator + "history";
+      dfsCluster = new MiniDFSCluster(conf, 2, true, null);
+      String logDir = String.format(historyFolder, dfsCluster.getNameNodePort());
+      
+      //set the history folder location
+      conf.set(JTConfig.JT_JOBHISTORY_LOCATION, logDir);
 
       Path logDirPath = new Path(logDir);
       FileSystem logDirFs = logDirPath.getFileSystem(conf);
@@ -647,7 +671,6 @@ public class TestJobHistory extends TestCase {
       assertEquals("No of file in logDir not correct", 2,
           logDirFs.listStatus(logDirPath).length);
       
-      dfsCluster = new MiniDFSCluster(conf, 2, true, null);
       mr = new MiniMRCluster(2, dfsCluster.getFileSystem().getUri().toString(),
           3, null, null, conf);
 

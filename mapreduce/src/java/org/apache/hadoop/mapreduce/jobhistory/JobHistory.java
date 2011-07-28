@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.JobConf;
@@ -354,7 +355,8 @@ public class JobHistory {
     if (logDirFs.exists(fromPath)) {
       LOG.info("Moving " + fromPath.toString() + " to " +
           toPath.toString());
-      doneDirFs.moveFromLocalFile(fromPath, toPath);
+      FileUtil.copy(logDirFs, fromPath, doneDirFs, toPath, true, false,
+          jobTracker.getConf());
       doneDirFs.setPermission(toPath,
           new FsPermission(JobHistory.HISTORY_FILE_PERMISSION));
     }

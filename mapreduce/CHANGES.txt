@@ -359,6 +359,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2732. Remove directly accessing FSNamesystem.LOG from
     TestCopyFiles and TestDistCh.  (szetszwo)
 
+    MAPREDUCE-2463. Job history files are not moved to done folder when job
+    history location is hdfs.  (Devaraj K via szetszwo)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
