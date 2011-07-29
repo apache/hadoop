@@ -25,6 +25,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 
+import com.google.common.base.Joiner;
+
 /**
  * Common class for storage information.
  * 
@@ -104,5 +106,10 @@ public class StorageInfo implements Writable {
     sb.append("lv=").append(layoutVersion).append(";cid=").append(clusterID)
     .append(";nsid=").append(namespaceID).append(";c=").append(cTime);
     return sb.toString();
+  }
+  
+  public String toColonSeparatedString() {
+    return Joiner.on(":").join(
+        layoutVersion, namespaceID, cTime, clusterID);
   }
 }

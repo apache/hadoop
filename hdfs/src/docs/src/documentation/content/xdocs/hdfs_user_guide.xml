@@ -271,9 +271,9 @@
         the maximum delay between two consecutive checkpoints, and 
       </li>
       <li>
-        <code>dfs.namenode.checkpoint.size</code>, set to 64MB by default, defines the
-        size of the edits log file that forces an urgent checkpoint even if 
-        the maximum checkpoint delay is not reached.
+        <code>dfs.namenode.checkpoint.txns</code>, set to 40000 default, defines the
+        number of uncheckpointed transactions on the NameNode which will force
+        an urgent checkpoint, even if the checkpoint period has not been reached.
       </li>
    </ul>
    <p>
@@ -322,9 +322,9 @@
         the maximum delay between two consecutive checkpoints 
       </li>
       <li>
-        <code>dfs.namenode.checkpoint.size</code>, set to 64MB by default, defines the
-        size of the edits log file that forces an urgent checkpoint even if 
-        the maximum checkpoint delay is not reached.
+        <code>dfs.namenode.checkpoint.txns</code>, set to 40000 default, defines the
+        number of uncheckpointed transactions on the NameNode which will force
+        an urgent checkpoint, even if the checkpoint period has not been reached.
       </li>
    </ul>
    <p>

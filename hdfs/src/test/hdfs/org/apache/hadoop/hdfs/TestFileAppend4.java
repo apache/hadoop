@@ -27,7 +27,6 @@ import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
@@ -45,11 +44,10 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 /* File Append tests for HDFS-200 & HDFS-142, specifically focused on:
  *  using append()/sync() to recover block information
@@ -157,7 +155,7 @@ public class TestFileAppend4 {
       NameNode spyNN = spy(preSpyNN);
  
       // Delay completeFile
-      DelayAnswer delayer = new DelayAnswer();
+      GenericTestUtils.DelayAnswer delayer = new GenericTestUtils.DelayAnswer(LOG);
       doAnswer(delayer).when(spyNN).complete(
           anyString(), anyString(), (ExtendedBlock)anyObject());
  
@@ -228,7 +226,8 @@ public class TestFileAppend4 {
       NameNode spyNN = spy(preSpyNN);
  
       // Delay completeFile
-      DelayAnswer delayer = new DelayAnswer();
+      GenericTestUtils.DelayAnswer delayer =
+        new GenericTestUtils.DelayAnswer(LOG);
       doAnswer(delayer).when(spyNN).complete(anyString(), anyString(),
           (ExtendedBlock) anyObject());
  
@@ -289,43 +288,6 @@ public class TestFileAppend4 {
       appenderStream.close();
     } finally {
       cluster.shutdown();
-    }
-  }  
- 
-  /**
-   * Mockito answer helper that triggers one latch as soon as the
-   * method is called, then waits on another before continuing.
-   */
-  private static class DelayAnswer implements Answer<Object> {
-    private final CountDownLatch fireLatch = new CountDownLatch(1);
-    private final CountDownLatch waitLatch = new CountDownLatch(1);
- 
-    /**
-     * Wait until the method is called.
-     */
-    public void waitForCall() throws InterruptedException {
-      fireLatch.await();
-    }
- 
-    /**
-     * Tell the method to proceed.
-     * This should only be called after waitForCall()
-     */
-    public void proceed() {
-      waitLatch.countDown();
-    }
- 
-    public Object answer(InvocationOnMock invocation) throws Throwable {
-      LOG.info("DelayAnswer firing fireLatch");
-      fireLatch.countDown();
-      try {
-        LOG.info("DelayAnswer waiting on waitLatch");
-        waitLatch.await();
-        LOG.info("DelayAnswer delay complete");
-      } catch (InterruptedException ie) {
-        throw new IOException("Interrupted waiting on latch", ie);
-      }
-      return invocation.callRealMethod();
     }
   }
 }

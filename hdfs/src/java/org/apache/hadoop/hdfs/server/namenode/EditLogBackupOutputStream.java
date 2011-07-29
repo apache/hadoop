@@ -19,10 +19,11 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.ipc.RPC;
@@ -39,7 +40,7 @@ import org.apache.hadoop.net.NetUtils;
 class EditLogBackupOutputStream extends EditLogOutputStream {
   static int DEFAULT_BUFFER_SIZE = 256;
 
-  private NamenodeProtocol backupNode;          // RPC proxy to backup node
+  private JournalProtocol backupNode;        // RPC proxy to backup node
   private NamenodeRegistration bnRegistration;  // backup node registration
   private NamenodeRegistration nnRegistration;  // active node registration
   private EditsDoubleBuffer doubleBuf;
@@ -56,8 +57,8 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
     Storage.LOG.info("EditLogBackupOutputStream connects to: " + bnAddress);
     try {
       this.backupNode =
-        (NamenodeProtocol) RPC.getProxy(NamenodeProtocol.class,
-            NamenodeProtocol.versionID, bnAddress, new HdfsConfiguration());
+        RPC.getProxy(JournalProtocol.class,
+            JournalProtocol.versionID, bnAddress, new HdfsConfiguration());
     } catch(IOException e) {
       Storage.LOG.error("Error connecting to: " + bnAddress, e);
       throw e;
@@ -65,7 +66,7 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
     this.doubleBuf = new EditsDoubleBuffer(DEFAULT_BUFFER_SIZE);
     this.out = new DataOutputBuffer(DEFAULT_BUFFER_SIZE);
   }
-
+  
   @Override // JournalStream
   public String getName() {
     return bnRegistration.getAddress();
@@ -109,6 +110,12 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
     doubleBuf = null;
   }
 
+  @Override
+  public void abort() throws IOException {
+    RPC.stopProxy(backupNode);
+    doubleBuf = null;
+  }
+
   @Override // EditLogOutputStream
   void setReadyToFlush() throws IOException {
     doubleBuf.setReadyToFlush();
@@ -116,11 +123,21 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
 
   @Override // EditLogOutputStream
   protected void flushAndSync() throws IOException {
-    // XXX: this code won't work in trunk, but it's redone
-    // in HDFS-1073 where it's simpler.
+    assert out.getLength() == 0 : "Output buffer is not empty";
+    
+    int numReadyTxns = doubleBuf.countReadyTxns();
+    long firstTxToFlush = doubleBuf.getFirstReadyTxId();
+    
     doubleBuf.flushTo(out);
-    if (out.size() > 0) {
-      send(NamenodeProtocol.JA_JOURNAL);
+    if (out.getLength() > 0) {
+      assert numReadyTxns > 0;
+      
+      byte[] data = Arrays.copyOf(out.getData(), out.getLength());
+      out.reset();
+      assert out.getLength() == 0 : "Output buffer is not empty";
+
+      backupNode.journal(nnRegistration,
+          firstTxToFlush, numReadyTxns, data);
     }
   }
 
@@ -134,16 +151,6 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
     return 0;
   }
 
-  private void send(int ja) throws IOException {
-    try {
-      int length = out.getLength();
-      out.write(FSEditLogOpCodes.OP_INVALID.getOpCode());
-      backupNode.journal(nnRegistration, ja, length, out.getData());
-    } finally {
-      out.reset();
-    }
-  }
-
   /**
    * Get backup node registration.
    */
@@ -151,17 +158,7 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
     return bnRegistration;
   }
 
-  /**
-   * Verify that the backup node is alive.
-   */
-  boolean isAlive() {
-    try {
-      send(NamenodeProtocol.JA_IS_ALIVE);
-    } catch(IOException ei) {
-      Storage.LOG.info(bnRegistration.getRole() + " "
-                      + bnRegistration.getAddress() + " is not alive. ", ei);
-      return false;
-    }
-    return true;
+  void startLogSegment(long txId) throws IOException {
+    backupNode.startLogSegment(nnRegistration, txId);
   }
 }

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.util.zip.CheckedInputStream;
 import java.util.zip.Checksum;
 import java.util.EnumMap;
 
@@ -29,10 +30,12 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
-import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.common.GenerationStamp;
+import org.apache.hadoop.hdfs.server.common.Storage;
 
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.*;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
@@ -61,6 +64,8 @@ import java.io.EOFException;
 @InterfaceStability.Unstable
 public abstract class FSEditLogOp {
   final FSEditLogOpCodes opCode;
+  long txid;
+
 
   @SuppressWarnings("deprecation")
   private static ThreadLocal<EnumMap<FSEditLogOpCodes, FSEditLogOp>> opInstances =
@@ -93,8 +98,10 @@ public abstract class FSEditLogOp {
         instances.put(OP_CANCEL_DELEGATION_TOKEN, 
                       new CancelDelegationTokenOp());
         instances.put(OP_UPDATE_MASTER_KEY, new UpdateMasterKeyOp());
-        instances.put(OP_CHECKPOINT_TIME, new CheckpointTimeOp());
-        instances.put(OP_JSPOOL_START, new JSpoolStartOp());
+        instances.put(OP_START_LOG_SEGMENT,
+                      new LogSegmentOp(OP_START_LOG_SEGMENT));
+        instances.put(OP_END_LOG_SEGMENT,
+                      new LogSegmentOp(OP_END_LOG_SEGMENT));
         return instances;
       }
   };
@@ -105,6 +112,11 @@ public abstract class FSEditLogOp {
    */
   private FSEditLogOp(FSEditLogOpCodes opCode) {
     this.opCode = opCode;
+    this.txid = 0;
+  }
+
+  public void setTransactionId(long txid) {
+    this.txid = txid;
   }
 
   abstract void readFields(DataInputStream in, int logVersion)
@@ -1207,6 +1219,28 @@ public abstract class FSEditLogOp {
       this.key.readFields(in);
     }
   }
+  
+  static class LogSegmentOp extends FSEditLogOp {
+    private LogSegmentOp(FSEditLogOpCodes code) {
+      super(code);
+      assert code == OP_START_LOG_SEGMENT ||
+             code == OP_END_LOG_SEGMENT : "Bad op: " + code;
+    }
+
+    static LogSegmentOp getInstance(FSEditLogOpCodes code) {
+      return (LogSegmentOp)opInstances.get().get(code);
+    }
+
+    public void readFields(DataInputStream in, int logVersion)
+        throws IOException {
+      // no data stored in these ops yet
+    }
+
+    @Override
+    void writeFields(DataOutputStream out) throws IOException {
+      // no data stored
+    }
+  }
 
   static class InvalidOp extends FSEditLogOp {
     private InvalidOp() {
@@ -1225,54 +1259,6 @@ public abstract class FSEditLogOp {
     void readFields(DataInputStream in, int logVersion)
         throws IOException {
       // nothing to read
-    }
-  }
-
-  static class JSpoolStartOp extends FSEditLogOp {
-    private JSpoolStartOp() {
-      super(OP_JSPOOL_START);
-    }
-
-    static JSpoolStartOp getInstance() {
-      return (JSpoolStartOp)opInstances.get().get(OP_JSPOOL_START);
-    }
-
-    @Override 
-    void writeFields(DataOutputStream out) throws IOException {
-    }
-    
-    @Override
-    void readFields(DataInputStream in, int logVersion)
-        throws IOException {
-    }
-  }
-
-  static class CheckpointTimeOp extends FSEditLogOp {
-    long checkpointTime;
-
-    private CheckpointTimeOp() {
-      super(OP_CHECKPOINT_TIME);            
-    }
-    
-    CheckpointTimeOp setCheckpointTime(long time) {
-      this.checkpointTime = time;
-      return this;
-    }
-
-    static CheckpointTimeOp getInstance() {
-      return (CheckpointTimeOp)opInstances.get()
-        .get(OP_CHECKPOINT_TIME);
-    }
-
-    @Override 
-    void writeFields(DataOutputStream out) throws IOException {
-      new LongWritable(checkpointTime).write(out);
-    }
-    
-    @Override
-    void readFields(DataInputStream in, int logVersion)
-        throws IOException {
-      this.checkpointTime = readLong(in);
     }
   }
 
@@ -1337,6 +1323,62 @@ public abstract class FSEditLogOp {
       return longWritable.get();
     }
   }
+  
+  /**
+   * Class to encapsulate the header at the top of a log file.
+   */
+  static class LogHeader {
+    final int logVersion;
+    final Checksum checksum;
+
+    public LogHeader(int logVersion, Checksum checksum) {
+      this.logVersion = logVersion;
+      this.checksum = checksum;
+    }
+
+    static LogHeader read(DataInputStream in) throws IOException {
+      int logVersion = 0;
+
+      logVersion = FSEditLogOp.LogHeader.readLogVersion(in);
+      Checksum checksum = null;
+      if (LayoutVersion.supports(Feature.EDITS_CHESKUM, logVersion)) {
+        checksum = FSEditLog.getChecksum();
+      }
+      return new LogHeader(logVersion, checksum);
+    }
+    
+    /**
+     * Read the header of fsedit log
+     * @param in fsedit stream
+     * @return the edit log version number
+     * @throws IOException if error occurs
+     */
+    private static int readLogVersion(DataInputStream in) throws IOException {
+      int logVersion = 0;
+      // Read log file version. Could be missing.
+      in.mark(4);
+      // If edits log is greater than 2G, available method will return negative
+      // numbers, so we avoid having to call available
+      boolean available = true;
+      try {
+        logVersion = in.readByte();
+      } catch (EOFException e) {
+        available = false;
+      }
+      if (available) {
+        in.reset();
+        logVersion = in.readInt();
+        if (logVersion < FSConstants.LAYOUT_VERSION) // future version
+          throw new IOException(
+              "Unexpected version of the file system log file: "
+              + logVersion + ". Current version = "
+              + FSConstants.LAYOUT_VERSION + ".");
+      }
+      assert logVersion <= Storage.LAST_UPGRADABLE_LAYOUT_VERSION :
+        "Unsupported version " + logVersion;
+      return logVersion;
+    }
+  }
 
   /**
    * Class for writing editlog ops
@@ -1357,6 +1399,7 @@ public abstract class FSEditLogOp {
     public void writeOp(FSEditLogOp op) throws IOException {
       int start = buf.getLength();
       buf.writeByte(op.opCode.getOpCode());
+      buf.writeLong(op.txid);
       op.writeFields(buf);
       int end = buf.getLength();
       Checksum checksum = FSEditLog.getChecksum();
@@ -1384,7 +1427,12 @@ public abstract class FSEditLogOp {
     @SuppressWarnings("deprecation")
     public Reader(DataInputStream in, int logVersion,
                   Checksum checksum) {
-      this.in = in;
+      if (checksum != null) {
+        this.in = new DataInputStream(
+            new CheckedInputStream(in, checksum));
+      } else {
+        this.in = in;
+      }
       this.logVersion = logVersion;
       this.checksum = checksum;
     }
@@ -1423,9 +1471,15 @@ public abstract class FSEditLogOp {
       if (op == null) {
         throw new IOException("Read invalid opcode " + opCode);
       }
+
+      if (LayoutVersion.supports(Feature.STORED_TXIDS, logVersion)) {
+        // Read the txid
+        op.setTransactionId(in.readLong());
+      }
+
       op.readFields(in, logVersion);
 
-      validateChecksum(in, checksum);
+      validateChecksum(in, checksum, op.txid);
       return op;
     }
 
@@ -1433,7 +1487,8 @@ public abstract class FSEditLogOp {
      * Validate a transaction's checksum
      */
     private void validateChecksum(DataInputStream in,
-                                  Checksum checksum)
+                                  Checksum checksum,
+                                  long txid)
         throws IOException {
       if (checksum != null) {
         int calculatedChecksum = (int)checksum.getValue();
@@ -1441,7 +1496,7 @@ public abstract class FSEditLogOp {
         if (readChecksum != calculatedChecksum) {
           throw new ChecksumException(
               "Transaction is corrupt. Calculated checksum is " +
-              calculatedChecksum + " but read checksum " + readChecksum, -1);
+              calculatedChecksum + " but read checksum " + readChecksum, txid);
         }
       }
     }

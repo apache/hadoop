@@ -22,9 +22,7 @@ import static org.apache.hadoop.hdfs.server.common.Util.now;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.URI;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
@@ -157,26 +155,33 @@ public class FSDirectory implements Closeable {
     return getFSNamesystem().getBlockManager();
   }
 
-  void loadFSImage(Collection<URI> dataDirs,
-                   Collection<URI> editsDirs,
-                   StartupOption startOpt) 
+  /**
+   * Load the filesystem image into memory.
+   *
+   * @param startOpt Startup type as specified by the user.
+   * @throws IOException If image or editlog cannot be read.
+   */
+  void loadFSImage(StartupOption startOpt) 
       throws IOException {
     // format before starting up if requested
     if (startOpt == StartupOption.FORMAT) {
-      fsImage.getStorage().setStorageDirectories(dataDirs, editsDirs);
-      fsImage.getStorage().format(fsImage.getStorage().determineClusterId()); // reuse current id
+      fsImage.format(fsImage.getStorage().determineClusterId());// reuse current id
+
       startOpt = StartupOption.REGULAR;
     }
+    boolean success = false;
     try {
-      if (fsImage.recoverTransitionRead(dataDirs, editsDirs, startOpt)) {
-        fsImage.saveNamespace(true);
+      if (fsImage.recoverTransitionRead(startOpt)) {
+        fsImage.saveNamespace();
       }
-      FSEditLog editLog = fsImage.getEditLog();
-      assert editLog != null : "editLog must be initialized";
+      fsImage.openEditLog();
+      
       fsImage.setCheckpointDirectories(null, null);
-    } catch(IOException e) {
-      fsImage.close();
-      throw e;
+      success = true;
+    } finally {
+      if (!success) {
+        fsImage.close();
+      }
     }
     writeLock();
     try {

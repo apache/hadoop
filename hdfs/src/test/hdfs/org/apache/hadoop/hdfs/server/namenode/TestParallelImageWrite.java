@@ -30,16 +30,12 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
-import org.apache.hadoop.util.PureJavaCrc32;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
-import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 
-import java.util.Iterator;
+import java.util.Collections;
 import java.util.List;
-import java.util.ArrayList;
 
 import java.io.File;
-import java.io.FileInputStream;
 
 /**
  * A JUnit test for checking if restarting DFS preserves integrity.
@@ -84,6 +80,10 @@ public class TestParallelImageWrite extends TestCase {
       if (cluster != null) { cluster.shutdown(); }
     }
     try {
+      // Force the NN to save its images on startup so long as
+      // there are any uncheckpointed txns
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 1);
+
       // Here we restart the MiniDFScluster without formatting namenode
       cluster = new MiniDFSCluster.Builder(conf).format(false)
           .numDataNodes(NUM_DATANODES).build();
@@ -102,16 +102,17 @@ public class TestParallelImageWrite extends TestCase {
       assertEquals(dirstatus.getGroup() + "_XXX", newdirstatus.getGroup());
       rootmtime = fs.getFileStatus(rootpath).getModificationTime();
 
-      final long checkAfterRestart = checkImages(fsn, numNamenodeDirs);
+      final String checkAfterRestart = checkImages(fsn, numNamenodeDirs);
       
       // Modify the system and then perform saveNamespace
       files.cleanup(fs, dir);
       files.createFiles(fs, dir);
       fsn.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       cluster.getNameNode().saveNamespace();
-      final long checkAfterModify = checkImages(fsn, numNamenodeDirs);
-      assertTrue("Modified namespace doesn't change fsimage contents",
-          checkAfterRestart != checkAfterModify);
+      final String checkAfterModify = checkImages(fsn, numNamenodeDirs);
+      assertFalse("Modified namespace should change fsimage contents. " +
+          "was: " + checkAfterRestart + " now: " + checkAfterModify,
+          checkAfterRestart.equals(checkAfterModify));
       fsn.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
       files.cleanup(fs, dir);
     } finally {
@@ -124,42 +125,35 @@ public class TestParallelImageWrite extends TestCase {
    * and non-empty, and there are the expected number of them.
    * @param fsn - the FSNamesystem being checked.
    * @param numImageDirs - the configured number of StorageDirectory of type IMAGE. 
-   * @return - the checksum of the FSImage files, which must all be the same.
+   * @return - the md5 hash of the most recent FSImage files, which must all be the same.
    * @throws AssertionFailedError if image files are empty or different,
    *     if less than two StorageDirectory are provided, or if the
    *     actual number of StorageDirectory is less than configured.
    */
-  public static long checkImages(FSNamesystem fsn, int numImageDirs) throws Exception {
+  public static String checkImages(
+      FSNamesystem fsn, int numImageDirs)
+  throws Exception {    
     NNStorage stg = fsn.getFSImage().getStorage();
     //any failed StorageDirectory is removed from the storageDirs list
     assertEquals("Some StorageDirectories failed Upgrade",
         numImageDirs, stg.getNumStorageDirs(NameNodeDirType.IMAGE));
     assertTrue("Not enough fsimage copies in MiniDFSCluster " + 
         "to test parallel write", numImageDirs > 1);
-    //checksum the FSImage stored in each storageDir
-    Iterator<StorageDirectory> iter = stg.dirIterator(NameNodeDirType.IMAGE);
-    List<Long> checksums = new ArrayList<Long>();
-    while (iter.hasNext()) {
-      StorageDirectory sd = iter.next();
-      File fsImage = NNStorage.getStorageFile(sd, NameNodeFile.IMAGE);
-      PureJavaCrc32 crc = new PureJavaCrc32();
-      FileInputStream in = new FileInputStream(fsImage);
-      byte[] buff = new byte[4096];
-      int read = 0;
-      while ((read = in.read(buff)) != -1) {
-       crc.update(buff, 0, read);
-      }
-      long val = crc.getValue();
-      checksums.add(val);
-    }
-    assertEquals(numImageDirs, checksums.size());
-    PureJavaCrc32 crc = new PureJavaCrc32();
-    long emptyCrc = crc.getValue();
-    assertTrue("Empty fsimage file", checksums.get(0) != emptyCrc);
-    for (int i = 1; i < numImageDirs; i++) {
-      assertEquals(checksums.get(i - 1), checksums.get(i));
-    }
-    return checksums.get(0);
+
+    // List of "current/" directory from each SD
+    List<File> dirs = FSImageTestUtil.getCurrentDirs(stg, NameNodeDirType.IMAGE);
+
+    // across directories, all files with same names should be identical hashes   
+    FSImageTestUtil.assertParallelFilesAreIdentical(
+        dirs, Collections.<String>emptySet());
+    FSImageTestUtil.assertSameNewestImage(dirs);
+    
+    // Return the hash of the newest image file
+    StorageDirectory firstSd = stg.dirIterator(NameNodeDirType.IMAGE).next();
+    File latestImage = FSImageTestUtil.findLatestImageFile(firstSd);
+    String md5 = FSImageTestUtil.getImageFileMD5IgnoringTxId(latestImage);
+    System.err.println("md5 of " + latestImage + ": " + md5);
+    return md5;
   }
 }
 

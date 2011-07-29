@@ -18,8 +18,12 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.util.zip.Checksum;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
+
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.Writable;
 
 /**
  * A generic abstract class to support journaling of edits logs into 
@@ -63,9 +67,19 @@ abstract class EditLogOutputStream implements JournalStream {
    */
   abstract void create() throws IOException;
 
-  /** {@inheritDoc} */
+  /**
+   * Close the journal.
+   * @throws IOException if the journal can't be closed,
+   *         or if there are unflushed edits
+   */
   abstract public void close() throws IOException;
 
+  /**
+   * Close the stream without necessarily flushing any pending data.
+   * This may be called after a previous write or close threw an exception.
+   */
+  abstract public void abort() throws IOException;
+  
   /**
    * All data that has been written to the stream so far will be flushed.
    * New data can be still written to the stream while flushing is performed.
@@ -108,10 +122,6 @@ abstract class EditLogOutputStream implements JournalStream {
     return false;
   }
   
-  boolean isOperationSupported(byte op) {
-    return true;
-  }
-
   /**
    * Return total time spent in {@link #flushAndSync()}
    */

@@ -78,7 +78,9 @@ public class LayoutVersion {
     RESERVED_REL22(-33, -27, "Reserved for release 0.22"),
     RESERVED_REL23(-34, -30, "Reserved for release 0.23"),
     FEDERATION(-35, "Support for namenode federation"),
-    LEASE_REASSIGNMENT(-36, "Support for persisting lease holder reassignment");
+    LEASE_REASSIGNMENT(-36, "Support for persisting lease holder reassignment"),
+    STORED_TXIDS(-37, "Transaction IDs are stored in edits log and image files"),
+    TXID_BASED_LAYOUT(-38, "File names in NN Storage are based on transaction IDs");
     
     final int lv;
     final int ancestorLV;

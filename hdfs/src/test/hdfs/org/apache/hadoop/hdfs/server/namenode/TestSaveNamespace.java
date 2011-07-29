@@ -18,10 +18,11 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+
+import static org.junit.Assert.*;
+
 import static org.mockito.Matchers.anyObject;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
@@ -31,6 +32,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -42,7 +44,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.log4j.Level;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -60,46 +62,47 @@ import org.mockito.stubbing.Answer;
  * </ol>
  */
 public class TestSaveNamespace {
+  static {
+    ((Log4JLogger)FSImage.LOG).getLogger().setLevel(Level.ALL);
+  }
+  
   private static final Log LOG = LogFactory.getLog(TestSaveNamespace.class);
 
   private static class FaultySaveImage implements Answer<Void> {
     int count = 0;
-    boolean exceptionType = true;
-
-    // generate a RuntimeException
-    public FaultySaveImage() {
-      this.exceptionType = true;
-    }
+    boolean throwRTE = true;
 
     // generate either a RuntimeException or IOException
-    public FaultySaveImage(boolean etype) {
-      this.exceptionType = etype;
+    public FaultySaveImage(boolean throwRTE) {
+      this.throwRTE = throwRTE;
     }
 
     public Void answer(InvocationOnMock invocation) throws Throwable {
       Object[] args = invocation.getArguments();
-      File f = (File)args[0];
+      StorageDirectory sd = (StorageDirectory)args[0];
 
       if (count++ == 1) {
-        LOG.info("Injecting fault for file: " + f);
-        if (exceptionType) {
+        LOG.info("Injecting fault for sd: " + sd);
+        if (throwRTE) {
           throw new RuntimeException("Injected fault: saveFSImage second time");
         } else {
           throw new IOException("Injected fault: saveFSImage second time");
         }
       }
-      LOG.info("Not injecting fault for file: " + f);
+      LOG.info("Not injecting fault for sd: " + sd);
       return (Void)invocation.callRealMethod();
     }
   }
 
   private enum Fault {
-    SAVE_FSIMAGE,
-    MOVE_CURRENT,
-    MOVE_LAST_CHECKPOINT
+    SAVE_SECOND_FSIMAGE_RTE,
+    SAVE_SECOND_FSIMAGE_IOE,
+    SAVE_ALL_FSIMAGES,
+    WRITE_STORAGE_ALL,
+    WRITE_STORAGE_ONE
   };
 
-  private void saveNamespaceWithInjectedFault(Fault fault) throws IOException {
+  private void saveNamespaceWithInjectedFault(Fault fault) throws Exception {
     Configuration conf = getConf();
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
@@ -108,46 +111,71 @@ public class TestSaveNamespace {
     // Replace the FSImage with a spy
     FSImage originalImage = fsn.dir.fsImage;
     NNStorage storage = originalImage.getStorage();
-    storage.close(); // unlock any directories that FSNamesystem's initialization may have locked
 
     NNStorage spyStorage = spy(storage);
     originalImage.storage = spyStorage;
 
     FSImage spyImage = spy(originalImage);
     fsn.dir.fsImage = spyImage;
-    
-    spyImage.getStorage().setStorageDirectories(FSNamesystem.getNamespaceDirs(conf), 
-                                                FSNamesystem.getNamespaceEditsDirs(conf));
 
+    boolean shouldFail = false; // should we expect the save operation to fail
     // inject fault
     switch(fault) {
-    case SAVE_FSIMAGE:
+    case SAVE_SECOND_FSIMAGE_RTE:
       // The spy throws a RuntimeException when writing to the second directory
-      doAnswer(new FaultySaveImage()).
-        when(spyImage).saveFSImage((File)anyObject());
+      doAnswer(new FaultySaveImage(true)).
+        when(spyImage).saveFSImage((StorageDirectory)anyObject(), anyLong());
+      shouldFail = false;
       break;
-    case MOVE_CURRENT:
-      // The spy throws a RuntimeException when calling moveCurrent()
-      doThrow(new RuntimeException("Injected fault: moveCurrent")).
-        when(spyStorage).moveCurrent((StorageDirectory)anyObject());
+    case SAVE_SECOND_FSIMAGE_IOE:
+      // The spy throws an IOException when writing to the second directory
+      doAnswer(new FaultySaveImage(false)).
+        when(spyImage).saveFSImage((StorageDirectory)anyObject(), anyLong());
+      shouldFail = false;
       break;
-    case MOVE_LAST_CHECKPOINT:
-      // The spy throws a RuntimeException when calling moveLastCheckpoint()
-      doThrow(new RuntimeException("Injected fault: moveLastCheckpoint")).
-        when(spyStorage).moveLastCheckpoint((StorageDirectory)anyObject());
+    case SAVE_ALL_FSIMAGES:
+      // The spy throws IOException in all directories
+      doThrow(new RuntimeException("Injected")).
+        when(spyImage).saveFSImage((StorageDirectory)anyObject(), anyLong());
+      shouldFail = true;
+      break;
+    case WRITE_STORAGE_ALL:
+      // The spy throws an exception before writing any VERSION files
+      doThrow(new RuntimeException("Injected"))
+        .when(spyStorage).writeAll();
+      shouldFail = true;
+      break;
+    case WRITE_STORAGE_ONE:
+      // The spy throws on exception on one particular storage directory
+      doAnswer(new FaultySaveImage(true))
+        .when(spyStorage).writeProperties((StorageDirectory)anyObject());
+      // TODO: unfortunately this fails -- should be improved.
+      // See HDFS-2173.
+      shouldFail = true;
       break;
     }
 
     try {
       doAnEdit(fsn, 1);
 
-      // Save namespace - this will fail because we inject a fault.
+      // Save namespace - this may fail, depending on fault injected
       fsn.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       try {
         fsn.saveNamespace();
+        if (shouldFail) {
+          fail("Did not fail!");
+        }
       } catch (Exception e) {
-        LOG.info("Test caught expected exception", e);
+        if (! shouldFail) {
+          throw e;
+        } else {
+          LOG.info("Test caught expected exception", e);
+        }
       }
+      
+      fsn.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      // Should still be able to perform edits
+      doAnEdit(fsn, 2);
 
       // Now shut down and restart the namesystem
       originalImage.close();
@@ -158,8 +186,9 @@ public class TestSaveNamespace {
       // the namespace from the previous incarnation.
       fsn = new FSNamesystem(conf);
 
-      // Make sure the image loaded including our edit.
+      // Make sure the image loaded including our edits.
       checkEditExists(fsn, 1);
+      checkEditExists(fsn, 2);
     } finally {
       if (fsn != null) {
         fsn.close();
@@ -185,35 +214,33 @@ public class TestSaveNamespace {
     // Replace the FSImage with a spy
     FSImage originalImage = fsn.dir.fsImage;
     NNStorage storage = originalImage.getStorage();
-    storage.close(); // unlock any directories that FSNamesystem's initialization may have locked
-
-    NNStorage spyStorage = spy(storage);
-    originalImage.storage = spyStorage;
 
     FSImage spyImage = spy(originalImage);
     fsn.dir.fsImage = spyImage;
-
-    spyImage.getStorage().setStorageDirectories(FSNamesystem.getNamespaceDirs(conf), 
-                                                FSNamesystem.getNamespaceEditsDirs(conf));
-
-    // inject fault
-    // The spy throws a IOException when writing to the second directory
-    doAnswer(new FaultySaveImage(false)).
-      when(spyImage).saveFSImage((File)anyObject());
+    
+    File rootDir = storage.getStorageDir(0).getRoot();
+    rootDir.setExecutable(false);
+    rootDir.setWritable(false);
+    rootDir.setReadable(false);
 
     try {
       doAnEdit(fsn, 1);
       fsn.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
 
-      // Save namespace - this  injects a fault and marks one
-      // directory as faulty.
+      // Save namespace - should mark the first storage dir as faulty
+      // since it's not traversable.
       LOG.info("Doing the first savenamespace.");
       fsn.saveNamespace();
-      LOG.warn("First savenamespace sucessful.");
+      LOG.info("First savenamespace sucessful.");      
+      
       assertTrue("Savenamespace should have marked one directory as bad." +
-                 " But found " + spyStorage.getRemovedStorageDirs().size() +
+                 " But found " + storage.getRemovedStorageDirs().size() +
                  " bad directories.", 
-                   spyStorage.getRemovedStorageDirs().size() == 1);
+                   storage.getRemovedStorageDirs().size() == 1);
+
+      rootDir.setExecutable(true);
+      rootDir.setWritable(true);
+      rootDir.setReadable(true);
 
       // The next call to savenamespace should try inserting the
       // erroneous directory back to fs.name.dir. This command should
@@ -243,33 +270,53 @@ public class TestSaveNamespace {
       checkEditExists(fsn, 1);
       LOG.info("Reloaded image is good.");
     } finally {
+      if (rootDir.exists()) {
+        rootDir.setExecutable(true);
+        rootDir.setWritable(true);
+        rootDir.setReadable(true);
+      }
+
       if (fsn != null) {
-        fsn.close();
+        try {
+          fsn.close();
+        } catch (Throwable t) {
+          LOG.fatal("Failed to shut down", t);
+        }
       }
     }
   }
 
   @Test
-  public void testCrashWhileSavingSecondImage() throws Exception {
-    saveNamespaceWithInjectedFault(Fault.SAVE_FSIMAGE);
+  public void testRTEWhileSavingSecondImage() throws Exception {
+    saveNamespaceWithInjectedFault(Fault.SAVE_SECOND_FSIMAGE_RTE);
   }
 
   @Test
-  public void testCrashWhileMoveCurrent() throws Exception {
-    saveNamespaceWithInjectedFault(Fault.MOVE_CURRENT);
+  public void testIOEWhileSavingSecondImage() throws Exception {
+    saveNamespaceWithInjectedFault(Fault.SAVE_SECOND_FSIMAGE_IOE);
   }
 
   @Test
-  public void testCrashWhileMoveLastCheckpoint() throws Exception {
-    saveNamespaceWithInjectedFault(Fault.MOVE_LAST_CHECKPOINT);
+  public void testCrashInAllImageDirs() throws Exception {
+    saveNamespaceWithInjectedFault(Fault.SAVE_ALL_FSIMAGES);
+  }
+  
+  @Test
+  public void testCrashWhenWritingVersionFiles() throws Exception {
+    saveNamespaceWithInjectedFault(Fault.WRITE_STORAGE_ALL);
+  }
+  
+  @Test
+  public void testCrashWhenWritingVersionFileInOneDir() throws Exception {
+    saveNamespaceWithInjectedFault(Fault.WRITE_STORAGE_ONE);
   }
  
 
   /**
    * Test case where savenamespace fails in all directories
    * and then the NN shuts down. Here we should recover from the
-   * failed checkpoint by moving the directories back on next
-   * NN start. This is a regression test for HDFS-1921.
+   * failed checkpoint since it only affected ".ckpt" files, not
+   * valid image files
    */
   @Test
   public void testFailedSaveNamespace() throws Exception {
@@ -313,7 +360,8 @@ public class TestSaveNamespace {
         FSNamesystem.getNamespaceEditsDirs(conf));
 
     doThrow(new IOException("Injected fault: saveFSImage")).
-      when(spyImage).saveFSImage((File)anyObject());
+      when(spyImage).saveFSImage((StorageDirectory)anyObject(),
+                                 Mockito.anyLong());
 
     try {
       doAnEdit(fsn, 1);
@@ -360,16 +408,6 @@ public class TestSaveNamespace {
     DFSTestUtil.formatNameNode(conf);
     FSNamesystem fsn = new FSNamesystem(conf);
 
-    // Replace the FSImage with a spy
-    final FSImage originalImage = fsn.dir.fsImage;
-    originalImage.getStorage().close();
-
-    FSImage spyImage = spy(originalImage);
-    spyImage.getStorage().setStorageDirectories(
-        FSNamesystem.getNamespaceDirs(conf), 
-        FSNamesystem.getNamespaceEditsDirs(conf));
-    fsn.dir.fsImage = spyImage;
-
     try {
       doAnEdit(fsn, 1);
       CheckpointSignature sig = fsn.rollEditLog();
@@ -382,7 +420,6 @@ public class TestSaveNamespace {
       fsn.saveNamespace();
 
       // Now shut down and restart the NN
-      originalImage.close();
       fsn.close();
       fsn = null;
 
@@ -399,7 +436,45 @@ public class TestSaveNamespace {
       }
     }
   }
+  
+  @Test
+  public void testTxIdPersistence() throws Exception {
+    Configuration conf = getConf();
+    NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
+    DFSTestUtil.formatNameNode(conf);
+    FSNamesystem fsn = new FSNamesystem(conf);
 
+    try {
+      // We have a BEGIN_LOG_SEGMENT txn to start
+      assertEquals(1, fsn.getEditLog().getLastWrittenTxId());
+      doAnEdit(fsn, 1);
+      assertEquals(2, fsn.getEditLog().getLastWrittenTxId());
+      
+      fsn.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fsn.saveNamespace();
+
+      // 2 more txns: END the first segment, BEGIN a new one
+      assertEquals(4, fsn.getEditLog().getLastWrittenTxId());
+      
+      // Shut down and restart
+      fsn.getFSImage().close();
+      fsn.close();
+      
+      // 1 more txn to END that segment
+      assertEquals(5, fsn.getEditLog().getLastWrittenTxId());
+      fsn = null;
+      
+      fsn = new FSNamesystem(conf);
+      // 1 more txn to start new segment on restart
+      assertEquals(6, fsn.getEditLog().getLastWrittenTxId());
+      
+    } finally {
+      if (fsn != null) {
+        fsn.close();
+      }
+    }
+  }
+  
   private void doAnEdit(FSNamesystem fsn, int id) throws IOException {
     // Make an edit
     fsn.mkdirs(

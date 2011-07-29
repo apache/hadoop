@@ -104,6 +104,10 @@ interface Tokenizer {
     public void fromBinary(DataInputStream in) throws IOException {
       value = in.readByte();
     }
+    
+    public void fromByte(byte b) {
+      value = b;
+    }
 
     @Override
     public String toString() {

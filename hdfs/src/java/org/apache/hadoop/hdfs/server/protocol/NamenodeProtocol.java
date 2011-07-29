@@ -42,20 +42,13 @@ public interface NamenodeProtocol extends VersionedProtocol {
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
    * 
-   * 5: Added one parameter to rollFSImage() and
-   *    changed the definition of CheckpointSignature
+   * 6: Switch to txid-based file naming for image and edits
    */
-  public static final long versionID = 5L;
+  public static final long versionID = 6L;
 
   // Error codes passed by errorReport().
   final static int NOTIFY = 0;
   final static int FATAL = 1;
-
-  // Journal action codes. See journal().
-  public static byte JA_IS_ALIVE = 100; // check whether the journal is alive
-  public static byte JA_JOURNAL      = 101; // just journal
-  public static byte JA_JSPOOL_START = 102;  // = FSEditLogOpCodes.OP_JSPOOL_START
-  public static byte JA_CHECKPOINT_TIME = 103; // = FSEditLogOpCodes.OP_CHECKPOINT_TIME
 
   public final static int ACT_UNKNOWN = 0;    // unknown action   
   public final static int ACT_SHUTDOWN = 50;   // shutdown node
@@ -84,14 +77,11 @@ public interface NamenodeProtocol extends VersionedProtocol {
   public ExportedBlockKeys getBlockKeys() throws IOException;
 
   /**
-   * Get the size of the current edit log (in bytes).
-   * @return The number of bytes in the current edit log.
+   * @return The most recent transaction ID that has been synced to
+   * persistent storage.
    * @throws IOException
-   * @deprecated 
-   *    See {@link org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode}
    */
-  @Deprecated
-  public long getEditLogSize() throws IOException;
+  public long getTransactionID() throws IOException;
 
   /**
    * Closes the current edit log and opens a new one. The 
@@ -103,20 +93,6 @@ public interface NamenodeProtocol extends VersionedProtocol {
    */
   @Deprecated
   public CheckpointSignature rollEditLog() throws IOException;
-
-  /**
-   * Rolls the fsImage log. It removes the old fsImage, copies the
-   * new image to fsImage, removes the old edits and renames edits.new 
-   * to edits. The call fails if any of the four files are missing.
-   * 
-   * @param sig the signature of this checkpoint (old fsimage)
-   * @throws IOException
-   * @deprecated 
-   *    See {@link org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode}
-   */
-  @Deprecated
-  public void rollFsImage(CheckpointSignature sig)
-  throws IOException;
 
   /**
    * Request name-node version and storage information.
@@ -177,31 +153,14 @@ public interface NamenodeProtocol extends VersionedProtocol {
    */
   public void endCheckpoint(NamenodeRegistration registration,
                             CheckpointSignature sig) throws IOException;
-
+  
+  
   /**
-   * Get the size of the active name-node journal (edit log) in bytes.
-   * 
-   * @param registration the requesting node
-   * @return The number of bytes in the journal.
-   * @throws IOException
+   * Return a structure containing details about all edit logs
+   * available to be fetched from the NameNode.
+   * @param sinceTxId return only logs that contain transactions >= sinceTxId
    */
-  public long journalSize(NamenodeRegistration registration) throws IOException;
-
-  /**
-   * Journal edit records.
-   * This message is sent by the active name-node to the backup node
-   * via {@code EditLogBackupOutputStream} in order to synchronize meta-data
-   * changes with the backup namespace image.
-   * 
-   * @param registration active node registration
-   * @param jAction journal action
-   * @param length length of the byte array
-   * @param records byte array containing serialized journal records
-   * @throws IOException
-   */
-  public void journal(NamenodeRegistration registration,
-                      int jAction,
-                      int length,
-                      byte[] records) throws IOException;
+  public RemoteEditLogManifest getEditLogManifest(long sinceTxId)
+    throws IOException;
 }
 

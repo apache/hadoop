@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.Writer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
@@ -35,20 +36,19 @@ import com.google.common.base.Preconditions;
  */
 class EditsDoubleBuffer {
 
-  private DataOutputBuffer bufCurrent; // current buffer for writing
-  private DataOutputBuffer bufReady; // buffer ready for flushing
+  private TxnBuffer bufCurrent; // current buffer for writing
+  private TxnBuffer bufReady; // buffer ready for flushing
   private final int initBufferSize;
-  private Writer writer;
 
   public EditsDoubleBuffer(int defaultBufferSize) {
     initBufferSize = defaultBufferSize;
-    bufCurrent = new DataOutputBuffer(initBufferSize);
-    bufReady = new DataOutputBuffer(initBufferSize);
-    writer = new FSEditLogOp.Writer(bufCurrent);
+    bufCurrent = new TxnBuffer(initBufferSize);
+    bufReady = new TxnBuffer(initBufferSize);
+
   }
     
   public void writeOp(FSEditLogOp op) throws IOException {
-    writer.writeOp(op);
+    bufCurrent.writeOp(op);
   }
 
   void writeRaw(byte[] bytes, int offset, int length) throws IOException {
@@ -71,10 +71,9 @@ class EditsDoubleBuffer {
   
   void setReadyToFlush() {
     assert isFlushed() : "previous data not flushed yet";
-    DataOutputBuffer tmp = bufReady;
+    TxnBuffer tmp = bufReady;
     bufReady = bufCurrent;
     bufCurrent = tmp;
-    writer = new FSEditLogOp.Writer(bufCurrent);
   }
   
   /**
@@ -100,6 +99,52 @@ class EditsDoubleBuffer {
 
   public int countBufferedBytes() {
     return bufReady.size() + bufCurrent.size();
+  }
+
+  /**
+   * @return the transaction ID of the first transaction ready to be flushed 
+   */
+  public long getFirstReadyTxId() {
+    assert bufReady.firstTxId > 0;
+    return bufReady.firstTxId;
+  }
+
+  /**
+   * @return the number of transactions that are ready to be flushed
+   */
+  public int countReadyTxns() {
+    return bufReady.numTxns;
+  }
+
+  
+  private static class TxnBuffer extends DataOutputBuffer {
+    long firstTxId;
+    int numTxns;
+    private Writer writer;
+    
+    public TxnBuffer(int initBufferSize) {
+      super(initBufferSize);
+      writer = new FSEditLogOp.Writer(this);
+      reset();
+    }
+
+    public void writeOp(FSEditLogOp op) throws IOException {
+      if (firstTxId == FSConstants.INVALID_TXID) {
+        firstTxId = op.txid;
+      } else {
+        assert op.txid > firstTxId;
+      }
+      writer.writeOp(op);
+      numTxns++;
+    }
+    
+    @Override
+    public DataOutputBuffer reset() {
+      super.reset();
+      firstTxId = FSConstants.INVALID_TXID;
+      numTxns = 0;
+      return this;
+    }
   }
 
 }

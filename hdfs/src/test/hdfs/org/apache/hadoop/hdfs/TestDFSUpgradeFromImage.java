@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.commons.logging.Log;
@@ -183,38 +184,6 @@ public class TestDFSUpgradeFromImage extends TestCase {
     }
   }
   
-  public void testUpgradeFromRel14Image() throws IOException {
-    unpackStorage();
-    MiniDFSCluster cluster = null;
-    try {
-      Configuration conf = new HdfsConfiguration();
-      if (System.getProperty("test.build.data") == null) { // to allow test to be run outside of Ant
-        System.setProperty("test.build.data", "build/test/data");
-      }
-      conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1); // block scanning off
-      cluster = new MiniDFSCluster.Builder(conf)
-                                  .numDataNodes(numDataNodes)
-                                  .format(false)
-                                  .startupOption(StartupOption.UPGRADE)
-                                  .clusterId("testClusterId")
-                                  .build();
-      cluster.waitActive();
-      DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
-      DFSClient dfsClient = dfs.dfs;
-      //Safemode will be off only after upgrade is complete. Wait for it.
-      while ( dfsClient.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_GET) ) {
-        LOG.info("Waiting for SafeMode to be OFF.");
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException ignored) {}
-      }
-
-      verifyFileSystem(dfs);
-    } finally {
-      if (cluster != null) { cluster.shutdown(); }
-    }
-  }
-
   /**
    * Test that sets up a fake image from Hadoop 0.3.0 and tries to start a
    * NN, verifying that the correct error message is thrown.
@@ -260,10 +229,50 @@ public class TestDFSUpgradeFromImage extends TestCase {
   }
   
   /**
+   * Test upgrade from an 0.14 image
+   */
+  public void testUpgradeFromRel14Image() throws IOException {
+    unpackStorage();
+    upgradeAndVerify();
+  }
+  
+  /**
    * Test upgrade from 0.22 image
    */
   public void testUpgradeFromRel22Image() throws IOException {
     unpackStorage(HADOOP22_IMAGE);
+    upgradeAndVerify();
+  }
+  
+  /**
+   * Test upgrade from 0.22 image with corrupt md5, make sure it
+   * fails to upgrade
+   */
+  public void testUpgradeFromCorruptRel22Image() throws IOException {
+    unpackStorage(HADOOP22_IMAGE);
+    
+    // Overwrite the md5 stored in the VERSION files
+    File baseDir = new File(MiniDFSCluster.getBaseDirectory());
+    FSImageTestUtil.corruptVersionFile(
+        new File(baseDir, "name1/current/VERSION"),
+        "imageMD5Digest", "22222222222222222222222222222222");
+    FSImageTestUtil.corruptVersionFile(
+        new File(baseDir, "name2/current/VERSION"),
+        "imageMD5Digest", "22222222222222222222222222222222");
+    
+    // Upgrade should now fail
+    try {
+      upgradeAndVerify();
+      fail("Upgrade did not fail with bad MD5");
+    } catch (IOException ioe) {
+      String msg = StringUtils.stringifyException(ioe);
+      if (!msg.contains("is corrupt with MD5 checksum")) {
+        throw ioe;
+      }
+    }
+  }
+
+  private void upgradeAndVerify() throws IOException {
     MiniDFSCluster cluster = null;
     try {
       Configuration conf = new HdfsConfiguration();
@@ -287,8 +296,12 @@ public class TestDFSUpgradeFromImage extends TestCase {
           Thread.sleep(1000);
         } catch (InterruptedException ignored) {}
       }
+
+      verifyFileSystem(dfs);
     } finally {
       if (cluster != null) { cluster.shutdown(); }
-    }
+    } 
   }
+
+
 }

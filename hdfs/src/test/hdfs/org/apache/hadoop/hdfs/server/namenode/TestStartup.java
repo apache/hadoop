@@ -21,16 +21,12 @@ import static org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption.I
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.net.InetAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Properties;
 import java.util.Random;
 
 import junit.framework.TestCase;
@@ -45,7 +41,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 
-import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -56,7 +51,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
-import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
@@ -237,13 +232,11 @@ public class TestStartup extends TestCase {
       sd = it.next();
 
       if(sd.getStorageDirType().isOfType(NameNodeDirType.IMAGE)) {
-        img.getStorage();
-        File imf = NNStorage.getStorageFile(sd, NameNodeFile.IMAGE);
+        File imf = img.getStorage().getStorageFile(sd, NameNodeFile.IMAGE, 0);
         LOG.info("--image file " + imf.getAbsolutePath() + "; len = " + imf.length() + "; expected = " + expectedImgSize);
         assertEquals(expectedImgSize, imf.length());	
       } else if(sd.getStorageDirType().isOfType(NameNodeDirType.EDITS)) {
-        img.getStorage();
-        File edf = NNStorage.getStorageFile(sd, NameNodeFile.EDITS);
+        File edf = img.getStorage().getStorageFile(sd, NameNodeFile.EDITS, 0);
         LOG.info("-- edits file " + edf.getAbsolutePath() + "; len = " + edf.length()  + "; expected = " + expectedEditsSize);
         assertEquals(expectedEditsSize, edf.length());	
       } else {
@@ -348,8 +341,8 @@ public class TestStartup extends TestCase {
       FSImage image = nn.getFSImage();
       StorageDirectory sd = image.getStorage().getStorageDir(0); //only one
       assertEquals(sd.getStorageDirType(), NameNodeDirType.IMAGE_AND_EDITS);
-      File imf = image.getStorage().getStorageFile(sd, NameNodeFile.IMAGE);
-      File edf = image.getStorage().getStorageFile(sd, NameNodeFile.EDITS);
+      File imf = image.getStorage().getStorageFile(sd, NameNodeFile.IMAGE, 0);
+      File edf = image.getStorage().getStorageFile(sd, NameNodeFile.EDITS, 0);
       LOG.info("--image file " + imf.getAbsolutePath() + "; len = " + imf.length());
       LOG.info("--edits file " + edf.getAbsolutePath() + "; len = " + edf.length());
 
@@ -430,70 +423,57 @@ public class TestStartup extends TestCase {
   }
 
   private void testImageChecksum(boolean compress) throws Exception {
-    Configuration conf = new Configuration();
-    FileSystem.setDefaultUri(conf, "hdfs://localhost:0");
-    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:0");
-    File base_dir = new File(
-        System.getProperty("test.build.data", "build/test/data"), "dfs/");
-    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
-        new File(base_dir, "name").getPath());
-    conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
+    MiniDFSCluster cluster = null;
+    Configuration conf = new HdfsConfiguration();
     if (compress) {
       conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESSION_CODEC_KEY, true);
     }
 
-    DFSTestUtil.formatNameNode(conf);
-
-    // create an image
-    LOG.info("Create an fsimage");
-    NameNode namenode = new NameNode(conf);
-    namenode.getNamesystem().mkdirs("/test",
-        new PermissionStatus("hairong", null, FsPermission.getDefault()), true);
-    assertTrue(namenode.getFileInfo("/test").isDir());
-    namenode.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
-    namenode.saveNamespace();
-
-    FSImage image = namenode.getFSImage();
-    image.loadFSImage();
-
-    File versionFile = image.getStorage().getStorageDir(0).getVersionFile();
-
-    RandomAccessFile file = new RandomAccessFile(versionFile, "rws");
-    FileInputStream in = null;
-    FileOutputStream out = null;
     try {
-      // read the property from version file
-      in = new FileInputStream(file.getFD());
-      file.seek(0);
-      Properties props = new Properties();
-      props.load(in);
+        LOG.info("\n===========================================\n" +
+                 "Starting empty cluster");
+        
+        cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(0)
+          .format(true)
+          .build();
+        cluster.waitActive();
+        
+        FileSystem fs = cluster.getFileSystem();
+        fs.mkdirs(new Path("/test"));
+        
+        // Directory layout looks like:
+        // test/data/dfs/nameN/current/{fsimage,edits,...}
+        File nameDir = new File(cluster.getNameDirs(0).iterator().next().getPath());
+        File dfsDir = nameDir.getParentFile();
+        assertEquals(dfsDir.getName(), "dfs"); // make sure we got right dir
+        
+        LOG.info("Shutting down cluster #1");
+        cluster.shutdown();
+        cluster = null;
 
-      // get the MD5 property and change it
-      String sMd5 = props.getProperty(NNStorage.MESSAGE_DIGEST_PROPERTY);
-      MD5Hash md5 = new MD5Hash(sMd5);
-      byte[] bytes = md5.getDigest();
-      bytes[0] += 1;
-      md5 = new MD5Hash(bytes);
-      props.setProperty(NNStorage.MESSAGE_DIGEST_PROPERTY, md5.toString());
-
-      // write the properties back to version file
-      file.seek(0);
-      out = new FileOutputStream(file.getFD());
-      props.store(out, null);
-      out.flush();
-      file.setLength(out.getChannel().position());
-
-      // now load the image again
-      image.loadFSImage();
-
-      fail("Expect to get a checksumerror");
-    } catch(IOException e) {
-        assertTrue(e.getMessage().contains("is corrupt"));
+        // Corrupt the md5 file to all 0s
+        File imageFile = new File(nameDir, "current/" + NNStorage.getImageFileName(0));
+        MD5FileUtils.saveMD5File(imageFile, new MD5Hash(new byte[16]));
+        
+        // Try to start a new cluster
+        LOG.info("\n===========================================\n" +
+        "Starting same cluster after simulated crash");
+        try {
+          cluster = new MiniDFSCluster.Builder(conf)
+            .numDataNodes(0)
+            .format(false)
+            .build();
+          fail("Should not have successfully started with corrupt image");
+        } catch (IOException ioe) {
+          if (!ioe.getCause().getMessage().contains("is corrupt with MD5")) {
+            throw ioe;
+          }
+        }
     } finally {
-      IOUtils.closeStream(in);
-      IOUtils.closeStream(out);
-      namenode.stop();
-      namenode.join();
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
   

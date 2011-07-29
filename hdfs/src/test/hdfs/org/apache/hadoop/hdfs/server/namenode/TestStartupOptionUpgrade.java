@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.net.URI;
+import java.util.Collections;
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -43,7 +45,9 @@ public class TestStartupOptionUpgrade {
     conf = new HdfsConfiguration();
     startOpt = StartupOption.UPGRADE;
     startOpt.setClusterId(null);
-    storage = new NNStorage(conf);
+    storage = new NNStorage(conf,
+      Collections.<URI>emptyList(),
+      Collections.<URI>emptyList());
   }
 
   @After

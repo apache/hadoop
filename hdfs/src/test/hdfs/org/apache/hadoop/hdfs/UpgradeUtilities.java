@@ -25,8 +25,10 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.Collections;
 import java.util.zip.CRC32;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -407,7 +409,9 @@ public class UpgradeUtilities {
    */
   public static File[] createNameNodeVersionFile(Configuration conf,
       File[] parent, StorageInfo version, String bpid) throws IOException {
-    Storage storage = new NNStorage(conf);
+    Storage storage = new NNStorage(conf, 
+                              Collections.<URI>emptyList(), 
+                              Collections.<URI>emptyList());
     storage.setStorageInfo(version);
     File[] versionFiles = new File[parent.length];
     for (int i = 0; i < parent.length; i++) {

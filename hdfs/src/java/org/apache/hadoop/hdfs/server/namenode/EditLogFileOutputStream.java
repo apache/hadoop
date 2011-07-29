@@ -25,6 +25,8 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.io.IOUtils;
 
@@ -35,6 +37,8 @@ import com.google.common.annotations.VisibleForTesting;
  * stores edits in a local file.
  */
 class EditLogFileOutputStream extends EditLogOutputStream {
+  private static Log LOG = LogFactory.getLog(EditLogFileOutputStream.class);;
+
   private static int EDITS_FILE_HEADER_SIZE_BYTES = Integer.SIZE / Byte.SIZE;
 
   private File file;
@@ -85,7 +89,14 @@ class EditLogFileOutputStream extends EditLogOutputStream {
     doubleBuf.writeOp(op);
   }
 
-  /** {@inheritDoc} */
+  /**
+   * Write a transaction to the stream. The serialization format is:
+   * <ul>
+   *   <li>the opcode (byte)</li>
+   *   <li>the transaction id (long)</li>
+   *   <li>the actual Writables for the transaction</li>
+   * </ul>
+   * */
   @Override
   void writeRaw(byte[] bytes, int offset, int length) throws IOException {
     doubleBuf.writeRaw(bytes, offset, length);
@@ -105,6 +116,10 @@ class EditLogFileOutputStream extends EditLogOutputStream {
 
   @Override
   public void close() throws IOException {
+    if (fp == null) {
+      throw new IOException("Trying to use aborted output stream");
+    }
+
     try {
       // close should have been called after all pending transactions
       // have been flushed & synced.
@@ -130,6 +145,16 @@ class EditLogFileOutputStream extends EditLogOutputStream {
       fc = null;
       fp = null;
     }
+    fp = null;
+  }
+  
+  @Override
+  public void abort() throws IOException {
+    if (fp == null) {
+      return;
+    }
+    IOUtils.cleanup(LOG, fp);
+    fp = null;
   }
 
   /**
@@ -148,6 +173,10 @@ class EditLogFileOutputStream extends EditLogOutputStream {
    */
   @Override
   protected void flushAndSync() throws IOException {
+    if (fp == null) {
+      throw new IOException("Trying to use aborted output stream");
+    }
+    
     preallocate(); // preallocate file if necessary
     doubleBuf.flushTo(fp);
     fc.force(false); // metadata updates not needed because of preallocation
@@ -190,19 +219,17 @@ class EditLogFileOutputStream extends EditLogOutputStream {
   }
 
   /**
-   * Operations like OP_JSPOOL_START and OP_CHECKPOINT_TIME should not be
-   * written into edits file.
-   */
-  @Override
-  boolean isOperationSupported(byte op) {
-    return op < FSEditLogOpCodes.OP_JSPOOL_START.getOpCode() - 1;
-  }
-
-  /**
    * Returns the file associated with this stream.
    */
   File getFile() {
     return file;
+  }
+
+  /**
+   * @return true if this stream is currently open.
+   */
+  public boolean isOpen() {
+    return fp != null;
   }
   
   @VisibleForTesting

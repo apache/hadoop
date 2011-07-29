@@ -67,6 +67,7 @@
     <dependency org="commons-logging" name="commons-logging" rev="${commons-logging.version}" conf="compile->master"/>
     <dependency org="commons-daemon" name="commons-daemon" rev="${commons-daemon.version}" conf="hdfs->default" />
     <dependency org="log4j" name="log4j" rev="${log4j.version}" conf="common->master"/>
+    <dependency org="com.google.guava" name="guava" rev="${guava.version}" conf="hdfs->default" />
     <dependency org="com.google.protobuf" name="protobuf-java" rev="2.4.0a" conf="common->master"/>
     <dependency org="org.apache.hadoop" name="avro" rev="${avro.version}" conf="compile->master">
       <exclude module="ant"/>

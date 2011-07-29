@@ -20,8 +20,6 @@ package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
 import java.io.IOException;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.DataInputStream;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.HashMap;
@@ -32,15 +30,11 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
 import org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer;
 import org.apache.hadoop.hdfs.tools.offlineEditsViewer.TokenizerFactory;
 import org.apache.hadoop.hdfs.tools.offlineEditsViewer.EditsVisitorFactory;
-import org.apache.hadoop.hdfs.tools.offlineEditsViewer.EditsVisitor;
-import org.apache.hadoop.hdfs.tools.offlineEditsViewer.XmlEditsVisitor;
-import org.apache.hadoop.hdfs.tools.offlineEditsViewer.BinaryEditsVisitor;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 
 import org.apache.hadoop.hdfs.server.namenode.OfflineEditsViewerHelper;
@@ -58,7 +52,7 @@ public class TestOfflineEditsViewer {
     System.getProperty("test.build.data", "build/test/data");
 
   private static String cacheDir =
-    System.getProperty("test.cache.data", "build/test/data/cache");
+    System.getProperty("test.cache.data", "build/test/cache");
 
   // to create edits and get edits filename
   private static final OfflineEditsViewerHelper nnHelper 
@@ -81,11 +75,13 @@ public class TestOfflineEditsViewer {
     obsoleteOpCodes.put(FSEditLogOpCodes.OP_DATANODE_REMOVE, true);
     obsoleteOpCodes.put(FSEditLogOpCodes.OP_SET_NS_QUOTA, true);
     obsoleteOpCodes.put(FSEditLogOpCodes.OP_CLEAR_NS_QUOTA, true);
-    // these are not written to files
-    obsoleteOpCodes.put(FSEditLogOpCodes.OP_JSPOOL_START, true);
-    obsoleteOpCodes.put(FSEditLogOpCodes.OP_CHECKPOINT_TIME, true);
   }
 
+  @Before
+  public void setup() {
+    new File(cacheDir).mkdirs();
+  }
+  
   /**
    * Test the OfflineEditsViewer
    */

@@ -23,6 +23,7 @@ import static org.mockito.Matchers.anyObject;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -33,6 +34,8 @@ import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -59,7 +62,7 @@ public class TestFsLimits {
   
   private static class TestFSDirectory extends FSDirectory {
     public TestFSDirectory() throws IOException {
-      super(new FSImage(), getMockNamesystem(), conf);
+      super(new FSImage(conf), getMockNamesystem(), conf);
       setReady(fsIsReady);
     }
     
@@ -71,8 +74,12 @@ public class TestFsLimits {
   }
 
   @Before
-  public void setUp() {
+  public void setUp() throws IOException {
     conf = new Configuration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+             fileAsURI(new File(MiniDFSCluster.getBaseDirectory(),
+                                "namenode")).toString());
+
     rootInode = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME, perms, 0L, 0L);
     inodes = new INode[]{ rootInode, null };
     fs = null;

@@ -78,6 +78,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.NodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
@@ -382,7 +383,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     nodeRegistration = new NamenodeRegistration(
         getHostPortString(rpcAddress),
         getHostPortString(getHttpAddress()),
-        getFSImage().getStorage(), getRole(), getFSImage().getStorage().getCheckpointTime());
+        getFSImage().getStorage(), getRole());
     return nodeRegistration;
   }
 
@@ -647,8 +648,9 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   public NamenodeRegistration register(NamenodeRegistration registration)
   throws IOException {
     verifyVersion(registration.getVersion());
-    namesystem.registerBackupNode(registration);
-    return setRegistration();
+    NamenodeRegistration myRegistration = setRegistration();
+    namesystem.registerBackupNode(registration, myRegistration);
+    return myRegistration;
   }
 
   @Override // NamenodeProtocol
@@ -667,22 +669,6 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     if(!isRole(NamenodeRole.NAMENODE))
       throw new IOException("Only an ACTIVE node can invoke endCheckpoint.");
     namesystem.endCheckpoint(registration, sig);
-  }
-
-  @Override // NamenodeProtocol
-  public long journalSize(NamenodeRegistration registration)
-  throws IOException {
-    verifyRequest(registration);
-    return namesystem.getEditLogSize();
-  }
-
-  @Override // NamenodeProtocol
-  public void journal(NamenodeRegistration registration,
-                      int jAction,
-                      int length,
-                      byte[] args) throws IOException {
-    // Active name-node cannot journal.
-    throw new UnsupportedActionException("journal");
   }
 
   @Override // ClientProtocol
@@ -1056,21 +1042,20 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     namesystem.refreshNodes(new HdfsConfiguration());
   }
 
-  @Deprecated // NamenodeProtocol
-  public long getEditLogSize() throws IOException {
-    return namesystem.getEditLogSize();
+  @Override // NamenodeProtocol
+  public long getTransactionID() {
+    return namesystem.getTransactionID();
   }
 
-  @Deprecated
   @Override // NamenodeProtocol
   public CheckpointSignature rollEditLog() throws IOException {
     return namesystem.rollEditLog();
   }
-
-  @Deprecated
-  @Override // NamenodeProtocol
-  public void rollFsImage(CheckpointSignature sig) throws IOException {
-    namesystem.rollFSImage(sig);
+  
+  @Override
+  public RemoteEditLogManifest getEditLogManifest(long sinceTxId)
+  throws IOException {
+    return namesystem.getEditLogManifest(sinceTxId);
   }
     
   @Override // ClientProtocol
@@ -1279,24 +1264,9 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     if (version != LAYOUT_VERSION)
       throw new IncorrectVersionException(version, "data node");
   }
-
-  /**
-   * Returns the name of the fsImage file
-   */
-  public File getFsImageName() throws IOException {
-    return getFSImage().getStorage().getFsImageName();
-  }
     
   public FSImage getFSImage() {
     return namesystem.dir.fsImage;
-  }
-
-  /**
-   * Returns the name of the fsImage file uploaded by periodic
-   * checkpointing
-   */
-  public File[] getFsImageNameCheckpoint() throws IOException {
-    return getFSImage().getStorage().getFsImageNameCheckpoint();
   }
 
   /**
@@ -1374,20 +1344,16 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     }
     System.out.println("Formatting using clusterid: " + clusterId);
     
-    FSImage fsImage = new FSImage(dirsToFormat, editDirsToFormat);
+    FSImage fsImage = new FSImage(conf, null, dirsToFormat, editDirsToFormat);
     FSNamesystem nsys = new FSNamesystem(fsImage, conf);
-    nsys.dir.fsImage.getStorage().format(clusterId);
+    nsys.dir.fsImage.format(clusterId);
     return false;
   }
 
   private static boolean finalize(Configuration conf,
                                boolean isConfirmationNeeded
                                ) throws IOException {
-    Collection<URI> dirsToFormat = FSNamesystem.getNamespaceDirs(conf);
-    Collection<URI> editDirsToFormat = 
-                               FSNamesystem.getNamespaceEditsDirs(conf);
-    FSNamesystem nsys = new FSNamesystem(new FSImage(dirsToFormat,
-                                         editDirsToFormat), conf);
+    FSNamesystem nsys = new FSNamesystem(new FSImage(conf), conf);
     System.err.print(
         "\"finalize\" will remove the previous state of the files system.\n"
         + "Recent upgrade will become permanent.\n"

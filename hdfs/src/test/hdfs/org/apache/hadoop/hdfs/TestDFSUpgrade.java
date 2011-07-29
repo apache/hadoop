@@ -27,15 +27,20 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.TestParallelImageWrite;
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEditsFileName;
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
+
 import org.apache.hadoop.util.StringUtils;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import com.google.common.base.Joiner;
+
 import static org.junit.Assert.*;
 
 /**
@@ -45,6 +50,7 @@ import static org.junit.Assert.*;
 */
 public class TestDFSUpgrade {
  
+  private static final int EXPECTED_TXID = 17;
   private static final Log LOG = LogFactory.getLog(TestDFSUpgrade.class.getName());
   private Configuration conf;
   private int testCounter = 0;
@@ -66,15 +72,22 @@ public class TestDFSUpgrade {
    * its files with their original checksum. It is assumed that the
    * server has recovered and upgraded.
    */
-  void checkNameNode(String[] baseDirs) throws IOException {
-    for (int i = 0; i < baseDirs.length; i++) {
-      assertTrue(new File(baseDirs[i],"current").isDirectory());
-      assertTrue(new File(baseDirs[i],"current/VERSION").isFile());
-      assertTrue(new File(baseDirs[i],"current/edits").isFile());
-      assertTrue(new File(baseDirs[i],"current/fsimage").isFile());
-      assertTrue(new File(baseDirs[i],"current/fstime").isFile());
+  void checkNameNode(String[] baseDirs, long imageTxId) throws IOException {
+    for (String baseDir : baseDirs) {
+      LOG.info("Checking namenode directory " + baseDir);
+      LOG.info("==== Contents ====:\n  " +
+          Joiner.on("  \n").join(new File(baseDir, "current").list()));
+      LOG.info("==================");
       
-      File previous = new File(baseDirs[i], "previous");
+      assertTrue(new File(baseDir,"current").isDirectory());
+      assertTrue(new File(baseDir,"current/VERSION").isFile());
+      assertTrue(new File(baseDir,"current/" 
+                          + getInProgressEditsFileName(imageTxId + 1)).isFile());
+      assertTrue(new File(baseDir,"current/" 
+                          + getImageFileName(imageTxId)).isFile());
+      assertTrue(new File(baseDir,"current/seen_txid").isFile());
+      
+      File previous = new File(baseDir, "previous");
       assertTrue(previous.isDirectory());
       assertEquals(UpgradeUtilities.checksumContents(NAME_NODE, previous),
           UpgradeUtilities.checksumMasterNameNodeContents());
@@ -200,7 +213,6 @@ public class TestDFSUpgrade {
     StorageInfo storageInfo = null;
     for (int numDirs = 1; numDirs <= 2; numDirs++) {
       conf = new HdfsConfiguration();
-      conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);      
       conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
       String[] nameNodeDirs = conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
       String[] dataNodeDirs = conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
@@ -208,7 +220,7 @@ public class TestDFSUpgrade {
       log("Normal NameNode upgrade", numDirs);
       UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       cluster = createCluster();
-      checkNameNode(nameNodeDirs);
+      checkNameNode(nameNodeDirs, EXPECTED_TXID);
       if (numDirs > 1)
         TestParallelImageWrite.checkImages(cluster.getNamesystem(), numDirs);
       cluster.shutdown();
@@ -277,25 +289,21 @@ public class TestDFSUpgrade {
       UpgradeUtilities.createEmptyDirs(dataNodeDirs);
 
       log("NameNode upgrade with no edits file", numDirs);
-      baseDirs = UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
-      for (File f : baseDirs) { 
-        FileUtil.fullyDelete(new File(f,"edits"));
-      }
+      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
+      deleteStorageFilesWithPrefix(nameNodeDirs, "edits_");
       startNameNodeShouldFail(StartupOption.UPGRADE);
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       
       log("NameNode upgrade with no image file", numDirs);
-      baseDirs = UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
-      for (File f : baseDirs) { 
-        FileUtil.fullyDelete(new File(f,"fsimage")); 
-      }
+      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
+      deleteStorageFilesWithPrefix(nameNodeDirs, "fsimage_");
       startNameNodeShouldFail(StartupOption.UPGRADE);
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       
       log("NameNode upgrade with corrupt version file", numDirs);
       baseDirs = UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       for (File f : baseDirs) { 
-        UpgradeUtilities.corruptFile(new File(f,"VERSION")); 
+        UpgradeUtilities.corruptFile(new File (f,"VERSION")); 
       }
       startNameNodeShouldFail(StartupOption.UPGRADE);
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
@@ -338,7 +346,7 @@ public class TestDFSUpgrade {
       log("Normal NameNode upgrade", numDirs);
       UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       cluster = createCluster();
-      checkNameNode(nameNodeDirs);
+      checkNameNode(nameNodeDirs, EXPECTED_TXID);
       TestParallelImageWrite.checkImages(cluster.getNamesystem(), numDirs);
       cluster.shutdown();
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
@@ -369,6 +377,19 @@ public class TestDFSUpgrade {
     }
   }
  
+  private void deleteStorageFilesWithPrefix(String[] nameNodeDirs, String prefix)
+  throws Exception {
+    for (String baseDirStr : nameNodeDirs) {
+      File baseDir = new File(baseDirStr);
+      File currentDir = new File(baseDir, "current");
+      for (File f : currentDir.listFiles()) {
+        if (f.getName().startsWith(prefix)) {
+          assertTrue("Deleting " + f, f.delete());
+        }
+      }
+    }
+  }
+
   @Test(expected=IOException.class)
   public void testUpgradeFromPreUpgradeLVFails() throws IOException {
     // Upgrade from versions prior to Storage#LAST_UPGRADABLE_LAYOUT_VERSION

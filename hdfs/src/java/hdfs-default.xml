@@ -582,10 +582,30 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.namenode.checkpoint.size</name>
-  <value>67108864</value>
-  <description>The size of the current edit log (in bytes) that triggers
-       a periodic checkpoint even if the dfs.namenode.checkpoint.period hasn't expired.
+  <name>dfs.namenode.checkpoint.txns</name>
+  <value>40000</value>
+  <description>The Secondary NameNode or CheckpointNode will create a checkpoint
+  of the namespace every 'dfs.namenode.checkpoint.txns' transactions, regardless
+  of whether 'dfs.namenode.checkpoint.period' has expired.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.checkpoint.check.period</name>
+  <value>60</value>
+  <description>The SecondaryNameNode and CheckpointNode will poll the NameNode
+  every 'dfs.namenode.checkpoint.check.period' seconds to query the number
+  of uncheckpointed transactions.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.num.checkpoints.retained</name>
+  <value>2</value>
+  <description>The number of image checkpoint files that will be retained by
+  the NameNode and Secondary NameNode in their storage directories. All edit
+  logs necessary to recover an up-to-date namespace from the oldest retained
+  checkpoint will also be retained.
   </description>
 </property>
 

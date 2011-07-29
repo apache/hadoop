@@ -105,6 +105,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlocks;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
@@ -124,6 +125,7 @@ import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
@@ -323,8 +325,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     if(fsImage == null) {
       this.dir = new FSDirectory(this, conf);
       StartupOption startOpt = NameNode.getStartupOption(conf);
-      this.dir.loadFSImage(getNamespaceDirs(conf),
-                           getNamespaceEditsDirs(conf), startOpt);
+      this.dir.loadFSImage(startOpt);
       long timeTakenToLoadFSImage = now() - systemStart;
       LOG.info("Finished loading FSImage in " + timeTakenToLoadFSImage + " msecs");
       NameNode.getNameNodeMetrics().setFsImageLoadTime(
@@ -392,8 +393,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
           + propertyName + "\" in hdfs-site.xml;" +
           "\n\t\t- use Backup Node as a persistent and up-to-date storage " +
           "of the file system meta-data.");
-    } else if (dirNames.isEmpty())
-      dirNames.add("file:///tmp/hadoop/dfs/name");
+    } else if (dirNames.isEmpty()) {
+      dirNames = Collections.singletonList("file:///tmp/hadoop/dfs/name");
+    }
     return Util.stringCollectionAsURIs(dirNames);
   }
 
@@ -3258,7 +3260,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
         throw new IOException("Safe mode should be turned ON " +
                               "in order to create namespace image.");
       }
-      getFSImage().saveNamespace(true);
+      getFSImage().saveNamespace();
       LOG.info("New namespace image has been created.");
     } finally {
       readUnlock();
@@ -4003,8 +4005,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     }
   }
 
-  long getEditLogSize() throws IOException {
-    return getEditLog().getEditLogSize();
+  public long getTransactionID() {
+    return getEditLog().getSyncTxId();
   }
 
   CheckpointSignature rollEditLog() throws IOException {
@@ -4019,24 +4021,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       writeUnlock();
     }
   }
-
-  /**
-   * Moves fsimage.ckpt to fsImage and edits.new to edits
-   * Reopens the new edits file.
-   *
-   * @param sig the signature of this checkpoint (old image)
-   */
-  void rollFSImage(CheckpointSignature sig) throws IOException {
-    writeLock();
-    try {
-      if (isInSafeMode()) {
-        throw new SafeModeException("Image not rolled", safeMode);
-      }
-      LOG.info("Roll FSImage from " + Server.getRemoteAddress());
-      getFSImage().rollFSImage(sig, true);
-    } finally {
-      writeUnlock();
-    }
+  
+  public RemoteEditLogManifest getEditLogManifest(long sinceTxId) throws IOException {
+    return getEditLog().getEditLogManifest(sinceTxId);
   }
 
   NamenodeCommand startCheckpoint(
@@ -4516,31 +4503,29 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   }
 
   /**
-   * Register a name-node.
-   * <p>
-   * Registration is allowed if there is no ongoing streaming to
-   * another backup node.
-   * We currently allow only one backup node, but multiple chackpointers 
-   * if there are no backups.
+   * Register a Backup name-node, verifying that it belongs
+   * to the correct namespace, and adding it to the set of
+   * active journals if necessary.
    * 
-   * @param registration
-   * @throws IOException
+   * @param bnReg registration of the new BackupNode
+   * @param nnReg registration of this NameNode
+   * @throws IOException if the namespace IDs do not match
    */
-  void registerBackupNode(NamenodeRegistration registration)
-    throws IOException {
+  void registerBackupNode(NamenodeRegistration bnReg,
+      NamenodeRegistration nnReg) throws IOException {
     writeLock();
     try {
       if(getFSImage().getStorage().getNamespaceID() 
-         != registration.getNamespaceID())
+         != bnReg.getNamespaceID())
         throw new IOException("Incompatible namespaceIDs: "
             + " Namenode namespaceID = "
             + getFSImage().getStorage().getNamespaceID() + "; "
-            + registration.getRole() +
-            " node namespaceID = " + registration.getNamespaceID());
-      boolean regAllowed = getEditLog().checkBackupRegistration(registration);
-      if(!regAllowed)
-        throw new IOException("Registration is not allowed. " +
-                              "Another node is registered as a backup.");
+            + bnReg.getRole() +
+            " node namespaceID = " + bnReg.getNamespaceID());
+      if (bnReg.getRole() == NamenodeRole.BACKUP) {
+        getFSImage().getEditLog().registerBackupNode(
+            bnReg, nnReg);
+      }
     } finally {
       writeUnlock();
     }
@@ -5080,4 +5065,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   void removeDecomNodeFromList(List<DatanodeDescriptor> nodeList) {
     getBlockManager().getDatanodeManager().removeDecomNodeFromList(nodeList);
   }
+
+
 }

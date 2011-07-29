@@ -28,6 +28,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * This class tests various combinations of dfs.namenode.name.dir 
@@ -46,13 +50,10 @@ public class TestNameEditsConfigs extends TestCase {
       System.getProperty("test.build.data", "build/test/data"), "dfs/");
 
   protected void setUp() throws java.lang.Exception {
-    if(base_dir.exists())
-      tearDown();
-  }
-
-  protected void tearDown() throws java.lang.Exception {
-    if (!FileUtil.fullyDelete(base_dir)) 
-      throw new IOException("Cannot remove directory " + base_dir);
+    if(base_dir.exists()) {
+      if (!FileUtil.fullyDelete(base_dir)) 
+        throw new IOException("Cannot remove directory " + base_dir);
+    }
   }
 
   private void writeFile(FileSystem fileSys, Path name, int repl)
@@ -68,10 +69,22 @@ public class TestNameEditsConfigs extends TestCase {
   }
 
   void checkImageAndEditsFilesExistence(File dir, 
-                                        boolean imageMustExist,
-                                        boolean editsMustExist) {
-    assertTrue(imageMustExist == new File(dir, FILE_IMAGE).exists());
-    assertTrue(editsMustExist == new File(dir, FILE_EDITS).exists());
+                                        boolean shouldHaveImages,
+                                        boolean shouldHaveEdits)
+  throws IOException {
+    FSImageTransactionalStorageInspector ins = inspect(dir);
+
+    if (shouldHaveImages) {
+      assertTrue("Expect images in " + dir, ins.foundImages.size() > 0);
+    } else {
+      assertTrue("Expect no images in " + dir, ins.foundImages.isEmpty());      
+    }
+
+    if (shouldHaveEdits) {
+      assertTrue("Expect edits in " + dir, ins.foundEditLogs.size() > 0);
+    } else {
+      assertTrue("Expect no edits in " + dir, ins.foundEditLogs.isEmpty());
+    }
   }
 
   private void checkFile(FileSystem fileSys, Path name, int repl)
@@ -110,9 +123,10 @@ public class TestNameEditsConfigs extends TestCase {
    *    do not read any stale image or edits. 
    * All along the test, we create and delete files at reach restart to make
    * sure we are reading proper edits and image.
+   * @throws Exception 
    */
   @SuppressWarnings("deprecation")
-  public void testNameEditsConfigs() throws IOException {
+  public void testNameEditsConfigs() throws Exception {
     Path file1 = new Path("TestNameEditsConfigs1");
     Path file2 = new Path("TestNameEditsConfigs2");
     Path file3 = new Path("TestNameEditsConfigs3");
@@ -120,12 +134,26 @@ public class TestNameEditsConfigs extends TestCase {
     SecondaryNameNode secondary = null;
     Configuration conf = null;
     FileSystem fileSys = null;
-    File newNameDir = new File(base_dir, "name");
-    File newEditsDir = new File(base_dir, "edits");
-    File nameAndEdits = new File(base_dir, "name_and_edits");
-    File checkpointNameDir = new File(base_dir, "secondname");
-    File checkpointEditsDir = new File(base_dir, "secondedits");
-    File checkpointNameAndEdits = new File(base_dir, "second_name_and_edits");
+    final File newNameDir = new File(base_dir, "name");
+    final File newEditsDir = new File(base_dir, "edits");
+    final File nameAndEdits = new File(base_dir, "name_and_edits");
+    final File checkpointNameDir = new File(base_dir, "secondname");
+    final File checkpointEditsDir = new File(base_dir, "secondedits");
+    final File checkpointNameAndEdits = new File(base_dir, "second_name_and_edits");
+    
+    ImmutableList<File> allCurrentDirs = ImmutableList.of(
+        new File(nameAndEdits, "current"),
+        new File(newNameDir, "current"),
+        new File(newEditsDir, "current"),
+        new File(checkpointNameAndEdits, "current"),
+        new File(checkpointNameDir, "current"),
+        new File(checkpointEditsDir, "current"));
+    ImmutableList<File> imageCurrentDirs = ImmutableList.of(
+        new File(nameAndEdits, "current"),
+        new File(newNameDir, "current"),
+        new File(checkpointNameAndEdits, "current"),
+        new File(checkpointNameDir, "current"));
+    
     
     // Start namenode with same dfs.namenode.name.dir and dfs.namenode.edits.dir
     conf = new HdfsConfiguration();
@@ -191,23 +219,12 @@ public class TestNameEditsConfigs extends TestCase {
       secondary.shutdown();
     }
 
-    checkImageAndEditsFilesExistence(nameAndEdits, true, true);
-    checkImageAndEditsFilesExistence(newNameDir, true, false);
-    checkImageAndEditsFilesExistence(newEditsDir, false, true);
-    checkImageAndEditsFilesExistence(checkpointNameAndEdits, true, true);
-    checkImageAndEditsFilesExistence(checkpointNameDir, true, false);
-    checkImageAndEditsFilesExistence(checkpointEditsDir, false, true);
-
+    FSImageTestUtil.assertParallelFilesAreIdentical(allCurrentDirs,
+        ImmutableSet.of("VERSION"));
+    FSImageTestUtil.assertSameNewestImage(imageCurrentDirs);
+    
     // Now remove common directory both have and start namenode with 
     // separate name and edits dirs
-    new File(nameAndEdits, FILE_EDITS).renameTo(
-        new File(newNameDir, FILE_EDITS));
-    new File(nameAndEdits, FILE_IMAGE).renameTo(
-        new File(newEditsDir, FILE_IMAGE));
-    new File(checkpointNameAndEdits, FILE_EDITS).renameTo(
-        new File(checkpointNameDir, FILE_EDITS));
-    new File(checkpointNameAndEdits, FILE_IMAGE).renameTo(
-        new File(checkpointEditsDir, FILE_IMAGE));
     conf =  new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, newNameDir.getPath());
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, newEditsDir.getPath());
@@ -237,7 +254,8 @@ public class TestNameEditsConfigs extends TestCase {
       cluster.shutdown();
       secondary.shutdown();
     }
-
+    
+    // No edit logs in new name dir
     checkImageAndEditsFilesExistence(newNameDir, true, false);
     checkImageAndEditsFilesExistence(newEditsDir, false, true);
     checkImageAndEditsFilesExistence(checkpointNameDir, true, false);
@@ -281,12 +299,18 @@ public class TestNameEditsConfigs extends TestCase {
     checkImageAndEditsFilesExistence(checkpointNameAndEdits, true, true);
   }
 
+  private FSImageTransactionalStorageInspector inspect(File storageDir)
+      throws IOException {
+    return FSImageTestUtil.inspectStorageDirectory(
+        new File(storageDir, "current"), NameNodeDirType.IMAGE_AND_EDITS);
+  }
+
   /**
    * Test various configuration options of dfs.namenode.name.dir and dfs.namenode.edits.dir
    * This test tries to simulate failure scenarios.
    * 1. Start cluster with shared name and edits dir
    * 2. Restart cluster by adding separate name and edits dirs
-   * 3. Restart cluster by removing shared name and edits dir
+   * T3. Restart cluster by removing shared name and edits dir
    * 4. Restart cluster with old shared name and edits dir, but only latest 
    *    name dir. This should fail since we dont have latest edits dir
    * 5. Restart cluster with old shared name and edits dir, but only latest
@@ -314,6 +338,10 @@ public class TestNameEditsConfigs extends TestCase {
                                 .manageNameDfsDirs(false)
                                 .build();
     cluster.waitActive();
+    
+    // Check that the dir has a VERSION file
+    assertTrue(new File(nameAndEdits, "current/VERSION").exists());
+    
     fileSys = cluster.getFileSystem();
 
     try {
@@ -342,6 +370,12 @@ public class TestNameEditsConfigs extends TestCase {
                                 .manageNameDfsDirs(false)
                                 .build();
     cluster.waitActive();
+
+    // Check that the dirs have a VERSION file
+    assertTrue(new File(nameAndEdits, "current/VERSION").exists());
+    assertTrue(new File(newNameDir, "current/VERSION").exists());
+    assertTrue(new File(newEditsDir, "current/VERSION").exists());
+
     fileSys = cluster.getFileSystem();
 
     try {
@@ -380,7 +414,7 @@ public class TestNameEditsConfigs extends TestCase {
       fileSys.close();
       cluster.shutdown();
     }
-
+    
     // Add old shared directory for name and edits along with latest name
     conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, newNameDir.getPath() + "," + 
@@ -401,7 +435,9 @@ public class TestNameEditsConfigs extends TestCase {
       cluster = null;
     }
 
-    // Add old shared directory for name and edits along with latest edits
+    // Add old shared directory for name and edits along with latest edits. 
+    // This is OK, since the latest edits will have segments leading all
+    // the way from the image in name_and_edits.
     conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameAndEdits.getPath());
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, newEditsDir.getPath() +
@@ -413,11 +449,17 @@ public class TestNameEditsConfigs extends TestCase {
                                   .format(false)
                                   .manageNameDfsDirs(false)
                                   .build();
-      assertTrue(false);
+      assertTrue(!fileSys.exists(file1));
+      assertTrue(fileSys.exists(file2));
+      checkFile(fileSys, file2, replication);
+      cleanupFile(fileSys, file2);
+      writeFile(fileSys, file3, replication);
+      checkFile(fileSys, file3, replication);
     } catch (IOException e) { // expect to fail
       System.out.println("cluster start failed due to missing latest name dir");
     } finally {
-      cluster = null;
+      fileSys.close();
+      cluster.shutdown();
     }
   }
 }

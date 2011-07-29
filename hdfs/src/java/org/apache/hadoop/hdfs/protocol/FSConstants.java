@@ -65,6 +65,9 @@ public interface FSConstants {
 
   // type of the datanode report
   public static enum DatanodeReportType {ALL, LIVE, DEAD }
+  
+  // An invalid transaction ID that will never be seen in a real namesystem.
+  public static final long INVALID_TXID = -12345;
 
   /**
    * Distributed upgrade actions:

@@ -95,6 +95,7 @@ public class MiniDFSCluster {
    */
   public static class Builder {
     private int nameNodePort = 0;
+    private int nameNodeHttpPort = 0;
     private final Configuration conf;
     private int numNameNodes = 1;
     private int numDataNodes = 1;
@@ -128,6 +129,14 @@ public class MiniDFSCluster {
      */
     public Builder nameNodePort(int val) {
       this.nameNodePort = val;
+      return this;
+    }
+    
+    /**
+     * Default: 0
+     */
+    public Builder nameNodeHttpPort(int val) {
+      this.nameNodeHttpPort = val;
       return this;
     }
 
@@ -247,6 +256,7 @@ public class MiniDFSCluster {
       builder.federation = true;
       
     initMiniDFSCluster(builder.nameNodePort,
+                       builder.nameNodeHttpPort,
                        builder.conf,
                        builder.numDataNodes,
                        builder.format,
@@ -473,12 +483,13 @@ public class MiniDFSCluster {
                         String[] racks, String hosts[],
                         long[] simulatedCapacities) throws IOException {
     this.nameNodes = new NameNodeInfo[1]; // Single namenode in the cluster
-    initMiniDFSCluster(nameNodePort, conf, numDataNodes, format,
+    initMiniDFSCluster(nameNodePort, 0, conf, numDataNodes, format,
         manageNameDfsDirs, manageDataDfsDirs, operation, racks, hosts,
         simulatedCapacities, null, true, false, false);
   }
 
-  private void initMiniDFSCluster(int nameNodePort, Configuration conf,
+  private void initMiniDFSCluster(int nameNodePort, int nameNodeHttpPort,
+      Configuration conf,
       int numDataNodes, boolean format, boolean manageNameDfsDirs,
       boolean manageDataDfsDirs, StartupOption operation, String[] racks,
       String[] hosts, long[] simulatedCapacities, String clusterId,
@@ -526,7 +537,8 @@ public class MiniDFSCluster {
   
     if (!federation) {
       conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "127.0.0.1:" + nameNodePort);
-      conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:"
+          + nameNodeHttpPort);
       NameNode nn = createNameNode(0, conf, numDataNodes, manageNameDfsDirs,
           format, operation, clusterId);
       nameNodes[0] = new NameNodeInfo(nn, conf);

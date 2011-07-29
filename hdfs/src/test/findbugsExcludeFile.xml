@@ -230,6 +230,15 @@
      </Match>
 
      <!--
+      lastAppliedTxid is carefully unsynchronized in the BackupNode in a couple spots.
+      See the comments in BackupImage for justification.
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.server.namenode.FSImage" />
+       <Field name="lastAppliedTxId" />
+       <Bug pattern="IS2_INCONSISTENT_SYNC" />
+     </Match>
+     <!--
       Findbugs doesn't realize that closing a FilterOutputStream pushes the close down to
       wrapped streams, too.
      -->
