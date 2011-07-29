@@ -587,6 +587,9 @@ Release 0.22.0 - Unreleased
     MAPREDUCE-2571. CombineFileInputFormat.getSplits throws a
     java.lang.ArrayStoreException. (Bochun Bai via todd)
 
+    MAPREDUCE-2127. mapreduce trunk builds are filing on hudson.
+    (Bruno Mahé via eli)
+
 Release 0.21.1 - Unreleased
 
   NEW FEATURES
