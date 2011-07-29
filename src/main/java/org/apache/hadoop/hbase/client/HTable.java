@@ -715,11 +715,8 @@ public class HTable implements HTableInterface, Closeable {
      
       // we need to periodically see if the writebuffer is full instead of waiting until the end of the List
       n++;
-      if (n == DOPUT_WB_CHECK) {
-        if (autoFlush || currentWriteBufferSize > writeBufferSize) {
-          flushCommits();
-          n = 0;
-        }
+      if (n % DOPUT_WB_CHECK == 0 && currentWriteBufferSize > writeBufferSize) {
+        flushCommits();
       }
     }
     if (autoFlush || currentWriteBufferSize > writeBufferSize) {
