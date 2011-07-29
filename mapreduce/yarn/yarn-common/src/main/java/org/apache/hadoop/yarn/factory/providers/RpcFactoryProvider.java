@@ -3,6 +3,8 @@ package org.apache.hadoop.yarn.factory.providers;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.factories.RpcClientFactory;
@@ -14,7 +16,7 @@ import org.apache.hadoop.yarn.factories.impl.pb.RpcServerFactoryPBImpl;
  * A public static get() method must be present in the Client/Server Factory implementation.
  */
 public class RpcFactoryProvider {
-  
+  private static final Log LOG = LogFactory.getLog(RpcFactoryProvider.class);
   //TODO Move these keys to CommonConfigurationKeys
   public static String RPC_SERIALIZER_KEY = "org.apache.yarn.ipc.rpc.serializer.property";
   public static String RPC_SERIALIZER_DEFAULT = "protocolbuffers";

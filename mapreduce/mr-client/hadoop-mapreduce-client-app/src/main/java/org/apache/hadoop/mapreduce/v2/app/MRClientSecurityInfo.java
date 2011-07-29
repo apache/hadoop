@@ -16,7 +16,7 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security;
+package org.apache.hadoop.mapreduce.v2.app;
 
 import java.lang.annotation.Annotation;
 
@@ -26,9 +26,10 @@ import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.TokenSelector;
-import org.apache.hadoop.yarn.proto.LocalizationProtocol;
+import org.apache.hadoop.yarn.proto.MRClientProtocol;
+import org.apache.hadoop.yarn.security.ApplicationTokenSelector;
 
-public class LocalizerSecurityInfo extends SecurityInfo {
+public class MRClientSecurityInfo extends SecurityInfo {
 
   @Override
   public KerberosInfo getKerberosInfo(Class<?> protocol, Configuration conf) {
@@ -37,8 +38,7 @@ public class LocalizerSecurityInfo extends SecurityInfo {
 
   @Override
   public TokenInfo getTokenInfo(Class<?> protocol, Configuration conf) {
-    if (!protocol
-        .equals(LocalizationProtocol.LocalizationProtocolService.BlockingInterface.class)) {
+    if (!protocol.equals(MRClientProtocol.MRClientProtocolService.BlockingInterface.class)) {
       return null;
     }
     return new TokenInfo() {
@@ -51,8 +51,7 @@ public class LocalizerSecurityInfo extends SecurityInfo {
       @Override
       public Class<? extends TokenSelector<? extends TokenIdentifier>>
           value() {
-        System.err.print("=========== Using localizerTokenSecurityInfo");
-        return LocalizerTokenSelector.class;
+        return ApplicationTokenSelector.class;
       }
     };
   }

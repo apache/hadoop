@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ProtocolSignature;
+import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.mapreduce.ClusterMetrics;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -556,7 +557,7 @@ public class YARNRunner implements ClientProtocol {
   @Override
   public ProtocolSignature getProtocolSignature(String protocol,
       long clientVersion, int clientMethodsHash) throws IOException {
-    return ProtocolSignature.getProtocolSigature(this, protocol, clientVersion,
+    return ProtocolSignature.getProtocolSignature(this, protocol, clientVersion,
         clientMethodsHash);
   }
 }

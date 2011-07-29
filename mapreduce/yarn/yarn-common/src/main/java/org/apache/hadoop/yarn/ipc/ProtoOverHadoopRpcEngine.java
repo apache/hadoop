@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.yarn.ipc;
 
 import java.io.Closeable;
@@ -15,15 +33,13 @@ import javax.net.SocketFactory;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.ipc.Client;
+import org.apache.hadoop.ipc.ProtocolProxy;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcEngine;
-import org.apache.hadoop.ipc.ProtocolProxy;
-import org.apache.hadoop.ipc.ProtocolSignature;
-import org.apache.hadoop.ipc.VersionedProtocol;
-import org.apache.hadoop.ipc.WritableRpcEngine;
+import org.apache.hadoop.ipc.ClientCache;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -35,24 +51,17 @@ import com.google.protobuf.BlockingService;
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;
 import com.google.protobuf.ServiceException;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 
 
 @InterfaceStability.Evolving
 public class ProtoOverHadoopRpcEngine implements RpcEngine {
   private static final Log LOG = LogFactory.getLog(RPC.class);
   
-  private static final RpcEngine ENGINE = new WritableRpcEngine();
-
-  /** Tunnel a Proto RPC request and response through Hadoop's RPC. */
-  public static interface TunnelProtocol extends VersionedProtocol {
-    /** WritableRpcEngine requires a versionID */
-    public static final long versionID = 1L;
-
-    /** All Proto methods and responses go through this. */
-    ProtoSpecificResponseWritable call(ProtoSpecificRequestWritable request) throws IOException;
-  }
-
-
+  private static final ClientCache CLIENTS=new ClientCache();
+  
   @Override
   @SuppressWarnings("unchecked")
   public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
@@ -74,30 +83,69 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
   }
 
   private class Invoker implements InvocationHandler, Closeable {
-    private TunnelProtocol tunnel;
     private Map<String, Message> returnTypes = new ConcurrentHashMap<String, Message>();
+    private boolean isClosed = false;
+    private Client.ConnectionId remoteId;
+    private Client client;
 
     public Invoker(Class<?> protocol, InetSocketAddress addr,
         UserGroupInformation ticket, Configuration conf, SocketFactory factory,
         int rpcTimeout) throws IOException {
-      this.tunnel = ENGINE.getProxy(TunnelProtocol.class,
-          TunnelProtocol.versionID, addr, ticket, conf, factory, rpcTimeout)
-          .getProxy();
+      this.remoteId = Client.ConnectionId.getConnectionId(addr, protocol,
+          ticket, rpcTimeout, conf);
+      this.client = CLIENTS.getClient(conf, factory,
+          ProtoSpecificResponseWritable.class);
+    }
+
+    private ProtoSpecificRpcRequest constructRpcRequest(Method method,
+        Object[] params) throws ServiceException {
+      ProtoSpecificRpcRequest rpcRequest;
+      ProtoSpecificRpcRequest.Builder builder;
+
+      builder = ProtoSpecificRpcRequest.newBuilder();
+      builder.setMethodName(method.getName());
+
+      if (params.length != 2) { // RpcController + Message
+        throw new ServiceException("Too many parameters for request. Method: ["
+            + method.getName() + "]" + ", Expected: 2, Actual: "
+            + params.length);
+      }
+      if (params[1] == null) {
+        throw new ServiceException("null param while calling Method: ["
+            + method.getName() + "]");
+      }
+
+      Message param = (Message) params[1];
+      builder.setRequestProto(param.toByteString());
+
+      rpcRequest = builder.build();
+      return rpcRequest;
     }
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args)
         throws Throwable {
+      long startTime = 0;
+      if (LOG.isDebugEnabled()) {
+        startTime = System.currentTimeMillis();
+      }
+
       ProtoSpecificRpcRequest rpcRequest = constructRpcRequest(method, args);
       ProtoSpecificResponseWritable val = null;
       try {
-        val = tunnel.call(new ProtoSpecificRequestWritable(rpcRequest));
+        val = (ProtoSpecificResponseWritable) client.call(
+            new ProtoSpecificRequestWritable(rpcRequest), remoteId);
       } catch (Exception e) {
         throw new ServiceException(e);
       }
       
       ProtoSpecificRpcResponse response = val.message;
-
+   
+      if (LOG.isDebugEnabled()) {
+        long callTime = System.currentTimeMillis() - startTime;
+        LOG.debug("Call: " + method.getName() + " " + callTime);
+      }
+ 
       if (response.hasIsError() && response.getIsError() == true) {
         YarnRemoteExceptionPBImpl exception = new YarnRemoteExceptionPBImpl(response.getException());
         exception.fillInStackTrace();
@@ -110,182 +158,46 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
         prototype = getReturnProtoType(method);
       } catch (Exception e) {
         throw new ServiceException(e);
-//        YarnRemoteExceptionPBImpl exception = new YarnRemoteExceptionPBImpl("Could not get prototype PB return type for method: [" + method.getName() + "]", e);
       }
-      Message actualReturnMessage = prototype.newBuilderForType().mergeFrom(response.getResponseProto()).build();
+      Message actualReturnMessage = prototype.newBuilderForType()
+          .mergeFrom(response.getResponseProto()).build();
       return actualReturnMessage;
     }
 
     public void close() throws IOException {
-      ENGINE.stopProxy(tunnel);
+      if (!isClosed) {
+        isClosed = true;
+        CLIENTS.stopClient(client);
+      }
     }
-    
+
     private Message getReturnProtoType(Method method) throws Exception {
       if (returnTypes.containsKey(method.getName())) {
         return returnTypes.get(method.getName());
       } else {
         Class<?> returnType = method.getReturnType();
 
-        Method newInstMethod = returnType.getMethod("getDefaultInstance", null);
+        Method newInstMethod = returnType.getMethod("getDefaultInstance");
         newInstMethod.setAccessible(true);
-        Message prototype = (Message) newInstMethod.invoke(null, null);
+        Message prototype = (Message) newInstMethod.invoke(null,
+            (Object[]) null);
         returnTypes.put(method.getName(), prototype);
         return prototype;
       }
-    }
-  }
-
-  private class TunnelResponder implements TunnelProtocol {
-    BlockingService service;
-    
-    public TunnelResponder(Class<?> iface, Object impl) {
-      this.service = (BlockingService)impl;
-    }
-
-    public long getProtocolVersion(String protocol, long version)
-        throws IOException {
-      return TunnelProtocol.versionID;
-    }
-    
-    @Override
-    public ProtocolSignature getProtocolSignature(
-        String protocol, long version, int clientMethodsHashCode)
-      throws IOException {
-      return new ProtocolSignature(TunnelProtocol.versionID, null);
-    }
-
-    public ProtoSpecificResponseWritable call(final ProtoSpecificRequestWritable request)
-        throws IOException {
-      ProtoSpecificRpcRequest rpcRequest = request.message;
-      String methodName = rpcRequest.getMethodName();
-      MethodDescriptor methodDescriptor = service.getDescriptorForType().findMethodByName(methodName);
-      
-      Message prototype = service.getRequestPrototype(methodDescriptor);
-      Message param = prototype.newBuilderForType().mergeFrom(rpcRequest.getRequestProto()).build();
-      
-      Message result;
-      try {
-        result = service.callBlockingMethod(methodDescriptor, null, param);
-      } catch (ServiceException e) {
-        return handleException(e);
-      } catch (Exception e) {
-        return handleException(e);
-      }
-      
-      ProtoSpecificRpcResponse response = constructProtoSpecificRpcSuccessResponse(result);
-      return new ProtoSpecificResponseWritable(response);
-    }
-    
-    private ProtoSpecificResponseWritable handleException (Throwable e) {
-      ProtoSpecificRpcResponse.Builder builder = ProtoSpecificRpcResponse.newBuilder();
-      builder.setIsError(true);
-      if (e.getCause() instanceof YarnRemoteExceptionPBImpl) {
-        builder.setException(((YarnRemoteExceptionPBImpl)e.getCause()).getProto());
-      } else {
-        builder.setException(new YarnRemoteExceptionPBImpl(e).getProto());
-      }
-      ProtoSpecificRpcResponse response = builder.build();
-      return new ProtoSpecificResponseWritable(response);
-    }
-  }
-
-  @Override
-  public Object[] call(Method method, Object[][] params,
-      InetSocketAddress[] addrs, UserGroupInformation ticket, Configuration conf)
-      throws IOException, InterruptedException {
-    throw new UnsupportedOperationException();
-  }
-
-  
-  @Override
-  public RPC.Server getServer(Class<?> protocol, Object instance,
-      String bindAddress, int port, int numHandlers, boolean verbose,
-      Configuration conf, SecretManager<? extends TokenIdentifier> secretManager)
-      throws IOException {
-
-    return ENGINE
-        .getServer(TunnelProtocol.class,
-            new TunnelResponder(protocol, instance), bindAddress, port,
-            numHandlers, verbose, conf, secretManager);
-  }
-
-  
-  private Class<?>[] getRequestParameterTypes(Message[] messages) {
-    Class<?> [] paramTypes = new Class<?>[messages.length];
-    for (int i = 0 ; i < messages.length ; i++) {
-      paramTypes[i] = messages[i].getClass();
-    }
-    return paramTypes;
-  }
-
-  private ProtoSpecificRpcRequest constructRpcRequest(Method method,
-      Object[] params) throws ServiceException {
-    ProtoSpecificRpcRequest rpcRequest;
-    ProtoSpecificRpcRequest.Builder builder;
-
-    builder = ProtoSpecificRpcRequest.newBuilder();
-    builder.setMethodName(method.getName());
-
-    if (params.length != 2) { //RpcController + Message
-      throw new ServiceException("Too many parameters for request. Method: [" + method.getName() + "]" + ", Expected: 2, Actual: " + params.length);
-    }
-    if (params[1] == null) {
-      throw new ServiceException("null param while calling Method: [" + method.getName() +"]");
-    }
-
-    Message param = (Message) params[1];
-    builder.setRequestProto(param.toByteString());
-
-    rpcRequest = builder.build();
-    return rpcRequest;
-  }
-
-  private ProtoSpecificRpcResponse constructProtoSpecificRpcSuccessResponse(Message message) {
-    ProtoSpecificRpcResponse res = ProtoSpecificRpcResponse.newBuilder().setResponseProto(message.toByteString()).build();
-    return res;
-  }
-
-  
-  /**
-   * Writable Wrapper for Protocol Buffer Responses
-   */
-  public static class ProtoSpecificResponseWritable implements Writable {
-    ProtoSpecificRpcResponse message;
-
-    public ProtoSpecificResponseWritable() {
-    }
-    
-    public ProtoSpecificResponseWritable(ProtoSpecificRpcResponse message) {
-      this.message = message;
-    }
-
-    @Override
-    public void write(DataOutput out) throws IOException {
-//      System.err.println("XXX: writing length: " + message.toByteArray().length);
-      out.writeInt(message.toByteArray().length);
-      out.write(message.toByteArray());
-    }
-
-    @Override
-    public void readFields(DataInput in) throws IOException {
-      int length = in.readInt();
-//      System.err.println("YYY: Reading length: " + length);
-      byte[] bytes = new byte[length];
-      in.readFully(bytes);
-      message = ProtoSpecificRpcResponse.parseFrom(bytes);
     }
   }
   
   /**
    * Writable Wrapper for Protocol Buffer Requests
    */
-  public static class ProtoSpecificRequestWritable implements Writable {
+  private static class ProtoSpecificRequestWritable implements Writable {
     ProtoSpecificRpcRequest message;
 
+    @SuppressWarnings("unused")
     public ProtoSpecificRequestWritable() {
     }
     
-    public ProtoSpecificRequestWritable(ProtoSpecificRpcRequest message) {
+    ProtoSpecificRequestWritable(ProtoSpecificRpcRequest message) {
       this.message = message;
     }
 
@@ -302,5 +214,173 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
       in.readFully(bytes);
       message = ProtoSpecificRpcRequest.parseFrom(bytes);
     }
+  }
+  
+  /**
+   * Writable Wrapper for Protocol Buffer Responses
+   */
+  public static class ProtoSpecificResponseWritable implements Writable {
+    ProtoSpecificRpcResponse message;
+
+    public ProtoSpecificResponseWritable() {
+    }
+    
+    public ProtoSpecificResponseWritable(ProtoSpecificRpcResponse message) {
+      this.message = message;
+    }
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+      out.writeInt(message.toByteArray().length);
+      out.write(message.toByteArray());
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+      int length = in.readInt();
+      byte[] bytes = new byte[length];
+      in.readFully(bytes);
+      message = ProtoSpecificRpcResponse.parseFrom(bytes);
+    }
+  }
+  
+  @Override
+  public Object[] call(Method method, Object[][] params,
+      InetSocketAddress[] addrs, UserGroupInformation ticket, Configuration conf)
+      throws IOException, InterruptedException {
+    throw new UnsupportedOperationException();
+  }
+
+  // for unit testing only
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  static Client getClient(Configuration conf) {
+    return CLIENTS.getClient(conf, SocketFactory.getDefault(),
+        ProtoSpecificResponseWritable.class);
+  }
+
+  public static class Server extends RPC.Server {
+
+    private BlockingService service;
+    private boolean verbose;
+//
+//    /**
+//     * Construct an RPC server.
+//     * 
+//     * @param instance
+//     *          the instance whose methods will be called
+//     * @param conf
+//     *          the configuration to use
+//     * @param bindAddress
+//     *          the address to bind on to listen for connection
+//     * @param port
+//     *          the port to listen for connections on
+//     */
+//    public Server(Object instance, Configuration conf, String bindAddress,
+//        int port) throws IOException {
+//      this(instance, conf, bindAddress, port, 1, false, null);
+//    }
+
+    private static String classNameBase(String className) {
+      String[] names = className.split("\\.", -1);
+      if (names == null || names.length == 0) {
+        return className;
+      }
+      return names[names.length - 1];
+    }
+
+    /**
+     * Construct an RPC server.
+     * 
+     * @param instance
+     *          the instance whose methods will be called
+     * @param conf
+     *          the configuration to use
+     * @param bindAddress
+     *          the address to bind on to listen for connection
+     * @param port
+     *          the port to listen for connections on
+     * @param numHandlers
+     *          the number of method handler threads to run
+     * @param verbose
+     *          whether each call should be logged
+     */
+    public Server(Object instance, Configuration conf, String bindAddress,
+        int port, int numHandlers, int numReaders, 
+        int queueSizePerHandler, boolean verbose,
+        SecretManager<? extends TokenIdentifier> secretManager)
+        throws IOException {
+      super(bindAddress, port, ProtoSpecificRequestWritable.class, numHandlers,
+          numReaders, queueSizePerHandler, conf, classNameBase(instance.getClass().getName()), secretManager);
+      this.service = (BlockingService) instance;
+      this.verbose = verbose;
+    }
+
+    @Override
+    public Writable call(Class<?> protocol, Writable writableRequest,
+        long receiveTime) throws IOException {
+      ProtoSpecificRequestWritable request = (ProtoSpecificRequestWritable) writableRequest;
+      ProtoSpecificRpcRequest rpcRequest = request.message;
+      String methodName = rpcRequest.getMethodName();
+      System.out.println("Call: protocol=" + protocol.getCanonicalName() + ", method="
+          + methodName);
+      if (verbose)
+        log("Call: protocol=" + protocol.getCanonicalName() + ", method="
+            + methodName);
+      MethodDescriptor methodDescriptor = service.getDescriptorForType()
+          .findMethodByName(methodName);
+      Message prototype = service.getRequestPrototype(methodDescriptor);
+      Message param = prototype.newBuilderForType()
+          .mergeFrom(rpcRequest.getRequestProto()).build();
+      Message result;
+      try {
+        result = service.callBlockingMethod(methodDescriptor, null, param);
+      } catch (ServiceException e) {
+        e.printStackTrace();
+        return handleException(e);
+      } catch (Exception e) {
+        return handleException(e);
+      }
+
+      ProtoSpecificRpcResponse response = constructProtoSpecificRpcSuccessResponse(result);
+      return new ProtoSpecificResponseWritable(response);
+    }
+
+    private ProtoSpecificResponseWritable handleException(Throwable e) {
+      ProtoSpecificRpcResponse.Builder builder = ProtoSpecificRpcResponse
+          .newBuilder();
+      builder.setIsError(true);
+      if (e.getCause() instanceof YarnRemoteExceptionPBImpl) {
+        builder.setException(((YarnRemoteExceptionPBImpl) e.getCause())
+            .getProto());
+      } else {
+        builder.setException(new YarnRemoteExceptionPBImpl(e).getProto());
+      }
+      ProtoSpecificRpcResponse response = builder.build();
+      return new ProtoSpecificResponseWritable(response);
+    }
+
+    private ProtoSpecificRpcResponse constructProtoSpecificRpcSuccessResponse(
+        Message message) {
+      ProtoSpecificRpcResponse res = ProtoSpecificRpcResponse.newBuilder()
+          .setResponseProto(message.toByteString()).build();
+      return res;
+    }
+  }
+
+  private static void log(String value) {
+    if (value != null && value.length() > 55)
+      value = value.substring(0, 55) + "...";
+    LOG.info(value);
+  }
+
+  @Override
+  public RPC.Server getServer(Class<?> protocol, Object instance,
+      String bindAddress, int port, int numHandlers,int numReaders, 
+      int queueSizePerHandler, boolean verbose,
+      Configuration conf, SecretManager<? extends TokenIdentifier> secretManager)
+      throws IOException {
+    return new Server(instance, conf, bindAddress, port, numHandlers, numReaders, queueSizePerHandler,
+        verbose, secretManager);
   }
 }

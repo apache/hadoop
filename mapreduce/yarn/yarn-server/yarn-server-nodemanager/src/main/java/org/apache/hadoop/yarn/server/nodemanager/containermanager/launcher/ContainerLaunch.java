@@ -100,8 +100,7 @@ public class ContainerLaunch implements Callable<Integer> {
       String appIdStr = app.toString();
       Path containerLogDir =
           this.logDirsSelector.getLocalPathForWrite(appIdStr + Path.SEPARATOR
-              + containerIdStr, LocalDirAllocator.SIZE_UNKNOWN, this.conf,
-              false);
+              + containerIdStr, LocalDirAllocator.SIZE_UNKNOWN, this.conf);
       for (String str : command) {
         // TODO: Should we instead work via symlinks without this grammar?
         newCmds.add(str.replace(ApplicationConstants.LOG_DIR_EXPANSION_VAR,
@@ -148,8 +147,7 @@ public class ContainerLaunch implements Callable<Integer> {
               + Path.SEPARATOR + user + Path.SEPARATOR
               + ContainerLocalizer.APPCACHE + Path.SEPARATOR + appIdStr
               + Path.SEPARATOR + containerIdStr,
-              LocalDirAllocator.SIZE_UNKNOWN, this.conf, false);
-
+              LocalDirAllocator.SIZE_UNKNOWN, this.conf);
       try {
         // /////////// Write out the container-script in the nmPrivate space.
         String[] localDirs =

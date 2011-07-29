@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
+import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.mapred.SortedRanges.Range;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
@@ -433,7 +434,7 @@ public class TaskAttemptListenerImpl extends CompositeService
   @Override
   public ProtocolSignature getProtocolSignature(String protocol,
       long clientVersion, int clientMethodsHash) throws IOException {
-    return ProtocolSignature.getProtocolSigature(this, protocol, clientVersion,
-        clientMethodsHash);
+    return ProtocolSignature.getProtocolSignature(this, 
+        protocol, clientVersion, clientMethodsHash);
   }
 }

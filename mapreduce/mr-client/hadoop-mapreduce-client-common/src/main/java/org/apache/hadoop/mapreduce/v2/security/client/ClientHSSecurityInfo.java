@@ -25,11 +25,16 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JHConfig;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.token.TokenInfo;
+import org.apache.hadoop.yarn.proto.MRClientProtocol;
 
 public class ClientHSSecurityInfo extends SecurityInfo {
-
+  
   @Override
   public KerberosInfo getKerberosInfo(Class<?> protocol, Configuration conf) {
+    if (!protocol
+        .equals(MRClientProtocol.MRClientProtocolService.BlockingInterface.class)) {
+      return null;
+    }
     return new KerberosInfo() {
 
       @Override

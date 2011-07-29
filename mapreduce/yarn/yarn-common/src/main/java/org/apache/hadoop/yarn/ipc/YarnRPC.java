@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.ipc;
 import java.net.InetSocketAddress;
 
 import org.apache.avro.ipc.Server;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -30,7 +32,8 @@ import org.apache.hadoop.yarn.YarnException;
  * Abstraction to get the RPC implementation for Yarn.
  */
 public abstract class YarnRPC {
-
+  private static final Log LOG = LogFactory.getLog(YarnRPC.class);
+  
   public static final String RPC_CLASSNAME 
       = "org.apache.hadoop.yarn.ipc.YarnRPC.classname";
 
@@ -47,6 +50,7 @@ public abstract class YarnRPC {
       int numHandlers);
 
   public static YarnRPC create(Configuration conf) {
+    LOG.info("Creating YarnRPC for " + conf.get(RPC_CLASSNAME));
     String clazzName = conf.get(RPC_CLASSNAME);
     if (clazzName == null) {
       clazzName = DEFAULT_RPC;

@@ -16,6 +16,11 @@
 
   <dependencies>
     <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <version>1.2.12</version>
+    </dependency> 
+   <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>yarn-api</artifactId>
     </dependency>

@@ -440,7 +440,7 @@ class JobSubmitter {
       for(Token<?> token: credentials.getAllTokens()) {
         if (token.getKind().toString().equals("HDFS_DELEGATION_TOKEN")) {
           LOG.debug("Submitting with " +
-              DFSClient.stringifyToken((Token<org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier>) token));
+              org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier.stringifyToken(token));
         }
       }
     }

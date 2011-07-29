@@ -169,6 +169,18 @@ for f in $HADOOP_COMMON_HOME/lib/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
+for f in $HADOOP_COMMON_HOME/share/hadoop/common/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+
+for f in $HADOOP_COMMON_HOME/share/hadoop/common/lib/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+
+for f in $HADOOP_COMMON_HOME/share/hadoop/hdfs/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+
 if [ -d "$HADOOP_COMMON_HOME/build/ivy/lib/Hadoop-Common/common" ]; then
 for f in $HADOOP_COMMON_HOME/build/ivy/lib/Hadoop-Common/common/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;

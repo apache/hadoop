@@ -5,6 +5,11 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
 
+    Fixes for making MR-279 work with trunk common/hdfs. (mahadev)
+
+    MAPREDUCE-2707. ProtoOverHadoopRpcEngine without using TunnelProtocol over 
+    WritableRpc (Jitendra Pandey via mahadev)
+
     MAPREDUCE-2664. Implement JobCounters for MRv2. (Siddharth Seth via 
     sharad)
 
