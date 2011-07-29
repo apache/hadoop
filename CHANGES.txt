@@ -15,6 +15,9 @@ Release 0.20.205.0 - unreleased
     HADOOP-7400. Fix HdfsProxyTests fails when the -Dtest.build.dir 
     and -Dbuild.test is set a dir other than build dir (gkesavan).
 
+    MAPREDUCE-2650. back-port MAPREDUCE-2238 to 0.20-security. 
+    (Sherry Chen via mahadev)
+
   IMPROVEMENTS
 
     MAPREDUCE-7343. Make the number of warnings accepted by test-patch

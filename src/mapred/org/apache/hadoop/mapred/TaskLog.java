@@ -109,32 +109,29 @@ public class TaskLog {
       if (FileUtil.symLink(strAttemptLogDir, strLinkAttemptLogDir) != 0) {
         LOG.warn("Creation of symlink to attempt log dir failed.");
         isSucceeded = false;
-      }
+      } 
 
       File linkAttemptLogDir = new File(strLinkAttemptLogDir);
-      // Set permissions for job dir in userlogs
-      if (!Localizer.PermissionsHandler.setPermissions(
-          linkAttemptLogDir.getParentFile(),
-          Localizer.PermissionsHandler.sevenZeroZero)) {
-        LOG.warn("Setting permissions to "
-                 + linkAttemptLogDir.getParentFile() + " failed.");
+      if (!linkAttemptLogDir.isDirectory() && !linkAttemptLogDir.mkdirs()) {
+        LOG.warn("Unable to create linkAttemptLogDir directory : "
+                 + linkAttemptLogDir.getPath());
         isSucceeded = false;
       }
+
+      FileSystem localFS = FileSystem.getLocal(new Configuration());
+
       //Set permissions for target attempt log dir 
-      if (!Localizer.PermissionsHandler.setPermissions(attemptLogDir,
-          Localizer.PermissionsHandler.sevenZeroZero)) {
-        LOG.warn("Setting permissions to the real attempt log dir "
-                 + attemptLogDir + " failed.");
-        isSucceeded = false;
-      }
+      localFS.setPermission(new Path(attemptLogDir.getCanonicalPath()),
+                            new FsPermission((short)0700));
+
       //Set permissions for target job log dir
-      if (!Localizer.PermissionsHandler.setPermissions(
-          attemptLogDir.getParentFile(),
-          Localizer.PermissionsHandler.sevenZeroZero)) {
-        LOG.warn("Setting permissions to the real job log dir "
-                 + attemptLogDir.getParentFile() + " failed.");
-        isSucceeded = false;
-      }
+      localFS.setPermission(new Path(attemptLogDir.getParentFile().getCanonicalPath()),
+                            new FsPermission((short)0700));
+
+      // Set permissions for job dir in userlogs
+      localFS.setPermission(
+          new Path(linkAttemptLogDir.getParentFile().getCanonicalPath()),
+          new FsPermission((short)0700));
     }
     return isSucceeded;
   }
