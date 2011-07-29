@@ -504,7 +504,7 @@
     <tar compression="gzip" destfile="${build.classes}/bin.tgz">
       <tarfileset dir="bin" mode="755"/>
     </tar>
-    <property name="jar.properties.list" value="commons-logging.properties, log4j.properties, hadoop-metrics.properties" />
+    <property name="jar.properties.list" value="commons-logging.properties, hadoop-metrics.properties" />
     <jar jarfile="${build.dir}/${final.name}.jar"
          basedir="${build.classes}">
       <service type="org.apache.hadoop.security.SecurityInfo">

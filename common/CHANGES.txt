@@ -431,6 +431,9 @@ Trunk (unreleased changes)
     HADOOP-7438. Fix deprecated warnings from hadoop-daemon.sh script.
     (Ravi Prakash via suresh)
 
+    HADOOP-7468 hadoop-core JAR contains a log4j.properties file.
+    (Jolly Chen)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
