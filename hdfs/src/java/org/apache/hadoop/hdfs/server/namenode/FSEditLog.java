@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.zip.Checksum;
+import java.util.zip.CheckedOutputStream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,7 +29,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -40,7 +40,6 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorageRetentionManager.StorageP
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
-import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
@@ -52,6 +51,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.*;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.*;
 
 /**
  * FSEditLog maintains a log of the namespace modifications.
@@ -207,7 +207,7 @@ public class FSEditLog  {
    * Write an operation to the edit log. Do not sync to persistent
    * store yet.
    */
-  void logEdit(final FSEditLogOpCodes opCode, final Writable ... writables) {
+  void logEdit(final FSEditLogOp op) {
     synchronized (this) {
       assert state != State.CLOSED;
       
@@ -219,12 +219,13 @@ public class FSEditLog  {
       }
       
       long start = beginTransaction();
+      op.setTransactionId(txid);
 
       mapJournalsAndReportErrors(new JournalClosure() {
         @Override 
         public void apply(JournalAndStream jas) throws IOException {
           if (!jas.isActive()) return;
-          jas.stream.write(opCode.getOpCode(), txid, writables);
+          jas.stream.write(op);
         }
       }, "logging edit");
 
@@ -520,49 +521,45 @@ public class FSEditLog  {
    * Records the block locations of the last block.
    */
   public void logOpenFile(String path, INodeFileUnderConstruction newNode) {
-
-    DeprecatedUTF8 nameReplicationPair[] = new DeprecatedUTF8[] { 
-      new DeprecatedUTF8(path), 
-      FSEditLog.toLogReplication(newNode.getReplication()),
-      FSEditLog.toLogLong(newNode.getModificationTime()),
-      FSEditLog.toLogLong(newNode.getAccessTime()),
-      FSEditLog.toLogLong(newNode.getPreferredBlockSize())};
-    logEdit(OP_ADD,
-            new ArrayWritable(DeprecatedUTF8.class, nameReplicationPair), 
-            new ArrayWritable(Block.class, newNode.getBlocks()),
-            newNode.getPermissionStatus(),
-            new DeprecatedUTF8(newNode.getClientName()),
-            new DeprecatedUTF8(newNode.getClientMachine()));
+    AddOp op = AddOp.getInstance()
+      .setPath(path)
+      .setReplication(newNode.getReplication())
+      .setModificationTime(newNode.getModificationTime())
+      .setAccessTime(newNode.getAccessTime())
+      .setBlockSize(newNode.getPreferredBlockSize())
+      .setBlocks(newNode.getBlocks())
+      .setPermissionStatus(newNode.getPermissionStatus())
+      .setClientName(newNode.getClientName())
+      .setClientMachine(newNode.getClientMachine());
+    
+      logEdit(op);
   }
 
   /** 
    * Add close lease record to edit log.
    */
   public void logCloseFile(String path, INodeFile newNode) {
-    DeprecatedUTF8 nameReplicationPair[] = new DeprecatedUTF8[] {
-      new DeprecatedUTF8(path),
-      FSEditLog.toLogReplication(newNode.getReplication()),
-      FSEditLog.toLogLong(newNode.getModificationTime()),
-      FSEditLog.toLogLong(newNode.getAccessTime()),
-      FSEditLog.toLogLong(newNode.getPreferredBlockSize())};
-    logEdit(OP_CLOSE,
-            new ArrayWritable(DeprecatedUTF8.class, nameReplicationPair),
-            new ArrayWritable(Block.class, newNode.getBlocks()),
-            newNode.getPermissionStatus());
+    CloseOp op = CloseOp.getInstance()
+      .setPath(path)
+      .setReplication(newNode.getReplication())
+      .setModificationTime(newNode.getModificationTime())
+      .setAccessTime(newNode.getAccessTime())
+      .setBlockSize(newNode.getPreferredBlockSize())
+      .setBlocks(newNode.getBlocks())
+      .setPermissionStatus(newNode.getPermissionStatus());
+    
+    logEdit(op);
   }
   
   /** 
    * Add create directory record to edit log
    */
   public void logMkDir(String path, INode newNode) {
-    DeprecatedUTF8 info[] = new DeprecatedUTF8[] {
-      new DeprecatedUTF8(path),
-      FSEditLog.toLogLong(newNode.getModificationTime()),
-      FSEditLog.toLogLong(newNode.getAccessTime())
-    };
-    logEdit(OP_MKDIR,
-      new ArrayWritable(DeprecatedUTF8.class, info),
-      newNode.getPermissionStatus());
+    MkdirOp op = MkdirOp.getInstance()
+      .setPath(path)
+      .setTimestamp(newNode.getModificationTime())
+      .setPermissionStatus(newNode.getPermissionStatus());
+    logEdit(op);
   }
   
   /** 
@@ -570,33 +567,33 @@ public class FSEditLog  {
    * TODO: use String parameters until just before writing to disk
    */
   void logRename(String src, String dst, long timestamp) {
-    DeprecatedUTF8 info[] = new DeprecatedUTF8[] { 
-      new DeprecatedUTF8(src),
-      new DeprecatedUTF8(dst),
-      FSEditLog.toLogLong(timestamp)};
-    logEdit(OP_RENAME_OLD, new ArrayWritable(DeprecatedUTF8.class, info));
+    RenameOldOp op = RenameOldOp.getInstance()
+      .setSource(src)
+      .setDestination(dst)
+      .setTimestamp(timestamp);
+    logEdit(op);
   }
   
   /** 
    * Add rename record to edit log
    */
   void logRename(String src, String dst, long timestamp, Options.Rename... options) {
-    DeprecatedUTF8 info[] = new DeprecatedUTF8[] { 
-      new DeprecatedUTF8(src),
-      new DeprecatedUTF8(dst),
-      FSEditLog.toLogLong(timestamp)};
-    logEdit(OP_RENAME,
-      new ArrayWritable(DeprecatedUTF8.class, info),
-      toBytesWritable(options));
+    RenameOp op = RenameOp.getInstance()
+      .setSource(src)
+      .setDestination(dst)
+      .setTimestamp(timestamp)
+      .setOptions(options);
+    logEdit(op);
   }
   
   /** 
    * Add set replication record to edit log
    */
   void logSetReplication(String src, short replication) {
-    logEdit(OP_SET_REPLICATION, 
-      new DeprecatedUTF8(src), 
-      FSEditLog.toLogReplication(replication));
+    SetReplicationOp op = SetReplicationOp.getInstance()
+      .setPath(src)
+      .setReplication(replication);
+    logEdit(op);
   }
   
   /** Add set namespace quota record to edit log
@@ -605,64 +602,69 @@ public class FSEditLog  {
    * @param quota the directory size limit
    */
   void logSetQuota(String src, long nsQuota, long dsQuota) {
-    logEdit(OP_SET_QUOTA,
-      new DeprecatedUTF8(src), 
-      new LongWritable(nsQuota), new LongWritable(dsQuota));
+    SetQuotaOp op = SetQuotaOp.getInstance()
+      .setSource(src)
+      .setNSQuota(nsQuota)
+      .setDSQuota(dsQuota);
+    logEdit(op);
   }
 
   /**  Add set permissions record to edit log */
   void logSetPermissions(String src, FsPermission permissions) {
-    logEdit(OP_SET_PERMISSIONS, new DeprecatedUTF8(src), permissions);
+    SetPermissionsOp op = SetPermissionsOp.getInstance()
+      .setSource(src)
+      .setPermissions(permissions);
+    logEdit(op);
   }
 
   /**  Add set owner record to edit log */
   void logSetOwner(String src, String username, String groupname) {
-    DeprecatedUTF8 u = new DeprecatedUTF8(username == null? "": username);
-    DeprecatedUTF8 g = new DeprecatedUTF8(groupname == null? "": groupname);
-    logEdit(OP_SET_OWNER, new DeprecatedUTF8(src), u, g);
+    SetOwnerOp op = SetOwnerOp.getInstance()
+      .setSource(src)
+      .setUser(username)
+      .setGroup(groupname);
+    logEdit(op);
   }
   
   /**
    * concat(trg,src..) log
    */
   void logConcat(String trg, String [] srcs, long timestamp) {
-    int size = 1 + srcs.length + 1; // trg, srcs, timestamp
-    DeprecatedUTF8 info[] = new DeprecatedUTF8[size];
-    int idx = 0;
-    info[idx++] = new DeprecatedUTF8(trg);
-    for(int i=0; i<srcs.length; i++) {
-      info[idx++] = new DeprecatedUTF8(srcs[i]);
-    }
-    info[idx] = FSEditLog.toLogLong(timestamp);
-    logEdit(OP_CONCAT_DELETE, new ArrayWritable(DeprecatedUTF8.class, info));
+    ConcatDeleteOp op = ConcatDeleteOp.getInstance()
+      .setTarget(trg)
+      .setSources(srcs)
+      .setTimestamp(timestamp);
+    logEdit(op);
   }
   
   /** 
    * Add delete file record to edit log
    */
   void logDelete(String src, long timestamp) {
-    DeprecatedUTF8 info[] = new DeprecatedUTF8[] { 
-      new DeprecatedUTF8(src),
-      FSEditLog.toLogLong(timestamp)};
-    logEdit(OP_DELETE, new ArrayWritable(DeprecatedUTF8.class, info));
+    DeleteOp op = DeleteOp.getInstance()
+      .setPath(src)
+      .setTimestamp(timestamp);
+    logEdit(op);
   }
 
   /** 
    * Add generation stamp record to edit log
    */
   void logGenerationStamp(long genstamp) {
-    logEdit(OP_SET_GENSTAMP, new LongWritable(genstamp));
+    SetGenstampOp op = SetGenstampOp.getInstance()
+      .setGenerationStamp(genstamp);
+    logEdit(op);
   }
 
   /** 
    * Add access time record to edit log
    */
   void logTimes(String src, long mtime, long atime) {
-    DeprecatedUTF8 info[] = new DeprecatedUTF8[] { 
-      new DeprecatedUTF8(src),
-      FSEditLog.toLogLong(mtime),
-      FSEditLog.toLogLong(atime)};
-    logEdit(OP_TIMES, new ArrayWritable(DeprecatedUTF8.class, info));
+    TimesOp op = TimesOp.getInstance()
+      .setPath(src)
+      .setModificationTime(mtime)
+      .setAccessTime(atime);
+    logEdit(op);
   }
 
   /** 
@@ -670,14 +672,13 @@ public class FSEditLog  {
    */
   void logSymlink(String path, String value, long mtime, 
                   long atime, INodeSymlink node) {
-    DeprecatedUTF8 info[] = new DeprecatedUTF8[] { 
-      new DeprecatedUTF8(path),
-      new DeprecatedUTF8(value),
-      FSEditLog.toLogLong(mtime),
-      FSEditLog.toLogLong(atime)};
-    logEdit(OP_SYMLINK, 
-      new ArrayWritable(DeprecatedUTF8.class, info),
-      node.getPermissionStatus());
+    SymlinkOp op = SymlinkOp.getInstance()
+      .setPath(path)
+      .setValue(value)
+      .setModificationTime(mtime)
+      .setAccessTime(atime)
+      .setPermissionStatus(node.getPermissionStatus());
+    logEdit(op);
   }
   
   /**
@@ -688,36 +689,40 @@ public class FSEditLog  {
    */
   void logGetDelegationToken(DelegationTokenIdentifier id,
       long expiryTime) {
-    logEdit(OP_GET_DELEGATION_TOKEN, id, FSEditLog.toLogLong(expiryTime));
+    GetDelegationTokenOp op = GetDelegationTokenOp.getInstance()
+      .setDelegationTokenIdentifier(id)
+      .setExpiryTime(expiryTime);
+    logEdit(op);
   }
   
   void logRenewDelegationToken(DelegationTokenIdentifier id,
       long expiryTime) {
-    logEdit(OP_RENEW_DELEGATION_TOKEN, id, FSEditLog.toLogLong(expiryTime));
+    RenewDelegationTokenOp op = RenewDelegationTokenOp.getInstance()
+      .setDelegationTokenIdentifier(id)
+      .setExpiryTime(expiryTime);
+    logEdit(op);
   }
   
   void logCancelDelegationToken(DelegationTokenIdentifier id) {
-    logEdit(OP_CANCEL_DELEGATION_TOKEN, id);
+    CancelDelegationTokenOp op = CancelDelegationTokenOp.getInstance()
+      .setDelegationTokenIdentifier(id);
+    logEdit(op);
   }
   
   void logUpdateMasterKey(DelegationKey key) {
-    logEdit(OP_UPDATE_MASTER_KEY, key);
+    UpdateMasterKeyOp op = UpdateMasterKeyOp.getInstance()
+      .setDelegationKey(key);
+    logEdit(op);
   }
 
   void logReassignLease(String leaseHolder, String src, String newHolder) {
-    logEdit(OP_REASSIGN_LEASE, new DeprecatedUTF8(leaseHolder),
-        new DeprecatedUTF8(src),
-        new DeprecatedUTF8(newHolder));
+    ReassignLeaseOp op = ReassignLeaseOp.getInstance()
+      .setLeaseHolder(leaseHolder)
+      .setPath(src)
+      .setNewHolder(newHolder);
+    logEdit(op);
   }
   
-  static private DeprecatedUTF8 toLogReplication(short replication) {
-    return new DeprecatedUTF8(Short.toString(replication));
-  }
-  
-  static private DeprecatedUTF8 toLogLong(long timestamp) {
-    return new DeprecatedUTF8(Long.toString(timestamp));
-  }
-
   /**
    * @return the number of active (non-failed) journals
    */
@@ -818,7 +823,8 @@ public class FSEditLog  {
     state = State.IN_SEGMENT;
 
     if (writeHeaderTxn) {
-      logEdit(FSEditLogOpCodes.OP_START_LOG_SEGMENT);
+      logEdit(LogSegmentOp.getInstance(
+          FSEditLogOpCodes.OP_START_LOG_SEGMENT));
       logSync();
     }
   }
@@ -833,7 +839,8 @@ public class FSEditLog  {
         "Bad state: %s", state);
     
     if (writeEndTxn) {
-      logEdit(FSEditLogOpCodes.OP_END_LOG_SEGMENT);
+      logEdit(LogSegmentOp.getInstance(
+          FSEditLogOpCodes.OP_END_LOG_SEGMENT));
       logSync();
     }
 
@@ -992,7 +999,7 @@ public class FSEditLog  {
       @Override
       public void apply(JournalAndStream jas) throws IOException {
         if (jas.isActive()) {
-          jas.getCurrentStream().write(data, 0, length);
+          jas.getCurrentStream().writeRaw(data, 0, length); // TODO writeRaw
         }
       }      
     }, "Logging edit");
@@ -1000,14 +1007,6 @@ public class FSEditLog  {
     endTransaction(start);
   }
 
-  static BytesWritable toBytesWritable(Options.Rename... options) {
-    byte[] bytes = new byte[options.length];
-    for (int i = 0; i < options.length; i++) {
-      bytes[i] = options[i].value();
-    }
-    return new BytesWritable(bytes);
-  }
-  
   //// Iteration across journals
   private interface JournalClosure {
     public void apply(JournalAndStream jas) throws IOException;

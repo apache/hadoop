@@ -43,6 +43,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -64,7 +65,7 @@ import org.apache.hadoop.util.VersionInfo;
 @InterfaceAudience.Private
 public class JspHelper {
   public static final String CURRENT_CONF = "current.conf";
-  final static public String WEB_UGI_PROPERTY_NAME = "dfs.web.ugi";
+  final static public String WEB_UGI_PROPERTY_NAME = DFSConfigKeys.DFS_WEB_UGI_KEY;
   public static final String DELEGATION_PARAMETER_NAME = "delegation";
   public static final String NAMENODE_ADDRESS = "nnaddr";
   static final String SET_DELEGATION = "&" + DELEGATION_PARAMETER_NAME +

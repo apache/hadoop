@@ -212,7 +212,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       chooseRandom(numOfReplicas, NodeBase.ROOT, excludedNodes, 
                    blocksize, maxNodesPerRack, results);
     } catch (NotEnoughReplicasException e) {
-      FSNamesystem.LOG.warn("Not able to place enough replicas, still in need of "
+      LOG.warn("Not able to place enough replicas, still in need of "
                + numOfReplicas + " to reach " + totalReplicasExpected + "\n"
                + e.getMessage());
     }
@@ -343,7 +343,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     int numOfAvailableNodes =
       clusterMap.countNumOfAvailableNodes(nodes, excludedNodes.keySet());
     StringBuilder builder = null;
-    if (FSNamesystem.LOG.isDebugEnabled()) {
+    if (LOG.isDebugEnabled()) {
       builder = threadLocalBuilder.get();
       builder.setLength(0);
       builder.append("[");
@@ -366,7 +366,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     }
 
     String detail = enableDebugLogging;
-    if (FSNamesystem.LOG.isDebugEnabled()) {
+    if (LOG.isDebugEnabled()) {
       if (badTarget && builder != null) {
         detail = builder.append("]").toString();
         builder.setLength(0);
@@ -388,7 +388,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     int numOfAvailableNodes =
       clusterMap.countNumOfAvailableNodes(nodes, excludedNodes.keySet());
     StringBuilder builder = null;
-    if (FSNamesystem.LOG.isDebugEnabled()) {
+    if (LOG.isDebugEnabled()) {
       builder = threadLocalBuilder.get();
       builder.setLength(0);
       builder.append("[");
@@ -412,7 +412,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       
     if (numOfReplicas>0) {
       String detail = enableDebugLogging;
-      if (FSNamesystem.LOG.isDebugEnabled()) {
+      if (LOG.isDebugEnabled()) {
         if (badTarget && builder != null) {
           detail = builder.append("]").toString();
           builder.setLength(0);
@@ -439,7 +439,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                                List<DatanodeDescriptor> results) {
     // check if the node is (being) decommissed
     if (node.isDecommissionInProgress() || node.isDecommissioned()) {
-      if(FSNamesystem.LOG.isDebugEnabled()) {
+      if(LOG.isDebugEnabled()) {
         threadLocalBuilder.get().append(node.toString()).append(": ")
           .append("Node ").append(NodeBase.getPath(node))
           .append(" is not chosen because the node is (being) decommissioned ");
@@ -451,7 +451,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                      (node.getBlocksScheduled() * blockSize); 
     // check the remaining capacity of the target machine
     if (blockSize* FSConstants.MIN_BLOCKS_FOR_WRITE>remaining) {
-      if(FSNamesystem.LOG.isDebugEnabled()) {
+      if(LOG.isDebugEnabled()) {
         threadLocalBuilder.get().append(node.toString()).append(": ")
           .append("Node ").append(NodeBase.getPath(node))
           .append(" is not chosen because the node does not have enough space ");
@@ -467,7 +467,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         avgLoad = (double)stats.getTotalLoad()/size;
       }
       if (node.getXceiverCount() > (2.0 * avgLoad)) {
-        if(FSNamesystem.LOG.isDebugEnabled()) {
+        if(LOG.isDebugEnabled()) {
           threadLocalBuilder.get().append(node.toString()).append(": ")
             .append("Node ").append(NodeBase.getPath(node))
             .append(" is not chosen because the node is too busy ");
@@ -487,7 +487,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       }
     }
     if (counter>maxTargetPerLoc) {
-      if(FSNamesystem.LOG.isDebugEnabled()) {
+      if(LOG.isDebugEnabled()) {
         threadLocalBuilder.get().append(node.toString()).append(": ")
           .append("Node ").append(NodeBase.getPath(node))
           .append(" is not chosen because the rack has too many chosen nodes ");

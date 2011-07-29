@@ -35,6 +35,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.junit.After;
 import org.junit.Before;
@@ -54,7 +55,7 @@ public class TestClusterId {
     Iterator<StorageDirectory> sdit = 
       fsImage.getStorage().dirIterator(NNStorage.NameNodeDirType.IMAGE);
     StorageDirectory sd = sdit.next();
-    Properties props = sd.readFrom(sd.getVersionFile());
+    Properties props = Storage.readPropertiesFile(sd.getVersionFile());
     String cid = props.getProperty("clusterID");
     LOG.info("successfully formated : sd="+sd.getCurrentDir() + ";cid="+cid);
     return cid;

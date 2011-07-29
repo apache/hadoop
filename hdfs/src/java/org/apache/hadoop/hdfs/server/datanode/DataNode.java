@@ -18,32 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_PERMISSION_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_PERMISSION_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_STORAGEID_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SYNCONCLOSE_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SYNCONCLOSE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_FEDERATION_NAMESERVICES;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
 import java.io.BufferedOutputStream;
@@ -448,8 +423,11 @@ public class DataNode extends Configured
       name = config.get(DFS_DATANODE_HOST_NAME_KEY);
     }
     if (name == null) {
-      name = DNS.getDefaultHost(config.get("dfs.datanode.dns.interface",
-          "default"), config.get("dfs.datanode.dns.nameserver", "default"));
+      name = DNS
+          .getDefaultHost(config.get(DFS_DATANODE_DNS_INTERFACE_KEY,
+              DFS_DATANODE_DNS_INTERFACE_DEFAULT), config.get(
+              DFS_DATANODE_DNS_NAMESERVER_KEY,
+              DFS_DATANODE_DNS_NAMESERVER_DEFAULT));
     }
     return name;
   }
@@ -521,7 +499,7 @@ public class DataNode extends Configured
   }
   
   private void startPlugins(Configuration conf) {
-    plugins = conf.getInstances("dfs.datanode.plugins", ServicePlugin.class);
+    plugins = conf.getInstances(DFS_DATANODE_PLUGINS_KEY, ServicePlugin.class);
     for (ServicePlugin p: plugins) {
       try {
         p.start(this);
@@ -810,8 +788,9 @@ public class DataNode extends Configured
       StartupOption startOpt = getStartupOption(conf);
       assert startOpt != null : "Startup option must be set.";
 
-      boolean simulatedFSDataset = 
-        conf.getBoolean("dfs.datanode.simulateddatastorage", false);
+      boolean simulatedFSDataset = conf.getBoolean(
+          DFS_DATANODE_SIMULATEDDATASTORAGE_KEY,
+          DFS_DATANODE_SIMULATEDDATASTORAGE_DEFAULT);
       
       if (simulatedFSDataset) {
         initFsDataSet(conf, dataDirs);
@@ -1455,8 +1434,9 @@ public class DataNode extends Configured
     }
 
     // get version and id info from the name-node
-    boolean simulatedFSDataset = 
-      conf.getBoolean("dfs.datanode.simulateddatastorage", false);
+    boolean simulatedFSDataset = conf.getBoolean(
+        DFS_DATANODE_SIMULATEDDATASTORAGE_KEY,
+        DFS_DATANODE_SIMULATEDDATASTORAGE_DEFAULT);
 
     if (simulatedFSDataset) {
       storage.createStorageID(getPort());
@@ -1480,8 +1460,8 @@ public class DataNode extends Configured
    * Determine the http server's effective addr
    */
   public static InetSocketAddress getInfoAddr(Configuration conf) {
-    return NetUtils.createSocketAddr(
-        conf.get("dfs.datanode.http.address", "0.0.0.0:50075"));
+    return NetUtils.createSocketAddr(conf.get(DFS_DATANODE_HTTP_ADDRESS_KEY,
+        DFS_DATANODE_HTTP_ADDRESS_DEFAULT));
   }
   
   private void registerMXBean() {
@@ -2258,11 +2238,11 @@ public class DataNode extends Configured
   }
 
   private static void setStartupOption(Configuration conf, StartupOption opt) {
-    conf.set("dfs.datanode.startup", opt.toString());
+    conf.set(DFS_DATANODE_STARTUP_KEY, opt.toString());
   }
 
   static StartupOption getStartupOption(Configuration conf) {
-    return StartupOption.valueOf(conf.get("dfs.datanode.startup",
+    return StartupOption.valueOf(conf.get(DFS_DATANODE_STARTUP_KEY,
                                           StartupOption.REGULAR.toString()));
   }
 
@@ -2661,7 +2641,7 @@ public class DataNode extends Configured
   // Determine a Datanode's streaming address
   public static InetSocketAddress getStreamingAddr(Configuration conf) {
     return NetUtils.createSocketAddr(
-        conf.get("dfs.datanode.address", "0.0.0.0:50010"));
+        conf.get(DFS_DATANODE_ADDRESS_KEY, DFS_DATANODE_ADDRESS_DEFAULT));
   }
   
   @Override // DataNodeMXBean
@@ -2672,7 +2652,7 @@ public class DataNode extends Configured
   @Override // DataNodeMXBean
   public String getRpcPort(){
     InetSocketAddress ipcAddr = NetUtils.createSocketAddr(
-        this.getConf().get("dfs.datanode.ipc.address"));
+        this.getConf().get(DFS_DATANODE_IPC_ADDRESS_KEY));
     return Integer.toString(ipcAddr.getPort());
   }
 

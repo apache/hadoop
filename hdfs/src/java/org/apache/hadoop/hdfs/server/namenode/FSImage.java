@@ -295,7 +295,7 @@ public class FSImage implements Closeable {
       StorageDirectory sd = it.next();
       StorageState curState;
       try {
-        curState = sd.analyzeStorage(startOpt);
+        curState = sd.analyzeStorage(startOpt, storage);
         // sd is locked but not opened
         switch(curState) {
         case NON_EXISTENT:
@@ -311,7 +311,8 @@ public class FSImage implements Closeable {
         }
         if (curState != StorageState.NOT_FORMATTED 
             && startOpt != StartupOption.ROLLBACK) {
-          sd.read(); // read and verify consistency with other directories
+          // read and verify consistency with other directories
+          storage.readProperties(sd);
           isFormatted = true;
         }
         if (startOpt == StartupOption.IMPORT && isFormatted)
@@ -395,7 +396,7 @@ public class FSImage implements Closeable {
       try {
         // Write the version file, since saveFsImage above only makes the
         // fsimage_<txid>, and the directory is otherwise empty.
-        sd.write();
+        storage.writeProperties(sd);
         
         File prevDir = sd.getPreviousDir();
         File tmpDir = sd.getPreviousTmp();
@@ -433,14 +434,14 @@ public class FSImage implements Closeable {
       if (!prevDir.exists()) {  // use current directory then
         LOG.info("Storage directory " + sd.getRoot()
                  + " does not contain previous fs state.");
-        sd.read(); // read and verify consistency with other directories
+        // read and verify consistency with other directories
+        storage.readProperties(sd);
         continue;
       }
-      StorageDirectory sdPrev 
-        = prevState.getStorage().new StorageDirectory(sd.getRoot());
 
       // read and verify consistency of the prev dir
-      sdPrev.read(sdPrev.getPreviousVersionFile());
+      prevState.getStorage().readPreviousVersionProperties(sd);
+
       if (prevState.getLayoutVersion() != FSConstants.LAYOUT_VERSION) {
         throw new IOException(
           "Cannot rollback to storage version " +
@@ -604,7 +605,7 @@ public class FSImage implements Closeable {
     //
     StorageDirectory sdForProperties =
       loadPlan.getStorageDirectoryForProperties();
-    sdForProperties.read();
+    storage.readProperties(sdForProperties);
     File imageFile = loadPlan.getImageFile();
 
     try {
@@ -729,7 +730,6 @@ public class FSImage implements Closeable {
     lastAppliedTxId = txId;
     storage.setMostRecentCheckpointTxId(txId);
   }
-
 
   /**
    * Save the contents of the FS image to the file.

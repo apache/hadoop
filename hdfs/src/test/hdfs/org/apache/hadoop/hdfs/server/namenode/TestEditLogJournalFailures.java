@@ -87,17 +87,12 @@ public class TestEditLogJournalFailures {
     assertTrue(doAnEdit());
     // Invalidate both edits journals.
     invalidateEditsDirAtIndex(0, true);
-    EditLogOutputStream elos = invalidateEditsDirAtIndex(1, true);
+    invalidateEditsDirAtIndex(1, true);
     // Make sure runtime.exit(...) hasn't been called at all yet.
     assertExitInvocations(0);
     assertTrue(doAnEdit());
     // The previous edit could not be synced to any persistent storage, should
     // have halted the NN.
-    assertExitInvocations(1);
-    // Restore an edits journal to working order.
-    restoreEditsDirAtIndex(1, elos);
-    assertTrue(doAnEdit());
-    // Make sure we didn't make another call to runtime.exit(...).
     assertExitInvocations(1);
   }
   

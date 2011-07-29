@@ -42,9 +42,11 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportIterator;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportIterator;
+import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlocks.BlockIterator;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
@@ -53,6 +55,8 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
+import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.util.Daemon;
 
@@ -156,7 +160,7 @@ public class BlockManager {
   public final int defaultReplication;
   /** The maximum number of entries returned by getCorruptInodes() */
   final int maxCorruptFilesReturned;
-  
+
   /** variable to enable check for enough racks */
   final boolean shouldCheckForEnoughRacks;
 
@@ -208,12 +212,12 @@ public class BlockManager {
     this.replicationRecheckInterval = 
       conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 
                   DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_DEFAULT) * 1000L;
-    FSNamesystem.LOG.info("defaultReplication = " + defaultReplication);
-    FSNamesystem.LOG.info("maxReplication = " + maxReplication);
-    FSNamesystem.LOG.info("minReplication = " + minReplication);
-    FSNamesystem.LOG.info("maxReplicationStreams = " + maxReplicationStreams);
-    FSNamesystem.LOG.info("shouldCheckForEnoughRacks = " + shouldCheckForEnoughRacks);
-    FSNamesystem.LOG.info("replicationRecheckInterval = " + replicationRecheckInterval);
+    LOG.info("defaultReplication = " + defaultReplication);
+    LOG.info("maxReplication     = " + maxReplication);
+    LOG.info("minReplication     = " + minReplication);
+    LOG.info("maxReplicationStreams      = " + maxReplicationStreams);
+    LOG.info("shouldCheckForEnoughRacks  = " + shouldCheckForEnoughRacks);
+    LOG.info("replicationRecheckInterval = " + replicationRecheckInterval);
   }
 
   public void activate(Configuration conf) {
@@ -294,15 +298,14 @@ public class BlockManager {
       }
     }
 
-    //
     // Dump blocks from pendingReplication
-    //
     pendingReplications.metaSave(out);
 
-    //
     // Dump blocks that are waiting to be deleted
-    //
     dumpRecentInvalidateSets(out);
+
+    // Dump all datanodes
+    getDatanodeManager().datanodeDump(out);
   }
 
   /**
@@ -341,9 +344,7 @@ public class BlockManager {
         namesystem.dir.updateSpaceConsumed(path, 0, -diff
             * fileINode.getReplication());
       } catch (IOException e) {
-        FSNamesystem.LOG
-            .warn("Unexpected exception while updating disk space : "
-                + e.getMessage());
+        LOG.warn("Unexpected exception while updating disk space.", e);
       }
     }
   }
@@ -453,7 +454,7 @@ public class BlockManager {
   /**
    * Get all valid locations of the block
    */
-  public ArrayList<String> getValidLocations(Block block) {
+  private List<String> getValidLocations(Block block) {
     ArrayList<String> machineSet =
       new ArrayList<String>(blocksMap.numNodes(block));
     for(Iterator<DatanodeDescriptor> it =
@@ -514,7 +515,7 @@ public class BlockManager {
     final int numCorruptNodes = countNodes(blk).corruptReplicas();
     final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk);
     if (numCorruptNodes != numCorruptReplicas) {
-      FSNamesystem.LOG.warn("Inconsistent number of corrupt replicas for "
+      LOG.warn("Inconsistent number of corrupt replicas for "
           + blk + " blockMap has " + numCorruptNodes
           + " but corrupt replicas map has " + numCorruptReplicas);
     }
@@ -562,6 +563,49 @@ public class BlockManager {
                             minReplication);
   }
 
+   /** Get all blocks with location information from a datanode. */
+  public BlocksWithLocations getBlocksWithLocations(final DatanodeID datanode,
+      final long size) throws UnregisteredNodeException {
+    final DatanodeDescriptor node = getDatanodeManager().getDatanode(datanode);
+    if (node == null) {
+      NameNode.stateChangeLog.warn("BLOCK* NameSystem.getBlocks: "
+          + "Asking for blocks from an unrecorded node " + datanode.getName());
+      throw new HadoopIllegalArgumentException(
+          "Datanode " + datanode.getName() + " not found.");
+    }
+
+    int numBlocks = node.numBlocks();
+    if(numBlocks == 0) {
+      return new BlocksWithLocations(new BlockWithLocations[0]);
+    }
+    Iterator<BlockInfo> iter = node.getBlockIterator();
+    int startBlock = DFSUtil.getRandom().nextInt(numBlocks); // starting from a random block
+    // skip blocks
+    for(int i=0; i<startBlock; i++) {
+      iter.next();
+    }
+    List<BlockWithLocations> results = new ArrayList<BlockWithLocations>();
+    long totalSize = 0;
+    BlockInfo curBlock;
+    while(totalSize<size && iter.hasNext()) {
+      curBlock = iter.next();
+      if(!curBlock.isComplete())  continue;
+      totalSize += addBlock(curBlock, results);
+    }
+    if(totalSize<size) {
+      iter = node.getBlockIterator(); // start from the beginning
+      for(int i=0; i<startBlock&&totalSize<size; i++) {
+        curBlock = iter.next();
+        if(!curBlock.isComplete())  continue;
+        totalSize += addBlock(curBlock, results);
+      }
+    }
+
+    return new BlocksWithLocations(
+        results.toArray(new BlockWithLocations[results.size()]));
+  }
+
+   
   /** Remove a datanode. */
   public void removeDatanode(final DatanodeDescriptor node) {
     final Iterator<? extends Block> it = node.getBlockIterator();
@@ -660,7 +704,7 @@ public class BlockManager {
     for(Map.Entry<String,Collection<Block>> entry : recentInvalidateSets.entrySet()) {
       Collection<Block> blocks = entry.getValue();
       if (blocks.size() > 0) {
-        out.println(namesystem.getDatanode(entry.getKey()).getName() + blocks);
+        out.println(datanodeManager.getDatanode(entry.getKey()).getName() + blocks);
       }
     }
   }
@@ -684,7 +728,7 @@ public class BlockManager {
   private void markBlockAsCorrupt(BlockInfo storedBlock,
                                   DatanodeInfo dn) throws IOException {
     assert storedBlock != null : "storedBlock should not be null";
-    DatanodeDescriptor node = namesystem.getDatanode(dn);
+    DatanodeDescriptor node = getDatanodeManager().getDatanode(dn);
     if (node == null) {
       throw new IOException("Cannot mark block " + 
                             storedBlock.getBlockName() +
@@ -723,7 +767,7 @@ public class BlockManager {
       throws IOException {
     NameNode.stateChangeLog.info("DIR* NameSystem.invalidateBlock: "
                                  + blk + " on " + dn.getName());
-    DatanodeDescriptor node = namesystem.getDatanode(dn);
+    DatanodeDescriptor node = getDatanodeManager().getDatanode(dn);
     if (node == null) {
       throw new IOException("Cannot invalidate block " + blk +
                             " because datanode " + dn.getName() +
@@ -748,7 +792,7 @@ public class BlockManager {
     }
   }
 
-  public void updateState() {
+  void updateState() {
     pendingReplicationBlocksCount = pendingReplications.size();
     underReplicatedBlocksCount = neededReplications.size();
     corruptReplicaBlocksCount = corruptReplicas.size();
@@ -869,7 +913,7 @@ public class BlockManager {
           Block block = neededReplicationsIterator.next();
           int priority = neededReplicationsIterator.getPriority();
           if (priority < 0 || priority >= blocksToReplicate.size()) {
-            FSNamesystem.LOG.warn("Unexpected replication priority: "
+            LOG.warn("Unexpected replication priority: "
                 + priority + " " + block);
           } else {
             blocksToReplicate.get(priority).add(block);
@@ -1134,7 +1178,7 @@ public class BlockManager {
    * If there were any replication requests that timed out, reap them
    * and put them back into the neededReplication queue
    */
-  public void processPendingReplications() {
+  private void processPendingReplications() {
     Block[] timedOutItems = pendingReplications.getTimedOutBlocks();
     if (timedOutItems != null) {
       namesystem.writeLock();
@@ -1338,8 +1382,8 @@ public class BlockManager {
       Collection<BlockInfo> toCorrupt,
       Collection<StatefulBlockInfo> toUC) {
     
-    if(FSNamesystem.LOG.isDebugEnabled()) {
-      FSNamesystem.LOG.debug("Reported block " + block
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Reported block " + block
           + " on " + dn.getName() + " size " + block.getNumBytes()
           + " replicaState = " + reportedState);
     }
@@ -1355,8 +1399,8 @@ public class BlockManager {
     BlockUCState ucState = storedBlock.getBlockUCState();
     
     // Block is on the NN
-    if(FSNamesystem.LOG.isDebugEnabled()) {
-      FSNamesystem.LOG.debug("In memory blockUCState = " + ucState);
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("In memory blockUCState = " + ucState);
     }
 
     // Ignore replicas already scheduled to be removed from the DN
@@ -1411,7 +1455,7 @@ public class BlockManager {
     case RUR:       // should not be reported
     case TEMPORARY: // should not be reported
     default:
-      FSNamesystem.LOG.warn("Unexpected replica state " + reportedState
+      LOG.warn("Unexpected replica state " + reportedState
           + " for block: " + storedBlock + 
           " on " + dn.getName() + " size " + storedBlock.getNumBytes());
       return true;
@@ -1579,7 +1623,7 @@ public class BlockManager {
     int corruptReplicasCount = corruptReplicas.numCorruptReplicas(storedBlock);
     int numCorruptNodes = num.corruptReplicas();
     if (numCorruptNodes != corruptReplicasCount) {
-      FSNamesystem.LOG.warn("Inconsistent number of corrupt replicas for " +
+      LOG.warn("Inconsistent number of corrupt replicas for " +
           storedBlock + "blockMap has " + numCorruptNodes + 
           " but corrupt replicas map has " + corruptReplicasCount);
     }
@@ -1662,10 +1706,10 @@ public class BlockManager {
     } finally {
       namesystem.writeUnlock();
     }
-    FSNamesystem.LOG.info("Total number of blocks = " + blocksMap.size());
-    FSNamesystem.LOG.info("Number of invalid blocks = " + nrInvalid);
-    FSNamesystem.LOG.info("Number of under-replicated blocks = " + nrUnderReplicated);
-    FSNamesystem.LOG.info("Number of  over-replicated blocks = " + nrOverReplicated);
+    LOG.info("Total number of blocks            = " + blocksMap.size());
+    LOG.info("Number of invalid blocks          = " + nrInvalid);
+    LOG.info("Number of under-replicated blocks = " + nrUnderReplicated);
+    LOG.info("Number of  over-replicated blocks = " + nrOverReplicated);
   }
 
   /**
@@ -1699,6 +1743,7 @@ public class BlockManager {
     namesystem.chooseExcessReplicates(nonExcess, block, replication, 
         addedNode, delNodeHint, blockplacement);
   }
+
 
   public void addToExcessReplicate(DatanodeInfo dn, Block block) {
     assert namesystem.hasWriteLock();
@@ -1774,6 +1819,21 @@ public class BlockManager {
   }
 
   /**
+   * Get all valid locations of the block & add the block to results
+   * return the length of the added block; 0 if the block is not added
+   */
+  private long addBlock(Block block, List<BlockWithLocations> results) {
+    final List<String> machineSet = getValidLocations(block);
+    if(machineSet.size() == 0) {
+      return 0;
+    } else {
+      results.add(new BlockWithLocations(block, 
+          machineSet.toArray(new String[machineSet.size()])));
+      return block.getNumBytes();
+    }
+  }
+
+  /**
    * The given node is reporting that it received a certain block.
    */
   public void addBlock(DatanodeDescriptor node, Block block, String delHint)
@@ -1784,7 +1844,7 @@ public class BlockManager {
     // get the deletion hint node
     DatanodeDescriptor delHintNode = null;
     if (delHint != null && delHint.length() != 0) {
-      delHintNode = namesystem.getDatanode(delHint);
+      delHintNode = datanodeManager.getDatanode(delHint);
       if (delHintNode == null) {
         NameNode.stateChangeLog.warn("BLOCK* NameSystem.blockReceived: "
             + block + " is expected to be removed from an unrecorded node "
@@ -1893,7 +1953,7 @@ public class BlockManager {
       nodeList.append(node.name);
       nodeList.append(" ");
     }
-    FSNamesystem.LOG.info("Block: " + block + ", Expected Replicas: "
+    LOG.info("Block: " + block + ", Expected Replicas: "
         + curExpectedReplicas + ", live replicas: " + curReplicas
         + ", corrupt replicas: " + num.corruptReplicas()
         + ", decommissioned replicas: " + num.decommissionedReplicas()
@@ -2071,7 +2131,7 @@ public class BlockManager {
         return 0;
       // get blocks to invalidate for the nodeId
       assert nodeId != null;
-      DatanodeDescriptor dn = namesystem.getDatanode(nodeId);
+      final DatanodeDescriptor dn = datanodeManager.getDatanode(nodeId);
       if (dn == null) {
         removeFromInvalidates(nodeId);
         return 0;
@@ -2082,11 +2142,11 @@ public class BlockManager {
         return 0;
 
       ArrayList<Block> blocksToInvalidate = new ArrayList<Block>(
-          namesystem.blockInvalidateLimit);
+          getDatanodeManager().blockInvalidateLimit);
 
       // # blocks that can be sent in one message is limited
       Iterator<Block> it = invalidateSet.iterator();
-      for (int blkCount = 0; blkCount < namesystem.blockInvalidateLimit
+      for (int blkCount = 0; blkCount < getDatanodeManager().blockInvalidateLimit
           && it.hasNext(); blkCount++) {
         blocksToInvalidate.add(it.next());
         it.remove();

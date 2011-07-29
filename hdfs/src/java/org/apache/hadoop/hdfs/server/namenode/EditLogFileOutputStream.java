@@ -28,9 +28,7 @@ import java.nio.channels.FileChannel;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.Writable;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -46,10 +44,7 @@ class EditLogFileOutputStream extends EditLogOutputStream {
   private File file;
   private FileOutputStream fp; // file stream for storing edit logs
   private FileChannel fc; // channel of the file stream for sync
-  private DataOutputBuffer bufCurrent; // current buffer for writing
-  private DataOutputBuffer bufReady; // buffer ready for flushing
-  final private int initBufferSize; // inital buffer size
-
+  private EditsDoubleBuffer doubleBuf;
   static ByteBuffer fill = ByteBuffer.allocateDirect(1024 * 1024); // preallocation, 1MB
 
   static {
@@ -71,9 +66,7 @@ class EditLogFileOutputStream extends EditLogOutputStream {
   EditLogFileOutputStream(File name, int size) throws IOException {
     super();
     file = name;
-    initBufferSize = size;
-    bufCurrent = new DataOutputBuffer(size);
-    bufReady = new DataOutputBuffer(size);
+    doubleBuf = new EditsDoubleBuffer(size);
     RandomAccessFile rp = new RandomAccessFile(name, "rw");
     fp = new FileOutputStream(rp.getFD()); // open for append
     fc = rp.getChannel();
@@ -90,15 +83,10 @@ class EditLogFileOutputStream extends EditLogOutputStream {
     return JournalType.FILE;
   }
 
-  /**
-   * Write a single byte to the output stream.
-   * @param b the byte to write
-   */
-  private void write(int b) throws IOException {
-    if (fp == null) {
-      throw new IOException("Trying to use aborted output stream");
-    }
-    bufCurrent.write(b);
+  /** {@inheritDoc} */
+  @Override
+  void write(FSEditLogOp op) throws IOException {
+    doubleBuf.writeOp(op);
   }
 
   /**
@@ -110,16 +98,8 @@ class EditLogFileOutputStream extends EditLogOutputStream {
    * </ul>
    * */
   @Override
-  void write(byte op, long txid, Writable... writables) throws IOException {
-    if (fp == null) {
-      throw new IOException("Trying to use aborted output stream");
-    }
-    writeChecksummedOp(bufCurrent, op, txid, writables);
-  }
-
-  @Override
-  void write(final byte[] data, int off, int len) throws IOException {
-    bufCurrent.write(data, off, len);
+  void writeRaw(byte[] bytes, int offset, int length) throws IOException {
+    doubleBuf.writeRaw(bytes, offset, length);
   }
 
   /**
@@ -129,7 +109,7 @@ class EditLogFileOutputStream extends EditLogOutputStream {
   void create() throws IOException {
     fc.truncate(0);
     fc.position(0);
-    bufCurrent.writeInt(FSConstants.LAYOUT_VERSION);
+    doubleBuf.getCurrentBuf().writeInt(FSConstants.LAYOUT_VERSION);
     setReadyToFlush();
     flush();
   }
@@ -144,22 +124,11 @@ class EditLogFileOutputStream extends EditLogOutputStream {
       // close should have been called after all pending transactions
       // have been flushed & synced.
       // if already closed, just skip
-      if(bufCurrent != null)
-      {
-        int bufSize = bufCurrent.size();
-        if (bufSize != 0) {
-          throw new IOException("FSEditStream has " + bufSize
-              + " bytes still to be flushed and cannot " + "be closed.");
-        }
-        bufCurrent.close();
-        bufCurrent = null;
+      if (doubleBuf != null) {
+        doubleBuf.close();
+        doubleBuf = null;
       }
-  
-      if(bufReady != null) {
-        bufReady.close();
-        bufReady = null;
-      }
-  
+      
       // remove the last INVALID marker from transaction log.
       if (fc != null && fc.isOpen()) {
         fc.truncate(fc.position());
@@ -171,8 +140,8 @@ class EditLogFileOutputStream extends EditLogOutputStream {
         fp = null;
       }
     } finally {
-      IOUtils.cleanup(FSNamesystem.LOG, bufCurrent, bufReady, fc, fp);
-      bufCurrent = bufReady = null;
+      IOUtils.cleanup(FSNamesystem.LOG, fc, fp);
+      doubleBuf = null;
       fc = null;
       fp = null;
     }
@@ -194,11 +163,8 @@ class EditLogFileOutputStream extends EditLogOutputStream {
    */
   @Override
   void setReadyToFlush() throws IOException {
-    assert bufReady.size() == 0 : "previous data is not flushed yet";
-    write(FSEditLogOpCodes.OP_INVALID.getOpCode()); // insert eof marker
-    DataOutputBuffer tmp = bufReady;
-    bufReady = bufCurrent;
-    bufCurrent = tmp;
+    doubleBuf.getCurrentBuf().write(FSEditLogOpCodes.OP_INVALID.getOpCode()); // insert eof marker
+    doubleBuf.setReadyToFlush();
   }
 
   /**
@@ -212,8 +178,7 @@ class EditLogFileOutputStream extends EditLogOutputStream {
     }
     
     preallocate(); // preallocate file if necessary
-    bufReady.writeTo(fp); // write data to file
-    bufReady.reset(); // erase all data in the buffer
+    doubleBuf.flushTo(fp);
     fc.force(false); // metadata updates not needed because of preallocation
     fc.position(fc.position() - 1); // skip back the end-of-file marker
   }
@@ -223,7 +188,7 @@ class EditLogFileOutputStream extends EditLogOutputStream {
    */
   @Override
   public boolean shouldForceSync() {
-    return bufReady.size() >= initBufferSize;
+    return doubleBuf.shouldForceSync();
   }
   
   /**
@@ -232,8 +197,8 @@ class EditLogFileOutputStream extends EditLogOutputStream {
   @Override
   long length() throws IOException {
     // file size - header size + size of both buffers
-    return fc.size() - EDITS_FILE_HEADER_SIZE_BYTES + bufReady.size()
-        + bufCurrent.size();
+    return fc.size() - EDITS_FILE_HEADER_SIZE_BYTES + 
+      doubleBuf.countBufferedBytes();
   }
 
   // allocate a big chunk of data

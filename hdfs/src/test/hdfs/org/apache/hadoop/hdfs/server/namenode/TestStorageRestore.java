@@ -131,8 +131,7 @@ public class TestStorageRestore {
           EditLogOutputStream mockStream = spy(j.getCurrentStream());
           j.setCurrentStreamForTests(mockStream);
           doThrow(new IOException("Injected fault: write")).
-            when(mockStream).write(Mockito.anyByte(),
-                Mockito.anyLong(), (Writable[]) Mockito.anyVararg());
+            when(mockStream).write(Mockito.<FSEditLogOp>anyObject());
         }
       }
     }

@@ -107,7 +107,7 @@ public class BackupImage extends FSImage {
       StorageDirectory sd = it.next();
       StorageState curState;
       try {
-        curState = sd.analyzeStorage(HdfsConstants.StartupOption.REGULAR);
+        curState = sd.analyzeStorage(HdfsConstants.StartupOption.REGULAR, storage);
         // sd is locked but not opened
         switch(curState) {
         case NON_EXISTENT:
@@ -126,7 +126,8 @@ public class BackupImage extends FSImage {
           sd.doRecover(curState);
         }
         if(curState != StorageState.NOT_FORMATTED) {
-          sd.read(); // read and verify consistency with other directories
+          // read and verify consistency with other directories
+          storage.readProperties(sd);
         }
       } catch(IOException ioe) {
         sd.unlock();

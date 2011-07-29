@@ -39,26 +39,27 @@ abstract class EditLogOutputStream implements JournalStream {
   }
 
   /**
-   * Write edits log record into the stream.
-   * The record is represented by operation name and
-   * an array of Writable arguments.
+   * Write edits log operation to the stream.
    * 
    * @param op operation
-   * @param txid the transaction ID of this operation
-   * @param writables array of Writable arguments
    * @throws IOException
    */
-  abstract void write(byte op, long txid, Writable ... writables)
-  throws IOException;
-  
+  abstract void write(FSEditLogOp op) throws IOException;
+
   /**
    * Write raw data to an edit log. This data should already have
    * the transaction ID, checksum, etc included. It is for use
    * within the BackupNode when replicating edits from the
    * NameNode.
+   *
+   * @param bytes the bytes to write.
+   * @param offset offset in the bytes to write from
+   * @param length number of bytes to write
+   * @throws IOException
    */
-  abstract void write(byte[] data, int offset, int length) throws IOException;
-  
+  abstract void writeRaw(byte[] bytes, int offset, int length)
+      throws IOException;
+
   /**
    * Create and initialize underlying persistent edits log storage.
    * 
@@ -138,27 +139,5 @@ abstract class EditLogOutputStream implements JournalStream {
   @Override // Object
   public String toString() {
     return getName();
-  }
-
-  /**
-   * Write the given operation to the specified buffer, including
-   * the transaction ID and checksum.
-   */
-  protected static void writeChecksummedOp(
-      DataOutputBuffer buf, byte op, long txid, Writable... writables)
-      throws IOException {
-    int start = buf.getLength();
-    buf.write(op);
-    buf.writeLong(txid);
-    for (Writable w : writables) {
-      w.write(buf);
-    }
-    // write transaction checksum
-    int end = buf.getLength();
-    Checksum checksum = FSEditLog.getChecksum();
-    checksum.reset();
-    checksum.update(buf.getData(), start, end-start);
-    int sum = (int)checksum.getValue();
-    buf.writeInt(sum);
   }
 }

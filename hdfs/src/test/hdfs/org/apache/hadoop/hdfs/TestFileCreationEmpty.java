@@ -21,7 +21,7 @@ import java.util.ConcurrentModificationException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 
 /**
  * Test empty file creation.
@@ -40,7 +40,7 @@ public class TestFileCreationEmpty extends junit.framework.TestCase {
     Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
       public void uncaughtException(Thread t, Throwable e) {
         if (e instanceof ConcurrentModificationException) {
-          FSNamesystem.LOG.error("t=" + t, e);
+          LeaseManager.LOG.error("t=" + t, e);
           isConcurrentModificationException = true;
         }
       }

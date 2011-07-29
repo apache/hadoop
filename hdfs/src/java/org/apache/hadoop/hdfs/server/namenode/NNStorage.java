@@ -490,7 +490,7 @@ public class NNStorage extends Storage implements Closeable {
    * in this filesystem. */
   private void format(StorageDirectory sd) throws IOException {
     sd.clearDirectory(); // create currrent dir
-    sd.write();
+    writeProperties(sd);
     writeTransactionIdFile(sd, 0);
 
     LOG.info("Storage directory " + sd.getRoot()
@@ -533,10 +533,9 @@ public class NNStorage extends Storage implements Closeable {
   }
 
   @Override // Storage
-  protected void getFields(Properties props,
-                           StorageDirectory sd
-                           ) throws IOException {
-    super.getFields(props, sd);
+  protected void setFieldsFromProperties(
+      Properties props, StorageDirectory sd) throws IOException {
+    super.setFieldsFromProperties(props, sd);
     if (layoutVersion == 0) {
       throw new IOException("NameNode directory "
                             + sd.getRoot() + " is not formatted.");
@@ -592,10 +591,10 @@ public class NNStorage extends Storage implements Closeable {
    * @throws IOException
    */
   @Override // Storage
-  protected void setFields(Properties props,
+  protected void setPropertiesFromFields(Properties props,
                            StorageDirectory sd
                            ) throws IOException {
-    super.setFields(props, sd);
+    super.setPropertiesFromFields(props, sd);
     // Set blockpoolID in version with federation support
     if (LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
       props.setProperty("blockpoolID", blockpoolID);
@@ -927,7 +926,7 @@ public class NNStorage extends Storage implements Closeable {
     while(sdit.hasNext()) {
       StorageDirectory sd = sdit.next();
       try {
-        Properties props = sd.readFrom(sd.getVersionFile());
+        Properties props = readPropertiesFile(sd.getVersionFile());
         cid = props.getProperty("clusterID");
         LOG.info("current cluster id for sd="+sd.getCurrentDir() + 
             ";lv=" + layoutVersion + ";cid=" + cid);
@@ -1027,7 +1026,7 @@ public class NNStorage extends Storage implements Closeable {
         FSImage.LOG.warn("Storage directory " + sd + " contains no VERSION file. Skipping...");
         continue;
       }
-      sd.read(); // sets layoutVersion
+      readProperties(sd); // sets layoutVersion
       minLayoutVersion = Math.min(minLayoutVersion, getLayoutVersion());
       maxLayoutVersion = Math.max(maxLayoutVersion, getLayoutVersion());
     }

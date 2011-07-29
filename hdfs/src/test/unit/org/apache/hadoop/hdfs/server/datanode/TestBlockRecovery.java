@@ -84,7 +84,7 @@ public class TestBlockRecovery {
     new NamespaceInfo(1,CLUSTER_ID, POOL_ID, 2, 3);
 
   static {
-    ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)LOG).getLogger().setLevel(Level.ALL);
   }
 

@@ -206,7 +206,7 @@ public abstract class Storage extends StorageInfo {
    * One of the storage directories.
    */
   @InterfaceAudience.Private
-  public class StorageDirectory {
+  public static class StorageDirectory {
     final File root;              // root directory
     final boolean useLock;        // flag to enable storage lock
     final StorageDirType dirType; // storage dir type
@@ -247,75 +247,11 @@ public abstract class Storage extends StorageInfo {
      */
     public StorageDirType getStorageDirType() {
       return dirType;
-    }
-    
-    /**
-     * Read version file.
-     * 
-     * @throws IOException if file cannot be read or contains inconsistent data
-     */
-    public void read() throws IOException {
-      read(getVersionFile());
-    }
-    public void read(File from) throws IOException {
-      Properties props = readFrom(from);
-      getFields(props, this);
-    }
-    
-    public Properties readFrom(File from) throws IOException {
-      RandomAccessFile file = new RandomAccessFile(from, "rws");
-      FileInputStream in = null;
-      Properties props = new Properties();
-      try {
-        in = new FileInputStream(file.getFD());
-        file.seek(0);
-        props.load(in);
-      } finally {
-        if (in != null) {
-          in.close();
-        }
-        file.close();
-      }
-      return props;
-    }
+    }    
 
-    /**
-     * Write version file.
-     * 
-     * @throws IOException
-     */
-    public void write() throws IOException {
-      write(getVersionFile());
-    }
-
-    public void write(File to) throws IOException {
-      Properties props = new Properties();
-      setFields(props, this);
-      RandomAccessFile file = new RandomAccessFile(to, "rws");
-      FileOutputStream out = null;
-      try {
-        file.seek(0);
-        out = new FileOutputStream(file.getFD());
-        /*
-         * If server is interrupted before this line, 
-         * the version file will remain unchanged.
-         */
-        props.store(out, null);
-        /*
-         * Now the new fields are flushed to the head of the file, but file 
-         * length can still be larger then required and therefore the file can 
-         * contain whole or corrupted fields from its old contents in the end.
-         * If server is interrupted here and restarted later these extra fields
-         * either should not effect server behavior or should be handled
-         * by the server correctly.
-         */
-        file.setLength(out.getChannel().position());
-      } finally {
-        if (out != null) {
-          out.close();
-        }
-        file.close();
-      }
+    public void read(File from, Storage storage) throws IOException {
+      Properties props = readPropertiesFile(from);
+      storage.setFieldsFromProperties(props, this);
     }
 
     /**
@@ -467,7 +403,8 @@ public abstract class Storage extends StorageInfo {
      * consistent and cannot be recovered.
      * @throws IOException
      */
-    public StorageState analyzeStorage(StartupOption startOpt) throws IOException {
+    public StorageState analyzeStorage(StartupOption startOpt, Storage storage)
+        throws IOException {
       assert root != null : "root is null";
       String rootPath = root.getCanonicalPath();
       try { // check that storage exists
@@ -499,8 +436,9 @@ public abstract class Storage extends StorageInfo {
 
       if (startOpt == HdfsConstants.StartupOption.FORMAT)
         return StorageState.NOT_FORMATTED;
+
       if (startOpt != HdfsConstants.StartupOption.IMPORT) {
-        checkOldLayoutStorage(this);
+        storage.checkOldLayoutStorage(this);
       }
 
       // check whether current directory is valid
@@ -807,9 +745,8 @@ public abstract class Storage extends StorageInfo {
    * @param props
    * @throws IOException
    */
-  protected void getFields(Properties props, 
-                           StorageDirectory sd 
-                           ) throws IOException {
+  protected void setFieldsFromProperties(
+      Properties props, StorageDirectory sd) throws IOException {
     setLayoutVersion(props, sd);
     setNamespaceID(props, sd);
     setStorageType(props, sd);
@@ -818,15 +755,14 @@ public abstract class Storage extends StorageInfo {
   }
   
   /**
-   * Set common storage fields.
+   * Set common storage fields into the given properties object.
    * Should be overloaded if additional fields need to be set.
    * 
-   * @param props
-   * @throws IOException
+   * @param props the Properties object to write into
    */
-  protected void setFields(Properties props, 
-                           StorageDirectory sd 
-                           ) throws IOException {
+  protected void setPropertiesFromFields(Properties props, 
+                                         StorageDirectory sd)
+      throws IOException {
     props.setProperty("layoutVersion", String.valueOf(layoutVersion));
     props.setProperty("storageType", storageType.toString());
     props.setProperty("namespaceID", String.valueOf(namespaceID));
@@ -835,6 +771,77 @@ public abstract class Storage extends StorageInfo {
       props.setProperty("clusterID", clusterID);
     }
     props.setProperty("cTime", String.valueOf(cTime));
+  }
+
+  /**
+   * Read properties from the VERSION file in the given storage directory.
+   */
+  public void readProperties(StorageDirectory sd) throws IOException {
+    Properties props = readPropertiesFile(sd.getVersionFile());
+    setFieldsFromProperties(props, sd);
+  }
+
+  /**
+   * Read properties from the the previous/VERSION file in the given storage directory.
+   */
+  public void readPreviousVersionProperties(StorageDirectory sd)
+      throws IOException {
+    Properties props = readPropertiesFile(sd.getPreviousVersionFile());
+    setFieldsFromProperties(props, sd);
+  }
+
+  /**
+   * Write properties to the VERSION file in the given storage directory.
+   */
+  public void writeProperties(StorageDirectory sd) throws IOException {
+    writeProperties(sd.getVersionFile(), sd);
+  }
+
+  public void writeProperties(File to, StorageDirectory sd) throws IOException {
+    Properties props = new Properties();
+    setPropertiesFromFields(props, sd);
+    RandomAccessFile file = new RandomAccessFile(to, "rws");
+    FileOutputStream out = null;
+    try {
+      file.seek(0);
+      out = new FileOutputStream(file.getFD());
+      /*
+       * If server is interrupted before this line, 
+       * the version file will remain unchanged.
+       */
+      props.store(out, null);
+      /*
+       * Now the new fields are flushed to the head of the file, but file 
+       * length can still be larger then required and therefore the file can 
+       * contain whole or corrupted fields from its old contents in the end.
+       * If server is interrupted here and restarted later these extra fields
+       * either should not effect server behavior or should be handled
+       * by the server correctly.
+       */
+      file.setLength(out.getChannel().position());
+    } finally {
+      if (out != null) {
+        out.close();
+      }
+      file.close();
+    }
+  }
+  
+  public static Properties readPropertiesFile(File from) throws IOException {
+    RandomAccessFile file = new RandomAccessFile(from, "rws");
+    FileInputStream in = null;
+    Properties props = new Properties();
+    try {
+      in = new FileInputStream(file.getFD());
+      file.seek(0);
+      props.load(in);
+    } finally {
+      if (in != null) {
+        in.close();
+      }
+      file.close();
+    }
+    return props;
   }
 
   public static void rename(File from, File to) throws IOException {
@@ -861,7 +868,7 @@ public abstract class Storage extends StorageInfo {
   public void writeAll() throws IOException {
     this.layoutVersion = FSConstants.LAYOUT_VERSION;
     for (Iterator<StorageDirectory> it = storageDirs.iterator(); it.hasNext();) {
-      it.next().write();
+      writeProperties(it.next());
     }
   }
 

@@ -42,7 +42,6 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.server.common.StorageAdapter;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.log4j.Level;
@@ -148,10 +147,8 @@ public class TestSaveNamespace {
       break;
     case WRITE_STORAGE_ONE:
       // The spy throws on exception on one particular storage directory
-      StorageDirectory dir = StorageAdapter.spyOnStorageDirectory(
-          storage, 1);
-      doThrow(new RuntimeException("Injected"))
-        .when(dir).write();
+      doAnswer(new FaultySaveImage(true))
+        .when(spyStorage).writeProperties((StorageDirectory)anyObject());
       // TODO: unfortunately this fails -- should be improved.
       // See HDFS-2173.
       shouldFail = true;

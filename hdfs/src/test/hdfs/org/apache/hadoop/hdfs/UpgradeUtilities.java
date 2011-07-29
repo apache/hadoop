@@ -409,18 +409,15 @@ public class UpgradeUtilities {
    */
   public static File[] createNameNodeVersionFile(Configuration conf,
       File[] parent, StorageInfo version, String bpid) throws IOException {
-    Storage storage = null;
-    File[] versionFiles = new File[parent.length];
-    for (int i = 0; i < parent.length; i++) {
-      File versionFile = new File(parent[i], "VERSION");
-      FileUtil.fullyDelete(versionFile);
-      storage = new NNStorage(conf, 
+    Storage storage = new NNStorage(conf, 
                               Collections.<URI>emptyList(), 
                               Collections.<URI>emptyList());
-      storage.setStorageInfo(version);
-      StorageDirectory sd = storage.new StorageDirectory(parent[i].getParentFile());
-      sd.write(versionFile);
-      versionFiles[i] = versionFile;
+    storage.setStorageInfo(version);
+    File[] versionFiles = new File[parent.length];
+    for (int i = 0; i < parent.length; i++) {
+      versionFiles[i] = new File(parent[i], "VERSION");
+      StorageDirectory sd = new StorageDirectory(parent[i].getParentFile());
+      storage.writeProperties(versionFiles[i], sd);
     }
     return versionFiles;
   }
@@ -453,14 +450,13 @@ public class UpgradeUtilities {
    */
   public static void createDataNodeVersionFile(File[] parent,
       StorageInfo version, String bpid, String bpidToWrite) throws IOException {
-    DataStorage storage = null;
+    DataStorage storage = new DataStorage(version, "doNotCare");
+
     File[] versionFiles = new File[parent.length];
     for (int i = 0; i < parent.length; i++) {
       File versionFile = new File(parent[i], "VERSION");
-      FileUtil.fullyDelete(versionFile);
-      storage = new DataStorage(version, "doNotCare");
-      StorageDirectory sd = storage.new StorageDirectory(parent[i].getParentFile());
-      sd.write(versionFile);
+      StorageDirectory sd = new StorageDirectory(parent[i].getParentFile());
+      storage.writeProperties(versionFile, sd);
       versionFiles[i] = versionFile;
       File bpDir = BlockPoolSliceStorage.getBpRoot(bpid, parent[i]);
       createBlockPoolVersionFile(bpDir, version, bpidToWrite);
@@ -475,9 +471,8 @@ public class UpgradeUtilities {
       BlockPoolSliceStorage bpStorage = new BlockPoolSliceStorage(version,
           bpid);
       File versionFile = new File(bpCurDir, "VERSION");
-      FileUtil.fullyDelete(versionFile);
-      StorageDirectory sd = bpStorage.new StorageDirectory(bpDir);
-      sd.write(versionFile);
+      StorageDirectory sd = new StorageDirectory(bpDir);
+      bpStorage.writeProperties(versionFile, sd);
     }
   }
   

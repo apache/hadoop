@@ -9,6 +9,8 @@ Trunk (unreleased changes)
 
     HDFS-1536. Improve HDFS WebUI. (hairong)
 
+    HDFS-2210. Remove hdfsproxy. (eli)
+
   NEW FEATURES
 
     HDFS-1359. Add BlockPoolID to Block. (suresh)
@@ -600,6 +602,22 @@ Trunk (unreleased changes)
     cause. (Ravi Prakash via atm)
 
     HDFS-2180. Refactor NameNode HTTP server into new class. (todd)
+    
+    HDFS-2198. Remove hardcoded configuration keys. (suresh)
+
+    HDFS-2149. Move EditLogOp serialization formats into FsEditLogOp
+    implementations. (Ivan Kelly via todd)
+
+    HDFS-2191. Move datanodeMap from FSNamesystem to DatanodeManager.
+    (szetszwo)
+
+    HDFS-2200. Change FSNamesystem.LOG to package private. (szetszwo)
+
+    HDFS-2195. Refactor StorageDirectory to not be an non-static inner class.
+    (todd via eli)
+
+    HDFS-2212. Refactor double-buffering code out of EditLogOutputStreams.
+    (todd via eli)
 
   OPTIMIZATIONS
 
@@ -1369,6 +1387,9 @@ Release 0.22.0 - Unreleased
 
     HDFS-2071. Use of isConnected() in DataXceiver is invalid. (Kihwal Lee
     via todd)
+
+    HDFS-1981. NameNode does not saveNamespace() when editsNew is empty.
+    (Uma Maheswara Rao G via shv)
 
 Release 0.21.1 - Unreleased
     HDFS-1466. TestFcHdfsSymlink relies on /tmp/test not existing. (eli)

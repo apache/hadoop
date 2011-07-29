@@ -41,7 +41,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtil.ErrorSimulator;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -182,8 +182,8 @@ public class SecondaryNameNode implements Runnable {
   
   public static InetSocketAddress getHttpAddress(Configuration conf) {
     return NetUtils.createSocketAddr(conf.get(
-        DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
-        DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_DEFAULT));
+        DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
+        DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_DEFAULT));
   }
   
   /**
@@ -196,15 +196,12 @@ public class SecondaryNameNode implements Runnable {
     infoBindAddress = infoSocAddr.getHostName();
     UserGroupInformation.setConfiguration(conf);
     if (UserGroupInformation.isSecurityEnabled()) {
-      SecurityUtil.login(conf, 
-          DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY,
-          DFSConfigKeys.DFS_SECONDARY_NAMENODE_USER_NAME_KEY,
-          infoBindAddress);
+      SecurityUtil.login(conf, DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY,
+          DFS_SECONDARY_NAMENODE_USER_NAME_KEY, infoBindAddress);
     }
     // initiate Java VM metrics
     JvmMetrics.create("SecondaryNameNode",
-        conf.get(DFSConfigKeys.DFS_METRICS_SESSION_ID_KEY),
-        DefaultMetricsSystem.instance());
+        conf.get(DFS_METRICS_SESSION_ID_KEY), DefaultMetricsSystem.instance());
     
     // Create connection to the namenode.
     shouldRun = true;
@@ -226,13 +223,13 @@ public class SecondaryNameNode implements Runnable {
 
     // Initialize other scheduling parameters from the configuration
     checkpointCheckPeriod = conf.getLong(
-        DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY,
-        DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_DEFAULT);
+        DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY,
+        DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_DEFAULT);
         
-    checkpointPeriod = conf.getLong(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 
-                                    DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_DEFAULT);
-    checkpointTxnCount = conf.getLong(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 
-                                  DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT);
+    checkpointPeriod = conf.getLong(DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 
+                                    DFS_NAMENODE_CHECKPOINT_PERIOD_DEFAULT);
+    checkpointTxnCount = conf.getLong(DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 
+                                  DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT);
     warnForDeprecatedConfigs(conf);
 
     // initialize the webserver for uploading files.
@@ -240,9 +237,9 @@ public class SecondaryNameNode implements Runnable {
     UserGroupInformation httpUGI = 
       UserGroupInformation.loginUserFromKeytabAndReturnUGI(
           SecurityUtil.getServerPrincipal(conf
-              .get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KRB_HTTPS_USER_NAME_KEY),
+              .get(DFS_SECONDARY_NAMENODE_KRB_HTTPS_USER_NAME_KEY),
               infoBindAddress),
-          conf.get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY));
+          conf.get(DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY));
     try {
       infoServer = httpUGI.doAs(new PrivilegedExceptionAction<HttpServer>() {
         @Override
@@ -253,7 +250,7 @@ public class SecondaryNameNode implements Runnable {
           int tmpInfoPort = infoSocAddr.getPort();
           infoServer = new HttpServer("secondary", infoBindAddress, tmpInfoPort,
               tmpInfoPort == 0, conf, 
-              new AccessControlList(conf.get(DFSConfigKeys.DFS_ADMIN, " ")));
+              new AccessControlList(conf.get(DFS_ADMIN, " ")));
           
           if(UserGroupInformation.isSecurityEnabled()) {
             System.setProperty("https.cipherSuites", 
@@ -286,7 +283,7 @@ public class SecondaryNameNode implements Runnable {
       imagePort = infoPort;
     }
     
-    conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, infoBindAddress + ":" +infoPort); 
+    conf.set(DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, infoBindAddress + ":" +infoPort); 
     LOG.info("Secondary Web-server up at: " + infoBindAddress + ":" +infoPort);
     LOG.info("Secondary image servlet up at: " + infoBindAddress + ":" + imagePort);
     LOG.info("Checkpoint Period   :" + checkpointPeriod + " secs " +
@@ -301,7 +298,7 @@ public class SecondaryNameNode implements Runnable {
       if (conf.get(key) != null) {
         LOG.warn("Configuration key " + key + " is deprecated! Ignoring..." +
             " Instead please specify a value for " +
-            DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY);
+            DFS_NAMENODE_CHECKPOINT_TXNS_KEY);
       }
     }
   }
@@ -796,7 +793,7 @@ public class SecondaryNameNode implements Runnable {
         
         StorageState curState;
         try {
-          curState = sd.analyzeStorage(HdfsConstants.StartupOption.REGULAR);
+          curState = sd.analyzeStorage(HdfsConstants.StartupOption.REGULAR, storage);
           // sd is locked but not opened
           switch(curState) {
           case NON_EXISTENT:
@@ -810,7 +807,7 @@ public class SecondaryNameNode implements Runnable {
             // (a) the VERSION file for each of the directories is the same,
             // and (b) when we connect to a NN, we can verify that the remote
             // node matches the same namespace that we ran on previously.
-            sd.read();
+            storage.readProperties(sd);
             break;
           default:  // recovery is possible
             sd.doRecover(curState);

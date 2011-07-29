@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.Arrays;
 
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -27,7 +26,6 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 
@@ -45,25 +43,8 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
   private JournalProtocol backupNode;        // RPC proxy to backup node
   private NamenodeRegistration bnRegistration;  // backup node registration
   private NamenodeRegistration nnRegistration;  // active node registration
-  private ArrayList<JournalRecord> bufCurrent;  // current buffer for writing
-  private ArrayList<JournalRecord> bufReady;    // buffer ready for flushing
+  private EditsDoubleBuffer doubleBuf;
   private DataOutputBuffer out;     // serialized output sent to backup node
-
-  static class JournalRecord {
-    byte op;
-    long txid;
-    Writable[] args;
-
-    JournalRecord(byte op, long txid, Writable ... writables) {
-      this.op = op;
-      this.txid = txid;
-      this.args = writables;
-    }
-
-    void write(DataOutputBuffer out) throws IOException {
-      writeChecksummedOp(out, op, txid, args);
-    }
-  }
 
   EditLogBackupOutputStream(NamenodeRegistration bnReg, // backup node
                             NamenodeRegistration nnReg) // active name-node
@@ -82,8 +63,7 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
       Storage.LOG.error("Error connecting to: " + bnAddress, e);
       throw e;
     }
-    this.bufCurrent = new ArrayList<JournalRecord>();
-    this.bufReady = new ArrayList<JournalRecord>();
+    this.doubleBuf = new EditsDoubleBuffer(DEFAULT_BUFFER_SIZE);
     this.out = new DataOutputBuffer(DEFAULT_BUFFER_SIZE);
   }
   
@@ -97,14 +77,14 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
     return JournalType.BACKUP;
   }
 
-  @Override
-  void write(byte[] data, int i, int length) throws IOException {
-    throw new IOException("Not implemented");
-  }
-
   @Override // EditLogOutputStream
-  void write(byte op, long txid, Writable ... writables) throws IOException {
-    bufCurrent.add(new JournalRecord(op, txid, writables));
+  void write(FSEditLogOp op) throws IOException {
+    doubleBuf.writeOp(op);
+ }
+
+  @Override
+  void writeRaw(byte[] bytes, int offset, int length) throws IOException {
+    throw new IOException("Not supported");
   }
 
   /**
@@ -112,51 +92,53 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
    */
   @Override // EditLogOutputStream
   void create() throws IOException {
-    bufCurrent.clear();
-    assert bufReady.size() == 0 : "previous data is not flushed yet";
+    assert doubleBuf.isFlushed() : "previous data is not flushed yet";
+    this.doubleBuf = new EditsDoubleBuffer(DEFAULT_BUFFER_SIZE);
   }
 
   @Override // EditLogOutputStream
   public void close() throws IOException {
     // close should have been called after all pending transactions 
     // have been flushed & synced.
-    int size = bufCurrent.size();
+    int size = doubleBuf.countBufferedBytes();
     if (size != 0) {
       throw new IOException("BackupEditStream has " + size +
                           " records still to be flushed and cannot be closed.");
     } 
     RPC.stopProxy(backupNode); // stop the RPC threads
-    bufCurrent = bufReady = null;
+    doubleBuf.close();
+    doubleBuf = null;
   }
 
   @Override
   public void abort() throws IOException {
     RPC.stopProxy(backupNode);
-    bufCurrent = bufReady = null;
+    doubleBuf = null;
   }
 
   @Override // EditLogOutputStream
   void setReadyToFlush() throws IOException {
-    assert bufReady.size() == 0 : "previous data is not flushed yet";
-    ArrayList<JournalRecord>  tmp = bufReady;
-    bufReady = bufCurrent;
-    bufCurrent = tmp;
+    doubleBuf.setReadyToFlush();
   }
 
   @Override // EditLogOutputStream
   protected void flushAndSync() throws IOException {
-    assert out.size() == 0 : "Output buffer is not empty";
-    for (JournalRecord jRec : bufReady) {
-      jRec.write(out);
-    }
-    if (out.size() > 0) {
+    assert out.getLength() == 0 : "Output buffer is not empty";
+    
+    int numReadyTxns = doubleBuf.countReadyTxns();
+    long firstTxToFlush = doubleBuf.getFirstReadyTxId();
+    
+    doubleBuf.flushTo(out);
+    if (out.getLength() > 0) {
+      assert numReadyTxns > 0;
+      
       byte[] data = Arrays.copyOf(out.getData(), out.getLength());
+      out.reset();
+      assert out.getLength() == 0 : "Output buffer is not empty";
+
       backupNode.journal(nnRegistration,
-          bufReady.get(0).txid, bufReady.size(),
-          data);
+          firstTxToFlush, numReadyTxns, data);
     }
-    bufReady.clear();         // erase all data in the buffer
-    out.reset();              // reset buffer to the start position
   }
 
   /**

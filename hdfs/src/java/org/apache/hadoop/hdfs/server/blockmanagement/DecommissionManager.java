@@ -83,8 +83,8 @@ class DecommissionManager {
     private void check() {
       int count = 0;
       for(Map.Entry<String, DatanodeDescriptor> entry
-          : new CyclicIteration<String, DatanodeDescriptor>(
-              fsnamesystem.datanodeMap, firstkey)) {
+          : blockManager.getDatanodeManager().getDatanodeCyclicIteration(
+              firstkey)) {
         final DatanodeDescriptor d = entry.getValue();
         firstkey = entry.getKey();
 

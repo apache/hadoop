@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -56,7 +57,7 @@ public class TestBalancerWithMultipleNameNodes {
     ((Log4JLogger)LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.OFF);
     ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.OFF);
-    ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.OFF);
+    ((Log4JLogger)LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.OFF);
 //    ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.OFF);
   }
 
