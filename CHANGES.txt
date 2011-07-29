@@ -178,6 +178,9 @@ Release 0.91.0 - Unreleased
    HBASE-4083  If Enable table is not completed and is partial, then scanning of
                the table is not working (ramkrishna.s.vasudevan)
    HBASE-4144  RS does not abort if the initialization of RS fails (ramkrishna.s.vasudevan)
+   HBASE-4138  If zookeeper.znode.parent is not specifed explicitly in Client
+               code then HTable object loops continuously waiting for the root region
+               by using /hbase as the base node.(ramkrishna.s.vasudevan)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

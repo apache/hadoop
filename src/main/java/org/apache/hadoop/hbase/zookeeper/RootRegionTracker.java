@@ -71,6 +71,12 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
    */
   public ServerName waitRootRegionLocation(long timeout)
   throws InterruptedException {
+    if (false == checkIfBaseNodeAvailable()) {
+      String errorMsg = "Check the value configured in 'zookeeper.znode.parent'. "
+          + "There could be a mismatch with the one configured in the master.";
+      LOG.error(errorMsg);
+      throw new IllegalArgumentException(errorMsg);
+    }
     return dataToServerName(super.blockUntilAvailable(timeout));
   }
 

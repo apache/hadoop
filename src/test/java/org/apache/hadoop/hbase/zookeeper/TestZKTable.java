@@ -60,7 +60,7 @@ public class TestZKTable {
       }
     };
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
-      name, abortable);
+      name, abortable, true);
     ZKTable zkt = new ZKTable(zkw);
     assertTrue(zkt.isEnabledTable(name));
     assertFalse(zkt.isDisablingTable(name));

@@ -570,7 +570,7 @@ public class HConnectionManager {
           return master;
         }
       }
-
+      checkIfBaseNodeAvailable();
       ServerName sn = null;
       synchronized (this.masterLock) {
         for (int tries = 0;
@@ -632,6 +632,15 @@ public class HConnectionManager {
       return this.master;
     }
 
+    private void checkIfBaseNodeAvailable() throws MasterNotRunningException {
+      if (false == masterAddressTracker.checkIfBaseNodeAvailable()) {
+        String errorMsg = "Check the value configured in 'zookeeper.znode.parent'. "
+            + "There could be a mismatch with the one configured in the master.";
+        LOG.error(errorMsg);
+        throw new MasterNotRunningException(errorMsg);
+      }
+    }
+    
     public boolean isMasterRunning()
     throws MasterNotRunningException, ZooKeeperConnectionException {
       if (this.master == null) {

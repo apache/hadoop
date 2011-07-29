@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.zookeeper.KeeperException;
 
@@ -32,6 +34,8 @@ import org.apache.zookeeper.KeeperException;
  * RegionServers.
  */
 public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
+  
+  static final Log LOG = LogFactory.getLog(ZooKeeperNodeTracker.class);
   /** Path of node being tracked */
   protected final String node;
 
@@ -178,5 +182,25 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
     if(path.equals(node)) {
       nodeCreated(path);
     }
+  }
+  
+  /**
+   * Checks if the baseznode set as per the property 'zookeeper.znode.parent'
+   * exists.
+   * @return true if baseznode exists.
+   *         false if doesnot exists.
+   */
+  public boolean checkIfBaseNodeAvailable() {
+    try {
+      if (ZKUtil.checkExists(watcher, watcher.baseZNode) == -1) {
+        return false;
+      }
+    } catch (KeeperException e) {
+      abortable
+          .abort(
+              "Exception while checking if basenode exists.",
+              e);
+    }
+    return true;
   }
 }

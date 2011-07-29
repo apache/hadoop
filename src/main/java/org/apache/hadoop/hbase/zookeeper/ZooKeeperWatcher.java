@@ -90,6 +90,18 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
 
   private final Exception constructorCaller;
 
+  
+  /**
+   * Instantiate a ZooKeeper connection and watcher.
+   * @param descriptor Descriptive string that is added to zookeeper sessionid
+   * and used as identifier for this instance.
+   * @throws IOException 
+   * @throws ZooKeeperConnectionException 
+   */
+  public ZooKeeperWatcher(Configuration conf, String descriptor,
+      Abortable abortable) throws ZooKeeperConnectionException, IOException {
+    this(conf, descriptor, abortable, false);
+  }
   /**
    * Instantiate a ZooKeeper connection and watcher.
    * @param descriptor Descriptive string that is added to zookeeper sessionid
@@ -98,7 +110,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
    * @throws ZooKeeperConnectionException
    */
   public ZooKeeperWatcher(Configuration conf, String descriptor,
-      Abortable abortable)
+      Abortable abortable, boolean canCreateBaseZNode)
   throws IOException, ZooKeeperConnectionException {
     this.conf = conf;
     // Capture a stack trace now.  Will print it out later if problem so we can
@@ -115,9 +127,14 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
     this.abortable = abortable;
     setNodeNames(conf);
     this.recoverableZooKeeper = ZKUtil.connect(conf, quorum, this, descriptor);
+    if (canCreateBaseZNode) {
+      createBaseZNodes();
+    }
+  }
+
+  private void createBaseZNodes() throws ZooKeeperConnectionException {
     try {
       // Create all the necessary "directories" of znodes
-      // TODO: Move this to an init method somewhere so not everyone calls it?
       ZKUtil.createAndFailSilent(this, baseZNode);
       ZKUtil.createAndFailSilent(this, assignmentZNode);
       ZKUtil.createAndFailSilent(this, rsZNode);

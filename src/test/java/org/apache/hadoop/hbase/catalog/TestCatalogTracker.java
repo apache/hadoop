@@ -84,7 +84,7 @@ public class TestCatalogTracker {
       }
     };
     this.watcher = new ZooKeeperWatcher(UTIL.getConfiguration(),
-      this.getClass().getSimpleName(), this.abortable);
+      this.getClass().getSimpleName(), this.abortable, true);
   }
 
   @After public void after() {

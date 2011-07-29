@@ -104,7 +104,7 @@ public class TestReplication {
     utility1 = new HBaseTestingUtility(conf1);
     utility1.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = utility1.getZkCluster();
-    zkw1 = new ZooKeeperWatcher(conf1, "cluster1", null);
+    zkw1 = new ZooKeeperWatcher(conf1, "cluster1", null, true);
     admin = new ReplicationAdmin(conf1);
     LOG.info("Setup first Zk");
 
@@ -116,7 +116,7 @@ public class TestReplication {
 
     utility2 = new HBaseTestingUtility(conf2);
     utility2.setZkCluster(miniZK);
-    zkw2 = new ZooKeeperWatcher(conf2, "cluster2", null);
+    zkw2 = new ZooKeeperWatcher(conf2, "cluster2", null, true);
 
     slaveClusterKey = conf2.get(HConstants.ZOOKEEPER_QUORUM)+":" +
             conf2.get("hbase.zookeeper.property.clientPort")+":/2";

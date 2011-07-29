@@ -67,7 +67,7 @@ public class TestRestartCluster {
   @Test (timeout=300000) public void testRestartClusterAfterKill()
   throws Exception {
     UTIL.startMiniZKCluster();
-    zooKeeper = new ZooKeeperWatcher(UTIL.getConfiguration(), "cluster1", null);
+    zooKeeper = new ZooKeeperWatcher(UTIL.getConfiguration(), "cluster1", null, true);
 
     // create the unassigned region, throw up a region opened state for META
     String unassignedZNode = zooKeeper.assignmentZNode;

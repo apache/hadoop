@@ -76,7 +76,7 @@ public class TestOpenRegionHandler {
     final ZooKeeperWatcher zk;
 
     MockServer() throws ZooKeeperConnectionException, IOException {
-      this.zk =  new ZooKeeperWatcher(HTU.getConfiguration(), NAME.toString(), this);
+      this.zk =  new ZooKeeperWatcher(HTU.getConfiguration(), NAME.toString(), this, true);
     }
 
     @Override
