@@ -118,6 +118,7 @@ case $COMMAND in
         echo "Error: No command named \`$COMMAND' was found. Perhaps you meant \`hadoop ${COMMAND#-}'"
         exit 1
     else
+      HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
       CLASS=$COMMAND
     fi
     shift
