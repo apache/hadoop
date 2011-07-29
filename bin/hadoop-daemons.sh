@@ -29,6 +29,10 @@ fi
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-. $bin/../libexec/hadoop-config.sh
+if [ -e "$bin/../libexec/hadoop-config.sh" ]; then
+  . "$bin"/../libexec/hadoop-config.sh
+else
+  . "$bin/hadoop-config.sh"
+fi
 
 exec "$bin/slaves.sh" --config $HADOOP_CONF_DIR cd "$HADOOP_HOME" \; "$bin/hadoop-daemon.sh" --config $HADOOP_CONF_DIR "$@"

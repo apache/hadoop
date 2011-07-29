@@ -25,7 +25,11 @@ usage="Usage: start-dfs.sh [-upgrade|-rollback]"
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/../libexec/hadoop-config.sh
+if [ -e "$bin/../libexec/hadoop-config.sh" ]; then
+  . "$bin"/../libexec/hadoop-config.sh
+else
+  . "$bin/hadoop-config.sh"
+fi
 
 # get arguments
 if [ $# -ge 1 ]; then
