@@ -384,6 +384,7 @@ public class SplitLogManager extends ZooKeeperListener {
       setDone(path, true);
       return;
     }
+    data = this.watcher.getRecoverableZooKeeper().removeMetaData(data);
     // LOG.debug("set watch on " + path + " got data " + new String(data));
     if (TaskState.TASK_UNASSIGNED.equals(data)) {
       LOG.debug("task not yet acquired " + path + " ver = " + version);
