@@ -45,9 +45,9 @@ import org.apache.avro.reflect.Nullable;
 @InterfaceAudience.Private
 public interface DatanodeProtocol extends VersionedProtocol {
   /**
-   * 27: Add block pool ID to Block
+   * 28: Add Balancer Bandwidth Command protocol.
    */
-  public static final long versionID = 27L;
+  public static final long versionID = 28L;
   
   // error code
   final static int NOTIFY = 0;
@@ -67,6 +67,7 @@ public interface DatanodeProtocol extends VersionedProtocol {
   final static int DNA_FINALIZE = 5;   // finalize previous upgrade
   final static int DNA_RECOVERBLOCK = 6;  // request a block recovery
   final static int DNA_ACCESSKEYUPDATE = 7;  // update access key
+  final static int DNA_BALANCERBANDWIDTHUPDATE = 8; // update balancer bandwidth
 
   /** 
    * Register Datanode.

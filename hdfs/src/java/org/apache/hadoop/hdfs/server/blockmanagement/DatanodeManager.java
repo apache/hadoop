@@ -56,6 +56,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
+import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.CachedDNSToSwitchMapping;
 import org.apache.hadoop.net.DNSToSwitchMapping;
@@ -749,7 +750,7 @@ public class DatanodeManager {
           return new DatanodeCommand[] { brCommand };
         }
 
-        final List<DatanodeCommand> cmds = new ArrayList<DatanodeCommand>(3);
+        final List<DatanodeCommand> cmds = new ArrayList<DatanodeCommand>();
         //check pending replication
         List<BlockTargetPair> pendingList = nodeinfo.getReplicationCommand(
               maxTransfers);
@@ -765,6 +766,14 @@ public class DatanodeManager {
         }
         
         namesystem.addKeyUpdateCommand(cmds, nodeinfo);
+
+        // check for balancer bandwidth update
+        if (nodeinfo.getBalancerBandwidth() > 0) {
+          cmds.add(new BalancerBandwidthCommand(nodeinfo.getBalancerBandwidth()));
+          // set back to 0 to indicate that datanode has been sent the new value
+          nodeinfo.setBalancerBandwidth(0);
+        }
+
         if (!cmds.isEmpty()) {
           return cmds.toArray(new DatanodeCommand[cmds.size()]);
         }
@@ -772,5 +781,27 @@ public class DatanodeManager {
     }
 
     return null;
+  }
+
+  /**
+   * Tell all datanodes to use a new, non-persistent bandwidth value for
+   * dfs.balance.bandwidthPerSec.
+   *
+   * A system administrator can tune the balancer bandwidth parameter
+   * (dfs.datanode.balance.bandwidthPerSec) dynamically by calling
+   * "dfsadmin -setBalanacerBandwidth newbandwidth", at which point the
+   * following 'bandwidth' variable gets updated with the new value for each
+   * node. Once the heartbeat command is issued to update the value on the
+   * specified datanode, this value will be set back to 0.
+   *
+   * @param bandwidth Blanacer bandwidth in bytes per second for all datanodes.
+   * @throws IOException
+   */
+  public void setBalancerBandwidth(long bandwidth) throws IOException {
+    synchronized(datanodeMap) {
+      for (DatanodeDescriptor nodeInfo : datanodeMap.values()) {
+        nodeInfo.setBalancerBandwidth(bandwidth);
+      }
+    }
   }
 }

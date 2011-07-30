@@ -67,9 +67,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 67: Add block pool ID to Block
+   * 68: Add Balancer Bandwidth Command protocol
    */
-  public static final long versionID = 67L;
+  public static final long versionID = 68L;
   
   ///////////////////////////////////////
   // File contents
@@ -715,6 +715,15 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws IOException
    */
   public void metaSave(String filename) throws IOException;
+
+  /**
+   * Tell all datanodes to use a new, non-persistent bandwidth value for
+   * dfs.balance.bandwidthPerSec.
+   *
+   * @param bandwidth Blanacer bandwidth in bytes per second for this datanode.
+   * @throws IOException
+   */
+  public void setBalancerBandwidth(long bandwidth) throws IOException;
   
   /**
    * Get the file info for a specific file or directory.

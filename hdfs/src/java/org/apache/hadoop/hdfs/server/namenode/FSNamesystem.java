@@ -5066,5 +5066,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     getBlockManager().getDatanodeManager().removeDecomNodeFromList(nodeList);
   }
 
-
+  /**
+   * Tell all datanodes to use a new, non-persistent bandwidth value for
+   * dfs.datanode.balance.bandwidthPerSec.
+   * @param bandwidth Blanacer bandwidth in bytes per second for all datanodes.
+   * @throws IOException
+   */
+  public void setBalancerBandwidth(long bandwidth) throws IOException {
+    getBlockManager().getDatanodeManager().setBalancerBandwidth(bandwidth);
+  }
 }

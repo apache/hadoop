@@ -106,6 +106,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
   public boolean isAlive = false;
   public boolean needKeyUpdate = false;
 
+  // A system administrator can tune the balancer bandwidth parameter
+  // (dfs.balance.bandwidthPerSec) dynamically by calling
+  // "dfsadmin -setBalanacerBandwidth <newbandwidth>", at which point the
+  // following 'bandwidth' variable gets updated with the new value for each
+  // node. Once the heartbeat command is issued to update the value on the
+  // specified datanode, this value will be set back to 0.
+  private long bandwidth;
+
   /** A queue of blocks to be replicated by this datanode */
   private BlockQueue<BlockTargetPair> replicateBlocks = new BlockQueue<BlockTargetPair>();
   /** A queue of blocks to be recovered by this datanode */
@@ -569,4 +577,20 @@ public class DatanodeDescriptor extends DatanodeInfo {
   public void updateRegInfo(DatanodeID nodeReg) {
     super.updateRegInfo(nodeReg);
   }
+
+  /**
+   * @return Blanacer bandwidth in bytes per second for this datanode.
+   */
+  public long getBalancerBandwidth() {
+    return this.bandwidth;
+  }
+
+  /**
+   * @param bandwidth Blanacer bandwidth in bytes per second for this datanode.
+   */
+  public void setBalancerBandwidth(long bandwidth) {
+    this.bandwidth = bandwidth;
+  }
+
+
 }

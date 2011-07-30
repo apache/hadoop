@@ -303,6 +303,9 @@ Trunk (unreleased changes)
     HDFS-2156. Make hdfs and mapreduce rpm only depend on the same major 
     version for common and hdfs. (eyang via omalley)
 
+    HDFS-2202. Add a new DFSAdmin command to set balancer bandwidth of
+    datanodes without restarting.  (Eric Payne via szetszwo)
+
   IMPROVEMENTS
 
     HDFS-1875. MiniDFSCluster hard-codes dfs.datanode.address to localhost

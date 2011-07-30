@@ -1089,6 +1089,16 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     }
     return new CorruptFileBlocks(files, lastCookie);
   }
+
+  /**
+   * Tell all datanodes to use a new, non-persistent bandwidth value for
+   * dfs.datanode.balance.bandwidthPerSec.
+   * @param bandwidth Blanacer bandwidth in bytes per second for all datanodes.
+   * @throws IOException
+   */
+  public void setBalancerBandwidth(long bandwidth) throws IOException {
+    namesystem.setBalancerBandwidth(bandwidth);
+  }
   
   @Override // ClientProtocol
   public ContentSummary getContentSummary(String path) throws IOException {

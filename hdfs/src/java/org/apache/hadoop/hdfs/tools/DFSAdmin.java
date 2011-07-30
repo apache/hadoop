@@ -452,6 +452,40 @@ public class DFSAdmin extends FsShell {
     return exitCode;
   }
 
+  /**
+   * Command to ask the namenode to set the balancer bandwidth for all of the
+   * datanodes.
+   * Usage: java DFSAdmin -setBalancerBandwidth bandwidth
+   * @param argv List of of command line parameters.
+   * @param idx The index of the command that is being processed.
+   * @exception IOException 
+   */
+  public int setBalancerBandwidth(String[] argv, int idx) throws IOException {
+    long bandwidth;
+    int exitCode = -1;
+
+    try {
+      bandwidth = Long.parseLong(argv[idx]);
+    } catch (NumberFormatException nfe) {
+      System.err.println("NumberFormatException: " + nfe.getMessage());
+      System.err.println("Usage: java DFSAdmin"
+                  + " [-setBalancerBandwidth <bandwidth in bytes per second>]");
+      return exitCode;
+    }
+
+    FileSystem fs = getFS();
+    if (!(fs instanceof DistributedFileSystem)) {
+      System.err.println("FileSystem is " + fs.getUri());
+      return exitCode;
+    }
+
+    DistributedFileSystem dfs = (DistributedFileSystem) fs;
+    dfs.setBalancerBandwidth(bandwidth);
+    exitCode = 0;
+
+    return exitCode;
+  }
+
   private void printHelp(String cmd) {
     String summary = "hadoop dfsadmin is the command to execute DFS administrative commands.\n" +
       "The full syntax is: \n\n" +
@@ -469,6 +503,7 @@ public class DFSAdmin extends FsShell {
       "\t[-printTopology]\n" +
       "\t[-refreshNamenodes datanodehost:port]\n"+
       "\t[-deleteBlockPool datanodehost:port blockpoolId [force]]\n"+
+      "\t[-setBalancerBandwidth <bandwidth>]\n" +
       "\t[-help [cmd]]\n";
 
     String report ="-report: \tReports basic filesystem information and statistics.\n";
@@ -546,6 +581,14 @@ public class DFSAdmin extends FsShell {
                              "\t\t will fail if datanode is still serving the block pool.\n" +
                              "\t\t   Refer to refreshNamenodes to shutdown a block pool\n" +
                              "\t\t service on a datanode.\n";
+
+    String setBalancerBandwidth = "-setBalancerBandwidth <bandwidth>:\n" +
+      "\tChanges the network bandwidth used by each datanode during\n" +
+      "\tHDFS block balancing.\n\n" +
+      "\t\t<bandwidth> is the maximum number of bytes per second\n" +
+      "\t\tthat will be used by each datanode. This value overrides\n" +
+      "\t\tthe dfs.balance.bandwidthPerSec parameter.\n\n" +
+      "\t\t--- NOTE: The new value is not persistent on the DataNode.---\n";
     
     String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
       "\t\tis specified.\n";
@@ -586,6 +629,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(refreshNamenodes);
     } else if ("deleteBlockPool".equals(cmd)) {
       System.out.println(deleteBlockPool);
+    } else if ("setBalancerBandwidth".equals(cmd)) {
+      System.out.println(setBalancerBandwidth);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -879,6 +924,9 @@ public class DFSAdmin extends FsShell {
     } else if ("-deleteBlockPool".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
           + " [-deleteBlockPool datanode-host:port blockpoolId [force]]");
+    } else if ("-setBalancerBandwidth".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+                  + " [-setBalancerBandwidth <bandwidth in bytes per second>]");
     } else {
       System.err.println("Usage: java DFSAdmin");
       System.err.println("           [-report]");
@@ -899,6 +947,7 @@ public class DFSAdmin extends FsShell {
       System.err.println("           ["+ClearQuotaCommand.USAGE+"]");
       System.err.println("           ["+SetSpaceQuotaCommand.USAGE+"]");
       System.err.println("           ["+ClearSpaceQuotaCommand.USAGE+"]");      
+      System.err.println("           [-setBalancerBandwidth <bandwidth in bytes per second>]");
       System.err.println("           [-help [cmd]]");
       System.err.println();
       ToolRunner.printGenericCommandUsage(System.err);
@@ -990,6 +1039,11 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if ("-setBalancerBandwidth".equals(cmd)) {
+      if (argv.length != 2) {
+        printUsage(cmd);
+        return exitCode;
+      }
     }
     
     // initialize DFSAdmin
@@ -1042,6 +1096,8 @@ public class DFSAdmin extends FsShell {
         exitCode = refreshNamenodes(argv, i);
       } else if ("-deleteBlockPool".equals(cmd)) {
         exitCode = deleteBlockPool(argv, i);
+      } else if ("-setBalancerBandwidth".equals(cmd)) {
+        exitCode = setBalancerBandwidth(argv, i);
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);
