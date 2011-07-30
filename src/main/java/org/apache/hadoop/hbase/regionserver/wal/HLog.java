@@ -1174,10 +1174,6 @@ public class HLog implements Syncable {
             " overwritten oldseq=" + oldseq + "with new seq=" + seq);
         Runtime.getRuntime().halt(1);
       }
-    } else {
-      LOG.error("Logic Error - flushing an empty region??? " +
-          Bytes.toString(encodedRegionName));
-      Runtime.getRuntime().halt(1);
     }
     return obtainSeqNum();
   }
