@@ -215,6 +215,8 @@ public class TestDFSClientRetries extends TestCase {
 
     public void metaSave(String filename) throws IOException {}
 
+    public void setBalancerBandwidth(long bandwidth) throws IOException {}
+
     public HdfsFileStatus getFileInfo(String src) throws IOException { return null; }
 
     public ContentSummary getContentSummary(String path) throws IOException { return null; }

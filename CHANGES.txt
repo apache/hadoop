@@ -4,6 +4,9 @@ Release 0.20.205.0 - unreleased
 
   NEW FEATURES
 
+    HDFS-2202. Add a new DFSAdmin command to set balancer bandwidth of
+    datanodes without restarting.  (Eric Payne via szetszwo)
+
   BUG FIXES
 
     MAPREDUCE-2651. Fix race condition in Linux task controller for

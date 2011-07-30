@@ -90,6 +90,7 @@ import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
+import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
@@ -1055,6 +1056,19 @@ public class DataNode extends Configured
         blockTokenSecretManager.setKeys(((KeyUpdateCommand) cmd).getExportedKeys());
       }
       break;
+    case DatanodeProtocol.DNA_BALANCERBANDWIDTHUPDATE:
+      LOG.info("DatanodeCommand action: DNA_BALANCERBANDWIDTHUPDATE");
+      int vsn = ((BalancerBandwidthCommand) cmd).getBalancerBandwidthVersion();
+      if (vsn >= 1) {
+        long bandwidth = 
+                   ((BalancerBandwidthCommand) cmd).getBalancerBandwidthValue();
+        if (bandwidth > 0) {
+          DataXceiverServer dxcs =
+                       (DataXceiverServer) this.dataXceiverServer.getRunnable();
+          dxcs.balanceThrottler.setBandwidth(bandwidth);
+        }
+      }
+      break;
     default:
       LOG.warn("Unknown DatanodeCommand action: " + cmd.getAction());
     }
@@ -1891,5 +1905,16 @@ public class DataNode extends Configured
       info.put(v.directory, innerInfo);
     }
     return JSON.toString(info);
+  }
+
+  /**
+   * Get current value of the max balancer bandwidth in bytes per second.
+   *
+   * @return bandwidth Blanacer bandwidth in bytes per second for this datanode.
+   */
+  public Long getBalancerBandwidth() {
+    DataXceiverServer dxcs =
+                       (DataXceiverServer) this.dataXceiverServer.getRunnable();
+    return dxcs.balanceThrottler.getBandwidth();
   }
 }

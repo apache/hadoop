@@ -949,6 +949,18 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   public void metaSave(String pathname) throws IOException {
     namenode.metaSave(pathname);
   }
+
+  /**
+   * Requests the namenode to tell all datanodes to use a new, non-persistent
+   * bandwidth value for dfs.balance.bandwidthPerSec.
+   * See {@link ClientProtocol#setBalancerBandwidth(long)} 
+   * for more details.
+   * 
+   * @see ClientProtocol#setBalancerBandwidth(long)
+   */
+  public void setBalancerBandwidth(long bandwidth) throws IOException {
+    namenode.setBalancerBandwidth(bandwidth);
+  }
     
   /**
    * @see ClientProtocol#finalizeUpgrade()
@@ -956,7 +968,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   public void finalizeUpgrade() throws IOException {
     namenode.finalizeUpgrade();
   }
-
+    
   /**
    * @see ClientProtocol#distributedUpgradeProgress(FSConstants.UpgradeAction)
    */

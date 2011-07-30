@@ -95,6 +95,7 @@ import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
+import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Server;
@@ -679,6 +680,28 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
 
     out.flush();
     out.close();
+  }
+
+  /**
+   * Tell all datanodes to use a new, non-persistent bandwidth value for
+   * dfs.balance.bandwidthPerSec.
+   *
+   * A system administrator can tune the balancer bandwidth parameter
+   * (dfs.balance.bandwidthPerSec) dynamically by calling
+   * "dfsadmin -setBalanacerBandwidth newbandwidth", at which point the
+   * following 'bandwidth' variable gets updated with the new value for each
+   * node. Once the heartbeat command is issued to update the value on the
+   * specified datanode, this value will be set back to 0.
+   *
+   * @param bandwidth Blanacer bandwidth in bytes per second for all datanodes.
+   * @throws IOException
+   */
+  public void setBalancerBandwidth(long bandwidth) throws IOException {
+    synchronized(datanodeMap) {
+      for (DatanodeDescriptor nodeInfo : datanodeMap.values()) {
+        nodeInfo.setBalancerBandwidth(bandwidth);
+      }
+    }
   }
 
   long getDefaultBlockSize() {
@@ -2404,7 +2427,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
           return new DatanodeCommand[] {cmd};
         }
       
-        ArrayList<DatanodeCommand> cmds = new ArrayList<DatanodeCommand>(3);
+        ArrayList<DatanodeCommand> cmds = new ArrayList<DatanodeCommand>();
         //check pending replication
         cmd = nodeinfo.getReplicationCommand(
               maxReplicationStreams - xmitsInProgress);
@@ -2420,6 +2443,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
         if (isAccessTokenEnabled && nodeinfo.needKeyUpdate) {
           cmds.add(new KeyUpdateCommand(accessTokenHandler.exportKeys()));
           nodeinfo.needKeyUpdate = false;
+        }
+        // check for balancer bandwidth update
+        if (nodeinfo.getBalancerBandwidth() > 0) {
+          cmds.add(new BalancerBandwidthCommand(nodeinfo.getBalancerBandwidth()));
+          // set back to 0 to indicate that datanode has been sent the new value
+          nodeinfo.setBalancerBandwidth(0);
         }
         if (!cmds.isEmpty()) {
           return cmds.toArray(new DatanodeCommand[cmds.size()]);

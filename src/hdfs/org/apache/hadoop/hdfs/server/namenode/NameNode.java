@@ -830,6 +830,16 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     namesystem.metaSave(filename);
   }
 
+  /**
+   * Tell all datanodes to use a new, non-persistent bandwidth value for
+   * dfs.balance.bandwidthPerSec.
+   * @param bandwidth Blanacer bandwidth in bytes per second for all datanodes.
+   * @throws IOException
+   */
+  public void setBalancerBandwidth(long bandwidth) throws IOException {
+    namesystem.setBalancerBandwidth(bandwidth);
+  }
+
   /** {@inheritDoc} */
   public ContentSummary getContentSummary(String path) throws IOException {
     return namesystem.getContentSummary(path);

@@ -66,6 +66,7 @@ public interface DatanodeProtocol extends VersionedProtocol {
   final static int DNA_FINALIZE = 5;   // finalize previous upgrade
   final static int DNA_RECOVERBLOCK = 6;  // request a block recovery
   final static int DNA_ACCESSKEYUPDATE = 7;  // update access key
+  final static int DNA_BALANCERBANDWIDTHUPDATE = 8; // update balancer bandwidth
 
   /** 
    * Register Datanode.
