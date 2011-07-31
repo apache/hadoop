@@ -19,13 +19,20 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.MD5Hash;
-
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 public class TestHRegionInfo {
   @Test
@@ -50,6 +57,25 @@ public class TestHRegionInfo {
     assertEquals(tableName + "," + startKey + ","
                  + id + "." + md5HashInHex + ".",
                  nameStr);
+  }
+  
+  @Test
+  public void testGetSetOfHTD() {
+    HBaseTestingUtility HTU = new HBaseTestingUtility();
+    final String tablename = "testGetSetOfHTD";
+    HTableDescriptor htd = new HTableDescriptor(tablename);
+    FSUtils.createTableDescriptor(htd, HTU.getConfiguration());
+    HRegionInfo hri = new HRegionInfo(Bytes.toBytes("testGetSetOfHTD"),
+        HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+    HTableDescriptor htd2 = hri.getTableDesc();
+    assertTrue(htd.equals(htd2));
+    final String key = "SOME_KEY";
+    assertNull(htd.getValue(key));
+    final String value = "VALUE";
+    htd.setValue(key, value);
+    hri.setTableDesc(htd);
+    HTableDescriptor htd3 = hri.getTableDesc();
+    assertTrue(htd.equals(htd3));
   }
   
   @Test

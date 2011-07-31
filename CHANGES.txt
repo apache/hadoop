@@ -181,6 +181,7 @@ Release 0.91.0 - Unreleased
    HBASE-4138  If zookeeper.znode.parent is not specifed explicitly in Client
                code then HTable object loops continuously waiting for the root region
                by using /hbase as the base node.(ramkrishna.s.vasudevan)
+   HBASE-4032  HBASE-451 improperly breaks public API HRegionInfo#getTableDesc
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
