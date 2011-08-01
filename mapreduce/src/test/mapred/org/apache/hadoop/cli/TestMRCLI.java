@@ -18,8 +18,7 @@
 
 package org.apache.hadoop.cli;
 
-import org.apache.hadoop.cli.util.CommandExecutor;
-import org.apache.hadoop.cli.util.CLITestData.TestCmd;
+import org.apache.hadoop.cli.util.*;
 import org.apache.hadoop.cli.util.CommandExecutor.Result;
 import org.apache.hadoop.tools.HadoopArchives;
 import org.apache.hadoop.mapred.JobConf;
@@ -29,51 +28,59 @@ import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.security.authorize.HadoopPolicyProvider;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.util.ToolRunner;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.xml.sax.SAXException;
 
-public class TestMRCLI extends TestHDFSCLI{
+public class TestMRCLI extends TestHDFSCLI {
 
   protected MiniMRCluster mrCluster = null;
   protected String jobtracker = null;
-  protected MRCmdExecutor cmdExecutor = null;
-  protected ArchiveCmdExecutor archiveCmdExecutor = null;
-  
+  private JobConf mrConf;
+
+  @Before
   public void setUp() throws Exception {
     super.setUp();
     conf.setClass(PolicyProvider.POLICY_PROVIDER_CONFIG,
         HadoopPolicyProvider.class, PolicyProvider.class);
-    JobConf mrConf = new JobConf(conf);
+    mrConf = new JobConf(conf);
     mrCluster = new MiniMRCluster(1, dfsCluster.getFileSystem().getUri().toString(), 1, 
                            null, null, mrConf);
     jobtracker = mrCluster.createJobConf().get(JTConfig.JT_IPC_ADDRESS, "local");
-    cmdExecutor = new MRCmdExecutor(jobtracker);
-    archiveCmdExecutor = new ArchiveCmdExecutor(namenode, mrConf);
   }
 
-  
+  @After
   public void tearDown() throws Exception {
     mrCluster.shutdown();
     super.tearDown();
   }
-  
-  protected String getTestFile() {
+
+    @Override
+    protected TestConfigFileParser getConfigParser() {
+        return new TestConfigFileParserMR();
+    }
+
+    protected String getTestFile() {
     return "testMRConf.xml";
   }
-  
+
+  @Override
   protected String expandCommand(final String cmd) {
     String expCmd = cmd;
     expCmd = expCmd.replaceAll("JOBTRACKER", jobtracker);
-    expCmd = super.expandCommand(cmd);
+    expCmd = super.expandCommand(expCmd);
     return expCmd;
   }
-  
-  protected Result execute(TestCmd cmd) throws Exception {
-    if(cmd.getType() == TestCmd.CommandType.MRADMIN) {
-      return cmdExecutor.executeCommand(cmd.getCmd());
-    } else if(cmd.getType() == TestCmd.CommandType.ARCHIVE) {
-      return archiveCmdExecutor.executeCommand(cmd.getCmd());
-    } else {
+
+  @Override
+  protected Result execute(CLICommand cmd) throws Exception {
+    if (cmd.getType() instanceof CLICommandMRAdmin)
+      return new TestMRCLI.MRCmdExecutor(jobtracker).executeCommand(cmd.getCmd());
+    else if (cmd.getType() instanceof CLICommandArchive)
+      return new TestMRCLI.ArchiveCmdExecutor(namenode, mrConf).executeCommand(cmd.getCmd());
+    else
       return super.execute(cmd);
-    }
   }
   
   public static class MRCmdExecutor extends CommandExecutor {
@@ -81,11 +88,13 @@ public class TestMRCLI extends TestHDFSCLI{
     public MRCmdExecutor(String jobtracker) {
       this.jobtracker = jobtracker;
     }
+    @Override
     protected void execute(final String cmd) throws Exception{
       MRAdmin mradmin = new MRAdmin();
       String[] args = getCommandAsArgs(cmd, "JOBTRACKER", jobtracker);
       ToolRunner.run(mradmin, args);
     }
+
   }
   
   public static class ArchiveCmdExecutor extends CommandExecutor {
@@ -95,11 +104,43 @@ public class TestMRCLI extends TestHDFSCLI{
       this.namenode = namenode;
       this.jobConf = jobConf;
     }
+    @Override
     protected void execute(final String cmd) throws Exception {
-//      JobConf job=new JobConf(conf);
       HadoopArchives archive = new HadoopArchives(jobConf);
       String[] args = getCommandAsArgs(cmd, "NAMENODE", namenode);
       ToolRunner.run(archive, args);
+    }
+  }
+
+  @Test
+  @Override
+  public void testAll () {
+    super.testAll();
+  }
+
+  class TestConfigFileParserMR extends CLITestHelper.TestConfigFileParser {
+    @Override
+    public void endElement(String uri, String localName, String qName)
+        throws SAXException {
+      if (qName.equals("mr-admin-command")) {
+        if (testCommands != null) {
+          testCommands.add(new CLITestCmdMR(charString,
+              new CLICommandMRAdmin()));
+        } else if (cleanupCommands != null) {
+          cleanupCommands.add(new CLITestCmdMR(charString,
+              new CLICommandMRAdmin()));
+        }
+      } else if (qName.equals("archive-command")) {
+        if (testCommands != null) {
+          testCommands.add(new CLITestCmdMR(charString,
+              new CLICommandArchive()));
+        } else if (cleanupCommands != null) {
+          cleanupCommands.add(new CLITestCmdMR(charString,
+              new CLICommandArchive()));
+        }
+      } else {
+        super.endElement(uri, localName, qName);
+      }
     }
   }
 }

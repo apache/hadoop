@@ -15,15 +15,26 @@
   </properties>
 
   <dependencies>
-    <dependency>
-      <groupId>log4j</groupId>
-      <artifactId>log4j</artifactId>
-      <version>1.2.12</version>
-    </dependency> 
-   <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>yarn-api</artifactId>
-    </dependency>
+  <dependency>
+    <groupId>log4j</groupId>
+    <artifactId>log4j</artifactId>
+    <version>1.2.12</version>
+    <exclusions>
+        <exclusion>
+          <groupId>com.sun.jdmk</groupId>
+          <artifactId>jmxtools</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.sun.jmx</groupId>
+          <artifactId>jmxri</artifactId>
+        </exclusion>
+    </exclusions>
+   </dependency>  
+   
+  <dependency>
+    <groupId>org.apache.hadoop</groupId>
+    <artifactId>yarn-api</artifactId>
+  </dependency>
   </dependencies>
 
   <build>

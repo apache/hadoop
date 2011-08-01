@@ -62,7 +62,7 @@ public class TestCopyFiles extends TestCase {
     ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hdfs.StateChange")
         ).getLogger().setLevel(Level.OFF);
     ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.OFF);
-    ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.OFF);
+    ((Log4JLogger)LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.OFF);
     ((Log4JLogger)DistCp.LOG).getLogger().setLevel(Level.ALL);
   }
   

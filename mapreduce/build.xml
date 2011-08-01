@@ -31,7 +31,7 @@
   <property name="Name" value="Hadoop-Mapred"/>
   <property name="name" value="hadoop-mapred"/>
   <!-- Need to change aop.xml project.version prop. synchronously -->
-  <property name="version" value="0.22.0-SNAPSHOT"/>
+  <property name="version" value="0.23.0-SNAPSHOT"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.final.name" value="${name}-test-${version}"/>
   <property name="examples.final.name" value="${name}-examples-${version}"/>
@@ -916,7 +916,6 @@
   	      tofile="${build.docs}/mapred-queues.xml" failonerror="false"/>
     <exec dir="${docs.src}" executable="${forrest.home}/bin/forrest"
 	  failonerror="true">
-      <env key="JAVA_HOME" value="${java5.home}"/>
     </exec>
     <copy todir="${build.docs}">
       <fileset dir="${docs.src}/build/site/" />
@@ -1734,7 +1733,6 @@
     <arg value="${findbugs.home}"/>
     <arg value="${forrest.home}"/>
     <arg value="${basedir}"/>
-    <arg value="${java5.home}"/>
   </exec>
 </target>
 
@@ -1757,7 +1755,6 @@
     <arg value="${basedir}"/>
     <arg value="${trigger.url}"/>
     <arg value="${jira.passwd}"/>
-    <arg value="${java5.home}"/>
     <arg value="${curl.cmd}"/>
     <arg value="${defect}"/>
   </exec>

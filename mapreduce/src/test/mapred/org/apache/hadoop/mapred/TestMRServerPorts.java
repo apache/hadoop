@@ -44,7 +44,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 public class TestMRServerPorts extends TestCase {
 
   static { DefaultMetricsSystem.setMiniClusterMode(true); }
-
+  static final String THIS_HOST = TestHDFSServerPorts.getFullHostName() + ":0";
   TestHDFSServerPorts hdfs = new TestHDFSServerPorts();
 
   // Runs the JT in a separate thread
@@ -84,12 +84,9 @@ public class TestMRServerPorts extends TestCase {
   }
   
   private void setDataNodePorts(Configuration conf) {
-    conf.set("dfs.datanode.address", 
-        TestHDFSServerPorts.NAME_NODE_HOST + "0");
-    conf.set("dfs.datanode.http.address", 
-        TestHDFSServerPorts.NAME_NODE_HTTP_HOST + "0");
-    conf.set("dfs.datanode.ipc.address", 
-        TestHDFSServerPorts.NAME_NODE_HOST + "0");
+    conf.set("dfs.datanode.address", THIS_HOST);
+    conf.set("dfs.datanode.http.address", THIS_HOST);
+    conf.set("dfs.datanode.ipc.address", THIS_HOST);
   }
 
   /**
@@ -142,22 +139,20 @@ public class TestMRServerPorts extends TestCase {
       JobConf conf2 = new JobConf(hdfs.getConfig());
       conf2.set(JTConfig.JT_IPC_ADDRESS,
                 FileSystem.getDefaultUri(hdfs.getConfig()).toString());
-      conf2.set(JTConfig.JT_HTTP_ADDRESS,
-        TestHDFSServerPorts.NAME_NODE_HTTP_HOST + 0);
+      conf2.set(JTConfig.JT_HTTP_ADDRESS, THIS_HOST);
       boolean started = canStartJobTracker(conf2);
       assertFalse(started); // should fail
 
       // bind http server to the same port as name-node
-      conf2.set(JTConfig.JT_IPC_ADDRESS, TestHDFSServerPorts.NAME_NODE_HOST + 0);
+      conf2.set(JTConfig.JT_IPC_ADDRESS, THIS_HOST);
       conf2.set(JTConfig.JT_HTTP_ADDRESS,
         hdfs.getConfig().get("dfs.http.address"));
       started = canStartJobTracker(conf2);
       assertFalse(started); // should fail again
 
       // both ports are different from the name-node ones
-      conf2.set(JTConfig.JT_IPC_ADDRESS, TestHDFSServerPorts.NAME_NODE_HOST + 0);
-      conf2.set(JTConfig.JT_HTTP_ADDRESS,
-        TestHDFSServerPorts.NAME_NODE_HTTP_HOST + 0);
+      conf2.set(JTConfig.JT_IPC_ADDRESS, THIS_HOST);
+      conf2.set(JTConfig.JT_HTTP_ADDRESS, THIS_HOST);
       started = canStartJobTracker(conf2);
       assertTrue(started); // should start now
 
@@ -187,24 +182,20 @@ public class TestMRServerPorts extends TestCase {
       // start job tracker on the same port as name-node
       conf2.set(TTConfig.TT_REPORT_ADDRESS,
                 FileSystem.getDefaultUri(hdfs.getConfig()).toString());
-      conf2.set(TTConfig.TT_HTTP_ADDRESS,
-        TestHDFSServerPorts.NAME_NODE_HTTP_HOST + 0);
+      conf2.set(TTConfig.TT_HTTP_ADDRESS, THIS_HOST);
       boolean started = canStartTaskTracker(conf2);
       assertFalse(started); // should fail
 
       // bind http server to the same port as name-node
-      conf2.set(TTConfig.TT_REPORT_ADDRESS,
-        TestHDFSServerPorts.NAME_NODE_HOST + 0);
+      conf2.set(TTConfig.TT_REPORT_ADDRESS, THIS_HOST);
       conf2.set(TTConfig.TT_HTTP_ADDRESS,
         hdfs.getConfig().get("dfs.http.address"));
       started = canStartTaskTracker(conf2);
       assertFalse(started); // should fail again
 
       // both ports are different from the name-node ones
-      conf2.set(TTConfig.TT_REPORT_ADDRESS,
-        TestHDFSServerPorts.NAME_NODE_HOST + 0);
-      conf2.set(TTConfig.TT_HTTP_ADDRESS,
-        TestHDFSServerPorts.NAME_NODE_HTTP_HOST + 0);
+      conf2.set(TTConfig.TT_REPORT_ADDRESS, THIS_HOST);
+      conf2.set(TTConfig.TT_HTTP_ADDRESS, THIS_HOST);
       started = canStartTaskTracker(conf2);
       assertTrue(started); // should start now
     } finally {

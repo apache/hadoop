@@ -4,6 +4,10 @@ Trunk (unreleased changes)
 
 
     MAPREDUCE-279
+ 
+    Backport MAPREDUCE-2202, MAPREDUCE-2228, MAPREDUCE-2723, MAPREDUCE-2282 +  changes to fix 
+    ant tar.
+
     Fix the findbugs version to make it work with maven 3. (mahadev)
 
     Fixes for making MR-279 work with trunk common/hdfs. (mahadev)

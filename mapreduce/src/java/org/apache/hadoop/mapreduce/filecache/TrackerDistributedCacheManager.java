@@ -169,7 +169,7 @@ public class TrackerDistributedCacheManager {
         String cachePath = new Path (subDir, 
           new Path(uniqueString, makeRelative(cache, conf))).toString();
         localPath = lDirAllocator.getLocalPathForWrite(cachePath,
-          fileStatus.getLen(), trackerConf, isPublic);
+          fileStatus.getLen(), trackerConf);
         lcacheStatus = 
           new CacheStatus(new Path(localPath.toString().replace(cachePath, "")),
                           localPath, new Path(subDir), uniqueString, 
