@@ -182,6 +182,7 @@ Release 0.91.0 - Unreleased
                code then HTable object loops continuously waiting for the root region
                by using /hbase as the base node.(ramkrishna.s.vasudevan)
    HBASE-4032  HBASE-451 improperly breaks public API HRegionInfo#getTableDesc
+   HBASE-4148  HFileOutputFormat doesn't fill in TIMERANGE_KEY metadata (Jonathan Hsieh)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

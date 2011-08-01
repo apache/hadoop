@@ -32,6 +32,8 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
@@ -46,18 +48,17 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * Writes HFiles. Passed KeyValues must arrive in order.
@@ -71,7 +72,8 @@ import org.apache.commons.logging.LogFactory;
 public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, KeyValue> {
   static Log LOG = LogFactory.getLog(HFileOutputFormat.class);
   static final String COMPRESSION_CONF_KEY = "hbase.hfileoutputformat.families.compression";
-  
+  TimeRangeTracker trt = new TimeRangeTracker();
+
   public RecordWriter<ImmutableBytesWritable, KeyValue> getRecordWriter(final TaskAttemptContext context)
   throws IOException, InterruptedException {
     // Get the path of the temporary output file
@@ -135,6 +137,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
 
         // we now have the proper HLog writer. full steam ahead
         kv.updateLatestStamp(this.now);
+        trt.includeTimestamp(kv);
         wl.writer.append(kv);
         wl.written += length;
 
@@ -178,8 +181,10 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
               Bytes.toBytes(System.currentTimeMillis()));
           w.appendFileInfo(StoreFile.BULKLOAD_TASK_KEY,
               Bytes.toBytes(context.getTaskAttemptID().toString()));
-          w.appendFileInfo(StoreFile.MAJOR_COMPACTION_KEY, 
+          w.appendFileInfo(StoreFile.MAJOR_COMPACTION_KEY,
               Bytes.toBytes(true));
+          w.appendFileInfo(StoreFile.TIMERANGE_KEY,
+              WritableUtils.toByteArray(trt));
           w.close();
         }
       }

@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -57,8 +58,10 @@ import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
+import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -227,6 +230,76 @@ public class TestHFileOutputFormat  {
         getTaskAttemptContext(job);
     }
     return context;
+  }
+
+  /*
+   * Test that {@link HFileOutputFormat} creates an HFile with TIMERANGE
+   * metadata used by time-restricted scans.
+   */
+  @Test
+  public void test_TIMERANGE()
+  throws IOException, InterruptedException {
+    Configuration conf = new Configuration(this.util.getConfiguration());
+    RecordWriter<ImmutableBytesWritable, KeyValue> writer = null;
+    TaskAttemptContext context = null;
+    Path dir =
+      HBaseTestingUtility.getTestDir("test_TIMERANGE_present");
+    LOG.info("Timerange dir writing to dir: "+ dir);
+    try {
+      // build a record writer using HFileOutputFormat
+      Job job = new Job(conf);
+      FileOutputFormat.setOutputPath(job, dir);
+      context = new TaskAttemptContext(job.getConfiguration(),
+        new TaskAttemptID());
+      HFileOutputFormat hof = new HFileOutputFormat();
+      writer = hof.getRecordWriter(context);
+
+      // Pass two key values with explicit times stamps
+      final byte [] b = Bytes.toBytes("b");
+
+      // value 1 with timestamp 2000
+      KeyValue kv = new KeyValue(b, b, b, 2000, b);
+      KeyValue original = kv.clone();
+      writer.write(new ImmutableBytesWritable(), kv);
+      assertEquals(original,kv);
+
+      // value 2 with timestamp 1000
+      kv = new KeyValue(b, b, b, 1000, b);
+      original = kv.clone();
+      writer.write(new ImmutableBytesWritable(), kv);
+      assertEquals(original, kv);
+
+      // verify that the file has the proper FileInfo.
+      writer.close(context);
+
+      // the generated file lives 3 directories down and is the only file,
+      // so we traverse the dirs to get to the file
+      // ./_temporary/_attempt__0000_r_000000_0/b/1979617994050536795
+      FileSystem fs = FileSystem.get(conf);
+      Path path = HFileOutputFormat.getOutputPath(job);
+      FileStatus[] sub1 = fs.listStatus(path);
+      FileStatus[] sub2 = fs.listStatus(sub1[0].getPath());
+      FileStatus[] sub3 = fs.listStatus(sub2[0].getPath());
+      FileStatus[] file = fs.listStatus(sub3[0].getPath());
+
+      // open as HFile Reader and pull out TIMERANGE FileInfo.
+      HFile.Reader rd = new HFile.Reader(fs, file[0].getPath(), null, true,
+          false);
+      Map<byte[],byte[]> finfo = rd.loadFileInfo();
+      byte[] range = finfo.get("TIMERANGE".getBytes());
+      assertNotNull(range);
+
+      // unmarshall and check values.
+      TimeRangeTracker timeRangeTracker = new TimeRangeTracker();
+      Writables.copyWritable(range, timeRangeTracker);
+      LOG.info(timeRangeTracker.getMinimumTimestamp() +
+          "...." + timeRangeTracker.getMaximumTimestamp());
+      assertEquals(1000, timeRangeTracker.getMinimumTimestamp());
+      assertEquals(2000, timeRangeTracker.getMaximumTimestamp());
+    } finally {
+      if (writer != null && context != null) writer.close(context);
+      dir.getFileSystem(conf).delete(dir, true);
+    }
   }
 
   /**

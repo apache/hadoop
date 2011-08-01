@@ -111,7 +111,7 @@ public class StoreFile {
   /** Bloom filter Type in FileInfo */
   static final byte[] BLOOM_FILTER_TYPE_KEY = Bytes.toBytes("BLOOM_FILTER_TYPE");
   /** Key for Timerange information in metadata*/
-  static final byte[] TIMERANGE_KEY = Bytes.toBytes("TIMERANGE");
+  public static final byte[] TIMERANGE_KEY = Bytes.toBytes("TIMERANGE");
 
   /** Meta data block name for bloom filter meta-info (ie: bloom params/specs) */
   static final String BLOOM_FILTER_META_KEY = "BLOOM_FILTER_META";
