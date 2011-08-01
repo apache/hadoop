@@ -362,6 +362,10 @@ Trunk (unreleased changes)
     MAPREDUCE-2463. Job history files are not moved to done folder when job
     history location is hdfs.  (Devaraj K via szetszwo)
 
+    MAPREDUCE-2243. Close streams propely in a finally-block to avoid leakage
+    in CompletedJobStatusStore, TaskLog, EventWriter and TotalOrderPartitioner.
+    (Devaraj K via szetszwo)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

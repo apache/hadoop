@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SecureIOUtils;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.util.ProcessTree;
@@ -111,34 +112,42 @@ public class TaskLog {
     //stderr:<start-offset in the stderr file> <length>
     //syslog:<start-offset in the syslog file> <length>
     LogFileDetail l = new LogFileDetail();
-    String str = fis.readLine();
-    if (str == null) { //the file doesn't have anything
-      throw new IOException ("Index file for the log of " + taskid+" doesn't exist.");
-    }
-    l.location = str.substring(str.indexOf(LogFileDetail.LOCATION)+
-        LogFileDetail.LOCATION.length());
-    //special cases are the debugout and profile.out files. They are guaranteed
-    //to be associated with each task attempt since jvm reuse is disabled
-    //when profiling/debugging is enabled
-    if (filter.equals(LogName.DEBUGOUT) || filter.equals(LogName.PROFILE)) {
-      l.length = new File(l.location, filter.toString()).length();
-      l.start = 0;
-      fis.close();
-      return l;
-    }
-    str = fis.readLine();
-    while (str != null) {
-      //look for the exact line containing the logname
-      if (str.contains(filter.toString())) {
-        str = str.substring(filter.toString().length()+1);
-        String[] startAndLen = str.split(" ");
-        l.start = Long.parseLong(startAndLen[0]);
-        l.length = Long.parseLong(startAndLen[1]);
-        break;
+    String str = null;
+    try {
+      str = fis.readLine();
+      if (str == null) { // the file doesn't have anything
+        throw new IOException("Index file for the log of " + taskid
+            + " doesn't exist.");
+      }
+      l.location = str.substring(str.indexOf(LogFileDetail.LOCATION)
+          + LogFileDetail.LOCATION.length());
+      // special cases are the debugout and profile.out files. They are
+      // guaranteed
+      // to be associated with each task attempt since jvm reuse is disabled
+      // when profiling/debugging is enabled
+      if (filter.equals(LogName.DEBUGOUT) || filter.equals(LogName.PROFILE)) {
+        l.length = new File(l.location, filter.toString()).length();
+        l.start = 0;
+        fis.close();
+        return l;
       }
       str = fis.readLine();
+      while (str != null) {
+        // look for the exact line containing the logname
+        if (str.contains(filter.toString())) {
+          str = str.substring(filter.toString().length() + 1);
+          String[] startAndLen = str.split(" ");
+          l.start = Long.parseLong(startAndLen[0]);
+          l.length = Long.parseLong(startAndLen[1]);
+          break;
+        }
+        str = fis.readLine();
+      }
+      fis.close();
+      fis = null;
+    } finally {
+      IOUtils.cleanup(LOG, fis);
     }
-    fis.close();
     return l;
   }
   
@@ -189,22 +198,27 @@ public class TaskLog {
     //LOG_DIR: <the dir where the task logs are really stored>
     //STDOUT: <start-offset in the stdout file> <length>
     //STDERR: <start-offset in the stderr file> <length>
-    //SYSLOG: <start-offset in the syslog file> <length>    
-    dos.writeBytes(LogFileDetail.LOCATION + logLocation + "\n"
-        + LogName.STDOUT.toString() + ":");
-    dos.writeBytes(Long.toString(prevOutLength) + " ");
-    dos.writeBytes(Long.toString(new File(logLocation, LogName.STDOUT
-        .toString()).length() - prevOutLength)
-        + "\n" + LogName.STDERR + ":");
-    dos.writeBytes(Long.toString(prevErrLength) + " ");
-    dos.writeBytes(Long.toString(new File(logLocation, LogName.STDERR
-        .toString()).length() - prevErrLength)
-        + "\n" + LogName.SYSLOG.toString() + ":");
-    dos.writeBytes(Long.toString(prevLogLength) + " ");
-    dos.writeBytes(Long.toString(new File(logLocation, LogName.SYSLOG
-        .toString()).length() - prevLogLength)
-        + "\n");
-    dos.close();
+    //SYSLOG: <start-offset in the syslog file> <length>   
+    try{
+      dos.writeBytes(LogFileDetail.LOCATION + logLocation + "\n"
+          + LogName.STDOUT.toString() + ":");
+      dos.writeBytes(Long.toString(prevOutLength) + " ");
+      dos.writeBytes(Long.toString(new File(logLocation, LogName.STDOUT
+          .toString()).length() - prevOutLength)
+          + "\n" + LogName.STDERR + ":");
+      dos.writeBytes(Long.toString(prevErrLength) + " ");
+      dos.writeBytes(Long.toString(new File(logLocation, LogName.STDERR
+          .toString()).length() - prevErrLength)
+          + "\n" + LogName.SYSLOG.toString() + ":");
+      dos.writeBytes(Long.toString(prevLogLength) + " ");
+      dos.writeBytes(Long.toString(new File(logLocation, LogName.SYSLOG
+          .toString()).length() - prevLogLength)
+          + "\n");
+      dos.close();
+      dos = null;
+    } finally {
+      IOUtils.cleanup(LOG, dos);
+    }
 
     File indexFile = getIndexFile(currentTaskid, isCleanup);
     Path indexFilePath = new Path(indexFile.getAbsolutePath());
