@@ -21,9 +21,11 @@ package org.apache.hadoop.fs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 
 
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.junit.After;
@@ -1078,6 +1080,31 @@ public abstract class FSMainOperationsBaseTest  {
     InputStream is = in.getWrappedStream();
     in.close();
     Assert.assertNotNull(is);  
+  }
+  
+  @Test
+  public void testCopyToLocalWithUseRawLocalFileSystemOption() throws Exception {
+    Configuration conf = new Configuration();
+    FileSystem fSys = new RawLocalFileSystem();
+    Path fileToFS = new Path(TEST_ROOT_DIR, "fs.txt");
+    Path fileToLFS = new Path(TEST_ROOT_DIR, "test.txt");
+    Path crcFileAtLFS = new Path(TEST_ROOT_DIR, ".test.txt.crc");
+    fSys.initialize(new URI("file:///"), conf);
+    writeFile(fSys, fileToFS);
+    if (fSys.exists(crcFileAtLFS))
+      Assert.assertTrue("CRC files not deleted", fSys
+          .delete(crcFileAtLFS, true));
+    fSys.copyToLocalFile(false, fileToFS, fileToLFS, true);
+    Assert.assertFalse("CRC files are created", fSys.exists(crcFileAtLFS));
+  }
+
+  private void writeFile(FileSystem fs, Path name) throws IOException {
+    FSDataOutputStream stm = fs.create(name);
+    try {
+      stm.writeBytes("42\n");
+    } finally {
+      stm.close();
+    }
   }
   
   protected void createFile(Path path) throws IOException {

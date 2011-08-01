@@ -296,7 +296,10 @@ Trunk (unreleased changes)
 
     HADOOP-7491. hadoop command should respect HADOOP_OPTS when given
     a class name. (eli)
-    
+
+    HADOOP-7178. Add a parameter, useRawLocalFileSystem, to copyToLocalFile(..)
+    in FileSystem.  (Uma Maheswara Rao G via szetszwo)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

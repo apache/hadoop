@@ -1707,7 +1707,38 @@ public abstract class FileSystem extends Configured implements Closeable {
    */   
   public void copyToLocalFile(boolean delSrc, Path src, Path dst)
     throws IOException {
-    FileUtil.copy(this, src, getLocal(getConf()), dst, delSrc, getConf());
+    copyToLocalFile(delSrc, src, dst, false);
+  }
+  
+    /**
+   * The src file is under FS, and the dst is on the local disk. Copy it from FS
+   * control to the local dst name. delSrc indicates if the src will be removed
+   * or not. useRawLocalFileSystem indicates whether to use RawLocalFileSystem
+   * as local file system or not. RawLocalFileSystem is non crc file system.So,
+   * It will not create any crc files at local.
+   * 
+   * @param delSrc
+   *          whether to delete the src
+   * @param src
+   *          path
+   * @param dst
+   *          path
+   * @param useRawLocalFileSystem
+   *          whether to use RawLocalFileSystem as local file system or not.
+   * 
+   * @throws IOException
+   *           - if any IO error
+   */
+  public void copyToLocalFile(boolean delSrc, Path src, Path dst,
+      boolean useRawLocalFileSystem) throws IOException {
+    Configuration conf = getConf();
+    FileSystem local = null;
+    if (useRawLocalFileSystem) {
+      local = getLocal(conf).getRawFileSystem();
+    } else {
+      local = getLocal(conf);
+    }
+    FileUtil.copy(this, src, local, dst, delSrc, conf);
   }
 
   /**
