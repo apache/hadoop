@@ -260,6 +260,8 @@ public interface MRJobConfig {
 
   public static final String REDUCE_MEMTOMEM_ENABLED = "mapreduce.reduce.merge.memtomem.enabled";
 
+  public static final String COMBINE_RECORDS_BEFORE_PROGRESS = "mapreduce.task.combine.progress.records";
+
   public static final String JOB_NAMENODES = "mapreduce.job.hdfs-servers";
 
   public static final String JOB_JOBTRACKER_ID = "mapreduce.job.kerberos.jtprinicipal";

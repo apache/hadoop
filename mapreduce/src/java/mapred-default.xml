@@ -1042,6 +1042,14 @@
 <!-- End of TaskTracker DistributedCache configuration -->
 
 <property>
+  <name>mapreduce.task.combine.progress.records</name>
+  <value>10000</value>
+  <description> The number of records to process during combine output collection 
+   before sending a progress notification to the TaskTracker.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.task.merge.progress.records</name>
   <value>10000</value>
   <description> The number of records to process during merge before

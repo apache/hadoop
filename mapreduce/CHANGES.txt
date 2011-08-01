@@ -40,6 +40,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via
+    acmurthy) 
+
     MAPREDUCE-2365. Add counters to track bytes (read,written) via 
     File(Input,Output)Format. (Siddharth Seth via acmurthy)
  
