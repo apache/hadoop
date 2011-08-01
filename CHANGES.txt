@@ -140,6 +140,9 @@ Release 0.20.204.0 - unreleased
     HDFS-2057. Wait time to terminate the threads causes unit tests to
     take longer time. (Bharath Mundlapudi via suresh)
 
+    HDFS-2218. Disable TestHdfsProxy.testHdfsProxyInterface in automated test suite 
+    for 0.20-security-204 release. (Matt Foley)
+
   IMPROVEMENTS
 
     HADOOP-7144. Expose JMX metrics via JSON servlet. (Robert Joseph Evans via
