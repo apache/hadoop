@@ -35,6 +35,9 @@ Release 0.20.205.0 - unreleased
     HADOOP-7314. Add support for throwing UnknownHostException when a host
     doesn't resolve. Needed for MAPREDUCE-2489. (Jeffrey Naisbitt via mattf)
 
+    MAPREDUCE-2494. Make the distributed cache delete entires using LRU priority
+    (Robert Joseph Evans via mahadev)
+
 Release 0.20.204.0 - unreleased
 
   NEW FEATURES
