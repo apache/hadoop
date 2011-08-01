@@ -180,6 +180,9 @@ Release 0.20.204.0 - unreleased
 
   IMPROVEMENTS
 
+    MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via
+    acmurthy) 
+
     HADOOP-7144. Expose JMX metrics via JSON servlet. (Robert Joseph Evans via
     cdouglas)
 

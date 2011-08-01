@@ -65,6 +65,8 @@ import org.apache.hadoop.fs.FSDataInputStream;
 abstract public class Task implements Writable, Configurable {
   private static final Log LOG =
     LogFactory.getLog(Task.class);
+  public static final String MR_COMBINE_RECORDS_BEFORE_PROGRESS = "mapred.combine.recordsBeforeProgress";
+  public static final long DEFAULT_MR_COMBINE_RECORDS_BEFORE_PROGRESS = 10000;
 
   // Counters used by Task subclasses
   public static enum Counter { 
@@ -1083,16 +1085,26 @@ abstract public class Task implements Writable, Configurable {
   implements OutputCollector<K, V> {
     private Writer<K, V> writer;
     private Counters.Counter outCounter;
-    public CombineOutputCollector(Counters.Counter outCounter) {
+    private Progressable progressable;
+    private long progressBar;
+
+    public CombineOutputCollector(Counters.Counter outCounter, Progressable progressable, Configuration conf) {
       this.outCounter = outCounter;
+      this.progressable=progressable;
+      progressBar = conf.getLong(MR_COMBINE_RECORDS_BEFORE_PROGRESS, DEFAULT_MR_COMBINE_RECORDS_BEFORE_PROGRESS);
     }
+    
     public synchronized void setWriter(Writer<K, V> writer) {
       this.writer = writer;
     }
+    
     public synchronized void collect(K key, V value)
         throws IOException {
       outCounter.increment(1);
       writer.append(key, value);
+      if ((outCounter.getValue() % progressBar) == 0) {
+        progressable.progress();
+      }
     }
   }
 
