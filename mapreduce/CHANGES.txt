@@ -212,6 +212,9 @@ Trunk (unreleased changes)
     JobInProgress.getCounters() aquire locks in a shorter time period.
     (Joydeep Sen Sarma via schen)
 
+    MAPREDUCE-2740. MultipleOutputs in new API creates needless
+    TaskAttemptContexts. (todd)
+
   BUG FIXES
 
     MAPREDUCE-2603. Disable High-Ram emulation in system tests. 
