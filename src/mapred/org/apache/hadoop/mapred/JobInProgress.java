@@ -2438,16 +2438,6 @@ public class JobInProgress {
       return -1;
     }
 
-    long outSize = resourceEstimator.getEstimatedReduceInputSize();
-    long availSpace = tts.getResourceStatus().getAvailableSpace();
-    if(availSpace < outSize) {
-      LOG.warn("No room for reduce task. Node " + taskTracker + " has " +
-                availSpace + 
-               " bytes free; but we expect reduce input to take " + outSize);
-
-      return -1; //see if a different TIP might work better. 
-    }
-    
     // 1. check for a never-executed reduce tip
     // reducers don't have a cache and so pass -1 to explicitly call that out
     tip = findTaskFromList(nonRunningReduces, tts, numUniqueHosts, false);

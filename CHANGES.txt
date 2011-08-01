@@ -51,6 +51,10 @@ Release 0.20.204.0 - unreleased
 
   BUG FIXES
 
+    MAPREDUCE-2324. Removed usage of broken
+    ResourceEstimator.getEstimatedReduceInputSize to check against usable
+    disk-space on TaskTracker. (Robert Evans via acmurthy) 
+
     MAPREDUCE-2621. TestCapacityScheduler fails with "Queue "q1" does not exist".
     (Sherry Chen via mahadev)
 
