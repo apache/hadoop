@@ -24,6 +24,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -47,6 +48,9 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
+import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlocks.BlockIterator;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
@@ -58,6 +62,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
 
 /**
@@ -80,7 +85,26 @@ public class BlockManager {
   public volatile long scheduledReplicationBlocksCount = 0L;
   private volatile long excessBlocksCount = 0L;
   private volatile long pendingDeletionBlocksCount = 0L;
+  private boolean isBlockTokenEnabled;
+  private long blockKeyUpdateInterval;
+  private long blockTokenLifetime;
+  private BlockTokenSecretManager blockTokenSecretManager;
+  
+  /** returns the isBlockTokenEnabled - true if block token enabled ,else false */
+  public boolean isBlockTokenEnabled() {
+    return isBlockTokenEnabled;
+  }
 
+  /** get the block key update interval */
+  public long getBlockKeyUpdateInterval() {
+    return blockKeyUpdateInterval;
+  }
+
+  /** get the BlockTokenSecretManager */
+  public BlockTokenSecretManager getBlockTokenSecretManager() {
+    return blockTokenSecretManager;
+  }
+  
   /** Used by metrics */
   public long getPendingReplicationBlocksCount() {
     return pendingReplicationBlocksCount;
@@ -169,7 +193,43 @@ public class BlockManager {
 
   /** for block replicas placement */
   private BlockPlacementPolicy blockplacement;
+  
+  /**
+   * Get access keys
+   * 
+   * @return current access keys
+   */
+  public ExportedBlockKeys getBlockKeys() {
+    return isBlockTokenEnabled ? blockTokenSecretManager.exportKeys()
+        : ExportedBlockKeys.DUMMY_KEYS;
+  }
+  
+  /** Generate block token for a LocatedBlock. */
+  public void setBlockToken(LocatedBlock l) throws IOException {
+    Token<BlockTokenIdentifier> token = blockTokenSecretManager.generateToken(l
+        .getBlock(), EnumSet.of(BlockTokenSecretManager.AccessMode.READ));
+    l.setBlockToken(token);
+  }
 
+  /** Generate block tokens for the blocks to be returned. */
+  public void setBlockTokens(List<LocatedBlock> locatedBlocks) throws IOException {
+    for(LocatedBlock l : locatedBlocks) {
+      setBlockToken(l);
+    }
+  }
+
+  /**
+   * Update access keys.
+   */
+  public void updateBlockKey() throws IOException {
+    this.blockTokenSecretManager.updateKeys();
+    synchronized (namesystem.heartbeats) {
+      for (DatanodeDescriptor nodeInfo : namesystem.heartbeats) {
+        nodeInfo.needKeyUpdate = true;
+      }
+    }
+  }
+  
   public BlockManager(FSNamesystem fsn, Configuration conf) throws IOException {
     namesystem = fsn;
     datanodeManager = new DatanodeManager(fsn, conf);
@@ -179,7 +239,26 @@ public class BlockManager {
     pendingReplications = new PendingReplicationBlocks(conf.getInt(
       DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
       DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_DEFAULT) * 1000L);
-
+    this.isBlockTokenEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, 
+        DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_DEFAULT);
+    if (isBlockTokenEnabled) {
+      if (isBlockTokenEnabled) {
+        this.blockKeyUpdateInterval = conf.getLong(
+            DFSConfigKeys.DFS_BLOCK_ACCESS_KEY_UPDATE_INTERVAL_KEY, 
+            DFSConfigKeys.DFS_BLOCK_ACCESS_KEY_UPDATE_INTERVAL_DEFAULT) * 60 * 1000L; // 10 hrs
+        this.blockTokenLifetime = conf.getLong(
+            DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY, 
+            DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_DEFAULT) * 60 * 1000L; // 10 hrs
+      }
+   
+      blockTokenSecretManager = new BlockTokenSecretManager(true,
+          blockKeyUpdateInterval, blockTokenLifetime);
+    }
+    LOG.info("isBlockTokenEnabled=" + isBlockTokenEnabled
+        + " blockKeyUpdateInterval=" + blockKeyUpdateInterval / (60 * 1000)
+        + " min(s), blockTokenLifetime=" + blockTokenLifetime / (60 * 1000)
+        + " min(s)");
     this.maxCorruptFilesReturned = conf.getInt(
       DFSConfigKeys.DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED_KEY,
       DFSConfigKeys.DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED);

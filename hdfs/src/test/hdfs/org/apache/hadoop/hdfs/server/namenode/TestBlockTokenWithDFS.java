@@ -190,7 +190,7 @@ public class TestBlockTokenWithDFS extends TestCase {
       assertEquals(numDataNodes, cluster.getDataNodes().size());
       // set a short token lifetime (1 second)
       SecurityTestUtil.setBlockTokenLifetime(
-          cluster.getNameNode().getNamesystem().blockTokenSecretManager, 1000L);
+          cluster.getNameNode().getNamesystem().getBlockManager().getBlockTokenSecretManager(), 1000L);
       Path fileToAppend = new Path(FILE_TO_APPEND);
       FileSystem fs = cluster.getFileSystem();
 
@@ -246,7 +246,7 @@ public class TestBlockTokenWithDFS extends TestCase {
       assertEquals(numDataNodes, cluster.getDataNodes().size());
       // set a short token lifetime (1 second)
       SecurityTestUtil.setBlockTokenLifetime(
-          cluster.getNameNode().getNamesystem().blockTokenSecretManager, 1000L);
+          cluster.getNameNode().getNamesystem().getBlockManager().getBlockTokenSecretManager(), 1000L);
       Path fileToWrite = new Path(FILE_TO_WRITE);
       FileSystem fs = cluster.getFileSystem();
 
@@ -294,7 +294,9 @@ public class TestBlockTokenWithDFS extends TestCase {
       assertEquals(numDataNodes, cluster.getDataNodes().size());
       // set a short token lifetime (1 second) initially
       SecurityTestUtil.setBlockTokenLifetime(
-          cluster.getNameNode().getNamesystem().blockTokenSecretManager, 1000L);
+          cluster.getNameNode()
+          .getNamesystem().getBlockManager().getBlockTokenSecretManager(),
+          1000L);
       Path fileToRead = new Path(FILE_TO_READ);
       FileSystem fs = cluster.getFileSystem();
       createFile(fs, fileToRead);
@@ -349,7 +351,8 @@ public class TestBlockTokenWithDFS extends TestCase {
       tryRead(conf, lblock, false);
       // use a valid new token
       lblock.setBlockToken(cluster.getNameNode().getNamesystem()
-          .blockTokenSecretManager.generateToken(lblock.getBlock(),
+          .getBlockManager().getBlockTokenSecretManager().generateToken(
+              lblock.getBlock(),
               EnumSet.of(BlockTokenSecretManager.AccessMode.READ)));
       // read should succeed
       tryRead(conf, lblock, true);
@@ -357,13 +360,15 @@ public class TestBlockTokenWithDFS extends TestCase {
       ExtendedBlock wrongBlock = new ExtendedBlock(lblock.getBlock()
           .getBlockPoolId(), lblock.getBlock().getBlockId() + 1);
       lblock.setBlockToken(cluster.getNameNode().getNamesystem()
-          .blockTokenSecretManager.generateToken(wrongBlock,
+          .getBlockManager().getBlockTokenSecretManager().generateToken(wrongBlock,
               EnumSet.of(BlockTokenSecretManager.AccessMode.READ)));
       // read should fail
       tryRead(conf, lblock, false);
       // use a token with wrong access modes
       lblock.setBlockToken(cluster.getNameNode().getNamesystem()
-          .blockTokenSecretManager.generateToken(lblock.getBlock(), EnumSet.of(
+          .getBlockManager().getBlockTokenSecretManager().generateToken(
+              lblock.getBlock(),
+              EnumSet.of(
               BlockTokenSecretManager.AccessMode.WRITE,
               BlockTokenSecretManager.AccessMode.COPY,
               BlockTokenSecretManager.AccessMode.REPLACE)));
@@ -372,7 +377,9 @@ public class TestBlockTokenWithDFS extends TestCase {
 
       // set a long token lifetime for future tokens
       SecurityTestUtil.setBlockTokenLifetime(
-          cluster.getNameNode().getNamesystem().blockTokenSecretManager, 600 * 1000L);
+          cluster.getNameNode()
+          .getNamesystem().getBlockManager().getBlockTokenSecretManager(),
+          600 * 1000L);
 
       /*
        * testing that when cached tokens are expired, DFSClient will re-fetch

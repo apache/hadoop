@@ -469,7 +469,7 @@ public class DatanodeManager {
                                       nodeReg.getInfoPort(),
                                       nodeReg.getIpcPort());
     nodeReg.updateRegInfo(dnReg);
-    nodeReg.exportedKeys = namesystem.getBlockKeys();
+    nodeReg.exportedKeys = namesystem.getBlockManager().getBlockKeys();
       
     NameNode.stateChangeLog.info("BLOCK* NameSystem.registerDatanode: "
         + "node registration from " + nodeReg.getName()
