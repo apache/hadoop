@@ -4,6 +4,7 @@ Trunk (unreleased changes)
 
 
     MAPREDUCE-279
+    Fix the findbugs version to make it work with maven 3. (mahadev)
 
     Fixes for making MR-279 work with trunk common/hdfs. (mahadev)
 

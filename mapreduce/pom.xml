@@ -145,7 +145,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>findbugs-maven-plugin</artifactId>
-          <version>2.3.1</version>
+          <version>2.3.2</version>
         </plugin>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
@@ -336,7 +336,7 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
         <!-- until we have reporting management cf. MSITE-443 -->
-        <version>2.3.1</version>
+        <version>2.3.2</version>
         <configuration>
           <findbugsXmlOutput>true</findbugsXmlOutput>
         </configuration>
