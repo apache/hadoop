@@ -21,6 +21,9 @@ Release 0.20.205.0 - unreleased
     MAPREDUCE-2650. back-port MAPREDUCE-2238 to 0.20-security. 
     (Sherry Chen via mahadev)
 
+    HDFS-2053. Bug in INodeDirectory#computeContentSummary warning
+    (Michael Noll via eli)
+
   IMPROVEMENTS
 
     MAPREDUCE-7343. Make the number of warnings accepted by test-patch
