@@ -27,8 +27,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
@@ -64,14 +63,13 @@ import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
-import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
+
 
 public class TestRuntimeEstimators {
 
@@ -82,9 +80,7 @@ public class TestRuntimeEstimators {
   private static int MAP_TASKS = 200;
   private static int REDUCE_TASKS = 150;
 
-  private Queue<TaskEvent> taskEvents;
-
-  Clock clock;
+  MockClock clock;
 
   Job myJob;
 
@@ -94,7 +90,7 @@ public class TestRuntimeEstimators {
 
   private final AtomicInteger slotsInUse = new AtomicInteger(0);
 
-  Dispatcher dispatcher;
+  AsyncDispatcher dispatcher;
 
   DefaultSpeculator speculator;
 
@@ -114,7 +110,8 @@ public class TestRuntimeEstimators {
   private void coreTestEstimator
       (TaskRuntimeEstimator testedEstimator, int expectedSpeculations) {
     estimator = testedEstimator;
-    taskEvents = new ConcurrentLinkedQueue<TaskEvent>();
+	clock = new MockClock();
+	dispatcher = new AsyncDispatcher();
     myJob = null;
     slotsInUse.set(0);
     completedMaps.set(0);
@@ -122,7 +119,7 @@ public class TestRuntimeEstimators {
     successfulSpeculations.set(0);
     taskTimeSavedBySpeculation.set(0);
 
-    ((MockClock)clock).advanceTime(1000);
+    clock.advanceTime(1000);
 
     Configuration conf = new Configuration();
 
@@ -137,8 +134,8 @@ public class TestRuntimeEstimators {
 
     dispatcher.register(TaskEventType.class, new SpeculationRequestEventHandler());
 
-    ((AsyncDispatcher)dispatcher).init(conf);
-    ((AsyncDispatcher)dispatcher).start();
+    dispatcher.init(conf);
+    dispatcher.start();
 
 
 
@@ -208,7 +205,7 @@ public class TestRuntimeEstimators {
         }
       }
 
-      ((MockClock) clock).advanceTime(1000L);
+      clock.advanceTime(1000L);
 
       if (clock.getTime() % 10000L == 0L) {
         speculator.scanForSpeculations();
@@ -221,44 +218,19 @@ public class TestRuntimeEstimators {
 
   @Test
   public void testLegacyEstimator() throws Exception {
-    clock = new MockClock();
     TaskRuntimeEstimator specificEstimator = new LegacyTaskRuntimeEstimator();
-    Configuration conf = new Configuration();
-    dispatcher = new AsyncDispatcher();
-    myAppContext = new MyAppContext(MAP_TASKS, REDUCE_TASKS);
-
     coreTestEstimator(specificEstimator, 3);
   }
 
-  @Ignore
   @Test
   public void testExponentialEstimator() throws Exception {
-    clock = new MockClock();
     TaskRuntimeEstimator specificEstimator
         = new ExponentiallySmoothedTaskRuntimeEstimator();
-    Configuration conf = new Configuration();
-    dispatcher = new AsyncDispatcher();
-    myAppContext = new MyAppContext(MAP_TASKS, REDUCE_TASKS);
-
-    coreTestEstimator(new LegacyTaskRuntimeEstimator(), 3);
+    coreTestEstimator(specificEstimator, 3);
   }
 
   int taskTypeSlots(TaskType type) {
     return type == TaskType.MAP ? MAP_SLOT_REQUIREMENT : REDUCE_SLOT_REQUIREMENT;
-  }
-
-  private boolean jobComplete() {
-    for (Task task : myJob.getTasks().values()) {
-      if (!task.isFinished()) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  private int slotsInUse(int mapSize, int reduceSize) {
-    return slotsInUse.get();
   }
 
   class SpeculationRequestEventHandler implements EventHandler<TaskEvent> {
@@ -286,7 +258,7 @@ public class TestRuntimeEstimators {
   class MyTaskImpl implements Task {
     private final TaskId taskID;
     private final Map<TaskAttemptId, TaskAttempt> attempts
-        = new HashMap<TaskAttemptId, TaskAttempt>(4);
+        = new ConcurrentHashMap<TaskAttemptId, TaskAttempt>(4);
 
     MyTaskImpl(JobId jobID, int index, TaskType type) {
       taskID = recordFactory.newRecordInstance(TaskId.class);
@@ -629,7 +601,6 @@ public class TestRuntimeEstimators {
 
         // check for a spectacularly successful speculation
         TaskId taskID = myAttemptID.getTaskId();
-        Task undoneTask = null;
 
         Task task = myJob.getTask(taskID);
 

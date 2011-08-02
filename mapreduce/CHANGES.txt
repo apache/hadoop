@@ -4,6 +4,9 @@ Trunk (unreleased changes)
 
 
     MAPREDUCE-279
+    
+    MAPREDUCE-2641. Fix the ExponentiallySmoothedTaskRuntimeEstimator
+    and its unit test. (Josh Willis via mahadev)
 
     Fix poms for adding dependency on sl4j-simple. (siddharth seth) 
  

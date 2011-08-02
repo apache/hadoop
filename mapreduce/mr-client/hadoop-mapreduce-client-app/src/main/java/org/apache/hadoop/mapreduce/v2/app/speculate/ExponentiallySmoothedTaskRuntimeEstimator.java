@@ -23,16 +23,15 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.app.AMConstants;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent.TaskAttemptStatus;
 
-/*
- * This estimator exponentially smooths the rate of progress vrs. wallclock
- *  time.  Conceivably we could write an estimator that smooths time per
- *  unit progress, and get different results.
+/**
+ * This estimator exponentially smooths the rate of progress versus wallclock
+ * time.  Conceivably we could write an estimator that smooths time per
+ * unit progress, and get different results.
  */
 public class ExponentiallySmoothedTaskRuntimeEstimator extends StartEndTimesBase {
 
@@ -64,8 +63,7 @@ public class ExponentiallySmoothedTaskRuntimeEstimator extends StartEndTimesBase
     final float basedOnProgress;
     final long atTime;
 
-    EstimateVector
-        (double value, float basedOnProgress, long atTime) {
+    EstimateVector(double value, float basedOnProgress, long atTime) {
       this.value = value;
       this.basedOnProgress = basedOnProgress;
       this.atTime = atTime;
@@ -94,11 +92,13 @@ public class ExponentiallySmoothedTaskRuntimeEstimator extends StartEndTimesBase
 
   private void incorporateReading
       (TaskAttemptId attemptID, float newProgress, long newTime) {
+    //TODO: Refactor this method, it seems more complicated than necessary.
     AtomicReference<EstimateVector> vectorRef = estimates.get(attemptID);
 
     if (vectorRef == null) {
       estimates.putIfAbsent(attemptID, new AtomicReference<EstimateVector>(null));
       incorporateReading(attemptID, newProgress, newTime);
+      return;
     }
 
     EstimateVector oldVector = vectorRef.get();
@@ -110,6 +110,7 @@ public class ExponentiallySmoothedTaskRuntimeEstimator extends StartEndTimesBase
       }
 
       incorporateReading(attemptID, newProgress, newTime);
+      return;
     }
 
     while (!vectorRef.compareAndSet
@@ -184,6 +185,7 @@ public class ExponentiallySmoothedTaskRuntimeEstimator extends StartEndTimesBase
 
   @Override
   public void updateAttempt(TaskAttemptStatus status, long timestamp) {
+    super.updateAttempt(status, timestamp);
     TaskAttemptId attemptID = status.id;
 
     float progress = status.progress;
