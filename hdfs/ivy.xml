@@ -58,6 +58,7 @@
   </publications>
   <dependencies>
     
+    <dependency org="org.apache.hadoop" name="hadoop-annotations" rev="${hadoop-common.version}" conf="compile->default"/>
     <dependency org="org.apache.hadoop" name="hadoop-common" rev="${hadoop-common.version}" conf="common->default">
       <exclude module="ant"/>
     </dependency>
@@ -66,7 +67,11 @@
     </dependency>
     <dependency org="commons-logging" name="commons-logging" rev="${commons-logging.version}" conf="compile->master"/>
     <dependency org="commons-daemon" name="commons-daemon" rev="${commons-daemon.version}" conf="hdfs->default" />
-    <dependency org="log4j" name="log4j" rev="${log4j.version}" conf="common->master"/>
+    <dependency org="log4j" name="log4j" rev="${log4j.version}" conf="common->master">
+      <exclude org="com.sun.jdmk"/>
+      <exclude org="com.sun.jmx"/>
+      <exclude org="javax.jms"/> 
+    </dependency>
     <dependency org="com.google.guava" name="guava" rev="${guava.version}" conf="hdfs->default" />
     <dependency org="com.google.protobuf" name="protobuf-java" rev="2.4.0a" conf="common->master"/>
     <dependency org="org.apache.hadoop" name="avro" rev="${avro.version}" conf="compile->master">

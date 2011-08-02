@@ -914,6 +914,9 @@ Trunk (unreleased changes)
 
     HDFS-1776. Bug in Concat code. (Bharath Mundlapudi via Dmytro Molkov)
 
+    HDFS-2196. Make ant build system work with hadoop-common JAR generated
+    by Maven. (Alejandro Abdelnur via tomwhite)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.
