@@ -537,6 +537,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
         getDataSetWatchFailure(path);
         return;
       }
+      data = watcher.getRecoverableZooKeeper().removeMetaData(data);
       getDataSetWatchSuccess(path, data);
       return;
     }

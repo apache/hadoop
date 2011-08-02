@@ -207,7 +207,7 @@ public class TestMultiParallel {
     doTestFlushCommits(true);
   }
 
-  @Test (timeout=300000) 
+  @Test (timeout=300000)
   public void testFlushCommitsNoAbort() throws Exception {
     LOG.info("test=testFlushCommitsNoAbort");
     doTestFlushCommits(false);
@@ -261,7 +261,7 @@ public class TestMultiParallel {
     LOG.info("done");
   }
 
-  @Test (timeout=300000) 
+  @Test (timeout=300000)
   public void testBatchWithPut() throws Exception {
     LOG.info("test=testBatchWithPut");
     HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
@@ -312,7 +312,7 @@ public class TestMultiParallel {
 
   }
 
-  @Test(timeout=300000) 
+  @Test(timeout=300000)
   public void testHTableDeleteWithList() throws Exception {
     LOG.info("test=testHTableDeleteWithList");
     HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
@@ -341,7 +341,7 @@ public class TestMultiParallel {
 
   }
 
-  @Test(timeout=300000) 
+  @Test(timeout=300000)
   public void testBatchWithManyColsInOneRowGetAndPut() throws Exception {
     LOG.info("test=testBatchWithManyColsInOneRowGetAndPut");
     HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
@@ -378,7 +378,7 @@ public class TestMultiParallel {
 
   }
 
-  @Test(timeout=300000) 
+  @Test(timeout=300000)
   public void testBatchWithMixedActions() throws Exception {
     LOG.info("test=testBatchWithMixedActions");
     HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
