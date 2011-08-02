@@ -96,6 +96,14 @@
       <organization>Trend Micro</organization>
       <organizationUrl>http://www.trendmicro.com</organizationUrl>
     </developer>
+  <developer>
+      <id>dmeil</id>
+      <name>Doug Meil</name>
+      <email>doug@explorys.com</email>
+      <timezone>-5</timezone>
+      <organization>Explorys</organization>
+      <organizationUrl>http://www.explorys.com</organizationUrl>
+    </developer>
     <developer>
       <id>garyh</id>
       <name>Gary Helmling</name>
@@ -115,7 +123,7 @@
     <developer>
       <id>jgray</id>
       <name>Jonathan Gray</name>
-      <email>jgray@streamy.com</email>
+      <email>jgray@fb.com</email>
       <timezone>-8</timezone>
       <organization>Facebook</organization>
       <organizationUrl>http://www.facebook.com</organizationUrl>
