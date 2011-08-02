@@ -1376,7 +1376,40 @@ false
             </orderedlist>
         </para>
     </section>
+    
     </section>
+    <section xml:id="copytable">
+        <title>CopyTable</title>
+      <para>
+            CopyTable is a utility that can copy part or of all of a table, either to the same cluster or another cluster. The usage is as follows:
+<programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.CopyTable [--rs.class=CLASS] [--rs.impl=IMPL] [--starttime=X] [--endtime=Y] [--new.name=NEW] [--peer.adr=ADR] tablename
+</programlisting>
+        </para>
+        <para>
+        Options:
+        <itemizedlist>
+          <listitem><varname>rs.class</varname> hbase.regionserver.class of the peer cluster.  Specify if different from current cluster.</listitem>
+          <listitem><varname>rs.impl</varname>  hbase.regionserver.impl of the peer cluster. </listitem>
+          <listitem><varname>starttime</varname>  Beginning of the time range.  Without endtime means starttime to forever.</listitem>
+          <listitem><varname>endtime</varname>  End of the time range.  Without endtime means starttime to forever.</listitem>
+          <listitem><varname>new.name</varname>  New table's name.</listitem>
+          <listitem><varname>peer.adr</varname>  Address of the peer cluster given in the format hbase.zookeeper.quorum:hbase.zookeeper.client.port:zookeeper.znode.parent</listitem>
+          <listitem><varname>families</varname>  Comma-separated list of ColumnFamilies to copy.</listitem>
+        </itemizedlist>
+         Args:
+        <itemizedlist>
+          <listitem>tablename  Name of table to copy.</listitem>
+        </itemizedlist>
+        </para>
+        <para>Example of copying 'TestTable' to a cluster that uses replication for a 1 hour window:
+<programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.CopyTable
+--rs.class=org.apache.hadoop.hbase.ipc.ReplicationRegionInterface
+--rs.impl=org.apache.hadoop.hbase.regionserver.replication.ReplicationRegionServer
+--starttime=1265875194289 --endtime=1265878794289
+--peer.adr=server1,server2,server3:2181:/hbase TestTable</programlisting>
+        </para>
+    </section>    
+    
   </appendix>
 
   <appendix xml:id="compression">
