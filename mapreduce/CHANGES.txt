@@ -4,6 +4,8 @@ Trunk (unreleased changes)
 
 
     MAPREDUCE-279
+
+    Fix poms for adding dependency on sl4j-simple. (siddharth seth) 
  
     Backport MAPREDUCE-2202, MAPREDUCE-2228, MAPREDUCE-2723, MAPREDUCE-2282 +  changes to fix 
     ant tar.
