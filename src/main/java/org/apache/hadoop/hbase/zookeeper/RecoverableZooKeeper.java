@@ -598,8 +598,8 @@ public class RecoverableZooKeeper {
   }
   
   private byte[] appendMetaData(byte[] data) {
-    if(data == null){
-      return null;
+    if(data == null || data.length == 0){
+      return data;
     }
     
     byte[] newData = new byte[MAGIC_OFFSET+ID_OFFSET+id.length+data.length];
