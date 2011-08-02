@@ -460,6 +460,31 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
             </para>
             
        </section>    
+       <section xml:id="trouble.client.zookeeper">
+            <title>ZooKeeper Client Connection Errors</title>
+            <para>Errors like this...
+<programlisting>
+11/07/05 11:26:41 WARN zookeeper.ClientCnxn: Session 0x0 for server null,
+ unexpected error, closing socket connection and attempting reconnect
+ java.net.ConnectException: Connection refused: no further information
+        at sun.nio.ch.SocketChannelImpl.checkConnect(Native Method)
+        at sun.nio.ch.SocketChannelImpl.finishConnect(Unknown Source)
+        at org.apache.zookeeper.ClientCnxn$SendThread.run(ClientCnxn.java:1078)
+ 11/07/05 11:26:43 INFO zookeeper.ClientCnxn: Opening socket connection to
+ server localhost/127.0.0.1:2181
+ 11/07/05 11:26:44 WARN zookeeper.ClientCnxn: Session 0x0 for server null,
+ unexpected error, closing socket connection and attempting reconnect
+ java.net.ConnectException: Connection refused: no further information
+        at sun.nio.ch.SocketChannelImpl.checkConnect(Native Method)
+        at sun.nio.ch.SocketChannelImpl.finishConnect(Unknown Source)
+        at org.apache.zookeeper.ClientCnxn$SendThread.run(ClientCnxn.java:1078)
+ 11/07/05 11:26:45 INFO zookeeper.ClientCnxn: Opening socket connection to
+ server localhost/127.0.0.1:2181
+</programlisting>
+            ... are either due to ZooKeeper being down, or unreachable due to network issues.            
+            </para>
+            
+       </section>    
 
     </section>
     <section xml:id="trouble.namenode">
