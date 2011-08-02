@@ -272,6 +272,70 @@ admin.enableTable(table);
   <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link> for more information.
   </para>
   </section>
+  <section xml:id="secondary.indexes">
+  <title>
+  Secondary Indexes and Alternate Query Paths
+  </title>
+  <para>This section could also be titled "what if my table rowkey looks like <emphasis>this</emphasis> but I also want to query my table like <emphasis>that</emphasis>."
+  A common example on the dist-list is where a row-key is of the format "user-timestamp" but there are are reporting requirements on activity across users for certain 
+  time ranges.  Thus, selecting by user is easy because it is in the lead position of the key, but time is not.
+  </para>
+  <para>There is no single answer on the best way to handle this because it depends on...
+   <itemizedlist>
+       <listitem>Number of users</listitem>  
+       <listitem>Data size and data arrival rate</listitem>
+       <listitem>Flexibility of reporting requirements (e.g., completely ad-hoc date selection vs. pre-configured ranges) </listitem>  
+       <listitem>Desired execution speed of query (e.g., 90 seconds may be reasonable to some for an ad-hoc report, whereas it may be too long for others) </listitem>  
+   </itemizedlist>
+   ... and solutions are also influenced by the size of the cluster and how much processing power you have to throw at the solution.  
+   Common techniques are in sub-sections below.  This is a comprehensive, but not exhaustive, list of approaches.   
+  </para>
+  <para>It should not be a surprise that secondary indexes require additional cluster space and processing.  
+  This is precisely what happens in an RDBMS because the act of creating an alternate index requires both space and processing cycles to update.  RBDMS products
+  are more advanced in this regard to handle alternative index management out of the box.  However, HBase scales better at larger data volumes, so this is a feature trade-off. 
+  </para>
+  <para>Pay attention to <xref linkend="performance"/> when implementing any of these approaches.</para>
+  <para>Additionally, see the David Butler response in this dist-list thread <link xlink:href="http://search-hadoop.com/m/nvbiBp2TDP/Stargate%252Bhbase&amp;subj=Stargate+hbase">HBase, mail # user - Stargate+hbase</link>
+   </para>
+    <section xml:id="secondary.indexes.filter">
+      <title>
+       Filter Query
+      </title>
+      <para>Depending on the case, it may be appropriate to use <xref linkend="client.filter"/>.  In this case, no secondary index is created.
+      However, don't try a full-scan on a large table like this from an application (i.e., single-threaded client).
+      </para>
+    </section>
+    <section xml:id="secondary.indexes.periodic">
+      <title>
+       Periodic-Update Secondary Index
+      </title>
+      <para>A secondary index could be created in an other table which is periodically updated via a MapReduce job.  The job could be executed intra-day, but depending on 
+      load-strategy it could still potentially be out of sync with the main data table.</para>
+      <para>See <xref linkend="mapreduce"/> for more information.</para>
+    </section>
+    <section xml:id="secondary.indexes.dualwrite">
+      <title>
+       Dual-Write Secondary Index
+      </title>
+      <para>Another strategy is to build the secondary index while publishing data to the cluster (e.g., write to data table, write to index table). 
+      If this is approach is taken after a data table already exists, then bootstrapping will be needed for the secondary index with a MapReduce job (see <xref linkend="secondary.indexes.periodic"/>).</para>
+    </section>
+    <section xml:id="secondary.indexes.summary">
+      <title>
+       Summary Tables
+      </title>
+      <para>Where time-ranges are very wide (e.g., year-long report) and where the data is voluminous, summary tables are a common approach.
+      These would be generated with MapReduce jobs into another table.</para>
+      <para>See <xref linkend="mapreduce"/> for more information.</para>
+    </section>
+    <section xml:id="secondary.indexes.coproc">
+      <title>
+       Coprocessor Secondary Index
+      </title>
+      <para>Coprocessors act like RDBMS triggers.  These are currently on TRUNK.
+      </para>
+    </section>
+  </section>
 
   </chapter>
 
@@ -1630,8 +1694,7 @@ When I build, why do I always get <code>Unable to find resource 'VM_global_libra
             </para></question>
             <answer>
                 <para>
-                For a useful introduction to the issues involved maintaining a secondary Index in a store like HBase,
-                see the David Butler message in this thread, <link xlink:href="http://search-hadoop.com/m/nvbiBp2TDP/Stargate%252Bhbase&amp;subj=Stargate+hbase">HBase, mail # user - Stargate+hbase</link>
+                See <xref linkend="secondary.indexes" />
                 </para>
             </answer>
         </qandaentry>
