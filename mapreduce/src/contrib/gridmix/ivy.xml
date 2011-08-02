@@ -36,6 +36,10 @@
     <artifact conf="master"/>
   </publications>
   <dependencies>
+    <dependency org="org.apache.hadoop" 
+      name="hadoop-annotations"
+      rev="${hadoop-common.version}"
+      conf="common->default"/>
     <dependency org="org.apache.hadoop"
       name="hadoop-common"
       rev="${hadoop-common.version}"
@@ -122,5 +126,12 @@
       name="paranamer"
       rev="${paranamer.version}"
       conf="common->default"/>
+
+   <!-- Exclusions for transitive dependencies pulled in by log4j -->
+   <exclude org="com.sun.jdmk"/>
+   <exclude org="com.sun.jmx"/>
+   <exclude org="javax.jms"/> 
+   <exclude org="javax.mail"/> 
+
   </dependencies>
 </ivy-module>

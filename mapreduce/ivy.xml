@@ -57,6 +57,7 @@
     <artifact conf="master"/>
   </publications>
  <dependencies>
+   <dependency org="org.apache.hadoop" name="hadoop-annotations" rev="${hadoop-common.version}" conf="compile->default"/>
    <dependency org="org.apache.hadoop" name="hadoop-common" 
                rev="${hadoop-common.version}" conf="compile->default"/> 
    <dependency org="org.apache.hadoop" name="hadoop-common-test" 
@@ -105,6 +106,8 @@
       <exclude module="jetty"/>
       <exclude module="slf4j-simple"/>
     </dependency>
+   <dependency org="junit" name="junit" rev="${junit.version}"
+               conf="test->default"/>
    <dependency org="org.mockito" name="mockito-all" rev="${mockito-all.version}" 
                conf="test->default"/>
    <dependency org="org.vafer" name="jdeb" rev="${jdeb.version}" conf="package->master"/>
@@ -115,6 +118,12 @@
                conf="compile->default"/>
    <dependency org="org.aspectj" name="aspectjtools" rev="${aspectj.version}"
                conf="compile->default"/>
+
+   <!-- Exclusions for transitive dependencies pulled in by log4j -->
+   <exclude org="com.sun.jdmk"/>
+   <exclude org="com.sun.jmx"/>
+   <exclude org="javax.jms"/> 
+   <exclude org="javax.mail"/> 
 
  </dependencies>
   
