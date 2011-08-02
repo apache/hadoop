@@ -88,10 +88,10 @@ public class TestInterDatanodeProtocol extends junit.framework.TestCase {
       assertTrue(datanodeinfo.length > 0);
 
       //connect to a data node
-      InterDatanodeProtocol idp = DataNode.createInterDataNodeProtocolProxy(
-          datanodeinfo[0], conf);
       DataNode datanode = cluster.getDataNode(datanodeinfo[0].getIpcPort());
       assertTrue(datanode != null);
+      InterDatanodeProtocol idp = DataNode.createInterDataNodeProtocolProxy(
+          datanodeinfo[0], conf, datanode.socketTimeout);
       
       //stop block scanner, so we could compare lastScanTime
       datanode.blockScannerThread.interrupt();
@@ -111,4 +111,42 @@ public class TestInterDatanodeProtocol extends junit.framework.TestCase {
       if (cluster != null) {cluster.shutdown();}
     }
   }
+
+  /**
+   * The following test first creates a file.
+   * It verifies the block information from a datanode.
+   * Then, it stops the DN and observes timeout on connection attempt. 
+   */
+  public void testInterDNProtocolTimeout() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = null;
+
+    try {
+      cluster = new MiniDFSCluster(conf, 3, true, null);
+      cluster.waitActive();
+
+      //create a file
+      DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
+      String filestr = "/foo";
+      Path filepath = new Path(filestr);
+      DFSTestUtil.createFile(dfs, filepath, 1024L, (short)3, 0L);
+      assertTrue(dfs.getClient().exists(filestr));
+
+      //get block info
+      LocatedBlock locatedblock = getLastLocatedBlock(dfs.getClient().namenode, filestr);
+      DatanodeInfo[] datanodeinfo = locatedblock.getLocations();
+      assertTrue(datanodeinfo.length > 0);
+
+      //shutdown a data node
+      cluster.stopDataNode(datanodeinfo[0].getName());
+      InterDatanodeProtocol idp = DataNode.createInterDataNodeProtocolProxy(
+          datanodeinfo[0], conf, 500);
+      fail("Expected an exception to have been thrown"); 
+    } catch (IOException e) {
+      InterDatanodeProtocol.LOG.info("Got a SocketTimeoutException ", e);
+    } finally {
+      if (cluster != null) {cluster.shutdown();}
+    }
+  }
+  
 }

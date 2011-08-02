@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.DFSClient.DFSInputStream;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.*;
+import org.apache.hadoop.hdfs.server.datanode.TestInterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.*;
@@ -381,4 +382,43 @@ public class TestDFSClientRetries extends TestCase {
       return new LocatedBlocks(goodBlockList.getFileLength(), badBlocks, false);
     }
   }
+  
+  
+  /**
+   * The following test first creates a file.
+   * It verifies the block information from a datanode.
+   * Then, it stops the DN and observes timeout on connection attempt. 
+   */
+  public void testDFSClientTimeout() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = null;
+
+    try {
+      cluster = new MiniDFSCluster(conf, 3, true, null);
+      cluster.waitActive();
+
+      //create a file
+      DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
+      String filestr = "/foo";
+      Path filepath = new Path(filestr);
+      DFSTestUtil.createFile(dfs, filepath, 1024L, (short)3, 0L);
+      assertTrue(dfs.getClient().exists(filestr));
+
+      //get block info
+      LocatedBlock locatedblock = TestInterDatanodeProtocol.getLastLocatedBlock(dfs.getClient().namenode, filestr);
+      DatanodeInfo[] datanodeinfo = locatedblock.getLocations();
+      assertTrue(datanodeinfo.length > 0);
+
+      //shutdown a data node
+      cluster.stopDataNode(datanodeinfo[0].getName());
+      DFSClient.createClientDatanodeProtocolProxy(datanodeinfo[0], conf, 
+        locatedblock.getBlock(), locatedblock.getBlockToken(), 500);
+      fail("Expected an exception to have been thrown"); 
+    } catch (IOException e) {
+      DFSClient.LOG.info("Got a SocketTimeoutException ", e);
+    } finally {
+      if (cluster != null) {cluster.shutdown();}
+    }
+  }
+  
 }

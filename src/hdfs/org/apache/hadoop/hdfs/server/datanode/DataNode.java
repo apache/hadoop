@@ -537,7 +537,7 @@ public class DataNode extends Configured
   } 
 
   public static InterDatanodeProtocol createInterDataNodeProtocolProxy(
-      DatanodeID datanodeid, final Configuration conf) throws IOException {
+      DatanodeID datanodeid, final Configuration conf, final int socketTimeout) throws IOException {
     final InetSocketAddress addr = NetUtils.createSocketAddr(
         datanodeid.getHost() + ":" + datanodeid.getIpcPort());
     if (InterDatanodeProtocol.LOG.isDebugEnabled()) {
@@ -551,7 +551,7 @@ public class DataNode extends Configured
             public InterDatanodeProtocol run() throws IOException {
               return (InterDatanodeProtocol) RPC.getProxy(
                   InterDatanodeProtocol.class, InterDatanodeProtocol.versionID,
-                  addr, conf);
+                  addr, conf, socketTimeout);
             }
           });
     } catch (InterruptedException ie) {
@@ -1712,7 +1712,7 @@ public class DataNode extends Configured
       for(DatanodeID id : datanodeids) {
         try {
           InterDatanodeProtocol datanode = dnRegistration.equals(id)?
-              this: DataNode.createInterDataNodeProtocolProxy(id, getConf());
+              this: DataNode.createInterDataNodeProtocolProxy(id, getConf(), socketTimeout);
           BlockMetaDataInfo info = datanode.getBlockMetaDataInfo(block);
           if (info != null && info.getGenerationStamp() >= block.getGenerationStamp()) {
             if (keepLength) {

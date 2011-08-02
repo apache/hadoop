@@ -134,7 +134,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
   static ClientDatanodeProtocol createClientDatanodeProtocolProxy (
       DatanodeID datanodeid, Configuration conf, 
-      Block block, Token<BlockTokenIdentifier> token) throws IOException {
+      Block block, Token<BlockTokenIdentifier> token, int socketTimeout) throws IOException {
     InetSocketAddress addr = NetUtils.createSocketAddr(
       datanodeid.getHost() + ":" + datanodeid.getIpcPort());
     if (ClientDatanodeProtocol.LOG.isDebugEnabled()) {
@@ -145,7 +145,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     ticket.addToken(token);
     return (ClientDatanodeProtocol)RPC.getProxy(ClientDatanodeProtocol.class,
         ClientDatanodeProtocol.versionID, addr, ticket, conf, NetUtils
-        .getDefaultSocketFactory(conf));
+        .getDefaultSocketFactory(conf), socketTimeout);
   }
         
   /**
@@ -2741,7 +2741,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         try {
           // Pick the "least" datanode as the primary datanode to avoid deadlock.
           primaryNode = Collections.min(Arrays.asList(newnodes));
-          primary = createClientDatanodeProtocolProxy(primaryNode, conf, block, accessToken);
+          primary = createClientDatanodeProtocolProxy(primaryNode, conf, block, accessToken, socketTimeout);
           newBlock = primary.recoverBlock(block, isAppend, newnodes);
         } catch (IOException e) {
           recoveryErrorCount++;
