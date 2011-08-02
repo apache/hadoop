@@ -29,10 +29,13 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.coprocessor.Coprocessor;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableComparable;
@@ -665,6 +668,110 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   public HColumnDescriptor removeFamily(final byte [] column) {
     return this.families.remove(column);
+  }
+
+  /**
+   * Add a table coprocessor to this table. The coprocessor
+   * type must be {@link org.apache.hadoop.hbase.coprocessor.RegionObserver}
+   * or Endpoint.
+   * It won't check if the class can be loaded or not.
+   * Whether a coprocessor is loadable or not will be determined when
+   * a region is opened.
+   * @param className Full class name.
+   * @throws IOException
+   */
+  public void addCoprocessor(String className) throws IOException {
+    addCoprocessor(className, null, Coprocessor.PRIORITY_USER, null);
+  }
+
+  /**
+   * Add a table coprocessor to this table. The coprocessor
+   * type must be {@link org.apache.hadoop.hbase.coprocessor.RegionObserver}
+   * or Endpoint.
+   * It won't check if the class can be loaded or not.
+   * Whether a coprocessor is loadable or not will be determined when
+   * a region is opened.
+   * @param jarFilePath Path of the jar file. If it's null, the class will be
+   * loaded from default classloader.
+   * @param className Full class name.
+   * @param priority Priority
+   * @param kvs Arbitrary key-value parameter pairs passed into the coprocessor.
+   * @throws IOException
+   */
+  public void addCoprocessor(String className, Path jarFilePath,
+                             int priority, final Map<String, String> kvs)
+  throws IOException {
+    if (hasCoprocessor(className)) {
+      throw new IOException("Coprocessor " + className + " already exists.");
+    }
+    // validate parameter kvs
+    //String kvString = "";
+    StringBuilder kvString = new StringBuilder();
+    if (kvs != null) {
+      for (Map.Entry<String, String> e: kvs.entrySet()) {
+        if (!e.getKey().matches(RegionCoprocessorHost.PARAMETER_KEY_PATTERN)) {
+          throw new IOException("Illegal parameter key = " + e.getKey());
+        }
+        if (!e.getValue().matches(RegionCoprocessorHost.PARAMETER_VALUE_PATTERN)) {
+          throw new IOException("Illegal parameter (" + e.getKey() +
+              ") value = " + e.getValue());
+        }
+        if (kvString.length() != 0) {
+          kvString.append(',');
+        }
+        kvString.append(e.getKey());
+        kvString.append('=');
+        kvString.append(e.getValue());
+      }
+    }
+
+    // generate a coprocessor key
+    int maxCoprocessorNumber = 0;
+    Matcher keyMatcher;
+    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
+        this.values.entrySet()) {
+      keyMatcher =
+          RegionCoprocessorHost.CP_KEY_PATTERN.matcher(
+              Bytes.toString(e.getKey().get()));
+      if (!keyMatcher.matches()) {
+        continue;
+      }
+      maxCoprocessorNumber = Math.max(Integer.parseInt(keyMatcher.group(1)),
+          maxCoprocessorNumber);
+    }
+    maxCoprocessorNumber++;
+
+    String key = "coprocessor$" + Integer.toString(maxCoprocessorNumber);
+    String value = ((jarFilePath == null)? "" : jarFilePath.toString()) +
+        "|" + className + "|" + Integer.toString(priority) + "|" +
+        kvString.toString();
+    setValue(key, value);
+  }
+
+  public boolean hasCoprocessor(String className) {
+    Matcher keyMatcher;
+    Matcher valueMatcher;
+    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
+        this.values.entrySet()) {
+      keyMatcher =
+          RegionCoprocessorHost.CP_KEY_PATTERN.matcher(
+              Bytes.toString(e.getKey().get()));
+      if (!keyMatcher.matches()) {
+        continue;
+      }
+      valueMatcher =
+        RegionCoprocessorHost.CP_VALUE_PATTERN.matcher(
+            Bytes.toString(e.getValue().get()));
+      if (!valueMatcher.matches()) {
+        continue;
+      }
+      // get className and compare
+      String clazz = valueMatcher.group(2).trim(); // classname is the 2nd field
+      if (clazz.equals(className.trim())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**

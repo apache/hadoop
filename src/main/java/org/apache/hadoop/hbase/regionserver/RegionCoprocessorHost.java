@@ -92,9 +92,15 @@ public class RegionCoprocessorHost
     }
   }
 
-  static final Pattern attrSpecMatch1 = Pattern.compile("(.+)\\|(.+)\\|(.+)\\|(.+)");
-  static final Pattern attrSpecMatch2 = Pattern.compile("(.+)\\|(.+)\\|(.+)");
-  static final Pattern cfgSpecMatch = Pattern.compile("([^=]+)=([^,]+),?");
+  public static final Pattern CP_KEY_PATTERN = Pattern.compile
+      ("coprocessor\\$([0-9]+)", Pattern.CASE_INSENSITIVE);
+  public static final Pattern CP_VALUE_PATTERN =
+      Pattern.compile("([^\\|]*)\\|([^\\|]+)\\|[\\s]*([\\d]*)[\\s]*(\\|.*)?");
+
+  public static final String PARAMETER_KEY_PATTERN = "[^=,]+";
+  public static final String PARAMETER_VALUE_PATTERN = "[^,]+";
+  public static final Pattern CFG_SPEC_MATCH = Pattern.compile(
+      "(" + PARAMETER_KEY_PATTERN + ")=(" + PARAMETER_VALUE_PATTERN  + "),?");
 
   /** The region server services */
   RegionServerServices rsServices;
@@ -117,28 +123,29 @@ public class RegionCoprocessorHost
     loadSystemCoprocessors(conf, REGION_COPROCESSOR_CONF_KEY);
 
     // load Coprocessor From HDFS
-    loadTableCoprocessors();
+    loadTableCoprocessors(conf);
   }
 
-  void loadTableCoprocessors() {
+  void loadTableCoprocessors(final Configuration conf) {
     // scan the table attributes for coprocessor load specifications
     // initialize the coprocessors
     List<RegionEnvironment> configured = new ArrayList<RegionEnvironment>();
     for (Map.Entry<ImmutableBytesWritable,ImmutableBytesWritable> e:
         region.getTableDesc().getValues().entrySet()) {
-      String key = Bytes.toString(e.getKey().get());
-      String spec = Bytes.toString(e.getValue().get());
-      if (key.startsWith("COPROCESSOR")) {
+      String key = Bytes.toString(e.getKey().get()).trim();
+      String spec = Bytes.toString(e.getValue().get()).trim();
+      if (CP_KEY_PATTERN.matcher(key).matches()) {
         // found one
         try {
-          Matcher matcher = attrSpecMatch1.matcher(spec);
-          if (!matcher.matches()) {
-            matcher = attrSpecMatch2.matcher(spec);
-          }
+          Matcher matcher = CP_VALUE_PATTERN.matcher(spec);
           if (matcher.matches()) {
-            Path path = new Path(matcher.group(1));
-            String className = matcher.group(2);
-            int priority = Integer.valueOf(matcher.group(3));
+            // jar file path can be empty if the cp class can be loaded
+            // from class loader.
+            Path path = matcher.group(1).trim().isEmpty() ?
+                null : new Path(matcher.group(1).trim());
+            String className = matcher.group(2).trim();
+            int priority = matcher.group(3).trim().isEmpty() ?
+                Coprocessor.PRIORITY_USER : Integer.valueOf(matcher.group(3));
             String cfgSpec = null;
             try {
               cfgSpec = matcher.group(4);
@@ -146,8 +153,9 @@ public class RegionCoprocessorHost
               // ignore
             }
             if (cfgSpec != null) {
-              Configuration newConf = HBaseConfiguration.create();
-              Matcher m = cfgSpecMatch.matcher(cfgSpec);
+              cfgSpec = cfgSpec.substring(cfgSpec.indexOf('|') + 1);
+              Configuration newConf = HBaseConfiguration.create(conf);
+              Matcher m = CFG_SPEC_MATCH.matcher(cfgSpec);
               while (m.find()) {
                 newConf.set(m.group(1), m.group(2));
               }
