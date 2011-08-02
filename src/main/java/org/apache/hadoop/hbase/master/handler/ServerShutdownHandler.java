@@ -220,11 +220,13 @@ public class ServerShutdownHandler extends EventHandler {
       " regions(s) that are already in transition)");
 
     // Iterate regions that were on this server and assign them
-    for (Map.Entry<HRegionInfo, Result> e: hris.entrySet()) {
-      if (processDeadRegion(e.getKey(), e.getValue(),
-          this.services.getAssignmentManager(),
-          this.server.getCatalogTracker())) {
-        this.services.getAssignmentManager().assign(e.getKey(), true);
+    if (hris != null) {
+      for (Map.Entry<HRegionInfo, Result> e: hris.entrySet()) {
+        if (processDeadRegion(e.getKey(), e.getValue(),
+            this.services.getAssignmentManager(),
+            this.server.getCatalogTracker())) {
+          this.services.getAssignmentManager().assign(e.getKey(), true);
+        }
       }
     }
     this.deadServers.finish(serverName);
