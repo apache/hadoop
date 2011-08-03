@@ -28,7 +28,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
@@ -99,8 +98,7 @@ public class ApplicationMasterService extends AbstractService implements
   public void start() {
     YarnRPC rpc = YarnRPC.create(getConfig());
     Configuration serverConf = new Configuration(getConfig());
-    serverConf.setClass(
-        CommonConfigurationKeys.HADOOP_SECURITY_INFO_CLASS_NAME,
+    serverConf.setClass(YarnConfiguration.YARN_SECURITY_INFO,
         SchedulerSecurityInfo.class, SecurityInfo.class);
     this.server =
       rpc.getServer(AMRMProtocol.class, this, masterServiceAddress,
