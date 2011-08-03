@@ -306,6 +306,9 @@ Trunk (unreleased changes)
     HADOOP-7502. Make generated sources IDE friendly.
     (Alejandro Abdelnur via llu)
 
+    HADOOP-7501. publish Hadoop Common artifacts (post HADOOP-6671) to Apache
+    SNAPSHOTs repo. (Alejandro Abdelnur via tomwhite)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
