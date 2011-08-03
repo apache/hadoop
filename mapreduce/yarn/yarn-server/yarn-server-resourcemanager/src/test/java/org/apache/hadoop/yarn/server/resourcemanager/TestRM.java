@@ -16,13 +16,13 @@ public class TestRM {
     rootLogger.setLevel(Level.DEBUG);
     MockRM rm = new MockRM();
     rm.start();
-    rm.registerNode(1, "h1", 5000);
-    rm.registerNode(2, "h2", 10000);
+    rm.registerNode("h1:1234", 5000);
+    rm.registerNode("h2:5678", 10000);
     
     RMApp app = rm.submitApp(2000);
 
     //kick the scheduling
-    rm.nodeHeartbeat(1, true);
+    rm.nodeHeartbeat("h1:1234", true);
 
     RMAppAttempt attempt = app.getCurrentAppAttempt();
     rm.sendAMLaunched(attempt.getAppAttemptId());

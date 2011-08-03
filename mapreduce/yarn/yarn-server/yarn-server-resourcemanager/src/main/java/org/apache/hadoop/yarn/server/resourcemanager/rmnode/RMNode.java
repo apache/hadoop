@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 
 /**
  * Node managers information on available resources 
@@ -115,4 +116,6 @@ public interface RMNode {
   public List<ContainerId> pullContainersToCleanUp();
 
   public List<ApplicationId> pullAppsToCleanup();
+
+  public HeartbeatResponse getLastHeartBeatResponse();
 }

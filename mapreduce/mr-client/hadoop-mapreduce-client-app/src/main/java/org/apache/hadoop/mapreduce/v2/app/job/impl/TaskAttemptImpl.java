@@ -1049,7 +1049,8 @@ public abstract class TaskAttemptImpl implements
       TaskAttemptContainerAssignedEvent cEvent = 
         (TaskAttemptContainerAssignedEvent) event;
       taskAttempt.containerID = cEvent.getContainer().getId();
-      taskAttempt.containerMgrAddress = cEvent.getContainer().getContainerManagerAddress();
+      taskAttempt.containerMgrAddress = cEvent.getContainer().getNodeId()
+          .toString();
       taskAttempt.nodeHttpAddress = cEvent.getContainer().getNodeHttpAddress();
       taskAttempt.containerToken = cEvent.getContainer().getContainerToken();
       taskAttempt.assignedCapability = cEvent.getContainer().getResource();

@@ -1,9 +1,12 @@
 package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
 
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.RegisterNodeManagerRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.RegisterNodeManagerRequestProtoOrBuilder;
@@ -17,7 +20,7 @@ public class RegisterNodeManagerRequestPBImpl extends ProtoBase<RegisterNodeMana
   boolean viaProto = false;
   
   private Resource resource = null;
-  
+  private NodeId nodeId = null;
   
   public RegisterNodeManagerRequestPBImpl() {
     builder = RegisterNodeManagerRequestProto.newBuilder();
@@ -39,6 +42,10 @@ public class RegisterNodeManagerRequestPBImpl extends ProtoBase<RegisterNodeMana
     if (this.resource != null) {
       builder.setResource(convertToProtoFormat(this.resource));
     }
+    if (this.nodeId != null) {
+      builder.setNodeId(convertToProtoFormat(this.nodeId));
+    }
+
   }
 
   private void mergeLocalToProto() {
@@ -79,18 +86,24 @@ public class RegisterNodeManagerRequestPBImpl extends ProtoBase<RegisterNodeMana
   }
 
   @Override
-  public int getContainerManagerPort() {
+  public NodeId getNodeId() {
     RegisterNodeManagerRequestProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasContainerManagerPort()) {
-      return 0;
+    if (this.nodeId != null) {
+      return this.nodeId;
     }
-    return (p.getContainerManagerPort());
+    if (!p.hasNodeId()) {
+      return null;
+    }
+    this.nodeId = convertFromProtoFormat(p.getNodeId());
+    return this.nodeId;
   }
 
   @Override
-  public void setContainerManagerPort(int port) {
+  public void setNodeId(NodeId nodeId) {
     maybeInitBuilder();
-    builder.setContainerManagerPort(port);
+    if (nodeId == null) 
+      builder.clearNodeId();
+    this.nodeId = nodeId;
   }
 
   @Override
@@ -108,21 +121,12 @@ public class RegisterNodeManagerRequestPBImpl extends ProtoBase<RegisterNodeMana
     builder.setHttpPort(httpPort);
   }
 
-  @Override
-  public String getHost() {
-    RegisterNodeManagerRequestProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasHost()) {
-      return null;
-    }
-    return (p.getHost());
+  private NodeIdPBImpl convertFromProtoFormat(NodeIdProto p) {
+    return new NodeIdPBImpl(p);
   }
 
-  @Override
-  public void setHost(String host) {
-    maybeInitBuilder();
-    if (host == null) 
-      builder.clearHost();
-    builder.setHost((host));
+  private NodeIdProto convertToProtoFormat(NodeId t) {
+    return ((NodeIdPBImpl)t).getProto();
   }
 
   private ResourcePBImpl convertFromProtoFormat(ResourceProto p) {

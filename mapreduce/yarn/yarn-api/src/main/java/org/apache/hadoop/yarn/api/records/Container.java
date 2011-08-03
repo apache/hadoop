@@ -22,7 +22,6 @@ package org.apache.hadoop.yarn.api.records;
 public interface Container extends Comparable<Container> {
   ContainerId getId();
   NodeId getNodeId();
-  String getContainerManagerAddress();
   String getNodeHttpAddress();
   Resource getResource();
   ContainerState getState();
@@ -31,7 +30,6 @@ public interface Container extends Comparable<Container> {
   
   void setId(ContainerId id);
   void setNodeId(NodeId nodeId);
-  void setContainerManagerAddress(String containerManagerAddress);
   void setNodeHttpAddress(String nodeHttpAddress);
   void setResource(Resource resource);
   void setState(ContainerState state);

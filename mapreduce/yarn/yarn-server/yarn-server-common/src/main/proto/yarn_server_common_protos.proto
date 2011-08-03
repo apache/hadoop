@@ -13,8 +13,7 @@ message NodeStatusProto {
 }
 
 message RegistrationResponseProto {
-  optional NodeIdProto node_id = 1;
-  optional bytes secret_key = 2;
+  optional bytes secret_key = 1;
 }
 
 message HeartbeatResponseProto {

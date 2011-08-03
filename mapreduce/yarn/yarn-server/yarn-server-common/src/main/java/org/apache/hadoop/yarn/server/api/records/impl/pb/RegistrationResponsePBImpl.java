@@ -18,10 +18,7 @@ public class RegistrationResponsePBImpl extends ProtoBase<RegistrationResponsePr
   RegistrationResponseProto.Builder builder = null;
   boolean viaProto = false;
   
-  private NodeId nodeId = null;
   private ByteBuffer secretKey = null;
-  
-  
   
   public RegistrationResponsePBImpl() {
     builder = RegistrationResponseProto.newBuilder();
@@ -41,9 +38,6 @@ public class RegistrationResponsePBImpl extends ProtoBase<RegistrationResponsePr
   }
 
   private void mergeLocalToBuilder() {
-    if (this.nodeId != null) {
-      builder.setNodeId(convertToProtoFormat(this.nodeId));
-    }
     if (this.secretKey != null) {
       builder.setSecretKey(convertToProtoFormat(this.secretKey));
     }
@@ -64,28 +58,7 @@ public class RegistrationResponsePBImpl extends ProtoBase<RegistrationResponsePr
     }
     viaProto = false;
   }
-    
-  
-  @Override
-  public NodeId getNodeId() {
-    RegistrationResponseProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.nodeId != null) {
-      return this.nodeId;
-    }
-    if (!p.hasNodeId()) {
-      return null;
-    }
-    this.nodeId = convertFromProtoFormat(p.getNodeId());
-    return this.nodeId;
-  }
 
-  @Override
-  public void setNodeId(NodeId nodeId) {
-    maybeInitBuilder();
-    if (nodeId == null) 
-      builder.clearNodeId();
-    this.nodeId = nodeId;
-  }
   @Override
   public ByteBuffer getSecretKey() {
     RegistrationResponseProtoOrBuilder p = viaProto ? proto : builder;
@@ -105,14 +78,6 @@ public class RegistrationResponsePBImpl extends ProtoBase<RegistrationResponsePr
     if (secretKey == null) 
       builder.clearSecretKey();
     this.secretKey = secretKey;
-  }
-
-  private NodeIdPBImpl convertFromProtoFormat(NodeIdProto p) {
-    return new NodeIdPBImpl(p);
-  }
-
-  private NodeIdProto convertToProtoFormat(NodeId t) {
-    return ((NodeIdPBImpl)t).getProto();
   }
 
 }  

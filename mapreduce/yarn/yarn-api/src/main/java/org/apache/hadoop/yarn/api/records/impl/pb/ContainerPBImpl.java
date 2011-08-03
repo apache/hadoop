@@ -173,25 +173,6 @@ public class ContainerPBImpl extends ProtoBase<ContainerProto> implements Contai
   }
 
   @Override
-  public String getContainerManagerAddress() {
-    ContainerProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasContainerManagerAddress()) {
-      return null;
-    }
-    return (p.getContainerManagerAddress());
-  }
-
-  @Override
-  public void setContainerManagerAddress(String containerManagerAddress) {
-    maybeInitBuilder();
-    if (containerManagerAddress == null) {
-      builder.clearContainerManagerAddress();
-      return;
-    }
-    builder.setContainerManagerAddress((containerManagerAddress));
-  }
-
-  @Override
   public String getNodeHttpAddress() {
     ContainerProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasNodeHttpAddress()) {
@@ -324,7 +305,7 @@ public class ContainerPBImpl extends ProtoBase<ContainerProto> implements Contai
   @Override
   public int compareTo(Container other) {
     if (this.getId().compareTo(other.getId()) == 0) {
-      if (this.getContainerManagerAddress().compareTo(other.getContainerManagerAddress()) == 0) {
+      if (this.getNodeId().compareTo(other.getNodeId()) == 0) {
         if (this.getResource().compareTo(other.getResource()) == 0) {
           if (this.getState().compareTo(other.getState()) == 0) {
             //ContainerToken
@@ -336,7 +317,7 @@ public class ContainerPBImpl extends ProtoBase<ContainerProto> implements Contai
           return this.getResource().compareTo(other.getResource());
         }
       } else {
-        return this.getContainerManagerAddress().compareTo(other.getContainerManagerAddress());
+        return this.getNodeId().compareTo(other.getNodeId());
       }
     } else {
       return this.getId().compareTo(other.getId());

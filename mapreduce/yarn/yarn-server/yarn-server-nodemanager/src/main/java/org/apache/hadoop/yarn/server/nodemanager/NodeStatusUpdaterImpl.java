@@ -23,7 +23,6 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.avro.AvroRuntimeException;
@@ -58,6 +57,7 @@ import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.service.AbstractService;
+import org.apache.hadoop.yarn.util.Records;
 
 public class NodeStatusUpdaterImpl extends AbstractService implements
     NodeStatusUpdater {
@@ -164,13 +164,13 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     LOG.info("Connected to ResourceManager at " + this.rmAddress);
     
     RegisterNodeManagerRequest request = recordFactory.newRecordInstance(RegisterNodeManagerRequest.class);
-    request.setHost(this.hostName);
-    request.setContainerManagerPort(this.containerManagerPort);
+    this.nodeId = Records.newRecord(NodeId.class);
+    this.nodeId.setHost(this.hostName);
+    this.nodeId.setPort(this.containerManagerPort);
     request.setHttpPort(this.httpPort);
     request.setResource(this.totalResource);
     RegistrationResponse regResponse =
         this.resourceTracker.registerNodeManager(request).getRegistrationResponse();
-    this.nodeId = regResponse.getNodeId();
     if (UserGroupInformation.isSecurityEnabled()) {
       this.secretKeyBytes = regResponse.getSecretKey().array();
     }
@@ -213,7 +213,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         // Clone the container to send it to the RM
         org.apache.hadoop.yarn.api.records.Container c = container.cloneAndGetContainer();
         c.setNodeId(this.nodeId);
-        c.setContainerManagerAddress(this.containerManagerBindAddress);
         c.setNodeHttpAddress(this.nodeHttpAddress); // TODO: don't set everytime.
         applicationContainers.add(c);
         ++numActiveContainers;

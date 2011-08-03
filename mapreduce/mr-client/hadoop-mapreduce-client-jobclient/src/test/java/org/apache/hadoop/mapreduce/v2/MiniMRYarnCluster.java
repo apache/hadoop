@@ -61,8 +61,6 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
   @Override
   public void init(Configuration conf) {
     conf.set(MRConfig.FRAMEWORK_NAME, "yarn");
-    conf.setStrings(MRConstants.NM_HOSTS_CONF_KEY,
-        new String[] { NMConfig.DEFAULT_NM_BIND_ADDRESS });
     conf.set(MRJobConfig.USER_NAME, System.getProperty("user.name"));
     conf.set(MRConstants.APPS_STAGING_DIR_KEY, new File(getTestWorkDir(),
         "apps_staging_dir/${user.name}/").getAbsolutePath());

@@ -98,22 +98,23 @@ public class ZKStore implements Store {
         this.ZK_TIMEOUT,
         createZKWatcher() 
     );
-    this.nodeId.setId(0);
+    // TODO: FIXMEVinodkv
+//    this.nodeId.setId(0);
   }
 
   protected Watcher createZKWatcher() {
     return new ZKWatcher();   
   }
 
-  private NodeReportPBImpl createNodeManagerInfo(RMNode nodeInfo) {
+  private NodeReportPBImpl createNodeManagerInfo(RMNode rmNode) {
     NodeReport node = 
       recordFactory.newRecordInstance(NodeReport.class);
-    node.setNodeAddress(nodeInfo.getNodeAddress());
-    node.setRackName(nodeInfo.getRackName());
-    node.setCapability(nodeInfo.getTotalCapability());
+    node.setNodeId(rmNode.getNodeID());
+    node.setRackName(rmNode.getRackName());
+    node.setCapability(rmNode.getTotalCapability());
     // TODO: FIXME
 //    node.setUsed(nodeInfo.getUsedResource());
-    node.setNumContainers(nodeInfo.getNumContainers());
+    node.setNumContainers(rmNode.getNumContainers());
     return (NodeReportPBImpl)node;
   }
 
@@ -123,32 +124,34 @@ public class ZKStore implements Store {
     if (!doneWithRecovery) return;
     NodeReportPBImpl nodeManagerInfo = createNodeManagerInfo(node);
     byte[] bytes = nodeManagerInfo.getProto().toByteArray();
-    try {
-      zkClient.create(NODES + Integer.toString(node.getNodeID().getId()), bytes, null,
-          CreateMode.PERSISTENT);
-    } catch(InterruptedException ie) {
-      LOG.info("Interrupted", ie);
-      throw new InterruptedIOException("Interrupted");
-    } catch(KeeperException ke) {
-      LOG.info("Keeper exception", ke);
-      throw convertToIOException(ke);
-    }
+    // TODO: FIXMEVinodkv
+//    try {
+//      zkClient.create(NODES + Integer.toString(node.getNodeID().getId()), bytes, null,
+//          CreateMode.PERSISTENT);
+//    } catch(InterruptedException ie) {
+//      LOG.info("Interrupted", ie);
+//      throw new InterruptedIOException("Interrupted");
+//    } catch(KeeperException ke) {
+//      LOG.info("Keeper exception", ke);
+//      throw convertToIOException(ke);
+//    }
   }
 
   @Override
   public synchronized void removeNode(RMNode node) throws IOException {
     if (!doneWithRecovery) return;
     
-    /** remove a storage node **/
-    try {
-      zkClient.delete(NODES + Integer.toString(node.getNodeID().getId()), -1);
-    } catch(InterruptedException ie) {
-      LOG.info("Interrupted", ie);
-      throw new InterruptedIOException("Interrupted");
-    } catch(KeeperException ke) {
-      LOG.info("Keeper exception", ke);
-      throw convertToIOException(ke);
-    }
+//    TODO: FIXME VINODKV
+//    /** remove a storage node **/
+//    try {
+//      zkClient.delete(NODES + Integer.toString(node.getNodeID().getId()), -1);
+//    } catch(InterruptedException ie) {
+//      LOG.info("Interrupted", ie);
+//      throw new InterruptedIOException("Interrupted");
+//    } catch(KeeperException ke) {
+//      LOG.info("Keeper exception", ke);
+//      throw convertToIOException(ke);
+//    }
 
   }
 
@@ -160,17 +163,18 @@ public class ZKStore implements Store {
 
   @Override
   public synchronized NodeId getNextNodeId() throws IOException {
-    int num = nodeId.getId();
-    num++;
-    nodeId.setId(num);
-    try {
-      zkClient.setData(NODES + NODE_ID, nodeId.getProto().toByteArray() , -1);
-    } catch(InterruptedException ie) {
-      LOG.info("Interrupted", ie);
-      throw new InterruptedIOException(ie.getMessage());
-    } catch(KeeperException ke) {
-      throw convertToIOException(ke);
-    }
+//    TODO: FIXME VINODKV
+//    int num = nodeId.getId();
+//    num++;
+//    nodeId.setId(num);
+//    try {
+//      zkClient.setData(NODES + NODE_ID, nodeId.getProto().toByteArray() , -1);
+//    } catch(InterruptedException ie) {
+//      LOG.info("Interrupted", ie);
+//      throw new InterruptedIOException(ie.getMessage());
+//    } catch(KeeperException ke) {
+//      throw convertToIOException(ke);
+//    }
     return nodeId;
   }
 
@@ -458,9 +462,10 @@ public class ZKStore implements Store {
       final Pattern trackerPattern = Pattern.compile(".*:.*");
       final Matcher m = trackerPattern.matcher("");
       for (NodeReport node: nodeInfos) {
-        m.reset(node.getNodeAddress());
+        m.reset(node.getNodeId().getHost());
         if (!m.find()) {
-          LOG.info("Skipping node, bad node-address " + node.getNodeAddress());
+          LOG.info("Skipping node, bad node-address "
+              + node.getNodeId().getHost());
           continue;
         }
         String hostName = m.group(0);
@@ -473,8 +478,8 @@ public class ZKStore implements Store {
         int httpPort = Integer.valueOf(m.group(1));
         RMNode nm = new RMNodeImpl(node.getNodeId(), null,
             hostName, cmPort, httpPort,
-            ResourceTrackerService.resolve(node.getNodeAddress()), 
-            node.getCapability(), null);
+            ResourceTrackerService.resolve(node.getNodeId().getHost()), 
+            node.getCapability());
         nodeManagers.add(nm);
       }
       readLastNodeId();

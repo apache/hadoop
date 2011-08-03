@@ -384,7 +384,7 @@ public class TypeConverter {
   private static final String TT_NAME_PREFIX = "tracker_";
   public static TaskTrackerInfo fromYarn(NodeReport node) {
     TaskTrackerInfo taskTracker = 
-      new TaskTrackerInfo(TT_NAME_PREFIX + node.getNodeAddress());
+      new TaskTrackerInfo(TT_NAME_PREFIX + node.getNodeId().toString());
     return taskTracker;
   }
 

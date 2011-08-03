@@ -66,12 +66,13 @@ class NodesPage extends RmView {
         NodeHealthStatus health = ni.getNodeHealthStatus();
         tbody.tr().
             td(ni.getRackName()).
-            td(String.valueOf(ni.getNodeID().getId())).
+            td(String.valueOf(ni.getNodeID().toString())).
             td().a("http://" + ni.getHttpAddress(), ni.getHttpAddress())._().
             td(health.getIsNodeHealthy() ? "Healthy" : "Unhealthy").
             td(Times.format(health.getLastHealthReportTime())).
             td(String.valueOf(health.getHealthReport())).
             td(String.valueOf(ni.getNumContainers())).
+            // TODO: FIXME Vinodkv
 //            td(String.valueOf(ni.getUsedResource().getMemory())).
 //            td(String.valueOf(ni.getAvailableResource().getMemory())).
             _();

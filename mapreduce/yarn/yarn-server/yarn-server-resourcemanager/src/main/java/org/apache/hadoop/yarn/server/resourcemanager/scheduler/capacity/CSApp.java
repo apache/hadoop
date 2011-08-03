@@ -33,7 +33,7 @@ public class CSApp extends SchedulerApp {
   private final Comparator<CSNode> nodeComparator = new Comparator<CSNode>() {
     @Override
     public int compare(CSNode o1, CSNode o2) {
-      return o1.getNodeID().getId() - o2.getNodeID().getId();
+      return o1.getNodeID().compareTo(o2.getNodeID());
     }
   };
 

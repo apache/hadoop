@@ -119,7 +119,7 @@ public class SchedulerApp {
       Resources.addTo(currentConsumption, container.getResource());
       LOG.debug("allocate: applicationId=" + container.getId().getAppId()
           + " container=" + container.getId() + " host="
-          + container.getContainerManagerAddress());
+          + container.getNodeId().toString());
     }
   }
 

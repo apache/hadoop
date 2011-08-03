@@ -482,14 +482,14 @@ public class FifoScheduler implements ResourceScheduler {
               recordFactory.newRecordInstance(ContainerToken.class);
           ContainerTokenIdentifier tokenidentifier =
             new ContainerTokenIdentifier(container.getId(),
-                container.getContainerManagerAddress(), container.getResource());
+                container.getNodeId().toString(), container.getResource());
           containerToken.setIdentifier(
               ByteBuffer.wrap(tokenidentifier.getBytes()));
           containerToken.setKind(ContainerTokenIdentifier.KIND.toString());
           containerToken.setPassword(
               ByteBuffer.wrap(containerTokenSecretManager
                   .createPassword(tokenidentifier)));
-          containerToken.setService(container.getContainerManagerAddress());
+          containerToken.setService(container.getNodeId().toString());
           container.setContainerToken(containerToken);
         }
         containers.add(container);

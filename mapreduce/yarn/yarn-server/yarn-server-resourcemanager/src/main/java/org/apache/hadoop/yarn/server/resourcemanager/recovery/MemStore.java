@@ -39,7 +39,8 @@ public class MemStore implements Store {
 
   public MemStore() {
     nodeId = recordFactory.newRecordInstance(NodeId.class);
-    nodeId.setId(-1);
+    nodeId.setHost("TODO");
+    nodeId.setPort(-1);
   }
 
   @Override
@@ -87,9 +88,10 @@ public class MemStore implements Store {
 
   @Override
   public synchronized NodeId getNextNodeId() throws IOException {
-    int num = nodeId.getId();
-    num++;
-    nodeId.setId(num);
+    // TODO: FIXMEVinodkv
+//    int num = nodeId.getId();
+//    num++;
+//    nodeId.setId(num);
     return nodeId;
   }
 

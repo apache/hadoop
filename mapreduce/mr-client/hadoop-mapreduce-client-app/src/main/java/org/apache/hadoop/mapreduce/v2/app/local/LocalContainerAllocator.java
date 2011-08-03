@@ -75,7 +75,6 @@ public class LocalContainerAllocator extends RMCommunicator
       Container container = recordFactory.newRecordInstance(Container.class);
       container.setId(cID);
       container.setNodeId(null);
-      container.setContainerManagerAddress("localhost");
       container.setContainerToken(null);
       container.setNodeHttpAddress("localhost:9999");
       // send the container-assigned event to task attempt

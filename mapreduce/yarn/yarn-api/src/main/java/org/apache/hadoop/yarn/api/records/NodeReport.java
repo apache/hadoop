@@ -1,8 +1,8 @@
 package org.apache.hadoop.yarn.api.records;
 
 public interface NodeReport {
-  String getNodeAddress();
-  void setNodeAddress(String nodeAddress);
+  NodeId getNodeId();
+  void setNodeId(NodeId nodeId);
   String getHttpAddress();
   void setHttpAddress(String httpAddress);
   String getRackName();
@@ -13,8 +13,6 @@ public interface NodeReport {
   void setCapability(Resource capability);
   int getNumContainers();
   void setNumContainers(int numContainers);
-  NodeId getNodeId();
-  void setNodeId(NodeId nodeId);
   NodeHealthStatus getNodeHealthStatus();
   void setNodeHealthStatus(NodeHealthStatus nodeHealthStatus);
 }

@@ -18,16 +18,15 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords;
 
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 
 public interface RegisterNodeManagerRequest {
-  String getHost();
-  int getContainerManagerPort();
+  NodeId getNodeId();
   int getHttpPort();
   Resource getResource();
   
-  void setHost(String host);
-  void setContainerManagerPort(int port);
+  void setNodeId(NodeId nodeId);
   void setHttpPort(int port);
   void setResource(Resource resource);
 }

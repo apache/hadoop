@@ -60,12 +60,6 @@ public class NodeReportPBImpl extends ProtoBase<NodeReportProto>
   }
 
   @Override
-  public String getNodeAddress() {
-    NodeReportProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.hasNodeAddress()) ? p.getNodeAddress() : null;
-  }
-
-  @Override
   public String getHttpAddress() {
     NodeReportProtoOrBuilder p = viaProto ? proto : builder;
     return (p.hasHttpAddress()) ? p.getHttpAddress() : null;
@@ -133,16 +127,6 @@ public class NodeReportPBImpl extends ProtoBase<NodeReportProto>
     if (healthStatus == null)
       builder.clearNodeHealthStatus();
     this.nodeHealthStatus = healthStatus;
-  }
-
-  @Override
-  public void setNodeAddress(String nodeAddress) {
-    maybeInitBuilder();
-    if (nodeAddress == null) {
-      builder.clearNodeAddress();
-      return;
-    }
-    builder.setNodeAddress(nodeAddress);
   }
 
   @Override

@@ -568,7 +568,7 @@ public class RMContainerAllocator extends RMContainerRequestor
           
           LOG.info("Assigned container (" + allocated + ") " +
               " to task " + assigned.attemptID +
-              " on node " + allocated.getContainerManagerAddress());
+              " on node " + allocated.getNodeId().toString());
         } else {
           //not assigned to any request, release the container
           LOG.info("Releasing unassigned container " + allocated);
@@ -653,7 +653,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       ContainerRequest assigned = null;
       while (assigned == null && maps.size() > 0
           && allocated.getResource().getMemory() >= mapResourceReqt) {
-        String host = getHost(allocated.getContainerManagerAddress());
+        String host = getHost(allocated.getNodeId().toString());
         LinkedList<TaskAttemptId> list = mapsHostMapping.get(host);
         while (list != null && list.size() > 0) {
           LOG.info("Host matched to the request list " + host);
@@ -712,7 +712,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       new HashSet<TaskAttemptId>();
     
     void add(Container container, TaskAttemptId tId) {
-      LOG.info("Assigned container " + container.getContainerManagerAddress() 
+      LOG.info("Assigned container " + container.getNodeId().toString()
           + " to " + tId);
       containerToAttemptMap.put(container.getId(), tId);
       if (tId.getTaskId().getTaskType().equals(TaskType.MAP)) {

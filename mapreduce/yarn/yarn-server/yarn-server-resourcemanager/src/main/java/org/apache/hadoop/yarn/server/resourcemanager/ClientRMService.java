@@ -351,23 +351,23 @@ public class ClientRMService extends AbstractService implements
     return response;
   }
 
-  private NodeReport createNodeReports(RMNode nodeInfo) {
-    NodeReport node = 
+  private NodeReport createNodeReports(RMNode rmNode) {
+    NodeReport report = 
       recordFactory.newRecordInstance(NodeReport.class);
-    node.setNodeAddress(nodeInfo.getNodeAddress());
-    node.setRackName(nodeInfo.getRackName());
-    node.setCapability(nodeInfo.getTotalCapability());
-    node.setNodeHealthStatus(nodeInfo.getNodeHealthStatus());
-    List<Container> containers = nodeInfo.getRunningContainers();
+    report.setNodeId(rmNode.getNodeID());
+    report.setRackName(rmNode.getRackName());
+    report.setCapability(rmNode.getTotalCapability());
+    report.setNodeHealthStatus(rmNode.getNodeHealthStatus());
+    List<Container> containers = rmNode.getRunningContainers();
     int userdResource = 0;
     for (Container c : containers) {
       userdResource += c.getResource().getMemory();
     }
     Resource usedRsrc = recordFactory.newRecordInstance(Resource.class);
     usedRsrc.setMemory(userdResource);
-    node.setUsed(usedRsrc);
-    node.setNumContainers(nodeInfo.getNumContainers());
-    return node;
+    report.setUsed(usedRsrc);
+    report.setNumContainers(rmNode.getNumContainers());
+    return report;
   }
 
   @Override

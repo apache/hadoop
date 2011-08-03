@@ -164,7 +164,6 @@ public class MockRM extends ResourceManager {
     for (ContainerId id : releases) {
       Container cont = recordFactory.newRecordInstance(Container.class);
       cont.setId(id);
-      cont.setContainerManagerAddress("");
       //TOOD: set all fields
     }
     return allocateFromAM(attemptId, toRelease, 
@@ -193,18 +192,20 @@ public class MockRM extends ResourceManager {
   }
 
   //from Node
-  public void containerStatus(Container container, int nodeIntId) throws Exception {
+  public void containerStatus(Container container, NodeId nodeId) throws Exception {
     Map<ApplicationId, List<Container>> conts = new HashMap<ApplicationId, List<Container>>();
     conts.put(container.getId().getAppId(), Arrays.asList(new Container[]{}));
-    nodeHeartbeat(nodeIntId, conts, true);
+    nodeHeartbeat(nodeId, conts, true);
   }
 
-  public void registerNode(int nodeIntId, String host, int memory) throws Exception {
+  public void registerNode(String nodeIdStr, int memory) throws Exception {
+    String[] splits = nodeIdStr.split(":");
     NodeId nodeId = recordFactory.newRecordInstance(NodeId.class);
-    nodeId.setId(nodeIntId);
-    RegisterNodeManagerRequest req = recordFactory.newRecordInstance(RegisterNodeManagerRequest.class);
-    req.setContainerManagerPort(1);
-    req.setHost(host);
+    nodeId.setHost(splits[0]);
+    nodeId.setPort(Integer.parseInt(splits[1]));
+    RegisterNodeManagerRequest req = recordFactory
+        .newRecordInstance(RegisterNodeManagerRequest.class);
+    req.setNodeId(nodeId);
     req.setHttpPort(2);
     Resource resource = recordFactory.newRecordInstance(Resource.class);
     resource.setMemory(memory);
@@ -212,14 +213,16 @@ public class MockRM extends ResourceManager {
     getResourceTrackerService().registerNodeManager(req);
   }
 
-  public void nodeHeartbeat(int i, boolean b) throws Exception {
-    nodeHeartbeat(i, new HashMap<ApplicationId, List<Container>>(), b);
+  public void nodeHeartbeat(String nodeIdStr, boolean b) throws Exception {
+    String[] splits = nodeIdStr.split(":");
+    NodeId nodeId = recordFactory.newRecordInstance(NodeId.class);
+    nodeId.setHost(splits[0]);
+    nodeId.setPort(Integer.parseInt(splits[1]));
+    nodeHeartbeat(nodeId, new HashMap<ApplicationId, List<Container>>(), b);
   }
 
-  public void nodeHeartbeat(int nodeIntId, Map<ApplicationId, 
+  public void nodeHeartbeat(NodeId nodeId, Map<ApplicationId, 
       List<Container>> conts, boolean isHealthy) throws Exception {
-    NodeId nodeId = recordFactory.newRecordInstance(NodeId.class);
-    nodeId.setId(nodeIntId);
     NodeHeartbeatRequest req = recordFactory.newRecordInstance(NodeHeartbeatRequest.class);
     NodeStatus status = recordFactory.newRecordInstance(NodeStatus.class);
     status.setNodeId(nodeId);

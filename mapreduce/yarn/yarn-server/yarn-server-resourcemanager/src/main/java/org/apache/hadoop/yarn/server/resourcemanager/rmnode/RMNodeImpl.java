@@ -44,8 +44,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.RMNodeRemovalListener;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
@@ -84,8 +84,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private final String nodeAddress; // The containerManager address
   private final String httpAddress;
   private final Resource totalCapability;
-  private final RMNodeRemovalListener nodeRemovalListener;
-  private Resource availableResource = recordFactory.newRecordInstance(Resource.class);
   private final Node node;
   private final NodeHealthStatus nodeHealthStatus = recordFactory
       .newRecordInstance(NodeHealthStatus.class);
@@ -100,6 +98,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   /* the list of applications that have finished and need to be purged */
   private final List<ApplicationId> finishedApplications = new ArrayList<ApplicationId>();
+
+  private HeartbeatResponse latestHeartBeatResponse = recordFactory
+      .newRecordInstance(HeartbeatResponse.class);
 
   private static final StateMachineFactory<RMNodeImpl,
                                            RMNodeState,
@@ -137,8 +138,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
                              RMNodeEvent> stateMachine;
 
   public RMNodeImpl(NodeId nodeId, RMContext context, String hostName,
-      int cmPort, int httpPort, Node node, Resource capability,
-      RMNodeRemovalListener nodeRemovalListener) {
+      int cmPort, int httpPort, Node node, Resource capability) {
     this.nodeId = nodeId;
     this.context = context;
     this.hostName = hostName;
@@ -146,12 +146,12 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     this.httpPort = httpPort;
     this.totalCapability = capability; 
     this.nodeAddress = hostName + ":" + cmPort;
-    this.httpAddress = hostName + ":" + httpPort;
-    Resources.addTo(availableResource, capability);
-    this.nodeRemovalListener = nodeRemovalListener;
+    this.httpAddress = hostName + ":" + httpPort;;
     this.node = node;
     this.nodeHealthStatus.setIsNodeHealthy(true);
     this.nodeHealthStatus.setLastHealthReportTime(System.currentTimeMillis());
+
+    this.latestHeartBeatResponse.setResponseId(0);
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
@@ -284,6 +284,18 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
   };
 
+  @Override
+  public HeartbeatResponse getLastHeartBeatResponse() {
+
+    this.writeLock.lock();
+
+    try {
+      return this.latestHeartBeatResponse;
+    } finally {
+      this.writeLock.unlock();
+    }
+  }
+
   public void handle(RMNodeEvent event) {
     LOG.info("Processing " + event.getNodeId() + " of type " + event.getType());
     try {
@@ -343,7 +355,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       rmNode.killAllContainers();
       rmNode.context.getDispatcher().getEventHandler().handle(
           new NodeRemovedSchedulerEvent(rmNode));
-      rmNode.nodeRemovalListener.RMNodeRemoved(rmNode.nodeId);
+
+      // Remove the node from the system.
+      rmNode.context.getRMNodes().remove(rmNode.nodeId);
       LOG.info("Removed Node " + rmNode.nodeId);
       
     }
@@ -355,6 +369,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     public RMNodeState transition(RMNodeImpl rmNode, RMNodeEvent event) {
 
       RMNodeStatusEvent statusEvent = (RMNodeStatusEvent) event;
+
+      // Switch the last heartbeatresponse.
+      rmNode.latestHeartBeatResponse = statusEvent.getLatestResponse();
+
       if (!statusEvent.getNodeHealthStatus().getIsNodeHealthy()) {
         rmNode.killAllContainers();
         rmNode.context.getDispatcher().getEventHandler().handle(
@@ -402,6 +420,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     @Override
     public RMNodeState transition(RMNodeImpl rmNode, RMNodeEvent event) {
       RMNodeStatusEvent statusEvent = (RMNodeStatusEvent) event;
+
+      // Switch the last heartbeatresponse.
+      rmNode.latestHeartBeatResponse = statusEvent.getLatestResponse();
 
       if (statusEvent.getNodeHealthStatus().getIsNodeHealthy()) {
         rmNode.context.getDispatcher().getEventHandler().handle(

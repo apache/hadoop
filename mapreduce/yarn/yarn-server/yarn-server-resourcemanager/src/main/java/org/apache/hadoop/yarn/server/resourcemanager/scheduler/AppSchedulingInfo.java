@@ -380,7 +380,7 @@ public class AppSchedulingInfo {
       }
       LOG.debug("allocate: applicationId=" + applicationId + " container="
           + container.getId() + " host="
-          + container.getContainerManagerAddress());
+          + container.getNodeId().toString());
     }
   }
 

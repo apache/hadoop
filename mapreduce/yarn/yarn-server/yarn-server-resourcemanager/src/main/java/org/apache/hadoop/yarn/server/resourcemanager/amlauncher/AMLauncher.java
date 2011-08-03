@@ -141,7 +141,7 @@ public class AMLauncher implements Runnable {
 
     Container container = application.getMasterContainer();
 
-    final String containerManagerBindAddress = container.getContainerManagerAddress();
+    final String containerManagerBindAddress = container.getNodeId().toString();
 
     final YarnRPC rpc = YarnRPC.create(conf); // TODO: Don't create again and again.
 

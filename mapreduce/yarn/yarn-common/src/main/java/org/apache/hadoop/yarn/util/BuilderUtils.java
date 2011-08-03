@@ -145,7 +145,6 @@ public class BuilderUtils {
     container.setId(c.getId());
     container.setContainerToken(c.getContainerToken());
     container.setNodeId(c.getNodeId());
-    container.setContainerManagerAddress(c.getContainerManagerAddress());
     container.setNodeHttpAddress(c.getNodeHttpAddress());
     container.setResource(c.getResource());
     container.setState(c.getState());
@@ -168,7 +167,6 @@ public class BuilderUtils {
     Container container = recordFactory.newRecordInstance(Container.class);
     container.setId(containerId);
     container.setNodeId(nodeId);
-    container.setContainerManagerAddress(containerManagerAddress);
     container.setNodeHttpAddress(nodeHttpAddress);
     container.setResource(resource);
     container.setState(ContainerState.INITIALIZING);

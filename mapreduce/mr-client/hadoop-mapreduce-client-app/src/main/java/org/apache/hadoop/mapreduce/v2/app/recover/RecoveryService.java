@@ -359,7 +359,6 @@ public class RecoveryService extends CompositeService implements Recovery {
       container.setId(cId);
       container.setNodeId(recordFactory
           .newRecordInstance(NodeId.class));
-      container.setContainerManagerAddress("localhost");
       container.setContainerToken(null);
       container.setNodeHttpAddress(attemptInfo.getHostname() + ":" + 
           attemptInfo.getHttpPort());

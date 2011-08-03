@@ -45,12 +45,11 @@ message ContainerTokenProto {
 message ContainerProto {
   optional ContainerIdProto id = 1;
   optional NodeIdProto nodeId = 2;
-  optional string container_manager_address = 3;
-  optional string node_http_address = 4;
-  optional ResourceProto resource = 5;
-  optional ContainerStateProto state = 6;
-  optional ContainerTokenProto container_token = 7;
-  optional ContainerStatusProto container_status = 8;
+  optional string node_http_address = 3;
+  optional ResourceProto resource = 4;
+  optional ContainerStateProto state = 5;
+  optional ContainerTokenProto container_token = 6;
+  optional ContainerStatusProto container_status = 7;
 }
 
 enum ApplicationStateProto {
@@ -122,7 +121,8 @@ message ApplicationReportProto {
 }
 
 message NodeIdProto {
-  optional int32 id = 1;
+  optional string host = 1;
+  optional int32 port = 2;
 }
 
 message NodeHealthStatusProto {
@@ -132,13 +132,12 @@ message NodeHealthStatusProto {
 }
 
 message NodeReportProto {
-  optional string nodeAddress = 1;
+  optional NodeIdProto nodeId = 1;
   optional string httpAddress = 2;
   optional string rackName = 3;
   optional ResourceProto used = 4;
   optional ResourceProto capability = 5;
   optional int32 numContainers = 6;
-  optional NodeIdProto nodeId = 7;
   optional NodeHealthStatusProto node_health_status = 8;
 }
 
