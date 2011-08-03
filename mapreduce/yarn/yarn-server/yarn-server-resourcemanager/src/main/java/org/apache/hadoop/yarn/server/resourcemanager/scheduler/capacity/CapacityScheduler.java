@@ -606,7 +606,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
   }
 
   private synchronized void removeNode(RMNode nodeInfo) {
-    SchedulerNode node = this.nodes.remove(nodeInfo.getNodeID());
+    SchedulerNode node = this.nodes.get(nodeInfo.getNodeID());
     Resources.subtractFrom(clusterResource, nodeInfo.getTotalCapability());
     --numNodeManagers;
 
@@ -621,7 +621,8 @@ implements ResourceScheduler, CapacitySchedulerContext {
     if (reservedContainer != null) {
       completedContainer(reservedContainer, RMContainerEventType.KILL);
     }
-    
+
+    this.nodes.remove(nodeInfo.getNodeID());
     LOG.info("Removed node " + nodeInfo.getNodeAddress() + 
         " clusterResource: " + clusterResource);
   }
