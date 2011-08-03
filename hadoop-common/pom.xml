@@ -250,7 +250,7 @@
           <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>
           <argLine>-Xmx1024m</argLine>
           <environmentVariables>
-            <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/native/lib</LD_LIBRARY_PATH>
+            <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib</LD_LIBRARY_PATH>
           </environmentVariables>
           <systemPropertyVariables>
 
