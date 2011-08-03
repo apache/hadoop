@@ -103,7 +103,8 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   @SuppressWarnings("unchecked")
   protected void dispatch(Event event) {
     //all events go thru this loop
-    LOG.info("Dispatching the event " + event.toString());
+    LOG.info("Dispatching the event " + event.getClass().getName() + "."
+        + event.toString());
 
     Class<? extends Enum> type = event.getType().getDeclaringClass();
 

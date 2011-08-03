@@ -536,8 +536,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
   }
 
   private void processSingleCompletedContainer(Container container) {
-    CSApp application = getApplication(this.rmContext.getRMContainers().get(
-        container.getId()).getApplicationAttemptId());
+    CSApp application = getApplication(container.getId().getAppAttemptId());
 
     // this is possible, since an application can be removed from scheduler 
     // but the nodemanger is just updating about a completed container.
