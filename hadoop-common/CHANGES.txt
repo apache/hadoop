@@ -303,6 +303,9 @@ Trunk (unreleased changes)
     HADOOP-6671. Use maven for hadoop common builds. (Alejandro Abdelnur
     via tomwhite)
 
+    HADOOP-7502. Make generated sources IDE friendly.
+    (Alejandro Abdelnur via llu)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

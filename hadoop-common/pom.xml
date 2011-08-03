@@ -322,10 +322,10 @@
             </goals>
             <configuration>
               <target>
-                <mkdir dir="${project.build.directory}/generated-src/main/java"/>
+                <mkdir dir="${project.build.directory}/generated-sources/java"/>
                 <exec executable="sh">
                   <arg
-                      line="${basedir}/dev-support/saveVersion.sh ${project.version} ${project.build.directory}/generated-src/main/java"/>
+                      line="${basedir}/dev-support/saveVersion.sh ${project.version} ${project.build.directory}/generated-sources/java"/>
                 </exec>
               </target>
             </configuration>
@@ -339,19 +339,19 @@
             <configuration>
               <target>
 
-                <mkdir dir="${project.build.directory}/generated-src/test/java"/>
+                <mkdir dir="${project.build.directory}/generated-test-sources/java"/>
 
                 <taskdef name="recordcc" classname="org.apache.hadoop.record.compiler.ant.RccTask">
                   <classpath refid="maven.compile.classpath"/>
                 </taskdef>
-                <recordcc destdir="${project.build.directory}/generated-src/test/java">
+                <recordcc destdir="${project.build.directory}/generated-test-sources/java">
                   <fileset dir="${basedir}/src/test/ddl" includes="**/*.jr"/>
                 </recordcc>
 
                 <taskdef name="schema" classname="org.apache.avro.specific.SchemaTask">
                   <classpath refid="maven.test.classpath"/>
                 </taskdef>
-                <schema destdir="${project.build.directory}/generated-src/test/java">
+                <schema destdir="${project.build.directory}/generated-test-sources/java">
                   <fileset dir="${basedir}/src/test">
                     <include name="**/*.avsc"/>
                   </fileset>
@@ -360,7 +360,7 @@
                 <taskdef name="schema" classname="org.apache.avro.specific.ProtocolTask">
                   <classpath refid="maven.test.classpath"/>
                 </taskdef>
-                <schema destdir="${project.build.directory}/generated-src/test/java">
+                <schema destdir="${project.build.directory}/generated-test-sources/java">
                   <fileset dir="${basedir}/src/test">
                     <include name="**/*.avpr"/>
                   </fileset>
@@ -403,7 +403,7 @@
             </goals>
             <configuration>
               <sources>
-                <source>${project.build.directory}/generated-src/main/java</source>
+                <source>${project.build.directory}/generated-sources/java</source>
               </sources>
             </configuration>
           </execution>
@@ -415,7 +415,7 @@
             </goals>
             <configuration>
               <sources>
-                <source>${project.build.directory}/generated-src/test/java</source>
+                <source>${project.build.directory}/generated-test-sources/java</source>
               </sources>
             </configuration>
           </execution>
