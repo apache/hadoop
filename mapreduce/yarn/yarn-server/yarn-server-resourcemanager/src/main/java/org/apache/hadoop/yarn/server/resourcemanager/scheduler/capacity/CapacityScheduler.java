@@ -20,14 +20,10 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
@@ -38,14 +34,13 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.Lock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -58,14 +53,18 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRejectedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerExpiredSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -97,10 +96,10 @@ implements ResourceScheduler, CapacitySchedulerContext {
     }
   };
 
-  private final Comparator<CSApp> applicationComparator = 
-    new Comparator<CSApp>() {
+  private final Comparator<SchedulerApp> applicationComparator = 
+    new Comparator<SchedulerApp>() {
     @Override
-    public int compare(CSApp a1, CSApp a2) {
+    public int compare(SchedulerApp a1, SchedulerApp a2) {
       return a1.getApplicationId().getId() - a2.getApplicationId().getId();
     }
   };
@@ -111,7 +110,8 @@ implements ResourceScheduler, CapacitySchedulerContext {
 
   private Map<String, Queue> queues = new ConcurrentHashMap<String, Queue>();
 
-  private Map<NodeId, CSNode> csNodes = new ConcurrentHashMap<NodeId, CSNode>();
+  private Map<NodeId, SchedulerNode> nodes = 
+      new ConcurrentHashMap<NodeId, SchedulerNode>();
 
   private Resource clusterResource = 
     RecordFactoryProvider.getRecordFactory(null).newRecordInstance(Resource.class);
@@ -120,8 +120,8 @@ implements ResourceScheduler, CapacitySchedulerContext {
   private Resource minimumAllocation;
   private Resource maximumAllocation;
 
-  private Map<ApplicationAttemptId, CSApp> applications = Collections
-      .synchronizedMap(new TreeMap<ApplicationAttemptId, CSApp>());
+  private Map<ApplicationAttemptId, SchedulerApp> applications = 
+      new ConcurrentHashMap<ApplicationAttemptId, SchedulerApp>();
 
   private boolean initialized = false;
 
@@ -150,11 +150,11 @@ implements ResourceScheduler, CapacitySchedulerContext {
   }
 
   public synchronized Resource getUsedResource(NodeId nodeId) {
-    return csNodes.get(nodeId).getUsedResource();
+    return nodes.get(nodeId).getUsedResource();
   }
 
   public synchronized Resource getAvailableResource(NodeId nodeId) {
-    return csNodes.get(nodeId).getAvailableResource();
+    return nodes.get(nodeId).getAvailableResource();
   }
 
   public synchronized int getNumClusterNodes() {
@@ -316,19 +316,20 @@ implements ResourceScheduler, CapacitySchedulerContext {
 
     AppSchedulingInfo appSchedulingInfo = new AppSchedulingInfo(
         applicationAttemptId, queueName, user, null);
-    CSApp csApp = new CSApp(appSchedulingInfo, queue);
+    SchedulerApp SchedulerApp = 
+        new SchedulerApp(this.rmContext, appSchedulingInfo, queue);
 
     // Submit to the queue
     try {
-      queue.submitApplication(csApp, user, queueName);
+      queue.submitApplication(SchedulerApp, user, queueName);
     } catch (AccessControlException ace) {
       this.rmContext.getDispatcher().getEventHandler().handle(
-          new RMAppAttemptRejectedEvent(applicationAttemptId, StringUtils
-              .stringifyException(ace)));
+          new RMAppAttemptRejectedEvent(applicationAttemptId, 
+              ace.toString()));
       return;
     }
 
-    applications.put(applicationAttemptId, csApp);
+    applications.put(applicationAttemptId, SchedulerApp);
 
     LOG.info("Application Submission: " + applicationAttemptId + 
         ", user: " + user +
@@ -346,7 +347,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
     LOG.info("Application " + applicationAttemptId + " is done." +
     		" finalState=" + rmAppAttemptFinalState);
     
-    CSApp application = getApplication(applicationAttemptId);
+    SchedulerApp application = getApplication(applicationAttemptId);
 
     if (application == null) {
       //      throw new IOException("Unknown application " + applicationId + 
@@ -356,10 +357,14 @@ implements ResourceScheduler, CapacitySchedulerContext {
     }
     
     // Release all the running containers 
-    processReleasedContainers(application, application.getCurrentContainers());
+    for (RMContainer rmContainer : application.getLiveContainers()) {
+      completedContainer(rmContainer, RMContainerEventType.KILL);
+    }
     
      // Release all reserved containers
-    releaseReservedContainers(application);
+    for (RMContainer rmContainer : application.getAllReservedContainers()) {
+      completedContainer(rmContainer, RMContainerEventType.KILL);
+    }
     
     // Clean up pending requests, metrics etc.
     application.stop(rmAppAttemptFinalState);
@@ -386,7 +391,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
   public Allocation allocate(ApplicationAttemptId applicationAttemptId,
       List<ResourceRequest> ask, List<Container> release) {
 
-    CSApp application = getApplication(applicationAttemptId);
+    SchedulerApp application = getApplication(applicationAttemptId);
     if (application == null) {
       LOG.info("Calling allocate on removed " +
           "or non existant application " + applicationAttemptId);
@@ -395,6 +400,12 @@ implements ResourceScheduler, CapacitySchedulerContext {
     
     // Sanity check
     normalizeRequests(ask);
+
+    // Release containers
+    for (Container releasedContainer : release) {
+      completedContainer(getRMContainer(releasedContainer), 
+          RMContainerEventType.RELEASED);
+    }
 
     synchronized (application) {
 
@@ -465,154 +476,82 @@ implements ResourceScheduler, CapacitySchedulerContext {
         minMemory * ((memory/minMemory) + (memory%minMemory > 0 ? 1 : 0)));
   }
 
-  @Lock(CapacityScheduler.class)
-  private List<Container> getCompletedContainers(
-      Map<String, List<Container>> allContainers) {
-    if (allContainers == null) {
-      return new ArrayList<Container>();
-    }
-    List<Container> completedContainers = new ArrayList<Container>();
-    // Iterate through the running containers and update their status
-    for (Map.Entry<String, List<Container>> e : 
-      allContainers.entrySet()) {
-      for (Container c: e.getValue()) {
-        if (c.getState() == ContainerState.COMPLETE) {
-          completedContainers.add(c);
-        }
-      }
-    }
-    return completedContainers;
-  }
-
   private synchronized void nodeUpdate(RMNode nm, 
       Map<String,List<Container>> containers ) {
     LOG.info("nodeUpdate: " + nm + " clusterResources: " + clusterResource);
-    SchedulerNode node = this.csNodes.get(nm.getNodeID());
-    //TODO node.statusUpdate(containers);
+    
+    SchedulerNode node = getNode(nm.getNodeID());
+    for (List<Container> appContainers : containers.values()) {
+      for (Container container : appContainers) {
+        if (container.getState() == ContainerState.RUNNING) {
+          containerLaunchedOnNode(container, node);
+        } else { // has to be 'COMPLETE'
+          LOG.info("DEBUG --- Container FINISHED: " + container.getId());
+          completedContainer(getRMContainer(container), 
+              RMContainerEventType.FINISHED);
+        }
+      }
+    }
 
-    // Completed containers
-    processCompletedContainers(getCompletedContainers(containers));
-
-    // Assign new containers
+    // Assign new containers...
     // 1. Check for reserved applications
     // 2. Schedule if there are no reservations
 
-    CSNode csNode = this.csNodes.get(nm.getNodeID());
-
-    CSApp reservedApplication = csNode.getReservedApplication();
-    if (reservedApplication != null) {
+    RMContainer reservedContainer = node.getReservedContainer();
+    if (reservedContainer != null) {
+      SchedulerApp reservedApplication = 
+          getApplication(reservedContainer.getApplicationAttemptId());
+      
       // Try to fulfill the reservation
       LOG.info("Trying to fulfill reservation for application " + 
           reservedApplication.getApplicationId() + " on node: " + nm);
-      LeafQueue queue = ((LeafQueue)reservedApplication.getQueue());
-      Resource released = queue.assignContainers(clusterResource, csNode);
       
-      // Is the reservation necessary? If not, release the reservation
-      if (org.apache.hadoop.yarn.server.resourcemanager.resource.Resource.greaterThan(
-          released, org.apache.hadoop.yarn.server.resourcemanager.resource.Resource.NONE)) {
-        queue.completedContainer(clusterResource, null, released, reservedApplication);
-      }
+      LeafQueue queue = ((LeafQueue)reservedApplication.getQueue());
+      queue.assignContainers(clusterResource, node);
     }
 
     // Try to schedule more if there are no reservations to fulfill
-    if (csNode.getReservedApplication() == null) {
-      root.assignContainers(clusterResource, csNode);
+    if (node.getReservedContainer() == null) {
+      root.assignContainers(clusterResource, node);
     } else {
       LOG.info("Skipping scheduling since node " + nm + 
           " is reserved by application " + 
-          csNode.getReservedApplication().getApplicationId());
+          node.getReservedContainer().getContainerId().getAppId());
     }
 
   }
 
-  @Lock(CapacityScheduler.class)
-  private void killRunningContainers(List<Container> containers) {
-    for (Container container : containers) {
-      container.setState(ContainerState.COMPLETE);
-      LOG.info("Killing running container " + container.getId());
-      CSApp application = applications.get(container.getId().getAppId());
-      processReleasedContainers(application, Collections.singletonList(container));
+  private void containerLaunchedOnNode(Container container, SchedulerNode node) {
+    // Get the application for the finished container
+    ApplicationAttemptId applicationAttemptId = container.getId().getAppAttemptId();
+    SchedulerApp application = getApplication(applicationAttemptId);
+    if (application == null) {
+      LOG.info("Unknown application: " + applicationAttemptId + 
+          " launched container " + container.getId() +
+          " on node: " + node);
+      return;
     }
-  }
-  
-  @Lock(Lock.NoLock.class)
-  private void processCompletedContainers(
-      List<Container> completedContainers) {
-    for (Container container: completedContainers) {
-      processSingleCompletedContainer(container);
-    }
-  }
-
-  private void processSingleCompletedContainer(Container container) {
-    CSApp application = getApplication(container.getId().getAppAttemptId());
-
-    // this is possible, since an application can be removed from scheduler 
-    // but the nodemanger is just updating about a completed container.
-    if (application != null) {
-
-      // Inform the queue
-      LeafQueue queue = (LeafQueue)application.getQueue();
-      queue.completedContainer(clusterResource, container, 
-          container.getResource(), application);
-    }
-  }
-
-  @Lock(Lock.NoLock.class)
-  private synchronized void processReleasedContainers(CSApp application,
-      List<Container> releasedContainers) {
-
-    // Inform clusterTracker
-    List<Container> unusedContainers = new ArrayList<Container>();
-    for (Container container : releasedContainers) {
-      if (releaseContainer(
-          application.getApplicationId(), 
-          container)) {
-        unusedContainers.add(container);
-      }
-    }
-
-    // Update queue capacities
-    processCompletedContainers(unusedContainers);
-  }
-
-  @Lock(CapacityScheduler.class)
-  private void releaseReservedContainers(CSApp application) {
-    LOG.info("Releasing reservations for completed application: " + 
-        application.getApplicationId());
-    Queue queue = queues.get(application.getQueue().getQueueName());
-    Map<Priority, Set<CSNode>> reservations = application.getAllReservations();
-    for (Map.Entry<Priority, Set<CSNode>> e : reservations.entrySet()) {
-      Priority priority = e.getKey();
-      Set<CSNode> reservedNodes = new HashSet<CSNode>(e.getValue());
-      for (CSNode node : reservedNodes) {
-        Resource allocatedResource = 
-          application.getResourceRequest(priority, SchedulerNode.ANY).getCapability();
     
-        application.unreserveResource(node, priority);
-        node.unreserveResource(application, priority);
-        
-        queue.completedContainer(clusterResource, null, allocatedResource, application);
-      }
-    }
-  }
-  
-  @Lock(Lock.NoLock.class)
-  private CSApp getApplication(ApplicationAttemptId applicationAttemptId) {
-    return applications.get(applicationAttemptId);
+    application.containerLaunchedOnNode(container.getId());
   }
 
   @Override
-  public synchronized void handle(SchedulerEvent event) {
+  public void handle(SchedulerEvent event) {
     switch(event.getType()) {
     case NODE_ADDED:
+    {
       NodeAddedSchedulerEvent nodeAddedEvent = (NodeAddedSchedulerEvent)event;
       addNode(nodeAddedEvent.getAddedRMNode());
-      break;
+    }
+    break;
     case NODE_REMOVED:
+    {
       NodeRemovedSchedulerEvent nodeRemovedEvent = (NodeRemovedSchedulerEvent)event;
       removeNode(nodeRemovedEvent.getRemovedRMNode());
-      break;
+    }
+    break;
     case NODE_UPDATE:
+    {
       NodeUpdateSchedulerEvent nodeUpdatedEvent = (NodeUpdateSchedulerEvent)event;
       Map<ApplicationId, List<Container>> contAppMapping = nodeUpdatedEvent.getContainers();
       Map<String, List<Container>> conts = new HashMap<String, List<Container>>();
@@ -620,24 +559,37 @@ implements ResourceScheduler, CapacitySchedulerContext {
         conts.put(entry.getKey().toString(), entry.getValue());
       }
       nodeUpdate(nodeUpdatedEvent.getRMNode(), conts);
-      break;
+    }
+    break;
     case APP_ADDED:
+    {
       AppAddedSchedulerEvent appAddedEvent = (AppAddedSchedulerEvent)event;
       addApplication(appAddedEvent.getApplicationAttemptId(), appAddedEvent
           .getQueue(), appAddedEvent.getUser());
-      break;
+    }
+    break;
     case APP_REMOVED:
+    {
       AppRemovedSchedulerEvent appRemovedEvent = (AppRemovedSchedulerEvent)event;
       doneApplication(appRemovedEvent.getApplicationAttemptID(),
           appRemovedEvent.getFinalAttemptState());
-      break;
+    }
+    break;
+    case CONTAINER_EXPIRED:
+    {
+      ContainerExpiredSchedulerEvent containerExpiredEvent = 
+          (ContainerExpiredSchedulerEvent) event;
+      completedContainer(getRMContainer(containerExpiredEvent.getContainer()), 
+          RMContainerEventType.EXPIRE);
+    }
+    break;
     default:
       LOG.error("Invalid eventtype " + event.getType() + ". Ignoring!");
     }
   }
 
   private synchronized void addNode(RMNode nodeManager) {
-    this.csNodes.put(nodeManager.getNodeID(), new CSNode(nodeManager));
+    this.nodes.put(nodeManager.getNodeID(), new SchedulerNode(nodeManager));
     Resources.addTo(clusterResource, nodeManager.getTotalCapability());
     ++numNodeManagers;
     LOG.info("Added node " + nodeManager.getNodeAddress() + 
@@ -645,43 +597,86 @@ implements ResourceScheduler, CapacitySchedulerContext {
   }
 
   private synchronized void removeNode(RMNode nodeInfo) {
-    CSNode csNode = this.csNodes.remove(nodeInfo.getNodeID());
+    SchedulerNode node = this.nodes.remove(nodeInfo.getNodeID());
     Resources.subtractFrom(clusterResource, nodeInfo.getTotalCapability());
     --numNodeManagers;
 
     // Remove running containers
-    List<Container> runningContainers = null;//TODO = nodeInfo.getRunningContainers();
-    killRunningContainers(runningContainers);
+    List<RMContainer> runningContainers = node.getRunningContainers();
+    for (RMContainer container : runningContainers) {
+      completedContainer(container, RMContainerEventType.KILL);
+    }
     
     // Remove reservations, if any
-    CSApp reservedApplication = csNode.getReservedApplication();
-    if (reservedApplication != null) {
-      LeafQueue queue = ((LeafQueue)reservedApplication.getQueue());
-      Resource released = csNode.getReservedResource();
-      queue.completedContainer(clusterResource, null, released, reservedApplication);
+    RMContainer reservedContainer = node.getReservedContainer();
+    if (reservedContainer != null) {
+      completedContainer(reservedContainer, RMContainerEventType.KILL);
     }
     
     LOG.info("Removed node " + nodeInfo.getNodeAddress() + 
         " clusterResource: " + clusterResource);
   }
   
-  private synchronized boolean releaseContainer(ApplicationId applicationId, 
-      Container container) {
-    // Reap containers
-    LOG.info("Application " + applicationId + " released container " + container);
-    csNodes.get(container.getNodeId()).releaseContainer(container);
-    return true;
+  @Lock(CapacityScheduler.class)
+  private synchronized void completedContainer(RMContainer rmContainer, 
+      RMContainerEventType event) {
+    if (rmContainer == null) {
+      LOG.info("Null container completed...");
+      return;
+    }
+    
+    Container container = rmContainer.getContainer();
+    
+    // Get the application for the finished container
+    ApplicationAttemptId applicationAttemptId = container.getId().getAppAttemptId();
+    SchedulerApp application = getApplication(applicationAttemptId);
+    if (application == null) {
+      LOG.info("Container " + container + " of" +
+      		" unknown application " + applicationAttemptId + 
+          " completed with event " + event);
+      return;
+    }
+    
+    // Get the node on which the container was allocated
+    SchedulerNode node = getNode(container.getNodeId());
+    
+    // Inform the queue
+    LeafQueue queue = (LeafQueue)application.getQueue();
+    queue.completedContainer(clusterResource, application, node, 
+        rmContainer, event);
+
+    LOG.info("Application " + applicationAttemptId + 
+        " released container " + container.getId() +
+        " on node: " + node + 
+        " with event: " + event);
+  }
+
+  @Lock(Lock.NoLock.class)
+  private SchedulerApp getApplication(ApplicationAttemptId applicationAttemptId) {
+    return applications.get(applicationAttemptId);
+  }
+
+  @Lock(Lock.NoLock.class)
+  private SchedulerNode getNode(NodeId nodeId) {
+    return nodes.get(nodeId);
+  }
+
+  private RMContainer getRMContainer(Container container) {
+    ContainerId containerId = container.getId();
+    SchedulerApp application = 
+        getApplication(container.getId().getAppAttemptId());
+    return (application == null) ? null : application.getRMContainer(containerId);
   }
 
   @Override
   @Lock(Lock.NoLock.class)
   public void recover(RMState state) throws Exception {
-    // TODO: VINDOKVFIXME
+    // TODO: VINDOKVFIXME recovery
 //    applications.clear();
 //    for (Map.Entry<ApplicationId, ApplicationInfo> entry : state.getStoredApplications().entrySet()) {
 //      ApplicationId appId = entry.getKey();
 //      ApplicationInfo appInfo = entry.getValue();
-//      CSApp app = applications.get(appId);
+//      SchedulerApp app = applications.get(appId);
 //      app.allocate(appInfo.getContainers());
 //      for (Container c: entry.getValue().getContainers()) {
 //        Queue queue = queues.get(appInfo.getApplicationSubmissionContext().getQueue());
@@ -692,7 +687,9 @@ implements ResourceScheduler, CapacitySchedulerContext {
 
   @Override
   public SchedulerNodeReport getNodeReport(NodeId nodeId) {
-    // TODO Auto-generated method stub
-    return null;
+    SchedulerNode node = getNode(nodeId);
+    return new SchedulerNodeReport(
+        node.getUsedResource(), node.getNumContainers());
   }
+  
 }

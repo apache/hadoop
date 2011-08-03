@@ -36,7 +36,6 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -46,7 +45,11 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 
 @Private
 @Evolving
@@ -396,7 +399,7 @@ public class ParentQueue implements Queue {
   }
 
   @Override
-  public void submitApplication(CSApp application, String user,
+  public void submitApplication(SchedulerApp application, String user,
       String queue) throws AccessControlException {
     
     synchronized (this) {
@@ -428,7 +431,7 @@ public class ParentQueue implements Queue {
     }
   }
 
-  private synchronized void addApplication(CSApp application, 
+  private synchronized void addApplication(SchedulerApp application, 
       String user) {
   
     ++numApplications;
@@ -441,7 +444,7 @@ public class ParentQueue implements Queue {
   }
   
   @Override
-  public void finishApplication(CSApp application, String queue) {
+  public void finishApplication(SchedulerApp application, String queue) {
     
     synchronized (this) {
       removeApplication(application, application.getUser());
@@ -453,7 +456,7 @@ public class ParentQueue implements Queue {
     }
   }
 
-  public synchronized void removeApplication(CSApp application, 
+  public synchronized void removeApplication(SchedulerApp application, 
       String user) {
     
     --numApplications;
@@ -475,7 +478,7 @@ public class ParentQueue implements Queue {
 
   @Override
   public synchronized Resource assignContainers(
-      Resource clusterResource, CSNode node) {
+      Resource clusterResource, SchedulerNode node) {
     Resource assigned = Resources.createResource(0);
 
     while (canAssign(node)) {
@@ -539,14 +542,14 @@ public class ParentQueue implements Queue {
 
   }
   
-  private boolean canAssign(CSNode node) {
-    return (node.getReservedApplication() == null) && 
+  private boolean canAssign(SchedulerNode node) {
+    return (node.getReservedContainer() == null) && 
         Resources.greaterThanOrEqual(node.getAvailableResource(), 
                                      minimumAllocation);
   }
   
   synchronized Resource assignContainersToChildQueues(Resource cluster, 
-      CSNode node) {
+      SchedulerNode node) {
     Resource assigned = Resources.createResource(0);
     
     printChildQueues();
@@ -588,13 +591,14 @@ public class ParentQueue implements Queue {
   
   @Override
   public void completedContainer(Resource clusterResource,
-      Container container, Resource containerResource, 
-      CSApp application) {
+      SchedulerApp application, SchedulerNode node, 
+      RMContainer rmContainer, RMContainerEventType event) {
     if (application != null) {
       // Careful! Locking order is important!
       // Book keeping
       synchronized (this) {
-        releaseResource(clusterResource, containerResource);
+        releaseResource(clusterResource, 
+            rmContainer.getContainer().getResource());
 
         LOG.info("completedContainer" +
             " queue=" + getQueueName() + 
@@ -605,8 +609,8 @@ public class ParentQueue implements Queue {
 
       // Inform the parent
       if (parent != null) {
-        parent.completedContainer(clusterResource, container, 
-            containerResource, application);
+        parent.completedContainer(clusterResource, application, 
+            node, rmContainer, event);
       }    
     }
   }
@@ -646,7 +650,7 @@ public class ParentQueue implements Queue {
   
   @Override
   public void recoverContainer(Resource clusterResource,
-      CSApp application, Container container) {
+      SchedulerApp application, Container container) {
     // Careful! Locking order is important! 
     synchronized (this) {
       allocateResource(clusterResource, container.getResource());

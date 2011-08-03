@@ -8,6 +8,7 @@ public enum RMContainerEventType {
   // Source: SchedulerApp
   ACQUIRED,
   KILL, // Also from Node on NodeRemoval
+  RESERVED,
 
   LAUNCHED,
   FINISHED,

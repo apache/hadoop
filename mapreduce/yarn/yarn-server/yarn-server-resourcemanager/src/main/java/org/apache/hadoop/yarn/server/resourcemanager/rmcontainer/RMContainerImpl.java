@@ -11,6 +11,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAcquiredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAllocatedEvent;
@@ -36,6 +38,19 @@ public class RMContainerImpl implements RMContainer {
         RMContainerEventType.START, new ContainerStartedTransition())
     .addTransition(RMContainerState.NEW, RMContainerState.KILLED,
         RMContainerEventType.KILL)
+    .addTransition(RMContainerState.NEW, RMContainerState.RESERVED,
+        RMContainerEventType.RESERVED, new ContainerReservedTransition())
+
+    // Transitions from RESERVED state
+    .addTransition(RMContainerState.RESERVED, RMContainerState.RESERVED, 
+        RMContainerEventType.RESERVED, new ContainerReservedTransition())
+    .addTransition(RMContainerState.RESERVED, RMContainerState.ALLOCATED, 
+        RMContainerEventType.START, new ContainerStartedTransition())
+    .addTransition(RMContainerState.RESERVED, RMContainerState.KILLED, 
+        RMContainerEventType.KILL) // nothing to do
+    .addTransition(RMContainerState.RESERVED, RMContainerState.RELEASED, 
+        RMContainerEventType.RELEASED) // nothing to do
+       
 
     // Transitions from ALLOCATED state
     .addTransition(RMContainerState.ALLOCATED, RMContainerState.ACQUIRED,
@@ -95,6 +110,10 @@ public class RMContainerImpl implements RMContainer {
   private final EventHandler eventHandler;
   private final ContainerAllocationExpirer containerAllocationExpirer;
 
+  private Resource reservedResource;
+  private NodeId reservedNode;
+  private Priority reservedPriority;
+
   public RMContainerImpl(Container container,
       ApplicationAttemptId appAttemptId, NodeId nodeId,
       EventHandler handler,
@@ -139,6 +158,21 @@ public class RMContainerImpl implements RMContainer {
   }
 
   @Override
+  public Resource getReservedResource() {
+    return reservedResource;
+  }
+
+  @Override
+  public NodeId getReservedNode() {
+    return reservedNode;
+  }
+
+  @Override
+  public Priority getReservedPriority() {
+    return reservedPriority;
+  }
+  
+  @Override
   public void handle(RMContainerEvent event) {
     LOG.info("Processing " + event.getContainerId() + " of type " + event.getType());
     try {
@@ -171,6 +205,19 @@ public class RMContainerImpl implements RMContainer {
     }
   }
 
+  private static final class ContainerReservedTransition extends
+  BaseTransition {
+
+    @Override
+    public void transition(RMContainerImpl container, RMContainerEvent event) {
+      RMContainerReservedEvent e = (RMContainerReservedEvent)event;
+      container.reservedResource = e.getReservedResource();
+      container.reservedNode = e.getReservedNode();
+      container.reservedPriority = e.getReservedPriority();
+    }
+  }
+
+
   private static final class ContainerStartedTransition extends
       BaseTransition {
 
@@ -179,7 +226,7 @@ public class RMContainerImpl implements RMContainer {
       container.eventHandler.handle(new RMAppAttemptContainerAllocatedEvent(
           container.appAttemptId, container.container));
     }
-}
+  }
 
   private static final class AcquiredTransition extends BaseTransition {
 

@@ -7,14 +7,17 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
 public class SchedulerNode {
@@ -29,9 +32,11 @@ public class SchedulerNode {
 
   private volatile int numContainers;
 
+  private RMContainer reservedContainer;
+  
   /* set of containers that are allocated containers */
-  private final Map<ContainerId, Container> launchedContainers = 
-    new TreeMap<ContainerId, Container>();
+  private final Map<ContainerId, RMContainer> launchedContainers = 
+    new TreeMap<ContainerId, RMContainer>();
   
   private final RMNode rmNode;
 
@@ -70,11 +75,12 @@ public class SchedulerNode {
    * @param containers allocated containers
    */
   public synchronized void allocateContainer(ApplicationId applicationId, 
-      Container container) {
+      RMContainer rmContainer) {
+    Container container = rmContainer.getContainer();
     deductAvailableResource(container.getResource());
     ++numContainers;
     
-    launchedContainers.put(container.getId(), container);
+    launchedContainers.put(container.getId(), rmContainer);
     LOG.info("Allocated container " + container.getId() + 
         " to node " + rmNode.getNodeAddress());
     
@@ -115,7 +121,6 @@ public class SchedulerNode {
     }
 
     /* remove the containers from the nodemanger */
-    
     launchedContainers.remove(container.getId());
     updateResource(container);
 
@@ -157,7 +162,63 @@ public class SchedulerNode {
     return numContainers;
   }
 
-  public synchronized List<Container> getRunningContainers() {
-    return new ArrayList<Container>(launchedContainers.values());
+  public synchronized List<RMContainer> getRunningContainers() {
+    return new ArrayList<RMContainer>(launchedContainers.values());
   }
+
+  public synchronized void reserveResource(
+      SchedulerApp application, Priority priority, 
+      RMContainer reservedContainer) {
+    // Check if it's already reserved
+    if (this.reservedContainer != null) {
+      // Sanity check
+      if (!reservedContainer.getContainer().getNodeId().equals(getNodeID())) {
+        throw new IllegalStateException("Trying to reserve" +
+            " container " + reservedContainer +
+            " on node " + reservedContainer.getReservedNode() + 
+            " when currently" + " reserved resource " + this.reservedContainer +
+            " on node " + this.reservedContainer.getReservedNode());
+      }
+      
+      // Cannot reserve more than one application on a given node!
+      if (!this.reservedContainer.getContainer().getId().getAppAttemptId().equals(
+          reservedContainer.getContainer().getId().getAppAttemptId())) {
+        throw new IllegalStateException("Trying to reserve" +
+        		" container " + reservedContainer + 
+            " for application " + application.getApplicationId() + 
+            " when currently" +
+            " reserved container " + this.reservedContainer +
+            " on node " + this);
+      }
+
+      LOG.info("Updated reserved container " + 
+          reservedContainer.getContainer().getId() + " on node " + 
+          this + " for application " + application);
+    } else {
+      LOG.info("Reserved container " + reservedContainer.getContainer().getId() + 
+          " on node " + this + " for application " + application);
+    }
+    this.reservedContainer = reservedContainer;
+  }
+
+  public synchronized void unreserveResource(SchedulerApp application) {
+    // Cannot unreserve for wrong application...
+    ApplicationAttemptId reservedApplication = 
+        reservedContainer.getContainer().getId().getAppAttemptId(); 
+    if (!reservedApplication.equals(
+        application.getApplicationAttemptId())) {
+      throw new IllegalStateException("Trying to unreserve " +  
+          " for application " + application.getApplicationId() + 
+          " when currently reserved " + 
+          " for application " + reservedApplication.getApplicationId() + 
+          " on node " + this);
+    }
+    
+    reservedContainer = null;
+  }
+
+  public synchronized RMContainer getReservedContainer() {
+    return reservedContainer;
+  }
+
 }
