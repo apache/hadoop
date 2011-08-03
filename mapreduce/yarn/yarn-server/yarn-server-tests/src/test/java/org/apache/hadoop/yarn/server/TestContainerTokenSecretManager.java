@@ -169,8 +169,8 @@ public class TestContainerTokenSecretManager {
     RMAppAttempt appAttempt = app == null ? null : app.getCurrentAppAttempt();
     RMAppAttemptState state = appAttempt == null ? null : appAttempt
         .getAppAttemptState();
-    while (app == null || appAttempt == null || state == null
-        || !state.equals(RMAppAttemptState.LAUNCHED) || waitCounter++ != 20) {
+    while ((app == null || appAttempt == null || state == null
+        || !state.equals(RMAppAttemptState.LAUNCHED)) && waitCounter++ != 20) {
       LOG.info("Waiting for applicationAttempt to be created.. ");
       Thread.sleep(1000);
       app = resourceManager.getRMContext().getRMApps().get(appID);

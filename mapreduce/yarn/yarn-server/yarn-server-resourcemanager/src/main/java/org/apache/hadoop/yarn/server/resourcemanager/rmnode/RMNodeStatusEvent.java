@@ -1,6 +1,5 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 

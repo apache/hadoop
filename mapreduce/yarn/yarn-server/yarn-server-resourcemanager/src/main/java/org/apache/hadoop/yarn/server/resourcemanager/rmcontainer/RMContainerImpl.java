@@ -48,6 +48,8 @@ public class RMContainerImpl implements RMContainer {
     // Transitions from ACQUIRED state
     .addTransition(RMContainerState.ACQUIRED, RMContainerState.RUNNING,
         RMContainerEventType.LAUNCHED, new LaunchedTransition())
+    .addTransition(RMContainerState.ACQUIRED, RMContainerState.COMPLETED,
+        RMContainerEventType.FINISHED, new ContainerFinishedAtAcquiredState())        
     .addTransition(RMContainerState.ACQUIRED, RMContainerState.RELEASED,
         RMContainerEventType.RELEASED, new KillTransition())
     .addTransition(RMContainerState.ACQUIRED, RMContainerState.EXPIRED,
@@ -213,6 +215,19 @@ public class RMContainerImpl implements RMContainer {
       // Inform Scheduler
       container.eventHandler.handle(new ContainerFinishedSchedulerEvent(
           container.container));
+    }
+  }
+
+  private static final class ContainerFinishedAtAcquiredState extends
+      FinishedTransition {
+    @Override
+    public void transition(RMContainerImpl container, RMContainerEvent event) {
+
+      // Unregister from containerAllocationExpirer.
+      container.containerAllocationExpirer.unregister(container.containerId);
+
+      // Inform AppAttempt, scheduler etc.
+      super.transition(container, event);
     }
   }
 

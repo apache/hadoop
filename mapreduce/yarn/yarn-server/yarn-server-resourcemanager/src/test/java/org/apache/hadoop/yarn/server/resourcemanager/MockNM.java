@@ -36,7 +36,8 @@ public class MockNM {
 
   public void containerStatus(Container container) throws Exception {
     Map<ApplicationId, List<Container>> conts = new HashMap<ApplicationId, List<Container>>();
-    conts.put(container.getId().getAppId(), Arrays.asList(new Container[]{}));
+    conts.put(container.getId().getAppId(), Arrays
+        .asList(new Container[] { container }));
     nodeHeartbeat(conts, true);
   }
 

@@ -223,7 +223,7 @@ public class TestNodeStatusUpdater {
         + nm.getServiceState());
 
     int waitCount = 0;
-    while (nm.getServiceState() == STATE.INITED || waitCount++ != 20) {
+    while (nm.getServiceState() == STATE.INITED && waitCount++ != 20) {
       LOG.info("Waiting for NM to start..");
       Thread.sleep(1000);
     }

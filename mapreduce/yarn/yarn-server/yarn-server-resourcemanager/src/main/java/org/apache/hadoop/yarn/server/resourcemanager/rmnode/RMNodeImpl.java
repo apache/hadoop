@@ -388,8 +388,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
           // Process running containers
           ContainerId containerId = remoteContainer.getId();
-          if (remoteContainer.getContainerStatus().getState() == ContainerState.RUNNING
-              || remoteContainer.getContainerStatus().getState() == ContainerState.INITIALIZING) {
+          if (remoteContainer.getState() == ContainerState.RUNNING
+              || remoteContainer.getState() == ContainerState.INITIALIZING) {
             if (!rmNode.launchedContainers.containsKey(containerId)) {
               // Just launched container. RM knows about it the first time.
               rmNode.launchedContainers.put(containerId, remoteContainer);
