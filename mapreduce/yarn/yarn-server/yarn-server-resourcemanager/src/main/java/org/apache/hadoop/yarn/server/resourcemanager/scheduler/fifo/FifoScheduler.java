@@ -60,6 +60,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
@@ -262,7 +263,7 @@ public class FifoScheduler implements ResourceScheduler {
   private synchronized void addApplication(ApplicationAttemptId appAttemptId,
       String queueName, String user) {
     AppSchedulingInfo appSchedulingInfo = new AppSchedulingInfo(
-        appAttemptId, null, queueName, user, null);
+        appAttemptId, queueName, user, null);
     SchedulerApp schedulerApp = new SchedulerApp(appSchedulingInfo,
         DEFAULT_QUEUE);
     applications.put(appAttemptId, schedulerApp);
@@ -275,7 +276,8 @@ public class FifoScheduler implements ResourceScheduler {
   }
 
   private synchronized void doneApplication(
-      ApplicationAttemptId applicationAttemptId, boolean finishApplication)
+      ApplicationAttemptId applicationAttemptId,
+      RMAppAttemptState rmAppAttemptFinalState)
       throws IOException {
     SchedulerApp application = getApplication(applicationAttemptId);
     if (application == null) {
@@ -284,12 +286,10 @@ public class FifoScheduler implements ResourceScheduler {
     }
 
     // Clean up pending requests, metrics etc.
-    application.stop();
-    
-    if (finishApplication) {
-      // Remove the application
-      applications.remove(applicationAttemptId);
-    }
+    application.stop(rmAppAttemptFinalState);
+
+    // Remove the application
+    applications.remove(applicationAttemptId);
   }
 
   /**
@@ -548,8 +548,6 @@ public class FifoScheduler implements ResourceScheduler {
     applicationCompletedContainers(getCompletedContainers(containers));
 
     LOG.info("Node heartbeat " + rmNode.getNodeID() + " resource = " + node.getAvailableResource());
-    LOG.info("Node heartbeat " + rmNode.getNodeID() + " resource = " + node.getAvailableResource().getMemory());
-    LOG.info("=========Node heartbeat " + rmNode.getNodeID() + " resourcemimi = " + minimumAllocation.getMemory());
     if (Resources.greaterThanOrEqual(node.getAvailableResource(),
         minimumAllocation)) {
       assignContainers(node);
@@ -590,7 +588,8 @@ public class FifoScheduler implements ResourceScheduler {
     case APP_REMOVED:
       AppRemovedSchedulerEvent appRemovedEvent = (AppRemovedSchedulerEvent)event;
       try {
-        doneApplication(appRemovedEvent.getApplicationAttemptID(), true);
+        doneApplication(appRemovedEvent.getApplicationAttemptID(),
+            appRemovedEvent.getFinalAttemptState());
       } catch(IOException ie) {
         LOG.error("Unable to remove application "
             + appRemovedEvent.getApplicationAttemptID(), ie);

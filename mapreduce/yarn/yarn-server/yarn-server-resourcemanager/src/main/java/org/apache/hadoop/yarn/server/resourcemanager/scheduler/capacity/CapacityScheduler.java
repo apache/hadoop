@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
@@ -308,7 +309,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
     }
 
     AppSchedulingInfo appSchedulingInfo = new AppSchedulingInfo(
-        applicationAttemptId, null, queueName, user, null);
+        applicationAttemptId, queueName, user, null);
     CSApp csApp = new CSApp(appSchedulingInfo, queue);
 
     // Submit to the queue
@@ -334,9 +335,10 @@ implements ResourceScheduler, CapacitySchedulerContext {
   }
 
   private synchronized void doneApplication(
-      ApplicationAttemptId applicationAttemptId, boolean finishApplication) {
+      ApplicationAttemptId applicationAttemptId,
+      RMAppAttemptState rmAppAttemptFinalState) {
     LOG.info("Application " + applicationAttemptId + " is done." +
-    		" finish=" + finishApplication);
+    		" finalState=" + rmAppAttemptFinalState);
     
     CSApp application = getApplication(applicationAttemptId);
 
@@ -354,25 +356,20 @@ implements ResourceScheduler, CapacitySchedulerContext {
     releaseReservedContainers(application);
     
     // Clean up pending requests, metrics etc.
-    application.stop();
+    application.stop(rmAppAttemptFinalState);
     
-    /** The application can be retried. So only remove it from scheduler data
-     * structures if the finishApplication flag is set.
-     */
-    if (finishApplication) {
-      // Inform the queue
-      String queueName = application.getQueue().getQueueName();
-      Queue queue = queues.get(queueName);
-      if (!(queue instanceof LeafQueue)) {
-        LOG.error("Cannot finish application " + "from non-leaf queue: "
-            + queueName);
-      } else {
-        queue.finishApplication(application, queue.getQueueName());
-      }
-      
-      // Remove from our data-structure
-      applications.remove(applicationAttemptId);
+    // Inform the queue
+    String queueName = application.getQueue().getQueueName();
+    Queue queue = queues.get(queueName);
+    if (!(queue instanceof LeafQueue)) {
+      LOG.error("Cannot finish application " + "from non-leaf queue: "
+          + queueName);
+    } else {
+      queue.finishApplication(application, queue.getQueueName());
     }
+    
+    // Remove from our data-structure
+    applications.remove(applicationAttemptId);
   }
 
   @Override
@@ -621,7 +618,8 @@ implements ResourceScheduler, CapacitySchedulerContext {
       break;
     case APP_REMOVED:
       AppRemovedSchedulerEvent appRemovedEvent = (AppRemovedSchedulerEvent)event;
-      doneApplication(appRemovedEvent.getApplicationAttemptID(), true);
+      doneApplication(appRemovedEvent.getApplicationAttemptID(),
+          appRemovedEvent.getFinalAttemptState());
       break;
     case CONTAINER_FINISHED:
       ContainerFinishedSchedulerEvent containerFinishedEvent = (ContainerFinishedSchedulerEvent) event;

@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
 /**
@@ -78,17 +79,14 @@ public class AppSchedulingInfo {
   List<Container> completedContainers = new ArrayList<Container>();
   /* Allocated by scheduler */
   List<Container> allocated = new ArrayList<Container>();
-  ApplicationMaster master;
   boolean pending = true; // for app metrics
 
   public AppSchedulingInfo(ApplicationAttemptId appAttemptId,
-      ApplicationMaster master, String queueName, String user,
-      ApplicationStore store) {
+      String queueName, String user, ApplicationStore store) {
     this.applicationAttemptId = appAttemptId;
     this.applicationId = appAttemptId.getApplicationId();
     this.queueName = queueName;
     this.user = user;
-    this.master = master;
     this.store = store;
   }
 
@@ -106,10 +104,6 @@ public class AppSchedulingInfo {
 
   public String getUser() {
     return user;
-  }
-
-  public synchronized ApplicationState getState() {
-    return master.getState();
   }
 
   public synchronized boolean isPending() {
@@ -390,7 +384,7 @@ public class AppSchedulingInfo {
     }
   }
 
-  synchronized public void stop() {
+  synchronized public void stop(RMAppAttemptState rmAppAttemptFinalState) {
     // clear pending resources metrics for the application
     QueueMetrics metrics = queue.getMetrics();
     for (Map<String, ResourceRequest> asks : requests.values()) {
@@ -401,7 +395,7 @@ public class AppSchedulingInfo {
                 .getNumContainers()));
       }
     }
-    metrics.finishApp(this);
+    metrics.finishApp(this, rmAppAttemptFinalState);
     
     // Clear requests themselves
     clearRequests();

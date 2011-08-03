@@ -99,6 +99,8 @@ AMRMProtocol, EventHandler<ApplicationMasterServiceEvent> {
       conf.get(YarnConfiguration.SCHEDULER_ADDRESS,
           YarnConfiguration.DEFAULT_SCHEDULER_BIND_ADDRESS);
     masterServiceAddress =  NetUtils.createSocketAddr(bindAddress);
+    this.rmContext.getDispatcher().register(
+        ApplicationMasterServiceEventType.class, this);
     super.init(conf);
   }
 

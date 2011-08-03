@@ -24,6 +24,8 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.ams.ApplicationMasterServiceEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.ams.ApplicationMasterServiceEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
@@ -102,7 +104,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
 
        // Transitions from NEW State
       .addTransition(RMAppAttemptState.NEW, RMAppAttemptState.SUBMITTED,
-          RMAppAttemptEventType.START, new AddToSchedulerTransition())
+          RMAppAttemptEventType.START, new AttemptStartedTransition())
       .addTransition(RMAppAttemptState.NEW, RMAppAttemptState.KILLED,
           RMAppAttemptEventType.KILL)
 
@@ -113,7 +115,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
           RMAppAttemptEventType.APP_ACCEPTED, new ScheduleTransition())
       .addTransition(RMAppAttemptState.SUBMITTED, RMAppAttemptState.KILLED,
           RMAppAttemptEventType.KILL,
-          new BaseFinalTransition(RMAppEventType.ATTEMPT_KILLED))
+          new BaseFinalTransition(RMAppAttemptState.KILLED))
 
        // Transitions from SCHEDULED State
       .addTransition(RMAppAttemptState.SCHEDULED,
@@ -122,7 +124,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
           new AMContainerAllocatedTransition())
       .addTransition(RMAppAttemptState.SCHEDULED, RMAppAttemptState.KILLED,
           RMAppAttemptEventType.KILL,
-          new BaseFinalTransition(RMAppEventType.ATTEMPT_KILLED))
+          new BaseFinalTransition(RMAppAttemptState.KILLED))
 
        // Transitions from ALLOCATED State
       .addTransition(RMAppAttemptState.ALLOCATED, RMAppAttemptState.LAUNCHED,
@@ -141,10 +143,10 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       .addTransition(
           RMAppAttemptState.LAUNCHED, RMAppAttemptState.FAILED,
           RMAppAttemptEventType.EXPIRE,
-          new FinalTransition(RMAppEventType.ATTEMPT_FAILED))
+          new FinalTransition(RMAppAttemptState.FAILED))
       .addTransition(RMAppAttemptState.LAUNCHED, RMAppAttemptState.KILLED,
           RMAppAttemptEventType.KILL,
-          new FinalTransition(RMAppEventType.ATTEMPT_KILLED))
+          new FinalTransition(RMAppAttemptState.KILLED))
 
        // Transitions from RUNNING State
       .addTransition(RMAppAttemptState.RUNNING, RMAppAttemptState.FINISHED,
@@ -162,11 +164,11 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       .addTransition(
           RMAppAttemptState.RUNNING, RMAppAttemptState.FAILED,
           RMAppAttemptEventType.EXPIRE,
-          new FinalTransition(RMAppEventType.ATTEMPT_FAILED))
+          new FinalTransition(RMAppAttemptState.FAILED))
       .addTransition(
           RMAppAttemptState.RUNNING, RMAppAttemptState.KILLED,
           RMAppAttemptEventType.KILL,
-          new FinalTransition(RMAppEventType.ATTEMPT_KILLED))
+          new FinalTransition(RMAppAttemptState.KILLED))
 
       // Transitions from FAILED State
       .addTransition(RMAppAttemptState.FAILED, RMAppAttemptState.FAILED,
@@ -389,10 +391,15 @@ public class RMAppAttemptImpl implements RMAppAttempt {
     
   }
 
-  private static final class AddToSchedulerTransition extends BaseTransition {
+  private static final class AttemptStartedTransition extends BaseTransition {
     @Override
     public void transition(RMAppAttemptImpl appAttempt,
         RMAppAttemptEvent event) {
+
+      // Register with the ApplicationMasterService
+      appAttempt.eventHandler.handle(new ApplicationMasterServiceEvent(
+          appAttempt.applicationAttemptId,
+          ApplicationMasterServiceEventType.REGISTER));
 
       // Add the application to the scheduler
       appAttempt.eventHandler.handle(
@@ -455,22 +462,42 @@ public class RMAppAttemptImpl implements RMAppAttempt {
 
   private static class BaseFinalTransition extends BaseTransition {
 
-    private final RMAppEventType outgoingEvent;
+    private final RMAppAttemptState finalAttemptState;
 
-    public BaseFinalTransition(RMAppEventType outgoingEventToApp) {
-      this.outgoingEvent = outgoingEventToApp;
+    public BaseFinalTransition(RMAppAttemptState finalAttemptState) {
+      this.finalAttemptState = finalAttemptState;
     }
 
     @Override
     public void transition(RMAppAttemptImpl appAttempt,
         RMAppAttemptEvent event) {
 
+      // Tell the AMS
+      // Register with the ApplicationMasterService
+      appAttempt.eventHandler.handle(new ApplicationMasterServiceEvent(
+          appAttempt.applicationAttemptId,
+          ApplicationMasterServiceEventType.UNREGISTER));
+
       // Tell the application and the scheduler
+      RMAppEventType eventToApp = null;
+      switch (finalAttemptState) {
+      case FINISHED:
+        eventToApp = RMAppEventType.ATTEMPT_FINISHED;
+        break;
+      case KILLED:
+        eventToApp = RMAppEventType.ATTEMPT_KILLED;
+        break;
+      case FAILED:
+        eventToApp = RMAppEventType.ATTEMPT_FAILED;
+        break;
+      default:
+        LOG.info("Cannot get this state!! Error!!");
+        break;
+      }
       appAttempt.eventHandler.handle(new RMAppEvent(
-          appAttempt.applicationAttemptId.getApplicationId(),
-          this.outgoingEvent));
+          appAttempt.applicationAttemptId.getApplicationId(), eventToApp));
       appAttempt.eventHandler.handle(new AppRemovedSchedulerEvent(appAttempt
-          .getAppAttemptId()));
+          .getAppAttemptId(), finalAttemptState));
     }
   }
 
@@ -489,7 +516,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   private static final class LaunchFailedTransition extends BaseFinalTransition {
 
     public LaunchFailedTransition() {
-      super(RMAppEventType.ATTEMPT_FAILED);
+      super(RMAppAttemptState.FAILED);
     }
 
     @Override
@@ -510,7 +537,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   private static final class KillAllocatedAMTransition extends
       BaseFinalTransition {
     public KillAllocatedAMTransition() {
-      super(RMAppEventType.ATTEMPT_KILLED);
+      super(RMAppAttemptState.KILLED);
     }
 
     @Override
@@ -549,7 +576,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       BaseFinalTransition {
 
     public AMContainerCrashedTransition() {
-      super(RMAppEventType.ATTEMPT_FAILED);
+      super(RMAppAttemptState.FAILED);
     }
 
     @Override
@@ -571,8 +598,8 @@ public class RMAppAttemptImpl implements RMAppAttempt {
 
   private static class FinalTransition extends BaseFinalTransition {
 
-    public FinalTransition(RMAppEventType outgoingEventToApp) {
-      super(outgoingEventToApp);
+    public FinalTransition(RMAppAttemptState finalAttemptState) {
+      super(finalAttemptState);
     }
 
     @Override
@@ -636,7 +663,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   private static final class AMUnregisteredTransition extends FinalTransition {
 
     public AMUnregisteredTransition() {
-      super(RMAppEventType.ATTEMPT_FINISHED);
+      super(RMAppAttemptState.FINISHED);
     }
 
     @Override
@@ -671,7 +698,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       // the AMContainer, AppAttempt fails
       if (appAttempt.masterContainer.getId().equals(
           containerId)) {
-        new BaseFinalTransition(RMAppEventType.ATTEMPT_FAILED).transition(
+        new BaseFinalTransition(RMAppAttemptState.FAILED).transition(
             appAttempt, containerFinishedEvent);
         return RMAppAttemptState.FAILED;
       }

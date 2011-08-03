@@ -16,6 +16,7 @@ import org.apache.hadoop.metrics2.lib.MutableCounterInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.Self;
 import static org.apache.hadoop.yarn.server.resourcemanager.resource.Resources.*;
 
@@ -133,9 +134,9 @@ public class QueueMetrics {
     }
   }
 
-  public void finishApp(AppSchedulingInfo app) {
-    ApplicationState state = app.getState();
-    switch (state) {
+  public void finishApp(AppSchedulingInfo app,
+      RMAppAttemptState rmAppAttemptFinalState) {
+    switch (rmAppAttemptFinalState) {
       case KILLED: appsKilled.incr(); break;
       case FAILED: appsFailed.incr(); break;
       default: appsCompleted.incr();  break;
@@ -147,10 +148,10 @@ public class QueueMetrics {
     }
     QueueMetrics userMetrics = getUserMetrics(app.getUser());
     if (userMetrics != null) {
-      userMetrics.finishApp(app);
+      userMetrics.finishApp(app, rmAppAttemptFinalState);
     }
     if (parent != null) {
-      parent.finishApp(app);
+      parent.finishApp(app, rmAppAttemptFinalState);
     }
   }
 

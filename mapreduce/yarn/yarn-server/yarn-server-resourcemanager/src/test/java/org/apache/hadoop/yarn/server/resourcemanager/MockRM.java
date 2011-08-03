@@ -244,6 +244,10 @@ public class MockRM extends ResourceManager {
       public void start() {
         //override to not start rpc handler
       }
+      @Override
+      public void stop() {
+        // don't do anything
+      }
     };
   }
 
@@ -255,6 +259,10 @@ public class MockRM extends ResourceManager {
       public void start() {
         //override to not start rpc handler
       }
+      @Override
+      public void stop() {
+        // don't do anything
+      }
     };
   }
 
@@ -265,6 +273,10 @@ public class MockRM extends ResourceManager {
       @Override
       public void start() {
         //override to not start rpc handler
+      }
+      @Override
+      public void stop() {
+        // don't do anything
       }
     };
   }
@@ -282,6 +294,10 @@ public class MockRM extends ResourceManager {
       public void  handle(AMLauncherEvent appEvent) {
         //don't do anything
       }
+      @Override
+      public void stop() {
+        // don't do anything
+      }
     };
   }
 
@@ -291,6 +307,10 @@ public class MockRM extends ResourceManager {
       @Override
       public void start() {
         //override to not start rpc handler
+      }
+      @Override
+      public void stop() {
+        // don't do anything
       }
     };
   }

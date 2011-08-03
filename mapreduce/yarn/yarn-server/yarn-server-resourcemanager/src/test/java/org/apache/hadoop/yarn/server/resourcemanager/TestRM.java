@@ -29,6 +29,8 @@ public class TestRM {
     rm.registerAppAttempt(attempt.getAppAttemptId());
     rm.unregisterAppAttempt(attempt.getAppAttemptId());
     rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.FINISHED);
+
+    rm.stop();
   }
 
   public static void main(String[] args) throws Exception {

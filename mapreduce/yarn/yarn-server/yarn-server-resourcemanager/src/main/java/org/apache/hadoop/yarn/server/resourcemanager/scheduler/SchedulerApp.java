@@ -17,6 +17,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
 public class SchedulerApp {
@@ -98,8 +99,8 @@ public class SchedulerApp {
     return this.queue;
   }
 
-  public void stop() {
-    this.appSchedulingInfo.stop();
+  public void stop(RMAppAttemptState rmAppAttemptFinalState) {
+    this.appSchedulingInfo.stop(rmAppAttemptFinalState);
   }
 
   synchronized public void completedContainer(Container container, 
