@@ -24,7 +24,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -56,26 +55,6 @@ public class TestRMNMRPCResponseId {
     new ContainerTokenSecretManager();
   private NodeId nodeId;
 
-  private class InlineDispatcher extends AsyncDispatcher {
-    private class InlineEventHandler implements EventHandler {
-      private final InlineDispatcher dispatcher;
-      public InlineEventHandler(InlineDispatcher dispatcher) {
-        this.dispatcher = dispatcher;
-      }
-      @Override
-      public void handle(Event event) {
-        this.dispatcher.dispatch(event);
-      }
-    }
-    public void dispatch(Event event) {
-      super.dispatch(event);
-    }
-    @Override
-    public EventHandler getEventHandler() {
-      return new InlineEventHandler(this);
-    }
-  }
-  
   @Before
   public void setUp() {
     // Dispatcher that processes events inline
