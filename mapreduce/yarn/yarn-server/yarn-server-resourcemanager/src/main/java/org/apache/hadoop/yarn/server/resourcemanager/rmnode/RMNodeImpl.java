@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -379,28 +380,29 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         return RMNodeState.UNHEALTHY;
       }
 
-      Map<ApplicationId, List<Container>> appConts = statusEvent
+      Map<ApplicationId, List<Container>> remoteAppContainersMap = statusEvent
           .getContainersCollection();
-      for (List<Container> l : appConts.values()) {
-        for (Container cont : l) {
+      for (List<Container> remoteContainerList : remoteAppContainersMap
+          .values()) {
+        for (Container remoteContainer : remoteContainerList) {
 
           // Process running containers
-          ContainerId containerId = cont.getId();
-          if (cont.getContainerStatus().getState() == ContainerState.RUNNING
-              || cont.getContainerStatus().getState() == ContainerState.INITIALIZING) {
+          ContainerId containerId = remoteContainer.getId();
+          if (remoteContainer.getContainerStatus().getState() == ContainerState.RUNNING
+              || remoteContainer.getContainerStatus().getState() == ContainerState.INITIALIZING) {
             if (!rmNode.launchedContainers.containsKey(containerId)) {
-              rmNode.launchedContainers.put(containerId, cont);
+              // Just launched container. RM knows about it the first time.
+              rmNode.launchedContainers.put(containerId, remoteContainer);
               rmNode.context.getDispatcher().getEventHandler().handle(
                   new RMContainerEvent(containerId,
                       RMContainerEventType.LAUNCHED));
             }
           } else {
-
-            rmNode.launchedContainers.remove(containerId);
+            // A finished container
             // Send event to the finished container
             rmNode.context.getDispatcher().getEventHandler().handle(
-                new RMContainerEvent(containerId,
-                    RMContainerEventType.FINISHED));
+                new RMContainerFinishedEvent(containerId, remoteContainer
+                    .getContainerStatus()));
           }
         }
       }

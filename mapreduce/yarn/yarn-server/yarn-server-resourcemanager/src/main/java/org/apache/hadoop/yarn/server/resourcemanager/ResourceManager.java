@@ -437,7 +437,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
       resourceManager.start();
     } catch (Throwable e) {
       LOG.error("Error starting RM", e);
-    } finally {
       if (resourceManager != null) {
         resourceManager.stop();
       }

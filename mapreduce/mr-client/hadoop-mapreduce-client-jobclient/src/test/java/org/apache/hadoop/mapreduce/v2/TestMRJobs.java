@@ -281,11 +281,12 @@ public class TestMRJobs {
 
   protected Job runFailingMapperJob()
   throws IOException, InterruptedException, ClassNotFoundException {
-    mrCluster.getConfig().setInt(MRJobConfig.NUM_MAPS, 1);
-    mrCluster.getConfig().setInt("mapreduce.task.timeout", 10*1000);//reduce the timeout
-    mrCluster.getConfig().setInt(MRJobConfig.MAP_MAX_ATTEMPTS, 2); //reduce the number of attempts
+    Configuration myConf = new Configuration(mrCluster.getConfig());
+    myConf.setInt(MRJobConfig.NUM_MAPS, 1);
+    myConf.setInt("mapreduce.task.timeout", 10*1000);//reduce the timeout
+    myConf.setInt(MRJobConfig.MAP_MAX_ATTEMPTS, 2); //reduce the number of attempts
 
-    Job job = new Job(mrCluster.getConfig());
+    Job job = new Job(myConf);
 
     job.setJarByClass(FailingMapper.class);
     job.setJobName("failmapper");

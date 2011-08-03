@@ -165,7 +165,9 @@ public class MiniYARNCluster extends CompositeService {
         remoteLogDir.mkdir();
         LOG.info("Created logDir in " + logDir.getAbsolutePath());
         getConfig().set(NMConfig.NM_LOG_DIR, logDir.getAbsolutePath());
-        getConfig().set(NMConfig.REMOTE_USER_LOG_DIR, remoteLogDir.getAbsolutePath());
+        getConfig().set(NMConfig.REMOTE_USER_LOG_DIR,
+            remoteLogDir.getAbsolutePath());
+        getConfig().setInt(NMConfig.NM_VMEM_GB, 4); // By default AM + 2 containers
         nodeManager = new NodeManager() {
 
           @Override
