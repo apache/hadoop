@@ -13,7 +13,7 @@ import org.apache.hadoop.io.Writable;
  * 
  */
 public class NodeHealthStatus implements
-  org.apache.hadoop.yarn.server.api.records.NodeHealthStatus, Writable {
+  org.apache.hadoop.yarn.api.records.NodeHealthStatus, Writable {
 
   private boolean isNodeHealthy;
   private String healthReport;

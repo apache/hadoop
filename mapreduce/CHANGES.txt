@@ -4,7 +4,10 @@ Trunk (unreleased changes)
 
 
     MAPREDUCE-279
-    
+
+    MAPREDUCE-2773. server.api.records.NodeHealthStatus renamed but 
+    not updated in client NodeHealthStatus.java (Thomas Graves via mahadev)
+ 
     Refactor/Cleanup yarn ResourceManager for managing state via
     state-machines and making most of the component interactions as
     asynchronous. (vinodkv, sharad and acmurthy)
