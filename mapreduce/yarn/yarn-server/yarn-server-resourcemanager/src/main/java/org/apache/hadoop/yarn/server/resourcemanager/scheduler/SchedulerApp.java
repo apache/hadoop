@@ -141,7 +141,7 @@ public class SchedulerApp {
         " in state: " + container.getState());
     
     // Remove from the list of containers
-    liveContainers.remove(container.getContainer());
+    liveContainers.remove(container.getContainerId());
     
     // Update usage metrics 
     Resource containerResource = container.getContainer().getResource();
