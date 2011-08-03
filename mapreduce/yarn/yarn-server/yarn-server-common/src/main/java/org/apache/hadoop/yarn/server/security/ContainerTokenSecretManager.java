@@ -41,7 +41,7 @@ public class ContainerTokenSecretManager extends
   public SecretKey createAndGetSecretKey(CharSequence hostName) {
     String hostNameStr = hostName.toString();
     if (!this.secretkeys.containsKey(hostNameStr)) {
-      LOG.info("Creating secretKey for NM " + hostNameStr);
+      LOG.debug("Creating secretKey for NM " + hostNameStr);
       this.secretkeys.put(hostNameStr,
           createSecretKey("mySecretKey".getBytes()));
     }
@@ -55,8 +55,9 @@ public class ContainerTokenSecretManager extends
 
   @Override
   public byte[] createPassword(ContainerTokenIdentifier identifier) {
-    LOG.info("Creating password for " + identifier.getContainerID()
-        + " to be run on NM " + identifier.getNmHostName() + " ======= " + this.secretkeys.get(identifier.getNmHostName()));
+    LOG.debug("Creating password for " + identifier.getContainerID()
+        + " to be run on NM " + identifier.getNmHostName() + " "
+        + this.secretkeys.get(identifier.getNmHostName()));
     return createPassword(identifier.getBytes(),
         this.secretkeys.get(identifier.getNmHostName()));
   }
@@ -64,7 +65,7 @@ public class ContainerTokenSecretManager extends
   @Override
   public byte[] retrievePassword(ContainerTokenIdentifier identifier)
       throws org.apache.hadoop.security.token.SecretManager.InvalidToken {
-    LOG.info("Retrieving password for " + identifier.getContainerID()
+    LOG.debug("Retrieving password for " + identifier.getContainerID()
         + " to be run on NM " + identifier.getNmHostName());
     return createPassword(identifier.getBytes(),
         this.secretkeys.get(identifier.getNmHostName()));

@@ -66,7 +66,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
 
   @Override
   public void write(DataOutput out) throws IOException {
-    LOG.info("Writing ContainerTokenIdentifier to RPC layer");
+    LOG.debug("Writing ContainerTokenIdentifier to RPC layer");
     out.writeInt(this.containerId.getAppId().getId());
     out.writeInt(this.containerId.getId());
     // TODO: Cluster time-stamp?
