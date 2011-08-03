@@ -1,10 +1,12 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.EventHandler;
 
 public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent>{
@@ -24,6 +26,8 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent>{
   StringBuilder getDiagnostics();
 
   float getProgress();
+
+  Set<NodeId> getRanNodes();
 
   List<Container> pullJustFinishedContainers();
 

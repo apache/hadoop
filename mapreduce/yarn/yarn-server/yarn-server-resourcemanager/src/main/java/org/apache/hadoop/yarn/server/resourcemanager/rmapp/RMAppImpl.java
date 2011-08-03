@@ -1,8 +1,10 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -16,6 +18,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -25,6 +28,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
@@ -96,7 +100,7 @@ public class RMAppImpl implements RMApp {
 
      // Transitions from RUNNING state
     .addTransition(RMAppState.RUNNING, RMAppState.FINISHED,
-        RMAppEventType.ATTEMPT_FINISHED)
+        RMAppEventType.ATTEMPT_FINISHED, new FinalTransition())
     .addTransition(RMAppState.RUNNING,
         EnumSet.of(RMAppState.RESTARTING, RMAppState.FAILED),
         RMAppEventType.ATTEMPT_FAILED,
@@ -317,6 +321,21 @@ public class RMAppImpl implements RMApp {
   }
 
   @Override
+  public Set<NodeId> getRanNodes() {
+    this.readLock.lock();
+
+    try {
+      Set<NodeId> ranNodes = new HashSet<NodeId>();
+      for (RMAppAttempt attempt : attempts.values()) {
+        ranNodes.addAll(attempt.getRanNodes());
+      }
+      return ranNodes;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  @Override
   public void handle(RMAppEvent event) {
 
     this.writeLock.lock();
@@ -381,8 +400,19 @@ public class RMAppImpl implements RMApp {
     };
   }
 
-  private static final class AttemptFailedTransition implements
-      MultipleArcTransition<RMAppImpl, RMAppEvent, RMAppState> {
+  private static class FinalTransition extends RMAppTransition {
+    public void transition(RMAppImpl app, RMAppEvent event) {
+      Set<NodeId> ranNodes = app.getRanNodes();
+      for (NodeId nodeId : ranNodes) {
+        app.dispatcher.getEventHandler().handle(
+            new RMNodeCleanAppEvent(nodeId, app.applicationId));
+      }
+    };
+  }
+
+  private static final class AttemptFailedTransition extends FinalTransition 
+    implements
+      MultipleArcTransition<RMAppImpl, RMAppEvent, RMAppState>  {
 
     private final RMAppState initialState;
 

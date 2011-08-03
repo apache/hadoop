@@ -373,11 +373,12 @@ public class AppSchedulingInfo {
     for (Container container : containers) {
 
       allocated.add(container);
-      try {
+      //TODO: fixme sharad
+     /* try {
         store.storeContainer(container);
       } catch (IOException ie) {
         // TODO fix this. we shouldnt ignore
-      }
+      }*/
       LOG.debug("allocate: applicationId=" + applicationId + " container="
           + container.getId() + " host="
           + container.getNodeId().toString());

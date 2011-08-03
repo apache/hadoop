@@ -4,8 +4,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -16,6 +18,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -79,8 +82,13 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   private Map<ContainerId, ContainerId> liveContainers
     = new HashMap<ContainerId, ContainerId>();
 
-  private List<Container> newlyAllocatedContainers;
-  private List<ContainerId> justFinishedContainers;
+  //nodes on while this attempt's containers ran
+  private final Set<NodeId> ranNodes = 
+    new HashSet<NodeId>();
+  private final List<Container> newlyAllocatedContainers = 
+    new ArrayList<Container>();
+  private final List<ContainerId> justFinishedContainers = 
+    new ArrayList<ContainerId>();
   private Container masterContainer;
 
   private float progress = 0;
@@ -317,7 +325,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
     this.writeLock.lock();
 
     try {
-      return null;  // TODO: Should just be ContainerId 
+      return new ArrayList<Container>();  // TODO: Should just be ContainerId 
 //      List<Container> returnList = new ArrayList<Container>(
 //          this.justFinishedContainers.size());
 //      returnList.addAll(this.justFinishedContainers);
@@ -329,6 +337,11 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   }
 
   @Override
+  public Set<NodeId> getRanNodes() {
+    return ranNodes;
+  }
+
+  @Override
   public List<Container> pullNewlyAllocatedContainers() {
     this.writeLock.lock();
 
@@ -336,6 +349,10 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       List<Container> returnList = new ArrayList<Container>(
           this.newlyAllocatedContainers.size());
       returnList.addAll(this.newlyAllocatedContainers);
+      for (Container cont : newlyAllocatedContainers) {
+        ranNodes.add(cont.getNodeId());//add to the nodes set when these containers
+        //are pulled by AM
+      }
       this.newlyAllocatedContainers.clear();
       return returnList;
     } finally {

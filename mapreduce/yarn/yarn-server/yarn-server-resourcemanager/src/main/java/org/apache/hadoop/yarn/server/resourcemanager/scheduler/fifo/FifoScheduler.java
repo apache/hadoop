@@ -494,7 +494,7 @@ public class FifoScheduler implements ResourceScheduler {
         }
         containers.add(container);
       }
-      application.allocate(containers);
+      application.allocate(type, node, priority, request, containers);
       addAllocatedContainers(node, application.getApplicationAttemptId(),
           containers);
       Resources.addTo(usedResource,

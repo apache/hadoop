@@ -190,16 +190,15 @@ AMRMProtocol, EventHandler<ApplicationMasterServiceEvent> {
       throws YarnRemoteException {
 
     ApplicationAttemptId appAttemptId = request.getApplicationAttemptId();
-    ApplicationId applicationId = appAttemptId.getApplicationId();
 
     this.amLivelinessMonitor.receivedPing(appAttemptId);
 
     /* check if its in cache */
     AllocateResponse allocateResponse = recordFactory
         .newRecordInstance(AllocateResponse.class);
-    AMResponse lastResponse = responseMap.get(applicationId);
+    AMResponse lastResponse = responseMap.get(appAttemptId);
     if (lastResponse == null) {
-      LOG.error("Application doesnt exist in cache " + applicationId);
+      LOG.error("AppAttemptId doesnt exist in cache " + appAttemptId);
       allocateResponse.setAMResponse(reboot);
       return allocateResponse;
     }
@@ -208,7 +207,7 @@ AMRMProtocol, EventHandler<ApplicationMasterServiceEvent> {
       allocateResponse.setAMResponse(lastResponse);
       return allocateResponse;
     } else if (request.getResponseId() + 1 < lastResponse.getResponseId()) {
-      LOG.error("Invalid responseid from application " + applicationId);
+      LOG.error("Invalid responseid from appAttemptId " + appAttemptId);
       // Oh damn! Sending reboot isn't enough. RM state is corrupted. TODO:
       allocateResponse.setAMResponse(reboot);
       return allocateResponse;
@@ -237,7 +236,7 @@ AMRMProtocol, EventHandler<ApplicationMasterServiceEvent> {
                 RMContainerEventType.RELEASED));
       }
 
-      RMApp app = this.rmContext.getRMApps().get(applicationId);
+      RMApp app = this.rmContext.getRMApps().get(appAttemptId.getApplicationId());
       RMAppAttempt appAttempt = app.getRMAppAttempt(appAttemptId);
 
       // Get the list of finished containers.

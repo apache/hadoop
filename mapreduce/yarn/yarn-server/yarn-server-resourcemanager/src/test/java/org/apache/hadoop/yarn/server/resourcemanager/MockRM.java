@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
+import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
@@ -52,6 +53,8 @@ import org.apache.log4j.Logger;
 public class MockRM extends ResourceManager {
 
   private RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+  private Map<NodeId, Integer> responseIds = new HashMap<NodeId, Integer>();
+  private Map<ApplicationAttemptId, Integer> AMResponseIds = new HashMap<ApplicationAttemptId, Integer>();
 
   public MockRM() {
     this(new Configuration());
@@ -140,6 +143,7 @@ public class MockRM extends ResourceManager {
   //from AMS
   public void registerAppAttempt(ApplicationAttemptId attemptId) throws Exception {
     waitForState(attemptId, RMAppAttemptState.LAUNCHED);
+    AMResponseIds.put(attemptId, 0);
     RegisterApplicationMasterRequest req = recordFactory.newRecordInstance(RegisterApplicationMasterRequest.class);
     req.setApplicationAttemptId(attemptId);
     req.setHost("");
@@ -148,32 +152,51 @@ public class MockRM extends ResourceManager {
     masterService.registerApplicationMaster(req);
   }
 
-  public List<Container> allocateFromAM(ApplicationAttemptId attemptId, 
+  public List<Container> allocate(ApplicationAttemptId attemptId, 
       String host, int memory, int numContainers, 
       List<ContainerId> releases) throws Exception {
-    ResourceRequest req = recordFactory.newRecordInstance(ResourceRequest.class);
-    req.setHostName(host);
-    req.setNumContainers(numContainers);
-    Priority pri = recordFactory.newRecordInstance(Priority.class);
-    pri.setPriority(1);
-    req.setPriority(pri);
-    Resource capability = recordFactory.newRecordInstance(Resource.class);
-    capability.setMemory(memory);
-    req.setCapability(capability);
+    List reqs = createReq(host, memory, 1, numContainers);
     List<Container> toRelease = new ArrayList<Container>();
     for (ContainerId id : releases) {
       Container cont = recordFactory.newRecordInstance(Container.class);
       cont.setId(id);
       //TOOD: set all fields
     }
-    return allocateFromAM(attemptId, toRelease, 
-        Arrays.asList(new ResourceRequest[] {req}));
+    return allocate(attemptId, toRelease, reqs);
   }
 
-  public List<Container> allocateFromAM(ApplicationAttemptId attemptId, 
+  private List<ResourceRequest> createReq(String host, int memory, int priority, 
+      int containers) throws Exception {
+    ResourceRequest hostReq = createResourceReq(host, memory, priority, 
+        containers);
+    ResourceRequest rackReq = createResourceReq("default-rack", memory, 
+        priority, containers);
+    ResourceRequest offRackReq = createResourceReq("*", memory, priority, 
+        containers);
+    return Arrays.asList(new ResourceRequest[] {hostReq, rackReq, offRackReq});
+    
+  }
+  private ResourceRequest createResourceReq(String resource, int memory, int priority, 
+      int containers) throws Exception {
+    ResourceRequest req = recordFactory.newRecordInstance(ResourceRequest.class);
+    req.setHostName(resource);
+    req.setNumContainers(containers);
+    Priority pri = recordFactory.newRecordInstance(Priority.class);
+    pri.setPriority(1);
+    req.setPriority(pri);
+    Resource capability = recordFactory.newRecordInstance(Resource.class);
+    capability.setMemory(memory);
+    req.setCapability(capability);
+    return req;
+  }
+
+  public List<Container> allocate(ApplicationAttemptId attemptId, 
       List<Container> releases, List<ResourceRequest> resourceRequest) 
       throws Exception {
     AllocateRequest req = recordFactory.newRecordInstance(AllocateRequest.class);
+    int responseId = AMResponseIds.remove(attemptId) + 1;
+    AMResponseIds.put(attemptId, responseId);
+    req.setResponseId(responseId);
     req.setApplicationAttemptId(attemptId);
     req.addAllAsks(resourceRequest);
     req.addAllReleases(releases);
@@ -182,6 +205,7 @@ public class MockRM extends ResourceManager {
   }
 
   public void unregisterAppAttempt(ApplicationAttemptId attemptId) throws Exception {
+    AMResponseIds.remove(attemptId);
     waitForState(attemptId, RMAppAttemptState.RUNNING);
     FinishApplicationMasterRequest req = recordFactory.newRecordInstance(FinishApplicationMasterRequest.class);
     req.setAppAttemptId(attemptId);
@@ -211,17 +235,18 @@ public class MockRM extends ResourceManager {
     resource.setMemory(memory);
     req.setResource(resource);
     getResourceTrackerService().registerNodeManager(req);
+    responseIds.put(nodeId, 0);
   }
 
-  public void nodeHeartbeat(String nodeIdStr, boolean b) throws Exception {
+  public HeartbeatResponse nodeHeartbeat(String nodeIdStr, boolean b) throws Exception {
     String[] splits = nodeIdStr.split(":");
     NodeId nodeId = recordFactory.newRecordInstance(NodeId.class);
     nodeId.setHost(splits[0]);
     nodeId.setPort(Integer.parseInt(splits[1]));
-    nodeHeartbeat(nodeId, new HashMap<ApplicationId, List<Container>>(), b);
+    return nodeHeartbeat(nodeId, new HashMap<ApplicationId, List<Container>>(), b);
   }
 
-  public void nodeHeartbeat(NodeId nodeId, Map<ApplicationId, 
+  public HeartbeatResponse nodeHeartbeat(NodeId nodeId, Map<ApplicationId, 
       List<Container>> conts, boolean isHealthy) throws Exception {
     NodeHeartbeatRequest req = recordFactory.newRecordInstance(NodeHeartbeatRequest.class);
     NodeStatus status = recordFactory.newRecordInstance(NodeStatus.class);
@@ -234,9 +259,11 @@ public class MockRM extends ResourceManager {
     healthStatus.setIsNodeHealthy(isHealthy);
     healthStatus.setLastHealthReportTime(1);
     status.setNodeHealthStatus(healthStatus);
-    status.setResponseId(1);
+    int responseId = responseIds.remove(nodeId) + 1;
+    responseIds.put(nodeId, responseId);
+    status.setResponseId(responseId);
     req.setNodeStatus(status);
-    getResourceTrackerService().nodeHeartbeat(req);
+    return getResourceTrackerService().nodeHeartbeat(req).getHeartbeatResponse();
   }
 
   @Override

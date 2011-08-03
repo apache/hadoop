@@ -1,8 +1,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
+import java.util.Set;
+
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -37,4 +40,5 @@ public interface RMApp extends EventHandler<RMAppEvent>{
 
   StringBuilder getDiagnostics();
 
+  Set<NodeId> getRanNodes();
 }

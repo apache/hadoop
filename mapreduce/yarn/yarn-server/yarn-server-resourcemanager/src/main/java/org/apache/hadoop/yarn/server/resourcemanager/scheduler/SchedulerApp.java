@@ -8,7 +8,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -16,9 +15,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
 public class SchedulerApp {
 
@@ -81,12 +78,6 @@ public class SchedulerApp {
     return this.appSchedulingInfo.getResource(priority);
   }
 
-  public void allocate(NodeType type, SchedulerNode node, Priority priority,
-      ResourceRequest request, List<Container> containers) {
-    this.appSchedulingInfo
-        .allocate(type, node, priority, request, containers);
-  }
-
   public boolean isPending() {
     return this.appSchedulingInfo.isPending();
   }
@@ -113,7 +104,8 @@ public class SchedulerApp {
     Resources.subtractFrom(currentConsumption, containerResource);
   }
 
-  synchronized public void allocate(List<Container> containers) {
+  synchronized public void allocate(NodeType type, SchedulerNode node,
+      Priority priority, ResourceRequest request, List<Container> containers) {
     // Update consumption and track allocations
     for (Container container : containers) {
       Resources.addTo(currentConsumption, container.getResource());
@@ -121,6 +113,7 @@ public class SchedulerApp {
           + " container=" + container.getId() + " host="
           + container.getNodeId().toString());
     }
+    appSchedulingInfo.allocate(type, node, priority, request, containers);
   }
 
   public Resource getCurrentConsumption() {
@@ -133,8 +126,8 @@ public class SchedulerApp {
         Map<String, ResourceRequest> requests = getResourceRequests(priority);
         if (requests != null) {
           LOG.debug("showRequests:" + " application=" + getApplicationId() + 
-              " available=" + getHeadroom() + 
-              " current=" + currentConsumption);
+              " headRoom=" + getHeadroom() + 
+              " currentConsumption=" + currentConsumption.getMemory());
           for (ResourceRequest request : requests.values()) {
             LOG.debug("showRequests:" + " application=" + getApplicationId()
                 + " request=" + request);
