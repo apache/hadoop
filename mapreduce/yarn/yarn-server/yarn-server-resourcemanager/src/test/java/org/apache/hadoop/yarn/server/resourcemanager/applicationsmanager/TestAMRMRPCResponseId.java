@@ -42,10 +42,11 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
-import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.ams.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
@@ -83,13 +84,8 @@ public class TestAMRMRPCResponseId {
     }
 
     @Override
-    public void doneApplication(ApplicationId applicationId, boolean finishApplication)
-        throws IOException {
-    }
-
-    @Override
     public QueueInfo getQueueInfo(String queueName,
-        boolean includeApplications, boolean includeChildQueues,
+        boolean includeChildQueues,
         boolean recursive) throws IOException {
       return null;
     }
@@ -121,7 +117,7 @@ public class TestAMRMRPCResponseId {
   
   @Before
   public void setUp() {
-    context = new ResourceManager.RMContextImpl(new MemStore());
+    context = new RMContextImpl(new MemStore());
 
     context.getDispatcher().register(ApplicationEventType.class,
         new ResourceManager.ApplicationEventDispatcher(context));
@@ -132,7 +128,7 @@ public class TestAMRMRPCResponseId {
     Configuration conf = new Configuration();
     this.clientService = new ClientRMService(context, applicationsManager
         .getAmLivelinessMonitor(), applicationsManager
-        .getClientToAMSecretManager(), null, scheduler);
+        .getClientToAMSecretManager(), scheduler);
     this.clientService.init(conf);
     amService = new ApplicationMasterService(appTokenManager, scheduler,
         context);

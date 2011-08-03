@@ -18,18 +18,19 @@
 
 package org.apache.hadoop.yarn;
 
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.util.Records;
+
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 
 /**
  * Utilities to generate fake test apps
@@ -179,6 +180,13 @@ public class MockApps {
     ApplicationId id = Records.newRecord(ApplicationId.class);
     id.setClusterTimestamp(TS);
     id.setId(i);
+    return id;
+  }
+
+  public static ApplicationAttemptId newAppAttemptID(ApplicationId appId, int i) {
+    ApplicationAttemptId id = Records.newRecord(ApplicationAttemptId.class);
+    id.setApplicationId(appId);
+    id.setAttemptId(i);
     return id;
   }
 

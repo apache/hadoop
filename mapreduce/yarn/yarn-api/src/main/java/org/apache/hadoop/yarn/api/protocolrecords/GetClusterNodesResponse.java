@@ -2,9 +2,9 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 
 import java.util.List;
 
-import org.apache.hadoop.yarn.api.records.NodeManagerInfo;
+import org.apache.hadoop.yarn.api.records.NodeReport;
 
 public interface GetClusterNodesResponse {
-  List<NodeManagerInfo> getNodeManagerList();
-  void setNodeManagerList(List<NodeManagerInfo> nodeManagers);
+  List<NodeReport> getNodeReports();
+  void setNodeReports(List<NodeReport> nodeReports);
 }

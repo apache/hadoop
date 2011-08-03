@@ -21,12 +21,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 import java.io.IOException;
 
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
 
 public interface NodeStore {
-  public void storeNode(NodeManager node) throws IOException;
-  public void removeNode(NodeManager node) throws IOException;
+  public void storeNode(RMNode node) throws IOException;
+  public void removeNode(RMNode node) throws IOException;
   public NodeId getNextNodeId() throws IOException;
   public boolean isLoggable();
 }

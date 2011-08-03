@@ -20,6 +20,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
@@ -32,9 +33,10 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMLauncherEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
@@ -43,8 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.ClusterTracker;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.NodeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
@@ -60,7 +61,7 @@ import org.junit.Test;
 public class TestAMRestart {
   private static final Log LOG = LogFactory.getLog(TestAMRestart.class);
   ApplicationsManagerImpl appImpl;
-  RMContext asmContext = new ResourceManager.RMContextImpl(new MemStore());
+  RMContext asmContext = new RMContextImpl(new MemStore());
   ApplicationTokenSecretManager appTokenSecretManager = 
     new ApplicationTokenSecretManager();
   DummyResourceScheduler scheduler;
@@ -139,7 +140,7 @@ public class TestAMRestart {
   private class DummyResourceScheduler implements ResourceScheduler {
    
     @Override
-    public void removeNode(NodeInfo node) {
+    public void removeNode(RMNode node) {
     }
     
     @Override
@@ -147,6 +148,7 @@ public class TestAMRestart {
         List<ResourceRequest> ask, List<Container> release) throws IOException {
       Container container = recordFactory.newRecordInstance(Container.class);
       container.setContainerToken(recordFactory.newRecordInstance(ContainerToken.class));
+      container.setNodeId(recordFactory.newRecordInstance(NodeId.class));
       container.setContainerManagerAddress("localhost");
       container.setNodeHttpAddress("localhost:9999");
       container.setId(recordFactory.newRecordInstance(ContainerId.class));
@@ -178,12 +180,8 @@ public class TestAMRestart {
     }
 
     @Override
-    public void doneApplication(ApplicationId applicationId, boolean finishApplication)
-        throws IOException {
-    }
-    @Override
     public QueueInfo getQueueInfo(String queueName,
-        boolean includeApplications, boolean includeChildQueues,
+        boolean includeChildQueues,
         boolean recursive) throws IOException {
       return null;
     }
@@ -198,19 +196,19 @@ public class TestAMRestart {
         throws IOException {
     }
     @Override
-    public void addNode(NodeInfo nodeInfo) {
+    public void addNode(RMNode nodeInfo) {
     }
     @Override
     public void recover(RMState state) throws Exception {
     }
     @Override
     public void reinitialize(Configuration conf,
-        ContainerTokenSecretManager secretManager, ClusterTracker clusterTracker)
+        ContainerTokenSecretManager secretManager, RMContext rmContext)
         throws IOException {
     }
 
     @Override
-    public void nodeUpdate(NodeInfo nodeInfo,
+    public void nodeUpdate(RMNode nodeInfo,
         Map<String, List<Container>> containers) {      
     }
 
@@ -250,7 +248,7 @@ public class TestAMRestart {
 
     this.clientRMService = new ClientRMService(asmContext, appImpl
         .getAmLivelinessMonitor(), appImpl.getClientToAMSecretManager(),
-        null, scheduler); 
+        scheduler); 
     this.clientRMService.init(conf);
   }
 
@@ -258,7 +256,7 @@ public class TestAMRestart {
   public void tearDown() {
   }
 
-  private void waitForFailed(Application application, ApplicationState 
+  private void waitForFailed(AppAttempt application, ApplicationState 
       finalState) throws Exception {
     int count = 0;
     while(application.getState() != finalState && count < 10) {
@@ -281,7 +279,7 @@ public class TestAMRestart {
         .newRecordInstance(SubmitApplicationRequest.class);
     request.setApplicationSubmissionContext(subContext);
     clientRMService.submitApplication(request);
-    Application application = asmContext.getApplications().get(appID); 
+    AppAttempt application = asmContext.getApplications().get(appID); 
     synchronized (schedulerNotify) {
       while(schedulerNotify.get() == 0) {
         schedulerNotify.wait();

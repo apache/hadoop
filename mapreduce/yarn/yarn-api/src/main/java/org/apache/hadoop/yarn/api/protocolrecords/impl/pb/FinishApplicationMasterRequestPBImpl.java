@@ -2,12 +2,13 @@ package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
-import org.apache.hadoop.yarn.api.records.ApplicationMaster;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
-import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationMasterPBImpl;
-import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationMasterProto;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.FinishApplicationMasterRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.FinishApplicationMasterRequestProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterRequestProtoOrBuilder;
 
 
     
@@ -16,7 +17,7 @@ public class FinishApplicationMasterRequestPBImpl extends ProtoBase<FinishApplic
   FinishApplicationMasterRequestProto.Builder builder = null;
   boolean viaProto = false;
   
-  private ApplicationMaster applicationMaster = null;
+  private ApplicationAttemptId appAttemptId = null;
   
   
   public FinishApplicationMasterRequestPBImpl() {
@@ -36,8 +37,8 @@ public class FinishApplicationMasterRequestPBImpl extends ProtoBase<FinishApplic
   }
 
   private void mergeLocalToBuilder() {
-    if (this.applicationMaster != null) {
-      builder.setApplicationMaster(convertToProtoFormat(this.applicationMaster));
+    if (this.appAttemptId != null) {
+      builder.setApplicationAttemptId(convertToProtoFormat(this.appAttemptId));
     }
   }
 
@@ -58,32 +59,68 @@ public class FinishApplicationMasterRequestPBImpl extends ProtoBase<FinishApplic
     
   
   @Override
-  public ApplicationMaster getApplicationMaster() {
+  public ApplicationAttemptId getApplicationAttemptId() {
     FinishApplicationMasterRequestProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.applicationMaster != null) {
-      return this.applicationMaster;
+    if (this.appAttemptId != null) {
+      return this.appAttemptId;
     }
-    if (!p.hasApplicationMaster()) {
+    if (!p.hasApplicationAttemptId()) {
       return null;
     }
-    this.applicationMaster = convertFromProtoFormat(p.getApplicationMaster());
-    return this.applicationMaster;
+    this.appAttemptId = convertFromProtoFormat(p.getApplicationAttemptId());
+    return this.appAttemptId;
   }
 
   @Override
-  public void setApplicationMaster(ApplicationMaster applicationMaster) {
+  public void setAppAttemptId(ApplicationAttemptId applicationAttemptId) {
     maybeInitBuilder();
-    if (applicationMaster == null) 
-      builder.clearApplicationMaster();
-    this.applicationMaster = applicationMaster;
+    if (applicationAttemptId == null) 
+      builder.clearApplicationAttemptId();
+    this.appAttemptId = applicationAttemptId;
   }
 
-  private ApplicationMasterPBImpl convertFromProtoFormat(ApplicationMasterProto p) {
-    return new ApplicationMasterPBImpl(p);
+  @Override
+  public String getDiagnostics() {
+    FinishApplicationMasterRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getDiagnostics();
   }
 
-  private ApplicationMasterProto convertToProtoFormat(ApplicationMaster t) {
-    return ((ApplicationMasterPBImpl)t).getProto();
+  @Override
+  public void setDiagnostics(String diagnostics) {
+    maybeInitBuilder();
+    builder.setDiagnostics(diagnostics);
+  }
+
+  @Override
+  public String getTrackingUrl() {
+    FinishApplicationMasterRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getTrackingUrl();
+  }
+
+  @Override
+  public void setTrackingUrl(String url) {
+    maybeInitBuilder();
+    builder.setTrackingUrl(url);
+  }
+
+  @Override
+  public String getFinalState() {
+    FinishApplicationMasterRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getFinalState();
+  }
+
+  @Override
+  public void setFinalState(String state) {
+    maybeInitBuilder();
+    builder.setFinalState(state);
+  }
+
+  private ApplicationAttemptIdPBImpl convertFromProtoFormat(ApplicationAttemptIdProto p) {
+    return new ApplicationAttemptIdPBImpl(p);
+  }
+
+  private ApplicationAttemptIdProto convertToProtoFormat(ApplicationAttemptId t) {
+    return ((ApplicationAttemptIdPBImpl)t).getProto();
   }
 
 

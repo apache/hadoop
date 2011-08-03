@@ -33,15 +33,17 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMLauncherEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMFinishEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMFinishEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -63,7 +65,7 @@ public class TestApplicationMasterLauncher {
   Object doneLaunching = new Object();
   AtomicInteger launched = new AtomicInteger();
   AtomicInteger cleanedUp = new AtomicInteger();
-  private RMContext context = new ResourceManager.RMContextImpl(new MemStore());
+  private RMContext context = new RMContextImpl(new MemStore());
 
   private Configuration conf = new Configuration();
   
@@ -114,7 +116,7 @@ public class TestApplicationMasterLauncher {
     }
 
     @Override
-    protected Runnable createRunnableLauncher(Application masterInfo, 
+    protected Runnable createRunnableLauncher(AppAttempt masterInfo, 
         AMLauncherEventType event) {
       Runnable r = null;
       switch (event) {
@@ -154,7 +156,7 @@ public class TestApplicationMasterLauncher {
     submissionContext.getApplicationId().setClusterTimestamp(System.currentTimeMillis());
     submissionContext.getApplicationId().setId(1);
     submissionContext.setUser("dummyuser");
-    ApplicationImpl masterInfo = new ApplicationImpl(this.context,
+    AppAttemptImpl masterInfo = new AppAttemptImpl(this.context,
         this.conf, "dummyuser", submissionContext, "dummyclienttoken",
         StoreFactory.createVoidAppStore(), new AMLivelinessMonitor(context
             .getDispatcher().getEventHandler()));

@@ -1,17 +1,14 @@
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
-import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
-import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationStateProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
@@ -22,8 +19,6 @@ implements ApplicationReport {
   boolean viaProto = false;
 
   ApplicationId applicationId;
-  ApplicationStatus status;
-  Container masterContainer = null;
 
   public ApplicationReportPBImpl() {
     builder = ApplicationReportProto.newBuilder();
@@ -46,20 +41,6 @@ implements ApplicationReport {
     }
     this.applicationId = convertFromProtoFormat(p.getApplicationId());
     return this.applicationId;
-  }
-  
-  @Override
-  public Container getMasterContainer() {
-    if (this.masterContainer != null) {
-      return this.masterContainer;
-    }
-
-    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasMasterContainer()) {
-      return null;
-    }
-    this.masterContainer = convertFromProtoFormat(p.getMasterContainer());
-    return this.masterContainer;
   }
 
   @Override
@@ -123,20 +104,6 @@ implements ApplicationReport {
   }
 
   @Override
-  public ApplicationStatus getStatus() {
-    if (this.status != null) {
-      return this.status;
-    }
-
-    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasStatus()) {
-      return null;
-    }
-    this.status = convertFromProtoFormat(p.getStatus());
-    return this.status;
-  }
-
-  @Override
   public String getUser() {
     ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasUser()) {
@@ -161,14 +128,6 @@ implements ApplicationReport {
     if (applicationId == null)
       builder.clearStatus();
     this.applicationId = applicationId;
-  }
-
-  @Override
-  public void setMasterContainer(Container container) {
-    maybeInitBuilder();
-    if (container == null)
-      builder.clearMasterContainer();
-    this.masterContainer = container;
   }
 
   @Override
@@ -238,14 +197,6 @@ implements ApplicationReport {
   }
 
   @Override
-  public void setStatus(ApplicationStatus status) {
-    maybeInitBuilder();
-    if (status == null)
-      builder.clearStatus();
-    this.status = status;
-  }
-
-  @Override
   public void setUser(String user) {
     maybeInitBuilder();
     if (user == null) {
@@ -279,11 +230,6 @@ implements ApplicationReport {
             builder.getApplicationId())) {
       builder.setApplicationId(convertToProtoFormat(this.applicationId));
     }
-    if (this.status != null
-        && !((ApplicationStatusPBImpl) this.status).getProto().equals(
-            builder.getStatus())) {
-      builder.setStatus(convertToProtoFormat(this.status));
-    }
   }
 
   private void mergeLocalToProto() {
@@ -303,15 +249,6 @@ implements ApplicationReport {
 
   private ApplicationIdProto convertToProtoFormat(ApplicationId t) {
     return ((ApplicationIdPBImpl) t).getProto();
-  }
-
-  private ApplicationStatusPBImpl convertFromProtoFormat(
-      ApplicationStatusProto p) {
-    return new ApplicationStatusPBImpl(p);
-  }
-
-  private ApplicationStatusProto convertToProtoFormat(ApplicationStatus t) {
-    return ((ApplicationStatusPBImpl) t).getProto();
   }
 
   private ApplicationState convertFromProtoFormat(ApplicationStateProto s) {

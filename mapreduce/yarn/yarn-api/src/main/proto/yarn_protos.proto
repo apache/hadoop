@@ -15,6 +15,11 @@ message ApplicationIdProto {
   optional int64 cluster_timestamp = 2;
 }
 
+message ApplicationAttemptIdProto {
+  optional ApplicationIdProto application_id = 1;
+  optional int32 attemptId = 2;
+}
+
 message ContainerIdProto {
   optional ApplicationIdProto app_id = 1;
   optional int32 id = 2;
@@ -39,32 +44,26 @@ message ContainerTokenProto {
 
 message ContainerProto {
   optional ContainerIdProto id = 1;
-  optional string container_manager_address = 2;
-  optional string node_http_address = 3;
-  optional ResourceProto resource = 4;
-  optional ContainerStateProto state = 5;
-  optional ContainerTokenProto container_token = 6;
-  optional ContainerStatusProto container_status = 7;
+  optional NodeIdProto nodeId = 2;
+  optional string container_manager_address = 3;
+  optional string node_http_address = 4;
+  optional ResourceProto resource = 5;
+  optional ContainerStateProto state = 6;
+  optional ContainerTokenProto container_token = 7;
+  optional ContainerStatusProto container_status = 8;
 }
 
 enum ApplicationStateProto {
-  PENDING = 1;
-  ALLOCATING = 2;
-  ALLOCATED = 3;
-  EXPIRED_PENDING=12;
-  LAUNCHING = 4;
-  LAUNCHED = 5;
-  RUNNING = 6;
-  PAUSED = 7;
-  CLEANUP = 8;
-  COMPLETED = 9;
-  KILLED = 10;
-  FAILED = 11;
+  NEW = 1;
+  RUNNING = 2;
+  SUCCEEDED = 3;
+  KILLED = 4;
+  FAILED = 5;
 }
 
 message ApplicationStatusProto {
   optional int32 response_id = 1;
-  optional ApplicationIdProto application_id = 2;
+  optional ApplicationAttemptIdProto application_attempt_id = 2;
   optional float progress = 3;
 }
 
@@ -126,7 +125,13 @@ message NodeIdProto {
   optional int32 id = 1;
 }
 
-message NodeManagerInfoProto {
+message NodeHealthStatusProto {
+  optional bool is_node_healthy = 1;
+  optional string health_report = 2;
+  optional int64 last_health_report_time = 3;
+}
+
+message NodeReportProto {
   optional string nodeAddress = 1;
   optional string httpAddress = 2;
   optional string rackName = 3;
@@ -134,6 +139,7 @@ message NodeManagerInfoProto {
   optional ResourceProto capability = 5;
   optional int32 numContainers = 6;
   optional NodeIdProto nodeId = 7;
+  optional NodeHealthStatusProto node_health_status = 8;
 }
 
 

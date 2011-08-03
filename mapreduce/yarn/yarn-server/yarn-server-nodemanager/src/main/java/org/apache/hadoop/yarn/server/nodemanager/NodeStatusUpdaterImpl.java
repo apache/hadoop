@@ -38,6 +38,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -52,7 +53,6 @@ import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
-import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -201,17 +201,18 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         Entry<ContainerId, Container> e = i.next();
         ContainerId containerId = e.getKey();
         Container container = e.getValue();
-        String applicationId = String.valueOf(containerId.getAppId().getId()); // TODO: ID? Really?
 
         List<org.apache.hadoop.yarn.api.records.Container> applicationContainers = nodeStatus
-            .getContainers(applicationId);
+            .getContainers(container.getContainerID().getAppId());
         if (applicationContainers == null) {
           applicationContainers = new ArrayList<org.apache.hadoop.yarn.api.records.Container>();
-          nodeStatus.setContainers(applicationId, applicationContainers);
+          nodeStatus.setContainers(container.getContainerID().getAppId(),
+              applicationContainers);
         }
 
         // Clone the container to send it to the RM
         org.apache.hadoop.yarn.api.records.Container c = container.cloneAndGetContainer();
+        c.setNodeId(this.nodeId);
         c.setContainerManagerAddress(this.containerManagerBindAddress);
         c.setNodeHttpAddress(this.nodeHttpAddress); // TODO: don't set everytime.
         applicationContainers.add(c);
@@ -268,8 +269,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             HeartbeatResponse response =
               resourceTracker.nodeHeartbeat(request).getHeartbeatResponse();
             lastHeartBeatID = response.getResponseId();
-            List<org.apache.hadoop.yarn.api.records.Container> containersToCleanup =
-                response.getContainersToCleanupList();
+            List<ContainerId> containersToCleanup = response
+                .getContainersToCleanupList();
             if (containersToCleanup.size() != 0) {
               dispatcher.getEventHandler().handle(
                   new CMgrCompletedContainersEvent(containersToCleanup));

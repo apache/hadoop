@@ -27,7 +27,7 @@ public class TestQueueMetrics {
 
     QueueMetrics metrics = QueueMetrics.forQueue(ms, queueName, null, false);
     MetricsSource queueSource= queueSource(ms, queueName);
-    Application app = mockApp(user);
+    AppSchedulingInfo app = mockApp(user);
 
     metrics.submitApp(user);
     MetricsSource userSource = userSource(ms, queueName, user);
@@ -59,7 +59,7 @@ public class TestQueueMetrics {
 
     QueueMetrics metrics = QueueMetrics.forQueue(ms, queueName, null, true);
     MetricsSource queueSource = queueSource(ms, queueName);
-    Application app = mockApp(user);
+    AppSchedulingInfo app = mockApp(user);
 
     metrics.submitApp(user);
     MetricsSource userSource = userSource(ms, queueName, user);
@@ -105,7 +105,7 @@ public class TestQueueMetrics {
         QueueMetrics.forQueue(ms, leafQueueName, parentQueue, true);
     MetricsSource parentQueueSource = queueSource(ms, parentQueueName);
     MetricsSource queueSource = queueSource(ms, leafQueueName);
-    Application app = mockApp(user);
+    AppSchedulingInfo app = mockApp(user);
 
     metrics.submitApp(user);
     MetricsSource userSource = userSource(ms, leafQueueName, user);
@@ -177,8 +177,8 @@ public class TestQueueMetrics {
     assertGauge("ReservedContainers", reservedCtnrs, rb);
   }
 
-  private static Application mockApp(String user) {
-    Application app = mock(Application.class);
+  private static AppSchedulingInfo mockApp(String user) {
+    AppSchedulingInfo app = mock(AppSchedulingInfo.class);
     when(app.getState()).thenReturn(ApplicationState.RUNNING);
     when(app.getUser()).thenReturn(user);
     return app;

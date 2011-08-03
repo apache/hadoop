@@ -26,7 +26,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationMaster;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
 
 public interface Store extends NodeStore, ApplicationsStore {
@@ -37,7 +37,7 @@ public interface Store extends NodeStore, ApplicationsStore {
     public List<Container> getContainers();
   }
   public interface RMState {
-    public List<NodeManager> getStoredNodeManagers() ;
+    public List<RMNode> getStoredNodeManagers() ;
     public Map<ApplicationId, ApplicationInfo> getStoredApplications();
     public NodeId getLastLoggedNodeId();
   }

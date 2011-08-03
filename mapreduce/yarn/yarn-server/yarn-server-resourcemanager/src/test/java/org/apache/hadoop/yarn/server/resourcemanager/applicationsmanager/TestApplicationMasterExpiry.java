@@ -32,10 +32,11 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMAllocatedEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
@@ -43,6 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.SNEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -54,7 +56,7 @@ public class TestApplicationMasterExpiry {
   private static final Log LOG = LogFactory.getLog(TestApplicationMasterExpiry.class);
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   
-  private final RMContext context = new ResourceManager.RMContextImpl(new MemStore());
+  private final RMContext context = new RMContextImpl(new MemStore());
   private AMLivelinessMonitor amLivelinessMonitor;
   
   @Before
@@ -123,7 +125,7 @@ public class TestApplicationMasterExpiry {
     }
   }
   
-  private void waitForState(Application application, ApplicationState 
+  private void waitForState(AppAttempt application, ApplicationState 
       finalState) throws Exception {
     int count = 0;
     while(application.getState() != finalState && count < 10) {
@@ -146,7 +148,7 @@ public class TestApplicationMasterExpiry {
     ApplicationStore appStore = context.getApplicationsStore()
     .createApplicationStore(submissionContext.getApplicationId(),
         submissionContext);
-    Application application = new ApplicationImpl(context,
+    AppAttempt application = new AppAttemptImpl(context,
         new Configuration(), "dummy", submissionContext, "dummytoken", appStore,
         amLivelinessMonitor);
     context.getApplications()

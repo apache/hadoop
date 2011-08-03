@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.AccessControlException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -56,12 +57,13 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationMaster;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.NodeManagerInfo;
+import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -71,18 +73,13 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientRMSecurityInfo;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.AMLivelinessMonitor;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.Application;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.ApplicationImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.application.ApplicationACL;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.application.ApplicationACLsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.ClusterTracker;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.service.AbstractService;
 
@@ -93,11 +90,11 @@ import org.apache.hadoop.yarn.service.AbstractService;
  */
 public class ClientRMService extends AbstractService implements
     ClientRMProtocol {
+  private static final ArrayList<ApplicationReport> EMPTY_APPS_REPORT = new ArrayList<ApplicationReport>();
+
   private static final Log LOG = LogFactory.getLog(ClientRMService.class);
 
   final private AtomicInteger applicationCounter = new AtomicInteger(0);
-
-  final private ClusterTracker clusterInfo;
   final private YarnScheduler scheduler;
   final private RMContext rmContext;
   private final ClientToAMSecretManager clientToAMSecretManager;
@@ -114,9 +111,8 @@ public class ClientRMService extends AbstractService implements
   public ClientRMService(RMContext rmContext,
       AMLivelinessMonitor amLivelinessMonitor,
       ClientToAMSecretManager clientToAMSecretManager,
-      ClusterTracker clusterInfo, YarnScheduler scheduler) {
+      YarnScheduler scheduler) {
     super(ClientRMService.class.getName());
-    this.clusterInfo = clusterInfo;
     this.scheduler = scheduler;
     this.rmContext = rmContext;
     this.amLivelinessMonitor = amLivelinessMonitor;
@@ -156,29 +152,9 @@ public class ClientRMService extends AbstractService implements
     super.start();
   }
 
-  private ApplicationReport createApplicationReport(Application application,
-      String user, String queue, String name, Container masterContainer) {
-    ApplicationMaster am = application.getMaster();
-    ApplicationReport applicationReport = 
-      recordFactory.newRecordInstance(ApplicationReport.class);
-    applicationReport.setApplicationId(am.getApplicationId());
-    applicationReport.setMasterContainer(masterContainer);
-    applicationReport.setHost(am.getHost());
-    applicationReport.setRpcPort(am.getRpcPort());
-    applicationReport.setClientToken(am.getClientToken());
-    applicationReport.setTrackingUrl(am.getTrackingUrl());
-    applicationReport.setDiagnostics(am.getDiagnostics());
-    applicationReport.setName(name);
-    applicationReport.setQueue(queue);
-    applicationReport.setState(am.getState());
-    applicationReport.setStatus(am.getStatus());
-    applicationReport.setUser(user);
-    return applicationReport;
-  }
-
   /**
    * check if the calling user has the access to application information.
-   * @param applicationId
+   * @param appAttemptId
    * @param callerUGI
    * @param owner
    * @param appACL
@@ -213,11 +189,9 @@ public class ClientRMService extends AbstractService implements
   public GetApplicationReportResponse getApplicationReport(
       GetApplicationReportRequest request) throws YarnRemoteException {
     ApplicationId applicationId = request.getApplicationId();
-    Application application = rmContext.getApplications().get(applicationId);
-    ApplicationReport report = (application == null) ? null
-        : createApplicationReport(application, application.getUser(),
-            application.getQueue(), application.getName(), application
-                .getMasterContainer());
+    RMApp application = rmContext.getRMApps().get(applicationId);
+    ApplicationReport report = (application == null) ? null : application
+        .createAndGetApplicationReport();
 
     GetApplicationReportResponse response = recordFactory
         .newRecordInstance(GetApplicationReportResponse.class);
@@ -225,6 +199,7 @@ public class ClientRMService extends AbstractService implements
     return response;
   }
 
+  @Override
   public SubmitApplicationResponse submitApplication(
       SubmitApplicationRequest request) throws YarnRemoteException {
     ApplicationSubmissionContext submissionContext = request
@@ -251,37 +226,18 @@ public class ClientRMService extends AbstractService implements
       ApplicationStore appStore = rmContext.getApplicationsStore()
           .createApplicationStore(submissionContext.getApplicationId(),
               submissionContext);
-      Application application = new ApplicationImpl(rmContext, getConfig(),
-          user, submissionContext, clientTokenStr, appStore,
-          this.amLivelinessMonitor);
-      if (rmContext.getApplications().putIfAbsent(
-          application.getApplicationID(), application) != null) {
-        throw new IOException("Application with id "
-            + application.getApplicationID()
+      RMApp application = new RMAppImpl(applicationId, rmContext,
+          getConfig(), submissionContext.getApplicationName(), user,
+          submissionContext.getQueue(), submissionContext, clientTokenStr,
+          appStore, this.amLivelinessMonitor, this.scheduler);
+      if (rmContext.getRMApps().putIfAbsent(applicationId, application) != null) {
+        throw new IOException("Application with id " + applicationId
             + " is already present! Cannot add a duplicate!");
       }
 
-      /**
-       * this can throw so we need to call it synchronously to let the client
-       * know as soon as it submits. For backwards compatibility we cannot make
-       * it asynchronous
-       */
-      try {
-        scheduler.addApplication(applicationId, application.getMaster(),
-            user, application.getQueue(), submissionContext.getPriority(),
-            application.getStore());
-      } catch (IOException io) {
-        LOG.info("Failed to submit application " + applicationId, io);
-        rmContext.getDispatcher().getSyncHandler().handle(
-            new ApplicationEvent(ApplicationEventType.FAILED, applicationId));
-        throw io;
-      }
+      this.rmContext.getDispatcher().getEventHandler().handle(
+          new RMAppEvent(applicationId, RMAppEventType.START));
 
-      rmContext.getDispatcher().getSyncHandler().handle(
-          new ApplicationEvent(ApplicationEventType.ALLOCATE, applicationId));
-
-      // TODO this should happen via dispatcher. should move it out to scheudler
-      // negotiator.
       LOG.info("Application with id " + applicationId.getId()
           + " submitted by user " + user + " with " + submissionContext);
     } catch (IOException ie) {
@@ -308,7 +264,7 @@ public class ClientRMService extends AbstractService implements
       throw RPCUtil.getRemoteException(ie);
     }
 
-    Application application = rmContext.getApplications().get(applicationId);
+    RMApp application = this.rmContext.getRMApps().get(applicationId);
     // TODO: What if null
     if (!checkAccess(callerUGI, application.getUser(),
         ApplicationACL.MODIFY_APP)) {
@@ -317,8 +273,8 @@ public class ClientRMService extends AbstractService implements
           + ApplicationACL.MODIFY_APP.name() + " on " + applicationId));
     }
 
-    rmContext.getDispatcher().getEventHandler().handle(
-        new ApplicationEvent(ApplicationEventType.KILL, applicationId));
+    this.rmContext.getDispatcher().getEventHandler().handle(
+        new RMAppEvent(applicationId, RMAppEventType.KILL));
 
     FinishApplicationResponse response = recordFactory
         .newRecordInstance(FinishApplicationResponse.class);
@@ -326,9 +282,14 @@ public class ClientRMService extends AbstractService implements
   }
 
   @Override
-  public GetClusterMetricsResponse getClusterMetrics(GetClusterMetricsRequest request) throws YarnRemoteException {
-    GetClusterMetricsResponse response = recordFactory.newRecordInstance(GetClusterMetricsResponse.class);
-    response.setClusterMetrics(clusterInfo.getClusterMetrics());
+  public GetClusterMetricsResponse getClusterMetrics(
+      GetClusterMetricsRequest request) throws YarnRemoteException {
+    GetClusterMetricsResponse response = recordFactory
+        .newRecordInstance(GetClusterMetricsResponse.class);
+    YarnClusterMetrics ymetrics = recordFactory
+        .newRecordInstance(YarnClusterMetrics.class);
+    ymetrics.setNumNodeManagers(this.rmContext.getRMNodes().size());
+    response.setClusterMetrics(ymetrics);
     return response;
   }
   
@@ -337,10 +298,8 @@ public class ClientRMService extends AbstractService implements
       GetAllApplicationsRequest request) throws YarnRemoteException {
 
     List<ApplicationReport> reports = new ArrayList<ApplicationReport>();
-    for (Application application : rmContext.getApplications().values()) {
-      reports.add(createApplicationReport(application, application.getUser(),
-          application.getQueue(), application.getName(), application
-              .getMasterContainer()));
+    for (RMApp application : this.rmContext.getRMApps().values()) {
+      reports.add(application.createAndGetApplicationReport());
     }
 
     GetAllApplicationsResponse response = 
@@ -354,13 +313,12 @@ public class ClientRMService extends AbstractService implements
       throws YarnRemoteException {
     GetClusterNodesResponse response = 
       recordFactory.newRecordInstance(GetClusterNodesResponse.class);
-    List<NodeInfo> nodeInfos = clusterInfo.getAllNodeInfo();
-    List<NodeManagerInfo> nodes = 
-      new ArrayList<NodeManagerInfo>(nodeInfos.size());
-    for (NodeInfo nodeInfo : nodeInfos) {
-      nodes.add(createNodeManagerInfo(nodeInfo));
+    Collection<RMNode> nodes = this.rmContext.getRMNodes().values();
+    List<NodeReport> nodeReports = new ArrayList<NodeReport>(nodes.size());
+    for (RMNode nodeInfo : nodes) {
+      nodeReports.add(createNodeReports(nodeInfo));
     }
-    response.setNodeManagerList(nodes);
+    response.setNodeReports(nodeReports);
     return response;
   }
 
@@ -371,10 +329,19 @@ public class ClientRMService extends AbstractService implements
       recordFactory.newRecordInstance(GetQueueInfoResponse.class);
     try {
       QueueInfo queueInfo = 
-        scheduler.getQueueInfo(request.getQueueName(), 
-            request.getIncludeApplications(), 
+        scheduler.getQueueInfo(request.getQueueName(),  
             request.getIncludeChildQueues(), 
             request.getRecursive());
+      List<ApplicationReport> appReports = EMPTY_APPS_REPORT;
+      if (request.getIncludeApplications()) {
+        Collection<RMApp> apps = this.rmContext.getRMApps().values();
+        appReports = new ArrayList<ApplicationReport>(
+            apps.size());
+        for (RMApp app : apps) {
+          appReports.add(app.createAndGetApplicationReport());
+        }
+      }
+      queueInfo.setApplications(appReports);
       response.setQueueInfo(queueInfo);
     } catch (IOException ioe) {
       LOG.info("Failed to getQueueInfo for " + request.getQueueName(), ioe);
@@ -384,13 +351,21 @@ public class ClientRMService extends AbstractService implements
     return response;
   }
 
-  private NodeManagerInfo createNodeManagerInfo(NodeInfo nodeInfo) {
-    NodeManagerInfo node = 
-      recordFactory.newRecordInstance(NodeManagerInfo.class);
+  private NodeReport createNodeReports(RMNode nodeInfo) {
+    NodeReport node = 
+      recordFactory.newRecordInstance(NodeReport.class);
     node.setNodeAddress(nodeInfo.getNodeAddress());
     node.setRackName(nodeInfo.getRackName());
     node.setCapability(nodeInfo.getTotalCapability());
-    node.setUsed(nodeInfo.getUsedResource());
+    node.setNodeHealthStatus(nodeInfo.getNodeHealthStatus());
+    List<Container> containers = nodeInfo.getRunningContainers();
+    int userdResource = 0;
+    for (Container c : containers) {
+      userdResource += c.getResource().getMemory();
+    }
+    Resource usedRsrc = recordFactory.newRecordInstance(Resource.class);
+    usedRsrc.setMemory(userdResource);
+    node.setUsed(usedRsrc);
     node.setNumContainers(nodeInfo.getNumContainers());
     return node;
   }

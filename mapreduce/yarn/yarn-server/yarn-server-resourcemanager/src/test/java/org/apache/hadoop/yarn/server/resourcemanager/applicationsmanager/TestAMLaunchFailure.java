@@ -47,9 +47,10 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMLauncherEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
@@ -85,13 +86,8 @@ public class TestAMLaunchFailure {
     }
 
     @Override
-    public void doneApplication(ApplicationId applicationId, boolean finishApplication)
-        throws IOException {
-    }
-
-    @Override
     public QueueInfo getQueueInfo(String queueName,
-        boolean includeApplications, boolean includeChildQueues,
+        boolean includeChildQueues,
         boolean recursive) throws IOException {
       return null;
     }
@@ -136,7 +132,7 @@ public class TestAMLaunchFailure {
 
     private  class DummyApplicationMasterLauncher implements EventHandler<ASMEvent<AMLauncherEventType>> {
       private AtomicInteger notify = new AtomicInteger();
-      private Application app;
+      private AppAttempt app;
 
       public DummyApplicationMasterLauncher(RMContext context) {
         context.getDispatcher().register(AMLauncherEventType.class, this);
@@ -190,7 +186,7 @@ public class TestAMLaunchFailure {
 
   @Before
   public void setUp() {
-    context = new ResourceManager.RMContextImpl(new MemStore());
+    context = new RMContextImpl(new MemStore());
     Configuration conf = new Configuration();
 
     context.getDispatcher().register(ApplicationEventType.class,
@@ -202,7 +198,7 @@ public class TestAMLaunchFailure {
     asmImpl = new ExtApplicationsManagerImpl(applicationTokenSecretManager, scheduler);
     clientService = new ClientRMService(context, asmImpl
         .getAmLivelinessMonitor(), asmImpl.getClientToAMSecretManager(),
-        null, scheduler);
+        scheduler);
     clientService.init(conf);
     new DummyApplicationTracker();
     conf.setLong(YarnConfiguration.AM_EXPIRY_INTERVAL, 3000L);
@@ -230,7 +226,7 @@ public class TestAMLaunchFailure {
         .newRecordInstance(SubmitApplicationRequest.class);
     request.setApplicationSubmissionContext(submissionContext);
     clientService.submitApplication(request);
-    Application application = context.getApplications().get(appID); 
+    AppAttempt application = context.getApplications().get(appID); 
 
     while (application.getState() != ApplicationState.FAILED) {
       LOG.info("Waiting for application to go to FAILED state."

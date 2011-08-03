@@ -1,9 +1,18 @@
 package org.apache.hadoop.yarn.api.protocolrecords;
 
-import org.apache.hadoop.yarn.api.records.ApplicationMaster;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 
 public interface RegisterApplicationMasterRequest {
-  public abstract ApplicationMaster getApplicationMaster();
-  
-  public abstract void setApplicationMaster(ApplicationMaster applicationMaster);
+
+  ApplicationAttemptId getApplicationAttemptId();
+  void setApplicationAttemptId(ApplicationAttemptId applicationAttemptId);
+
+  String getHost();
+  void setHost(String host);
+
+  int getRpcPort();
+  void setRpcPort(int port);
+
+  String getTrackingUrl();
+  void setTrackingUrl(String string);
 }

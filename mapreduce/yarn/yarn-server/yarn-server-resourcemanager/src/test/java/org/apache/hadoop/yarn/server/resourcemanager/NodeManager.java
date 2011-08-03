@@ -41,18 +41,20 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.RMResourceTrackerImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 
 @Private
@@ -68,26 +70,32 @@ public class NodeManager implements ContainerManager {
   Resource available = recordFactory.newRecordInstance(Resource.class);
   Resource used = recordFactory.newRecordInstance(Resource.class);
 
-  final RMResourceTrackerImpl resourceTracker;
-  final NodeInfo nodeInfo;
+  final ResourceTrackerService resourceTrackerService;
+  final RMNode nodeInfo;
   final Map<String, List<Container>> containers = 
     new HashMap<String, List<Container>>();
   
   public NodeManager(String hostName, int containerManagerPort, int httpPort,
-      String rackName, int memory, RMResourceTrackerImpl resourceTracker)
+      String rackName, int memory,
+      ResourceTrackerService resourceTrackerService, RMContext rmContext)
       throws IOException {
     this.containerManagerAddress = hostName + ":" + containerManagerPort;
     this.nodeHttpAddress = hostName + ":" + httpPort;
     this.rackName = rackName;
-    this.resourceTracker = resourceTracker;
+    this.resourceTrackerService = resourceTrackerService;
     this.capability = Resources.createResource(memory);
     Resources.addTo(available, capability);
 
-    RegistrationResponse response =
-        resourceTracker.registerNodeManager(hostName, containerManagerPort, 
-            httpPort, capability);
+    RegisterNodeManagerRequest request = recordFactory
+        .newRecordInstance(RegisterNodeManagerRequest.class);
+    request.setContainerManagerPort(containerManagerPort);
+    request.setHost(hostName);
+    request.setHttpPort(httpPort);
+    request.setResource(capability);
+    RegistrationResponse response = resourceTrackerService
+        .registerNodeManager(request).getRegistrationResponse();
     this.nodeId = response.getNodeId();
-    this.nodeInfo = resourceTracker.getNodeManager(nodeId);
+    this.nodeInfo = rmContext.getNodesCollection().getNodeInfo(nodeId);
    
     // Sanity check
     Assert.assertEquals(memory, 
@@ -122,10 +130,14 @@ public class NodeManager implements ContainerManager {
   
   public void heartbeat() throws IOException {
     NodeStatus nodeStatus = 
-      org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.NodeStatus.createNodeStatus(
+      org.apache.hadoop.yarn.server.resourcemanager.NodeManager.createNodeStatus(
           nodeId, containers);
     nodeStatus.setResponseId(responseID);
-    HeartbeatResponse response = resourceTracker.nodeHeartbeat(nodeStatus);
+    NodeHeartbeatRequest request = recordFactory
+        .newRecordInstance(NodeHeartbeatRequest.class);
+    request.setNodeStatus(nodeStatus);
+    HeartbeatResponse response = resourceTrackerService
+        .nodeHeartbeat(request).getHeartbeatResponse();
     responseID = response.getResponseId();
   }
 
@@ -152,7 +164,7 @@ public class NodeManager implements ContainerManager {
 
     Container container =
         BuilderUtils.newContainer(containerLaunchContext.getContainerId(),
-            containerManagerAddress, nodeHttpAddress,
+            this.nodeId, containerManagerAddress, nodeHttpAddress,
             containerLaunchContext.getResource());
 
     applicationContainers.add(container);
@@ -235,5 +247,18 @@ public class NodeManager implements ContainerManager {
     ContainerId containerID = request.getContainerId();
     GetContainerStatusResponse response = recordFactory.newRecordInstance(GetContainerStatusResponse.class);
     return response;
+  }
+
+  public static org.apache.hadoop.yarn.server.api.records.NodeStatus createNodeStatus(
+      NodeId nodeId, Map<String, List<Container>> containers) {
+    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+    org.apache.hadoop.yarn.server.api.records.NodeStatus nodeStatus = recordFactory.newRecordInstance(org.apache.hadoop.yarn.server.api.records.NodeStatus.class);
+    nodeStatus.setNodeId(nodeId);
+    nodeStatus.addAllContainers(containers);
+    NodeHealthStatus nodeHealthStatus = 
+      recordFactory.newRecordInstance(NodeHealthStatus.class);
+    nodeHealthStatus.setIsNodeHealthy(true);
+    nodeStatus.setNodeHealthStatus(nodeHealthStatus);
+    return nodeStatus;
   }
 }

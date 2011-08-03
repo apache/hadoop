@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.AMResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
@@ -71,10 +72,10 @@ public class RMCommunicator extends AbstractService  {
   private static final Log LOG = LogFactory.getLog(RMContainerAllocator.class);
   private static int rmPollInterval;//millis
   protected ApplicationId applicationId;
+  protected ApplicationAttemptId applicationAttemptId;
   private volatile boolean stopped;
   protected Thread allocatorThread;
   protected EventHandler eventHandler;
-  private ApplicationMaster applicationMaster;
   protected AMRMProtocol scheduler;
   private final ClientService clientService;
   private int lastResponseID;
@@ -93,8 +94,7 @@ public class RMCommunicator extends AbstractService  {
     this.context = context;
     this.eventHandler = context.getEventHandler();
     this.applicationId = context.getApplicationID();
-    this.applicationMaster =
-        recordFactory.newRecordInstance(ApplicationMaster.class);
+    this.applicationAttemptId = context.getApplicationAttemptId();
   }
 
   @Override
@@ -127,22 +127,15 @@ public class RMCommunicator extends AbstractService  {
 
   protected void register() {
     //Register
-    applicationMaster.setApplicationId(applicationId);
     String host = 
       clientService.getBindAddress().getAddress().getHostAddress();
-    applicationMaster.setHost(host);
-    applicationMaster.setRpcPort(clientService.getBindAddress().getPort());
-    applicationMaster.setState(ApplicationState.RUNNING);
-    applicationMaster
-        .setTrackingUrl(host + ":" + clientService.getHttpPort());
-    applicationMaster.setStatus(
-        recordFactory.newRecordInstance(ApplicationStatus.class));
-    applicationMaster.getStatus().setApplicationId(applicationId);
-    applicationMaster.getStatus().setProgress(0.0f);
     try {
       RegisterApplicationMasterRequest request =
         recordFactory.newRecordInstance(RegisterApplicationMasterRequest.class);
-      request.setApplicationMaster(applicationMaster);
+      request.setApplicationAttemptId(applicationAttemptId);
+      request.setHost(host);
+      request.setRpcPort(clientService.getBindAddress().getPort());
+      request.setTrackingUrl(host + ":" + clientService.getHttpPort());
       RegisterApplicationMasterResponse response = 
         scheduler.registerApplicationMaster(request);
       minContainerCapability = response.getMinimumResourceCapability();
@@ -157,31 +150,31 @@ public class RMCommunicator extends AbstractService  {
 
   protected void unregister() {
     try {
-      ApplicationState finalState = ApplicationState.RUNNING;
+      String finalState = "RUNNING";
       if (job.getState() == JobState.SUCCEEDED) {
-        finalState = ApplicationState.COMPLETED;
+        finalState = "SUCCEEDED";
       } else if (job.getState() == JobState.KILLED) {
-        finalState = ApplicationState.KILLED;
+        finalState = "KILLED";
       } else if (job.getState() == JobState.FAILED
           || job.getState() == JobState.ERROR) {
-        finalState = ApplicationState.FAILED;
+        finalState = "FAILED";
       }
-      applicationMaster.setState(finalState);
       StringBuffer sb = new StringBuffer();
       for (String s : job.getDiagnostics()) {
         sb.append(s).append("\n");
       }
-      applicationMaster.setDiagnostics(sb.toString());
       LOG.info("Setting job diagnostics to " + sb.toString());
       
       String historyUrl = JobHistoryUtils.getHistoryUrl(getConfig(), 
           context.getApplicationID());
       LOG.info("History url is " + historyUrl);
-      applicationMaster.setTrackingUrl(historyUrl);
 
       FinishApplicationMasterRequest request =
           recordFactory.newRecordInstance(FinishApplicationMasterRequest.class);
-      request.setApplicationMaster(applicationMaster);
+      request.setAppAttemptId(this.applicationAttemptId);
+      request.setFinalState(finalState.toString());
+      request.setDiagnostics(sb.toString());
+      request.setTrackingUrl(historyUrl);
       scheduler.finishApplicationMaster(request);
     } catch(Exception are) {
       LOG.info("Exception while unregistering ", are);
@@ -273,14 +266,10 @@ public class RMCommunicator extends AbstractService  {
   }
 
   protected synchronized void heartbeat() throws Exception {
-    ApplicationStatus status =
-        recordFactory.newRecordInstance(ApplicationStatus.class);
-    status.setApplicationId(applicationId);
-    status.setResponseId(lastResponseID);
-
     AllocateRequest allocateRequest =
         recordFactory.newRecordInstance(AllocateRequest.class);
-    allocateRequest.setApplicationStatus(status);
+    allocateRequest.setApplicationAttemptId(applicationAttemptId);
+    allocateRequest.setResponseId(lastResponseID);
     allocateRequest.addAllAsks(new ArrayList<ResourceRequest>());
     allocateRequest.addAllReleases(new ArrayList<Container>());
     AllocateResponse allocateResponse = scheduler.allocate(allocateRequest);

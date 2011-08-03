@@ -33,10 +33,10 @@ public class RMConfig {
       + "application.max.retries";
   public static final int DEFAULT_ZK_TIMEOUT = 60000;
   public static final int DEFAULT_AM_MAX_RETRIES = 3;
-  public static final long DEFAULT_AM_EXPIRY_INTERVAL = 60000L;
+  public static final int DEFAULT_AM_EXPIRY_INTERVAL = 60000;
   public static final String NM_EXPIRY_INTERVAL = YarnConfiguration.RM_PREFIX
       + "nodemanager.expiry.interval";
-  public static final long DEFAULT_NM_EXPIRY_INTERVAL = 600000L;
+  public static final int DEFAULT_NM_EXPIRY_INTERVAL = 600000;
   public static final String DEFAULT_ADMIN_BIND_ADDRESS = "0.0.0.0:8141";
   public static final String RESOURCE_SCHEDULER = YarnConfiguration.RM_PREFIX
       + "scheduler";
@@ -44,11 +44,15 @@ public class RMConfig {
   public static final String AMLIVELINESS_MONITORING_INTERVAL =
       YarnConfiguration.RM_PREFIX
           + "amliveliness-monitor.monitoring-interval";
-  public static final long DEFAULT_AMLIVELINESS_MONITORING_INTERVAL = 1000;
+  public static final int DEFAULT_AMLIVELINESS_MONITORING_INTERVAL = 1000;
+  public static final String CONTAINER_LIVELINESS_MONITORING_INTERVAL
+    = YarnConfiguration.RM_PREFIX
+      + "amliveliness-monitor.monitoring-interval";
+  public static final int DEFAULT_CONTAINER_LIVELINESS_MONITORING_INTERVAL = 1000;
   public static final String NMLIVELINESS_MONITORING_INTERVAL =
       YarnConfiguration.RM_PREFIX
           + "nmliveliness-monitor.monitoring-interval";
-  public static final long DEFAULT_NMLIVELINESS_MONITORING_INTERVAL = 1000;
+  public static final int DEFAULT_NMLIVELINESS_MONITORING_INTERVAL = 1000;
   
   public static final String RM_RESOURCE_TRACKER_THREADS =
     YarnConfiguration.RM_PREFIX + "resource.tracker.threads";

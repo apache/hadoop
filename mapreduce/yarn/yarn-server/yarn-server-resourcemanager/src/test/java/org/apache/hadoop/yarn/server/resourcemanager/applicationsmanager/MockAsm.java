@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -169,7 +170,7 @@ public abstract class MockAsm extends MockApps {
     }
   }
 
-  public static class ApplicationBase implements Application {
+  public static class ApplicationBase implements AppAttempt {
     @Override
     public ApplicationSubmissionContext getSubmissionContext() {
       throw new UnsupportedOperationException("Not supported yet.");
@@ -270,7 +271,7 @@ public abstract class MockAsm extends MockApps {
     };
   }
 
-  public static Application newApplication(int i) {
+  public static AppAttempt newApplication(int i) {
     final ApplicationId id = newAppID(i);
     final ApplicationMaster master = newAppMaster(id);
     final Container masterContainer = Records.newRecord(Container.class);
@@ -333,8 +334,8 @@ public abstract class MockAsm extends MockApps {
     };
   }
   
-  public static List<Application> newApplications(int n) {
-    List<Application> list = Lists.newArrayList();
+  public static List<AppAttempt> newApplications(int n) {
+    List<AppAttempt> list = Lists.newArrayList();
     for (int i = 0; i < n; ++i) {
       list.add(newApplication(i));
     }

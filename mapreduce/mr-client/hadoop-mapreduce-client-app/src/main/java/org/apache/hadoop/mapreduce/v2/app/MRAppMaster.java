@@ -76,6 +76,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -112,6 +113,7 @@ public class MRAppMaster extends CompositeService {
   private String appName;
   private final int startCount;
   private final ApplicationId appID;
+  private final ApplicationAttemptId appAttemptID;
   protected final MRAppMetrics metrics;
   private Set<TaskId> completedTasksFromPreviousRun;
   private AppContext context;
@@ -135,6 +137,10 @@ public class MRAppMaster extends CompositeService {
     super(MRAppMaster.class.getName());
     this.clock = clock;
     this.appID = applicationId;
+    this.appAttemptID = RecordFactoryProvider.getRecordFactory(null)
+        .newRecordInstance(ApplicationAttemptId.class);
+    this.appAttemptID.setApplicationId(appID);
+    this.appAttemptID.setAttemptId(startCount);
     this.startCount = startCount;
     this.metrics = MRAppMetrics.create();
     LOG.info("Created MRAppMaster for application " + applicationId);
@@ -433,6 +439,11 @@ public class MRAppMaster extends CompositeService {
   class RunningAppContext implements AppContext {
 
     private Map<JobId, Job> jobs = new ConcurrentHashMap<JobId, Job>();
+
+    @Override
+    public ApplicationAttemptId getApplicationAttemptId() {
+      return appAttemptID;
+    }
 
     @Override
     public ApplicationId getApplicationID() {

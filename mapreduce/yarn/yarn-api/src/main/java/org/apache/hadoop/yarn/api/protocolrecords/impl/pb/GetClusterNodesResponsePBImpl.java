@@ -5,10 +5,10 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
-import org.apache.hadoop.yarn.api.records.NodeManagerInfo;
+import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
-import org.apache.hadoop.yarn.api.records.impl.pb.NodeManagerInfoPBImpl;
-import org.apache.hadoop.yarn.proto.YarnProtos.NodeManagerInfoProto;
+import org.apache.hadoop.yarn.api.records.impl.pb.NodeReportPBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterNodesResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterNodesResponseProtoOrBuilder;
 
@@ -20,7 +20,7 @@ public class GetClusterNodesResponsePBImpl extends
   GetClusterNodesResponseProto.Builder builder = null;
   boolean viaProto = false;
 
-  List<NodeManagerInfo> nodeManagerInfoList;
+  List<NodeReport> nodeManagerInfoList;
   
   public GetClusterNodesResponsePBImpl() {
     builder = GetClusterNodesResponseProto.newBuilder();
@@ -32,15 +32,15 @@ public class GetClusterNodesResponsePBImpl extends
   }
 
   @Override
-  public List<NodeManagerInfo> getNodeManagerList() {    
+  public List<NodeReport> getNodeReports() {    
     initLocalNodeManagerInfosList();
     return this.nodeManagerInfoList;
   }
   
   @Override
-  public void setNodeManagerList(List<NodeManagerInfo> nodeManagers) {
+  public void setNodeReports(List<NodeReport> nodeManagers) {
     if (nodeManagers == null) {
-      builder.clearNodeManagers();
+      builder.clearNodeReports();
     }
     this.nodeManagerInfoList = nodeManagers;
   }
@@ -80,25 +80,25 @@ public class GetClusterNodesResponsePBImpl extends
       return;
     }
     GetClusterNodesResponseProtoOrBuilder p = viaProto ? proto : builder;
-    List<NodeManagerInfoProto> list = p.getNodeManagersList();
-    nodeManagerInfoList = new ArrayList<NodeManagerInfo>();
+    List<NodeReportProto> list = p.getNodeReportsList();
+    nodeManagerInfoList = new ArrayList<NodeReport>();
 
-    for (NodeManagerInfoProto a : list) {
+    for (NodeReportProto a : list) {
       nodeManagerInfoList.add(convertFromProtoFormat(a));
     }
   }
 
   private void addLocalNodeManagerInfosToProto() {
     maybeInitBuilder();
-    builder.clearNodeManagers();
+    builder.clearNodeReports();
     if (nodeManagerInfoList == null)
       return;
-    Iterable<NodeManagerInfoProto> iterable = new Iterable<NodeManagerInfoProto>() {
+    Iterable<NodeReportProto> iterable = new Iterable<NodeReportProto>() {
       @Override
-      public Iterator<NodeManagerInfoProto> iterator() {
-        return new Iterator<NodeManagerInfoProto>() {
+      public Iterator<NodeReportProto> iterator() {
+        return new Iterator<NodeReportProto>() {
 
-          Iterator<NodeManagerInfo> iter = nodeManagerInfoList.iterator();
+          Iterator<NodeReport> iter = nodeManagerInfoList.iterator();
 
           @Override
           public boolean hasNext() {
@@ -106,7 +106,7 @@ public class GetClusterNodesResponsePBImpl extends
           }
 
           @Override
-          public NodeManagerInfoProto next() {
+          public NodeReportProto next() {
             return convertToProtoFormat(iter.next());
           }
 
@@ -119,15 +119,15 @@ public class GetClusterNodesResponsePBImpl extends
 
       }
     };
-    builder.addAllNodeManagers(iterable);
+    builder.addAllNodeReports(iterable);
   }
 
-  private NodeManagerInfoPBImpl convertFromProtoFormat(NodeManagerInfoProto p) {
-    return new NodeManagerInfoPBImpl(p);
+  private NodeReportPBImpl convertFromProtoFormat(NodeReportProto p) {
+    return new NodeReportPBImpl(p);
   }
 
-  private NodeManagerInfoProto convertToProtoFormat(NodeManagerInfo t) {
-    return ((NodeManagerInfoPBImpl)t).getProto();
+  private NodeReportProto convertToProtoFormat(NodeReport t) {
+    return ((NodeReportPBImpl)t).getProto();
   }
 
 }

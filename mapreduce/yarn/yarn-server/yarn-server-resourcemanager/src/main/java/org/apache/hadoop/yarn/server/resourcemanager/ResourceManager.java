@@ -20,11 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 
 import java.io.IOException;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.avro.AvroRuntimeException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -32,29 +29,44 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.AsyncDispatcher;
+import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.Application;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.ApplicationImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.ApplicationsManagerImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationTrackerEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.NodeStore;
+import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
+import org.apache.hadoop.yarn.server.resourcemanager.ams.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.NodeTracker;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.RMResourceTrackerImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.service.CompositeService;
+import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 
@@ -66,126 +78,147 @@ public class ResourceManager extends CompositeService implements Recoverable {
   private static final Log LOG = LogFactory.getLog(ResourceManager.class);
   public static final long clusterTimeStamp = System.currentTimeMillis();
   private YarnConfiguration conf;
+
+  protected ClientToAMSecretManager clientToAMSecretManager =
+      new ClientToAMSecretManager();
   
-  private ApplicationsManager applicationsManager;
-  
-  private ContainerTokenSecretManager containerTokenSecretManager =
+  protected ContainerTokenSecretManager containerTokenSecretManager =
       new ContainerTokenSecretManager();
 
-  private ApplicationTokenSecretManager appTokenSecretManager =
+  protected ApplicationTokenSecretManager appTokenSecretManager =
       new ApplicationTokenSecretManager();
 
-  private ResourceScheduler scheduler;
-  private ResourceTrackerService resourceTracker;
+  private Dispatcher rmDispatcher;
+
+  protected ResourceScheduler scheduler;
   private ClientRMService clientRM;
-  private ApplicationMasterService masterService;
+  protected ApplicationMasterService masterService;
+  private ApplicationMasterLauncher applicationMasterLauncher;
   private AdminService adminService;
+  private ContainerAllocationExpirer containerAllocationExpirer;
+  protected NMLivelinessMonitor nmLivelinessMonitor;
+  protected AMLivelinessMonitor amLivelinessMonitor;
+  protected NodesListManager nodesListManager;
+
   private final AtomicBoolean shutdown = new AtomicBoolean(false);
   private WebApp webApp;
   private RMContext rmContext;
   private final Store store;
+  protected ResourceTrackerService resourceTracker;
   
   public ResourceManager(Store store) {
     super("ResourceManager");
     this.store = store;
+    this.nodesListManager = new NodesListManager();
   }
   
   public RMContext getRMContext() {
     return this.rmContext;
   }
   
-  public interface RMContext {
-    public RMDispatcherImpl getDispatcher();
-    public NodeStore getNodeStore();
-    public ApplicationsStore getApplicationsStore();
-    public ConcurrentMap<ApplicationId, Application> getApplications();
-  }
-  
-  public static class RMContextImpl implements RMContext {
-    private final RMDispatcherImpl asmEventDispatcher;
-    private final Store store;
-    private final ConcurrentMap<ApplicationId, Application> applications = 
-      new ConcurrentHashMap<ApplicationId, Application>();
-
-    public RMContextImpl(Store store) {
-      this.asmEventDispatcher = new RMDispatcherImpl();
-      this.store = store;
-    }
-    
-    @Override
-    public RMDispatcherImpl getDispatcher() {
-      return this.asmEventDispatcher;
-    }
-
-    @Override
-    public NodeStore getNodeStore() {
-     return store;
-    }
-
-    @Override
-    public ApplicationsStore getApplicationsStore() {
-      return store;
-    }
-
-    @Override
-    public ConcurrentMap<ApplicationId, Application> getApplications() {
-      return this.applications;
-    }
-  }
-  
-  
   @Override
   public synchronized void init(Configuration conf) {
-    
-    this.rmContext = new RMContextImpl(this.store);
-    addService(rmContext.getDispatcher());
+
+    this.rmDispatcher = new AsyncDispatcher();
+    addIfService(this.rmDispatcher);
+
+    this.containerAllocationExpirer = new ContainerAllocationExpirer(
+        this.rmDispatcher);
+    addService(this.containerAllocationExpirer);
+
+    this.amLivelinessMonitor = createAMLivelinessMonitor();
+    addService(amLivelinessMonitor);
+
+    this.rmContext = new RMContextImpl(this.store, this.rmDispatcher,
+        this.containerAllocationExpirer, this.amLivelinessMonitor);
+
+    addService(nodesListManager);
+
     // Initialize the config
     this.conf = new YarnConfiguration(conf);
     // Initialize the scheduler
-    this.scheduler = 
-      ReflectionUtils.newInstance(
-          conf.getClass(RMConfig.RESOURCE_SCHEDULER, 
-              FifoScheduler.class, ResourceScheduler.class), 
-          this.conf);
+    this.scheduler = createScheduler();
+    this.rmDispatcher.register(SchedulerEventType.class, scheduler);
 
-    // Register event handler for ApplicationEvents.
-    this.rmContext.getDispatcher().register(ApplicationEventType.class,
+    // Register event handler for RmAppEvents
+    this.rmDispatcher.register(RMAppEventType.class,
         new ApplicationEventDispatcher(this.rmContext));
 
-    this.rmContext.getDispatcher().register(ApplicationTrackerEventType.class, scheduler);
+    // Register event handler for RmAppAttemptEvents
+    this.rmDispatcher.register(RMAppAttemptEventType.class,
+        new ApplicationAttemptEventDispatcher(this.rmContext));
+
+    // Register event handler for RmNodes
+    this.rmDispatcher.register(RMNodeEventType.class,
+        new NodeEventDispatcher(this.rmContext));
+
+    // Register event handler for RMContainer
+    this.rmDispatcher.register(RMContainerEventType.class,
+        new ContainerEventDispatcher(this.rmContext));
+
     //TODO change this to be random
     this.appTokenSecretManager.setMasterKey(ApplicationTokenSecretManager
         .createSecretKey("Dummy".getBytes()));
 
-    applicationsManager = createApplicationsManager();
-    addService(applicationsManager);
-    
-    resourceTracker = createResourceTrackerService();
+    this.nmLivelinessMonitor = createNMLivelinessMonitor();
+    addService(this.nmLivelinessMonitor);
+
+    this.resourceTracker = createResourceTrackerService();
     addService(resourceTracker);
   
     try {
-      this.scheduler.reinitialize(this.conf, 
-          this.containerTokenSecretManager, 
-          resourceTracker.getResourceTracker());
+      this.scheduler.reinitialize(this.conf,
+          this.containerTokenSecretManager, this.rmContext);
     } catch (IOException ioe) {
       throw new RuntimeException("Failed to initialize scheduler", ioe);
     }
-    
+
     clientRM = createClientRMService();
     addService(clientRM);
     
     masterService = createApplicationMasterService();
     addService(masterService) ;
     
-    adminService = 
-      createAdminService(conf, scheduler, resourceTracker.getResourceTracker());
+    adminService = createAdminService();
     addService(adminService);
+
+    this.applicationMasterLauncher = createAMLauncher();
+    addService(applicationMasterLauncher);
 
     super.init(conf);
   }
 
-  public static final class ApplicationEventDispatcher implements
-      EventHandler<ApplicationEvent> {
+  protected void addIfService(Object object) {
+    if (object instanceof Service) {
+      addService((Service) object);
+    }
+  }
+
+  protected ResourceScheduler createScheduler() {
+    return 
+    ReflectionUtils.newInstance(
+        conf.getClass(RMConfig.RESOURCE_SCHEDULER, 
+            FifoScheduler.class, ResourceScheduler.class), 
+        this.conf);
+  }
+
+  protected ApplicationMasterLauncher createAMLauncher() {
+    return new ApplicationMasterLauncher(
+        this.appTokenSecretManager, this.clientToAMSecretManager,
+        this.rmContext);
+  }
+
+  private NMLivelinessMonitor createNMLivelinessMonitor() {
+    return new NMLivelinessMonitor(this.rmContext
+        .getDispatcher());
+  }
+
+  protected AMLivelinessMonitor createAMLivelinessMonitor() {
+    return new AMLivelinessMonitor(this.rmDispatcher);
+  }
+
+  private static final class ApplicationEventDispatcher implements
+      EventHandler<RMAppEvent> {
 
     private final RMContext rmContext;
 
@@ -194,17 +227,102 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
 
     @Override
-    public void handle(ApplicationEvent event) {
+    public void handle(RMAppEvent event) {
       ApplicationId appID = event.getApplicationId();
-      ApplicationImpl application = (ApplicationImpl) this.rmContext
-          .getApplications().get(appID);
-      try {
-        application.handle(event);
-      } catch (Throwable t) {
-        LOG.error("Error in handling event type " + event.getType()
-            + " for application " + event.getApplicationId(), t);
+      RMApp rmApp = this.rmContext.getRMApps().get(appID);
+      if (rmApp != null) {
+        try {
+          rmApp.handle(event);
+        } catch (Throwable t) {
+          LOG.error("Error in handling event type " + event.getType()
+              + " for application " + appID, t);
+        }
       }
     }
+  }
+
+  private static final class ApplicationAttemptEventDispatcher implements
+      EventHandler<RMAppAttemptEvent> {
+
+    private final RMContext rmContext;
+
+    public ApplicationAttemptEventDispatcher(RMContext rmContext) {
+      this.rmContext = rmContext;
+    }
+
+    @Override
+    public void handle(RMAppAttemptEvent event) {
+      ApplicationAttemptId appAttemptID = event.getApplicationAttemptId();
+      ApplicationId appAttemptId = appAttemptID.getApplicationId();
+      RMApp rmApp = this.rmContext.getRMApps().get(appAttemptId);
+      if (rmApp != null) {
+        RMAppAttempt rmAppAttempt = rmApp.getRMAppAttempt(appAttemptID);
+        if (rmAppAttempt != null) {
+          try {
+            rmAppAttempt.handle(event);
+          } catch (Throwable t) {
+            LOG.error("Error in handling event type " + event.getType()
+                + " for applicationAttempt " + appAttemptId, t);
+          }
+        }
+      }
+    }
+  }
+
+  private static final class NodeEventDispatcher implements
+      EventHandler<RMNodeEvent> {
+
+    private final RMContext rmContext;
+
+    public NodeEventDispatcher(RMContext rmContext) {
+      this.rmContext = rmContext;
+    }
+
+    @Override
+    public void handle(RMNodeEvent event) {
+      NodeId nodeId = event.getNodeId();
+      RMNode node = this.rmContext.getRMNodes().get(nodeId);
+      if (node != null) {
+        try {
+          ((EventHandler<RMNodeEvent>) node).handle(event);
+        } catch (Throwable t) {
+          LOG.error("Error in handling event type " + event.getType()
+              + " for node " + nodeId, t);
+        }
+      }
+    }
+  }
+
+  private static final class ContainerEventDispatcher implements
+      EventHandler<RMContainerEvent> {
+
+    private final RMContext rmContext;
+
+    public ContainerEventDispatcher(RMContext rmContext) {
+      this.rmContext = rmContext;
+    }
+
+    @Override
+    public void handle(RMContainerEvent event) {
+      ContainerId containerId = event.getContainerId();
+      RMContainer container = this.rmContext.getRMContainers().get(containerId);
+      if (container != null) {
+        try {
+          ((EventHandler<RMContainerEvent>) container).handle(event);
+        } catch (Throwable t) {
+          LOG.error("Error in handling event type " + event.getType()
+              + " for container " + containerId, t);
+        }
+      }
+    }
+  }
+
+  protected void startWepApp() {
+    webApp = WebApps.$for("yarn", masterService).at(
+        conf.get(YarnConfiguration.RM_WEBAPP_BIND_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_WEBAPP_BIND_ADDRESS)).
+      start(new RMWebApp(this));
+
   }
 
   @Override
@@ -212,19 +330,15 @@ public class ResourceManager extends CompositeService implements Recoverable {
     try {
       doSecureLogin();
     } catch(IOException ie) {
-      throw new AvroRuntimeException("Failed to login", ie);
+      throw new YarnException("Failed to login", ie);
     }
 
-    webApp = WebApps.$for("yarn", masterService).at(
-      conf.get(YarnConfiguration.RM_WEBAPP_BIND_ADDRESS,
-      YarnConfiguration.DEFAULT_RM_WEBAPP_BIND_ADDRESS)).
-    start(new RMWebApp(this));
-
+    startWepApp();
     DefaultMetricsSystem.initialize("ResourceManager");
 
     super.start();
 
-    synchronized(shutdown) {
+    /*synchronized(shutdown) {
       try {
         while(!shutdown.get()) {
           shutdown.wait();
@@ -232,7 +346,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
       } catch(InterruptedException ie) {
         LOG.info("Interrupted while waiting", ie);
       }
-    }
+    }*/
   }
   
   protected void doSecureLogin() throws IOException {
@@ -245,11 +359,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
     if (webApp != null) {
       webApp.stop();
     }
-  
-    synchronized(shutdown) {
+
+    /*synchronized(shutdown) {
       shutdown.set(true);
       shutdown.notifyAll();
-    }
+    }*/
 
     DefaultMetricsSystem.shutdown();
 
@@ -257,46 +371,28 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
   
   protected ResourceTrackerService createResourceTrackerService() {
-    return new ResourceTrackerService(
-        new RMResourceTrackerImpl(this.containerTokenSecretManager, 
-            this.rmContext));
-  }
-  
-  protected ApplicationsManager createApplicationsManager() {
-    return new ApplicationsManagerImpl(
-        this.appTokenSecretManager, this.scheduler, this.rmContext);
+    return new ResourceTrackerService(this.rmContext, this.nodesListManager,
+        this.nmLivelinessMonitor, this.containerTokenSecretManager);
   }
 
   protected ClientRMService createClientRMService() {
-    return new ClientRMService(this.rmContext, this.applicationsManager
-        .getAmLivelinessMonitor(), this.applicationsManager
-        .getClientToAMSecretManager(), resourceTracker.getResourceTracker(),
-        scheduler);
+    return new ClientRMService(this.rmContext, this.amLivelinessMonitor,
+        this.clientToAMSecretManager, scheduler);
   }
 
   protected ApplicationMasterService createApplicationMasterService() {
-    return new ApplicationMasterService(this.appTokenSecretManager,
-        scheduler, this.rmContext);
+    return new ApplicationMasterService(this.rmContext,
+        this.amLivelinessMonitor, this.appTokenSecretManager, scheduler);
   }
   
 
-  protected AdminService createAdminService(Configuration conf, 
-      ResourceScheduler scheduler, NodeTracker nodesTracker) {
-    return new AdminService(conf, scheduler, nodesTracker);
+  protected AdminService createAdminService() {
+    return new AdminService(conf, scheduler, rmContext, this.nodesListManager);
   }
 
   @Private
   public ClientRMService getClientRMService() {
     return this.clientRM;
-  }
-
-  /**
-   * return applications manager.
-   * @return
-   */
-  @Private
-  public ApplicationsManager getApplicationsManager() {
-    return applicationsManager;
   }
   
   /**
@@ -307,20 +403,18 @@ public class ResourceManager extends CompositeService implements Recoverable {
   public ResourceScheduler getResourceScheduler() {
     return this.scheduler;
   }
-  
+
   /**
    * return the resource tracking component.
    * @return
    */
   @Private
-  public RMResourceTrackerImpl getResourceTracker() {
-    return this.resourceTracker.getResourceTracker();
+  public ResourceTrackerService getResourceTrackerService() {
+    return this.resourceTracker;
   }
-  
 
   @Override
   public void recover(RMState state) throws Exception {
-    applicationsManager.recover(state);
     resourceTracker.recover(state);
     scheduler.recover(state);
   }

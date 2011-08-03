@@ -18,13 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import org.apache.hadoop.yarn.server.resourcemanager.ApplicationsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.ClusterTracker;
-import org.apache.hadoop.yarn.webapp.WebApp;
+import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 
-import static org.apache.hadoop.yarn.util.StringHelper.*;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.webapp.WebApp;
 
 /**
  * The RM webapp
@@ -44,8 +42,6 @@ public class RMWebApp extends WebApp {
     if (rm != null) {
       bind(ResourceManager.class).toInstance(rm);
       bind(RMContext.class).toInstance(rm.getRMContext());
-      bind(ApplicationsManager.class).toInstance(rm.getApplicationsManager());
-      bind(ClusterTracker.class).toInstance(rm.getResourceTracker());
     }
     route("/", RmController.class);
     route("/nodes", RmController.class, "nodes");

@@ -20,6 +20,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo;
 
 import java.io.IOException;
 
+import junit.framework.Assert;
+import junit.framework.TestCase;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -31,14 +34,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.Task;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeManager;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import junit.framework.Assert;
-import junit.framework.TestCase;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 
 public class TestFifoScheduler extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestFifoScheduler.class);
@@ -61,7 +61,8 @@ public class TestFifoScheduler extends TestCase {
           String rackName, int memory) throws IOException {
     return new org.apache.hadoop.yarn.server.resourcemanager.NodeManager(
         hostName, containerManagerPort, nmHttpPort, rackName, memory,
-        resourceManager.getResourceTracker());
+        resourceManager.getResourceTrackerService(), resourceManager
+            .getRMContext());
   }
   
 
@@ -153,15 +154,15 @@ public class TestFifoScheduler extends TestCase {
     LOG.info("Adding new tasks...");
     
     Task task_1_1 = new Task(application_1, priority_1, 
-        new String[] {NodeManager.ANY});
+        new String[] {RMNode.ANY});
     application_1.addTask(task_1_1);
 
     Task task_1_2 = new Task(application_1, priority_1, 
-        new String[] {NodeManager.ANY});
+        new String[] {RMNode.ANY});
     application_1.addTask(task_1_2);
 
     Task task_1_3 = new Task(application_1, priority_0, 
-        new String[] {NodeManager.ANY});
+        new String[] {RMNode.ANY});
     application_1.addTask(task_1_3);
     
     application_1.schedule();
@@ -175,7 +176,7 @@ public class TestFifoScheduler extends TestCase {
     application_0.addTask(task_0_2);
     
     Task task_0_3 = new Task(application_0, priority_0, 
-        new String[] {NodeManager.ANY});
+        new String[] {RMNode.ANY});
     application_0.addTask(task_0_3);
 
     application_0.schedule();

@@ -2,30 +2,36 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 
 import java.util.List;
 
-import org.apache.hadoop.yarn.api.records.ApplicationStatus;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 
 public interface AllocateRequest {
-  public abstract ApplicationStatus getApplicationStatus();
+
+  ApplicationAttemptId getApplicationAttemptId();
+  void setApplicationAttemptId(ApplicationAttemptId applicationAttemptId);
+
+  int getResponseId();
+  void setResponseId(int id);
+
+  float getProgress();
+  void setProgress(float progress);
+
+  List<ResourceRequest> getAskList();
+  ResourceRequest getAsk(int index);
+  int getAskCount();
   
-  public abstract List<ResourceRequest> getAskList();
-  public abstract ResourceRequest getAsk(int index);
-  public abstract int getAskCount();
+  List<Container> getReleaseList();
+  Container getRelease(int index);
+  int getReleaseCount();
+
+  void addAllAsks(List<ResourceRequest> resourceRequest);
+  void addAsk(ResourceRequest request);
+  void removeAsk(int index);
+  void clearAsks();
   
-  public abstract List<Container> getReleaseList();
-  public abstract Container getRelease(int index);
-  public abstract int getReleaseCount();
-  
-  public abstract void setApplicationStatus(ApplicationStatus applicationStatus);
-  
-  public abstract void addAllAsks(List<ResourceRequest> resourceRequest);
-  public abstract void addAsk(ResourceRequest request);
-  public abstract void removeAsk(int index);
-  public abstract void clearAsks();
-  
-  public abstract void addAllReleases(List<Container> releaseContainers);
-  public abstract void addRelease(Container container);
-  public abstract void removeRelease(int index);
-  public abstract void clearReleases();
+  void addAllReleases(List<Container> releaseContainers);
+  void addRelease(Container container);
+  void removeRelease(int index);
+  void clearReleases();
 }

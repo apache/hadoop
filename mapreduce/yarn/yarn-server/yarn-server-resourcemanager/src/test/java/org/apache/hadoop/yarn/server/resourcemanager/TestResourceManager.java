@@ -26,12 +26,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeManager;
-
+import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,7 +56,8 @@ public class TestResourceManager {
           String rackName, int memory) throws IOException {
     return new org.apache.hadoop.yarn.server.resourcemanager.NodeManager(
         hostName, containerManagerPort, httpPort, rackName, memory,
-        resourceManager.getResourceTracker());
+        resourceManager.getResourceTrackerService(), resourceManager
+            .getRMContext());
   }
   
   @Test
@@ -165,7 +164,7 @@ public class TestResourceManager {
     Task t2 = new Task(application, priority1, new String[] {host1, host2});
     application.addTask(t2);
 
-    Task t3 = new Task(application, priority0, new String[] {NodeManager.ANY});
+    Task t3 = new Task(application, priority0, new String[] {RMNode.ANY});
     application.addTask(t3);
 
     // Send resource requests to the scheduler

@@ -9,7 +9,10 @@ import "yarn_protos.proto";
 /////// AM_RM_Protocol ///////////////////////////////
 //////////////////////////////////////////////////////
 message RegisterApplicationMasterRequestProto {
-  optional ApplicationMasterProto application_master = 1;
+  optional ApplicationAttemptIdProto application_attempt_id = 1;
+  optional string host = 2;
+  optional int32 rpc_port = 3;
+  optional string tracking_url = 4;
 }
 
 message RegisterApplicationMasterResponseProto {
@@ -18,16 +21,21 @@ message RegisterApplicationMasterResponseProto {
 }
 
 message FinishApplicationMasterRequestProto {
-  optional ApplicationMasterProto application_master = 1;
+  optional ApplicationAttemptIdProto application_attempt_id = 1;
+  optional string diagnostics = 2;
+  optional string tracking_url = 3;
+  optional string final_state = 4;
 }
 
 message FinishApplicationMasterResponseProto {
 }
 
 message AllocateRequestProto {
-  optional ApplicationStatusProto application_status = 1;
+  optional ApplicationAttemptIdProto application_attempt_id = 1;
   repeated ResourceRequestProto ask = 2;
   repeated ContainerProto release = 3;
+  optional int32 response_id = 4;
+  optional float progress = 5;
 }
 
 message AllocateResponseProto {
@@ -87,7 +95,7 @@ message GetClusterNodesRequestProto {
 }
 
 message GetClusterNodesResponseProto {
-  repeated NodeManagerInfoProto nodeManagers = 1; 
+  repeated NodeReportProto nodeReports = 1; 
 }
 
 message GetQueueInfoRequestProto {

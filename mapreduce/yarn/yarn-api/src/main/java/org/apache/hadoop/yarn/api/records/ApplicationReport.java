@@ -41,14 +41,8 @@ public interface ApplicationReport {
   String getClientToken();
   void setClientToken(String clientToken);
 
-  ApplicationStatus getStatus();
-  void setStatus(ApplicationStatus status);
-
   ApplicationState getState();
   void setState(ApplicationState state);
-
-  Container getMasterContainer();
-  void setMasterContainer(Container masterContainer);
 
   String getDiagnostics();
   void setDiagnostics(String diagnostics);

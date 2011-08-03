@@ -38,7 +38,6 @@ import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.AMResponse;
-import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -113,14 +112,10 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   protected abstract void heartbeat() throws Exception;
 
   protected List<Container> makeRemoteRequest() throws YarnRemoteException {
-    ApplicationStatus status = recordFactory
-        .newRecordInstance(ApplicationStatus.class);
-    status.setApplicationId(applicationId);
-    status.setResponseId(lastResponseID);
-
     AllocateRequest allocateRequest = recordFactory
         .newRecordInstance(AllocateRequest.class);
-    allocateRequest.setApplicationStatus(status);
+    allocateRequest.setApplicationAttemptId(applicationAttemptId);
+    allocateRequest.setResponseId(lastResponseID);
     allocateRequest.addAllAsks(new ArrayList<ResourceRequest>(ask));
     allocateRequest.addAllReleases(new ArrayList<Container>(release));
     AllocateResponse allocateResponse = scheduler.allocate(allocateRequest);

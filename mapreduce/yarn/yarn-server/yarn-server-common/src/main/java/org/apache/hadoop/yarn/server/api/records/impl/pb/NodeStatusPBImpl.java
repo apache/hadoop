@@ -6,21 +6,27 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.NodeHealthStatusPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
-import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.ContainerListProto;
-import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeHealthStatusProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeHealthStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.ApplicationIdContainerListMapProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.ContainerListProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProtoOrBuilder;
-import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.StringContainerListMapProto;
-import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.mortbay.util.ajax.JSON.Convertor;
     
 public class NodeStatusPBImpl extends ProtoBase<NodeStatusProto> implements NodeStatus {
   NodeStatusProto proto = NodeStatusProto.getDefaultInstance();
@@ -28,7 +34,7 @@ public class NodeStatusPBImpl extends ProtoBase<NodeStatusProto> implements Node
   boolean viaProto = false;
   
   private NodeId nodeId = null;
-  private Map<String, List<Container>> containers = null;
+  private Map<ApplicationIdProto, List<Container>> containers = null;
   private NodeHealthStatus nodeHealthStatus = null;
   
   public NodeStatusPBImpl() {
@@ -110,18 +116,24 @@ public class NodeStatusPBImpl extends ProtoBase<NodeStatusProto> implements Node
   }
   
   @Override
-  public Map<String, List<Container>> getAllContainers() {
+  public Map<ApplicationId, List<Container>> getAllContainers() {
     initContainers();
-    return this.containers;
+    HashMap<ApplicationId, List<Container>> returnMap = new HashMap<ApplicationId, List<Container>>(
+        this.containers.size());
+    for (Entry<ApplicationIdProto, List<Container>> entry : this.containers.entrySet()) {
+      returnMap.put(convertFromProtoFormat(entry.getKey()), entry.getValue());
+    }
+    return returnMap;
   }
 
   @Override
-  public List<Container> getContainers(String key) {
+  public List<Container> getContainers(ApplicationId applicationId) {
     initContainers();
-    if (this.containers.get(key) == null) {
-      this.containers.put(key, new ArrayList<Container>());
+    ApplicationIdProto applicationIdProto = convertToProtoFormat(applicationId);
+    if (this.containers.get(applicationIdProto) == null) {
+      this.containers.put(applicationIdProto, new ArrayList<Container>());
     }
-    return this.containers.get(key);
+    return this.containers.get(applicationIdProto);
   }
 
   private void initContainers() {
@@ -129,43 +141,45 @@ public class NodeStatusPBImpl extends ProtoBase<NodeStatusProto> implements Node
       return;
     }
     NodeStatusProtoOrBuilder p = viaProto ? proto : builder;
-    List<StringContainerListMapProto> list = p.getContainersList();
-    this.containers = new HashMap<String, List<Container>>();
+    List<ApplicationIdContainerListMapProto> list = p.getContainersList();
+    this.containers = new HashMap<ApplicationIdProto, List<Container>>();
 
-    for (StringContainerListMapProto c : list) {
-      this.containers.put(c.getKey(), convertFromProtoFormat(c.getValue()));
+    for (ApplicationIdContainerListMapProto c : list) {
+      this.containers.put(c.getApplicationId(), convertFromProtoFormat(c.getValue()));
     }
     
   }
   
   @Override
-  public void addAllContainers(final Map<String, List<Container>> containers) {
+  public void addAllContainers(final Map<ApplicationId, List<Container>> containers) {
     if (containers == null)
       return;
     initContainers();
-    this.containers.putAll(containers);
+    for (Entry<ApplicationId, List<Container>> entry : containers.entrySet()) {
+      this.containers.put(convertToProtoFormat(entry.getKey()), entry.getValue());
+    }
   }
   
   private void addContainersToProto() {
     maybeInitBuilder();
     builder.clearContainers();
     viaProto = false;
-    Iterable<StringContainerListMapProto> iterable = new Iterable<StringContainerListMapProto>() {
+    Iterable<ApplicationIdContainerListMapProto> iterable = new Iterable<ApplicationIdContainerListMapProto>() {
 
       @Override
-      public Iterator<StringContainerListMapProto> iterator() {
-        return new Iterator<StringContainerListMapProto>() {
+      public Iterator<ApplicationIdContainerListMapProto> iterator() {
+        return new Iterator<ApplicationIdContainerListMapProto>() {
 
-          Iterator<String> keyIter = containers.keySet().iterator();
+          Iterator<ApplicationIdProto> keyIter = containers.keySet().iterator();
           @Override
           public boolean hasNext() {
             return keyIter.hasNext();
           }
 
           @Override
-          public StringContainerListMapProto next() {
-            String key = keyIter.next();
-            return StringContainerListMapProto.newBuilder().setKey(key).setValue(convertToProtoFormat(containers.get(key))).build();
+          public ApplicationIdContainerListMapProto next() {
+            ApplicationIdProto applicationIdProto = keyIter.next();
+            return ApplicationIdContainerListMapProto.newBuilder().setApplicationId(applicationIdProto).setValue(convertToProtoFormat(containers.get(applicationIdProto))).build();
           }
 
           @Override
@@ -245,15 +259,15 @@ public class NodeStatusPBImpl extends ProtoBase<NodeStatusProto> implements Node
   }
   
   @Override
-  public void setContainers(String key, List<Container> containers) {
+  public void setContainers(ApplicationId applicationId, List<Container> containers) {
     initContainers();
-    this.containers.put(key, containers);
+    this.containers.put(convertToProtoFormat(applicationId), containers);
   }
 
   @Override
-  public void removeContainers(String key) {
+  public void removeContainers(ApplicationId applicationId) {
     initContainers();
-    this.containers.remove(key);
+    this.containers.remove(applicationId);
   }
   
   @Override
@@ -268,6 +282,14 @@ public class NodeStatusPBImpl extends ProtoBase<NodeStatusProto> implements Node
   
   private NodeId convertFromProtoFormat(NodeIdProto proto) {
     return new NodeIdPBImpl(proto);
+  }
+
+  private ApplicationIdProto convertToProtoFormat(ApplicationId applicationId) {
+    return ((ApplicationIdPBImpl)applicationId).getProto();
+  }
+  
+  private ApplicationId convertFromProtoFormat(ApplicationIdProto proto) {
+    return new ApplicationIdPBImpl(proto);
   }
 
   private NodeHealthStatusProto convertToProtoFormat(

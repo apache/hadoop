@@ -26,9 +26,9 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.Application;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.util.Apps;
@@ -73,7 +73,7 @@ public class RmController extends Controller {
     }
     ApplicationId appID = Apps.toAppID(aid);
     RMContext context = getInstance(RMContext.class);
-    Application app = context.getApplications().get(appID);
+    RMApp app = context.getRMApps().get(appID);
     if (app == null) {
       // TODO: handle redirect to jobhistory server
       setStatus(response().SC_NOT_FOUND);
@@ -81,21 +81,22 @@ public class RmController extends Controller {
       return;
     }
     setTitle(join("Application ", aid));
-    String trackingUrl = app.getMaster().getTrackingUrl();
+    String trackingUrl = app.getTrackingUrl();
     String ui = trackingUrl == null ? "UNASSIGNED" :
         (app.getFinishTime() == 0 ? "ApplicationMaster" : "JobHistory");
 
     ResponseInfo info = info("Application Overview").
       _("User:", app.getUser()).
       _("Name:", app.getName()).
-      _("State:", app.getMaster().getState()).
+      _("State:", app.getState()).
       _("Started:", Times.format(app.getStartTime())).
       _("Elapsed:", StringUtils.formatTime(
         Times.elapsed(app.getStartTime(), app.getFinishTime()))).
       _("Tracking URL:", trackingUrl == null ? "#" :
         join("http://", trackingUrl), ui).
-      _("Diagnostics:", app.getMaster().getDiagnostics());
-    Container masterContainer = app.getMasterContainer();
+      _("Diagnostics:", app.getDiagnostics());
+    Container masterContainer = app.getCurrentAppAttempt()
+        .getMasterContainer();
     if (masterContainer != null) {
       String url = join("http://", masterContainer.getNodeHttpAddress(),
           "/yarn", "/containerlogs/",

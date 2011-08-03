@@ -60,6 +60,7 @@ import org.apache.hadoop.mapreduce.v2.app.speculate.TaskRuntimeEstimator;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.SystemClock;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -707,6 +708,7 @@ public class TestRuntimeEstimators {
   class MyAppContext implements AppContext {
     // I'll be making Avro objects by hand.  Please don't do that very often.
 
+    private final ApplicationAttemptId myAppAttemptID;
     private final ApplicationId myApplicationID;
     private final JobId myJobID;
     private final Map<JobId, Job> allJobs;
@@ -716,6 +718,10 @@ public class TestRuntimeEstimators {
       myApplicationID.setClusterTimestamp(clock.getTime());
       myApplicationID.setId(1);
 
+      myAppAttemptID = recordFactory
+          .newRecordInstance(ApplicationAttemptId.class);
+      myAppAttemptID.setApplicationId(myApplicationID);
+      myAppAttemptID.setAttemptId(0);
       myJobID = recordFactory.newRecordInstance(JobId.class);
       myJobID.setAppId(myApplicationID);
 
@@ -723,6 +729,11 @@ public class TestRuntimeEstimators {
           = new MyJobImpl(myJobID, numberMaps, numberReduces);
 
       allJobs = Collections.singletonMap(myJobID, myJob);
+    }
+
+    @Override
+    public ApplicationAttemptId getApplicationAttemptId() {
+      return myAppAttemptID;
     }
 
     @Override

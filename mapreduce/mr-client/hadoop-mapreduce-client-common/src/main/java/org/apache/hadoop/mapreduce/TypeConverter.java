@@ -43,7 +43,7 @@ import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
-import org.apache.hadoop.yarn.api.records.NodeManagerInfo;
+import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -366,20 +366,14 @@ public class TypeConverter {
   
   public static JobStatus.State fromYarn(ApplicationState state) {
     switch (state) {
-    case ALLOCATED:
-    case ALLOCATING:
-    case PENDING:
-    case LAUNCHING:
+    case SUBMITTED:
       return State.PREP;
-    case PAUSED:
-    case LAUNCHED:
     case RUNNING:
+    case RESTARTING:
       return State.RUNNING;
-    case COMPLETED:
-    case CLEANUP:
+    case SUCCEEDED:
       return State.SUCCEEDED;
     case FAILED:
-    case EXPIRED_PENDING:
       return State.FAILED;
     case KILLED:
       return State.KILLED;
@@ -388,15 +382,15 @@ public class TypeConverter {
   }
 
   private static final String TT_NAME_PREFIX = "tracker_";
-  public static TaskTrackerInfo fromYarn(NodeManagerInfo node) {
+  public static TaskTrackerInfo fromYarn(NodeReport node) {
     TaskTrackerInfo taskTracker = 
       new TaskTrackerInfo(TT_NAME_PREFIX + node.getNodeAddress());
     return taskTracker;
   }
 
-  public static TaskTrackerInfo[] fromYarnNodes(List<NodeManagerInfo> nodes) {
+  public static TaskTrackerInfo[] fromYarnNodes(List<NodeReport> nodes) {
     List<TaskTrackerInfo> taskTrackers = new ArrayList<TaskTrackerInfo>();
-    for (NodeManagerInfo node : nodes) {
+    for (NodeReport node : nodes) {
       taskTrackers.add(fromYarn(node));
     }
     return taskTrackers.toArray(new TaskTrackerInfo[nodes.size()]);

@@ -23,11 +23,8 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationTrackerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.ClusterTracker;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 
 /**
@@ -37,8 +34,7 @@ import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
  */
 @LimitedPrivate("yarn")
 @Evolving
-public interface ResourceScheduler extends ResourceListener, YarnScheduler, 
-  EventHandler<ASMEvent<ApplicationTrackerEventType>>, Recoverable {
+public interface ResourceScheduler extends YarnScheduler, Recoverable {
   /**
    * Re-initialize the <code>ResourceScheduler</code>.
    * @param conf configuration
@@ -46,5 +42,5 @@ public interface ResourceScheduler extends ResourceListener, YarnScheduler,
    * @throws IOException
    */
   void reinitialize(Configuration conf, 
-      ContainerTokenSecretManager secretManager, ClusterTracker clusterTracker) throws IOException;    
+      ContainerTokenSecretManager secretManager, RMContext rmContext) throws IOException;    
 }

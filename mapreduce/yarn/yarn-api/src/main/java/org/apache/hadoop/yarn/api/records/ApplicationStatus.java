@@ -19,11 +19,11 @@
 package org.apache.hadoop.yarn.api.records;
 
 public interface ApplicationStatus {
+  ApplicationAttemptId getApplicationAttemptId();
   int getResponseId();
-  ApplicationId getApplicationId();
   float getProgress();
-  
+
+  void setApplicationAttemptId(ApplicationAttemptId applicationAttemptId);
   void setResponseId(int id);
-  void setApplicationId(ApplicationId applicationID);
   void setProgress(float progress);
 }

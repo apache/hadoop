@@ -80,7 +80,7 @@ import org.apache.hadoop.yarn.security.ContainerManagerSecurityInfo;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.SchedulerSecurityInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.Application;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.AppAttempt;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -163,7 +163,7 @@ public class TestContainerTokenSecretManager {
 
     // Wait till container gets allocated for AM
     int waitCounter = 0;
-    Application app =
+    AppAttempt app =
         resourceManager.getRMContext().getApplications().get(appID);
     while (app.getState() != ApplicationState.LAUNCHED && waitCounter <= 20) {
       Thread.sleep(1000);

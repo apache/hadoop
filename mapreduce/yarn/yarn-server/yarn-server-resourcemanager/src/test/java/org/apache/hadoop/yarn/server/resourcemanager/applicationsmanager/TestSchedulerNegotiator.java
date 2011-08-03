@@ -40,9 +40,9 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMLauncherEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
@@ -52,8 +52,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.ClusterTracker;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.NodeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
@@ -67,8 +67,8 @@ public class TestSchedulerNegotiator {
   private DummyScheduler scheduler;
   private final int testNum = 99999;
   
-  private final RMContext context = new ResourceManager.RMContextImpl(new MemStore());
-  ApplicationImpl masterInfo;
+  private final RMContext context = new RMContextImpl(new MemStore());
+  AppAttemptImpl masterInfo;
   private EventHandler handler;
   private Configuration conf = new Configuration();
   private class DummyScheduler implements ResourceScheduler {
@@ -86,25 +86,21 @@ public class TestSchedulerNegotiator {
   
   
     @Override
-    public void nodeUpdate(NodeInfo nodeInfo,
+    public void nodeUpdate(RMNode nodeInfo,
         Map<String, List<Container>> containers) {
     }
     
     @Override
-    public void removeNode(NodeInfo node) {
+    public void removeNode(RMNode node) {
     }
 
     @Override
     public void handle(ASMEvent<ApplicationTrackerEventType> event) {
     }
-   
-    @Override
-    public void doneApplication(ApplicationId applicationId, boolean finishApplication)
-        throws IOException {
-    }
+
     @Override
     public QueueInfo getQueueInfo(String queueName,
-        boolean includeApplications, boolean includeChildQueues,
+        boolean includeChildQueues,
         boolean recursive) throws IOException {
       return null;
     }
@@ -121,7 +117,7 @@ public class TestSchedulerNegotiator {
 
 
     @Override
-    public void addNode(NodeInfo nodeInfo) {
+    public void addNode(RMNode nodeInfo) {
     }
 
 
@@ -132,7 +128,7 @@ public class TestSchedulerNegotiator {
 
     @Override
     public void reinitialize(Configuration conf,
-        ContainerTokenSecretManager secretManager, ClusterTracker clusterTracker)
+        ContainerTokenSecretManager secretManager, RMContext rmContext)
         throws IOException {
     }
 
@@ -167,7 +163,7 @@ public class TestSchedulerNegotiator {
     schedulerNegotiator.stop();
   }
   
-  public void waitForState(ApplicationState state, ApplicationImpl info) {
+  public void waitForState(ApplicationState state, AppAttemptImpl info) {
     int count = 0;
     while (info.getState() != state && count < 100) {
       try {
@@ -193,7 +189,7 @@ public class TestSchedulerNegotiator {
     submissionContext.getApplicationId().setClusterTimestamp(System.currentTimeMillis());
     submissionContext.getApplicationId().setId(1);
     
-    masterInfo = new ApplicationImpl(this.context, this.conf, "dummy",
+    masterInfo = new AppAttemptImpl(this.context, this.conf, "dummy",
         submissionContext, "dummyClientToken", StoreFactory
             .createVoidAppStore(), new AMLivelinessMonitor(context
             .getDispatcher().getEventHandler()));

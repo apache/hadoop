@@ -1,10 +1,10 @@
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
 
-import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
-import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationStatusProtoOrBuilder;
 
@@ -15,8 +15,7 @@ public class ApplicationStatusPBImpl extends ProtoBase<ApplicationStatusProto> i
   ApplicationStatusProto.Builder builder = null;
   boolean viaProto = false;
   
-  private ApplicationId applicationId = null;
-  
+  private ApplicationAttemptId applicationAttemptId = null;  
   
   
   public ApplicationStatusPBImpl() {
@@ -37,8 +36,8 @@ public class ApplicationStatusPBImpl extends ProtoBase<ApplicationStatusProto> i
   }
 
   private void mergeLocalToBuilder() {
-    if (this.applicationId != null && !((ApplicationIdPBImpl)this.applicationId).getProto().equals(builder.getApplicationId())) {
-      builder.setApplicationId(convertToProtoFormat(this.applicationId));
+    if (this.applicationAttemptId != null && !((ApplicationAttemptIdPBImpl)this.applicationAttemptId).getProto().equals(builder.getApplicationAttemptId())) {
+      builder.setApplicationAttemptId(convertToProtoFormat(this.applicationAttemptId));
     }
   }
 
@@ -70,29 +69,28 @@ public class ApplicationStatusPBImpl extends ProtoBase<ApplicationStatusProto> i
     maybeInitBuilder();
     builder.setResponseId((responseId));
   }
+
   @Override
-  public ApplicationId getApplicationId() {
+  public ApplicationAttemptId getApplicationAttemptId() {
     ApplicationStatusProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.applicationId != null) {
-      return applicationId;
-    } // Else via proto
-    if (!p.hasApplicationId()) {
+    if (this.applicationAttemptId != null) {
+      return this.applicationAttemptId;
+    }
+    if (!p.hasApplicationAttemptId()) {
       return null;
     }
-    applicationId = convertFromProtoFormat(p.getApplicationId());
-    
-    return applicationId;
+    this.applicationAttemptId = convertFromProtoFormat(p.getApplicationAttemptId());
+    return this.applicationAttemptId;
   }
 
   @Override
-  public void setApplicationId(ApplicationId applicationId) {
+  public void setApplicationAttemptId(ApplicationAttemptId applicationAttemptId) {
     maybeInitBuilder();
-    if (applicationId == null) {
-      builder.clearApplicationId();
-    }
-    this.applicationId = applicationId;
-    
+    if (applicationAttemptId == null) 
+      builder.clearApplicationAttemptId();
+    this.applicationAttemptId = applicationAttemptId;
   }
+
   @Override
   public float getProgress() {
     ApplicationStatusProtoOrBuilder p = viaProto ? proto : builder;
@@ -105,12 +103,12 @@ public class ApplicationStatusPBImpl extends ProtoBase<ApplicationStatusProto> i
     builder.setProgress((progress));
   }
 
-  private ApplicationIdPBImpl convertFromProtoFormat(ApplicationIdProto p) {
-    return new ApplicationIdPBImpl(p);
+  private ApplicationAttemptIdPBImpl convertFromProtoFormat(ApplicationAttemptIdProto p) {
+    return new ApplicationAttemptIdPBImpl(p);
   }
 
-  private ApplicationIdProto convertToProtoFormat(ApplicationId t) {
-    return ((ApplicationIdPBImpl)t).getProto();
+  private ApplicationAttemptIdProto convertToProtoFormat(ApplicationAttemptId t) {
+    return ((ApplicationAttemptIdPBImpl)t).getProto();
   }
 
 

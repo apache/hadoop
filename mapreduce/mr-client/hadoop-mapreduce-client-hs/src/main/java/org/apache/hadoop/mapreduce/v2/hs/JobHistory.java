@@ -62,6 +62,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -307,6 +308,8 @@ public class JobHistory extends AbstractService implements HistoryContext   {
     super(JobHistory.class.getName());
     this.appID = RecordFactoryProvider.getRecordFactory(conf)
         .newRecordInstance(ApplicationId.class);
+    this.appAttemptID = RecordFactoryProvider.getRecordFactory(conf)
+    .newRecordInstance(ApplicationAttemptId.class);
   }
   
   /**
@@ -1119,7 +1122,13 @@ public class JobHistory extends AbstractService implements HistoryContext   {
     
   
   
-  
+  //TODO AppContext - Not Required
+  private final ApplicationAttemptId appAttemptID;
+  @Override
+  public ApplicationAttemptId getApplicationAttemptId() {
+  //TODO fixme - bogus appAttemptID for now
+    return appAttemptID;
+  }  
   
   //TODO AppContext - Not Required
   private final ApplicationId appID;

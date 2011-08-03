@@ -19,13 +19,12 @@
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
@@ -34,6 +33,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerTokenProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
@@ -46,6 +46,7 @@ public class ContainerPBImpl extends ProtoBase<ContainerProto> implements Contai
   boolean viaProto = false;
   
   private ContainerId containerId = null;
+  private NodeId nodeId = null;
   private Resource resource = null;
   private ContainerToken containerToken = null;
   private ContainerStatus containerStatus = null;
@@ -72,6 +73,11 @@ public class ContainerPBImpl extends ProtoBase<ContainerProto> implements Contai
         && !((ContainerIdPBImpl) containerId).getProto().equals(
             builder.getId())) {
       builder.setId(convertToProtoFormat(this.containerId));
+    }
+    if (this.nodeId != null
+        && !((NodeIdPBImpl) nodeId).getProto().equals(
+            builder.getNodeId())) {
+      builder.setNodeId(convertToProtoFormat(this.nodeId));
     }
     if (this.resource != null
         && !((ResourcePBImpl) this.resource).getProto().equals(
@@ -138,12 +144,34 @@ public class ContainerPBImpl extends ProtoBase<ContainerProto> implements Contai
   }
 
   @Override
+  public void setNodeId(NodeId nodeId) {
+    maybeInitBuilder();
+    if (nodeId == null)
+      builder.clearNodeId();
+    this.nodeId = nodeId;
+  }
+
+  @Override
+  public NodeId getNodeId() {
+    ContainerProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.nodeId != null) {
+      return this.nodeId;
+    }
+    if (!p.hasNodeId()) {
+      return null;
+    }
+    this.nodeId = convertFromProtoFormat(p.getNodeId());
+    return this.nodeId;
+  }
+
+  @Override
   public void setId(ContainerId id) {
     maybeInitBuilder();
     if (id == null)
       builder.clearId();
     this.containerId = id;
   }
+
   @Override
   public String getContainerManagerAddress() {
     ContainerProtoOrBuilder p = viaProto ? proto : builder;
@@ -256,8 +284,16 @@ public class ContainerPBImpl extends ProtoBase<ContainerProto> implements Contai
     return new ContainerIdPBImpl(p);
   }
 
+  private NodeIdPBImpl convertFromProtoFormat(NodeIdProto p) {
+    return new NodeIdPBImpl(p);
+  }
+
   private ContainerIdProto convertToProtoFormat(ContainerId t) {
     return ((ContainerIdPBImpl)t).getProto();
+  }
+
+  private NodeIdProto convertToProtoFormat(NodeId t) {
+    return ((NodeIdPBImpl)t).getProto();
   }
 
   private ResourcePBImpl convertFromProtoFormat(ResourceProto p) {

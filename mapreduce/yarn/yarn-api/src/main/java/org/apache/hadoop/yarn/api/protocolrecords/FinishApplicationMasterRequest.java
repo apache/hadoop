@@ -1,8 +1,20 @@
 package org.apache.hadoop.yarn.api.protocolrecords;
 
-import org.apache.hadoop.yarn.api.records.ApplicationMaster;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+
 
 public interface FinishApplicationMasterRequest {
-  public abstract ApplicationMaster getApplicationMaster();
-  public abstract void setApplicationMaster(ApplicationMaster applicationMaster);
+
+  ApplicationAttemptId getApplicationAttemptId();
+  void setAppAttemptId(ApplicationAttemptId applicationAttemptId);
+
+  String getFinalState();
+  void setFinalState(String string);
+
+  String getDiagnostics();
+  void setDiagnostics(String string);
+
+  String getTrackingUrl();
+  void setTrackingUrl(String historyUrl);
+
 }

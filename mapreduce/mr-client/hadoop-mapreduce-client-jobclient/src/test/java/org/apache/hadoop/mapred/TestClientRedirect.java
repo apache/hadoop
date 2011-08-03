@@ -224,9 +224,6 @@ public class TestClientRedirect {
       ApplicationReport application = recordFactory
           .newRecordInstance(ApplicationReport.class);
       application.setApplicationId(applicationId);
-      application.setStatus(recordFactory
-          .newRecordInstance(ApplicationStatus.class));
-      application.getStatus().setApplicationId(applicationId);
       if (amRunning) {
         application.setState(ApplicationState.RUNNING);
       } else {

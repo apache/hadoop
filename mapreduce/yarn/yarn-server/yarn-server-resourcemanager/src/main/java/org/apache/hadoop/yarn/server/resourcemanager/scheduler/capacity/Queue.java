@@ -30,8 +30,8 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Application;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
 
 /**
  * Queue represents a node in the tree of 
@@ -124,12 +124,6 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
   public List<Queue> getChildQueues();
   
   /**
-   * Get applications in this queue
-   * @return applications in the queue
-   */
-  public List<Application> getApplications();
-  
-  /**
    * Check if the <code>user</code> has permission to perform the operation
    * @param acl ACL
    * @param user user
@@ -143,10 +137,9 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @param application application being submitted
    * @param user user who submitted the application
    * @param queue queue to which the application is submitted
-   * @param priority application priority
    */
-  public void submitApplication(Application application, String user, 
-      String queue, Priority priority) 
+  public void submitApplication(CSApp application, String user, 
+      String queue) 
   throws AccessControlException;
   
   /**
@@ -154,8 +147,7 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @param application
    * @param queue application queue 
    */
-  public void finishApplication(Application application, String queue)
-  throws AccessControlException;
+  public void finishApplication(CSApp application, String queue);
   
   /**
    * Assign containers to applications in the queue or it's children (if any).
@@ -163,7 +155,7 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @param node node on which resources are available
    * @return
    */
-  public Resource assignContainers(Resource clusterResource, NodeInfo node);
+  public Resource assignContainers(Resource clusterResource, CSNode node);
   
   /**
    * A container assigned to the queue has completed.
@@ -175,7 +167,7 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    */
   public void completedContainer(Resource clusterResource,
       Container container, Resource containerResource, 
-      Application application);
+      CSApp application);
 
   /**
    * Get the number of applications in the queue.
@@ -204,6 +196,6 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @param application the application for which the container was allocated
    * @param container the container that was recovered.
    */
-  public void recoverContainer(Resource clusterResource, Application application, 
+  public void recoverContainer(Resource clusterResource, CSApp application, 
       Container container);
 }

@@ -21,6 +21,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
 
+import junit.framework.Assert;
+import junit.framework.TestCase;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -33,17 +36,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.Task;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeManager;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import junit.framework.Assert;
-import junit.framework.TestCase;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 
 public class TestCapacityScheduler extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestCapacityScheduler.class);
@@ -73,7 +71,8 @@ public class TestCapacityScheduler extends TestCase {
           throws IOException {
     return new org.apache.hadoop.yarn.server.resourcemanager.NodeManager(
         hostName, containerManagerPort, httpPort, rackName, memory,
-        resourceManager.getResourceTracker());
+        resourceManager.getResourceTrackerService(), resourceManager
+            .getRMContext());
   }  
 
   @Test
@@ -160,7 +159,7 @@ public class TestCapacityScheduler extends TestCase {
     LOG.info("Adding new tasks...");
     
     Task task_1_1 = new Task(application_1, priority_0, 
-        new String[] {NodeManager.ANY});
+        new String[] {RMNode.ANY});
     application_1.addTask(task_1_1);
 
     application_1.schedule();

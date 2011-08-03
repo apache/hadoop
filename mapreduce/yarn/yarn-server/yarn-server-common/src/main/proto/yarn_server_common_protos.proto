@@ -5,16 +5,10 @@ option java_generate_equals_and_hash = true;
 
 import "yarn_protos.proto";
 
-message NodeHealthStatusProto {
-  optional bool is_node_healthy = 1;
-  optional string health_report = 2;
-  optional int64 last_health_report_time = 3;
-}
-
 message NodeStatusProto {
   optional NodeIdProto node_id = 1;
   optional int32 response_id = 2;
-  repeated StringContainerListMapProto containers = 3;
+  repeated ApplicationIdContainerListMapProto containers = 3;
   optional NodeHealthStatusProto nodeHealthStatus = 4;
 }
 
@@ -26,7 +20,7 @@ message RegistrationResponseProto {
 message HeartbeatResponseProto {
   optional int32 response_id = 1;
   optional bool reboot = 2;
-  repeated ContainerProto containers_to_cleanup = 3;
+  repeated ContainerIdProto containers_to_cleanup = 3;
   repeated ApplicationIdProto applications_to_cleanup = 4;
 }
 
@@ -34,8 +28,8 @@ message ContainerListProto {
   repeated ContainerProto container = 1;
 }
 
-message StringContainerListMapProto {
-  optional string key = 1;
+message ApplicationIdContainerListMapProto {
+  optional ApplicationIdProto application_id = 1;
   optional ContainerListProto value = 2;
 }
 

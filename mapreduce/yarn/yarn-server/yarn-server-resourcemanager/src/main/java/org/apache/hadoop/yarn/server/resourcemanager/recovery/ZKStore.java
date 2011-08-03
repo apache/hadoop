@@ -35,23 +35,23 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.NodeManagerInfo;
+import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationMasterPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.NodeManagerInfoPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.NodeReportPBImpl;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationMasterProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationSubmissionContextProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.NodeManagerInfoProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProto;
 import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.RMResourceTrackerImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeManagerImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -105,22 +105,23 @@ public class ZKStore implements Store {
     return new ZKWatcher();   
   }
 
-  private NodeManagerInfoPBImpl createNodeManagerInfo(NodeManager nodeInfo) {
-    NodeManagerInfo node = 
-      recordFactory.newRecordInstance(NodeManagerInfo.class);
+  private NodeReportPBImpl createNodeManagerInfo(RMNode nodeInfo) {
+    NodeReport node = 
+      recordFactory.newRecordInstance(NodeReport.class);
     node.setNodeAddress(nodeInfo.getNodeAddress());
     node.setRackName(nodeInfo.getRackName());
     node.setCapability(nodeInfo.getTotalCapability());
-    node.setUsed(nodeInfo.getUsedResource());
+    // TODO: FIXME
+//    node.setUsed(nodeInfo.getUsedResource());
     node.setNumContainers(nodeInfo.getNumContainers());
-    return (NodeManagerInfoPBImpl)node;
+    return (NodeReportPBImpl)node;
   }
 
   @Override
-  public synchronized void storeNode(NodeManager node) throws IOException {
+  public synchronized void storeNode(RMNode node) throws IOException {
     /** create a storage node and store it in zk **/
     if (!doneWithRecovery) return;
-    NodeManagerInfoPBImpl nodeManagerInfo = createNodeManagerInfo(node);
+    NodeReportPBImpl nodeManagerInfo = createNodeManagerInfo(node);
     byte[] bytes = nodeManagerInfo.getProto().toByteArray();
     try {
       zkClient.create(NODES + Integer.toString(node.getNodeID().getId()), bytes, null,
@@ -135,7 +136,7 @@ public class ZKStore implements Store {
   }
 
   @Override
-  public synchronized void removeNode(NodeManager node) throws IOException {
+  public synchronized void removeNode(RMNode node) throws IOException {
     if (!doneWithRecovery) return;
     
     /** remove a storage node **/
@@ -364,7 +365,7 @@ public class ZKStore implements Store {
   }
 
   private class ZKRMState implements RMState {
-    private List<NodeManager> nodeManagers = new ArrayList<NodeManager>();
+    private List<RMNode> nodeManagers = new ArrayList<RMNode>();
     private Map<ApplicationId, ApplicationInfo> applications = new 
     HashMap<ApplicationId, ApplicationInfo>();
 
@@ -372,17 +373,17 @@ public class ZKStore implements Store {
       LOG.info("Restoring RM state from ZK");
     }
 
-    private synchronized List<NodeManagerInfo> listStoredNodes() throws IOException {
+    private synchronized List<NodeReport> listStoredNodes() throws IOException {
       /** get the list of nodes stored in zk **/
       //TODO PB
-      List<NodeManagerInfo> nodes = new ArrayList<NodeManagerInfo>();
+      List<NodeReport> nodes = new ArrayList<NodeReport>();
       Stat stat = new Stat();
       try {
         List<String> children = zkClient.getChildren(NODES, false);
         for (String child: children) {
           byte[] data = zkClient.getData(NODES + child, false, stat);
-          NodeManagerInfoPBImpl nmImpl = new NodeManagerInfoPBImpl(
-              NodeManagerInfoProto.parseFrom(data));
+          NodeReportPBImpl nmImpl = new NodeReportPBImpl(
+              NodeReportProto.parseFrom(data));
           nodes.add(nmImpl);
         }
       } catch (InterruptedException ie) {
@@ -396,7 +397,7 @@ public class ZKStore implements Store {
     }
 
     @Override
-    public List<NodeManager> getStoredNodeManagers()  {
+    public List<RMNode> getStoredNodeManagers()  {
       return nodeManagers;
     }
 
@@ -453,10 +454,10 @@ public class ZKStore implements Store {
     }
 
     private void load() throws IOException {
-      List<NodeManagerInfo> nodeInfos = listStoredNodes();
+      List<NodeReport> nodeInfos = listStoredNodes();
       final Pattern trackerPattern = Pattern.compile(".*:.*");
       final Matcher m = trackerPattern.matcher("");
-      for (NodeManagerInfo node: nodeInfos) {
+      for (NodeReport node: nodeInfos) {
         m.reset(node.getNodeAddress());
         if (!m.find()) {
           LOG.info("Skipping node, bad node-address " + node.getNodeAddress());
@@ -470,10 +471,10 @@ public class ZKStore implements Store {
           continue;
         }
         int httpPort = Integer.valueOf(m.group(1));
-        NodeManager nm = new NodeManagerImpl(node.getNodeId(),
+        RMNode nm = new RMNodeImpl(node.getNodeId(), null,
             hostName, cmPort, httpPort,
-            RMResourceTrackerImpl.resolve(node.getNodeAddress()), 
-            node.getCapability());
+            ResourceTrackerService.resolve(node.getNodeAddress()), 
+            node.getCapability(), null);
         nodeManagers.add(nm);
       }
       readLastNodeId();

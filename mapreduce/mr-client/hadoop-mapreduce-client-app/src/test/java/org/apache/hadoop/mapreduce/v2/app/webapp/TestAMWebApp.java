@@ -28,6 +28,7 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.MockJobs;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.yarn.Clock;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.Apps;
@@ -40,6 +41,7 @@ import com.google.inject.Injector;
 public class TestAMWebApp {
 
   static class TestAppContext implements AppContext {
+    final ApplicationAttemptId appAttemptID;
     final ApplicationId appID;
     final String user = MockJobs.newUserName();
     final Map<JobId, Job> jobs;
@@ -47,11 +49,17 @@ public class TestAMWebApp {
 
     TestAppContext(int appid, int numJobs, int numTasks, int numAttempts) {
       appID = MockJobs.newAppID(appid);
+      appAttemptID = MockJobs.newAppAttemptID(appID, 0);
       jobs = MockJobs.newJobs(appID, numJobs, numTasks, numAttempts);
     }
 
     TestAppContext() {
       this(0, 1, 1, 1);
+    }
+
+    @Override
+    public ApplicationAttemptId getApplicationAttemptId() {
+      return appAttemptID;
     }
 
     @Override

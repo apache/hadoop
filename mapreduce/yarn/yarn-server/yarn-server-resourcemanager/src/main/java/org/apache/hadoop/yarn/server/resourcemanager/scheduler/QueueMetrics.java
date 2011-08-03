@@ -133,7 +133,7 @@ public class QueueMetrics {
     }
   }
 
-  public void finishApp(Application app) {
+  public void finishApp(AppSchedulingInfo app) {
     ApplicationState state = app.getState();
     switch (state) {
       case KILLED: appsKilled.incr(); break;

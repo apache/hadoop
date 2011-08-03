@@ -376,10 +376,10 @@ public class ContainerManagerImpl extends CompositeService implements
     case FINISH_CONTAINERS:
       CMgrCompletedContainersEvent containersFinishedEvent =
           (CMgrCompletedContainersEvent) event;
-      for (org.apache.hadoop.yarn.api.records.Container container :
-            containersFinishedEvent.getContainersToCleanup()) {
+      for (ContainerId container : containersFinishedEvent
+          .getContainersToCleanup()) {
         this.dispatcher.getEventHandler().handle(
-            new ContainerKillEvent(container.getId(),
+            new ContainerKillEvent(container,
                 "Container Killed by ResourceManager"));
       }
       break;

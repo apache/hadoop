@@ -60,10 +60,12 @@ import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.service.Service;
@@ -84,6 +86,8 @@ import org.apache.hadoop.yarn.service.Service;
 //    - recover output of completed tasks
 
 public class RecoveryService extends CompositeService implements Recovery {
+
+  private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
   private static final Log LOG = LogFactory.getLog(RecoveryService.class);
 
@@ -348,11 +352,13 @@ public class RecoveryService extends CompositeService implements Recovery {
     private void sendAssignedEvent(TaskAttemptId yarnAttemptID,
         TaskAttemptInfo attemptInfo) {
       LOG.info("Sending assigned event to " + yarnAttemptID);
-      ContainerId cId = RecordFactoryProvider.getRecordFactory(null)
+      ContainerId cId = recordFactory
           .newRecordInstance(ContainerId.class);
-      Container container = RecordFactoryProvider.getRecordFactory(null)
+      Container container = recordFactory
           .newRecordInstance(Container.class);
       container.setId(cId);
+      container.setNodeId(recordFactory
+          .newRecordInstance(NodeId.class));
       container.setContainerManagerAddress("localhost");
       container.setContainerToken(null);
       container.setNodeHttpAddress(attemptInfo.getHostname() + ":" + 

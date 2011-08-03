@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRespons
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.AMResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
 import org.apache.hadoop.yarn.api.records.ApplicationStatus;
@@ -65,17 +66,14 @@ import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.ClusterTracker;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.RMResourceTrackerImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeManagerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
-
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -95,9 +93,9 @@ public class TestRMContainerAllocator {
         scheduler, new Configuration());
 
     //add resources to scheduler
-    NodeInfo nodeManager1 = addNode(scheduler, "h1", 10240);
-    NodeInfo nodeManager2 = addNode(scheduler, "h2", 10240);
-    NodeInfo nodeManager3 = addNode(scheduler, "h3", 10240);
+    RMNode nodeManager1 = addNode(scheduler, "h1", 10240);
+    RMNode nodeManager2 = addNode(scheduler, "h2", 10240);
+    RMNode nodeManager3 = addNode(scheduler, "h3", 10240);
 
     //create the container request
     ContainerRequestEvent event1 = 
@@ -123,9 +121,9 @@ public class TestRMContainerAllocator {
     Assert.assertEquals("No of assignments must be 0", 0, assigned.size());
 
     //update resources in scheduler
-    scheduler.nodeUpdate(nodeManager1, null); // Node heartbeat
-    scheduler.nodeUpdate(nodeManager2, null); // Node heartbeat
-    scheduler.nodeUpdate(nodeManager3, null); // Node heartbeat
+    scheduler.nodeUpdate(nodeManager1); // Node heartbeat
+    scheduler.nodeUpdate(nodeManager2); // Node heartbeat
+    scheduler.nodeUpdate(nodeManager3); // Node heartbeat
 
 
     assigned = allocator.schedule();
@@ -142,9 +140,9 @@ public class TestRMContainerAllocator {
         scheduler, new Configuration());
 
     //add resources to scheduler
-    NodeInfo nodeManager1 = addNode(scheduler, "h1", 10240);
-    NodeInfo nodeManager2 = addNode(scheduler, "h2", 10240);
-    NodeInfo nodeManager3 = addNode(scheduler, "h3", 10240);
+    RMNode nodeManager1 = addNode(scheduler, "h1", 10240);
+    RMNode nodeManager2 = addNode(scheduler, "h2", 10240);
+    RMNode nodeManager3 = addNode(scheduler, "h3", 10240);
 
     //create the container request
     ContainerRequestEvent event1 = 
@@ -161,9 +159,9 @@ public class TestRMContainerAllocator {
     Assert.assertEquals("No of assignments must be 0", 0, assigned.size());
 
     //update resources in scheduler
-    scheduler.nodeUpdate(nodeManager1, null); // Node heartbeat
-    scheduler.nodeUpdate(nodeManager2, null); // Node heartbeat
-    scheduler.nodeUpdate(nodeManager3, null); // Node heartbeat
+    scheduler.nodeUpdate(nodeManager1); // Node heartbeat
+    scheduler.nodeUpdate(nodeManager2); // Node heartbeat
+    scheduler.nodeUpdate(nodeManager3); // Node heartbeat
 
     assigned = allocator.schedule();
     checkAssignments(
@@ -178,9 +176,9 @@ public class TestRMContainerAllocator {
         scheduler, conf);
 
     //add resources to scheduler
-    NodeInfo nodeManager1 = addNode(scheduler, "h1", 1024);
-    NodeInfo nodeManager2 = addNode(scheduler, "h2", 10240);
-    NodeInfo nodeManager3 = addNode(scheduler, "h3", 10240);
+    RMNode nodeManager1 = addNode(scheduler, "h1", 1024);
+    RMNode nodeManager2 = addNode(scheduler, "h2", 10240);
+    RMNode nodeManager3 = addNode(scheduler, "h3", 10240);
 
     //create the container request
     //send MAP request
@@ -202,9 +200,9 @@ public class TestRMContainerAllocator {
     Assert.assertEquals("No of assignments must be 0", 0, assigned.size());
 
     //update resources in scheduler
-    scheduler.nodeUpdate(nodeManager1, null); // Node heartbeat
-    scheduler.nodeUpdate(nodeManager2, null); // Node heartbeat
-    scheduler.nodeUpdate(nodeManager3, null); // Node heartbeat
+    scheduler.nodeUpdate(nodeManager1); // Node heartbeat
+    scheduler.nodeUpdate(nodeManager2); // Node heartbeat
+    scheduler.nodeUpdate(nodeManager3); // Node heartbeat
 
     assigned = allocator.schedule();
     checkAssignments(
@@ -219,22 +217,21 @@ public class TestRMContainerAllocator {
 
 
 
-  private NodeInfo addNode(FifoScheduler scheduler, 
+  private RMNode addNode(FifoScheduler scheduler, 
       String nodeName, int memory) {
     NodeId nodeId = recordFactory.newRecordInstance(NodeId.class);
     nodeId.setId(0);
     Resource resource = recordFactory.newRecordInstance(Resource.class);
     resource.setMemory(memory);
-    NodeManager nodeManager = new NodeManagerImpl(nodeId, nodeName, 0, 0,
-        RMResourceTrackerImpl.resolve(nodeName), resource
+    RMNode nodeManager = new RMNodeImpl(nodeId, nodeName, 0, 0,
+        ResourceTrackerService.resolve(nodeName), resource
         );
     scheduler.addNode(nodeManager); // Node registration
     return nodeManager;
   }
 
   private FifoScheduler createScheduler() throws YarnRemoteException {
-    ClusterTracker clusterTracker = null;
-    FifoScheduler fsc = new FifoScheduler(clusterTracker) {
+    FifoScheduler fsc = new FifoScheduler() {
       //override this to copy the objects
       //otherwise FifoScheduler updates the numContainers in same objects as kept by
       //RMContainerAllocator
@@ -459,6 +456,10 @@ public class TestRMContainerAllocator {
       @Override
       public Map<JobId, Job> getAllJobs() {
         return null;
+      }
+      @Override
+      public ApplicationAttemptId getApplicationAttemptId() {
+        return recordFactory.newRecordInstance(ApplicationAttemptId.class);
       }
       @Override
       public ApplicationId getApplicationID() {

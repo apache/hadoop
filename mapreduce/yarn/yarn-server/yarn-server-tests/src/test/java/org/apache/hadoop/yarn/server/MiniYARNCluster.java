@@ -44,9 +44,9 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdaterImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.RMResourceTrackerImpl;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.service.CompositeService;
 
@@ -180,7 +180,8 @@ public class MiniYARNCluster extends CompositeService {
                 healthChecker, metrics) {
               @Override
               protected ResourceTracker getRMClient() {
-                final RMResourceTrackerImpl rt = resourceManager.getResourceTracker();
+                final ResourceTrackerService rt = resourceManager
+                    .getResourceTrackerService();
                 final RecordFactory recordFactory =
                   RecordFactoryProvider.getRecordFactory(null);
 
@@ -193,8 +194,8 @@ public class MiniYARNCluster extends CompositeService {
                     NodeHeartbeatResponse response = recordFactory.newRecordInstance(
                         NodeHeartbeatResponse.class);
                     try {
-                    response.setHeartbeatResponse(
-                        rt.nodeHeartbeat(request.getNodeStatus()));
+                      response.setHeartbeatResponse(rt.nodeHeartbeat(request)
+                          .getHeartbeatResponse());
                     } catch (IOException ioe) {
                       LOG.info("Exception in heartbeat from node " + 
                           request.getNodeStatus().getNodeId(), ioe);
@@ -210,10 +211,9 @@ public class MiniYARNCluster extends CompositeService {
                     RegisterNodeManagerResponse response = recordFactory.newRecordInstance(
                         RegisterNodeManagerResponse.class);
                     try {
-                      response.setRegistrationResponse(
-                          rt.registerNodeManager(
-                              request.getHost(), request.getContainerManagerPort(), 
-                              request.getHttpPort(), request.getResource()));
+                      response.setRegistrationResponse(rt
+                          .registerNodeManager(request)
+                          .getRegistrationResponse());
                     } catch (IOException ioe) {
                       LOG.info("Exception in node registration from " + request.getHost(), ioe);
                       throw RPCUtil.getRemoteException(ioe);

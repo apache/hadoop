@@ -7,14 +7,12 @@ import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
-import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -45,10 +43,10 @@ public class MemStore implements Store {
   }
 
   @Override
-  public void storeNode(NodeManager node) throws IOException {}
+  public void storeNode(RMNode node) throws IOException {}
 
   @Override
-  public void removeNode(NodeManager node) throws IOException {}
+  public void removeNode(RMNode node) throws IOException {}
 
   private class ApplicationStoreImpl implements ApplicationStore {
     @Override
@@ -102,8 +100,8 @@ public class MemStore implements Store {
     }
 
     @Override
-    public List<NodeManager> getStoredNodeManagers()  {
-      return new ArrayList<NodeManager>();
+    public List<RMNode> getStoredNodeManagers()  {
+      return new ArrayList<RMNode>();
     }
 
     @Override

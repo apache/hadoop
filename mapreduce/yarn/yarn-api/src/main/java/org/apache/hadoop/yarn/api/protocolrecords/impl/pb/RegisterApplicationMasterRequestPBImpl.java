@@ -2,10 +2,10 @@ package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
-import org.apache.hadoop.yarn.api.records.ApplicationMaster;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
-import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationMasterPBImpl;
-import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationMasterProto;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterRequestProtoOrBuilder;
 
@@ -16,7 +16,7 @@ public class RegisterApplicationMasterRequestPBImpl extends ProtoBase<RegisterAp
   RegisterApplicationMasterRequestProto.Builder builder = null;
   boolean viaProto = false;
   
-  private ApplicationMaster applicationMaster = null;
+  private ApplicationAttemptId applicationAttemptId = null;
   
   
   public RegisterApplicationMasterRequestPBImpl() {
@@ -36,8 +36,8 @@ public class RegisterApplicationMasterRequestPBImpl extends ProtoBase<RegisterAp
   }
 
   private void mergeLocalToBuilder() {
-    if (this.applicationMaster != null && !((ApplicationMasterPBImpl)this.applicationMaster).getProto().equals(builder.getApplicationMaster())) {
-      builder.setApplicationMaster(convertToProtoFormat(this.applicationMaster));
+    if (this.applicationAttemptId != null && !((ApplicationAttemptIdPBImpl)this.applicationAttemptId).getProto().equals(builder.getApplicationAttemptId())) {
+      builder.setApplicationAttemptId(convertToProtoFormat(this.applicationAttemptId));
     }
   }
 
@@ -58,34 +58,68 @@ public class RegisterApplicationMasterRequestPBImpl extends ProtoBase<RegisterAp
     
   
   @Override
-  public ApplicationMaster getApplicationMaster() {
+  public ApplicationAttemptId getApplicationAttemptId() {
     RegisterApplicationMasterRequestProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.applicationMaster != null) {
-      return this.applicationMaster;
+    if (this.applicationAttemptId != null) {
+      return this.applicationAttemptId;
     }
-    if (!p.hasApplicationMaster()) {
+    if (!p.hasApplicationAttemptId()) {
       return null;
     }
-    this.applicationMaster = convertFromProtoFormat(p.getApplicationMaster());
-    return this.applicationMaster;
+    this.applicationAttemptId = convertFromProtoFormat(p.getApplicationAttemptId());
+    return this.applicationAttemptId;
   }
 
   @Override
-  public void setApplicationMaster(ApplicationMaster applicationMaster) {
+  public void setApplicationAttemptId(ApplicationAttemptId applicationMaster) {
     maybeInitBuilder();
     if (applicationMaster == null) 
-      builder.clearApplicationMaster();
-    this.applicationMaster = applicationMaster;
+      builder.clearApplicationAttemptId();
+    this.applicationAttemptId = applicationMaster;
   }
 
-  private ApplicationMasterPBImpl convertFromProtoFormat(ApplicationMasterProto p) {
-    return new ApplicationMasterPBImpl(p);
+  @Override
+  public String getHost() {
+    RegisterApplicationMasterRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getHost();
   }
 
-  private ApplicationMasterProto convertToProtoFormat(ApplicationMaster t) {
-    return ((ApplicationMasterPBImpl)t).getProto();
+  @Override
+  public void setHost(String host) {
+    maybeInitBuilder();
+    builder.setHost(host);
   }
 
+  @Override
+  public int getRpcPort() {
+    RegisterApplicationMasterRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getRpcPort();
+  }
 
+  @Override
+  public void setRpcPort(int port) {
+    maybeInitBuilder();
+    builder.setRpcPort(port);
+  }
+
+  @Override
+  public String getTrackingUrl() {
+    RegisterApplicationMasterRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getTrackingUrl();
+  }
+
+  @Override
+  public void setTrackingUrl(String url) {
+    maybeInitBuilder();
+    builder.setTrackingUrl(url);
+  }
+
+  private ApplicationAttemptIdPBImpl convertFromProtoFormat(ApplicationAttemptIdProto p) {
+    return new ApplicationAttemptIdPBImpl(p);
+  }
+
+  private ApplicationAttemptIdProto convertToProtoFormat(ApplicationAttemptId t) {
+    return ((ApplicationAttemptIdPBImpl)t).getProto();
+  }
 
 }  

@@ -52,13 +52,11 @@ public interface Queue {
   
   /**
    * Get queue information
-   * @param includeApplications include applications?
    * @param includeChildQueues include child queues?
    * @param recursive recursively get child queue information?
    * @return queue information
    */
-  QueueInfo getQueueInfo(boolean includeApplications, 
-      boolean includeChildQueues, boolean recursive);
+  QueueInfo getQueueInfo(boolean includeChildQueues, boolean recursive);
   
   /**
    * Get queue ACLs for given <code>user</code>.

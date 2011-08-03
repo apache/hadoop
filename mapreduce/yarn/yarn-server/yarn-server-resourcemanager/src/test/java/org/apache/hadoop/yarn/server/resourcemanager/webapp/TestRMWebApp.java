@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import static org.apache.hadoop.test.MockitoMaker.make;
-import static org.apache.hadoop.test.MockitoMaker.stub;
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNodes.newResource;
 import static org.apache.hadoop.yarn.webapp.Params.TITLE;
 import static org.junit.Assert.assertEquals;
@@ -27,21 +25,19 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
+import org.apache.hadoop.yarn.server.resourcemanager.NodesCollection;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContextImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.Application;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.AppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.MockAsm;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.ClusterTracker;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.RMResourceTrackerImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
@@ -49,7 +45,6 @@ import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.junit.Test;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Injector;
 
@@ -65,35 +60,43 @@ public class TestRMWebApp {
 
   @Test public void testView() {
     Injector injector = WebAppTests.createMockInjector(RMContext.class,
-                                                       mockRMContext(3));
+                                               mockRMContext(3, 1, 2, 8*GiB));
     injector.getInstance(RmView.class).render();
     WebAppTests.flushOutput(injector);
   }
 
   @Test public void testNodesPage() {
-    WebAppTests.testPage(NodesPage.class, ClusterTracker.class,
-                         mockResource(1, 2, 8*GiB));
+    WebAppTests.testPage(NodesPage.class, RMContext.class,
+                         mockRMContext(3, 1, 2, 8*GiB));
   }
 
-  public static RMResourceTrackerImpl mockResource(int racks, int nodes,
-                                                   int mbsPerNode) {
-    final List<NodeInfo> list =
-        MockNodes.newNodes(racks, nodes, newResource(mbsPerNode));
-    return make(stub(RMResourceTrackerImpl.class).returning(list).from.
-        getAllNodeInfo());
-  }
-
-  public static RMContext mockRMContext(int n) {
-    final List<Application> apps = MockAsm.newApplications(n);
-    final ConcurrentMap<ApplicationId, Application> map = Maps
+  public static RMContext mockRMContext(int numApps, int racks, int nodes,
+      int mbsPerNode) {
+    final List<AppAttempt> apps = MockAsm.newApplications(numApps);
+    final ConcurrentMap<ApplicationId, AppAttempt> map = Maps
         .newConcurrentMap();
-    for (Application app : apps) {
+    for (AppAttempt app : apps) {
       map.put(app.getApplicationID(), app);
     }
+    final List<RMNode> list = MockNodes.newNodes(racks, nodes,
+        newResource(mbsPerNode));
     return new RMContextImpl(new MemStore()) {
       @Override
-      public ConcurrentMap<ApplicationId, Application> getApplications() {
+      public ConcurrentMap<ApplicationId, AppAttempt> getApplications() {
         return map;
+      }
+      @Override
+      public NodesCollection getNodesCollection() {
+        NodesCollection nodesCollection = new NodesCollection(new MemStore());
+        try {
+          nodesCollection.addListener(mockCapacityScheduler());
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+        for (RMNode node : list) {
+          nodesCollection.addNode(node);
+        }
+        return nodesCollection;
       }
     };
   }
@@ -103,11 +106,10 @@ public class TestRMWebApp {
   throws Exception {
     ResourceManager rm = mock(ResourceManager.class);
     ApplicationsManager asm = MockAsm.create();
-    RMContext rmContext = mockRMContext(apps);
-    RMResourceTrackerImpl rt = mockResource(racks, nodes, mbsPerNode);
+    RMContext rmContext = mockRMContext(apps, racks, nodes,
+        mbsPerNode);
     ResourceScheduler rs = mockCapacityScheduler();
     when(rm.getApplicationsManager()).thenReturn(asm);
-    when(rm.getResourceTracker()).thenReturn(rt);
     when(rm.getResourceScheduler()).thenReturn(rs);
     when(rm.getRMContext()).thenReturn(rmContext);
     return rm;

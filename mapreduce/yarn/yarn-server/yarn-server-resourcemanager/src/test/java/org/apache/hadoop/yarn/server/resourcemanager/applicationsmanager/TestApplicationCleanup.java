@@ -33,7 +33,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
@@ -48,25 +47,22 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMLauncherEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMAllocatedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMAllocatedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationTrackerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.SNEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.NodeInfoTracker;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.RMResourceTrackerImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -86,34 +82,13 @@ public class TestApplicationCleanup {
   private ExtASM asm;
   private static final int memoryNeeded = 100;
 
-  private final RMContext context = new ResourceManager.RMContextImpl(new MemStore());
+  private final RMContext context = new RMContextImpl(new MemStore());
   private ClientRMService clientService;
-  private TestRMResourceTrackerImpl clusterTracker;
-
-  private class TestRMResourceTrackerImpl extends RMResourceTrackerImpl {
-
-    public TestRMResourceTrackerImpl(
-        ContainerTokenSecretManager containerTokenSecretManager, RMContext context) {
-      super(containerTokenSecretManager, context);
-    }
-    
-    @Override
-    protected NodeInfoTracker getAndAddNodeInfoTracker(NodeId nodeId,
-        String host, int cmPort, int httpPort, Node node, Resource capability) {
-      return super.getAndAddNodeInfoTracker(nodeId, host, cmPort, httpPort, node, capability);
-    }
-    
-    @Override
-    protected void updateListener(NodeInfo nodeManager, Map<String, List<Container>> containers) {
-      super.updateListener(nodeManager, containers);
-    }
-  }
 
   @Before
   public void setUp() {
     new DummyApplicationTracker();
-    this.clusterTracker = new TestRMResourceTrackerImpl(new ContainerTokenSecretManager(), context);
-    scheduler = new FifoScheduler(clusterTracker);
+    scheduler = new FifoScheduler();
     context.getDispatcher().register(ApplicationTrackerEventType.class, scheduler);
     Configuration conf = new Configuration();
     context.getDispatcher().init(conf);
@@ -122,7 +97,7 @@ public class TestApplicationCleanup {
     asm.init(conf);
     clientService = new ClientRMService(context,
         asm.getAmLivelinessMonitor(), asm.getClientToAMSecretManager(),
-        clusterTracker, scheduler);
+        scheduler);
   }
 
   @After
@@ -150,7 +125,7 @@ public class TestApplicationCleanup {
 
     private class DummyApplicationMasterLauncher implements EventHandler<ASMEvent<AMLauncherEventType>> {
       private AtomicInteger notify = new AtomicInteger(0);
-      private Application application;
+      private AppAttempt application;
 
       public DummyApplicationMasterLauncher(RMContext context) {
         context.getDispatcher().register(AMLauncherEventType.class, this);
@@ -179,7 +154,7 @@ public class TestApplicationCleanup {
 
     private class DummySchedulerNegotiator implements EventHandler<ASMEvent<SNEventType>> {
       private AtomicInteger snnotify = new AtomicInteger(0);
-      Application application;
+      AppAttempt application;
       public  DummySchedulerNegotiator(RMContext context) {
         context.getDispatcher().register(SNEventType.class, this);
       }
@@ -193,7 +168,7 @@ public class TestApplicationCleanup {
           break;
         case SCHEDULE:
           schedulerScheduleCalled = true;
-          application = appEvent.getApplication();
+          application = appEvent.getAppAttempt();
           context.getDispatcher().getEventHandler().handle(
               new AMAllocatedEvent(application.getApplicationID(),
                   application.getMasterContainer()));
@@ -223,7 +198,7 @@ public class TestApplicationCleanup {
   }
 
   private void waitForState(ApplicationState 
-      finalState, Application application) throws Exception {
+      finalState, AppAttempt application) throws Exception {
     int count = 0;
     while(application.getState() != finalState && count < 10) {
       Thread.sleep(500);
@@ -244,15 +219,14 @@ public class TestApplicationCleanup {
     return request;
   }
 
-  protected NodeManager addNodes(String commonName, int i, int memoryCapability) throws IOException {
+  protected RMNode addNodes(String commonName, int i, int memoryCapability) throws IOException {
     NodeId nodeId = recordFactory.newRecordInstance(NodeId.class);
     nodeId.setId(i);
     String hostName = commonName + "_" + i;
     Node node = new NodeBase(hostName, NetworkTopology.DEFAULT_RACK);
     Resource capability = recordFactory.newRecordInstance(Resource.class);
-    capability.setMemory(1024);
-    NodeInfoTracker nTracker = clusterTracker.getAndAddNodeInfoTracker(nodeId, hostName, i, -1, node, capability);
-    return nTracker.getNodeManager();
+    capability.setMemory(memoryCapability);
+    return new RMNodeImpl(nodeId, hostName, i, -i, node, capability);
   }
 
   @Test
@@ -274,18 +248,18 @@ public class TestApplicationCleanup {
     reqs.add(createNewResourceRequest(memoryNeeded, 2));
     List<Container> release = new ArrayList<Container>();
     scheduler.allocate(appID, reqs, release);
-    ArrayList<NodeManager> nodesAdded = new ArrayList<NodeManager>();
+    ArrayList<RMNode> nodesAdded = new ArrayList<RMNode>();
     for (int i = 0; i < 10; i++) {
       nodesAdded.add(addNodes("localhost", i, memoryCapability));
     }
     /* let one node heartbeat */
     Map<String, List<Container>> containers = new HashMap<String, List<Container>>();
-    NodeManager firstNode = nodesAdded.get(0);
+    RMNode firstNode = nodesAdded.get(0);
     int firstNodeMemory = firstNode.getAvailableResource().getMemory();
-    NodeManager secondNode = nodesAdded.get(1);
+    RMNode secondNode = nodesAdded.get(1);
   
-    clusterTracker.updateListener(firstNode, containers);
-    clusterTracker.updateListener(secondNode, containers);
+    context.getNodesCollection().updateListener(firstNode, containers);
+    context.getNodesCollection().updateListener(secondNode, containers);
     LOG.info("Available resource on first node" + firstNode.getAvailableResource());
     LOG.info("Available resource on second node" + secondNode.getAvailableResource());
     /* only allocate the containers to the first node */
@@ -301,7 +275,7 @@ public class TestApplicationCleanup {
     Assert.assertTrue(asm.schedulerCleanupCalled);
     Assert.assertTrue(asm.schedulerScheduleCalled);
     /* check for update of completed application */
-    clusterTracker.updateListener(firstNode, containers);
+    context.getNodesCollection().updateListener(firstNode, containers);
     NodeResponse response = firstNode.statusUpdate(containers);
     Assert.assertTrue(response.getFinishedApplications().contains(appID));
     LOG.info("The containers to clean up " + response.getContainersToCleanUp().size());

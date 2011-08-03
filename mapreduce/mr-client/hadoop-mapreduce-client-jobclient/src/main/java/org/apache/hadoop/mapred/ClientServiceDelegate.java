@@ -70,8 +70,7 @@ public class ClientServiceDelegate {
 
   private Configuration conf;
   private ApplicationId currentAppId;
-  private ApplicationState currentAppState
-    = ApplicationState.PENDING;
+  private ApplicationState currentAppState = ApplicationState.NEW;
   private final ResourceMgrDelegate rm;
   private MRClientProtocol realProxy = null;
   private String serviceAddr = "";
@@ -108,10 +107,7 @@ public class ClientServiceDelegate {
     // Possibly allow nulls through the PB tunnel, otherwise deal with an exception
     // and redirect to the history server.
     ApplicationReport application = rm.getApplicationReport(currentAppId);
-    while (!ApplicationState.COMPLETED.equals(application.getState()) &&
-        !ApplicationState.FAILED.equals(application.getState()) && 
-        !ApplicationState.KILLED.equals(application.getState()) &&
-        !ApplicationState.ALLOCATING.equals(application.getState())) {
+    while (ApplicationState.RUNNING.equals(application.getState())) {
       try {
         if (application.getHost() == null || "".equals(application.getHost())) {
           LOG.debug("AM not assigned to Job. Waiting to get the AM ...");
@@ -157,12 +153,12 @@ public class ClientServiceDelegate {
      * on a allocating Application.
      */
     
-    if (currentAppState == ApplicationState.ALLOCATING) {
+    if (currentAppState == ApplicationState.NEW) {
       realProxy = null;
       return;
     }
     
-    if (currentAppState == ApplicationState.COMPLETED
+    if (currentAppState == ApplicationState.SUCCEEDED
         || currentAppState == ApplicationState.FAILED
         || currentAppState == ApplicationState.KILLED) {
       serviceAddr = conf.get(JHConfig.HS_BIND_ADDRESS,
@@ -345,11 +341,11 @@ public class ClientServiceDelegate {
     jobreport.setReduceProgress(0);
     jobreport.setSetupProgress(0);
 
-    if (currentAppState == ApplicationState.ALLOCATING) {
+    if (currentAppState == ApplicationState.NEW) {
       /* the protocol wasnt instantiated because the applicaton wasnt launched
        * return a fake report.
        */
-      jobreport.setJobState(JobState.INITED); 
+      jobreport.setJobState(JobState.NEW); 
     } else if (currentAppState == ApplicationState.KILLED) {
       jobreport.setJobState(JobState.KILLED);
     } else if (currentAppState == ApplicationState.FAILED) {

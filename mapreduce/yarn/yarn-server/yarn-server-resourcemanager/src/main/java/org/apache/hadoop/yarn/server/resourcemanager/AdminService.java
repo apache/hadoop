@@ -33,6 +33,12 @@ import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.ipc.RPCUtil;
+import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.security.SchedulerSecurityInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.api.RMAdminProtocol;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshAdminAclsResponse;
@@ -61,7 +67,8 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
 
   private final Configuration conf;
   private final ResourceScheduler scheduler;
-  private final NodeTracker nodesTracker;
+  private final RMContext rmContext;
+  private final NodesListManager nodesListManager;
 
   private Server server;
   private InetSocketAddress masterServiceAddress;
@@ -71,11 +78,12 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
     RecordFactoryProvider.getRecordFactory(null);
 
   public AdminService(Configuration conf, ResourceScheduler scheduler, 
-      NodeTracker nodesTracker) {
+      RMContext rmContext, NodesListManager nodesListManager) {
     super(AdminService.class.getName());
     this.conf = conf;
     this.scheduler = scheduler;
-    this.nodesTracker = nodesTracker;
+    this.rmContext = rmContext;
+    this.nodesListManager = nodesListManager;
   }
 
   @Override
@@ -156,7 +164,7 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
       throws YarnRemoteException {
     checkAcls("refreshNodes");
     try {
-      nodesTracker.refreshNodes();
+      this.nodesListManager.refreshNodes();
       return recordFactory.newRecordInstance(RefreshNodesResponse.class);
     } catch (IOException ioe) {
       LOG.info("Exception refreshing nodes ", ioe);

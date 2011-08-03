@@ -32,20 +32,21 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMLauncherEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMAllocatedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMFinishEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMRegistrationEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMStatusUpdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ASMEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMFinishEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMAllocatedEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMRegistrationEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.AMStatusUpdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.ApplicationTrackerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.events.SNEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -53,7 +54,7 @@ import org.junit.Test;
 public class TestASMStateMachine {
   private static final Log LOG = LogFactory.getLog(TestASMStateMachine.class);
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-  RMContext context = new ResourceManager.RMContextImpl(new MemStore());
+  RMContext context = new RMContextImpl(new MemStore());
   EventHandler handler;
   private boolean snreceivedCleanUp = false;
   private boolean snAllocateReceived = false;
@@ -80,7 +81,7 @@ public class TestASMStateMachine {
   }
 
   private class DummyAMLaunchEventHandler implements EventHandler<ASMEvent<AMLauncherEventType>> {
-    Application application;
+    AppAttempt application;
     AtomicInteger amsync = new AtomicInteger(0);
 
     public DummyAMLaunchEventHandler() {
@@ -105,7 +106,7 @@ public class TestASMStateMachine {
   }
 
   private class DummySNEventHandler implements EventHandler<ASMEvent<SNEventType>> {
-    Application application;
+    AppAttempt application;
     AtomicInteger snsync = new AtomicInteger(0);
 
     public DummySNEventHandler() {
@@ -120,7 +121,7 @@ public class TestASMStateMachine {
         break;
       case SCHEDULE:
         snAllocateReceived = true;
-        application = event.getApplication();
+        application = event.getAppAttempt();
         context.getDispatcher().getEventHandler().handle(
             new AMAllocatedEvent(application.getApplicationID(),
                 application.getMasterContainer()));
@@ -161,7 +162,7 @@ public class TestASMStateMachine {
   }
 
   private void waitForState( ApplicationState 
-      finalState, ApplicationImpl masterInfo) throws Exception {
+      finalState, AppAttemptImpl masterInfo) throws Exception {
     int count = 0;
     while(masterInfo.getState() != finalState && count < 10) {
       Thread.sleep(500);
@@ -180,7 +181,7 @@ public class TestASMStateMachine {
     submissioncontext.getApplicationId().setId(1);
     submissioncontext.getApplicationId().setClusterTimestamp(System.currentTimeMillis());
 
-    ApplicationImpl masterInfo = new ApplicationImpl(context,
+    AppAttemptImpl masterInfo = new AppAttemptImpl(context,
         conf, "dummyuser", submissioncontext, "dummyToken", StoreFactory
             .createVoidAppStore(), new AMLivelinessMonitor(context
             .getDispatcher().getEventHandler()));

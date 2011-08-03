@@ -22,24 +22,28 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import junit.framework.Assert;
 import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
+import org.apache.hadoop.yarn.server.resourcemanager.NMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.RMResourceTrackerImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceListener;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.junit.Before;
@@ -49,7 +53,7 @@ public class TestNMExpiry extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestNMExpiry.class);
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   
-  RMResourceTrackerImpl resourceTracker;
+  ResourceTrackerService resourceTrackerService;
   ContainerTokenSecretManager containerTokenSecretManager = 
     new ContainerTokenSecretManager();
   AtomicInteger test = new AtomicInteger();
@@ -58,27 +62,26 @@ public class TestNMExpiry extends TestCase {
   private static class VoidResourceListener implements ResourceListener {
    
     @Override
-    public void removeNode(NodeInfo node) {
+    public void removeNode(RMNode node) {
     }
     @Override
-    public void nodeUpdate(NodeInfo nodeInfo,
+    public void nodeUpdate(RMNode nodeInfo,
         Map<String, List<Container>> containers) {
      
     }
     @Override
-    public void addNode(NodeInfo nodeInfo) {
+    public void addNode(RMNode nodeInfo) {
         
     }
   }
 
-  private class TestRMResourceTrackerImpl extends RMResourceTrackerImpl {
-    public TestRMResourceTrackerImpl(
-        ContainerTokenSecretManager containerTokenSecretManager, RMContext context) {
-      super(containerTokenSecretManager, context);
+  private class TestNmLivelinessMonitor extends NMLivelinessMonitor {
+    public TestNmLivelinessMonitor(RMContext context) {
+      super(context);
     }
 
     @Override
-    protected void expireNMs(List<NodeId> ids) {
+    protected void expireNodes(List<NodeId> ids) {
       for (NodeId id: ids) {
         LOG.info("Expired  " + id);
         if (test.addAndGet(1) == 2) {
@@ -100,14 +103,17 @@ public class TestNMExpiry extends TestCase {
   @Before
   public void setUp() {
     Configuration conf = new Configuration();
-    RMContext context = new ResourceManager.RMContextImpl(new MemStore());
-    resourceTracker = new TestRMResourceTrackerImpl(containerTokenSecretManager, 
-       context);
-    resourceTracker.addListener(new VoidResourceListener());
+    RMContext context = new RMContextImpl(new MemStore());
+    NMLivelinessMonitor nmLivelinessMonitror = new TestNmLivelinessMonitor(
+        context);
+    nmLivelinessMonitror.start();
+    resourceTrackerService = new ResourceTrackerService(context,
+        nmLivelinessMonitror, containerTokenSecretManager);
+    context.getNodesCollection().addListener(new VoidResourceListener());
     
     conf.setLong(RMConfig.NM_EXPIRY_INTERVAL, 1000);
-    resourceTracker.init(conf);
-    resourceTracker.start();
+    resourceTrackerService.init(conf);
+    resourceTrackerService.start();
   }
 
   private class ThirdNodeHeartBeatThread extends Thread {
@@ -122,9 +128,13 @@ public class TestNMExpiry extends TestCase {
           nodeStatus.setResponseId(lastResponseID);
           nodeStatus.setNodeHealthStatus(recordFactory.newRecordInstance(NodeHealthStatus.class));
           nodeStatus.getNodeHealthStatus().setIsNodeHealthy(true);
-          lastResponseID =
-              resourceTracker.nodeHeartbeat(nodeStatus)
-                  .getResponseId();
+
+          NodeHeartbeatRequest request = recordFactory
+              .newRecordInstance(NodeHeartbeatRequest.class);
+          request.setNodeStatus(nodeStatus);
+          lastResponseID = resourceTrackerService.nodeHeartbeat(request)
+              .getHeartbeatResponse().getResponseId();
+
         } catch(Exception e) {
           LOG.info("failed to heartbeat ", e);
         }
@@ -141,10 +151,32 @@ public class TestNMExpiry extends TestCase {
     String hostname2 = "localhost2";
     String hostname3 = "localhost3";
     Resource capability = recordFactory.newRecordInstance(Resource.class);
-    resourceTracker.registerNodeManager(hostname1, 0, 0, capability);
-    resourceTracker.registerNodeManager(hostname2, 0, 0, capability);
-    thirdNodeRegResponse =
-        resourceTracker.registerNodeManager(hostname3, 0, 0, capability);
+
+    RegisterNodeManagerRequest request1 = recordFactory
+        .newRecordInstance(RegisterNodeManagerRequest.class);
+    request1.setContainerManagerPort(0);
+    request1.setHost(hostname1);
+    request1.setHttpPort(0);
+    request1.setResource(capability);
+    resourceTrackerService.registerNodeManager(request1);
+
+    RegisterNodeManagerRequest request2 = recordFactory
+        .newRecordInstance(RegisterNodeManagerRequest.class);
+    request2.setContainerManagerPort(0);
+    request2.setHost(hostname2);
+    request2.setHttpPort(0);
+    request2.setResource(capability);
+    resourceTrackerService.registerNodeManager(request2);
+
+    RegisterNodeManagerRequest request3 = recordFactory
+        .newRecordInstance(RegisterNodeManagerRequest.class);
+    request3.setContainerManagerPort(0);
+    request3.setHost(hostname3);
+    request3.setHttpPort(0);
+    request3.setResource(capability);
+    thirdNodeRegResponse = resourceTrackerService.registerNodeManager(
+        request3).getRegistrationResponse();
+
     /* test to see if hostanme 3 does not expire */
     stopT = false;
     new ThirdNodeHeartBeatThread().start();
@@ -154,8 +186,7 @@ public class TestNMExpiry extends TestCase {
         notify.wait(1000);
       }
     }
-    if (test.get() != 2) 
-      assertTrue(false);
+    Assert.assertEquals(2, test.get()); 
 
     stopT = true;
   }

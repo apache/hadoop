@@ -24,7 +24,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
-import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssignedEvent;
@@ -33,6 +32,8 @@ import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.log4j.Level;
@@ -40,6 +41,8 @@ import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
 public class MRAppBenchmark {
+
+  private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
   /**
    * Runs memory and time benchmark with Mock MRApp.
@@ -121,14 +124,14 @@ public class MRAppBenchmark {
               try {
                 if (concurrentRunningTasks < maxConcurrentRunningTasks) {
                   event = eventQueue.take();
-                  ContainerId cId = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ContainerId.class);
+                  ContainerId cId = recordFactory.newRecordInstance(ContainerId.class);
                   cId.setAppId(getContext().getApplicationID());
                   cId.setId(containerCount++);
                   //System.out.println("Allocating " + containerCount);
                   
-                  Container container = RecordFactoryProvider.getRecordFactory(
-                      null).newRecordInstance(Container.class);
+                  Container container = recordFactory.newRecordInstance(Container.class);
                   container.setId(cId);
+                  container.setNodeId(recordFactory.newRecordInstance(NodeId.class));
                   container.setContainerManagerAddress("dumm");
                   container.setContainerToken(null);
                   container.setNodeHttpAddress("localhost:9999");

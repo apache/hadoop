@@ -18,21 +18,23 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import com.google.common.collect.Lists;
-
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Application;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeResponse;
+
+import com.google.common.collect.Lists;
 
 /**
  * Test helper to generate mock nodes
@@ -41,9 +43,9 @@ public class MockNodes {
   private static int NODE_ID = 0;
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
-  public static List<NodeInfo> newNodes(int racks, int nodesPerRack,
+  public static List<RMNode> newNodes(int racks, int nodesPerRack,
                                         Resource perNode) {
-    List<NodeInfo> list = Lists.newArrayList();
+    List<RMNode> list = Lists.newArrayList();
     for (int i = 0; i < racks; ++i) {
       for (int j = 0; j < nodesPerRack; ++j) {
         list.add(newNodeInfo(i, perNode));
@@ -76,7 +78,7 @@ public class MockNodes {
     return rs;
   }
 
-  public static NodeInfo newNodeInfo(int rack, final Resource perNode) {
+  public static RMNode newNodeInfo(int rack, final Resource perNode) {
     final String rackName = "rack"+ rack;
     final int nid = NODE_ID++;
     final NodeId nodeID = newNodeID(nid);
@@ -87,7 +89,7 @@ public class MockNodes {
     final Resource used = newUsedResource(perNode);
     final Resource avail = newAvailResource(perNode, used);
     final int containers = (int)(Math.random() * 8);
-    return new NodeInfo() {
+    return new RMNode() {
       @Override
       public NodeId getNodeID() {
         return nodeID;
@@ -144,7 +146,7 @@ public class MockNodes {
       }
 
       @Override
-      public Application getReservedApplication() {
+      public AppSchedulingInfo getReservedApplication() {
         return null;
       }
 
@@ -154,12 +156,12 @@ public class MockNodes {
       }
 
       @Override
-      public void reserveResource(Application application, Priority priority,
+      public void reserveResource(AppSchedulingInfo application, Priority priority,
           Resource resource) {
       }
 
       @Override
-      public void unreserveResource(Application application, Priority priority) {
+      public void unreserveResource(AppSchedulingInfo application, Priority priority) {
       }
 
       @Override
@@ -182,6 +184,31 @@ public class MockNodes {
       @Override
       public String getNodeHostName() {
         return hostName;
+      }
+
+      @Override
+      public boolean releaseContainer(Container container) {
+        // TODO Auto-generated method stub
+        return false;
+      }
+
+      @Override
+      public void updateHealthStatus(NodeHealthStatus healthStatus) {
+        // TODO Auto-generated method stub
+        
+      }
+
+      @Override
+      public NodeResponse
+          statusUpdate(Map<String, List<Container>> containers) {
+        // TODO Auto-generated method stub
+        return null;
+      }
+
+      @Override
+      public void finishedApplication(ApplicationId applicationId) {
+        // TODO Auto-generated method stub
+        
       }
     };
   }

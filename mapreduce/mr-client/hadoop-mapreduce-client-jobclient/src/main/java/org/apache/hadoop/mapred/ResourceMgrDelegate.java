@@ -111,7 +111,7 @@ public class ResourceMgrDelegate {
       recordFactory.newRecordInstance(GetClusterNodesRequest.class);
     GetClusterNodesResponse response = 
       applicationsManager.getClusterNodes(request);
-    return TypeConverter.fromYarnNodes(response.getNodeManagerList());
+    return TypeConverter.fromYarnNodes(response.getNodeReports());
   }
 
 

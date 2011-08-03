@@ -22,18 +22,18 @@ import java.net.URI;
 import java.util.Comparator;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.LocalResource;
-import org.apache.hadoop.yarn.api.records.LocalResourceType;
-import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
-import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 
@@ -54,13 +54,33 @@ public class BuilderUtils {
     }
   }
 
-  public static class ContainerComparator implements
-      java.util.Comparator<Container> {
+  public static class ContainerIdComparator implements
+      java.util.Comparator<ContainerId> {
 
     @Override
-    public int compare(Container c1,
-        Container c2) {
+    public int compare(ContainerId c1,
+        ContainerId c2) {
       return c1.compareTo(c2);
+    }
+  }
+
+  public static class ResourceRequestComparator 
+  implements java.util.Comparator<org.apache.hadoop.yarn.api.records.ResourceRequest> {
+    @Override
+    public int compare(org.apache.hadoop.yarn.api.records.ResourceRequest r1,
+        org.apache.hadoop.yarn.api.records.ResourceRequest r2) {
+      
+      // Compare priority, host and capability
+      int ret = r1.getPriority().compareTo(r2.getPriority());
+      if (ret == 0) {
+        String h1 = r1.getHostName();
+        String h2 = r2.getHostName();
+        ret = h1.compareTo(h2);
+      }
+      if (ret == 0) {
+        ret = r1.getCapability().compareTo(r2.getCapability());
+      }
+      return ret;
     }
   }
 
@@ -124,6 +144,7 @@ public class BuilderUtils {
     Container container = recordFactory.newRecordInstance(Container.class);
     container.setId(c.getId());
     container.setContainerToken(c.getContainerToken());
+    container.setNodeId(c.getNodeId());
     container.setContainerManagerAddress(c.getContainerManagerAddress());
     container.setNodeHttpAddress(c.getNodeHttpAddress());
     container.setResource(c.getResource());
@@ -132,24 +153,65 @@ public class BuilderUtils {
   }
 
   public static Container newContainer(RecordFactory recordFactory,
-      ApplicationId applicationId, int containerId,
+      ApplicationId applicationId, int containerId, NodeId nodeId,
       String containerManagerAddress, String nodeHttpAddress,
       Resource resource) {
     ContainerId containerID =
         newContainerId(recordFactory, applicationId, containerId);
-    return newContainer(containerID, containerManagerAddress,
+    return newContainer(containerID, nodeId, containerManagerAddress,
         nodeHttpAddress, resource);
   }
 
-  public static Container newContainer(ContainerId containerId,
+  public static Container newContainer(ContainerId containerId, NodeId nodeId,
       String containerManagerAddress, String nodeHttpAddress,
       Resource resource) {
     Container container = recordFactory.newRecordInstance(Container.class);
     container.setId(containerId);
+    container.setNodeId(nodeId);
     container.setContainerManagerAddress(containerManagerAddress);
     container.setNodeHttpAddress(nodeHttpAddress);
     container.setResource(resource);
     container.setState(ContainerState.INITIALIZING);
     return container;
+  }
+
+  public static ResourceRequest newResourceRequest(Priority priority,
+      String hostName, Resource capability, int numContainers) {
+    ResourceRequest request = recordFactory
+        .newRecordInstance(ResourceRequest.class);
+    request.setPriority(priority);
+    request.setHostName(hostName);
+    request.setCapability(capability);
+    request.setNumContainers(numContainers);
+    return request;
+  }
+
+  public static ResourceRequest newResourceRequest(ResourceRequest r) {
+    ResourceRequest request = recordFactory
+        .newRecordInstance(ResourceRequest.class);
+    request.setPriority(r.getPriority());
+    request.setHostName(r.getHostName());
+    request.setCapability(r.getCapability());
+    request.setNumContainers(r.getNumContainers());
+    return request;
+  }
+
+  public static ApplicationReport newApplicationReport(
+      ApplicationId applicationId, String user, String queue, String name,
+      String host, int rpcPort, String clientToken, ApplicationState state,
+      String diagnostics, String url) {
+    ApplicationReport report = recordFactory
+        .newRecordInstance(ApplicationReport.class);
+    report.setApplicationId(applicationId);
+    report.setUser(user);
+    report.setQueue(queue);
+    report.setName(name);
+    report.setHost(host);
+    report.setRpcPort(rpcPort);
+    report.setClientToken(clientToken);
+    report.setState(state);
+    report.setDiagnostics(diagnostics);
+    report.setTrackingUrl(url);
+    return report;
   }
 }

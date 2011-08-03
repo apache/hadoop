@@ -6,14 +6,14 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
-import org.apache.hadoop.yarn.api.records.ApplicationStatus;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationStatusPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceRequestPBImpl;
-import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationStatusProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateRequestProto;
@@ -25,8 +25,8 @@ public class AllocateRequestPBImpl extends ProtoBase<AllocateRequestProto> imple
   AllocateRequestProto proto = AllocateRequestProto.getDefaultInstance();
   AllocateRequestProto.Builder builder = null;
   boolean viaProto = false;
-  
-  private ApplicationStatus applicationStatus = null;
+
+  private ApplicationAttemptId applicationAttemptID = null;
   private List<ResourceRequest> ask = null;
   private List<Container> release = null;
   
@@ -48,8 +48,8 @@ public class AllocateRequestPBImpl extends ProtoBase<AllocateRequestProto> imple
   }
 
   private void mergeLocalToBuilder() {
-    if (this.applicationStatus != null) {
-      builder.setApplicationStatus(convertToProtoFormat(this.applicationStatus));
+    if (this.applicationAttemptID != null) {
+      builder.setApplicationAttemptId(convertToProtoFormat(this.applicationAttemptID));
     }
     if (this.ask != null) {
       addAsksToProto();
@@ -73,28 +73,52 @@ public class AllocateRequestPBImpl extends ProtoBase<AllocateRequestProto> imple
     }
     viaProto = false;
   }
-    
-  
+
   @Override
-  public ApplicationStatus getApplicationStatus() {
+  public ApplicationAttemptId getApplicationAttemptId() {
     AllocateRequestProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.applicationStatus != null) {
-      return this.applicationStatus;
+    if (this.applicationAttemptID != null) {
+      return this.applicationAttemptID;
     }
-    if (!p.hasApplicationStatus()) {
+    if (!p.hasApplicationAttemptId()) {
       return null;
     }
-    this.applicationStatus = convertFromProtoFormat(p.getApplicationStatus());
-    return this.applicationStatus;
+    this.applicationAttemptID = convertFromProtoFormat(p.getApplicationAttemptId());
+    return this.applicationAttemptID;
   }
 
   @Override
-  public void setApplicationStatus(ApplicationStatus applicationStatus) {
+  public void setApplicationAttemptId(ApplicationAttemptId appAttemptId) {
     maybeInitBuilder();
-    if (applicationStatus == null) 
-      builder.clearApplicationStatus();
-    this.applicationStatus = applicationStatus;
+    if (appAttemptId == null) 
+      builder.clearApplicationAttemptId();
+    this.applicationAttemptID = appAttemptId;
   }
+
+  @Override
+  public int getResponseId() {
+    AllocateRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getResponseId();
+  }
+
+  @Override
+  public void setResponseId(int id) {
+    maybeInitBuilder();
+    builder.setResponseId(id);
+  }
+
+  @Override
+  public float getProgress() {
+    AllocateRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getProgress();
+  }
+
+  @Override
+  public void setProgress(float progress) {
+    maybeInitBuilder();
+    builder.setProgress(progress);
+  }
+
   @Override
   public List<ResourceRequest> getAskList() {
     initAsks();
@@ -266,12 +290,12 @@ public class AllocateRequestPBImpl extends ProtoBase<AllocateRequestProto> imple
     this.release.clear();
   }
 
-  private ApplicationStatusPBImpl convertFromProtoFormat(ApplicationStatusProto p) {
-    return new ApplicationStatusPBImpl(p);
+  private ApplicationAttemptIdPBImpl convertFromProtoFormat(ApplicationAttemptIdProto p) {
+    return new ApplicationAttemptIdPBImpl(p);
   }
 
-  private ApplicationStatusProto convertToProtoFormat(ApplicationStatus t) {
-    return ((ApplicationStatusPBImpl)t).getProto();
+  private ApplicationAttemptIdProto convertToProtoFormat(ApplicationAttemptId t) {
+    return ((ApplicationAttemptIdPBImpl)t).getProto();
   }
 
   private ResourceRequestPBImpl convertFromProtoFormat(ResourceRequestProto p) {
@@ -289,7 +313,4 @@ public class AllocateRequestPBImpl extends ProtoBase<AllocateRequestProto> imple
   private ContainerProto convertToProtoFormat(Container t) {
     return ((ContainerPBImpl)t).getProto();
   }
-
-
-
 }  

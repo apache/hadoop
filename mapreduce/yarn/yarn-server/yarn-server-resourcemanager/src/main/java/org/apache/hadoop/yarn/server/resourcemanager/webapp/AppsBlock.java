@@ -18,16 +18,19 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import com.google.inject.Inject;
+import static org.apache.hadoop.yarn.util.StringHelper.join;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR_VALUE;
 
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.Application;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.*;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
+import org.apache.hadoop.yarn.webapp.view.JQueryUI.Render;
 
-import static org.apache.hadoop.yarn.util.StringHelper.*;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
+import com.google.inject.Inject;
 
 class AppsBlock extends HtmlBlock {
   final AppsList list;
@@ -52,21 +55,21 @@ class AppsBlock extends HtmlBlock {
             th(".note", "Note")._()._().
         tbody();
     int i = 0;
-    for (Application app : list.apps.values()) {
-      String appId = Apps.toString(app.getApplicationID());
-      String trackingUrl = app.getMaster().getTrackingUrl();
+    for (RMApp app : list.apps.values()) {
+      String appId = Apps.toString(app.getApplicationId());
+      String trackingUrl = app.getTrackingUrl();
       String ui = trackingUrl == null || trackingUrl.isEmpty() ? "UNASSIGNED" :
           (app.getFinishTime() == 0 ? "ApplicationMaster" : "JobHistory");
-      String percent = String.format("%.1f", app.getStatus().getProgress() * 100);
+      String percent = String.format("%.1f", app.getProgress() * 100);
       tbody.
         tr().
           td().
-            br().$title(String.valueOf(app.getApplicationID().getId()))._(). // for sorting
+            br().$title(String.valueOf(app.getApplicationId().getId()))._(). // for sorting
             a(url("app", appId), appId)._().
           td(app.getUser().toString()).
           td(app.getName().toString()).
           td(app.getQueue().toString()).
-          td(app.getMaster().getState().toString()).
+          td(app.getState().toString()).
           td().
             br().$title(percent)._(). // for sorting
             div(_PROGRESSBAR).
@@ -75,7 +78,7 @@ class AppsBlock extends HtmlBlock {
                 $style(join("width:", percent, '%'))._()._()._().
           td().
             a(trackingUrl == null ? "#" : join("http://", trackingUrl), ui)._().
-          td(app.getMaster().getDiagnostics())._();
+          td(app.getDiagnostics().toString())._();
       if (list.rendering != Render.HTML && ++i >= 20) break;
     }
     tbody._()._();

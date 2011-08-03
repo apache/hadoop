@@ -79,7 +79,7 @@ public class Application {
   
   final private Set<ResourceRequest> ask = 
     new TreeSet<ResourceRequest>(
-        new org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceRequest.Comparator());
+        new org.apache.hadoop.yarn.util.BuilderUtils.ResourceRequestComparator());
   final private Set<Container> release = 
     new TreeSet<Container>(
         new org.apache.hadoop.yarn.util.BuilderUtils.ContainerComparator());
@@ -197,7 +197,7 @@ public class Application {
       
     // Off-switch
     addResourceRequest(priority, requests, 
-        org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeManager.ANY, 
+        org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode.ANY, 
         capability);
   }
   
@@ -230,7 +230,7 @@ public class Application {
     ResourceRequest request = requests.get(resourceName);
     if (request == null) {
       request = 
-        org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceRequest.create(
+        org.apache.hadoop.yarn.util.BuilderUtils.create(
             priority, resourceName, capability, 1);
       requests.put(resourceName, request);
     } else {
@@ -240,7 +240,7 @@ public class Application {
     // Note this down for next interaction with ResourceManager
     ask.remove(request);
     ask.add(
-        org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceRequest.create(
+        org.apache.hadoop.yarn.util.BuilderUtils.create(
             request)); // clone to ensure the RM doesn't manipulate the same obj
     
     LOG.info("DEBUG --- addResourceRequest:" +
@@ -386,7 +386,7 @@ public class Application {
     
     updateResourceRequest(
         requests.get(
-            org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeManager.ANY)
+            org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode.ANY)
             );
     
     LOG.info("DEBUG --- updateResourceRequests:" +
@@ -400,7 +400,7 @@ public class Application {
     // Note this for next interaction with ResourceManager
     ask.remove(request);
     ask.add(
-        org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceRequest.create(
+        org.apache.hadoop.yarn.util.BuilderUtils.create(
         request)); // clone to ensure the RM doesn't manipulate the same obj
 
     LOG.info("DEBUG --- updateResourceRequest:" +

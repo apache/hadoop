@@ -18,30 +18,32 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
-import java.util.Date;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 
-import com.google.inject.Inject;
-
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.ClusterTracker;
+import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.*;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
+import com.google.inject.Inject;
 
 class NodesPage extends RmView {
 
   static class NodesBlock extends HtmlBlock {
-    final ClusterTracker resource;
+    final RMContext rmContext;
 
     @Inject
-    NodesBlock(ClusterTracker rc, ViewContext ctx) {
+    NodesBlock(RMContext context, ViewContext ctx) {
       super(ctx);
-      resource = rc;
+      this.rmContext = context;
     }
 
     @Override
@@ -56,10 +58,11 @@ class NodesPage extends RmView {
           th(".lastHealthUpdate", "Last health-update").
           th(".healthReport", "Health-report").
           th(".containers", "Containers").
-          th(".mem", "Mem Used (MB)").
-          th(".mem", "Mem Avail (MB)")._()._().
+//          th(".mem", "Mem Used (MB)").
+//          th(".mem", "Mem Avail (MB)").
+          _()._().
           tbody();
-      for (NodeInfo ni : resource.getAllNodeInfo()) {
+      for (RMNode ni : this.rmContext.getRMNodes().values()) {
         NodeHealthStatus health = ni.getNodeHealthStatus();
         tbody.tr().
             td(ni.getRackName()).
@@ -69,8 +72,9 @@ class NodesPage extends RmView {
             td(Times.format(health.getLastHealthReportTime())).
             td(String.valueOf(health.getHealthReport())).
             td(String.valueOf(ni.getNumContainers())).
-            td(String.valueOf(ni.getUsedResource().getMemory())).
-            td(String.valueOf(ni.getAvailableResource().getMemory()))._();
+//            td(String.valueOf(ni.getUsedResource().getMemory())).
+//            td(String.valueOf(ni.getAvailableResource().getMemory())).
+            _();
       }
       tbody._()._();
     }

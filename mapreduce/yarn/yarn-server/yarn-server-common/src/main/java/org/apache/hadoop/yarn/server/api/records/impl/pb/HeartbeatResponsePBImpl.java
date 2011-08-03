@@ -6,12 +6,12 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.HeartbeatResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.HeartbeatResponseProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
@@ -23,7 +23,7 @@ public class HeartbeatResponsePBImpl extends ProtoBase<HeartbeatResponseProto> i
   HeartbeatResponseProto.Builder builder = null;
   boolean viaProto = false;
   
-  private List<Container> containersToCleanup = null;
+  private List<ContainerId> containersToCleanup = null;
   
   private List<ApplicationId> applicationsToCleanup = null;
   
@@ -93,12 +93,12 @@ public class HeartbeatResponsePBImpl extends ProtoBase<HeartbeatResponseProto> i
     builder.setReboot((reboot));
   }
   @Override
-  public List<Container> getContainersToCleanupList() {
+  public List<ContainerId> getContainersToCleanupList() {
     initContainersToCleanup();
     return this.containersToCleanup;
   }
   @Override
-  public Container getContainerToCleanup(int index) {
+  public ContainerId getContainerToCleanup(int index) {
     initContainersToCleanup();
     return this.containersToCleanup.get(index);
   }
@@ -113,16 +113,16 @@ public class HeartbeatResponsePBImpl extends ProtoBase<HeartbeatResponseProto> i
       return;
     }
     HeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
-    List<ContainerProto> list = p.getContainersToCleanupList();
-    this.containersToCleanup = new ArrayList<Container>();
+    List<ContainerIdProto> list = p.getContainersToCleanupList();
+    this.containersToCleanup = new ArrayList<ContainerId>();
 
-    for (ContainerProto c : list) {
+    for (ContainerIdProto c : list) {
       this.containersToCleanup.add(convertFromProtoFormat(c));
     }
   }
   
   @Override
-  public void addAllContainersToCleanup(final List<Container> containersToCleanup) {
+  public void addAllContainersToCleanup(final List<ContainerId> containersToCleanup) {
     if (containersToCleanup == null)
       return;
     initContainersToCleanup();
@@ -134,12 +134,12 @@ public class HeartbeatResponsePBImpl extends ProtoBase<HeartbeatResponseProto> i
     builder.clearContainersToCleanup();
     if (containersToCleanup == null)
       return;
-    Iterable<ContainerProto> iterable = new Iterable<ContainerProto>() {
+    Iterable<ContainerIdProto> iterable = new Iterable<ContainerIdProto>() {
       @Override
-      public Iterator<ContainerProto> iterator() {
-        return new Iterator<ContainerProto>() {
+      public Iterator<ContainerIdProto> iterator() {
+        return new Iterator<ContainerIdProto>() {
 
-          Iterator<Container> iter = containersToCleanup.iterator();
+          Iterator<ContainerId> iter = containersToCleanup.iterator();
 
           @Override
           public boolean hasNext() {
@@ -147,7 +147,7 @@ public class HeartbeatResponsePBImpl extends ProtoBase<HeartbeatResponseProto> i
           }
 
           @Override
-          public ContainerProto next() {
+          public ContainerIdProto next() {
             return convertToProtoFormat(iter.next());
           }
 
@@ -163,7 +163,7 @@ public class HeartbeatResponsePBImpl extends ProtoBase<HeartbeatResponseProto> i
     builder.addAllContainersToCleanup(iterable);
   }
   @Override
-  public void addContainerToCleanup(Container containersToCleanup) {
+  public void addContainerToCleanup(ContainerId containersToCleanup) {
     initContainersToCleanup();
     this.containersToCleanup.add(containersToCleanup);
   }
@@ -263,12 +263,12 @@ public class HeartbeatResponsePBImpl extends ProtoBase<HeartbeatResponseProto> i
     this.applicationsToCleanup.clear();
   }
 
-  private ContainerPBImpl convertFromProtoFormat(ContainerProto p) {
-    return new ContainerPBImpl(p);
+  private ContainerIdPBImpl convertFromProtoFormat(ContainerIdProto p) {
+    return new ContainerIdPBImpl(p);
   }
 
-  private ContainerProto convertToProtoFormat(Container t) {
-    return ((ContainerPBImpl)t).getProto();
+  private ContainerIdProto convertToProtoFormat(ContainerId t) {
+    return ((ContainerIdPBImpl)t).getProto();
   }
 
   private ApplicationIdPBImpl convertFromProtoFormat(ApplicationIdProto p) {

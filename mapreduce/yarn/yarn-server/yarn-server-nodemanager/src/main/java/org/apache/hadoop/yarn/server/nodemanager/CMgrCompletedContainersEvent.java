@@ -20,19 +20,18 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.util.List;
 
-import org.apache.hadoop.yarn.api.records.Container;
-
+import org.apache.hadoop.yarn.api.records.ContainerId;
 
 public class CMgrCompletedContainersEvent extends ContainerManagerEvent {
 
-  private List<Container> containerToCleanup;
+  private List<ContainerId> containerToCleanup;
 
-  public CMgrCompletedContainersEvent(List<Container> containersToCleanup) {
+  public CMgrCompletedContainersEvent(List<ContainerId> containersToCleanup) {
     super(ContainerManagerEventType.FINISH_CONTAINERS);
     this.containerToCleanup = containersToCleanup;
   }
 
-  public List<Container> getContainersToCleanup() {
+  public List<ContainerId> getContainersToCleanup() {
     return this.containerToCleanup;
   }
 }

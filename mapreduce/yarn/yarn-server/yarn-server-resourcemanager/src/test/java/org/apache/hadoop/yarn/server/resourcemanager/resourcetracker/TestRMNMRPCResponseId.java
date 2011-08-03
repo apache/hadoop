@@ -22,30 +22,32 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
-import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.NMLivelinessMonitor;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.RMResourceTrackerImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceListener;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.junit.After;
 import org.junit.Before;
 
-import junit.framework.TestCase;
-
 public class TestRMNMRPCResponseId extends TestCase {
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-  RMResourceTrackerImpl rmResourceTrackerImpl;
+  ResourceTrackerService resourceTrackerService;
   ContainerTokenSecretManager containerTokenSecretManager =
     new ContainerTokenSecretManager();
   ResourceListener listener = new DummyResourceListener();
@@ -54,27 +56,28 @@ public class TestRMNMRPCResponseId extends TestCase {
   private class DummyResourceListener implements ResourceListener {
 
     @Override
-    public void addNode(NodeInfo nodeManager) {
+    public void addNode(RMNode nodeManager) {
       nodeid = nodeManager.getNodeID();
     }
 
     @Override
-    public void removeNode(NodeInfo node) {
+    public void removeNode(RMNode node) {
       /* do nothing */
     }
 
     @Override
-    public void nodeUpdate(NodeInfo nodeInfo,
+    public void nodeUpdate(RMNode nodeInfo,
         Map<String, List<Container>> containers) {
     }
   }
   
   @Before
   public void setUp() {
-    RMContext context = new ResourceManager.RMContextImpl(new MemStore());
-    rmResourceTrackerImpl = new RMResourceTrackerImpl(containerTokenSecretManager, context);
-    rmResourceTrackerImpl.init(new Configuration());
-    rmResourceTrackerImpl.addListener(listener);
+    RMContext context = new RMContextImpl(new MemStore());
+    resourceTrackerService = new ResourceTrackerService(context,
+        new NMLivelinessMonitor(context), containerTokenSecretManager);
+    resourceTrackerService.init(new Configuration());
+    context.getNodesCollection().addListener(listener);
   }
   
   @After
@@ -90,24 +93,43 @@ public class TestRMNMRPCResponseId extends TestCase {
     request.setContainerManagerPort(0);
     request.setHttpPort(0);
     request.setResource(capability);
-    rmResourceTrackerImpl.registerNodeManager(node, 0, 0, capability);
+
+    RegisterNodeManagerRequest request1 = recordFactory
+        .newRecordInstance(RegisterNodeManagerRequest.class);
+    request1.setContainerManagerPort(0);
+    request1.setHost(node);
+    request1.setHttpPort(0);
+    request1.setResource(capability);
+    resourceTrackerService.registerNodeManager(request1);
+
     org.apache.hadoop.yarn.server.api.records.NodeStatus nodeStatus = recordFactory.
       newRecordInstance(org.apache.hadoop.yarn.server.api.records.NodeStatus.class);
     nodeStatus.setNodeId(nodeid);
-    nodeStatus.setResponseId(0);
     NodeHealthStatus nodeHealthStatus = recordFactory.newRecordInstance(NodeHealthStatus.class);
     nodeHealthStatus.setIsNodeHealthy(true);
     nodeStatus.setNodeHealthStatus(nodeHealthStatus);
-    HeartbeatResponse response = rmResourceTrackerImpl.nodeHeartbeat(nodeStatus);
-    assertTrue(response.getResponseId() == 1);
-    nodeStatus.setResponseId(response.getResponseId());
-    response = rmResourceTrackerImpl.nodeHeartbeat(nodeStatus);
-    assertTrue(response.getResponseId() == 2);   
-    /* try calling with less response id */
-    response = rmResourceTrackerImpl.nodeHeartbeat(nodeStatus);
-    assertTrue(response.getResponseId() == 2);   
+    NodeHeartbeatRequest nodeHeartBeatRequest = recordFactory
+        .newRecordInstance(NodeHeartbeatRequest.class);
+    nodeHeartBeatRequest.setNodeStatus(nodeStatus);
+
     nodeStatus.setResponseId(0);
-    response = rmResourceTrackerImpl.nodeHeartbeat(nodeStatus);
+    HeartbeatResponse response = resourceTrackerService.nodeHeartbeat(
+        nodeHeartBeatRequest).getHeartbeatResponse();
+    assertTrue(response.getResponseId() == 1);
+
+    nodeStatus.setResponseId(response.getResponseId());
+    response = resourceTrackerService.nodeHeartbeat(nodeHeartBeatRequest)
+        .getHeartbeatResponse();
+    assertTrue(response.getResponseId() == 2);   
+
+    /* try calling with less response id */
+    response = resourceTrackerService.nodeHeartbeat(nodeHeartBeatRequest)
+        .getHeartbeatResponse();
+    assertTrue(response.getResponseId() == 2);
+
+    nodeStatus.setResponseId(0);
+    response = resourceTrackerService.nodeHeartbeat(nodeHeartBeatRequest)
+        .getHeartbeatResponse();
     assertTrue(response.getReboot() == true);
   }
 }
