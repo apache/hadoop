@@ -233,7 +233,7 @@ public class RMContainerImpl implements RMContainer {
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
       // Register with containerAllocationExpirer.
-      container.containerAllocationExpirer.register(container.getContainer());
+      container.containerAllocationExpirer.register(container.getContainerId());
 
       // Tell the appAttempt
       container.eventHandler.handle(new RMAppAttemptContainerAcquiredEvent(
@@ -246,7 +246,8 @@ public class RMContainerImpl implements RMContainer {
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
       // Unregister from containerAllocationExpirer.
-      container.containerAllocationExpirer.unregister(container.getContainer());
+      container.containerAllocationExpirer.unregister(container
+          .getContainerId());
     }
   }
 
@@ -267,7 +268,8 @@ public class RMContainerImpl implements RMContainer {
     public void transition(RMContainerImpl container, RMContainerEvent event) {
 
       // Unregister from containerAllocationExpirer.
-      container.containerAllocationExpirer.unregister(container.getContainer());
+      container.containerAllocationExpirer.unregister(container
+          .getContainerId());
 
       // Inform AppAttempt
       super.transition(container, event);
@@ -280,7 +282,8 @@ public class RMContainerImpl implements RMContainer {
     public void transition(RMContainerImpl container, RMContainerEvent event) {
 
       // Unregister from containerAllocationExpirer.
-      container.containerAllocationExpirer.unregister(container.getContainer());
+      container.containerAllocationExpirer.unregister(container
+          .getContainerId());
 
       // Inform node
       container.eventHandler.handle(new RMNodeCleanContainerEvent(

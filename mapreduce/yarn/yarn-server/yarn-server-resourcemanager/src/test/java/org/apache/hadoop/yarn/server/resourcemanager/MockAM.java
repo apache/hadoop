@@ -30,7 +30,7 @@ public class MockAM {
   private final AMRMProtocol amRMProtocol;
   
   private final List<ResourceRequest> requests = new ArrayList<ResourceRequest>();
-  private final List<Container> releases = new ArrayList<Container>();
+  private final List<ContainerId> releases = new ArrayList<ContainerId>();
 
   MockAM(RMContext context, AMRMProtocol amRMProtocol, 
       ApplicationAttemptId attemptId) {
@@ -82,13 +82,7 @@ public class MockAM {
       String host, int memory, int numContainers, 
       List<ContainerId> releases) throws Exception {
     List reqs = createReq(new String[]{host}, memory, 1, numContainers);
-    List<Container> toRelease = new ArrayList<Container>();
-    for (ContainerId id : releases) {
-      Container cont = Records.newRecord(Container.class);
-      cont.setId(id);
-      //TOOD: set all fields
-    }
-    return allocate(reqs, toRelease);
+    return allocate(reqs, releases);
   }
 
   public List<ResourceRequest> createReq(String[] hosts, int memory, int priority, 
@@ -125,7 +119,7 @@ public class MockAM {
   }
 
   public AMResponse allocate(
-      List<ResourceRequest> resourceRequest, List<Container> releases) 
+      List<ResourceRequest> resourceRequest, List<ContainerId> releases) 
       throws Exception {
     AllocateRequest req = Records.newRecord(AllocateRequest.class);
     req.setResponseId(++responseId);

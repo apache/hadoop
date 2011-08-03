@@ -266,7 +266,7 @@ public class Application {
     
     // Get resources from the ResourceManager
     resourceManager.getResourceScheduler().allocate(applicationAttemptId,
-        new ArrayList<ResourceRequest>(ask), new ArrayList<Container>());
+        new ArrayList<ResourceRequest>(ask), new ArrayList<ContainerId>());
     System.out.println("-=======" + applicationAttemptId);
     System.out.println("----------" + resourceManager.getRMContext().getRMApps()
         .get(applicationId).getRMAppAttempt(applicationAttemptId));

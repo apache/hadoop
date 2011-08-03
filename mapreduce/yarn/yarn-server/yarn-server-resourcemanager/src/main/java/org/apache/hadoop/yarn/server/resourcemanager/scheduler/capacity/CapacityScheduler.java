@@ -389,7 +389,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
   @Override
   @Lock(Lock.NoLock.class)
   public Allocation allocate(ApplicationAttemptId applicationAttemptId,
-      List<ResourceRequest> ask, List<Container> release) {
+      List<ResourceRequest> ask, List<ContainerId> release) {
 
     SchedulerApp application = getApplication(applicationAttemptId);
     if (application == null) {
@@ -402,8 +402,8 @@ implements ResourceScheduler, CapacitySchedulerContext {
     normalizeRequests(ask);
 
     // Release containers
-    for (Container releasedContainer : release) {
-      completedContainer(getRMContainer(releasedContainer), 
+    for (ContainerId releasedContainerId : release) {
+      completedContainer(getRMContainer(releasedContainerId), 
           RMContainerEventType.RELEASED);
     }
 
@@ -492,7 +492,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
           containerLaunchedOnNode(container, node);
         } else { // has to be 'COMPLETE'
           LOG.info("DEBUG --- Container FINISHED: " + container.getId());
-          completedContainer(getRMContainer(container), 
+          completedContainer(getRMContainer(container.getId()), 
               RMContainerEventType.FINISHED);
         }
       }
@@ -588,7 +588,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
     {
       ContainerExpiredSchedulerEvent containerExpiredEvent = 
           (ContainerExpiredSchedulerEvent) event;
-      completedContainer(getRMContainer(containerExpiredEvent.getContainer()), 
+      completedContainer(getRMContainer(containerExpiredEvent.getContainerId()), 
           RMContainerEventType.EXPIRE);
     }
     break;
@@ -671,10 +671,9 @@ implements ResourceScheduler, CapacitySchedulerContext {
     return nodes.get(nodeId);
   }
 
-  private RMContainer getRMContainer(Container container) {
-    ContainerId containerId = container.getId();
+  private RMContainer getRMContainer(ContainerId containerId) {
     SchedulerApp application = 
-        getApplication(container.getId().getAppAttemptId());
+        getApplication(containerId.getAppAttemptId());
     return (application == null) ? null : application.getRMContainer(containerId);
   }
 

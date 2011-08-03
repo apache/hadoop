@@ -212,7 +212,7 @@ public class FifoScheduler implements ResourceScheduler {
   @Override
   public Allocation allocate(
       ApplicationAttemptId applicationAttemptId, List<ResourceRequest> ask,
-      List<Container> release) {
+      List<ContainerId> release) {
     SchedulerApp application = getApplication(applicationAttemptId);
     if (application == null) {
       LOG.error("Calling allocate on removed " +
@@ -224,7 +224,7 @@ public class FifoScheduler implements ResourceScheduler {
     normalizeRequests(ask);
 
     // Release containers
-    for (Container releasedContainer : release) {
+    for (ContainerId releasedContainer : release) {
       containerCompleted(getRMContainer(releasedContainer), 
           RMContainerEventType.RELEASED);
     }
@@ -543,7 +543,7 @@ public class FifoScheduler implements ResourceScheduler {
         if (container.getState() == ContainerState.RUNNING) {
           containerLaunchedOnNode(container, node);
         } else { // has to COMPLETE
-          containerCompleted(getRMContainer(container), 
+          containerCompleted(getRMContainer(container.getId()), 
               RMContainerEventType.FINISHED);
         }
       }
@@ -610,7 +610,7 @@ public class FifoScheduler implements ResourceScheduler {
     {
       ContainerExpiredSchedulerEvent containerExpiredEvent = 
           (ContainerExpiredSchedulerEvent) event;
-      containerCompleted(getRMContainer(containerExpiredEvent.getContainer()), 
+      containerCompleted(getRMContainer(containerExpiredEvent.getContainerId()), 
           RMContainerEventType.EXPIRE);
     }
     break;
@@ -716,10 +716,9 @@ public class FifoScheduler implements ResourceScheduler {
         node.getUsedResource(), node.getNumContainers());
   }
   
-  private RMContainer getRMContainer(Container container) {
-    ContainerId containerId = container.getId();
+  private RMContainer getRMContainer(ContainerId containerId) {
     SchedulerApp application = 
-        getApplication(container.getId().getAppAttemptId());
+        getApplication(containerId.getAppAttemptId());
     return application.getRMContainer(containerId);
   }
 

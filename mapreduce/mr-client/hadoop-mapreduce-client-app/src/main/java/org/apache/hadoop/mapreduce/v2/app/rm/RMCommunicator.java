@@ -51,7 +51,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRespo
 import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -269,7 +269,7 @@ public class RMCommunicator extends AbstractService  {
     allocateRequest.setApplicationAttemptId(applicationAttemptId);
     allocateRequest.setResponseId(lastResponseID);
     allocateRequest.addAllAsks(new ArrayList<ResourceRequest>());
-    allocateRequest.addAllReleases(new ArrayList<Container>());
+    allocateRequest.addAllReleases(new ArrayList<ContainerId>());
     AllocateResponse allocateResponse = scheduler.allocate(allocateRequest);
     AMResponse response = allocateResponse.getAMResponse();
   }

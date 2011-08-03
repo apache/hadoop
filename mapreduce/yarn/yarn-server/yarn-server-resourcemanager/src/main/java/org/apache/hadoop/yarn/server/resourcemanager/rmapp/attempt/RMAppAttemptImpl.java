@@ -15,6 +15,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -421,8 +422,8 @@ public class RMAppAttemptImpl implements RMAppAttempt {
     }
   }
 
-  private static final List<Container> EMPTY_CONTAINER_RELEASE_LIST = 
-      new ArrayList<Container>();
+  private static final List<ContainerId> EMPTY_CONTAINER_RELEASE_LIST = 
+      new ArrayList<ContainerId>();
   private static final List<ResourceRequest> EMPTY_CONTAINER_REQUEST_LIST = 
     new ArrayList<ResourceRequest>();
 

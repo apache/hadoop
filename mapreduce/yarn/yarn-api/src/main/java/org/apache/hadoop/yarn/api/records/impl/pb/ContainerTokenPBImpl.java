@@ -11,9 +11,9 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ContainerTokenProtoOrBuilder;
 
     
 public class ContainerTokenPBImpl extends ProtoBase<ContainerTokenProto> implements ContainerToken {
-  ContainerTokenProto proto = ContainerTokenProto.getDefaultInstance();
-  ContainerTokenProto.Builder builder = null;
-  boolean viaProto = false;
+  private ContainerTokenProto proto = ContainerTokenProto.getDefaultInstance();
+  private ContainerTokenProto.Builder builder = null;
+  private boolean viaProto = false;
   
   private ByteBuffer identifier;
   private ByteBuffer password;
@@ -28,14 +28,14 @@ public class ContainerTokenPBImpl extends ProtoBase<ContainerTokenProto> impleme
     viaProto = true;
   }
   
-  public ContainerTokenProto getProto() {
+  public synchronized ContainerTokenProto getProto() {
       mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
   }
 
-  private void mergeLocalToBuilder() {
+  private synchronized void mergeLocalToBuilder() {
     if (this.identifier != null) {
       builder.setIdentifier(convertToProtoFormat(this.identifier));
     }
@@ -44,7 +44,7 @@ public class ContainerTokenPBImpl extends ProtoBase<ContainerTokenProto> impleme
     }
   }
 
-  private void mergeLocalToProto() {
+  private synchronized void mergeLocalToProto() {
     if (viaProto) 
       maybeInitBuilder();
     mergeLocalToBuilder();
@@ -52,7 +52,7 @@ public class ContainerTokenPBImpl extends ProtoBase<ContainerTokenProto> impleme
     viaProto = true;
   }
 
-  private void maybeInitBuilder() {
+  private synchronized void maybeInitBuilder() {
     if (viaProto || builder == null) {
       builder = ContainerTokenProto.newBuilder(proto);
     }
@@ -61,7 +61,7 @@ public class ContainerTokenPBImpl extends ProtoBase<ContainerTokenProto> impleme
     
   
   @Override
-  public ByteBuffer getIdentifier() {
+  public synchronized ByteBuffer getIdentifier() {
     ContainerTokenProtoOrBuilder p = viaProto ? proto : builder;
     if (this.identifier != null) {
       return this.identifier;
@@ -74,14 +74,14 @@ public class ContainerTokenPBImpl extends ProtoBase<ContainerTokenProto> impleme
   }
 
   @Override
-  public void setIdentifier(ByteBuffer identifier) {
+  public synchronized void setIdentifier(ByteBuffer identifier) {
     maybeInitBuilder();
     if (identifier == null) 
       builder.clearIdentifier();
     this.identifier = identifier;
   }
   @Override
-  public ByteBuffer getPassword() {
+  public synchronized ByteBuffer getPassword() {
     ContainerTokenProtoOrBuilder p = viaProto ? proto : builder;
     if (this.password != null) {
       return this.password;
@@ -94,14 +94,14 @@ public class ContainerTokenPBImpl extends ProtoBase<ContainerTokenProto> impleme
   }
 
   @Override
-  public void setPassword(ByteBuffer password) {
+  public synchronized void setPassword(ByteBuffer password) {
     maybeInitBuilder();
     if (password == null) 
       builder.clearPassword();
     this.password = password;
   }
   @Override
-  public String getKind() {
+  public synchronized String getKind() {
     ContainerTokenProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasKind()) {
       return null;
@@ -110,7 +110,7 @@ public class ContainerTokenPBImpl extends ProtoBase<ContainerTokenProto> impleme
   }
 
   @Override
-  public void setKind(String kind) {
+  public synchronized void setKind(String kind) {
     maybeInitBuilder();
     if (kind == null) {
       builder.clearKind();
@@ -119,7 +119,7 @@ public class ContainerTokenPBImpl extends ProtoBase<ContainerTokenProto> impleme
     builder.setKind((kind));
   }
   @Override
-  public String getService() {
+  public synchronized String getService() {
     ContainerTokenProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasService()) {
       return null;
@@ -128,7 +128,7 @@ public class ContainerTokenPBImpl extends ProtoBase<ContainerTokenProto> impleme
   }
 
   @Override
-  public void setService(String service) {
+  public synchronized void setService(String service) {
     maybeInitBuilder();
     if (service == null) {
       builder.clearService();

@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterReque
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
@@ -213,7 +213,7 @@ public class ApplicationMasterService extends AbstractService implements
               .getProgress()));
 
       List<ResourceRequest> ask = request.getAskList();
-      List<Container> release = request.getReleaseList();
+      List<ContainerId> release = request.getReleaseList();
 
       // Send new requests to appAttempt.
       Allocation allocation = 

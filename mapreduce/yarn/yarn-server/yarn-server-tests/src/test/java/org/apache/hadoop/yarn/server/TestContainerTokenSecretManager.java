@@ -231,7 +231,7 @@ public class TestContainerTokenSecretManager {
     rr.setPriority(recordFactory.newRecordInstance(Priority.class));
     rr.getPriority().setPriority(0);
     ask.add(rr);
-    ArrayList<Container> release = new ArrayList<Container>();
+    ArrayList<ContainerId> release = new ArrayList<ContainerId>();
     
     AllocateRequest allocateRequest =
         recordFactory.newRecordInstance(AllocateRequest.class);

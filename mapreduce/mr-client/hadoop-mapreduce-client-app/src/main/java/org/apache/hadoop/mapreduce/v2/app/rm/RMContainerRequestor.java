@@ -21,7 +21,6 @@ package org.apache.hadoop.mapreduce.v2.app.rm;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -71,7 +70,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
       new TreeMap<Priority, Map<String, Map<Resource, ResourceRequest>>>();
 
   private final Set<ResourceRequest> ask = new TreeSet<ResourceRequest>();
-  private final Set<Container> release = new TreeSet<Container>(); 
+  private final Set<ContainerId> release = new TreeSet<ContainerId>(); 
 
   private boolean nodeBlacklistingEnabled;
   private int maxTaskFailuresPerNode;
@@ -118,7 +117,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     allocateRequest.setApplicationAttemptId(applicationAttemptId);
     allocateRequest.setResponseId(lastResponseID);
     allocateRequest.addAllAsks(new ArrayList<ResourceRequest>(ask));
-    allocateRequest.addAllReleases(new ArrayList<Container>(release));
+    allocateRequest.addAllReleases(new ArrayList<ContainerId>(release));
     AllocateResponse allocateResponse = scheduler.allocate(allocateRequest);
     AMResponse response = allocateResponse.getAMResponse();
     lastResponseID = response.getResponseId();
@@ -268,8 +267,8 @@ public abstract class RMContainerRequestor extends RMCommunicator {
              + remoteRequest.getNumContainers() + " #asks=" + ask.size());
   }
 
-  protected void release(Container container) {
-    release.add(container);
+  protected void release(ContainerId containerId) {
+    release.add(containerId);
   }
   
 }

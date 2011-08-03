@@ -68,11 +68,11 @@ public class TestRM {
     //kick the scheduler
     nm1.nodeHeartbeat(true);
     List<Container> conts = am.allocate(new ArrayList<ResourceRequest>(),
-        new ArrayList<Container>()).getNewContainerList();
+        new ArrayList<ContainerId>()).getNewContainerList();
     int contReceived = conts.size();
     while (contReceived < 3) {//only 3 containers are available on node1
       conts.addAll(am.allocate(new ArrayList<ResourceRequest>(),
-          new ArrayList<Container>()).getNewContainerList());
+          new ArrayList<ContainerId>()).getNewContainerList());
       contReceived = conts.size();
       LOG.info("Got " + contReceived + " containers. Waiting to get " + 3);
       Thread.sleep(2000);
@@ -82,11 +82,11 @@ public class TestRM {
     //send node2 heartbeat
     nm2.nodeHeartbeat(true);
     conts = am.allocate(new ArrayList<ResourceRequest>(),
-        new ArrayList<Container>()).getNewContainerList();
+        new ArrayList<ContainerId>()).getNewContainerList();
     contReceived = conts.size();
     while (contReceived < 10) {
       conts.addAll(am.allocate(new ArrayList<ResourceRequest>(),
-          new ArrayList<Container>()).getNewContainerList());
+          new ArrayList<ContainerId>()).getNewContainerList());
       contReceived = conts.size();
       LOG.info("Got " + contReceived + " containers. Waiting to get " + 10);
       Thread.sleep(2000);

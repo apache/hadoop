@@ -8,13 +8,14 @@ import java.util.List;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceRequestPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateRequestProtoOrBuilder;
@@ -28,7 +29,7 @@ public class AllocateRequestPBImpl extends ProtoBase<AllocateRequestProto> imple
 
   private ApplicationAttemptId applicationAttemptID = null;
   private List<ResourceRequest> ask = null;
-  private List<Container> release = null;
+  private List<ContainerId> release = null;
   
   
   public AllocateRequestPBImpl() {
@@ -205,12 +206,12 @@ public class AllocateRequestPBImpl extends ProtoBase<AllocateRequestProto> imple
     this.ask.clear();
   }
   @Override
-  public List<Container> getReleaseList() {
+  public List<ContainerId> getReleaseList() {
     initReleases();
     return this.release;
   }
   @Override
-  public Container getRelease(int index) {
+  public ContainerId getRelease(int index) {
     initReleases();
     return this.release.get(index);
   }
@@ -225,16 +226,16 @@ public class AllocateRequestPBImpl extends ProtoBase<AllocateRequestProto> imple
       return;
     }
     AllocateRequestProtoOrBuilder p = viaProto ? proto : builder;
-    List<ContainerProto> list = p.getReleaseList();
-    this.release = new ArrayList<Container>();
+    List<ContainerIdProto> list = p.getReleaseList();
+    this.release = new ArrayList<ContainerId>();
 
-    for (ContainerProto c : list) {
+    for (ContainerIdProto c : list) {
       this.release.add(convertFromProtoFormat(c));
     }
   }
   
   @Override
-  public void addAllReleases(final List<Container> release) {
+  public void addAllReleases(final List<ContainerId> release) {
     if (release == null)
       return;
     initReleases();
@@ -246,12 +247,12 @@ public class AllocateRequestPBImpl extends ProtoBase<AllocateRequestProto> imple
     builder.clearRelease();
     if (release == null)
       return;
-    Iterable<ContainerProto> iterable = new Iterable<ContainerProto>() {
+    Iterable<ContainerIdProto> iterable = new Iterable<ContainerIdProto>() {
       @Override
-      public Iterator<ContainerProto> iterator() {
-        return new Iterator<ContainerProto>() {
+      public Iterator<ContainerIdProto> iterator() {
+        return new Iterator<ContainerIdProto>() {
 
-          Iterator<Container> iter = release.iterator();
+          Iterator<ContainerId> iter = release.iterator();
 
           @Override
           public boolean hasNext() {
@@ -259,7 +260,7 @@ public class AllocateRequestPBImpl extends ProtoBase<AllocateRequestProto> imple
           }
 
           @Override
-          public ContainerProto next() {
+          public ContainerIdProto next() {
             return convertToProtoFormat(iter.next());
           }
 
@@ -275,7 +276,7 @@ public class AllocateRequestPBImpl extends ProtoBase<AllocateRequestProto> imple
     builder.addAllRelease(iterable);
   }
   @Override
-  public void addRelease(Container release) {
+  public void addRelease(ContainerId release) {
     initReleases();
     this.release.add(release);
   }
@@ -306,11 +307,11 @@ public class AllocateRequestPBImpl extends ProtoBase<AllocateRequestProto> imple
     return ((ResourceRequestPBImpl)t).getProto();
   }
 
-  private ContainerPBImpl convertFromProtoFormat(ContainerProto p) {
-    return new ContainerPBImpl(p);
+  private ContainerIdPBImpl convertFromProtoFormat(ContainerIdProto p) {
+    return new ContainerIdPBImpl(p);
   }
 
-  private ContainerProto convertToProtoFormat(Container t) {
-    return ((ContainerPBImpl)t).getProto();
+  private ContainerIdProto convertToProtoFormat(ContainerId t) {
+    return ((ContainerIdPBImpl)t).getProto();
   }
 }  

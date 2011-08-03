@@ -1,24 +1,24 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
 
-import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 
 /**
- * The {@link SchedulerEvent} which notifies that a {@link Container}
+ * The {@link SchedulerEvent} which notifies that a {@link ContainerId}
  * has expired, sent by {@link ContainerAllocationExpirer} 
  *
  */
 public class ContainerExpiredSchedulerEvent extends SchedulerEvent {
 
-  private final Container container;
+  private final ContainerId containerId;
   
-  public ContainerExpiredSchedulerEvent(Container container) {
+  public ContainerExpiredSchedulerEvent(ContainerId containerId) {
     super(SchedulerEventType.CONTAINER_EXPIRED);
-    this.container = container;
+    this.containerId = containerId;
   }
 
-  public Container getContainer() {
-    return container;
+  public ContainerId getContainerId() {
+    return containerId;
   }
 
 }

@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
@@ -94,7 +94,7 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   Allocation 
   allocate(ApplicationAttemptId appAttemptId, 
       List<ResourceRequest> ask,
-      List<Container> release);
+      List<ContainerId> release);
 
   /**
    * Get node resource usage report.
