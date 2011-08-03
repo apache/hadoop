@@ -131,8 +131,10 @@ public class MRAppBenchmark {
                   
                   Container container = recordFactory.newRecordInstance(Container.class);
                   container.setId(cId);
-                  container.setNodeId(recordFactory.newRecordInstance(NodeId.class));
-                  container.setContainerManagerAddress("dumm");
+                  NodeId nodeId = recordFactory.newRecordInstance(NodeId.class);
+                  nodeId.setHost("dummy");
+                  nodeId.setPort(1234);
+                  container.setNodeId(nodeId);
                   container.setContainerToken(null);
                   container.setNodeHttpAddress("localhost:9999");
                   getContext().getEventHandler()

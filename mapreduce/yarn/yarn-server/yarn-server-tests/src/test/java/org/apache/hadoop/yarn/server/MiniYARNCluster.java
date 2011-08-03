@@ -215,7 +215,8 @@ public class MiniYARNCluster extends CompositeService {
                           .registerNodeManager(request)
                           .getRegistrationResponse());
                     } catch (IOException ioe) {
-                      LOG.info("Exception in node registration from " + request.getHost(), ioe);
+                      LOG.info("Exception in node registration from "
+                          + request.getNodeId().toString(), ioe);
                       throw RPCUtil.getRemoteException(ioe);
                     }
                     return response;

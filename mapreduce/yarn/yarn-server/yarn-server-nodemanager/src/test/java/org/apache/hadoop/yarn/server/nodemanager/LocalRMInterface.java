@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
-import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -36,12 +34,7 @@ public class LocalRMInterface implements ResourceTracker {
   
   @Override
   public RegisterNodeManagerResponse registerNodeManager(RegisterNodeManagerRequest request) throws YarnRemoteException {
-    String host = request.getHost();
-    int cmPort = request.getContainerManagerPort();
-    String node = host + ":" + cmPort;
-    Resource resource = request.getResource();
     RegistrationResponse registrationResponse = recordFactory.newRecordInstance(RegistrationResponse.class);
-    registrationResponse.setNodeId(recordFactory.newRecordInstance(NodeId.class));
     RegisterNodeManagerResponse response = recordFactory.newRecordInstance(RegisterNodeManagerResponse.class);
     response.setRegistrationResponse(registrationResponse);
     return response;

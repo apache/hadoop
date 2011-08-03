@@ -24,13 +24,16 @@ import java.util.Map;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeResponse;
 
@@ -54,9 +57,10 @@ public class MockNodes {
     return list;
   }
 
-  public static NodeId newNodeID(int id) {
+  public static NodeId newNodeID(String host, int port) {
     NodeId nid = recordFactory.newRecordInstance(NodeId.class);
-    nid.setId(id);
+    nid.setHost(host);
+    nid.setPort(port);
     return nid;
   }
 
@@ -81,8 +85,9 @@ public class MockNodes {
   public static RMNode newNodeInfo(int rack, final Resource perNode) {
     final String rackName = "rack"+ rack;
     final int nid = NODE_ID++;
-    final NodeId nodeID = newNodeID(nid);
     final String hostName = "host"+ nid;
+    final int port = 123;
+    final NodeId nodeID = newNodeID(hostName, port);
     final String httpAddress = "localhost:0";
     final NodeHealthStatus nodeHealthStatus =
         recordFactory.newRecordInstance(NodeHealthStatus.class);
@@ -121,16 +126,6 @@ public class MockNodes {
       }
 
       @Override
-      public Resource getAvailableResource() {
-        return avail;
-      }
-
-      @Override
-      public Resource getUsedResource() {
-        return used;
-      }
-
-      @Override
       public int getNumContainers() {
         return containers;
       }
@@ -138,30 +133,6 @@ public class MockNodes {
       @Override
       public NodeHealthStatus getNodeHealthStatus() {
         return nodeHealthStatus;
-      }
-
-      @Override
-      public void allocateContainer(ApplicationId applicationId,
-          List<Container> containers) {
-      }
-
-      @Override
-      public AppSchedulingInfo getReservedApplication() {
-        return null;
-      }
-
-      @Override
-      public Resource getReservedResource() {
-        return null;
-      }
-
-      @Override
-      public void reserveResource(AppSchedulingInfo application, Priority priority,
-          Resource resource) {
-      }
-
-      @Override
-      public void unreserveResource(AppSchedulingInfo application, Priority priority) {
       }
 
       @Override
@@ -187,28 +158,27 @@ public class MockNodes {
       }
 
       @Override
-      public boolean releaseContainer(Container container) {
-        // TODO Auto-generated method stub
-        return false;
-      }
-
-      @Override
-      public void updateHealthStatus(NodeHealthStatus healthStatus) {
-        // TODO Auto-generated method stub
-        
-      }
-
-      @Override
-      public NodeResponse
-          statusUpdate(Map<String, List<Container>> containers) {
+      public RMNodeState getState() {
         // TODO Auto-generated method stub
         return null;
       }
 
       @Override
-      public void finishedApplication(ApplicationId applicationId) {
+      public List<ApplicationId> pullAppsToCleanup() {
         // TODO Auto-generated method stub
-        
+        return null;
+      }
+
+      @Override
+      public List<ContainerId> pullContainersToCleanUp() {
+        // TODO Auto-generated method stub
+        return null;
+      }
+
+      @Override
+      public HeartbeatResponse getLastHeartBeatResponse() {
+        // TODO Auto-generated method stub
+        return null;
       }
     };
   }

@@ -75,20 +75,17 @@ public class TestNodeStatusUpdater {
 
     @Override
     public RegisterNodeManagerResponse registerNodeManager(RegisterNodeManagerRequest request) throws YarnRemoteException {
-      String host = request.getHost();
-      int cmPort = request.getContainerManagerPort();
-      String node = host + ":" + cmPort;
+      NodeId nodeId = request.getNodeId();
       Resource resource = request.getResource();
-      LOG.info("Registering " + node);
+      LOG.info("Registering " + nodeId.toString());
       try {
         Assert.assertEquals(InetAddress.getLocalHost().getHostAddress()
-            + ":12345", node);
+            + ":12345", nodeId.toString());
       } catch (UnknownHostException e) {
         Assert.fail(e.getMessage());
       }
       Assert.assertEquals(5 * 1024, resource.getMemory());
       RegistrationResponse regResponse = recordFactory.newRecordInstance(RegistrationResponse.class);
-      regResponse.setNodeId(recordFactory.newRecordInstance(NodeId.class));
       
       RegisterNodeManagerResponse response = recordFactory.newRecordInstance(RegisterNodeManagerResponse.class);
       response.setRegistrationResponse(regResponse);
@@ -122,11 +119,9 @@ public class TestNodeStatusUpdater {
         Assert.assertEquals("Number of applications should only be one!", 1,
             nodeStatus.getAllContainers().size());
         Assert.assertEquals("Number of container for the app should be one!",
-            1, nodeStatus.getContainers(String.valueOf(applicationID.getId()))
-                .size());
-        Assert.assertEquals(2,
-            nodeStatus.getContainers(String.valueOf(applicationID.getId()))
-                .get(0).getResource().getMemory());
+            1, nodeStatus.getContainers(applicationID).size());
+        Assert.assertEquals(2, nodeStatus.getContainers(applicationID).get(0)
+            .getResource().getMemory());
 
         // Checks on the NM end
         ConcurrentMap<ContainerId, Container> activeContainers =
@@ -148,14 +143,11 @@ public class TestNodeStatusUpdater {
         Assert.assertEquals("Number of applications should only be one!", 1,
             nodeStatus.getAllContainers().size());
         Assert.assertEquals("Number of container for the app should be two!",
-            2, nodeStatus.getContainers(String.valueOf(applicationID.getId()))
-                .size());
-        Assert.assertEquals(2,
-            nodeStatus.getContainers(String.valueOf(applicationID.getId()))
-                .get(0).getResource().getMemory());
-        Assert.assertEquals(3,
-            nodeStatus.getContainers(String.valueOf(applicationID.getId()))
-                .get(1).getResource().getMemory());
+            2, nodeStatus.getContainers(applicationID).size());
+        Assert.assertEquals(2, nodeStatus.getContainers(applicationID).get(0)
+            .getResource().getMemory());
+        Assert.assertEquals(3, nodeStatus.getContainers(applicationID).get(1)
+            .getResource().getMemory());
 
         // Checks on the NM end
         ConcurrentMap<ContainerId, Container> activeContainers =
@@ -230,7 +222,8 @@ public class TestNodeStatusUpdater {
     System.out.println(" ----- thread already started.."
         + nm.getServiceState());
 
-    while (nm.getServiceState() == STATE.INITED) {
+    int waitCount = 0;
+    while (nm.getServiceState() == STATE.INITED || waitCount++ != 20) {
       LOG.info("Waiting for NM to start..");
       Thread.sleep(1000);
     }

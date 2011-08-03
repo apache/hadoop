@@ -11,6 +11,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -25,8 +26,9 @@ public class TestApplicationCleanup {
     rootLogger.setLevel(Level.DEBUG);
     MockRM rm = new MockRM();
     rm.start();
+
     MockNM nm1 = rm.registerNode("h1:1234", 5000);
-    
+
     RMApp app = rm.submitApp(2000);
 
     //kick the scheduling
@@ -44,11 +46,11 @@ public class TestApplicationCleanup {
     //kick the scheduler
     nm1.nodeHeartbeat(true);
     List<Container> conts = am.allocate(new ArrayList<Container>(),
-        new ArrayList<ResourceRequest>());
+        new ArrayList<ResourceRequest>()).getNewContainerList();
     int contReceived = conts.size();
     while (contReceived < request) {
       conts = am.allocate(new ArrayList<Container>(),
-          new ArrayList<ResourceRequest>());
+          new ArrayList<ResourceRequest>()).getNewContainerList();
       contReceived += conts.size();
       Log.info("Got " + contReceived + " containers. Waiting to get " + request);
       Thread.sleep(2000);

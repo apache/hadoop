@@ -109,13 +109,12 @@ public class ClientRMService extends AbstractService implements
   private Map<ApplicationACL, AccessControlList> applicationACLs;
   
   public ClientRMService(RMContext rmContext,
-      AMLivelinessMonitor amLivelinessMonitor,
       ClientToAMSecretManager clientToAMSecretManager,
       YarnScheduler scheduler) {
     super(ClientRMService.class.getName());
     this.scheduler = scheduler;
     this.rmContext = rmContext;
-    this.amLivelinessMonitor = amLivelinessMonitor;
+    this.amLivelinessMonitor = rmContext.getAMLivelinessMonitor();
     this.clientToAMSecretManager = clientToAMSecretManager;
   }
   

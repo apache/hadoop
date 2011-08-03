@@ -37,6 +37,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.Test;
@@ -116,8 +117,8 @@ public class TestMRJobsWithHistoryService {
     ApplicationId appID = TypeConverter.toYarn(job.getJobID()).getAppId();
     while (true) {
       Thread.sleep(1000);
-      if (mrCluster.getResourceManager().getRMContext().getApplications()
-          .get(appID).getState().equals(ApplicationState.COMPLETED))
+      if (mrCluster.getResourceManager().getRMContext().getRMApps()
+          .get(appID).getState().equals(RMAppState.FINISHED))
         break;
     }
     Counters counterHS = job.getCounters();

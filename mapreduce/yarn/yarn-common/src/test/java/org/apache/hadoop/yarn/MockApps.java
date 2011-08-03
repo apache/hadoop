@@ -81,25 +81,15 @@ public class MockApps {
     final String user = newUserName();
     final String name = newAppName();
     final String queue = newQueue();
-    final Container masterContainer = null;
     return new ApplicationReport() {
       @Override public ApplicationId getApplicationId() { return id; }
       @Override public String getUser() { return user; }
       @Override public String getName() { return name; }
-      @Override public ApplicationStatus getStatus() { return status; }
       @Override public ApplicationState getState() { return state; }
       @Override public String getQueue() { return queue; }
-      @Override public Container getMasterContainer() {
-        return masterContainer;
-      }
       @Override public String getTrackingUrl() { return ""; }
       @Override
       public void setApplicationId(ApplicationId applicationId) {
-        // TODO Auto-generated method stub
-        
-      }
-      @Override
-      public void setMasterContainer(Container container) {
         // TODO Auto-generated method stub
         
       }
@@ -120,11 +110,6 @@ public class MockApps {
       }
       @Override
       public void setState(ApplicationState state) {
-        // TODO Auto-generated method stub
-        
-      }
-      @Override
-      public void setStatus(ApplicationStatus status) {
         // TODO Auto-generated method stub
         
       }

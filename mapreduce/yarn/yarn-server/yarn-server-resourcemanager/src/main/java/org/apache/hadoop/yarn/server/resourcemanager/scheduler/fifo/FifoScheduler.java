@@ -212,7 +212,6 @@ public class FifoScheduler implements ResourceScheduler {
     // Sanity check
     normalizeRequests(ask);
     
-    Resource limit = null;
     synchronized (application) {
 
       LOG.debug("allocate: pre-update" +

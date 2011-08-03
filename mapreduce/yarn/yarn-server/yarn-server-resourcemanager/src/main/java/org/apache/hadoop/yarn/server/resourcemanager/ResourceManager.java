@@ -97,7 +97,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
   private AdminService adminService;
   private ContainerAllocationExpirer containerAllocationExpirer;
   protected NMLivelinessMonitor nmLivelinessMonitor;
-  protected AMLivelinessMonitor amLivelinessMonitor;
   protected NodesListManager nodesListManager;
 
   private final AtomicBoolean shutdown = new AtomicBoolean(false);
@@ -126,11 +125,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
         this.rmDispatcher);
     addService(this.containerAllocationExpirer);
 
-    this.amLivelinessMonitor = createAMLivelinessMonitor();
+    AMLivelinessMonitor amLivelinessMonitor = createAMLivelinessMonitor();
     addService(amLivelinessMonitor);
 
     this.rmContext = new RMContextImpl(this.store, this.rmDispatcher,
-        this.containerAllocationExpirer, this.amLivelinessMonitor);
+        this.containerAllocationExpirer, amLivelinessMonitor);
 
     addService(nodesListManager);
 
@@ -217,7 +216,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return new AMLivelinessMonitor(this.rmDispatcher);
   }
 
-  private static final class ApplicationEventDispatcher implements
+  public static final class ApplicationEventDispatcher implements
       EventHandler<RMAppEvent> {
 
     private final RMContext rmContext;
@@ -241,7 +240,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
   }
 
-  private static final class ApplicationAttemptEventDispatcher implements
+  public static final class ApplicationAttemptEventDispatcher implements
       EventHandler<RMAppAttemptEvent> {
 
     private final RMContext rmContext;
@@ -376,13 +375,13 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected ClientRMService createClientRMService() {
-    return new ClientRMService(this.rmContext, this.amLivelinessMonitor,
-        this.clientToAMSecretManager, scheduler);
+    return new ClientRMService(this.rmContext, this.clientToAMSecretManager,
+        scheduler);
   }
 
   protected ApplicationMasterService createApplicationMasterService() {
     return new ApplicationMasterService(this.rmContext,
-        this.amLivelinessMonitor, this.appTokenSecretManager, scheduler);
+        this.appTokenSecretManager, scheduler);
   }
   
 
@@ -411,6 +410,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
   @Private
   public ResourceTrackerService getResourceTrackerService() {
     return this.resourceTracker;
+  }
+
+  @Private
+  public ApplicationMasterService getApplicationMasterService() {
+    return this.masterService;
   }
 
   @Override

@@ -17,17 +17,14 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import java.io.IOException;
 import java.util.List;
-import java.util.Map;
+
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.MockApps;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -35,12 +32,17 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
-import org.apache.hadoop.yarn.server.resourcemanager.ApplicationsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.Records;
+
+import com.google.common.collect.Lists;
 
 @InterfaceAudience.Private
 public abstract class MockAsm extends MockApps {
@@ -148,59 +150,7 @@ public abstract class MockAsm extends MockApps {
     }
   }
 
-  public static class AsmBase extends AbstractService implements
-      ApplicationsManager {
-    public AsmBase() {
-      super(AsmBase.class.getName());
-    }
-
-    @Override
-    public void recover(RMState state) throws Exception {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public AMLivelinessMonitor getAmLivelinessMonitor() {
-      return null;
-    }
-
-    @Override
-    public ClientToAMSecretManager getClientToAMSecretManager() {
-      return null;
-    }
-  }
-
-  public static class ApplicationBase implements AppAttempt {
-    @Override
-    public ApplicationSubmissionContext getSubmissionContext() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public Resource getResource() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public ApplicationId getApplicationID() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public ApplicationStatus getStatus() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public ApplicationMaster getMaster() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public Container getMasterContainer() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
+  public static class ApplicationBase implements RMApp {
     @Override
     public String getUser() {
       throw new UnsupportedOperationException("Not supported yet.");
@@ -217,16 +167,6 @@ public abstract class MockAsm extends MockApps {
     }
 
     @Override
-    public int getFailedCount() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public ApplicationStore getStore() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
     public long getStartTime() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
@@ -235,10 +175,45 @@ public abstract class MockAsm extends MockApps {
     public long getFinishTime() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
-
     @Override
-    public ApplicationState getState() {
+    public StringBuilder getDiagnostics() {
       throw new UnsupportedOperationException("Not supported yet.");
+    }
+    @Override
+    public ApplicationId getApplicationId() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+    @Override
+    public RMAppAttempt getCurrentAppAttempt() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+    @Override
+    public ApplicationStore getApplicationStore() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+    @Override
+    public float getProgress() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+    @Override
+    public RMAppAttempt getRMAppAttempt(ApplicationAttemptId appAttemptId) {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+    @Override
+    public RMAppState getState() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+    @Override
+    public String getTrackingUrl() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+    @Override
+    public ApplicationReport createAndGetApplicationReport() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+    @Override
+    public void handle(RMAppEvent event) {
+      throw new UnsupportedOperationException("Not supported yet.");      
     }
   }
 
@@ -271,7 +246,7 @@ public abstract class MockAsm extends MockApps {
     };
   }
 
-  public static AppAttempt newApplication(int i) {
+  public static RMApp newApplication(int i) {
     final ApplicationId id = newAppID(i);
     final ApplicationMaster master = newAppMaster(id);
     final Container masterContainer = Records.newRecord(Container.class);
@@ -287,26 +262,6 @@ public abstract class MockAsm extends MockApps {
     final long finish = Math.random() < 0.5 ? 0 :
         System.currentTimeMillis() + (int)(Math.random()*DT);
     return new ApplicationBase() {
-      @Override
-      public ApplicationId getApplicationID() {
-        return id;
-      }
-
-      @Override
-      public ApplicationStatus getStatus() {
-        return status;
-      }
-
-      @Override
-      public ApplicationMaster getMaster() {
-        return master;
-      }
-
-      @Override
-      public Container getMasterContainer() {
-        return Math.random() < 0.5 ? null : masterContainer;
-      }
-
       @Override
       public String getUser() {
         return user;
@@ -334,15 +289,11 @@ public abstract class MockAsm extends MockApps {
     };
   }
   
-  public static List<AppAttempt> newApplications(int n) {
-    List<AppAttempt> list = Lists.newArrayList();
+  public static List<RMApp> newApplications(int n) {
+    List<RMApp> list = Lists.newArrayList();
     for (int i = 0; i < n; ++i) {
       list.add(newApplication(i));
     }
     return list;
-  }
-
-  public static ApplicationsManager create() {
-    return new AsmBase();
   }
 }

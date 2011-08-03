@@ -19,29 +19,26 @@
 package org.apache.hadoop.yarn.server.resourcemanager.resourcetracker;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
 
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.event.AsyncDispatcher;
+import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
-import org.apache.hadoop.yarn.server.resourcemanager.NMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceListener;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
+import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
 import org.junit.Before;
 
@@ -50,34 +47,16 @@ public class TestRMNMRPCResponseId extends TestCase {
   ResourceTrackerService resourceTrackerService;
   ContainerTokenSecretManager containerTokenSecretManager =
     new ContainerTokenSecretManager();
-  ResourceListener listener = new DummyResourceListener();
   private NodeId nodeid;
-  
-  private class DummyResourceListener implements ResourceListener {
-
-    @Override
-    public void addNode(RMNode nodeManager) {
-      nodeid = nodeManager.getNodeID();
-    }
-
-    @Override
-    public void removeNode(RMNode node) {
-      /* do nothing */
-    }
-
-    @Override
-    public void nodeUpdate(RMNode nodeInfo,
-        Map<String, List<Container>> containers) {
-    }
-  }
   
   @Before
   public void setUp() {
-    RMContext context = new RMContextImpl(new MemStore());
-    resourceTrackerService = new ResourceTrackerService(context,
-        new NMLivelinessMonitor(context), containerTokenSecretManager);
+    Dispatcher dispatcher = new AsyncDispatcher();
+    RMContext context = new RMContextImpl(new MemStore(), dispatcher, null,
+        null);
+    resourceTrackerService = new ResourceTrackerService(context, null, null,
+        containerTokenSecretManager);
     resourceTrackerService.init(new Configuration());
-    context.getNodesCollection().addListener(listener);
   }
   
   @After
@@ -89,15 +68,16 @@ public class TestRMNMRPCResponseId extends TestCase {
     String node = "localhost";
     Resource capability = recordFactory.newRecordInstance(Resource.class);
     RegisterNodeManagerRequest request = recordFactory.newRecordInstance(RegisterNodeManagerRequest.class);
-    request.setHost(node);
-    request.setContainerManagerPort(0);
+    NodeId nodeId = Records.newRecord(NodeId.class);
+    nodeId.setHost(node);
+    nodeId.setPort(1234);
+    request.setNodeId(nodeId);
     request.setHttpPort(0);
     request.setResource(capability);
 
     RegisterNodeManagerRequest request1 = recordFactory
         .newRecordInstance(RegisterNodeManagerRequest.class);
-    request1.setContainerManagerPort(0);
-    request1.setHost(node);
+    request1.setNodeId(nodeId);
     request1.setHttpPort(0);
     request1.setResource(capability);
     resourceTrackerService.registerNodeManager(request1);

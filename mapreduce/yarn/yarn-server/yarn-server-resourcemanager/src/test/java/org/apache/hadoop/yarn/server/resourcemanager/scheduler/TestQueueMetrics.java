@@ -10,6 +10,7 @@ import static org.apache.hadoop.test.MockitoMaker.*;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -48,7 +49,7 @@ public class TestQueueMetrics {
     metrics.releaseResources(user, 1, Resources.createResource(2*GB));
     checkResources(queueSource, 4, 2, 100, 9, 2, 0, 0);
 
-    metrics.finishApp(app);
+    metrics.finishApp(app, RMAppAttemptState.FINISHED);
     checkApps(queueSource, 1, 0, 0, 1, 0, 0);
     assertNull(userSource);
   }
@@ -87,7 +88,7 @@ public class TestQueueMetrics {
     checkResources(queueSource, 4, 2, 100, 9, 2, 0, 0);
     checkResources(userSource, 4, 2, 10, 9, 2, 0, 0);
 
-    metrics.finishApp(app);
+    metrics.finishApp(app, RMAppAttemptState.FINISHED);
     checkApps(queueSource, 1, 0, 0, 1, 0, 0);
     checkApps(userSource, 1, 0, 0, 1, 0, 0);
   }
@@ -146,7 +147,7 @@ public class TestQueueMetrics {
     checkResources(userSource, 4, 2, 10, 9, 2, 0, 0);
     checkResources(parentUserSource, 4, 2, 10, 9, 2, 0, 0);
 
-    metrics.finishApp(app);
+    metrics.finishApp(app, RMAppAttemptState.FINISHED);
     checkApps(queueSource, 1, 0, 0, 1, 0, 0);
     checkApps(parentQueueSource, 1, 0, 0, 1, 0, 0);
     checkApps(userSource, 1, 0, 0, 1, 0, 0);
@@ -179,7 +180,6 @@ public class TestQueueMetrics {
 
   private static AppSchedulingInfo mockApp(String user) {
     AppSchedulingInfo app = mock(AppSchedulingInfo.class);
-    when(app.getState()).thenReturn(ApplicationState.RUNNING);
     when(app.getUser()).thenReturn(user);
     return app;
   }

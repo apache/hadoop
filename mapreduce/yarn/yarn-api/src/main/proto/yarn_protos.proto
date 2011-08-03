@@ -54,10 +54,12 @@ message ContainerProto {
 
 enum ApplicationStateProto {
   NEW = 1;
-  RUNNING = 2;
-  SUCCEEDED = 3;
-  KILLED = 4;
-  FAILED = 5;
+  SUBMITTED = 2;
+  RUNNING = 3;
+  RESTARTING = 4;
+  SUCCEEDED = 5;
+  FAILED = 6;
+  KILLED = 7; 
 }
 
 message ApplicationStatusProto {

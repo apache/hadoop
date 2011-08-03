@@ -37,6 +37,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -52,6 +53,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.Task.State;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
+import org.apache.hadoop.yarn.util.Records;
 
 @Private
 public class Application {
@@ -59,9 +61,11 @@ public class Application {
   
   private AtomicInteger taskCounter = new AtomicInteger(0);
 
+  private AtomicInteger numAttempts = new AtomicInteger(0);
   final private String user;
   final private String queue;
   final private ApplicationId applicationId;
+  final private ApplicationAttemptId applicationAttemptId;
   final private ResourceManager resourceManager;
   private final static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   
@@ -80,27 +84,25 @@ public class Application {
   final private Set<ResourceRequest> ask = 
     new TreeSet<ResourceRequest>(
         new org.apache.hadoop.yarn.util.BuilderUtils.ResourceRequestComparator());
-  final private Set<Container> release = 
-    new TreeSet<Container>(
-        new org.apache.hadoop.yarn.util.BuilderUtils.ContainerComparator());
 
   final private Map<String, NodeManager> nodes = 
     new HashMap<String, NodeManager>();
   
   Resource used = recordFactory.newRecordInstance(Resource.class);
   
-  public Application(String user, ResourceManager resourceManager)
-      throws YarnRemoteException {
+  public Application(String user, ResourceManager resourceManager) {
     this(user, "default", resourceManager);
   }
   
-  public Application(String user, String queue, ResourceManager resourceManager)
-  throws YarnRemoteException {
+  public Application(String user, String queue, ResourceManager resourceManager) {
     this.user = user;
     this.queue = queue;
     this.resourceManager = resourceManager;
     this.applicationId =
       this.resourceManager.getClientRMService().getNewApplicationId();
+    this.applicationAttemptId = Records.newRecord(ApplicationAttemptId.class);
+    this.applicationAttemptId.setApplicationId(this.applicationId);
+    this.applicationAttemptId.setAttemptId(this.numAttempts.getAndIncrement());
   }
 
   public String getUser() {
@@ -230,7 +232,7 @@ public class Application {
     ResourceRequest request = requests.get(resourceName);
     if (request == null) {
       request = 
-        org.apache.hadoop.yarn.util.BuilderUtils.create(
+        org.apache.hadoop.yarn.util.BuilderUtils.newResourceRequest(
             priority, resourceName, capability, 1);
       requests.put(resourceName, request);
     } else {
@@ -240,7 +242,7 @@ public class Application {
     // Note this down for next interaction with ResourceManager
     ask.remove(request);
     ask.add(
-        org.apache.hadoop.yarn.util.BuilderUtils.create(
+        org.apache.hadoop.yarn.util.BuilderUtils.newResourceRequest(
             request)); // clone to ensure the RM doesn't manipulate the same obj
     
     LOG.info("DEBUG --- addResourceRequest:" +
@@ -255,40 +257,26 @@ public class Application {
   public synchronized List<Container> getResources() throws IOException {
     LOG.info("DEBUG --- getResources begin:" +
         " application=" + applicationId + 
-        " #ask=" + ask.size() +
-        " #release=" + release.size());
+        " #ask=" + ask.size());
     for (ResourceRequest request : ask) {
       LOG.info("DEBUG --- getResources:" +
           " application=" + applicationId + 
           " ask-request=" + request);
     }
-    for (Container c : release) {
-      LOG.info("DEBUG --- getResources:" +
-          " application=" + applicationId + 
-          " release=" + c);
-    }
     
     // Get resources from the ResourceManager
-    List<Container> response = 
-      resourceManager.getResourceScheduler().allocate(applicationId, 
-          new ArrayList<ResourceRequest>(ask), 
-          new ArrayList<Container>(release)).getContainers();
+    resourceManager.getResourceScheduler().allocate(applicationAttemptId,
+        new ArrayList<ResourceRequest>(ask));
     
-    List<Container> containers = new ArrayList<Container>(response.size());
-    for (Container container : response) {
-      if (container.getState() != ContainerState.COMPLETE) {
-        containers.add(
-            org.apache.hadoop.yarn.util.BuilderUtils.clone(
-                container));
-      }
-    }
+    List<Container> containers = resourceManager.getRMContext().getRMApps()
+        .get(applicationId).getRMAppAttempt(applicationAttemptId)
+        .pullNewlyAllocatedContainers();
+
     // Clear state for next interaction with ResourceManager
     ask.clear();
-    release.clear();
     
     LOG.info("DEBUG --- getResources() for " + applicationId + ":" +
     		" ask=" + ask.size() + 
-    		" release= "+ release.size() + 
     		" recieved=" + containers.size());
     
     return containers;
@@ -312,10 +300,6 @@ public class Application {
     int assignedContainers = numContainers - containers.size();
     LOG.info("Application " + applicationId + " assigned " + 
         assignedContainers + "/" + numContainers);
-    if (assignedContainers < numContainers) {
-      // Release
-      release.addAll(containers);
-    }
   }
   
   public synchronized void schedule() throws IOException {
@@ -326,7 +310,7 @@ public class Application {
       List<Container> containers) throws IOException {
     for (Iterator<Container> i=containers.iterator(); i.hasNext();) {
       Container container = i.next();
-      String host = container.getContainerManagerAddress();
+      String host = container.getNodeId().toString();
       
       if (Resources.equals(requestSpec.get(priority), container.getResource())) { 
         // See which task can use this container
@@ -400,7 +384,7 @@ public class Application {
     // Note this for next interaction with ResourceManager
     ask.remove(request);
     ask.add(
-        org.apache.hadoop.yarn.util.BuilderUtils.create(
+        org.apache.hadoop.yarn.util.BuilderUtils.newResourceRequest(
         request)); // clone to ensure the RM doesn't manipulate the same obj
 
     LOG.info("DEBUG --- updateResourceRequest:" +

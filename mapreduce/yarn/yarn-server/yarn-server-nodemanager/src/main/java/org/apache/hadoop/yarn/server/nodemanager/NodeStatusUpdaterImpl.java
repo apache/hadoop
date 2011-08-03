@@ -169,6 +169,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     this.nodeId.setPort(this.containerManagerPort);
     request.setHttpPort(this.httpPort);
     request.setResource(this.totalResource);
+    request.setNodeId(this.nodeId);
     RegistrationResponse regResponse =
         this.resourceTracker.registerNodeManager(request).getRegistrationResponse();
     if (UserGroupInformation.isSecurityEnabled()) {

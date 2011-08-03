@@ -46,16 +46,17 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
-import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -80,8 +81,9 @@ import org.apache.hadoop.yarn.security.ContainerManagerSecurityInfo;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.SchedulerSecurityInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.AppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.Records;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -163,16 +165,20 @@ public class TestContainerTokenSecretManager {
 
     // Wait till container gets allocated for AM
     int waitCounter = 0;
-    AppAttempt app =
-        resourceManager.getRMContext().getApplications().get(appID);
-    while (app.getState() != ApplicationState.LAUNCHED && waitCounter <= 20) {
+    GetApplicationReportRequest rmRequest = Records
+        .newRecord(GetApplicationReportRequest.class);
+    rmRequest.setApplicationId(appID);
+    ApplicationReport app = resourceManager.getClientRMService()
+        .getApplicationReport(rmRequest).getApplicationReport();
+    while (app.getState() != ApplicationState.RUNNING && waitCounter <= 20) {
       Thread.sleep(1000);
       LOG.info("Waiting for AM to be allocated a container. Current state is "
           + app.getState());
-      app = resourceManager.getRMContext().getApplications().get(appID);
+      app = resourceManager.getClientRMService()
+          .getApplicationReport(rmRequest).getApplicationReport();
     }
 
-    Assert.assertTrue(ApplicationState.PENDING != app.getState());
+    Assert.assertTrue(ApplicationState.NEW != app.getState());
 
     UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
 
@@ -213,13 +219,8 @@ public class TestContainerTokenSecretManager {
             .newRecordInstance(RegisterApplicationMasterRequest.class);
     ApplicationMaster applicationMaster = recordFactory
         .newRecordInstance(ApplicationMaster.class);
-    applicationMaster.setApplicationId(appID);
-    applicationMaster.setState(ApplicationState.RUNNING);
-    ApplicationStatus status =
-        recordFactory.newRecordInstance(ApplicationStatus.class);
-    status.setApplicationId(appID);
-    applicationMaster.setStatus(status);
-    request.setApplicationMaster(applicationMaster);
+    request.setApplicationAttemptId(resourceManager.getRMContext()
+        .getRMApps().get(appID).getCurrentAppAttempt().getAppAttemptId());
     scheduler.registerApplicationMaster(request);
 
     // Now request a container allocation.
@@ -236,7 +237,6 @@ public class TestContainerTokenSecretManager {
     
     AllocateRequest allocateRequest =
         recordFactory.newRecordInstance(AllocateRequest.class);
-    allocateRequest.setApplicationStatus(status);
     allocateRequest.addAllAsks(ask);
     allocateRequest.addAllReleases(release);
     List<Container> allocatedContainers = scheduler.allocate(allocateRequest)
@@ -247,8 +247,7 @@ public class TestContainerTokenSecretManager {
         && waitCounter++ != 20) {
       LOG.info("Waiting for container to be allocated..");
       Thread.sleep(1000);
-      status.setResponseId(status.getResponseId() + 1);
-      allocateRequest.setApplicationStatus(status);
+      allocateRequest.setResponseId(allocateRequest.getResponseId() + 1);
       allocatedContainers =
           scheduler.allocate(allocateRequest).getAMResponse()
               .getNewContainerList();
@@ -274,10 +273,10 @@ public class TestContainerTokenSecretManager {
     currentUser.doAs(new PrivilegedAction<Void>() {
       @Override
       public Void run() {
-        ContainerManager client =
-            (ContainerManager) yarnRPC.getProxy(ContainerManager.class,
-                NetUtils.createSocketAddr(allocatedContainer
-                    .getContainerManagerAddress()), conf);
+        ContainerManager client = (ContainerManager) yarnRPC.getProxy(
+            ContainerManager.class, NetUtils
+                .createSocketAddr(allocatedContainer.getNodeId().toString()),
+            conf);
         try {
           LOG.info("Going to make a getContainerStatus() legal request");
           GetContainerStatusRequest request =
@@ -320,10 +319,10 @@ public class TestContainerTokenSecretManager {
     maliceUser.doAs(new PrivilegedAction<Void>() {
       @Override
       public Void run() {
-        ContainerManager client =
-            (ContainerManager) yarnRPC.getProxy(ContainerManager.class,
-                NetUtils.createSocketAddr(allocatedContainer
-                    .getContainerManagerAddress()), conf);
+        ContainerManager client = (ContainerManager) yarnRPC.getProxy(
+            ContainerManager.class, NetUtils
+                .createSocketAddr(allocatedContainer.getNodeId().toString()),
+            conf);
         ContainerId containerID;
 
         LOG.info("Going to contact NM:  ilLegal request");

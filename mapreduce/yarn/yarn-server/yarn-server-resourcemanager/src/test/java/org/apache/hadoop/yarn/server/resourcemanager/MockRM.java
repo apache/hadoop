@@ -110,7 +110,7 @@ public class MockRM extends ResourceManager {
 
   @Override
   protected ClientRMService createClientRMService() {
-    return new ClientRMService(getRMContext(), amLivelinessMonitor,
+    return new ClientRMService(getRMContext(),
         clientToAMSecretManager, getResourceScheduler()) {
       @Override
       public void start() {
@@ -141,7 +141,7 @@ public class MockRM extends ResourceManager {
   @Override
   protected ApplicationMasterService createApplicationMasterService() {
     return new ApplicationMasterService(getRMContext(),
-        this.amLivelinessMonitor, this.appTokenSecretManager, scheduler){
+        this.appTokenSecretManager, scheduler) {
       @Override
       public void start() {
         //override to not start rpc handler

@@ -11,6 +11,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -63,7 +64,7 @@ public class MockAM {
     amRMProtocol.registerApplicationMaster(req);
   }
 
-  public List<Container> allocate( 
+  public AMResponse allocate( 
       String host, int memory, int numContainers, 
       List<ContainerId> releases) throws Exception {
     List reqs = createReq(host, memory, 1, numContainers);
@@ -101,7 +102,7 @@ public class MockAM {
     return req;
   }
 
-  public List<Container> allocate(
+  public AMResponse allocate(
       List<Container> releases, List<ResourceRequest> resourceRequest) 
       throws Exception {
     AllocateRequest req = Records.newRecord(AllocateRequest.class);
@@ -110,7 +111,7 @@ public class MockAM {
     req.addAllAsks(resourceRequest);
     req.addAllReleases(releases);
     AllocateResponse resp = amRMProtocol.allocate(req);
-    return resp.getAMResponse().getContainerList();
+    return resp.getAMResponse();
   }
 
   public void unregisterAppAttempt() throws Exception {

@@ -53,6 +53,9 @@ public class RMAppImpl implements RMApp {
   private final String clientTokenStr;
   private final ApplicationStore appStore;
   private final Dispatcher dispatcher;
+  private final YarnScheduler scheduler;
+  private final StringBuilder diagnostics = new StringBuilder();
+  private final int maxRetries;
   private final ReadLock readLock;
   private final WriteLock writeLock;
   private final Map<ApplicationAttemptId, RMAppAttempt> attempts
@@ -61,10 +64,7 @@ public class RMAppImpl implements RMApp {
   // Mutable fields
   private long startTime;
   private long finishTime;
-  private StringBuilder diagnostics;
   private AMLivelinessMonitor amLivelinessMonitor;
-  private YarnScheduler scheduler;
-  private int maxRetries;
   private RMAppAttempt currentAttempt;
 
   private static final FinalTransition FINAL_TRANSITION = new FinalTransition();
@@ -267,12 +267,20 @@ public class RMAppImpl implements RMApp {
     this.readLock.lock();
 
     try {
+      String clientToken = "N/A";
+      String trackingUrl = "N/A";
+      String host = "N/A";
+      int rpcPort = -1;
+      if (this.currentAttempt != null) {
+        trackingUrl = this.currentAttempt.getTrackingUrl();
+        clientToken = this.currentAttempt.getClientToken();
+        host = this.currentAttempt.getHost();
+        rpcPort = this.currentAttempt.getRpcPort();
+      }
       return BuilderUtils.newApplicationReport(this.applicationId, this.user,
-          this.queue, this.name, this.currentAttempt.getHost(),
-          this.currentAttempt.getRpcPort(), this.currentAttempt
-              .getClientToken(), createApplicationState(this.stateMachine
-              .getCurrentState()), this.diagnostics.toString(),
-          this.currentAttempt.getTrackingUrl());
+          this.queue, this.name, host, rpcPort, clientToken,
+          createApplicationState(this.stateMachine.getCurrentState()),
+          this.diagnostics.toString(), trackingUrl);
     } finally {
       this.readLock.unlock();
     }

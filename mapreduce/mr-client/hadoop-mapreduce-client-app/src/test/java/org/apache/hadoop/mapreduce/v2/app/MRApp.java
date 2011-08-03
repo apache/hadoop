@@ -325,7 +325,8 @@ public class MRApp extends MRAppMaster {
         Container container = recordFactory.newRecordInstance(Container.class);
         container.setId(cId);
         container.setNodeId(recordFactory.newRecordInstance(NodeId.class));
-        container.setContainerManagerAddress("dummy");
+        container.getNodeId().setHost("dummy");
+        container.getNodeId().setPort(1234);
         container.setContainerToken(null);
         container.setNodeHttpAddress("localhost:9999");
         getContext().getEventHandler().handle(

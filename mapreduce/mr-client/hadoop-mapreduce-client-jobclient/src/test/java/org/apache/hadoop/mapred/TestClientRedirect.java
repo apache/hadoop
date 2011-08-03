@@ -227,7 +227,7 @@ public class TestClientRedirect {
       if (amRunning) {
         application.setState(ApplicationState.RUNNING);
       } else {
-        application.setState(ApplicationState.COMPLETED);
+        application.setState(ApplicationState.SUCCEEDED);
       }
       String[] split = AMHOSTADDRESS.split(":");
       application.setHost(split[0]);

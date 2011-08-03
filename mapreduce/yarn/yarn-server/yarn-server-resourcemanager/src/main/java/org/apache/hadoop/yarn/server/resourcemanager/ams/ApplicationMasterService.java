@@ -83,10 +83,9 @@ AMRMProtocol, EventHandler<ApplicationMasterServiceEvent> {
   private final RMContext rmContext;
   
   public ApplicationMasterService(RMContext rmContext,
-      AMLivelinessMonitor amLivelinessMonitor,
       ApplicationTokenSecretManager appTokenManager, YarnScheduler scheduler) {
     super(ApplicationMasterService.class.getName());
-    this.amLivelinessMonitor = amLivelinessMonitor;
+    this.amLivelinessMonitor = rmContext.getAMLivelinessMonitor();
     this.appTokenManager = appTokenManager;
     this.rScheduler = scheduler;
     this.reboot.setReboot(true);
