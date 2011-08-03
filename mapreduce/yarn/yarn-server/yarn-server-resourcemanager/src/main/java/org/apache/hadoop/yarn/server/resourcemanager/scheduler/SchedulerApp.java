@@ -62,7 +62,8 @@ public class SchedulerApp {
     return this.appSchedulingInfo.getUser();
   }
 
-  public void updateResourceRequests(List<ResourceRequest> requests) {
+  public synchronized void updateResourceRequests(
+      List<ResourceRequest> requests) {
     this.appSchedulingInfo.updateResourceRequests(requests);
   }
 
@@ -104,7 +105,7 @@ public class SchedulerApp {
   }
 
   public synchronized Collection<RMContainer> getLiveContainers() {
-    return this.liveContainers.values();
+    return new ArrayList<RMContainer>(liveContainers.values());
   }
 
   public synchronized void stop(RMAppAttemptState rmAppAttemptFinalState) {
@@ -130,6 +131,12 @@ public class SchedulerApp {
     ContainerId containerId = cont.getId();
     // Inform the container
     RMContainer container = getRMContainer(containerId);
+
+    if (container == null) {
+      LOG.error("Invalid container completed " + cont.getId());
+      return;
+    }
+
     if (event.equals(RMContainerEventType.FINISHED)) {
       // Have to send diagnostics for finished containers.
       container.handle(new RMContainerFinishedEvent(containerId,

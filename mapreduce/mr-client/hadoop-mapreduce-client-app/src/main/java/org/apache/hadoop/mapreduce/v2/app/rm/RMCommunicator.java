@@ -210,6 +210,7 @@ public class RMCommunicator extends AbstractService  {
               heartbeat();
             } catch (Exception e) {
               LOG.error("ERROR IN CONTACTING RM. ", e);
+              // TODO: for other exceptions
             }
           } catch (InterruptedException e) {
             LOG.info("Allocated thread interrupted. Returning.");

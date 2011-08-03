@@ -1,7 +1,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -11,7 +10,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -109,15 +107,13 @@ public class SchedulerNode {
   /**
    * Release an allocated container on this node.
    * @param container container to be released
-   * @return <code>true</code> iff the container was unused, 
-   *         <code>false</code> otherwise
    */
-  public synchronized boolean releaseContainer(Container container) {
+  public synchronized void releaseContainer(Container container) {
     if (!isValidContainer(container)) {
       LOG.error("Invalid container released " + container);
-      return false;
+      return;
     }
-    
+
     /* remove the containers from the nodemanger */
     
     launchedContainers.remove(container.getId());
@@ -128,7 +124,6 @@ public class SchedulerNode {
         ", which currently has " + numContainers + " containers, " + 
         getUsedResource() + " used and " + getAvailableResource()
         + " available" + ", release resources=" + true);
-    return true;
   }
 
 

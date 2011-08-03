@@ -37,14 +37,14 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
     viaProto = true;
   }
   
-  public AMResponseProto getProto() {
+  public synchronized AMResponseProto getProto() {
       mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
   }
   
-  private void mergeLocalToBuilder() {
+  private synchronized void mergeLocalToBuilder() {
     if (this.newContainersList != null) {
       builder.clearNewContainers();
       Iterable<ContainerProto> iterable = getProtoIterable(this.newContainersList);
@@ -60,7 +60,7 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
     }
   }
   
-  private void mergeLocalToProto() {
+  private synchronized void mergeLocalToProto() {
     if (viaProto) 
       maybeInitBuilder();
     mergeLocalToBuilder();
@@ -68,7 +68,7 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
     viaProto = true;
   }
 
-  private void maybeInitBuilder() {
+  private synchronized void maybeInitBuilder() {
     if (viaProto || builder == null) {
       builder = AMResponseProto.newBuilder(proto);
     }
@@ -77,29 +77,29 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
     
   
   @Override
-  public boolean getReboot() {
+  public synchronized boolean getReboot() {
     AMResponseProtoOrBuilder p = viaProto ? proto : builder;
     return (p.getReboot());
   }
 
   @Override
-  public void setReboot(boolean reboot) {
+  public synchronized void setReboot(boolean reboot) {
     maybeInitBuilder();
     builder.setReboot((reboot));
   }
   @Override
-  public int getResponseId() {
+  public synchronized int getResponseId() {
     AMResponseProtoOrBuilder p = viaProto ? proto : builder;
     return (p.getResponseId());
   }
 
   @Override
-  public void setResponseId(int responseId) {
+  public synchronized void setResponseId(int responseId) {
     maybeInitBuilder();
     builder.setResponseId((responseId));
   }
   @Override
-  public Resource getAvailableResources() {
+  public synchronized Resource getAvailableResources() {
     if (this.limit != null) {
       return this.limit;
     }
@@ -113,7 +113,7 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
   }
 
   @Override
-  public void setAvailableResources(Resource limit) {
+  public synchronized void setAvailableResources(Resource limit) {
     maybeInitBuilder();
     if (limit == null)
       builder.clearLimit();
@@ -121,24 +121,24 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
   }
 
   @Override
-  public List<Container> getNewContainerList() {
+  public synchronized List<Container> getNewContainerList() {
     initLocalNewContainerList();
     return this.newContainersList;
   }
   
   @Override
-  public Container getNewContainer(int index) {
+  public synchronized Container getNewContainer(int index) {
     initLocalNewContainerList();
     return this.newContainersList.get(index);
   }
   @Override
-  public int getNewContainerCount() {
+  public synchronized int getNewContainerCount() {
     initLocalNewContainerList();
     return this.newContainersList.size();
   }
   
   //Once this is called. containerList will never be null - untill a getProto is called.
-  private void initLocalNewContainerList() {
+  private synchronized void initLocalNewContainerList() {
     if (this.newContainersList != null) {
       return;
     }
@@ -152,35 +152,35 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
   }
 
   @Override
-  public void addAllNewContainers(final List<Container> containers) {
+  public synchronized void addAllNewContainers(final List<Container> containers) {
     if (containers == null) 
       return;
     initLocalNewContainerList();
     newContainersList.addAll(containers);
   }
 
-  private Iterable<ContainerProto> getProtoIterable(
+  private synchronized Iterable<ContainerProto> getProtoIterable(
       final List<Container> newContainersList) {
     maybeInitBuilder();
     return new Iterable<ContainerProto>() {
       @Override
-      public Iterator<ContainerProto> iterator() {
+      public synchronized Iterator<ContainerProto> iterator() {
         return new Iterator<ContainerProto>() {
 
           Iterator<Container> iter = newContainersList.iterator();
 
           @Override
-          public boolean hasNext() {
+          public synchronized boolean hasNext() {
             return iter.hasNext();
           }
 
           @Override
-          public ContainerProto next() {
+          public synchronized ContainerProto next() {
             return convertToProtoFormat(iter.next());
           }
 
           @Override
-          public void remove() {
+          public synchronized void remove() {
             throw new UnsupportedOperationException();
 
           }
@@ -191,7 +191,7 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
   }
   
   @Override
-  public void addNewContainer(Container containers) {
+  public synchronized void addNewContainer(Container containers) {
     initLocalNewContainerList();
     if (containers == null) 
       return;
@@ -199,36 +199,36 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
   }
   
   @Override
-  public void removeNewContainer(int index) {
+  public synchronized void removeNewContainer(int index) {
     initLocalNewContainerList();
     this.newContainersList.remove(index);
   }
   @Override
-  public void clearNewContainers() {
+  public synchronized void clearNewContainers() {
     initLocalNewContainerList();
     this.newContainersList.clear();
   }
 
   //// Finished containers
   @Override
-  public List<Container> getFinishedContainerList() {
+  public synchronized List<Container> getFinishedContainerList() {
     initLocalFinishedContainerList();
     return this.finishedContainersList;
   }
   
   @Override
-  public Container getFinishedContainer(int index) {
+  public synchronized Container getFinishedContainer(int index) {
     initLocalFinishedContainerList();
     return this.finishedContainersList.get(index);
   }
   @Override
-  public int getFinishedContainerCount() {
+  public synchronized int getFinishedContainerCount() {
     initLocalFinishedContainerList();
     return this.finishedContainersList.size();
   }
   
   //Once this is called. containerList will never be null - untill a getProto is called.
-  private void initLocalFinishedContainerList() {
+  private synchronized void initLocalFinishedContainerList() {
     if (this.finishedContainersList != null) {
       return;
     }
@@ -242,7 +242,7 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
   }
 
   @Override
-  public void addAllFinishedContainers(final List<Container> containers) {
+  public synchronized void addAllFinishedContainers(final List<Container> containers) {
     if (containers == null) 
       return;
     initLocalFinishedContainerList();
@@ -250,7 +250,7 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
   }
   
   @Override
-  public void addFinishedContainer(Container containers) {
+  public synchronized void addFinishedContainer(Container containers) {
     initLocalFinishedContainerList();
     if (containers == null) 
       return;
@@ -258,29 +258,29 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
   }
   
   @Override
-  public void removeFinishedContainer(int index) {
+  public synchronized void removeFinishedContainer(int index) {
     initLocalFinishedContainerList();
     this.finishedContainersList.remove(index);
   }
   @Override
-  public void clearFinishedContainers() {
+  public synchronized void clearFinishedContainers() {
     initLocalFinishedContainerList();
     this.finishedContainersList.clear();
   }
 
-  private ContainerPBImpl convertFromProtoFormat(ContainerProto p) {
+  private synchronized ContainerPBImpl convertFromProtoFormat(ContainerProto p) {
     return new ContainerPBImpl(p);
   }
 
-  private ContainerProto convertToProtoFormat(Container t) {
+  private synchronized ContainerProto convertToProtoFormat(Container t) {
     return ((ContainerPBImpl)t).getProto();
   }
 
-  private ResourcePBImpl convertFromProtoFormat(ResourceProto p) {
+  private synchronized ResourcePBImpl convertFromProtoFormat(ResourceProto p) {
     return new ResourcePBImpl(p);
   }
 
-  private ResourceProto convertToProtoFormat(Resource r) {
+  private synchronized ResourceProto convertToProtoFormat(Resource r) {
     return ((ResourcePBImpl) r).getProto();
   }
 

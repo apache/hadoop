@@ -210,7 +210,7 @@ public class FifoScheduler implements ResourceScheduler {
   private static final Allocation EMPTY_ALLOCATION = 
       new Allocation(EMPTY_CONTAINER_LIST, Resources.createResource(0));
   @Override
-  public synchronized Allocation allocate(
+  public Allocation allocate(
       ApplicationAttemptId applicationAttemptId, List<ResourceRequest> ask,
       List<Container> release) {
     SchedulerApp application = getApplication(applicationAttemptId);
@@ -275,7 +275,7 @@ public class FifoScheduler implements ResourceScheduler {
     return nodes.get(nodeId);
   }
   
-  private void addApplication(ApplicationAttemptId appAttemptId,
+  private synchronized void addApplication(ApplicationAttemptId appAttemptId,
       String queueName, String user) {
     AppSchedulingInfo appSchedulingInfo = new AppSchedulingInfo(
         appAttemptId, queueName, user, null);
@@ -290,7 +290,7 @@ public class FifoScheduler implements ResourceScheduler {
             RMAppAttemptEventType.APP_ACCEPTED));
   }
 
-  private void doneApplication(
+  private synchronized void doneApplication(
       ApplicationAttemptId applicationAttemptId,
       RMAppAttemptState rmAppAttemptFinalState)
       throws IOException {
@@ -532,7 +532,7 @@ public class FifoScheduler implements ResourceScheduler {
     return assignedContainers;
   }
 
-  private void nodeUpdate(RMNode rmNode,
+  private synchronized void nodeUpdate(RMNode rmNode,
       Map<ApplicationId, List<Container>> remoteContainers) {
     SchedulerNode node = getNode(rmNode.getNodeID());
     
@@ -562,7 +562,7 @@ public class FifoScheduler implements ResourceScheduler {
   }  
 
   @Override
-  public synchronized void handle(SchedulerEvent event) {
+  public void handle(SchedulerEvent event) {
     switch(event.getType()) {
     case NODE_ADDED:
     {
@@ -631,7 +631,8 @@ public class FifoScheduler implements ResourceScheduler {
   }
 
   @Lock(FifoScheduler.class)
-  private void containerCompleted(Container container, RMContainerEventType event) {
+  private synchronized void containerCompleted(Container container,
+      RMContainerEventType event) {
     // Get the application for the finished container
     ApplicationAttemptId applicationAttemptId = container.getId().getAppAttemptId();
     SchedulerApp application = getApplication(applicationAttemptId);
@@ -646,10 +647,10 @@ public class FifoScheduler implements ResourceScheduler {
           " with event: " + event);
       return;
     }
-    
+
     // Inform the application
     application.containerCompleted(container, event);
-    
+
     // Inform the node
     node.releaseContainer(container);
 
@@ -663,7 +664,7 @@ public class FifoScheduler implements ResourceScheduler {
   private Resource clusterResource = recordFactory.newRecordInstance(Resource.class);
   private Resource usedResource = recordFactory.newRecordInstance(Resource.class);
 
-  private void removeNode(RMNode nodeInfo) {
+  private synchronized void removeNode(RMNode nodeInfo) {
     SchedulerNode node = getNode(nodeInfo.getNodeID());
     // Kill running containers
     for(Container container : node.getRunningContainers()) {
@@ -688,7 +689,7 @@ public class FifoScheduler implements ResourceScheduler {
     return DEFAULT_QUEUE.getQueueUserAclInfo(null); 
   }
 
-  private void addNode(RMNode nodeManager) {
+  private synchronized void addNode(RMNode nodeManager) {
     this.nodes.put(nodeManager.getNodeID(), new SchedulerNode(nodeManager));
     Resources.addTo(clusterResource, nodeManager.getTotalCapability());
   }

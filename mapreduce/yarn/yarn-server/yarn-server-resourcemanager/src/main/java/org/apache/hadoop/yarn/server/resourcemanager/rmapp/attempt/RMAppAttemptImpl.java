@@ -691,7 +691,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       // Is this container the AmContainer? If the finished container is same as
       // the AMContainer, AppAttempt fails
       if (appAttempt.masterContainer.getId().equals(container.getId())) {
-        new BaseFinalTransition(RMAppAttemptState.FAILED).transition(
+        new FinalTransition(RMAppAttemptState.FAILED).transition(
             appAttempt, containerFinishedEvent);
         return RMAppAttemptState.FAILED;
       }
