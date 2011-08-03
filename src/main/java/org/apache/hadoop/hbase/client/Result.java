@@ -109,7 +109,8 @@ public class Result implements Writable, WritableWithSize {
   }
 
   /**
-   * Method for retrieving the row that this result is for
+   * Method for retrieving the row key that corresponds to
+   * the row from which this Result was created.
    * @return row
    */
   public byte [] getRow() {
