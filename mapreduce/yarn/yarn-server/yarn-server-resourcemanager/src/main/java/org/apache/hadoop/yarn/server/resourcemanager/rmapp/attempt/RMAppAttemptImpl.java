@@ -321,6 +321,16 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   }
 
   @Override
+  public List<Container> getJustFinishedContainers() {
+    return this.justFinishedContainers;
+  }
+
+  @Override
+  public List<Container> getNewlyAllocatedContainers() {
+    return this.newlyAllocatedContainers;
+  }
+
+  @Override
   public List<Container> pullJustFinishedContainers() {
     this.writeLock.lock();
 

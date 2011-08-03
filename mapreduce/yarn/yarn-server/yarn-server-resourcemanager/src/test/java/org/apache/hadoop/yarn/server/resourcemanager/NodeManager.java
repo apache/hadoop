@@ -94,6 +94,7 @@ public class NodeManager implements ContainerManager {
     RegisterNodeManagerRequest request = recordFactory
         .newRecordInstance(RegisterNodeManagerRequest.class);
     request.setHttpPort(httpPort);
+    request.setNodeId(this.nodeId);
     request.setResource(capability);
     RegistrationResponse response = resourceTrackerService
         .registerNodeManager(request).getRegistrationResponse();

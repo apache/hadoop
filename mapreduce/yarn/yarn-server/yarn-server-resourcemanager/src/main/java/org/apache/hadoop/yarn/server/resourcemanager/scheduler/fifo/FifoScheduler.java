@@ -55,7 +55,6 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.ApplicationInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
@@ -120,7 +119,7 @@ public class FifoScheduler implements ResourceScheduler {
   private Resource maximumAllocation;
 
   private Map<ApplicationAttemptId, SchedulerApp> applications
-      = new HashMap<ApplicationAttemptId, SchedulerApp>();
+      = new TreeMap<ApplicationAttemptId, SchedulerApp>();
 
   private static final String DEFAULT_QUEUE_NAME = "default";
   private final QueueMetrics metrics =
@@ -168,7 +167,15 @@ public class FifoScheduler implements ResourceScheduler {
       return Collections.singletonList(queueUserAclInfo);
     }
   };
-  
+
+  public synchronized Resource getUsedResource(NodeId nodeId) {
+    return nodes.get(nodeId).getUsedResource();
+  }
+
+  public synchronized Resource getAvailableResource(NodeId nodeId) {
+    return nodes.get(nodeId).getAvailableResource();
+  }
+
   @Override
   public Resource getMinimumResourceCapability() {
     return minimumAllocation;
@@ -471,10 +478,11 @@ public class FifoScheduler implements ResourceScheduler {
       for (int i=0; i < assignedContainers; ++i) {
         Container container =
             BuilderUtils.newContainer(recordFactory,
-                application.getApplicationId(),
+                application.getApplicationAttemptId(),
                 application.getNewContainerId(),
                 node.getRMNode().getNodeID(), node.getRMNode().getNodeAddress(),
                 node.getRMNode().getHttpAddress(), capability);
+        
         // If security is enabled, send the container-tokens too.
         if (UserGroupInformation.isSecurityEnabled()) {
           ContainerToken containerToken =
@@ -513,7 +521,7 @@ public class FifoScheduler implements ResourceScheduler {
   }
 
   private synchronized void applicationCompletedContainer(Container c) {
-      SchedulerApp app = applications.get(c.getId().getAppId());
+      SchedulerApp app = applications.get(c.getId().getAppAttemptId());
       /** this is possible, since an application can be removed from scheduler but
        * the nodemanger is just updating about a completed container.
        */
@@ -638,8 +646,7 @@ public class FifoScheduler implements ResourceScheduler {
     // Reap containers
     LOG.info("Application " + applicationId + " released container " +
         container.getId());
-    // TODO:FIXMEVINODKV
-//    node.releaseContainer(container);
+    nodes.get(container.getNodeId()).releaseContainer(container);
   }
 
   private synchronized void addAllocatedContainers(SchedulerNode node,

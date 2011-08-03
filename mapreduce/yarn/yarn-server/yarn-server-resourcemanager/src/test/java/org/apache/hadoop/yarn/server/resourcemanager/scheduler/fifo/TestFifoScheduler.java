@@ -283,4 +283,10 @@ public class TestFifoScheduler extends TestCase {
     node.checkResourceUsage();
   }
 
+  public static void main(String[] arg) throws Exception {
+    TestFifoScheduler t = new TestFifoScheduler();
+    t.setUp();
+    t.testFifoScheduler();
+    t.tearDown();
+  }
 }

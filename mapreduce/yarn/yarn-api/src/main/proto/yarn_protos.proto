@@ -22,7 +22,8 @@ message ApplicationAttemptIdProto {
 
 message ContainerIdProto {
   optional ApplicationIdProto app_id = 1;
-  optional int32 id = 2;
+  optional ApplicationAttemptIdProto app_attempt_id = 2;
+  optional int32 id = 3;
 }
 
 message ResourceProto {

@@ -239,10 +239,6 @@ AMRMProtocol, EventHandler<ApplicationMasterServiceEvent> {
       RMApp app = this.rmContext.getRMApps().get(appAttemptId.getApplicationId());
       RMAppAttempt appAttempt = app.getRMAppAttempt(appAttemptId);
 
-      // Get the list of finished containers.
-      List<Container> finishedContainers = appAttempt
-          .pullJustFinishedContainers();
-
       AMResponse response = recordFactory.newRecordInstance(AMResponse.class);
       response.addAllNewContainers(appAttempt.pullNewlyAllocatedContainers());
       response.addAllFinishedContainers(appAttempt

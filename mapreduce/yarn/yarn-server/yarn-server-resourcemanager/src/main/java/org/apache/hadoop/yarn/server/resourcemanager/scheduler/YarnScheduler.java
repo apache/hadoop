@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -70,5 +70,9 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   public Resource getResourceLimit(ApplicationAttemptId appAttemptId);
 
   void allocate(ApplicationAttemptId appAttemptId, List<ResourceRequest> ask);
+
+  Resource getUsedResource(NodeId nodeId);
+
+  Resource getAvailableResource(NodeId nodeId);
 
 }

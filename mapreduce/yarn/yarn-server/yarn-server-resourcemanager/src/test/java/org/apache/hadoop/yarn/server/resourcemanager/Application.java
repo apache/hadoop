@@ -267,8 +267,11 @@ public class Application {
     // Get resources from the ResourceManager
     resourceManager.getResourceScheduler().allocate(applicationAttemptId,
         new ArrayList<ResourceRequest>(ask));
+    System.out.println("-=======" + applicationAttemptId);
+    System.out.println("----------" + resourceManager.getRMContext().getRMApps()
+        .get(applicationId).getRMAppAttempt(applicationAttemptId));
     
-    List<Container> containers = resourceManager.getRMContext().getRMApps()
+     List<Container> containers = resourceManager.getRMContext().getRMApps()
         .get(applicationId).getRMAppAttempt(applicationAttemptId)
         .pullNewlyAllocatedContainers();
 

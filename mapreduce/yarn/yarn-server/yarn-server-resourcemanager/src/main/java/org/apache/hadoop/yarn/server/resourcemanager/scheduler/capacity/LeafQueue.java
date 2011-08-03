@@ -857,7 +857,7 @@ public class LeafQueue implements Queue {
         new ArrayList<Container>();
       Container container =
          BuilderUtils.newContainer(this.recordFactory,
-                    application.getApplicationId(),
+                    application.getApplicationAttemptId(),
                     application.getNewContainerId(),
                     node.getNodeID(), node.getNodeAddress(),
                     node.getHttpAddress(), capability);

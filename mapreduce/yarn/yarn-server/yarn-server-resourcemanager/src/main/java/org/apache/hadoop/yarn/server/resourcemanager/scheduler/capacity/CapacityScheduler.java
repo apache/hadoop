@@ -123,7 +123,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
   private Resource maximumAllocation;
 
   private Map<ApplicationAttemptId, CSApp> applications = Collections
-      .synchronizedMap(new HashMap<ApplicationAttemptId, CSApp>());
+      .synchronizedMap(new TreeMap<ApplicationAttemptId, CSApp>());
 
   private boolean initialized = false;
 
@@ -149,6 +149,14 @@ implements ResourceScheduler, CapacitySchedulerContext {
   @Override
   public Resource getMaximumResourceCapability() {
     return maximumAllocation;
+  }
+
+  public synchronized Resource getUsedResource(NodeId nodeId) {
+    return csNodes.get(nodeId).getUsedResource();
+  }
+
+  public synchronized Resource getAvailableResource(NodeId nodeId) {
+    return csNodes.get(nodeId).getAvailableResource();
   }
 
   public synchronized int getNumClusterNodes() {
@@ -666,8 +674,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
       Container container) {
     // Reap containers
     LOG.info("Application " + applicationId + " released container " + container);
-    // TODO:FIXMEVINODKV
-//    node.releaseContainer(container);
+    csNodes.get(container.getNodeId()).releaseContainer(container);
     return true;
   }
 

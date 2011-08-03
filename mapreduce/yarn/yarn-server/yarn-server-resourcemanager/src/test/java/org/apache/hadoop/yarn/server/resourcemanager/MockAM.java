@@ -1,7 +1,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import junit.framework.Assert;
@@ -29,6 +28,9 @@ public class MockAM {
   private final ApplicationAttemptId attemptId;
   private final RMContext context;
   private final AMRMProtocol amRMProtocol;
+  
+  private final List<ResourceRequest> requests = new ArrayList<ResourceRequest>();
+  private final List<Container> releases = new ArrayList<Container>();
 
   MockAM(RMContext context, AMRMProtocol amRMProtocol, 
       ApplicationAttemptId attemptId) {
@@ -64,10 +66,19 @@ public class MockAM {
     amRMProtocol.registerApplicationMaster(req);
   }
 
+  public void addRequests(String[] hosts, int memory, int priority, 
+      int containers) throws Exception {
+    requests.addAll(createReq(hosts, memory, priority, containers));
+  }
+
+  public AMResponse schedule() throws Exception {
+    return allocate(releases, requests);
+  }
+
   public AMResponse allocate( 
       String host, int memory, int numContainers, 
       List<ContainerId> releases) throws Exception {
-    List reqs = createReq(host, memory, 1, numContainers);
+    List reqs = createReq(new String[]{host}, memory, 1, numContainers);
     List<Container> toRelease = new ArrayList<Container>();
     for (ContainerId id : releases) {
       Container cont = Records.newRecord(Container.class);
@@ -77,18 +88,26 @@ public class MockAM {
     return allocate(toRelease, reqs);
   }
 
-  private List<ResourceRequest> createReq(String host, int memory, int priority, 
+  public List<ResourceRequest> createReq(String[] hosts, int memory, int priority, 
       int containers) throws Exception {
-    ResourceRequest hostReq = createResourceReq(host, memory, priority, 
-        containers);
-    ResourceRequest rackReq = createResourceReq("default-rack", memory, 
-        priority, containers);
+    List<ResourceRequest> reqs = new ArrayList<ResourceRequest>();
+    for (String host : hosts) {
+      ResourceRequest hostReq = createResourceReq(host, memory, priority, 
+          containers);
+      reqs.add(hostReq);
+      ResourceRequest rackReq = createResourceReq("default-rack", memory, 
+          priority, containers);
+      reqs.add(rackReq);
+    }
+    
     ResourceRequest offRackReq = createResourceReq("*", memory, priority, 
         containers);
-    return Arrays.asList(new ResourceRequest[] {hostReq, rackReq, offRackReq});
+    reqs.add(offRackReq);
+    return reqs;
     
   }
-  private ResourceRequest createResourceReq(String resource, int memory, int priority, 
+
+  public ResourceRequest createResourceReq(String resource, int memory, int priority, 
       int containers) throws Exception {
     ResourceRequest req = Records.newRecord(ResourceRequest.class);
     req.setHostName(resource);

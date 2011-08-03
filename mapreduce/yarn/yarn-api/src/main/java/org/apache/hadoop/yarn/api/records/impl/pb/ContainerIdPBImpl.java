@@ -3,9 +3,11 @@ package org.apache.hadoop.yarn.api.records.impl.pb;
 
 import java.text.NumberFormat;
 
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProtoOrBuilder;
@@ -18,6 +20,7 @@ public class ContainerIdPBImpl extends ProtoBase<ContainerIdProto> implements Co
   boolean viaProto = false;
   
   private ApplicationId applicationId = null;
+  private ApplicationAttemptId appAttemptId = null;
   protected static final NumberFormat idFormat = NumberFormat.getInstance();
   static {
     idFormat.setGroupingUsed(false);
@@ -50,6 +53,9 @@ public class ContainerIdPBImpl extends ProtoBase<ContainerIdProto> implements Co
   private void mergeLocalToBuilder() {
     if (this.applicationId != null && !((ApplicationIdPBImpl)applicationId).getProto().equals(builder.getAppId())) {
       builder.setAppId(convertToProtoFormat(this.applicationId));
+    }
+    if (this.appAttemptId != null && !((ApplicationAttemptIdPBImpl)appAttemptId).getProto().equals(builder.getAppAttemptId())) {
+      builder.setAppAttemptId(convertToProtoFormat(this.appAttemptId));
     }
   }
 
@@ -94,11 +100,40 @@ public class ContainerIdPBImpl extends ProtoBase<ContainerIdProto> implements Co
   }
 
   @Override
+  public ApplicationAttemptId getAppAttemptId() {
+    ContainerIdProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.appAttemptId != null) {
+      return this.appAttemptId;
+    }
+    if (!p.hasAppAttemptId()) {
+      return null;
+    }
+    this.appAttemptId = convertFromProtoFormat(p.getAppAttemptId());
+    return this.appAttemptId;
+  }
+
+  @Override
   public void setAppId(ApplicationId appId) {
     maybeInitBuilder();
     if (appId == null) 
       builder.clearAppId();
     this.applicationId = appId;
+  }
+
+  @Override
+  public void setAppAttemptId(ApplicationAttemptId atId) {
+    maybeInitBuilder();
+    if (atId == null) 
+      builder.clearAppAttemptId();
+    this.appAttemptId = atId;
+  }
+
+  private ApplicationAttemptIdPBImpl convertFromProtoFormat(ApplicationAttemptIdProto p) {
+    return new ApplicationAttemptIdPBImpl(p);
+  }
+
+  private ApplicationAttemptIdProto convertToProtoFormat(ApplicationAttemptId t) {
+    return ((ApplicationAttemptIdPBImpl)t).getProto();
   }
 
   private ApplicationIdPBImpl convertFromProtoFormat(ApplicationIdProto p) {

@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.util;
 import java.net.URI;
 import java.util.Comparator;
 
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
@@ -132,10 +133,11 @@ public class BuilderUtils {
   }
 
   public static ContainerId newContainerId(RecordFactory recordFactory,
-      ApplicationId applicationId,
+      ApplicationAttemptId appAttemptId,
       int containerId) {
     ContainerId id = recordFactory.newRecordInstance(ContainerId.class);
-    id.setAppId(applicationId);
+    id.setAppAttemptId(appAttemptId);
+    id.setAppId(appAttemptId.getApplicationId());
     id.setId(containerId);
     return id;
   }
@@ -152,11 +154,11 @@ public class BuilderUtils {
   }
 
   public static Container newContainer(RecordFactory recordFactory,
-      ApplicationId applicationId, int containerId, NodeId nodeId,
+      ApplicationAttemptId appAttemptId, int containerId, NodeId nodeId,
       String containerManagerAddress, String nodeHttpAddress,
       Resource resource) {
     ContainerId containerID =
-        newContainerId(recordFactory, applicationId, containerId);
+        newContainerId(recordFactory, appAttemptId, containerId);
     return newContainer(containerID, nodeId, containerManagerAddress,
         nodeHttpAddress, resource);
   }
