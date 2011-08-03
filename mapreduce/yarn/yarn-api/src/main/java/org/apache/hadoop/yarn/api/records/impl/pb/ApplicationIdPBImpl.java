@@ -68,4 +68,9 @@ public class ApplicationIdPBImpl extends ProtoBase<ApplicationIdProto> implement
       return this.getId() - other.getId();
     }
   }
+
+  @Override
+  public String toString() {
+    return "application_" + this.getClusterTimestamp() + "_" + this.getId();
+  }
 }  

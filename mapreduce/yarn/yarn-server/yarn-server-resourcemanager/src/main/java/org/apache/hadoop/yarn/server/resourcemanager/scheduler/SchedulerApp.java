@@ -230,20 +230,6 @@ public class SchedulerApp {
         }
       }
     }
-    // TODO - Remove block
-    for (Priority priority : getPriorities()) {
-      Map<String, ResourceRequest> requests = getResourceRequests(priority);
-      if (requests != null) {
-        LOG.info("showRequests:" + " application=" + getApplicationId() + 
-            " headRoom=" + getHeadroom() + 
-            " currentConsumption=" + currentConsumption.getMemory());
-        for (ResourceRequest request : requests.values()) {
-          LOG.info("showRequests:" + " application=" + getApplicationId()
-              + " request=" + request);
-        }
-      }
-    }
-
   }
 
   public synchronized void setAvailableResourceLimit(Resource globalLimit) {

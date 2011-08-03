@@ -33,7 +33,7 @@ public class RMConfig {
       + "application.max.retries";
   public static final int DEFAULT_ZK_TIMEOUT = 60000;
   public static final int DEFAULT_AM_MAX_RETRIES = 3;
-  public static final int DEFAULT_AM_EXPIRY_INTERVAL = 60000;
+  public static final int DEFAULT_AM_EXPIRY_INTERVAL = 600000;
   public static final String NM_EXPIRY_INTERVAL = YarnConfiguration.RM_PREFIX
       + "nodemanager.expiry.interval";
   public static final int DEFAULT_NM_EXPIRY_INTERVAL = 600000;

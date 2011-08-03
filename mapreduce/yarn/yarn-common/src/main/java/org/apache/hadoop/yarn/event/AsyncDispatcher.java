@@ -27,6 +27,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.service.AbstractService;
 
 /**
@@ -150,7 +151,20 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   class GenericEventHandler implements EventHandler<Event> {
     public void handle(Event event) {
       /* all this method does is enqueue all the events onto the queue */
-      eventQueue.offer(event);
+      int qSize = eventQueue.size();
+      if (qSize !=0 && qSize %1000 == 0) {
+        LOG.info("Size of event-queue is " + qSize);
+      }
+      int remCapacity = eventQueue.remainingCapacity();
+      if (remCapacity < 1000) {
+        LOG.info("Very low remaining capacity in the event-queue: "
+            + remCapacity);
+      }
+      try {
+        eventQueue.put(event);
+      } catch (InterruptedException e) {
+        throw new YarnException(e);
+      }
     };
   }
 

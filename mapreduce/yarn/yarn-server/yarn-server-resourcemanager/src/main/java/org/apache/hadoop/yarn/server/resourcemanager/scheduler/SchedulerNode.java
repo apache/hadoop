@@ -81,9 +81,7 @@ public class SchedulerNode {
     ++numContainers;
     
     launchedContainers.put(container.getId(), rmContainer);
-    LOG.info("Allocated container " + container.getId() + 
-        " to node " + rmNode.getNodeAddress());
-    
+
     LOG.info("Assigned container " + container.getId() + 
         " of capacity " + container.getResource() + " on host " + rmNode.getNodeAddress() + 
         ", which currently has " + numContainers + " containers, " + 

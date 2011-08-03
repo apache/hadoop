@@ -316,7 +316,10 @@ public class RMAppImpl implements RMApp {
     this.readLock.lock();
 
     try {
-      return this.currentAttempt.getTrackingUrl();
+      if (this.currentAttempt != null) {
+        return this.currentAttempt.getTrackingUrl();
+      }
+      return null;
     } finally {
       this.readLock.unlock();
     }

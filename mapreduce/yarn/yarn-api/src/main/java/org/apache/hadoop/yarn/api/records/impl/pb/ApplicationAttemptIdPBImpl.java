@@ -38,20 +38,20 @@ public class ApplicationAttemptIdPBImpl extends ProtoBase<ApplicationAttemptIdPr
     viaProto = true;
   }
   
-  public ApplicationAttemptIdProto getProto() {
+  public synchronized ApplicationAttemptIdProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
   }
 
-  private void mergeLocalToBuilder() {
+  private synchronized void mergeLocalToBuilder() {
     if (this.applicationId != null && !((ApplicationIdPBImpl)applicationId).getProto().equals(builder.getApplicationId())) {
       builder.setApplicationId(convertToProtoFormat(this.applicationId));
     }
   }
 
-  private void mergeLocalToProto() {
+  private synchronized void mergeLocalToProto() {
     if (viaProto) 
       maybeInitBuilder();
     mergeLocalToBuilder();
@@ -59,7 +59,7 @@ public class ApplicationAttemptIdPBImpl extends ProtoBase<ApplicationAttemptIdPr
     viaProto = true;
   }
 
-  private void maybeInitBuilder() {
+  private synchronized void maybeInitBuilder() {
     if (viaProto || builder == null) {
       builder = ApplicationAttemptIdProto.newBuilder(proto);
     }
@@ -68,18 +68,18 @@ public class ApplicationAttemptIdPBImpl extends ProtoBase<ApplicationAttemptIdPr
     
   
   @Override
-  public int getAttemptId() {
+  public synchronized int getAttemptId() {
     ApplicationAttemptIdProtoOrBuilder p = viaProto ? proto : builder;
     return (p.getAttemptId());
   }
 
   @Override
-  public void setAttemptId(int attemptId) {
+  public synchronized void setAttemptId(int attemptId) {
     maybeInitBuilder();
     builder.setAttemptId((attemptId));
   }
   @Override
-  public ApplicationId getApplicationId() {
+  public synchronized ApplicationId getApplicationId() {
     ApplicationAttemptIdProtoOrBuilder p = viaProto ? proto : builder;
     if (this.applicationId != null) {
       return this.applicationId;
@@ -92,28 +92,28 @@ public class ApplicationAttemptIdPBImpl extends ProtoBase<ApplicationAttemptIdPr
   }
 
   @Override
-  public void setApplicationId(ApplicationId appId) {
+  public synchronized void setApplicationId(ApplicationId appId) {
     maybeInitBuilder();
     if (appId == null) 
       builder.clearApplicationId();
     this.applicationId = appId;
   }
 
-  private ApplicationIdPBImpl convertFromProtoFormat(ApplicationIdProto p) {
+  private synchronized ApplicationIdPBImpl convertFromProtoFormat(ApplicationIdProto p) {
     return new ApplicationIdPBImpl(p);
   }
 
-  private ApplicationIdProto convertToProtoFormat(ApplicationId t) {
+  private synchronized ApplicationIdProto convertToProtoFormat(ApplicationId t) {
     return ((ApplicationIdPBImpl)t).getProto();
   }
 
   @Override
-  public int hashCode() {
+  public synchronized int hashCode() {
     return getProto().hashCode();
   }
 
   @Override
-  public boolean equals(Object other) {
+  public synchronized boolean equals(Object other) {
     if (other.getClass().isAssignableFrom(this.getClass())) {
       return this.getProto().equals(this.getClass().cast(other).getProto());
     }
@@ -121,7 +121,7 @@ public class ApplicationAttemptIdPBImpl extends ProtoBase<ApplicationAttemptIdPr
   }
 
   @Override
-  public int compareTo(ApplicationAttemptId other) {
+  public synchronized int compareTo(ApplicationAttemptId other) {
     int compareAppIds = this.getApplicationId().compareTo(
         other.getApplicationId());
     if (compareAppIds == 0) {
@@ -133,7 +133,7 @@ public class ApplicationAttemptIdPBImpl extends ProtoBase<ApplicationAttemptIdPr
   }
   
   @Override
-  public String toString() {
+  public synchronized String toString() {
     String id = (this.getApplicationId() != null) ? this.getApplicationId().getClusterTimestamp() + "_" +
         idFormat.format(this.getApplicationId().getId()): "none";
     return "appattempt_" + id + "_" + counterFormat.format(getAttemptId());

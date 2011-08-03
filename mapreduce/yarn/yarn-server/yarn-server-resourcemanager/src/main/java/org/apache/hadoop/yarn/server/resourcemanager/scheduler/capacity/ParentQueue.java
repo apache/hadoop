@@ -516,7 +516,7 @@ public class ParentQueue implements Queue {
 
       LOG.info("DEBUG ---" +
       		" parentQ=" + getQueueName() + 
-      		" assigned=" + assigned + 
+      		" assignedSoFarInThisIteration=" + assigned + 
       		" utilization=" + getUtilization());
       
       // Do not assign more than one container if this isn't the root queue

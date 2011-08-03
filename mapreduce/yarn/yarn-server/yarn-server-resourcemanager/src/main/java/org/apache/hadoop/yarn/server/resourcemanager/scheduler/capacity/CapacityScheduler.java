@@ -409,21 +409,24 @@ implements ResourceScheduler, CapacitySchedulerContext {
 
     synchronized (application) {
 
-      LOG.info("DEBUG --- allocate: pre-update" +
-          " applicationId=" + applicationAttemptId + 
-          " application=" + application);
-      application.showRequests();
+      if (!ask.isEmpty()) {
 
-      // Update application requests
-      application.updateResourceRequests(ask);
-
-      LOG.info("DEBUG --- allocate: post-update");
-      application.showRequests();
+        LOG.info("DEBUG --- allocate: pre-update" +
+            " applicationAttemptId=" + applicationAttemptId + 
+            " application=" + application);
+        application.showRequests();
+  
+        // Update application requests
+        application.updateResourceRequests(ask);
+  
+        LOG.info("DEBUG --- allocate: post-update");
+        application.showRequests();
+      }
 
       LOG.info("DEBUG --- allocate:" +
-          " applicationId=" + applicationAttemptId + 
+          " applicationAttemptId=" + applicationAttemptId + 
           " #ask=" + ask.size());
-      
+
       return new Allocation(
           application.pullNewlyAllocatedContainers(), 
           application.getHeadroom());
@@ -481,6 +484,8 @@ implements ResourceScheduler, CapacitySchedulerContext {
     LOG.info("nodeUpdate: " + nm + " clusterResources: " + clusterResource);
     
     SchedulerNode node = getNode(nm.getNodeID());
+
+    // Processing the current containers running/finished on node
     for (List<Container> appContainers : containers.values()) {
       for (Container container : appContainers) {
         if (container.getState() == ContainerState.RUNNING) {
@@ -492,6 +497,10 @@ implements ResourceScheduler, CapacitySchedulerContext {
         }
       }
     }
+
+    // Now node data structures are upto date and ready for scheduling.
+    LOG.info("DEBUG -- Node being looked for scheduling " + nm
+        + " availableResource: " + node.getAvailableResource());
 
     // Assign new containers...
     // 1. Check for reserved applications

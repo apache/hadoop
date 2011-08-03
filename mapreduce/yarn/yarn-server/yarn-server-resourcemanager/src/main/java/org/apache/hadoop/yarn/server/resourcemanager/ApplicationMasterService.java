@@ -205,7 +205,7 @@ public class ApplicationMasterService extends AbstractService implements
     }
 
     // Allow only one thread in AM to do heartbeat at a time.
-    synchronized (lastResponse) {
+    synchronized (lastResponse) { // BUG TODO: Locking order is screwed.
 
       // Send the status update to the appAttempt.
       this.rmContext.getDispatcher().getEventHandler().handle(
