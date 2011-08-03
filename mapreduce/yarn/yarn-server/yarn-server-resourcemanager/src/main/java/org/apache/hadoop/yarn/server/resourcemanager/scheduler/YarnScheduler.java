@@ -21,7 +21,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
@@ -45,6 +49,8 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @return queue information
    * @throws IOException
    */
+  @Public
+  @Stable
   public QueueInfo getQueueInfo(String queueName, boolean includeChildQueues,
       boolean recursive) throws IOException;
 
@@ -53,26 +59,68 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @return acls for queues for current user
    * @throws IOException
    */
+  @Public
+  @Stable
   public List<QueueUserACLInfo> getQueueUserAclInfo();
   
   /**
    * Get minimum allocatable {@link Resource}.
    * @return minimum allocatable resource
    */
+  @Public
+  @Stable
   public Resource getMinimumResourceCapability();
   
   /**
    * Get maximum allocatable {@link Resource}.
    * @return maximum allocatable resource
    */
+  @Public
+  @Stable
   public Resource getMaximumResourceCapability();
 
-  public Resource getResourceLimit(ApplicationAttemptId appAttemptId);
+  /**
+   * The main api between the ApplicationMaster and the Scheduler.
+   * The ApplicationMaster is updating his future resource requirements
+   * and may release containers he doens't need.
+   * 
+   * @param appAttemptId
+   * @param ask
+   * @param release
+   * @return the {@link Allocation} for the application
+   */
+  @Public
+  @Stable
+  Allocation 
+  allocate(ApplicationAttemptId appAttemptId, 
+      List<ResourceRequest> ask,
+      List<Container> release);
 
-  void allocate(ApplicationAttemptId appAttemptId, List<ResourceRequest> ask);
-
+  /**
+   * Get node resource usage report.
+   * @param nodeId
+   * @return the {@link SchedulerNodeReport} for the node
+   */
+  @Private
+  @Stable
+  public SchedulerNodeReport getNodeReport(NodeId nodeId);
+  
+  /**
+   * Get used resources on the node
+   * @param nodeId node
+   * @return used resources on the node
+   */
+  @Private
+  @Stable
   Resource getUsedResource(NodeId nodeId);
 
+  /**
+   * Get available resources on the node
+   * @param nodeId node
+   * @return available resources on the node
+   */
+  @Private
+  @Stable
   Resource getAvailableResource(NodeId nodeId);
-
+  
 }

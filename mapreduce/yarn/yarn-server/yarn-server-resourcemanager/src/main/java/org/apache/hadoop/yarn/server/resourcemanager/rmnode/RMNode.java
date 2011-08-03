@@ -99,19 +99,7 @@ public interface RMNode {
    */
   public Node getNode();
   
-  /**
-   * The current number of containers for this node
-   * @return the number of containers
-   */
-  public int getNumContainers();
-
   public RMNodeState getState();
-
-  /**
-   * Get running containers on this node.
-   * @return running containers
-   */
-  public List<Container> getRunningContainers();
 
   public List<ContainerId> pullContainersToCleanUp();
 

@@ -31,11 +31,7 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent>{
 
   List<Container> pullJustFinishedContainers();
 
-  List<Container> pullNewlyAllocatedContainers();
-
   List<Container> getJustFinishedContainers();
-
-  List<Container> getNewlyAllocatedContainers();
 
   Container getMasterContainer();
 

@@ -20,14 +20,16 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.SystemClock;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerExpiredSchedulerEvent;
 import org.apache.hadoop.yarn.util.AbstractLivelinessMonitor;
 
 public class ContainerAllocationExpirer extends
-    AbstractLivelinessMonitor<ContainerId> {
+    AbstractLivelinessMonitor<Container> {
 
   private EventHandler dispatcher;
 
@@ -46,7 +48,7 @@ public class ContainerAllocationExpirer extends
   }
 
   @Override
-  protected void expire(ContainerId id) {
-    dispatcher.handle(new RMContainerEvent(id, RMContainerEventType.EXPIRE));
+  protected void expire(Container container) {
+    dispatcher.handle(new ContainerExpiredSchedulerEvent(container));
   }
 }

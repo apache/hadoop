@@ -1,6 +1,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -31,9 +32,9 @@ public class SchedulerNode {
   private volatile int numContainers;
 
   /* set of containers that are allocated containers */
-  private final Map<ContainerId, Container> runningContainers = 
+  private final Map<ContainerId, Container> launchedContainers = 
     new TreeMap<ContainerId, Container>();
-
+  
   private final RMNode rmNode;
 
   public static final String ANY = "*";
@@ -71,70 +72,11 @@ public class SchedulerNode {
    * @param containers allocated containers
    */
   public synchronized void allocateContainer(ApplicationId applicationId, 
-      List<Container> containers) {
-    if (containers == null) {
-      LOG.error("Adding null containers for application " + applicationId);
-      return;
-    }   
-    for (Container container : containers) {
-      allocateContainer(container);
-    }
-
-    LOG.info("addContainers:" +
-        " node=" + rmNode.getNodeAddress() + 
-        " #containers=" + containers.size() + 
-        " available=" + getAvailableResource().getMemory() + 
-        " used=" + getUsedResource().getMemory());
-  }
-
-  /**
-   * Status update from the NodeManager
-   * @param nodeStatus node status
-   * @return the set of containers no longer should be used by the
-   * node manager.
-   */
-  public synchronized void 
-    statusUpdate(Map<String,List<Container>> allContainers) {
-
-    if (allContainers == null) {
-      return;
-    }
-       
-    List<Container> listContainers = new ArrayList<Container>();
-    // Iterate through the running containers and update their status
-    for (Map.Entry<String, List<Container>> e : 
-      allContainers.entrySet()) {
-      listContainers.addAll(e.getValue());
-    }
-    update(listContainers);
-  }
-  
-  /**
-   * Status update for an application running on a given node
-   * @param node node
-   * @param containers containers update.
-   * @return containers that are completed or need to be preempted.
-   */
-  private synchronized void update(List<Container> containers) {
-    
-    for (Container container : containers) {
-    
-      if (container.getState() == ContainerState.COMPLETE) {
-        if (runningContainers.remove(container.getId()) != null) {
-          updateResource(container);
-          LOG.info("Completed container " + container);
-        }
-        LOG.info("Removed completed container " + container.getId() + " on node " + 
-            rmNode.getNodeAddress());
-      }
-    }
-  }
-  
-  private synchronized void allocateContainer(Container container) {
+      Container container) {
     deductAvailableResource(container.getResource());
     ++numContainers;
     
-    runningContainers.put(container.getId(), container);
+    launchedContainers.put(container.getId(), container);
     LOG.info("Allocated container " + container.getId() + 
         " to node " + rmNode.getNodeAddress());
     
@@ -154,7 +96,7 @@ public class SchedulerNode {
   }
 
   private synchronized boolean isValidContainer(Container c) {    
-    if (runningContainers.containsKey(c.getId()))
+    if (launchedContainers.containsKey(c.getId()))
       return true;
     return false;
   }
@@ -178,7 +120,7 @@ public class SchedulerNode {
     
     /* remove the containers from the nodemanger */
     
-    runningContainers.remove(container.getId());
+    launchedContainers.remove(container.getId());
     updateResource(container);
 
     LOG.info("Released container " + container.getId() + 
@@ -211,8 +153,16 @@ public class SchedulerNode {
 
   @Override
   public String toString() {
-    return "host: " + rmNode.getNodeAddress() + " #containers=" + rmNode.getNumContainers() +  
+    return "host: " + rmNode.getNodeAddress() + " #containers=" + getNumContainers() +  
       " available=" + getAvailableResource().getMemory() + 
       " used=" + getUsedResource().getMemory();
+  }
+
+  public int getNumContainers() {
+    return numContainers;
+  }
+
+  public synchronized List<Container> getRunningContainers() {
+    return new ArrayList<Container>(launchedContainers.values());
   }
 }

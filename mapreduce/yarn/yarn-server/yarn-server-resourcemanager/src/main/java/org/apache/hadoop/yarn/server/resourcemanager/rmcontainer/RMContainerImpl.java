@@ -15,7 +15,6 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAllocatedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerFinishedSchedulerEvent;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
@@ -91,12 +90,12 @@ public class RMContainerImpl implements RMContainer {
   private final EventHandler eventHandler;
   private final ContainerAllocationExpirer containerAllocationExpirer;
 
-  public RMContainerImpl(ContainerId containerId,
-      ApplicationAttemptId appAttemptId, NodeId nodeId, Container container,
+  public RMContainerImpl(Container container,
+      ApplicationAttemptId appAttemptId, NodeId nodeId,
       EventHandler handler,
       ContainerAllocationExpirer containerAllocationExpirer) {
     this.stateMachine = stateMachineFactory.make(this);
-    this.containerId = containerId;
+    this.containerId = container.getId();
     this.nodeId = nodeId;
     this.container = container;
     this.appAttemptId = appAttemptId;
@@ -182,7 +181,7 @@ public class RMContainerImpl implements RMContainer {
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
       // Register with containerAllocationExpirer.
-      container.containerAllocationExpirer.register(container.containerId);
+      container.containerAllocationExpirer.register(container.getContainer());
     }
   }
 
@@ -191,7 +190,7 @@ public class RMContainerImpl implements RMContainer {
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
       // Unregister from containerAllocationExpirer.
-      container.containerAllocationExpirer.unregister(container.containerId);
+      container.containerAllocationExpirer.unregister(container.getContainer());
     }
   }
 
@@ -211,10 +210,6 @@ public class RMContainerImpl implements RMContainer {
       // Inform AppAttempt
       container.eventHandler.handle(new RMAppAttemptContainerFinishedEvent(
           container.appAttemptId, container.container));
-
-      // Inform Scheduler
-      container.eventHandler.handle(new ContainerFinishedSchedulerEvent(
-          container.container));
     }
   }
 
@@ -224,7 +219,7 @@ public class RMContainerImpl implements RMContainer {
     public void transition(RMContainerImpl container, RMContainerEvent event) {
 
       // Unregister from containerAllocationExpirer.
-      container.containerAllocationExpirer.unregister(container.containerId);
+      container.containerAllocationExpirer.unregister(container.getContainer());
 
       // Inform AppAttempt, scheduler etc.
       super.transition(container, event);
@@ -237,7 +232,7 @@ public class RMContainerImpl implements RMContainer {
     public void transition(RMContainerImpl container, RMContainerEvent event) {
 
       // Unregister from containerAllocationExpirer.
-      container.containerAllocationExpirer.unregister(container.containerId);
+      container.containerAllocationExpirer.unregister(container.getContainer());
 
       // Inform node
       container.eventHandler.handle(new RMNodeCleanContainerEvent(

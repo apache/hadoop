@@ -354,21 +354,15 @@ public class ClientRMService extends AbstractService implements
   }
 
   private NodeReport createNodeReports(RMNode rmNode) {
-    NodeReport report = 
-      recordFactory.newRecordInstance(NodeReport.class);
+    NodeReport report = recordFactory.newRecordInstance(NodeReport.class);
     report.setNodeId(rmNode.getNodeID());
     report.setRackName(rmNode.getRackName());
     report.setCapability(rmNode.getTotalCapability());
     report.setNodeHealthStatus(rmNode.getNodeHealthStatus());
-    List<Container> containers = rmNode.getRunningContainers();
-    int userdResource = 0;
-    for (Container c : containers) {
-      userdResource += c.getResource().getMemory();
-    }
-    Resource usedRsrc = recordFactory.newRecordInstance(Resource.class);
-    usedRsrc.setMemory(userdResource);
-    report.setUsed(usedRsrc);
-    report.setNumContainers(rmNode.getNumContainers());
+    org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport schedulerNodeReport = scheduler
+        .getNodeReport(rmNode.getNodeID());
+    report.setUsed(schedulerNodeReport.getUsedResources());
+    report.setNumContainers(schedulerNodeReport.getNumContainers());
     return report;
   }
 

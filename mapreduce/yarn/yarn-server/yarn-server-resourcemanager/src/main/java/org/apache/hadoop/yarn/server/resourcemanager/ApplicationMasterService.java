@@ -56,8 +56,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRegistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStatusupdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.service.AbstractService;
 
@@ -217,26 +216,18 @@ public class ApplicationMasterService extends AbstractService implements
       List<Container> release = request.getReleaseList();
 
       // Send new requests to appAttempt.
-      if (!ask.isEmpty()) {        this.rScheduler.allocate(appAttemptId, ask);
-      }
-
-      // Send events to the containers being released.
-      for (Container releasedContainer : release) {
-        this.rmContext.getDispatcher().getEventHandler().handle(
-            new RMContainerEvent(releasedContainer.getId(),
-                RMContainerEventType.RELEASED));
-      }
+      Allocation allocation = 
+          this.rScheduler.allocate(appAttemptId, ask, release);
 
       RMApp app = this.rmContext.getRMApps().get(appAttemptId.getApplicationId());
       RMAppAttempt appAttempt = app.getRMAppAttempt(appAttemptId);
 
       AMResponse response = recordFactory.newRecordInstance(AMResponse.class);
-      response.addAllNewContainers(appAttempt.pullNewlyAllocatedContainers());
+      response.addAllNewContainers(allocation.getContainers());
       response.addAllFinishedContainers(appAttempt
           .pullJustFinishedContainers());
       response.setResponseId(lastResponse.getResponseId() + 1);
-      response.setAvailableResources(rScheduler
-          .getResourceLimit(appAttemptId));
+      response.setAvailableResources(allocation.getResourceLimit());
       responseMap.put(appAttemptId, response);
       allocateResponse.setAMResponse(response);
       return allocateResponse;

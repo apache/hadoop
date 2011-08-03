@@ -71,7 +71,8 @@ class NodesPage extends RmView {
             td(health.getIsNodeHealthy() ? "Healthy" : "Unhealthy").
             td(Times.format(health.getLastHealthReportTime())).
             td(String.valueOf(health.getHealthReport())).
-            td(String.valueOf(ni.getNumContainers())).
+            // TODO: acm: refactor2 FIXME
+            //td(String.valueOf(ni.getNumContainers())).
             // TODO: FIXME Vinodkv
 //            td(String.valueOf(ni.getUsedResource().getMemory())).
 //            td(String.valueOf(ni.getAvailableResource().getMemory())).

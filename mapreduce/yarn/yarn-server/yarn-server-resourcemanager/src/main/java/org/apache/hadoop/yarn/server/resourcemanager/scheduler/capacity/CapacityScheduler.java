@@ -52,27 +52,25 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.ApplicationInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerFinishedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 
 @LimitedPrivate("yarn")
 @Evolving
@@ -380,36 +378,46 @@ implements ResourceScheduler, CapacitySchedulerContext {
     applications.remove(applicationAttemptId);
   }
 
+  private static final Allocation EMPTY_ALLOCATION = 
+      new Allocation(EMPTY_CONTAINER_LIST, Resources.createResource(0));
+
   @Override
   @Lock(Lock.NoLock.class)
-  public void allocate(ApplicationAttemptId applicationAttemptId,
-      List<ResourceRequest> ask) {
+  public Allocation allocate(ApplicationAttemptId applicationAttemptId,
+      List<ResourceRequest> ask, List<Container> release) {
 
     CSApp application = getApplication(applicationAttemptId);
     if (application == null) {
       LOG.info("Calling allocate on removed " +
           "or non existant application " + applicationAttemptId);
-      return;
+      return EMPTY_ALLOCATION;
     }
     
     // Sanity check
     normalizeRequests(ask);
 
-    LOG.info("DEBUG --- allocate: pre-update" +
-        " applicationId=" + applicationAttemptId + 
-        " application=" + application);
-    application.showRequests();
+    synchronized (application) {
 
-    // Update application requests
-    application.updateResourceRequests(ask);
+      LOG.info("DEBUG --- allocate: pre-update" +
+          " applicationId=" + applicationAttemptId + 
+          " application=" + application);
+      application.showRequests();
 
-    LOG.info("DEBUG --- allocate: post-update");
-    application.showRequests();
-    
-    LOG.info("DEBUG --- allocate:" +
-        " applicationId=" + applicationAttemptId + 
-        " #ask=" + ask.size());
-   }
+      // Update application requests
+      application.updateResourceRequests(ask);
+
+      LOG.info("DEBUG --- allocate: post-update");
+      application.showRequests();
+
+      LOG.info("DEBUG --- allocate:" +
+          " applicationId=" + applicationAttemptId + 
+          " #ask=" + ask.size());
+      
+      return new Allocation(
+          application.pullNewlyAllocatedContainers(), 
+          application.getHeadroom());
+    }
+  }
 
   @Override
   @Lock(Lock.NoLock.class)
@@ -480,7 +488,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
       Map<String,List<Container>> containers ) {
     LOG.info("nodeUpdate: " + nm + " clusterResources: " + clusterResource);
     SchedulerNode node = this.csNodes.get(nm.getNodeID());
-    node.statusUpdate(containers);
+    //TODO node.statusUpdate(containers);
 
     // Completed containers
     processCompletedContainers(getCompletedContainers(containers));
@@ -594,11 +602,6 @@ implements ResourceScheduler, CapacitySchedulerContext {
   }
 
   @Override
-  public Resource getResourceLimit(ApplicationAttemptId applicationAttemptId) {
-    return applications.get(applicationAttemptId).getHeadroom();
-  }
-
-  @Override
   public synchronized void handle(SchedulerEvent event) {
     switch(event.getType()) {
     case NODE_ADDED:
@@ -628,13 +631,6 @@ implements ResourceScheduler, CapacitySchedulerContext {
       doneApplication(appRemovedEvent.getApplicationAttemptID(),
           appRemovedEvent.getFinalAttemptState());
       break;
-    case CONTAINER_FINISHED:
-      ContainerFinishedSchedulerEvent containerFinishedEvent = (ContainerFinishedSchedulerEvent) event;
-      Container container = containerFinishedEvent.getContainer();
-      this.rmContext.getRMContainers().remove(container.getId());
-      processSingleCompletedContainer(container);
-      releaseContainer(container.getId().getAppId(), container);
-      break;
     default:
       LOG.error("Invalid eventtype " + event.getType() + ". Ignoring!");
     }
@@ -654,7 +650,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
     --numNodeManagers;
 
     // Remove running containers
-    List<Container> runningContainers = nodeInfo.getRunningContainers();
+    List<Container> runningContainers = null;//TODO = nodeInfo.getRunningContainers();
     killRunningContainers(runningContainers);
     
     // Remove reservations, if any
@@ -692,5 +688,11 @@ implements ResourceScheduler, CapacitySchedulerContext {
 //        queue.recoverContainer(clusterResource, applications.get(appId), c);
 //      }
 //    }
+  }
+
+  @Override
+  public SchedulerNodeReport getNodeReport(NodeId nodeId) {
+    // TODO Auto-generated method stub
+    return null;
   }
 }

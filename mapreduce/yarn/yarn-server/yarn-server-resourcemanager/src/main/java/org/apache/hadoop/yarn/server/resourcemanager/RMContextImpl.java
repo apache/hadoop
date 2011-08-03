@@ -24,9 +24,6 @@ public class RMContextImpl implements RMContext {
   private final ConcurrentMap<ApplicationId, RMApp> applications
     = new ConcurrentHashMap<ApplicationId, RMApp>();
 
-  private final ConcurrentMap<ContainerId, RMContainer> containers
-    = new ConcurrentHashMap<ContainerId, RMContainer>();
-
   private final ConcurrentMap<NodeId, RMNode> nodes
     = new ConcurrentHashMap<NodeId, RMNode>();
 
@@ -60,11 +57,6 @@ public class RMContextImpl implements RMContext {
   @Override
   public ConcurrentMap<ApplicationId, RMApp> getRMApps() {
     return this.applications;
-  }
-
-  @Override
-  public ConcurrentMap<ContainerId, RMContainer> getRMContainers() {
-    return this.containers;
   }
 
   @Override

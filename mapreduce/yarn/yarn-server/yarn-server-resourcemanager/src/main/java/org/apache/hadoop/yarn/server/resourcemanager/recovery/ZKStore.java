@@ -114,7 +114,8 @@ public class ZKStore implements Store {
     node.setCapability(rmNode.getTotalCapability());
     // TODO: FIXME
 //    node.setUsed(nodeInfo.getUsedResource());
-    node.setNumContainers(rmNode.getNumContainers());
+    // TODO: acm: refactor2 FIXME
+//  node.setNumContainers(rmNode.getNumContainers());
     return (NodeReportPBImpl)node;
   }
 

@@ -6,12 +6,11 @@ public enum SchedulerEventType {
   NODE_ADDED,
   NODE_REMOVED,
   NODE_UPDATE,
-
-  // Source: Container
-  CONTAINER_FINISHED,
   
   // Source: App
   APP_ADDED,
   APP_REMOVED,
 
+  // Source: ContainerAllocationExpirer
+  CONTAINER_EXPIRED
 }

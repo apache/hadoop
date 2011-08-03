@@ -919,28 +919,31 @@ public class LeafQueue implements Queue {
       Priority priority, ResourceRequest request, 
       CSNode node, List<Container> containers) {
     // Allocate container to the application
-    application.allocate(type, node, priority, request, containers);
+    // TODO: acm: refactor2 FIXME
+    application.allocate(type, node, priority, request, null);
 
     for (Container container : containers) {
       // Create the container and 'start' it.
       ContainerId containerId = container.getId();
       RMContext rmContext = this.scheduler.getRMContext();
       EventHandler eventHandler = rmContext.getDispatcher().getEventHandler();
-      RMContainer rmContainer = new RMContainerImpl(containerId, application
-          .getApplicationAttemptId(), node.getNodeID(), container,
+      RMContainer rmContainer = new RMContainerImpl(container, application
+          .getApplicationAttemptId(), node.getNodeID(),
           eventHandler, rmContext.getContainerAllocationExpirer());
-      if (rmContext.getRMContainers().putIfAbsent(containerId, rmContainer) != null) {
-        LOG.error("Duplicate container addition! ContainerID :  "
-            + containerId);
-      } else {
-        eventHandler.handle(new RMContainerEvent(containerId,
-            RMContainerEventType.START));
-      }
+      // TODO: FIX
+//      if (rmContext.getRMContainers().putIfAbsent(containerId, rmContainer) != null) {
+//        LOG.error("Duplicate container addition! ContainerID :  "
+//            + containerId);
+//      } else {
+//        eventHandler.handle(new RMContainerEvent(containerId,
+//            RMContainerEventType.START));
+//      }
     }
 
     // Inform the NodeManager about the allocation
-    node.allocateContainer(application.getApplicationId(),
-        containers);
+    // TODO: acm: refactor2 FIXME
+//    node.allocateContainer(application.getApplicationId(),
+//        containers);
   }
 
   private void reserve(CSApp application, Priority priority, 
@@ -968,7 +971,8 @@ public class LeafQueue implements Queue {
         
         // Inform the application - this might be an allocated container or
         // an unfulfilled reservation
-        application.completedContainer(container, containerResource);
+        // TODO: acm: refactor2 FIXME
+        //application.completedContainer(container, containerResource);
         
         // Book-keeping
         releaseResource(clusterResource, 

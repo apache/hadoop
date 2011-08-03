@@ -21,9 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
@@ -35,9 +33,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -46,9 +42,6 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -87,10 +80,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private final Node node;
   private final NodeHealthStatus nodeHealthStatus = recordFactory
       .newRecordInstance(NodeHealthStatus.class);
-  
-  /* set of containers that are allocated containers */
-  private final Map<ContainerId, Container> launchedContainers = 
-    new TreeMap<ContainerId, Container>();
   
   /* set of containers that need to be cleaned */
   private final Set<ContainerId> containersToClean = new TreeSet<ContainerId>(
@@ -209,30 +198,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   }
   
   @Override
-  public List<Container> getRunningContainers() {
-    this.readLock.lock();
-
-    try {
-      List<Container> containers = new ArrayList<Container>();
-      containers.addAll(this.launchedContainers.values());
-      return containers;
-    } finally {
-      this.readLock.unlock();
-    }
-  }
-
-  @Override
-  public int getNumContainers() {
-    this.readLock.lock();
-
-    try {
-      return this.launchedContainers.size();
-    } finally {
-      this.readLock.unlock();
-    }
-  }
-
-  @Override
   public NodeHealthStatus getNodeHealthStatus() {
     this.readLock.lock();
 
@@ -319,13 +284,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
   }
   
-  private void killAllContainers() {
-    for (ContainerId contId : launchedContainers.keySet()) {
-      context.getDispatcher().getEventHandler().handle(
-          new RMContainerEvent(contId, RMContainerEventType.KILL));
-    }
-  }
-
   public static class CleanUpAppTransition
     implements SingleArcTransition<RMNodeImpl, RMNodeEvent> {
 
@@ -352,7 +310,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
     @Override
     public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
-      rmNode.killAllContainers();
+      // Inform the scheduler
       rmNode.context.getDispatcher().getEventHandler().handle(
           new NodeRemovedSchedulerEvent(rmNode));
 
@@ -374,37 +332,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       rmNode.latestHeartBeatResponse = statusEvent.getLatestResponse();
 
       if (!statusEvent.getNodeHealthStatus().getIsNodeHealthy()) {
-        rmNode.killAllContainers();
+        // Inform the scheduler
         rmNode.context.getDispatcher().getEventHandler().handle(
             new NodeRemovedSchedulerEvent(rmNode));
         return RMNodeState.UNHEALTHY;
-      }
-
-      Map<ApplicationId, List<Container>> remoteAppContainersMap = statusEvent
-          .getContainersCollection();
-      for (List<Container> remoteContainerList : remoteAppContainersMap
-          .values()) {
-        for (Container remoteContainer : remoteContainerList) {
-
-          // Process running containers
-          ContainerId containerId = remoteContainer.getId();
-          if (remoteContainer.getState() == ContainerState.RUNNING
-              || remoteContainer.getState() == ContainerState.INITIALIZING) {
-            if (!rmNode.launchedContainers.containsKey(containerId)) {
-              // Just launched container. RM knows about it the first time.
-              rmNode.launchedContainers.put(containerId, remoteContainer);
-              rmNode.context.getDispatcher().getEventHandler().handle(
-                  new RMContainerEvent(containerId,
-                      RMContainerEventType.LAUNCHED));
-            }
-          } else {
-            // A finished container
-            // Send event to the finished container
-            rmNode.context.getDispatcher().getEventHandler().handle(
-                new RMContainerFinishedEvent(containerId, remoteContainer
-                    .getContainerStatus()));
-          }
-        }
       }
 
       rmNode.context.getDispatcher().getEventHandler().handle(

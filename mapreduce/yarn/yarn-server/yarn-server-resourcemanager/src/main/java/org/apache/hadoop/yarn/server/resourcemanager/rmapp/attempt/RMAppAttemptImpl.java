@@ -79,14 +79,9 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   private final String clientToken;
   private final ApplicationSubmissionContext submissionContext;
 
-  private Map<ContainerId, ContainerId> liveContainers
-    = new HashMap<ContainerId, ContainerId>();
-
   //nodes on while this attempt's containers ran
   private final Set<NodeId> ranNodes = 
     new HashSet<NodeId>();
-  private final List<Container> newlyAllocatedContainers = 
-    new ArrayList<Container>();
   private final List<Container> justFinishedContainers = 
     new ArrayList<Container>();
   private Container masterContainer;
@@ -162,8 +157,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       .addTransition(RMAppAttemptState.RUNNING, RMAppAttemptState.RUNNING,
           RMAppAttemptEventType.STATUS_UPDATE, new StatusUpdateTransition())
       .addTransition(RMAppAttemptState.RUNNING, RMAppAttemptState.RUNNING,
-          RMAppAttemptEventType.CONTAINER_ALLOCATED,
-          new NormalContainerAllocatedTransition())
+          RMAppAttemptEventType.CONTAINER_ALLOCATED)
       .addTransition(
           RMAppAttemptState.RUNNING,
           EnumSet.of(RMAppAttemptState.RUNNING, RMAppAttemptState.FAILED),
@@ -333,16 +327,6 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   }
 
   @Override
-  public List<Container> getNewlyAllocatedContainers() {
-    this.readLock.lock();
-    try {
-      return this.newlyAllocatedContainers;
-    } finally {
-      this.readLock.unlock();
-    }
-  }
-
-  @Override
   public List<Container> pullJustFinishedContainers() {
     this.writeLock.lock();
 
@@ -360,27 +344,6 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   @Override
   public Set<NodeId> getRanNodes() {
     return ranNodes;
-  }
-
-  @Override
-  public List<Container> pullNewlyAllocatedContainers() {
-    this.writeLock.lock();
-
-    try {
-      List<Container> returnList = new ArrayList<Container>(
-          this.newlyAllocatedContainers.size());
-      returnList.addAll(this.newlyAllocatedContainers);
-      for (Container cont : newlyAllocatedContainers) {
-        ranNodes.add(cont.getNodeId());//add to the nodes set when these containers
-        //are pulled by AM
-        eventHandler.handle(
-            new RMContainerEvent(cont.getId(), RMContainerEventType.ACQUIRED));
-      }
-      this.newlyAllocatedContainers.clear();
-      return returnList;
-    } finally {
-      this.writeLock.unlock();
-    }
   }
 
   @Override
@@ -461,6 +424,8 @@ public class RMAppAttemptImpl implements RMAppAttempt {
     }
   }
 
+  private static final List<Container> EMPTY_CONTAINER_LIST = 
+      new ArrayList<Container>();
   private static final class ScheduleTransition extends BaseTransition {
     @Override
     public void transition(RMAppAttemptImpl appAttempt,
@@ -479,7 +444,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
           + appAttempt.applicationAttemptId + " required " + request);
 
       appAttempt.scheduler.allocate(appAttempt.applicationAttemptId,
-          Collections.singletonList(request));
+          Collections.singletonList(request), EMPTY_CONTAINER_LIST);
     }
   }
 
@@ -657,29 +622,6 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       // Tell the launcher to cleanup.
       appAttempt.eventHandler.handle(new AMLauncherEvent(
           AMLauncherEventType.CLEANUP, appAttempt));
-
-      // Kill all the allocated containers.
-      for (ContainerId containerid : appAttempt.liveContainers.keySet()) {
-        appAttempt.eventHandler.handle(new RMContainerEvent(containerid,
-            RMContainerEventType.KILL));
-      }
-    }
-  }
-
-  private static final class NormalContainerAllocatedTransition extends
-      BaseTransition {
-    @Override
-    public void transition(RMAppAttemptImpl appAttempt,
-        RMAppAttemptEvent event) {
-      RMAppAttemptContainerAllocatedEvent allocatedEvent
-          = (RMAppAttemptContainerAllocatedEvent) event;
-
-      // Store the container for pulling
-      Container container = allocatedEvent.getContainer();
-      appAttempt.newlyAllocatedContainers.add(container);
-
-      // Add it to allContainers list.
-      appAttempt.liveContainers.put(container.getId(), container.getId());
     }
   }
 
@@ -744,9 +686,6 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       }
 
       // Normal container.
-
-      // Remove it from allContainers list.
-      appAttempt.liveContainers.remove(container.getId());
 
       // Put it in completedcontainers list
       appAttempt.justFinishedContainers.add(container);

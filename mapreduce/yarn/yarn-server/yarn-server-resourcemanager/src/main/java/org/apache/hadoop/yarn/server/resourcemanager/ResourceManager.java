@@ -150,10 +150,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.rmDispatcher.register(RMNodeEventType.class,
         new NodeEventDispatcher(this.rmContext));
 
-    // Register event handler for RMContainer
-    this.rmDispatcher.register(RMContainerEventType.class,
-        new ContainerEventDispatcher(this.rmContext));
-
     //TODO change this to be random
     this.appTokenSecretManager.setMasterKey(ApplicationTokenSecretManager
         .createSecretKey("Dummy".getBytes()));
@@ -289,30 +285,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
         } catch (Throwable t) {
           LOG.error("Error in handling event type " + event.getType()
               + " for node " + nodeId, t);
-        }
-      }
-    }
-  }
-
-  private static final class ContainerEventDispatcher implements
-      EventHandler<RMContainerEvent> {
-
-    private final RMContext rmContext;
-
-    public ContainerEventDispatcher(RMContext rmContext) {
-      this.rmContext = rmContext;
-    }
-
-    @Override
-    public void handle(RMContainerEvent event) {
-      ContainerId containerId = event.getContainerId();
-      RMContainer container = this.rmContext.getRMContainers().get(containerId);
-      if (container != null) {
-        try {
-          ((EventHandler<RMContainerEvent>) container).handle(event);
-        } catch (Throwable t) {
-          LOG.error("Error in handling event type " + event.getType()
-              + " for container " + containerId, t);
         }
       }
     }

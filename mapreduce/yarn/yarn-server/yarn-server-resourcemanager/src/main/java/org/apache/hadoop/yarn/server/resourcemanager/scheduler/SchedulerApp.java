@@ -1,6 +1,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -9,6 +11,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -16,6 +19,10 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerFinishedEvent;
 
 public class SchedulerApp {
 
@@ -31,6 +38,11 @@ public class SchedulerApp {
       .newRecordInstance(Resource.class);
   private Resource resourceLimit = recordFactory
       .newRecordInstance(Resource.class);
+
+  private Map<ContainerId, RMContainer> liveContainers
+  = new HashMap<ContainerId, RMContainer>();
+  private List<Container> newlyAllocatedContainers = 
+      new ArrayList<Container>();
 
   public SchedulerApp(AppSchedulingInfo application, Queue queue) {
     this.appSchedulingInfo = application;
@@ -62,10 +74,15 @@ public class SchedulerApp {
     return this.appSchedulingInfo.getNewContainerId();
   }
   
+  @Deprecated
   public List<Container> getCurrentContainers() {
     return this.appSchedulingInfo.getCurrentContainers();
   }
 
+  public synchronized Collection<RMContainer> getLiveContainers() {
+    return liveContainers.values();
+  }
+  
   public Collection<Priority> getPriorities() {
     return this.appSchedulingInfo.getPriorities();
   }
@@ -90,30 +107,85 @@ public class SchedulerApp {
     return this.queue;
   }
 
-  public void stop(RMAppAttemptState rmAppAttemptFinalState) {
+  public synchronized void stop(RMAppAttemptState rmAppAttemptFinalState) {
+    // Kill all 'live' containers
+    for (RMContainer container : getLiveContainers()) {
+      completedContainer(container.getContainer(), 
+          RMContainerEventType.KILL); 
+    }
+    
+    // Cleanup all scheduling information
     this.appSchedulingInfo.stop(rmAppAttemptFinalState);
   }
 
-  synchronized public void completedContainer(Container container, 
-      Resource containerResource) {
-    if (container != null) {
-      LOG.info("Completed container: " + container);
+  synchronized public void launchContainer(ContainerId containerId) {
+    // Inform the container
+    RMContainer rmContainer = 
+        getRMContainer(containerId);
+    rmContainer.handle(
+        new RMContainerEvent(containerId, 
+            RMContainerEventType.LAUNCHED));
+  }
+
+  public synchronized void killContainers(
+      SchedulerApp application) {
+  }
+
+  synchronized public void completedContainer(Container cont,
+      RMContainerEventType event) {
+    ContainerId containerId = cont.getId();
+    // Inform the container
+    RMContainer container = getRMContainer(containerId);
+    if (event.equals(RMContainerEventType.FINISHED)) {
+      // Have to send diagnostics for finished containers.
+      container.handle(new RMContainerFinishedEvent(containerId,
+          cont.getContainerStatus()));
+    } else {
+      container.handle(new RMContainerEvent(containerId, event));
     }
-    queue.getMetrics().releaseResources(getUser(), 1,
-        containerResource);
+    LOG.info("Completed container: " + container + 
+        " in state: " + container.getState());
+    
+    // Remove from the list of containers
+    liveContainers.remove(container.getContainer());
+    
+    // Update usage metrics 
+    Resource containerResource = container.getContainer().getResource();
+    queue.getMetrics().releaseResources(getUser(), 1, containerResource);
     Resources.subtractFrom(currentConsumption, containerResource);
   }
 
   synchronized public void allocate(NodeType type, SchedulerNode node,
-      Priority priority, ResourceRequest request, List<Container> containers) {
+      Priority priority, ResourceRequest request, 
+      List<RMContainer> containers) {
     // Update consumption and track allocations
-    for (Container container : containers) {
-      Resources.addTo(currentConsumption, container.getResource());
-      LOG.debug("allocate: applicationId=" + container.getId().getAppId()
-          + " container=" + container.getId() + " host="
-          + container.getNodeId().toString());
+    List<Container> allocatedContainers = 
+        new ArrayList<Container>();
+    for (RMContainer container : containers) {
+      Container c = container.getContainer();
+      // Inform the container
+      container.handle(
+          new RMContainerEvent(c.getId(), RMContainerEventType.START));
+      allocatedContainers.add(c);
+      
+      Resources.addTo(currentConsumption, c.getResource());
+      LOG.debug("allocate: applicationId=" + c.getId().getAppId()
+          + " container=" + c.getId() + " host="
+          + c.getNodeId().toString());
+      
+      // Add it to allContainers list.
+      newlyAllocatedContainers.add(c);
+      liveContainers.put(c.getId(), container);
     }
-    appSchedulingInfo.allocate(type, node, priority, request, containers);
+    
+    appSchedulingInfo.allocate(type, node, priority, 
+        request, allocatedContainers);
+  }
+  
+  synchronized public List<Container> pullNewlyAllocatedContainers() {
+    List<Container> allocatedContainers = newlyAllocatedContainers;
+    newlyAllocatedContainers = new ArrayList<Container>();
+    return allocatedContainers;
   }
 
   public Resource getCurrentConsumption() {
@@ -154,5 +226,9 @@ public class SchedulerApp {
     }
     
     return limit;
+  }
+
+  public synchronized RMContainer getRMContainer(ContainerId id) {
+    return liveContainers.get(id);
   }
 }
