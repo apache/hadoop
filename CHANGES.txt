@@ -24,6 +24,9 @@ Release 0.20.205.0 - unreleased
     HDFS-2053. Bug in INodeDirectory#computeContentSummary warning
     (Michael Noll via eli)
 
+    HDFS-2117. DiskChecker#mkdirsWithExistsAndPermissionCheck may
+    return true even when the dir is not created. (eli)
+
   IMPROVEMENTS
 
     MAPREDUCE-7343. Make the number of warnings accepted by test-patch
