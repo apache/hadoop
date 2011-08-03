@@ -82,8 +82,11 @@ public class SingleColumnValueFilter extends FilterBase {
   /**
    * Constructor for binary compare of the value of a single column.  If the
    * column is found and the condition passes, all columns of the row will be
-   * emitted.  If the column is not found or the condition fails, the row will
-   * not be emitted.
+   * emitted.  If the condition fails, the row will not be emitted.
+   * <p>
+   * Use the filterIfColumnMissing flag to set whether the rest of the columns
+   * in a row will be emitted if the specified column to check is not found in
+   * the row.
    *
    * @param family name of column family
    * @param qualifier name of column qualifier
