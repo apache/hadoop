@@ -41,8 +41,8 @@ public class SchedulerApp {
 
   private Map<ContainerId, RMContainer> liveContainers
   = new HashMap<ContainerId, RMContainer>();
-  private List<Container> newlyAllocatedContainers = 
-      new ArrayList<Container>();
+  private List<RMContainer> newlyAllocatedContainers = 
+      new ArrayList<RMContainer>();
 
   public SchedulerApp(AppSchedulingInfo application, Queue queue) {
     this.appSchedulingInfo = application;
@@ -78,10 +78,6 @@ public class SchedulerApp {
   public List<Container> getCurrentContainers() {
     return this.appSchedulingInfo.getCurrentContainers();
   }
-
-  public synchronized Collection<RMContainer> getLiveContainers() {
-    return liveContainers.values();
-  }
   
   public Collection<Priority> getPriorities() {
     return this.appSchedulingInfo.getPriorities();
@@ -107,18 +103,16 @@ public class SchedulerApp {
     return this.queue;
   }
 
+  public synchronized Collection<RMContainer> getLiveContainers() {
+    return this.liveContainers.values();
+  }
+
   public synchronized void stop(RMAppAttemptState rmAppAttemptFinalState) {
-    // Kill all 'live' containers
-    for (RMContainer container : getLiveContainers()) {
-      completedContainer(container.getContainer(), 
-          RMContainerEventType.KILL); 
-    }
-    
     // Cleanup all scheduling information
     this.appSchedulingInfo.stop(rmAppAttemptFinalState);
   }
 
-  synchronized public void launchContainer(ContainerId containerId) {
+  synchronized public void containerLaunchedOnNode(ContainerId containerId) {
     // Inform the container
     RMContainer rmContainer = 
         getRMContainer(containerId);
@@ -131,7 +125,7 @@ public class SchedulerApp {
       SchedulerApp application) {
   }
 
-  synchronized public void completedContainer(Container cont,
+  synchronized public void containerCompleted(Container cont,
       RMContainerEventType event) {
     ContainerId containerId = cont.getId();
     // Inform the container
@@ -143,7 +137,7 @@ public class SchedulerApp {
     } else {
       container.handle(new RMContainerEvent(containerId, event));
     }
-    LOG.info("Completed container: " + container + 
+    LOG.info("Completed container: " + container.getContainerId() + 
         " in state: " + container.getState());
     
     // Remove from the list of containers
@@ -174,7 +168,7 @@ public class SchedulerApp {
           + c.getNodeId().toString());
       
       // Add it to allContainers list.
-      newlyAllocatedContainers.add(c);
+      newlyAllocatedContainers.add(container);
       liveContainers.put(c.getId(), container);
     }
     
@@ -183,9 +177,15 @@ public class SchedulerApp {
   }
   
   synchronized public List<Container> pullNewlyAllocatedContainers() {
-    List<Container> allocatedContainers = newlyAllocatedContainers;
-    newlyAllocatedContainers = new ArrayList<Container>();
-    return allocatedContainers;
+    List<Container> returnContainerList = new ArrayList<Container>(
+        newlyAllocatedContainers.size());
+    for (RMContainer rmContainer : newlyAllocatedContainers) {
+      rmContainer.handle(new RMContainerEvent(rmContainer.getContainerId(),
+          RMContainerEventType.ACQUIRED));
+      returnContainerList.add(rmContainer.getContainer());
+    }
+    newlyAllocatedContainers.clear();
+    return returnContainerList;
   }
 
   public Resource getCurrentConsumption() {

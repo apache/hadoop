@@ -12,6 +12,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAcquiredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAllocatedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
@@ -58,7 +59,7 @@ public class RMContainerImpl implements RMContainer {
 
     // Transitions from RUNNING state
     .addTransition(RMContainerState.RUNNING, RMContainerState.COMPLETED,
-        RMContainerEventType.FINISHED, new FinishedTransition())
+        RMContainerEventType.FINISHED, new ContainerCompletedTransition())
     .addTransition(RMContainerState.RUNNING, RMContainerState.KILLED,
         RMContainerEventType.KILL, new KillTransition())
 
@@ -147,8 +148,8 @@ public class RMContainerImpl implements RMContainer {
             " on container " + this.containerId);
       }
       if (oldState != getState()) {
-        LOG.info(nodeId + " Container Transitioned from " + oldState + " to "
-                 + getState());
+        LOG.info(event.getContainerId() + " Container Transitioned from "
+            + oldState + " to " + getState());
       }
     }
     
@@ -157,7 +158,7 @@ public class RMContainerImpl implements RMContainer {
     }
   }
 
-  private static class RMContainerTransition implements
+  private static class BaseTransition implements
       SingleArcTransition<RMContainerImpl, RMContainerEvent> {
 
     @Override
@@ -167,7 +168,7 @@ public class RMContainerImpl implements RMContainer {
   }
 
   private static final class ContainerStartedTransition extends
-      RMContainerTransition {
+      BaseTransition {
 
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
@@ -176,16 +177,20 @@ public class RMContainerImpl implements RMContainer {
     }
 }
 
-  private static final class AcquiredTransition extends RMContainerTransition {
+  private static final class AcquiredTransition extends BaseTransition {
 
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
       // Register with containerAllocationExpirer.
       container.containerAllocationExpirer.register(container.getContainer());
+
+      // Tell the appAttempt
+      container.eventHandler.handle(new RMAppAttemptContainerAcquiredEvent(
+          container.getApplicationAttemptId(), container.getContainer()));
     }
   }
 
-  private static final class LaunchedTransition extends RMContainerTransition {
+  private static final class LaunchedTransition extends BaseTransition {
 
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
@@ -194,18 +199,10 @@ public class RMContainerImpl implements RMContainer {
     }
   }
 
-  private static class FinishedTransition extends RMContainerTransition {
+  private static class FinishedTransition extends BaseTransition {
 
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
-
-      RMContainerFinishedEvent finishedEvent = (RMContainerFinishedEvent) event;
-
-      // Update container-status for diagnostics. Today we completely
-      // replace it on finish. We may just need to update diagnostics.
-      // ^TODO
-      container.container.setContainerStatus(finishedEvent
-          .getRemoteContainerStatus());
 
       // Inform AppAttempt
       container.eventHandler.handle(new RMAppAttemptContainerFinishedEvent(
@@ -221,7 +218,7 @@ public class RMContainerImpl implements RMContainer {
       // Unregister from containerAllocationExpirer.
       container.containerAllocationExpirer.unregister(container.getContainer());
 
-      // Inform AppAttempt, scheduler etc.
+      // Inform AppAttempt
       super.transition(container, event);
     }
   }
@@ -238,11 +235,27 @@ public class RMContainerImpl implements RMContainer {
       container.eventHandler.handle(new RMNodeCleanContainerEvent(
           container.nodeId, container.containerId));
 
-      // Inform appAttempt and scheduler
+      // Inform appAttempt
       super.transition(container, event);
     }
   }
 
-  
+  private static final class ContainerCompletedTransition extends
+      FinishedTransition {
 
+    @Override
+    public void transition(RMContainerImpl container, RMContainerEvent event) {
+
+      RMContainerFinishedEvent finishedEvent = (RMContainerFinishedEvent) event;
+
+      // Update container-status for diagnostics. Today we completely
+      // replace it on finish. We may just need to update diagnostics.
+      // ^TODO
+      container.container.setContainerStatus(finishedEvent
+          .getRemoteContainerStatus());
+
+      // Inform appAttempt
+      super.transition(container, event);
+    }
+  }
 }

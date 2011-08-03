@@ -5,14 +5,14 @@ public enum RMContainerEventType {
   // Source: scheduler
   START,
 
-  // Source: App
+  // Source: SchedulerApp
   ACQUIRED,
   KILL, // Also from Node on NodeRemoval
 
   LAUNCHED,
   FINISHED,
 
-  // Source: ApplicationMasterService
+  // Source: ApplicationMasterService->Scheduler
   RELEASED,
 
   // Source: ContainerAllocationExpirer  

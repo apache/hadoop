@@ -47,12 +47,12 @@ public class TestApplicationCleanup {
     
     //kick the scheduler
     nm1.nodeHeartbeat(true);
-    List<Container> conts = am.allocate(new ArrayList<Container>(),
-        new ArrayList<ResourceRequest>()).getNewContainerList();
+    List<Container> conts = am.allocate(new ArrayList<ResourceRequest>(),
+        new ArrayList<Container>()).getNewContainerList();
     int contReceived = conts.size();
     while (contReceived < request) {
-      conts = am.allocate(new ArrayList<Container>(),
-          new ArrayList<ResourceRequest>()).getNewContainerList();
+      conts = am.allocate(new ArrayList<ResourceRequest>(),
+          new ArrayList<Container>()).getNewContainerList();
       contReceived += conts.size();
       Log.info("Got " + contReceived + " containers. Waiting to get " + request);
       Thread.sleep(2000);
@@ -73,7 +73,8 @@ public class TestApplicationCleanup {
       HeartbeatResponse resp = nm1.nodeHeartbeat(true);
       contsToClean = resp.getContainersToCleanupList();
       apps = resp.getApplicationsToCleanupList();
-      Log.info("Waiting to get cleanup events.." + cleanedConts);
+      Log.info("Waiting to get cleanup events.. cleanedConts: "
+          + cleanedConts + " cleanedApps: " + cleanedApps);
       cleanedConts += contsToClean.size();
       cleanedApps += apps.size();
       Thread.sleep(1000);

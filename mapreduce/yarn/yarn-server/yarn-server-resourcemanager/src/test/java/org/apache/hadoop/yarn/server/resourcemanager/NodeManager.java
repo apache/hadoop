@@ -170,7 +170,7 @@ public class NodeManager implements ContainerManager {
 
     Container container =
         BuilderUtils.newContainer(containerLaunchContext.getContainerId(),
-            this.nodeId, containerManagerAddress, nodeHttpAddress,
+            this.nodeId, nodeHttpAddress,
             containerLaunchContext.getResource());
 
     applicationContainers.add(container);

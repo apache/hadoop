@@ -224,28 +224,30 @@ public class FifoScheduler implements ResourceScheduler {
 
     // Release containers
     for (Container releasedContainer : release) {
-      completedContainer(releasedContainer, RMContainerEventType.RELEASED);
+      containerCompleted(releasedContainer, RMContainerEventType.RELEASED);
     }
 
     synchronized (application) {
 
-      LOG.debug("allocate: pre-update" +
-          " applicationId=" + applicationAttemptId + 
-          " application=" + application);
-      application.showRequests();
+      if (!ask.isEmpty()) {
+        LOG.debug("allocate: pre-update" +
+            " applicationId=" + applicationAttemptId + 
+            " application=" + application);
+        application.showRequests();
+  
+        // Update application requests
+        application.updateResourceRequests(ask);
+  
+        LOG.debug("allocate: post-update" +
+            " applicationId=" + applicationAttemptId + 
+            " application=" + application);
+        application.showRequests();
+  
+        LOG.debug("allocate:" +
+            " applicationId=" + applicationAttemptId + 
+            " #ask=" + ask.size());
+      }
 
-      // Update application requests
-      application.updateResourceRequests(ask);
-
-      LOG.debug("allocate: post-update" +
-          " applicationId=" + applicationAttemptId + 
-          " application=" + application);
-      application.showRequests();
-
-      LOG.debug("allocate:" +
-          " applicationId=" + applicationAttemptId + 
-          " #ask=" + ask.size());
-      
       return new Allocation(
           application.pullNewlyAllocatedContainers(), 
           application.getHeadroom());
@@ -298,6 +300,11 @@ public class FifoScheduler implements ResourceScheduler {
     if (application == null) {
       throw new IOException("Unknown application " + applicationAttemptId + 
       " has completed!");
+    }
+
+    // Kill all 'live' containers
+    for (RMContainer container : application.getLiveContainers()) {
+      containerCompleted(container.getContainer(), RMContainerEventType.KILL);
     }
 
     // Clean up pending requests, metrics etc.
@@ -488,12 +495,12 @@ public class FifoScheduler implements ResourceScheduler {
             BuilderUtils.newContainer(recordFactory,
                 application.getApplicationAttemptId(),
                 application.getNewContainerId(),
-                node.getRMNode().getNodeID(), node.getRMNode().getNodeAddress(),
+                node.getRMNode().getNodeID(),
                 node.getRMNode().getHttpAddress(), capability);
-        RMContainer rmContainer = 
-            new RMContainerImpl(container, 
-                application.getApplicationAttemptId(), node.getNodeID(), 
-                null, this.rmContext.getContainerAllocationExpirer());
+        RMContainer rmContainer = new RMContainerImpl(container, application
+            .getApplicationAttemptId(), node.getNodeID(), this.rmContext
+            .getDispatcher().getEventHandler(), this.rmContext
+            .getContainerAllocationExpirer());
         
         // If security is enabled, send the container-tokens too.
         if (UserGroupInformation.isSecurityEnabled()) {
@@ -528,17 +535,15 @@ public class FifoScheduler implements ResourceScheduler {
   }
 
   private synchronized void nodeUpdate(RMNode rmNode,
-      Map<ApplicationId, List<Container>> containers) {
+      Map<ApplicationId, List<Container>> remoteContainers) {
     SchedulerNode node = getNode(rmNode.getNodeID());
     
-    // Process completed containers
-    for (List<Container> appContainers : containers.values()) {
+    for (List<Container> appContainers : remoteContainers.values()) {
       for (Container container : appContainers) {
-        if (container.getContainerStatus().getState() == ContainerState.RUNNING
-            || container.getContainerStatus().getState() == ContainerState.INITIALIZING) {
-          launchContainer(container, node);
+        if (container.getState() == ContainerState.RUNNING) {
+          containerLaunchedOnNode(container, node);
         } else { // has to COMPLETE
-          completedContainer(container, RMContainerEventType.FINISHED);
+          containerCompleted(container, RMContainerEventType.FINISHED);
         }
       }
     }
@@ -603,7 +608,7 @@ public class FifoScheduler implements ResourceScheduler {
     {
       ContainerExpiredSchedulerEvent containerExpiredEvent = 
           (ContainerExpiredSchedulerEvent) event;
-      completedContainer(containerExpiredEvent.getContainer(), 
+      containerCompleted(containerExpiredEvent.getContainer(), 
           RMContainerEventType.EXPIRE);
     }
     break;
@@ -612,7 +617,7 @@ public class FifoScheduler implements ResourceScheduler {
     }
   }
 
-  private void launchContainer(Container container, SchedulerNode node) {
+  private void containerLaunchedOnNode(Container container, SchedulerNode node) {
     // Get the application for the finished container
     ApplicationAttemptId applicationAttemptId = container.getId().getAppAttemptId();
     SchedulerApp application = getApplication(applicationAttemptId);
@@ -623,11 +628,11 @@ public class FifoScheduler implements ResourceScheduler {
       return;
     }
     
-    application.launchContainer(container.getId());
+    application.containerLaunchedOnNode(container.getId());
   }
 
   @Lock(FifoScheduler.class)
-  private synchronized void completedContainer(Container container, RMContainerEventType event) {
+  private synchronized void containerCompleted(Container container, RMContainerEventType event) {
     // Get the application for the finished container
     ApplicationAttemptId applicationAttemptId = container.getId().getAppAttemptId();
     SchedulerApp application = getApplication(applicationAttemptId);
@@ -644,7 +649,7 @@ public class FifoScheduler implements ResourceScheduler {
     }
     
     // Inform the application
-    application.completedContainer(container, event);
+    application.containerCompleted(container, event);
     
     // Inform the node
     node.releaseContainer(container);
@@ -663,7 +668,7 @@ public class FifoScheduler implements ResourceScheduler {
     SchedulerNode node = getNode(nodeInfo.getNodeID());
     // Kill running containers
     for(Container container : node.getRunningContainers()) {
-      completedContainer(container, RMContainerEventType.KILL);
+      containerCompleted(container, RMContainerEventType.KILL);
     }
     
     //Remove the node

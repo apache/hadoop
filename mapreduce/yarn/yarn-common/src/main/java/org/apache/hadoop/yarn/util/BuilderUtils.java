@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -164,23 +165,24 @@ public class BuilderUtils {
 
   public static Container newContainer(RecordFactory recordFactory,
       ApplicationAttemptId appAttemptId, int containerId, NodeId nodeId,
-      String containerManagerAddress, String nodeHttpAddress,
-      Resource resource) {
+      String nodeHttpAddress, Resource resource) {
     ContainerId containerID =
         newContainerId(recordFactory, appAttemptId, containerId);
-    return newContainer(containerID, nodeId, containerManagerAddress,
-        nodeHttpAddress, resource);
+    return newContainer(containerID, nodeId, nodeHttpAddress, resource);
   }
 
-  public static Container newContainer(ContainerId containerId, NodeId nodeId,
-      String containerManagerAddress, String nodeHttpAddress,
-      Resource resource) {
+  public static Container newContainer(ContainerId containerId,
+      NodeId nodeId, String nodeHttpAddress, Resource resource) {
     Container container = recordFactory.newRecordInstance(Container.class);
     container.setId(containerId);
     container.setNodeId(nodeId);
     container.setNodeHttpAddress(nodeHttpAddress);
     container.setResource(resource);
-    container.setState(ContainerState.INITIALIZING);
+    container.setState(ContainerState.NEW);
+    ContainerStatus containerStatus = Records.newRecord(ContainerStatus.class);
+    containerStatus.setContainerId(containerId);
+    containerStatus.setState(ContainerState.NEW);
+    container.setContainerStatus(containerStatus);
     return container;
   }
 

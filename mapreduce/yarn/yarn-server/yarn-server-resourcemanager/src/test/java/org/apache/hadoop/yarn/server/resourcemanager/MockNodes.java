@@ -93,7 +93,6 @@ public class MockNodes {
         recordFactory.newRecordInstance(NodeHealthStatus.class);
     final Resource used = newUsedResource(perNode);
     final Resource avail = newAvailResource(perNode, used);
-    final int containers = (int)(Math.random() * 8);
     return new RMNode() {
       @Override
       public NodeId getNodeID() {
@@ -126,19 +125,8 @@ public class MockNodes {
       }
 
       @Override
-      public int getNumContainers() {
-        return containers;
-      }
-
-      @Override
       public NodeHealthStatus getNodeHealthStatus() {
         return nodeHealthStatus;
-      }
-
-      @Override
-      public List<Container> getRunningContainers() {
-        // TODO Auto-generated method stub
-        return null;
       }
 
       @Override

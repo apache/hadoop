@@ -72,7 +72,10 @@ public class MockAM {
   }
 
   public AMResponse schedule() throws Exception {
-    return allocate(releases, requests);
+    AMResponse response = allocate(requests, releases);
+    requests.clear();
+    releases.clear();
+    return response;
   }
 
   public AMResponse allocate( 
@@ -85,7 +88,7 @@ public class MockAM {
       cont.setId(id);
       //TOOD: set all fields
     }
-    return allocate(toRelease, reqs);
+    return allocate(reqs, toRelease);
   }
 
   public List<ResourceRequest> createReq(String[] hosts, int memory, int priority, 
@@ -122,7 +125,7 @@ public class MockAM {
   }
 
   public AMResponse allocate(
-      List<Container> releases, List<ResourceRequest> resourceRequest) 
+      List<ResourceRequest> resourceRequest, List<Container> releases) 
       throws Exception {
     AllocateRequest req = Records.newRecord(AllocateRequest.class);
     req.setResponseId(++responseId);

@@ -3,10 +3,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
@@ -17,7 +15,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -31,15 +28,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventT
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAllocatedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAcquiredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRegistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStatusupdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
@@ -93,9 +89,6 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   private String finalState;
   private final StringBuilder diagnostics = new StringBuilder();
 
-  private static final CancelContainerTransition CANCEL_CONTAINER_TRANSITION
-      = new CancelContainerTransition();
-
   private static final StateMachineFactory<RMAppAttemptImpl,
                                            RMAppAttemptState,
                                            RMAppAttemptEventType,
@@ -130,6 +123,10 @@ public class RMAppAttemptImpl implements RMAppAttempt {
           new BaseFinalTransition(RMAppAttemptState.KILLED))
 
        // Transitions from ALLOCATED State
+      .addTransition(RMAppAttemptState.ALLOCATED,
+          RMAppAttemptState.ALLOCATED,
+          RMAppAttemptEventType.CONTAINER_ACQUIRED,
+          new ContainerAcquiredTransition())       
       .addTransition(RMAppAttemptState.ALLOCATED, RMAppAttemptState.LAUNCHED,
           RMAppAttemptEventType.LAUNCHED, new AMLaunchedTransition())
       .addTransition(RMAppAttemptState.ALLOCATED, RMAppAttemptState.FAILED,
@@ -159,6 +156,10 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       .addTransition(RMAppAttemptState.RUNNING, RMAppAttemptState.RUNNING,
           RMAppAttemptEventType.CONTAINER_ALLOCATED)
       .addTransition(
+                RMAppAttemptState.RUNNING, RMAppAttemptState.RUNNING,
+                RMAppAttemptEventType.CONTAINER_ACQUIRED,
+                new ContainerAcquiredTransition())
+      .addTransition(
           RMAppAttemptState.RUNNING,
           EnumSet.of(RMAppAttemptState.RUNNING, RMAppAttemptState.FAILED),
           RMAppAttemptEventType.CONTAINER_FINISHED,
@@ -173,34 +174,29 @@ public class RMAppAttemptImpl implements RMAppAttempt {
           new FinalTransition(RMAppAttemptState.KILLED))
 
       // Transitions from FAILED State
-      .addTransition(RMAppAttemptState.FAILED, RMAppAttemptState.FAILED,
-          RMAppAttemptEventType.CONTAINER_ALLOCATED,
-          CANCEL_CONTAINER_TRANSITION)
       .addTransition(
           RMAppAttemptState.FAILED,
           RMAppAttemptState.FAILED,
-          EnumSet.of(RMAppAttemptEventType.EXPIRE,
+          EnumSet.of(
+              RMAppAttemptEventType.EXPIRE,
               RMAppAttemptEventType.KILL,
               RMAppAttemptEventType.UNREGISTERED,
               RMAppAttemptEventType.STATUS_UPDATE,
+              RMAppAttemptEventType.CONTAINER_ALLOCATED,
               RMAppAttemptEventType.CONTAINER_FINISHED))
 
       // Transitions from FINISHED State
-      .addTransition(RMAppAttemptState.FINISHED, RMAppAttemptState.FINISHED,
-          RMAppAttemptEventType.CONTAINER_ALLOCATED,
-          CANCEL_CONTAINER_TRANSITION)
       .addTransition(
           RMAppAttemptState.FINISHED,
           RMAppAttemptState.FINISHED,
-          EnumSet.of(RMAppAttemptEventType.EXPIRE,
+          EnumSet.of(
+              RMAppAttemptEventType.EXPIRE,
               RMAppAttemptEventType.UNREGISTERED,
+              RMAppAttemptEventType.CONTAINER_ALLOCATED,
               RMAppAttemptEventType.CONTAINER_FINISHED,
               RMAppAttemptEventType.KILL))
 
       // Transitions from KILLED State
-      .addTransition(RMAppAttemptState.KILLED, RMAppAttemptState.KILLED,
-          RMAppAttemptEventType.CONTAINER_ALLOCATED,
-          CANCEL_CONTAINER_TRANSITION)
       .addTransition(
           RMAppAttemptState.KILLED,
           RMAppAttemptState.KILLED,
@@ -209,6 +205,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
               RMAppAttemptEventType.LAUNCH_FAILED,
               RMAppAttemptEventType.EXPIRE,
               RMAppAttemptEventType.REGISTERED,
+              RMAppAttemptEventType.CONTAINER_ALLOCATED,
               RMAppAttemptEventType.CONTAINER_FINISHED,
               RMAppAttemptEventType.UNREGISTERED,
               RMAppAttemptEventType.KILL,
@@ -424,8 +421,11 @@ public class RMAppAttemptImpl implements RMAppAttempt {
     }
   }
 
-  private static final List<Container> EMPTY_CONTAINER_LIST = 
+  private static final List<Container> EMPTY_CONTAINER_RELEASE_LIST = 
       new ArrayList<Container>();
+  private static final List<ResourceRequest> EMPTY_CONTAINER_REQUEST_LIST = 
+    new ArrayList<ResourceRequest>();
+
   private static final class ScheduleTransition extends BaseTransition {
     @Override
     public void transition(RMAppAttemptImpl appAttempt,
@@ -444,7 +444,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
           + appAttempt.applicationAttemptId + " required " + request);
 
       appAttempt.scheduler.allocate(appAttempt.applicationAttemptId,
-          Collections.singletonList(request), EMPTY_CONTAINER_LIST);
+          Collections.singletonList(request), EMPTY_CONTAINER_RELEASE_LIST);
     }
   }
 
@@ -453,14 +453,14 @@ public class RMAppAttemptImpl implements RMAppAttempt {
     public void transition(RMAppAttemptImpl appAttempt,
         RMAppAttemptEvent event) {
 
-      // Set the masterContainer
-      RMAppAttemptContainerAllocatedEvent allocatedEvent
-        = (RMAppAttemptContainerAllocatedEvent) event;
-      appAttempt.masterContainer = allocatedEvent.getContainer();
+      // Acquire the AM container from the scheduler.
+      Allocation amContainerAllocation = appAttempt.scheduler.allocate(
+          appAttempt.applicationAttemptId, EMPTY_CONTAINER_REQUEST_LIST,
+          EMPTY_CONTAINER_RELEASE_LIST);
 
-      // Make the AM container as acquired.
-      appAttempt.eventHandler.handle(new RMContainerEvent(allocatedEvent
-          .getContainer().getId(), RMContainerEventType.ACQUIRED));
+      // Set the masterContainer
+      appAttempt.masterContainer = amContainerAllocation.getContainers().get(
+          0);
 
       // Send event to launch the AM Container
       appAttempt.eventHandler.handle(new AMLauncherEvent(
@@ -665,6 +665,17 @@ public class RMAppAttemptImpl implements RMAppAttempt {
     }
   }
 
+  private static final class ContainerAcquiredTransition extends
+      BaseTransition {
+    @Override
+    public void transition(RMAppAttemptImpl appAttempt,
+        RMAppAttemptEvent event) {
+      RMAppAttemptContainerAcquiredEvent acquiredEvent
+        = (RMAppAttemptContainerAcquiredEvent) event;
+      appAttempt.ranNodes.add(acquiredEvent.getContainer().getNodeId());
+    }
+  }
+
   private static final class ContainerFinishedTransition
       implements
       MultipleArcTransition<RMAppAttemptImpl, RMAppAttemptEvent, RMAppAttemptState> {
@@ -692,18 +703,4 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       return RMAppAttemptState.RUNNING;
     }
   }
-
-  private static final class CancelContainerTransition extends BaseTransition {
-    @Override
-    public void transition(RMAppAttemptImpl appAttempt,
-        RMAppAttemptEvent event) {
-      RMAppAttemptContainerAllocatedEvent containerAllocatedEvent
-          = (RMAppAttemptContainerAllocatedEvent) event;
-      // Kill this container.
-      appAttempt.eventHandler.handle(new RMContainerEvent(
-          containerAllocatedEvent.getContainer().getId(),
-          RMContainerEventType.KILL));
-    }
-  }
-
 }

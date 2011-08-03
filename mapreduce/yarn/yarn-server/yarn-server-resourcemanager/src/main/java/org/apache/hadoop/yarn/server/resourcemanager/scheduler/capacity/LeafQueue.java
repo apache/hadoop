@@ -859,7 +859,7 @@ public class LeafQueue implements Queue {
          BuilderUtils.newContainer(this.recordFactory,
                     application.getApplicationAttemptId(),
                     application.getNewContainerId(),
-                    node.getNodeID(), node.getNodeAddress(),
+                    node.getNodeID(),
                     node.getHttpAddress(), capability);
       
       // If security is enabled, send the container-tokens too.

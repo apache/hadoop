@@ -66,7 +66,7 @@ public class TestFifoScheduler {
     MockNM nm2 = rm.registerNode("h2:5678", 4 * GB);
 
     RMApp app1 = rm.submitApp(2048);
-    // kick the scheduling, 2 GB given to AM1, remaining 4GB
+    // kick the scheduling, 2 GB given to AM1, remaining 4GB on nm1
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
     MockAM am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());
@@ -75,7 +75,7 @@ public class TestFifoScheduler {
         nm1.getNodeId()).getMemory());
 
     RMApp app2 = rm.submitApp(2048);
-    // kick the scheduling, 2GB given to AM, remaining 2 GB
+    // kick the scheduling, 2GB given to AM, remaining 2 GB on nm2
     nm2.nodeHeartbeat(true);
     RMAppAttempt attempt2 = app2.getCurrentAppAttempt();
     MockAM am2 = rm.sendAMLaunched(attempt2.getAppAttemptId());
@@ -85,32 +85,32 @@ public class TestFifoScheduler {
 
     // add request for containers
     am1.addRequests(new String[] { "h1", "h2" }, GB, 1, 1);
-    am1.schedule(); // send the request
+    AMResponse am1Response = am1.schedule(); // send the request
     // add request for containers
     am2.addRequests(new String[] { "h1", "h2" }, 3 * GB, 0, 1);
-    am2.schedule(); // send the request
+    AMResponse am2Response = am2.schedule(); // send the request
 
     // kick the scheduler, 1 GB and 3 GB given to AM1 and AM2, remaining 0
     nm1.nodeHeartbeat(true);
-    while (attempt1.getNewlyAllocatedContainers().size() < 1) {
+    while (am1Response.getNewContainerCount() < 1) {
       LOG.info("Waiting for containers to be created for app 1...");
       Thread.sleep(1000);
+      am1Response = am1.schedule();
     }
-    while (attempt2.getNewlyAllocatedContainers().size() < 1) {
+    while (am2Response.getNewContainerCount() < 1) {
       LOG.info("Waiting for containers to be created for app 2...");
       Thread.sleep(1000);
+      am2Response = am2.schedule();
     }
     // kick the scheduler, nothing given remaining 2 GB.
     nm2.nodeHeartbeat(true);
 
-    AMResponse resp1 = am1.schedule(); // get allocations
-    List<Container> allocated1 = resp1.getNewContainerList();
+    List<Container> allocated1 = am1Response.getNewContainerList();
     Assert.assertEquals(1, allocated1.size());
     Assert.assertEquals(1 * GB, allocated1.get(0).getResource().getMemory());
     Assert.assertEquals(nm1.getNodeId(), allocated1.get(0).getNodeId());
 
-    AMResponse resp2 = am2.schedule(); // get allocations
-    List<Container> allocated2 = resp2.getNewContainerList();
+    List<Container> allocated2 = am2Response.getNewContainerList();
     Assert.assertEquals(1, allocated2.size());
     Assert.assertEquals(3 * GB, allocated2.get(0).getResource().getMemory());
     Assert.assertEquals(nm1.getNodeId(), allocated2.get(0).getNodeId());

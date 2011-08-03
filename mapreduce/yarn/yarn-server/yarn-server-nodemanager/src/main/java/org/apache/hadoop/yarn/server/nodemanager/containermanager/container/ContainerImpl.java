@@ -251,7 +251,6 @@ public class ContainerImpl implements Container {
     case LOCALIZING:
     case LOCALIZATION_FAILED:
     case LOCALIZED:
-      return org.apache.hadoop.yarn.api.records.ContainerState.INITIALIZING;
     case RUNNING:
     case EXITED_WITH_SUCCESS:
     case EXITED_WITH_FAILURE:

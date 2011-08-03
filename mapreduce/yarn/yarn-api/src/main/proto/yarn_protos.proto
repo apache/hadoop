@@ -31,7 +31,7 @@ message ResourceProto {
 }
 
 enum ContainerStateProto {
-  C_INITIALIZING = 1;
+  C_NEW = 1;
   C_RUNNING = 2;
   C_COMPLETE = 3;
 }
