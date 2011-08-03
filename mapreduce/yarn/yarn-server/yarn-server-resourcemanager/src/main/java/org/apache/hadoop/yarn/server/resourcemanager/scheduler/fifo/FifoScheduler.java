@@ -666,11 +666,11 @@ public class FifoScheduler implements ResourceScheduler {
 
   @Override
   public void recover(RMState state) {
-    for (Map.Entry<ApplicationId, ApplicationInfo> entry: state.getStoredApplications().entrySet()) {
-      ApplicationId appId = entry.getKey();
-      ApplicationInfo appInfo = entry.getValue();
-      SchedulerApp app = applications.get(appId);
-      app.allocate(appInfo.getContainers());
-    }
+//    for (Map.Entry<ApplicationId, ApplicationInfo> entry: state.getStoredApplications().entrySet()) {
+//      ApplicationId appId = entry.getKey();
+//      ApplicationInfo appInfo = entry.getValue();
+//      SchedulerApp app = applications.get(appId);
+//      app.allocate(appInfo.getContainers());
+//    }
   }
 }

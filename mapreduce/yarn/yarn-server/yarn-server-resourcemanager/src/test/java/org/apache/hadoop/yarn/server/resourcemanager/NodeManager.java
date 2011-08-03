@@ -254,7 +254,7 @@ public class NodeManager implements ContainerManager {
     RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
     org.apache.hadoop.yarn.server.api.records.NodeStatus nodeStatus = recordFactory.newRecordInstance(org.apache.hadoop.yarn.server.api.records.NodeStatus.class);
     nodeStatus.setNodeId(nodeId);
-    nodeStatus.addAllContainers(containers);
+    nodeStatus.addAllNewContainers(containers);
     NodeHealthStatus nodeHealthStatus = 
       recordFactory.newRecordInstance(NodeHealthStatus.class);
     nodeHealthStatus.setIsNodeHealthy(true);

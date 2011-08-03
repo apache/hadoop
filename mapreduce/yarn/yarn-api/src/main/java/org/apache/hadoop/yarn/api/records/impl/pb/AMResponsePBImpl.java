@@ -23,7 +23,8 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
   
   Resource limit;
 
-  private List<Container> containerList = null;
+  private List<Container> newContainersList = null;
+  private List<Container> finishedContainersList = null;
 //  private boolean hasLocalContainerList = false;
   
   
@@ -44,8 +45,15 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
   }
   
   private void mergeLocalToBuilder() {
-    if (this.containerList != null) {
-      addLocalContainersToProto();
+    if (this.newContainersList != null) {
+      builder.clearNewContainers();
+      Iterable<ContainerProto> iterable = getProtoIterable(this.newContainersList);
+      builder.addAllNewContainers(iterable);
+    }
+    if (this.finishedContainersList != null) {
+      builder.clearFinishedContainers();
+      Iterable<ContainerProto> iterable = getProtoIterable(this.finishedContainersList);
+      builder.addAllFinishedContainers(iterable);
     }
     if (this.limit != null) {
       builder.setLimit(convertToProtoFormat(this.limit));
@@ -113,55 +121,53 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
   }
 
   @Override
-  public List<Container> getContainerList() {
-    initLocalContainerList();
-    return this.containerList;
+  public List<Container> getNewContainerList() {
+    initLocalNewContainerList();
+    return this.newContainersList;
   }
   
   @Override
-  public Container getContainer(int index) {
-    initLocalContainerList();
-    return this.containerList.get(index);
+  public Container getNewContainer(int index) {
+    initLocalNewContainerList();
+    return this.newContainersList.get(index);
   }
   @Override
-  public int getContainerCount() {
-    initLocalContainerList();
-    return this.containerList.size();
+  public int getNewContainerCount() {
+    initLocalNewContainerList();
+    return this.newContainersList.size();
   }
   
   //Once this is called. containerList will never be null - untill a getProto is called.
-  private void initLocalContainerList() {
-    if (this.containerList != null) {
+  private void initLocalNewContainerList() {
+    if (this.newContainersList != null) {
       return;
     }
     AMResponseProtoOrBuilder p = viaProto ? proto : builder;
-    List<ContainerProto> list = p.getContainersList();
-    containerList = new ArrayList<Container>();
+    List<ContainerProto> list = p.getNewContainersList();
+    newContainersList = new ArrayList<Container>();
 
     for (ContainerProto c : list) {
-      containerList.add(convertFromProtoFormat(c));
+      newContainersList.add(convertFromProtoFormat(c));
     }
   }
 
   @Override
-  public void addAllContainers(final List<Container> containers) {
+  public void addAllNewContainers(final List<Container> containers) {
     if (containers == null) 
       return;
-    initLocalContainerList();
-    containerList.addAll(containers);
+    initLocalNewContainerList();
+    newContainersList.addAll(containers);
   }
 
-  private void addLocalContainersToProto() {
+  private Iterable<ContainerProto> getProtoIterable(
+      final List<Container> newContainersList) {
     maybeInitBuilder();
-    builder.clearContainers();
-    if (containerList == null)
-      return;
-    Iterable<ContainerProto> iterable = new Iterable<ContainerProto>() {
+    return new Iterable<ContainerProto>() {
       @Override
       public Iterator<ContainerProto> iterator() {
         return new Iterator<ContainerProto>() {
 
-          Iterator<Container> iter = containerList.iterator();
+          Iterator<Container> iter = newContainersList.iterator();
 
           @Override
           public boolean hasNext() {
@@ -182,26 +188,84 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
 
       }
     };
-    builder.addAllContainers(iterable);
   }
   
   @Override
-  public void addContainer(Container containers) {
-    initLocalContainerList();
+  public void addNewContainer(Container containers) {
+    initLocalNewContainerList();
     if (containers == null) 
       return;
-    this.containerList.add(containers);
+    this.newContainersList.add(containers);
   }
   
   @Override
-  public void removeContainer(int index) {
-    initLocalContainerList();
-    this.containerList.remove(index);
+  public void removeNewContainer(int index) {
+    initLocalNewContainerList();
+    this.newContainersList.remove(index);
   }
   @Override
-  public void clearContainers() {
-    initLocalContainerList();
-    this.containerList.clear();
+  public void clearNewContainers() {
+    initLocalNewContainerList();
+    this.newContainersList.clear();
+  }
+
+  //// Finished containers
+  @Override
+  public List<Container> getFinishedContainerList() {
+    initLocalFinishedContainerList();
+    return this.finishedContainersList;
+  }
+  
+  @Override
+  public Container getFinishedContainer(int index) {
+    initLocalFinishedContainerList();
+    return this.finishedContainersList.get(index);
+  }
+  @Override
+  public int getFinishedContainerCount() {
+    initLocalFinishedContainerList();
+    return this.finishedContainersList.size();
+  }
+  
+  //Once this is called. containerList will never be null - untill a getProto is called.
+  private void initLocalFinishedContainerList() {
+    if (this.finishedContainersList != null) {
+      return;
+    }
+    AMResponseProtoOrBuilder p = viaProto ? proto : builder;
+    List<ContainerProto> list = p.getFinishedContainersList();
+    finishedContainersList = new ArrayList<Container>();
+
+    for (ContainerProto c : list) {
+      finishedContainersList.add(convertFromProtoFormat(c));
+    }
+  }
+
+  @Override
+  public void addAllFinishedContainers(final List<Container> containers) {
+    if (containers == null) 
+      return;
+    initLocalFinishedContainerList();
+    finishedContainersList.addAll(containers);
+  }
+  
+  @Override
+  public void addFinishedContainer(Container containers) {
+    initLocalFinishedContainerList();
+    if (containers == null) 
+      return;
+    this.finishedContainersList.add(containers);
+  }
+  
+  @Override
+  public void removeFinishedContainer(int index) {
+    initLocalFinishedContainerList();
+    this.finishedContainersList.remove(index);
+  }
+  @Override
+  public void clearFinishedContainers() {
+    initLocalFinishedContainerList();
+    this.finishedContainersList.clear();
   }
 
   private ContainerPBImpl convertFromProtoFormat(ContainerProto p) {

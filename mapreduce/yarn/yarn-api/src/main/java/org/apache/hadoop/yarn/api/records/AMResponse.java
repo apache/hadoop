@@ -24,18 +24,27 @@ public interface AMResponse {
   public boolean getReboot();
   public int getResponseId();
   
-  public List<Container> getContainerList();
-  public Container getContainer(int index);
-  public int getContainerCount();
+  public List<Container> getNewContainerList();
+  public Container getNewContainer(int index);
+  public int getNewContainerCount();
 
   public void setReboot(boolean reboot);
   public void setResponseId(int responseId);
   
-  public void addAllContainers(List<Container> containers);
-  public void addContainer(Container container);
-  public void removeContainer(int index);
-  public void clearContainers();
+  public void addAllNewContainers(List<Container> containers);
+  public void addNewContainer(Container container);
+  public void removeNewContainer(int index);
+  public void clearNewContainers();
   
   public void setAvailableResources(Resource limit);
   public Resource getAvailableResources();
+
+  public List<Container> getFinishedContainerList();
+  public Container getFinishedContainer(int index);
+  public int getFinishedContainerCount();
+  
+  public void addAllFinishedContainers(List<Container> containers);
+  public void addFinishedContainer(Container container);
+  public void removeFinishedContainer(int index);
+  public void clearFinishedContainers();
 }

@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -243,17 +244,10 @@ AMRMProtocol, EventHandler<ApplicationMasterServiceEvent> {
       List<Container> finishedContainers = appAttempt
           .pullJustFinishedContainers();
 
-      // Get the list of newly allocated containers.
-      List<Container> newlyAllocatedContainers = appAttempt
-          .pullNewlyAllocatedContainers();
-
-      // TODO: For now all containers are combined
-      List<Container> allContainers = new ArrayList<Container>(
-          finishedContainers);
-      allContainers.addAll(newlyAllocatedContainers);
-
       AMResponse response = recordFactory.newRecordInstance(AMResponse.class);
-      response.addAllContainers(allContainers);
+      response.addAllNewContainers(appAttempt.pullNewlyAllocatedContainers());
+      response.addAllFinishedContainers(appAttempt
+          .pullJustFinishedContainers());
       response.setResponseId(lastResponse.getResponseId() + 1);
       response.setAvailableResources(rScheduler
           .getResourceLimit(appAttemptId));

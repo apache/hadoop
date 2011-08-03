@@ -674,16 +674,17 @@ implements ResourceScheduler, CapacitySchedulerContext {
   @Override
   @Lock(Lock.NoLock.class)
   public void recover(RMState state) throws Exception {
-    applications.clear();
-    for (Map.Entry<ApplicationId, ApplicationInfo> entry : state.getStoredApplications().entrySet()) {
-      ApplicationId appId = entry.getKey();
-      ApplicationInfo appInfo = entry.getValue();
-      CSApp app = applications.get(appId);
-      app.allocate(appInfo.getContainers());
-      for (Container c: entry.getValue().getContainers()) {
-        Queue queue = queues.get(appInfo.getApplicationSubmissionContext().getQueue());
-        queue.recoverContainer(clusterResource, applications.get(appId), c);
-      }
-    }
+    // TODO: VINDOKVFIXME
+//    applications.clear();
+//    for (Map.Entry<ApplicationId, ApplicationInfo> entry : state.getStoredApplications().entrySet()) {
+//      ApplicationId appId = entry.getKey();
+//      ApplicationInfo appInfo = entry.getValue();
+//      CSApp app = applications.get(appId);
+//      app.allocate(appInfo.getContainers());
+//      for (Container c: entry.getValue().getContainers()) {
+//        Queue queue = queues.get(appInfo.getApplicationSubmissionContext().getQueue());
+//        queue.recoverContainer(clusterResource, applications.get(appId), c);
+//      }
+//    }
   }
 }

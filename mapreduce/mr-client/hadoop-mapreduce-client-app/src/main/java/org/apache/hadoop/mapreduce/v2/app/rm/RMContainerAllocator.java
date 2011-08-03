@@ -51,6 +51,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssigned
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
+import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -410,43 +411,43 @@ public class RMContainerAllocator extends RMContainerRequestor
   
   private List<Container> getResources() throws Exception {
     int headRoom = getAvailableResources() != null ? getAvailableResources().getMemory() : 0;//first time it would be null
-    List<Container> allContainers = makeRemoteRequest();
+    AMResponse response = makeRemoteRequest();
     int newHeadRoom = getAvailableResources() != null ? getAvailableResources().getMemory() : 0;
-    if (allContainers.size() > 0 || headRoom != newHeadRoom) {
+    List<Container> newContainers = response.getNewContainerList();
+    List<Container> finishedContainers = response.getFinishedContainerList();
+    if (newContainers.size() + finishedContainers.size() > 0 || headRoom != newHeadRoom) {
       //something changed
       recalculateReduceSchedule = true;
     }
     
     List<Container> allocatedContainers = new ArrayList<Container>();
-    for (Container cont : allContainers) {
-      if (cont.getState() != ContainerState.COMPLETE) {
+    for (Container cont : newContainers) {
         allocatedContainers.add(cont);
-        LOG.debug("Received Container :" + cont);
-      } else {
-        LOG.info("Received completed container " + cont);
-        TaskAttemptId attemptID = assignedRequests.get(cont.getId());
-        if (attemptID == null) {
-          LOG.error("Container complete event for unknown container id " +
-              cont.getId());
-        } else {
-          assignedRequests.remove(attemptID);
-          if (attemptID.getTaskId().getTaskType().equals(TaskType.MAP)) {
-            completedMaps++;
-          } else {
-            completedReduces++;
-          }
-          //send the container completed event to Task attempt
-          eventHandler.handle(new TaskAttemptEvent(attemptID,
-              TaskAttemptEventType.TA_CONTAINER_COMPLETED));
-          // Send the diagnostics
-          String diagnostics = cont.getContainerStatus().getDiagnostics();
-          eventHandler.handle(new TaskAttemptDiagnosticsUpdateEvent(
-              attemptID, diagnostics));
-        }
-      }
-      LOG.debug("Received Container :" + cont);
+        LOG.debug("Received new Container :" + cont);
     }
-    return allocatedContainers;
+    for (Container cont : finishedContainers) {
+      LOG.info("Received completed container " + cont);
+      TaskAttemptId attemptID = assignedRequests.get(cont.getId());
+      if (attemptID == null) {
+        LOG.error("Container complete event for unknown container id "
+            + cont.getId());
+      } else {
+        assignedRequests.remove(attemptID);
+        if (attemptID.getTaskId().getTaskType().equals(TaskType.MAP)) {
+          completedMaps++;
+        } else {
+          completedReduces++;
+        }
+        // send the container completed event to Task attempt
+        eventHandler.handle(new TaskAttemptEvent(attemptID,
+            TaskAttemptEventType.TA_CONTAINER_COMPLETED));
+        // Send the diagnostics
+        String diagnostics = cont.getContainerStatus().getDiagnostics();
+        eventHandler.handle(new TaskAttemptDiagnosticsUpdateEvent(attemptID,
+            diagnostics));
+      }
+    }
+    return newContainers;
   }
 
   private int getMemLimit() {

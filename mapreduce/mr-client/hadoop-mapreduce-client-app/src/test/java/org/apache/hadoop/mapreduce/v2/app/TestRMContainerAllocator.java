@@ -369,7 +369,7 @@ public class TestRMContainerAllocator {
         try {
           AMResponse response = recordFactory.newRecordInstance(AMResponse.class);
           Allocation allocation = resourceScheduler.allocate(status.getApplicationId(), ask, release);
-          response.addAllContainers(allocation.getContainers());
+          response.addAllNewContainers(allocation.getContainers());
           response.setAvailableResources(allocation.getResourceLimit());
           AllocateResponse allocateResponse = recordFactory.newRecordInstance(AllocateResponse.class);
           allocateResponse.setAMResponse(response);

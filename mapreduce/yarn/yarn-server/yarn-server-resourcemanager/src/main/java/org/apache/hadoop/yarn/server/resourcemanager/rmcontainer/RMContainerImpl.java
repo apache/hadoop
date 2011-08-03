@@ -200,7 +200,7 @@ public class RMContainerImpl implements RMContainer {
 
       // Inform AppAttempt
       container.eventHandler.handle(new RMAppAttemptContainerFinishedEvent(
-          container.appAttemptId, container.getContainerId()));
+          container.appAttemptId, container.container));
 
       // Inform Scheduler
       container.eventHandler.handle(new ContainerFinishedSchedulerEvent(

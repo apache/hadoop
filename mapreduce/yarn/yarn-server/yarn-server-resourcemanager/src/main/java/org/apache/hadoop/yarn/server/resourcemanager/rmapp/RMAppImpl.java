@@ -67,6 +67,8 @@ public class RMAppImpl implements RMApp {
   private int maxRetries;
   private RMAppAttempt currentAttempt;
 
+  private static final FinalTransition FINAL_TRANSITION = new FinalTransition();
+
   private static final StateMachineFactory<RMAppImpl,
                                            RMAppState,
                                            RMAppEventType,
@@ -100,7 +102,7 @@ public class RMAppImpl implements RMApp {
 
      // Transitions from RUNNING state
     .addTransition(RMAppState.RUNNING, RMAppState.FINISHED,
-        RMAppEventType.ATTEMPT_FINISHED, new FinalTransition())
+        RMAppEventType.ATTEMPT_FINISHED, FINAL_TRANSITION)
     .addTransition(RMAppState.RUNNING,
         EnumSet.of(RMAppState.RESTARTING, RMAppState.FAILED),
         RMAppEventType.ATTEMPT_FAILED,
@@ -321,21 +323,6 @@ public class RMAppImpl implements RMApp {
   }
 
   @Override
-  public Set<NodeId> getRanNodes() {
-    this.readLock.lock();
-
-    try {
-      Set<NodeId> ranNodes = new HashSet<NodeId>();
-      for (RMAppAttempt attempt : attempts.values()) {
-        ranNodes.addAll(attempt.getRanNodes());
-      }
-      return ranNodes;
-    } finally {
-      this.readLock.unlock();
-    }
-  }
-
-  @Override
   public void handle(RMAppEvent event) {
 
     this.writeLock.lock();
@@ -401,18 +388,26 @@ public class RMAppImpl implements RMApp {
   }
 
   private static class FinalTransition extends RMAppTransition {
+
+    private Set<NodeId> getNodesOnWhichAttemptRan(RMAppImpl app) {
+      Set<NodeId> nodes = new HashSet<NodeId>();
+      for (RMAppAttempt attempt : app.attempts.values()) {
+        nodes.addAll(attempt.getRanNodes());
+      }
+      return nodes;
+    }
+
     public void transition(RMAppImpl app, RMAppEvent event) {
-      Set<NodeId> ranNodes = app.getRanNodes();
-      for (NodeId nodeId : ranNodes) {
+      Set<NodeId> nodes = getNodesOnWhichAttemptRan(app);
+      for (NodeId nodeId : nodes) {
         app.dispatcher.getEventHandler().handle(
             new RMNodeCleanAppEvent(nodeId, app.applicationId));
       }
     };
   }
 
-  private static final class AttemptFailedTransition extends FinalTransition 
-    implements
-      MultipleArcTransition<RMAppImpl, RMAppEvent, RMAppState>  {
+  private static final class AttemptFailedTransition implements
+      MultipleArcTransition<RMAppImpl, RMAppEvent, RMAppState> {
 
     private final RMAppState initialState;
 
@@ -427,6 +422,8 @@ public class RMAppImpl implements RMApp {
         app.diagnostics.append("Application " + app.getApplicationId()
             + " failed " + app.maxRetries
             + " times. Failing the application.");
+        // Inform the node for app-finish
+        FINAL_TRANSITION.transition(app, event);
         return RMAppState.FAILED;
       }
 

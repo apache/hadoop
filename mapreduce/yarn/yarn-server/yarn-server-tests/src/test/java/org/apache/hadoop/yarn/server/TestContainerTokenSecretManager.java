@@ -239,8 +239,8 @@ public class TestContainerTokenSecretManager {
     allocateRequest.setApplicationStatus(status);
     allocateRequest.addAllAsks(ask);
     allocateRequest.addAllReleases(release);
-    List<Container> allocatedContainers =
-        scheduler.allocate(allocateRequest).getAMResponse().getContainerList();
+    List<Container> allocatedContainers = scheduler.allocate(allocateRequest)
+        .getAMResponse().getNewContainerList();
 
     waitCounter = 0;
     while ((allocatedContainers == null || allocatedContainers.size() == 0)
@@ -251,7 +251,7 @@ public class TestContainerTokenSecretManager {
       allocateRequest.setApplicationStatus(status);
       allocatedContainers =
           scheduler.allocate(allocateRequest).getAMResponse()
-              .getContainerList();
+              .getNewContainerList();
     }
 
     Assert.assertNotNull("Container is not allocted!", allocatedContainers);

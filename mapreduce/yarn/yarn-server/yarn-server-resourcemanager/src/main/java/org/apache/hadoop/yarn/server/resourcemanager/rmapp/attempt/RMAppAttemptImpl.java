@@ -87,8 +87,8 @@ public class RMAppAttemptImpl implements RMAppAttempt {
     new HashSet<NodeId>();
   private final List<Container> newlyAllocatedContainers = 
     new ArrayList<Container>();
-  private final List<ContainerId> justFinishedContainers = 
-    new ArrayList<ContainerId>();
+  private final List<Container> justFinishedContainers = 
+    new ArrayList<Container>();
   private Container masterContainer;
 
   private float progress = 0;
@@ -325,12 +325,11 @@ public class RMAppAttemptImpl implements RMAppAttempt {
     this.writeLock.lock();
 
     try {
-      return new ArrayList<Container>();  // TODO: Should just be ContainerId 
-//      List<Container> returnList = new ArrayList<Container>(
-//          this.justFinishedContainers.size());
-//      returnList.addAll(this.justFinishedContainers);
-//      this.justFinishedContainers.clear();
-//      return returnList;
+      List<Container> returnList = new ArrayList<Container>(
+          this.justFinishedContainers.size());
+      returnList.addAll(this.justFinishedContainers);
+      this.justFinishedContainers.clear();
+      return returnList;
     } finally {
       this.writeLock.unlock();
     }
@@ -709,12 +708,11 @@ public class RMAppAttemptImpl implements RMAppAttempt {
 
       RMAppAttemptContainerFinishedEvent containerFinishedEvent
         = (RMAppAttemptContainerFinishedEvent) event;
-      ContainerId containerId = containerFinishedEvent.getContainerId();
+      Container container = containerFinishedEvent.getContainer();
 
       // Is this container the AmContainer? If the finished container is same as
       // the AMContainer, AppAttempt fails
-      if (appAttempt.masterContainer.getId().equals(
-          containerId)) {
+      if (appAttempt.masterContainer.getId().equals(container.getId())) {
         new BaseFinalTransition(RMAppAttemptState.FAILED).transition(
             appAttempt, containerFinishedEvent);
         return RMAppAttemptState.FAILED;
@@ -723,10 +721,10 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       // Normal container.
 
       // Remove it from allContainers list.
-      appAttempt.liveContainers.remove(containerId);
+      appAttempt.liveContainers.remove(container.getId());
 
       // Put it in completedcontainers list
-      appAttempt.justFinishedContainers.add(containerId);
+      appAttempt.justFinishedContainers.add(container);
       return RMAppAttemptState.RUNNING;
     }
   }

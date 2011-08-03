@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -111,7 +112,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
 
   protected abstract void heartbeat() throws Exception;
 
-  protected List<Container> makeRemoteRequest() throws YarnRemoteException {
+  protected AMResponse makeRemoteRequest() throws YarnRemoteException {
     AllocateRequest allocateRequest = recordFactory
         .newRecordInstance(AllocateRequest.class);
     allocateRequest.setApplicationAttemptId(applicationAttemptId);
@@ -121,17 +122,17 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     AllocateResponse allocateResponse = scheduler.allocate(allocateRequest);
     AMResponse response = allocateResponse.getAMResponse();
     lastResponseID = response.getResponseId();
-    List<Container> allContainers = response.getContainerList();
     availableResources = response.getAvailableResources();
 
     LOG.info("getResources() for " + applicationId + ":" + " ask="
-        + ask.size() + " release= " + release.size() + " recieved="
-        + allContainers.size()
+        + ask.size() + " release= " + release.size() + " newContainers="
+        + response.getNewContainerCount() + " finishedContainers="
+        + response.getFinishedContainerCount()
         + " resourcelimit=" + availableResources);
 
     ask.clear();
     release.clear();
-    return allContainers;
+    return response;
   }
 
   protected void containerFailedOnHost(String hostName) {

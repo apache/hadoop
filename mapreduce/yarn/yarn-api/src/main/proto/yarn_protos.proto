@@ -155,8 +155,9 @@ message ResourceRequestProto {
 message AMResponseProto {
   optional bool reboot = 1;
   optional int32 response_id = 2;
-  repeated ContainerProto containers = 3;
-  optional ResourceProto limit = 4;
+  repeated ContainerProto new_containers = 3;
+  repeated ContainerProto finished_containers = 4;
+  optional ResourceProto limit = 5;
 }
 
 
