@@ -71,6 +71,10 @@ public class RMContainerImpl implements RMContainer {
     .addTransition(RMContainerState.EXPIRED, RMContainerState.EXPIRED,
         EnumSet.of(RMContainerEventType.RELEASED, RMContainerEventType.KILL))
 
+    // Transitions from RELEASED state
+    .addTransition(RMContainerState.RELEASED, RMContainerState.RELEASED,
+        EnumSet.of(RMContainerEventType.RELEASED, RMContainerEventType.KILL))
+
     // Transitions from KILLED state
     .addTransition(RMContainerState.KILLED, RMContainerState.KILLED,
         EnumSet.of(RMContainerEventType.RELEASED, RMContainerEventType.KILL))
