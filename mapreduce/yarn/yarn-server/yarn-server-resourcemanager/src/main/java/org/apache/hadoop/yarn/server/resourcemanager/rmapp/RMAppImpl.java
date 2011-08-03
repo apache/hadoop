@@ -171,7 +171,7 @@ public class RMAppImpl implements RMApp {
 
   @Override
   public ApplicationId getApplicationId() {
-    return this.getApplicationId();
+    return this.applicationId;
   }
 
   @Override

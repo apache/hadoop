@@ -351,6 +351,8 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       for (Container cont : newlyAllocatedContainers) {
         ranNodes.add(cont.getNodeId());//add to the nodes set when these containers
         //are pulled by AM
+        eventHandler.handle(
+            new RMContainerEvent(cont.getId(), RMContainerEventType.ACQUIRED));
       }
       this.newlyAllocatedContainers.clear();
       return returnList;

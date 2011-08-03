@@ -8,7 +8,7 @@ public class RMNodeCleanContainerEvent extends RMNodeEvent {
   private ContainerId contId;
 
   public RMNodeCleanContainerEvent(NodeId nodeId, ContainerId contId) {
-    super(nodeId, RMNodeEventType.CLEANUP_APP);
+    super(nodeId, RMNodeEventType.CLEANUP_CONTAINER);
     this.contId = contId;
   }
 

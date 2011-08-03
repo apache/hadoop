@@ -5,9 +5,11 @@ import java.util.List;
 
 import junit.framework.Assert;
 
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -60,13 +62,25 @@ public class TestApplicationCleanup {
     am.unregisterAppAttempt();
     am.waitForState(RMAppAttemptState.FINISHED);
 
-    int size = nm1.nodeHeartbeat(true).getApplicationsToCleanupList().size();
-    while(size < 1) {
+    int cleanedConts = 0;
+    int cleanedApps = 0;
+    List<ContainerId> contsToClean = null;
+    List<ApplicationId> apps = null;
+    
+    //currently only containers are cleaned via this
+    //AM container is cleaned via container launcher
+    while (cleanedConts < 2 || cleanedApps < 1) {
+      HeartbeatResponse resp = nm1.nodeHeartbeat(true);
+      contsToClean = resp.getContainersToCleanupList();
+      apps = resp.getApplicationsToCleanupList();
+      Log.info("Waiting to get cleanup events.." + cleanedConts);
+      cleanedConts += contsToClean.size();
+      cleanedApps += apps.size();
       Thread.sleep(1000);
-      Log.info("Waiting to get application cleanup..");
-      size = nm1.nodeHeartbeat(true).getApplicationsToCleanupList().size();
     }
-    Assert.assertEquals(1, size);
+    
+    Assert.assertEquals(1, apps.size());
+    Assert.assertEquals(app.getApplicationId(), apps.get(0));
 
     rm.stop();
   }
