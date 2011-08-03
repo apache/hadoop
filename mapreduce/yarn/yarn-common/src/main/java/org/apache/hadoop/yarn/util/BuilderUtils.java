@@ -133,6 +133,15 @@ public class BuilderUtils {
   }
 
   public static ContainerId newContainerId(RecordFactory recordFactory,
+      ApplicationId appId,
+      int containerId) {
+    ContainerId id = recordFactory.newRecordInstance(ContainerId.class);
+    id.setAppId(appId);
+    id.setId(containerId);
+    return id;
+  }
+
+  public static ContainerId newContainerId(RecordFactory recordFactory,
       ApplicationAttemptId appAttemptId,
       int containerId) {
     ContainerId id = recordFactory.newRecordInstance(ContainerId.class);

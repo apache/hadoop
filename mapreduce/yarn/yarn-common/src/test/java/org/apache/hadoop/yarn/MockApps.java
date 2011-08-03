@@ -25,8 +25,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
-import org.apache.hadoop.yarn.api.records.ApplicationStatus;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.util.Records;
 
 import com.google.common.collect.Iterators;
@@ -76,7 +74,6 @@ public class MockApps {
 
   public static ApplicationReport newApp(int i) {
     final ApplicationId id = newAppID(i);
-    final ApplicationStatus status = newAppStatus();
     final ApplicationState state = newAppState();
     final String user = newUserName();
     final String name = newAppName();
@@ -173,12 +170,6 @@ public class MockApps {
     id.setApplicationId(appId);
     id.setAttemptId(i);
     return id;
-  }
-
-  public static ApplicationStatus newAppStatus() {
-    ApplicationStatus status = Records.newRecord(ApplicationStatus.class);
-    status.setProgress((float)Math.random());
-    return status;
   }
 
   public static ApplicationState newAppState() {

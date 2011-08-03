@@ -48,7 +48,7 @@ public class RMConfig {
   public static final String CONTAINER_LIVELINESS_MONITORING_INTERVAL
     = YarnConfiguration.RM_PREFIX
       + "amliveliness-monitor.monitoring-interval";
-  public static final int DEFAULT_CONTAINER_LIVELINESS_MONITORING_INTERVAL = 1000;
+  public static final int DEFAULT_CONTAINER_LIVELINESS_MONITORING_INTERVAL = 600000;
   public static final String NMLIVELINESS_MONITORING_INTERVAL =
       YarnConfiguration.RM_PREFIX
           + "nmliveliness-monitor.monitoring-interval";

@@ -20,6 +20,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
@@ -54,6 +55,7 @@ public class RMAppImpl implements RMApp {
   private final ApplicationStore appStore;
   private final Dispatcher dispatcher;
   private final YarnScheduler scheduler;
+  private final ApplicationMasterService masterService;
   private final StringBuilder diagnostics = new StringBuilder();
   private final int maxRetries;
   private final ReadLock readLock;
@@ -144,7 +146,7 @@ public class RMAppImpl implements RMApp {
       Configuration config, String name, String user, String queue,
       ApplicationSubmissionContext submissionContext, String clientTokenStr,
       ApplicationStore appStore, AMLivelinessMonitor amLivelinessMonitor,
-      YarnScheduler scheduler) {
+      YarnScheduler scheduler, ApplicationMasterService masterService) {
 
     this.applicationId = applicationId;
     this.name = name;
@@ -158,6 +160,7 @@ public class RMAppImpl implements RMApp {
     this.appStore = appStore;
     this.amLivelinessMonitor = amLivelinessMonitor;
     this.scheduler = scheduler;
+    this.masterService = masterService;
 
     this.maxRetries = conf.getInt(RMConfig.AM_MAX_RETRIES,
         RMConfig.DEFAULT_AM_MAX_RETRIES);
@@ -373,7 +376,8 @@ public class RMAppImpl implements RMApp {
       appAttemptId.setAttemptId(app.attempts.size() + 1);
 
       RMAppAttempt attempt = new RMAppAttemptImpl(appAttemptId,
-          app.clientTokenStr, app.rmContext, app.scheduler, app.submissionContext);
+          app.clientTokenStr, app.rmContext, app.scheduler,
+          app.masterService, app.submissionContext);
       app.attempts.put(appAttemptId, attempt);
       app.currentAttempt = attempt;
       app.dispatcher.getEventHandler().handle(
@@ -443,7 +447,7 @@ public class RMAppImpl implements RMApp {
       // Create a new attempt.
       RMAppAttempt attempt = new RMAppAttemptImpl(appAttemptId,
           app.clientTokenStr, app.rmContext, app.scheduler,
-          app.submissionContext);
+          app.masterService, app.submissionContext);
       app.attempts.put(appAttemptId, attempt);
       app.currentAttempt = attempt;
       app.dispatcher.getEventHandler().handle(

@@ -15,7 +15,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
-import org.apache.hadoop.yarn.server.resourcemanager.ams.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -111,7 +110,7 @@ public class MockRM extends ResourceManager {
   @Override
   protected ClientRMService createClientRMService() {
     return new ClientRMService(getRMContext(),
-        clientToAMSecretManager, getResourceScheduler()) {
+        clientToAMSecretManager, getResourceScheduler(), masterService) {
       @Override
       public void start() {
         //override to not start rpc handler

@@ -419,6 +419,7 @@ public abstract class TaskAttemptImpl implements
     stateMachine;
 
   private ContainerId containerID;
+  private String nodeHostName;
   private String containerMgrAddress;
   private String nodeHttpAddress;
   private WrappedJvmID jvmID;
@@ -950,7 +951,7 @@ public abstract class TaskAttemptImpl implements
         TypeConverter.fromYarn(taskAttempt.attemptId),
         TypeConverter.fromYarn(taskAttempt.attemptId.getTaskId().getTaskType()),
         attemptState.toString(), taskAttempt.finishTime,
-        taskAttempt.containerMgrAddress == null ? "UNKNOWN" : taskAttempt.containerMgrAddress,
+        taskAttempt.nodeHostName == null ? "UNKNOWN" : taskAttempt.nodeHostName,
         taskAttempt.reportedStatus.diagnosticInfo.toString(),
         taskAttempt.getProgressSplitBlock().burst());
     return tauce;
@@ -1049,6 +1050,7 @@ public abstract class TaskAttemptImpl implements
       TaskAttemptContainerAssignedEvent cEvent = 
         (TaskAttemptContainerAssignedEvent) event;
       taskAttempt.containerID = cEvent.getContainer().getId();
+      taskAttempt.nodeHostName = cEvent.getContainer().getNodeId().getHost();
       taskAttempt.containerMgrAddress = cEvent.getContainer().getNodeId()
           .toString();
       taskAttempt.nodeHttpAddress = cEvent.getContainer().getNodeHttpAddress();
@@ -1270,7 +1272,7 @@ public abstract class TaskAttemptImpl implements
          TypeConverter.fromYarn(attemptId.getTaskId().getTaskType()),
          state.toString(),
          this.reportedStatus.mapFinishTime,
-         finishTime, this.containerMgrAddress == null ? "UNKNOWN" : this.containerMgrAddress,
+         finishTime, this.nodeHostName == null ? "UNKNOWN" : this.nodeHostName,
          this.reportedStatus.stateString,
          TypeConverter.fromYarn(getCounters()),
          getProgressSplitBlock().burst());

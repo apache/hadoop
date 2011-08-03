@@ -41,7 +41,6 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
-import org.apache.hadoop.yarn.server.resourcemanager.ams.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
@@ -172,11 +171,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
       throw new RuntimeException("Failed to initialize scheduler", ioe);
     }
 
-    clientRM = createClientRMService();
-    addService(clientRM);
-    
     masterService = createApplicationMasterService();
     addService(masterService) ;
+
+    clientRM = createClientRMService();
+    addService(clientRM);
     
     adminService = createAdminService();
     addService(adminService);
@@ -216,6 +215,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return new AMLivelinessMonitor(this.rmDispatcher);
   }
 
+  @Private
   public static final class ApplicationEventDispatcher implements
       EventHandler<RMAppEvent> {
 
@@ -240,6 +240,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
   }
 
+  @Private
   public static final class ApplicationAttemptEventDispatcher implements
       EventHandler<RMAppAttemptEvent> {
 
@@ -268,7 +269,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
   }
 
-  private static final class NodeEventDispatcher implements
+  @Private
+  public static final class NodeEventDispatcher implements
       EventHandler<RMNodeEvent> {
 
     private final RMContext rmContext;
@@ -376,7 +378,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   protected ClientRMService createClientRMService() {
     return new ClientRMService(this.rmContext, this.clientToAMSecretManager,
-        scheduler);
+        scheduler, masterService);
   }
 
   protected ApplicationMasterService createApplicationMasterService() {

@@ -24,11 +24,10 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.ams.ApplicationMasterServiceEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.ams.ApplicationMasterServiceEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
@@ -71,6 +70,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   private final RMContext rmContext;
   private final EventHandler eventHandler;
   private final YarnScheduler scheduler;
+  private final ApplicationMasterService masterService;
 
   private final ReadLock readLock;
   private final WriteLock writeLock;
@@ -224,6 +224,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
 
   public RMAppAttemptImpl(ApplicationAttemptId appAttemptId,
       String clientToken, RMContext rmContext, YarnScheduler scheduler,
+      ApplicationMasterService masterService,
       ApplicationSubmissionContext submissionContext) {
 
     this.applicationAttemptId = appAttemptId;
@@ -231,6 +232,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
     this.eventHandler = rmContext.getDispatcher().getEventHandler();
     this.submissionContext = submissionContext;
     this.scheduler = scheduler;
+    this.masterService = masterService;
     this.clientToken = clientToken;
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -425,9 +427,8 @@ public class RMAppAttemptImpl implements RMAppAttempt {
         RMAppAttemptEvent event) {
 
       // Register with the ApplicationMasterService
-      appAttempt.eventHandler.handle(new ApplicationMasterServiceEvent(
-          appAttempt.applicationAttemptId,
-          ApplicationMasterServiceEventType.REGISTER));
+      appAttempt.masterService
+          .registerAppAttempt(appAttempt.applicationAttemptId);
 
       // Add the application to the scheduler
       appAttempt.eventHandler.handle(
@@ -482,6 +483,10 @@ public class RMAppAttemptImpl implements RMAppAttempt {
         = (RMAppAttemptContainerAllocatedEvent) event;
       appAttempt.masterContainer = allocatedEvent.getContainer();
 
+      // Make the AM container as acquired.
+      appAttempt.eventHandler.handle(new RMContainerEvent(allocatedEvent
+          .getContainer().getId(), RMContainerEventType.ACQUIRED));
+
       // Send event to launch the AM Container
       appAttempt.eventHandler.handle(new AMLauncherEvent(
           AMLauncherEventType.LAUNCH, appAttempt));
@@ -500,11 +505,9 @@ public class RMAppAttemptImpl implements RMAppAttempt {
     public void transition(RMAppAttemptImpl appAttempt,
         RMAppAttemptEvent event) {
 
-      // Tell the AMS
-      // Register with the ApplicationMasterService
-      appAttempt.eventHandler.handle(new ApplicationMasterServiceEvent(
-          appAttempt.applicationAttemptId,
-          ApplicationMasterServiceEventType.UNREGISTER));
+      // Tell the AMS. Unregister from the ApplicationMasterService
+      appAttempt.masterService
+          .unregisterAttempt(appAttempt.applicationAttemptId);
 
       // Tell the application and the scheduler
       RMAppEventType eventToApp = null;

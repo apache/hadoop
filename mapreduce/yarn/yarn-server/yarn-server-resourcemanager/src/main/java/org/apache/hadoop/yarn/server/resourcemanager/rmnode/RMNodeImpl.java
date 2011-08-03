@@ -46,7 +46,6 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
@@ -387,7 +386,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
           // Process running containers
           ContainerId containerId = cont.getId();
-          if (cont.getContainerStatus().getState() == ContainerState.RUNNING) {
+          if (cont.getContainerStatus().getState() == ContainerState.RUNNING
+              || cont.getContainerStatus().getState() == ContainerState.INITIALIZING) {
             if (!rmNode.launchedContainers.containsKey(containerId)) {
               rmNode.launchedContainers.put(containerId, cont);
               rmNode.context.getDispatcher().getEventHandler().handle(

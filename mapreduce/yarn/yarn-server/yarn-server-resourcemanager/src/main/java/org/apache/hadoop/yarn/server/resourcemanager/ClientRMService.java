@@ -97,6 +97,7 @@ public class ClientRMService extends AbstractService implements
   final private AtomicInteger applicationCounter = new AtomicInteger(0);
   final private YarnScheduler scheduler;
   final private RMContext rmContext;
+  private final ApplicationMasterService masterService;
   private final ClientToAMSecretManager clientToAMSecretManager;
   private final AMLivelinessMonitor amLivelinessMonitor;
 
@@ -110,10 +111,11 @@ public class ClientRMService extends AbstractService implements
   
   public ClientRMService(RMContext rmContext,
       ClientToAMSecretManager clientToAMSecretManager,
-      YarnScheduler scheduler) {
+      YarnScheduler scheduler, ApplicationMasterService masterService) {
     super(ClientRMService.class.getName());
     this.scheduler = scheduler;
     this.rmContext = rmContext;
+    this.masterService = masterService;
     this.amLivelinessMonitor = rmContext.getAMLivelinessMonitor();
     this.clientToAMSecretManager = clientToAMSecretManager;
   }
@@ -228,7 +230,8 @@ public class ClientRMService extends AbstractService implements
       RMApp application = new RMAppImpl(applicationId, rmContext,
           getConfig(), submissionContext.getApplicationName(), user,
           submissionContext.getQueue(), submissionContext, clientTokenStr,
-          appStore, this.amLivelinessMonitor, this.scheduler);
+          appStore, this.amLivelinessMonitor, this.scheduler,
+          this.masterService);
       if (rmContext.getRMApps().putIfAbsent(applicationId, application) != null) {
         throw new IOException("Application with id " + applicationId
             + " is already present! Cannot add a duplicate!");

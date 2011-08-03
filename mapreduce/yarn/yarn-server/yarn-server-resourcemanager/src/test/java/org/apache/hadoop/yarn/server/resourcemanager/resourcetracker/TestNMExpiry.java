@@ -48,7 +48,7 @@ import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.junit.Before;
 import org.junit.Test;
 
-public class TestNMExpiry extends TestCase {
+public class TestNMExpiry {
 //  private static final Log LOG = LogFactory.getLog(TestNMExpiry.class);
 //  private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 //  

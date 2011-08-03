@@ -96,8 +96,9 @@ public class NodeManager implements ContainerManager {
     request.setHttpPort(httpPort);
     request.setNodeId(this.nodeId);
     request.setResource(capability);
-    RegistrationResponse response = resourceTrackerService
-        .registerNodeManager(request).getRegistrationResponse();
+    request.setNodeId(this.nodeId);
+    resourceTrackerService.registerNodeManager(request)
+        .getRegistrationResponse();
     this.schedulerNode = new SchedulerNode(rmContext.getRMNodes().get(
         this.nodeId));
    

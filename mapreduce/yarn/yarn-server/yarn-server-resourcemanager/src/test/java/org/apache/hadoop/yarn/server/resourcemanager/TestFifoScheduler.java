@@ -55,7 +55,7 @@ public class TestFifoScheduler {
   public void tearDown() throws Exception {
   }
   
-  @Test
+//  @Test
   public void test() throws Exception {
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);

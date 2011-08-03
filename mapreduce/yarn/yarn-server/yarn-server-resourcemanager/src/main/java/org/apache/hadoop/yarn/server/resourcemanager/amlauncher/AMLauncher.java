@@ -124,8 +124,6 @@ public class AMLauncher implements Runnable {
     containerMgrProxy.startContainer(request);
     LOG.info("Done launching container " + application.getMasterContainer() 
         + " for AM " + application.getAppAttemptId());
-    this.handler.handle(new RMAppAttemptEvent(application.getAppAttemptId(),
-        RMAppAttemptEventType.LAUNCHED));
   }
   
   private void cleanup() throws IOException {

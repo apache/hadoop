@@ -35,9 +35,11 @@ import org.apache.hadoop.mapreduce.v2.app.rm.RMCommunicator;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * Allocates containers locally. Doesn't allocate a real container;
@@ -74,7 +76,10 @@ public class LocalContainerAllocator extends RMCommunicator
       
       Container container = recordFactory.newRecordInstance(Container.class);
       container.setId(cID);
-      container.setNodeId(null);
+      NodeId nodeId = Records.newRecord(NodeId.class);
+      nodeId.setHost("localhost");
+      nodeId.setPort(1234);
+      container.setNodeId(nodeId);
       container.setContainerToken(null);
       container.setNodeHttpAddress("localhost:9999");
       // send the container-assigned event to task attempt

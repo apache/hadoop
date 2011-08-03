@@ -29,13 +29,19 @@ import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
+import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.ams.ApplicationMasterService;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
 import org.junit.Before;
@@ -47,6 +53,7 @@ public class TestAMRMRPCResponseId {
   private static final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
 
+  private MockRM rm;
   ApplicationMasterService amService = null;
   private ClientRMService clientService;
   
@@ -54,9 +61,7 @@ public class TestAMRMRPCResponseId {
 
   @Before
   public void setUp() {
-    Configuration conf = new Configuration();
-    ResourceManager rm = new MockRM();
-    rm.init(conf);
+    this.rm = new MockRM();
     rm.start();
     this.clientService = rm.getClientRMService();
     amService = rm.getApplicationMasterService();
@@ -64,34 +69,29 @@ public class TestAMRMRPCResponseId {
   
   @After
   public void tearDown() {
-    
+    if (rm != null) {
+      this.rm.stop();
+    }
   }
 
   @Test
   public void testARRMResponseId() throws Exception {
-    ApplicationId applicationID = clientService.getNewApplicationId();
-    ApplicationSubmissionContext context = recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
-    context.setApplicationId(applicationID);
-    SubmitApplicationRequest submitRequest = recordFactory
-        .newRecordInstance(SubmitApplicationRequest.class);
-    submitRequest.setApplicationSubmissionContext(context);
-    clientService.submitApplication(submitRequest);
-    // Wait till app is launched
-    GetApplicationReportRequest reportRequest = Records.newRecord(GetApplicationReportRequest.class);
-    reportRequest.setApplicationId(applicationID);
-    int waitCount = 0;
-    while ((clientService.getApplicationReport(reportRequest).getApplicationReport()
-        .getState() != ApplicationState.RUNNING) || waitCount++ != 20) {
-      Log.info("Waiting for application to become running.. Current state is "
-          + clientService.getApplicationReport(reportRequest)
-              .getApplicationReport().getState());
-      Thread.sleep(1000);
-    }
 
-    RegisterApplicationMasterRequest request = recordFactory.newRecordInstance(RegisterApplicationMasterRequest.class);
-    amService.registerApplicationMaster(request);
+    MockNM nm1 = rm.registerNode("h1:1234", 5000);
+
+    RMApp app = rm.submitApp(2000);
+
+    // Trigger the scheduling so the AM gets 'launched'
+    nm1.nodeHeartbeat(true);
+
+    RMAppAttempt attempt = app.getCurrentAppAttempt();
+    MockAM am = rm.sendAMLaunched(attempt.getAppAttemptId());
+
+    am.registerAppAttempt();
     
     AllocateRequest allocateRequest = recordFactory.newRecordInstance(AllocateRequest.class);
+    allocateRequest.setApplicationAttemptId(attempt.getAppAttemptId());
+
     AMResponse response = amService.allocate(allocateRequest).getAMResponse();
     Assert.assertEquals(1, response.getResponseId());
     Assert.assertFalse(response.getReboot());

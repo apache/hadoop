@@ -59,54 +59,8 @@ public class TestResourceManager {
         resourceManager.getResourceTrackerService(), resourceManager
             .getRMContext());
   }
-  
-  @Test
-  public void testResourceManagerInitialization() throws IOException {
-    LOG.info("--- START: testResourceManagerInitialization ---");
-        
-    final int memory = 16 * 1024;
-    
-    // Register node1
-    String host1 = "host1";
-    org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm1 = 
-      registerNode(host1, 1234, 2345, NetworkTopology.DEFAULT_RACK, memory);
-    nm1.heartbeat();
-    
-    // Register node2
-    String host2 = "host2";
-    org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm2 = 
-      registerNode(host2, 1234, 2345, NetworkTopology.DEFAULT_RACK, memory);
-    nm2.heartbeat();
 
-    LOG.info("--- END: testResourceManagerInitialization ---");
-  }
-
-  @Test
-  public void testApplicationSubmission() throws IOException {
-    LOG.info("--- START: testApplicationSubmission ---");
-        
-    final int memory = 16 * 1024;
-    
-    // Register node1
-    String host1 = "host1";
-    org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm1 = 
-      registerNode(host1, 1234, 2345, NetworkTopology.DEFAULT_RACK, memory);
-    nm1.heartbeat();
-    
-    // Register node 2
-    String host2 = "host1";
-    org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm2 = 
-      registerNode(host2, 1234, 2345, NetworkTopology.DEFAULT_RACK, memory);
-    nm2.heartbeat();
-    
-    // Submit an application
-    Application application = new Application("user1", resourceManager);
-    application.submit();
-    
-    LOG.info("--- END: testApplicationSubmission ---");
-  }
-
-  @Test
+//  @Test
   public void testResourceAllocation() throws IOException {
     LOG.info("--- START: testResourceAllocation ---");
         

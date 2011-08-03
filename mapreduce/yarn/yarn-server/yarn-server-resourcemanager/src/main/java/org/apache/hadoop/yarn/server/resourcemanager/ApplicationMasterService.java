@@ -16,10 +16,9 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.resourcemanager.ams;
+package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -41,12 +40,9 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterReque
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -54,8 +50,6 @@ import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.security.SchedulerSecurityInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -68,8 +62,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.service.AbstractService;
 
 @Private
-public class ApplicationMasterService extends AbstractService implements 
-AMRMProtocol, EventHandler<ApplicationMasterServiceEvent> {
+public class ApplicationMasterService extends AbstractService implements
+    AMRMProtocol {
   private static final Log LOG = LogFactory.getLog(ApplicationMasterService.class);
   private final AMLivelinessMonitor amLivelinessMonitor;
   private YarnScheduler rScheduler;
@@ -99,8 +93,6 @@ AMRMProtocol, EventHandler<ApplicationMasterServiceEvent> {
       conf.get(YarnConfiguration.SCHEDULER_ADDRESS,
           YarnConfiguration.DEFAULT_SCHEDULER_BIND_ADDRESS);
     masterServiceAddress =  NetUtils.createSocketAddr(bindAddress);
-    this.rmContext.getDispatcher().register(
-        ApplicationMasterServiceEventType.class, this);
     super.init(conf);
   }
 
@@ -225,8 +217,7 @@ AMRMProtocol, EventHandler<ApplicationMasterServiceEvent> {
       List<Container> release = request.getReleaseList();
 
       // Send new requests to appAttempt.
-      if (!ask.isEmpty()) {
-        this.rScheduler.allocate(appAttemptId, ask);
+      if (!ask.isEmpty()) {        this.rScheduler.allocate(appAttemptId, ask);
       }
 
       // Send events to the containers being released.
@@ -252,34 +243,26 @@ AMRMProtocol, EventHandler<ApplicationMasterServiceEvent> {
     }
   }
 
+  public void registerAppAttempt(ApplicationAttemptId attemptId) {
+    AMResponse response = recordFactory.newRecordInstance(AMResponse.class);
+    response.setResponseId(0);
+    responseMap.put(attemptId, response);
+  }
+
+  public void unregisterAttempt(ApplicationAttemptId attemptId) {
+    AMResponse lastResponse = responseMap.get(attemptId);
+    if (lastResponse != null) {
+      synchronized (lastResponse) {
+        responseMap.remove(attemptId);
+      }
+    }
+  }
+
   @Override
   public void stop() {
     if (this.server != null) {
       this.server.close();
     }
     super.stop();
-  }
-
-  @Override
-  public void handle(ApplicationMasterServiceEvent amsEvent) {
-    ApplicationMasterServiceEventType eventType = amsEvent.getType();
-    ApplicationAttemptId attemptId = amsEvent.getAppAttemptId();
-    switch (eventType) {
-    case REGISTER:
-      AMResponse response = recordFactory.newRecordInstance(AMResponse.class);
-      response.setResponseId(0);
-      responseMap.put(attemptId, response);
-      break;
-    case UNREGISTER:
-      AMResponse lastResponse = responseMap.get(attemptId);
-      if (lastResponse != null) {
-        synchronized (lastResponse) {
-          responseMap.remove(attemptId);
-        }
-      }
-      break;
-    default:
-      LOG.error("Unknown event " + eventType + ". Ignoring..");
-    }
   }
 }

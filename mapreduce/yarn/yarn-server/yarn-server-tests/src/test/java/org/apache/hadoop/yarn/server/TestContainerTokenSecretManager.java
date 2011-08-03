@@ -50,7 +50,6 @@ import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
@@ -58,7 +57,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
-import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -82,6 +80,8 @@ import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.SchedulerSecurityInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.BeforeClass;
@@ -165,20 +165,22 @@ public class TestContainerTokenSecretManager {
 
     // Wait till container gets allocated for AM
     int waitCounter = 0;
-    GetApplicationReportRequest rmRequest = Records
-        .newRecord(GetApplicationReportRequest.class);
-    rmRequest.setApplicationId(appID);
-    ApplicationReport app = resourceManager.getClientRMService()
-        .getApplicationReport(rmRequest).getApplicationReport();
-    while (app.getState() != ApplicationState.RUNNING && waitCounter <= 20) {
+    RMApp app = resourceManager.getRMContext().getRMApps().get(appID);
+    RMAppAttempt appAttempt = app == null ? null : app.getCurrentAppAttempt();
+    RMAppAttemptState state = appAttempt == null ? null : appAttempt
+        .getAppAttemptState();
+    while (app == null || appAttempt == null || state == null
+        || !state.equals(RMAppAttemptState.LAUNCHED) || waitCounter++ != 20) {
+      LOG.info("Waiting for applicationAttempt to be created.. ");
       Thread.sleep(1000);
-      LOG.info("Waiting for AM to be allocated a container. Current state is "
-          + app.getState());
-      app = resourceManager.getClientRMService()
-          .getApplicationReport(rmRequest).getApplicationReport();
+      app = resourceManager.getRMContext().getRMApps().get(appID);
+      appAttempt = app == null ? null : app.getCurrentAppAttempt();
+      state = appAttempt == null ? null : appAttempt.getAppAttemptState();
     }
-
-    Assert.assertTrue(ApplicationState.NEW != app.getState());
+    Assert.assertNotNull(app);
+    Assert.assertNotNull(appAttempt);
+    Assert.assertNotNull(state);
+    Assert.assertEquals(RMAppAttemptState.LAUNCHED, state);
 
     UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
 
@@ -237,6 +239,8 @@ public class TestContainerTokenSecretManager {
     
     AllocateRequest allocateRequest =
         recordFactory.newRecordInstance(AllocateRequest.class);
+    allocateRequest.setApplicationAttemptId(appAttempt.getAppAttemptId());
+    allocateRequest.setResponseId(0);
     allocateRequest.addAllAsks(ask);
     allocateRequest.addAllReleases(release);
     List<Container> allocatedContainers = scheduler.allocate(allocateRequest)

@@ -345,7 +345,9 @@ public class ClientServiceDelegate {
       /* the protocol wasnt instantiated because the applicaton wasnt launched
        * return a fake report.
        */
-      jobreport.setJobState(JobState.NEW); 
+      jobreport.setJobState(JobState.NEW);
+    } else if (currentAppState == ApplicationState.SUBMITTED) {
+      jobreport.setJobState(JobState.NEW);
     } else if (currentAppState == ApplicationState.KILLED) {
       jobreport.setJobState(JobState.KILLED);
     } else if (currentAppState == ApplicationState.FAILED) {

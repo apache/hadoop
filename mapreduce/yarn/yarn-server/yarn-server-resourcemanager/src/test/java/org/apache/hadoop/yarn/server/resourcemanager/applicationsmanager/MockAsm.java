@@ -217,44 +217,13 @@ public abstract class MockAsm extends MockApps {
     }
   }
 
-  public static ApplicationMaster newAppMaster(final ApplicationId id) {
-    final ApplicationState state = newAppState();
-    return new AppMasterBase() {
-      @Override
-      public ApplicationId getApplicationId() {
-        return id;
-      }
-
-      @Override
-      public ApplicationState getState() {
-        return state;
-      }
-
-      @Override
-      public String getTrackingUrl() {
-        return Math.random() < 0.5 ? "host.com:port" : null;
-      }
-
-      @Override
-      public String getDiagnostics() {
-        switch (getState()) {
-          case FAILED: return "Application was failed";
-          case KILLED: return "Appiication was killed.\nyada yada yada.";
-        }
-        return "";
-      }
-    };
-  }
-
   public static RMApp newApplication(int i) {
     final ApplicationId id = newAppID(i);
-    final ApplicationMaster master = newAppMaster(id);
     final Container masterContainer = Records.newRecord(Container.class);
     ContainerId containerId = Records.newRecord(ContainerId.class);
     containerId.setAppId(id);
     masterContainer.setId(containerId);
     masterContainer.setNodeHttpAddress("node:port");
-    final ApplicationStatus status = newAppStatus();
     final String user = newUserName();
     final String name = newAppName();
     final String queue = newQueue();
@@ -262,6 +231,10 @@ public abstract class MockAsm extends MockApps {
     final long finish = Math.random() < 0.5 ? 0 :
         System.currentTimeMillis() + (int)(Math.random()*DT);
     return new ApplicationBase() {
+      @Override
+      public ApplicationId getApplicationId() {
+        return id;
+      }
       @Override
       public String getUser() {
         return user;
@@ -285,6 +258,22 @@ public abstract class MockAsm extends MockApps {
       @Override
       public long getFinishTime() {
         return finish;
+      }
+      @Override
+      public String getTrackingUrl() {
+        return null;
+      }
+      @Override
+      public RMAppState getState() {
+        return RMAppState.RUNNING;
+      }
+      @Override
+      public StringBuilder getDiagnostics() {
+        return new StringBuilder();
+      }
+      @Override
+      public float getProgress() {
+        return (float)Math.random();
       }
     };
   }

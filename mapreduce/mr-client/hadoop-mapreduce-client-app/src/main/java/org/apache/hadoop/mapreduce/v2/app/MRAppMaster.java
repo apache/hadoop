@@ -560,7 +560,7 @@ public class MRAppMaster extends CompositeService {
       applicationId.setClusterTimestamp(Long.valueOf(args[0]));
       applicationId.setId(Integer.valueOf(args[1]));
       int failCount = Integer.valueOf(args[2]);
-      MRAppMaster appMaster = new MRAppMaster(applicationId, ++failCount);
+      MRAppMaster appMaster = new MRAppMaster(applicationId, failCount);
       YarnConfiguration conf = new YarnConfiguration(new JobConf());
       conf.addResource(new Path(MRConstants.JOB_CONF_FILE));
       conf.set(MRJobConfig.USER_NAME, 
