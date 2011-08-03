@@ -19,6 +19,10 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -142,6 +146,8 @@ public class TestBytes extends TestCase {
     byte [] key2 = {4,9};
     byte [] key2_2 = {4};
     byte [] key3 = {5,11};
+    byte [] key4 = {0};
+    byte [] key5 = {2};
 
     assertEquals(1, Bytes.binarySearch(arr, key1, 0, 1,
       Bytes.BYTES_RAWCOMPARATOR));
@@ -157,8 +163,22 @@ public class TestBytes extends TestCase {
       Bytes.BYTES_RAWCOMPARATOR));
     assertEquals(5, Bytes.binarySearch(arr, key3, 1, 1,
       Bytes.BYTES_RAWCOMPARATOR));
+    assertEquals(-1,
+      Bytes.binarySearch(arr, key4, 0, 1, Bytes.BYTES_RAWCOMPARATOR));
+    assertEquals(-2,
+      Bytes.binarySearch(arr, key5, 0, 1, Bytes.BYTES_RAWCOMPARATOR));
+
+    // Search for values to the left and to the right of each item in the array.
+    for (int i = 0; i < arr.length; ++i) {
+      assertEquals(-(i + 1), Bytes.binarySearch(arr,
+          new byte[] { (byte) (arr[i][0] - 1) }, 0, 1,
+          Bytes.BYTES_RAWCOMPARATOR));
+      assertEquals(-(i + 2), Bytes.binarySearch(arr,
+          new byte[] { (byte) (arr[i][0] + 1) }, 0, 1,
+          Bytes.BYTES_RAWCOMPARATOR));
+    }
   }
-  
+
   public void testStartsWith() {
     assertTrue(Bytes.startsWith(Bytes.toBytes("hello"), Bytes.toBytes("h")));
     assertTrue(Bytes.startsWith(Bytes.toBytes("hello"), Bytes.toBytes("")));
@@ -202,4 +222,30 @@ public class TestBytes extends TestCase {
 
     return (Bytes.toLong(testValue) + amount) == incrementResult;
   }
+
+  public void testFixedSizeString() throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DataOutputStream dos = new DataOutputStream(baos);
+    Bytes.writeStringFixedSize(dos, "Hello", 5);
+    Bytes.writeStringFixedSize(dos, "World", 18);
+    Bytes.writeStringFixedSize(dos, "", 9);
+
+    try {
+      // Use a long dash which is three bytes in UTF-8. If encoding happens
+      // using ISO-8859-1, this will fail.
+      Bytes.writeStringFixedSize(dos, "Too\u2013Long", 9);
+      fail("Exception expected");
+    } catch (IOException ex) {
+      assertEquals(
+          "Trying to write 10 bytes (Too\\xE2\\x80\\x93Long) into a field of " +
+          "length 9", ex.getMessage());
+    }
+
+    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+    DataInputStream dis = new DataInputStream(bais);
+    assertEquals("Hello", Bytes.readStringFixedSize(dis, 5));
+    assertEquals("World", Bytes.readStringFixedSize(dis, 18));
+    assertEquals("", Bytes.readStringFixedSize(dis, 9));
+  }
+
 }

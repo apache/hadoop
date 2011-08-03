@@ -67,9 +67,9 @@ public class RandomSeek {
     Path path = new Path("/Users/ryan/rfile.big.txt");
     long start = System.currentTimeMillis();
     SimpleBlockCache cache = new SimpleBlockCache();
-    Reader reader = new HFile.Reader(lfs, path, cache, false, false);
+    Reader reader = HFile.createReader(lfs, path, cache, false, false);
     reader.loadFileInfo();
-    System.out.println(reader.trailer);
+    System.out.println(reader.getTrailer());
     long end = System.currentTimeMillis();
 
     System.out.println("Index read time: " + (end - start));

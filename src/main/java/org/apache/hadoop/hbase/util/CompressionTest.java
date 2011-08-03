@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -80,6 +81,7 @@ public class CompressionTest {
       }
     }
 
+    Configuration conf = HBaseConfiguration.create();
     try {
       Compressor c = algo.getCompressor();
       algo.returnCompressor(c);
@@ -103,13 +105,14 @@ public class CompressionTest {
 
   public static void doSmokeTest(FileSystem fs, Path path, String codec)
   throws Exception {
-    HFile.Writer writer = new HFile.Writer(
+    Configuration conf = HBaseConfiguration.create();
+    HFile.Writer writer = HFile.getWriterFactory(conf).createWriter(
       fs, path, HFile.DEFAULT_BLOCKSIZE, codec, null);
     writer.append(Bytes.toBytes("testkey"), Bytes.toBytes("testval"));
     writer.appendFileInfo(Bytes.toBytes("infokey"), Bytes.toBytes("infoval"));
     writer.close();
 
-    HFile.Reader reader = new HFile.Reader(fs, path, null, false, false);
+    HFile.Reader reader = HFile.createReader(fs, path, null, false, false);
     reader.loadFileInfo();
     byte[] key = reader.getFirstKey();
     boolean rc = Bytes.toString(key).equals("testkey");

@@ -55,22 +55,22 @@ public class CachedBlock implements HeapSize, Comparable<CachedBlock> {
   };
 
   private final String blockName;
-  private final ByteBuffer buf;
+  private final HeapSize buf;
   private volatile long accessTime;
   private long size;
   private BlockPriority priority;
 
-  public CachedBlock(String blockName, ByteBuffer buf, long accessTime) {
+  public CachedBlock(String blockName, HeapSize buf, long accessTime) {
     this(blockName, buf, accessTime, false);
   }
 
-  public CachedBlock(String blockName, ByteBuffer buf, long accessTime,
+  public CachedBlock(String blockName, HeapSize buf, long accessTime,
       boolean inMemory) {
     this.blockName = blockName;
     this.buf = buf;
     this.accessTime = accessTime;
-    this.size = ClassSize.align(blockName.length()) +
-    ClassSize.align(buf.capacity()) + PER_BLOCK_OVERHEAD;
+    this.size = ClassSize.align(blockName.length())
+        + ClassSize.align(buf.heapSize()) + PER_BLOCK_OVERHEAD;
     if(inMemory) {
       this.priority = BlockPriority.MEMORY;
     } else {
@@ -97,7 +97,7 @@ public class CachedBlock implements HeapSize, Comparable<CachedBlock> {
     return this.accessTime < that.accessTime ? 1 : -1;
   }
 
-  public ByteBuffer getBuffer() {
+  public HeapSize getBuffer() {
     return this.buf;
   }
 

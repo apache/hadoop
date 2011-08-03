@@ -308,18 +308,24 @@ public class Bytes {
    * @see #toStringBinary(byte[], int, int)
    */
   public static String toStringBinary(final byte [] b) {
-    return toStringBinary(b, 0, b.length);
-  }
-  
-  /**
-   * The same as {@link #toStringBinary(byte[])}, but returns a string "null"
-   * if given a null argument.
-   */
-  public static String toStringBinarySafe(final byte [] b) {
     if (b == null)
       return "null";
     return toStringBinary(b, 0, b.length);
   }
+  
+  /**
+   * Converts the given byte buffer, from its array offset to its limit, to
+   * a string. The position and the mark are ignored.
+   *
+   * @param buf a byte buffer
+   * @return a string representation of the buffer's binary contents
+   */
+  public static String toStringBinary(ByteBuffer buf) {
+    if (buf == null)
+      return "null";
+    return toStringBinary(buf.array(), buf.arrayOffset(), buf.limit());
+  }
+
   /**
    * Write a printable representation of a byte array. Non-printable
    * characters are hex escaped in the format \\x%02X, eg:
@@ -1470,12 +1476,18 @@ public class Bytes {
 
   /**
    * Binary search for keys in indexes.
+   *
    * @param arr array of byte arrays to search for
    * @param key the key you want to find
    * @param offset the offset in the key you want to find
    * @param length the length of the key
    * @param comparator a comparator to compare.
-   * @return index of key
+   * @return zero-based index of the key, if the key is present in the array.
+   *         Otherwise, a value -(i + 1) such that the key is between arr[i -
+   *         1] and arr[i] non-inclusively, where i is in [0, i], if we define
+   *         arr[-1] = -Inf and arr[N] = Inf for an N-element array. The above
+   *         means that this function can return 2N + 1 different values
+   *         ranging from -(N + 1) to N - 1.
    */
   public static int binarySearch(byte [][]arr, byte []key, int offset,
       int length, RawComparator<byte []> comparator) {
@@ -1582,6 +1594,36 @@ public class Bytes {
       if (amo == 0) return value;
     }
     return value;
+  }
+
+  /**
+   * Writes a string as a fixed-size field, padded with zeros.
+   */
+  public static void writeStringFixedSize(final DataOutput out, String s,
+      int size) throws IOException {
+    byte[] b = toBytes(s);
+    if (b.length > size) {
+      throw new IOException("Trying to write " + b.length + " bytes (" +
+          toStringBinary(b) + ") into a field of length " + size);
+    }
+
+    out.writeBytes(s);
+    for (int i = 0; i < size - s.length(); ++i)
+      out.writeByte(0);
+  }
+
+  /**
+   * Reads a fixed-size field and interprets it as a string padded with zeros.
+   */
+  public static String readStringFixedSize(final DataInput in, int size) 
+      throws IOException {
+    byte[] b = new byte[size];
+    in.readFully(b);
+    int n = b.length;
+    while (n > 0 && b[n - 1] == 0)
+      --n;
+
+    return toString(b, 0, n);
   }
 
 }

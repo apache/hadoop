@@ -447,6 +447,57 @@
     </description>
   </property>
   <property>
+      <name>hfile.block.index.cacheonwrite</name>
+      <value>false</value>
+      <description>
+          This allows to put non-root multi-level index blocks into the block
+          cache at the time the index is being written.
+      </description>
+  </property>
+  <property>
+      <name>hfile.index.block.max.size</name>
+      <value>131072</value>
+      <description>
+          When the size of a leaf-level, intermediate-level, or root-level
+          index block in a multi-level block index grows to this size, the
+          block is written out and a new block is started.
+      </description>
+  </property>
+  <property>
+      <name>hfile.format.version</name>
+      <value>2</value>
+      <description>
+          The HFile format version to use for new files. Set this to 1 to test
+          backwards-compatibility. The default value of this option should be
+          consistent with FixedFileTrailer.MAX_VERSION.
+      </description>
+  </property>
+  <property>
+      <name>io.storefile.bloom.block.size</name>
+      <value>131072</value>
+      <description>
+          The size in bytes of a single block ("chunk") of a compound Bloom
+          filter. This size is approximate, because Bloom blocks can only be
+          inserted at data block boundaries, and the number of keys per data
+          block varies.
+      </description>
+  </property>
+  <property>
+      <name>io.storefile.bloom.cacheonwrite</name>
+      <value>false</value>
+      <description>
+          Enables cache-on-write for inline blocks of a compound Bloom filter.
+      </description>
+  </property>
+  <property>
+      <name>hbase.rs.cacheblocksonwrite</name>
+      <value>false</value>
+      <description>
+          Whether an HFile block should be added to the block cache when the
+          block is finished.
+      </description>
+  </property>
+  <property>
     <name>hbase.rpc.engine</name>
     <value>org.apache.hadoop.hbase.ipc.WritableRpcEngine</value>
     <description>Implementation of org.apache.hadoop.hbase.ipc.RpcEngine to be

@@ -487,8 +487,8 @@ public class RecoverableZooKeeper {
                 return path;
               }
               LOG.error("Node " + path + " already exists with " + 
-                  Bytes.toStringBinarySafe(currentData) + ", could not write " +
-                  Bytes.toStringBinarySafe(data));
+                  Bytes.toStringBinary(currentData) + ", could not write " +
+                  Bytes.toStringBinary(data));
               throw e;
             }
             LOG.error("Node " + path + " already exists and this is not a " +

@@ -70,7 +70,8 @@ public class TestFSErrorsExposed {
         HBaseTestingUtility.getTestDir("internalScannerExposesErrors"),
         "regionname"), "familyname");
     FaultyFileSystem fs = new FaultyFileSystem(util.getTestFileSystem());
-    StoreFile.Writer writer = StoreFile.createWriter(fs, hfilePath, 2*1024);
+    StoreFile.Writer writer = StoreFile.createWriter(fs, hfilePath, 2*1024,
+        util.getConfiguration());
     TestStoreFile.writeStoreFile(
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
 
@@ -111,7 +112,8 @@ public class TestFSErrorsExposed {
         HBaseTestingUtility.getTestDir("internalScannerExposesErrors"),
         "regionname"), "familyname");
     FaultyFileSystem fs = new FaultyFileSystem(util.getTestFileSystem());
-    StoreFile.Writer writer = StoreFile.createWriter(fs, hfilePath, 2 * 1024);
+    StoreFile.Writer writer = StoreFile.createWriter(fs, hfilePath, 2 * 1024,
+        util.getConfiguration());
     TestStoreFile.writeStoreFile(
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
 

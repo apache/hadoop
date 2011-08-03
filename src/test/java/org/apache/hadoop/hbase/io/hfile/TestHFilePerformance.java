@@ -157,8 +157,8 @@ public class TestHFilePerformance extends TestCase {
 
     if ("HFile".equals(fileType)){
         System.out.println("HFile write method: ");
-        HFile.Writer writer =
-          new HFile.Writer(fout, minBlockSize, codecName, null);
+        HFile.Writer writer = HFile.getWriterFactory(conf).createWriter(fout,
+             minBlockSize, codecName, null);
 
         // Writing value in one shot.
         for (long l=0 ; l<rows ; l++ ) {
@@ -236,7 +236,7 @@ public class TestHFilePerformance extends TestCase {
     FSDataInputStream fin = fs.open(path);
 
     if ("HFile".equals(fileType)){
-        HFile.Reader reader = new HFile.Reader(path, fs.open(path),
+        HFile.Reader reader = HFile.createReader(path, fs.open(path),
           fs.getFileStatus(path).getLen(), null, false, false);
         reader.loadFileInfo();
         switch (method) {

@@ -926,6 +926,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     int storefileSizeMB = 0;
     int memstoreSizeMB = (int) (r.memstoreSize.get() / 1024 / 1024);
     int storefileIndexSizeMB = 0;
+    int rootIndexSizeKB = 0;
+    int totalStaticIndexSizeKB = 0;
+    int totalStaticBloomSizeKB = 0;
     synchronized (r.stores) {
       stores += r.stores.size();
       for (Store store : r.stores.values()) {
@@ -934,11 +937,21 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             / 1024 / 1024);
         storefileSizeMB += (int) (store.getStorefilesSize() / 1024 / 1024);
         storefileIndexSizeMB += (int) (store.getStorefilesIndexSize() / 1024 / 1024);
+
+        rootIndexSizeKB +=
+            (int) (store.getStorefilesIndexSize() / 1024);
+
+        totalStaticIndexSizeKB +=
+          (int) (store.getTotalStaticIndexSize() / 1024);
+
+        totalStaticBloomSizeKB +=
+          (int) (store.getTotalStaticBloomSize() / 1024);
       }
     }
-    return new HServerLoad.RegionLoad(name,stores, storefiles,
+    return new HServerLoad.RegionLoad(name, stores, storefiles,
         storeUncompressedSizeMB,
-        storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB,
+        storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB, rootIndexSizeKB,
+        totalStaticIndexSizeKB, totalStaticBloomSizeKB,
         (int) r.readRequestsCount.get(), (int) r.writeRequestsCount.get());
   }
 
@@ -1197,6 +1210,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     int readRequestsCount = 0;
     int writeRequestsCount = 0;
     long storefileIndexSize = 0;
+    long totalStaticIndexSize = 0;
+    long totalStaticBloomSize = 0;
     for (Map.Entry<String, HRegion> e : this.onlineRegions.entrySet()) {
         HRegion r = e.getValue();
         memstoreSize += r.memstoreSize.get();
@@ -1208,20 +1223,24 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             Store store = ee.getValue();
             storefiles += store.getStorefilesCount();
             storefileIndexSize += store.getStorefilesIndexSize();
+            totalStaticIndexSize += store.getTotalStaticIndexSize();
+            totalStaticBloomSize += store.getTotalStaticBloomSize();
           }
         }
       }
     this.metrics.stores.set(stores);
     this.metrics.storefiles.set(storefiles);
     this.metrics.memstoreSizeMB.set((int) (memstoreSize / (1024 * 1024)));
+    this.metrics.storefileIndexSizeMB.set(
+        (int) (storefileIndexSize / (1024 * 1024)));
+    this.metrics.rootIndexSizeKB.set(
+        (int) (storefileIndexSize / 1024));
+    this.metrics.totalStaticIndexSizeKB.set(
+        (int) (totalStaticIndexSize / 1024));
+    this.metrics.totalStaticBloomSizeKB.set(
+        (int) (totalStaticBloomSize / 1024));
     this.metrics.readRequestsCount.set(readRequestsCount);
     this.metrics.writeRequestsCount.set(writeRequestsCount);
-    this.metrics.storefileIndexSizeMB
-        .set((int) (storefileIndexSize / (1024 * 1024)));
-    this.metrics.compactionQueueSize.set(compactSplitThread
-        .getCompactionQueueSize());
-    this.metrics.flushQueueSize.set(cacheFlusher
-        .getFlushQueueSize());
 
     BlockCache blockCache = StoreFile.getBlockCache(conf);
     if (blockCache != null) {

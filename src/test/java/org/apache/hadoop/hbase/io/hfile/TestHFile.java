@@ -33,11 +33,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
-import org.apache.hadoop.hbase.io.hfile.HFile.BlockIndex;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -63,9 +61,9 @@ public class TestHFile extends HBaseTestCase {
    */
   public void testEmptyHFile() throws IOException {
     Path f = new Path(ROOT_DIR, getName());
-    Writer w = new Writer(this.fs, f);
+    Writer w = HFile.getWriterFactory(conf).createWriter(this.fs, f);
     w.close();
-    Reader r = new Reader(fs, f, null, false, false);
+    Reader r = HFile.createReader(fs, f, null, false, false);
     r.loadFileInfo();
     assertNull(r.getFirstKey());
     assertNull(r.getLastKey());
@@ -134,13 +132,13 @@ public class TestHFile extends HBaseTestCase {
   void basicWithSomeCodec(String codec) throws IOException {
     Path ncTFile = new Path(ROOT_DIR, "basic.hfile");
     FSDataOutputStream fout = createFSOutput(ncTFile);
-    Writer writer = new Writer(fout, minBlockSize,
-      Compression.getCompressionAlgorithmByName(codec), null);
+    Writer writer = HFile.getWriterFactory(conf).createWriter(fout,
+        minBlockSize, Compression.getCompressionAlgorithmByName(codec), null);
     LOG.info(writer);
     writeRecords(writer);
     fout.close();
     FSDataInputStream fin = fs.open(ncTFile);
-    Reader reader = new Reader(ncTFile, fs.open(ncTFile),
+    Reader reader = HFile.createReader(ncTFile, fs.open(ncTFile),
       fs.getFileStatus(ncTFile).getLen(), null, false, false);
     // Load up the index.
     reader.loadFileInfo();
@@ -209,13 +207,14 @@ public class TestHFile extends HBaseTestCase {
   private void metablocks(final String compress) throws Exception {
     Path mFile = new Path(ROOT_DIR, "meta.hfile");
     FSDataOutputStream fout = createFSOutput(mFile);
-    Writer writer = new Writer(fout, minBlockSize,
-      Compression.getCompressionAlgorithmByName(compress), null);
+    Writer writer = HFile.getWriterFactory(conf).createWriter(fout,
+        minBlockSize, Compression.getCompressionAlgorithmByName(compress),
+        null);
     someTestingWithMetaBlock(writer);
     writer.close();
     fout.close();
     FSDataInputStream fin = fs.open(mFile);
-    Reader reader = new Reader(mFile, fs.open(mFile),
+    Reader reader = HFile.createReader(mFile, fs.open(mFile),
         this.fs.getFileStatus(mFile).getLen(), null, false, false);
     reader.loadFileInfo();
     // No data -- this should return false.
@@ -233,33 +232,35 @@ public class TestHFile extends HBaseTestCase {
   }
 
   public void testNullMetaBlocks() throws Exception {
-    Path mFile = new Path(ROOT_DIR, "nometa.hfile");
-    FSDataOutputStream fout = createFSOutput(mFile);
-    Writer writer = new Writer(fout, minBlockSize,
-        Compression.Algorithm.NONE, null);
-    writer.append("foo".getBytes(), "value".getBytes());
-    writer.close();
-    fout.close();
-    Reader reader = new Reader(fs, mFile, null, false, false);
-    reader.loadFileInfo();
-    assertNull(reader.getMetaBlock("non-existant", false));
+    for (Compression.Algorithm compressAlgo : 
+        HBaseTestingUtility.COMPRESSION_ALGORITHMS) {
+      Path mFile = new Path(ROOT_DIR, "nometa_" + compressAlgo + ".hfile");
+      FSDataOutputStream fout = createFSOutput(mFile);
+      Writer writer = HFile.getWriterFactory(conf).createWriter(fout,
+          minBlockSize, compressAlgo, null);
+      writer.append("foo".getBytes(), "value".getBytes());
+      writer.close();
+      fout.close();
+      Reader reader = HFile.createReader(fs, mFile, null, false, false);
+      reader.loadFileInfo();
+      assertNull(reader.getMetaBlock("non-existant", false));
+    }
   }
 
   /**
    * Make sure the orginals for our compression libs doesn't change on us.
    */
   public void testCompressionOrdinance() {
-    //assertTrue(Compression.Algorithm.LZO.ordinal() == 0);
+    assertTrue(Compression.Algorithm.LZO.ordinal() == 0);
     assertTrue(Compression.Algorithm.GZ.ordinal() == 1);
     assertTrue(Compression.Algorithm.NONE.ordinal() == 2);
   }
 
-
   public void testComparator() throws IOException {
     Path mFile = new Path(ROOT_DIR, "meta.tfile");
     FSDataOutputStream fout = createFSOutput(mFile);
-    Writer writer = new Writer(fout, minBlockSize, (Compression.Algorithm) null,
-      new KeyComparator() {
+    Writer writer = HFile.getWriterFactory(conf).createWriter(fout,
+      minBlockSize, (Compression.Algorithm) null, new KeyComparator() {
         @Override
         public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2,
             int l2) {
@@ -275,29 +276,6 @@ public class TestHFile extends HBaseTestCase {
     writer.append("2".getBytes(), "0".getBytes());
     writer.append("1".getBytes(), "0".getBytes());
     writer.close();
-  }
-
-  /**
-   * Checks if the HeapSize calculator is within reason
-   */
-  @SuppressWarnings("unchecked")
-  public void testHeapSizeForBlockIndex() throws IOException{
-    Class cl = null;
-    long expected = 0L;
-    long actual = 0L;
-
-    cl = BlockIndex.class;
-    expected = ClassSize.estimateBase(cl, false);
-    BlockIndex bi = new BlockIndex(Bytes.BYTES_RAWCOMPARATOR);
-    actual = bi.heapSize();
-    //Since the arrays in BlockIndex(byte [][] blockKeys, long [] blockOffsets,
-    //int [] blockDataSizes) are all null they are not going to show up in the
-    //HeapSize calculation, so need to remove those array costs from ecpected.
-    expected -= ClassSize.align(3 * ClassSize.ARRAY);
-    if(expected != actual) {
-      ClassSize.estimateBase(cl, true);
-      assertEquals(expected, actual);
-    }
   }
 
 }

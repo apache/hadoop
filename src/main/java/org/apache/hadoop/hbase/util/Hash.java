@@ -122,8 +122,8 @@ public abstract class Hash {
   }
 
   /**
-   * Calculate a hash using bytes from 0 to <code>length</code>, and
-   * the provided seed value
+   * Calculate a hash using bytes from <code>offset</code> to <code>offset + 
+   * length</code>, and the provided seed value.
    * @param bytes input bytes
    * @param offset the offset into the array to start consideration
    * @param length length of the valid bytes after offset to consider

@@ -101,8 +101,8 @@ public class TestLoadIncrementalHFiles {
     for (byte[][] range : hfileRanges) {
       byte[] from = range[0];
       byte[] to = range[1];
-      createHFile(fs, new Path(familyDir, "hfile_" + hfileIdx++),
-          FAMILY, QUALIFIER, from, to, 1000);
+      createHFile(util.getConfiguration(), fs, new Path(familyDir, "hfile_"
+          + hfileIdx++), FAMILY, QUALIFIER, from, to, 1000);
     }
     int expectedRows = hfileIdx * 1000;
 
@@ -132,7 +132,7 @@ public class TestLoadIncrementalHFiles {
     FileSystem fs = util.getTestFileSystem();
     Path testIn = new Path(dir, "testhfile");
     HColumnDescriptor familyDesc = new HColumnDescriptor(FAMILY);
-    createHFile(fs, testIn, FAMILY, QUALIFIER,
+    createHFile(util.getConfiguration(), fs, testIn, FAMILY, QUALIFIER,
         Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), 1000);
 
     Path bottomOut = new Path(dir, "bottom.out");
@@ -151,7 +151,7 @@ public class TestLoadIncrementalHFiles {
 
   private int verifyHFile(Path p) throws IOException {
     Configuration conf = util.getConfiguration();
-    HFile.Reader reader = new HFile.Reader(
+    HFile.Reader reader = HFile.createReader(
         p.getFileSystem(conf), p, null, false, false);
     reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, false);
@@ -171,11 +171,13 @@ public class TestLoadIncrementalHFiles {
    * TODO put me in an HFileTestUtil or something?
    */
   static void createHFile(
+      Configuration conf,
       FileSystem fs, Path path,
       byte[] family, byte[] qualifier,
       byte[] startKey, byte[] endKey, int numRows) throws IOException
   {
-    HFile.Writer writer = new HFile.Writer(fs, path, BLOCKSIZE, COMPRESSION,
+    HFile.Writer writer = HFile.getWriterFactory(conf).createWriter(fs, path,
+        BLOCKSIZE, COMPRESSION,
         KeyValue.KEY_COMPARATOR);
     long now = System.currentTimeMillis();
     try {

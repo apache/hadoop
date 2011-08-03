@@ -83,12 +83,28 @@ implements WritableComparable<HServerLoad> {
     private int storefileSizeMB;
     /** the current size of the memstore for the region, in MB */
     private int memstoreSizeMB;
-    /** the current total size of storefile indexes for the region, in MB */
+
+    /**
+     * The current total size of root-level store file indexes for the region,
+     * in MB. The same as {@link #rootIndexSizeKB} but in MB.
+     */
     private int storefileIndexSizeMB;
     /** the current total read requests made to region */
     private int readRequestsCount;
     /** the current total write requests made to region */
     private int writeRequestsCount;
+
+    /** The current total size of root-level indexes for the region, in KB. */
+    private int rootIndexSizeKB;
+
+    /** The total size of all index blocks, not just the root level, in KB. */
+    private int totalStaticIndexSizeKB;
+
+    /**
+     * The total size of all Bloom filter blocks, not just loaded into the
+     * block cache, in KB.
+     */
+    private int totalStaticBloomSizeKB;
 
     /**
      * Constructor, for Writable
@@ -111,6 +127,8 @@ implements WritableComparable<HServerLoad> {
         final int storefiles, final int storeUncompressedSizeMB,
         final int storefileSizeMB,
         final int memstoreSizeMB, final int storefileIndexSizeMB,
+        final int rootIndexSizeKB, final int totalStaticIndexSizeKB,
+        final int totalStaticBloomSizeKB,
         final int readRequestsCount, final int writeRequestsCount) {
       this.name = name;
       this.stores = stores;
@@ -119,6 +137,9 @@ implements WritableComparable<HServerLoad> {
       this.storefileSizeMB = storefileSizeMB;
       this.memstoreSizeMB = memstoreSizeMB;
       this.storefileIndexSizeMB = storefileIndexSizeMB;
+      this.rootIndexSizeKB = rootIndexSizeKB;
+      this.totalStaticIndexSizeKB = totalStaticIndexSizeKB;
+      this.totalStaticBloomSizeKB = totalStaticBloomSizeKB;
       this.readRequestsCount = readRequestsCount;
       this.writeRequestsCount = writeRequestsCount;
     }
@@ -263,6 +284,9 @@ implements WritableComparable<HServerLoad> {
       this.storefileIndexSizeMB = in.readInt();
       this.readRequestsCount = in.readInt();
       this.writeRequestsCount = in.readInt();
+      this.rootIndexSizeKB = in.readInt();
+      this.totalStaticIndexSizeKB = in.readInt();
+      this.totalStaticBloomSizeKB = in.readInt();
     }
 
     public void write(DataOutput out) throws IOException {
@@ -278,6 +302,9 @@ implements WritableComparable<HServerLoad> {
       out.writeInt(storefileIndexSizeMB);
       out.writeInt(readRequestsCount);
       out.writeInt(writeRequestsCount);
+      out.writeInt(rootIndexSizeKB);
+      out.writeInt(totalStaticIndexSizeKB);
+      out.writeInt(totalStaticBloomSizeKB);
     }
 
     /**
@@ -306,6 +333,12 @@ implements WritableComparable<HServerLoad> {
           Long.valueOf(this.readRequestsCount));
       sb = Strings.appendKeyValue(sb, "writeRequestsCount",
           Long.valueOf(this.writeRequestsCount));
+      sb = Strings.appendKeyValue(sb, "rootIndexSizeKB",
+          Integer.valueOf(this.rootIndexSizeKB));
+      sb = Strings.appendKeyValue(sb, "totalStaticIndexSizeKB",
+          Integer.valueOf(this.totalStaticIndexSizeKB));
+      sb = Strings.appendKeyValue(sb, "totalStaticBloomSizeKB",
+        Integer.valueOf(this.totalStaticBloomSizeKB));
       return sb.toString();
     }
   }

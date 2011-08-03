@@ -45,7 +45,8 @@ public class TestSeekTo extends HBaseTestCase {
     Path ncTFile = new Path(this.testDir, "basic.hfile");
     FSDataOutputStream fout = this.fs.create(ncTFile);
     int blocksize = toKV("a").getLength() * 3;
-    HFile.Writer writer = new HFile.Writer(fout, blocksize, "none", null);
+    HFile.Writer writer = HFile.getWriterFactory(conf).createWriter(fout,
+        blocksize, "none", null);
     // 4 bytes * 3 * 2 for each key/value +
     // 3 for keys, 15 for values = 42 (woot)
     writer.append(toKV("c"));
@@ -58,9 +59,10 @@ public class TestSeekTo extends HBaseTestCase {
     fout.close();
     return ncTFile;
   }
+
   public void testSeekBefore() throws Exception {
     Path p = makeNewFile();
-    HFile.Reader reader = new HFile.Reader(fs, p, null, false, false);
+    HFile.Reader reader = HFile.createReader(fs, p, null, false, false);
     reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, true);
     assertEquals(false, scanner.seekBefore(toKV("a").getKey()));
@@ -93,9 +95,9 @@ public class TestSeekTo extends HBaseTestCase {
 
   public void testSeekTo() throws Exception {
     Path p = makeNewFile();
-    HFile.Reader reader = new HFile.Reader(fs, p, null, false, false);
+    HFile.Reader reader = HFile.createReader(fs, p, null, false, false);
     reader.loadFileInfo();
-    assertEquals(2, reader.blockIndex.count);
+    assertEquals(2, reader.getDataBlockIndexReader().getRootBlockCount());
     HFileScanner scanner = reader.getScanner(false, true);
     // lies before the start of the file.
     assertEquals(-1, scanner.seekTo(toKV("a").getKey()));
@@ -113,30 +115,32 @@ public class TestSeekTo extends HBaseTestCase {
 
   public void testBlockContainingKey() throws Exception {
     Path p = makeNewFile();
-    HFile.Reader reader = new HFile.Reader(fs, p, null, false, false);
+    HFile.Reader reader = HFile.createReader(fs, p, null, false, false);
     reader.loadFileInfo();
-    System.out.println(reader.blockIndex.toString());
+    HFileBlockIndex.BlockIndexReader blockIndexReader = 
+      reader.getDataBlockIndexReader();
+    System.out.println(blockIndexReader.toString());
     int klen = toKV("a").getKey().length;
     // falls before the start of the file.
-    assertEquals(-1, reader.blockIndex.blockContainingKey(toKV("a").getKey(),
-        0, klen));
-    assertEquals(0, reader.blockIndex.blockContainingKey(toKV("c").getKey(), 0,
-        klen));
-    assertEquals(0, reader.blockIndex.blockContainingKey(toKV("d").getKey(), 0,
-        klen));
-    assertEquals(0, reader.blockIndex.blockContainingKey(toKV("e").getKey(), 0,
-        klen));
-    assertEquals(0, reader.blockIndex.blockContainingKey(toKV("g").getKey(), 0,
-        klen));
-    assertEquals(0, reader.blockIndex.blockContainingKey(toKV("h").getKey(), 0,
-        klen));
-    assertEquals(1, reader.blockIndex.blockContainingKey(toKV("i").getKey(), 0,
-        klen));
-    assertEquals(1, reader.blockIndex.blockContainingKey(toKV("j").getKey(), 0,
-        klen));
-    assertEquals(1, reader.blockIndex.blockContainingKey(toKV("k").getKey(), 0,
-        klen));
-    assertEquals(1, reader.blockIndex.blockContainingKey(toKV("l").getKey(), 0,
-        klen));
-  }
+    assertEquals(-1, blockIndexReader.rootBlockContainingKey(
+        toKV("a").getKey(), 0, klen));
+    assertEquals(0, blockIndexReader.rootBlockContainingKey(
+        toKV("c").getKey(), 0, klen));
+    assertEquals(0, blockIndexReader.rootBlockContainingKey(
+        toKV("d").getKey(), 0, klen));
+    assertEquals(0, blockIndexReader.rootBlockContainingKey(
+        toKV("e").getKey(), 0, klen));
+    assertEquals(0, blockIndexReader.rootBlockContainingKey(
+        toKV("g").getKey(), 0, klen));
+    assertEquals(0, blockIndexReader.rootBlockContainingKey(
+        toKV("h").getKey(), 0, klen));
+    assertEquals(1, blockIndexReader.rootBlockContainingKey(
+        toKV("i").getKey(), 0, klen));
+    assertEquals(1, blockIndexReader.rootBlockContainingKey(
+        toKV("j").getKey(), 0, klen));
+    assertEquals(1, blockIndexReader.rootBlockContainingKey(
+        toKV("k").getKey(), 0, klen));
+    assertEquals(1, blockIndexReader.rootBlockContainingKey(
+        toKV("l").getKey(), 0, klen));
+ }
 }

@@ -138,10 +138,21 @@ public class RegionServerMetrics implements Updater {
   public final MetricsLongValue writeRequestsCount = new MetricsLongValue("writeRequestsCount", registry);
 
   /**
-   * Sum of all the storefile index sizes in this regionserver in MB
    */
   public final MetricsIntValue storefileIndexSizeMB =
     new MetricsIntValue("storefileIndexSizeMB", registry);
+
+  /** The total size of block index root levels in this regionserver in KB. */
+  public final MetricsIntValue rootIndexSizeKB =
+    new MetricsIntValue("rootIndexSizeKB", registry);
+
+  /** Total size of all block indexes (not necessarily loaded in memory) */
+  public final MetricsIntValue totalStaticIndexSizeKB =
+    new MetricsIntValue("totalStaticIndexSizeKB", registry);
+
+  /** Total size of all Bloom filters (not necessarily loaded in memory) */
+  public final MetricsIntValue totalStaticBloomSizeKB =
+    new MetricsIntValue("totalStaticBloomSizeKB", registry);
 
   /**
    * Sum of all the memstore sizes in this regionserver in MB
@@ -252,6 +263,9 @@ public class RegionServerMetrics implements Updater {
       this.stores.pushMetric(this.metricsRecord);
       this.storefiles.pushMetric(this.metricsRecord);
       this.storefileIndexSizeMB.pushMetric(this.metricsRecord);
+      this.rootIndexSizeKB.pushMetric(this.metricsRecord);
+      this.totalStaticIndexSizeKB.pushMetric(this.metricsRecord);
+      this.totalStaticBloomSizeKB.pushMetric(this.metricsRecord);
       this.memstoreSizeMB.pushMetric(this.metricsRecord);
       this.readRequestsCount.pushMetric(this.metricsRecord);
       this.writeRequestsCount.pushMetric(this.metricsRecord);
@@ -278,9 +292,9 @@ public class RegionServerMetrics implements Updater {
       // }
       // Means you can't pass a numOps of zero or get a ArithmeticException / by zero.
       int ops = (int)HFile.getReadOps();
-      if (ops != 0) this.fsReadLatency.inc(ops, HFile.getReadTime());
+      if (ops != 0) this.fsReadLatency.inc(ops, HFile.getReadTimeMs());
       ops = (int)HFile.getWriteOps();
-      if (ops != 0) this.fsWriteLatency.inc(ops, HFile.getWriteTime());
+      if (ops != 0) this.fsWriteLatency.inc(ops, HFile.getWriteTimeMs());
       // mix in HLog metrics
       ops = (int)HLog.getWriteOps();
       if (ops != 0) this.fsWriteLatency.inc(ops, HLog.getWriteTime());
@@ -356,6 +370,12 @@ public class RegionServerMetrics implements Updater {
       Integer.valueOf(this.storefiles.get()));
     sb = Strings.appendKeyValue(sb, "storefileIndexSize",
       Integer.valueOf(this.storefileIndexSizeMB.get()));
+    sb = Strings.appendKeyValue(sb, "rootIndexSizeKB",
+        Integer.valueOf(this.rootIndexSizeKB.get()));
+    sb = Strings.appendKeyValue(sb, "totalStaticIndexSizeKB",
+        Integer.valueOf(this.totalStaticIndexSizeKB.get()));
+    sb = Strings.appendKeyValue(sb, "totalStaticBloomSizeKB",
+        Integer.valueOf(this.totalStaticBloomSizeKB.get()));
     sb = Strings.appendKeyValue(sb, "memstoreSize",
       Integer.valueOf(this.memstoreSizeMB.get()));
     sb = Strings.appendKeyValue(sb, "readRequestsCount",

@@ -42,7 +42,8 @@ public class TestReseekTo {
 
     Path ncTFile = new Path(HBaseTestingUtility.getTestDir(), "basic.hfile");
     FSDataOutputStream fout = TEST_UTIL.getTestFileSystem().create(ncTFile);
-    HFile.Writer writer = new HFile.Writer(fout, 4000, "none", null);
+    HFile.Writer writer = HFile.getWriterFactory(
+        TEST_UTIL.getConfiguration()).createWriter(fout, 4000, "none", null);
     int numberOfKeys = 1000;
 
     String valueString = "Value";
@@ -59,7 +60,7 @@ public class TestReseekTo {
     writer.close();
     fout.close();
 
-    HFile.Reader reader = new HFile.Reader(TEST_UTIL.getTestFileSystem(),
+    HFile.Reader reader = HFile.createReader(TEST_UTIL.getTestFileSystem(),
         ncTFile, null, false, false);
     reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, true);

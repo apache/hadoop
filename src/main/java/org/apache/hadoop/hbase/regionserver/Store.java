@@ -24,10 +24,8 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.NavigableSet;
-import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -59,7 +57,6 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
 /**
  * A Store holds a column family in a Region.  Its a memstore and a set of zero
@@ -342,7 +339,7 @@ public class Store implements HeapSize {
     try {
       LOG.info("Validating hfile at " + srcPath + " for inclusion in "
           + "store " + this + " region " + this.region);
-      reader = new HFile.Reader(srcPath.getFileSystem(conf),
+      reader = HFile.createReader(srcPath.getFileSystem(conf),
           srcPath, null, false, false);
       reader.loadFileInfo();
 
@@ -556,8 +553,7 @@ public class Store implements HeapSize {
   throws IOException {
     return StoreFile.createWriter(this.fs, region.getTmpDir(), this.blocksize,
         compression, this.comparator, this.conf,
-        this.family.getBloomFilterType(), maxKeyCount,
-        conf.getBoolean("hbase.rs.cacheblocksonwrite", false));
+        this.family.getBloomFilterType(), maxKeyCount);
   }
 
   /*
@@ -1570,6 +1566,37 @@ public class Store implements HeapSize {
         continue;
       }
       size += r.indexSize();
+    }
+    return size;
+  }
+
+  /**
+   * Returns the total size of all index blocks in the data block indexes,
+   * including the root level, intermediate levels, and the leaf level for
+   * multi-level indexes, or just the root level for single-level indexes.
+   *
+   * @return the total size of block indexes in the store
+   */
+  long getTotalStaticIndexSize() {
+    long size = 0;
+    for (StoreFile s : storefiles) {
+      size += s.getReader().getUncompressedDataIndexSize();
+    }
+    return size;
+  }
+
+  /**
+   * Returns the total byte size of all Bloom filter bit arrays. For compound
+   * Bloom filters even the Bloom blocks currently not loaded into the block
+   * cache are counted.
+   *
+   * @return the total size of all Bloom filters in the store
+   */
+  long getTotalStaticBloomSize() {
+    long size = 0;
+    for (StoreFile s : storefiles) {
+      StoreFile.Reader r = s.getReader();
+      size += r.getTotalBloomSize();
     }
     return size;
   }

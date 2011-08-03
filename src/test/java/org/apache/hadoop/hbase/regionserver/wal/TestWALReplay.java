@@ -199,7 +199,7 @@ public class TestWALReplay {
     HLog wal = createWAL(this.conf);
     HRegion region = HRegion.openHRegion(hri, htd, wal, this.conf);
     Path f =  new Path(basedir, "hfile");
-    HFile.Writer writer = new HFile.Writer(this.fs, f);
+    HFile.Writer writer = HFile.getWriterFactory(conf).createWriter(this.fs, f);
     byte [] family = htd.getFamilies().iterator().next().getName();
     byte [] row = Bytes.toBytes(tableNameStr);
     writer.append(new KeyValue(row, family, family, row));

@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
+import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.mockito.Mockito;
@@ -87,7 +88,8 @@ public class TestStoreFile extends HBaseTestCase {
   public void testBasicHalfMapFile() throws Exception {
     // Make up a directory hierarchy that has a regiondir and familyname.
     StoreFile.Writer writer = StoreFile.createWriter(this.fs,
-      new Path(new Path(this.testDir, "regionname"), "familyname"), 2 * 1024);
+      new Path(new Path(this.testDir, "regionname"), "familyname"), 2 * 1024,
+      conf);
     writeStoreFile(writer);
     checkHalfHFile(new StoreFile(this.fs, writer.getPath(), true, conf,
         StoreFile.BloomType.NONE, false));
@@ -127,7 +129,8 @@ public class TestStoreFile extends HBaseTestCase {
     Path storedir = new Path(new Path(this.testDir, "regionname"), "familyname");
     Path dir = new Path(storedir, "1234567890");
     // Make a store file and write data to it.
-    StoreFile.Writer writer = StoreFile.createWriter(this.fs, dir, 8 * 1024);
+    StoreFile.Writer writer = StoreFile.createWriter(this.fs, dir, 8 * 1024,
+        conf);
     writeStoreFile(writer);
     StoreFile hsf = new StoreFile(this.fs, writer.getPath(), true, conf,
         StoreFile.BloomType.NONE, false);
@@ -197,8 +200,11 @@ public class TestStoreFile extends HBaseTestCase {
           (topScanner.isSeeked() && topScanner.next())) {
         key = topScanner.getKey();
 
-        assertTrue(topScanner.getReader().getComparator().compare(key.array(),
-          key.arrayOffset(), key.limit(), midkey, 0, midkey.length) >= 0);
+        if (topScanner.getReader().getComparator().compare(key.array(),
+          key.arrayOffset(), key.limit(), midkey, 0, midkey.length) < 0) {
+          fail("key=" + Bytes.toStringBinary(key) + " < midkey=" +
+              Bytes.toStringBinary(midkey));
+        }
         if (first) {
           first = false;
           LOG.info("First in top: " + Bytes.toString(Bytes.toBytes(key)));
@@ -327,7 +333,8 @@ public class TestStoreFile extends HBaseTestCase {
 
   private void bloomWriteRead(StoreFile.Writer writer, FileSystem fs)
   throws Exception {
-    float err = conf.getFloat(StoreFile.IO_STOREFILE_BLOOM_ERROR_RATE, 0);
+    float err = conf.getFloat(
+        BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE, 0);
     Path f = writer.getPath();
     long now = System.currentTimeMillis();
     for (int i = 0; i < 2000; i += 2) {
@@ -362,25 +369,24 @@ public class TestStoreFile extends HBaseTestCase {
     }
     reader.close();
     fs.delete(f, true);
-    System.out.println("False negatives: " + falseNeg);
-    assertEquals(0, falseNeg);
-    System.out.println("False positives: " + falsePos);
-    if (!(falsePos <= 2* 2000 * err)) {
-      System.out.println("WTFBBQ! " + falsePos + ", " + (2* 2000 * err) );
-    }
-    assertTrue(falsePos <= 2* 2000 * err);
+    assertEquals("False negatives: " + falseNeg, 0, falseNeg);
+    int maxFalsePos = (int) (2 * 2000 * err);
+    assertTrue("Too many false positives: " + falsePos + " (err=" + err
+        + ", expected no more than " + maxFalsePos + ")",
+        falsePos <= maxFalsePos);
   }
 
   public void testBloomFilter() throws Exception {
     FileSystem fs = FileSystem.getLocal(conf);
-    conf.setFloat(StoreFile.IO_STOREFILE_BLOOM_ERROR_RATE, (float)0.01);
-    conf.setBoolean(StoreFile.IO_STOREFILE_BLOOM_ENABLED, true);
+    conf.setFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE,
+        (float) 0.01);
+    conf.setBoolean(BloomFilterFactory.IO_STOREFILE_BLOOM_ENABLED, true);
 
     // write the file
     Path f = new Path(ROOT_DIR, getName());
     StoreFile.Writer writer = new StoreFile.Writer(fs, f,
         StoreFile.DEFAULT_BLOCKSIZE_SMALL, HFile.DEFAULT_COMPRESSION_ALGORITHM,
-        conf, KeyValue.COMPARATOR, StoreFile.BloomType.ROW, 2000, false);
+        conf, KeyValue.COMPARATOR, StoreFile.BloomType.ROW, 2000);
 
     bloomWriteRead(writer, fs);
   }
@@ -388,8 +394,8 @@ public class TestStoreFile extends HBaseTestCase {
   public void testBloomTypes() throws Exception {
     float err = (float) 0.01;
     FileSystem fs = FileSystem.getLocal(conf);
-    conf.setFloat(StoreFile.IO_STOREFILE_BLOOM_ERROR_RATE, err);
-    conf.setBoolean(StoreFile.IO_STOREFILE_BLOOM_ENABLED, true);
+    conf.setFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE, err);
+    conf.setBoolean(BloomFilterFactory.IO_STOREFILE_BLOOM_ENABLED, true);
 
     int rowCount = 50;
     int colCount = 10;
@@ -411,7 +417,7 @@ public class TestStoreFile extends HBaseTestCase {
       StoreFile.Writer writer = new StoreFile.Writer(fs, f,
           StoreFile.DEFAULT_BLOCKSIZE_SMALL,
           HFile.DEFAULT_COMPRESSION_ALGORITHM,
-          conf, KeyValue.COMPARATOR, bt[x], expKeys[x], false);
+          conf, KeyValue.COMPARATOR, bt[x], expKeys[x]);
 
       long now = System.currentTimeMillis();
       for (int i = 0; i < rowCount*2; i += 2) { // rows
@@ -471,19 +477,23 @@ public class TestStoreFile extends HBaseTestCase {
     float err = (float)0.005;
     FileSystem fs = FileSystem.getLocal(conf);
     Path f = new Path(ROOT_DIR, getName());
-    conf.setFloat(StoreFile.IO_STOREFILE_BLOOM_ERROR_RATE, err);
-    conf.setBoolean(StoreFile.IO_STOREFILE_BLOOM_ENABLED, true);
-    conf.setInt(StoreFile.IO_STOREFILE_BLOOM_MAX_KEYS, 1000);
+    conf.setFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE, err);
+    conf.setBoolean(BloomFilterFactory.IO_STOREFILE_BLOOM_ENABLED, true);
+    conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_MAX_KEYS, 1000);
+
+    // This test only runs for HFile format version 1.
+    conf.setInt(HFile.FORMAT_VERSION_KEY, 1);
 
     // this should not create a bloom because the max keys is too small
     StoreFile.Writer writer = new StoreFile.Writer(fs, f,
         StoreFile.DEFAULT_BLOCKSIZE_SMALL, HFile.DEFAULT_COMPRESSION_ALGORITHM,
-        conf, KeyValue.COMPARATOR, StoreFile.BloomType.ROW, 2000, false);
+        conf, KeyValue.COMPARATOR, StoreFile.BloomType.ROW, 2000);
     assertFalse(writer.hasBloom());
     writer.close();
     fs.delete(f, true);
 
-    conf.setInt(StoreFile.IO_STOREFILE_BLOOM_MAX_KEYS, Integer.MAX_VALUE);
+    conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_MAX_KEYS,
+        Integer.MAX_VALUE);
 
     // TODO: commented out because we run out of java heap space on trunk
     /*
@@ -500,8 +510,7 @@ public class TestStoreFile extends HBaseTestCase {
     // because Java can't create a contiguous array > MAX_INT
     writer = new StoreFile.Writer(fs, f,
         StoreFile.DEFAULT_BLOCKSIZE_SMALL, HFile.DEFAULT_COMPRESSION_ALGORITHM,
-        conf, KeyValue.COMPARATOR, StoreFile.BloomType.ROW, Integer.MAX_VALUE,
-        false);
+        conf, KeyValue.COMPARATOR, StoreFile.BloomType.ROW, Integer.MAX_VALUE);
     assertFalse(writer.hasBloom());
     writer.close();
     fs.delete(f, true);
@@ -556,7 +565,7 @@ public class TestStoreFile extends HBaseTestCase {
   }
 
   /**
-   *Generate a list of KeyValues for testing based on given parameters
+   * Generate a list of KeyValues for testing based on given parameters
    * @param timestamps
    * @param numRows
    * @param qualifier
@@ -592,7 +601,8 @@ public class TestStoreFile extends HBaseTestCase {
     Path storedir = new Path(new Path(this.testDir, "regionname"),
     "familyname");
     Path dir = new Path(storedir, "1234567890");
-    StoreFile.Writer writer = StoreFile.createWriter(this.fs, dir, 8 * 1024);
+    StoreFile.Writer writer = StoreFile.createWriter(this.fs, dir, 8 * 1024,
+        conf);
 
     List<KeyValue> kvList = getKeyValueSet(timestamps,numRows,
         family, qualifier);
@@ -645,7 +655,7 @@ public class TestStoreFile extends HBaseTestCase {
     long startEvicted = cs.getEvictedCount();
 
     // Let's write a StoreFile with three blocks, with cache on write off
-    conf.setBoolean("hbase.rs.cacheblocksonwrite", false);
+    conf.setBoolean(HFile.CACHE_BLOCKS_ON_WRITE_KEY, false);
     Path pathCowOff = new Path(baseDir, "123456789");
     StoreFile.Writer writer = writeStoreFile(conf, pathCowOff, 3);
     StoreFile hsf = new StoreFile(this.fs, writer.getPath(), true, conf,
@@ -666,7 +676,7 @@ public class TestStoreFile extends HBaseTestCase {
     reader.close();
 
     // Now write a StoreFile with three blocks, with cache on write on
-    conf.setBoolean("hbase.rs.cacheblocksonwrite", true);
+    conf.setBoolean(HFile.CACHE_BLOCKS_ON_WRITE_KEY, true);
     Path pathCowOn = new Path(baseDir, "123456788");
     writer = writeStoreFile(conf, pathCowOn, 3);
     hsf = new StoreFile(this.fs, writer.getPath(), true, conf,
@@ -702,6 +712,12 @@ public class TestStoreFile extends HBaseTestCase {
     while ((kv1 = scannerOne.next()) != null) {
       kv2 = scannerTwo.next();
       assertTrue(kv1.equals(kv2));
+      assertTrue(Bytes.compareTo(
+          kv1.getBuffer(), kv1.getKeyOffset(), kv1.getKeyLength(), 
+          kv2.getBuffer(), kv2.getKeyOffset(), kv2.getKeyLength()) == 0);
+      assertTrue(Bytes.compareTo(
+          kv1.getBuffer(), kv1.getValueOffset(), kv1.getValueLength(),
+          kv2.getBuffer(), kv2.getValueOffset(), kv2.getValueLength()) == 0);
     }
     assertNull(scannerTwo.next());
     assertEquals(startHit + 6, cs.getHitCount());
@@ -755,8 +771,7 @@ public class TestStoreFile extends HBaseTestCase {
     int blockSize = totalSize / numBlocks;
     StoreFile.Writer writer = new StoreFile.Writer(fs, path, blockSize,
         HFile.DEFAULT_COMPRESSION_ALGORITHM,
-        conf, KeyValue.COMPARATOR, StoreFile.BloomType.NONE, 2000,
-        conf.getBoolean("hbase.rs.cacheblocksonwrite", false));
+        conf, KeyValue.COMPARATOR, StoreFile.BloomType.NONE, 2000);
     // We'll write N-1 KVs to ensure we don't write an extra block
     kvs.remove(kvs.size()-1);
     for (KeyValue kv : kvs) {

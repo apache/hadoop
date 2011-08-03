@@ -19,12 +19,15 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.nio.ByteBuffer;
-
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 
 /**
- * Block cache interface.
+ * Block cache interface. Anything that implements the {@link HeapSize}
+ * interface can be put in the cache, because item size is all the cache
+ * cares about. We might move to a more specialized "cacheable" interface
+ * in the future.
+ *
  * TODO: Add filename or hash of filename to block cache key.
  */
 public interface BlockCache {
@@ -34,14 +37,14 @@ public interface BlockCache {
    * @param buf The block contents wrapped in a ByteBuffer.
    * @param inMemory Whether block should be treated as in-memory
    */
-  public void cacheBlock(String blockName, ByteBuffer buf, boolean inMemory);
+  public void cacheBlock(String blockName, HeapSize buf, boolean inMemory);
 
   /**
    * Add block to cache (defaults to not in-memory).
    * @param blockName Zero-based file block number.
    * @param buf The block contents wrapped in a ByteBuffer.
    */
-  public void cacheBlock(String blockName, ByteBuffer buf);
+  public void cacheBlock(String blockName, HeapSize buf);
 
   /**
    * Fetch block from cache.
@@ -49,7 +52,7 @@ public interface BlockCache {
    * @param caching Whether this request has caching enabled (used for stats)
    * @return Block or null if block is not in the cache.
    */
-  public ByteBuffer getBlock(String blockName, boolean caching);
+  public HeapSize getBlock(String blockName, boolean caching);
 
   /**
    * Evict block from cache.
@@ -57,6 +60,17 @@ public interface BlockCache {
    * @return true if block existed and was evicted, false if not
    */
   public boolean evictBlock(String blockName);
+
+  /**
+   * Evicts all blocks with name starting with the given prefix. This is
+   * necessary in cases we need to evict all blocks that belong to a particular
+   * HFile. In HFile v2 all blocks consist of the storefile name (UUID), an
+   * underscore, and the block offset in the file. An efficient implementation
+   * would avoid scanning all blocks in the cache.
+   *
+   * @return the number of blocks evicted
+   */
+  public int evictBlocksByPrefix(String string);
 
   /**
    * Get the statistics for this block cache.

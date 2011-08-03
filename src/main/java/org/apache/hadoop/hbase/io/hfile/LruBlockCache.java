@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.lang.ref.WeakReference;
-import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicLong;
@@ -251,7 +250,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
    * @param buf block buffer
    * @param inMemory if block is in-memory
    */
-  public void cacheBlock(String blockName, ByteBuffer buf, boolean inMemory) {
+  public void cacheBlock(String blockName, HeapSize buf, boolean inMemory) {
     CachedBlock cb = map.get(blockName);
     if(cb != null) {
       throw new RuntimeException("Cached an already cached block");
@@ -275,7 +274,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
    * @param blockName block name
    * @param buf block buffer
    */
-  public void cacheBlock(String blockName, ByteBuffer buf) {
+  public void cacheBlock(String blockName, HeapSize buf) {
     cacheBlock(blockName, buf, false);
   }
 
@@ -284,7 +283,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
    * @param blockName block name
    * @return buffer of specified block name, or null if not in cache
    */
-  public ByteBuffer getBlock(String blockName, boolean caching) {
+  public HeapSize getBlock(String blockName, boolean caching) {
     CachedBlock cb = map.get(blockName);
     if(cb == null) {
       stats.miss(caching);
@@ -302,6 +301,31 @@ public class LruBlockCache implements BlockCache, HeapSize {
     if (cb == null) return false;
     evictBlock(cb);
     return true;
+  }
+
+  /**
+   * Evicts all blocks whose name starts with the given prefix. This is an
+   * expensive operation implemented as a linear-time search through all blocks
+   * in the cache. Ideally this should be a search in a log-access-time map.
+   *
+   * <p>
+   * This is used for evict-on-close to remove all blocks of a specific HFile.
+   * The prefix would be the HFile/StoreFile name (a UUID) followed by an
+   * underscore, because HFile v2 block names in cache are of the form
+   * "&lt;storeFileUUID&gt;_&lt;blockOffset&gt;".
+   *
+   * @return the number of blocks evicted
+   */
+  @Override
+  public int evictBlocksByPrefix(String prefix) {
+    int numEvicted = 0;
+    for (String key : map.keySet()) {
+      if (key.startsWith(prefix)) {
+        if (evictBlock(key))
+          ++numEvicted;
+      }
+    }
+    return numEvicted;
   }
 
   protected long evictBlock(CachedBlock block) {

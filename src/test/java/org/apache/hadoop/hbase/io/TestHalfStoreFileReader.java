@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.io;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -60,9 +61,11 @@ public class TestHalfStoreFileReader {
     String root_dir = HBaseTestingUtility.getTestDir("TestHalfStoreFile").toString();
     Path p = new Path(root_dir, "test");
 
-    FileSystem fs = FileSystem.get(test_util.getConfiguration());
+    Configuration conf = test_util.getConfiguration();
+    FileSystem fs = FileSystem.get(conf);
 
-    HFile.Writer w = new HFile.Writer(fs, p, 1024, "none", KeyValue.KEY_COMPARATOR);
+    HFile.Writer w = HFile.getWriterFactory(conf).createWriter(fs, p, 1024,
+        "none", KeyValue.KEY_COMPARATOR);
 
     // write some things.
     List<KeyValue> items = genSomeKeys();
@@ -71,7 +74,7 @@ public class TestHalfStoreFileReader {
     }
     w.close();
 
-    HFile.Reader r = new HFile.Reader(fs, p, null, false, false);
+    HFile.Reader r = HFile.createReader(fs, p, null, false, false);
     r.loadFileInfo();
     byte [] midkey = r.midkey();
     KeyValue midKV = KeyValue.createKeyValueFromKey(midkey);

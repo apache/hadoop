@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -57,6 +58,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
+import org.apache.hadoop.util.Progressable;
 import org.mockito.Mockito;
 
 import com.google.common.base.Joiner;
@@ -204,7 +206,7 @@ public class TestStore extends TestCase {
     Configuration c = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(c);
     StoreFile.Writer w = StoreFile.createWriter(fs, storedir,
-        StoreFile.DEFAULT_BLOCKSIZE_SMALL);
+        StoreFile.DEFAULT_BLOCKSIZE_SMALL, c);
     w.appendMetadata(seqid + 1, false);
     w.close();
     this.store.close();
@@ -570,6 +572,14 @@ public class TestStore extends TestCase {
     public FSDataOutputStream create(Path p) throws IOException {
       return new FaultyOutputStream(super.create(p), faultPos);
     }
+
+    @Override
+    public FSDataOutputStream create(Path f, FsPermission permission,
+        boolean overwrite, int bufferSize, short replication, long blockSize,
+        Progressable progress) throws IOException {
+      return new FaultyOutputStream(super.create(f, permission,
+          overwrite, bufferSize, replication, blockSize, progress), faultPos);
+    }    
 
   }
 

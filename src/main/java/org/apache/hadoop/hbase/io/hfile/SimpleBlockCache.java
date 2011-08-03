@@ -25,6 +25,7 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 
 
@@ -32,10 +33,10 @@ import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
  * Simple one RFile soft reference cache.
  */
 public class SimpleBlockCache implements BlockCache {
-  private static class Ref extends SoftReference<ByteBuffer> {
+  private static class Ref extends SoftReference<HeapSize> {
     public String blockId;
-    public Ref(String blockId, ByteBuffer buf, ReferenceQueue q) {
-      super(buf, q);
+    public Ref(String blockId, HeapSize block, ReferenceQueue q) {
+      super(block, q);
       this.blockId = blockId;
     }
   }
@@ -68,7 +69,7 @@ public class SimpleBlockCache implements BlockCache {
     return cache.size();
   }
 
-  public synchronized ByteBuffer getBlock(String blockName, boolean caching) {
+  public synchronized HeapSize getBlock(String blockName, boolean caching) {
     processQueue(); // clear out some crap.
     Ref ref = cache.get(blockName);
     if (ref == null)
@@ -76,13 +77,13 @@ public class SimpleBlockCache implements BlockCache {
     return ref.get();
   }
 
-  public synchronized void cacheBlock(String blockName, ByteBuffer buf) {
-    cache.put(blockName, new Ref(blockName, buf, q));
+  public synchronized void cacheBlock(String blockName, HeapSize block) {
+    cache.put(blockName, new Ref(blockName, block, q));
   }
 
-  public synchronized void cacheBlock(String blockName, ByteBuffer buf,
+  public synchronized void cacheBlock(String blockName, HeapSize block,
       boolean inMemory) {
-    cache.put(blockName, new Ref(blockName, buf, q));
+    cache.put(blockName, new Ref(blockName, block, q));
   }
 
   @Override
@@ -117,4 +118,10 @@ public class SimpleBlockCache implements BlockCache {
     // TODO: implement this if we ever actually use this block cache
     return 0;
   }
+
+  @Override
+  public int evictBlocksByPrefix(String string) {
+    throw new UnsupportedOperationException();
+  }
 }
+

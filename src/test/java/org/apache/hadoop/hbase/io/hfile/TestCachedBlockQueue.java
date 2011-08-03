@@ -20,7 +20,10 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.nio.ByteBuffer;
+
+import org.apache.hadoop.hbase.io.HeapSize;
 import java.util.LinkedList;
+
 
 import junit.framework.TestCase;
 
@@ -127,9 +130,13 @@ public class TestCachedBlockQueue extends TestCase {
 
   private static class CachedBlock extends org.apache.hadoop.hbase.io.hfile.CachedBlock
   {
-    public CachedBlock(long heapSize, String name, long accessTime) {
+    public CachedBlock(final long heapSize, String name, long accessTime) {
       super(name,
-          ByteBuffer.allocate((int)(heapSize - CachedBlock.PER_BLOCK_OVERHEAD)),
+          new HeapSize(){
+            @Override
+            public long heapSize() {
+              return ((int)(heapSize - CachedBlock.PER_BLOCK_OVERHEAD));
+            }},
           accessTime,false);
     }
   }
