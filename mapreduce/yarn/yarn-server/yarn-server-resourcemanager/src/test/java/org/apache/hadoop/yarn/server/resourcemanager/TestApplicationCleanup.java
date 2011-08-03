@@ -7,7 +7,6 @@ import junit.framework.Assert;
 
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -26,29 +25,29 @@ public class TestApplicationCleanup {
     rootLogger.setLevel(Level.DEBUG);
     MockRM rm = new MockRM();
     rm.start();
-    NodeId node1 = rm.registerNode("h1", 5000);
+    MockNM nm1 = rm.registerNode("h1:1234", 5000);
     
     RMApp app = rm.submitApp(2000);
 
     //kick the scheduling
-    rm.nodeHeartbeat(node1, true);
+    nm1.nodeHeartbeat(true);
 
     RMAppAttempt attempt = app.getCurrentAppAttempt();
-    rm.sendAMLaunched(attempt.getAppAttemptId());
-    rm.registerAppAttempt(attempt.getAppAttemptId());
+    MockAM am = rm.sendAMLaunched(attempt.getAppAttemptId());
+    am.registerAppAttempt();
     
     //request for containers
     int request = 2;
-    rm.allocate(attempt.getAppAttemptId(), "h1" , 1000, request, 
+    am.allocate("h1" , 1000, request, 
         new ArrayList<ContainerId>());
     
     //kick the scheduler
-    rm.nodeHeartbeat(node1, true);
-    List<Container> conts = rm.allocate(attempt.getAppAttemptId(), new ArrayList<Container>(),
+    nm1.nodeHeartbeat(true);
+    List<Container> conts = am.allocate(new ArrayList<Container>(),
         new ArrayList<ResourceRequest>());
     int contReceived = conts.size();
     while (contReceived < request) {
-      conts = rm.allocate(attempt.getAppAttemptId(), new ArrayList<Container>(),
+      conts = am.allocate(new ArrayList<Container>(),
           new ArrayList<ResourceRequest>());
       contReceived += conts.size();
       Log.info("Got " + contReceived + " containers. Waiting to get " + request);
@@ -56,14 +55,14 @@ public class TestApplicationCleanup {
     }
     Assert.assertEquals(request, conts.size());
     
-    rm.unregisterAppAttempt(attempt.getAppAttemptId());
-    rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.FINISHED);
+    am.unregisterAppAttempt();
+    am.waitForState(RMAppAttemptState.FINISHED);
 
-    int size = rm.nodeHeartbeat(node1, true).getApplicationsToCleanupList().size();
+    int size = nm1.nodeHeartbeat(true).getApplicationsToCleanupList().size();
     while(size < 1) {
       Thread.sleep(1000);
       Log.info("Waiting to get application cleanup..");
-      size = rm.nodeHeartbeat(node1, true).getApplicationsToCleanupList().size();
+      size = nm1.nodeHeartbeat(true).getApplicationsToCleanupList().size();
     }
     Assert.assertEquals(1, size);
 

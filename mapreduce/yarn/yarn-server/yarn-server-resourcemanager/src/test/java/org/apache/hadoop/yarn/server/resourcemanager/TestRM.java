@@ -9,7 +9,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -29,18 +28,18 @@ public class TestRM {
     rootLogger.setLevel(Level.DEBUG);
     MockRM rm = new MockRM();
     rm.start();
-    rm.registerNode("h1:1234", 5000);
+    MockNM nm1 = rm.registerNode("h1:1234", 5000);
     
     RMApp app = rm.submitApp(2000);
 
     //kick the scheduling
-    rm.nodeHeartbeat("h1:1234", true);
+    nm1.nodeHeartbeat(true);
 
     RMAppAttempt attempt = app.getCurrentAppAttempt();
-    rm.sendAMLaunched(attempt.getAppAttemptId());
-    rm.registerAppAttempt(attempt.getAppAttemptId());
-    rm.unregisterAppAttempt(attempt.getAppAttemptId());
-    rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.FINISHED);
+    MockAM am = rm.sendAMLaunched(attempt.getAppAttemptId());
+    am.registerAppAttempt();
+    am.unregisterAppAttempt();
+    am.waitForState(RMAppAttemptState.FINISHED);
     rm.stop();
   }
 
@@ -50,30 +49,29 @@ public class TestRM {
     rootLogger.setLevel(Level.DEBUG);
     MockRM rm = new MockRM();
     rm.start();
-    rm.registerNode("h1:1234", 5000);
-    rm.registerNode("h2:5678", 10000);
+    MockNM nm1 = rm.registerNode("h1:1234", 5000);
+    MockNM nm2 = rm.registerNode("h2:5678", 10000);
     
     RMApp app = rm.submitApp(2000);
 
     //kick the scheduling
-    rm.nodeHeartbeat("h1:1234", true);
+    nm1.nodeHeartbeat(true);
 
     RMAppAttempt attempt = app.getCurrentAppAttempt();
-    rm.sendAMLaunched(attempt.getAppAttemptId());
-    rm.registerAppAttempt(attempt.getAppAttemptId());
+    MockAM am = rm.sendAMLaunched(attempt.getAppAttemptId());
+    am.registerAppAttempt();
     
     //request for containers
     int request = 13;
-    rm.allocate(attempt.getAppAttemptId(), "h1" , 1000, request, 
-        new ArrayList<ContainerId>());
+    am.allocate("h1" , 1000, request, new ArrayList<ContainerId>());
     
     //kick the scheduler
-    rm.nodeHeartbeat("h1:1234", true);
-    List<Container> conts = rm.allocate(attempt.getAppAttemptId(), new ArrayList<Container>(),
+    nm1.nodeHeartbeat(true);
+    List<Container> conts = am.allocate(new ArrayList<Container>(),
         new ArrayList<ResourceRequest>());
     int contReceived = conts.size();
     while (contReceived < 3) {//only 3 containers are available on node1
-      conts = rm.allocate(attempt.getAppAttemptId(), new ArrayList<Container>(),
+      conts = am.allocate(new ArrayList<Container>(),
           new ArrayList<ResourceRequest>());
       contReceived += conts.size();
       LOG.info("Got " + contReceived + " containers. Waiting to get " + 3);
@@ -82,12 +80,12 @@ public class TestRM {
     Assert.assertEquals(3, conts.size());
 
     //send node2 heartbeat
-    rm.nodeHeartbeat("h2:5678", true);
-    conts = rm.allocate(attempt.getAppAttemptId(), new ArrayList<Container>(),
+    nm2.nodeHeartbeat(true);
+    conts = am.allocate(new ArrayList<Container>(),
         new ArrayList<ResourceRequest>());
     contReceived = conts.size();
     while (contReceived < 10) {
-      conts = rm.allocate(attempt.getAppAttemptId(), new ArrayList<Container>(),
+      conts = am.allocate(new ArrayList<Container>(),
           new ArrayList<ResourceRequest>());
       contReceived += conts.size();
       LOG.info("Got " + contReceived + " containers. Waiting to get " + 10);
@@ -95,8 +93,8 @@ public class TestRM {
     }
     Assert.assertEquals(10, conts.size());
 
-    rm.unregisterAppAttempt(attempt.getAppAttemptId());
-    rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.FINISHED);
+    am.unregisterAppAttempt();
+    am.waitForState(RMAppAttemptState.FINISHED);
 
     rm.stop();
   }
