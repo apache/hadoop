@@ -5,6 +5,10 @@ Trunk (unreleased changes)
 
     MAPREDUCE-279
     
+    Refactor/Cleanup yarn ResourceManager for managing state via
+    state-machines and making most of the component interactions as
+    asynchronous. (vinodkv, sharad and acmurthy)
+
     MAPREDUCE-2641. Fix the ExponentiallySmoothedTaskRuntimeEstimator
     and its unit test. (Josh Willis via mahadev)
 
