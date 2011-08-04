@@ -77,8 +77,23 @@
           <title>DataNode</title>
           <para>Each DataNode server will have a DataNode log for HDFS, as well as a RegionServer log for HBase.</para>
           <para>Additionally, each DataNode server will also have a TaskTracker log for MapReduce task execution.</para>
-         </section>        
-      </section>      
+         </section>
+        </section>
+        <section xml:id="trouble.log.levels">
+          <title>Log Levels</title>
+         <section xml:id="rpc.logging"><title>Enabling RPC-level logging</title>
+          <para>Enabling the RPC-level logging on a RegionServer can often given
+           insight on timings at the server.  Once enabled, the amount of log
+           spewed is voluminous.  It is not recommended that you leave this
+           logging on for more than short bursts of time.  To enable RPC-level
+           logging, browse to the RegionServer UI and click on 
+           <emphasis>Log Level</emphasis>.  Set the log level to <varname>DEBUG</varname> for the package
+           <classname>org.apache.hadoop.ipc</classname> (Thats right, for
+           <classname>hadoop.ipc</classname>, NOT, <classname>hbase.ipc</classname>).  Then tail the RegionServers log.  Analyze.</para>
+           <para>To disable, set the logging level back to <varname>INFO</varname> level.
+           </para>
+         </section>                 
+       </section>      
       <section xml:id="trouble.log.gc">
         <title>JVM Garbage Collection Logs</title>
           <para>HBase is memory intensive, and using the default GC you can see long pauses in all threads including the <emphasis>Juliet Pause</emphasis> aka "GC of Death". 

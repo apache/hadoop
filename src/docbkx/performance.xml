@@ -9,20 +9,6 @@
          xmlns:db="http://docbook.org/ns/docbook">
   <title>Performance Tuning</title>
 
-  <note xml:id="rpc.logging"><title>Enabling RPC-level logging</title>
-  <para>Enabling the RPC-level logging on a RegionServer can often given
-      insight on timings at the server.  Once enabled, the amount of log
-      spewed is voluminous.  It is not recommended that you leave this
-      logging on for more than short bursts of time.  To enable RPC-level
-      logging, browse to the RegionServer UI and click on 
-      <emphasis>Log Level</emphasis>.  Set the log level to <varname>DEBUG</varname> for the package
-      <classname>org.apache.hadoop.ipc</classname> (Thats right, for
-      hadoop.ipc, NOT, hbase.ipc).  Then tail the RegionServers log.
-      Analyze.</para>
-  <para>To disable, set the logging level back to <varname>INFO</varname> level.
-  </para>
-  </note>
-
   <section xml:id="perf.os">
     <title>Operating System</title>
         <section xml:id="perf.os.ram">
