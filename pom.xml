@@ -129,14 +129,6 @@
       <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
     <developer>
-      <id>tedyu</id>
-      <name>Ted Yu</name>
-      <email>yuzhihong@gmail.com</email>
-      <timezone>-8</timezone>
-      <organization>CarrierIQ</organization>
-      <organizationUrl>http://www.carrieriq.com</organizationUrl>
-    </developer>
-    <developer>
       <id>larsgeorge</id>
       <name>Lars George</name>
       <email>larsgeorge@apache.org</email>
@@ -157,8 +149,8 @@
       <name>Ryan Rawson</name>
       <email>rawson@apache.org</email>
       <timezone>-8</timezone>
-      <organization>StumbleUpon</organization>
-      <organizationUrl>http://www.stumbleupon.com</organizationUrl>
+      <organization>CX</organization>
+      <organizationUrl>http://www.cx.com</organizationUrl>
     </developer>
     <developer>
       <id>stack</id>
@@ -167,6 +159,14 @@
       <timezone>-8</timezone>
       <organization>StumbleUpon</organization>
       <organizationUrl>http://www.stumbleupon.com/</organizationUrl>
+    </developer>
+    <developer>
+      <id>tedyu</id>
+      <name>Ted Yu</name>
+      <email>yuzhihong@gmail.com</email>
+      <timezone>-8</timezone>
+      <organization>CarrierIQ</organization>
+      <organizationUrl>http://www.carrieriq.com</organizationUrl>
     </developer>
     <developer>
       <id>todd</id>
