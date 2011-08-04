@@ -45,8 +45,8 @@ public class DataStatistics {
 
   private synchronized void sub(double oldNum) {
     this.count--;
-    this.sum = Math.max(this.sum -= oldNum, 0.0d);
-    this.sumSquares = Math.max(this.sumSquares -= oldNum * oldNum, 0.0d);
+    this.sum = Math.max(this.sum - oldNum, 0.0d);
+    this.sumSquares = Math.max(this.sumSquares - oldNum * oldNum, 0.0d);
   }
 
   public synchronized double mean() {

@@ -3,7 +3,9 @@ Hadoop MapReduce Change Log
 Trunk (unreleased changes)
 
   MAPREDUCE-279
-    
+ 
+    Fix findbugs warnings in mr-client modules, part 1  (mahadev) 
+  
     MAPREDUCE-2776. Fix some of the yarn findbug warnings. (siddharth 
     seth via mahadev)
 

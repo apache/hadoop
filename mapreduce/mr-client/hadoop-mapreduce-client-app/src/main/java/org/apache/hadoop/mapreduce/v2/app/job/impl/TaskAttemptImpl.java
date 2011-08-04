@@ -520,6 +520,7 @@ public abstract class TaskAttemptImpl implements
     }
   }
 
+
   /**
    * Create the {@link ContainerLaunchContext} for this attempt.
    */
@@ -576,7 +577,7 @@ public abstract class TaskAttemptImpl implements
         // Add file-system tokens
         for (Token<? extends TokenIdentifier> token : fsTokens) {
           LOG.info("Putting fs-token for NM use for launching container : "
-              + token.getIdentifier().toString());
+              + token.toString());
           taskCredentials.addToken(token.getService(), token);
         }
       }
@@ -1417,10 +1418,10 @@ public abstract class TaskAttemptImpl implements
   }
 
   private void initTaskAttemptStatus(TaskAttemptStatus result) {
-    result.progress = new Float(0);
-    result.diagnosticInfo = new String("");
+    result.progress = 0.0f;
+    result.diagnosticInfo = "";
     result.phase = Phase.STARTING;
-    result.stateString = new String("NEW");
+    result.stateString = "NEW";
     result.taskState = TaskAttemptState.NEW;
     Counters counters = recordFactory.newRecordInstance(Counters.class);
 //    counters.groups = new HashMap<String, CounterGroup>();

@@ -638,7 +638,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     try {
       if (TaskType.MAP == taskType) {
         tasksOfGivenType = mapTasks;
-      } else if (TaskType.REDUCE == taskType) {
+      } else {
         tasksOfGivenType = reduceTasks;
       }
       for (TaskId taskID : tasksOfGivenType)

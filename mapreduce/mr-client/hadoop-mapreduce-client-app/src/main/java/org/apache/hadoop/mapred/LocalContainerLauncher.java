@@ -64,7 +64,7 @@ import org.apache.hadoop.yarn.service.AbstractService;
 public class LocalContainerLauncher extends AbstractService implements
     ContainerLauncher {
 
-  private static final File curDir = new File(new String("."));
+  private static final File curDir = new File(".");
   private static final Log LOG = LogFactory.getLog(LocalContainerLauncher.class);
 
   private FileContext curFC = null;

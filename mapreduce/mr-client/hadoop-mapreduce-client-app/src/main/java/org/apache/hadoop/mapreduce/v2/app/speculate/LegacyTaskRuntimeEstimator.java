@@ -85,10 +85,8 @@ public class LegacyTaskRuntimeEstimator extends StartEndTimesBase {
           = attemptRuntimeEstimateVariances.get(taskAttempt);
 
       if (estimateContainer == null) {
-        synchronized (attemptRuntimeEstimates) {
-          if (attemptRuntimeEstimates.get(taskAttempt) == null) {
-            attemptRuntimeEstimates.put(taskAttempt, new AtomicLong());
-          }
+        if (attemptRuntimeEstimates.get(taskAttempt) == null) {
+          attemptRuntimeEstimates.put(taskAttempt, new AtomicLong());
 
           estimateContainer = attemptRuntimeEstimates.get(taskAttempt);
         }

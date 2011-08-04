@@ -91,10 +91,12 @@ public class MapReduceChildJVM {
     Vector<String> logProps = new Vector<String>(4);
     setupLog4jProperties(logProps, logSize, containerLogDir);
     Iterator<String> it = logProps.iterator();
+    StringBuffer buffer = new StringBuffer();
     while (it.hasNext()) {
-      hadoopClientOpts += " " + it.next();
+      buffer.append(" " + it.next());
     }
-
+    hadoopClientOpts = hadoopClientOpts + buffer.toString();
+    
     env.put("HADOOP_CLIENT_OPTS", hadoopClientOpts);
 
     // add the env variables passed by the user

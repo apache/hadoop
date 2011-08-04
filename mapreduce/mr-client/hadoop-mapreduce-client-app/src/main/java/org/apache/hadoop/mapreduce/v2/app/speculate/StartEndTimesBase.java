@@ -87,8 +87,8 @@ abstract class StartEndTimesBase implements TaskRuntimeEstimator {
 
     Map<JobId, Job> allJobs = context.getAllJobs();
 
-    for (JobId jobID : allJobs.keySet()) {
-      final Job job = allJobs.get(jobID);
+    for (Map.Entry<JobId, Job> entry : allJobs.entrySet()) {
+      final Job job = entry.getValue();
       mapperStatistics.put(job, new DataStatistics());
       reducerStatistics.put(job, new DataStatistics());
       slowTaskRelativeTresholds.put

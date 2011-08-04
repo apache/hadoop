@@ -67,7 +67,7 @@ import org.apache.hadoop.yarn.service.AbstractService;
  */
 public class RMCommunicator extends AbstractService  {
   private static final Log LOG = LogFactory.getLog(RMContainerAllocator.class);
-  private static int rmPollInterval;//millis
+  private int rmPollInterval;//millis
   protected ApplicationId applicationId;
   protected ApplicationAttemptId applicationAttemptId;
   private volatile boolean stopped;

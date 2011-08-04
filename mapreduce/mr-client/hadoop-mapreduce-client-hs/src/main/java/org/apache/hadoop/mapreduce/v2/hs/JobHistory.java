@@ -179,6 +179,11 @@ public class JobHistory extends AbstractService implements HistoryContext   {
   public void init(Configuration conf) throws YarnException {
     LOG.info("JobHistory Init");
     this.conf = conf;
+    this.appID = RecordFactoryProvider.getRecordFactory(conf)
+        .newRecordInstance(ApplicationId.class);
+    this.appAttemptID = RecordFactoryProvider.getRecordFactory(conf)
+    .newRecordInstance(ApplicationAttemptId.class);
+
     debugMode = conf.getBoolean(JHConfig.HISTORY_DEBUG_MODE_KEY, false);
     serialNumberLowDigits = debugMode ? 1 : 3;
     serialNumberFormat = ("%0"
@@ -306,10 +311,6 @@ public class JobHistory extends AbstractService implements HistoryContext   {
   
   public JobHistory() {
     super(JobHistory.class.getName());
-    this.appID = RecordFactoryProvider.getRecordFactory(conf)
-        .newRecordInstance(ApplicationId.class);
-    this.appAttemptID = RecordFactoryProvider.getRecordFactory(conf)
-    .newRecordInstance(ApplicationAttemptId.class);
   }
   
   /**
@@ -338,15 +339,14 @@ public class JobHistory extends AbstractService implements HistoryContext   {
       LOG.warn("Could not find serial portion from path: " + serialDirPath.toString() + ". Continuing with next");
       return;
     }
-    synchronized (idToDateString) {
-      if (idToDateString.containsKey(serialPart)) {
-        Set<String> set = idToDateString.get(serialPart);
-        set.remove(timeStampPart);
-        if (set.isEmpty()) {
-          idToDateString.remove(serialPart);
-        }
+    if (idToDateString.containsKey(serialPart)) {
+      Set<String> set = idToDateString.get(serialPart);
+      set.remove(timeStampPart);
+      if (set.isEmpty()) {
+        idToDateString.remove(serialPart);
       }
-  }
+    }
+
   }
   
   private void addDirectoryToSerialNumberIndex(Path serialDirPath) {
@@ -363,13 +363,11 @@ public class JobHistory extends AbstractService implements HistoryContext   {
   }
 
   private void addToSerialNumberIndex(String serialPart, String timestampPart) {
-    synchronized (idToDateString) {
       if (!idToDateString.containsKey(serialPart)) {
         idToDateString.put(serialPart, new HashSet<String>());
         if (idToDateString.size() > dateStringCacheSize) {
           idToDateString.remove(idToDateString.firstKey());
         }
-      }
       Set<String> datePartSet = idToDateString.get(serialPart);
       datePartSet.add(timestampPart);
     }
@@ -435,11 +433,9 @@ public class JobHistory extends AbstractService implements HistoryContext   {
    * Adds an entry to the loaded job cache. Maintains the size.
    */
   private void  addToLoadedJobCache(Job job) {
-    synchronized(loadedJobCache) {
-      loadedJobCache.put(job.getID(), job);
-      if (loadedJobCache.size() > loadedJobCacheSize ) {
-        loadedJobCache.remove(loadedJobCache.firstKey());
-      }
+    loadedJobCache.put(job.getID(), job);
+    if (loadedJobCache.size() > loadedJobCacheSize ) {
+      loadedJobCache.remove(loadedJobCache.firstKey());
     }
   }
   
@@ -705,10 +701,8 @@ public class JobHistory extends AbstractService implements HistoryContext   {
   
   private Job findJob(JobId jobId) throws IOException {
     //Job already loaded.
-    synchronized (loadedJobCache) {
-      if (loadedJobCache.containsKey(jobId)) {
-        return loadedJobCache.get(jobId);
-      }
+    if (loadedJobCache.containsKey(jobId)) {
+      return loadedJobCache.get(jobId);        
     }
     
     //MetaInfo available in cache.
@@ -763,8 +757,9 @@ public class JobHistory extends AbstractService implements HistoryContext   {
     Map<JobId, Job> resultMap = new TreeMap<JobId, Job>();
     
     SortedMap<JobId, JobIndexInfo> allJobs = getAllJobsMetaInfo();
-    for (JobId jobId : allJobs.keySet()) {
-      JobIndexInfo indexInfo = allJobs.get(jobId);
+    for (Map.Entry<JobId, JobIndexInfo> entry : allJobs.entrySet()) {
+      JobId jobId = entry.getKey();
+      JobIndexInfo indexInfo = entry.getValue();
       String jobName = indexInfo.getJobName();
       String jobUser = indexInfo.getUser();
       long finishTime = indexInfo.getFinishTime();
@@ -1123,7 +1118,7 @@ public class JobHistory extends AbstractService implements HistoryContext   {
   
   
   //TODO AppContext - Not Required
-  private final ApplicationAttemptId appAttemptID;
+  private  ApplicationAttemptId appAttemptID;
   @Override
   public ApplicationAttemptId getApplicationAttemptId() {
   //TODO fixme - bogus appAttemptID for now
@@ -1131,7 +1126,7 @@ public class JobHistory extends AbstractService implements HistoryContext   {
   }  
   
   //TODO AppContext - Not Required
-  private final ApplicationId appID;
+  private ApplicationId appID;
   @Override
   public ApplicationId getApplicationID() {
   //TODO fixme - bogus appID for now
