@@ -635,6 +635,9 @@ Trunk (unreleased changes)
     HDFS-2225. Refactor file management so it's not in classes which should
     be generic. (Ivan Kelly via todd)
 
+    HDFS-2108. Move datanode heartbeat handling from namenode package to
+    blockmanagement package.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

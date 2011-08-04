@@ -112,10 +112,10 @@ public class TestNamenodeCapacityReport extends TestCase {
       
       configCapacity = namesystem.getCapacityTotal();
       used = namesystem.getCapacityUsed();
-      nonDFSUsed = namesystem.getCapacityUsedNonDFS();
+      nonDFSUsed = namesystem.getNonDfsUsedSpace();
       remaining = namesystem.getCapacityRemaining();
-      percentUsed = namesystem.getCapacityUsedPercent();
-      percentRemaining = namesystem.getCapacityRemainingPercent();
+      percentUsed = namesystem.getPercentUsed();
+      percentRemaining = namesystem.getPercentRemaining();
       bpUsed = namesystem.getBlockPoolUsedSpace();
       percentBpUsed = namesystem.getPercentBlockPoolUsed();
       

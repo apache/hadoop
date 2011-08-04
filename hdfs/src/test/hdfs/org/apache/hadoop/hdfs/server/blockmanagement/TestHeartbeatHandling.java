@@ -52,6 +52,8 @@ public class TestHeartbeatHandling extends TestCase {
     try {
       cluster.waitActive();
       final FSNamesystem namesystem = cluster.getNamesystem();
+      final HeartbeatManager hm = namesystem.getBlockManager(
+          ).getDatanodeManager().getHeartbeatManager();
       final String poolId = namesystem.getBlockPoolId();
       final DatanodeRegistration nodeReg = 
         DataNodeTestUtils.getDNRegistrationForBP(cluster.getDataNodes().get(0), poolId);
@@ -69,7 +71,7 @@ public class TestHeartbeatHandling extends TestCase {
 
       try {
         namesystem.writeLock();
-        synchronized (namesystem.heartbeats) {
+        synchronized(hm) {
           for (int i=0; i<MAX_REPLICATE_BLOCKS; i++) {
             dd.addBlockToBeReplicated(
                 new Block(i, 0, GenerationStamp.FIRST_VALID_STAMP), ONE_TARGET);

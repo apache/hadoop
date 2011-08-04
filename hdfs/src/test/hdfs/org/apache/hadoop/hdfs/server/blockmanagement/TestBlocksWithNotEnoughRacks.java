@@ -16,10 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.blockmanagement;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
@@ -31,18 +37,14 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.log4j.Level;
-
-import static org.junit.Assert.*;
 import org.junit.Test;
 
 public class TestBlocksWithNotEnoughRacks {
   public static final Log LOG = LogFactory.getLog(TestBlocksWithNotEnoughRacks.class);
   static {
-    ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)LOG).getLogger().setLevel(Level.ALL);
   }
 
@@ -278,6 +280,7 @@ public class TestBlocksWithNotEnoughRacks {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
       .numDataNodes(racks.length).racks(racks).build();
     final FSNamesystem ns = cluster.getNameNode().getNamesystem();
+    final DatanodeManager dm = ns.getBlockManager().getDatanodeManager();
 
     try {
       // Create a file with one block with a replication factor of 2
@@ -293,7 +296,7 @@ public class TestBlocksWithNotEnoughRacks {
       DataNode dataNode = datanodes.get(idx);
       DatanodeID dnId = dataNode.getDatanodeId();
       cluster.stopDataNode(idx);
-      ns.removeDatanode(dnId);
+      dm.removeDatanode(dnId);
 
       // The block should still have sufficient # replicas, across racks.
       // The last node may not have contained a replica, but if it did
@@ -307,7 +310,7 @@ public class TestBlocksWithNotEnoughRacks {
       dataNode = datanodes.get(idx);
       dnId = dataNode.getDatanodeId();
       cluster.stopDataNode(idx);
-      ns.removeDatanode(dnId);
+      dm.removeDatanode(dnId);
 
       // Make sure we have enough live replicas even though we are
       // short one rack and therefore need one replica
@@ -332,6 +335,7 @@ public class TestBlocksWithNotEnoughRacks {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
       .numDataNodes(racks.length).racks(racks).build();
     final FSNamesystem ns = cluster.getNameNode().getNamesystem();
+    final DatanodeManager dm = ns.getBlockManager().getDatanodeManager();
 
     try {
       // Create a file with one block
@@ -347,7 +351,7 @@ public class TestBlocksWithNotEnoughRacks {
       DataNode dataNode = datanodes.get(2);
       DatanodeID dnId = dataNode.getDatanodeId();
       cluster.stopDataNode(2);
-      ns.removeDatanode(dnId);
+      dm.removeDatanode(dnId);
 
       // The block gets re-replicated to another datanode so it has a 
       // sufficient # replicas, but not across racks, so there should

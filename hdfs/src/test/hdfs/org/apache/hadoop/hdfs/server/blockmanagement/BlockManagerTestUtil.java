@@ -25,10 +25,13 @@ import java.util.Set;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.Daemon;
 
 public class BlockManagerTestUtil {
+  public static void setNodeReplicationLimit(final BlockManager blockManager,
+      final int limit) {
+    blockManager.maxReplicationStreams = limit;
+  }
 
   /** @return the datanode descriptor for the given the given storageID. */
   public static DatanodeDescriptor getDatanode(final FSNamesystem ns,

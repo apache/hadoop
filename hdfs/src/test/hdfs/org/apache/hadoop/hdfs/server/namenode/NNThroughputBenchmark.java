@@ -1128,7 +1128,8 @@ public class NNThroughputBenchmark {
       // decommission data-nodes
       decommissionNodes();
       // set node replication limit
-      namesystem.setNodeReplicationLimit(nodeReplicationLimit);
+      BlockManagerTestUtil.setNodeReplicationLimit(namesystem.getBlockManager(),
+          nodeReplicationLimit);
     }
 
     private void decommissionNodes() throws IOException {
@@ -1171,9 +1172,7 @@ public class NNThroughputBenchmark {
     void printResults() {
       String blockDistribution = "";
       String delim = "(";
-      int totalReplicas = 0;
       for(int idx=0; idx < blockReportObject.getNumDatanodes(); idx++) {
-        totalReplicas += blockReportObject.datanodes[idx].nrBlocks;
         blockDistribution += delim + blockReportObject.datanodes[idx].nrBlocks;
         delim = ", ";
       }

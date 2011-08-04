@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.Collection;
 import java.util.Iterator;
@@ -33,7 +33,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.HeartbeatManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 
 /**
  * Test if live nodes count per node is correct 
@@ -57,6 +59,8 @@ public class TestNodeCount extends TestCase {
       new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION_FACTOR).build();
     try {
       final FSNamesystem namesystem = cluster.getNamesystem();
+      final BlockManager bm = namesystem.getBlockManager();
+      final HeartbeatManager hm = bm.getDatanodeManager().getHeartbeatManager();
       final FileSystem fs = cluster.getFileSystem();
       
       // populate the cluster with a one block file
@@ -66,8 +70,7 @@ public class TestNodeCount extends TestCase {
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
 
       // keep a copy of all datanode descriptor
-      DatanodeDescriptor[] datanodes = 
-         namesystem.heartbeats.toArray(new DatanodeDescriptor[REPLICATION_FACTOR]);
+      final DatanodeDescriptor[] datanodes = hm.getDatanodes();
       
       // start two new nodes
       cluster.startDataNodes(conf, 2, true, null, null);
@@ -80,9 +83,9 @@ public class TestNodeCount extends TestCase {
       // make sure that NN detects that the datanode is down
       try {
         namesystem.writeLock();
-        synchronized (namesystem.heartbeats) {
+        synchronized (hm) {
           datanode.setLastUpdate(0); // mark it dead
-          namesystem.heartbeatCheck();
+          hm.heartbeatCheck();
         }
       } finally {
         namesystem.writeUnlock();
@@ -102,12 +105,12 @@ public class TestNodeCount extends TestCase {
       }
       
       // find out a non-excess node
-      Iterator<DatanodeDescriptor> iter = namesystem.getBlockManager().blocksMap
+      final Iterator<DatanodeDescriptor> iter = bm.blocksMap
           .nodeIterator(block.getLocalBlock());
       DatanodeDescriptor nonExcessDN = null;
       while (iter.hasNext()) {
         DatanodeDescriptor dn = iter.next();
-        Collection<Block> blocks = namesystem.getBlockManager().excessReplicateMap.get(dn.getStorageID());
+        Collection<Block> blocks = bm.excessReplicateMap.get(dn.getStorageID());
         if (blocks == null || !blocks.contains(block) ) {
           nonExcessDN = dn;
           break;
@@ -121,9 +124,9 @@ public class TestNodeCount extends TestCase {
       
       try {
         namesystem.writeLock();
-        synchronized (namesystem.heartbeats) {
+        synchronized(hm) {
           nonExcessDN.setLastUpdate(0); // mark it dead
-          namesystem.heartbeatCheck();
+          hm.heartbeatCheck();
         }
       } finally {
         namesystem.writeUnlock();

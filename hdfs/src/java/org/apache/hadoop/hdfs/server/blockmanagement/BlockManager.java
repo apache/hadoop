@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.apache.hadoop.hdfs.server.common.Util.now;
-
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -46,6 +44,7 @@ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportIterator;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
@@ -95,11 +94,6 @@ public class BlockManager {
     return isBlockTokenEnabled;
   }
 
-  /** get the block key update interval */
-  public long getBlockKeyUpdateInterval() {
-    return blockKeyUpdateInterval;
-  }
-
   /** get the BlockTokenSecretManager */
   public BlockTokenSecretManager getBlockTokenSecretManager() {
     return blockTokenSecretManager;
@@ -140,7 +134,8 @@ public class BlockManager {
   public final BlocksMap blocksMap;
 
   private final DatanodeManager datanodeManager;
-  
+  private final HeartbeatManager heartbeatManager;
+
   /** Replication thread. */
   final Daemon replicationThread = new Daemon(new ReplicationMonitor());
   
@@ -177,7 +172,7 @@ public class BlockManager {
   /** The maximum number of outgoing replication streams
    *  a given node should have at one time 
    */
-  public int maxReplicationStreams;
+  int maxReplicationStreams;
   /** Minimum copies needed or else write is disallowed */
   public final int minReplication;
   /** Default number of replicas */
@@ -217,22 +212,12 @@ public class BlockManager {
       setBlockToken(l);
     }
   }
-
-  /**
-   * Update access keys.
-   */
-  public void updateBlockKey() throws IOException {
-    this.blockTokenSecretManager.updateKeys();
-    synchronized (namesystem.heartbeats) {
-      for (DatanodeDescriptor nodeInfo : namesystem.heartbeats) {
-        nodeInfo.needKeyUpdate = true;
-      }
-    }
-  }
   
   public BlockManager(FSNamesystem fsn, Configuration conf) throws IOException {
     namesystem = fsn;
-    datanodeManager = new DatanodeManager(fsn, conf);
+    datanodeManager = new DatanodeManager(this, fsn, conf);
+    heartbeatManager = datanodeManager.getHeartbeatManager();
+
     blocksMap = new BlocksMap(DEFAULT_MAP_LOAD_FACTOR);
     blockplacement = BlockPlacementPolicy.getInstance(
         conf, namesystem, datanodeManager.getNetworkTopology());
@@ -385,6 +370,11 @@ public class BlockManager {
 
     // Dump all datanodes
     getDatanodeManager().datanodeDump(out);
+  }
+
+  /** @return maxReplicationStreams */
+  public int getMaxReplicationStreams() {
+    return maxReplicationStreams;
   }
 
   /**
@@ -587,7 +577,8 @@ public class BlockManager {
       }
       final BlockInfoUnderConstruction uc = (BlockInfoUnderConstruction)blk;
       final DatanodeDescriptor[] locations = uc.getExpectedLocations();
-      return namesystem.createLocatedBlock(uc, locations, pos, false);
+      final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
+      return new LocatedBlock(eb, locations, pos, false);
     }
 
     // get block locations
@@ -613,7 +604,8 @@ public class BlockManager {
           machines[j++] = d;
       }
     }
-    return namesystem.createLocatedBlock(blk, machines, pos, isCorrupt);
+    final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
+    return new LocatedBlock(eb, machines, pos, isCorrupt);
   }
 
   /**
@@ -685,8 +677,8 @@ public class BlockManager {
   }
 
    
-  /** Remove a datanode. */
-  public void removeDatanode(final DatanodeDescriptor node) {
+  /** Remove the blocks associated to the given datanode. */
+  void removeBlocksAssociatedTo(final DatanodeDescriptor node) {
     final Iterator<? extends Block> it = node.getBlockIterator();
     while(it.hasNext()) {
       removeStoredBlock(it.next(), node);
@@ -694,11 +686,6 @@ public class BlockManager {
 
     node.resetBlocks();
     removeFromInvalidates(node.getStorageID());
-    datanodeManager.getNetworkTopology().remove(node);
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("remove datanode " + node.getName());
-    }
   }
   
   private void removeFromInvalidates(String storageID, Block block) {
@@ -887,7 +874,7 @@ public class BlockManager {
    * @param nodesToProcess number of datanodes to schedule deletion work
    * @return total number of block for deletion
    */
-  public int computeInvalidateWork(int nodesToProcess) {
+  int computeInvalidateWork(int nodesToProcess) {
     int numOfNodes = recentInvalidateSets.size();
     nodesToProcess = Math.min(numOfNodes, nodesToProcess);
 
@@ -927,7 +914,7 @@ public class BlockManager {
    *
    * @return number of blocks scheduled for replication during this iteration.
    */
-  public int computeReplicationWork(int blocksToProcess) throws IOException {
+  private int computeReplicationWork(int blocksToProcess) throws IOException {
     // Choose the blocks to be replicated
     List<List<Block>> blocksToReplicate =
       chooseUnderReplicatedBlocks(blocksToProcess);
@@ -2047,7 +2034,7 @@ public class BlockManager {
    * On stopping decommission, check if the node has excess replicas.
    * If there are any excess replicas, call processOverReplicatedBlock()
    */
-  private void processOverReplicatedBlocksOnReCommission(
+  void processOverReplicatedBlocksOnReCommission(
       final DatanodeDescriptor srcNode) {
     final Iterator<? extends Block> it = srcNode.getBlockIterator();
     while(it.hasNext()) {
@@ -2143,6 +2130,16 @@ public class BlockManager {
 
   public BlockInfo getStoredBlock(Block block) {
     return blocksMap.getStoredBlock(block);
+  }
+
+
+  /** Should the access keys be updated? */
+  boolean shouldUpdateBlockKey(final long updateTime) throws IOException {
+    final boolean b = isBlockTokenEnabled && blockKeyUpdateInterval < updateTime;
+    if (b) {
+      blockTokenSecretManager.updateKeys();
+    }
+    return b;
   }
 
   /* updates a block in under replication queue */
@@ -2356,57 +2353,11 @@ public class BlockManager {
   }
 
   /**
-   * Change, if appropriate, the admin state of a datanode to 
-   * decommission completed. Return true if decommission is complete.
-   */
-  boolean checkDecommissionStateInternal(DatanodeDescriptor node) {
-    // Check to see if all blocks in this decommissioned
-    // node has reached their target replication factor.
-    if (node.isDecommissionInProgress()) {
-      if (!isReplicationInProgress(node)) {
-        node.setDecommissioned();
-        LOG.info("Decommission complete for node " + node.getName());
-      }
-    }
-    return node.isDecommissioned();
-  }
-
-  /** Start decommissioning the specified datanode. */
-  void startDecommission(DatanodeDescriptor node) throws IOException {
-    if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
-      LOG.info("Start Decommissioning node " + node.getName() + " with " + 
-          node.numBlocks() +  " blocks.");
-      synchronized (namesystem.heartbeats) {
-        namesystem.updateStats(node, false);
-        node.startDecommission();
-        namesystem.updateStats(node, true);
-      }
-      node.decommissioningStatus.setStartTime(now());
-      
-      // all the blocks that reside on this node have to be replicated.
-      checkDecommissionStateInternal(node);
-    }
-  }
-
-  /** Stop decommissioning the specified datanodes. */
-  void stopDecommission(DatanodeDescriptor node) throws IOException {
-    if (node.isDecommissionInProgress() || node.isDecommissioned()) {
-      LOG.info("Stop Decommissioning node " + node.getName());
-      synchronized (namesystem.heartbeats) {
-        namesystem.updateStats(node, false);
-        node.stopDecommission();
-        namesystem.updateStats(node, true);
-      }
-      processOverReplicatedBlocksOnReCommission(node);
-    }
-  }
-
-  /**
    * Periodically calls computeReplicationWork().
    */
   private class ReplicationMonitor implements Runnable {
-    static final int INVALIDATE_WORK_PCT_PER_ITERATION = 32;
-    static final float REPLICATION_WORK_MULTIPLIER_PER_ITERATION = 2;
+    private static final int INVALIDATE_WORK_PCT_PER_ITERATION = 32;
+    private static final int REPLICATION_WORK_MULTIPLIER_PER_ITERATION = 2;
 
     @Override
     public void run() {
@@ -2439,8 +2390,6 @@ public class BlockManager {
    */
   int computeDatanodeWork() throws IOException {
     int workFound = 0;
-    int blocksToProcess = 0;
-    int nodesToProcess = 0;
     // Blocks should not be replicated or removed if in safe mode.
     // It's OK to check safe mode here w/o holding lock, in the worst
     // case extra replications will be scheduled, and these will get
@@ -2448,11 +2397,11 @@ public class BlockManager {
     if (namesystem.isInSafeMode())
       return workFound;
 
-    synchronized (namesystem.heartbeats) {
-      blocksToProcess = (int) (namesystem.heartbeats.size() * ReplicationMonitor.REPLICATION_WORK_MULTIPLIER_PER_ITERATION);
-      nodesToProcess = (int) Math.ceil((double) namesystem.heartbeats.size()
-          * ReplicationMonitor.INVALIDATE_WORK_PCT_PER_ITERATION / 100);
-    }
+    final int numlive = heartbeatManager.getLiveDatanodeCount();
+    final int blocksToProcess = numlive
+        * ReplicationMonitor.REPLICATION_WORK_MULTIPLIER_PER_ITERATION;
+    final int nodesToProcess = (int) Math.ceil(numlive
+        * ReplicationMonitor.INVALIDATE_WORK_PCT_PER_ITERATION / 100.0);
 
     workFound = this.computeReplicationWork(blocksToProcess);
 

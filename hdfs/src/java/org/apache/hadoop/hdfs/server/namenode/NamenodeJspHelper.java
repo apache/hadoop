@@ -349,7 +349,7 @@ class NamenodeJspHelper {
           + colTxt() + ":" + colTxt() + decommissioning.size() 
           + rowTxt() + colTxt("Excludes missing blocks.")
           + "Number of Under-Replicated Blocks" + colTxt() + ":" + colTxt()
-          + fsn.getUnderReplicatedNotMissingBlocks()
+          + fsn.getBlockManager().getUnderReplicatedNotMissingBlocks()
           + "</table></div><br>\n");
 
       if (live.isEmpty() && dead.isEmpty()) {
