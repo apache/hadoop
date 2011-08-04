@@ -320,8 +320,8 @@ htable.close();</programlisting></para>
     </section>
    <section xml:id="perf.hbase.read.dist">
       <title>Concurrency:  Monitor Data Spread</title>
-      <para>When performing a high number of concurrent reads, monitor the data spread of the target tables.  If there target table(s) are in 
-      too few regions then the reads will fall on only a few nodes.  </para>
+      <para>When performing a high number of concurrent reads, monitor the data spread of the target tables.  If the target table(s) have 
+      too few regions then the reads could likely be served from too few nodes.  </para>
       <para>See <xref linkend="precreate.regions"/>, as well as <xref linkend="perf.configurations"/> </para>   
    </section>
     

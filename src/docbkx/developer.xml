@@ -126,5 +126,61 @@ mvn test -Dtest=TestXYZ
            </para>
         </section>
     </section> 
+
+    <section xml:id="getting.involved"> 
+        <title>Getting Involved</title>
+        <para>HBase gets better only when people contribute!  The following are highlights from the HBase wiki on 
+        <link xlink:href="http://wiki.apache.org/hadoop/Hbase/HowToContribute">How To Contribute</link>.
+        </para>
+        <section xml:id="mailing.list">
+          <title>Mailing Lists</title>
+          <para>Sign up for the dev-list, and the user-list too for greater coverage.  See the 
+          <link xlink:href="http://hbase.apache.org/mail-lists.html">mailing lists</link> page.
+          </para>
+        </section>
+        <section xml:id="jira">
+          <title>Jira</title>
+          <para>Check for existing issues in <link xlink:href="https://issues.apache.org/jira/browse/HBASE">Jira</link>.  
+          If it's either a new feature request, enhancement, or a bug, file a ticket.
+          </para>
+        </section>
+        <section xml:id="submitting.patches">
+          <title>Submitting Patches</title>
+          <section xml:id="submitting.patches.create">
+            <title>Create Patch</title>
+          <para>Patch files can be easily generated from Eclipse, for example by selecting Team -&gt; Create Patch.
+          </para>
+          <para>Please submit one patch-file per Jira.  For example, if multiple files are changed make sure the 
+          selected resource when generating the patch is a directory.  Patch files can reflect changes in multiple files. </para>
+          </section>
+          <section xml:id="submitting.patches.naming">
+            <title>Patch File Naming</title>
+          <para>The patch file should have the HBase Jira ticket in the name.  For example, if a patch was submitted for <filename>Foo.java</filename>, then
+          a patch file called <filename>Foo_HBASE_XXX.patch</filename> would be acceptable where XXX is the HBase Jira number.
+          </para>
+          </section>
+          <section xml:id="submitting.patches.tests">
+            <title>Unit Tests</title>
+            <para>Yes, please.  Please try to include unit tests with every code patch (and especially new classes and large changes).</para>
+          </section>
+          <section xml:id="submitting.patches.jira">
+            <title>Attach Patch to Jira</title>
+          <para>The patch should be attached to the associated Jira ticket.
+          </para>
+          <para>Once attached to the ticket, click "submit patch" and 
+          the status of the ticket will change.  Committers will review submitted patches for inclusion into the codebase.  Please
+          understand that not every patch may get committed, and that feedback will likely be provided on the patch.  Fear not, though,
+          because the HBase community is helpful!
+          </para>
+          </section>
+        </section>
+        <section xml:id="committing.patches">
+          <title>Committing Patches</title>
+          <para>
+          See <link xlink:href="http://wiki.apache.org/hadoop/Hbase/HowToCommit">How To Commit</link> in the HBase wiki.
+          </para>
+        </section>
+    
+    </section>
           
     </chapter>
