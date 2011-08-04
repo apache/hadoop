@@ -134,25 +134,21 @@
     <para>See <xref linkend="number.of.cfs" />.</para>
   </section>
 
-  <section xml:id="perf.one.region">
-    <title>Data Clumping</title>
+  <section xml:id="perf.writing">
+    <title>Writing to HBase</title>
 
-    <para>If all your data is being written to one region, then re-read the
-    section on processing <link linkend="timeseries">timeseries</link>
-    data.</para>
-  </section>
-
-  <section xml:id="perf.batch.loading">
-    <title>Batch Loading</title>
-    <para>Use the bulk load tool if you can.  See
+    <section xml:id="perf.batch.loading">
+      <title>Batch Loading</title>
+      <para>Use the bulk load tool if you can.  See
         <link xlink:href="http://hbase.apache.org/bulk-loads.html">Bulk Loads</link>.
         Otherwise, pay attention to the below.
-    </para>
+      </para>
+    </section>  <!-- batch loading -->
 
-  <section xml:id="precreate.regions">
-  <title>
-  Table Creation: Pre-Creating Regions
-  </title>
+    <section xml:id="precreate.regions">
+    <title>
+    Table Creation: Pre-Creating Regions
+    </title>
 <para>
 Tables in HBase are initially created with one region by default.  For bulk imports, this means that all clients will write to the same region until it is large enough to split and become distributed across the cluster.  A useful pattern to speed up the bulk import process is to pre-create empty regions.  Be somewhat conservative in this, because too-many regions can actually degrade performance.  An example of pre-creation using hex-keys is as follows (note:  this example may need to be tweaked to the individual applications keys):
 </para>
@@ -185,10 +181,10 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
 }</programlisting>
   </para>
   </section>
-  <section xml:id="def.log.flush">
-  <title>
-  Table Creation: Deferred Log Flush
-  </title>
+    <section xml:id="def.log.flush">
+    <title>
+    Table Creation: Deferred Log Flush
+    </title>
 <para>
 The default behavior for Puts using the Write Ahead Log (WAL) is that <classname>HLog</classname> edits will be written immediately.  If deferred log flush is used, 
 WAL edits are kept in memory until the flush period.  The benefit is aggregated and asynchronous <classname>HLog</classname>- writes, but the potential downside is that if
@@ -198,14 +194,10 @@ WAL edits are kept in memory until the flush period.  The benefit is aggregated 
 Deferred log flush can be configured on tables via <link
       xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html">HTableDescriptor</link>.  The default value of <varname>hbase.regionserver.optionallogflushinterval</varname> is 1000ms.
 </para>
-  </section>  
-  </section>  <!-- batch loading -->
-
-  <section>
-    <title>HBase Client</title>
+    </section>  
 
     <section xml:id="perf.hbase.client.autoflush">
-      <title>AutoFlush</title>
+      <title>HBase Client:  AutoFlush</title>
 
       <para>When performing a lot of Puts, make sure that setAutoFlush is set
       to false on your <link
@@ -218,6 +210,46 @@ Deferred log flush can be configured on tables via <link
       Calling <methodname>close</methodname> on the <classname>HTable</classname>
       instance will invoke <methodname>flushCommits</methodname>.</para>
     </section>
+    <section xml:id="perf.hbase.client.putwal">
+      <title>HBase Client:  Turn off WAL on Puts</title>
+      <para>A frequently discussed option for increasing throughput on <classname>Put</classname>s is to call <code>writeToWAL(false)</code>.  Turning this off means
+          that the RegionServer will <emphasis>not</emphasis> write the <classname>Put</classname> to the Write Ahead Log,
+          only into the memstore, HOWEVER the consequence is that if there
+          is a RegionServer failure <emphasis>there will be data loss</emphasis>.
+          If <code>writeToWAL(false)</code> is used, do so with extreme caution.  You may find in actuality that
+          it makes little difference if your load is well distributed across the cluster.
+      </para>
+      <para>In general, it is best to use WAL for Puts, and where loading throughput
+          is a concern to use <link linkend="perf.batch.loading">bulk loading</link> techniques instead.  
+      </para>
+    </section>
+    <section xml:id="perf.hbase.client.regiongroup">
+      <title>HBase Client: Group Puts by RegionServer</title>
+      <para>In addition to using the writeBuffer, grouping <classname>Put</classname>s by RegionServer can reduce the number of client RPC calls per writeBuffer flush. 
+      There is a utility <classname>HTableUtil</classname> currently on TRUNK that does this, but you can either copy that or implement your own verison for
+      those still on 0.90.x or earlier.
+      </para>
+    </section>    
+    <section xml:id="perf.hbase.write.mr.reducer">
+      <title>MapReduce:  Skip The Reducer</title>
+      <para>When writing a lot of data to an HBase table in a in a Mapper (e.g., with <link
+      xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableOutputFormat.html">TableOutputFormat</link>),
+      skip the Reducer step whenever possible.  When a Reducer step is used, all of the output (Puts) from the Mapper will get spooled to disk, then shuffled to other 
+      Reducers that will most likely be off-node.   
+      </para>
+    </section>
+
+  <section xml:id="perf.one.region">
+    <title>Anti-Pattern:  One Hot Region</title>
+    <para>If all your data is being written to one region at a time, then re-read the
+    section on processing <link linkend="timeseries">timeseries</link> data.</para>
+    <para>Also, see <xref linkend="precreate.regions"/>, as well as <xref linkend="perf.configurations"/> </para>   
+  </section>
+
+  </section>  <!--  writing -->
+  
+  <section xml:id="perf.reading">
+    <title>Reading from HBase</title>
 
     <section xml:id="perf.hbase.client.caching">
       <title>Scan Caching</title>
@@ -286,18 +318,12 @@ htable.close();</programlisting></para>
             and minimal network traffic to the client for a single row.
       </para>
     </section>
-    <section xml:id="perf.hbase.client.putwal">
-      <title>Turn off WAL on Puts</title>
-      <para>A frequently discussed option for increasing throughput on <classname>Put</classname>s is to call <code>writeToWAL(false)</code>.  Turning this off means
-          that the RegionServer will <emphasis>not</emphasis> write the <classname>Put</classname> to the Write Ahead Log,
-          only into the memstore, HOWEVER the consequence is that if there
-          is a RegionServer failure <emphasis>there will be data loss</emphasis>.
-          If <code>writeToWAL(false)</code> is used, do so with extreme caution.  You may find in actuality that
-          it makes little difference if your load is well distributed across the cluster.
-      </para>
-      <para>In general, it is best to use WAL for Puts, and where loading throughput
-          is a concern to use <link linkend="perf.batch.loading">bulk loading</link> techniques instead.  
-      </para>
-    </section>
-  </section>
+   <section xml:id="perf.hbase.read.dist">
+      <title>Concurrency:  Monitor Data Spread</title>
+      <para>When performing a high number of concurrent reads, monitor the data spread of the target tables.  If there target table(s) are in 
+      too few regions then the reads will fall on only a few nodes.  </para>
+      <para>See <xref linkend="precreate.regions"/>, as well as <xref linkend="perf.configurations"/> </para>   
+   </section>
+    
+  </section>  <!--  reading -->
 </chapter>
