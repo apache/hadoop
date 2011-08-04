@@ -165,13 +165,10 @@ public class TestPoolMap {
       String randomKey = String.valueOf(random.nextInt());
       for (int i = 0; i < POOL_SIZE * 2; i++) {
         String randomValue = String.valueOf(random.nextInt());
-        if (i < POOL_SIZE) {
+        // as of HBASE-4150, pool limit is no longer used with ThreadLocalPool
           runThread(randomKey, randomValue, randomValue);
-        } else {
-          // When the pool fills up, we should not be able to put any new values
-          runThread(randomKey, randomValue, null);
-        }
       }
+      assertEquals(POOL_SIZE * 2, poolMap.size(randomKey));
     }
 
   }

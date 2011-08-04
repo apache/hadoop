@@ -396,9 +396,6 @@ public class PoolMap<K, V> implements Map<K, V> {
         if (poolSize == null) {
           poolSizes.put(this, poolSize = new AtomicInteger(0));
         }
-        if (poolSize.intValue() >= maxSize) {
-          return null;
-        }
         poolSize.incrementAndGet();
       }
       this.set(resource);

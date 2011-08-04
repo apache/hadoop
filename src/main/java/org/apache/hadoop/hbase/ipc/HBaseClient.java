@@ -761,11 +761,11 @@ public class HBaseClient {
 
   /**
    * Return the pool type specified in the configuration, if it roughly equals either
-   * the name of {@link PoolType#Reusable} or {@link PoolType#ThreadLocal}, otherwise
+   * the name of {@link PoolType#RoundRobin} or {@link PoolType#ThreadLocal}, otherwise
    * default to the former type.
    *
    * @param config configuration
-   * @return either a {@link PoolType#Reusable} or {@link PoolType#ThreadLocal}
+   * @return either a {@link PoolType#RoundRobin} or {@link PoolType#ThreadLocal}
    */
   private static PoolType getPoolType(Configuration config) {
     return PoolType.valueOf(config.get(HConstants.HBASE_CLIENT_IPC_POOL_TYPE),
