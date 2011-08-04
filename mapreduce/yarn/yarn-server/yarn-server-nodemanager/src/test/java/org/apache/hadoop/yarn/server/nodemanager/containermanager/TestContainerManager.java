@@ -264,6 +264,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
       IOException {
     // Real del service
     delSrvc = new DeletionService(exec);
+    delSrvc.init(conf);
     containerManager = new ContainerManagerImpl(context, exec, delSrvc,
         nodeStatusUpdater, metrics);
     containerManager.init(conf);

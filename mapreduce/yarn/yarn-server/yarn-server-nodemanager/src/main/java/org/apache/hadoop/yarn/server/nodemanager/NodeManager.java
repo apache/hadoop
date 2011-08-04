@@ -22,7 +22,6 @@ import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.NM_CONTAINER_EX
 import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.NM_KEYTAB;
 
 import java.io.IOException;
-import java.util.Comparator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -158,20 +157,7 @@ public class NodeManager extends CompositeService {
     private final ConcurrentMap<ApplicationId, Application> applications =
         new ConcurrentHashMap<ApplicationId, Application>();
     private final ConcurrentMap<ContainerId, Container> containers =
-      new ConcurrentSkipListMap<ContainerId,Container>(
-          new Comparator<ContainerId>() {
-            @Override
-            public int compare(ContainerId a, ContainerId b) {
-              if (a.getAppId().getId() == b.getAppId().getId()) {
-                return a.getId() - b.getId();
-              }
-              return a.getAppId().getId() - b.getAppId().getId();
-            }
-            @Override
-            public boolean equals(Object other) {
-              return getClass().equals(other.getClass());
-            }
-          });
+        new ConcurrentSkipListMap<ContainerId, Container>();
 
     private final NodeHealthStatus nodeHealthStatus = RecordFactoryProvider
         .getRecordFactory(null).newRecordInstance(NodeHealthStatus.class);

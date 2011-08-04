@@ -357,7 +357,8 @@ public class ResourceLocalizationService extends AbstractService
 
       Application application =
           ((ApplicationLocalizationEvent) event).getApplication();
-      LocalResourcesTracker appLocalRsrcsTracker = appRsrc.remove(application);
+      LocalResourcesTracker appLocalRsrcsTracker =
+        appRsrc.remove(ConverterUtils.toString(application.getAppId()));
       if (null == appLocalRsrcsTracker) {
         LOG.warn("Removing uninitialized application " + application);
       }

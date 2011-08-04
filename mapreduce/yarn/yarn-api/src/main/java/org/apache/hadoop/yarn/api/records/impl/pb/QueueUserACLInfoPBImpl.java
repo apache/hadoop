@@ -47,6 +47,7 @@ implements QueueUserACLInfo {
     maybeInitBuilder();
     if (queueName == null) {
       builder.clearQueueName();
+      return;
     }
     builder.setQueueName(queueName);
   }

@@ -28,7 +28,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 
 public class LocalizerTokenIdentifier extends TokenIdentifier {
 
-  public static Text KIND = new Text("Localizer");
+  public static final Text KIND = new Text("Localizer");
 
   @Override
   public void write(DataOutput out) throws IOException {

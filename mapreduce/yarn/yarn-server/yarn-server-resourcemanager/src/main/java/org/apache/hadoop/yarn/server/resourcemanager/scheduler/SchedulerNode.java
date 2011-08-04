@@ -144,6 +144,7 @@ public class SchedulerNode {
     if (resource == null) {
       LOG.error("Invalid deduction of null resource for "
           + rmNode.getNodeAddress());
+      return;
     }
     Resources.subtractFrom(availableResource, resource);
     Resources.addTo(usedResource, resource);

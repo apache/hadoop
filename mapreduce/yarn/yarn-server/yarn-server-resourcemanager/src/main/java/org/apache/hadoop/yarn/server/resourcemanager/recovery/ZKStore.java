@@ -83,7 +83,7 @@ public class ZKStore implements Store {
    * of connection and session events.
    *
    */
-  private class ZKWatcher implements Watcher {
+  private static class ZKWatcher implements Watcher {
     @Override
     public void process(WatchedEvent arg0) {
     }
@@ -124,6 +124,7 @@ public class ZKStore implements Store {
     /** create a storage node and store it in zk **/
     if (!doneWithRecovery) return;
     NodeReportPBImpl nodeManagerInfo = createNodeManagerInfo(node);
+    // TODO FinBugs - will be fixed after the subsequent fixme
     byte[] bytes = nodeManagerInfo.getProto().toByteArray();
     // TODO: FIXMEVinodkv
 //    try {
@@ -228,8 +229,6 @@ public class ZKStore implements Store {
     @Override
     public synchronized void removeContainer(Container container) throws IOException {
       if (!doneWithRecovery) return;
-      
-      ContainerPBImpl containerPBImpl = (ContainerPBImpl) container;
       try { 
         zkClient.delete(APPS + containerPathFromContainerId(container.getId()),
             -1);
@@ -325,7 +324,7 @@ public class ZKStore implements Store {
     return rmState;
   }  
 
-  private class ApplicationInfoImpl implements ApplicationInfo {
+  private static class ApplicationInfoImpl implements ApplicationInfo {
     private ApplicationMaster master;
     private Container masterContainer;
 
@@ -477,6 +476,7 @@ public class ZKStore implements Store {
           continue;
         }
         int httpPort = Integer.valueOf(m.group(1));
+        // TODO: FindBugs Valid. Fix
         RMNode nm = new RMNodeImpl(node.getNodeId(), null,
             hostName, cmPort, httpPort,
             ResourceTrackerService.resolve(node.getNodeId().getHost()), 

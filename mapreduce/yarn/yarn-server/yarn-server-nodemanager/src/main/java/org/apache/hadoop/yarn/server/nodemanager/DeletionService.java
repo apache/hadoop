@@ -45,7 +45,7 @@ public class DeletionService extends AbstractService {
 
   private int debugDelay;
   private final ContainerExecutor exec;
-  private final ScheduledThreadPoolExecutor sched;
+  private ScheduledThreadPoolExecutor sched;
   private final FileContext lfs = getLfs();
   static final FileContext getLfs() {
     try {
@@ -56,16 +56,8 @@ public class DeletionService extends AbstractService {
   }
 
   public DeletionService(ContainerExecutor exec) {
-    this(exec, new ScheduledThreadPoolExecutor(1));
-    sched.setMaximumPoolSize(DEFAULT_MAX_DELETE_THREADS);
-    sched.setKeepAliveTime(60L, SECONDS);
-  }
-
-  public DeletionService(ContainerExecutor exec,
-      ScheduledThreadPoolExecutor sched) {
     super(DeletionService.class.getName());
     this.exec = exec;
-    this.sched = sched;
     this.debugDelay = 0;
   }
 
@@ -83,10 +75,13 @@ public class DeletionService extends AbstractService {
   @Override
   public void init(Configuration conf) {
     if (conf != null) {
-      sched.setMaximumPoolSize(
+      sched = new ScheduledThreadPoolExecutor(
           conf.getInt(NM_MAX_DELETE_THREADS, DEFAULT_MAX_DELETE_THREADS));
       debugDelay = conf.getInt(DEBUG_DELAY_SEC, 0);
+    } else {
+      sched = new ScheduledThreadPoolExecutor(DEFAULT_MAX_DELETE_THREADS);
     }
+    sched.setKeepAliveTime(60L, SECONDS);
     super.init(conf);
   }
 

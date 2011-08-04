@@ -80,25 +80,25 @@ public class CapacitySchedulerConfiguration extends Configuration {
     PREFIX + "maximum-allocation-mb";
 
   @Private
-  public static int DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS = 10000;
+  public static final int DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS = 10000;
   
   @Private
-  public static int UNDEFINED = -1;
+  public static final int UNDEFINED = -1;
   
   @Private
-  public static int MINIMUM_CAPACITY_VALUE = 1;
+  public static final int MINIMUM_CAPACITY_VALUE = 1;
   
   @Private
-  public static int MAXIMUM_CAPACITY_VALUE = 100;
+  public static final int MAXIMUM_CAPACITY_VALUE = 100;
   
   @Private
-  public static int DEFAULT_USER_LIMIT = 100;
+  public static final int DEFAULT_USER_LIMIT = 100;
   
   @Private
-  public static float DEFAULT_USER_LIMIT_FACTOR = 1.0f;
+  public static final float DEFAULT_USER_LIMIT_FACTOR = 1.0f;
   
   @Private
-  public static String DEFAULT_ACL = "*";
+  public static final String DEFAULT_ACL = "*";
 
   @Private public static final String ENABLE_USER_METRICS =
       PREFIX +"user-metrics.enable";

@@ -29,7 +29,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerInitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ApplicationLocalizationEvent;
@@ -186,7 +185,6 @@ public class ApplicationImpl implements Application {
     @Override
     public void transition(ApplicationImpl app, ApplicationEvent event) {
 
-      ApplicationInitedEvent initedEvent = (ApplicationInitedEvent) event;
       // Inform the logAggregator
       app.dispatcher.getEventHandler().handle(
             new LogAggregatorAppStartedEvent(app.appId, app.user,
@@ -214,7 +212,7 @@ public class ApplicationImpl implements Application {
             container.getContainerID()));
     }
   }
-
+  
   static final class ContainerDoneTransition implements
       SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override

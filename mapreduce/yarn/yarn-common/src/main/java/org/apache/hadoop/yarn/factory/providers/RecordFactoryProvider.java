@@ -10,10 +10,10 @@ import org.apache.hadoop.yarn.factories.impl.pb.RecordFactoryPBImpl;
 
 public class RecordFactoryProvider {
 
-  public static String RPC_SERIALIZER_KEY = "org.apache.yarn.ipc.rpc.serializer.property";
-  public static String RPC_SERIALIZER_DEFAULT = "protocolbuffers";
+  public static final String RPC_SERIALIZER_KEY = "org.apache.yarn.ipc.rpc.serializer.property";
+  public static final String RPC_SERIALIZER_DEFAULT = "protocolbuffers";
   
-  public static String RECORD_FACTORY_CLASS_KEY = "org.apache.yarn.ipc.record.factory.class";
+  public static final String RECORD_FACTORY_CLASS_KEY = "org.apache.yarn.ipc.record.factory.class";
   
   private static Configuration defaultConf;
   

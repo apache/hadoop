@@ -87,7 +87,6 @@ public class FSDownload implements Callable<Path> {
   }
 
   private long unpack(File localrsrc, File dst) throws IOException {
-    File destDir = new File(localrsrc.getParent());
     switch (resource.getType()) {
     case ARCHIVE:
       String lowerDst = dst.getName().toLowerCase();
@@ -101,12 +100,18 @@ public class FSDownload implements Callable<Path> {
         FileUtil.unTar(localrsrc, dst);
       } else {
         LOG.warn("Cannot unpack " + localrsrc);
-        localrsrc.renameTo(dst);
+        if (!localrsrc.renameTo(dst)) {
+            throw new IOException("Unable to rename file: [" + localrsrc
+              + "] to [" + dst + "]");
+        }
       }
       break;
     case FILE:
     default:
-      localrsrc.renameTo(dst);
+      if (!localrsrc.renameTo(dst)) {
+        throw new IOException("Unable to rename file: [" + localrsrc
+          + "] to [" + dst + "]");
+      }
       break;
     }
     return 0;

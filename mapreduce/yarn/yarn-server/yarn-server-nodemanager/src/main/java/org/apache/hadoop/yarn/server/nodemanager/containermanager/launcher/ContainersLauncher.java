@@ -40,7 +40,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.service.AbstractService;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 
 /**
  * The launcher for the containers. This service should be started only after
@@ -81,7 +80,8 @@ public class ContainersLauncher extends AbstractService
   @Override
   public void init(Configuration conf) {
     try {
-      FileContext lfs = FileContext.getLocalFSFileContext(conf);
+      //TODO Is this required?
+      FileContext.getLocalFSFileContext(conf);
     } catch (UnsupportedFileSystemException e) {
       throw new YarnException("Failed to start ContainersLauncher", e);
     }
@@ -104,8 +104,6 @@ public class ContainersLauncher extends AbstractService
       case LAUNCH_CONTAINER:
         Application app =
           context.getApplications().get(containerId.getAppId());
-        String appIdStr = ConverterUtils.toString(app.getAppId());
-        // TODO set in Application
       ContainerLaunch launch =
           new ContainerLaunch(getConfig(), dispatcher, exec, app,
               event.getContainer());

@@ -17,6 +17,7 @@
     <yarn.version>1.0-SNAPSHOT</yarn.version>
     <install.pom>${project.build.directory}/saner-pom.xml</install.pom>
     <install.file>${install.pom}</install.file>
+    <yarn.basedir>${basedir}</yarn.basedir>
   </properties>
 
   <repositories>
@@ -347,6 +348,16 @@
           </execution>
         </executions>
       </plugin>
+	  <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>findbugs-maven-plugin</artifactId>
+		<configuration>
+          <findbugsXmlOutput>true</findbugsXmlOutput>
+          <xmlOutput>true</xmlOutput>
+          <excludeFilterFile>${yarn.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
+          <effort>Max</effort>
+        </configuration>
+	  </plugin>
     </plugins>
   </build>
 

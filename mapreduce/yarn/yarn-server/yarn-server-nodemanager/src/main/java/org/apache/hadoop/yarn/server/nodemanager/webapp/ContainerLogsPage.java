@@ -106,7 +106,7 @@ public class ContainerLogsPage extends NMView {
           } catch (Exception e) {
             div.h1("Cannot find this log on the local disk.")._();
           }
-          div.h1(logFile.getName());
+          div.h1(logFile == null ? "Unknown LogFile" : logFile.getName());
           long start =
               $("start").isEmpty() ? -4 * 1024 : Long.parseLong($("start"));
           start = start < 0 ? logFile.length() + start : start;
@@ -128,6 +128,7 @@ public class ContainerLogsPage extends NMView {
                     ._(" for full log").br()._();
             }
             // TODO: Use secure IO Utils to avoid symlink attacks.
+            //TODO Fix findBugs close warning along with IOUtils change
             FileReader reader = new FileReader(logFile);
             char[] cbuf = new char[65536];
             reader.skip(start);
@@ -145,7 +146,7 @@ public class ContainerLogsPage extends NMView {
               writer().write(
                   "Exception reading log-file "
                       + StringUtils.stringifyException(e));
-          }
+          } 
         }
           div._();
         } else {

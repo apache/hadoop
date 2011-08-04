@@ -11,6 +11,11 @@
   <name>hadoop-mapreduce-client</name>
   <packaging>pom</packaging>
 
+  <properties>
+    <mr.basedir>${project.parent.basedir}</mr.basedir>
+  </properties>
+
+
   <dependencyManagement>
     <dependencies>
       <!-- begin MNG-4223 workaround -->

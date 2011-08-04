@@ -143,6 +143,7 @@ public abstract class BaseContainerManagerTest {
             + ", baseDirs - " + baseDirs); 
       };
     };
+    delSrvc.init(conf);
 
     exec = createContainerExecutor();
     containerManager =

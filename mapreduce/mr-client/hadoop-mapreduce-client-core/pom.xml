@@ -12,6 +12,7 @@
 
   <properties>
     <install.file>${project.artifact.file}</install.file>
+    <mr.basedir>${project.parent.parent.basedir}</mr.basedir>
   </properties>
   
   <dependencies>

@@ -158,7 +158,7 @@ public class WebApps {
         throw new WebAppException("Error starting http server", e);
       }
       Injector injector = Guice.createInjector(webapp, new AbstractModule() {
-        @Override @SuppressWarnings("unchecked")
+        @Override
         protected void configure() {
           if (api != null) {
             bind(api).toInstance(application);
@@ -211,7 +211,6 @@ public class WebApps {
   }
 
   // Ditto
-  @SuppressWarnings("unchecked")
   public static <T> Builder<T> $for(T app) {
     return $for("", app);
   }

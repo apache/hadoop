@@ -211,7 +211,9 @@ public class ContainerLocalizer {
               final LocalDirAllocator lda;
               switch (r.getVisibility()) {
               default:
-                LOG.warn("Unknown visibility: " + r.getVisibility());
+                LOG.warn("Unknown visibility: " + r.getVisibility()
+                        + ", Using userDirs");
+                //Falling back to userDirs for unknown visibility.
               case PUBLIC:
               case PRIVATE:
                 lda = userDirs;

@@ -1,0 +1,132 @@
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<FindBugsFilter>
+  <!-- Ignore PB Generated Code -->
+  <Match>
+    <Package name="org.apache.hadoop.yarn.proto" />
+  </Match>
+  <Match>
+    <Class name="~org\.apache\.hadoop\.yarn\.ipc\.RpcProtos.*" />
+  </Match>
+
+  <!-- Ignore unchecked Event casts -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+  <Match>
+    <Class name="~org\.apache\.hadoop\.yarn\.server\.nodemanager\.containermanager\.application\.ApplicationImpl.*" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+  <Match>
+    <Class name="~org\.apache\.hadoop\.yarn\.server\.nodemanager\.containermanager\.container\.ContainerImpl.*" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+  <Match>
+    <Class name="~org\.apache\.hadoop\.yarn\.server\.nodemanager\.containermanager\.localizer\.LocalizedResource.*" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+  <Match>
+    <Class name="~org\.apache\.hadoop\.yarn\.server\.nodemanager\.containermanager\.localizer\.ResourceLocalizationService.*" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+  <Match>
+    <Class name="~org\.apache\.hadoop\.yarn\.server\.resourcemanager\.rmapp\.attempt\.RMAppAttemptImpl.*" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl$AppRejectedTransition" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+  <Match>
+    <Class name="~org\.apache\.hadoop\.yarn\.server\.resourcemanager\.rmcontainer\.RMContainerImpl.*" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+  <Match>
+    <Class name="~org\.apache\.hadoop\.yarn\.server\.resourcemanager\.rmnode\.RMNodeImpl.*" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+  <Match>
+    <Class name="~org\.apache\.hadoop\.yarn\.server\.resourcemanager\.scheduler\.capacity\.CapacityScheduler.*" />
+    <Method name="handle" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+  <Match>
+    <Class name="~org\.apache\.hadoop\.yarn\.server\.resourcemanager\.scheduler\.fifo\.FifoScheduler.*" />
+    <Method name="handle" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+
+  <!-- Ignore intentional switch fallthroughs -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl" />
+    <Method name="finished" />
+    <Bug pattern="SF_SWITCH_FALLTHROUGH" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer" />
+    <Method name="localizeFiles" />
+    <Bug pattern="SF_SWITCH_FALLTHROUGH" />
+  </Match>
+
+  <!-- Ignore some irrelevant serialization warnings -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceRetentionSet$LRUComparator" />
+    <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl" />
+    <Field name="builder" />
+    <Bug pattern="SE_BAD_FIELD" />
+  </Match>
+  <Match>
+    <Class name="~org\.apache\.hadoop\.yarn\.util\.BuilderUtils.*" />
+    <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.resource.Priority$Comparator" />
+    <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
+  </Match>
+
+  <!-- Inconsistent sync warning - only start() is synchronized-->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.LogAggregationService" />
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
+
+  <!-- Don't care if putIfAbsent value is ignored -->
+  <Match>
+    <Package name="org.apache.hadoop.yarn.factories.impl.pb" />
+    <Bug pattern="RV_RETURN_VALUE_OF_PUTIFABSENT_IGNORED" />
+  </Match>
+
+  <!-- Intended System.exit calls -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.webapp.Dispatcher$1" />
+    <Bug pattern="DM_EXIT" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.webapp.WebApps$Builder" />
+    <Bug pattern="DM_EXIT" />
+  </Match>
+
+ </FindBugsFilter>

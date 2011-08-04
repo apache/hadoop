@@ -117,6 +117,7 @@ public class QueueInfoPBImpl extends ProtoBase<QueueInfoProto> implements
     maybeInitBuilder();
     if (queueName == null) {
       builder.clearQueueName();
+      return;
     }
     builder.setQueueName(queueName);
   }

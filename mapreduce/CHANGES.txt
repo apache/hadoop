@@ -3,6 +3,9 @@ Hadoop MapReduce Change Log
 Trunk (unreleased changes)
 
   MAPREDUCE-279
+    
+    MAPREDUCE-2776. Fix some of the yarn findbug warnings. (siddharth 
+    seth via mahadev)
 
     Fix NPE in FifoScheduler. (mahadev)
 

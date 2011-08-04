@@ -10,10 +10,10 @@ import org.apache.hadoop.yarn.factories.impl.pb.YarnRemoteExceptionFactoryPBImpl
 
 public class YarnRemoteExceptionFactoryProvider {
 
-  public static String RPC_SERIALIZER_KEY = "org.apache.yarn.ipc.rpc.serializer.property";
-  public static String RPC_SERIALIZER_DEFAULT = "protocolbuffers";
+  public static final String RPC_SERIALIZER_KEY = "org.apache.yarn.ipc.rpc.serializer.property";
+  public static final String RPC_SERIALIZER_DEFAULT = "protocolbuffers";
   
-  public static String EXCEPTION_FACTORY_CLASS_KEY = "org.apache.yarn.ipc.exception.factory.class";
+  public static final String EXCEPTION_FACTORY_CLASS_KEY = "org.apache.yarn.ipc.exception.factory.class";
   
   private YarnRemoteExceptionFactoryProvider() {
   }

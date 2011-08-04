@@ -12,6 +12,7 @@
 
   <properties>
     <install.file>${project.artifact.file}</install.file>
+    <yarn.basedir>${project.parent.basedir}</yarn.basedir>
   </properties>
 
   <build>

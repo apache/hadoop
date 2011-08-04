@@ -90,6 +90,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
   @Test
   public void testLocalFileDeletionAfterUpload() throws IOException {
     this.delSrvc = new DeletionService(createContainerExecutor());
+    this.delSrvc.init(conf);
     this.conf.set(NMConfig.NM_LOG_DIR, localLogDir.getAbsolutePath());
     this.conf.set(NMConfig.REMOTE_USER_LOG_DIR,
         this.remoteRootLogDir.getAbsolutePath());

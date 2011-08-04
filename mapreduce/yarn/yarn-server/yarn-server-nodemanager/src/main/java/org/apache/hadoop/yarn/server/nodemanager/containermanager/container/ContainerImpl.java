@@ -659,7 +659,7 @@ public class ContainerImpl implements Container {
       container.finished();
     }
   }
-
+  
   static class ContainerDiagnosticsUpdateTransition implements
       SingleArcTransition<ContainerImpl, ContainerEvent> {
     @Override

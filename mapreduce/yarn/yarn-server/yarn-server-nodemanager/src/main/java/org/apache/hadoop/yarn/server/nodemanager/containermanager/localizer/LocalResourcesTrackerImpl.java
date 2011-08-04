@@ -67,7 +67,7 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
       break;
     case RELEASE:
       if (null == rsrc) {
-        LOG.info("Release unknown rsrc " + rsrc + " (discard)");
+        LOG.info("Release unknown rsrc null (discard)");
         return;
       }
       break;

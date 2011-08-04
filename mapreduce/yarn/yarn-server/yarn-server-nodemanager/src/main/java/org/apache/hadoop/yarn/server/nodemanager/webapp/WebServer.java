@@ -23,7 +23,6 @@ import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NMConfig;
@@ -77,7 +76,7 @@ public class WebServer extends AbstractService {
     super.stop();
   }
 
-  public class NMWebApp extends WebApp implements NMWebParams {
+  public static class NMWebApp extends WebApp implements NMWebParams {
 
     private final ResourceView resourceView;
 

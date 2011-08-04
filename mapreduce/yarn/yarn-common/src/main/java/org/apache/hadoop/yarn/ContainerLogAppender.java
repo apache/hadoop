@@ -37,7 +37,6 @@ public class ContainerLogAppender extends FileAppender {
   //so that log4j can configure it from the configuration(log4j.properties). 
   private int maxEvents;
   private Queue<LoggingEvent> tail = null;
-  private boolean isCleanup;
 
   @Override
   public void activateOptions() {

@@ -18,11 +18,11 @@ import org.apache.hadoop.yarn.factories.impl.pb.RpcServerFactoryPBImpl;
 public class RpcFactoryProvider {
   private static final Log LOG = LogFactory.getLog(RpcFactoryProvider.class);
   //TODO Move these keys to CommonConfigurationKeys
-  public static String RPC_SERIALIZER_KEY = "org.apache.yarn.ipc.rpc.serializer.property";
-  public static String RPC_SERIALIZER_DEFAULT = "protocolbuffers";
+  public static final String RPC_SERIALIZER_KEY = "org.apache.yarn.ipc.rpc.serializer.property";
+  public static final String RPC_SERIALIZER_DEFAULT = "protocolbuffers";
 
-  public static String RPC_CLIENT_FACTORY_CLASS_KEY = "org.apache.yarn.ipc.client.factory.class";
-  public static String RPC_SERVER_FACTORY_CLASS_KEY = "org.apache.yarn.ipc.server.factory.class";
+  public static final String RPC_CLIENT_FACTORY_CLASS_KEY = "org.apache.yarn.ipc.client.factory.class";
+  public static final String RPC_SERVER_FACTORY_CLASS_KEY = "org.apache.yarn.ipc.server.factory.class";
   
   private RpcFactoryProvider() {
     

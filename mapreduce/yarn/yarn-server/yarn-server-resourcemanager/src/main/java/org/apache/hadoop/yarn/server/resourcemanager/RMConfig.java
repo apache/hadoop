@@ -74,15 +74,15 @@ public class RMConfig {
   public static final String RM_ACLS_ENABLED = YarnConfiguration.RM_PREFIX +
     "acls.enabled";
   
-  public static String RM_ADMIN_ACL = 
+  public static final String RM_ADMIN_ACL = 
     YarnConfiguration.RM_PREFIX + "admin.acl";
-  public static String DEFAULT_RM_ADMIN_ACL = "*"; 
+  public static final String DEFAULT_RM_ADMIN_ACL = "*"; 
 
-  public static String RM_NODES_INCLUDE_FILE = 
+  public static final String RM_NODES_INCLUDE_FILE = 
     YarnConfiguration.RM_PREFIX + "nodes.include";
-  public static String DEFAULT_RM_NODES_INCLUDE_FILE = "";
+  public static final String DEFAULT_RM_NODES_INCLUDE_FILE = "";
   
-  public static String RM_NODES_EXCLUDE_FILE = 
+  public static final String RM_NODES_EXCLUDE_FILE = 
     YarnConfiguration.RM_PREFIX + "nodes.exclude";
-  public static String DEFAULT_RM_NODES_EXCLUDE_FILE = "";
+  public static final String DEFAULT_RM_NODES_EXCLUDE_FILE = "";
 }

@@ -13,6 +13,7 @@
   <properties>
     <install.file>${project.artifact.file}</install.file>
     <applink.base>${project.build.directory}/${project.name}</applink.base>
+    <mr.basedir>${project.parent.parent.basedir}</mr.basedir>
   </properties>
 
   <dependencies>

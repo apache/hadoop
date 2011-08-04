@@ -134,7 +134,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
           new File(containerWorkDir.toUri().getPath()));
       launchCommandObjs.put(containerId, shExec);
       shExec.execute();
-    } catch (Exception e) {
+    } catch (IOException e) {
       if (null == shExec) {
         return -1;
       }

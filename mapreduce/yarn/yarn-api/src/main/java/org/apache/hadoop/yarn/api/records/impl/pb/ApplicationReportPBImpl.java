@@ -264,10 +264,6 @@ implements ApplicationReport {
     return new ApplicationIdPBImpl(applicationId);
   }
 
-  private ContainerProto convertToProtoFormat(Container t) {
-    return ((ContainerPBImpl) t).getProto();
-  }
-
   private Container convertFromProtoFormat(ContainerProto c) {
     return new ContainerPBImpl(c);
   }

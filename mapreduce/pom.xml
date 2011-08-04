@@ -19,6 +19,7 @@
     <install.pom>${project.build.directory}/saner-pom.xml</install.pom>
     <install.file>${install.pom}</install.file>
     <fork.mode>once</fork.mode>
+    <mr.basedir>=${basedir}</mr.basedir>
   </properties>
 
   <repositories>
@@ -322,6 +323,16 @@
           </execution>
         </executions>
       </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>findbugs-maven-plugin</artifactId>
+          <configuration>
+            <findbugsXmlOutput>true</findbugsXmlOutput>
+            <xmlOutput>true</xmlOutput>
+            <excludeFilterFile>${mr.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
+            <effort>Max</effort>
+          </configuration>
+        </plugin>
     </plugins>
   </build>
 
@@ -361,6 +372,7 @@
         <version>2.3.2</version>
         <configuration>
           <findbugsXmlOutput>true</findbugsXmlOutput>
+          <xmlOutput>true</xmlOutput>
         </configuration>
       </plugin>
       <plugin>

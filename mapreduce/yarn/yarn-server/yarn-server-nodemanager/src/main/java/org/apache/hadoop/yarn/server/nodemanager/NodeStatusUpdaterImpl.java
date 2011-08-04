@@ -187,7 +187,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
   @Override
   public byte[] getRMNMSharedSecret() {
-    return this.secretKeyBytes;
+    return this.secretKeyBytes.clone();
   }
 
   private NodeStatus getNodeStatus() {
