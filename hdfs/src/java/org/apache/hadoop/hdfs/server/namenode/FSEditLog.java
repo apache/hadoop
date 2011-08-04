@@ -862,8 +862,7 @@ public class FSEditLog  {
   /**
    * Archive any log files that are older than the given txid.
    */
-  public void purgeLogsOlderThan(
-      final long minTxIdToKeep, final StoragePurger purger) {
+  public void purgeLogsOlderThan(final long minTxIdToKeep) {
     synchronized (this) {
       // synchronized to prevent findbugs warning about inconsistent
       // synchronization. This will be JIT-ed out if asserts are
@@ -877,7 +876,7 @@ public class FSEditLog  {
     mapJournalsAndReportErrors(new JournalClosure() {
       @Override
       public void apply(JournalAndStream jas) throws IOException {
-        jas.manager.purgeLogsOlderThan(minTxIdToKeep, purger);
+        jas.manager.purgeLogsOlderThan(minTxIdToKeep);
       }
     }, "purging logs older than " + minTxIdToKeep);
   }

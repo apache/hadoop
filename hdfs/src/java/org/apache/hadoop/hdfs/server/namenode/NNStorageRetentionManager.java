@@ -27,8 +27,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.FoundEditLog;
-import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.FoundFSImage;
+import org.apache.hadoop.hdfs.server.namenode.FSImageStorageInspector.FSImageFile;
+import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 
 import com.google.common.collect.Lists;
@@ -80,14 +80,14 @@ public class NNStorageRetentionManager {
     // If fsimage_N is the image we want to keep, then we need to keep
     // all txns > N. We can remove anything < N+1, since fsimage_N
     // reflects the state up to and including N.
-    editLog.purgeLogsOlderThan(minImageTxId + 1, purger);
+    editLog.purgeLogsOlderThan(minImageTxId + 1);
   }
   
   private void purgeCheckpointsOlderThan(
       FSImageTransactionalStorageInspector inspector,
       long minTxId) {
-    for (FoundFSImage image : inspector.getFoundImages()) {
-      if (image.getTxId() < minTxId) {
+    for (FSImageFile image : inspector.getFoundImages()) {
+      if (image.getCheckpointTxId() < minTxId) {
         LOG.info("Purging old image " + image);
         purger.purgeImage(image);
       }
@@ -101,10 +101,10 @@ public class NNStorageRetentionManager {
    */
   private long getImageTxIdToRetain(FSImageTransactionalStorageInspector inspector) {
       
-    List<FoundFSImage> images = inspector.getFoundImages();
+    List<FSImageFile> images = inspector.getFoundImages();
     TreeSet<Long> imageTxIds = Sets.newTreeSet();
-    for (FoundFSImage image : images) {
-      imageTxIds.add(image.getTxId());
+    for (FSImageFile image : images) {
+      imageTxIds.add(image.getCheckpointTxId());
     }
     
     List<Long> imageTxIdsList = Lists.newArrayList(imageTxIds);
@@ -124,18 +124,18 @@ public class NNStorageRetentionManager {
    * Interface responsible for disposing of old checkpoints and edit logs.
    */
   static interface StoragePurger {
-    void purgeLog(FoundEditLog log);
-    void purgeImage(FoundFSImage image);
+    void purgeLog(EditLogFile log);
+    void purgeImage(FSImageFile image);
   }
   
   static class DeletionStoragePurger implements StoragePurger {
     @Override
-    public void purgeLog(FoundEditLog log) {
+    public void purgeLog(EditLogFile log) {
       deleteOrWarn(log.getFile());
     }
 
     @Override
-    public void purgeImage(FoundFSImage image) {
+    public void purgeImage(FSImageFile image) {
       deleteOrWarn(image.getFile());
       deleteOrWarn(MD5FileUtils.getDigestFileForFile(image.getFile()));
     }

@@ -23,14 +23,20 @@ import org.apache.commons.logging.LogFactory;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Comparator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.FoundEditLog;
 import org.apache.hadoop.hdfs.server.namenode.NNStorageRetentionManager.StoragePurger;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.google.common.collect.ComparisonChain;
 
 /**
  * Journal manager for the common case of edits files being written
@@ -44,6 +50,15 @@ class FileJournalManager implements JournalManager {
 
   private final StorageDirectory sd;
   private int outputBufferCapacity = 512*1024;
+
+  private static final Pattern EDITS_REGEX = Pattern.compile(
+    NameNodeFile.EDITS.getName() + "_(\\d+)-(\\d+)");
+  private static final Pattern EDITS_INPROGRESS_REGEX = Pattern.compile(
+    NameNodeFile.EDITS_INPROGRESS.getName() + "_(\\d+)");
+
+  @VisibleForTesting
+  StoragePurger purger
+    = new NNStorageRetentionManager.DeletionStoragePurger();
 
   public FileJournalManager(StorageDirectory sd) {
     this.sd = sd;
@@ -91,13 +106,13 @@ class FileJournalManager implements JournalManager {
   }
 
   @Override
-  public void purgeLogsOlderThan(long minTxIdToKeep, StoragePurger purger)
+  public void purgeLogsOlderThan(long minTxIdToKeep)
       throws IOException {
     File[] files = FileUtil.listFiles(sd.getCurrentDir());
-    List<FoundEditLog> editLogs = 
-      FSImageTransactionalStorageInspector.matchEditLogs(files);
-    for (FoundEditLog log : editLogs) {
-      if (log.getStartTxId() < minTxIdToKeep &&
+    List<EditLogFile> editLogs = 
+      FileJournalManager.matchEditLogs(files);
+    for (EditLogFile log : editLogs) {
+      if (log.getFirstTxId() < minTxIdToKeep &&
           log.getLastTxId() < minTxIdToKeep) {
         purger.purgeLog(log);
       }
@@ -111,4 +126,139 @@ class FileJournalManager implements JournalManager {
     return new EditLogFileInputStream(f);
   }
 
+  static List<EditLogFile> matchEditLogs(File[] filesInStorage) {
+    List<EditLogFile> ret = Lists.newArrayList();
+    for (File f : filesInStorage) {
+      String name = f.getName();
+      // Check for edits
+      Matcher editsMatch = EDITS_REGEX.matcher(name);
+      if (editsMatch.matches()) {
+        try {
+          long startTxId = Long.valueOf(editsMatch.group(1));
+          long endTxId = Long.valueOf(editsMatch.group(2));
+          ret.add(new EditLogFile(f, startTxId, endTxId));
+        } catch (NumberFormatException nfe) {
+          LOG.error("Edits file " + f + " has improperly formatted " +
+                    "transaction ID");
+          // skip
+        }          
+      }
+      
+      // Check for in-progress edits
+      Matcher inProgressEditsMatch = EDITS_INPROGRESS_REGEX.matcher(name);
+      if (inProgressEditsMatch.matches()) {
+        try {
+          long startTxId = Long.valueOf(inProgressEditsMatch.group(1));
+          ret.add(
+            new EditLogFile(f, startTxId, EditLogFile.UNKNOWN_END));
+        } catch (NumberFormatException nfe) {
+          LOG.error("In-progress edits file " + f + " has improperly " +
+                    "formatted transaction ID");
+          // skip
+        }          
+      }
+    }
+    return ret;
+  }
+
+  /**
+   * Record of an edit log that has been located and had its filename parsed.
+   */
+  static class EditLogFile {
+    private File file;
+    private final long firstTxId;
+    private long lastTxId;
+    
+    private EditLogValidation cachedValidation = null;
+    private boolean isCorrupt = false;
+    
+    static final long UNKNOWN_END = -1;
+    
+    final static Comparator<EditLogFile> COMPARE_BY_START_TXID 
+      = new Comparator<EditLogFile>() {
+      public int compare(EditLogFile a, EditLogFile b) {
+        return ComparisonChain.start()
+        .compare(a.getFirstTxId(), b.getFirstTxId())
+        .compare(a.getLastTxId(), b.getLastTxId())
+        .result();
+      }
+    };
+
+    EditLogFile(File file,
+        long firstTxId, long lastTxId) {
+      assert lastTxId == UNKNOWN_END || lastTxId >= firstTxId;
+      assert firstTxId > 0;
+      assert file != null;
+      
+      this.firstTxId = firstTxId;
+      this.lastTxId = lastTxId;
+      this.file = file;
+    }
+    
+    public void finalizeLog() throws IOException {
+      long numTransactions = validateLog().numTransactions;
+      long lastTxId = firstTxId + numTransactions - 1;
+      File dst = new File(file.getParentFile(),
+          NNStorage.getFinalizedEditsFileName(firstTxId, lastTxId));
+      LOG.info("Finalizing edits log " + file + " by renaming to "
+          + dst.getName());
+      if (!file.renameTo(dst)) {
+        throw new IOException("Couldn't finalize log " +
+            file + " to " + dst);
+      }
+      this.lastTxId = lastTxId;
+      file = dst;
+    }
+
+    long getFirstTxId() {
+      return firstTxId;
+    }
+    
+    long getLastTxId() {
+      return lastTxId;
+    }
+
+    EditLogValidation validateLog() throws IOException {
+      if (cachedValidation == null) {
+        cachedValidation = EditLogFileInputStream.validateEditLog(file);
+      }
+      return cachedValidation;
+    }
+
+    boolean isInProgress() {
+      return (lastTxId == UNKNOWN_END);
+    }
+
+    File getFile() {
+      return file;
+    }
+    
+    void markCorrupt() {
+      isCorrupt = true;
+    }
+    
+    boolean isCorrupt() {
+      return isCorrupt;
+    }
+
+    void moveAsideCorruptFile() throws IOException {
+      assert isCorrupt;
+    
+      File src = file;
+      File dst = new File(src.getParent(), src.getName() + ".corrupt");
+      boolean success = src.renameTo(dst);
+      if (!success) {
+        throw new IOException(
+          "Couldn't rename corrupt log " + src + " to " + dst);
+      }
+      file = dst;
+    }
+    
+    @Override
+    public String toString() {
+      return String.format("EditLogFile(file=%s,first=%019d,last=%019d,"
+                           +"inProgress=%b,corrupt=%b)", file.toString(),
+                           firstTxId, lastTxId, isInProgress(), isCorrupt);
+    }
+  }
 }

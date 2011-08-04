@@ -33,7 +33,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.FoundEditLog;
+import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
@@ -163,8 +163,8 @@ public class TestBackupNode extends TestCase {
       
       // When shutting down the BN, it shouldn't finalize logs that are
       // still open on the NN
-      FoundEditLog editsLog = FSImageTestUtil.findLatestEditsLog(sd);
-      assertEquals(editsLog.getStartTxId(),
+      EditLogFile editsLog = FSImageTestUtil.findLatestEditsLog(sd);
+      assertEquals(editsLog.getFirstTxId(),
           nn.getFSImage().getEditLog().getCurSegmentTxId());
       assertTrue("Should not have finalized " + editsLog,
           editsLog.isInProgress());

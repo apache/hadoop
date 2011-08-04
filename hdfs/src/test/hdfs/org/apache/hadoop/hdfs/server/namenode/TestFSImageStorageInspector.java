@@ -36,8 +36,8 @@ import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEdit
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getFinalizedEditsFileName;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
 
-import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.FoundEditLog;
-import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.FoundFSImage;
+import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
+import org.apache.hadoop.hdfs.server.namenode.FSImageStorageInspector.FSImageFile;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.TransactionalLoadPlan;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.LogGroup;
 import org.apache.hadoop.hdfs.server.namenode.FSImageStorageInspector.LoadPlan;
@@ -72,7 +72,7 @@ public class TestFSImageStorageInspector {
     assertEquals(2, inspector.foundImages.size());
     assertTrue(inspector.foundEditLogs.get(1).isInProgress());
     
-    FoundFSImage latestImage = inspector.getLatestImage();
+    FSImageFile latestImage = inspector.getLatestImage();
     assertEquals(456, latestImage.txId);
     assertSame(mockDir, latestImage.sd);
     assertTrue(inspector.isUpgradeFinalized());
@@ -203,7 +203,7 @@ public class TestFSImageStorageInspector {
 
     LogGroup lg = inspector.logGroups.get(123L);
     assertEquals(3, lg.logs.size());
-    FoundEditLog inProgressLog = lg.logs.get(2);
+    EditLogFile inProgressLog = lg.logs.get(2);
     assertTrue(inProgressLog.isInProgress());
     
     LoadPlan plan = inspector.createLoadPlan();
@@ -282,7 +282,7 @@ public class TestFSImageStorageInspector {
     assertTrue(lg.logs.get(2).isCorrupt());
     
     // Calling recover should move it aside
-    FoundEditLog badLog = lg.logs.get(2);
+    EditLogFile badLog = lg.logs.get(2);
     Mockito.doNothing().when(badLog).moveAsideCorruptFile();
     Mockito.doNothing().when(lg.logs.get(0)).finalizeLog();
     Mockito.doNothing().when(lg.logs.get(1)).finalizeLog();
@@ -303,12 +303,12 @@ public class TestFSImageStorageInspector {
       String path, int numValidTransactions) throws IOException {
     
     for (LogGroup lg : inspector.logGroups.values()) {
-      List<FoundEditLog> logs = lg.logs;
+      List<EditLogFile> logs = lg.logs;
       for (int i = 0; i < logs.size(); i++) {
-        FoundEditLog log = logs.get(i);
-        if (log.file.getPath().equals(path)) {
+        EditLogFile log = logs.get(i);
+        if (log.getFile().getPath().equals(path)) {
           // mock out its validation
-          FoundEditLog spyLog = spy(log);
+          EditLogFile spyLog = spy(log);
           doReturn(new FSEditLogLoader.EditLogValidation(-1, numValidTransactions))
             .when(spyLog).validateLog();
           logs.set(i, spyLog);
@@ -356,7 +356,7 @@ public class TestFSImageStorageInspector {
     // Check plan
     TransactionalLoadPlan plan =
       (TransactionalLoadPlan)inspector.createLoadPlan();
-    FoundFSImage pickedImage = plan.image;
+    FSImageFile pickedImage = plan.image;
     assertEquals(456, pickedImage.txId);
     assertSame(mockImageDir2, pickedImage.sd);
     assertEquals(new File("/foo2/current/" + getImageFileName(456)),

@@ -632,6 +632,9 @@ Trunk (unreleased changes)
     HDFS-2187. Make EditLogInputStream act like an iterator over FSEditLogOps
     (Ivan Kelly and todd via todd)
 
+    HDFS-2225. Refactor file management so it's not in classes which should
+    be generic. (Ivan Kelly via todd)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

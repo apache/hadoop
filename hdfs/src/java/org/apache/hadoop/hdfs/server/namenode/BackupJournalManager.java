@@ -54,7 +54,7 @@ class BackupJournalManager implements JournalManager {
   }
 
   @Override
-  public void purgeLogsOlderThan(long minTxIdToKeep, StoragePurger purger)
+  public void purgeLogsOlderThan(long minTxIdToKeep)
       throws IOException {
   }
 

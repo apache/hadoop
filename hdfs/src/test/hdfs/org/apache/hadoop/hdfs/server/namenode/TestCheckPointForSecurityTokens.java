@@ -28,7 +28,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.FoundEditLog;
+import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -82,7 +82,7 @@ public class TestCheckPointForSecurityTokens {
       // verify that the edits file is NOT empty
       NameNode nn = cluster.getNameNode();
       for (StorageDirectory sd : nn.getFSImage().getStorage().dirIterable(null)) {
-        FoundEditLog log = FSImageTestUtil.findLatestEditsLog(sd);
+        EditLogFile log = FSImageTestUtil.findLatestEditsLog(sd);
         assertTrue(log.isInProgress());
         assertEquals("In-progress log " + log + " should have 5 transactions",
             5, log.validateLog().numTransactions);
@@ -97,7 +97,7 @@ public class TestCheckPointForSecurityTokens {
       }
       // verify that the edits file is empty except for the START txn
       for (StorageDirectory sd : nn.getFSImage().getStorage().dirIterable(null)) {
-        FoundEditLog log = FSImageTestUtil.findLatestEditsLog(sd);
+        EditLogFile log = FSImageTestUtil.findLatestEditsLog(sd);
         assertTrue(log.isInProgress());
         assertEquals("In-progress log " + log + " should only have START txn",
             1, log.validateLog().numTransactions);
