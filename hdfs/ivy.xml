@@ -74,6 +74,7 @@
     </dependency>
     <dependency org="com.google.guava" name="guava" rev="${guava.version}" conf="hdfs->default" />
     <dependency org="com.google.protobuf" name="protobuf-java" rev="2.4.0a" conf="common->master"/>
+    <dependency org="com.jcraft" name="jsch" rev="${jsch.version}" conf="hdfs->default" />
     <dependency org="org.apache.hadoop" name="avro" rev="${avro.version}" conf="compile->master">
       <exclude module="ant"/>
       <exclude module="jetty"/>

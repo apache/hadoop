@@ -3,3 +3,5 @@ Changes for HDFS-1623 branch.
 This change list will be merged into the trunk CHANGES.txt when the HDFS-1623
 branch is merged.
 ------------------------------
+
+HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
