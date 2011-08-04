@@ -1253,7 +1253,7 @@ public class TaskTracker
     }
   }
 
-  private void launchTaskForJob(TaskInProgress tip, JobConf jobConf,
+  protected void launchTaskForJob(TaskInProgress tip, JobConf jobConf,
       UserGroupInformation ugi) throws IOException {
     synchronized (tip) {
       tip.setJobConf(jobConf);
@@ -2351,30 +2351,35 @@ public class TaskTracker
    * All exceptions are handled locally, so that we don't mess up the
    * task tracker.
    */
-  void startNewTask(TaskInProgress tip) {
-    try {
-      RunningJob rjob = localizeJob(tip);
-      // Localization is done. Neither rjob.jobConf nor rjob.ugi can be null
-      launchTaskForJob(tip, new JobConf(rjob.jobConf), rjob.ugi); 
-    } catch (Throwable e) {
-      String msg = ("Error initializing " + tip.getTask().getTaskID() + 
-                    ":\n" + StringUtils.stringifyException(e));
-      LOG.warn(msg);
-      tip.reportDiagnosticInfo(msg);
-      try {
-        tip.kill(true);
-        tip.cleanup(true);
-      } catch (IOException ie2) {
-        LOG.info("Error cleaning up " + tip.getTask().getTaskID() + ":\n" +
-                 StringUtils.stringifyException(ie2));          
+  void startNewTask(final TaskInProgress tip) {
+    Thread launchThread = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          RunningJob rjob = localizeJob(tip);
+          // Localization is done. Neither rjob.jobConf nor rjob.ugi can be null
+          launchTaskForJob(tip, new JobConf(rjob.getJobConf()), rjob.ugi); 
+        } catch (Throwable e) {
+          String msg = ("Error initializing " + tip.getTask().getTaskID() + 
+                        ":\n" + StringUtils.stringifyException(e));
+          LOG.warn(msg);
+          tip.reportDiagnosticInfo(msg);
+          try {
+            tip.kill(true);
+            tip.cleanup(true);
+          } catch (IOException ie2) {
+            LOG.info("Error cleaning up " + tip.getTask().getTaskID() + ":\n" +
+                     StringUtils.stringifyException(ie2));          
+          }
+          if (e instanceof Error) {
+            LOG.error("TaskLauncher error " +
+                StringUtils.stringifyException(e));
+          }
+        }
       }
+    });
+    launchThread.start();
         
-      // Careful! 
-      // This might not be an 'Exception' - don't handle 'Error' here!
-      if (e instanceof Error) {
-        throw ((Error) e);
-      }
-    }
   }
   
   void addToMemoryManager(TaskAttemptID attemptId, boolean isMap, 

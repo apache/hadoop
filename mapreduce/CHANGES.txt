@@ -209,6 +209,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2602. Allow setting of end-of-record delimiter for
     TextInputFormat for the old API. (Ahmed Radwan via todd)
 
+    MAPREDUCE-2705. Permits parallel multiple task launches. 
+    (Thomas Graves via ddas)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
