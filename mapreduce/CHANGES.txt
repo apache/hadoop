@@ -4,6 +4,8 @@ Trunk (unreleased changes)
 
   MAPREDUCE-279
 
+    Fix NPE in FifoScheduler. (mahadev)
+
     Harmonize slf4j versions. (llu)
 
     MAPREDUCE-2772. Fix MR-279 build after common mavenization, part 2.

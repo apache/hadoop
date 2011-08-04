@@ -540,11 +540,17 @@ public class FifoScheduler implements ResourceScheduler {
     
     for (List<Container> appContainers : remoteContainers.values()) {
       for (Container container : appContainers) {
-        if (container.getState() == ContainerState.RUNNING) {
-          containerLaunchedOnNode(container, node);
-        } else { // has to COMPLETE
-          containerCompleted(getRMContainer(container.getId()), 
-              RMContainerEventType.FINISHED);
+        /* make sure the scheduler hasnt already removed the applications */
+        if (getApplication(container.getId().getAppAttemptId()) != null) {
+          if (container.getState() == ContainerState.RUNNING) {
+            containerLaunchedOnNode(container, node);
+          } else { // has to COMPLETE
+            containerCompleted(getRMContainer(container.getId()), 
+                RMContainerEventType.FINISHED);
+          }
+        }
+        else {
+          LOG.warn("Scheduler not tracking application " + container.getId().getAppAttemptId());
         }
       }
     }
