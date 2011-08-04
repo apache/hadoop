@@ -265,6 +265,11 @@ public class DataChecksum implements Checksum {
           fileName, basePos);
       return;
     }
+    if (NativeCrc32.isAvailable()) {
+      NativeCrc32.verifyChunkedSums(bytesPerChecksum, type, checksums, data,
+          fileName, basePos);
+      return;
+    }
     
     int startDataPos = data.position();
     data.mark();

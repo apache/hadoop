@@ -51,7 +51,9 @@ libhadoop_la_SOURCES = src/org/apache/hadoop/io/compress/zlib/ZlibCompressor.c \
                        src/org/apache/hadoop/security/JniBasedUnixGroupsNetgroupMapping.c \
                        src/org/apache/hadoop/io/nativeio/file_descriptor.c \
                        src/org/apache/hadoop/io/nativeio/errno_enum.c \
-                       src/org/apache/hadoop/io/nativeio/NativeIO.c
+                       src/org/apache/hadoop/io/nativeio/NativeIO.c \
+                       src/org/apache/hadoop/util/NativeCrc32.c \
+                       src/org/apache/hadoop/util/bulk_crc32.c
 
 libhadoop_la_LDFLAGS = -version-info 1:0:0 $(AM_LDFLAGS)
 libhadoop_la_LIBADD = -ldl -ljvm
