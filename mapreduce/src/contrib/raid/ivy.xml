@@ -52,5 +52,11 @@
       name="hadoop-hdfs-test"
       rev="${hadoop-hdfs.version}"
       conf="test->default"/>
+
+    <!-- Exclusions for transitive dependencies pulled in by log4j -->
+    <exclude org="com.sun.jdmk"/>
+    <exclude org="com.sun.jmx"/>
+    <exclude org="javax.jms"/>
+    <exclude org="javax.mail"/>
   </dependencies>
 </ivy-module>

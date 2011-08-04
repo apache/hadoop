@@ -51,5 +51,11 @@
                 conf="common->default"/>
     <dependency org="org.aspectj" name="aspectjtools" rev="${aspectj.version}"
                 conf="common->default"/>
+
+    <!-- Exclusions for transitive dependencies pulled in by log4j -->
+    <exclude org="com.sun.jdmk"/>
+    <exclude org="com.sun.jmx"/>
+    <exclude org="javax.jms"/>
+    <exclude org="javax.mail"/>
   </dependencies>
 </ivy-module>

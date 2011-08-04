@@ -2,8 +2,10 @@ Hadoop MapReduce Change Log
 
 Trunk (unreleased changes)
 
+  MAPREDUCE-279
 
-    MAPREDUCE-279
+    MAPREDUCE-2772. Fix MR-279 build after common mavenization, part 2.
+    (Thomas Graves via llu)
 
     MAPREDUCE-2772. Fix MR-279 build after common mavenization.
     (Robert Joseph Evans via llu)

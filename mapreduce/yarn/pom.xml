@@ -139,9 +139,8 @@
     </dependency>
    <dependency>
      <groupId>org.slf4j</groupId>
-     <artifactId>slf4j-simple</artifactId>
-     <version>1.5.2</version>
-     <scope>test</scope>
+     <artifactId>slf4j-log4j12</artifactId>
+     <version>1.6.1</version>
    </dependency>
   </dependencies>
 
