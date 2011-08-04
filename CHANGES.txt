@@ -184,6 +184,7 @@ Release 0.91.0 - Unreleased
    HBASE-4032  HBASE-451 improperly breaks public API HRegionInfo#getTableDesc
    HBASE-4148  HFileOutputFormat doesn't fill in TIMERANGE_KEY metadata (Jonathan Hsieh)
    HBASE-4003  Cleanup Calls Conservatively On Timeout (Karthick)
+   HBASE-3857  Fix TestHFileBlock.testBlockHeapSize test failure (Mikhail)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
