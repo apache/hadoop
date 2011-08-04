@@ -629,6 +629,9 @@ Trunk (unreleased changes)
     HDFS-2199. Move blockTokenSecretManager from FSNamesystem to BlockManager.
     (Uma Maheswara Rao G via szetszwo)
 
+    HDFS-2187. Make EditLogInputStream act like an iterator over FSEditLogOps
+    (Ivan Kelly and todd via todd)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

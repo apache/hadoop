@@ -17,10 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
+import java.io.Closeable;
 import java.io.IOException;
-import java.io.InputStream;
 
 /**
  * A generic abstract class to support reading edits log data from 
@@ -29,29 +27,41 @@ import java.io.InputStream;
  * It should stream bytes from the storage exactly as they were written
  * into the #{@link EditLogOutputStream}.
  */
-abstract class EditLogInputStream extends InputStream
-implements JournalStream {
-  /** {@inheritDoc} */
-  public abstract int available() throws IOException;
-
-  /** {@inheritDoc} */
-  public abstract int read() throws IOException;
-
-  /** {@inheritDoc} */
-  public abstract int read(byte[] b, int off, int len) throws IOException;
-
-  /** {@inheritDoc} */
+abstract class EditLogInputStream implements JournalStream, Closeable {
+  /**
+   * Close the stream.
+   * @throws IOException if an error occurred while closing
+   */
   public abstract void close() throws IOException;
+
+  /** 
+   * Read an operation from the stream
+   * @return an operation from the stream or null if at end of stream
+   * @throws IOException if there is an error reading from the stream
+   */
+  public abstract FSEditLogOp readOp() throws IOException;
+
+  /** 
+   * Get the layout version of the data in the stream.
+   * @return the layout version of the ops in the stream.
+   * @throws IOException if there is an error reading the version
+   */
+  public abstract int getVersion() throws IOException;
+
+  /**
+   * Get the "position" of in the stream. This is useful for 
+   * debugging and operational purposes.
+   *
+   * Different stream types can have a different meaning for 
+   * what the position is. For file streams it means the byte offset
+   * from the start of the file.
+   *
+   * @return the position in the stream
+   */
+  public abstract long getPosition();
 
   /**
    * Return the size of the current edits log.
    */
   abstract long length() throws IOException;
-
-  /**
-   * Return DataInputStream based on this edit stream.
-   */
-  DataInputStream getDataInputStream() {
-    return new DataInputStream(new BufferedInputStream(this));
-  }
 }

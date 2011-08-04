@@ -210,14 +210,13 @@ public class BackupImage extends FSImage {
       if (LOG.isTraceEnabled()) {
         LOG.debug("data:" + StringUtils.byteToHexString(data));
       }
-      backupInputStream.setBytes(data);
+
       FSEditLogLoader logLoader = new FSEditLogLoader(namesystem);
       int logVersion = storage.getLayoutVersion();
-      BufferedInputStream bin = new BufferedInputStream(backupInputStream);
-      DataInputStream in = new DataInputStream(bin);
-      Checksum checksum = FSEditLog.getChecksum();
-      int numLoaded = logLoader.loadEditRecords(logVersion, in, checksum, true,
-                                lastAppliedTxId + 1);
+      backupInputStream.setBytes(data, logVersion);
+
+      int numLoaded = logLoader.loadEditRecords(logVersion, backupInputStream, 
+                                                true, lastAppliedTxId + 1);
       if (numLoaded != numTxns) {
         throw new IOException("Batch of txns starting at txnid " +
             firstTxId + " was supposed to contain " + numTxns +

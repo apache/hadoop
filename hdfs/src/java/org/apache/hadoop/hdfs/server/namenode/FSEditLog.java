@@ -20,8 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
-import java.util.zip.Checksum;
-import java.util.zip.CheckedOutputStream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -44,7 +42,6 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
-import org.apache.hadoop.util.PureJavaCrc32;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -115,18 +112,6 @@ public class FSEditLog  {
   private NameNodeMetrics metrics;
 
   private NNStorage storage;
-
-  private static ThreadLocal<Checksum> localChecksum =
-    new ThreadLocal<Checksum>() {
-    protected Checksum initialValue() {
-      return new PureJavaCrc32();
-    }
-  };
-
-  /** Get a thread local checksum */
-  public static Checksum getChecksum() {
-    return localChecksum.get();
-  }
 
   private static class TransactionId {
     public long txid;

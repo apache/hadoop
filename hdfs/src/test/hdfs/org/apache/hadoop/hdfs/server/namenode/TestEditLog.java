@@ -676,28 +676,44 @@ public class TestEditLog extends TestCase {
   private static class EditLogByteInputStream extends EditLogInputStream {
     private InputStream input;
     private long len;
+    private int version;
+    private FSEditLogOp.Reader reader = null;
+    private FSEditLogLoader.PositionTrackingInputStream tracker = null;
 
-    public EditLogByteInputStream(byte[] data) {
+    public EditLogByteInputStream(byte[] data) throws IOException {
       len = data.length;
       input = new ByteArrayInputStream(data);
-    }
 
-    public int available() throws IOException {
-      return input.available();
+      BufferedInputStream bin = new BufferedInputStream(input);
+      DataInputStream in = new DataInputStream(bin);
+      version = EditLogFileInputStream.readLogVersion(in);
+      tracker = new FSEditLogLoader.PositionTrackingInputStream(in);
+      in = new DataInputStream(tracker);
+            
+      reader = new FSEditLogOp.Reader(in, version);
     }
     
-    public int read() throws IOException {
-      return input.read();
-    }
-    
+    @Override
     public long length() throws IOException {
       return len;
     }
-    
-    public int read(byte[] b, int off, int len) throws IOException {
-      return input.read(b, off, len);
+  
+    @Override
+    public long getPosition() {
+      return tracker.getPos();
     }
 
+    @Override
+    public FSEditLogOp readOp() throws IOException {
+      return reader.readOp();
+    }
+
+    @Override
+    public int getVersion() throws IOException {
+      return version;
+    }
+
+    @Override
     public void close() throws IOException {
       input.close();
     }

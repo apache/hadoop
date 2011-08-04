@@ -588,7 +588,7 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
 
     EditLogValidation validateLog() throws IOException {
       if (cachedValidation == null) {
-        cachedValidation = FSEditLogLoader.validateEditLog(file);
+        cachedValidation = EditLogFileInputStream.validateEditLog(file);
       }
       return cachedValidation;
     }
