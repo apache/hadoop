@@ -37,6 +37,7 @@
   </publications>
 
   <dependencies>
+   <dependency org="org.apache.hadoop" name="hadoop-annotations" rev="${hadoop-common.version}" conf="common->default"/>
     <dependency org="org.apache.hadoop" name="hadoop-common" rev="${hadoop-common.version}" conf="common->default"/>
     <dependency org="org.mortbay.jetty" name="jetty" rev="${jetty.version}" conf="common->master"/>
     <dependency org="org.mortbay.jetty" name="jetty-util" rev="${jetty-util.version}" conf="common->master"/>
@@ -50,5 +51,12 @@
     <dependency org="org.mortbay.jetty" name="servlet-api-2.5" rev="${servlet-api-2.5.version}" conf="common->master"/>
     <dependency org="junit" name="junit" rev="${junit.version}" conf="common->default"/>
     <dependency org="org.slf4j" name="slf4j-api" rev="${slf4j-api.version}" conf="common->master"/>
+
+   <!-- Exclusions for transitive dependencies pulled in by log4j -->
+   <exclude org="com.sun.jdmk"/>
+   <exclude org="com.sun.jmx"/>
+   <exclude org="javax.jms"/> 
+   <exclude org="javax.mail"/> 
+
   </dependencies>
 </ivy-module>

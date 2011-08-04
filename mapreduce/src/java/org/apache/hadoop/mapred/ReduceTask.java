@@ -352,7 +352,7 @@ public class ReduceTask extends Task {
       Class combinerClass = conf.getCombinerClass();
       CombineOutputCollector combineCollector = 
         (null != combinerClass) ? 
-            new CombineOutputCollector(reduceCombineOutputCounter) : null;
+ 	     new CombineOutputCollector(reduceCombineOutputCounter, reporter, conf) : null;
 
       Shuffle shuffle = 
         new Shuffle(getTaskID(), job, FileSystem.getLocal(job), umbilical, 

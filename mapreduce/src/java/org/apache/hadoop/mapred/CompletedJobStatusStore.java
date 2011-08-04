@@ -32,6 +32,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 /**
@@ -172,8 +173,9 @@ class CompletedJobStatusStore implements Runnable {
     if (active && retainTime > 0) {
       JobID jobId = job.getStatus().getJobID();
       Path jobStatusFile = getInfoFilePath(jobId);
+      FSDataOutputStream dataOut = null;
       try {
-        FSDataOutputStream dataOut = fs.create(jobStatusFile);
+        dataOut = fs.create(jobStatusFile);
 
         job.getStatus().write(dataOut);
 
@@ -189,6 +191,7 @@ class CompletedJobStatusStore implements Runnable {
         }
 
         dataOut.close();
+        dataOut = null; // set dataOut to null explicitly so that close in finally will not be executed again.
       } catch (IOException ex) {
         LOG.warn("Could not store [" + jobId + "] job info : " +
                  ex.getMessage(), ex);
@@ -198,6 +201,8 @@ class CompletedJobStatusStore implements Runnable {
         catch (IOException ex1) {
           //ignore
         }
+      } finally {
+        IOUtils.cleanup(LOG, dataOut);
       }
     }
   }

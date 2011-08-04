@@ -58,6 +58,7 @@ import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.lib.reduce.WrappedReducer;
 import org.apache.hadoop.mapreduce.task.ReduceContextImpl;
 import org.apache.hadoop.mapreduce.util.ResourceCalculatorPlugin;
@@ -79,6 +80,7 @@ abstract public class Task implements Writable, Configurable {
     LogFactory.getLog(Task.class);
 
   public static String MERGED_OUTPUT_PREFIX = ".merged";
+  public static final long DEFAULT_COMBINE_RECORDS_BEFORE_PROGRESS = 10000;
 
   /**
    * Counters to measure the usage of the different file systems.
@@ -1176,16 +1178,26 @@ abstract public class Task implements Writable, Configurable {
   implements OutputCollector<K, V> {
     private Writer<K, V> writer;
     private Counters.Counter outCounter;
-    public CombineOutputCollector(Counters.Counter outCounter) {
+    private Progressable progressable;
+    private long progressBar;
+
+    public CombineOutputCollector(Counters.Counter outCounter, Progressable progressable, Configuration conf) {
       this.outCounter = outCounter;
+      this.progressable=progressable;
+      progressBar = conf.getLong(MRJobConfig.COMBINE_RECORDS_BEFORE_PROGRESS, DEFAULT_COMBINE_RECORDS_BEFORE_PROGRESS);
     }
+    
     public synchronized void setWriter(Writer<K, V> writer) {
       this.writer = writer;
     }
+
     public synchronized void collect(K key, V value)
         throws IOException {
       outCounter.increment(1);
       writer.append(key, value);
+      if ((outCounter.getValue() % progressBar) == 0) {
+        progressable.progress();
+      }
     }
   }
 

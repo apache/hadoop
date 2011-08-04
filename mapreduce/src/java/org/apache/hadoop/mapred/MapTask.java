@@ -946,7 +946,7 @@ class MapTask extends Task {
       if (combinerRunner != null) {
         final Counters.Counter combineOutputCounter =
           reporter.getCounter(TaskCounter.COMBINE_OUTPUT_RECORDS);
-        combineCollector= new CombineOutputCollector<K,V>(combineOutputCounter);
+        combineCollector= new CombineOutputCollector<K,V>(combineOutputCounter, reporter, conf);
       } else {
         combineCollector = null;
       }

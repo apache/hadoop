@@ -631,7 +631,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
 
   @Override // NamenodeProtocol
   public ExportedBlockKeys getBlockKeys() throws IOException {
-    return namesystem.getBlockKeys();
+    return namesystem.getBlockManager().getBlockKeys();
   }
 
   @Override // NamenodeProtocol

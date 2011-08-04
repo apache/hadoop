@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Iterator;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.CounterGroup;
 import org.apache.hadoop.mapreduce.Counters;
@@ -33,6 +34,8 @@ import org.apache.avro.io.DatumWriter;
 import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.util.Utf8;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * Event Writer is an utility class used to write events to the underlying
@@ -47,6 +50,7 @@ class EventWriter {
   private DatumWriter<Event> writer =
     new SpecificDatumWriter<Event>(Event.class);
   private Encoder encoder;
+  private static final Log LOG = LogFactory.getLog(EventWriter.class);
   
   EventWriter(FSDataOutputStream out) throws IOException {
     this.out = out;
@@ -72,8 +76,13 @@ class EventWriter {
   }
 
   void close() throws IOException {
-    encoder.flush();
-    out.close();
+    try {
+      encoder.flush();
+      out.close();
+      out = null;
+    } finally {
+      IOUtils.cleanup(LOG, out);
+    }
   }
 
   private static final Schema GROUPS =

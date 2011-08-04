@@ -626,6 +626,9 @@ Trunk (unreleased changes)
     HDFS-2212. Refactor double-buffering code out of EditLogOutputStreams.
     (todd via eli)
 
+    HDFS-2199. Move blockTokenSecretManager from FSNamesystem to BlockManager.
+    (Uma Maheswara Rao G via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
@@ -910,6 +913,9 @@ Trunk (unreleased changes)
     excess replicas. (John George via mattf)
 
     HDFS-1776. Bug in Concat code. (Bharath Mundlapudi via Dmytro Molkov)
+
+    HDFS-2196. Make ant build system work with hadoop-common JAR generated
+    by Maven. (Alejandro Abdelnur via tomwhite)
 
   BREAKDOWN OF HDFS-1073 SUBTASKS
 

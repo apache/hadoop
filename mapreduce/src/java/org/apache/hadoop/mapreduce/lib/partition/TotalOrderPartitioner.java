@@ -23,6 +23,8 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
@@ -30,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BinaryComparable;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.RawComparator;
@@ -56,6 +59,7 @@ public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
   public static final String NATURAL_ORDER = 
     "mapreduce.totalorderpartitioner.naturalorder";
   Configuration conf;
+  private static final Log LOG = LogFactory.getLog(TotalOrderPartitioner.class);
 
   public TotalOrderPartitioner() { }
 
@@ -298,11 +302,16 @@ public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
     ArrayList<K> parts = new ArrayList<K>();
     K key = ReflectionUtils.newInstance(keyClass, conf);
     NullWritable value = NullWritable.get();
-    while (reader.next(key, value)) {
-      parts.add(key);
-      key = ReflectionUtils.newInstance(keyClass, conf);
+    try {
+      while (reader.next(key, value)) {
+        parts.add(key);
+        key = ReflectionUtils.newInstance(keyClass, conf);
+      }
+      reader.close();
+      reader = null;
+    } finally {
+      IOUtils.cleanup(LOG, reader);
     }
-    reader.close();
     return parts.toArray((K[])Array.newInstance(keyClass, parts.size()));
   }
   
