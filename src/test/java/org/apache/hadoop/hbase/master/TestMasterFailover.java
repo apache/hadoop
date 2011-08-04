@@ -60,7 +60,7 @@ public class TestMasterFailover {
    * the cluster.
    * @throws Exception
    */
-  @Test (timeout=180000)
+  @Test (timeout=240000)
   public void testSimpleMasterFailover() throws Exception {
 
     final int NUM_MASTERS = 3;
