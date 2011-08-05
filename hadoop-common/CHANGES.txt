@@ -455,6 +455,9 @@ Trunk (unreleased changes)
     HADOOP-7508. Compiled nativelib is in wrong directory and it is not picked
     up by surefire setup. (Alejandro Abdelnur via tomwhite)
 
+    HADOOP-7515. test-patch reports the wrong number of javadoc warnings.
+    (tomwhite)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
