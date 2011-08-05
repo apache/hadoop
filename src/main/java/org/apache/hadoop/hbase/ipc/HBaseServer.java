@@ -256,6 +256,9 @@ public abstract class HBaseServer implements RpcServer {
     protected ByteBuffer response;                // the response for this call
     protected boolean delayResponse;
     protected Responder responder;
+    protected boolean delayReturnValue;           // if the return value should be
+                                                  // set at call completion
+    protected boolean isError;
 
     public Call(int id, Writable param, Connection connection,
         Responder responder) {
@@ -266,6 +269,7 @@ public abstract class HBaseServer implements RpcServer {
       this.response = null;
       this.delayResponse = false;
       this.responder = responder;
+      this.isError = false;
     }
 
     @Override
@@ -275,6 +279,14 @@ public abstract class HBaseServer implements RpcServer {
 
     private synchronized void setResponse(Object value, String errorClass,
         String error) {
+      // Avoid overwriting an error value in the response.  This can happen if
+      // endDelayThrowing is called by another thread before the actual call
+      // returning.
+      if (this.isError)
+        return;
+      if (errorClass != null) {
+        this.isError = true;
+      }
       Writable result = null;
       if (value instanceof Writable) {
         result = (Writable) value;
@@ -334,16 +346,24 @@ public abstract class HBaseServer implements RpcServer {
     @Override
     public synchronized void endDelay(Object result) throws IOException {
       assert this.delayResponse;
+      assert this.delayReturnValue || result == null;
       this.delayResponse = false;
       delayedCalls.decrementAndGet();
-      this.setResponse(result, null, null);
+      if (this.delayReturnValue)
+        this.setResponse(result, null, null);
       this.responder.doRespond(this);
     }
 
     @Override
-    public synchronized void startDelay() {
+    public synchronized void endDelay() throws IOException {
+      this.endDelay(null);
+    }
+
+    @Override
+    public synchronized void startDelay(boolean delayReturnValue) {
       assert !this.delayResponse;
       this.delayResponse = true;
+      this.delayReturnValue = delayReturnValue;
       int numDelayed = delayedCalls.incrementAndGet();
       if (numDelayed > warnDelayedCalls) {
         LOG.warn("Too many delayed calls: limit " + warnDelayedCalls +
@@ -352,8 +372,21 @@ public abstract class HBaseServer implements RpcServer {
     }
 
     @Override
+    public synchronized void endDelayThrowing(Throwable t) throws IOException {
+      this.setResponse(null, t.getClass().toString(),
+          StringUtils.stringifyException(t));
+      this.delayResponse = false;
+      this.sendResponseIfReady();
+    }
+
+    @Override
     public synchronized boolean isDelayed() {
       return this.delayResponse;
+    }
+
+    @Override
+    public synchronized boolean isReturnValueDelayed() {
+      return this.delayReturnValue;
     }
 
     /**
@@ -1194,7 +1227,9 @@ public abstract class HBaseServer implements RpcServer {
           }
           CurCall.set(null);
 
-          if (!call.isDelayed()) {
+          // Set the response for undelayed calls and delayed calls with
+          // undelayed responses.
+          if (!call.isDelayed() || !call.isReturnValueDelayed()) {
             call.setResponse(value, errorClass, error);
           }
           call.sendResponseIfReady();

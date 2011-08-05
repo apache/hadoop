@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.ipc;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -48,17 +49,26 @@ public class TestDelayedRpc {
   public static final int DELAYED = 1;
 
   @Test
-  public void testDelayedRpc() throws Exception {
+  public void testDelayedRpcImmediateReturnValue() throws Exception {
+    testDelayedRpc(false);
+  }
+
+  @Test
+  public void testDelayedRpcDelayedReturnValue() throws Exception {
+    testDelayedRpc(true);
+  }
+
+  private void testDelayedRpc(boolean delayReturnValue) throws Exception {
     Configuration conf = HBaseConfiguration.create();
     InetSocketAddress isa = new InetSocketAddress("localhost", 0);
 
-    rpcServer = HBaseRPC.getServer(new TestRpcImpl(),
+    rpcServer = HBaseRPC.getServer(new TestRpcImpl(delayReturnValue),
         new Class<?>[]{ TestRpcImpl.class },
         isa.getHostName(), isa.getPort(), 1, 0, true, conf, 0);
     rpcServer.start();
 
     TestRpc client = (TestRpc) HBaseRPC.getProxy(TestRpc.class, 0,
-        rpcServer.getListenerAddress(), conf, 400);
+        rpcServer.getListenerAddress(), conf, 1000);
 
     List<Integer> results = new ArrayList<Integer>();
 
@@ -77,7 +87,8 @@ public class TestDelayedRpc {
 
     assertEquals(results.get(0).intValue(), UNDELAYED);
     assertEquals(results.get(1).intValue(), UNDELAYED);
-    assertEquals(results.get(2).intValue(), DELAYED);
+    assertEquals(results.get(2).intValue(), delayReturnValue ? DELAYED :
+        0xDEADBEEF);
   }
 
   private static class ListAppender extends AppenderSkeleton {
@@ -113,7 +124,7 @@ public class TestDelayedRpc {
     log.addAppender(listAppender);
 
     InetSocketAddress isa = new InetSocketAddress("localhost", 0);
-    rpcServer = HBaseRPC.getServer(new TestRpcImpl(),
+    rpcServer = HBaseRPC.getServer(new TestRpcImpl(true),
         new Class<?>[]{ TestRpcImpl.class },
         isa.getHostName(), isa.getPort(), 1, 0, true, conf, 0);
     rpcServer.start();
@@ -150,26 +161,41 @@ public class TestDelayedRpc {
   }
 
   private static class TestRpcImpl implements TestRpc {
+    /**
+     * Should the return value of delayed call be set at the end of the delay
+     * or at call return.
+     */
+    private boolean delayReturnValue;
+
+    /**
+     * @param delayReturnValue Should the response to the delayed call be set
+     * at the start or the end of the delay.
+     * @param delay Amount of milliseconds to delay the call by
+     */
+    public TestRpcImpl(boolean delayReturnValue) {
+      this.delayReturnValue = delayReturnValue;
+    }
+
     @Override
-    public int test(boolean delay) {
+    public int test(final boolean delay) {
       if (!delay) {
         return UNDELAYED;
       }
       final Delayable call = rpcServer.getCurrentCall();
-      call.startDelay();
+      call.startDelay(delayReturnValue);
       new Thread() {
         public void run() {
           try {
             Thread.sleep(500);
-            call.endDelay(DELAYED);
-          } catch (IOException e) {
-            e.printStackTrace();
-          } catch (InterruptedException e) {
+            call.endDelay(delayReturnValue ? DELAYED : null);
+          } catch (Exception e) {
             e.printStackTrace();
           }
         }
       }.start();
-      return 0xDEADBEEF; // this return value should not go back to client
+      // This value should go back to client only if the response is set
+      // immediately at delay time.
+      return 0xDEADBEEF;
     }
 
     @Override
@@ -197,6 +223,65 @@ public class TestDelayedRpc {
           results.add(result);
         }
       }
+    }
+  }
+
+  @Test
+  public void testEndDelayThrowing() throws IOException {
+    Configuration conf = HBaseConfiguration.create();
+    InetSocketAddress isa = new InetSocketAddress("localhost", 0);
+
+    rpcServer = HBaseRPC.getServer(new FaultyTestRpc(),
+        new Class<?>[]{ TestRpcImpl.class },
+        isa.getHostName(), isa.getPort(), 1, 0, true, conf, 0);
+    rpcServer.start();
+
+    TestRpc client = (TestRpc) HBaseRPC.getProxy(TestRpc.class, 0,
+        rpcServer.getListenerAddress(), conf, 1000);
+
+    int result = 0xDEADBEEF;
+
+    try {
+      result = client.test(false);
+    } catch (Exception e) {
+      fail("No exception should have been thrown.");
+    }
+    assertEquals(result, UNDELAYED);
+
+    boolean caughtException = false;
+    try {
+      result = client.test(true);
+    } catch(Exception e) {
+      // Exception thrown by server is enclosed in a RemoteException.
+      if (e.getCause().getMessage().startsWith(
+          "java.lang.Exception: Something went wrong"))
+        caughtException = true;
+    }
+    assertTrue(caughtException);
+  }
+
+  /**
+   * Delayed calls to this class throw an exception.
+   */
+  private static class FaultyTestRpc implements TestRpc {
+    @Override
+    public int test(boolean delay) {
+      if (!delay)
+        return UNDELAYED;
+      Delayable call = rpcServer.getCurrentCall();
+      call.startDelay(true);
+      try {
+        call.endDelayThrowing(new Exception("Something went wrong"));
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      // Client will receive the Exception, not this value.
+      return DELAYED;
+    }
+
+    @Override
+    public long getProtocolVersion(String arg0, long arg1) throws IOException {
+      return 0;
     }
   }
 }
