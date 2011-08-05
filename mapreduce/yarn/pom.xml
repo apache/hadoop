@@ -348,16 +348,16 @@
           </execution>
         </executions>
       </plugin>
-	  <plugin>
+       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
-		<configuration>
+         <configuration>
           <findbugsXmlOutput>true</findbugsXmlOutput>
           <xmlOutput>true</xmlOutput>
           <excludeFilterFile>${yarn.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
           <effort>Max</effort>
         </configuration>
-	  </plugin>
+      </plugin>
     </plugins>
   </build>
 

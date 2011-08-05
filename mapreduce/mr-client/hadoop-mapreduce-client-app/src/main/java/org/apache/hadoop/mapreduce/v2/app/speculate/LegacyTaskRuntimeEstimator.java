@@ -112,8 +112,9 @@ public class LegacyTaskRuntimeEstimator extends StartEndTimesBase {
         estimate = (long) ((timestamp - start) / Math.max(0.0001, status.progress));
         varianceEstimate = (long) (estimate * status.progress / 10);
       }
-
-      estimateContainer.set(estimate);
+      if (estimateContainer != null) {
+        estimateContainer.set(estimate);
+      }
       estimateVarianceContainer.set(varianceEstimate);
     }
   }

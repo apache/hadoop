@@ -19,7 +19,7 @@
     <install.pom>${project.build.directory}/saner-pom.xml</install.pom>
     <install.file>${install.pom}</install.file>
     <fork.mode>once</fork.mode>
-    <mr.basedir>=${basedir}</mr.basedir>
+    <mr.basedir>${basedir}</mr.basedir>
   </properties>
 
   <repositories>

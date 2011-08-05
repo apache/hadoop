@@ -388,4 +388,57 @@
        <Field name="started" />
        <Bug pattern="IS2_INCONSISTENT_SYNC" />
     </Match>
+  
+   <!-- Yarn excludes -->
+  <Match>
+    <Class name="org.apache.hadoop.mapreduce.v2.app.job.impl.TaskAttemptImpl" />
+    <Method name="computeSlotMillis" />
+    <Bug pattern="DB_DUPLICATE_BRACHES" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.mapreduce.v2.app.MRAppMaster$1" />
+    <Bug pattern="DM_EXIT" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.mapred.LocalContainerLauncher$SubtaskRunner" />
+    <Bug pattern="DM_EXIT" />
+  </Match>
+  <Match>
+    <Class name="~org\.apache\.hadoop\.mapreduce\.v2\.app\.job\.impl\.TaskImpl.*" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+
+  <Match>
+    <Class name="~org\.apache\.hadoop\.mapreduce\.v2\.app\.job\.impl\.JobImpl.*" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+  <Match>
+    <Class name="~org\.apache\.hadoop\.mapreduce\.v2\.app\.job\.impl\.TaskAttemptImpl.*" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+  <Match>
+    <Class name="~org\.apache\.hadoop\.mapreduce\.v2\.app\.recover\.RecoveryService" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+
+  <Match>
+    <Class name="~org\.apache\.hadoop\.mapreduce\.v2\.app\.rm\.RMContainerAllocator" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.mapreduce.v2.app.job.impl.TaskAttemptImpl" />
+    <Method name="computeSlotMillis" />
+   <Bug pattern="DB_DUPLICATE_BRANCHES" />
+  </Match>
+
+   <Match>
+    <Package name="org.apache.hadoop.yarn.proto" />
+  </Match>
+  <Match>
+    <Class name="~org\.apache\.hadoop\.mapreduce\.v2\.proto.*" />
+  </Match>
+
  </FindBugsFilter>
