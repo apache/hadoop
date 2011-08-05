@@ -19,15 +19,13 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
-import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
-import java.util.zip.Checksum;
+import java.util.EnumMap;
 
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
@@ -38,8 +36,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream.LogHeaderCorruptException;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.Reader;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCloseOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.CancelDelegationTokenOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ClearNSQuotaOp;
@@ -61,7 +57,10 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
+import org.apache.hadoop.hdfs.util.Holder;
 import org.apache.hadoop.io.IOUtils;
+
+import com.google.common.base.Joiner;
 
 public class FSEditLogLoader {
   private final FSNamesystem fsNamesys;
@@ -110,13 +109,8 @@ public class FSEditLogLoader {
     FSDirectory fsDir = fsNamesys.dir;
     int numEdits = 0;
 
-    int numOpAdd = 0, numOpClose = 0, numOpDelete = 0,
-        numOpRenameOld = 0, numOpSetRepl = 0, numOpMkDir = 0,
-        numOpSetPerm = 0, numOpSetOwner = 0, numOpSetGenStamp = 0,
-        numOpTimes = 0, numOpRename = 0, numOpConcatDelete = 0, 
-        numOpSymlink = 0, numOpGetDelegationToken = 0,
-        numOpRenewDelegationToken = 0, numOpCancelDelegationToken = 0, 
-        numOpUpdateMasterKey = 0, numOpReassignLease = 0, numOpOther = 0;
+    EnumMap<FSEditLogOpCodes, Holder<Integer>> opCounts =
+      new EnumMap<FSEditLogOpCodes, Holder<Integer>>(FSEditLogOpCodes.class);
 
     fsNamesys.writeLock();
     fsDir.writeLock();
@@ -142,6 +136,7 @@ public class FSEditLogLoader {
           }
 
           numEdits++;
+          incrOpCount(op.opCode, opCounts);
           switch (op.opCode) {
           case OP_ADD:
           case OP_CLOSE: {
@@ -201,7 +196,6 @@ public class FSEditLogLoader {
                 blocks, replication,
                 addCloseOp.mtime, addCloseOp.atime, blockSize);
             if (addCloseOp.opCode == FSEditLogOpCodes.OP_ADD) {
-              numOpAdd++;
               //
               // Replace current node with a INodeUnderConstruction.
               // Recreate in-memory lease record.
@@ -223,7 +217,6 @@ public class FSEditLogLoader {
             break;
           }
           case OP_SET_REPLICATION: {
-            numOpSetRepl++;
             SetReplicationOp setReplicationOp = (SetReplicationOp)op;
             short replication
               = fsNamesys.adjustReplication(setReplicationOp.replication);
@@ -232,15 +225,12 @@ public class FSEditLogLoader {
             break;
           }
           case OP_CONCAT_DELETE: {
-            numOpConcatDelete++;
-
             ConcatDeleteOp concatDeleteOp = (ConcatDeleteOp)op;
             fsDir.unprotectedConcat(concatDeleteOp.trg, concatDeleteOp.srcs,
                 concatDeleteOp.timestamp);
             break;
           }
           case OP_RENAME_OLD: {
-            numOpRenameOld++;
             RenameOldOp renameOp = (RenameOldOp)op;
             HdfsFileStatus dinfo = fsDir.getFileInfo(renameOp.dst, false);
             fsDir.unprotectedRenameTo(renameOp.src, renameOp.dst,
@@ -249,14 +239,11 @@ public class FSEditLogLoader {
             break;
           }
           case OP_DELETE: {
-            numOpDelete++;
-
             DeleteOp deleteOp = (DeleteOp)op;
             fsDir.unprotectedDelete(deleteOp.path, deleteOp.timestamp);
             break;
           }
           case OP_MKDIR: {
-            numOpMkDir++;
             MkdirOp mkdirOp = (MkdirOp)op;
             PermissionStatus permissions = fsNamesys.getUpgradePermission();
             if (mkdirOp.permissions != null) {
@@ -268,22 +255,17 @@ public class FSEditLogLoader {
             break;
           }
           case OP_SET_GENSTAMP: {
-            numOpSetGenStamp++;
             SetGenstampOp setGenstampOp = (SetGenstampOp)op;
             fsNamesys.setGenerationStamp(setGenstampOp.genStamp);
             break;
           }
           case OP_SET_PERMISSIONS: {
-            numOpSetPerm++;
-
             SetPermissionsOp setPermissionsOp = (SetPermissionsOp)op;
             fsDir.unprotectedSetPermission(setPermissionsOp.src,
                                            setPermissionsOp.permissions);
             break;
           }
           case OP_SET_OWNER: {
-            numOpSetOwner++;
-
             SetOwnerOp setOwnerOp = (SetOwnerOp)op;
             fsDir.unprotectedSetOwner(setOwnerOp.src, setOwnerOp.username,
                                       setOwnerOp.groupname);
@@ -312,7 +294,6 @@ public class FSEditLogLoader {
             break;
 
           case OP_TIMES: {
-            numOpTimes++;
             TimesOp timesOp = (TimesOp)op;
 
             fsDir.unprotectedSetTimes(timesOp.path,
@@ -321,8 +302,6 @@ public class FSEditLogLoader {
             break;
           }
           case OP_SYMLINK: {
-            numOpSymlink++;
-
             SymlinkOp symlinkOp = (SymlinkOp)op;
             fsDir.unprotectedSymlink(symlinkOp.path, symlinkOp.value,
                                      symlinkOp.mtime, symlinkOp.atime,
@@ -330,7 +309,6 @@ public class FSEditLogLoader {
             break;
           }
           case OP_RENAME: {
-            numOpRename++;
             RenameOp renameOp = (RenameOp)op;
 
             HdfsFileStatus dinfo = fsDir.getFileInfo(renameOp.dst, false);
@@ -340,7 +318,6 @@ public class FSEditLogLoader {
             break;
           }
           case OP_GET_DELEGATION_TOKEN: {
-            numOpGetDelegationToken++;
             GetDelegationTokenOp getDelegationTokenOp
               = (GetDelegationTokenOp)op;
 
@@ -350,8 +327,6 @@ public class FSEditLogLoader {
             break;
           }
           case OP_RENEW_DELEGATION_TOKEN: {
-            numOpRenewDelegationToken++;
-
             RenewDelegationTokenOp renewDelegationTokenOp
               = (RenewDelegationTokenOp)op;
             fsNamesys.getDelegationTokenSecretManager()
@@ -360,8 +335,6 @@ public class FSEditLogLoader {
             break;
           }
           case OP_CANCEL_DELEGATION_TOKEN: {
-            numOpCancelDelegationToken++;
-
             CancelDelegationTokenOp cancelDelegationTokenOp
               = (CancelDelegationTokenOp)op;
             fsNamesys.getDelegationTokenSecretManager()
@@ -370,14 +343,12 @@ public class FSEditLogLoader {
             break;
           }
           case OP_UPDATE_MASTER_KEY: {
-            numOpUpdateMasterKey++;
             UpdateMasterKeyOp updateMasterKeyOp = (UpdateMasterKeyOp)op;
             fsNamesys.getDelegationTokenSecretManager()
               .updatePersistedMasterKey(updateMasterKeyOp.key);
             break;
           }
           case OP_REASSIGN_LEASE: {
-            numOpReassignLease++;
             ReassignLeaseOp reassignLeaseOp = (ReassignLeaseOp)op;
 
             Lease lease = fsNamesys.leaseManager.getLease(
@@ -392,17 +363,16 @@ public class FSEditLogLoader {
           case OP_START_LOG_SEGMENT:
           case OP_END_LOG_SEGMENT: {
             // no data in here currently.
-            numOpOther++;
             break;
           }
           case OP_DATANODE_ADD:
           case OP_DATANODE_REMOVE:
-            numOpOther++;
             break;
           default:
             throw new IOException("Invalid operation read " + op.opCode);
           }
         }
+
       } catch (IOException ex) {
         check203UpgradeFailure(logVersion, ex);
       } finally {
@@ -431,24 +401,29 @@ public class FSEditLogLoader {
       fsNamesys.writeUnlock();
     }
     if (FSImage.LOG.isDebugEnabled()) {
-      FSImage.LOG.debug("numOpAdd = " + numOpAdd + " numOpClose = " + numOpClose 
-          + " numOpDelete = " + numOpDelete 
-          + " numOpRenameOld = " + numOpRenameOld 
-          + " numOpSetRepl = " + numOpSetRepl + " numOpMkDir = " + numOpMkDir
-          + " numOpSetPerm = " + numOpSetPerm 
-          + " numOpSetOwner = " + numOpSetOwner
-          + " numOpSetGenStamp = " + numOpSetGenStamp 
-          + " numOpTimes = " + numOpTimes
-          + " numOpConcatDelete  = " + numOpConcatDelete
-          + " numOpRename = " + numOpRename
-          + " numOpGetDelegationToken = " + numOpGetDelegationToken
-          + " numOpRenewDelegationToken = " + numOpRenewDelegationToken
-          + " numOpCancelDelegationToken = " + numOpCancelDelegationToken
-          + " numOpUpdateMasterKey = " + numOpUpdateMasterKey
-          + " numOpReassignLease = " + numOpReassignLease
-          + " numOpOther = " + numOpOther);
+      dumpOpCounts(opCounts);
     }
     return numEdits;
+  }
+
+
+  private static void dumpOpCounts(
+      EnumMap<FSEditLogOpCodes, Holder<Integer>> opCounts) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("Summary of operations loaded from edit log:\n  ");
+    Joiner.on("\n  ").withKeyValueSeparator("=").appendTo(sb, opCounts);
+    FSImage.LOG.debug(sb.toString());
+  }
+
+  private void incrOpCount(FSEditLogOpCodes opCode,
+      EnumMap<FSEditLogOpCodes, Holder<Integer>> opCounts) {
+    Holder<Integer> holder = opCounts.get(opCode);
+    if (holder == null) {
+      holder = new Holder<Integer>(1);
+      opCounts.put(opCode, holder);
+    } else {
+      holder.held++;
+    }
   }
 
   /**

@@ -638,6 +638,8 @@ Trunk (unreleased changes)
     HDFS-2108. Move datanode heartbeat handling from namenode package to
     blockmanagement package.  (szetszwo)
 
+    HDFS-2226. Clean up counting of operations in FSEditLogLoader (todd)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
