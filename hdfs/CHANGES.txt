@@ -632,8 +632,9 @@ Trunk (unreleased changes)
     HDFS-2187. Make EditLogInputStream act like an iterator over FSEditLogOps
     (Ivan Kelly and todd via todd)
 
-    HDFS-2225. Refactor file management so it's not in classes which should
-    be generic. (Ivan Kelly via todd)
+    HDFS-2225. Refactor edit log file management so it's not in classes
+    which should be generic to the type of edit log storage. (Ivan Kelly
+    via todd)
 
     HDFS-2108. Move datanode heartbeat handling from namenode package to
     blockmanagement package.  (szetszwo)
