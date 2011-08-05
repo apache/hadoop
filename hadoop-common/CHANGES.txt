@@ -63,6 +63,8 @@ Trunk (unreleased changes)
     HADOOP-6385. dfs should support -rmdir (was HDFS-639). (Daryn Sharp
     via mattf)
 
+    HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
+
   IMPROVEMENTS
 
     HADOOP-7042. Updates to test-patch.sh to include failed test names and
