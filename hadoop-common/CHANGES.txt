@@ -454,6 +454,9 @@ Trunk (unreleased changes)
 
     HADOOP-7508. Compiled nativelib is in wrong directory and it is not picked
     up by surefire setup. (Alejandro Abdelnur via tomwhite)
+   
+    HADOOP-7520. Fix to add distribution management info to hadoop-main
+    (Alejandro Abdelnur via gkesavan)
 
     HADOOP-7515. test-patch reports the wrong number of javadoc warnings.
     (tomwhite)
