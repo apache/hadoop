@@ -298,8 +298,8 @@ checkJavadocWarnings () {
   echo ""
   echo ""
   echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= clean javadoc | tee $PATCH_DIR/patchJavadocWarnings.txt"
-  (cd root; mvn install)
-  (cd doclet; mvn install)
+  (cd root; mvn install -DskipTests)
+  (cd doclet; mvn install -DskipTests)
   #$ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= clean javadoc | tee $PATCH_DIR/patchJavadocWarnings.txt
   $MAVEN_HOME/bin/mvn clean compile javadoc:javadoc -DskipTests -Pdocs -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchJavadocWarnings.txt 2>&1
   javadocWarnings=`$GREP '\[WARNING\]' $PATCH_DIR/patchJavadocWarnings.txt | awk '/Javadoc Warnings/,EOF' | $GREP -v 'Javadoc Warnings' | awk 'BEGIN {total = 0} {total += 1} END {print total}'`
