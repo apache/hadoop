@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 0.20.204.0 - unreleased
+Release 0.20.204.0 - 2011-8-5
 
   NEW FEATURES
 
@@ -13,8 +13,8 @@ Release 0.20.204.0 - unreleased
 
   BUG FIXES
 
-    MAPREDUCE-2621. TestCapacityScheduler fails with "Queue "q1" does not exist".
-    (Sherry Chen via mahadev)
+    MAPREDUCE-2621. TestCapacityScheduler fails with "Queue "q1" does not 
+    exist". (Sherry Chen via mahadev)
 
     HADOOP-7475. Fix hadoop-setup-single-node.sh to reflect new layout. (eyang
     via omalley)
@@ -140,8 +140,8 @@ Release 0.20.204.0 - unreleased
     HDFS-2057. Wait time to terminate the threads causes unit tests to
     take longer time. (Bharath Mundlapudi via suresh)
 
-    HDFS-2218. Disable TestHdfsProxy.testHdfsProxyInterface in automated test suite 
-    for 0.20-security-204 release. (Matt Foley)
+    HDFS-2218. Disable TestHdfsProxy.testHdfsProxyInterface in automated test 
+    suite for 0.20-security-204 release. (Matt Foley)
 
   IMPROVEMENTS
 
@@ -175,8 +175,6 @@ Release 0.20.204.0 - unreleased
     MAPREDUCE-1251. c++ utils doesn't compile. (Eli Collins via shv)
 
     HADOOP-7459. Remove jdk-1.6.0 dependency check from rpm. (omalley)
-
-Release 0.20.203.1 - Unreleased
 
     HADOOP-7330. Fix MetricsSourceAdapter to use the value instead of the 
     object. (Luke Lu via omalley)
