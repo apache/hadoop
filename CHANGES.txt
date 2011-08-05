@@ -187,6 +187,8 @@ Release 0.91.0 - Unreleased
    HBASE-3857  Fix TestHFileBlock.testBlockHeapSize test failure (Mikhail)
    HBASE-4150  Don't enforce pool size limit with ThreadLocalPool
                (Karthick Sankarachary via garyh)
+   HBASE-4159  HBaseServer - IPC Reader threads are not daemons (Douglas
+               Campbell)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
