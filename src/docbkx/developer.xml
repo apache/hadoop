@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-    <chapter xml:id="build"
+    <chapter xml:id="developer"
       version="5.0" xmlns="http://docbook.org/ns/docbook"
       xmlns:xlink="http://www.w3.org/1999/xlink"
       xmlns:xi="http://www.w3.org/2001/XInclude"
@@ -9,7 +9,6 @@
       xmlns:db="http://docbook.org/ns/docbook">
     <title>Developing HBase</title>
     <para>This chapter will be of interest only to those developing HBase (i.e., as opposed to using it).
-    See the HBase wiki <link xlink:href="http://wiki.apache.org/hadoop/Hbase/HowToContribute">How To Contribute</link>
     </para>
     <section xml:id="repos">
       <title>HBase Repositories</title>
