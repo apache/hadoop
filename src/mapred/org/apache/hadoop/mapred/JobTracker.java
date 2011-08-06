@@ -1257,7 +1257,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
        * Adds a task-attempt in the listener
        */
       private void processTaskAttempt(String taskAttemptId, 
-                                      JobHistory.TaskAttempt attempt) {
+                                      JobHistory.TaskAttempt attempt) 
+        throws UnknownHostException {
         TaskAttemptID id = TaskAttemptID.forName(taskAttemptId);
         
         // Check if the transaction for this attempt can be committed
@@ -1512,7 +1513,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     
     private void createTaskAttempt(JobInProgress job, 
                                    TaskAttemptID attemptId, 
-                                   JobHistory.TaskAttempt attempt) {
+                                   JobHistory.TaskAttempt attempt) 
+      throws UnknownHostException {
       TaskID id = attemptId.getTaskID();
       String type = attempt.get(Keys.TASK_TYPE);
       TaskInProgress tip = job.getTaskInProgress(id);
@@ -3172,7 +3174,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * 
    * @param status Task Tracker's status
    */
-  private void addNewTracker(TaskTracker taskTracker) {
+  private void addNewTracker(TaskTracker taskTracker) throws UnknownHostException {
     TaskTrackerStatus status = taskTracker.getStatus();
     trackerExpiryQueue.add(status);
 
@@ -3196,10 +3198,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     trackers.add(taskTracker);
   }
 
-  public Node resolveAndAddToTopology(String name) {
+  public Node resolveAndAddToTopology(String name) throws UnknownHostException {
     List <String> tmpList = new ArrayList<String>(1);
     tmpList.add(name);
-    List <String> rNameList = dnsToSwitchMapping.resolve(tmpList);
+    List <String> rNameList = dnsToSwitchMapping.resolveValidHosts(tmpList);
     String rName = rNameList.get(0);
     String networkLoc = NodeBase.normalize(rName);
     return addHostToNodeMapping(name, networkLoc);
@@ -3639,7 +3641,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   private synchronized boolean processHeartbeat(
                                  TaskTrackerStatus trackerStatus, 
                                  boolean initialContact,
-                                 long timeStamp) {
+                                 long timeStamp) throws UnknownHostException {
 
     getInstrumentation().heartbeat();
 
@@ -3671,6 +3673,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           if (isBlacklisted(trackerName)) {
             faultyTrackers.incrBlacklistedTrackers(1);
           }
+          // This could now throw an UnknownHostException but only if the
+          // TaskTracker status itself has an invalid name
           addNewTracker(taskTracker);
         }
       }

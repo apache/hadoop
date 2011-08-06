@@ -26,6 +26,9 @@ Release 0.20.205.0 - unreleased
 
     HDFS-2117. DiskChecker#mkdirsWithExistsAndPermissionCheck may
     return true even when the dir is not created. (eli)
+    
+    MAPREDUCE-2489. Jobsplits with random hostnames can make the 
+    queue unusable. (Jeffrey Naisbitt via mahadev)
 
   IMPROVEMENTS
 

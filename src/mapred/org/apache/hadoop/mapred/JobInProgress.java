@@ -36,6 +36,7 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.Vector;
+import java.net.UnknownHostException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -531,7 +532,8 @@ public class JobInProgress {
   }
   
   private Map<Node, List<TaskInProgress>> createCache(
-                                 TaskSplitMetaInfo[] splits, int maxLevel) {
+                                 TaskSplitMetaInfo[] splits, int maxLevel)
+                                 throws UnknownHostException {
     Map<Node, List<TaskInProgress>> cache = 
       new IdentityHashMap<Node, List<TaskInProgress>>(maxLevel);
     
@@ -658,7 +660,7 @@ public class JobInProgress {
    * thread so that split-computation doesn't block anyone.
    */
   public synchronized void initTasks() 
-  throws IOException, KillInterruptedException {
+  throws IOException, KillInterruptedException, UnknownHostException {
     if (tasksInited || isComplete()) {
       return;
     }
@@ -704,6 +706,11 @@ public class JobInProgress {
     }
     numMapTasks = splits.length;
 
+    // Sanity check the locations so we don't create/initialize unnecessary tasks
+    for (TaskSplitMetaInfo split : splits) {
+      NetUtils.verifyHostnames(split.getLocations());
+    }
+    
     jobtracker.getInstrumentation().addWaitingMaps(getJobID(), numMapTasks);
     jobtracker.getInstrumentation().addWaitingReduces(getJobID(), numReduceTasks);
     this.queueMetrics.addWaitingMaps(getJobID(), numMapTasks);

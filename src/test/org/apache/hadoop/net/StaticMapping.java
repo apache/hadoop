@@ -62,17 +62,6 @@ public class StaticMapping extends Configured implements DNSToSwitchMapping {
   }
   public List<String> resolveValidHosts(List<String> names)
     throws UnknownHostException {
-    List<String> m = new ArrayList<String>();
-    synchronized (nameToRackMap) {
-      for (String name : names) {
-        String rackId;
-        if ((rackId = nameToRackMap.get(name)) != null) {
-          m.add(rackId);
-        } else {
-          throw new UnknownHostException(name);
-        }
-      }
-      return m;
-    }
+    return this.resolve(names);
   }
 }
