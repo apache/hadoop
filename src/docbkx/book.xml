@@ -260,6 +260,15 @@ admin.enableTable(table);
   search the mailling list for conversations on this topic. All rows in HBase conform to the <xref linkend="datamodel">datamodel</xref>, and 
   that includes versioning.  Take that into consideration when making your design, as well as block size for the ColumnFamily.  
   </para>
+    <section xml:id="counters">
+      <title>Counters</title>
+      <para>
+      One supported datatype that deserves special mention are "counters" (i.e., the ability to do atomic increments of numbers).  See 
+      <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#increment%28org.apache.hadoop.hbase.client.Increment%29">Increment</link> in HTable.
+      </para>
+      <para>Synchronization on counters are done on the RegionServer, not in the client.
+      </para>
+    </section> 
   </section>
   <section xml:id="cf.in.memory">
   <title>
@@ -811,7 +820,7 @@ admin.enableTable(table);
          <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>
          is responsible for finding RegionServers that are serving the
          particular row range of interest.  It does this by querying
-         the <code>.META.</code> and <code>-ROOT</code> catalog tables
+         the <code>.META.</code> and <code>-ROOT-</code> catalog tables
          (TODO: Explain).  After locating the required
          region(s), the client <emphasis>directly</emphasis> contacts
          the RegionServer serving that region (i.e., it does not go
@@ -842,6 +851,11 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
         For more information about how connections are handled in the HBase client,
         see <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HConnectionManager.html">HConnectionManager</link>.
           </para>
+          <section xml:id="client.connection.pooling"><title>Connection Pooling</title>
+            <para>For applications which require high-end multithreaded access (e.g., web-servers or application servers that may serve many application threads
+            in a single JVM), see <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTablePool.html">HTablePool</link>.
+            </para>
+          </section>
    	  </section>
 	   <section xml:id="client.writebuffer"><title>WriteBuffer and Batch Methods</title>
            <para>If <xref linkend="perf.hbase.client.autoflush" /> is turned off on
@@ -1055,7 +1069,7 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
          For a description of how a minor compaction picks files to compact, see the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/regionserver/Store.html#836">ascii diagram in the Store source code.</link>
          </para>
          <para>After a major compaction runs there will be a single storefile per store, and this will help performance usually.  Caution:  major compactions rewrite all of the stores data and on a loaded system, this may not be tenable;
-             major compactions will usually have to be <xref linkend="disable.splitting" /> on large systems.
+             major compactions will usually have to be done manually on large systems.  See <xref linkend="managed.compactions" />.
         </para>
       </section>
 

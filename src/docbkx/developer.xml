@@ -35,6 +35,7 @@ git clone git://git.apache.org/hbase.git
             <para>See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3678">HBASE-3678 Add Eclipse-based Apache Formatter to HBase Wiki</link>
               for an Eclipse formatter to help ensure your code conforms to HBase'y coding conventsion.
             The issue includes instructions for loading the attached formatter.</para>
+            <para>Also, no @author tags - that's a rule.  Quality Javadoc comments are appreciated.  And include the Apache license.</para>
             </section>         
             <section xml:id="eclipse.svn">
             <title>Subversive Plugin</title>
@@ -129,13 +130,15 @@ mvn test -Dtest=TestXYZ
 
     <section xml:id="getting.involved"> 
         <title>Getting Involved</title>
-        <para>HBase gets better only when people contribute!  The following are highlights from the HBase wiki on 
-        <link xlink:href="http://wiki.apache.org/hadoop/Hbase/HowToContribute">How To Contribute</link>.
+        <para>HBase gets better only when people contribute!
         </para>
         <section xml:id="mailing.list">
           <title>Mailing Lists</title>
-          <para>Sign up for the dev-list, and the user-list too for greater coverage.  See the 
+          <para>Sign up for the dev-list and the user-list.  See the 
           <link xlink:href="http://hbase.apache.org/mail-lists.html">mailing lists</link> page.
+          Posing questions - and helping to answer other people's questions - is encouraged!  
+          There are varying levels of experience on both lists so patience and politeness are encouraged (and please 
+          stay on topic.)  
           </para>
         </section>
         <section xml:id="jira">
@@ -144,14 +147,19 @@ mvn test -Dtest=TestXYZ
           If it's either a new feature request, enhancement, or a bug, file a ticket.
           </para>
         </section>
+        <section xml:id="codelines"><title>Codelines</title>
+          <para>Most development is done on TRUNK.  However, there are branches for minor releases (e.g., 0.90.1, 0.90.2, and 0.90.3 are on the 0.90 branch).</para>
+          <para>If you have any questions on this just send an email to the dev dist-list.</para>
+        </section>
         <section xml:id="submitting.patches">
           <title>Submitting Patches</title>
           <section xml:id="submitting.patches.create">
             <title>Create Patch</title>
-          <para>Patch files can be easily generated from Eclipse, for example by selecting Team -&gt; Create Patch.
+          <para>Patch files can be easily generated from Eclipse, for example by selecting "Team -&gt; Create Patch".
           </para>
           <para>Please submit one patch-file per Jira.  For example, if multiple files are changed make sure the 
           selected resource when generating the patch is a directory.  Patch files can reflect changes in multiple files. </para>
+          <para>Make sure you review <xref linkend="eclipse.code.formatting"/> for code style. </para>
           </section>
           <section xml:id="submitting.patches.naming">
             <title>Patch File Naming</title>
@@ -162,12 +170,14 @@ mvn test -Dtest=TestXYZ
           <section xml:id="submitting.patches.tests">
             <title>Unit Tests</title>
             <para>Yes, please.  Please try to include unit tests with every code patch (and especially new classes and large changes).</para>
+            <para>Also, please make sure unit tests pass locally before submitting the patch.</para>
           </section>
           <section xml:id="submitting.patches.jira">
             <title>Attach Patch to Jira</title>
-          <para>The patch should be attached to the associated Jira ticket.
+          <para>The patch should be attached to the associated Jira ticket "More Actions -&gt; Attach Files".  Make sure you click the
+          ASF license inclusion, otherwise the patch can't be considered for inclusion.
           </para>
-          <para>Once attached to the ticket, click "submit patch" and 
+          <para>Once attached to the ticket, click "Submit Patch" and 
           the status of the ticket will change.  Committers will review submitted patches for inclusion into the codebase.  Please
           understand that not every patch may get committed, and that feedback will likely be provided on the patch.  Fear not, though,
           because the HBase community is helpful!
@@ -177,7 +187,7 @@ mvn test -Dtest=TestXYZ
         <section xml:id="committing.patches">
           <title>Committing Patches</title>
           <para>
-          See <link xlink:href="http://wiki.apache.org/hadoop/Hbase/HowToCommit">How To Commit</link> in the HBase wiki.
+          Committers do this.  See <link xlink:href="http://wiki.apache.org/hadoop/Hbase/HowToCommit">How To Commit</link> in the HBase wiki.
           </para>
         </section>
     

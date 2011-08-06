@@ -1076,7 +1076,18 @@ script to perform a network IO safe rolling split
 of all regions.
 </para>
       </section>
-
+      <section xml:id="managed.compactions"><title>Managed Compactions</title>
+      <para>A common administrative technique is to manage major compactions manually, rather than letting 
+      HBase do it.  By default, <varname>HConstants.MAJOR_COMPACTION_PERIOD</varname> is one day and major compactions
+      may kick in when you least desire it - especially on a busy system.  To "turn off" automatic major compactions set
+      the value to <varname>Long.MAX_VALUE</varname>. 
+      </para>
+      <para>It is important to stress that major compactions are absolutely necessary for StoreFile cleanup, the only variant is when
+      they occur.  They can be administered through the HBase shell, or via 
+      <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html#majorCompact%28java.lang.String%29">HBaseAdmin</link>.
+      </para>
+      </section>
+      
       </section>
 
       </section>

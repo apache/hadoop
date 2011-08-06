@@ -232,10 +232,13 @@ Deferred log flush can be configured on tables via <link
     </section>    
     <section xml:id="perf.hbase.write.mr.reducer">
       <title>MapReduce:  Skip The Reducer</title>
-      <para>When writing a lot of data to an HBase table in a in a Mapper (e.g., with <link
-      xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableOutputFormat.html">TableOutputFormat</link>),
-      skip the Reducer step whenever possible.  When a Reducer step is used, all of the output (Puts) from the Mapper will get spooled to disk, then shuffled to other 
-      Reducers that will most likely be off-node.   
+      <para>When writing a lot of data to an HBase table from a MR job (e.g., with <link
+      xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableOutputFormat.html">TableOutputFormat</link>), and specifically where Puts are being emitted
+      from the Mapper, skip the Reducer step.  When a Reducer step is used, all of the output (Puts) from the Mapper will get spooled to disk, then sorted/shuffled to other 
+      Reducers that will most likely be off-node.  It's far more efficient to just write directly to HBase.   
+      </para>
+      <para>For summary jobs where HBase is used as a source and a sink, then writes will be coming from the Reducer step (e.g., summarize values then write out result). 
+      This is a different processing problem than from the the above case. 
       </para>
     </section>
 
