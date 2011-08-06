@@ -30,7 +30,7 @@ module Hbase
       @admin = org.apache.hadoop.hbase.client.HBaseAdmin.new(configuration)
       connection = @admin.getConnection()
       @zk_wrapper = connection.getZooKeeperWatcher()
-      zk = @zk_wrapper.getZooKeeper()
+      zk = @zk_wrapper.getRecoverableZooKeeper().getZooKeeper()
       @zk_main = org.apache.zookeeper.ZooKeeperMain.new(zk)
       @formatter = formatter
     end
