@@ -32,7 +32,7 @@ git clone git://git.apache.org/hbase.git
             <section xml:id="eclipse.code.formatting">
             <title>Code Formatting</title>
             <para>See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3678">HBASE-3678 Add Eclipse-based Apache Formatter to HBase Wiki</link>
-              for an Eclipse formatter to help ensure your code conforms to HBase'y coding conventsion.
+              for an Eclipse formatter to help ensure your code conforms to HBase'y coding convention.
             The issue includes instructions for loading the attached formatter.</para>
             <para>Also, no @author tags - that's a rule.  Quality Javadoc comments are appreciated.  And include the Apache license.</para>
             </section>         
@@ -145,6 +145,18 @@ mvn test -Dtest=TestXYZ
           <para>Check for existing issues in <link xlink:href="https://issues.apache.org/jira/browse/HBASE">Jira</link>.  
           If it's either a new feature request, enhancement, or a bug, file a ticket.
           </para>
+          <section xml:id="jira.priorities"><title>Jira Priorities</title>
+          <para>The following is a guideline on setting Jira issue priorities:
+                <itemizedlist>
+                <listitem>Blocker: Should only be used if the issue WILL cause data loss or cluster instability reliably.</listitem>
+                <listitem>Critical: The issue described can cause data loss or cluster instability in some cases.</listitem>
+                <listitem>Major: Important but not tragic issues, like updates to the client API that will add a lot of much-needed functionality or significant
+                bugs that need to be fixed but that don't cause data loss.</listitem>
+                <listitem>Minor: Useful enhancements and annoying but not damaging bugs.</listitem> 
+                <listitem>Trivial: Useful enhancements but generally cosmetic.</listitem> 
+                </itemizedlist>  
+             </para> 
+          </section>
         </section>
         <section xml:id="codelines"><title>Codelines</title>
           <para>Most development is done on TRUNK.  However, there are branches for minor releases (e.g., 0.90.1, 0.90.2, and 0.90.3 are on the 0.90 branch).</para>
