@@ -600,6 +600,9 @@ Release 0.22.0 - Unreleased
     HDFS-2189. Add guava-r09 dependency to ivy/hadoop-hdfs-template.xml
     (Plamen Jeliazkov & Joep Rottinghuis via shv)
 
+    HDFS-2211. Build does not pass along properties to contrib builds (Joep
+    Rottinghuis via cos)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

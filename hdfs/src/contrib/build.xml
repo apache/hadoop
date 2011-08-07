@@ -27,7 +27,7 @@
   <!-- Compile contribs.                                      -->
   <!-- ====================================================== -->
   <target name="compile">
-    <subant target="compile">
+    <subant target="compile"  inheritAll="true">
       <fileset dir="." includes="*/build.xml"/>
     </subant>
   </target>
@@ -36,7 +36,7 @@
   <!-- Package contrib jars.                                  -->
   <!-- ====================================================== -->
   <target name="package">
-    <subant target="package">
+    <subant target="package" inheritAll="true">
       <fileset dir="." includes="*/build.xml"/>
     </subant>
   </target>
@@ -46,7 +46,7 @@
   <!-- ====================================================== -->
   <target name="test">
     <!-- hdfsproxy tests failing due to HDFS-1666
-    <subant target="test">
+    <subant target="test" inheritAll="true">
       <fileset dir="." includes="hdfsproxy/build.xml"/>
     </subant>
       -->
@@ -57,7 +57,7 @@
   <!-- Clean all the contribs.                              -->
   <!-- ====================================================== -->
   <target name="clean">
-    <subant target="clean">
+    <subant target="clean" inheritAll="true">
       <fileset dir="." includes="*/build.xml"/>
     </subant>
   </target>

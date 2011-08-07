@@ -120,7 +120,7 @@
     <mkdir dir="${build.test}"/>
     <mkdir dir="${build.examples}"/>
     <mkdir dir="${hadoop.log.dir}"/>
-    <antcall target="init-contrib"/>
+    <antcall target="init-contrib" inheritAll="true"/>
   </target>
 
 

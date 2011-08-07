@@ -371,6 +371,11 @@
   <target name="compile-contrib" depends="compile-core,compile-c++-libhdfs">
      <subant target="compile">
         <property name="version" value="${version}"/>
+        <!-- Need to pass along properties so that ivy in contrib build resolves correctly. -->
+        <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+        <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+        <property name="offline" value="${offline}"/>
+        <property name="resolvers" value="${resolvers}"/>
         <fileset file="${contrib.dir}/build.xml"/>
      </subant>  	
   </target>
@@ -733,6 +738,10 @@
        <property name="version" value="${version}"/>
        <property name="hadoop-version" value="${hadoop-common.version}"/>
        <property name="clover.jar" value="${clover.jar}"/>
+       <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+       <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+       <property name="offline" value="${offline}"/>
+       <property name="resolvers" value="${resolvers}"/>
        <fileset file="${contrib.dir}/build.xml"/>
     </subant> 
   </target>
@@ -749,6 +758,10 @@
 
   <target name="test" depends="test-c++-libhdfs, jar-test, test-core" description="Run all unit tests">
     <subant target="test-contrib">
+      <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+      <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+      <property name="offline" value="${offline}"/>
+      <property name="resolvers" value="${resolvers}"/>
       <fileset file="${basedir}/build.xml"/>
      </subant>
   </target>
@@ -997,6 +1010,10 @@
       distribution directory so contribs know where to install to.-->
       <property name="version" value="${version}"/>
       <property name="dist.dir" value="${dist.dir}"/>
+      <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+      <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+      <property name="offline" value="${offline}"/>
+      <property name="resolvers" value="${resolvers}"/>
       <fileset file="${contrib.dir}/build.xml"/>
     </subant>  	
 
