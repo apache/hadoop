@@ -190,6 +190,8 @@ Release 0.91.0 - Unreleased
    HBASE-4159  HBaseServer - IPC Reader threads are not daemons (Douglas
                Campbell)
    HBASE-4171  HBase shell broken in trunk (Lars Hofhansl)
+   HBASE-4162  Fix TestHRegionInfo.testGetSetOfHTD: delete /tmp/hbase-<username>
+               if it already exists (Mikhail Bautin)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

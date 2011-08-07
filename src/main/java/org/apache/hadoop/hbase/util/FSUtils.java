@@ -1004,6 +1004,18 @@ public class FSUtils {
   }
 
   /**
+   * Deletes a table's directory from the file system if exists. Used in unit
+   * tests.
+   */
+  public static void deleteTableDescriptorIfExists(String tableName,
+      Configuration conf) throws IOException {
+    FileSystem fs = getCurrentFileSystem(conf);
+    Path tableInfoPath = getTableInfoPath(getRootDir(conf), tableName);
+    if (fs.exists(tableInfoPath))
+      deleteDirectory(fs, tableInfoPath);
+  }
+
+  /**
    * Called when we are creating a table to write out the tables' descriptor.
    * @param fs
    * @param hTableDescriptor
