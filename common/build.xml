@@ -1215,11 +1215,13 @@
     <get src="${ant_task_repo_url}" dest="${ant_task.jar}" usetimestamp="true"/>
   </target>
 
-  <target name="mvn-taskdef" depends="ant-task-download">
+  <target name="mvn-taskdef" depends="ant-task-download" unless="mvn-taskdef.called">
      <path id="mvn-ant-task.classpath" path="${ant_task.jar}"/> 
      <typedef resource="org/apache/maven/artifact/ant/antlib.xml" 
          uri="urn:maven-artifact-ant"
          classpathref="mvn-ant-task.classpath"/>
+  	<!-- Record that this target is already called to avoid ClassCastException. -->
+  	<property name="mvn-taskdef.called" value="true" />
   </target>   
 
   <target name="mvn-install" depends="mvn-taskdef,jar,jar-test,set-version,-mvn-system-install"

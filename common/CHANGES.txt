@@ -527,6 +527,9 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7513. mvn-deploy target fails (Joep Rottinghuis via cos)
 
+    HADOOP-7514. Build fails with ClassCastException when running both
+    mvn-install and mvn-deploy targets (Joep Rottinghuis via cos)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
