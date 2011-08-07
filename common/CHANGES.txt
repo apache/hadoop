@@ -525,6 +525,8 @@ Release 0.22.0 - Unreleased
     HADOOP-7252. JUnit shows up as a compile time dependency in 0.22.
     (Harsh J Chouraria via todd)
 
+    HADOOP-7513. mvn-deploy target fails (Joep Rottinghuis via cos)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

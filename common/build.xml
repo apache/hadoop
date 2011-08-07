@@ -1325,7 +1325,7 @@
 
   <target name="simpledeploy" unless="staging">
      <artifact:pom file="${hadoop-common.pom}" id="hadoop.core"/>
-     <artifact:pom file="${hadoop-common-test.pom}" id="hadoop.test"/>
+     <artifact:pom file="${hadoop-common-test.pom}" id="hadoop.core.test"/>
      <artifact:pom file="${hadoop-common-instrumented.pom}" 
        id="hadoop.core.${herriot.suffix}"/>
 
