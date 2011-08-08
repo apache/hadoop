@@ -646,46 +646,77 @@ public class NamenodeFsck {
     /** {@inheritDoc} */
     public String toString() {
       StringBuilder res = new StringBuilder();
-      res.append("Status: " + (isHealthy() ? "HEALTHY" : "CORRUPT"));
-      res.append("\n Total size:\t" + totalSize + " B");
-      if (totalOpenFilesSize != 0) 
-        res.append(" (Total open files size: " + totalOpenFilesSize + " B)");
-      res.append("\n Total dirs:\t" + totalDirs);
-      res.append("\n Total files:\t" + totalFiles);
-      if (totalOpenFiles != 0)
-        res.append(" (Files currently being written: " + 
-                   totalOpenFiles + ")");
-      res.append("\n Total blocks (validated):\t" + totalBlocks);
-      if (totalBlocks > 0) res.append(" (avg. block size "
-                                      + (totalSize / totalBlocks) + " B)");
-      if (totalOpenFilesBlocks != 0)
-        res.append(" (Total open file blocks (not validated): " + 
-                   totalOpenFilesBlocks + ")");
-      if (corruptFiles > 0) { 
-        res.append("\n  ********************************");
-        res.append("\n  CORRUPT FILES:\t" + corruptFiles);
+      res.append("Status: ").append((isHealthy() ? "HEALTHY" : "CORRUPT"))
+          .append("\n Total size:\t").append(totalSize).append(" B");
+      if (totalOpenFilesSize != 0) {
+        res.append(" (Total open files size: ").append(totalOpenFilesSize)
+            .append(" B)");
+      }
+      res.append("\n Total dirs:\t").append(totalDirs).append(
+          "\n Total files:\t").append(totalFiles);
+      if (totalOpenFiles != 0) {
+        res.append(" (Files currently being written: ").append(totalOpenFiles)
+            .append(")");
+      }
+      res.append("\n Total blocks (validated):\t").append(totalBlocks);
+      if (totalBlocks > 0) {
+        res.append(" (avg. block size ").append((totalSize / totalBlocks))
+            .append(" B)");
+      }
+      if (totalOpenFilesBlocks != 0) {
+        res.append(" (Total open file blocks (not validated): ").append(
+            totalOpenFilesBlocks).append(")");
+      }
+      if (corruptFiles > 0) {
+        res.append("\n  ********************************").append(
+            "\n  CORRUPT FILES:\t").append(corruptFiles);
         if (missingSize > 0) {
-          res.append("\n  MISSING BLOCKS:\t" + missingIds.size());
-          res.append("\n  MISSING SIZE:\t\t" + missingSize + " B");
+          res.append("\n  MISSING BLOCKS:\t").append(missingIds.size()).append(
+              "\n  MISSING SIZE:\t\t").append(missingSize).append(" B");
         }
         if (corruptBlocks > 0) {
-          res.append("\n  CORRUPT BLOCKS: \t" + corruptBlocks);
+          res.append("\n  CORRUPT BLOCKS: \t").append(corruptBlocks);
         }
         res.append("\n  ********************************");
       }
-      res.append("\n Minimally replicated blocks:\t" + numMinReplicatedBlocks);
-      if (totalBlocks > 0)        res.append(" (" + ((float) (numMinReplicatedBlocks * 100) / (float) totalBlocks) + " %)");
-      res.append("\n Over-replicated blocks:\t" + numOverReplicatedBlocks);
-      if (totalBlocks > 0)        res.append(" (" + ((float) (numOverReplicatedBlocks * 100) / (float) totalBlocks) + " %)");
-      res.append("\n Under-replicated blocks:\t" + numUnderReplicatedBlocks);
-      if (totalBlocks > 0)        res.append(" (" + ((float) (numUnderReplicatedBlocks * 100) / (float) totalBlocks) + " %)");
-      res.append("\n Mis-replicated blocks:\t\t" + numMisReplicatedBlocks);
-      if (totalBlocks > 0)        res.append(" (" + ((float) (numMisReplicatedBlocks * 100) / (float) totalBlocks) + " %)");
-      res.append("\n Default replication factor:\t" + replication);
-      res.append("\n Average block replication:\t" + getReplicationFactor());
-      res.append("\n Corrupt blocks:\t\t" + corruptBlocks);
-      res.append("\n Missing replicas:\t\t" + missingReplicas);
-      if (totalReplicas > 0)        res.append(" (" + ((float) (missingReplicas * 100) / (float) totalReplicas) + " %)");
+      res.append("\n Minimally replicated blocks:\t").append(
+          numMinReplicatedBlocks);
+      if (totalBlocks > 0) {
+        res.append(" (").append(
+            ((float) (numMinReplicatedBlocks * 100) / (float) totalBlocks))
+            .append(" %)");
+      }
+      res.append("\n Over-replicated blocks:\t")
+          .append(numOverReplicatedBlocks);
+      if (totalBlocks > 0) {
+        res.append(" (").append(
+            ((float) (numOverReplicatedBlocks * 100) / (float) totalBlocks))
+            .append(" %)");
+      }
+      res.append("\n Under-replicated blocks:\t").append(
+          numUnderReplicatedBlocks);
+      if (totalBlocks > 0) {
+        res.append(" (").append(
+            ((float) (numUnderReplicatedBlocks * 100) / (float) totalBlocks))
+            .append(" %)");
+      }
+      res.append("\n Mis-replicated blocks:\t\t")
+          .append(numMisReplicatedBlocks);
+      if (totalBlocks > 0) {
+        res.append(" (").append(
+            ((float) (numMisReplicatedBlocks * 100) / (float) totalBlocks))
+            .append(" %)");
+      }
+      res.append("\n Default replication factor:\t").append(replication)
+          .append("\n Average block replication:\t").append(
+              getReplicationFactor()).append("\n Corrupt blocks:\t\t").append(
+              corruptBlocks).append("\n Missing replicas:\t\t").append(
+              missingReplicas);
+      if (totalReplicas > 0) {
+        res.append(" (").append(
+            ((float) (missingReplicas * 100) / (float) totalReplicas)).append(
+            " %)");
+      }
       return res.toString();
     }
   }
