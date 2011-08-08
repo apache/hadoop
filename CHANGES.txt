@@ -33,6 +33,9 @@ Release 0.20.205.0 - unreleased
     MAPREDUCE-2489. Jobsplits with random hostnames can make the 
     queue unusable. (Jeffrey Naisbitt via mahadev)
 
+    HDFS-2190. NN fails to start if it encounters an empty or malformed fstime
+    file. (atm)
+
   IMPROVEMENTS
 
     MAPREDUCE-7343. Make the number of warnings accepted by test-patch
