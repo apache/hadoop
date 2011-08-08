@@ -30,8 +30,8 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -54,7 +54,6 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.RackResolver;
@@ -394,7 +393,10 @@ public class RMContainerAllocator extends RMContainerRequestor
     }
   }
 
-  private String getStat() {
+  /**
+   * Synchronized to avoid findbugs warnings
+   */
+  private synchronized String getStat() {
     return "PendingReduces:" + pendingReduces.size() +
         " ScheduledMaps:" + scheduledRequests.maps.size() +
         " ScheduledReduces:" + scheduledRequests.reduces.size() +

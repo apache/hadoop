@@ -31,7 +31,6 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest;
@@ -187,10 +186,11 @@ public class MRClientService extends AbstractService
       if (job == null) {
         throw RPCUtil.getRemoteException("Unknown job " + jobID);
       }
-      JobACL operation = JobACL.VIEW_JOB;
-      if (modifyAccess) {
-        operation = JobACL.MODIFY_JOB;
-      }
+      //TODO fix job acls.
+      //JobACL operation = JobACL.VIEW_JOB;
+      //if (modifyAccess) {
+      //  operation = JobACL.MODIFY_JOB;
+      //}
       //TO disable check access ofr now.
       //checkAccess(job, operation);
       return job;

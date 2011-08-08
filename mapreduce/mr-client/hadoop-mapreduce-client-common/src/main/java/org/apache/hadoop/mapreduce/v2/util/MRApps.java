@@ -156,41 +156,49 @@ public class MRApps extends Apps {
 
   public static void setInitialClasspath(
       Map<String, String> environment) throws IOException {
+    InputStream classpathFileStream = null;
+    try {
+      // Get yarn mapreduce-app classpath from generated classpath
+      // Works if compile time env is same as runtime. Mainly tests.
+      ClassLoader thisClassLoader =
+          Thread.currentThread().getContextClassLoader();
+      String mrAppGeneratedClasspathFile = "mrapp-generated-classpath";
+      classpathFileStream =
+          thisClassLoader.getResourceAsStream(mrAppGeneratedClasspathFile);
+      BufferedReader reader =
+          new BufferedReader(new InputStreamReader(classpathFileStream));
+      String cp = reader.readLine();
+      if (cp != null) {
+        addToClassPath(environment, cp.trim());
+      }
+      // Put the file itself on classpath for tasks.
+      addToClassPath(environment,
+          thisClassLoader.getResource(mrAppGeneratedClasspathFile).getFile());
 
-    // Get yarn mapreduce-app classpath from generated classpath
-    // Works if compile time env is same as runtime. Mainly tests.
-    ClassLoader thisClassLoader =
-        Thread.currentThread().getContextClassLoader();
-    String mrAppGeneratedClasspathFile = "mrapp-generated-classpath";
-    InputStream classpathFileStream =
-        thisClassLoader.getResourceAsStream(mrAppGeneratedClasspathFile);
-    BufferedReader reader =
-        new BufferedReader(new InputStreamReader(classpathFileStream));
-    addToClassPath(environment, reader.readLine().trim());
-    // Put the file itself on classpath for tasks.
-    addToClassPath(environment,
-        thisClassLoader.getResource(mrAppGeneratedClasspathFile).getFile());
+      // If runtime env is different.
+      if (System.getenv().get("YARN_HOME") != null) {
+        ShellCommandExecutor exec =
+            new ShellCommandExecutor(new String[] {
+                System.getenv().get("YARN_HOME") + "/bin/yarn",
+            "classpath" });
+        exec.execute();
+        addToClassPath(environment, exec.getOutput().trim());
+      }
 
-    // If runtime env is different.
-    if (System.getenv().get("YARN_HOME") != null) {
-      ShellCommandExecutor exec =
-         new ShellCommandExecutor(new String[] {
-              System.getenv().get("YARN_HOME") + "/bin/yarn",
-              "classpath" });
-      exec.execute();
-      addToClassPath(environment, exec.getOutput().trim());
+      // Get yarn mapreduce-app classpath
+      if (System.getenv().get("HADOOP_MAPRED_HOME")!= null) {
+        ShellCommandExecutor exec =
+            new ShellCommandExecutor(new String[] {
+                System.getenv().get("HADOOP_MAPRED_HOME") + "/bin/mapred",
+            "classpath" });
+        exec.execute();
+        addToClassPath(environment, exec.getOutput().trim());
+      }
+    } finally {
+      if (classpathFileStream != null) {
+        classpathFileStream.close();
+      }
     }
-
-    // Get yarn mapreduce-app classpath
-    if (System.getenv().get("HADOOP_MAPRED_HOME")!= null) {
-      ShellCommandExecutor exec =
-          new ShellCommandExecutor(new String[] {
-              System.getenv().get("HADOOP_MAPRED_HOME") + "/bin/mapred",
-              "classpath" });
-      exec.execute();
-      addToClassPath(environment, exec.getOutput().trim());
-    }
-
     // TODO: Remove duplicates.
   }
 

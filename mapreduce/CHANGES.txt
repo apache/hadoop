@@ -4,6 +4,8 @@ Trunk (unreleased changes)
 
   MAPREDUCE-279
  
+    Fix findbugs warnings in mr-client modules part 3 (mahadev)
+
     Fix findbugs warnings in mr-client modules part 2 (mahadev)
  
     Fix findbugs warnings in mr-client modules, part 1  (mahadev) 

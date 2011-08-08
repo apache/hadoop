@@ -155,7 +155,7 @@ public abstract class TaskAttemptImpl implements
   private Token<JobTokenIdentifier> jobToken;
   private static AtomicBoolean initialClasspathFlag = new AtomicBoolean();
   private static String initialClasspath = null;
-
+  private final Object classpathLock = new Object();
   private long launchTime;
   private long finishTime;
   private WrappedProgressSplitsBlock progressSplitBlock;
@@ -508,7 +508,7 @@ public abstract class TaskAttemptImpl implements
    * a parent CLC and use it for all the containers.
    */
   private String getInitialClasspath() throws IOException {
-    synchronized (initialClasspathFlag) {
+    synchronized (classpathLock) {
       if (initialClasspathFlag.get()) {
         return initialClasspath;
       }

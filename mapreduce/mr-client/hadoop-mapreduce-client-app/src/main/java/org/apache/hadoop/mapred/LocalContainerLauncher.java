@@ -439,7 +439,7 @@ FIXME:  do we really need to worry about renamed map outputs, or already moved t
               // this is recursive, unlike File delete():
               deleted = curFC.delete(new Path(curLocalFiles[j].getName()),true);
             }
-          } catch (Exception e) {
+          } catch (IOException e) {
             deleted = false;
           }
           if (!deleted) {

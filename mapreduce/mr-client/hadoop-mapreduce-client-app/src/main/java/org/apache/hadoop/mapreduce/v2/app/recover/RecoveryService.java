@@ -111,9 +111,7 @@ public class RecoveryService extends CompositeService implements Recovery {
     this.startCount = startCount;
     this.dispatcher = new RecoveryDispatcher();
     this.clock = new ControlledClock(clock);
-    if (dispatcher instanceof Service) {
       addService((Service) dispatcher);
-    }
   }
 
   @Override

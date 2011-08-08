@@ -842,9 +842,13 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           attemptID.getTaskId().setTaskType(TaskType.MAP);
           TaskAttemptContext taskContext = new TaskAttemptContextImpl(job.conf,
               TypeConverter.fromYarn(attemptID));
-          OutputFormat outputFormat = ReflectionUtils.newInstance(
-              taskContext.getOutputFormatClass(), job.conf);
-          job.committer = outputFormat.getOutputCommitter(taskContext);
+          try {
+            OutputFormat outputFormat = ReflectionUtils.newInstance(
+                taskContext.getOutputFormatClass(), job.conf);
+            job.committer = outputFormat.getOutputCommitter(taskContext);
+          } catch(Exception e) {
+            throw new IOException("Failed to assign outputcommitter", e);
+          }
         } else {
           job.jobContext = new org.apache.hadoop.mapred.JobContextImpl(
               new JobConf(job.conf), job.oldJobId);
@@ -950,7 +954,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         return JobState.INITED;
         //TODO XXX Should JobInitedEvent be generated here (instead of in StartTransition)
 
-      } catch (Exception e) {
+      } catch (IOException e) {
         LOG.warn("Job init failed", e);
         job.addDiagnostic("Job init failed : "
             + StringUtils.stringifyException(e));

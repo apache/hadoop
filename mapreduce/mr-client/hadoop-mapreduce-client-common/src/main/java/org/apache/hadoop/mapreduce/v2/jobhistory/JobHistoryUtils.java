@@ -140,7 +140,7 @@ public class JobHistoryUtils {
    * @throws IOException if the filename format is invalid.
    */
   public static JobID getJobIDFromHistoryFilePath(String pathString) throws IOException {
-    String [] parts = pathString.split(File.separator);
+    String [] parts = pathString.split(Path.SEPARATOR);
     String fileNamePart = parts[parts.length -1];
     JobIndexInfo jobIndexInfo =  FileNameIndexUtils.getIndexInfo(fileNamePart);
     return TypeConverter.fromYarn(jobIndexInfo.getJobId());
@@ -293,8 +293,8 @@ public class JobHistoryUtils {
     Matcher matcher = TIMESTAMP_DIR_PATTERN.matcher(path);
     if (matcher.find()) {
       String matched = matcher.group();
-      matched.intern();
-      return matched;
+      String ret = matched.intern();
+      return ret;
     } else {
       return null;
     }

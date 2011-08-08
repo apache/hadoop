@@ -272,6 +272,9 @@ public class RMCommunicator extends AbstractService  {
     allocateRequest.addAllReleases(new ArrayList<ContainerId>());
     AllocateResponse allocateResponse = scheduler.allocate(allocateRequest);
     AMResponse response = allocateResponse.getAMResponse();
+    if (response.getReboot()) {
+      LOG.info("Event from RM: shutting down Application Master");
+    }
   }
 
 }

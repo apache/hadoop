@@ -440,5 +440,20 @@
   <Match>
     <Class name="~org\.apache\.hadoop\.mapreduce\.v2\.proto.*" />
   </Match>
-
+  
+   <Match>
+     <Class name="org.apache.hadoop.mapreduce.v2.app.rm.RMContainerAllocator" />
+      <Field name="mapResourceReqt" />
+     <Bug pattern="IS2_INCONSISTENT_SYNC" />
+   </Match>
+  
+   <Match>
+     <Class name="org.apache.hadoop.mapreduce.v2.app.rm.RMContainerAllocator" />
+      <Field name="reduceResourceReqt" />
+     <Bug pattern="IS2_INCONSISTENT_SYNC" />
+   </Match>
+   <!--
+     The above 2 fields are accessed locally and only via methods that are synchronized. 
+     -->
+  
  </FindBugsFilter>

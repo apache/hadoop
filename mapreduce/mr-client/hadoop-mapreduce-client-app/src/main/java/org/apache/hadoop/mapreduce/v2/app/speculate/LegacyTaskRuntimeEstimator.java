@@ -22,8 +22,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
@@ -40,7 +38,7 @@ public class LegacyTaskRuntimeEstimator extends StartEndTimesBase {
 
   private final Map<TaskAttempt, AtomicLong> attemptRuntimeEstimates
       = new ConcurrentHashMap<TaskAttempt, AtomicLong>();
-  private final Map<TaskAttempt, AtomicLong> attemptRuntimeEstimateVariances
+  private final ConcurrentHashMap<TaskAttempt, AtomicLong> attemptRuntimeEstimateVariances
       = new ConcurrentHashMap<TaskAttempt, AtomicLong>();
 
   @Override
@@ -93,15 +91,10 @@ public class LegacyTaskRuntimeEstimator extends StartEndTimesBase {
       }
 
       if (estimateVarianceContainer == null) {
-        synchronized (attemptRuntimeEstimateVariances) {
-          if (attemptRuntimeEstimateVariances.get(taskAttempt) == null) {
-            attemptRuntimeEstimateVariances.put(taskAttempt, new AtomicLong());
-          }
-
-          estimateVarianceContainer
-              = attemptRuntimeEstimateVariances.get(taskAttempt);
-        }
+        attemptRuntimeEstimateVariances.putIfAbsent(taskAttempt, new AtomicLong());
+        estimateVarianceContainer = attemptRuntimeEstimateVariances.get(taskAttempt);
       }
+
 
       long estimate = -1;
       long varianceEstimate = -1;
@@ -115,7 +108,9 @@ public class LegacyTaskRuntimeEstimator extends StartEndTimesBase {
       if (estimateContainer != null) {
         estimateContainer.set(estimate);
       }
-      estimateVarianceContainer.set(varianceEstimate);
+      if (estimateVarianceContainer != null) {
+        estimateVarianceContainer.set(varianceEstimate);
+      }
     }
   }
 

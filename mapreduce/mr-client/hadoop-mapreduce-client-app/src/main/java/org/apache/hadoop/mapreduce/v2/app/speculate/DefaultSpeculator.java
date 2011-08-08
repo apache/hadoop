@@ -267,7 +267,7 @@ public class DefaultSpeculator extends AbstractService implements
       case TASK_CONTAINER_NEED_UPDATE:
       {
         AtomicInteger need = containerNeed(event.getTaskID());
-        int newNeed = need.addAndGet(event.containersNeededChange());
+        need.addAndGet(event.containersNeededChange());
         break;
       }
 
