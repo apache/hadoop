@@ -28,6 +28,15 @@
         <enabled>false</enabled>
       </snapshots>
     </repository>
+    <repository>
+      <id>apache.snapshots</id>
+      <url>http://repository.apache.org/snapshots</url>
+      <!-- until we move to hadoop-common/hdfs trunk and/or maven 3 -->
+      <!-- cf. MNG-4326 -->
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
   </repositories>
 
   <dependencies>
