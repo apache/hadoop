@@ -2455,4 +2455,7 @@ Release 0.21.0 - 2010-08-13
     (Amar Kamat via amareshwari)
 
     MAPREDUCE-1856. Extract a subset of tests for smoke (DOA) validation (cos)
+    
+    Fix ivy conf to work with the hadoop common trunk maven build changes.
+    (Giridharan Kesavan)
 

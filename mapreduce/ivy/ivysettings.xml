@@ -31,7 +31,7 @@
   -->
   <property name="repo.maven.org" value="http://repo1.maven.org/maven2/" override="false"/>
   <property name="snapshot.apache.org" value="https://repository.apache.org/content/repositories/snapshots/" override="false"/>
-  <property name="maven2.pattern" value="[organisation]/[module]/[revision]/[module]-[revision]"/>
+  <property name="maven2.pattern" value="[organisation]/[module]/[revision]/[module]-[revision](-[classifier])"/>
   <property name="repo.dir" value="${user.home}/.m2/repository"/>
   <property name="maven2.pattern.ext"  value="${maven2.pattern}.[ext]"/>
   <property name="resolvers" value="default" override="false"/>
