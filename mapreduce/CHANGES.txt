@@ -593,6 +593,9 @@ Release 0.22.0 - Unreleased
     MAPREDUCE-2752. Build does not pass along properties to contrib builds.
     (Joep Rottinghuis via cos)
 
+    MAPREDUCE-2753. Generated POMs hardcode dependency on hadoop-common
+    version 0.22.0-SNAPSHOT (Joep Rottinghuis via cos)
+
 Release 0.21.1 - Unreleased
 
   NEW FEATURES
