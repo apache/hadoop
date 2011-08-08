@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.log4j.Level;
 import org.junit.Test;
 
@@ -133,7 +134,7 @@ public class TestBlocksWithNotEnoughRacks {
       DFSTestUtil.waitForReplication(cluster, b, 1, REPLICATION_FACTOR, 0);
 
       REPLICATION_FACTOR = 2;
-      ns.setReplication("/testFile", REPLICATION_FACTOR);
+      NameNodeAdapter.setReplication(ns, "/testFile", REPLICATION_FACTOR);
       DFSTestUtil.waitForReplication(cluster, b, 2, REPLICATION_FACTOR, 0);
     } finally {
       cluster.shutdown();
@@ -172,7 +173,7 @@ public class TestBlocksWithNotEnoughRacks {
       String newRacks[] = {"/rack2", "/rack2"};
       cluster.startDataNodes(conf, 2, true, null, newRacks);
       REPLICATION_FACTOR = 5;
-      ns.setReplication("/testFile", REPLICATION_FACTOR);
+      NameNodeAdapter.setReplication(ns, "/testFile", REPLICATION_FACTOR);
 
       DFSTestUtil.waitForReplication(cluster, b, 2, REPLICATION_FACTOR, 0);
     } finally {
@@ -258,7 +259,7 @@ public class TestBlocksWithNotEnoughRacks {
       // was not the one that lived on the rack with only one replica,
       // ie we should still have 2 racks after reducing the repl factor.
       REPLICATION_FACTOR = 2;
-      ns.setReplication("/testFile", REPLICATION_FACTOR); 
+      NameNodeAdapter.setReplication(ns, "/testFile", REPLICATION_FACTOR); 
 
       DFSTestUtil.waitForReplication(cluster, b, 2, REPLICATION_FACTOR, 0);
     } finally {

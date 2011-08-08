@@ -641,6 +641,9 @@ Trunk (unreleased changes)
 
     HDFS-2226. Clean up counting of operations in FSEditLogLoader (todd)
 
+    HDFS-2228. Move block and datanode code from FSNamesystem to
+    BlockManager and DatanodeManager.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

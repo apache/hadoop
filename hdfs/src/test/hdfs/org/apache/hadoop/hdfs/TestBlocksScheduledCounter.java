@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 
 /**
  * This class tests DatanodeDescriptor.getBlocksScheduled() at the
@@ -50,7 +51,9 @@ public class TestBlocksScheduledCounter extends TestCase {
     ((DFSOutputStream)(out.getWrappedStream())).hflush();
     
     ArrayList<DatanodeDescriptor> dnList = new ArrayList<DatanodeDescriptor>();
-    cluster.getNamesystem().DFSNodesStatus(dnList, dnList);
+    final DatanodeManager dm = cluster.getNamesystem().getBlockManager(
+        ).getDatanodeManager();
+    dm.fetchDatanodes(dnList, dnList, false);
     DatanodeDescriptor dn = dnList.get(0);
     
     assertEquals(1, dn.getBlocksScheduled());

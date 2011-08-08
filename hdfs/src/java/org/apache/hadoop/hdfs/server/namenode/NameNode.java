@@ -855,7 +855,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
       DatanodeInfo[] nodes = blocks[i].getLocations();
       for (int j = 0; j < nodes.length; j++) {
         DatanodeInfo dn = nodes[j];
-        namesystem.markBlockAsCorrupt(blk, dn);
+        namesystem.getBlockManager().findAndMarkBlockAsCorrupt(blk, dn);
       }
     }
   }
@@ -1055,7 +1055,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   @Override
   public RemoteEditLogManifest getEditLogManifest(long sinceTxId)
   throws IOException {
-    return namesystem.getEditLogManifest(sinceTxId);
+    return namesystem.getEditLog().getEditLogManifest(sinceTxId);
   }
     
   @Override // ClientProtocol
@@ -1096,8 +1096,9 @@ public class NameNode implements NamenodeProtocols, FSConstants {
    * @param bandwidth Blanacer bandwidth in bytes per second for all datanodes.
    * @throws IOException
    */
+  @Override // ClientProtocol
   public void setBalancerBandwidth(long bandwidth) throws IOException {
-    namesystem.setBalancerBandwidth(bandwidth);
+    namesystem.getBlockManager().getDatanodeManager().setBalancerBandwidth(bandwidth);
   }
   
   @Override // ClientProtocol
@@ -1195,7 +1196,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
            + " blocks");
     }
 
-    namesystem.processReport(nodeReg, poolId, blist);
+    namesystem.getBlockManager().processReport(nodeReg, poolId, blist);
     if (getFSImage().isUpgradeFinalized())
       return new DatanodeCommand.Finalize(poolId);
     return null;
@@ -1210,7 +1211,8 @@ public class NameNode implements NamenodeProtocols, FSConstants {
           +"from "+nodeReg.getName()+" "+blocks.length+" blocks.");
     }
     for (int i = 0; i < blocks.length; i++) {
-      namesystem.blockReceived(nodeReg, poolId, blocks[i], delHints[i]);
+      namesystem.getBlockManager().blockReceived(
+          nodeReg, poolId, blocks[i], delHints[i]);
     }
   }
 

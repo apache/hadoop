@@ -39,10 +39,8 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -74,7 +72,6 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -88,12 +85,12 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStatistics;
@@ -110,11 +107,9 @@ import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
-import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
@@ -394,7 +389,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     return this.fsLock.getReadHoldCount() > 0;
   }
 
-  boolean hasReadOrWriteLock() {
+  public boolean hasReadOrWriteLock() {
     return hasReadLock() || hasWriteLock();
   }
 
@@ -534,14 +529,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   
       long totalInodes = this.dir.totalInodes();
       long totalBlocks = this.getBlocksTotal();
-  
-      ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-      ArrayList<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
-      this.DFSNodesStatus(live, dead);
-      
-      String str = totalInodes + " files and directories, " + totalBlocks
-          + " blocks = " + (totalInodes + totalBlocks) + " total";
-      out.println(str);
+      out.println(totalInodes + " files and directories, " + totalBlocks
+          + " blocks = " + (totalInodes + totalBlocks) + " total");
+
+      final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+      final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
+      blockManager.getDatanodeManager().fetchDatanodes(live, dead, false);
       out.println("Live Datanodes: "+live.size());
       out.println("Dead Datanodes: "+dead.size());
       blockManager.metaSave(out);
@@ -750,7 +743,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
           }
           dir.setTimes(src, inode, -1, now, false);
         }
-        return getBlockLocationsInternal(inode, offset, length, needBlockToken);
+        return blockManager.createLocatedBlocks(inode.getBlocks(),
+            inode.computeFileSize(false), inode.isUnderConstruction(),
+            offset, length, needBlockToken);
       } finally {
         if (attempt == 0) {
           readUnlock();
@@ -761,44 +756,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     }
     return null; // can never reach here
   }
-  
-  LocatedBlocks getBlockLocationsInternal(INodeFile inode,
-      long offset, long length, boolean needBlockToken)
-  throws IOException {
-    assert hasReadOrWriteLock();
-    final BlockInfo[] blocks = inode.getBlocks();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("blocks = " + java.util.Arrays.asList(blocks));
-    }
-    if (blocks == null) {
-      return null;
-    }
-
-    if (blocks.length == 0) {
-      return new LocatedBlocks(0, inode.isUnderConstruction(),
-          Collections.<LocatedBlock>emptyList(), null, false);
-    } else {
-      final long n = inode.computeFileSize(false);
-      final List<LocatedBlock> locatedblocks = blockManager.getBlockLocations(
-          blocks, offset, length, Integer.MAX_VALUE);
-      final BlockInfo last = inode.getLastBlock();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("last = " + last);
-      }
-      
-      LocatedBlock lastBlock = last.isComplete() ? blockManager
-          .getBlockLocation(last, n - last.getNumBytes()) : blockManager
-          .getBlockLocation(last, n);
-          
-      if (blockManager.isBlockTokenEnabled() && needBlockToken) {
-        blockManager.setBlockTokens(locatedblocks);
-        blockManager.setBlockToken(lastBlock);
-      }
-      return new LocatedBlocks(n, inode.isUnderConstruction(), locatedblocks,
-          lastBlock, last.isComplete());
-    }
-  }
-  
 
   /**
    * Moves all the blocks from srcs and appends them to trg
@@ -960,7 +917,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    * The access time is precise upto an hour. The transaction, if needed, is
    * written to the edits log but is not flushed.
    */
-  public void setTimes(String src, long mtime, long atime) 
+  void setTimes(String src, long mtime, long atime) 
     throws IOException, UnresolvedLinkException {
     if (!isAccessTimeSupported() && atime != -1) {
       throw new IOException("Access time for hdfs is not configured. " +
@@ -1060,60 +1017,37 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    * @return true if successful; 
    *         false if file does not exist or is a directory
    */
-  public boolean setReplication(String src, short replication) 
-    throws IOException, UnresolvedLinkException {
-    boolean status = false;
+  boolean setReplication(final String src, final short replication
+      ) throws IOException {
+    blockManager.verifyReplication(src, replication, null);
+
+    final boolean isFile;
     writeLock();
     try {
       if (isInSafeMode()) {
         throw new SafeModeException("Cannot set replication for " + src, safeMode);
       }
-      status = setReplicationInternal(src, replication);
+      if (isPermissionEnabled) {
+        checkPathAccess(src, FsAction.WRITE);
+      }
+
+      final short[] oldReplication = new short[1];
+      final Block[] blocks = dir.setReplication(src, replication, oldReplication);
+      isFile = blocks != null;
+      if (isFile) {
+        blockManager.setReplication(oldReplication[0], replication, src, blocks);
+      }
     } finally {
       writeUnlock();
     }
+
     getEditLog().logSync();
-    if (status && auditLog.isInfoEnabled() && isExternalInvocation()) {
+    if (isFile && auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "setReplication", src, null, null);
     }
-    return status;
-  }
-
-  private boolean setReplicationInternal(String src,
-      short replication) throws AccessControlException, QuotaExceededException,
-      SafeModeException, UnresolvedLinkException, IOException {
-    assert hasWriteLock();
-    blockManager.verifyReplication(src, replication, null);
-    if (isPermissionEnabled) {
-      checkPathAccess(src, FsAction.WRITE);
-    }
-
-    int[] oldReplication = new int[1];
-    Block[] fileBlocks;
-    fileBlocks = dir.setReplication(src, replication, oldReplication);
-    if (fileBlocks == null)  // file not found or is a directory
-      return false;
-    int oldRepl = oldReplication[0];
-    if (oldRepl == replication) // the same replication
-      return true;
-
-    // update needReplication priority queues
-    for(int idx = 0; idx < fileBlocks.length; idx++)
-      blockManager.updateNeededReplications(fileBlocks[idx], 0, replication-oldRepl);
-      
-    if (oldRepl > replication) {  
-      // old replication > the new one; need to remove copies
-      LOG.info("Reducing replication for file " + src 
-               + ". New replication is " + replication);
-      for(int idx = 0; idx < fileBlocks.length; idx++)
-        blockManager.processOverReplicatedBlock(fileBlocks[idx], replication, null, null);
-    } else { // replication factor is increased
-      LOG.info("Increasing replication for file " + src 
-          + ". New replication is " + replication);
-    }
-    return true;
+    return isFile;
   }
     
   long getPreferredBlockSize(String filename) 
@@ -1287,9 +1221,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
         LocatedBlock lb = 
           blockManager.convertLastBlockToUnderConstruction(cons);
 
-        if (lb != null && blockManager.isBlockTokenEnabled()) {
-          lb.setBlockToken(blockManager.getBlockTokenSecretManager().generateToken(lb.getBlock(), 
-              EnumSet.of(BlockTokenSecretManager.AccessMode.WRITE)));
+        if (lb != null) {
+          blockManager.setBlockToken(lb, AccessMode.WRITE);
         }
         return lb;
       } else {
@@ -1456,7 +1389,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     try {
       lb = startFileInternal(src, null, holder, clientMachine, 
                         EnumSet.of(CreateFlag.APPEND), 
-                        false, (short)blockManager.maxReplication, (long)0);
+                        false, blockManager.maxReplication, (long)0);
     } finally {
       writeUnlock();
     }
@@ -1577,10 +1510,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
 
     // Create next block
     LocatedBlock b = new LocatedBlock(getExtendedBlock(newBlock), targets, fileLength);
-    if (blockManager.isBlockTokenEnabled()) {
-      b.setBlockToken(blockManager.getBlockTokenSecretManager().generateToken(b.getBlock(), 
-          EnumSet.of(BlockTokenSecretManager.AccessMode.WRITE)));
-    }
+    blockManager.setBlockToken(b, BlockTokenSecretManager.AccessMode.WRITE);
     return b;
   }
 
@@ -1626,17 +1556,14 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
         ).chooseTarget(src, numAdditionalNodes, clientnode, chosen, true,
         excludes, preferredblocksize);
     final LocatedBlock lb = new LocatedBlock(blk, targets);
-    if (blockManager.isBlockTokenEnabled()) {
-      lb.setBlockToken(blockManager.getBlockTokenSecretManager().generateToken(lb.getBlock(), 
-          EnumSet.of(BlockTokenSecretManager.AccessMode.COPY)));
-    }
+    blockManager.setBlockToken(lb, AccessMode.COPY);
     return lb;
   }
 
   /**
    * The client would like to let go of the given block
    */
-  public boolean abandonBlock(ExtendedBlock b, String src, String holder)
+  boolean abandonBlock(ExtendedBlock b, String src, String holder)
       throws LeaseExpiredException, FileNotFoundException,
       UnresolvedLinkException, IOException {
     writeLock();
@@ -1820,23 +1747,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       readUnlock();
     }
   }
-
-
-  /**
-   * Mark the block belonging to datanode as corrupt
-   * @param blk Block to be marked as corrupt
-   * @param dn Datanode which holds the corrupt replica
-   */
-  public void markBlockAsCorrupt(ExtendedBlock blk, DatanodeInfo dn)
-    throws IOException {
-    writeLock();
-    try {
-      blockManager.findAndMarkBlockAsCorrupt(blk.getLocalBlock(), dn);
-    } finally {
-      writeUnlock();
-    }
-  }
-
 
   ////////////////////////////////////////////////////////////////
   // Here's how to handle block-copy failure during client write:
@@ -2621,16 +2531,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     }
   }
 
-  public void addKeyUpdateCommand(final List<DatanodeCommand> cmds,
-      final DatanodeDescriptor nodeinfo) {
-    // check access key update
-    if (blockManager.isBlockTokenEnabled() && nodeinfo.needKeyUpdate) {
-      cmds.add(new KeyUpdateCommand(blockManager.getBlockTokenSecretManager().exportKeys()));
-      nodeinfo.needKeyUpdate = false;
-    }
-  }
-
-
   /**
    * Returns whether or not there were available resources at the last check of
    * resources.
@@ -2688,179 +2588,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
 
   FSEditLog getEditLog() {
     return getFSImage().getEditLog();
-  }
-    
-  /**
-   * The given node is reporting all its blocks.  Use this info to 
-   * update the (machine-->blocklist) and (block-->machinelist) tables.
-   */
-  void processReport(DatanodeID nodeID, String poolId,
-      BlockListAsLongs newReport) throws IOException {
-    long startTime, endTime;
-
-    writeLock();
-    startTime = now(); //after acquiring write lock
-    try {
-      final DatanodeDescriptor node = blockManager.getDatanodeManager(
-          ).getDatanode(nodeID);
-      if (node == null || !node.isAlive) {
-        throw new IOException("ProcessReport from dead or unregistered node: "
-                              + nodeID.getName());
-      }
-      // To minimize startup time, we discard any second (or later) block reports
-      // that we receive while still in startup phase.
-      if (isInStartupSafeMode() && node.numBlocks() > 0) {
-        NameNode.stateChangeLog.info("BLOCK* NameSystem.processReport: "
-            + "discarded non-initial block report from " + nodeID.getName()
-            + " because namenode still in startup phase");
-        return;
-      }
-  
-      blockManager.processReport(node, newReport);
-    } finally {
-      endTime = now();
-      writeUnlock();
-    }
-
-    // Log the block report processing stats from Namenode perspective
-    NameNode.getNameNodeMetrics().addBlockReport((int) (endTime - startTime));
-    NameNode.stateChangeLog.info("BLOCK* NameSystem.processReport: from "
-        + nodeID.getName() + ", blocks: " + newReport.getNumberOfBlocks()
-        + ", processing time: " + (endTime - startTime) + " msecs");
-  }
-
-  /**
-   * We want "replication" replicates for the block, but we now have too many.  
-   * In this method, copy enough nodes from 'srcNodes' into 'dstNodes' such that:
-   *
-   * srcNodes.size() - dstNodes.size() == replication
-   *
-   * We pick node that make sure that replicas are spread across racks and
-   * also try hard to pick one with least free space.
-   * The algorithm is first to pick a node with least free space from nodes
-   * that are on a rack holding more than one replicas of the block.
-   * So removing such a replica won't remove a rack. 
-   * If no such a node is available,
-   * then pick a node with least free space
-   */
-  public void chooseExcessReplicates(Collection<DatanodeDescriptor> nonExcess, 
-                              Block b, short replication,
-                              DatanodeDescriptor addedNode,
-                              DatanodeDescriptor delNodeHint,
-                              BlockPlacementPolicy replicator) {
-    assert hasWriteLock();
-    // first form a rack to datanodes map and
-    INodeFile inode = blockManager.getINode(b);
-    HashMap<String, ArrayList<DatanodeDescriptor>> rackMap =
-      new HashMap<String, ArrayList<DatanodeDescriptor>>();
-    for (Iterator<DatanodeDescriptor> iter = nonExcess.iterator();
-         iter.hasNext();) {
-      DatanodeDescriptor node = iter.next();
-      String rackName = node.getNetworkLocation();
-      ArrayList<DatanodeDescriptor> datanodeList = rackMap.get(rackName);
-      if(datanodeList==null) {
-        datanodeList = new ArrayList<DatanodeDescriptor>();
-      }
-      datanodeList.add(node);
-      rackMap.put(rackName, datanodeList);
-    }
-    
-    // split nodes into two sets
-    // priSet contains nodes on rack with more than one replica
-    // remains contains the remaining nodes
-    ArrayList<DatanodeDescriptor> priSet = new ArrayList<DatanodeDescriptor>();
-    ArrayList<DatanodeDescriptor> remains = new ArrayList<DatanodeDescriptor>();
-    for( Iterator<Entry<String, ArrayList<DatanodeDescriptor>>> iter = 
-      rackMap.entrySet().iterator(); iter.hasNext(); ) {
-      Entry<String, ArrayList<DatanodeDescriptor>> rackEntry = iter.next();
-      ArrayList<DatanodeDescriptor> datanodeList = rackEntry.getValue(); 
-      if( datanodeList.size() == 1 ) {
-        remains.add(datanodeList.get(0));
-      } else {
-        priSet.addAll(datanodeList);
-      }
-    }
-    
-    // pick one node to delete that favors the delete hint
-    // otherwise pick one with least space from priSet if it is not empty
-    // otherwise one node with least space from remains
-    boolean firstOne = true;
-    while (nonExcess.size() - replication > 0) {
-      DatanodeInfo cur = null;
-
-      // check if we can del delNodeHint
-      if (firstOne && delNodeHint !=null && nonExcess.contains(delNodeHint) &&
-            (priSet.contains(delNodeHint) || (addedNode != null && !priSet.contains(addedNode))) ) {
-          cur = delNodeHint;
-      } else { // regular excessive replica removal
-        cur = replicator.chooseReplicaToDelete(inode, b, replication, priSet, remains);
-      }
-
-      firstOne = false;
-      // adjust rackmap, priSet, and remains
-      String rack = cur.getNetworkLocation();
-      ArrayList<DatanodeDescriptor> datanodes = rackMap.get(rack);
-      datanodes.remove(cur);
-      if(datanodes.isEmpty()) {
-        rackMap.remove(rack);
-      }
-      if( priSet.remove(cur) ) {
-        if (datanodes.size() == 1) {
-          priSet.remove(datanodes.get(0));
-          remains.add(datanodes.get(0));
-        }
-      } else {
-        remains.remove(cur);
-      }
-
-      nonExcess.remove(cur);
-      blockManager.addToExcessReplicate(cur, b);
-
-      //
-      // The 'excessblocks' tracks blocks until we get confirmation
-      // that the datanode has deleted them; the only way we remove them
-      // is when we get a "removeBlock" message.  
-      //
-      // The 'invalidate' list is used to inform the datanode the block 
-      // should be deleted.  Items are removed from the invalidate list
-      // upon giving instructions to the namenode.
-      //
-      blockManager.addToInvalidates(b, cur);
-      NameNode.stateChangeLog.info("BLOCK* NameSystem.chooseExcessReplicates: "
-                +"("+cur.getName()+", "+b+") is added to recentInvalidateSets");
-    }
-  }
-
-
-  /**
-   * The given node is reporting that it received a certain block.
-   */
-  public void blockReceived(DatanodeID nodeID,  
-                                         String poolId,
-                                         Block block,
-                                         String delHint
-                                         ) throws IOException {
-    writeLock();
-    try {
-      final DatanodeDescriptor node = blockManager.getDatanodeManager(
-          ).getDatanode(nodeID);
-      if (node == null || !node.isAlive) {
-        NameNode.stateChangeLog.warn("BLOCK* NameSystem.blockReceived: " + block
-            + " is received from dead or unregistered node " + nodeID.getName());
-        throw new IOException(
-            "Got blockReceived message from unregistered or dead node " + block);
-      }
-          
-      if (NameNode.stateChangeLog.isDebugEnabled()) {
-        NameNode.stateChangeLog.debug("BLOCK* NameSystem.blockReceived: "
-                                      +block+" is received from " + nodeID.getName());
-      }
-  
-      blockManager.addBlock(node, block, delHint);
-    } finally {
-      writeUnlock();
-    }
-  }
+  }    
 
   private void checkBlock(ExtendedBlock block) throws IOException {
     if (block != null && !this.blockPoolId.equals(block.getBlockPoolId())) {
@@ -3009,43 +2737,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     }
   }
 
-  /**
-   */
-  public void DFSNodesStatus(ArrayList<DatanodeDescriptor> live, 
-                                          ArrayList<DatanodeDescriptor> dead) {
-    readLock();
-    try {
-      getBlockManager().getDatanodeManager().fetchDatanodess(live, dead);
-    } finally {
-      readUnlock();
-    }
-  }
-
   public Date getStartTime() {
     return new Date(systemStart); 
   }
     
-  short getMaxReplication()     { return (short)blockManager.maxReplication; }
-  short getMinReplication()     { return (short)blockManager.minReplication; }
-  short getDefaultReplication() { return (short)blockManager.defaultReplication; }
-
-  /**
-   * Clamp the specified replication between the minimum and maximum
-   * replication levels for this namesystem.
-   */
-  short adjustReplication(short replication) {
-    short minReplication = getMinReplication();
-    if (replication < minReplication) {
-      replication = minReplication;
-    }
-    short maxReplication = getMaxReplication();
-    if (replication > maxReplication) {
-      replication = maxReplication;
-    }
-    return replication;
-  }
-    
-  
   /**
    * Rereads the config to get hosts and exclude list file names.
    * Rereads the files to update the hosts and exclude lists.  It
@@ -3740,10 +3435,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       writeUnlock();
     }
   }
-  
-  public RemoteEditLogManifest getEditLogManifest(long sinceTxId) throws IOException {
-    return getEditLog().getEditLogManifest(sinceTxId);
-  }
 
   NamenodeCommand startCheckpoint(
                                 NamenodeRegistration bnReg, // backup node
@@ -3968,7 +3659,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   /**
    * shutdown FSNamesystem
    */
-  public void shutdown() {
+  void shutdown() {
     if (mbeanName != null)
       MBeans.unregister(mbeanName);
   }
@@ -4069,10 +3760,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       // get a new generation stamp and an access token
       block.setGenerationStamp(nextGenerationStamp());
       locatedBlock = new LocatedBlock(block, new DatanodeInfo[0]);
-      if (blockManager.isBlockTokenEnabled()) {
-        locatedBlock.setBlockToken(blockManager.getBlockTokenSecretManager().generateToken(
-          block, EnumSet.of(BlockTokenSecretManager.AccessMode.WRITE)));
-      }
+      blockManager.setBlockToken(locatedBlock, AccessMode.WRITE);
     } finally {
       writeUnlock();
     }
@@ -4273,26 +3961,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     return blockManager.numCorruptReplicas(blk);
   }
 
-  /**
-   * Return a range of corrupt replica block ids. Up to numExpectedBlocks 
-   * blocks starting at the next block after startingBlockId are returned
-   * (fewer if numExpectedBlocks blocks are unavailable). If startingBlockId 
-   * is null, up to numExpectedBlocks blocks are returned from the beginning.
-   * If startingBlockId cannot be found, null is returned.
-   *
-   * @param numExpectedBlocks Number of block ids to return.
-   *  0 <= numExpectedBlocks <= 100
-   * @param startingBlockId Block id from which to start. If null, start at
-   *  beginning.
-   * @return Up to numExpectedBlocks blocks from startingBlockId if it exists
-   *
-   */
-  long[] getCorruptReplicaBlockIds(int numExpectedBlocks,
-                                   Long startingBlockId) {  
-    return blockManager.getCorruptReplicaBlockIds(numExpectedBlocks,
-                                                  startingBlockId);
-  }
-  
   static class CorruptFileBlockInfo {
     String path;
     Block block;
@@ -4355,28 +4023,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   }
   
   /**
-   * @return list of datanodes where decommissioning is in progress
-   */
-  public ArrayList<DatanodeDescriptor> getDecommissioningNodes() {
-    readLock();
-    try {
-      ArrayList<DatanodeDescriptor> decommissioningNodes = 
-        new ArrayList<DatanodeDescriptor>();
-      final List<DatanodeDescriptor> results = getBlockManager(
-          ).getDatanodeManager().getDatanodeListForReport(DatanodeReportType.LIVE);
-      for (Iterator<DatanodeDescriptor> it = results.iterator(); it.hasNext();) {
-        DatanodeDescriptor node = it.next();
-        if (node.isDecommissionInProgress()) {
-          decommissioningNodes.add(node);
-        }
-      }
-      return decommissioningNodes;
-    } finally {
-      readUnlock();
-    }
-  }
-
-  /**
    * Create delegation token secret manager
    */
   private DelegationTokenSecretManager createDelegationTokenSecretManager(
@@ -4406,7 +4052,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    * @return Token<DelegationTokenIdentifier>
    * @throws IOException
    */
-  public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
+  Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
     Token<DelegationTokenIdentifier> token;
     writeLock();
@@ -4686,13 +4332,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   public String getLiveNodes() {
     final Map<String, Map<String,Object>> info = 
       new HashMap<String, Map<String,Object>>();
-    final ArrayList<DatanodeDescriptor> liveNodeList = 
-      new ArrayList<DatanodeDescriptor>();
-    final ArrayList<DatanodeDescriptor> deadNodeList =
-      new ArrayList<DatanodeDescriptor>();
-    DFSNodesStatus(liveNodeList, deadNodeList);
-    removeDecomNodeFromList(liveNodeList);
-    for (DatanodeDescriptor node : liveNodeList) {
+    final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+    blockManager.getDatanodeManager().fetchDatanodes(live, null, true);
+    for (DatanodeDescriptor node : live) {
       final Map<String, Object> innerinfo = new HashMap<String, Object>();
       innerinfo.put("lastContact", getLastContact(node));
       innerinfo.put("usedSpace", getDfsUsed(node));
@@ -4710,14 +4352,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   public String getDeadNodes() {
     final Map<String, Map<String, Object>> info = 
       new HashMap<String, Map<String, Object>>();
-    final ArrayList<DatanodeDescriptor> liveNodeList =
-    new ArrayList<DatanodeDescriptor>();
-    final ArrayList<DatanodeDescriptor> deadNodeList =
-    new ArrayList<DatanodeDescriptor>();
-    // we need to call DFSNodeStatus to filter out the dead data nodes
-    DFSNodesStatus(liveNodeList, deadNodeList);
-    removeDecomNodeFromList(deadNodeList);
-    for (DatanodeDescriptor node : deadNodeList) {
+    final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
+    blockManager.getDatanodeManager().fetchDatanodes(null, dead, true);
+    for (DatanodeDescriptor node : dead) {
       final Map<String, Object> innerinfo = new HashMap<String, Object>();
       innerinfo.put("lastContact", getLastContact(node));
       innerinfo.put("decommissioned", node.isDecommissioned());
@@ -4734,8 +4371,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   public String getDecomNodes() {
     final Map<String, Map<String, Object>> info = 
       new HashMap<String, Map<String, Object>>();
-    final ArrayList<DatanodeDescriptor> decomNodeList = 
-      this.getDecommissioningNodes();
+    final List<DatanodeDescriptor> decomNodeList = blockManager.getDatanodeManager(
+        ).getDecommissioningNodes();
     for (DatanodeDescriptor node : decomNodeList) {
       final Map<String, Object> innerinfo = new HashMap<String, Object>();
       innerinfo.put("underReplicatedBlocks", node.decommissioningStatus
@@ -4770,19 +4407,5 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   /** @return the block manager. */
   public BlockManager getBlockManager() {
     return blockManager;
-  }
-  
-  void removeDecomNodeFromList(List<DatanodeDescriptor> nodeList) {
-    getBlockManager().getDatanodeManager().removeDecomNodeFromList(nodeList);
-  }
-
-  /**
-   * Tell all datanodes to use a new, non-persistent bandwidth value for
-   * dfs.datanode.balance.bandwidthPerSec.
-   * @param bandwidth Blanacer bandwidth in bytes per second for all datanodes.
-   * @throws IOException
-   */
-  public void setBalancerBandwidth(long bandwidth) throws IOException {
-    getBlockManager().getDatanodeManager().setBalancerBandwidth(bandwidth);
   }
 }

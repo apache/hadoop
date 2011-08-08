@@ -29,7 +29,7 @@ import org.apache.hadoop.hdfs.util.LightWeightGSet;
  * block's metadata currently includes INode it belongs to and
  * the datanodes that store the block.
  */
-public class BlocksMap {
+class BlocksMap {
   private static class NodeIterator implements Iterator<DatanodeDescriptor> {
     private BlockInfo blockInfo;
     private int nextIdx = 0;
@@ -101,7 +101,7 @@ public class BlocksMap {
   /**
    * Add block b belonging to the specified file inode to the map.
    */
-  public BlockInfo addINode(BlockInfo b, INodeFile iNode) {
+  BlockInfo addINode(BlockInfo b, INodeFile iNode) {
     BlockInfo info = blocks.get(b);
     if (info != b) {
       info = b;
@@ -137,7 +137,7 @@ public class BlocksMap {
    * Searches for the block in the BlocksMap and 
    * returns Iterator that iterates through the nodes the block belongs to.
    */
-  public Iterator<DatanodeDescriptor> nodeIterator(Block b) {
+  Iterator<DatanodeDescriptor> nodeIterator(Block b) {
     return nodeIterator(blocks.get(b));
   }
 
@@ -181,27 +181,6 @@ public class BlocksMap {
 
   Iterable<BlockInfo> getBlocks() {
     return blocks;
-  }
-
-  /**
-   * Check if the block exists in map
-   */
-  public boolean contains(Block block) {
-    return blocks.contains(block);
-  }
-  
-  /**
-   * Check if the replica at the given datanode exists in map
-   */
-  boolean contains(Block block, DatanodeDescriptor datanode) {
-    BlockInfo info = blocks.get(block);
-    if (info == null)
-      return false;
-    
-    if (-1 == info.findDatanode(datanode))
-      return false;
-    
-    return true;
   }
   
   /** Get the capacity of the HashMap that stores blocks */

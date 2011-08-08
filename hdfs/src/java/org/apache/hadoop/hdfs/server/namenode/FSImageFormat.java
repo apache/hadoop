@@ -330,7 +330,7 @@ class FSImageFormat {
     
     int imgVersion = getLayoutVersion();
     short replication = in.readShort();
-    replication = namesystem.adjustReplication(replication);
+    replication = namesystem.getBlockManager().adjustReplication(replication);
     modificationTime = in.readLong();
     if (LayoutVersion.supports(Feature.FILE_ACCESS_TIME, imgVersion)) {
       atime = in.readLong();

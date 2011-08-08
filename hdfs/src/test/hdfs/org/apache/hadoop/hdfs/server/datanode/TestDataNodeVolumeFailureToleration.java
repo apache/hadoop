@@ -17,29 +17,30 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
+
 import java.io.File;
 import java.io.IOException;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.log4j.Level;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
 
 /**
  * Test the ability of a DN to tolerate volume failures.
@@ -154,9 +155,10 @@ public class TestDataNodeVolumeFailureToleration {
     conf.setInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, 0);
     cluster.startDataNodes(conf, 2, true, null, null);
     cluster.waitActive();
-    FSNamesystem ns = cluster.getNamesystem();
-    long origCapacity = DFSTestUtil.getLiveDatanodeCapacity(ns);
-    long dnCapacity = DFSTestUtil.getDatanodeCapacity(ns, 0);
+    final DatanodeManager dm = cluster.getNamesystem().getBlockManager(
+        ).getDatanodeManager();
+    long origCapacity = DFSTestUtil.getLiveDatanodeCapacity(dm);
+    long dnCapacity = DFSTestUtil.getDatanodeCapacity(dm, 0);
 
     // Fail a volume on the 2nd DN
     File dn2Vol1 = new File(dataDir, "data"+(2*1+1));
@@ -168,7 +170,7 @@ public class TestDataNodeVolumeFailureToleration {
     DFSTestUtil.waitReplication(fs, file1, (short)2);
 
     // Check that this single failure caused a DN to die.
-    DFSTestUtil.waitForDatanodeStatus(ns, 2, 1, 0, 
+    DFSTestUtil.waitForDatanodeStatus(dm, 2, 1, 0, 
         origCapacity - (1*dnCapacity), WAIT_FOR_HEARTBEATS);
 
     // If we restore the volume we should still only be able to get

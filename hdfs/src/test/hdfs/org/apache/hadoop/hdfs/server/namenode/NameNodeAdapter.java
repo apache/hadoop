@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
@@ -51,6 +50,11 @@ public class NameNodeAdapter {
    */
   public static Server getRpcServer(NameNode namenode) {
     return namenode.server;
+  }
+
+  public static boolean setReplication(final FSNamesystem ns,
+      final String src, final short replication) throws IOException {
+    return ns.setReplication(src, replication);
   }
   
   public static String getLeaseHolderForPath(NameNode namenode, String path) {

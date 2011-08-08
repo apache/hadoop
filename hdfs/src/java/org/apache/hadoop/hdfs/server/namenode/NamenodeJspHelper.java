@@ -42,13 +42,14 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -229,14 +230,10 @@ class NamenodeJspHelper {
     void generateHealthReport(JspWriter out, NameNode nn,
         HttpServletRequest request) throws IOException {
       FSNamesystem fsn = nn.getNamesystem();
-      ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-      ArrayList<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
-      fsn.DFSNodesStatus(live, dead);
-      // If a data node has been first included in the include list, 
-      // then decommissioned, then removed from both include and exclude list.  
-      // We make the web console to "forget" this node by not displaying it.
-      fsn.removeDecomNodeFromList(live);  
-      fsn.removeDecomNodeFromList(dead); 
+      final DatanodeManager dm = fsn.getBlockManager().getDatanodeManager();
+      final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+      final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
+      dm.fetchDatanodes(live, dead, true);
 
       int liveDecommissioned = 0;
       for (DatanodeDescriptor d : live) {
@@ -248,8 +245,7 @@ class NamenodeJspHelper {
         deadDecommissioned += d.isDecommissioned() ? 1 : 0;
       }
       
-      ArrayList<DatanodeDescriptor> decommissioning = fsn
-          .getDecommissioningNodes();
+      final List<DatanodeDescriptor> decommissioning = dm.getDecommissioningNodes();
 
       sorterField = request.getParameter("sorter/field");
       sorterOrder = request.getParameter("sorter/order");
@@ -370,15 +366,10 @@ class NamenodeJspHelper {
     return token == null ? null : token.encodeToUrlString();
   }
 
-  /** @return the network topology. */
-  static NetworkTopology getNetworkTopology(final NameNode namenode) {
-    return namenode.getNamesystem().getBlockManager().getDatanodeManager(
-        ).getNetworkTopology();
-  }
-
   /** @return a randomly chosen datanode. */
   static DatanodeDescriptor getRandomDatanode(final NameNode namenode) {
-    return (DatanodeDescriptor)getNetworkTopology(namenode).chooseRandom(
+    return (DatanodeDescriptor)namenode.getNamesystem().getBlockManager(
+        ).getDatanodeManager().getNetworkTopology().chooseRandom(
         NodeBase.ROOT);
   }
   
@@ -564,12 +555,14 @@ class NamenodeJspHelper {
 
     void generateNodesList(ServletContext context, JspWriter out,
         HttpServletRequest request) throws IOException {
-      ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-      ArrayList<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
       final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
-      nn.getNamesystem().DFSNodesStatus(live, dead);
-      nn.getNamesystem().removeDecomNodeFromList(live);
-      nn.getNamesystem().removeDecomNodeFromList(dead);
+      final FSNamesystem ns = nn.getNamesystem();
+      final DatanodeManager dm = ns.getBlockManager().getDatanodeManager();
+
+      final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+      final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
+      dm.fetchDatanodes(live, dead, true);
+
       InetSocketAddress nnSocketAddress = (InetSocketAddress) context
           .getAttribute(NameNodeHttpServer.NAMENODE_ADDRESS_ATTRIBUTE_KEY);
       String nnaddr = nnSocketAddress.getAddress().getHostAddress() + ":"
@@ -678,8 +671,7 @@ class NamenodeJspHelper {
           }
         } else if (whatNodes.equals("DECOMMISSIONING")) {
           // Decommissioning Nodes
-          ArrayList<DatanodeDescriptor> decommissioning = nn.getNamesystem()
-              .getDecommissioningNodes();
+          final List<DatanodeDescriptor> decommissioning = dm.getDecommissioningNodes();
           out.print("<br> <a name=\"DecommissioningNodes\" id=\"title\"> "
               + " Decommissioning Datanodes : " + decommissioning.size()
               + "</a><br><br>\n");
@@ -715,16 +707,17 @@ class NamenodeJspHelper {
   static class XMLBlockInfo {
     final Block block;
     final INodeFile inode;
-    final FSNamesystem fsn;
+    final BlockManager blockManager;
     
-    public XMLBlockInfo(FSNamesystem fsn, Long blockId) {
-      this.fsn = fsn;
+    XMLBlockInfo(FSNamesystem fsn, Long blockId) {
+      this.blockManager = fsn.getBlockManager();
+
       if (blockId == null) {
         this.block = null;
         this.inode = null;
       } else {
         this.block = new Block(blockId);
-        this.inode = fsn.getBlockManager().getINode(block);
+        this.inode = blockManager.getINode(block);
       }
     }
 
@@ -798,31 +791,25 @@ class NamenodeJspHelper {
         } 
 
         doc.startTag("replicas");
-       
-        if (fsn.getBlockManager().blocksMap.contains(block)) {
-          Iterator<DatanodeDescriptor> it =
-            fsn.getBlockManager().blocksMap.nodeIterator(block);
+        for(final Iterator<DatanodeDescriptor> it = blockManager.datanodeIterator(block);
+            it.hasNext(); ) {
+          doc.startTag("replica");
 
-          while (it.hasNext()) {
-            doc.startTag("replica");
+          DatanodeDescriptor dd = it.next();
 
-            DatanodeDescriptor dd = it.next();
+          doc.startTag("host_name");
+          doc.pcdata(dd.getHostName());
+          doc.endTag();
 
-            doc.startTag("host_name");
-            doc.pcdata(dd.getHostName());
-            doc.endTag();
-
-            boolean isCorrupt = fsn.getCorruptReplicaBlockIds(0,
-                                  block.getBlockId()) != null;
-            
-            doc.startTag("is_corrupt");
-            doc.pcdata(""+isCorrupt);
-            doc.endTag();
-            
-            doc.endTag(); // </replica>
-          }
-
-        } 
+          boolean isCorrupt = blockManager.getCorruptReplicaBlockIds(0,
+                                block.getBlockId()) != null;
+          
+          doc.startTag("is_corrupt");
+          doc.pcdata(""+isCorrupt);
+          doc.endTag();
+          
+          doc.endTag(); // </replica>
+        }
         doc.endTag(); // </replicas>
                 
       }
@@ -834,14 +821,14 @@ class NamenodeJspHelper {
   
   // utility class used in corrupt_replicas_xml.jsp
   static class XMLCorruptBlockInfo {
-    final FSNamesystem fsn;
     final Configuration conf;
     final Long startingBlockId;
     final int numCorruptBlocks;
+    final BlockManager blockManager;
     
-    public XMLCorruptBlockInfo(FSNamesystem fsn, Configuration conf,
+    XMLCorruptBlockInfo(FSNamesystem fsn, Configuration conf,
                                int numCorruptBlocks, Long startingBlockId) {
-      this.fsn = fsn;
+      this.blockManager = fsn.getBlockManager();
       this.conf = conf;
       this.numCorruptBlocks = numCorruptBlocks;
       this.startingBlockId = startingBlockId;
@@ -864,17 +851,16 @@ class NamenodeJspHelper {
       doc.endTag();
       
       doc.startTag("num_missing_blocks");
-      doc.pcdata(""+fsn.getMissingBlocksCount());
+      doc.pcdata(""+blockManager.getMissingBlocksCount());
       doc.endTag();
       
       doc.startTag("num_corrupt_replica_blocks");
-      doc.pcdata(""+fsn.getCorruptReplicaBlocks());
+      doc.pcdata(""+blockManager.getCorruptReplicaBlocksCount());
       doc.endTag();
      
       doc.startTag("corrupt_replica_block_ids");
-      long[] corruptBlockIds
-        = fsn.getCorruptReplicaBlockIds(numCorruptBlocks,
-                                        startingBlockId);
+      final long[] corruptBlockIds = blockManager.getCorruptReplicaBlockIds(
+          numCorruptBlocks, startingBlockId);
       if (corruptBlockIds != null) {
         for (Long blockId: corruptBlockIds) {
           doc.startTag("block_id");

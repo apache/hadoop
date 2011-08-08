@@ -61,6 +61,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseP
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.TestTransferRbw;
@@ -375,10 +376,9 @@ public class DFSTestUtil {
   /*
    * Return the total capacity of all live DNs.
    */
-  public static long getLiveDatanodeCapacity(FSNamesystem ns) {
-    ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-    ArrayList<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
-    ns.DFSNodesStatus(live, dead);
+  public static long getLiveDatanodeCapacity(DatanodeManager dm) {
+    final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+    dm.fetchDatanodes(live, null, false);
     long capacity = 0;
     for (final DatanodeDescriptor dn : live) {
       capacity += dn.getCapacity();
@@ -389,21 +389,20 @@ public class DFSTestUtil {
   /*
    * Return the capacity of the given live DN.
    */
-  public static long getDatanodeCapacity(FSNamesystem ns, int index) {
-    ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-    ArrayList<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
-    ns.DFSNodesStatus(live, dead);
+  public static long getDatanodeCapacity(DatanodeManager dm, int index) {
+    final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+    dm.fetchDatanodes(live, null, false);
     return live.get(index).getCapacity();
   }
 
   /*
    * Wait for the given # live/dead DNs, total capacity, and # vol failures. 
    */
-  public static void waitForDatanodeStatus(FSNamesystem ns, int expectedLive, 
+  public static void waitForDatanodeStatus(DatanodeManager dm, int expectedLive, 
       int expectedDead, long expectedVolFails, long expectedTotalCapacity, 
       long timeout) throws InterruptedException, TimeoutException {
-    ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-    ArrayList<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
+    final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+    final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
     final int ATTEMPTS = 10;
     int count = 0;
     long currTotalCapacity = 0;
@@ -413,7 +412,7 @@ public class DFSTestUtil {
       Thread.sleep(timeout);
       live.clear();
       dead.clear();
-      ns.DFSNodesStatus(live, dead);
+      dm.fetchDatanodes(live, dead, false);
       currTotalCapacity = 0;
       volFails = 0;
       for (final DatanodeDescriptor dd : live) {

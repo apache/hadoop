@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
-import java.io.DataInputStream;
 import java.io.File;
 import java.io.FilterInputStream;
 import java.io.IOException;
@@ -144,8 +143,8 @@ public class FSEditLogLoader {
 
             // versions > 0 support per file replication
             // get name and replication
-            short replication
-              = fsNamesys.adjustReplication(addCloseOp.replication);
+            final short replication  = fsNamesys.getBlockManager(
+                ).adjustReplication(addCloseOp.replication);
 
             long blockSize = addCloseOp.blockSize;
             BlockInfo blocks[] = new BlockInfo[addCloseOp.blocks.length];
@@ -218,8 +217,8 @@ public class FSEditLogLoader {
           }
           case OP_SET_REPLICATION: {
             SetReplicationOp setReplicationOp = (SetReplicationOp)op;
-            short replication
-              = fsNamesys.adjustReplication(setReplicationOp.replication);
+            short replication = fsNamesys.getBlockManager().adjustReplication(
+                setReplicationOp.replication);
             fsDir.unprotectedSetReplication(setReplicationOp.path,
                                             replication, null);
             break;

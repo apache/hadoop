@@ -26,11 +26,11 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.TreeSet;
 
 import javax.servlet.ServletContext;
@@ -249,7 +249,7 @@ public class JspHelper {
     out.print("</tbody></table>");
   }
 
-  public static void sortNodeList(ArrayList<DatanodeDescriptor> nodes,
+  public static void sortNodeList(final List<DatanodeDescriptor> nodes,
                            String field, String order) {
         
     class NodeComapare implements Comparator<DatanodeDescriptor> {

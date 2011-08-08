@@ -34,6 +34,7 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -405,7 +406,7 @@ public class DatanodeManager {
    * @param nodeList
    *          , array list of live or dead nodes.
    */
-  public void removeDecomNodeFromList(final List<DatanodeDescriptor> nodeList) {
+  private void removeDecomNodeFromList(final List<DatanodeDescriptor> nodeList) {
     // If the include list is empty, any nodes are welcomed and it does not
     // make sense to exclude any nodes from the cluster. Therefore, no remove.
     if (hostsReader.getHosts().isEmpty()) {
@@ -563,7 +564,7 @@ public class DatanodeManager {
                                       nodeReg.getInfoPort(),
                                       nodeReg.getIpcPort());
     nodeReg.updateRegInfo(dnReg);
-    nodeReg.exportedKeys = namesystem.getBlockManager().getBlockKeys();
+    nodeReg.exportedKeys = blockManager.getBlockKeys();
       
     NameNode.stateChangeLog.info("BLOCK* NameSystem.registerDatanode: "
         + "node registration from " + nodeReg.getName()
@@ -710,16 +711,59 @@ public class DatanodeManager {
     return numDead;
   }
 
+  /** @return list of datanodes where decommissioning is in progress. */
+  public List<DatanodeDescriptor> getDecommissioningNodes() {
+    namesystem.readLock();
+    try {
+      final List<DatanodeDescriptor> decommissioningNodes
+          = new ArrayList<DatanodeDescriptor>();
+      final List<DatanodeDescriptor> results = getDatanodeListForReport(
+          DatanodeReportType.LIVE);
+      for(DatanodeDescriptor node : results) {
+        if (node.isDecommissionInProgress()) {
+          decommissioningNodes.add(node);
+        }
+      }
+      return decommissioningNodes;
+    } finally {
+      namesystem.readUnlock();
+    }
+  }
+
+
   /** Fetch live and dead datanodes. */
-  public void fetchDatanodess(final List<DatanodeDescriptor> live, 
-      final List<DatanodeDescriptor> dead) {
-    final List<DatanodeDescriptor> results =
-        getDatanodeListForReport(DatanodeReportType.ALL);    
-    for(DatanodeDescriptor node : results) {
-      if (isDatanodeDead(node))
-        dead.add(node);
-      else
-        live.add(node);
+  public void fetchDatanodes(final List<DatanodeDescriptor> live, 
+      final List<DatanodeDescriptor> dead, final boolean removeDecommissionNode) {
+    if (live == null && dead == null) {
+      throw new HadoopIllegalArgumentException("Both live and dead lists are null");
+    }
+
+    namesystem.readLock();
+    try {
+      final List<DatanodeDescriptor> results =
+          getDatanodeListForReport(DatanodeReportType.ALL);    
+      for(DatanodeDescriptor node : results) {
+        if (isDatanodeDead(node)) {
+          if (dead != null) {
+            dead.add(node);
+          }
+        } else {
+          if (live != null) {
+            live.add(node);
+          }
+        }
+      }
+    } finally {
+      namesystem.readUnlock();
+    }
+    
+    if (removeDecommissionNode) {
+      if (live != null) {
+        removeDecomNodeFromList(live);
+      }
+      if (dead != null) {
+        removeDecomNodeFromList(dead);
+      }
     }
   }
 
@@ -847,7 +891,7 @@ public class DatanodeManager {
               blockPoolId, blks));
         }
         
-        namesystem.addKeyUpdateCommand(cmds, nodeinfo);
+        blockManager.addKeyUpdateCommand(cmds, nodeinfo);
 
         // check for balancer bandwidth update
         if (nodeinfo.getBalancerBandwidth() > 0) {

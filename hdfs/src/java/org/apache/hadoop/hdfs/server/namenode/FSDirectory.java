@@ -444,8 +444,6 @@ public class FSDirectory implements Closeable {
       // modify file-> block and blocksMap
       fileNode.removeLastBlock(block);
       getBlockManager().removeBlockFromMap(block);
-      // If block is removed from blocksMap remove it from corruptReplicasMap
-      getBlockManager().removeFromCorruptReplicasMap(block);
 
       // write modified block locations to log
       fsImage.getEditLog().logOpenFile(path, fileNode);
@@ -809,7 +807,7 @@ public class FSDirectory implements Closeable {
    * @return array of file blocks
    * @throws QuotaExceededException
    */
-  Block[] setReplication(String src, short replication, int[] oldReplication)
+  Block[] setReplication(String src, short replication, short[] oldReplication)
       throws QuotaExceededException, UnresolvedLinkException {
     waitForReady();
     Block[] fileBlocks = null;
@@ -826,14 +824,10 @@ public class FSDirectory implements Closeable {
 
   Block[] unprotectedSetReplication(String src, 
                                     short replication,
-                                    int[] oldReplication
+                                    short[] oldReplication
                                     ) throws QuotaExceededException, 
                                     UnresolvedLinkException {
     assert hasWriteLock();
-    if (oldReplication == null) {
-      oldReplication = new int[1];
-    }
-    oldReplication[0] = -1;
 
     INode[] inodes = rootDir.getExistingPathINodes(src, true);
     INode inode = inodes[inodes.length - 1];
@@ -845,14 +839,17 @@ public class FSDirectory implements Closeable {
       return null;
     }
     INodeFile fileNode = (INodeFile)inode;
-    oldReplication[0] = fileNode.getReplication();
+    final short oldRepl = fileNode.getReplication();
 
     // check disk quota
-    long dsDelta = (replication - oldReplication[0]) *
-         (fileNode.diskspaceConsumed()/oldReplication[0]);
+    long dsDelta = (replication - oldRepl) * (fileNode.diskspaceConsumed()/oldRepl);
     updateCount(inodes, inodes.length-1, 0, dsDelta, true);
 
     fileNode.setReplication(replication);
+
+    if (oldReplication != null) {
+      oldReplication[0] = oldRepl;
+    }
     return fileNode.getBlocks();
   }
 
@@ -2075,8 +2072,9 @@ public class FSDirectory implements Closeable {
         size = fileNode.computeFileSize(true);
         replication = fileNode.getReplication();
         blocksize = fileNode.getPreferredBlockSize();
-        loc = getFSNamesystem().getBlockLocationsInternal(
-            fileNode, 0L, size, false);
+        loc = getFSNamesystem().getBlockManager().createLocatedBlocks(
+            fileNode.getBlocks(), fileNode.computeFileSize(false),
+            fileNode.isUnderConstruction(), 0L, size, false);
         if (loc==null) {
           loc = new LocatedBlocks();
         }

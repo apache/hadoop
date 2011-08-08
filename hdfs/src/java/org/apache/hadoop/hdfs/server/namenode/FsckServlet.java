@@ -30,6 +30,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -59,13 +60,12 @@ public class FsckServlet extends DfsServlet {
           NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
           
           final FSNamesystem namesystem = nn.getNamesystem();
+          final BlockManager bm = namesystem.getBlockManager();
           final int totalDatanodes = 
-            namesystem.getNumberOfDatanodes(DatanodeReportType.LIVE); 
-          final short minReplication = namesystem.getMinReplication();
-
+              namesystem.getNumberOfDatanodes(DatanodeReportType.LIVE); 
           new NamenodeFsck(conf, nn,
-              NamenodeJspHelper.getNetworkTopology(nn), pmap, out,
-              totalDatanodes, minReplication, remoteAddress).fsck();
+              bm.getDatanodeManager().getNetworkTopology(), pmap, out,
+              totalDatanodes, bm.minReplication, remoteAddress).fsck();
           
           return null;
         }
