@@ -646,6 +646,9 @@ Trunk (unreleased changes)
 
     HDFS-2238. In NamenodeFsck.toString(), uses StringBuilder.(..) instead of
     string concatenation.  (Uma Maheswara Rao G via szetszwo)
+   
+    HDFS-2230. ivy to resolve/retrieve latest common-tests jar published by 
+    hadoop common maven build. (gkesavan)
 
   OPTIMIZATIONS
 
