@@ -174,7 +174,7 @@
     <!-- The below two tags  added for contrib system tests -->
     <mkdir dir="${build.test.system}"/>
     <mkdir dir="${build.system.classes}"/> 
-    <antcall target="init-contrib"/>
+    <antcall target="init-contrib" inheritAll="true"/>
   </target>
 
 
@@ -333,7 +333,7 @@
         <fileset dir="${src.test}" includes="**/${testcase}.java" excludes="system/**/*.java" />
       </batchtest>
     </junit>
-    <antcall target="checkfailure"/>
+    <antcall target="checkfailure" inheritAll="true"/>
   </target>
 
   <!-- ================================================================== -->
@@ -450,7 +450,7 @@
           <fileset dir="@{fileset.dir}" includes="**/${testcase}.java"/>
         </batchtest>
       </junit>
-      <antcall target="checkfailure"/>
+      <antcall target="checkfailure" inheritAll="true"/>
     </sequential>
   </macrodef>
 

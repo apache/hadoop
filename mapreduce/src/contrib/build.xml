@@ -27,7 +27,7 @@
   <!-- Compile contribs.                                      -->
   <!-- ====================================================== -->
   <target name="compile">
-    <subant target="compile">
+    <subant target="compile" inheritAll="true">
       <fileset dir="." includes="*/build.xml"/>
     </subant>
   </target>
@@ -36,7 +36,7 @@
   <!-- Compile contrib test code.                             -->
   <!-- ====================================================== -->
   <target name="compile-test">
-    <subant target="compile-test">
+    <subant target="compile-test" inheritAll="true">
       <fileset dir="." includes="*/build.xml"/>
     </subant>
   </target>
@@ -45,7 +45,7 @@
   <!-- Package contrib jars.                                  -->
   <!-- ====================================================== -->
   <target name="package">
-    <subant target="package">
+    <subant target="package" inheritAll="true">
       <fileset dir="." includes="*/build.xml"/>
     </subant>
   </target>
@@ -57,7 +57,7 @@
       <property name="hadoop.root" location="${root}/../../../"/>
       <property name="build.contrib.dir" location="${hadoop.root}/build/contrib"/>
       <delete file="${build.contrib.dir}/testsfailed"/>
-    <subant target="test">
+    <subant target="test" inheritAll="true">
       <property name="continueOnFailure" value="true"/>
       <fileset dir="." includes="streaming/build.xml"/> 
       <fileset dir="." includes="fairscheduler/build.xml"/> 
@@ -80,12 +80,8 @@
       <property name="hadoop.root" location="${root}/../../../"/>
       <property name="build.contrib.dir" location="${hadoop.root}/build/contrib"/>
       <delete file="${build.contrib.dir}/testsfailed"/>
-      <subant target="test-system">
+      <subant target="test-system" inheritAll="true">
           <property name="continueOnFailure" value="true"/>
-          <property name="hadoop.home" value="${hadoop.home}"/>
-          <property name="hadoop.conf.dir" value="${hadoop.conf.dir}"/>
-          <property name="hadoop.conf.dir.deployed"
-               value="${hadoop.conf.dir.deployed}"/>
           <fileset dir="." includes="hdfsproxy/build.xml"/>
           <fileset dir="." includes="streaming/build.xml"/>
           <fileset dir="." includes="fairscheduler/build.xml"/>
@@ -97,7 +93,7 @@
   </target>
 
   <target name="docs">
-    <subant target="docs">
+    <subant target="docs" inheritAll="true">
       <fileset dir="." includes="capacity-scheduler/build.xml"/> 
     </subant>
   </target>

@@ -432,6 +432,10 @@
      <subant target="compile">
         <property name="version" value="${version}"/>
         <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+        <property name="hadoop-hdfs.version" value="${hadoop-hdfs.version}"/>
+        <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+        <property name="offline" value="${offline}"/>
+        <property name="resolvers" value="${resolvers}"/>
         <fileset file="${contrib.dir}/build.xml"/>
      </subant>  	
   </target>
@@ -615,7 +619,7 @@
     <copy todir="${test.build.classes}">
       <fileset dir="${test.mapred.build.classes}"/>
     </copy>
-    <subant buildpath="build.xml" target="-do-jar-test"/>
+    <subant buildpath="build.xml" target="-do-jar-test" inheritAll="true"/>
     <jar jarfile="${hadoop-mapred-test-sources.jar}">
       <fileset dir="${test.src.dir}/mapred" includes="org/apache/hadoop/**/*.java" />
       <fileset dir="${test.src.dir}/unit" includes="org/apache/hadoop/**/*.java" />
@@ -737,7 +741,7 @@
             includes="**/${testcase}.java"/>
         </batchtest>
       </junit>
-      <antcall target="checkfailure"/>
+      <antcall target="checkfailure" inheritAll="true"/>
     </sequential>
   </macrodef>
 
@@ -805,6 +809,11 @@
     <subant target="test">
        <property name="version" value="${version}"/>
        <property name="clover.jar" value="${clover.jar}"/>
+       <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+       <property name="hadoop-hdfs.version" value="${hadoop-hdfs.version}"/>
+       <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+       <property name="offline" value="${offline}"/>
+       <property name="resolvers" value="${resolvers}"/>
        <fileset file="${contrib.dir}/build.xml"/>
     </subant> 
   </target>
@@ -812,13 +821,20 @@
   <target name="test-core" description="Run core, hdfs and mapred unit tests">
     <delete file="${test.build.dir}/testsfailed"/>
     <property name="continueOnFailure" value="true"/>
-    <antcall target="run-test-mapred"/>
+    <antcall target="run-test-mapred" inheritAll="true"/>
     <available file="${test.build.dir}/testsfailed" property="testsfailed"/>
     <fail if="testsfailed">Tests failed!</fail>
   </target>
 
   <target name="test" depends="jar-test, test-core" description="Run all unit tests">
     <subant target="test-contrib">
+      <property name="version" value="${version}"/>
+      <property name="clover.jar" value="${clover.jar}"/>
+      <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+      <property name="hadoop-hdfs.version" value="${hadoop-hdfs.version}"/>
+      <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+      <property name="offline" value="${offline}"/>
+      <property name="resolvers" value="${resolvers}"/>
       <fileset file="${basedir}/build.xml"/>
      </subant>
   </target>
@@ -828,6 +844,13 @@
     <antcall target="test">
       <param name="test.include" value="*"/>
       <param name="test.classpath.id" value="test.cluster.classpath"/>
+      <param name="version" value="${version}"/>
+      <param name="clover.jar" value="${clover.jar}"/>
+      <param name="hadoop-common.version" value="${hadoop-common.version}"/>
+      <param name="hadoop-hdfs.version" value="${hadoop-hdfs.version}"/>
+      <param name="ivy_repo_url" value="${ivy_repo_url}"/>
+      <param name="offline" value="${offline}"/>
+      <param name="resolvers" value="${resolvers}"/>
     </antcall>
   </target>
 
@@ -865,6 +888,11 @@
    <subant target="jar">
       <property name="version" value="${version}"/>
       <property name="dist.dir" value="${dist.dir}"/>
+      <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+      <property name="hadoop-hdfs.version" value="${hadoop-hdfs.version}"/>
+      <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+      <property name="offline" value="${offline}"/>
+      <property name="resolvers" value="${resolvers}"/>
       <fileset file="${contrib.dir}/capacity-scheduler/build.xml"/>
       <fileset file="${contrib.dir}/streaming/build.xml"/>
       <fileset file="${contrib.dir}/gridmix/build.xml"/>
@@ -938,9 +966,16 @@
     <copy file="${docs.src}/releasenotes.html" todir="${build.docs}"/>
     <style basedir="${mapred.src.dir}" destdir="${build.docs}"
            includes="mapred-default.xml" style="conf/configuration.xsl"/>
-    <antcall target="changes-to-html"/>
+    <antcall target="changes-to-html" inheritAll="true"/>
     <subant target="docs">
        <property name="build.docs" value="${build.docs}"/>
+       <property name="version" value="${version}"/>
+       <property name="clover.jar" value="${clover.jar}"/>
+       <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+       <property name="hadoop-hdfs.version" value="${hadoop-hdfs.version}"/>
+       <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+       <property name="offline" value="${offline}"/>
+       <property name="resolvers" value="${resolvers}"/>
        <fileset file="${contrib.dir}/build.xml"/>
     </subant> 
   </target>
@@ -1160,6 +1195,11 @@
       distribution directory so contribs know where to install to.-->
       <property name="version" value="${version}"/>
       <property name="dist.dir" value="${dist.dir}"/>
+      <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+      <property name="hadoop-hdfs.version" value="${hadoop-hdfs.version}"/>
+      <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+      <property name="offline" value="${offline}"/>
+      <property name="resolvers" value="${resolvers}"/>
       <fileset file="${contrib.dir}/build.xml"/>
     </subant>  	
     <subant target="package">
@@ -1167,6 +1207,11 @@
       distribution directory so contribs know where to install to.-->
       <property name="version" value="${version}"/>
       <property name="dist.dir" value="${dist.dir}"/>
+      <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+      <property name="hadoop-hdfs.version" value="${hadoop-hdfs.version}"/>
+      <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+      <property name="offline" value="${offline}"/>
+      <property name="resolvers" value="${resolvers}"/>
       <fileset file="${contrib.dir}/build.xml"/>
     </subant>  	
 
@@ -1283,6 +1328,13 @@
       distribution directory so contribs know where to install to.-->
       <property name="version" value="${version}"/>
       <property name="dist.dir" value="${dist.dir}"/>
+      <property name="hadoop-version" value="${hadoop-common.version}"/>
+      <property name="clover.jar" value="${clover.jar}"/>
+      <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+      <property name="hadoop-hdfs.version" value="${hadoop-hdfs.version}"/>
+      <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+      <property name="offline" value="${offline}"/>
+      <property name="resolvers" value="${resolvers}"/>
       <fileset file="${contrib.dir}/build.xml"/>
     </subant>  	
 
@@ -1751,7 +1803,7 @@
 
   <target name="create-c++-utils-makefile" depends="check-c++-makefiles" 
                                            if="need.c++.utils.makefile">
-    <antcall target="create-c++-utils-configure"/>
+    <antcall target="create-c++-utils-configure" inheritAll="true"/>
     <mkdir dir="${build.c++.utils}"/>
     <chmod file="${c++.utils.src}/configure" perm="ugo+x"/>
     <exec executable="${c++.utils.src}/configure" dir="${build.c++.utils}"
@@ -1770,7 +1822,7 @@
 
   <target name="create-c++-pipes-makefile" depends="check-c++-makefiles" 
                                            if="need.c++.pipes.makefile">
-    <antcall target="create-c++-pipes-configure"/>
+    <antcall target="create-c++-pipes-configure" inheritAll="true"/>
     <mkdir dir="${build.c++.pipes}"/>
     <chmod file="${c++.pipes.src}/configure" perm="ugo+x"/>
     <exec executable="${c++.pipes.src}/configure" dir="${build.c++.pipes}"
@@ -1794,7 +1846,7 @@
   <target name="create-c++-examples-pipes-makefile" 
           depends="check-c++-makefiles" 
           if="need.c++.examples.pipes.makefile">
-    <antcall target="create-c++-examples-pipes-configure"/>
+    <antcall target="create-c++-examples-pipes-configure" inheritAll="true"/>
     <mkdir dir="${build.c++.examples.pipes}"/>
     <chmod file="${c++.examples.pipes.src}/configure" perm="ugo+x"/>
     <exec executable="${c++.examples.pipes.src}/configure" 
@@ -2175,7 +2227,7 @@
 
   <!-- taskcontroller targets -->
   <target name="init-task-controller-build">
-    <antcall target="create-c++-task-controller-configure"/>
+    <antcall target="create-c++-task-controller-configure" inheritAll="true"/>
     <mkdir dir="${build.c++.task-controller}" />
     <copy todir="${build.c++.task-controller}">
       <fileset dir="${c++.task-controller.src}" includes="*.c"/>
