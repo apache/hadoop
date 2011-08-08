@@ -9,6 +9,9 @@ Release 0.20.205.0 - unreleased
 
   BUG FIXES
 
+    MAPREDUCE-2729. Ensure jobs with reduces which can't be launched due to
+    slow-start do not count for user-limits. (Sherry Chen via acmurthy) 
+
     MAPREDUCE-2651. Fix race condition in Linux task controller for
     job log directory creation. (Bharath Mundlapudi via llu)
 
