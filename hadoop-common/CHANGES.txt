@@ -464,6 +464,9 @@ Trunk (unreleased changes)
     HADOOP-7523. Test org.apache.hadoop.fs.TestFilterFileSystem fails due to
     java.lang.NoSuchMethodException. (John Lee via tomwhite)
 
+    HADOOP-7528. Maven build fails in Windows. (Alejandro Abdelnur via
+    tomwhite)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

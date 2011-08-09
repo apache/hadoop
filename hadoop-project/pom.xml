@@ -462,9 +462,6 @@
             <requireJavaVersion>
               <version>1.6</version>
             </requireJavaVersion>
-            <requireOS>
-              <family>unix</family>
-            </requireOS>
           </rules>
         </configuration>
         <executions>
@@ -507,7 +504,7 @@
       <id>os.linux</id>
       <activation>
         <os>
-          <family>Linux</family>
+          <family>!Mac</family>
         </os>
       </activation>
       <properties>

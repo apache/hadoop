@@ -853,11 +853,17 @@
                     <!-- Using Unix script to preserve symlinks -->
                     <echo file="${project.build.directory}/tar-copynativelibs.sh">
 
+                      which cygpath 2> /dev/null
+                      if [ $? = 1 ]; then
+                        BUILD_DIR="${project.build.directory}"
+                      else
+                        BUILD_DIR=`cygpath --unix '${project.build.directory}'`
+                      fi
                       TAR='tar cf -'
                       UNTAR='tar xfBp -'
-                      LIB_DIR="${project.build.directory}/native/target/usr/local/lib"
+                      LIB_DIR="${BUILD_DIR}/native/target/usr/local/lib"
                       if [ -d $${LIB_DIR} ] ; then
-                      TARGET_DIR="${project.build.directory}/${project.artifactId}-${project.version}/lib/native/${build.platform}"
+                      TARGET_DIR="${BUILD_DIR}/${project.artifactId}-${project.version}/lib/native/${build.platform}"
                       mkdir -p $${TARGET_DIR}
                       cd $${LIB_DIR}
                       $$TAR *hadoop* | (cd $${TARGET_DIR}/; $$UNTAR)
@@ -881,11 +887,20 @@
                 </goals>
                 <configuration>
                   <target>
-                    <!-- Using Unix tar to preserve symlinks -->
-                    <exec executable="tar" dir="${project.build.directory}" failonerror="yes">
-                      <arg value="czf"/>
-                      <arg value="${project.build.directory}/${project.artifactId}-${project.version}.tar.gz"/>
-                      <arg value="${project.artifactId}-${project.version}"/>
+                    <!-- Using Unix script to preserve symlinks -->
+                    <echo file="${project.build.directory}/tar-maketar.sh">
+
+                      which cygpath 2> /dev/null
+                      if [ $? = 1 ]; then
+                        BUILD_DIR="${project.build.directory}"
+                      else
+                        BUILD_DIR=`cygpath --unix '${project.build.directory}'`
+                      fi
+                      cd ${BUILD_DIR}
+                      tar czf ${project.artifactId}-${project.version}.tar.gz ${project.artifactId}-${project.version}
+                    </echo>
+                    <exec executable="sh" dir="${project.build.directory}" failonerror="true">
+                      <arg line="./tar-maketar.sh"/>
                     </exec>
                   </target>
                 </configuration>
@@ -946,11 +961,17 @@
                     <!-- Using Unix script to preserve symlinks -->
                     <echo file="${project.build.directory}/bintar-copynativelibs.sh">
 
+                      which cygpath 2> /dev/null
+                      if [ $? = 1 ]; then
+                        BUILD_DIR="${project.build.directory}"
+                      else
+                        BUILD_DIR=`cygpath --unix '${project.build.directory}'`
+                      fi
                       TAR='tar cf -'
                       UNTAR='tar xfBp -'
-                      LIB_DIR="${project.build.directory}/native/target/usr/local/lib"
+                      LIB_DIR="${BUILD_DIR}/native/target/usr/local/lib"
                       if [ -d $${LIB_DIR} ] ; then
-                      TARGET_DIR="${project.build.directory}/${project.artifactId}-${project.version}-bin/lib"
+                      TARGET_DIR="${BUILD_DIR}/${project.artifactId}-${project.version}-bin/lib"
                       mkdir -p $${TARGET_DIR}
                       cd $${LIB_DIR}
                       $$TAR *hadoop* | (cd $${TARGET_DIR}/; $$UNTAR)
@@ -974,11 +995,20 @@
                 </goals>
                 <configuration>
                   <target>
-                    <!-- Using Unix tar to preserve symlinks -->
-                    <exec executable="tar" dir="${project.build.directory}" failonerror="yes">
-                      <arg value="czf"/>
-                      <arg value="${project.build.directory}/${project.artifactId}-${project.version}-bin.tar.gz"/>
-                      <arg value="${project.artifactId}-${project.version}-bin"/>
+                    <!-- Using Unix script to preserve symlinks -->
+                    <echo file="${project.build.directory}/bintar-maketar.sh">
+
+                      which cygpath 2> /dev/null
+                      if [ $? = 1 ]; then
+                        BUILD_DIR="${project.build.directory}"
+                      else
+                        BUILD_DIR=`cygpath --unix '${project.build.directory}'`
+                      fi
+                      cd ${BUILD_DIR}
+                      tar czf ${project.artifactId}-${project.version}-bin.tar.gz ${project.artifactId}-${project.version}-bin
+                    </echo>
+                    <exec executable="sh" dir="${project.build.directory}" failonerror="true">
+                      <arg line="./bintar-maketar.sh"/>
                     </exec>
                   </target>
                 </configuration>
