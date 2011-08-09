@@ -651,8 +651,7 @@ public class RegionSplitter {
       fs.rename(tmpFile, splitFile);
     } else {
       LOG.debug("_balancedSplit file found. Replay log to restore state...");
-      FSUtils.getInstance(fs, table.getConfiguration())
-        .recoverFileLease(fs, splitFile, table.getConfiguration());
+      FSUtils.recoverFileLease(fs, splitFile, table.getConfiguration());
 
       // parse split file and process remaining splits
       FSDataInputStream tmpIn = fs.open(splitFile);

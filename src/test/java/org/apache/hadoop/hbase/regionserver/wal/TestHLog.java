@@ -408,8 +408,7 @@ public class TestHLog  {
       public Exception exception = null;
       public void run() {
           try {
-            FSUtils.getInstance(fs, rlConf)
-              .recoverFileLease(recoveredFs, walPath, rlConf);
+            FSUtils.recoverFileLease(recoveredFs, walPath, rlConf);
           } catch (IOException e) {
             exception = e;
           }
