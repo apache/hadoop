@@ -309,6 +309,8 @@ Trunk (unreleased changes)
     HADOOP-7501. Publish Hadoop Common artifacts (post HADOOP-6671) to Apache
     SNAPSHOTs repo. (Alejandro Abdelnur via tomwhite)
 
+    HADOOP-7525. Make arguments to test-patch optional. (tomwhite)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
