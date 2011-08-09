@@ -22,8 +22,6 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.KeyValue;
 
-import java.util.ArrayList;
-
 /**
  * This filter is used to filter based on the column family. It takes an
  * operator (equal, greater, not equal, etc) and a byte [] comparator for the
@@ -65,10 +63,5 @@ public class FamilyFilter extends CompareFilter {
       }
     }
     return ReturnCode.INCLUDE;
-  }
-
-  @Override
-  public Filter createFilterFromArguments (ArrayList<byte []> filterArguments) {
-    return super.createFilterFromArguments(filterArguments);
   }
 }

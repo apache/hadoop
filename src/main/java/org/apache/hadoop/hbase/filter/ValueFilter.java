@@ -22,8 +22,6 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.KeyValue;
 
-import java.util.ArrayList;
-
 /**
  * This filter is used to filter based on column value. It takes an
  * operator (equal, greater, not equal, etc) and a byte [] comparator for the
@@ -62,10 +60,5 @@ public class ValueFilter extends CompareFilter {
       return ReturnCode.SKIP;
     }
     return ReturnCode.INCLUDE;
-  }
-
-  @Override
-  public Filter createFilterFromArguments (ArrayList<byte []> filterArguments) {
-    return super.createFilterFromArguments(filterArguments);
   }
 }

@@ -26,8 +26,6 @@ import java.io.IOException;
 import java.io.DataInput;
 import java.util.List;
 
-import java.util.ArrayList;
-
 /**
  * A filter that will only return the first KV from each row.
  * <p>
@@ -47,16 +45,6 @@ public class FirstKeyOnlyFilter extends FilterBase {
     if(foundKV) return ReturnCode.NEXT_ROW;
     foundKV = true;
     return ReturnCode.INCLUDE;
-  }
-
-  @Override
-  public Filter createFilterFromArguments (ArrayList<byte []> filterArguments) {
-    if (filterArguments.size() != 0) {
-      throw new IllegalArgumentException("Incorrect Arguments passed to FirstKeyOnlyFilter. " +
-                                         "Expected: 0 but got: " + filterArguments.size());
-    }
-
-    return new FirstKeyOnlyFilter();
   }
 
   public void write(DataOutput out) throws IOException {

@@ -33,7 +33,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.ArrayList;
 
 /**
  * This filter is used to filter cells based on value. It takes a {@link CompareFilter.CompareOp}
@@ -246,39 +245,6 @@ public class SingleColumnValueFilter extends FilterBase {
    */
   public void setLatestVersionOnly(boolean latestVersionOnly) {
     this.latestVersionOnly = latestVersionOnly;
-  }
-
-  @Override
-  public Filter createFilterFromArguments (ArrayList<byte []> filterArguments) {
-    if (filterArguments.size() != 4 && filterArguments.size() != 6)
-      throw new IllegalArgumentException("Incorrect Arguments passed to SingleColumnValueFilter. " +
-                                         "Expected: 4 or 6 but got: " + filterArguments.size());
-
-    byte [] family = ParseFilter.convertByteArrayToString(filterArguments.get(0));
-    byte [] qualifier = ParseFilter.convertByteArrayToString(filterArguments.get(1));
-    CompareOp compareOp = ParseFilter.createCompareOp(filterArguments.get(2));
-    WritableByteArrayComparable comparator = ParseFilter.createComparator(
-      ParseFilter.convertByteArrayToString(filterArguments.get(3)));
-
-    if (comparator instanceof RegexStringComparator ||
-        comparator instanceof SubstringComparator) {
-      if (compareOp != CompareOp.EQUAL &&
-          compareOp != CompareOp.NOT_EQUAL) {
-        throw new IllegalArgumentException ("A regexstring comparator and substring comparator " +
-                                            "can only be used with EQUAL and NOT_EQUAL");
-      }
-    }
-
-    SingleColumnValueFilter filter = new SingleColumnValueFilter(family, qualifier,
-                                                                 compareOp, comparator);
-
-    if (filterArguments.size() == 6) {
-      boolean filterIfMissing = ParseFilter.convertByteArrayToBoolean(filterArguments.get(4));
-      boolean latestVersionOnly = ParseFilter.convertByteArrayToBoolean(filterArguments.get(5));
-      filter.setFilterIfMissing(filterIfMissing);
-      filter.setLatestVersionOnly(latestVersionOnly);
-    }
-    return filter;
   }
 
   public void readFields(final DataInput in) throws IOException {

@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.DataInput;
-import java.util.ArrayList;
 
 /**
  * This filter is used for selecting only those keys with columns that are
@@ -142,26 +141,6 @@ public class ColumnRangeFilter extends FilterBase {
     }
 
     return ReturnCode.NEXT_ROW;
-  }
-
-  @Override
-  public Filter createFilterFromArguments (ArrayList<byte []> filterArguments) {
-    if (filterArguments.size() != 4) {
-      throw new IllegalArgumentException("Incorrect arguments passed to ColumnRangeFilter. " +
-                                         "Expected: 4 but got: " + filterArguments.size());
-    }
-
-    byte [] minColumn = ParseFilter.convertByteArrayToString(filterArguments.get(0));
-    boolean minColumnInclusive = ParseFilter.convertByteArrayToBoolean(filterArguments.get(1));
-    byte [] maxColumn = ParseFilter.convertByteArrayToString(filterArguments.get(2));
-    boolean maxColumnInclusive = ParseFilter.convertByteArrayToBoolean(filterArguments.get(3));
-
-    if (minColumn.length == 0)
-      minColumn = null;
-    if (maxColumn.length == 0)
-      maxColumn = null;
-    return new ColumnRangeFilter(minColumn, minColumnInclusive,
-                                 maxColumn, maxColumnInclusive);
   }
 
   @Override

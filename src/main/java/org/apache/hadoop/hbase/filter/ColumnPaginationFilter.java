@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.filter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.KeyValue;
 
@@ -47,12 +46,6 @@ public class ColumnPaginationFilter extends FilterBase
 
   public ColumnPaginationFilter(final int limit, final int offset)
   {
-    if (limit < 0) {
-      throw new IllegalArgumentException("Limit must not be negative");
-    }
-    if (offset < 0) {
-      throw new IllegalArgumentException("Offset must not be negative");
-    }
     this.limit = limit;
     this.offset = offset;
   }
@@ -88,17 +81,6 @@ public class ColumnPaginationFilter extends FilterBase
   public void reset()
   {
     this.count = 0;
-  }
-
-  @Override
-  public Filter createFilterFromArguments (ArrayList<byte []> filterArguments) {
-    if (filterArguments.size() != 2) {
-      throw new IllegalArgumentException("Incorrect Arguments passed to ColumnPaginationFilter. " +
-                                         "Expected: 2 but got: " + filterArguments.size());
-    }
-    int limit = ParseFilter.convertByteArrayToInt(filterArguments.get(0));
-    int offset = ParseFilter.convertByteArrayToInt(filterArguments.get(1));
-    return new ColumnPaginationFilter(limit, offset);
   }
 
   public void readFields(DataInput in) throws IOException

@@ -47,7 +47,8 @@ public class ZKConfig {
 
   private static final String ZK_CFG_PROPERTY = "hbase.zookeeper.property.";
   private static final int ZK_CFG_PROPERTY_SIZE = ZK_CFG_PROPERTY.length();
-  private static final String ZK_CLIENT_PORT_KEY = "clientPort";
+  private static final String ZK_CLIENT_PORT_KEY = ZK_CFG_PROPERTY
+      + "clientPort";
 
   /**
    * Make a Properties object holding ZooKeeper config equivalent to zoo.cfg.
