@@ -3,13 +3,11 @@ package org.apache.hadoop.yarn.api.records.impl.pb;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationStateProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
 public class ApplicationReportPBImpl extends ProtoBase<ApplicationReportProto> 
@@ -263,9 +261,4 @@ implements ApplicationReport {
       ApplicationIdProto applicationId) {
     return new ApplicationIdPBImpl(applicationId);
   }
-
-  private Container convertFromProtoFormat(ContainerProto c) {
-    return new ContainerPBImpl(c);
-  }
-
 }

@@ -26,7 +26,6 @@ import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.ContainerListProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
-import org.mortbay.util.ajax.JSON.Convertor;
     
 public class NodeStatusPBImpl extends ProtoBase<NodeStatusProto> implements NodeStatus {
   NodeStatusProto proto = NodeStatusProto.getDefaultInstance();
@@ -267,7 +266,7 @@ public class NodeStatusPBImpl extends ProtoBase<NodeStatusProto> implements Node
   @Override
   public void removeContainers(ApplicationId applicationId) {
     initContainers();
-    this.containers.remove(applicationId);
+    this.containers.remove(convertToProtoFormat(applicationId));
   }
   
   @Override

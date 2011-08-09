@@ -3,7 +3,12 @@ Hadoop MapReduce Change Log
 Trunk (unreleased changes)
 
   MAPREDUCE-279
-
+    
+    Patch for findbugs warnings in Resource Manager (siddharth seth via mahadev)
+    
+    Fix ivy conf to work with the hadoop common trunk maven build changes.
+    (Giridharan Kesavan)
+    
     Fix the poms to enable 0.23 snapshots for hdfs/common from apache 
     nightly builds (gkesavan)
  
@@ -2456,6 +2461,4 @@ Release 0.21.0 - 2010-08-13
 
     MAPREDUCE-1856. Extract a subset of tests for smoke (DOA) validation (cos)
     
-    Fix ivy conf to work with the hadoop common trunk maven build changes.
-    (Giridharan Kesavan)
 

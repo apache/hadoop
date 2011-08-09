@@ -141,6 +141,7 @@ public class ContainerLogsPage extends NMView {
               totalRead += len;
               toRead = toRead - totalRead;
             }
+            reader.close();
             writer().write("</pre>");
           } catch (IOException e) {
               writer().write(

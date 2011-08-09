@@ -107,11 +107,16 @@ public class AggregatedLogFormat {
           out.writeUTF(String.valueOf(logFile.length()));
 
           // Write the log itself
-          FileInputStream in = new FileInputStream(logFile);
-          byte[] buf = new byte[65535];
-          int len = 0;
-          while ((len = in.read(buf)) != -1) {
-            out.write(buf, 0, len);
+          FileInputStream in = null;
+          try {
+            in = new FileInputStream(logFile);
+            byte[] buf = new byte[65535];
+            int len = 0;
+            while ((len = in.read(buf)) != -1) {
+              out.write(buf, 0, len);
+            }
+          } finally {
+            in.close();
           }
         }
       }

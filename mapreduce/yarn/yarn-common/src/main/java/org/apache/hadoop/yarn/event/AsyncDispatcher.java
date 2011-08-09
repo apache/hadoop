@@ -113,6 +113,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
       eventDispatchers.get(type).handle(event);
     }
     catch (Throwable t) {
+      //TODO Maybe log the state of the queue
       LOG.fatal("Error in dispatcher thread. Exiting..", t);
       System.exit(-1);
     }

@@ -112,6 +112,35 @@
     <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.LogAggregationService" />
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
+  <!-- Inconsistent sync warning - reinitialize read from other queue does not need sync-->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue" />
+    <Or>
+      <Field name="absoluteCapacity" />
+      <Field name="absoluteMaxCapacity" />
+      <Field name="acls" />
+      <Field name="capacity" />
+      <Field name="maxApplications" />
+      <Field name="maxApplicationsPerUser" />
+      <Field name="maximumCapacity" />
+      <Field name="state" />
+      <Field name="userLimit" />
+      <Field name="userLimitFactor" />
+    </Or>
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue" />
+    <Or>
+      <Field name="absoluteCapacity" />
+      <Field name="absoluteMaxCapacity" />
+      <Field name="acls" />
+      <Field name="capacity" />
+      <Field name="maximumCapacity" />
+      <Field name="state" />
+    </Or>
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
 
   <!-- Don't care if putIfAbsent value is ignored -->
   <Match>
@@ -128,5 +157,27 @@
     <Class name="org.apache.hadoop.yarn.webapp.WebApps$Builder" />
     <Bug pattern="DM_EXIT" />
   </Match>
+  <!-- AsyncDispatcher will kill the process if there is an error dispatching -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.event.AsyncDispatcher" />
+    <Method name="dispatch" />
+    <Bug pattern="DM_EXIT" />
+  </Match>
 
- </FindBugsFilter>
+  <!-- Ignore heartbeat exception when killing localizer -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer" />
+    <Method name="localizeFiles" />
+    <Bug pattern="DE_MIGHT_IGNORE" />
+  </Match>
+
+  <!-- Ignore EI_EXPOSE_REP2 in Log services -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.AggregatedLogFormat$LogValue" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.AppLogAggregatorImpl" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+</FindBugsFilter>

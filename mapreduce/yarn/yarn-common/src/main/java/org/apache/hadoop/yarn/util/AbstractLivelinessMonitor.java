@@ -35,7 +35,7 @@ public abstract class AbstractLivelinessMonitor<O> extends AbstractService {
   //received.
   private Thread checkerThread;
   private volatile boolean stopped;
-  public static int DEFAULT_EXPIRE = 5*60*1000;//5 mins
+  public static final int DEFAULT_EXPIRE = 5*60*1000;//5 mins
   private int expireInterval = DEFAULT_EXPIRE;
   private int monitorInterval = expireInterval/3;
 

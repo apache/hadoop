@@ -196,35 +196,33 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     nodeStatus.setNodeId(this.nodeId);
 
     int numActiveContainers = 0;
-    synchronized (this.context.getContainers()) {
-      for (Iterator<Entry<ContainerId, Container>> i =
-          this.context.getContainers().entrySet().iterator(); i.hasNext();) {
-        Entry<ContainerId, Container> e = i.next();
-        ContainerId containerId = e.getKey();
-        Container container = e.getValue();
+    for (Iterator<Entry<ContainerId, Container>> i =
+        this.context.getContainers().entrySet().iterator(); i.hasNext();) {
+      Entry<ContainerId, Container> e = i.next();
+      ContainerId containerId = e.getKey();
+      Container container = e.getValue();
 
-        List<org.apache.hadoop.yarn.api.records.Container> applicationContainers = nodeStatus
-            .getContainers(container.getContainerID().getAppId());
-        if (applicationContainers == null) {
-          applicationContainers = new ArrayList<org.apache.hadoop.yarn.api.records.Container>();
-          nodeStatus.setContainers(container.getContainerID().getAppId(),
-              applicationContainers);
-        }
+      List<org.apache.hadoop.yarn.api.records.Container> applicationContainers = nodeStatus
+          .getContainers(container.getContainerID().getAppId());
+      if (applicationContainers == null) {
+        applicationContainers = new ArrayList<org.apache.hadoop.yarn.api.records.Container>();
+        nodeStatus.setContainers(container.getContainerID().getAppId(),
+            applicationContainers);
+      }
 
-        // Clone the container to send it to the RM
-        org.apache.hadoop.yarn.api.records.Container c = container.cloneAndGetContainer();
-        c.setNodeId(this.nodeId);
-        c.setNodeHttpAddress(this.nodeHttpAddress); // TODO: don't set everytime.
-        applicationContainers.add(c);
-        ++numActiveContainers;
-        LOG.info("Sending out status for container: " + c);
+      // Clone the container to send it to the RM
+      org.apache.hadoop.yarn.api.records.Container c = container.cloneAndGetContainer();
+      c.setNodeId(this.nodeId);
+      c.setNodeHttpAddress(this.nodeHttpAddress); // TODO: don't set everytime.
+      applicationContainers.add(c);
+      ++numActiveContainers;
+      LOG.info("Sending out status for container: " + c);
 
-        if (c.getState() == ContainerState.COMPLETE) {
-          // Remove
-          i.remove();
+      if (c.getState() == ContainerState.COMPLETE) {
+        // Remove
+        i.remove();
 
-          LOG.info("Removed completed container " + containerId);
-        }
+        LOG.info("Removed completed container " + containerId);
       }
     }
 

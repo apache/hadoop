@@ -216,12 +216,12 @@ public class ParentQueue implements Queue {
   }
 
   @Override
-  public float getCapacity() {
+  public synchronized float getCapacity() {
     return capacity;
   }
 
   @Override
-  public float getAbsoluteCapacity() {
+  public synchronized float getAbsoluteCapacity() {
     return absoluteCapacity;
   }
 
@@ -236,7 +236,7 @@ public class ParentQueue implements Queue {
   }
 
   @Override
-  public float getUsedCapacity() {
+  public synchronized float getUsedCapacity() {
     return usedCapacity;
   }
 
@@ -255,21 +255,21 @@ public class ParentQueue implements Queue {
     return new ArrayList<Queue>(childQueues);
   }
 
-  public int getNumContainers() {
+  public synchronized int getNumContainers() {
     return numContainers;
   }
   
-  public int getNumApplications() {
+  public synchronized int getNumApplications() {
     return numApplications;
   }
 
   @Override
-  public QueueState getState() {
+  public synchronized QueueState getState() {
     return state;
   }
 
   @Override
-  public Map<QueueACL, AccessControlList> getQueueAcls() {
+  public synchronized Map<QueueACL, AccessControlList> getQueueAcls() {
     return new HashMap<QueueACL, AccessControlList>(acls);
   }
 

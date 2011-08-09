@@ -82,7 +82,7 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
     }
   }
 
-  private class Invoker implements InvocationHandler, Closeable {
+  private static class Invoker implements InvocationHandler, Closeable {
     private Map<String, Message> returnTypes = new ConcurrentHashMap<String, Message>();
     private boolean isClosed = false;
     private Client.ConnectionId remoteId;

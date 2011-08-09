@@ -325,7 +325,7 @@ public class AppSchedulingInfo {
     clearRequests();
   }
 
-  public void setQueue(Queue queue) {
+  public synchronized void setQueue(Queue queue) {
     this.queue = queue;
   }
 }

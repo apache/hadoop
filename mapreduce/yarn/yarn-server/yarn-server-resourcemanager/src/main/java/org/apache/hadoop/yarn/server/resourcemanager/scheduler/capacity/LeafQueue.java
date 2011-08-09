@@ -203,24 +203,24 @@ public class LeafQueue implements Queue {
         ", state=" + state +
         ", acls=" + aclsString);
   }
-
+  
   @Override
-  public float getCapacity() {
+  public synchronized float getCapacity() {
     return capacity;
   }
 
   @Override
-  public float getAbsoluteCapacity() {
+  public synchronized float getAbsoluteCapacity() {
     return absoluteCapacity;
   }
 
   @Override
-  public float getMaximumCapacity() {
+  public synchronized float getMaximumCapacity() {
     return maximumCapacity;
   }
 
   @Override
-  public float getAbsoluteMaximumCapacity() {
+  public synchronized float getAbsoluteMaximumCapacity() {
     return absoluteMaxCapacity;
   }
 
@@ -240,7 +240,7 @@ public class LeafQueue implements Queue {
   }
 
   @Override
-  public float getUsedCapacity() {
+  public synchronized float getUsedCapacity() {
     return usedCapacity;
   }
 
@@ -271,12 +271,12 @@ public class LeafQueue implements Queue {
     return applications.size();
   }
 
-  public int getNumContainers() {
+  public synchronized int getNumContainers() {
     return numContainers;
   }
 
   @Override
-  public QueueState getState() {
+  public synchronized QueueState getState() {
     return state;
   }
 
