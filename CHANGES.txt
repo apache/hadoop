@@ -192,6 +192,8 @@ Release 0.91.0 - Unreleased
    HBASE-4171  HBase shell broken in trunk (Lars Hofhansl)
    HBASE-4162  Fix TestHRegionInfo.testGetSetOfHTD: delete /tmp/hbase-<username>
                if it already exists (Mikhail Bautin)
+   HBASE-4179  Failed to run RowCounter on top of Hadoop branch-0.22
+               (Michael Weng)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

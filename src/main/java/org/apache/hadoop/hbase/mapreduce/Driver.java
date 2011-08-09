@@ -48,6 +48,7 @@ public class Driver {
         " the data from tables in two different clusters. WARNING: It" +
         " doesn't work for incrementColumnValues'd cells since the" +
         " timestamp is changed after being appended to the log.");
-    pgd.driver(args);
+    ProgramDriver.class.getMethod("driver", new Class [] {String[].class}).
+      invoke(pgd, new Object[]{args});
   }
 }

@@ -35,6 +35,7 @@ public class Driver {
     ProgramDriver pgd = new ProgramDriver();
     pgd.addClass(RowCounter.NAME, RowCounter.class,
       "Count rows in HBase table");
-    pgd.driver(args);
+    ProgramDriver.class.getMethod("driver", new Class [] {String[].class}).
+      invoke(pgd, new Object[]{args});
   }
 }
