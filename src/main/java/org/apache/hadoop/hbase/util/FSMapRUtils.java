@@ -29,10 +29,10 @@ import org.apache.commons.logging.LogFactory;
 /**
  * <a href="http://www.mapr.com">MapR</a> implementation.
  */
-public class FSMapRUtils {
+public class FSMapRUtils extends FSUtils {
   private static final Log LOG = LogFactory.getLog(FSMapRUtils.class);
   
-  public static void recoverFileLease(final FileSystem fs, final Path p, 
+  public void recoverFileLease(final FileSystem fs, final Path p, 
       Configuration conf) throws IOException {
     LOG.info("Recovering file " + p.toString() + 
       " by changing permission to readonly");
