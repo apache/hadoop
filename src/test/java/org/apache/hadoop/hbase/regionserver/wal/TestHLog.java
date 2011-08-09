@@ -594,7 +594,7 @@ public class TestHLog  {
     final byte [] tableName = Bytes.toBytes("tablename");
     final byte [] row = Bytes.toBytes("row");
     HLog log = new HLog(fs, dir, oldLogDir, conf);
-    DumbWALObserver visitor = new DumbWALObserver();
+    DumbWALActionsListener visitor = new DumbWALActionsListener();
     log.registerWALActionsListener(visitor);
     long timestamp = System.currentTimeMillis();
     HTableDescriptor htd = new HTableDescriptor();
@@ -692,7 +692,7 @@ public class TestHLog  {
     }
   }
 
-  static class DumbWALObserver implements WALObserver {
+  static class DumbWALActionsListener implements WALActionsListener {
     int increments = 0;
 
     @Override

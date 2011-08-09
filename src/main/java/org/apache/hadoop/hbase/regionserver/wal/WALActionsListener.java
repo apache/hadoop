@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 The Apache Software Foundation
+ * Copyright 2011 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
  * Get notification of {@link HLog}/WAL log events. The invocations are inline
  * so make sure your implementation is fast else you'll slow hbase.
  */
-public interface WALObserver {
+public interface WALActionsListener {
   /**
    * The WAL was rolled.
    * @param newFile the path to the new hlog

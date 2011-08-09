@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.regionserver.wal.WALObserver;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.ReplicationSourceDummy;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -156,7 +156,7 @@ public class TestReplicationSourceManager {
     WALEdit edit = new WALEdit();
     edit.add(kv);
 
-    List<WALObserver> listeners = new ArrayList<WALObserver>();
+    List<WALActionsListener> listeners = new ArrayList<WALActionsListener>();
     listeners.add(replication);
     HLog hlog = new HLog(fs, logDir, oldLogDir, conf, listeners,
       URLEncoder.encode("regionserver:60020", "UTF8"));

@@ -1,5 +1,5 @@
 /**
- * Copyright 2010 The Apache Software Foundation
+ * Copyright 2011 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -38,8 +38,8 @@ import static org.junit.Assert.*;
 /**
  * Test that the actions are called while playing with an HLog
  */
-public class TestWALObserver {
-  protected static final Log LOG = LogFactory.getLog(TestWALObserver.class);
+public class TestWALActionsListener {
+  protected static final Log LOG = LogFactory.getLog(TestWALActionsListener.class);
 
   private final static HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
@@ -79,10 +79,10 @@ public class TestWALObserver {
    */
   @Test
   public void testActionListener() throws Exception {
-    DummyWALObserver observer = new DummyWALObserver();
-    List<WALObserver> list = new ArrayList<WALObserver>();
+    DummyWALActionsListener observer = new DummyWALActionsListener();
+    List<WALActionsListener> list = new ArrayList<WALActionsListener>();
     list.add(observer);
-    DummyWALObserver laterobserver = new DummyWALObserver();
+    DummyWALActionsListener laterobserver = new DummyWALActionsListener();
     HLog hlog = new HLog(fs, logDir, oldLogDir, conf, list, null);
     HRegionInfo hri = new HRegionInfo(SOME_BYTES,
              SOME_BYTES, SOME_BYTES, false);
@@ -117,7 +117,7 @@ public class TestWALObserver {
   /**
    * Just counts when methods are called
    */
-  static class DummyWALObserver implements WALObserver {
+  static class DummyWALActionsListener implements WALActionsListener {
     public int logRollCounter = 0;
     public int closedCount = 0;
 
@@ -135,7 +135,7 @@ public class TestWALObserver {
     public void visitLogEntryBeforeWrite(HRegionInfo info, HLogKey logKey,
         WALEdit logEdit) {
       // Not interested
-      
+
     }
 
     @Override

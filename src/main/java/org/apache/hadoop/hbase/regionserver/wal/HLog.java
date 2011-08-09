@@ -119,8 +119,8 @@ public class HLog implements Syncable {
   private final Path dir;
   private final Configuration conf;
   // Listeners that are called on WAL events.
-  private List<WALObserver> listeners =
-    new CopyOnWriteArrayList<WALObserver>();
+  private List<WALActionsListener> listeners =
+    new CopyOnWriteArrayList<WALActionsListener>();
   private final long optionalFlushInterval;
   private final long blocksize;
   private final String prefix;
@@ -295,7 +295,7 @@ public class HLog implements Syncable {
    * @throws IOException
    */
   public HLog(final FileSystem fs, final Path dir, final Path oldLogDir,
-      final Configuration conf, final List<WALObserver> listeners,
+      final Configuration conf, final List<WALActionsListener> listeners,
       final String prefix) throws IOException {
     this(fs, dir, oldLogDir, conf, listeners, true, prefix);
   }
@@ -321,7 +321,7 @@ public class HLog implements Syncable {
    * @throws IOException
    */
   public HLog(final FileSystem fs, final Path dir, final Path oldLogDir,
-      final Configuration conf, final List<WALObserver> listeners,
+      final Configuration conf, final List<WALActionsListener> listeners,
       final boolean failIfLogDirExists, final String prefix)
  throws IOException {
     super();
@@ -329,7 +329,7 @@ public class HLog implements Syncable {
     this.dir = dir;
     this.conf = conf;
     if (listeners != null) {
-      for (WALObserver i: listeners) {
+      for (WALActionsListener i: listeners) {
         registerWALActionsListener(i);
       }
     }
@@ -404,11 +404,11 @@ public class HLog implements Syncable {
     return m;
   }
 
-  public void registerWALActionsListener (final WALObserver listener) {
+  public void registerWALActionsListener(final WALActionsListener listener) {
     this.listeners.add(listener);
   }
 
-  public boolean unregisterWALActionsListener(final WALObserver listener) {
+  public boolean unregisterWALActionsListener(final WALActionsListener listener) {
     return this.listeners.remove(listener);
   }
 
@@ -501,7 +501,7 @@ public class HLog implements Syncable {
       }
       // Tell our listeners that a new log was created
       if (!this.listeners.isEmpty()) {
-        for (WALObserver i : this.listeners) {
+        for (WALActionsListener i : this.listeners) {
           i.logRolled(newPath);
         }
       }
@@ -813,7 +813,7 @@ public class HLog implements Syncable {
     try {
       // Tell our listeners that the log is closing
       if (!this.listeners.isEmpty()) {
-        for (WALObserver i : this.listeners) {
+        for (WALActionsListener i : this.listeners) {
           i.logCloseRequested();
         }
       }
@@ -1053,7 +1053,7 @@ public class HLog implements Syncable {
 
   private void requestLogRoll() {
     if (!this.listeners.isEmpty()) {
-      for (WALObserver i: this.listeners) {
+      for (WALActionsListener i: this.listeners) {
         i.logRollRequested();
       }
     }
@@ -1066,7 +1066,7 @@ public class HLog implements Syncable {
       return;
     }
     if (!this.listeners.isEmpty()) {
-      for (WALObserver i: this.listeners) {
+      for (WALActionsListener i: this.listeners) {
         i.visitLogEntryBeforeWrite(htd, logKey, logEdit);
       }
     }

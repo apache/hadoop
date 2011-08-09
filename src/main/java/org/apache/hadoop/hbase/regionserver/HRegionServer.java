@@ -117,7 +117,7 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRootHandler;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.WALObserver;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
@@ -1167,12 +1167,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   /**
    * Called by {@link #instantiateHLog(Path, Path)} setting up WAL instance.
-   * Add any {@link WALObserver}s you want inserted before WAL startup.
+   * Add any {@link WALActionsListener}s you want inserted before WAL startup.
    * @return List of WALActionsListener that will be passed in to
    * {@link HLog} on construction.
    */
-  protected List<WALObserver> getWALActionListeners() {
-    List<WALObserver> listeners = new ArrayList<WALObserver>();
+  protected List<WALActionsListener> getWALActionListeners() {
+    List<WALActionsListener> listeners = new ArrayList<WALActionsListener>();
     // Log roller.
     this.hlogRoller = new LogRoller(this, this);
     listeners.add(this.hlogRoller);
