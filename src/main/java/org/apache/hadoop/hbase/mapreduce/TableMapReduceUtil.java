@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.StringUtils;
 
@@ -119,9 +120,9 @@ public class TableMapReduceUtil {
       Class<? extends TableMapper> mapper,
       Class<? extends WritableComparable> outputKeyClass,
       Class<? extends Writable> outputValueClass, Job job,
-      boolean addDependencyJars)
+      boolean addDependencyJars, Class<? extends InputFormat> inputFormatClass)
   throws IOException {
-    job.setInputFormatClass(TableInputFormat.class);
+    job.setInputFormatClass(inputFormatClass);
     if (outputValueClass != null) job.setMapOutputValueClass(outputValueClass);
     if (outputKeyClass != null) job.setMapOutputKeyClass(outputKeyClass);
     job.setMapperClass(mapper);
@@ -133,7 +134,33 @@ public class TableMapReduceUtil {
       addDependencyJars(job);
     }
   }
-
+  
+  /**
+   * Use this before submitting a TableMap job. It will appropriately set up
+   * the job.
+   *
+   * @param table Binary representation of the table name to read from.
+   * @param scan  The scan instance with the columns, time range etc.
+   * @param mapper  The mapper class to use.
+   * @param outputKeyClass  The class of the output key.
+   * @param outputValueClass  The class of the output value.
+   * @param job  The current job to adjust.  Make sure the passed job is
+   * carrying all necessary HBase configuration.
+   * @param addDependencyJars upload HBase jars and jars for any of the configured
+   *           job classes via the distributed cache (tmpjars).
+   * @param inputFormatClass The class of the input format
+   * @throws IOException When setting up the details fails.
+   */
+  public static void initTableMapperJob(byte[] table, Scan scan,
+      Class<? extends TableMapper> mapper,
+      Class<? extends WritableComparable> outputKeyClass,
+      Class<? extends Writable> outputValueClass, Job job,
+      boolean addDependencyJars, Class<? extends InputFormat> inputFormatClass)
+  throws IOException {
+      initTableMapperJob(Bytes.toString(table), scan, mapper, outputKeyClass,
+              outputValueClass, job, addDependencyJars, inputFormatClass);
+  }
+  
   /**
    * Use this before submitting a TableMap job. It will appropriately set up
    * the job.
@@ -156,7 +183,32 @@ public class TableMapReduceUtil {
       boolean addDependencyJars)
   throws IOException {
       initTableMapperJob(Bytes.toString(table), scan, mapper, outputKeyClass,
-              outputValueClass, job, addDependencyJars);
+              outputValueClass, job, addDependencyJars, TableInputFormat.class);
+  }
+  
+  /**
+   * Use this before submitting a TableMap job. It will appropriately set up
+   * the job.
+   *
+   * @param table The table name to read from.
+   * @param scan  The scan instance with the columns, time range etc.
+   * @param mapper  The mapper class to use.
+   * @param outputKeyClass  The class of the output key.
+   * @param outputValueClass  The class of the output value.
+   * @param job  The current job to adjust.  Make sure the passed job is
+   * carrying all necessary HBase configuration.
+   * @param addDependencyJars upload HBase jars and jars for any of the configured
+   *           job classes via the distributed cache (tmpjars).
+   * @throws IOException When setting up the details fails.
+   */
+  public static void initTableMapperJob(String table, Scan scan,
+      Class<? extends TableMapper> mapper,
+      Class<? extends WritableComparable> outputKeyClass,
+      Class<? extends Writable> outputValueClass, Job job,
+      boolean addDependencyJars)
+  throws IOException {
+      initTableMapperJob(table, scan, mapper, outputKeyClass,
+              outputValueClass, job, addDependencyJars, TableInputFormat.class);
   }
 
   /**

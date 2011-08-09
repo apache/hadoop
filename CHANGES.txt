@@ -380,6 +380,8 @@ Release 0.91.0 - Unreleased
    HBASE-4017  BlockCache interface should be truly modular (Li Pi)
    HBASE-4152  Rename o.a.h.h.regionserver.wal.WALObserver to
                o.a.h.h.regionserver.wal.WALActionsListener
+   HBASE-4039  Users should be able to choose custom TableInputFormats without
+               modifying TableMapReduceUtil.initTableMapperJob() (Brock Noland)
 
   NEW FEATURES
    HBASE-2001  Coprocessors: Colocate user code with regions (Mingjie Lai via
