@@ -132,14 +132,11 @@ public class TestHQuorumPeer {
     assertEquals("foo.bar", server.addr.getHostName());
   }
 
-  /**
-   * Test Case for HBASE-2305
-   */
   @Test public void testShouldAssignDefaultZookeeperClientPort() {
     Configuration config = HBaseConfiguration.create();
     config.clear();
     Properties p = ZKConfig.makeZKProps(config);
     assertNotNull(p);
-    assertEquals(2181, p.get("hbase.zookeeper.property.clientPort"));
+    assertEquals(2181, p.get("clientPort"));
   }
 }

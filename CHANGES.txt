@@ -196,6 +196,8 @@ Release 0.91.0 - Unreleased
                (Michael Weng)
    HBASE-4181  HConnectionManager can't find cached HRegionInterface and makes clients
                work very slow (Jia Liu)
+   HBASE-4156  ZKConfig defaults clientPort improperly (Michajlo Matijkiw)
+
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
