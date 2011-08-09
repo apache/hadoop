@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.io.Writable;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Interface for row and column filters directly applied within the regionserver.
@@ -45,7 +46,7 @@ import java.util.List;
  *
  * When implementing your own filters, consider inheriting {@link FilterBase} to help
  * you reduce boilerplate.
- * 
+ *
  * @see FilterBase
  */
 public interface Filter extends Writable {
@@ -148,4 +149,12 @@ public interface Filter extends Writable {
    * not sure which key to seek to next.
    */
   public KeyValue getNextKeyHint(KeyValue currentKV);
+
+  /**
+   * Given the filter's arguments it constructs the filter
+   * <p>
+   * @param filterArguments the filter's arguments
+   * @return constructed filter object
+   */
+   public Filter createFilterFromArguments (ArrayList<byte []> filterArguments);
 }

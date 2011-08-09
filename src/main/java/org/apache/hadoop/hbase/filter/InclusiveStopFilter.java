@@ -27,6 +27,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * A Filter that stops after the given row.  There is no "RowStopFilter" because
@@ -70,6 +71,16 @@ public class InclusiveStopFilter extends FilterBase {
 
   public boolean filterAllRemaining() {
     return done;
+  }
+
+  @Override
+  public Filter createFilterFromArguments (ArrayList<byte []> filterArguments) {
+    if (filterArguments.size() != 1) {
+      throw new IllegalArgumentException("Incorrect arguments passed to InclusiveStopFilter. " +
+                                         "Expected: 1 but got: " + filterArguments.size());
+    }
+    byte [] stopRowKey = ParseFilter.convertByteArrayToString(filterArguments.get(0));
+    return new InclusiveStopFilter(stopRowKey);
   }
 
   public void write(DataOutput out) throws IOException {

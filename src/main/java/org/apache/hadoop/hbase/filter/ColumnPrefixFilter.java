@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.DataInput;
+import java.util.ArrayList;
 
 /**
  * This filter is used for selecting only those keys with columns that matches
@@ -76,6 +77,17 @@ public class ColumnPrefixFilter extends FilterBase {
         return ReturnCode.INCLUDE;
       }
     }
+  }
+
+  @Override
+  public Filter createFilterFromArguments (ArrayList<byte []> filterArguments) {
+    if (filterArguments.size() != 1) {
+      throw new IllegalArgumentException("Incorrect Arguments passed to ColumnPrefixFilter. " +
+                                         "Expected: 1 but got: " + filterArguments.size());
+    }
+
+    byte [] columnPrefix = ParseFilter.convertByteArrayToString(filterArguments.get(0));
+    return new ColumnPrefixFilter(columnPrefix);
   }
 
   public void write(DataOutput out) throws IOException {

@@ -27,6 +27,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.DataInput;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Pass results that have same row prefix.
@@ -65,6 +66,17 @@ public class PrefixFilter extends FilterBase {
 
   public boolean filterAllRemaining() {
     return passedPrefix;
+  }
+
+  @Override
+  public Filter createFilterFromArguments (ArrayList<byte []> filterArguments) {
+    if (filterArguments.size() != 1) {
+      throw new IllegalArgumentException("Incorrect arguments passed to PrefixFilter. " +
+                                         "Expected: 1 but got: " + filterArguments.size());
+    }
+
+    byte [] prefix = ParseFilter.convertByteArrayToString(filterArguments.get(0));
+    return new PrefixFilter(prefix);
   }
 
   public void write(DataOutput out) throws IOException {

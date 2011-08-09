@@ -27,7 +27,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
-
+import java.util.ArrayList;
 /**
  * This is a generic filter to be used to filter by comparison.  It takes an
  * operator (equal, greater, not equal, etc) and a byte [] comparator.
@@ -108,21 +108,43 @@ public abstract class CompareFilter extends FilterBase {
         offset + length));
     switch (compareOp) {
       case LESS:
-        return compareResult <= 0;
-      case LESS_OR_EQUAL:
         return compareResult < 0;
+      case LESS_OR_EQUAL:
+        return compareResult <= 0;
       case EQUAL:
-        return compareResult != 0;
-      case NOT_EQUAL:
         return compareResult == 0;
+      case NOT_EQUAL:
+        return compareResult != 0;
       case GREATER_OR_EQUAL:
-        return compareResult > 0;
-      case GREATER:
         return compareResult >= 0;
+      case GREATER:
+        return compareResult > 0;
       default:
         throw new RuntimeException("Unknown Compare op " +
           compareOp.name());
     }
+  }
+
+  @Override
+  public Filter createFilterFromArguments (ArrayList<byte []> filterArguments) {
+    if (filterArguments.size() != 2) {
+      throw new IllegalArgumentException("Incorrect Arguments passed to Compare Filter. " +
+                                         "Expected: 2 but got: " + filterArguments.size());
+    }
+
+    this.compareOp = ParseFilter.createCompareOp(filterArguments.get(0));
+    this.comparator = ParseFilter.createComparator(
+      ParseFilter.convertByteArrayToString(filterArguments.get(1)));
+
+    if (this.comparator instanceof RegexStringComparator ||
+        this.comparator instanceof SubstringComparator) {
+      if (this.compareOp != CompareOp.EQUAL &&
+          this.compareOp != CompareOp.NOT_EQUAL) {
+        throw new IllegalArgumentException ("A regexstring comparator and substring comparator" +
+                                            " can only be used with EQUAL and NOT_EQUAL");
+      }
+    }
+    return this;
   }
 
   public void readFields(DataInput in) throws IOException {

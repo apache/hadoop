@@ -276,4 +276,10 @@ public class FilterList implements Filter {
   public KeyValue getNextKeyHint(KeyValue currentKV) {
     return null;
   }
+
+  @Override
+  public Filter createFilterFromArguments(ArrayList<byte[]> filterArguments) {
+    throw new IllegalArgumentException("This function has not been implemented" +
+                                       "A FilterList can be created using the AND/OR operators)");
+  }
 }

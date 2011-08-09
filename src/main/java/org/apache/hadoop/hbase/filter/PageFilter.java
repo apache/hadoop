@@ -25,6 +25,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Implementation of Filter interface that limits results to a specific page
@@ -55,6 +56,9 @@ public class PageFilter extends FilterBase {
    * @param pageSize Maximum result size.
    */
   public PageFilter(final long pageSize) {
+    if (pageSize < 0) {
+      throw new IllegalArgumentException("Page Size must not be negative");
+    }
     this.pageSize = pageSize;
   }
 
@@ -69,6 +73,16 @@ public class PageFilter extends FilterBase {
   public boolean filterRow() {
     this.rowsAccepted++;
     return this.rowsAccepted > this.pageSize;
+  }
+
+  @Override
+  public Filter createFilterFromArguments (ArrayList<byte []> filterArguments) {
+    if (filterArguments.size() != 1) {
+      throw new IllegalArgumentException("Incorrect Arguments passed to PageFilter. " +
+                                         "Expected: 1 but got: " + filterArguments.size());
+    }
+    long pageSize = ParseFilter.convertByteArrayToLong(filterArguments.get(0));
+    return new PageFilter(pageSize);
   }
 
   public void readFields(final DataInput in) throws IOException {

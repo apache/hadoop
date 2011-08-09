@@ -196,6 +196,7 @@ Release 0.91.0 - Unreleased
                (Michael Weng)
    HBASE-4181  HConnectionManager can't find cached HRegionInterface and makes clients
                work very slow (Jia Liu)
+   HBASE-4156  ZKConfig defaults clientPort improperly (Michajlo Matijkiw)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
@@ -416,6 +417,7 @@ Release 0.91.0 - Unreleased
                (Nichole Treadway and Nicholas Telford)
    HBASE-2233  Support both Hadoop 0.20 and 0.22
    HBASE-3857  Change the HFile Format (Mikhail & Liyin)
+   HBASE-4176  Exposing HBase Filters to the Thrift API (Anirudh Todi)
 
 Release 0.90.5 - Unreleased
 
