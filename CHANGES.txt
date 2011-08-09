@@ -408,6 +408,12 @@ Release 0.91.0 - Unreleased
    HBASE-2233  Support both Hadoop 0.20 and 0.22
    HBASE-3857  Change the HFile Format (Mikhail & Liyin)
 
+Release 0.90.5 - Unreleased
+
+  BUG FIXES
+   HBASE-4160  HBase shell move and online may be unusable if region name
+               or server includes binary-encoded data (Jonathan Hsieh)
+
 Release 0.90.4 - Unreleased
 
   BUG FIXES

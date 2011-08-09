@@ -231,7 +231,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Move a region
     def move(encoded_region_name, server = nil)
-      @admin.move(org.apache.hadoop.hbase.util.Bytes.toBytes(encoded_region_name), server ? org.apache.hadoop.hbase.util.Bytes.toBytes(server): nil)
+      @admin.move(encoded_region_name.to_java_bytes, server ? server.to_java_bytes: nil)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -435,7 +435,7 @@ module Hbase
 
       # Read region info
       # FIXME: fail gracefully if can't find the region
-      region_bytes = org.apache.hadoop.hbase.util.Bytes.toBytes(region_name)
+      region_bytes = region_name.to_java_bytes
       g = org.apache.hadoop.hbase.client.Get.new(region_bytes)
       g.addColumn(org.apache.hadoop.hbase.HConstants::CATALOG_FAMILY, org.apache.hadoop.hbase.HConstants::REGIONINFO_QUALIFIER)
       hri_bytes = meta.get(g).value
