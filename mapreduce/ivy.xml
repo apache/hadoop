@@ -56,9 +56,8 @@
   </publications>
  <dependencies>
    <dependency org="org.apache.hadoop" name="hadoop-common" 
-               rev="${hadoop-common.version}" conf="common->default"/> 
-   <dependency org="org.apache.hadoop" name="hadoop-common" 
                rev="${hadoop-common.version}" conf="common->default"> 
+      <artifact name="hadoop-common" ext="jar"/>
       <artifact name="hadoop-common" type="tests" ext="jar" m:classifier="tests"/>
    </dependency>
    <dependency org="org.apache.hadoop" name="hadoop-hdfs" 
@@ -98,6 +97,8 @@
                conf="common->default"/>
    <dependency org="org.aspectj" name="aspectjtools" rev="${aspectj.version}"
                conf="common->default"/>
+   <dependency org="org.mockito" name="mockito-all" rev="${mockito.version}" 
+    conf="common->master" />
 
    <!-- Exclusions for transitive dependencies pulled in by log4j -->
    <exclude org="com.sun.jdmk"/>
