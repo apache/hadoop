@@ -38,6 +38,7 @@ import org.apache.hadoop.metrics.util.MetricsIntValue;
 import org.apache.hadoop.metrics.util.MetricsLongValue;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
+import org.apache.hadoop.util.StringUtils;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
@@ -356,19 +357,15 @@ public class RegionServerMetrics implements Updater {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    int seconds = (int)((System.currentTimeMillis() - this.lastUpdate)/1000);
-    if (seconds == 0) {
-      seconds = 1;
-    }
-    sb = Strings.appendKeyValue(sb, "request",
+    sb = Strings.appendKeyValue(sb, "requestsPerSecond",
       Float.valueOf(this.requests.getPreviousIntervalValue()));
-    sb = Strings.appendKeyValue(sb, "regions",
+    sb = Strings.appendKeyValue(sb, "numberOfOnlineRegions",
       Integer.valueOf(this.regions.get()));
-    sb = Strings.appendKeyValue(sb, "stores",
+    sb = Strings.appendKeyValue(sb, "numberOfStores",
       Integer.valueOf(this.stores.get()));
-    sb = Strings.appendKeyValue(sb, "storefiles",
+    sb = Strings.appendKeyValue(sb, "numberOfStorefiles",
       Integer.valueOf(this.storefiles.get()));
-    sb = Strings.appendKeyValue(sb, "storefileIndexSize",
+    sb = Strings.appendKeyValue(sb, this.storefileIndexSizeMB.getName(),
       Integer.valueOf(this.storefileIndexSizeMB.get()));
     sb = Strings.appendKeyValue(sb, "rootIndexSizeKB",
         Integer.valueOf(this.rootIndexSizeKB.get()));
@@ -376,7 +373,7 @@ public class RegionServerMetrics implements Updater {
         Integer.valueOf(this.totalStaticIndexSizeKB.get()));
     sb = Strings.appendKeyValue(sb, "totalStaticBloomSizeKB",
         Integer.valueOf(this.totalStaticBloomSizeKB.get()));
-    sb = Strings.appendKeyValue(sb, "memstoreSize",
+    sb = Strings.appendKeyValue(sb, this.memstoreSizeMB.getName(),
       Integer.valueOf(this.memstoreSizeMB.get()));
     sb = Strings.appendKeyValue(sb, "readRequestsCount",
         Long.valueOf(this.readRequestsCount.get()));
@@ -390,14 +387,14 @@ public class RegionServerMetrics implements Updater {
     // inaccessible.
     MemoryUsage memory =
       ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
-    sb = Strings.appendKeyValue(sb, "usedHeap",
+    sb = Strings.appendKeyValue(sb, "usedHeapMB",
       Long.valueOf(memory.getUsed()/MB));
-    sb = Strings.appendKeyValue(sb, "maxHeap",
+    sb = Strings.appendKeyValue(sb, "maxHeapMB",
       Long.valueOf(memory.getMax()/MB));
-    sb = Strings.appendKeyValue(sb, this.blockCacheSize.getName(),
-        Long.valueOf(this.blockCacheSize.get()));
-    sb = Strings.appendKeyValue(sb, this.blockCacheFree.getName(),
-        Long.valueOf(this.blockCacheFree.get()));
+    sb = Strings.appendKeyValue(sb, this.blockCacheSize.getName()+"MB",
+    	StringUtils.limitDecimalTo2((float)this.blockCacheSize.get()/MB));
+    sb = Strings.appendKeyValue(sb, this.blockCacheFree.getName()+"MB",
+    	StringUtils.limitDecimalTo2((float)this.blockCacheFree.get()/MB));
     sb = Strings.appendKeyValue(sb, this.blockCacheCount.getName(),
         Long.valueOf(this.blockCacheCount.get()));
     sb = Strings.appendKeyValue(sb, this.blockCacheHitCount.getName(),
@@ -407,9 +404,9 @@ public class RegionServerMetrics implements Updater {
     sb = Strings.appendKeyValue(sb, this.blockCacheEvictedCount.getName(),
         Long.valueOf(this.blockCacheEvictedCount.get()));
     sb = Strings.appendKeyValue(sb, this.blockCacheHitRatio.getName(),
-        Long.valueOf(this.blockCacheHitRatio.get()));
+        Long.valueOf(this.blockCacheHitRatio.get())+"%");
     sb = Strings.appendKeyValue(sb, this.blockCacheHitCachingRatio.getName(),
-        Long.valueOf(this.blockCacheHitCachingRatio.get()));
+        Long.valueOf(this.blockCacheHitCachingRatio.get())+"%");
     return sb.toString();
   }
 }

@@ -312,9 +312,9 @@ implements WritableComparable<HServerLoad> {
      */
     @Override
     public String toString() {
-      StringBuilder sb = Strings.appendKeyValue(new StringBuilder(), "stores",
+      StringBuilder sb = Strings.appendKeyValue(new StringBuilder(), "numberOfStores",
         Integer.valueOf(this.stores));
-      sb = Strings.appendKeyValue(sb, "storefiles",
+      sb = Strings.appendKeyValue(sb, "numberOfStorefiles",
         Integer.valueOf(this.storefiles));
       sb = Strings.appendKeyValue(sb, "storefileUncompressedSizeMB",
         Integer.valueOf(this.storeUncompressedSizeMB));
@@ -419,13 +419,13 @@ implements WritableComparable<HServerLoad> {
   public String toString(int msgInterval) {
     int numberOfRegions = this.regionLoad.size();
     StringBuilder sb = new StringBuilder();
-    sb = Strings.appendKeyValue(sb, "requests",
+    sb = Strings.appendKeyValue(sb, "requestsPerSecond",
       Integer.valueOf(numberOfRequests/msgInterval));
-    sb = Strings.appendKeyValue(sb, "regions",
+    sb = Strings.appendKeyValue(sb, "numberOfOnlineRegions",
       Integer.valueOf(numberOfRegions));
-    sb = Strings.appendKeyValue(sb, "usedHeap",
+    sb = Strings.appendKeyValue(sb, "usedHeapMB",
       Integer.valueOf(this.usedHeapMB));
-    sb = Strings.appendKeyValue(sb, "maxHeap", Integer.valueOf(maxHeapMB));
+    sb = Strings.appendKeyValue(sb, "maxHeapMB", Integer.valueOf(maxHeapMB));
     return sb.toString();
   }
 

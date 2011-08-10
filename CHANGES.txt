@@ -370,6 +370,7 @@ Release 0.91.0 - Unreleased
    HBASE-3899  Add ability for delayed RPC calls to set return value
                immediately at call return. (Vlad Dogaru via todd)
    HBASE-4169  FSUtils LeaseRecovery for non HDFS FileSystems (Lohit Vijayarenu)
+   HBASE-3807  Fix units in RS UI metrics (subramanian raghunathan)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
