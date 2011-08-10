@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
@@ -147,7 +148,7 @@ public class TestBinaryTokenFile {
         dfsCluster.getFileSystem().getUri().toString(), 1, null, null, null, 
         jConf);
 
-    dfsCluster.getNamesystem().getDelegationTokenSecretManager().startThreads();
+    NameNodeAdapter.getDtSecretManager(dfsCluster.getNamesystem()).startThreads();
     FileSystem fs = dfsCluster.getFileSystem();
     
     p1 = new Path("file1");

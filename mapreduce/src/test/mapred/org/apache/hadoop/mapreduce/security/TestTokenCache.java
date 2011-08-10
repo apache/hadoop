@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
@@ -157,7 +158,7 @@ public class TestTokenCache {
     
     createTokenFileJson();
     verifySecretKeysInJSONFile();
-    dfsCluster.getNamesystem().getDelegationTokenSecretManager().startThreads();
+    NameNodeAdapter.getDtSecretManager(dfsCluster.getNamesystem()).startThreads();
     FileSystem fs = dfsCluster.getFileSystem();
     
     p1 = new Path("file1");
@@ -303,7 +304,7 @@ public class TestTokenCache {
     HftpFileSystem hfs = mock(HftpFileSystem.class);
 
     DelegationTokenSecretManager dtSecretManager = 
-      dfsCluster.getNamesystem().getDelegationTokenSecretManager();
+        NameNodeAdapter.getDtSecretManager(dfsCluster.getNamesystem());
     String renewer = "renewer";
     jConf.set(JTConfig.JT_USER_NAME,renewer);
     DelegationTokenIdentifier dtId = 

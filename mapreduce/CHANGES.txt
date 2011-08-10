@@ -381,6 +381,8 @@ Trunk (unreleased changes)
     MAPREDUCE-2760. mapreduce.jobtracker.split.metainfo.maxsize typoed
     in mapred-default.xml. (todd via eli)
 
+    MAPREDUCE-2797. Update mapreduce tests and RAID for HDFS-2239.  (szetszwo)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
