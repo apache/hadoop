@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.junit.Assert.*;
 
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
 import java.io.File;
@@ -29,7 +28,6 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEditsFileName;
@@ -56,7 +54,7 @@ public class TestFSImageStorageInspector {
     FSImageTransactionalStorageInspector inspector = 
         new FSImageTransactionalStorageInspector();
     
-    StorageDirectory mockDir = mockDirectory(
+    StorageDirectory mockDir = FSImageTestUtil.mockStorageDirectory(
         NameNodeDirType.IMAGE_AND_EDITS,
         false,
         "/foo/current/" + getImageFileName(123),
@@ -95,7 +93,7 @@ public class TestFSImageStorageInspector {
     FSImageTransactionalStorageInspector inspector =
         new FSImageTransactionalStorageInspector();
     
-    StorageDirectory mockDir = mockDirectory(
+    StorageDirectory mockDir = FSImageTestUtil.mockStorageDirectory(
         NameNodeDirType.IMAGE_AND_EDITS,
         false,
         "/foo/current/" + getImageFileName(123),
@@ -123,7 +121,7 @@ public class TestFSImageStorageInspector {
     FSImageTransactionalStorageInspector inspector =
         new FSImageTransactionalStorageInspector();
     
-    StorageDirectory mockDir = mockDirectory(
+    StorageDirectory mockDir = FSImageTestUtil.mockStorageDirectory(
         NameNodeDirType.IMAGE_AND_EDITS,
         false,
         "/foo/current/" + getImageFileName(123),
@@ -196,7 +194,7 @@ public class TestFSImageStorageInspector {
     inspector.inspectDirectory(
         mockDirectoryWithEditLogs("/foo3/current/"
                                   + getInProgressEditsFileName(123)));
-    inspector.inspectDirectory(mockDirectory(
+    inspector.inspectDirectory(FSImageTestUtil.mockStorageDirectory(
         NameNodeDirType.IMAGE,
         false,
         "/foo4/current/" + getImageFileName(122)));
@@ -327,15 +325,15 @@ public class TestFSImageStorageInspector {
     FSImageTransactionalStorageInspector inspector =
         new FSImageTransactionalStorageInspector();
     
-    StorageDirectory mockImageDir = mockDirectory(
+    StorageDirectory mockImageDir = FSImageTestUtil.mockStorageDirectory(
         NameNodeDirType.IMAGE,
         false,
         "/foo/current/" + getImageFileName(123));
-    StorageDirectory mockImageDir2 = mockDirectory(
+    StorageDirectory mockImageDir2 = FSImageTestUtil.mockStorageDirectory(
         NameNodeDirType.IMAGE,
         false,
         "/foo2/current/" + getImageFileName(456));
-    StorageDirectory mockEditsDir = mockDirectory(
+    StorageDirectory mockEditsDir = FSImageTestUtil.mockStorageDirectory(
         NameNodeDirType.EDITS,
         false,
         "/foo3/current/" + getFinalizedEditsFileName(123, 456),
@@ -364,43 +362,8 @@ public class TestFSImageStorageInspector {
     assertArrayEquals(new File[] {
         new File("/foo3/current/" + getInProgressEditsFileName(457))
       }, plan.getEditsFiles().toArray(new File[0]));
-
-    // Check log manifest
-    assertEquals("[[123,456]]", inspector.getEditLogManifest(123).toString());
-    assertEquals("[[123,456]]", inspector.getEditLogManifest(456).toString());
-    assertEquals("[]", inspector.getEditLogManifest(457).toString());
   }
   
-  @Test
-  public void testLogManifest() throws IOException { 
-    FSImageTransactionalStorageInspector inspector =
-        new FSImageTransactionalStorageInspector();
-    inspector.inspectDirectory(
-        mockDirectoryWithEditLogs("/foo1/current/" 
-                                  + getFinalizedEditsFileName(1,1),
-                                  "/foo1/current/"
-                                  + getFinalizedEditsFileName(2,200)));
-    inspector.inspectDirectory(
-        mockDirectoryWithEditLogs("/foo2/current/" 
-                                  + getInProgressEditsFileName(1),
-                                  "/foo2/current/"
-                                  + getFinalizedEditsFileName(201, 400)));
-    inspector.inspectDirectory(
-        mockDirectoryWithEditLogs("/foo3/current/"
-                                  + getFinalizedEditsFileName(1, 1),
-                                  "/foo3/current/"
-                                  + getFinalizedEditsFileName(2,200)));
-    
-    assertEquals("[[1,1], [2,200], [201,400]]",
-                 inspector.getEditLogManifest(1).toString());
-    assertEquals("[[2,200], [201,400]]",
-                 inspector.getEditLogManifest(2).toString());
-    assertEquals("[[2,200], [201,400]]",
-                 inspector.getEditLogManifest(10).toString());
-    assertEquals("[[201,400]]",
-                 inspector.getEditLogManifest(201).toString());
-  }  
-
   /**
    * Test case where an in-progress log is in an earlier name directory
    * than a finalized log. Previously, getEditLogManifest wouldn't
@@ -426,46 +389,9 @@ public class TestFSImageStorageInspector {
                                   + getFinalizedEditsFileName(2626,2627),
                                   "/foo2/current/"
                                   + getFinalizedEditsFileName(2628,2629)));
-    
-    assertEquals("[[2622,2623], [2624,2625], [2626,2627], [2628,2629]]",
-                 inspector.getEditLogManifest(2621).toString());
   }  
   
-  private StorageDirectory mockDirectoryWithEditLogs(String... fileNames) {
-    return mockDirectory(NameNodeDirType.EDITS, false, fileNames);
-  }
-  
-  /**
-   * Make a mock storage directory that returns some set of file contents.
-   * @param type type of storage dir
-   * @param previousExists should we mock that the previous/ dir exists?
-   * @param fileNames the names of files contained in current/
-   */
-  static StorageDirectory mockDirectory(
-      StorageDirType type,
-      boolean previousExists,
-      String...  fileNames) {
-    StorageDirectory sd = mock(StorageDirectory.class);
-    
-    doReturn(type).when(sd).getStorageDirType();
-
-    // Version file should always exist
-    doReturn(FSImageTestUtil.mockFile(true)).when(sd).getVersionFile();
-    
-    // Previous dir optionally exists
-    doReturn(FSImageTestUtil.mockFile(previousExists))
-      .when(sd).getPreviousDir();   
-
-    // Return a mock 'current' directory which has the given paths
-    File[] files = new File[fileNames.length];
-    for (int i = 0; i < fileNames.length; i++) {
-      files[i] = new File(fileNames[i]);
-    }
-    
-    File mockDir = Mockito.spy(new File("/dir/current"));
-    doReturn(files).when(mockDir).listFiles();
-    doReturn(mockDir).when(sd).getCurrentDir();
-    
-    return sd;
+  static StorageDirectory mockDirectoryWithEditLogs(String... fileNames) {
+    return FSImageTestUtil.mockStorageDirectory(NameNodeDirType.EDITS, false, fileNames);
   }
 }

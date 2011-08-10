@@ -650,6 +650,10 @@ Trunk (unreleased changes)
     HDFS-2230. ivy to resolve/retrieve latest common-tests jar published by 
     hadoop common maven build. (gkesavan)
 
+    HDFS-2227. getRemoteEditLogManifest should pull its information from
+    FileJournalManager during checkpoint process (Ivan Kelly and Todd Lipcon
+    via todd)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

@@ -268,22 +268,6 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
     return needToSave;
   }
   
-  
-  RemoteEditLogManifest getEditLogManifest(long sinceTxId) {
-    List<RemoteEditLog> logs = Lists.newArrayList();
-    for (LogGroup g : logGroups.values()) {
-      if (!g.hasFinalized) continue;
-
-      EditLogFile fel = g.getBestNonCorruptLog();
-      if (fel.getLastTxId() < sinceTxId) continue;
-      
-      logs.add(new RemoteEditLog(fel.getFirstTxId(),
-          fel.getLastTxId()));
-    }
-    
-    return new RemoteEditLogManifest(logs);
-  }
-
   /**
    * A group of logs that all start at the same txid.
    * 

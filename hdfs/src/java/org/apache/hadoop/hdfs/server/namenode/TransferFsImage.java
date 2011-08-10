@@ -69,6 +69,8 @@ class TransferFsImage implements FSConstants {
   
   static void downloadEditsToStorage(String fsName, RemoteEditLog log,
       NNStorage dstStorage) throws IOException {
+    assert log.getStartTxId() > 0 && log.getEndTxId() > 0 :
+      "bad log: " + log;
     String fileid = GetImageServlet.getParamStringForLog(
         log, dstStorage);
     String fileName = NNStorage.getFinalizedEditsFileName(

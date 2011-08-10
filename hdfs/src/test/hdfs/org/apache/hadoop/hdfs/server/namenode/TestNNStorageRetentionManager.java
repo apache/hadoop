@@ -216,7 +216,7 @@ public class TestNNStorageRetentionManager {
       }
 
       StorageDirectory mockStorageDir() {
-        return TestFSImageStorageInspector.mockDirectory(
+        return FSImageTestUtil.mockStorageDirectory(
             type, false,
             files.toArray(new String[0]));
       }

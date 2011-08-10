@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorageRetentionManager.StoragePurger;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
+import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -124,6 +125,33 @@ class FileJournalManager implements JournalManager {
       throws IOException {
     File f = NNStorage.getInProgressEditsFile(sd, segmentStartsAtTxId);
     return new EditLogFileInputStream(f);
+  }
+  
+  /**
+   * Find all editlog segments starting at or above the given txid.
+   * @param fromTxId the txnid which to start looking
+   * @return a list of remote edit logs
+   * @throws IOException if edit logs cannot be listed.
+   */
+  List<RemoteEditLog> getRemoteEditLogs(long firstTxId) throws IOException {
+    File currentDir = sd.getCurrentDir();
+    List<EditLogFile> allLogFiles = matchEditLogs(
+        FileUtil.listFiles(currentDir));
+    List<RemoteEditLog> ret = Lists.newArrayListWithCapacity(
+        allLogFiles.size());
+
+    for (EditLogFile elf : allLogFiles) {
+      if (elf.isCorrupt() || elf.isInProgress()) continue;
+      if (elf.getFirstTxId() >= firstTxId) {
+        ret.add(new RemoteEditLog(elf.firstTxId, elf.lastTxId));
+      } else if ((firstTxId > elf.getFirstTxId()) &&
+                 (firstTxId <= elf.getLastTxId())) {
+        throw new IOException("Asked for firstTxId " + firstTxId
+            + " which is in the middle of file " + elf.file);
+      }
+    }
+    
+    return ret;
   }
 
   static List<EditLogFile> matchEditLogs(File[] filesInStorage) {

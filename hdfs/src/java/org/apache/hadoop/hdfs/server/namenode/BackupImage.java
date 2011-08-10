@@ -91,7 +91,6 @@ public class BackupImage extends FSImage {
     super(conf);
     storage.setDisablePreUpgradableLayoutCheck(true);
     bnState = BNState.DROP_UNTIL_NEXT_ROLL;
-    editLog.initJournals();
   }
 
   /**

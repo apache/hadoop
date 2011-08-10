@@ -24,14 +24,18 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
+import org.apache.commons.logging.Log;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.server.namenode.FSImageStorageInspector.FSImageFile;
@@ -105,6 +109,40 @@ public abstract class FSImageTestUtil {
     
     Mockito.doReturn(mockFile(true)).when(sd).getVersionFile();
     Mockito.doReturn(mockFile(false)).when(sd).getPreviousDir();
+    return sd;
+  }
+  
+  /**
+   * Make a mock storage directory that returns some set of file contents.
+   * @param type type of storage dir
+   * @param previousExists should we mock that the previous/ dir exists?
+   * @param fileNames the names of files contained in current/
+   */
+  static StorageDirectory mockStorageDirectory(
+      StorageDirType type,
+      boolean previousExists,
+      String...  fileNames) {
+    StorageDirectory sd = mock(StorageDirectory.class);
+    
+    doReturn(type).when(sd).getStorageDirType();
+  
+    // Version file should always exist
+    doReturn(mockFile(true)).when(sd).getVersionFile();
+    
+    // Previous dir optionally exists
+    doReturn(mockFile(previousExists))
+      .when(sd).getPreviousDir();   
+  
+    // Return a mock 'current' directory which has the given paths
+    File[] files = new File[fileNames.length];
+    for (int i = 0; i < fileNames.length; i++) {
+      files[i] = new File(fileNames[i]);
+    }
+    
+    File mockDir = Mockito.spy(new File("/dir/current"));
+    doReturn(files).when(mockDir).listFiles();
+    doReturn(mockDir).when(sd).getCurrentDir();
+    
     return sd;
   }
   
@@ -361,5 +399,16 @@ public abstract class FSImageTestUtil {
     assertNotNull(image);
   }
 
-
+  public static void logStorageContents(Log LOG, NNStorage storage) {
+    LOG.info("current storages and corresponding sizes:");
+    for (StorageDirectory sd : storage.dirIterable(null)) {
+      File curDir = sd.getCurrentDir();
+      LOG.info("In directory " + curDir);
+      File[] files = curDir.listFiles();
+      Arrays.sort(files);
+      for (File f : files) {
+        LOG.info("  file " + f.getAbsolutePath() + "; len = " + f.length());  
+      }
+    }
+  }
 }

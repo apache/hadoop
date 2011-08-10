@@ -207,7 +207,7 @@ class Checkpointer extends Daemon {
     long lastApplied = bnImage.getLastAppliedTxId();
     LOG.debug("Doing checkpoint. Last applied: " + lastApplied);
     RemoteEditLogManifest manifest =
-      getNamenode().getEditLogManifest(bnImage.getLastAppliedTxId());
+      getNamenode().getEditLogManifest(bnImage.getLastAppliedTxId() + 1);
 
     if (!manifest.getLogs().isEmpty()) {
       RemoteEditLog firstRemoteLog = manifest.getLogs().get(0);

@@ -22,9 +22,15 @@ import java.io.*;
 import java.net.URI;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Arrays;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,6 +55,10 @@ import org.apache.log4j.Level;
 import org.aspectj.util.FileUtil;
 
 import org.mockito.Mockito;
+import org.junit.Test;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 import static org.apache.hadoop.test.MetricsAsserts.*;
 
@@ -745,4 +755,103 @@ public class TestEditLog extends TestCase {
       log.close();
     }
   }
+
+  /**
+   * Tests the getEditLogManifest function using mock storage for a number
+   * of different situations.
+   */
+  @Test
+  public void testEditLogManifestMocks() throws IOException {
+    NNStorage storage;
+    FSEditLog log;
+    // Simple case - different directories have the same
+    // set of logs, with an in-progress one at end
+    storage = mockStorageWithEdits(
+        "[1,100]|[101,200]|[201,]",
+        "[1,100]|[101,200]|[201,]");
+    log = new FSEditLog(storage);
+    assertEquals("[[1,100], [101,200]]",
+        log.getEditLogManifest(1).toString());
+    assertEquals("[[101,200]]",
+        log.getEditLogManifest(101).toString());
+
+    // Another simple case, different directories have different
+    // sets of files
+    storage = mockStorageWithEdits(
+        "[1,100]|[101,200]",
+        "[1,100]|[201,300]|[301,400]"); // nothing starting at 101
+    log = new FSEditLog(storage);
+    assertEquals("[[1,100], [101,200], [201,300], [301,400]]",
+        log.getEditLogManifest(1).toString());
+    
+    // Case where one directory has an earlier finalized log, followed
+    // by a gap. The returned manifest should start after the gap.
+    storage = mockStorageWithEdits(
+        "[1,100]|[301,400]", // gap from 101 to 300
+        "[301,400]|[401,500]");
+    log = new FSEditLog(storage);
+    assertEquals("[[301,400], [401,500]]",
+        log.getEditLogManifest(1).toString());
+    
+    // Case where different directories have different length logs
+    // starting at the same txid - should pick the longer one
+    storage = mockStorageWithEdits(
+        "[1,100]|[101,150]", // short log at 101
+        "[1,50]|[101,200]"); // short log at 1
+    log = new FSEditLog(storage);
+    assertEquals("[[1,100], [101,200]]",
+        log.getEditLogManifest(1).toString());
+    assertEquals("[[101,200]]",
+        log.getEditLogManifest(101).toString());
+
+    // Case where the first storage has an inprogress while
+    // the second has finalised that file (i.e. the first failed
+    // recently)
+    storage = mockStorageWithEdits(
+        "[1,100]|[101,]", 
+        "[1,100]|[101,200]"); 
+    log = new FSEditLog(storage);
+    assertEquals("[[1,100], [101,200]]",
+        log.getEditLogManifest(1).toString());
+    assertEquals("[[101,200]]",
+        log.getEditLogManifest(101).toString());
+  }
+  
+  /**
+   * Create a mock NNStorage object with several directories, each directory
+   * holding edit logs according to a specification. Each directory
+   * is specified by a pipe-separated string. For example:
+   * <code>[1,100]|[101,200]</code> specifies a directory which
+   * includes two finalized segments, one from 1-100, and one from 101-200.
+   * The syntax <code>[1,]</code> specifies an in-progress log starting at
+   * txid 1.
+   */
+  private NNStorage mockStorageWithEdits(String... editsDirSpecs) {
+    List<StorageDirectory> sds = Lists.newArrayList();
+    for (String dirSpec : editsDirSpecs) {
+      List<String> files = Lists.newArrayList();
+      String[] logSpecs = dirSpec.split("\\|");
+      for (String logSpec : logSpecs) {
+        Matcher m = Pattern.compile("\\[(\\d+),(\\d+)?\\]").matcher(logSpec);
+        assertTrue("bad spec: " + logSpec, m.matches());
+        if (m.group(2) == null) {
+          files.add(NNStorage.getInProgressEditsFileName(
+              Long.valueOf(m.group(1))));
+        } else {
+          files.add(NNStorage.getFinalizedEditsFileName(
+              Long.valueOf(m.group(1)),
+              Long.valueOf(m.group(2))));
+        }
+      }
+      sds.add(FSImageTestUtil.mockStorageDirectory(
+          NameNodeDirType.EDITS, false,
+          files.toArray(new String[0])));
+    }
+    
+    NNStorage storage = Mockito.mock(NNStorage.class);
+    Mockito.doReturn(sds).when(storage).dirIterable(NameNodeDirType.EDITS);
+    return storage;
+  }
+  
+  
 }

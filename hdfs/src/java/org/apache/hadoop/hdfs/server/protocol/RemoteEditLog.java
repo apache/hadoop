@@ -20,11 +20,15 @@ package org.apache.hadoop.hdfs.server.protocol;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Comparator;
 
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.io.Writable;
 
-public class RemoteEditLog implements Writable {
+import com.google.common.base.Function;
+import com.google.common.collect.ComparisonChain;
+
+public class RemoteEditLog implements Writable, Comparable<RemoteEditLog> {
   private long startTxId = FSConstants.INVALID_TXID;
   private long endTxId = FSConstants.INVALID_TXID;
   
@@ -60,5 +64,34 @@ public class RemoteEditLog implements Writable {
     startTxId = in.readLong();
     endTxId = in.readLong();
   }
+  
+  @Override
+  public int compareTo(RemoteEditLog log) {
+    return ComparisonChain.start()
+      .compare(startTxId, log.startTxId)
+      .compare(endTxId, log.endTxId)
+      .result();
+  }
 
+  @Override
+  public boolean equals(Object o) {
+    if (!(o instanceof RemoteEditLog)) return false;
+    return this.compareTo((RemoteEditLog)o) == 0;
+  }
+  
+  @Override
+  public int hashCode() {
+    return (int) (startTxId * endTxId);
+  }
+  
+  /**
+   * Guava <code>Function</code> which applies {@link #getStartTxId()} 
+   */
+  public static final Function<RemoteEditLog, Long> GET_START_TXID =
+    new Function<RemoteEditLog, Long>() {
+      @Override
+      public Long apply(RemoteEditLog log) {
+        return log.getStartTxId();
+      }
+    };
 }
