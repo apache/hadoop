@@ -311,6 +311,9 @@ Trunk (unreleased changes)
 
     HADOOP-7525. Make arguments to test-patch optional. (tomwhite)
 
+    HADOOP-7472. RPC client should deal with IP address change.
+    (Kihwal Lee via suresh)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
