@@ -457,11 +457,7 @@ public class CatalogTracker {
       t = e;
     } catch (RemoteException e) {
       IOException ioe = e.unwrapRemoteException();
-      if (ioe instanceof NotServingRegionException) {
-        t = ioe;
-      } else {
-        throw e;
-      }
+      t = ioe;
     } catch (IOException e) {
       Throwable cause = e.getCause();
       if (cause != null && cause instanceof EOFException) {
@@ -470,7 +466,7 @@ public class CatalogTracker {
           && cause.getMessage().contains("Connection reset")) {
         t = cause;
       } else {
-        throw e;
+        t = e;
       }
     }
     LOG.info("Failed verification of " + Bytes.toStringBinary(regionName) +

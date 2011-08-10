@@ -200,7 +200,6 @@ Release 0.91.0 - Unreleased
    HBASE-4184  CatalogJanitor doesn't work properly when "fs.default.name" isn't
                set in config file (Ming Ma)
 
-
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
    HBASE-3292  Expose block cache hit/miss/evict counts into region server
@@ -428,8 +427,10 @@ Release 0.90.5 - Unreleased
   BUG FIXES
    HBASE-4160  HBase shell move and online may be unusable if region name
                or server includes binary-encoded data (Jonathan Hsieh)
+   HBASE-4168  A client continues to try and connect to a powered down
+               regionserver (Anirudh Todi)
 
-Release 0.90.4 - Unreleased
+Release 0.90.4 - August 10, 2011
 
   BUG FIXES
    HBASE-3878  Hbase client throws NoSuchElementException (Ted Yu)
