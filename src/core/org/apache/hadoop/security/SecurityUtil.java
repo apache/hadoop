@@ -18,6 +18,7 @@ package org.apache.hadoop.security;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
 import java.net.UnknownHostException;
@@ -30,8 +31,10 @@ import javax.security.auth.kerberos.KerberosTicket;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.security.token.Token;
 
 import sun.security.jgss.krb5.Krb5Util;
 import sun.security.krb5.Credentials;
@@ -232,27 +235,54 @@ public class SecurityUtil {
   }
   
   /**
+   * Set the given token's service to the format expected by the RPC client 
+   * @param token a delegation token
+   * @param addr the socket for the rpc connection
+   */
+  public static void setTokenService(Token<?> token, InetSocketAddress addr) {
+    token.setService(buildTokenService(addr));
+  }
+  
+  /**
+   * Construct the service key for a token
+   * @param addr the socket for the rpc connection
+   * @return Text formatted for the service field in a token 
+   */
+  public static Text buildTokenService(InetSocketAddress addr) {
+    return new Text(buildDTAuthority(addr));
+  }
+  
+  /**
    * create service name for Delegation token ip:port
    * @param uri
    * @return "ip:port"
    */
   public static String buildDTServiceName(URI uri, int defPort) {
-    int port = uri.getPort();
-    if(port == -1) 
-      port = defPort;
-    
-    // build the service name string "/ip:port"
-    // for whatever reason using NetUtils.createSocketAddr(target).toString()
-    // returns "localhost/ip:port"
-    StringBuffer sb = new StringBuffer();
-    String host = uri.getHost();
-    if (host != null) {
-      host = NetUtils.normalizeHostName(host);
-    } else {
-      host = "";
-    }
-    sb.append(host).append(":").append(port);
-    return sb.toString();
+    InetSocketAddress addr = NetUtils.createSocketAddr(uri.getAuthority(),
+                                                       defPort);
+    return buildDTAuthority(addr);
+   }
+  
+  /**
+   * create an authority name for looking up a Delegation token based
+   * on a socket
+   * @param addr InetSocketAddress of remote connection with a token
+   * @return "ip:port"
+   */
+  static String buildDTAuthority(InetSocketAddress addr) {
+    return buildDTAuthority(addr.getAddress().getHostAddress(), addr.getPort());
+  }
+  
+  /**
+   * create an authority name for looking up a Delegation token based
+   * on a host/ip pair
+   * @param host the remote host
+   * @param port the remote port
+   * @return "ip:port"
+   */
+  static String buildDTAuthority(String host, int port) {
+    host = (host != null) ? NetUtils.normalizeHostName(host) : "";
+    return host + ":" + port;
   }
   
   /**

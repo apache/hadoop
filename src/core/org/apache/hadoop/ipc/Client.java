@@ -240,9 +240,8 @@ public class Client {
             throw new IOException(e.toString());
           }
           InetSocketAddress addr = remoteId.getAddress();
-          token = tokenSelector.selectToken(new Text(addr.getAddress()
-              .getHostAddress() + ":" + addr.getPort()), 
-              ticket.getTokens());
+          token = tokenSelector.selectToken(
+              SecurityUtil.buildTokenService(addr), ticket.getTokens());
         }
         KerberosInfo krbInfo = protocol.getAnnotation(KerberosInfo.class);
         if (krbInfo != null) {
