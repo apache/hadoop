@@ -179,7 +179,7 @@ admin.enableTable(table);
       On the number of column families
   </title>
   <para>
-      HBase currently does not do well with anything about two or three column families so keep the number
+      HBase currently does not do well with anything above two or three column families so keep the number
       of column families in your schema low.  Currently, flushing and compactions are done on a per Region basis so
       if one column family is carrying the bulk of the data bringing on flushes, the adjacent families
       will also be flushed though the amount of data they carry is small.  Compaction is currently triggered
@@ -187,7 +187,7 @@ admin.enableTable(table);
       flushing and compaction interaction can make for a bunch of needless i/o loading (To be addressed by
       changing flushing and compaction to work on a per column family basis).
     </para>
-    <para>Try to make do with one column famliy if you can in your schemas.  Only introduce a
+    <para>Try to make do with one column family if you can in your schemas.  Only introduce a
         second and third column family in the case where data access is usually column scoped;
         i.e. you query one column family or the other but usually not both at the one time.
     </para>
@@ -214,7 +214,7 @@ admin.enableTable(table);
       <subtitle>Or why are my storefile indices large?</subtitle>
       <para>In HBase, values are always freighted with their coordinates; as a
           cell value passes through the system, it'll be accompanied by its
-          row, column name, and timestamp.  Always.  If your rows and column names
+          row, column name, and timestamp - always.  If your rows and column names
           are large, especially compared to the size of the cell value, then
           you may run up against some interesting scenarios.  One such is
           the case described by Marc Limotte at the tail of
@@ -231,6 +231,8 @@ admin.enableTable(table);
                   the thread <link xlink:href="http://search-hadoop.com/m/hemBv1LiN4Q1/a+question+storefileIndexSize&amp;subj=a+question+storefileIndexSize">a question storefileIndexSize</link>
                   up on the user mailing list.
       `</para>
+      <para>In summary, although verbose attribute names (e.g., "myImportantAttribute") are easier to read, you pay for the clarity in storage and increased I/O - use shorter attribute names and constants. 
+      Also, try to keep the row-keys as small as possible too.</para>
   </section>
   <section xml:id="schema.versions">
   <title>

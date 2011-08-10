@@ -128,12 +128,19 @@
 
   </section>
 
-  <section xml:id="perf.number.of.cfs">
-    <title>Number of Column Families</title>
-
-    <para>See <xref linkend="number.of.cfs" />.</para>
+  <section xml:id="perf.schema">
+      <title>Schema Design</title>
+  
+    <section xml:id="perf.number.of.cfs">
+      <title>Number of Column Families</title>
+      <para>See <xref linkend="number.of.cfs" />.</para>
+    </section>
+    <section xml:id="perf.schema.keys">
+      <title>Key and Attribute Lengths</title>
+      <para>See <xref linkend="keysize" />.</para>
+    </section>
   </section>
-
+  
   <section xml:id="perf.writing">
     <title>Writing to HBase</title>
 
