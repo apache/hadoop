@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -30,14 +34,12 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
-import static org.junit.Assert.*;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -224,7 +226,7 @@ public class TestDecommission {
     }
     nodes.add(nodename);
     writeConfigFile(excludeFile, nodes);
-    cluster.getNamesystem(nnIndex).refreshNodes(conf);
+    refreshNodes(cluster.getNamesystem(nnIndex), conf);
     DatanodeInfo ret = NameNodeAdapter.getDatanode(
         cluster.getNamesystem(nnIndex), info[index]);
     waitNodeState(ret, waitForState);
@@ -235,7 +237,7 @@ public class TestDecommission {
   private void recomissionNode(DatanodeInfo decommissionedNode) throws IOException {
     LOG.info("Recommissioning node: " + decommissionedNode.getName());
     writeConfigFile(excludeFile, null);
-    cluster.getNamesystem().refreshNodes(conf);
+    refreshNodes(cluster.getNamesystem(), conf);
     waitNodeState(decommissionedNode, AdminStates.NORMAL);
 
   }
@@ -283,6 +285,11 @@ public class TestDecommission {
       DFSClient client = getDfsClient(cluster.getNameNode(i), conf);
       validateCluster(client, numDatanodes);
     }
+  }
+
+  static void refreshNodes(final FSNamesystem ns, final Configuration conf
+      ) throws IOException {
+    ns.getBlockManager().getDatanodeManager().refreshNodes(conf);
   }
   
   private void verifyStats(NameNode namenode, FSNamesystem fsn,
@@ -465,7 +472,7 @@ public class TestDecommission {
       
       // Stop decommissioning and verify stats
       writeConfigFile(excludeFile, null);
-      fsn.refreshNodes(conf);
+      refreshNodes(fsn, conf);
       DatanodeInfo ret = NameNodeAdapter.getDatanode(fsn, downnode);
       waitNodeState(ret, AdminStates.NORMAL);
       verifyStats(namenode, fsn, ret, false);
@@ -509,7 +516,7 @@ public class TestDecommission {
     writeConfigFile(hostsFile, list);
     
     for (int j = 0; j < numNameNodes; j++) {
-      cluster.getNamesystem(j).refreshNodes(conf);
+      refreshNodes(cluster.getNamesystem(j), conf);
       
       DFSClient client = getDfsClient(cluster.getNameNode(j), conf);
       DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);

@@ -649,8 +649,24 @@ public class DatanodeManager {
     heartbeatManager.addDatanode(nodeDescr);
   }
 
+  /**
+   * Rereads conf to get hosts and exclude list file names.
+   * Rereads the files to update the hosts and exclude lists.  It
+   * checks if any of the hosts have changed states:
+   */
+  public void refreshNodes(final Configuration conf) throws IOException {
+    namesystem.checkSuperuserPrivilege();
+    refreshHostsReader(conf);
+    namesystem.writeLock();
+    try {
+      refreshDatanodes();
+    } finally {
+      namesystem.writeUnlock();
+    }
+  }
+
   /** Reread include/exclude files. */
-  public void refreshHostsReader(Configuration conf) throws IOException {
+  private void refreshHostsReader(Configuration conf) throws IOException {
     // Reread the conf to get dfs.hosts and dfs.hosts.exclude filenames.
     // Update the file names and refresh internal includes and excludes list.
     if (conf == null) {
@@ -662,15 +678,12 @@ public class DatanodeManager {
   }
   
   /**
-   * Rereads the config to get hosts and exclude list file names.
-   * Rereads the files to update the hosts and exclude lists.  It
-   * checks if any of the hosts have changed states:
    * 1. Added to hosts  --> no further work needed here.
    * 2. Removed from hosts --> mark AdminState as decommissioned. 
    * 3. Added to exclude --> start decommission.
    * 4. Removed from exclude --> stop decommission.
    */
-  public void refreshDatanodes() throws IOException {
+  private void refreshDatanodes() throws IOException {
     for(DatanodeDescriptor node : datanodeMap.values()) {
       // Check if not include.
       if (!inHostsList(node, null)) {

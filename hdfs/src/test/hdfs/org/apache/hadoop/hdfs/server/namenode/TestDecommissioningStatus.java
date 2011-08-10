@@ -148,7 +148,7 @@ public class TestDecommissioningStatus {
   /*
    * Decommissions the node at the given index
    */
-  private String decommissionNode(FSNamesystem namesystem, Configuration conf,
+  private String decommissionNode(FSNamesystem namesystem,
       DFSClient client, FileSystem localFileSys, int nodeIndex)
       throws IOException {
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
@@ -160,7 +160,6 @@ public class TestDecommissioningStatus {
     ArrayList<String> nodes = new ArrayList<String>(decommissionedNodes);
     nodes.add(nodename);
     writeConfigFile(localFileSys, excludeFile, nodes);
-    namesystem.refreshNodes(conf);
     return nodename;
   }
 
@@ -203,8 +202,8 @@ public class TestDecommissioningStatus {
     FSNamesystem fsn = cluster.getNamesystem();
     final DatanodeManager dm = fsn.getBlockManager().getDatanodeManager();
     for (int iteration = 0; iteration < numDatanodes; iteration++) {
-      String downnode = decommissionNode(fsn, conf, client, localFileSys,
-          iteration);
+      String downnode = decommissionNode(fsn, client, localFileSys, iteration);
+      dm.refreshNodes(conf);
       decommissionedNodes.add(downnode);
       Thread.sleep(5000);
       final List<DatanodeDescriptor> decommissioningNodes = dm.getDecommissioningNodes();
@@ -224,7 +223,7 @@ public class TestDecommissioningStatus {
     // This will remove the datanodes from decommissioning list and
     // make them available again.
     writeConfigFile(localFileSys, excludeFile, null);
-    fsn.refreshNodes(conf);
+    dm.refreshNodes(conf);
     st1.close();
     cleanupFile(fileSys, file1);
     cleanupFile(fileSys, file2);

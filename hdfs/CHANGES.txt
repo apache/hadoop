@@ -654,6 +654,9 @@ Trunk (unreleased changes)
     FileJournalManager during checkpoint process (Ivan Kelly and Todd Lipcon
     via todd)
 
+    HDFS-2239. Reduce access levels of the fields and methods in FSNamesystem.
+    (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

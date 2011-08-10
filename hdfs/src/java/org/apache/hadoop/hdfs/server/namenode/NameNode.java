@@ -626,7 +626,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
         "Unexpected not positive size: "+size);
     }
 
-    return namesystem.getBlocks(datanode, size); 
+    return namesystem.getBlockManager().getBlocks(datanode, size); 
   }
 
   @Override // NamenodeProtocol
@@ -1039,7 +1039,8 @@ public class NameNode implements NamenodeProtocols, FSConstants {
 
   @Override // ClientProtocol
   public void refreshNodes() throws IOException {
-    namesystem.refreshNodes(new HdfsConfiguration());
+    namesystem.getBlockManager().getDatanodeManager().refreshNodes(
+        new HdfsConfiguration());
   }
 
   @Override // NamenodeProtocol

@@ -380,19 +380,8 @@ public class BlockManager {
       "commitBlock length is less than the stored one "
       + commitBlock.getNumBytes() + " vs. " + block.getNumBytes();
     block.commitBlock(commitBlock);
-    
-    // Adjust disk space consumption if required
-    long diff = fileINode.getPreferredBlockSize() - commitBlock.getNumBytes();    
-    if (diff > 0) {
-      try {
-        String path = /* For finding parents */
-        namesystem.leaseManager.findPath(fileINode);
-        namesystem.dir.updateSpaceConsumed(path, 0, -diff
-            * fileINode.getReplication());
-      } catch (IOException e) {
-        LOG.warn("Unexpected exception while updating disk space.", e);
-      }
-    }
+
+    namesystem.updateDiskSpaceConsumed(fileINode, commitBlock);
   }
   
   /**
@@ -682,8 +671,26 @@ public class BlockManager {
                             minReplication);
   }
 
-   /** Get all blocks with location information from a datanode. */
-  public BlocksWithLocations getBlocksWithLocations(final DatanodeID datanode,
+  /**
+   * return a list of blocks & their locations on <code>datanode</code> whose
+   * total size is <code>size</code>
+   * 
+   * @param datanode on which blocks are located
+   * @param size total size of blocks
+   */
+  public BlocksWithLocations getBlocks(DatanodeID datanode, long size
+      ) throws IOException {
+    namesystem.readLock();
+    try {
+      namesystem.checkSuperuserPrivilege();
+      return getBlocksWithLocations(datanode, size);  
+    } finally {
+      namesystem.readUnlock();
+    }
+  }
+
+  /** Get all blocks with location information from a datanode. */
+  private BlocksWithLocations getBlocksWithLocations(final DatanodeID datanode,
       final long size) throws UnregisteredNodeException {
     final DatanodeDescriptor node = getDatanodeManager().getDatanode(datanode);
     if (node == null) {

@@ -137,10 +137,6 @@ public class FSImage implements Closeable {
                              FSImage.getCheckpointEditsDirs(conf, null));
 
     storage = new NNStorage(conf, imageDirs, editsDirs);
-    if (ns != null) {
-      storage.setUpgradeManager(ns.upgradeManager);
-    }
-
     if(conf.getBoolean(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_RESTORE_KEY,
                        DFSConfigKeys.DFS_NAMENODE_NAME_DIR_RESTORE_DEFAULT)) {
       storage.setRestoreFailedStorage(true);

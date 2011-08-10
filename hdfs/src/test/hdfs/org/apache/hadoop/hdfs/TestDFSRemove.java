@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import java.io.*;
+import java.io.DataOutputStream;
+import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -27,10 +28,6 @@ import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 
 public class TestDFSRemove extends junit.framework.TestCase {
-  static int countLease(MiniDFSCluster cluster) {
-    return cluster.getNamesystem().leaseManager.countLease();
-  }
-  
   final Path dir = new Path("/test/remove/");
 
   void list(FileSystem fs, String name) throws IOException {
