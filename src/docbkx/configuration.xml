@@ -341,7 +341,7 @@ to ensure well-formedness of your document after an edit session.
           For example, adding the properties below to your
           <filename>hbase-site.xml</filename> says that HBase should use the
           <filename>/hbase</filename> directory in the HDFS whose namenode is
-          at port 9000 on your local machine, and that it should run with one
+          at port 8020 on your local machine, and that it should run with one
           replica only (recommended for pseudo-distributed mode):</para>
 
           <programlisting>
@@ -349,7 +349,7 @@ to ensure well-formedness of your document after an edit session.
   ...
   &lt;property&gt;
     &lt;name&gt;hbase.rootdir&lt;/name&gt;
-    &lt;value&gt;hdfs://localhost:9000/hbase&lt;/value&gt;
+    &lt;value&gt;hdfs://localhost:8020/hbase&lt;/value&gt;
     &lt;description&gt;The directory shared by RegionServers.
     &lt;/description&gt;
   &lt;/property&gt;
@@ -396,7 +396,7 @@ to ensure well-formedness of your document after an edit session.
           <varname>hbase.rootdir</varname> at the appropriate HDFS NameNode
           and location in HDFS where you would like HBase to write data. For
           example, if you namenode were running at namenode.example.org on
-          port 9000 and you wanted to home your HBase in HDFS at
+          port 8020 and you wanted to home your HBase in HDFS at
           <filename>/hbase</filename>, make the following
           configuration.</para>
 
@@ -405,7 +405,7 @@ to ensure well-formedness of your document after an edit session.
   ...
   &lt;property&gt;
     &lt;name&gt;hbase.rootdir&lt;/name&gt;
-    &lt;value&gt;hdfs://namenode.example.org:9000/hbase&lt;/value&gt;
+    &lt;value&gt;hdfs://namenode.example.org:8020/hbase&lt;/value&gt;
     &lt;description&gt;The directory shared by RegionServers.
     &lt;/description&gt;
   &lt;/property&gt;
@@ -856,7 +856,7 @@ config.set("hbase.zookeeper.quorum", "localhost");  // Here we are running zooke
   &lt;/property&gt;
   &lt;property&gt;
     &lt;name&gt;hbase.rootdir&lt;/name&gt;
-    &lt;value&gt;hdfs://example0:9000/hbase&lt;/value&gt;
+    &lt;value&gt;hdfs://example0:8020/hbase&lt;/value&gt;
     &lt;description&gt;The directory shared by RegionServers.
     &lt;/description&gt;
   &lt;/property&gt;

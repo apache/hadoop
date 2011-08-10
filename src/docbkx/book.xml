@@ -1060,8 +1060,8 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
         the <classname>org.apache.hadoop.hbase.io.hfile.HFile
         </classname>tool. Type the following to see usage:<programlisting><code>$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.io.hfile.HFile </code> </programlisting>For
         example, to view the content of the file
-        <filename>hdfs://10.81.47.41:9000/hbase/TEST/1418428042/DSMP/4759508618286845475</filename>,
-        type the following:<programlisting> <code>$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.io.hfile.HFile -v -f hdfs://10.81.47.41:9000/hbase/TEST/1418428042/DSMP/4759508618286845475 </code> </programlisting>If
+        <filename>hdfs://10.81.47.41:8020/hbase/TEST/1418428042/DSMP/4759508618286845475</filename>,
+        type the following:<programlisting> <code>$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.io.hfile.HFile -v -f hdfs://10.81.47.41:8020/hbase/TEST/1418428042/DSMP/4759508618286845475 </code> </programlisting>If
         you leave off the option -v to see just a summary on the hfile. See
         usage for other things to do with the <classname>HFile</classname>
         tool.</para>
@@ -1320,13 +1320,13 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
         content of the <filename>recovered.edits</filename>. directory.</para>
 
         <para>You can get a textual dump of a WAL file content by doing the
-        following:<programlisting> <code>$ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.HLog --dump hdfs://example.org:9000/hbase/.logs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012</code> </programlisting>The
+        following:<programlisting> <code>$ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.HLog --dump hdfs://example.org:8020/hbase/.logs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012</code> </programlisting>The
         return code will be non-zero if issues with the file so you can test
         wholesomeness of file by redirecting <varname>STDOUT</varname> to
         <code>/dev/null</code> and testing the program return.</para>
 
         <para>Similarily you can force a split of a log file directory by
-        doing:<programlisting> $ ./<code>bin/hbase org.apache.hadoop.hbase.regionserver.wal.HLog --split hdfs://example.org:9000/hbase/.logs/example.org,60020,1283516293161/</code></programlisting></para>
+        doing:<programlisting> $ ./<code>bin/hbase org.apache.hadoop.hbase.regionserver.wal.HLog --split hdfs://example.org:8020/hbase/.logs/example.org,60020,1283516293161/</code></programlisting></para>
       </section>
     </section>
     <section xml:id="compression.tool"><title>Compression Tool</title>
