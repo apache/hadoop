@@ -112,7 +112,7 @@ mvn test -Dtest=TestXYZ
             <link xlink:href="http://blog.sematext.com/2010/08/30/hbase-case-study-using-hbasetestingutility-for-local-testing-development/">HBase Case-Study: Using HBaseTestingUtility for Local Testing and Development</link> (2010).
         </para>
         <section xml:id="mockito">
-          <title>Mocito</title>
+          <title>Mockito</title>
           <para>Sometimes you don't need a full running server
               unit testing.  For example, some methods can make do with a
               a <classname>org.apache.hadoop.hbase.Server</classname> instance

@@ -332,6 +332,7 @@
           <sectionLabelIncludesComponentLabel>true</sectionLabelIncludesComponentLabel>
           <targetDirectory>${basedir}/target/site/book/</targetDirectory>
           <htmlStylesheet>../css/freebsd_docbook.css</htmlStylesheet>
+          <imgSrcPath>../images/</imgSrcPath>
         </configuration>
             <goals>
               <goal>generate-html</goal>
@@ -348,6 +349,7 @@
           <sectionLabelIncludesComponentLabel>true</sectionLabelIncludesComponentLabel>
           <targetDirectory>${basedir}/target/site/</targetDirectory>
           <htmlStylesheet>css/freebsd_docbook.css</htmlStylesheet>
+          <imgSrcPath>images/</imgSrcPath>
         </configuration>
             <goals>
               <goal>generate-html</goal>
