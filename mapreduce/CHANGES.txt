@@ -4,6 +4,9 @@ Trunk (unreleased changes)
 
   MAPREDUCE-279
 
+    MAPREDUCE-2706. Log job submission failures. (Jeffrey Naisbitt via
+    acmurthy) 
+    
     MAPREDUCE-2782. Unit tests for CapacityScheduler. (acmurthy) 
     
     Fix for running ant targets to use the right set of common/test jars 

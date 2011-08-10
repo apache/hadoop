@@ -414,27 +414,33 @@ public class LeafQueue implements Queue {
 
       // Check if the queue is accepting jobs
       if (state != QueueState.RUNNING) {
-        throw new AccessControlException("Queue " + getQueuePath() +
-            " is STOPPED. Cannot accept submission of application: " +
-            application.getApplicationId());
+        String msg = "Queue " + getQueuePath() +
+        " is STOPPED. Cannot accept submission of application: " +
+        application.getApplicationId();
+        LOG.info(msg);
+        throw new AccessControlException(msg);
       }
 
       // Check submission limits for queues
       if (getNumApplications() >= maxApplications) {
-        throw new AccessControlException("Queue " + getQueuePath() + 
-            " already has " + getNumApplications() + " applications," +
-            " cannot accept submission of application: " + 
-            application.getApplicationId());
+        String msg = "Queue " + getQueuePath() + 
+        " already has " + getNumApplications() + " applications," +
+        " cannot accept submission of application: " + 
+        application.getApplicationId();
+        LOG.info(msg);
+        throw new AccessControlException(msg);
       }
 
       // Check submission limits for the user on this queue
       user = getUser(userName);
       if (user.getApplications() >= maxApplicationsPerUser) {
-        throw new AccessControlException("Queue " + getQueuePath() + 
-            " already has " + user.getApplications() + 
-            " applications from user " + userName + 
-            " cannot accept submission of application: " + 
-            application.getApplicationId());
+        String msg = "Queue " + getQueuePath() + 
+        " already has " + user.getApplications() + 
+        " applications from user " + userName + 
+        " cannot accept submission of application: " + 
+        application.getApplicationId();
+        LOG.info(msg);
+        throw new AccessControlException(msg);
       }
 
       // Add the application to our data-structures
