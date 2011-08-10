@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.util;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -29,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
@@ -488,6 +490,32 @@ public abstract class FSUtils {
     return fs.exists(rootRegionDir);
   }
 
+
+  /**
+   * Compute HDFS blocks distribution of a given file, or a portion of the file
+   * @param fs file system
+   * @param FileStatus file status of the file
+   * @param start start position of the portion
+   * @param length length of the portion 
+   * @return The HDFS blocks distribution
+   */  
+  static public HDFSBlocksDistribution computeHDFSBlocksDistribution(
+    final FileSystem fs, FileStatus status, long start, long length)
+    throws IOException {
+    HDFSBlocksDistribution blocksDistribution = new HDFSBlocksDistribution();
+    BlockLocation [] blockLocations =
+      fs.getFileBlockLocations(status, start, length);
+    for(BlockLocation bl : blockLocations) {
+      String [] hosts = bl.getHosts();
+      long len = bl.getLength();
+      blocksDistribution.addHostsAndBlockWeight(hosts, len);
+    }
+    
+    return blocksDistribution;
+  }
+  
+
+  
   /**
    * Runs through the hbase rootdir and checks all stores have only
    * one file in them -- that is, they've been major compacted.  Looks

@@ -421,6 +421,7 @@ Release 0.91.0 - Unreleased
                (Nichole Treadway and Nicholas Telford)
    HBASE-2233  Support both Hadoop 0.20 and 0.22
    HBASE-3857  Change the HFile Format (Mikhail & Liyin)
+   HBASE-4114  Metrics for HFile HDFS block locality (Ming Ma)
 
 Release 0.90.5 - Unreleased
 

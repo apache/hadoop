@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -459,6 +460,61 @@ public class HRegion implements HeapSize { // , Writable{
       }
     }
     return false;
+  }
+  
+  /**
+   * This function will return the HDFS blocks distribution based on the data
+   * captured when HFile is created
+   * @return The HDFS blocks distribution for the region.
+   */
+  public HDFSBlocksDistribution getHDFSBlocksDistribution() {
+    HDFSBlocksDistribution hdfsBlocksDistribution =
+      new HDFSBlocksDistribution();
+    synchronized (this.stores) {
+      for (Store store : this.stores.values()) {
+        for (StoreFile sf : store.getStorefiles()) {
+          HDFSBlocksDistribution storeFileBlocksDistribution =
+            sf.getHDFSBlockDistribution();
+          hdfsBlocksDistribution.add(storeFileBlocksDistribution);
+        }
+      }
+    }
+    return hdfsBlocksDistribution;
+  }
+
+  /**
+   * This is a helper function to compute HDFS block distribution on demand
+   * @param conf configuration
+   * @param tableDescriptor HTableDescriptor of the table
+   * @param regionEncodedName encoded name of the region
+   * @return The HDFS blocks distribution for the given region.
+ * @throws IOException
+   */
+  static public HDFSBlocksDistribution computeHDFSBlocksDistribution(
+    Configuration conf, HTableDescriptor tableDescriptor,
+    String regionEncodedName) throws IOException {
+    HDFSBlocksDistribution hdfsBlocksDistribution =
+      new HDFSBlocksDistribution();
+    Path tablePath = FSUtils.getTablePath(FSUtils.getRootDir(conf),
+      tableDescriptor.getName());
+    FileSystem fs = tablePath.getFileSystem(conf);
+         
+    for (HColumnDescriptor family: tableDescriptor.getFamilies()) {
+      Path storeHomeDir = Store.getStoreHomedir(tablePath, regionEncodedName,
+      family.getName());
+      if (!fs.exists(storeHomeDir))continue;
+
+      FileStatus[] hfilesStatus = null;
+      hfilesStatus = fs.listStatus(storeHomeDir);
+
+      for (FileStatus hfileStatus : hfilesStatus) {
+        HDFSBlocksDistribution storeFileBlocksDistribution =
+          FSUtils.computeHDFSBlocksDistribution(fs, hfileStatus, 0,
+          hfileStatus.getLen());
+        hdfsBlocksDistribution.add(storeFileBlocksDistribution);
+      }
+    }
+    return hdfsBlocksDistribution;
   }
   
   public AtomicLong getMemstoreSize() {

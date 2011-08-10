@@ -156,6 +156,12 @@ public class RegionServerMetrics implements Updater {
     new MetricsIntValue("totalStaticBloomSizeKB", registry);
 
   /**
+   * HDFS blocks locality index
+   */
+  public final MetricsIntValue hdfsBlocksLocalityIndex =
+    new MetricsIntValue("hdfsBlocksLocalityIndex", registry);
+  
+  /**
    * Sum of all the memstore sizes in this regionserver in MB
    */
   public final MetricsIntValue memstoreSizeMB =
@@ -282,6 +288,7 @@ public class RegionServerMetrics implements Updater {
       this.blockCacheEvictedCount.pushMetric(this.metricsRecord);
       this.blockCacheHitRatio.pushMetric(this.metricsRecord);
       this.blockCacheHitCachingRatio.pushMetric(this.metricsRecord);
+      this.hdfsBlocksLocalityIndex.pushMetric(this.metricsRecord);
 
       // Mix in HFile and HLog metrics
       // Be careful. Here is code for MTVR from up in hadoop:
@@ -407,6 +414,8 @@ public class RegionServerMetrics implements Updater {
         Long.valueOf(this.blockCacheHitRatio.get())+"%");
     sb = Strings.appendKeyValue(sb, this.blockCacheHitCachingRatio.getName(),
         Long.valueOf(this.blockCacheHitCachingRatio.get())+"%");
+    sb = Strings.appendKeyValue(sb, this.hdfsBlocksLocalityIndex.getName(),
+        Long.valueOf(this.hdfsBlocksLocalityIndex.get()));
     return sb.toString();
   }
 }

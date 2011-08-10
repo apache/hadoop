@@ -19,29 +19,32 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.NavigableSet;
 import java.util.Random;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BlockLocation;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.collect.MinMaxPriorityQueue;
 
@@ -66,11 +69,23 @@ public class LoadBalancer {
   private static final Random RANDOM = new Random(System.currentTimeMillis());
   // slop for regions
   private float slop;
+  private Configuration config;
+  private ClusterStatus status;
+  private MasterServices services;
 
   LoadBalancer(Configuration conf) {
     this.slop = conf.getFloat("hbase.regions.slop", (float) 0.2);
     if (slop < 0) slop = 0;
     else if (slop > 1) slop = 1;
+    this.config = conf;
+  }
+  
+  public void setClusterStatus(ClusterStatus st) {
+    this.status = st;
+  }
+
+  public void setMasterServices(MasterServices masterServices) {
+    this.services = masterServices;
   }
   
   /* 
@@ -600,105 +615,95 @@ public class LoadBalancer {
   }
 
   /**
-   * Find the block locations for all of the files for the specified region.
-   *
    * Returns an ordered list of hosts that are hosting the blocks for this
    * region.  The weight of each host is the sum of the block lengths of all
    * files on that host, so the first host in the list is the server which
    * holds the most bytes of the given region's HFiles.
    *
-   * TODO: Make this work.  Need to figure out how to match hadoop's hostnames
-   *       given for block locations with our HServerAddress.
-   * TODO: Use the right directory for the region
-   * TODO: Use getFileBlockLocations on the files not the directory
-   *
    * @param fs the filesystem
    * @param region region
    * @return ordered list of hosts holding blocks of the specified region
-   * @throws IOException if any filesystem errors
    */
   @SuppressWarnings("unused")
-  private List<String> getTopBlockLocations(FileSystem fs, HRegionInfo region)
-  throws IOException {
-    String encodedName = region.getEncodedName();
-    Path path = new Path("/hbase/table/" + encodedName);
-    FileStatus status = fs.getFileStatus(path);
-    BlockLocation [] blockLocations =
-      fs.getFileBlockLocations(status, 0, status.getLen());
-    Map<HostAndWeight,HostAndWeight> hostWeights =
-      new TreeMap<HostAndWeight,HostAndWeight>(new HostAndWeight.HostComparator());
-    for(BlockLocation bl : blockLocations) {
-      String [] hosts = bl.getHosts();
-      long len = bl.getLength();
-      for(String host : hosts) {
-        HostAndWeight haw = hostWeights.get(host);
-        if(haw == null) {
-          haw = new HostAndWeight(host, len);
-          hostWeights.put(haw, haw);
-        } else {
-          haw.addWeight(len);
-        }
+  private List<ServerName> getTopBlockLocations(FileSystem fs,
+    HRegionInfo region) {
+    List<ServerName> topServerNames = null;
+    try {
+      HTableDescriptor tableDescriptor = getTableDescriptor(
+        region.getTableName());
+      if (tableDescriptor != null) {
+        HDFSBlocksDistribution blocksDistribution =
+          HRegion.computeHDFSBlocksDistribution(config, tableDescriptor,
+          region.getEncodedName());
+        List<String> topHosts = blocksDistribution.getTopHosts();
+        topServerNames = mapHostNameToServerName(topHosts);
       }
+    } catch (IOException ioe) {
+      LOG.debug("IOException during HDFSBlocksDistribution computation. for " +
+        "region = " + region.getEncodedName() , ioe);
     }
-    NavigableSet<HostAndWeight> orderedHosts = new TreeSet<HostAndWeight>(
-        new HostAndWeight.WeightComparator());
-    orderedHosts.addAll(hostWeights.values());
-    List<String> topHosts = new ArrayList<String>(orderedHosts.size());
-    for(HostAndWeight haw : orderedHosts.descendingSet()) {
-      topHosts.add(haw.getHost());
-    }
-    return topHosts;
+    
+    return topServerNames;
   }
 
   /**
-   * Stores the hostname and weight for that hostname.
-   *
-   * This is used when determining the physical locations of the blocks making
-   * up a region.
-   *
-   * To make a prioritized list of the hosts holding the most data of a region,
-   * this class is used to count the total weight for each host.  The weight is
-   * currently just the size of the file.
+   * return HTableDescriptor for a given tableName
+   * @param tableName the table name
+   * @return HTableDescriptor
+   * @throws IOException
    */
-  private static class HostAndWeight {
-
-    private final String host;
-    private long weight;
-
-    public HostAndWeight(String host, long weight) {
-      this.host = host;
-      this.weight = weight;
+  private HTableDescriptor getTableDescriptor(byte[] tableName)
+    throws IOException {
+    HTableDescriptor tableDescriptor = null;
+    try {
+      if ( this.services != null)
+      {
+        tableDescriptor = this.services.getTableDescriptors().
+          get(Bytes.toString(tableName));
+    }
+    } catch (TableExistsException tee) {
+      LOG.debug("TableExistsException during getTableDescriptors." +
+        " Current table name = " + tableName , tee);
+    } catch (FileNotFoundException fnfe) {
+      LOG.debug("FileNotFoundException during getTableDescriptors." +
+        " Current table name = " + tableName , fnfe);
     }
 
-    public void addWeight(long weight) {
-      this.weight += weight;
+    return tableDescriptor;
     }
 
-    public String getHost() {
-      return host;
+  /**
+   * Map hostname to ServerName, The output ServerName list will have the same
+   * order as input hosts.
+   * @param hosts the list of hosts
+   * @return ServerName list
+   */  
+  private List<ServerName> mapHostNameToServerName(List<String> hosts) {
+    if ( hosts == null || status == null) {
+      return null;
     }
 
-    public long getWeight() {
-      return weight;
-    }
+    List<ServerName> topServerNames = new ArrayList<ServerName>();
+    Collection<ServerName> regionServers = status.getServers();
 
-    private static class HostComparator implements Comparator<HostAndWeight> {
-      @Override
-      public int compare(HostAndWeight l, HostAndWeight r) {
-        return l.getHost().compareTo(r.getHost());
-      }
-    }
-
-    private static class WeightComparator implements Comparator<HostAndWeight> {
-      @Override
-      public int compare(HostAndWeight l, HostAndWeight r) {
-        if(l.getWeight() == r.getWeight()) {
-          return l.getHost().compareTo(r.getHost());
+    // create a mapping from hostname to ServerName for fast lookup
+    HashMap<String, ServerName> hostToServerName =
+      new HashMap<String, ServerName>();
+    for (ServerName sn : regionServers) {
+      hostToServerName.put(sn.getHostname(), sn);
         }
-        return l.getWeight() < r.getWeight() ? -1 : 1;
+
+    for (String host : hosts ) {
+      ServerName sn = hostToServerName.get(host);
+      // it is possible that HDFS is up ( thus host is valid ),
+      // but RS is down ( thus sn is null )
+      if (sn != null) {
+        topServerNames.add(sn);
       }
     }
+    return topServerNames;
   }
+
 
   /**
    * Generates an immediate assignment plan to be used by a new master for

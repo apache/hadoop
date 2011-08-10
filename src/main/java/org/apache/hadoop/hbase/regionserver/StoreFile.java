@@ -29,7 +29,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.SortedSet;
@@ -43,6 +42,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.client.Scan;
@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableUtils;
@@ -142,6 +143,9 @@ public class StoreFile {
 
   // Is this from an in-memory store
   private boolean inMemory;
+
+  // HDFS blocks distribuion information
+  private HDFSBlocksDistribution hdfsBlocksDistribution;
 
   // Keys for metadata stored in backing HFile.
   // Set when we obtain a Reader.
@@ -384,6 +388,84 @@ public class StoreFile {
     return blockcache ? getBlockCache(conf) : null;
   }
 
+
+  /**
+   * @return the cached value of HDFS blocks distribution. The cached value is
+   * calculated when store file is opened.
+   */  
+  public HDFSBlocksDistribution getHDFSBlockDistribution() {
+    return this.hdfsBlocksDistribution;
+  }
+
+  /**
+   * helper function to compute HDFS blocks distribution of a given reference
+   * file.For reference file, we don't compute the exact value. We use some
+   * estimate instead given it might be good enough. we assume bottom part
+   * takes the first half of reference file, top part takes the second half
+   * of the reference file. This is just estimate, given
+   * midkey ofregion != midkey of HFile, also the number and size of keys vary.
+   * If this estimate isn't good enough, we can improve it later.
+   * @param fs  The FileSystem
+   * @param reference  The reference
+   * @param reference  The referencePath
+   * @return HDFS blocks distribution
+   */    
+  static private HDFSBlocksDistribution computeRefFileHDFSBlockDistribution(
+    FileSystem fs, Reference reference, Path referencePath) throws IOException {
+    if ( referencePath == null) {
+      return null;
+    }
+    
+    FileStatus status = fs.getFileStatus(referencePath);
+    long start = 0;
+    long length = 0;
+    
+    if (Reference.isTopFileRegion(reference.getFileRegion())) {
+      start = status.getLen()/2;
+      length = status.getLen() - status.getLen()/2;
+    } else {
+      start = 0;
+      length = status.getLen()/2;
+    }
+    return FSUtils.computeHDFSBlocksDistribution(fs, status, start, length);
+  }
+  
+  /**
+   * helper function to compute HDFS blocks distribution of a given file.
+   * For reference file, it is an estimate
+   * @param fs  The FileSystem
+   * @param o  The path of the file
+   * @return HDFS blocks distribution
+   */    
+  static public HDFSBlocksDistribution computeHDFSBlockDistribution(
+    FileSystem fs, Path p) throws IOException {
+    if (isReference(p)) {
+      Reference reference = Reference.read(fs, p);
+      Path referencePath = getReferredToFile(p);
+      return computeRefFileHDFSBlockDistribution(fs, reference, referencePath);
+    } else {
+      FileStatus status = fs.getFileStatus(p);
+      long length = status.getLen();
+      return FSUtils.computeHDFSBlocksDistribution(fs, status, 0, length);
+    }
+  }
+  
+  
+  /**
+   * compute HDFS block distribution, for reference file, it is an estimate
+   */
+  private void computeHDFSBlockDistribution() throws IOException {
+    if (isReference()) {
+      this.hdfsBlocksDistribution = computeRefFileHDFSBlockDistribution(
+        this.fs, this.reference, this.referencePath);
+    } else {
+      FileStatus status = this.fs.getFileStatus(this.path);
+      long length = status.getLen();
+      this.hdfsBlocksDistribution = FSUtils.computeHDFSBlocksDistribution(
+        this.fs, status, 0, length);
+    }
+  }
+  
   /**
    * Opens reader on this store file.  Called by Constructor.
    * @return Reader for the store file.
@@ -402,6 +484,9 @@ public class StoreFile {
           this.inMemory,
           this.conf.getBoolean(HFile.EVICT_BLOCKS_ON_CLOSE_KEY, true));
     }
+    
+    computeHDFSBlockDistribution();
+    
     // Load up indices and fileinfo.
     metadataMap = Collections.unmodifiableMap(this.reader.loadFileInfo());
     // Read in our metadata.
@@ -1235,5 +1320,4 @@ public class StoreFile {
         }
       });
   }
-
 }

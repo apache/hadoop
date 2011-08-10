@@ -466,6 +466,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     status.setStatus("Starting assignment manager");
     this.assignmentManager.joinCluster();
 
+    this.balancer.setClusterStatus(getClusterStatus());
+    this.balancer.setMasterServices(this);
+    
     // Start balancer and meta catalog janitor after meta and regions have
     // been assigned.
     status.setStatus("Starting balancer and catalog janitor");

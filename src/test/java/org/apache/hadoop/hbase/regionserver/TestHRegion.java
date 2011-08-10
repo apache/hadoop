@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,6 +34,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -40,17 +43,21 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HDFSBlocksDistribution;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -69,6 +76,7 @@ import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
+import org.junit.Test;
 
 import com.google.common.collect.Lists;
 
@@ -2962,6 +2970,64 @@ public class TestHRegion extends HBaseTestCase {
     assertTrue(keyValues.length == 0);
   }
 
+  @Test public void testgetHDFSBlocksDistribution() throws Exception {
+    HBaseTestingUtility htu = new HBaseTestingUtility();
+    final int DEFAULT_BLOCK_SIZE = 1024;
+    htu.getConfiguration().setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
+    htu.getConfiguration().setInt("dfs.replication", 2);
+    
+    
+    // set up a cluster with 3 nodes
+    MiniHBaseCluster cluster;
+    String dataNodeHosts[] = new String[] { "host1", "host2", "host3" };
+    int regionServersCount = 3;
+	    
+    try {
+      cluster = htu.startMiniCluster(1, regionServersCount, dataNodeHosts);
+      byte [][] families = {fam1, fam2};
+      HTable ht = htu.createTable(Bytes.toBytes(this.getName()), families);
+
+      //Setting up region
+      byte row[] = Bytes.toBytes("row1");
+      byte col[] = Bytes.toBytes("col1");
+
+      Put put = new Put(row);	        
+      put.add(fam1, col, 1, Bytes.toBytes("test1"));
+      put.add(fam2, col, 1, Bytes.toBytes("test2"));
+      ht.put(put);
+      
+      HRegion firstRegion = htu.getHbaseCluster().
+        getRegions(Bytes.toBytes(this.getName())).get(0);
+      firstRegion.flushcache();
+      HDFSBlocksDistribution blocksDistribution1 =
+        firstRegion.getHDFSBlocksDistribution();
+      
+      // given the default replication factor is 2 and we have 2 HFiles,
+      // we will have total of 4 replica of blocks on 3 datanodes; thus there
+      // must be at least one host that have replica for 2 HFiles. That host's
+      // weight will be equal to the unique block weight.
+      long uniqueBlocksWeight1 =
+        blocksDistribution1.getUniqueBlocksTotalWeight();
+      
+      String topHost = blocksDistribution1.getTopHosts().get(0);
+      long topHostWeight = blocksDistribution1.getWeight(topHost);
+      assertTrue(uniqueBlocksWeight1 == topHostWeight);
+      
+      // use the static method to compute the value, it should be the same.
+      // static method is used by load balancer or other components
+      HDFSBlocksDistribution blocksDistribution2 = 
+        HRegion.computeHDFSBlocksDistribution(htu.getConfiguration(),
+        firstRegion.getTableDesc(),
+        firstRegion.getRegionInfo().getEncodedName());
+      long uniqueBlocksWeight2 =
+        blocksDistribution2.getUniqueBlocksTotalWeight();
+
+      assertTrue(uniqueBlocksWeight1 == uniqueBlocksWeight2);
+      } finally {
+        htu.shutdownMiniCluster();
+      }
+  }
+  
   private void putData(int startRow, int numRows, byte [] qf,
       byte [] ...families)
   throws IOException {

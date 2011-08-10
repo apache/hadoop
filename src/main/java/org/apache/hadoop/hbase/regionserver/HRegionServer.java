@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
+import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
@@ -1210,6 +1211,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     int readRequestsCount = 0;
     int writeRequestsCount = 0;
     long storefileIndexSize = 0;
+    HDFSBlocksDistribution hdfsBlocksDistribution =
+      new HDFSBlocksDistribution();
     long totalStaticIndexSize = 0;
     long totalStaticBloomSize = 0;
     for (Map.Entry<String, HRegion> e : this.onlineRegions.entrySet()) {
@@ -1227,6 +1230,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             totalStaticBloomSize += store.getTotalStaticBloomSize();
           }
         }
+        
+        hdfsBlocksDistribution.add(r.getHDFSBlocksDistribution());
       }
     this.metrics.stores.set(stores);
     this.metrics.storefiles.set(storefiles);
@@ -1258,6 +1263,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       percent = (int) (ratio * 100);
       this.metrics.blockCacheHitCachingRatio.set(percent);
     }
+    float localityIndex = hdfsBlocksDistribution.getBlockLocalityIndex(
+      getServerName().getHostname());
+    int percent = (int) (localityIndex * 100);
+    this.metrics.hdfsBlocksLocalityIndex.set(percent);
+    
   }
 
   /**
