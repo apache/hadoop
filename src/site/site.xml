@@ -19,7 +19,7 @@
       <item name="Overview" href="index.html"/>
       <item name="License" href="license.html" />
       <item name="Downloads" href="http://www.apache.org/dyn/closer.cgi/hbase/" />
-      <item name="Release Notes" href="https://issues.apache.org/jira/browse/HBASE?report=com.atlassian.jira.plugin.system.project:changelog-panel" />
+      <item name="Release Notes" href="https://issues.apache.org/jira/browse/HBASE?report=com.atlassian.jira.plugin.system.project:changelog-panel#selectedTab=com.atlassian.jira.plugin.system.project%3Achangelog-panel" />
       <item name="Issue Tracking" href="issue-tracking.html" />
       <item name="Mailing Lists" href="mail-lists.html" />
       <item name="Source Repository" href="source-repository.html" />
