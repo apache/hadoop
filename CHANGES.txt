@@ -197,6 +197,8 @@ Release 0.91.0 - Unreleased
    HBASE-4181  HConnectionManager can't find cached HRegionInterface and makes clients
                work very slow (Jia Liu)
    HBASE-4156  ZKConfig defaults clientPort improperly (Michajlo Matijkiw)
+   HBASE-4184  CatalogJanitor doesn't work properly when "fs.default.name" isn't
+               set in config file (Ming Ma)
 
 
   IMPROVEMENTS

@@ -115,8 +115,8 @@ class CatalogJanitor extends Chore {
           if (left == null) return -1;
           if (right == null) return 1;
           // Same table name.
-          int result = Bytes.compareTo(left.getTableDesc().getName(),
-            right.getTableDesc().getName());
+          int result = Bytes.compareTo(left.getTableName(),
+            right.getTableName());
           if (result != 0) return result;
           // Compare start keys.
           result = Bytes.compareTo(left.getStartKey(), right.getStartKey());
