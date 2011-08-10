@@ -67,7 +67,7 @@ public class LeafQueue implements Queue {
   private static final Log LOG = LogFactory.getLog(LeafQueue.class);
 
   private final String queueName;
-  private final Queue parent;
+  private Queue parent;
   private float capacity;
   private float absoluteCapacity;
   private float maximumCapacity;
@@ -267,6 +267,38 @@ public class LeafQueue implements Queue {
     this.usedCapacity = usedCapacity;
   }
 
+  /**
+   * Set maximum capacity - used only for testing.
+   * @param maximumCapacity new max capacity
+   */
+  synchronized void setMaxCapacity(float maximumCapacity) {
+    this.maximumCapacity = maximumCapacity;
+    this.absoluteMaxCapacity = 
+      (maximumCapacity == CapacitySchedulerConfiguration.UNDEFINED) ? 
+          Float.MAX_VALUE : 
+          (parent.getAbsoluteCapacity() * maximumCapacity);
+  }
+  
+  /**
+   * Set user limit - used only for testing.
+   * @param userLimit new user limit
+   */
+  synchronized void setUserLimit(int userLimit) {
+    this.userLimit = userLimit;
+  }
+
+  /**
+   * Set user limit factor - used only for testing.
+   * @param userLimitFactor new user limit factor
+   */
+  synchronized void setUserLimitFactor(int userLimitFactor) {
+    this.userLimitFactor = userLimitFactor;
+  }
+
+  synchronized void setParentQueue(Queue parent) {
+    this.parent = parent;
+  }
+  
   public synchronized int getNumApplications() {
     return applications.size();
   }
@@ -473,7 +505,7 @@ public class LeafQueue implements Queue {
   assignContainers(Resource clusterResource, SchedulerNode node) {
 
     LOG.info("DEBUG --- assignContainers:" +
-        " node=" + node.getNodeAddress() + 
+        " node=" + node.getHostName() + 
         " #applications=" + applications.size());
     
     // Check for reserved resources
@@ -505,10 +537,8 @@ public class LeafQueue implements Queue {
           }
 
           // Are we going over limits by allocating to this application?
-          
           ResourceRequest required = 
             application.getResourceRequest(priority, RMNode.ANY);
-          
 
           // Maximum Capacity of the queue
           if (!assignToQueue(clusterResource, required.getCapability())) {
@@ -599,9 +629,15 @@ public class LeafQueue implements Queue {
     return true;
   }
 
-  private void setUserResourceLimit(SchedulerApp application, Resource resourceLimit) {
+  private void setUserResourceLimit(SchedulerApp application, 
+      Resource resourceLimit) {
     application.setAvailableResourceLimit(resourceLimit);
     metrics.setAvailableResourcesToUser(application.getUser(), resourceLimit);
+  }
+  
+  private int roundUp(int memory) {
+    return divideAndCeil(memory, minimumAllocation.getMemory()) * 
+        minimumAllocation.getMemory();
   }
   
   private Resource computeUserLimit(SchedulerApp application, 
@@ -616,15 +652,13 @@ public class LeafQueue implements Queue {
     // Allow progress for queues with miniscule capacity
     final int queueCapacity = 
       Math.max(
-          divideAndCeil(
-              (int)(absoluteCapacity * clusterResource.getMemory()), 
-              minimumAllocation.getMemory()) 
-                * minimumAllocation.getMemory(),           // round up 
+          roundUp((int)(absoluteCapacity * clusterResource.getMemory())), 
           required.getMemory());
 
     final int consumed = usedResources.getMemory();
     final int currentCapacity = 
-      (consumed < queueCapacity) ? queueCapacity : (consumed + required.getMemory());
+      (consumed < queueCapacity) ? 
+          queueCapacity : (consumed + required.getMemory());
 
     // Never allow a single user to take more than the 
     // queue's configured capacity * user-limit-factor.
@@ -637,15 +671,19 @@ public class LeafQueue implements Queue {
     User user = getUser(userName);
 
     int limit = 
-      Math.min(
-          Math.max(divideAndCeil(currentCapacity, activeUsers), 
-              divideAndCeil((int)userLimit*currentCapacity, 100)),
+      roundUp(
+          Math.min(
+              Math.max(divideAndCeil(currentCapacity, activeUsers), 
+                       divideAndCeil((int)userLimit*currentCapacity, 100)),
               (int)(queueCapacity * userLimitFactor)
-      );
+              )
+          );
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("User limit computation for " + userName + 
-          " in queue " + getQueueName() + 
+          " in queue " + getQueueName() +
+          " userLimit=" + userLimit +
+          " userLimitFactor=" + userLimitFactor +
           " required: " + required + 
           " consumed: " + user.getConsumedResources() + 
           " limit: " + limit +
@@ -656,7 +694,7 @@ public class LeafQueue implements Queue {
           " clusterCapacity: " + clusterResource.getMemory()
       );
     }
-    
+
     return Resources.createResource(limit);
   }
   
@@ -665,7 +703,7 @@ public class LeafQueue implements Queue {
     User user = getUser(userName);
     
     // Note: We aren't considering the current request since there is a fixed
-    // overhead of the AM, so... 
+    // overhead of the AM, but it's a >= check, so... 
     if ((user.getConsumedResources().getMemory()) > limit.getMemory()) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("User " + userName + " in queue " + getQueueName() + 
@@ -694,8 +732,9 @@ public class LeafQueue implements Queue {
     return ((requiredContainers - reservedContainers) > 0);
   }
 
-  Resource assignContainersOnNode(Resource clusterResource, SchedulerNode node, 
-      SchedulerApp application, Priority priority, RMContainer reservedContainer) {
+  private Resource assignContainersOnNode(Resource clusterResource, 
+      SchedulerNode node, SchedulerApp application, 
+      Priority priority, RMContainer reservedContainer) {
 
     Resource assigned = Resources.none();
 
@@ -720,23 +759,23 @@ public class LeafQueue implements Queue {
         priority, reservedContainer);
   }
 
-  Resource assignNodeLocalContainers(Resource clusterResource, SchedulerNode node, 
-      SchedulerApp application, Priority priority, 
-      RMContainer reservedContainer) {
-    ResourceRequest request = application.getResourceRequest(priority, node
-        .getNodeAddress());
+  private Resource assignNodeLocalContainers(Resource clusterResource, 
+      SchedulerNode node, SchedulerApp application, 
+      Priority priority, RMContainer reservedContainer) {
+    ResourceRequest request = 
+        application.getResourceRequest(priority, node.getHostName());
     if (request != null) {
-      if (canAssign(application, priority, node, NodeType.DATA_LOCAL, 
+      if (canAssign(application, priority, node, NodeType.NODE_LOCAL, 
           reservedContainer)) {
-        return assignContainer(clusterResource, node, application, priority, request, 
-            NodeType.DATA_LOCAL, reservedContainer);
+        return assignContainer(clusterResource, node, application, priority, 
+            request, NodeType.NODE_LOCAL, reservedContainer);
       }
     }
     
     return Resources.none();
   }
 
-  Resource assignRackLocalContainers(Resource clusterResource,  
+  private Resource assignRackLocalContainers(Resource clusterResource,  
       SchedulerNode node, SchedulerApp application, Priority priority,
       RMContainer reservedContainer) {
     ResourceRequest request = 
@@ -751,7 +790,7 @@ public class LeafQueue implements Queue {
     return Resources.none();
   }
 
-  Resource assignOffSwitchContainers(Resource clusterResource, SchedulerNode node, 
+  private Resource assignOffSwitchContainers(Resource clusterResource, SchedulerNode node, 
       SchedulerApp application, Priority priority, 
       RMContainer reservedContainer) {
     ResourceRequest request = 
@@ -770,42 +809,24 @@ public class LeafQueue implements Queue {
   boolean canAssign(SchedulerApp application, Priority priority, 
       SchedulerNode node, NodeType type, RMContainer reservedContainer) {
 
-    ResourceRequest offSwitchRequest = 
-      application.getResourceRequest(priority, RMNode.ANY);
-
-    if (offSwitchRequest.getNumContainers() == 0) {
-      return false;
+    // Reserved... 
+    if (reservedContainer != null) {
+      return true;
     }
-
+    
+    // Clearly we need containers for this application...
     if (type == NodeType.OFF_SWITCH) {
       // 'Delay' off-switch
-      long missedNodes = application.getSchedulingOpportunities(priority);
+      ResourceRequest offSwitchRequest = 
+          application.getResourceRequest(priority, RMNode.ANY);
+      long missedOpportunities = application.getSchedulingOpportunities(priority);
       long requiredContainers = offSwitchRequest.getNumContainers(); 
       
       float localityWaitFactor = 
         application.getLocalityWaitFactor(priority, 
             scheduler.getNumClusterNodes());
       
-      if (requiredContainers > 0) {
-        // No 'delay' for reserved containers
-        if (reservedContainer != null) {
-          return true;
-        }
-        
-        // Check if we have waited long enough
-        if (missedNodes < (requiredContainers * localityWaitFactor)) {
-          LOG.info("Application " + application.getApplicationId() + 
-              " has missed " + missedNodes + " opportunities," +
-              " waitFactor= " + localityWaitFactor + 
-              " for cluster of size " + scheduler.getNumClusterNodes());
-          return false;
-        }
-        return true;
-      }
-      return false;
-      
-//      return ((requiredContainers > 0) && 
-//        (requiredContainers * localityWaitFactor) < missedNodes));
+      return ((requiredContainers * localityWaitFactor) > missedOpportunities);
     }
 
     // Check if we need containers on this rack 
@@ -813,15 +834,14 @@ public class LeafQueue implements Queue {
       application.getResourceRequest(priority, node.getRackName());
     if (type == NodeType.RACK_LOCAL) {
       if (rackLocalRequest == null) {
-        // No point waiting for rack-locality if we don't need this rack
-        return offSwitchRequest.getNumContainers() > 0;
+        return false;
       } else {
         return rackLocalRequest.getNumContainers() > 0;      
       }
     }
 
     // Check if we need containers on this host
-    if (type == NodeType.DATA_LOCAL) {
+    if (type == NodeType.NODE_LOCAL) {
       // First: Do we need containers on this rack?
       if (rackLocalRequest != null && rackLocalRequest.getNumContainers() == 0) {
         return false;
@@ -829,7 +849,7 @@ public class LeafQueue implements Queue {
       
       // Now check if we need containers on this host...
       ResourceRequest nodeLocalRequest = 
-        application.getResourceRequest(priority, node.getNodeAddress());
+        application.getResourceRequest(priority, node.getHostName());
       if (nodeLocalRequest != null) {
         return nodeLocalRequest.getNumContainers() > 0;
       }
@@ -840,10 +860,12 @@ public class LeafQueue implements Queue {
   
   private Container getContainer(RMContainer rmContainer, 
       SchedulerApp application, SchedulerNode node, Resource capability) {
-    if (rmContainer != null) {
-      return rmContainer.getContainer();
-    }
-
+    return (rmContainer != null) ? rmContainer.getContainer() :
+      createContainer(application, node, capability);
+  }
+  
+  public Container createContainer(SchedulerApp application, SchedulerNode node, 
+      Resource capability) {
     Container container = 
           BuilderUtils.newContainer(this.recordFactory,
               application.getApplicationAttemptId(),
@@ -875,11 +897,13 @@ public class LeafQueue implements Queue {
   private Resource assignContainer(Resource clusterResource, SchedulerNode node, 
       SchedulerApp application, Priority priority, 
       ResourceRequest request, NodeType type, RMContainer rmContainer) {
-    LOG.info("DEBUG --- assignContainers:" +
-        " node=" + node.getNodeAddress() + 
-        " application=" + application.getApplicationId().getId() + 
-        " priority=" + priority.getPriority() + 
-        " request=" + request + " type=" + type);
+    if (LOG.isDebugEnabled()) {
+      LOG.info("DEBUG --- assignContainers:" +
+          " node=" + node.getHostName() + 
+          " application=" + application.getApplicationId().getId() + 
+          " priority=" + priority.getPriority() + 
+          " request=" + request + " type=" + type);
+    }
     Resource capability = request.getCapability();
 
     Resource available = node.getAvailableResource();
@@ -1005,7 +1029,7 @@ public class LeafQueue implements Queue {
     }
   }
 
-  private synchronized void allocateResource(Resource clusterResource, 
+  synchronized void allocateResource(Resource clusterResource, 
       String userName, Resource resource) {
     // Update queue metrics
     Resources.addTo(usedResources, resource);
@@ -1021,7 +1045,7 @@ public class LeafQueue implements Queue {
         " user=" + userName + " resources=" + user.getConsumedResources());
   }
 
-  private synchronized void releaseResource(Resource clusterResource, 
+  synchronized void releaseResource(Resource clusterResource, 
       String userName, Resource resource) {
     // Update queue metrics
     Resources.subtractFrom(usedResources, resource);

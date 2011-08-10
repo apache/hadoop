@@ -212,7 +212,7 @@ public class ResourceTrackerService extends AbstractService implements
       this.nmLivelinessMonitor.receivedPing(nodeId);
 
       // 2. Check if it's a valid (i.e. not excluded) node
-      if (!this.nodesListManager.isValidNode(rmNode.getNodeHostName())) {
+      if (!this.nodesListManager.isValidNode(rmNode.getHostName())) {
         LOG.info("Disallowed NodeManager nodeId: " + nodeId +  
             " hostname: " + rmNode.getNodeAddress());
         throw new IOException("Disallowed NodeManager nodeId: " + 

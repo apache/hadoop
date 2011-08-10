@@ -141,7 +141,7 @@ public class MockNodes {
       }
 
       @Override
-      public String getNodeHostName() {
+      public String getHostName() {
         return hostName;
       }
 

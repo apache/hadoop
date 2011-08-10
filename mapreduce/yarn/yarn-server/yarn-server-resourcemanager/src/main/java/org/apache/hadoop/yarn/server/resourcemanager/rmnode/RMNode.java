@@ -48,7 +48,7 @@ public interface RMNode {
    * the hostname of this node
    * @return hostname of this node
    */
-  public String getNodeHostName();
+  public String getHostName();
   
   /**
    * the command port for this node

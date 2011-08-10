@@ -476,6 +476,20 @@ public class ParentQueue implements Queue {
     this.utilization = utilization;
   }
 
+  /**
+   * Set maximum capacity - used only for testing.
+   * @param maximumCapacity new max capacity
+   */
+  synchronized void setMaxCapacity(float maximumCapacity) {
+    this.maximumCapacity = maximumCapacity;
+    float parentAbsoluteCapacity = 
+        (rootQueue) ? 100.0f : parent.getAbsoluteCapacity();
+    this.absoluteMaxCapacity = 
+      (maximumCapacity == CapacitySchedulerConfiguration.UNDEFINED) ? 
+          Float.MAX_VALUE : 
+          (parentAbsoluteCapacity * maximumCapacity);
+  }
+
   @Override
   public synchronized Resource assignContainers(
       Resource clusterResource, SchedulerNode node) {
@@ -487,15 +501,13 @@ public class ParentQueue implements Queue {
       
       // Are we over maximum-capacity for this queue?
       if (!assignToQueue(clusterResource)) {
-        LOG.info(getQueueName() + 
-            " current-capacity (" + getUtilization() + ") > max-capacity (" + 
-            absoluteMaxCapacity + ")");
         break;
       }
       
       // Schedule
-      Resource assignedToChild = assignContainersToChildQueues(clusterResource, node);
-
+      Resource assignedToChild = 
+          assignContainersToChildQueues(clusterResource, node);
+      
       // Done if no child-queue assigned anything
       if (Resources.greaterThan(assignedToChild, Resources.none())) {
         // Track resource utilization for the parent-queue
@@ -527,15 +539,16 @@ public class ParentQueue implements Queue {
     
     return assigned;
   }
-  
+
   private synchronized boolean assignToQueue(Resource clusterResource) {
     // Check how of the cluster's absolute capacity we are currently using...
     float currentCapacity = 
       (float)(usedResources.getMemory()) / clusterResource.getMemory();
-    if (currentCapacity > absoluteMaxCapacity) {
+    if (currentCapacity >= absoluteMaxCapacity) {
       LOG.info(getQueueName() + 
-          " current-capacity (" + currentCapacity + ") +" +
-          " > max-capacity (" + absoluteMaxCapacity + ")");
+          " used=" + usedResources.getMemory() + 
+          " current-capacity (" + currentCapacity + ") " +
+          " >= max-capacity (" + absoluteMaxCapacity + ")");
       return false;
     }
     return true;
@@ -561,6 +574,9 @@ public class ParentQueue implements Queue {
       		" queue: " + childQueue.getQueuePath() + 
       		" stats: " + childQueue);
       assigned = childQueue.assignContainers(cluster, node);
+      LOG.info("DEBUG --- Assignedto" +
+          " queue: " + childQueue.getQueuePath() + 
+          " stats: " + childQueue + " --> " + assigned.getMemory());
 
       // If we do assign, remove the queue and re-insert in-order to re-sort
       if (Resources.greaterThan(assigned, Resources.none())) {
@@ -615,14 +631,14 @@ public class ParentQueue implements Queue {
     }
   }
   
-  private synchronized void allocateResource(Resource clusterResource, 
+  synchronized void allocateResource(Resource clusterResource, 
       Resource resource) {
     Resources.addTo(usedResources, resource);
     updateResource(clusterResource);
     ++numContainers;
   }
   
-  private synchronized void releaseResource(Resource clusterResource, 
+  synchronized void releaseResource(Resource clusterResource, 
       Resource resource) {
     Resources.subtractFrom(usedResources, resource);
     updateResource(clusterResource);

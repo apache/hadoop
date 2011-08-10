@@ -4,6 +4,8 @@ Trunk (unreleased changes)
 
   MAPREDUCE-279
 
+    MAPREDUCE-2782. Unit tests for CapacityScheduler. (acmurthy) 
+    
     Fix for running ant targets to use the right set of common/test jars 
     (gkesavan via mahadev)
     

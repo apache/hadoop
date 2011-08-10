@@ -1,9 +1,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,7 +36,7 @@ public class SchedulerNode {
   
   /* set of containers that are allocated containers */
   private final Map<ContainerId, RMContainer> launchedContainers = 
-    new TreeMap<ContainerId, RMContainer>();
+    new HashMap<ContainerId, RMContainer>();
   
   private final RMNode rmNode;
 
@@ -59,8 +59,8 @@ public class SchedulerNode {
     return this.rmNode.getHttpAddress();
   }
 
-  public String getNodeAddress() {
-    return this.rmNode.getNodeAddress();
+  public String getHostName() {
+    return this.rmNode.getHostName();
   }
 
   public String getRackName() {

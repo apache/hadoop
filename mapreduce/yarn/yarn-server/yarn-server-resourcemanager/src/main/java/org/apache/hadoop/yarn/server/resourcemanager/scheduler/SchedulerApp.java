@@ -8,6 +8,8 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -19,6 +21,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -54,16 +57,17 @@ public class SchedulerApp {
   
   Map<Priority, Integer> schedulingOpportunities = new HashMap<Priority, Integer>();
 
-  final Resource currentReservation = recordFactory
+  Resource currentReservation = recordFactory
       .newRecordInstance(Resource.class);
 
   private final RMContext rmContext;
-  public SchedulerApp(RMContext rmContext, 
-      AppSchedulingInfo application, Queue queue) {
+  public SchedulerApp(ApplicationAttemptId applicationAttemptId, 
+      String user, Queue queue, 
+      RMContext rmContext, ApplicationStore store) {
     this.rmContext = rmContext;
-    this.appSchedulingInfo = application;
+    this.appSchedulingInfo = 
+        new AppSchedulingInfo(applicationAttemptId, user, queue, store);
     this.queue = queue;
-    application.setQueue(queue);
   }
 
   public ApplicationId getApplicationId() {
@@ -186,9 +190,11 @@ public class SchedulerApp {
         new RMContainerEvent(container.getId(), RMContainerEventType.START));
 
     Resources.addTo(currentConsumption, container.getResource());
-    LOG.debug("allocate: applicationId=" + container.getId().getAppId()
-        + " container=" + container.getId() + " host="
-        + container.getNodeId().toString());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("allocate: applicationId=" + container.getId().getAppId()
+          + " container=" + container.getId() + " host="
+          + container.getNodeId().getHost() + " type=" + type);
+    }
 
     // Add it to allContainers list.
     newlyAllocatedContainers.add(rmContainer);
@@ -272,15 +278,28 @@ public class SchedulerApp {
         this.reservedContainers.get(priority);
     return (reservedContainers == null) ? 0 : reservedContainers.size();
   }
+  
+  /**
+   * Get total current reservations.
+   * Used only by unit tests
+   * @return total current reservations
+   */
+  @Stable
+  @Private
+  public synchronized Resource getCurrentReservation() {
+    return currentReservation;
+  }
 
   public synchronized RMContainer reserve(SchedulerNode node, Priority priority,
       RMContainer rmContainer, Container container) {
     // Create RMContainer if necessary
     if (rmContainer == null) {
-        rmContainer = 
-            new RMContainerImpl(container, getApplicationAttemptId(), 
-                node.getNodeID(), rmContext.getDispatcher().getEventHandler(), 
-                rmContext.getContainerAllocationExpirer());
+      rmContainer = 
+          new RMContainerImpl(container, getApplicationAttemptId(), 
+              node.getNodeID(), rmContext.getDispatcher().getEventHandler(), 
+              rmContext.getContainerAllocationExpirer());
+        
+      Resources.addTo(currentReservation, container.getResource());
     }
     rmContainer.handle(new RMContainerReservedEvent(container.getId(), 
         container.getResource(), node.getNodeID(), priority));
@@ -293,13 +312,11 @@ public class SchedulerApp {
     }
     reservedContainers.put(node.getNodeID(), rmContainer);
     
-    Resources.add(currentReservation, container.getResource());
-    
     LOG.info("Application " + getApplicationId() 
         + " reserved container " + rmContainer
         + " on node " + node + ", currently has " + reservedContainers.size()
         + " at priority " + priority 
-        + "; currentReservation " + currentReservation);
+        + "; currentReservation " + currentReservation.getMemory());
     
     return rmContainer;
   }
@@ -313,7 +330,7 @@ public class SchedulerApp {
     }
     
     Resource resource = reservedContainer.getContainer().getResource();
-    Resources.subtract(currentReservation, resource);
+    Resources.subtractFrom(currentReservation, resource);
 
     LOG.info("Application " + getApplicationId() + " unreserved " + " on node "
         + node + ", currently has " + reservedContainers.size() + " at priority "
@@ -341,7 +358,10 @@ public class SchedulerApp {
     // Estimate: Required unique resources (i.e. hosts + racks)
     int requiredResources = 
         Math.max(this.getResourceRequests(priority).size() - 1, 0);
-    return ((float) requiredResources / clusterNodes);
+    
+    // waitFactor can't be more than '1' 
+    // i.e. no point skipping more than clustersize opportunities
+    return Math.min(((float)requiredResources / clusterNodes), 1.0f);
   }
 
   public synchronized List<RMContainer> getAllReservedContainers() {

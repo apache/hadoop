@@ -279,10 +279,10 @@ public class FifoScheduler implements ResourceScheduler {
   
   private synchronized void addApplication(ApplicationAttemptId appAttemptId,
       String queueName, String user) {
-    AppSchedulingInfo appSchedulingInfo = new AppSchedulingInfo(
-        appAttemptId, queueName, user, null);
+    // TODO: Fix store
     SchedulerApp schedulerApp = 
-        new SchedulerApp(this.rmContext, appSchedulingInfo, DEFAULT_QUEUE);
+        new SchedulerApp(appAttemptId, user, DEFAULT_QUEUE, 
+            this.rmContext, null);
     applications.put(appAttemptId, schedulerApp);
     metrics.submitApp(user);
     LOG.info("Application Submission: " + appAttemptId.getApplicationId() + 
@@ -379,7 +379,7 @@ public class FifoScheduler implements ResourceScheduler {
       maxContainers = Math.min(maxContainers, rackLocalRequest.getNumContainers());
     }
 
-    if (type == NodeType.DATA_LOCAL) {
+    if (type == NodeType.NODE_LOCAL) {
       ResourceRequest nodeLocalRequest = 
         application.getResourceRequest(priority, node.getRMNode().getNodeAddress());
       if (nodeLocalRequest != null) {
@@ -427,11 +427,11 @@ public class FifoScheduler implements ResourceScheduler {
       int assignableContainers = 
         Math.min(
             getMaxAllocatableContainers(application, priority, node, 
-                NodeType.DATA_LOCAL), 
+                NodeType.NODE_LOCAL), 
                 request.getNumContainers());
       assignedContainers = 
         assignContainer(node, application, priority, 
-            assignableContainers, request, NodeType.DATA_LOCAL);
+            assignableContainers, request, NodeType.NODE_LOCAL);
     }
     return assignedContainers;
   }

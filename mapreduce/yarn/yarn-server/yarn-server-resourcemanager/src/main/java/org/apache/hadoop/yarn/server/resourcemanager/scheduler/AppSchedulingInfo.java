@@ -73,10 +73,11 @@ public class AppSchedulingInfo {
   boolean pending = true; // for app metrics
 
   public AppSchedulingInfo(ApplicationAttemptId appAttemptId,
-      String queueName, String user, ApplicationStore store) {
+      String user, Queue queue, ApplicationStore store) {
     this.applicationAttemptId = appAttemptId;
     this.applicationId = appAttemptId.getApplicationId();
-    this.queueName = queueName;
+    this.queue = queue;
+    this.queueName = queue.getQueueName();
     this.user = user;
     this.store = store;
   }
@@ -132,8 +133,10 @@ public class AppSchedulingInfo {
       ResourceRequest lastRequest = null;
 
       if (hostName.equals(RMNode.ANY)) {
-        LOG.debug("update:" + " application=" + applicationId + " request="
-            + request);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("update:" + " application=" + applicationId + " request="
+              + request);
+        }
         updatePendingResources = true;
       }
 
@@ -148,7 +151,6 @@ public class AppSchedulingInfo {
       }
 
       asks.put(hostName, request);
-
       if (updatePendingResources) {
         int lastRequestContainers = lastRequest != null ? lastRequest
             .getNumContainers() : 0;
@@ -200,7 +202,7 @@ public class AppSchedulingInfo {
    */
   synchronized public void allocate(NodeType type, SchedulerNode node,
       Priority priority, ResourceRequest request, Container container) {
-    if (type == NodeType.DATA_LOCAL) {
+    if (type == NodeType.NODE_LOCAL) {
       allocateNodeLocal(node, priority, request, container);
     } else if (type == NodeType.RACK_LOCAL) {
       allocateRackLocal(node, priority, request, container);
@@ -234,7 +236,7 @@ public class AppSchedulingInfo {
     // Update future requirements
     nodeLocalRequest.setNumContainers(nodeLocalRequest.getNumContainers() - 1);
     if (nodeLocalRequest.getNumContainers() == 0) {
-      this.requests.get(priority).remove(node.getNodeAddress());
+      this.requests.get(priority).remove(node.getHostName());
     }
 
     ResourceRequest rackLocalRequest = requests.get(priority).get(

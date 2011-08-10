@@ -168,7 +168,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   }
 
   @Override
-  public String getNodeHostName() {
+  public String getHostName() {
     return hostName;
   }
 

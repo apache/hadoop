@@ -293,7 +293,7 @@ public class Application {
     int numContainers = containers.size();
     // Schedule in priority order
     for (Priority priority : requests.keySet()) {
-      assign(priority, NodeType.DATA_LOCAL, containers);
+      assign(priority, NodeType.NODE_LOCAL, containers);
       assign(priority, NodeType.RACK_LOCAL, containers);
       assign(priority, NodeType.OFF_SWITCH, containers);
 
@@ -351,7 +351,7 @@ public class Application {
 
   private void updateResourceRequests(Map<String, ResourceRequest> requests, 
       NodeType type, Task task) {
-    if (type == NodeType.DATA_LOCAL) {
+    if (type == NodeType.NODE_LOCAL) {
       for (String host : task.getHosts()) {
         LOG.info("DEBUG --- updateResourceRequests:" +
             " application=" + applicationId +
@@ -362,7 +362,7 @@ public class Application {
       }
     }
     
-    if (type == NodeType.DATA_LOCAL || type == NodeType.RACK_LOCAL) {
+    if (type == NodeType.NODE_LOCAL || type == NodeType.RACK_LOCAL) {
       for (String rack : task.getRacks()) {
         LOG.info("DEBUG --- updateResourceRequests:" +
             " application=" + applicationId +

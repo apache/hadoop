@@ -97,7 +97,7 @@ public class Task {
   }
   
   public boolean canSchedule(NodeType type, String hostName) {
-    if (type == NodeType.DATA_LOCAL) { 
+    if (type == NodeType.NODE_LOCAL) { 
       return hosts.contains(hostName);
     } else if (type == NodeType.RACK_LOCAL) {
       return racks.contains(Application.resolve(hostName));

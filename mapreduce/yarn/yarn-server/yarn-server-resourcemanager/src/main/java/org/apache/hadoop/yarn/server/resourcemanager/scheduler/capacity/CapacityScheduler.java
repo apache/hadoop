@@ -83,7 +83,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
   private final static List<Container> EMPTY_CONTAINER_LIST = 
     new ArrayList<Container>();
 
-  private final Comparator<Queue> queueComparator = new Comparator<Queue>() {
+  static final Comparator<Queue> queueComparator = new Comparator<Queue>() {
     @Override
     public int compare(Queue q1, Queue q2) {
       if (q1.getUtilization() < q2.getUtilization()) {
@@ -96,7 +96,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
     }
   };
 
-  private final Comparator<SchedulerApp> applicationComparator = 
+  static final Comparator<SchedulerApp> applicationComparator = 
     new Comparator<SchedulerApp>() {
     @Override
     public int compare(SchedulerApp a1, SchedulerApp a2) {
@@ -199,9 +199,18 @@ implements ResourceScheduler, CapacitySchedulerContext {
   public static final String ROOT_QUEUE = 
     CapacitySchedulerConfiguration.PREFIX + ROOT;
 
+  static class QueueHook {
+    public Queue hook(Queue queue) {
+      return queue;
+    }
+  }
+  private static final QueueHook noop = new QueueHook();
+  
   @Lock(CapacityScheduler.class)
   private void initializeQueues(CapacitySchedulerConfiguration conf) {
-    root = parseQueue(conf, null, ROOT, queues, queues);
+    root = 
+        parseQueue(this, conf, null, ROOT, queues, queues, 
+            queueComparator, applicationComparator, noop);
     LOG.info("Initialized root queue " + root);
   }
 
@@ -210,7 +219,9 @@ implements ResourceScheduler, CapacitySchedulerContext {
   throws IOException {
     // Parse new queues
     Map<String, Queue> newQueues = new HashMap<String, Queue>();
-    Queue newRoot = parseQueue(conf, null, ROOT, newQueues, queues);
+    Queue newRoot = 
+        parseQueue(this, conf, null, ROOT, newQueues, queues, 
+            queueComparator, applicationComparator, noop);
     
     // Ensure all existing queues are still present
     validateExistingQueues(queues, newQueues);
@@ -258,9 +269,14 @@ implements ResourceScheduler, CapacitySchedulerContext {
   }
   
   @Lock(CapacityScheduler.class)
-  private Queue parseQueue(CapacitySchedulerConfiguration conf, 
+  static Queue parseQueue(
+      CapacitySchedulerContext csContext, 
+      CapacitySchedulerConfiguration conf, 
       Queue parent, String queueName, Map<String, Queue> queues,
-      Map<String, Queue> oldQueues) {
+      Map<String, Queue> oldQueues, 
+      Comparator<Queue> queueComparator,
+      Comparator<SchedulerApp> applicationComparator,
+      QueueHook hook) {
     Queue queue;
     String[] childQueueNames = 
       conf.getQueues((parent == null) ? 
@@ -270,21 +286,27 @@ implements ResourceScheduler, CapacitySchedulerContext {
         throw new IllegalStateException(
             "Queue configuration missing child queue names for " + queueName);
       }
-      queue = new LeafQueue(this, queueName, parent, applicationComparator,
+      queue = new LeafQueue(csContext, queueName, parent, applicationComparator,
                             oldQueues.get(queueName));
+      
+      // Used only for unit tests
+      queue = hook.hook(queue);
     } else {
       ParentQueue parentQueue = 
-        new ParentQueue(this, queueName, queueComparator, parent,
+        new ParentQueue(csContext, queueName, queueComparator, parent,
                         oldQueues.get(queueName));
+
+      // Used only for unit tests
+      queue = hook.hook(parentQueue);
+      
       List<Queue> childQueues = new ArrayList<Queue>();
       for (String childQueueName : childQueueNames) {
         Queue childQueue = 
-          parseQueue(conf, parentQueue, childQueueName, queues, oldQueues);
+          parseQueue(csContext, conf, queue, childQueueName, 
+              queues, oldQueues, queueComparator, applicationComparator, hook);
         childQueues.add(childQueue);
       }
       parentQueue.setChildQueues(childQueues);
-
-      queue = parentQueue;
     }
 
     queues.put(queueName, queue);
@@ -293,12 +315,16 @@ implements ResourceScheduler, CapacitySchedulerContext {
     return queue;
   }
 
+  synchronized Queue getQueue(String queueName) {
+    return queues.get(queueName);
+  }
+  
   private synchronized void
       addApplication(ApplicationAttemptId applicationAttemptId,
           String queueName, String user) {
 
     // Sanity checks
-    Queue queue = queues.get(queueName);
+    Queue queue = getQueue(queueName);
     if (queue == null) {
       String message = "Application " + applicationAttemptId + 
       " submitted by user " + user + " to unknown queue: " + queueName;
@@ -314,10 +340,9 @@ implements ResourceScheduler, CapacitySchedulerContext {
       return;
     }
 
-    AppSchedulingInfo appSchedulingInfo = new AppSchedulingInfo(
-        applicationAttemptId, queueName, user, null);
+    // TODO: Fix store
     SchedulerApp SchedulerApp = 
-        new SchedulerApp(this.rmContext, appSchedulingInfo, queue);
+        new SchedulerApp(applicationAttemptId, user, queue, rmContext, null);
 
     // Submit to the queue
     try {
@@ -480,7 +505,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
   }
 
   private synchronized void nodeUpdate(RMNode nm, 
-      Map<String,List<Container>> containers ) {
+      Map<ApplicationId, List<Container>> containers ) {
     LOG.info("nodeUpdate: " + nm + " clusterResources: " + clusterResource);
     
     SchedulerNode node = getNode(nm.getNodeID());
@@ -562,12 +587,8 @@ implements ResourceScheduler, CapacitySchedulerContext {
     case NODE_UPDATE:
     {
       NodeUpdateSchedulerEvent nodeUpdatedEvent = (NodeUpdateSchedulerEvent)event;
-      Map<ApplicationId, List<Container>> contAppMapping = nodeUpdatedEvent.getContainers();
-      Map<String, List<Container>> conts = new HashMap<String, List<Container>>();
-      for (Map.Entry<ApplicationId, List<Container>> entry : contAppMapping.entrySet()) {
-        conts.put(entry.getKey().toString(), entry.getValue());
-      }
-      nodeUpdate(nodeUpdatedEvent.getRMNode(), conts);
+      nodeUpdate(nodeUpdatedEvent.getRMNode(), 
+          nodeUpdatedEvent.getContainers());
     }
     break;
     case APP_ADDED:
@@ -662,12 +683,12 @@ implements ResourceScheduler, CapacitySchedulerContext {
   }
 
   @Lock(Lock.NoLock.class)
-  private SchedulerApp getApplication(ApplicationAttemptId applicationAttemptId) {
+  SchedulerApp getApplication(ApplicationAttemptId applicationAttemptId) {
     return applications.get(applicationAttemptId);
   }
 
   @Lock(Lock.NoLock.class)
-  private SchedulerNode getNode(NodeId nodeId) {
+  SchedulerNode getNode(NodeId nodeId) {
     return nodes.get(nodeId);
   }
 
