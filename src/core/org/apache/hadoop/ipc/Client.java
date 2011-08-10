@@ -383,6 +383,27 @@ public class Client {
       saslRpcClient = new SaslRpcClient(authMethod, token, serverPrincipal);
       return saslRpcClient.saslConnect(in2, out2);
     }
+
+    /**
+     * Update the server address if the address corresponding to the host
+     * name has changed.
+     *
+     * @return true if an addr change was detected.
+     * @throws IOException when the hostname cannot be resolved.
+     */
+    private synchronized boolean updateAddress() throws IOException {
+      // Do a fresh lookup with the old host name.
+      InetSocketAddress currentAddr =  new InetSocketAddress(
+                               server.getHostName(), server.getPort());
+
+      if (!server.equals(currentAddr)) {
+        LOG.warn("Address change detected. Old: " + server.toString() +
+                                 " New: " + currentAddr.toString());
+        server = currentAddr;
+        return true;
+      }
+      return false;
+    }
     
     private synchronized void setupConnection() throws IOException {
       short ioFailures = 0;
@@ -413,7 +434,7 @@ public class Client {
           }
           
           // connection time out is 20s
-          NetUtils.connect(this.socket, remoteId.getAddress(), 20000);
+          NetUtils.connect(this.socket, server, 20000);
           if (rpcTimeout > 0) {
             pingInterval = rpcTimeout;  // rpcTimeout overwrites pingInterval
           }
@@ -421,11 +442,20 @@ public class Client {
           this.socket.setSoTimeout(pingInterval);
           return;
         } catch (SocketTimeoutException toe) {
+          /* Check for an address change and update the local reference.
+           * Reset the failure counter if the address was changed
+           */
+          if (updateAddress()) {
+            timeoutFailures = ioFailures = 0;
+          }
           /* The max number of retries is 45,
            * which amounts to 20s*45 = 15 minutes retries.
            */
           handleConnectionFailure(timeoutFailures++, 45, toe);
         } catch (IOException ie) {
+          if (updateAddress()) {
+            timeoutFailures = ioFailures = 0;
+          }
           handleConnectionFailure(ioFailures++, maxRetries, ie);
         }
       }

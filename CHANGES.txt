@@ -59,6 +59,9 @@ Release 0.20.205.0 - unreleased
     MAPREDUCE-2780. Use a utility method to set service in token. 
     (Daryn Sharp via jitendra)
 
+    HADOOP-7472. RPC client should deal with IP address change.
+    (Kihwal Lee via suresh)
+
 Release 0.20.204.0 - unreleased
 
   NEW FEATURES
