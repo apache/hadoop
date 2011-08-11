@@ -212,6 +212,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2705. Permits parallel multiple task launches. 
     (Thomas Graves via ddas)
 
+    MAPREDUCE-2489. Jobsplits with random hostnames can make the queue 
+    unusable (jeffrey naisbit via mahadev)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

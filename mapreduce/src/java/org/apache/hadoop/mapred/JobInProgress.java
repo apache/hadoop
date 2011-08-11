@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -622,7 +623,7 @@ public class JobInProgress {
    * at {@link JobTracker#initJob(JobInProgress)} for more details.
    */
   public synchronized void initTasks() 
-  throws IOException, KillInterruptedException {
+  throws IOException, KillInterruptedException, UnknownHostException {
     if (tasksInited.get() || isComplete()) {
       return;
     }
@@ -652,6 +653,11 @@ public class JobInProgress {
     numMapTasks = taskSplitMetaInfo.length;
 
     checkTaskLimits();
+
+    // Sanity check the locations so we don't create/initialize unnecessary tasks
+    for (TaskSplitMetaInfo split : taskSplitMetaInfo) {
+      NetUtils.verifyHostnames(split.getLocations());
+    }
 
     jobtracker.getInstrumentation().addWaitingMaps(getJobID(), numMapTasks);
     jobtracker.getInstrumentation().addWaitingReduces(getJobID(), numReduceTasks);
