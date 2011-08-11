@@ -481,6 +481,9 @@ Trunk (unreleased changes)
     HADOOP-7512. Fix example mistake in WritableComparable javadocs.
     (Harsh J via eli)
 
+    HADOOP-7357. hadoop.io.compress.TestCodec#main() should exit with
+    non-zero exit code if test failed. (Philip Zeyliger via eli)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
