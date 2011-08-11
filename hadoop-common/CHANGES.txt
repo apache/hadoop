@@ -317,6 +317,8 @@ Trunk (unreleased changes)
     HADOOP-7499. Add method for doing a sanity check on hostnames in NetUtils.
     (Jeffrey Naisbit via mahadev)
 
+    HADOOP-6158. Move CyclicIteration to HDFS. (eli)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
