@@ -478,6 +478,9 @@ Trunk (unreleased changes)
     HADOOP-7533. Allow test-patch to be run from any subproject directory.
     (tomwhite)
 
+    HADOOP-7512. Fix example mistake in WritableComparable javadocs.
+    (Harsh J via eli)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
