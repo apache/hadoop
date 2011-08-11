@@ -18,7 +18,6 @@
 package org.apache.hadoop.net;
 
 import java.util.*;
-import java.net.UnknownHostException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -55,21 +54,6 @@ public class StaticMapping extends Configured implements DNSToSwitchMapping {
           m.add(rackId);
         } else {
           m.add(NetworkTopology.DEFAULT_RACK);
-        }
-      }
-      return m;
-    }
-  }
-  public List<String> resolveValidHosts(List<String> names)
-    throws UnknownHostException {
-    List<String> m = new ArrayList<String>();
-    synchronized (nameToRackMap) {
-      for (String name : names) {
-        String rackId;
-        if ((rackId = nameToRackMap.get(name)) != null) {
-          m.add(rackId);
-        } else {
-          throw new UnknownHostException(name);
         }
       }
       return m;

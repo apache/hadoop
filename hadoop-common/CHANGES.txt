@@ -313,6 +313,9 @@ Trunk (unreleased changes)
 
     HADOOP-7472. RPC client should deal with IP address change.
     (Kihwal Lee via suresh)
+  
+    HADOOP-7499. Add method for doing a sanity check on hostnames in NetUtils.
+    (Jeffrey Naisbit via mahadev)
 
   OPTIMIZATIONS
   

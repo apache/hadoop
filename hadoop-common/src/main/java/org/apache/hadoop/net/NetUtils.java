@@ -27,6 +27,7 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.net.ConnectException;
 import java.nio.channels.SocketChannel;
@@ -426,6 +427,35 @@ public class NetUtils {
       hostNames.add(normalizeHostName(name));
     }
     return hostNames;
+  }
+
+  /**
+   * Performs a sanity check on the list of hostnames/IPs to verify they at least
+   * appear to be valid.
+   * @param names - List of hostnames/IPs
+   * @throws UnknownHostException
+   */
+  public static void verifyHostnames(String[] names) throws UnknownHostException {
+    for (String name: names) {
+      if (name == null) {
+        throw new UnknownHostException("null hostname found");
+      }
+      // The first check supports URL formats (e.g. hdfs://, etc.). 
+      // java.net.URI requires a schema, so we add a dummy one if it doesn't
+      // have one already.
+      URI uri = null;
+      try {
+        uri = new URI(name);
+        if (uri.getHost() == null) {
+          uri = new URI("http://" + name);
+        }
+      } catch (URISyntaxException e) {
+        uri = null;
+      }
+      if (uri == null || uri.getHost() == null) {
+        throw new UnknownHostException(name + " is not a valid Inet address");
+      }
+    }
   }
 
   private static final Pattern ipPattern = // Pattern for matching hostname to ip:port
