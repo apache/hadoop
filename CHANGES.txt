@@ -103,6 +103,8 @@ Release 0.20.3 - Unreleased
 
     HDFS-1836. Thousand of CLOSE_WAIT socket. (todd via eli)
 
+    HADOOP-7240. Update eclipse .classpath template (atm)
+
 Release 0.20.2 - 2010-2-19
 
   NEW FEATURES
