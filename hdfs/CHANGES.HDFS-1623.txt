@@ -5,3 +5,5 @@ branch is merged.
 ------------------------------
 
 HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
+
+HDFS-1974. Introduce active and standy states to the namenode. (suresh)

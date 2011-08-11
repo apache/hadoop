@@ -189,34 +189,6 @@ public class BackupNode extends NameNode implements JournalProtocol {
   }
 
   /////////////////////////////////////////////////////
-  // NamenodeProtocol implementation for backup node.
-  /////////////////////////////////////////////////////
-  @Override // NamenodeProtocol
-  public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size)
-  throws IOException {
-    throw new UnsupportedActionException("getBlocks");
-  }
-
-  // Only active name-node can register other nodes.
-  @Override // NamenodeProtocol
-  public NamenodeRegistration register(NamenodeRegistration registration
-  ) throws IOException {
-    throw new UnsupportedActionException("register");
-  }
-
-  @Override // NamenodeProtocol
-  public NamenodeCommand startCheckpoint(NamenodeRegistration registration)
-  throws IOException {
-    throw new UnsupportedActionException("startCheckpoint");
-  }
-
-  @Override // NamenodeProtocol
-  public void endCheckpoint(NamenodeRegistration registration,
-                            CheckpointSignature sig) throws IOException {
-    throw new UnsupportedActionException("endCheckpoint");
-  }  
-
-  /////////////////////////////////////////////////////
   // BackupNodeProtocol implementation for backup node.
   /////////////////////////////////////////////////////
 
@@ -224,6 +196,7 @@ public class BackupNode extends NameNode implements JournalProtocol {
   public void journal(NamenodeRegistration nnReg,
       long firstTxId, int numTxns,
       byte[] records) throws IOException {
+    checkOperation(OperationCategory.JOURNAL);
     verifyRequest(nnReg);
     if(!nnRpcAddress.equals(nnReg.getAddress()))
       throw new IOException("Journal request from unexpected name-node: "
@@ -234,6 +207,7 @@ public class BackupNode extends NameNode implements JournalProtocol {
   @Override
   public void startLogSegment(NamenodeRegistration registration, long txid)
       throws IOException {
+    checkOperation(OperationCategory.JOURNAL);
     verifyRequest(registration);
   
     getBNImage().namenodeStartedLogSegment(txid);
@@ -368,5 +342,15 @@ public class BackupNode extends NameNode implements JournalProtocol {
   
   String getClusterId() {
     return clusterId;
+  }
+  
+  @Override // NameNode
+  protected void checkOperation(OperationCategory op)
+      throws UnsupportedActionException {
+    if (OperationCategory.JOURNAL != op) {
+      String msg = "Operation category " + op
+          + " is not supported at the BackupNode";
+      throw new UnsupportedActionException(msg);
+    }
   }
 }

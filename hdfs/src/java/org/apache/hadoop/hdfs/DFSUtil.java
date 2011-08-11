@@ -696,4 +696,14 @@ public class DFSUtil {
         ClientDatanodeProtocol.versionID, addr, ticket, confWithNoIpcIdle,
         NetUtils.getDefaultSocketFactory(conf), socketTimeout);
   }
+
+  /**
+   * Returns true if HA for namenode is configured.
+   * @param conf Configuration
+   * @return true if HA is configured in the configuration; else false.
+   */
+  public static boolean isHAEnabled(Configuration conf) {
+    // TODO:HA configuration changes pending
+    return false;
+  }
 }
