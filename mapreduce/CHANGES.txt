@@ -383,6 +383,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-2797. Update mapreduce tests and RAID for HDFS-2239.  (szetszwo)
 
+    MAPREDUCE-2805. Update RAID for HDFS-2241.  (szetszwo)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
