@@ -1370,6 +1370,7 @@
    <rat:report xmlns:rat="antlib:org.apache.rat.anttasks">
       <fileset dir="${dist.dir}">
         <exclude name="CHANGES.txt"/>
+        <exclude name="CHANGES.HDFS-1623.txt"/>
         <exclude name="docs/"/>
         <exclude name="lib/jdiff/"/>
         <exclude name="**/conf/*" />
