@@ -832,7 +832,7 @@ public class LeafQueue implements Queue {
         application.getLocalityWaitFactor(priority, 
             scheduler.getNumClusterNodes());
       
-      return ((requiredContainers * localityWaitFactor) > missedOpportunities);
+      return ((requiredContainers * localityWaitFactor) < missedOpportunities);
     }
 
     // Check if we need containers on this rack 
