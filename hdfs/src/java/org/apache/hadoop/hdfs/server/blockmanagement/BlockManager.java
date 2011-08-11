@@ -1221,12 +1221,13 @@ public class BlockManager {
     final DatanodeDescriptor targets[] = blockplacement.chooseTarget(
         src, numOfReplicas, client, excludedNodes, blocksize);
     if (targets.length < minReplication) {
-      throw new IOException("File " + src + " could only be replicated to " +
-                            targets.length + " nodes, instead of " +
-                            minReplication + ". There are "
-                            + getDatanodeManager().getNetworkTopology().getNumOfLeaves()
-                            + " datanode(s) running but "+excludedNodes.size() +
-                            " node(s) are excluded in this operation.");
+      throw new IOException("File " + src + " could only be replicated to "
+          + targets.length + " nodes instead of minReplication (="
+          + minReplication + ").  There are "
+          + getDatanodeManager().getNetworkTopology().getNumOfLeaves()
+          + " datanode(s) running and "
+          + (excludedNodes == null? "no": excludedNodes.size())
+          + " node(s) are excluded in this operation.");
     }
     return targets;
   }

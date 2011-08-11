@@ -404,6 +404,36 @@ public class TestFileCreation extends junit.framework.TestCase {
     }
   }
 
+  /** test addBlock(..) when replication<min and excludeNodes==null. */
+  public void testFileCreationError3() throws IOException {
+    System.out.println("testFileCreationError3 start");
+    Configuration conf = new HdfsConfiguration();
+    // create cluster
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+    DistributedFileSystem dfs = null;
+    try {
+      cluster.waitActive();
+      dfs = (DistributedFileSystem)cluster.getFileSystem();
+      DFSClient client = dfs.dfs;
+
+      // create a new file.
+      final Path f = new Path("/foo.txt");
+      createFile(dfs, f, 3);
+      try {
+        cluster.getNameNode().addBlock(f.toString(), 
+            client.clientName, null, null);
+        fail();
+      } catch(IOException ioe) {
+        FileSystem.LOG.info("GOOD!", ioe);
+      }
+
+      System.out.println("testFileCreationError3 successful");
+    } finally {
+      IOUtils.closeStream(dfs);
+      cluster.shutdown();
+    }
+  }
+
   /**
    * Test that file leases are persisted across namenode restarts.
    * This test is currently not triggered because more HDFS work is 
