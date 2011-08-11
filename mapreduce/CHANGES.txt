@@ -4,6 +4,8 @@ Trunk (unreleased changes)
 
   MAPREDUCE-279
 
+    MAPREDUCE-2808. pull MAPREDUCE-2797 into mr279 branch (thomas graves via mahadev)
+
     Fixed CS locality wait factor. (acmurthy)
 
     MAPREDUCE-2781. mr279 RM application finishtime not set 
