@@ -486,6 +486,8 @@ Trunk (unreleased changes)
     HADOOP-7357. hadoop.io.compress.TestCodec#main() should exit with
     non-zero exit code if test failed. (Philip Zeyliger via eli)
 
+    HADOOP-6622. Token should not print the password in toString. (eli)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

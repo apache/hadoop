@@ -238,8 +238,6 @@ public class Token<T extends TokenIdentifier> implements Writable {
     StringBuilder buffer = new StringBuilder();
     buffer.append("Ident: ");
     addBinaryBuffer(buffer, identifier);
-    buffer.append(", Pass: ");
-    addBinaryBuffer(buffer, password);
     buffer.append(", Kind: ");
     buffer.append(kind.toString());
     buffer.append(", Service: ");
