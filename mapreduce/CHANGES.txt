@@ -3,7 +3,10 @@ Hadoop MapReduce Change Log
 Trunk (unreleased changes)
 
   MAPREDUCE-279
-
+   
+    MAPREDUCE-2781. mr279 RM application finishtime not set 
+    (thomas graves via mahadev)
+    
     MAPREDUCE-2706. Log job submission failures. (Jeffrey Naisbitt via
     acmurthy) 
     

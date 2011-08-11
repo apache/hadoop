@@ -80,17 +80,23 @@ public class RMAppImpl implements RMApp {
                                            RMAppEventType,
                                            RMAppEvent>(RMAppState.NEW)
 
+
+     // TODO - ATTEMPT_KILLED not sent right now but should handle if 
+     // attempt starts sending
+
      // Transitions from NEW state
     .addTransition(RMAppState.NEW, RMAppState.SUBMITTED,
         RMAppEventType.START, new StartAppAttemptTransition())
     .addTransition(RMAppState.NEW, RMAppState.KILLED, RMAppEventType.KILL,
-        new NewAppKilledTransition())
+        new AppKilledTransition())
 
      // Transitions from SUBMITTED state
     .addTransition(RMAppState.SUBMITTED, RMAppState.FAILED,
         RMAppEventType.APP_REJECTED, new AppRejectedTransition())
     .addTransition(RMAppState.SUBMITTED, RMAppState.ACCEPTED,
         RMAppEventType.APP_ACCEPTED)
+    .addTransition(RMAppState.SUBMITTED, RMAppState.KILLED,
+        RMAppEventType.KILL, new AppKilledTransition())
 
      // Transitions from ACCEPTED state
     .addTransition(RMAppState.ACCEPTED, RMAppState.RUNNING,
@@ -100,19 +106,20 @@ public class RMAppImpl implements RMApp {
         RMAppEventType.ATTEMPT_FAILED,
         new AttemptFailedTransition(RMAppState.ACCEPTED))
     .addTransition(RMAppState.ACCEPTED, RMAppState.KILLED,
-        RMAppEventType.KILL)
+        RMAppEventType.KILL, new AppKilledTransition())
 
      // Transitions from RUNNING state
     .addTransition(RMAppState.RUNNING, RMAppState.FINISHED,
         RMAppEventType.ATTEMPT_FINISHED, FINAL_TRANSITION)
     .addTransition(RMAppState.RUNNING,
-        EnumSet.of(RMAppState.RESTARTING, RMAppState.FAILED),
+        EnumSet.of(RMAppState.RUNNING, RMAppState.FAILED),
         RMAppEventType.ATTEMPT_FAILED,
         new AttemptFailedTransition(RMAppState.RUNNING))
     .addTransition(RMAppState.RUNNING, RMAppState.KILLED,
-        RMAppEventType.KILL)
+        RMAppEventType.KILL, new AppKilledTransition())
 
      // Transitions from RESTARTING state
+     // TODO - no way to get to RESTARTING state right now
     .addTransition(RMAppState.RESTARTING, RMAppState.RUNNING,
         RMAppEventType.ATTEMPT_REGISTERED)
     .addTransition(RMAppState.RESTARTING,
@@ -120,10 +127,10 @@ public class RMAppImpl implements RMApp {
         RMAppEventType.ATTEMPT_FAILED,
         new AttemptFailedTransition(RMAppState.RESTARTING))
     .addTransition(RMAppState.RESTARTING, RMAppState.KILLED,
-        RMAppEventType.KILL)
+        RMAppEventType.KILL, new AppKilledTransition())
 
      // Transitions from FINISHED state
-    .addTransition(RMAppState.FINISHED, RMAppState.RUNNING,
+    .addTransition(RMAppState.FINISHED, RMAppState.FINISHED,
         RMAppEventType.KILL)
 
      // Transitions from FAILED state
@@ -161,6 +168,7 @@ public class RMAppImpl implements RMApp {
     this.amLivelinessMonitor = amLivelinessMonitor;
     this.scheduler = scheduler;
     this.masterService = masterService;
+    this.startTime = System.currentTimeMillis();
 
     this.maxRetries = conf.getInt(RMConfig.AM_MAX_RETRIES,
         RMConfig.DEFAULT_AM_MAX_RETRIES);
@@ -388,17 +396,19 @@ public class RMAppImpl implements RMApp {
     };
   }
 
-  private static final class NewAppKilledTransition extends RMAppTransition {
+  private static final class AppKilledTransition extends FinalTransition {
     public void transition(RMAppImpl app, RMAppEvent event) {
       app.diagnostics.append("Application killed by user.");
+      super.transition(app, event);
     };
   }
 
   private static final class AppRejectedTransition extends
-      RMAppTransition {
+      FinalTransition{
     public void transition(RMAppImpl app, RMAppEvent event) {
       RMAppRejectedEvent rejectedEvent = (RMAppRejectedEvent)event;
       app.diagnostics.append(rejectedEvent.getMessage());
+      super.transition(app, event);
     };
   }
 
@@ -418,6 +428,7 @@ public class RMAppImpl implements RMApp {
         app.dispatcher.getEventHandler().handle(
             new RMNodeCleanAppEvent(nodeId, app.applicationId));
       }
+      app.finishTime = System.currentTimeMillis();
     };
   }
 
