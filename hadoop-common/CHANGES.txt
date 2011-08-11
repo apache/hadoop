@@ -319,6 +319,9 @@ Trunk (unreleased changes)
 
     HADOOP-6158. Move CyclicIteration to HDFS. (eli)
 
+    HADOOP-7526. Add TestPath tests for URI conversion and reserved
+    characters. (eli)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
