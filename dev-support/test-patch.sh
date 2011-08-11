@@ -19,7 +19,6 @@ ulimit -n 1024
 ### SVN_REVISION and BUILD_URL are set by Hudson if it is run by patch process
 ### Read variables from properties file
 bindir=$(dirname $0)
-. $bindir/test-patch.properties
 
 # Defaults
 if [ -z "$MAVEN_HOME" ]; then
@@ -232,6 +231,7 @@ setup () {
       cleanupAndExit 0
     fi
   fi
+  . $BASEDIR/dev-support/test-patch.properties
   ### exit if warnings are NOT defined in the properties file
   if [ -z "$OK_FINDBUGS_WARNINGS" ] || [[ -z "$OK_JAVADOC_WARNINGS" ]] || [[ -z $OK_RELEASEAUDIT_WARNINGS ]]; then
     echo "Please define the following properties in test-patch.properties file"
@@ -367,8 +367,12 @@ checkJavadocWarnings () {
   echo ""
   echo ""
   echo "$MVN clean compile javadoc:javadoc -DskipTests -Pdocs -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchJavadocWarnings.txt 2>&1"
-  (cd hadoop-project; mvn install)
-  (cd hadoop-annotations; mvn install)
+  if [ -d hadoop-project ]; then
+    (cd hadoop-project; $MVN install)
+  fi
+  if [ -d hadoop-annotations ]; then  
+    (cd hadoop-annotations; $MVN install)
+  fi
   $MVN clean compile javadoc:javadoc -DskipTests -Pdocs -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchJavadocWarnings.txt 2>&1
   javadocWarnings=`$GREP '\[WARNING\]' $PATCH_DIR/patchJavadocWarnings.txt | $AWK '/Javadoc Warnings/,EOF' | $GREP warning | $AWK 'BEGIN {total = 0} {total += 1} END {print total}'`
   echo ""
@@ -525,18 +529,29 @@ checkFindbugsWarnings () {
     -1 findbugs.  The patch appears to cause Findbugs (version ${findbugs_version}) to fail."
     return 1
   fi
-JIRA_COMMENT_FOOTER="Findbugs warnings: $BUILD_URL/artifact/trunk/target/newPatchFindbugsWarnings.html
+    
+  findbugsWarnings=0
+  for file in $(find $BASEDIR -name findbugsXml.xml)
+  do
+    relative_file=${file#$BASEDIR/} # strip leading $BASEDIR prefix
+    if [ ! $relative_file == "target/findbugsXml.xml" ]; then
+      module_suffix=${relative_file%/target/findbugsXml.xml} # strip trailing path
+    fi
+    
+    cp $file $PATCH_DIR/patchFindbugsWarnings${module_suffix}.xml
+    $FINDBUGS_HOME/bin/setBugDatabaseInfo -timestamp "01/01/2000" \
+      $PATCH_DIR/patchFindbugsWarnings${module_suffix}.xml \
+      $PATCH_DIR/patchFindbugsWarnings${module_suffix}.xml
+    newFindbugsWarnings=`$FINDBUGS_HOME/bin/filterBugs -first "01/01/2000" $PATCH_DIR/patchFindbugsWarnings${module_suffix}.xml \
+      $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.xml | $AWK '{print $1}'`
+    echo "Found $newFindbugsWarnings Findbugs warnings ($file)"
+    findbugsWarnings=$((findbugsWarnings+newFindbugsWarnings))
+    $FINDBUGS_HOME/bin/convertXmlToText -html \
+      $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.xml \
+      $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.html
+    JIRA_COMMENT_FOOTER="Findbugs warnings: $BUILD_URL/artifact/trunk/target/newPatchFindbugsWarnings${module_suffix}.html
 $JIRA_COMMENT_FOOTER"
-  
-  cp $BASEDIR/hadoop-common/target/findbugsXml.xml $PATCH_DIR/patchFindbugsWarnings.xml
-  $FINDBUGS_HOME/bin/setBugDatabaseInfo -timestamp "01/01/2000" \
-    $PATCH_DIR/patchFindbugsWarnings.xml \
-    $PATCH_DIR/patchFindbugsWarnings.xml
-  findbugsWarnings=`$FINDBUGS_HOME/bin/filterBugs -first "01/01/2000" $PATCH_DIR/patchFindbugsWarnings.xml \
-    $PATCH_DIR/newPatchFindbugsWarnings.xml | $AWK '{print $1}'`
-  $FINDBUGS_HOME/bin/convertXmlToText -html \
-    $PATCH_DIR/newPatchFindbugsWarnings.xml \
-    $PATCH_DIR/newPatchFindbugsWarnings.html
+  done
 
   ### if current warnings greater than OK_FINDBUGS_WARNINGS
   if [[ $findbugsWarnings > $OK_FINDBUGS_WARNINGS ]] ; then

@@ -472,6 +472,9 @@ Trunk (unreleased changes)
     HADOOP-7528. Maven build fails in Windows. (Alejandro Abdelnur via
     tomwhite)
 
+    HADOOP-7533. Allow test-patch to be run from any subproject directory.
+    (tomwhite)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
