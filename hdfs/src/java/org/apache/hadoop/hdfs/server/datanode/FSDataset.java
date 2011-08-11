@@ -75,7 +75,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  *
  ***************************************************/
 @InterfaceAudience.Private
-public class FSDataset implements FSConstants, FSDatasetInterface {
+public class FSDataset implements FSDatasetInterface {
 
   /**
    * A node type that can be built into a tree reflecting the
@@ -465,7 +465,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
         }
         checksumIn = new DataInputStream(
             new BufferedInputStream(new FileInputStream(metaFile),
-                BUFFER_SIZE));
+                FSConstants.IO_FILE_BUFFER_SIZE));
 
         // read and handle the common header here. For now just a version
         BlockMetadataHeader header = BlockMetadataHeader.readHeader(checksumIn);

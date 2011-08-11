@@ -67,7 +67,7 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
@@ -78,6 +78,9 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -146,7 +149,7 @@ import org.mortbay.util.ajax.JSON;
  ***************************************************/
 @InterfaceAudience.Private
 @Metrics(context="dfs")
-public class FSNamesystem implements RwLock, FSConstants, FSClusterStats,
+public class FSNamesystem implements RwLock, FSClusterStats,
     FSNamesystemMBean, NameNodeMXBean {
   static final Log LOG = LogFactory.getLog(FSNamesystem.class);
 
@@ -274,9 +277,9 @@ public class FSNamesystem implements RwLock, FSConstants, FSClusterStats,
    */
   private void initialize(Configuration conf, FSImage fsImage)
       throws IOException {
-    resourceRecheckInterval =
-        conf.getLong(DFSConfigKeys.DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_KEY,
-        DFSConfigKeys.DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_DEFAULT);
+    resourceRecheckInterval = conf.getLong(
+        DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_KEY,
+        DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_DEFAULT);
     nnResourceChecker = new NameNodeResourceChecker(conf);
     checkAvailableResources();
     this.systemStart = now();
@@ -323,7 +326,7 @@ public class FSNamesystem implements RwLock, FSConstants, FSClusterStats,
   }
 
   public static Collection<URI> getNamespaceDirs(Configuration conf) {
-    return getStorageDirs(conf, DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
+    return getStorageDirs(conf, DFS_NAMENODE_NAME_DIR_KEY);
   }
 
   private static Collection<URI> getStorageDirs(Configuration conf,
@@ -357,7 +360,7 @@ public class FSNamesystem implements RwLock, FSConstants, FSClusterStats,
   }
 
   public static Collection<URI> getNamespaceEditsDirs(Configuration conf) {
-    return getStorageDirs(conf, DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY);
+    return getStorageDirs(conf, DFS_NAMENODE_EDITS_DIR_KEY);
   }
 
   @Override
@@ -429,29 +432,30 @@ public class FSNamesystem implements RwLock, FSConstants, FSClusterStats,
     
     LOG.info("fsOwner=" + fsOwner);
 
-    this.supergroup = conf.get(DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY, 
-                               DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
-    this.isPermissionEnabled = conf.getBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY,
-                                               DFSConfigKeys.DFS_PERMISSIONS_ENABLED_DEFAULT);
+    this.supergroup = conf.get(DFS_PERMISSIONS_SUPERUSERGROUP_KEY, 
+                               DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
+    this.isPermissionEnabled = conf.getBoolean(DFS_PERMISSIONS_ENABLED_KEY,
+                                               DFS_PERMISSIONS_ENABLED_DEFAULT);
     LOG.info("supergroup=" + supergroup);
     LOG.info("isPermissionEnabled=" + isPermissionEnabled);
-    short filePermission = (short)conf.getInt(DFSConfigKeys.DFS_NAMENODE_UPGRADE_PERMISSION_KEY,
-                                              DFSConfigKeys.DFS_NAMENODE_UPGRADE_PERMISSION_DEFAULT);
+    short filePermission = (short)conf.getInt(DFS_NAMENODE_UPGRADE_PERMISSION_KEY,
+                                              DFS_NAMENODE_UPGRADE_PERMISSION_DEFAULT);
     this.defaultPermission = PermissionStatus.createImmutable(
         fsOwner.getShortUserName(), supergroup, new FsPermission(filePermission));
     
     this.serverDefaults = new FsServerDefaults(
-        conf.getLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE),
-        conf.getInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, DEFAULT_BYTES_PER_CHECKSUM),
-        conf.getInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, DEFAULT_WRITE_PACKET_SIZE),
-        (short) conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, DEFAULT_REPLICATION_FACTOR),
-        conf.getInt("io.file.buffer.size", DEFAULT_FILE_BUFFER_SIZE));
-    this.maxFsObjects = conf.getLong(DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_KEY, 
-                                     DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_DEFAULT);
+        conf.getLong(DFS_BLOCK_SIZE_KEY, DFS_BLOCK_SIZE_DEFAULT),
+        conf.getInt(DFS_BYTES_PER_CHECKSUM_KEY, DFS_BYTES_PER_CHECKSUM_DEFAULT),
+        conf.getInt(DFS_CLIENT_WRITE_PACKET_SIZE_KEY, DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT),
+        (short) conf.getInt(DFS_REPLICATION_KEY, DFS_REPLICATION_DEFAULT),
+        conf.getInt(IO_FILE_BUFFER_SIZE_KEY, IO_FILE_BUFFER_SIZE_DEFAULT));
+    
+    this.maxFsObjects = conf.getLong(DFS_NAMENODE_MAX_OBJECTS_KEY, 
+                                     DFS_NAMENODE_MAX_OBJECTS_DEFAULT);
 
-    this.accessTimePrecision = conf.getLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, 0);
-    this.supportAppends = conf.getBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY,
-                                      DFSConfigKeys.DFS_SUPPORT_APPEND_DEFAULT);
+    this.accessTimePrecision = conf.getLong(DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, 0);
+    this.supportAppends = conf.getBoolean(DFS_SUPPORT_APPEND_KEY,
+        DFS_SUPPORT_APPEND_DEFAULT);
 
     this.dtpReplaceDatanodeOnFailure = ReplaceDatanodeOnFailure.get(conf);
   }
@@ -2798,16 +2802,17 @@ public class FSNamesystem implements RwLock, FSConstants, FSClusterStats,
      * @param conf configuration
      */
     SafeModeInfo(Configuration conf) {
-      this.threshold = conf.getFloat(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_DEFAULT);
+      this.threshold = conf.getFloat(DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY,
+          DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_DEFAULT);
       this.datanodeThreshold = conf.getInt(
-        DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY,
-        DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_DEFAULT);
-      this.extension = conf.getInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 0);
-      this.safeReplication = conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY, 
-                                         DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_DEFAULT);
+        DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY,
+        DFS_NAMENODE_SAFEMODE_MIN_DATANODES_DEFAULT);
+      this.extension = conf.getInt(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 0);
+      this.safeReplication = conf.getInt(DFS_NAMENODE_REPLICATION_MIN_KEY, 
+                                         DFS_NAMENODE_REPLICATION_MIN_DEFAULT);
       // default to safe mode threshold (i.e., don't populate queues before leaving safe mode)
       this.replQueueThreshold = 
-        conf.getFloat(DFSConfigKeys.DFS_NAMENODE_REPL_QUEUE_THRESHOLD_PCT_KEY,
+        conf.getFloat(DFS_NAMENODE_REPL_QUEUE_THRESHOLD_PCT_KEY,
                       (float) threshold);
       this.blockTotal = 0; 
       this.blockSafe = 0;
@@ -3977,14 +3982,12 @@ public class FSNamesystem implements RwLock, FSConstants, FSClusterStats,
   private DelegationTokenSecretManager createDelegationTokenSecretManager(
       Configuration conf) {
     return new DelegationTokenSecretManager(conf.getLong(
-        DFSConfigKeys.DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_KEY,
-        DFSConfigKeys.DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT),
-        conf.getLong(
-            DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_KEY,
-            DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT),
-        conf.getLong(
-            DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
-            DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT),
+        DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_KEY,
+        DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT),
+        conf.getLong(DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_KEY,
+            DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT),
+        conf.getLong(DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
+            DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT),
         DELEGATION_TOKEN_REMOVER_SCAN_INTERVAL, this);
   }
 

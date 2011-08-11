@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsProtoUtil;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -167,7 +168,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       this.seqno = HEART_BEAT_SEQNO;
       
       buffer = null;
-      int packetSize = PacketHeader.PKT_HEADER_LEN + DFSClient.SIZE_OF_INTEGER; // TODO(todd) strange
+      int packetSize = PacketHeader.PKT_HEADER_LEN + FSConstants.BYTES_IN_INTEGER;
       buf = new byte[packetSize];
       
       checksumStart = dataStart = packetSize;
@@ -235,12 +236,12 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
                          dataStart - checksumLen , checksumLen); 
       }
       
-      int pktLen = DFSClient.SIZE_OF_INTEGER + dataLen + checksumLen;
+      int pktLen = FSConstants.BYTES_IN_INTEGER + dataLen + checksumLen;
       
       //normally dataStart == checksumPos, i.e., offset is zero.
       buffer = ByteBuffer.wrap(
         buf, dataStart - checksumPos,
-        PacketHeader.PKT_HEADER_LEN + pktLen - DFSClient.SIZE_OF_INTEGER);
+        PacketHeader.PKT_HEADER_LEN + pktLen - FSConstants.BYTES_IN_INTEGER);
       buf = null;
       buffer.mark();
 
@@ -839,7 +840,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         final long writeTimeout = dfsClient.getDatanodeWriteTimeout(2);
         out = new DataOutputStream(new BufferedOutputStream(
             NetUtils.getOutputStream(sock, writeTimeout),
-            DataNode.SMALL_BUFFER_SIZE));
+            FSConstants.SMALL_BUFFER_SIZE));
 
         //send the TRANSFER_BLOCK request
         new Sender(out).transferBlock(block, blockToken, dfsClient.clientName,
@@ -1011,7 +1012,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         //
         DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
             NetUtils.getOutputStream(s, writeTimeout),
-            DataNode.SMALL_BUFFER_SIZE));
+            FSConstants.SMALL_BUFFER_SIZE));
         blockReplyStream = new DataInputStream(NetUtils.getInputStream(s));
 
         // send the request
@@ -1156,7 +1157,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
     final int timeout = client.getDatanodeReadTimeout(length);
     NetUtils.connect(sock, isa, timeout);
     sock.setSoTimeout(timeout);
-    sock.setSendBufferSize(DFSClient.DEFAULT_DATA_SOCKET_SIZE);
+    sock.setSendBufferSize(FSConstants.DEFAULT_DATA_SOCKET_SIZE);
     if(DFSClient.LOG.isDebugEnabled()) {
       DFSClient.LOG.debug("Send buf size " + sock.getSendBufferSize());
     }

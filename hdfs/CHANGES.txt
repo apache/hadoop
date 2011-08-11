@@ -657,6 +657,9 @@ Trunk (unreleased changes)
     HDFS-2239. Reduce access levels of the fields and methods in FSNamesystem.
     (szetszwo)
 
+    HDFS-2241. Remove implementing FSConstants interface to just get the
+    constants from the interface. (suresh)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

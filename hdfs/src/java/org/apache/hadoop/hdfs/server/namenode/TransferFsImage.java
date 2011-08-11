@@ -41,7 +41,7 @@ import com.google.common.collect.Lists;
 /**
  * This class provides fetching a specified file from the NameNode.
  */
-class TransferFsImage implements FSConstants {
+class TransferFsImage {
   
   public final static String CONTENT_LENGTH = "Content-Length";
   public final static String MD5_HEADER = "X-MD5-Digest";
@@ -124,7 +124,7 @@ class TransferFsImage implements FSConstants {
   static void getFileServer(OutputStream outstream, File localfile,
       DataTransferThrottler throttler) 
     throws IOException {
-    byte buf[] = new byte[BUFFER_SIZE];
+    byte buf[] = new byte[FSConstants.IO_FILE_BUFFER_SIZE];
     FileInputStream infile = null;
     try {
       infile = new FileInputStream(localfile);
@@ -139,7 +139,7 @@ class TransferFsImage implements FSConstants {
           && localfile.getAbsolutePath().contains("fsimage")) {
           // Test sending image shorter than localfile
           long len = localfile.length();
-          buf = new byte[(int)Math.min(len/2, BUFFER_SIZE)];
+          buf = new byte[(int)Math.min(len/2, FSConstants.IO_FILE_BUFFER_SIZE)];
           // This will read at most half of the image
           // and the rest of the image will be sent over the wire
           infile.read(buf);
@@ -179,7 +179,7 @@ class TransferFsImage implements FSConstants {
   static MD5Hash getFileClient(String nnHostPort,
       String queryString, List<File> localPaths,
       NNStorage dstStorage, boolean getChecksum) throws IOException {
-    byte[] buf = new byte[BUFFER_SIZE];
+    byte[] buf = new byte[FSConstants.IO_FILE_BUFFER_SIZE];
     String proto = UserGroupInformation.isSecurityEnabled() ? "https://" : "http://";
     StringBuilder str = new StringBuilder(proto+nnHostPort+"/getimage?");
     str.append(queryString);

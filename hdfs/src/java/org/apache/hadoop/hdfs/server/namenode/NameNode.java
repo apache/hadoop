@@ -56,6 +56,11 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
+import static org.apache.hadoop.hdfs.protocol.FSConstants.MAX_PATH_LENGTH;
+import static org.apache.hadoop.hdfs.protocol.FSConstants.MAX_PATH_DEPTH;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -140,7 +145,7 @@ import org.apache.hadoop.util.StringUtils;
  * NameNode state, for example partial blocksMap etc.
  **********************************************************/
 @InterfaceAudience.Private
-public class NameNode implements NamenodeProtocols, FSConstants {
+public class NameNode implements NamenodeProtocols {
   static{
     HdfsConfiguration.init();
   }
@@ -718,8 +723,8 @@ public class NameNode implements NamenodeProtocols, FSConstants {
                          +src+" for "+clientName+" at "+clientMachine);
     }
     if (!checkPathLength(src)) {
-      throw new IOException("create: Pathname too long.  Limit " 
-                            + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
+      throw new IOException("create: Pathname too long.  Limit "
+          + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
     namesystem.startFile(src,
         new PermissionStatus(UserGroupInformation.getCurrentUser().getShortUserName(),
@@ -896,8 +901,8 @@ public class NameNode implements NamenodeProtocols, FSConstants {
       stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst);
     }
     if (!checkPathLength(dst)) {
-      throw new IOException("rename: Pathname too long.  Limit " 
-                            + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
+      throw new IOException("rename: Pathname too long.  Limit "
+          + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
     boolean ret = namesystem.renameTo(src, dst);
     if (ret) {
@@ -918,8 +923,8 @@ public class NameNode implements NamenodeProtocols, FSConstants {
       stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst);
     }
     if (!checkPathLength(dst)) {
-      throw new IOException("rename: Pathname too long.  Limit " 
-                            + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
+      throw new IOException("rename: Pathname too long.  Limit "
+          + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
     namesystem.renameTo(src, dst, options);
     metrics.incrFilesRenamed();
@@ -1274,7 +1279,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
    * @throws IOException
    */
   public void verifyVersion(int version) throws IOException {
-    if (version != LAYOUT_VERSION)
+    if (version != FSConstants.LAYOUT_VERSION)
       throw new IncorrectVersionException(version, "data node");
   }
     

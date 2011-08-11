@@ -190,13 +190,15 @@ public class JspHelper {
     s.connect(addr, HdfsConstants.READ_TIMEOUT);
     s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
       
-      long amtToRead = Math.min(chunkSizeToView, blockSize - offsetIntoBlock);     
+    long amtToRead = Math.min(chunkSizeToView, blockSize - offsetIntoBlock);
       
       // Use the block name for file name. 
-      String file = BlockReader.getFileName(addr, poolId, blockId);
-      BlockReader blockReader = BlockReader.newBlockReader(s, file,
+    int bufferSize = conf.getInt(DFSConfigKeys.IO_FILE_BUFFER_SIZE_KEY,
+        DFSConfigKeys.IO_FILE_BUFFER_SIZE_DEFAULT);
+    String file = BlockReader.getFileName(addr, poolId, blockId);
+    BlockReader blockReader = BlockReader.newBlockReader(s, file,
         new ExtendedBlock(poolId, blockId, 0, genStamp), blockToken,
-        offsetIntoBlock, amtToRead, conf.getInt("io.file.buffer.size", 4096));
+        offsetIntoBlock, amtToRead, bufferSize);
         
     byte[] buf = new byte[(int)amtToRead];
     int readOffset = 0;

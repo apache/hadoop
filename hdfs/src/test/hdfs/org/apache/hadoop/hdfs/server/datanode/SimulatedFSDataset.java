@@ -63,7 +63,7 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
  * Note the synchronization is coarse grained - it is at each method. 
  */
 
-public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Configurable{
+public class SimulatedFSDataset  implements FSDatasetInterface, Configurable{
   
   public static final String CONFIG_PROPERTY_SIMULATED =
                                     "dfs.datanode.simulateddatastorage";

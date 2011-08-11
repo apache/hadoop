@@ -24,7 +24,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 
 public class TestDFSRemove extends junit.framework.TestCase {
@@ -73,7 +72,7 @@ public class TestDFSRemove extends junit.framework.TestCase {
           fs.delete(a, false);
         }
         // wait 3 heartbeat intervals, so that all blocks are deleted.
-        Thread.sleep(3 * FSConstants.HEARTBEAT_INTERVAL * 1000);
+        Thread.sleep(3 * DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT * 1000);
         // all blocks should be gone now.
         long dfsUsedFinal = getTotalDfsUsed(cluster);
         assertEquals("All blocks should be gone. start=" + dfsUsedStart

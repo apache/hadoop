@@ -61,6 +61,9 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsProtoUtil;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -106,7 +109,7 @@ import org.apache.hadoop.util.Progressable;
  *
  ********************************************************/
 @InterfaceAudience.Private
-public class DFSClient implements FSConstants, java.io.Closeable {
+public class DFSClient implements java.io.Closeable {
   public static final Log LOG = LogFactory.getLog(DFSClient.class);
   public static final long SERVER_DEFAULTS_VALIDITY_PERIOD = 60 * 60 * 1000L; // 1 hour
   static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
@@ -165,7 +168,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       writePacketSize = conf.getInt(DFS_CLIENT_WRITE_PACKET_SIZE_KEY,
           DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
       defaultBlockSize = conf.getLong(DFS_BLOCK_SIZE_KEY,
-          DEFAULT_BLOCK_SIZE);
+          DFS_BLOCK_SIZE_DEFAULT);
       defaultReplication = (short) conf.getInt(
           DFS_REPLICATION_KEY, DFS_REPLICATION_DEFAULT);
       taskId = conf.get("mapreduce.task.attempt.id", "NONMAPREDUCE");
@@ -1043,7 +1046,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
           out = new DataOutputStream(
               new BufferedOutputStream(NetUtils.getOutputStream(sock), 
-                                       DataNode.SMALL_BUFFER_SIZE));
+                                       FSConstants.SMALL_BUFFER_SIZE));
           in = new DataInputStream(NetUtils.getInputStream(sock));
 
           if (LOG.isDebugEnabled()) {
