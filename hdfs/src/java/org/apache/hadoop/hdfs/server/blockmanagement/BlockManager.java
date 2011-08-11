@@ -1829,39 +1829,37 @@ public class BlockManager {
    * over or under replicated. Place it into the respective queue.
    */
   public void processMisReplicatedBlocks() {
-    long nrInvalid = 0, nrOverReplicated = 0, nrUnderReplicated = 0;
-    namesystem.writeLock();
-    try {
-      neededReplications.clear();
-      for (BlockInfo block : blocksMap.getBlocks()) {
-        INodeFile fileINode = block.getINode();
-        if (fileINode == null) {
-          // block does not belong to any file
-          nrInvalid++;
-          addToInvalidates(block);
-          continue;
-        }
-        // calculate current replication
-        short expectedReplication = fileINode.getReplication();
-        NumberReplicas num = countNodes(block);
-        int numCurrentReplica = num.liveReplicas();
-        // add to under-replicated queue if need to be
-        if (isNeededReplication(block, expectedReplication, numCurrentReplica)) {
-          if (neededReplications.add(block, numCurrentReplica, num
-              .decommissionedReplicas(), expectedReplication)) {
-            nrUnderReplicated++;
-          }
-        }
+    assert namesystem.hasWriteLock();
 
-        if (numCurrentReplica > expectedReplication) {
-          // over-replicated block
-          nrOverReplicated++;
-          processOverReplicatedBlock(block, expectedReplication, null, null);
+    long nrInvalid = 0, nrOverReplicated = 0, nrUnderReplicated = 0;
+    neededReplications.clear();
+    for (BlockInfo block : blocksMap.getBlocks()) {
+      INodeFile fileINode = block.getINode();
+      if (fileINode == null) {
+        // block does not belong to any file
+        nrInvalid++;
+        addToInvalidates(block);
+        continue;
+      }
+      // calculate current replication
+      short expectedReplication = fileINode.getReplication();
+      NumberReplicas num = countNodes(block);
+      int numCurrentReplica = num.liveReplicas();
+      // add to under-replicated queue if need to be
+      if (isNeededReplication(block, expectedReplication, numCurrentReplica)) {
+        if (neededReplications.add(block, numCurrentReplica, num
+            .decommissionedReplicas(), expectedReplication)) {
+          nrUnderReplicated++;
         }
       }
-    } finally {
-      namesystem.writeUnlock();
+
+      if (numCurrentReplica > expectedReplication) {
+        // over-replicated block
+        nrOverReplicated++;
+        processOverReplicatedBlock(block, expectedReplication, null, null);
+      }
     }
+
     LOG.info("Total number of blocks            = " + blocksMap.size());
     LOG.info("Number of invalid blocks          = " + nrInvalid);
     LOG.info("Number of under-replicated blocks = " + nrUnderReplicated);

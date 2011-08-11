@@ -313,14 +313,19 @@ public class FSNamesystem implements RwLock, FSClusterStats,
    * Activate FSNamesystem daemons.
    */
   void activate(Configuration conf) throws IOException {
-    setBlockTotal();
-    blockManager.activate(conf);
-    this.lmthread = new Daemon(leaseManager.new Monitor());
-    lmthread.start();
+    writeLock();
+    try {
+      setBlockTotal();
+      blockManager.activate(conf);
 
-    this.nnrmthread = new Daemon(new NameNodeResourceMonitor());
-    nnrmthread.start();
-
+      this.lmthread = new Daemon(leaseManager.new Monitor());
+      lmthread.start();
+      this.nnrmthread = new Daemon(new NameNodeResourceMonitor());
+      nnrmthread.start();
+    } finally {
+      writeUnlock();
+    }
+    
     registerMXBean();
     DefaultMetricsSystem.instance().register(this);
   }
