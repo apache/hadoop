@@ -2336,6 +2336,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     LOG.info("Received request to open region: " +
       region.getRegionNameAsString());
+    this.regionsInTransitionInRS.add(region.getEncodedNameAsBytes());
     HTableDescriptor htd = this.tableDescriptors.get(region.getTableName());
     if (region.isRootRegion()) {
       this.service.submit(new OpenRootHandler(this, this, region, htd));
@@ -2397,6 +2398,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           region.getEncodedName());
       return false;
     }
+    this.regionsInTransitionInRS.add(region.getEncodedNameAsBytes());
     CloseRegionHandler crh = null;
     if (region.isRootRegion()) {
       crh = new CloseRootHandler(this, this, region, abort, zk);

@@ -199,6 +199,7 @@ Release 0.91.0 - Unreleased
    HBASE-4156  ZKConfig defaults clientPort improperly (Michajlo Matijkiw)
    HBASE-4184  CatalogJanitor doesn't work properly when "fs.default.name" isn't
                set in config file (Ming Ma)
+   HBASE-4186  No region is added to regionsInTransitionInRS
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
