@@ -51,7 +51,6 @@ import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
-import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlocks.BlockIterator;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.Util;
@@ -2588,9 +2587,14 @@ public class BlockManager {
   /**
    * Return an iterator over the set of blocks for which there are no replicas.
    */
-  public BlockIterator getCorruptReplicaBlockIterator() {
-    return neededReplications
-        .iterator(UnderReplicatedBlocks.QUEUE_WITH_CORRUPT_BLOCKS);
+  public Iterator<Block> getCorruptReplicaBlockIterator() {
+    return neededReplications.iterator(
+        UnderReplicatedBlocks.QUEUE_WITH_CORRUPT_BLOCKS);
+  }
+
+  /** @return the size of UnderReplicatedBlocks */
+  public int numOfUnderReplicatedBlocks() {
+    return neededReplications.size();
   }
 
   /**

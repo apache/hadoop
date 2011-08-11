@@ -660,6 +660,9 @@ Trunk (unreleased changes)
     HDFS-2241. Remove implementing FSConstants interface to just get the
     constants from the interface. (suresh)
 
+    HDFS-2237. Change UnderReplicatedBlocks from public to package private.
+    (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

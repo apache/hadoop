@@ -39,6 +39,7 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -97,7 +98,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStatistics;
-import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlocks;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
@@ -2910,7 +2910,7 @@ public class FSNamesystem implements RwLock, FSClusterStats,
           + nt.getNumOfRacks() + " racks and "
           + nt.getNumOfLeaves() + " datanodes");
       NameNode.stateChangeLog.info("STATE* UnderReplicatedBlocks has "
-                                   +blockManager.neededReplications.size()+" blocks");
+          + blockManager.numOfUnderReplicatedBlocks() + " blocks");
     }
 
     /**
@@ -3954,7 +3954,8 @@ public class FSNamesystem implements RwLock, FSClusterStats,
       if (startBlockAfter != null) {
         startBlockId = Block.filename2id(startBlockAfter);
       }
-      UnderReplicatedBlocks.BlockIterator blkIterator = blockManager.getCorruptReplicaBlockIterator();
+
+      final Iterator<Block> blkIterator = blockManager.getCorruptReplicaBlockIterator();
       while (blkIterator.hasNext()) {
         Block blk = blkIterator.next();
         INode inode = blockManager.getINode(blk);
