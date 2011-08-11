@@ -18,7 +18,6 @@
 package org.apache.hadoop.net;
 
 import java.util.*;
-import java.net.UnknownHostException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -59,9 +58,5 @@ public class StaticMapping extends Configured implements DNSToSwitchMapping {
       }
       return m;
     }
-  }
-  public List<String> resolveValidHosts(List<String> names)
-    throws UnknownHostException {
-    return this.resolve(names);
   }
 }

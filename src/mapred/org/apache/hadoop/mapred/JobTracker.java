@@ -3201,7 +3201,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   public Node resolveAndAddToTopology(String name) throws UnknownHostException {
     List <String> tmpList = new ArrayList<String>(1);
     tmpList.add(name);
-    List <String> rNameList = dnsToSwitchMapping.resolveValidHosts(tmpList);
+    List <String> rNameList = dnsToSwitchMapping.resolve(tmpList);
     String rName = rNameList.get(0);
     String networkLoc = NodeBase.normalize(rName);
     return addHostToNodeMapping(name, networkLoc);

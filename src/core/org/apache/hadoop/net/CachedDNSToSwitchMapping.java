@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.net;
 
-import java.net.InetAddress;
-import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -85,33 +82,7 @@ public class CachedDNSToSwitchMapping implements DNSToSwitchMapping {
     }
     return result;
   }
-  
-  /**
-   * Resolves host names and adds them to the cache.
-   * Unlike the 'resolve" method, this won't hide UnknownHostExceptions
-   * 
-   * @param names to resolve
-   * @return List of resolved names
-   * @throws UnknownHostException if any hosts cannot be resolved
-   */  
-  public List<String> resolveValidHosts(List<String> names) 
-    throws UnknownHostException {
-    if (names.isEmpty()) {
-      return new ArrayList<String>();
-    }
-    List<String> addresses = new ArrayList<String>(names.size());
-    for (String name : names) {
-      addresses.add(InetAddress.getByName(name).getHostAddress());
-    }
-    
-    List<String> uncachedHosts = this.getUncachedHosts(names);
 
-    // Resolve the uncached hosts
-    List<String> resolvedHosts = rawMapping.resolveValidHosts(uncachedHosts);
-    this.cacheResolvedHosts(uncachedHosts, resolvedHosts);
-    return this.getCachedHosts(addresses);
-  }
-  
   public List<String> resolve(List<String> names) {
     // normalize all input names to be in the form of IP addresses
     names = NetUtils.normalizeHostNames(names);

@@ -19,7 +19,6 @@ package org.apache.hadoop.net;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.net.UnknownHostException;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -49,37 +48,5 @@ public class TestScriptBasedMapping extends TestCase {
     List<String> result = mapping.resolve(names);
     assertNull(result);
   }
-  
-  public void testResolveValidInvalidHostException() {
-    names = new ArrayList<String>();
-    names.add("1.com"); // Add invalid hostname that doesn't resolve
-    boolean exceptionThrown = false;
-    try {
-      mapping.resolveValidHosts(names);
-    } catch (UnknownHostException e) {
-      exceptionThrown = true;
-    }
-    assertTrue(
-        "resolveValidHosts did not throw UnknownHostException for invalid host",
-        exceptionThrown);
-  }
 
-  public void testResolveValidHostNoException() {
-    conf.setInt(ScriptBasedMapping.SCRIPT_ARG_COUNT_KEY,
-        ScriptBasedMapping.MIN_ALLOWABLE_ARGS);
-    conf.set(ScriptBasedMapping.SCRIPT_FILENAME_KEY, "echo");
-    mapping.setConf(conf);    
-
-    names = new ArrayList<String>();
-    names.add("some.machine.name");
-    names.add("other.machine.name");
-    
-    boolean exceptionThrown = false;
-    try {
-      mapping.resolveValidHosts(names);
-    } catch (UnknownHostException e) {
-      exceptionThrown = true;
-    }
-    assertFalse("resolveValidHosts threw Exception for valid host", exceptionThrown);
-  }
 }

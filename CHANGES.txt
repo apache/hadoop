@@ -61,7 +61,10 @@ Release 0.20.205.0 - unreleased
 
     HADOOP-7472. RPC client should deal with IP address change.
     (Kihwal Lee via suresh)
-
+  
+    MAPREDUCE-2489. Jobsplits with random hostnames can make the queue unusable
+    (Jeffrey Naisbit via mahadev)
+    
 Release 0.20.204.0 - unreleased
 
   NEW FEATURES
