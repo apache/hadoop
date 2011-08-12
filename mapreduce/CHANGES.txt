@@ -38,6 +38,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-2323. Add metrics to the fair scheduler. (todd)
 
+    MAPREDUCE-2037. Capture intermediate progress, CPU and memory usage for
+    tasks. (Dick King via acmurthy) 
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via

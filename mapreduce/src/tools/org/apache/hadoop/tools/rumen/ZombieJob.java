@@ -537,7 +537,8 @@ public class ZombieJob implements JobStory {
       }
       taskTime = sanitizeTaskRuntime(taskTime, loggedAttempt.getAttemptID());
       taskTime *= scaleFactor;
-      return new MapTaskAttemptInfo(state, taskInfo, taskTime);
+      return new MapTaskAttemptInfo
+        (state, taskInfo, taskTime, loggedAttempt.allSplitVectors());
     } else {
       throw new IllegalArgumentException("taskType can only be MAP: "
           + loggedTask.getTaskType());
@@ -584,6 +585,9 @@ public class ZombieJob implements JobStory {
   private TaskAttemptInfo getTaskAttemptInfo(LoggedTask loggedTask,
       LoggedTaskAttempt loggedAttempt) {
     TaskInfo taskInfo = getTaskInfo(loggedTask);
+    
+    List<List<Integer>> allSplitVectors = loggedAttempt.allSplitVectors();
+
     State state = convertState(loggedAttempt.getResult());
     if (loggedTask.getTaskType() == Values.MAP) {
       long taskTime;
@@ -594,7 +598,7 @@ public class ZombieJob implements JobStory {
         taskTime = loggedAttempt.getFinishTime() - loggedAttempt.getStartTime();
       }
       taskTime = sanitizeTaskRuntime(taskTime, loggedAttempt.getAttemptID());
-      return new MapTaskAttemptInfo(state, taskInfo, taskTime);
+      return new MapTaskAttemptInfo(state, taskInfo, taskTime, allSplitVectors);
     } else if (loggedTask.getTaskType() == Values.REDUCE) {
       long startTime = loggedAttempt.getStartTime();
       long mergeDone = loggedAttempt.getSortFinished();
@@ -605,7 +609,8 @@ public class ZombieJob implements JobStory {
         // haven't seen reduce task with startTime=0 ever. But if this happens,
         // make up a reduceTime with no shuffle/merge.
         long reduceTime = makeUpReduceRuntime(state);
-        return new ReduceTaskAttemptInfo(state, taskInfo, 0, 0, reduceTime);
+        return new ReduceTaskAttemptInfo
+          (state, taskInfo, 0, 0, reduceTime, allSplitVectors);
       } else {
         if (shuffleDone <= 0) {
           shuffleDone = startTime;
@@ -619,7 +624,7 @@ public class ZombieJob implements JobStory {
         reduceTime = sanitizeTaskRuntime(reduceTime, loggedAttempt.getAttemptID());
         
         return new ReduceTaskAttemptInfo(state, taskInfo, shuffleTime,
-            mergeTime, reduceTime);
+            mergeTime, reduceTime, allSplitVectors);
       }
     } else {
       throw new IllegalArgumentException("taskType for "
@@ -700,7 +705,8 @@ public class ZombieJob implements JobStory {
       runtime = makeUpMapRuntime(state, locality);
       runtime = sanitizeTaskRuntime(runtime, makeTaskAttemptID(taskType,
           taskNumber, taskAttemptNumber).toString());
-      TaskAttemptInfo tai = new MapTaskAttemptInfo(state, taskInfo, runtime);
+      TaskAttemptInfo tai
+        = new MapTaskAttemptInfo(state, taskInfo, runtime, null);
       return tai;
     } else if (taskType == TaskType.REDUCE) {
       State state = State.SUCCEEDED;
@@ -711,8 +717,8 @@ public class ZombieJob implements JobStory {
       // TODO make up state
       // state = makeUpState(taskAttemptNumber, job.getReducerTriesToSucceed());
       reduceTime = makeUpReduceRuntime(state);
-      TaskAttemptInfo tai = new ReduceTaskAttemptInfo(state, taskInfo,
-          shuffleTime, sortTime, reduceTime);
+      TaskAttemptInfo tai = new ReduceTaskAttemptInfo
+        (state, taskInfo, shuffleTime, sortTime, reduceTime, null);
       return tai;
     }
 

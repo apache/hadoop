@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.tools.rumen;
 
+import java.util.List;
+
 import org.apache.hadoop.mapred.TaskStatus.State;
 
 /**
@@ -29,11 +31,33 @@ public class ReduceTaskAttemptInfo extends TaskAttemptInfo {
   private long reduceTime;
 
   public ReduceTaskAttemptInfo(State state, TaskInfo taskInfo, long shuffleTime,
-      long mergeTime, long reduceTime) {
-    super(state, taskInfo);
+      long mergeTime, long reduceTime, List<List<Integer>> allSplits) {
+    super(state, taskInfo,
+          allSplits == null
+            ? LoggedTaskAttempt.SplitVectorKind.getNullSplitsVector()
+           : allSplits);
     this.shuffleTime = shuffleTime;
     this.mergeTime = mergeTime;
     this.reduceTime = reduceTime;
+  }
+
+
+  /**
+   *
+   * @deprecated please use the constructor with 
+   *               {@code (state, taskInfo, shuffleTime, mergeTime, reduceTime
+   *                  List<List<Integer>> allSplits)}
+   *             instead.  
+   *
+   * see {@link LoggedTaskAttempt} for an explanation of
+   *        {@code allSplits}.
+   *
+   * If there are no known splits, use {@code null}.
+   */
+  @Deprecated
+  public ReduceTaskAttemptInfo(State state, TaskInfo taskInfo, long shuffleTime,
+      long mergeTime, long reduceTime) {
+    this(state, taskInfo, shuffleTime, mergeTime, reduceTime, null);
   }
 
   /**
@@ -67,5 +91,4 @@ public class ReduceTaskAttemptInfo extends TaskAttemptInfo {
   public long getRuntime() {
     return (getShuffleRuntime() + getMergeRuntime() + getReduceRuntime());
   }
-
 }

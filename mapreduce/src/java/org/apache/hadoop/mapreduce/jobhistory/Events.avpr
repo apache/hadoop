@@ -125,7 +125,11 @@
           {"name": "finishTime", "type": "long"},
           {"name": "hostname", "type": "string"},
           {"name": "state", "type": "string"},
-          {"name": "counters", "type": "JhCounters"}
+          {"name": "counters", "type": "JhCounters"},
+          {"name": "clockSplits", "type": { "type": "array", "items": "int"}},
+          {"name": "cpuUsages", "type": { "type": "array", "items": "int"}},
+          {"name": "vMemKbytes", "type": { "type": "array", "items": "int"}},
+          {"name": "physMemKbytes", "type": { "type": "array", "items": "int"}}
       ]
      },
 
@@ -140,7 +144,11 @@
           {"name": "finishTime", "type": "long"},
           {"name": "hostname", "type": "string"},
           {"name": "state", "type": "string"},
-          {"name": "counters", "type": "JhCounters"}
+          {"name": "counters", "type": "JhCounters"},
+          {"name": "clockSplits", "type": { "type": "array", "items": "int"}},
+          {"name": "cpuUsages", "type": { "type": "array", "items": "int"}},
+          {"name": "vMemKbytes", "type": { "type": "array", "items": "int"}},
+          {"name": "physMemKbytes", "type": { "type": "array", "items": "int"}}
       ]
      },
 
@@ -176,7 +184,11 @@
           {"name": "finishTime", "type": "long"},
           {"name": "hostname", "type": "string"},
           {"name": "status", "type": "string"},
-          {"name": "error", "type": "string"}
+          {"name": "error", "type": "string"},
+          {"name": "clockSplits", "type": { "type": "array", "items": "int"}},
+          {"name": "cpuUsages", "type": { "type": "array", "items": "int"}},
+          {"name": "vMemKbytes", "type": { "type": "array", "items": "int"}},
+          {"name": "physMemKbytes", "type": { "type": "array", "items": "int"}}
       ]
      },
 

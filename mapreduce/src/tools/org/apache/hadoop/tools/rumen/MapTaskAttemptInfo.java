@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.tools.rumen;
 
+import java.util.List;
+
 import org.apache.hadoop.mapred.TaskStatus.State;
 
 /**
@@ -26,9 +28,31 @@ import org.apache.hadoop.mapred.TaskStatus.State;
 public class MapTaskAttemptInfo extends TaskAttemptInfo {
   private long runtime;
 
-  public MapTaskAttemptInfo(State state, TaskInfo taskInfo, long runtime) {
-    super(state, taskInfo);
+  public MapTaskAttemptInfo(State state, TaskInfo taskInfo,
+                            long runtime, List<List<Integer>> allSplits) {
+    super(state, taskInfo,
+          allSplits == null
+            ? LoggedTaskAttempt.SplitVectorKind.getNullSplitsVector()
+           : allSplits);
     this.runtime = runtime;
+  }
+
+  /**
+   *
+   * @deprecated please use the constructor with 
+   *               {@code (state, taskInfo, runtime,
+   *                  List<List<Integer>> allSplits)}
+   *             instead.  
+   *
+   * see {@link LoggedTaskAttempt} for an explanation of
+   *        {@code allSplits}.
+   *
+   * If there are no known splits, use {@code null}.
+   */
+  @Deprecated
+  public MapTaskAttemptInfo(State state, TaskInfo taskInfo,
+                            long runtime) {
+    this(state, taskInfo, runtime, null);
   }
 
   @Override

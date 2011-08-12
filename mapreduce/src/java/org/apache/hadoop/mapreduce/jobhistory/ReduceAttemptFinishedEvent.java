@@ -27,6 +27,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
 
+import org.apache.hadoop.mapred.ProgressSplitsBlock;
+
 import org.apache.avro.util.Utf8;
 
 /**
@@ -50,12 +52,16 @@ public class ReduceAttemptFinishedEvent  implements HistoryEvent {
    * @param hostname Name of the host where the attempt executed
    * @param state State of the attempt
    * @param counters Counters for the attempt
+   * @param allSplits the "splits", or a pixelated graph of various
+   *        measurable worker node state variables against progress.
+   *        Currently there are four; wallclock time, CPU time,
+   *        virtual memory and physical memory.  
    */
-  public ReduceAttemptFinishedEvent(TaskAttemptID id, 
-      TaskType taskType, String taskStatus, 
-      long shuffleFinishTime, long sortFinishTime, 
-      long finishTime,
-      String hostname, String state, Counters counters) {
+  public ReduceAttemptFinishedEvent
+    (TaskAttemptID id, TaskType taskType, String taskStatus, 
+     long shuffleFinishTime, long sortFinishTime, long finishTime,
+     String hostname, String state, Counters counters,
+     int[][] allSplits) {
     datum.taskid = new Utf8(id.getTaskID().toString());
     datum.attemptId = new Utf8(id.toString());
     datum.taskType = new Utf8(taskType.name());
@@ -66,6 +72,45 @@ public class ReduceAttemptFinishedEvent  implements HistoryEvent {
     datum.hostname = new Utf8(hostname);
     datum.state = new Utf8(state);
     datum.counters = EventWriter.toAvro(counters);
+
+    datum.clockSplits 
+      = AvroArrayUtils.toAvro
+           (ProgressSplitsBlock.arrayGetWallclockTime(allSplits));
+    datum.cpuUsages 
+      = AvroArrayUtils.toAvro
+           (ProgressSplitsBlock.arrayGetCPUTime(allSplits));
+    datum.vMemKbytes 
+      = AvroArrayUtils.toAvro
+           (ProgressSplitsBlock.arrayGetVMemKbytes(allSplits));
+    datum.physMemKbytes 
+      = AvroArrayUtils.toAvro
+           (ProgressSplitsBlock.arrayGetPhysMemKbytes(allSplits));
+  }
+
+  /**
+   * @deprecated please use the constructor with an additional
+   *              argument, an array of splits arrays instead.  See
+   *              {@link org.apache.hadoop.mapred.ProgressSplitsBlock}
+   *              for an explanation of the meaning of that parameter.
+   *
+   * Create an event to record completion of a reduce attempt
+   * @param id Attempt Id
+   * @param taskType Type of task
+   * @param taskStatus Status of the task
+   * @param shuffleFinishTime Finish time of the shuffle phase
+   * @param sortFinishTime Finish time of the sort phase
+   * @param finishTime Finish time of the attempt
+   * @param hostname Name of the host where the attempt executed
+   * @param state State of the attempt
+   * @param counters Counters for the attempt
+   */
+  public ReduceAttemptFinishedEvent
+    (TaskAttemptID id, TaskType taskType, String taskStatus, 
+     long shuffleFinishTime, long sortFinishTime, long finishTime,
+     String hostname, String state, Counters counters) {
+    this(id, taskType, taskStatus,
+         shuffleFinishTime, sortFinishTime, finishTime,
+         hostname, state, counters, null);
   }
 
   ReduceAttemptFinishedEvent() {}
@@ -104,5 +149,18 @@ public class ReduceAttemptFinishedEvent  implements HistoryEvent {
     return EventType.REDUCE_ATTEMPT_FINISHED;
   }
 
+
+  public int[] getClockSplits() {
+    return AvroArrayUtils.fromAvro(datum.clockSplits);
+  }
+  public int[] getCpuUsages() {
+    return AvroArrayUtils.fromAvro(datum.cpuUsages);
+  }
+  public int[] getVMemKbytes() {
+    return AvroArrayUtils.fromAvro(datum.vMemKbytes);
+  }
+  public int[] getPhysMemKbytes() {
+    return AvroArrayUtils.fromAvro(datum.physMemKbytes);
+  }
 
 }

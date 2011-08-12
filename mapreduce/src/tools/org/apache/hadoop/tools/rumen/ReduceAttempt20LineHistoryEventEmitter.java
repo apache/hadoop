@@ -28,8 +28,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.jobhistory.HistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.ReduceAttemptFinishedEvent;
 
-public class ReduceAttempt20LineHistoryEventEmitter extends
-    TaskAttempt20LineEventEmitter {
+public class ReduceAttempt20LineHistoryEventEmitter
+     extends TaskAttempt20LineEventEmitter {
 
   static List<SingleEventEmitter> nonFinals =
       new LinkedList<SingleEventEmitter>();
@@ -71,10 +71,15 @@ public class ReduceAttempt20LineHistoryEventEmitter extends
           ReduceAttempt20LineHistoryEventEmitter that =
               (ReduceAttempt20LineHistoryEventEmitter) thatg;
 
-          return new ReduceAttemptFinishedEvent(taskAttemptID,
-              that.originalTaskType, status, Long.parseLong(shuffleFinish),
-              Long.parseLong(sortFinish), Long.parseLong(finishTime), hostName,
-              state, maybeParseCounters(counters));
+          return new ReduceAttemptFinishedEvent
+            (taskAttemptID,
+             that.originalTaskType, status,
+             Long.parseLong(shuffleFinish),
+             Long.parseLong(sortFinish),
+             Long.parseLong(finishTime),
+             hostName,
+             state, maybeParseCounters(counters),
+             null);
         }
       }
 

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.tools.rumen;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -71,8 +73,116 @@ public class LoggedTaskAttempt implements DeepCompare {
   // Initialize to default object for backward compatibility
   ResourceUsageMetrics metrics = new ResourceUsageMetrics();
   
+  List<Integer> clockSplits = new ArrayList<Integer>();
+  List<Integer> cpuUsages = new ArrayList<Integer>();
+  List<Integer> vMemKbytes = new ArrayList<Integer>();
+  List<Integer> physMemKbytes = new ArrayList<Integer>();
+
   LoggedTaskAttempt() {
     super();
+  }
+
+  // carries the kinds of splits vectors a LoggedTaskAttempt holds.
+  //
+  // Each enumeral has the following methods:
+  //   get(LoggedTaskAttempt attempt)
+  //    returns a List<Integer> with the corresponding value field
+  //   set(LoggedTaskAttempt attempt, List<Integer> newValue)
+  //    sets the value
+  // There is also a pair of methods get(List<List<Integer>>) and
+  //  set(List<List<Integer>>, List<Integer>) which correspondingly
+  //  delivers or sets the appropriate element of the
+  //  List<List<Integer>> .
+  // This makes it easier to add another kind in the future.
+  public enum SplitVectorKind {
+
+    WALLCLOCK_TIME {
+      @Override
+      public List<Integer> get(LoggedTaskAttempt attempt) {
+        return attempt.getClockSplits();
+      }
+      @Override
+      public void set(LoggedTaskAttempt attempt, List<Integer> newValue) {
+        attempt.setClockSplits(newValue);
+      }
+    },
+
+    CPU_USAGE {
+      @Override
+      public List<Integer> get(LoggedTaskAttempt attempt) {
+        return attempt.getCpuUsages();
+      }
+      @Override
+      public void set(LoggedTaskAttempt attempt, List<Integer> newValue) {
+        attempt.setCpuUsages(newValue);
+      }
+    },
+
+    VIRTUAL_MEMORY_KBYTES {
+      @Override
+      public List<Integer> get(LoggedTaskAttempt attempt) {
+        return attempt.getVMemKbytes();
+      }
+      @Override
+      public void set(LoggedTaskAttempt attempt, List<Integer> newValue) {
+        attempt.setVMemKbytes(newValue);
+      }
+    },
+
+    PHYSICAL_MEMORY_KBYTES {
+      @Override
+      public List<Integer> get(LoggedTaskAttempt attempt) {
+        return attempt.getPhysMemKbytes();
+      }
+      @Override
+      public void set(LoggedTaskAttempt attempt, List<Integer> newValue) {
+        attempt.setPhysMemKbytes(newValue);
+      }
+    };
+
+    static private final List<List<Integer>> NULL_SPLITS_VECTOR
+      = new ArrayList<List<Integer>>();
+
+    static {
+      for (SplitVectorKind kind : SplitVectorKind.values() ) {
+        NULL_SPLITS_VECTOR.add(new ArrayList<Integer>());
+      }
+    }
+
+    abstract public List<Integer> get(LoggedTaskAttempt attempt);
+
+    abstract public void set(LoggedTaskAttempt attempt, List<Integer> newValue);
+
+    public List<Integer> get(List<List<Integer>> listSplits) {
+      return listSplits.get(this.ordinal());
+    }
+
+    public void set(List<List<Integer>> listSplits, List<Integer> newValue) {
+      listSplits.set(this.ordinal(), newValue);
+    }
+
+    static public List<List<Integer>> getNullSplitsVector() {
+      return NULL_SPLITS_VECTOR;
+    }
+  }
+
+  /**
+   *
+   * @returns a list of all splits vectors, ordered in enumeral order
+   *           within {@link SplitVectorKind} .  Do NOT use hard-coded
+   *           indices within the return for this with a hard-coded
+   *           index to get individual values; use
+   *           {@code SplitVectorKind.get(LoggedTaskAttempt)} instead.
+   */
+  public List<List<Integer>> allSplitVectors() {
+    List<List<Integer>> result
+      = new ArrayList<List<Integer>>(SplitVectorKind.values().length);
+
+    for (SplitVectorKind kind : SplitVectorKind.values() ) {
+      result.add(kind.get(this));
+    }
+
+    return result;
   }
 
   static private Set<String> alreadySeenAnySetterAttributes =
@@ -87,6 +197,78 @@ public class LoggedTaskAttempt implements DeepCompare {
       System.err.println("In LoggedJob, we saw the unknown attribute "
           + attributeName + ".");
     }
+  }
+
+  public List<Integer> getClockSplits() {
+    return clockSplits;
+  }
+
+  void setClockSplits(List<Integer> clockSplits) {
+    this.clockSplits = clockSplits;
+  }
+
+  void arraySetClockSplits(int[] clockSplits) {
+    List<Integer> result = new ArrayList<Integer>();
+
+    for (int i = 0; i < clockSplits.length; ++i) {
+      result.add(clockSplits[i]);
+    }
+                 
+    this.clockSplits = result;
+  }
+
+  public List<Integer> getCpuUsages() {
+    return cpuUsages;
+  }
+
+  void setCpuUsages(List<Integer> cpuUsages) {
+    this.cpuUsages = cpuUsages;
+  }
+
+  void arraySetCpuUsages(int[] cpuUsages) {
+    List<Integer> result = new ArrayList<Integer>();
+
+    for (int i = 0; i < cpuUsages.length; ++i) {
+      result.add(cpuUsages[i]);
+    }
+                 
+    this.cpuUsages = result;
+  }
+
+  public List<Integer> getVMemKbytes() {
+    return vMemKbytes;
+  }
+
+  void setVMemKbytes(List<Integer> vMemKbytes) {
+    this.vMemKbytes = vMemKbytes;
+  }
+
+  void arraySetVMemKbytes(int[] vMemKbytes) {
+    List<Integer> result = new ArrayList<Integer>();
+
+    for (int i = 0; i < vMemKbytes.length; ++i) {
+      result.add(vMemKbytes[i]);
+    }
+                 
+    this.vMemKbytes = result;
+  }
+
+  public List<Integer> getPhysMemKbytes() {
+    return physMemKbytes;
+  }
+
+  void setPhysMemKbytes(List<Integer> physMemKbytes) {
+    this.physMemKbytes = physMemKbytes;
+  }
+
+  void arraySetPhysMemKbytes(int[] physMemKbytes) {
+    List<Integer> result = new ArrayList<Integer>();
+
+    for (int i = 0; i < physMemKbytes.length; ++i) {
+      result.add(physMemKbytes[i]);
+    }
+                 
+    this.physMemKbytes = result;
   }
 
   void adjustTimes(long adjustment) {
@@ -480,6 +662,26 @@ public class LoggedTaskAttempt implements DeepCompare {
     c1.deepCompare(c2, recurse);
   }
 
+  private void compare1(List<Integer> c1, List<Integer> c2, TreePath loc,
+                        String eltname)
+        throws DeepInequalityException {
+    if (c1 == null && c2 == null) {
+      return;
+    }
+
+    if (c1 == null || c2 == null || c1.size() != c2.size()) {
+      throw new DeepInequalityException
+              (eltname + " miscompared", new TreePath(loc, eltname));
+    }
+
+    for (int i = 0; i < c1.size(); ++i) {
+      if (!c1.get(i).equals(c2.get(i))) {
+        throw new DeepInequalityException("" + c1.get(i) + " != " + c2.get(i),
+                                          new TreePath(loc, eltname, i));
+      }
+    }
+  }    
+
   public void deepCompare(DeepCompare comparand, TreePath loc)
       throws DeepInequalityException {
     if (!(comparand instanceof LoggedTaskAttempt)) {
@@ -518,5 +720,10 @@ public class LoggedTaskAttempt implements DeepCompare {
     compare1(sortFinished, other.sortFinished, loc, "sortFinished");
 
     compare1(location, other.location, loc, "location");
+
+    compare1(clockSplits, other.clockSplits, loc, "clockSplits");
+    compare1(cpuUsages, other.cpuUsages, loc, "cpuUsages");
+    compare1(vMemKbytes, other.vMemKbytes, loc, "vMemKbytes");
+    compare1(physMemKbytes, other.physMemKbytes, loc, "physMemKbytes");
   }
 }

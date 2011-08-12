@@ -68,10 +68,13 @@ public class MapAttempt20LineHistoryEventEmitter extends
             (MapAttempt20LineHistoryEventEmitter) thatg;
 
         if (finishTime != null && "success".equalsIgnoreCase(status)) {
-          return new MapAttemptFinishedEvent(taskAttemptID,
-              that.originalTaskType, status, Long.parseLong(finishTime), Long
-                  .parseLong(finishTime), hostName, state,
-              maybeParseCounters(counters));
+          return new MapAttemptFinishedEvent
+            (taskAttemptID,
+              that.originalTaskType, status,
+             Long.parseLong(finishTime),
+             Long.parseLong(finishTime),
+             hostName, state, maybeParseCounters(counters),
+             null);
         }
       }
 
@@ -88,5 +91,4 @@ public class MapAttempt20LineHistoryEventEmitter extends
   List<SingleEventEmitter> nonFinalSEEs() {
     return nonFinals;
   }
-
 }

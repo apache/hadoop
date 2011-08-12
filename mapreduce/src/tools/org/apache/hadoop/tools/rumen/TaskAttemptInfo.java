@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.tools.rumen;
 
+import java.util.List;
+
 import org.apache.hadoop.mapred.TaskStatus.State;
 
 /**
@@ -27,13 +29,22 @@ public abstract class TaskAttemptInfo {
   protected final State state;
   protected final TaskInfo taskInfo;
 
-  protected TaskAttemptInfo(State state, TaskInfo taskInfo) {
+  protected final List<List<Integer>> allSplits;
+
+  protected TaskAttemptInfo
+       (State state, TaskInfo taskInfo, List<List<Integer>> allSplits) {
     if (state == State.SUCCEEDED || state == State.FAILED) {
       this.state = state;
     } else {
       throw new IllegalArgumentException("status cannot be " + state);
     }
     this.taskInfo = taskInfo;
+    this.allSplits = allSplits;
+  }
+
+  protected TaskAttemptInfo
+       (State state, TaskInfo taskInfo) {
+    this(state, taskInfo, LoggedTaskAttempt.SplitVectorKind.getNullSplitsVector());
   }
 
   /**
@@ -59,5 +70,9 @@ public abstract class TaskAttemptInfo {
    */
   public TaskInfo getTaskInfo() {
     return taskInfo;
+  }
+      
+  public List<Integer> getSplitVector(LoggedTaskAttempt.SplitVectorKind kind) {
+    return kind.get(allSplits);
   }
 }

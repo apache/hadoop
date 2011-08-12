@@ -476,6 +476,11 @@ public class JobBuilder {
     }
 
     attempt.setFinishTime(event.getFinishTime());
+
+    attempt.arraySetClockSplits(event.getClockSplits());
+    attempt.arraySetCpuUsages(event.getCpuUsages());
+    attempt.arraySetVMemKbytes(event.getVMemKbytes());
+    attempt.arraySetPhysMemKbytes(event.getPhysMemKbytes());
   }
 
   private void processTaskAttemptStartedEvent(TaskAttemptStartedEvent event) {
@@ -521,6 +526,10 @@ public class JobBuilder {
     attempt.setSortFinished(event.getSortFinishTime());
     attempt
         .incorporateCounters(((ReduceAttemptFinished) event.getDatum()).counters);
+    attempt.arraySetClockSplits(event.getClockSplits());
+    attempt.arraySetCpuUsages(event.getCpuUsages());
+    attempt.arraySetVMemKbytes(event.getVMemKbytes());
+    attempt.arraySetPhysMemKbytes(event.getPhysMemKbytes());
   }
 
   private void processMapAttemptFinishedEvent(MapAttemptFinishedEvent event) {
@@ -537,7 +546,11 @@ public class JobBuilder {
     // is redundant, but making this will add future-proofing.
     attempt.setFinishTime(event.getFinishTime());
     attempt
-        .incorporateCounters(((MapAttemptFinished) event.getDatum()).counters);
+      .incorporateCounters(((MapAttemptFinished) event.getDatum()).counters);
+    attempt.arraySetClockSplits(event.getClockSplits());
+    attempt.arraySetCpuUsages(event.getCpuUsages());
+    attempt.arraySetVMemKbytes(event.getVMemKbytes());
+    attempt.arraySetPhysMemKbytes(event.getPhysMemKbytes());
   }
 
   private void processJobUnsuccessfulCompletionEvent(

@@ -2673,25 +2673,29 @@ public class JobInProgress {
         status.getTaskTracker(),  ttStatus.getHttpPort());
     
     jobHistory.logEvent(tse, status.getTaskID().getJobID());
-    
+    TaskAttemptID statusAttemptID = status.getTaskID();
 
     if (status.getIsMap()){
       MapAttemptFinishedEvent mfe = new MapAttemptFinishedEvent(
-          status.getTaskID(), taskType, TaskStatus.State.SUCCEEDED.toString(),
+          statusAttemptID, taskType, TaskStatus.State.SUCCEEDED.toString(),
           status.getMapFinishTime(),
           status.getFinishTime(),  trackerHostname,
           status.getStateString(), 
-          new org.apache.hadoop.mapreduce.Counters(status.getCounters()));
+          new org.apache.hadoop.mapreduce.Counters(status.getCounters()),
+          tip.getSplits(statusAttemptID).burst()
+          );
       
       jobHistory.logEvent(mfe,  status.getTaskID().getJobID());
       
     }else{
       ReduceAttemptFinishedEvent rfe = new ReduceAttemptFinishedEvent(
-          status.getTaskID(), taskType, TaskStatus.State.SUCCEEDED.toString(), 
+          statusAttemptID, taskType, TaskStatus.State.SUCCEEDED.toString(), 
           status.getShuffleFinishTime(),
           status.getSortFinishTime(), status.getFinishTime(),
           trackerHostname, status.getStateString(),
-          new org.apache.hadoop.mapreduce.Counters(status.getCounters()));
+          new org.apache.hadoop.mapreduce.Counters(status.getCounters()),
+          tip.getSplits(statusAttemptID).burst()
+          );
       
       jobHistory.logEvent(rfe,  status.getTaskID().getJobID());
       
@@ -3171,12 +3175,16 @@ public class JobInProgress {
         taskid, taskType, startTime, taskTrackerName, taskTrackerPort);
     
     jobHistory.logEvent(tse, taskid.getJobID());
+
+    ProgressSplitsBlock splits = tip.getSplits(taskStatus.getTaskID());
    
-    TaskAttemptUnsuccessfulCompletionEvent tue = 
-      new TaskAttemptUnsuccessfulCompletionEvent(taskid, 
-          taskType, taskStatus.getRunState().toString(),
-          finishTime, 
-          taskTrackerHostName, diagInfo);
+    TaskAttemptUnsuccessfulCompletionEvent tue =
+      new TaskAttemptUnsuccessfulCompletionEvent
+            (taskid, 
+             taskType, taskStatus.getRunState().toString(),
+             finishTime, 
+             taskTrackerHostName, diagInfo,
+             splits.burst());
     jobHistory.logEvent(tue, taskid.getJobID());
         
     // After this, try to assign tasks with the one after this, so that
