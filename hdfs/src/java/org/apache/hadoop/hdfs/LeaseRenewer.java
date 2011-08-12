@@ -75,7 +75,9 @@ class LeaseRenewer {
   /** Get a {@link LeaseRenewer} instance */
   static LeaseRenewer getInstance(final String authority,
       final UserGroupInformation ugi, final DFSClient dfsc) throws IOException {
-    return Factory.INSTANCE.get(authority, ugi, dfsc);
+    final LeaseRenewer r = Factory.INSTANCE.get(authority, ugi);
+    r.addClient(dfsc);
+    return r;
   }
 
   /** 
@@ -132,14 +134,13 @@ class LeaseRenewer {
 
     /** Get a renewer. */
     private synchronized LeaseRenewer get(final String authority,
-        final UserGroupInformation ugi, final DFSClient dfsc) {
+        final UserGroupInformation ugi) {
       final Key k = new Key(authority, ugi);
       LeaseRenewer r = renewers.get(k);
       if (r == null) {
         r = new LeaseRenewer(k);
         renewers.put(k, r);
       }
-      r.addClient(dfsc);
       return r;
     }
 
@@ -196,7 +197,7 @@ class LeaseRenewer {
 
   private LeaseRenewer(Factory.Key factorykey) {
     this.factorykey = factorykey;
-    setGraceSleepPeriod(LEASE_RENEWER_GRACE_DEFAULT);
+    unsyncSetGraceSleepPeriod(LEASE_RENEWER_GRACE_DEFAULT);
     
     if (LOG.isTraceEnabled()) {
       instantiationTrace = StringUtils.stringifyException(
@@ -251,6 +252,10 @@ class LeaseRenewer {
 
   /** Set the grace period and adjust the sleep period accordingly. */
   synchronized void setGraceSleepPeriod(final long gracePeriod) {
+    unsyncSetGraceSleepPeriod(gracePeriod);
+  }
+
+  private void unsyncSetGraceSleepPeriod(final long gracePeriod) {
     if (gracePeriod < 100L) {
       throw new HadoopIllegalArgumentException(gracePeriod
           + " = gracePeriod < 100ms is too small.");
