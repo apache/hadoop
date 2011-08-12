@@ -59,7 +59,7 @@ public class FileChecksumServlets {
     /** Create a redirection URL */
     private URL createRedirectURL(UserGroupInformation ugi, DatanodeID host,
         HttpServletRequest request, NameNode nn) 
-        throws IOException, URISyntaxException {
+        throws IOException {
       final String hostname = host instanceof DatanodeInfo 
           ? ((DatanodeInfo)host).getHostName() : host.getHost();
       final String scheme = request.getScheme();
@@ -94,8 +94,6 @@ public class FileChecksumServlets {
       try {
         response.sendRedirect(
             createRedirectURL(ugi, datanode, request, namenode).toString());
-      } catch(URISyntaxException e) {
-        throw new ServletException(e); 
       } catch (IOException e) {
         response.sendError(400, e.getMessage());
       }

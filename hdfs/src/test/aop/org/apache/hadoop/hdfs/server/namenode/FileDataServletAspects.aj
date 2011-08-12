@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.net.URL;
+import java.io.IOException;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -30,18 +30,17 @@ import org.apache.hadoop.security.UserGroupInformation;
 public aspect FileDataServletAspects {
   static final Log LOG = FileDataServlet.LOG;
 
-  pointcut callCreateUri() : call (URI FileDataServlet.createUri(
-      String, HdfsFileStatus, UserGroupInformation, ClientProtocol,
+  pointcut callCreateUrl() : call (URL FileDataServlet.createRedirectURL(
+      String, String, HdfsFileStatus, UserGroupInformation, ClientProtocol,
       HttpServletRequest, String));
 
   /** Replace host name with "localhost" for unit test environment. */
-  URI around () throws URISyntaxException : callCreateUri() {
-    final URI original = proceed(); 
-    LOG.info("FI: original uri = " + original);
-    final URI replaced = new URI(original.getScheme(), original.getUserInfo(),
-        "localhost", original.getPort(), original.getPath(),
-        original.getQuery(), original.getFragment()) ; 
-    LOG.info("FI: replaced uri = " + replaced);
+  URL around () throws IOException : callCreateUrl() {
+    final URL original = proceed();
+    LOG.info("FI: original url = " + original);
+    final URL replaced = new URL("http", "localhost", original.getPort(),
+        original.getPath() + '?' + original.getQuery());
+    LOG.info("FI: replaced url = " + replaced);
     return replaced;
   }
 }

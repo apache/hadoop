@@ -48,7 +48,7 @@ public class FileDataServlet extends DfsServlet {
   /** Create a redirection URL */
   private URL createRedirectURL(String path, String encodedPath, HdfsFileStatus status, 
       UserGroupInformation ugi, ClientProtocol nnproxy, HttpServletRequest request, String dt)
-      throws IOException, URISyntaxException {
+      throws IOException {
     String scheme = request.getScheme();
     final LocatedBlocks blks = nnproxy.getBlockLocations(
         status.getFullPath(new Path(path)).toUri().getPath(), 0, 1);
@@ -121,12 +121,8 @@ public class FileDataServlet extends DfsServlet {
 
           HdfsFileStatus info = nn.getFileInfo(path);
           if (info != null && !info.isDir()) {
-            try {
-              response.sendRedirect(createRedirectURL(path, encodedPath, 
-                  info, ugi, nn, request, delegationToken).toString());
-            } catch (URISyntaxException e) {
-              response.getWriter().println(e.toString());
-            }
+            response.sendRedirect(createRedirectURL(path, encodedPath,
+                info, ugi, nn, request, delegationToken).toString());
           } else if (info == null) {
             response.sendError(400, "File not found " + path);
           } else {
