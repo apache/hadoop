@@ -293,7 +293,7 @@ public class TestMapRed extends Configured implements Tool {
                        ) throws IOException {
       if (first) {
         first = false;
-        MapOutputFile mapOutputFile = new MapOutputFile();
+        MapOutputFile mapOutputFile = new MROutputFiles();
         mapOutputFile.setConf(conf);
         Path input = mapOutputFile.getInputFile(0);
         FileSystem fs = FileSystem.get(conf);

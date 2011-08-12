@@ -178,7 +178,7 @@ public class TestBinaryTokenFile {
     jConf = mrCluster.createJobConf();
     
     // provide namenodes names for the job to get the delegation tokens for
-    String nnUri = dfsCluster.getURI().toString();
+    String nnUri = dfsCluster.getURI(0).toString();
     jConf.set(MRJobConfig.JOB_NAMENODES, nnUri + "," + nnUri);
     // job tracker principla id..
     jConf.set(JTConfig.JT_USER_NAME, "jt_id");

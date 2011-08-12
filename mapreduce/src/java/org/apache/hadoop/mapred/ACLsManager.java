@@ -36,7 +36,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
  * QueueManager for queue operations.
  */
 @InterfaceAudience.Private
-class ACLsManager {
+public class ACLsManager {
 
   static Log LOG = LogFactory.getLog(ACLsManager.class);
   // MROwner(user who started this mapreduce cluster)'s ugi
@@ -49,7 +49,7 @@ class ACLsManager {
   
   private final boolean aclsEnabled;
 
-  ACLsManager(Configuration conf, JobACLsManager jobACLsManager,
+  public ACLsManager(Configuration conf, JobACLsManager jobACLsManager,
       QueueManager queueManager) throws IOException {
 
     mrOwner = UserGroupInformation.getCurrentUser();
@@ -68,7 +68,7 @@ class ACLsManager {
     this.queueManager = queueManager;
   }
 
-  UserGroupInformation getMROwner() {
+  public UserGroupInformation getMROwner() {
     return mrOwner;
   }
 
@@ -76,7 +76,7 @@ class ACLsManager {
     return adminAcl;
   }
 
-  JobACLsManager getJobACLsManager() {
+  public JobACLsManager getJobACLsManager() {
     return jobACLsManager;
   }
 
@@ -85,7 +85,7 @@ class ACLsManager {
    * i.e. either cluster owner or cluster administrator
    * @return true, if user is an admin
    */
-  boolean isMRAdmin(UserGroupInformation callerUGI) {
+  public boolean isMRAdmin(UserGroupInformation callerUGI) {
     if (adminAcl.isUserAllowed(callerUGI)) {
       return true;
     }
@@ -111,7 +111,7 @@ class ACLsManager {
    * @param operation  the operation for which authorization is needed
    * @throws AccessControlException
    */
-   void checkAccess(JobInProgress job, UserGroupInformation callerUGI,
+   public void checkAccess(JobInProgress job, UserGroupInformation callerUGI,
        Operation operation) throws AccessControlException {
 
     String queue = job.getProfile().getQueueName();

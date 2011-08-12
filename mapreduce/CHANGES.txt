@@ -387,6 +387,10 @@ Trunk (unreleased changes)
     MAPREDUCE-2797. Update mapreduce tests and RAID for HDFS-2239.  (szetszwo)
 
     MAPREDUCE-2805. Update RAID for HDFS-2241.  (szetszwo)
+    
+    MAPREDUCE-2837. Ported bug fixes from y-merge to prepare for MAPREDUCE-279
+    merge. (acmurthy) 
+
 
 Release 0.22.0 - Unreleased
 

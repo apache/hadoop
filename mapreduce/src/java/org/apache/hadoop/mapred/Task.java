@@ -146,7 +146,7 @@ abstract public class Task implements Writable, Configurable {
   private long initCpuCumulativeTime = 0;
 
   protected JobConf conf;
-  protected MapOutputFile mapOutputFile = new MapOutputFile();
+  protected MapOutputFile mapOutputFile;
   protected LocalDirAllocator lDirAlloc;
   private final static int MAX_RETRIES = 10;
   protected JobContext jobContext;
@@ -1150,7 +1150,9 @@ abstract public class Task implements Writable, Configurable {
     } else {
       this.conf = new JobConf(conf);
     }
-    this.mapOutputFile.setConf(this.conf);
+    this.mapOutputFile = ReflectionUtils.newInstance(
+        conf.getClass(MRConfig.TASK_LOCAL_OUTPUT_CLASS,
+          MROutputFiles.class, MapOutputFile.class), conf);
     this.lDirAlloc = new LocalDirAllocator(MRConfig.LOCAL_DIR);
     // add the static resolutions (this is required for the junit to
     // work on testcases that simulate multiple nodes on a single physical

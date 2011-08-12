@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MapOutputFile;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
@@ -75,7 +76,8 @@ public class Shuffle<K, V> implements ExceptionReporter {
                  TaskStatus status,
                  Progress copyPhase,
                  Progress mergePhase,
-                 Task reduceTask) {
+                 Task reduceTask,
+                 MapOutputFile mapOutputFile) {
     this.reduceId = reduceId;
     this.jobConf = jobConf;
     this.umbilical = umbilical;
@@ -95,7 +97,7 @@ public class Shuffle<K, V> implements ExceptionReporter {
                                     spilledRecordsCounter, 
                                     reduceCombineInputCounter, 
                                     mergedMapOutputsCounter, 
-                                    this, mergePhase);
+                                    this, mergePhase, mapOutputFile);
   }
 
   @SuppressWarnings("unchecked")
