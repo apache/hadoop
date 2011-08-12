@@ -36,6 +36,7 @@ import javax.net.SocketFactory;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.hbase.util.Objects;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -309,13 +310,16 @@ class WritableRpcEngine implements RpcEngine {
         }
 
         long startTime = System.currentTimeMillis();
-        Object value = method.invoke(impl, call.getParameters());
+        Object[] params = call.getParameters();
+        Object value = method.invoke(impl, params);
         int processingTime = (int) (System.currentTimeMillis() - startTime);
         int qTime = (int) (startTime-receivedTime);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Served: " + call.getMethodName() +
-                    " queueTime= " + qTime +
-                    " procesingTime= " + processingTime);
+        if (TRACELOG.isDebugEnabled()) {
+          TRACELOG.debug("Call #" + CurCall.get().id +
+              "; Served: " + protocol.getSimpleName()+"#"+call.getMethodName() +
+              " queueTime=" + qTime +
+              " processingTime=" + processingTime +
+              " contents=" + Objects.describeQuantity(params));
         }
         rpcMetrics.rpcQueueTime.inc(qTime);
         rpcMetrics.rpcProcessingTime.inc(processingTime);

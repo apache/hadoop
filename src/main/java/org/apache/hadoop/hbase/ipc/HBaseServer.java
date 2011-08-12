@@ -114,6 +114,8 @@ public abstract class HBaseServer implements RpcServer {
 
   public static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.HBaseServer");
+  protected static final Log TRACELOG =
+      LogFactory.getLog("org.apache.hadoop.ipc.HBaseServer.trace");
 
   protected static final ThreadLocal<RpcServer> SERVER =
     new ThreadLocal<RpcServer>();
@@ -247,7 +249,7 @@ public abstract class HBaseServer implements RpcServer {
   }
 
   /** A call queued for handling. */
-  private class Call implements Delayable {
+  protected class Call implements Delayable {
     protected int id;                             // the client's call id
     protected Writable param;                     // the parameter passed
     protected Connection connection;              // connection to client
@@ -1151,12 +1153,13 @@ public abstract class HBaseServer implements RpcServer {
     }
 
     private void processData() throws  IOException, InterruptedException {
+      byte[] array = data.array();
       DataInputStream dis =
-        new DataInputStream(new ByteArrayInputStream(data.array()));
+        new DataInputStream(new ByteArrayInputStream(array));
       int id = dis.readInt();                    // try to read an id
 
       if (LOG.isDebugEnabled())
-        LOG.debug(" got #" + id);
+        LOG.debug(" got call #" + id + ", " + array.length + " bytes");
 
       Writable param = ReflectionUtils.newInstance(paramClass, conf);           // read param
       param.readFields(dis);

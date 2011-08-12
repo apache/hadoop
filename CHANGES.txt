@@ -373,6 +373,8 @@ Release 0.91.0 - Unreleased
                immediately at call return. (Vlad Dogaru via todd)
    HBASE-4169  FSUtils LeaseRecovery for non HDFS FileSystems (Lohit Vijayarenu)
    HBASE-3807  Fix units in RS UI metrics (subramanian raghunathan)
+   HBASE-4193  Enhance RPC debug logging to provide more details on
+               call contents
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
