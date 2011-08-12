@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.metrics2.lib;
 
+import java.util.concurrent.atomic.AtomicReference;
 import javax.management.ObjectName;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -34,7 +35,8 @@ import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
 public enum DefaultMetricsSystem {
   INSTANCE; // the singleton
 
-  private MetricsSystem impl = new MetricsSystemImpl();
+  private AtomicReference<MetricsSystem> impl =
+      new AtomicReference<MetricsSystem>(new MetricsSystemImpl());
   volatile boolean miniClusterMode = false;
   final UniqueNames mBeanNames = new UniqueNames();
   final UniqueNames sourceNames = new UniqueNames();
@@ -48,8 +50,8 @@ public enum DefaultMetricsSystem {
     return INSTANCE.init(prefix);
   }
 
-  synchronized MetricsSystem init(String prefix) {
-    return impl.init(prefix);
+  MetricsSystem init(String prefix) {
+    return impl.get().init(prefix);
   }
 
   /**
@@ -66,8 +68,9 @@ public enum DefaultMetricsSystem {
     INSTANCE.shutdownInstance();
   }
 
-  synchronized void shutdownInstance() {
-    if (impl.shutdown()) {
+  void shutdownInstance() {
+    boolean last = impl.get().shutdown();
+    if (last) synchronized(this) {
       mBeanNames.map.clear();
       sourceNames.map.clear();
     }
@@ -78,13 +81,11 @@ public enum DefaultMetricsSystem {
     return INSTANCE.setImpl(ms);
   }
 
-  synchronized MetricsSystem setImpl(MetricsSystem ms) {
-    MetricsSystem old = impl;
-    impl = ms;
-    return old;
+  MetricsSystem setImpl(MetricsSystem ms) {
+    return impl.getAndSet(ms);
   }
 
-  synchronized MetricsSystem getImpl() { return impl; }
+  MetricsSystem getImpl() { return impl.get(); }
 
   @InterfaceAudience.Private
   public static void setMiniClusterMode(boolean choice) {

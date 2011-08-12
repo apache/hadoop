@@ -493,6 +493,8 @@ Trunk (unreleased changes)
 
     HADOOP-6622. Token should not print the password in toString. (eli)
 
+    HADOOP-7529. Fix lock cycles in metrics system. (llu)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
