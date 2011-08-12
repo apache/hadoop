@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,18 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce;
+/**
+ * This package contains the implementations of different types of
+ * map-reduce counters.
+ *
+ * cf. MAPREDUCE-901 for rationales.
+ */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
+package org.apache.hadoop.mapreduce.counters;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.mapreduce.counters.CounterGroupBase;
-
-/**
- * A group of {@link Counter}s that logically belong together. Typically,
- * it is an {@link Enum} subclass and the counters are the values.
- */
-@InterfaceAudience.Public
-@InterfaceStability.Stable
-public interface CounterGroup extends CounterGroupBase<Counter> {
-  // essentially a typedef so user doesn't have to use generic syntax
-}

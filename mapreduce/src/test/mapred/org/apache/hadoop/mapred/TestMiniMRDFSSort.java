@@ -34,6 +34,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapred.lib.NullOutputFormat;
+import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -104,8 +105,8 @@ public class TestMiniMRDFSSort extends TestCase {
     org.apache.hadoop.mapreduce.Counters counters = sort.getResult().getCounters();
     long mapInput = counters.findCounter(FileInputFormatCounter.BYTES_READ)
         .getValue();
-    long hdfsRead = counters.findCounter(Task.FILESYSTEM_COUNTER_GROUP,
-                                         "HDFS_BYTES_READ").getValue();
+    long hdfsRead = counters.findCounter("hdfs", FileSystemCounter.BYTES_READ)
+        .getValue();
     // the hdfs read should be between 100% and 110% of the map input bytes
     assertTrue("map input = " + mapInput + ", hdfs read = " + hdfsRead,
                (hdfsRead < (mapInput * 1.1)) &&

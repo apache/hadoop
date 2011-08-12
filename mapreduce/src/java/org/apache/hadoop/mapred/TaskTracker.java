@@ -1617,13 +1617,13 @@ public class TaskTracker
    */
   HeartbeatResponse transmitHeartBeat(long now) throws IOException {
     // Send Counters in the status once every COUNTER_UPDATE_INTERVAL
-    boolean sendCounters;
+    boolean sendAllCounters;
     if (now > (previousUpdate + COUNTER_UPDATE_INTERVAL)) {
-      sendCounters = true;
+      sendAllCounters = true;
       previousUpdate = now;
     }
     else {
-      sendCounters = false;
+      sendAllCounters = false;
     }
 
     // 
@@ -1636,7 +1636,7 @@ public class TaskTracker
         status = new TaskTrackerStatus(taskTrackerName, localHostname, 
                                        httpPort, 
                                        cloneAndResetRunningTaskStatuses(
-                                         sendCounters), 
+                                         sendAllCounters),
                                        failures, 
                                        maxMapSlots,
                                        maxReduceSlots); 
@@ -3521,10 +3521,10 @@ public class TaskTracker
     List<TaskStatus> result = new ArrayList<TaskStatus>(runningTasks.size());
     for(TaskInProgress tip: runningTasks.values()) {
       TaskStatus status = tip.getStatus();
-      status.setIncludeCounters(sendCounters);
+      status.setIncludeAllCounters(sendCounters);
       // send counters for finished or failed tasks and commit pending tasks
       if (status.getRunState() != TaskStatus.State.RUNNING) {
-        status.setIncludeCounters(true);
+        status.setIncludeAllCounters(true);
       }
       result.add((TaskStatus)status.clone());
       status.clearStatus();

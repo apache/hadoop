@@ -103,9 +103,9 @@ class TaskInProgress {
   private boolean jobCleanup = false; 
   private boolean jobSetup = false;
 
-  private static Enum CPU_COUNTER_KEY = TaskCounter.CPU_MILLISECONDS;
-  private static Enum VM_BYTES_KEY = TaskCounter.VIRTUAL_MEMORY_BYTES;
-  private static Enum PHYSICAL_BYTES_KEY = TaskCounter.PHYSICAL_MEMORY_BYTES;
+  static final Enum<?> CPU_COUNTER_KEY = TaskCounter.CPU_MILLISECONDS;
+  static final Enum<?> VM_BYTES_KEY = TaskCounter.VIRTUAL_MEMORY_BYTES;
+  static final Enum<?> PHYSICAL_BYTES_KEY = TaskCounter.PHYSICAL_MEMORY_BYTES;
    
   // The 'next' usable taskid of this tip
   int nextTaskId = 0;
@@ -222,13 +222,10 @@ class TaskInProgress {
   }
 
   private void updateProgressSplits(TaskStatus taskStatus) {
-    if (!taskStatus.getIncludeCounters()) {
-      return;
-    }
-
     double newProgress = taskStatus.getProgress();
 
     Counters counters = taskStatus.getCounters();
+    if (counters == null) return;
 
     TaskAttemptID statusAttemptID = taskStatus.getTaskID();
     ProgressSplitsBlock splitsBlock = getSplits(statusAttemptID);
@@ -1040,7 +1037,7 @@ class TaskInProgress {
           if (status.getProgress() >= bestProgress) {
             bestProgress = status.getProgress();
             bestState = status.getStateString();
-            if (status.getIncludeCounters()) {
+            if (status.getIncludeAllCounters()) {
               bestCounters = status.getCounters();
             } else {
               bestCounters = this.counters;

@@ -114,8 +114,10 @@ public interface ClientProtocol extends VersionedProtocol {
    *             MAPREDUCE-1664.
    * Version 36: Added the method getJobTrackerStatus() as part of
    *             MAPREDUCE-2337.
+   * Version 37: More efficient serialization format for framework counters
+   *             (MAPREDUCE-901)
    */
-  public static final long versionID = 36L;
+  public static final long versionID = 37L;
 
   /**
    * Allocate a name for the job.

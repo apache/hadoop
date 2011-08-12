@@ -18,137 +18,58 @@
 
 package org.apache.hadoop.mapreduce;
 
-import java.io.IOException;
-import java.io.DataInput;
-import java.io.DataOutput;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
 
 /**
  * A named counter that tracks the progress of a map/reduce job.
- * 
- * <p><code>Counters</code> represent global counters, defined either by the 
+ *
+ * <p><code>Counters</code> represent global counters, defined either by the
  * Map-Reduce framework or applications. Each <code>Counter</code> is named by
  * an {@link Enum} and has a long for the value.</p>
- * 
+ *
  * <p><code>Counters</code> are bunched into Groups, each comprising of
- * counters from a particular <code>Enum</code> class. 
+ * counters from a particular <code>Enum</code> class.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class Counter implements Writable {
+public interface Counter extends Writable {
 
-  private String name;
-  private String displayName;
-  private long value = 0;
-    
-  protected Counter() { 
-  }
-
-  protected Counter(String name, String displayName) {
-    this.name = name;
-    this.displayName = displayName;
-  }
-  
-  /** Create a counter.
-   * @param name the name within the group's enum.
-   * @param displayName a name to be displayed.
-   * @param value the counter value.
+  /**
+   * Set the display name of the counter
+   * @param displayName of the counter
+   * @deprecated (and no-op by default)
    */
-  public Counter(String name, String displayName, long value) {
-    this.name = name;
-    this.displayName = displayName;
-    this.value = value;
-  }
-  
   @Deprecated
-  protected synchronized void setDisplayName(String displayName) {
-    this.displayName = displayName;
-  }
-    
-  /**
-   * Read the binary representation of the counter
-   */
-  @Override
-  public synchronized void readFields(DataInput in) throws IOException {
-    name = Text.readString(in);
-    if (in.readBoolean()) {
-      displayName = Text.readString(in);
-    } else {
-      displayName = name;
-    }
-    value = WritableUtils.readVLong(in);
-  }
-    
-  /**
-   * Write the binary representation of the counter
-   */
-  @Override
-  public synchronized void write(DataOutput out) throws IOException {
-    Text.writeString(out, name);
-    boolean distinctDisplayName = ! name.equals(displayName);
-    out.writeBoolean(distinctDisplayName);
-    if (distinctDisplayName) {
-      Text.writeString(out, displayName);
-    }
-    WritableUtils.writeVLong(out, value);
-  }
-
-  public synchronized String getName() {
-    return name;
-  }
+  void setDisplayName(String displayName);
 
   /**
-   * Get the name of the counter.
+   * @return the name of the counter
+   */
+  String getName();
+
+  /**
+   * Get the display name of the counter.
    * @return the user facing name of the counter
    */
-  public synchronized String getDisplayName() {
-    return displayName;
-  }
-    
+  String getDisplayName();
+
   /**
    * What is the current value of this counter?
    * @return the current value
    */
-  public synchronized long getValue() {
-    return value;
-  }
+  long getValue();
 
   /**
    * Set this counter by the given value
    * @param value the value to set
    */
-  public synchronized void setValue(long value) {
-    this.value = value;
-  }
+  void setValue(long value);
 
   /**
    * Increment this counter by the given value
    * @param incr the value to increase this counter by
    */
-  public synchronized void increment(long incr) {
-    value += incr;
-  }
-
-  @Override
-  public synchronized boolean equals(Object genericRight) {
-    if (genericRight instanceof Counter) {
-      synchronized (genericRight) {
-        Counter right = (Counter) genericRight;
-        return name.equals(right.name) && 
-               displayName.equals(right.displayName) &&
-               value == right.value;
-      }
-    }
-    return false;
-  }
-  
-  @Override
-  public synchronized int hashCode() {
-    return name.hashCode() + displayName.hashCode();
-  }
+  void increment(long incr);
 }

@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.TaskCounter;
@@ -244,12 +245,10 @@ public class TestMiniMRWithDFS extends TestCase {
     result = launchWordCount(jobConf, inDir, outDir, input, 0, 1);
     assertEquals("is\t1\noom\t1\nowen\t1\n", result.output);
     Counters counters = result.job.getCounters();
-    long hdfsRead = 
-      counters.findCounter(Task.FILESYSTEM_COUNTER_GROUP, 
-          Task.getFileSystemCounterNames("hdfs")[0]).getCounter();
-    long hdfsWrite = 
-      counters.findCounter(Task.FILESYSTEM_COUNTER_GROUP, 
-          Task.getFileSystemCounterNames("hdfs")[1]).getCounter();
+    long hdfsRead = counters.findCounter("HDFS",
+        FileSystemCounter.BYTES_READ).getValue();
+    long hdfsWrite = counters.findCounter("HDFS",
+        FileSystemCounter.BYTES_WRITTEN).getValue();
     long rawSplitBytesRead = 
       counters.findCounter(TaskCounter.SPLIT_RAW_BYTES).getCounter();
     assertEquals(result.output.length(), hdfsWrite);

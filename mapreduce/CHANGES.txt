@@ -227,6 +227,8 @@ Trunk (unreleased changes)
     MAPREDUCE-2740. MultipleOutputs in new API creates needless
     TaskAttemptContexts. (todd)
 
+    MAPREDUCE-901. Efficient framework counters. (llu via acmurthy)
+
   BUG FIXES
 
     MAPREDUCE-2603. Disable High-Ram emulation in system tests. 

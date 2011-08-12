@@ -22,7 +22,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapred.Task.CombineOutputCollector;
 import org.apache.hadoop.mapred.Task.TaskReporter;
@@ -31,11 +36,75 @@ import org.junit.Test;
 public class TestCombineOutputCollector {
   private CombineOutputCollector<String, Integer> coc;
 
+  Counters.Counter outCounter = new Counters.Counter() {
+    
+    @Override
+    public void setValue(long value) {
+      // TODO Auto-generated method stub
+      
+    }
+    
+    @Override
+    public void setDisplayName(String displayName) {
+      // TODO Auto-generated method stub
+      
+    }
+    
+    @Override
+    public void increment(long incr) {
+      // TODO Auto-generated method stub
+      
+    }
+    
+    @Override
+    public long getValue() {
+      // TODO Auto-generated method stub
+      return 0;
+    }
+    
+    @Override
+    public String getName() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+    
+    @Override
+    public String getDisplayName() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+    
+    @Override
+    public String makeEscapedCompactString() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+    
+    @Override
+    public long getCounter() {
+      // TODO Auto-generated method stub
+      return 0;
+    }
+    
+    @Override
+    public boolean contentEquals(Counter counter) {
+      // TODO Auto-generated method stub
+      return false;
+    }
+    
+    @Override
+    public void write(DataOutput out) throws IOException {
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+    }
+  };
+
   @Test
   public void testCustomCollect() throws Throwable {
     //mock creation
     TaskReporter mockTaskReporter = mock(TaskReporter.class);
-    Counters.Counter outCounter = new Counters.Counter();
     Writer<String, Integer> mockWriter = mock(Writer.class);
 
     Configuration conf = new Configuration();
@@ -56,7 +125,6 @@ public class TestCombineOutputCollector {
   public void testDefaultCollect() throws Throwable {
     //mock creation
     TaskReporter mockTaskReporter = mock(TaskReporter.class);
-    Counters.Counter outCounter = new Counters.Counter();
     Writer<String, Integer> mockWriter = mock(Writer.class);
 
     Configuration conf = new Configuration();

@@ -31,7 +31,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-
 import javax.crypto.SecretKey;
 
 import org.apache.commons.logging.Log;
@@ -54,6 +53,7 @@ import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.JobStatus;
@@ -819,37 +819,41 @@ abstract public class Task implements Writable, Configurable {
    * system and only creates the counters when they are needed.
    */
   class FileSystemStatisticUpdater {
-    private long prevReadBytes = 0;
-    private long prevWriteBytes = 0;
     private FileSystem.Statistics stats;
-    private Counters.Counter readCounter = null;
-    private Counters.Counter writeCounter = null;
-    private String[] counterNames;
+    private Counters.Counter readBytesCounter, writeBytesCounter,
+        readOpsCounter, largeReadOpsCounter, writeOpsCounter;
     
-    FileSystemStatisticUpdater(String uriScheme, FileSystem.Statistics stats) {
+    FileSystemStatisticUpdater(FileSystem.Statistics stats) {
       this.stats = stats;
-      this.counterNames = getFileSystemCounterNames(uriScheme);
     }
 
     void updateCounters() {
-      long newReadBytes = stats.getBytesRead();
-      long newWriteBytes = stats.getBytesWritten();
-      if (prevReadBytes != newReadBytes) {
-        if (readCounter == null) {
-          readCounter = counters.findCounter(FILESYSTEM_COUNTER_GROUP, 
-              counterNames[0]);
-        }
-        readCounter.increment(newReadBytes - prevReadBytes);
-        prevReadBytes = newReadBytes;
+      String scheme = stats.getScheme();
+      if (readBytesCounter == null) {
+        readBytesCounter = counters.findCounter(scheme,
+            FileSystemCounter.BYTES_READ);
       }
-      if (prevWriteBytes != newWriteBytes) {
-        if (writeCounter == null) {
-          writeCounter = counters.findCounter(FILESYSTEM_COUNTER_GROUP, 
-              counterNames[1]);
-        }
-        writeCounter.increment(newWriteBytes - prevWriteBytes);
-        prevWriteBytes = newWriteBytes;
+      readBytesCounter.setValue(stats.getBytesRead());
+      if (writeBytesCounter == null) {
+        writeBytesCounter = counters.findCounter(scheme,
+            FileSystemCounter.BYTES_WRITTEN);
       }
+      writeBytesCounter.setValue(stats.getBytesWritten());
+      if (readOpsCounter == null) {
+        readOpsCounter = counters.findCounter(scheme,
+            FileSystemCounter.READ_OPS);
+      }
+      readOpsCounter.setValue(stats.getReadOps());
+      if (largeReadOpsCounter == null) {
+        largeReadOpsCounter = counters.findCounter(scheme,
+            FileSystemCounter.LARGE_READ_OPS);
+      }
+      largeReadOpsCounter.setValue(stats.getLargeReadOps());
+      if (writeOpsCounter == null) {
+        writeOpsCounter = counters.findCounter(scheme,
+            FileSystemCounter.WRITE_OPS);
+      }
+      writeOpsCounter.setValue(stats.getWriteOps());
     }
   }
   
@@ -864,7 +868,7 @@ abstract public class Task implements Writable, Configurable {
       String uriScheme = stat.getScheme();
       FileSystemStatisticUpdater updater = statisticUpdaters.get(uriScheme);
       if(updater==null) {//new FileSystem has been found in the cache
-        updater = new FileSystemStatisticUpdater(uriScheme, stat);
+        updater = new FileSystemStatisticUpdater(stat);
         statisticUpdaters.put(uriScheme, updater);
       }
       updater.updateCounters();      
