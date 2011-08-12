@@ -964,6 +964,9 @@ Trunk (unreleased changes)
     HDFS-2240. Fix a deadlock in LeaseRenewer by enforcing lock acquisition
     ordering.  (szetszwo)
 
+    HDFS-73. DFSOutputStream does not close all the sockets.
+    (Uma Maheswara Rao G via eli)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.
