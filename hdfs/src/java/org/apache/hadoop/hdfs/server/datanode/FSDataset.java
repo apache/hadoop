@@ -775,12 +775,13 @@ public class FSDataset implements FSDatasetInterface {
      */
     private volatile List<FSVolume> volumes = null;
     BlockVolumeChoosingPolicy blockChooser;
-    int numFailedVolumes = 0;
+    int numFailedVolumes;
 
-    FSVolumeSet(FSVolume[] volumes, BlockVolumeChoosingPolicy blockChooser) {
+    FSVolumeSet(FSVolume[] volumes, int failedVols, BlockVolumeChoosingPolicy blockChooser) {
       List<FSVolume> list = Arrays.asList(volumes);
       this.volumes = Collections.unmodifiableList(list);
       this.blockChooser = blockChooser;
+      this.numFailedVolumes = failedVols;
     }
     
     private int numberOfVolumes() {
@@ -1144,15 +1145,19 @@ public class FSDataset implements FSDatasetInterface {
     String[] dataDirs = conf.getTrimmedStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
 
     int volsConfigured = (dataDirs == null) ? 0 : dataDirs.length;
-
+    int volsFailed = volsConfigured - storage.getNumStorageDirs();
     this.validVolsRequired = volsConfigured - volFailuresTolerated;
 
-    if (validVolsRequired < 1
-        || validVolsRequired > storage.getNumStorageDirs()) {
+    if (volFailuresTolerated < 0 || volFailuresTolerated >= volsConfigured) {
+      throw new DiskErrorException("Invalid volume failure "
+          + " config value: " + volFailuresTolerated);
+    }
+    if (volsFailed > volFailuresTolerated) {
       throw new DiskErrorException("Too many failed volumes - "
           + "current valid volumes: " + storage.getNumStorageDirs() 
           + ", volumes configured: " + volsConfigured 
-          + ", volume failures tolerated: " + volFailuresTolerated );
+          + ", volumes failed: " + volsFailed
+          + ", volume failures tolerated: " + volFailuresTolerated);
     }
 
     FSVolume[] volArray = new FSVolume[storage.getNumStorageDirs()];
@@ -1170,7 +1175,7 @@ public class FSDataset implements FSDatasetInterface {
             RoundRobinVolumesPolicy.class,
             BlockVolumeChoosingPolicy.class),
         conf);
-    volumes = new FSVolumeSet(volArray, blockChooserImpl);
+    volumes = new FSVolumeSet(volArray, volsFailed, blockChooserImpl);
     volumes.getVolumeMap(volumeMap);
 
     File[] roots = new File[storage.getNumStorageDirs()];

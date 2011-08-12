@@ -959,6 +959,8 @@ Trunk (unreleased changes)
 
     HDFS-2235. Encode servlet paths. (eli)
 
+    HDFS-2186. DN volume failures on startup are not counted. (eli)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.
