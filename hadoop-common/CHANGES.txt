@@ -322,6 +322,8 @@ Trunk (unreleased changes)
     HADOOP-7526. Add TestPath tests for URI conversion and reserved
     characters. (eli)
 
+    HADOOP-7531. Add servlet util methods for handling paths in requests. (eli)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

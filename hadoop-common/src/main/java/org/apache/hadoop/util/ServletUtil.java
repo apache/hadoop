@@ -21,9 +21,14 @@ import java.io.*;
 import java.util.Calendar;
 
 import javax.servlet.*;
+import javax.servlet.http.HttpServletRequest;
 
+import org.apache.commons.httpclient.URIException;
+import org.apache.commons.httpclient.util.URIUtil;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+
+import com.google.common.base.Preconditions;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -106,5 +111,56 @@ public class ServletUtil {
    */
   public static String percentageGraph(float perc, int width) throws IOException {
     return percentageGraph((int)perc, width);
+  }
+
+  /**
+   * Escape and encode a string regarded as within the query component of an URI.
+   * @param value the value to encode
+   * @return encoded query, null if the default charset is not supported
+   */
+  public static String encodeQueryValue(final String value) {
+    try {
+      return URIUtil.encodeWithinQuery(value, "UTF-8");
+    } catch (URIException e) {
+      throw new AssertionError("JVM does not support UTF-8"); // should never happen!
+    }
+  }
+
+  /**
+   * Escape and encode a string regarded as the path component of an URI.
+   * @param path the path component to encode
+   * @return encoded path, null if UTF-8 is not supported
+   */
+  public static String encodePath(final String path) {
+    try {
+      return URIUtil.encodePath(path, "UTF-8");
+    } catch (URIException e) {
+      throw new AssertionError("JVM does not support UTF-8"); // should never happen!
+    }
+  }
+
+  /**
+   * Parse and decode the path component from the given request.
+   * @param request Http request to parse
+   * @param servletName the name of servlet that precedes the path
+   * @return decoded path component, null if UTF-8 is not supported
+   */
+  public static String getDecodedPath(final HttpServletRequest request, String servletName) {
+    try {
+      return URIUtil.decode(getRawPath(request, servletName), "UTF-8");
+    } catch (URIException e) {
+      throw new AssertionError("JVM does not support UTF-8"); // should never happen!
+    }
+  }
+
+  /**
+   * Parse the path component from the given request and return w/o decoding.
+   * @param request Http request to parse
+   * @param servletName the name of servlet that precedes the path
+   * @return path component, null if the default charset is not supported
+   */
+  public static String getRawPath(final HttpServletRequest request, String servletName) {
+    Preconditions.checkArgument(request.getRequestURI().startsWith(servletName+"/"));
+    return request.getRequestURI().substring(servletName.length());
   }
 }
