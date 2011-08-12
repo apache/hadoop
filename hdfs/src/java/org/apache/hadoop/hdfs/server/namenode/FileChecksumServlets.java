@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 
 import javax.net.SocketFactory;
 import javax.servlet.ServletContext;
@@ -36,11 +37,14 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeJspHelper;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ServletUtil;
 import org.znerd.xmlenc.XMLOutputter;
 
 /** Servlets for file checksum */
@@ -52,6 +56,32 @@ public class FileChecksumServlets {
     /** For java.io.Serializable */
     private static final long serialVersionUID = 1L;
   
+    /** Create a redirection URL */
+    private URL createRedirectURL(UserGroupInformation ugi, DatanodeID host,
+        HttpServletRequest request, NameNode nn) 
+        throws IOException, URISyntaxException {
+      final String hostname = host instanceof DatanodeInfo 
+          ? ((DatanodeInfo)host).getHostName() : host.getHost();
+      final String scheme = request.getScheme();
+      final int port = "https".equals(scheme)
+          ? (Integer)getServletContext().getAttribute("datanode.https.port")
+          : host.getInfoPort();
+      final String encodedPath = ServletUtil.getRawPath(request, "/fileChecksum");
+
+      String dtParam = "";
+      if (UserGroupInformation.isSecurityEnabled()) {
+        String tokenString = ugi.getTokens().iterator().next().encodeToUrlString();
+        dtParam = JspHelper.getDelegationTokenUrlParam(tokenString);
+      }
+      String addr = NameNode.getHostPortString(nn.getNameNodeAddress());
+      String addrParam = JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, addr);
+
+      return new URL(scheme, hostname, port, 
+          "/getFileChecksum" + encodedPath + '?' +
+          "ugi=" + ServletUtil.encodeQueryValue(ugi.getShortUserName()) + 
+          dtParam + addrParam);
+    }
+
     /** {@inheritDoc} */
     public void doGet(HttpServletRequest request, HttpServletResponse response
         ) throws ServletException, IOException {
@@ -62,12 +92,10 @@ public class FileChecksumServlets {
           context);
       final DatanodeID datanode = NamenodeJspHelper.getRandomDatanode(namenode);
       try {
-        final URI uri = createRedirectUri("/getFileChecksum", ugi, datanode, 
-                                          request, namenode); 
-        response.sendRedirect(uri.toURL().toString());
+        response.sendRedirect(
+            createRedirectURL(ugi, datanode, request, namenode).toString());
       } catch(URISyntaxException e) {
         throw new ServletException(e); 
-        //response.getWriter().println(e.toString());
       } catch (IOException e) {
         response.sendError(400, e.getMessage());
       }
@@ -84,7 +112,7 @@ public class FileChecksumServlets {
     public void doGet(HttpServletRequest request, HttpServletResponse response
         ) throws ServletException, IOException {
       final PrintWriter out = response.getWriter();
-      final String filename = getFilename(request, response);
+      final String path = ServletUtil.getDecodedPath(request, "/getFileChecksum");
       final XMLOutputter xml = new XMLOutputter(out, "UTF-8");
       xml.declaration();
 
@@ -103,12 +131,12 @@ public class FileChecksumServlets {
             datanode, conf, getUGI(request, conf));
         final ClientProtocol nnproxy = dfs.getNamenode();
         final MD5MD5CRC32FileChecksum checksum = DFSClient.getFileChecksum(
-            filename, nnproxy, socketFactory, socketTimeout);
+            path, nnproxy, socketFactory, socketTimeout);
         MD5MD5CRC32FileChecksum.write(xml, checksum);
       } catch(IOException ioe) {
-        writeXml(ioe, filename, xml);
+        writeXml(ioe, path, xml);
       } catch (InterruptedException e) {
-        writeXml(e, filename, xml);
+        writeXml(e, path, xml);
       }
       xml.endDocument();
     }

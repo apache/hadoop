@@ -28,7 +28,6 @@ import java.net.URLEncoder;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.jsp.JspWriter;
 
-import org.apache.commons.httpclient.util.URIUtil;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -36,6 +35,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.util.ServletUtil;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -71,7 +71,7 @@ public class TestDatanodeJsp {
     
     if (!doTail) {
       assertTrue("page should show link to download file", viewFilePage
-          .contains("/streamFile" + URIUtil.encodePath(testPath.toString()) +
+          .contains("/streamFile" + ServletUtil.encodePath(testPath.toString()) +
               "?nnaddr=localhost:" + nnIpcAddress.getPort()));
     }
   }
@@ -90,7 +90,23 @@ public class TestDatanodeJsp {
       testViewingFile(cluster, "/test-file", true);
       testViewingFile(cluster, "/tmp/test-file", true);
       testViewingFile(cluster, "/tmp/test-file%with goofy&characters", true);
+
+      testViewingFile(cluster, "/foo bar", true);
+      testViewingFile(cluster, "/foo+bar", true);
+      testViewingFile(cluster, "/foo;bar", true);
+      testViewingFile(cluster, "/foo=bar", true);
+      testViewingFile(cluster, "/foo,bar", true);
+      testViewingFile(cluster, "/foo?bar", true);
+      testViewingFile(cluster, "/foo\">bar", true);
       
+      testViewingFile(cluster, "/foo bar", false);
+      // See HDFS-2233
+      //testViewingFile(cluster, "/foo+bar", false);
+      //testViewingFile(cluster, "/foo;bar", false);
+      testViewingFile(cluster, "/foo=bar", false);
+      testViewingFile(cluster, "/foo,bar", false);
+      testViewingFile(cluster, "/foo?bar", false);
+      testViewingFile(cluster, "/foo\">bar", false);
     } finally {
       if (cluster != null) {
         cluster.shutdown();

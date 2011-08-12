@@ -123,42 +123,42 @@ public class HsftpFileSystem extends HftpFileSystem {
   @Override
   protected HttpURLConnection openConnection(String path, String query)
       throws IOException {
+    query = addDelegationTokenParam(query);
+    final URL url = new URL("https", nnAddr.getHostName(), 
+        nnAddr.getPort(), path + '?' + query);
+    HttpsURLConnection conn = (HttpsURLConnection)url.openConnection();
+    // bypass hostname verification
     try {
-      query = updateQuery(query);
-      final URL url = new URI("https", null, nnAddr.getHostName(), nnAddr
-          .getPort(), path, query, null).toURL();
-      HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
-      // bypass hostname verification
       conn.setHostnameVerifier(new DummyHostnameVerifier());
       conn.setRequestMethod("GET");
       conn.connect();
+    } catch (IOException ioe) {
+      throwIOExceptionFromConnection(conn, ioe);
+    }
 
-      // check cert expiration date
-      final int warnDays = ExpWarnDays;
-      if (warnDays > 0) { // make sure only check once
-        ExpWarnDays = 0;
-        long expTimeThreshold = warnDays * MM_SECONDS_PER_DAY
-            + System.currentTimeMillis();
-        X509Certificate[] clientCerts = (X509Certificate[]) conn
-            .getLocalCertificates();
-        if (clientCerts != null) {
-          for (X509Certificate cert : clientCerts) {
-            long expTime = cert.getNotAfter().getTime();
-            if (expTime < expTimeThreshold) {
-              StringBuilder sb = new StringBuilder();
-              sb.append("\n Client certificate "
-                  + cert.getSubjectX500Principal().getName());
-              int dayOffSet = (int) ((expTime - System.currentTimeMillis()) / MM_SECONDS_PER_DAY);
-              sb.append(" have " + dayOffSet + " days to expire");
-              LOG.warn(sb.toString());
-            }
+    // check cert expiration date
+    final int warnDays = ExpWarnDays;
+    if (warnDays > 0) { // make sure only check once
+      ExpWarnDays = 0;
+      long expTimeThreshold = warnDays * MM_SECONDS_PER_DAY
+          + System.currentTimeMillis();
+      X509Certificate[] clientCerts = (X509Certificate[]) conn
+          .getLocalCertificates();
+      if (clientCerts != null) {
+        for (X509Certificate cert : clientCerts) {
+          long expTime = cert.getNotAfter().getTime();
+          if (expTime < expTimeThreshold) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("\n Client certificate "
+                + cert.getSubjectX500Principal().getName());
+            int dayOffSet = (int) ((expTime - System.currentTimeMillis()) / MM_SECONDS_PER_DAY);
+            sb.append(" have " + dayOffSet + " days to expire");
+            LOG.warn(sb.toString());
           }
         }
       }
-      return (HttpURLConnection) conn;
-    } catch (URISyntaxException e) {
-      throw (IOException) new IOException().initCause(e);
     }
+    return (HttpURLConnection) conn;
   }
 
   @Override

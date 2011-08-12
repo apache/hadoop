@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ServletUtil;
 import org.znerd.xmlenc.XMLOutputter;
 
 /** Servlets for file checksum */
@@ -49,8 +50,7 @@ public class ContentSummaryServlet extends DfsServlet {
       ugi.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          final String path = request.getPathInfo();
-
+          final String path = ServletUtil.getDecodedPath(request, "/contentSummary");
           final PrintWriter out = response.getWriter();
           final XMLOutputter xml = new XMLOutputter(out, "UTF-8");
           xml.declaration();

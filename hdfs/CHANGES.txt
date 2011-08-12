@@ -957,6 +957,8 @@ Trunk (unreleased changes)
     HDFS-2229. Fix a deadlock in namenode by enforcing lock acquisition
     ordering.  (szetszwo)
 
+    HDFS-2235. Encode servlet paths. (eli)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.

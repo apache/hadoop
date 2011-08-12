@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeJspHelper;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ServletUtil;
 import org.mortbay.jetty.InclusiveByteRange;
 
 @InterfaceAudience.Private
@@ -57,13 +58,14 @@ public class StreamFile extends DfsServlet {
     final DataNode datanode = (DataNode) context.getAttribute("datanode");
     return DatanodeJspHelper.getDFSClient(request, datanode, conf, ugi);
   }
-  
+
   @SuppressWarnings("unchecked")
   public void doGet(HttpServletRequest request, HttpServletResponse response)
     throws ServletException, IOException {
-    final String path = request.getPathInfo() != null ? 
-                                        request.getPathInfo() : "/";
+    final String path = ServletUtil.getDecodedPath(request, "/streamFile");
+    final String rawPath = ServletUtil.getRawPath(request, "/streamFile");
     final String filename = JspHelper.validatePath(path);
+    final String rawFilename = JspHelper.validatePath(rawPath);
     if (filename == null) {
       response.setContentType("text/plain");
       PrintWriter out = response.getWriter();
@@ -98,7 +100,7 @@ public class StreamFile extends DfsServlet {
       } else {
         // No ranges, so send entire file
         response.setHeader("Content-Disposition", "attachment; filename=\"" + 
-                           filename + "\"");
+                           rawFilename + "\"");
         response.setContentType("application/octet-stream");
         response.setHeader(CONTENT_LENGTH, "" + fileLen);
         StreamFile.copyFromOffset(in, out, 0L, fileLen);

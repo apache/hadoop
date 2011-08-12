@@ -19,14 +19,15 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.HttpURLConnection;
 import java.util.Random;
 
-import junit.extensions.TestSetup;
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
+import org.junit.Test;
+import org.junit.BeforeClass;
+import org.junit.AfterClass;
+import static org.junit.Assert.*;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
@@ -39,26 +40,48 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.util.ServletUtil;
 import org.apache.log4j.Level;
 
-/**
- * Unittest for HftpFileSystem.
- *
- */
-public class TestHftpFileSystem extends TestCase {
+public class TestHftpFileSystem {
   private static final Random RAN = new Random();
-  private static final Path TEST_FILE = new Path("/testfile+1");
   
   private static Configuration config = null;
   private static MiniDFSCluster cluster = null;
   private static FileSystem hdfs = null;
   private static HftpFileSystem hftpFs = null;
   private static String blockPoolId = null;
-  
-  /**
-   * Setup hadoop mini-cluster for test.
-   */
-  private static void oneTimeSetUp() throws IOException {
+
+  private static Path[] TEST_PATHS = new Path[] {
+      // URI does not encode, Request#getPathInfo returns /foo
+      new Path("/foo;bar"),
+
+      // URI does not encode, Request#getPathInfo returns verbatim
+      new Path("/foo+"),
+      new Path("/foo+bar/foo+bar"),
+      new Path("/foo=bar/foo=bar"),
+      new Path("/foo,bar/foo,bar"),
+      new Path("/foo@bar/foo@bar"),
+      new Path("/foo&bar/foo&bar"),
+      new Path("/foo$bar/foo$bar"),
+      new Path("/foo_bar/foo_bar"),
+      new Path("/foo~bar/foo~bar"),
+      new Path("/foo.bar/foo.bar"),
+      new Path("/foo../bar/foo../bar"),
+      new Path("/foo.../bar/foo.../bar"),
+      new Path("/foo'bar/foo'bar"),
+      new Path("/foo#bar/foo#bar"),
+      new Path("/foo!bar/foo!bar"),
+      // HDFS file names may not contain ":"
+
+      // URI percent encodes, Request#getPathInfo decodes
+      new Path("/foo bar/foo bar"),
+      new Path("/foo?bar/foo?bar"),
+      new Path("/foo\">bar/foo\">bar"),
+    };
+
+  @BeforeClass
+  public static void setUp() throws IOException {
     ((Log4JLogger)HftpFileSystem.LOG).getLogger().setLevel(Level.ALL);
 
     final long seed = RAN.nextLong();
@@ -67,66 +90,73 @@ public class TestHftpFileSystem extends TestCase {
 
     config = new Configuration();
     config.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, "localhost");
-
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(2).build();
     hdfs = cluster.getFileSystem();
     blockPoolId = cluster.getNamesystem().getBlockPoolId();
-    final String hftpuri = 
+    final String hftpUri = 
       "hftp://" + config.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
-    hftpFs = (HftpFileSystem) new Path(hftpuri).getFileSystem(config);
+    hftpFs = (HftpFileSystem) new Path(hftpUri).getFileSystem(config);
   }
   
-  /**
-   * Shutdown the hadoop mini-cluster.
-   */
-  private static void oneTimeTearDown() throws IOException {
+  @AfterClass
+  public static void tearDown() throws IOException {
     hdfs.close();
     hftpFs.close();
     cluster.shutdown();
   }
-  
-  public TestHftpFileSystem(String name) {
-    super(name);
-  }
 
   /**
-   * For one time setup / teardown.
+   * Test file creation and access with file names that need encoding. 
    */
-  public static Test suite() {
-    TestSuite suite = new TestSuite();
-    
-    suite.addTestSuite(TestHftpFileSystem.class);
-    
-    return new TestSetup(suite) {
-      @Override
-      protected void setUp() throws IOException {
-        oneTimeSetUp();
-      }
-      
-      @Override
-      protected void tearDown() throws IOException {
-        oneTimeTearDown();
-      }
-    };
-  }
-  
-  public void testDataNodeRedirect() throws Exception {
-    if (hdfs.exists(TEST_FILE)) {
-      hdfs.delete(TEST_FILE, true);
+  @Test
+  public void testFileNameEncoding() throws IOException, URISyntaxException {
+    for (Path p : TEST_PATHS) {
+      // Create and access the path (data and streamFile servlets)
+      FSDataOutputStream out = hdfs.create(p, true);
+      out.writeBytes("0123456789");
+      out.close();
+      FSDataInputStream in = hftpFs.open(p);
+      assertEquals('0', in.read());
+
+      // Check the file status matches the path. Hftp returns a FileStatus
+      // with the entire URI, extract the path part.
+      assertEquals(p, new Path(hftpFs.getFileStatus(p).getPath().toUri().getPath()));
+
+      // Test list status (listPath servlet)
+      assertEquals(1, hftpFs.listStatus(p).length);
+
+      // Test content summary (contentSummary servlet)
+      assertNotNull("No content summary", hftpFs.getContentSummary(p));
+
+      // Test checksums (fileChecksum and getFileChecksum servlets)
+      assertNotNull("No file checksum", hftpFs.getFileChecksum(p));
     }
-    FSDataOutputStream out = hdfs.create(TEST_FILE, (short) 1);
+  }
+
+  private void testDataNodeRedirect(Path path) throws IOException {
+    // Create the file
+    if (hdfs.exists(path)) {
+      hdfs.delete(path, true);
+    }
+    FSDataOutputStream out = hdfs.create(path, (short)1);
     out.writeBytes("0123456789");
     out.close();
-    
+
+    // Get the path's block location so we can determine
+    // if we were redirected to the right DN.
     BlockLocation[] locations = 
-        hdfs.getFileBlockLocations(TEST_FILE, 0, 10);
-    
+        hdfs.getFileBlockLocations(path, 0, 10);
     String locationName = locations[0].getNames()[0];
-    URL u = hftpFs.getNamenodeFileURL(TEST_FILE);
+
+    // Connect to the NN to get redirected
+    URL u = hftpFs.getNamenodeURL(
+        "/data" + ServletUtil.encodePath(path.toUri().getPath()), 
+        "ugi=userx,groupy");
     HttpURLConnection conn = (HttpURLConnection)u.openConnection();
     HttpURLConnection.setFollowRedirects(true);
     conn.connect();
     conn.getInputStream();
+
     boolean checked = false;
     // Find the datanode that has the block according to locations
     // and check that the URL was redirected to this DN's info port
@@ -138,19 +168,32 @@ public class TestHftpFileSystem extends TestCase {
         assertEquals(dnR.getInfoPort(), conn.getURL().getPort());
       }
     }
-    assertTrue("The test never checked that location of " + 
-              "the block and hftp desitnation are the same", checked);
+    assertTrue("The test never checked that location of " +
+               "the block and hftp desitnation are the same", checked);
   }
+
+  /**
+   * Test that clients are redirected to the appropriate DN.
+   */
+  @Test
+  public void testDataNodeRedirect() throws IOException {
+    for (Path p : TEST_PATHS) {
+      testDataNodeRedirect(p);
+    }
+  }
+
   /**
    * Tests getPos() functionality.
    */
-  public void testGetPos() throws Exception {
+  @Test
+  public void testGetPos() throws IOException {
+    final Path testFile = new Path("/testfile+1");
     // Write a test file.
-    FSDataOutputStream out = hdfs.create(TEST_FILE, true);
+    FSDataOutputStream out = hdfs.create(testFile, true);
     out.writeBytes("0123456789");
     out.close();
     
-    FSDataInputStream in = hftpFs.open(TEST_FILE);
+    FSDataInputStream in = hftpFs.open(testFile);
     
     // Test read().
     for (int i = 0; i < 5; ++i) {
@@ -175,17 +218,17 @@ public class TestHftpFileSystem extends TestCase {
     assertEquals(10, in.getPos());
     in.close();
   }
-  
+
   /**
    * Tests seek().
    */
-  public void testSeek() throws Exception {
-    // Write a test file.
-    FSDataOutputStream out = hdfs.create(TEST_FILE, true);
+  @Test
+  public void testSeek() throws IOException {
+    final Path testFile = new Path("/testfile+1");
+    FSDataOutputStream out = hdfs.create(testFile, true);
     out.writeBytes("0123456789");
     out.close();
-    
-    FSDataInputStream in = hftpFs.open(TEST_FILE);
+    FSDataInputStream in = hftpFs.open(testFile);
     in.seek(7);
     assertEquals('7', in.read());
   }

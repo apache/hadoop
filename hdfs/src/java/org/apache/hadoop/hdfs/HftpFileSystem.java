@@ -61,6 +61,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.ServletUtil;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -244,46 +245,31 @@ public class HftpFileSystem extends FileSystem {
   /**
    * Return a URL pointing to given path on the namenode.
    *
-   * @param p path to obtain the URL for
-   * @return namenode URL referring to the given path
-   * @throws IOException on error constructing the URL
-   */
-  URL getNamenodeFileURL(Path p) throws IOException {
-    return getNamenodeURL("/data" + p.toUri().getPath(),
-                          "ugi=" + getUgiParameter());
-  }
-
-  /**
-   * Return a URL pointing to given path on the namenode.
-   *
    * @param path to obtain the URL for
    * @param query string to append to the path
    * @return namenode URL referring to the given path
    * @throws IOException on error constructing the URL
    */
   URL getNamenodeURL(String path, String query) throws IOException {
-    try {
-      final URL url = new URI("http", null, nnAddr.getHostName(),
-          nnAddr.getPort(), path, query, null).toURL();
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("url=" + url);
-      }
-      return url;
-    } catch (URISyntaxException e) {
-      throw new IOException(e);
+    final URL url = new URL("http", nnAddr.getHostName(),
+          nnAddr.getPort(), path + '?' + query);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("url=" + url);
     }
+    return url;
   }
 
   /**
-   * ugi parameter for http connection
+   * Get encoded UGI parameter string for a URL.
    * 
    * @return user_shortname,group1,group2...
    */
-  private String getUgiParameter() {
-    StringBuilder ugiParamenter = new StringBuilder(ugi.getShortUserName());
+  private String getEncodedUgiParameter() {
+    StringBuilder ugiParamenter = new StringBuilder(
+        ServletUtil.encodeQueryValue(ugi.getShortUserName()));
     for(String g: ugi.getGroupNames()) {
       ugiParamenter.append(",");
-      ugiParamenter.append(g);
+      ugiParamenter.append(ServletUtil.encodeQueryValue(g));
     }
     return ugiParamenter.toString();
   }
@@ -304,7 +290,7 @@ public class HftpFileSystem extends FileSystem {
    */
   protected HttpURLConnection openConnection(String path, String query)
       throws IOException {
-    query = updateQuery(query);
+    query = addDelegationTokenParam(query);
     final URL url = getNamenodeURL(path, query);
     final HttpURLConnection connection = (HttpURLConnection)url.openConnection();
     try {
@@ -316,14 +302,14 @@ public class HftpFileSystem extends FileSystem {
     return connection;
   }
 
-  protected String updateQuery(String query) throws IOException {
+  protected String addDelegationTokenParam(String query) throws IOException {
     String tokenString = null;
     if (UserGroupInformation.isSecurityEnabled()) {
       synchronized (this) {
         if (delegationToken != null) {
           tokenString = delegationToken.encodeToUrlString();
           return (query + JspHelper.getDelegationTokenUrlParam(tokenString));
-        } // else we are talking to an insecure cluster
+        }
       }
     }
     return query;
@@ -331,9 +317,9 @@ public class HftpFileSystem extends FileSystem {
 
   @Override
   public FSDataInputStream open(Path f, int buffersize) throws IOException {
-    String query = "ugi=" + getUgiParameter();
-    query = updateQuery(query);
-    URL u = getNamenodeURL("/data" + f.toUri().getPath(), query);
+    String path = "/data" + ServletUtil.encodePath(f.toUri().getPath());
+    String query = addDelegationTokenParam("ugi=" + getEncodedUgiParameter());
+    URL u = getNamenodeURL(path, query);    
     return new FSDataInputStream(new ByteRangeInputStream(u));
   }
 
@@ -382,9 +368,9 @@ public class HftpFileSystem extends FileSystem {
       try {
         XMLReader xr = XMLReaderFactory.createXMLReader();
         xr.setContentHandler(this);
-        HttpURLConnection connection = openConnection("/listPaths" + path,
-            "ugi=" + getUgiParameter() + (recur? "&recursive=yes" : ""));
-
+        HttpURLConnection connection = openConnection(
+            "/listPaths" + ServletUtil.encodePath(path),
+            "ugi=" + getEncodedUgiParameter() + (recur ? "&recursive=yes" : ""));
         InputStream resp = connection.getInputStream();
         xr.parse(new InputSource(resp));
       } catch(SAXException e) {
@@ -447,7 +433,8 @@ public class HftpFileSystem extends FileSystem {
 
     private FileChecksum getFileChecksum(String f) throws IOException {
       final HttpURLConnection connection = openConnection(
-          "/fileChecksum" + f, "ugi=" + getUgiParameter());
+          "/fileChecksum" + ServletUtil.encodePath(f), 
+          "ugi=" + getEncodedUgiParameter());
       try {
         final XMLReader xr = XMLReaderFactory.createXMLReader();
         xr.setContentHandler(this);
@@ -534,7 +521,8 @@ public class HftpFileSystem extends FileSystem {
      */
     private ContentSummary getContentSummary(String path) throws IOException {
       final HttpURLConnection connection = openConnection(
-          "/contentSummary" + path, "ugi=" + getUgiParameter());
+          "/contentSummary" + ServletUtil.encodePath(path), 
+          "ugi=" + getEncodedUgiParameter());
       InputStream in = null;
       try {
         in = connection.getInputStream();        
