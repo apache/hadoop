@@ -21,7 +21,11 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -396,10 +400,29 @@ public class RegionSplitter {
       while (!daughterRegions.isEmpty()) {
         LOG.debug(daughterRegions.size() + " RS have regions to splt.");
 
-        // round-robin through the RS list
-        for (HServerAddress rsLoc = daughterRegions.firstKey();
-             rsLoc != null;
-             rsLoc = daughterRegions.higherKey(rsLoc)) {
+        // Get RegionServer : region count mapping
+        final TreeMap<HServerAddress, Integer> rsSizes = Maps.newTreeMap();
+        Map<HRegionInfo, HServerAddress> regionsInfo = table.getRegionsInfo();
+        for (HServerAddress rs : regionsInfo.values()) {
+          if (rsSizes.containsKey(rs)) {
+            rsSizes.put(rs, rsSizes.get(rs) + 1);
+          } else {
+            rsSizes.put(rs, 1);
+          }
+        }
+
+        // sort the RS by the number of regions they have
+        List<HServerAddress> serversLeft = Lists.newArrayList(daughterRegions
+            .keySet());
+        Collections.sort(serversLeft, new Comparator<HServerAddress>() {
+          public int compare(HServerAddress o1, HServerAddress o2) {
+            return rsSizes.get(o1).compareTo(rsSizes.get(o2));
+          }
+        });
+
+        // round-robin through the RS list. Choose the lightest-loaded servers
+        // first to keep the master from load-balancing regions as we split.
+        for (HServerAddress rsLoc : serversLeft) {
           Pair<byte[], byte[]> dr = null;
 
           // find a region in the RS list that hasn't been moved
