@@ -19,7 +19,7 @@
 package org.apache.hadoop.mapreduce.security;
 
 import java.io.IOException;
-import java.net.URI;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,10 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.HftpFileSystem;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Master;
@@ -131,6 +128,16 @@ public class TokenCache {
           return;
         }
       }
+      List<Token<?>> tokens = fs.getDelegationTokens(delegTokenRenewer);
+      if (tokens != null) {
+        for (Token<?> token : tokens) {
+          credentials.addToken(token.getService(), token);
+          LOG.info("Got dt for " + fs.getUri() + ";uri="+ fsName + 
+              ";t.service="+token.getService());
+        }
+      }
+      //Call getDelegationToken as well for now - for FS implementations
+      // which may not have implmented getDelegationTokens (hftp)
       Token<?> token = fs.getDelegationToken(delegTokenRenewer);
       if (token != null) {
         Text fsNameText = new Text(fsName);

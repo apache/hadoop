@@ -4,6 +4,9 @@ Trunk (unreleased changes)
 
   MAPREDUCE-279
 
+    MAPREDUCE-2839. Fixed TokenCache to get delegation tokens using both new
+    and old apis. (Siddharth Seth via acmurthy)
+
     MAPREDUCE-2639. Bug fixes in speculate.DataStatistics. (Josh Wills via
     acmurthy)
 
