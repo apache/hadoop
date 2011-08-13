@@ -330,9 +330,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   /**
    * Creates a new table with an initial set of empty regions defined by the
    * specified split keys.  The total number of regions created will be the
-   * number of split keys plus one (the first region has a null start key and
-   * the last region has a null end key).
-   * Synchronous operation.
+   * number of split keys plus one. Synchronous operation.
    *
    * @param desc table descriptor for table
    * @param splitKeys array of split keys for the initial regions of the table

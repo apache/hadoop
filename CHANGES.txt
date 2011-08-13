@@ -434,6 +434,7 @@ Release 0.90.5 - Unreleased
    HBASE-4168  A client continues to try and connect to a powered down
                regionserver (Anirudh Todi)
    HBASE-4196  TableRecordReader may skip first row of region (Ming Ma)
+   HBASE-4170  createTable java doc needs to be improved (Mubarak Seyed)
 
 Release 0.90.4 - August 10, 2011
 
