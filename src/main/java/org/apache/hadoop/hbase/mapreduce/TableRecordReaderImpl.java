@@ -42,7 +42,7 @@ public class TableRecordReaderImpl {
   private ResultScanner scanner = null;
   private Scan scan = null;
   private HTable htable = null;
-  private byte[] lastRow = null;
+  private byte[] lastSuccessfulRow = null;
   private ImmutableBytesWritable key = null;
   private Result value = null;
 
@@ -132,20 +132,23 @@ public class TableRecordReaderImpl {
       value = this.scanner.next();
     } catch (IOException e) {
       LOG.debug("recovered from " + StringUtils.stringifyException(e));
-      if (lastRow == null) {
+      if (lastSuccessfulRow == null) {
         LOG.warn("We are restarting the first next() invocation," +
             " if your mapper's restarted a few other times like this" +
             " then you should consider killing this job and investigate" +
             " why it's taking so long.");
-        lastRow = scan.getStartRow();
       }
-      restart(lastRow);
-      scanner.next();    // skip presumed already mapped row
+      if (lastSuccessfulRow == null) {
+        restart(scan.getStartRow());
+      } else {
+        restart(lastSuccessfulRow);
+        scanner.next();    // skip presumed already mapped row
+      }
       value = scanner.next();
     }
     if (value != null && value.size() > 0) {
       key.set(value.getRow());
-      lastRow = key.get();
+      lastSuccessfulRow = key.get();
       return true;
     }
     return false;

@@ -44,7 +44,7 @@ public class TableRecordReaderImpl {
 
   private byte [] startRow;
   private byte [] endRow;
-  private byte [] lastRow;
+  private byte [] lastSuccessfulRow;
   private Filter trrRowFilter;
   private ResultScanner scanner;
   private HTable htable;
@@ -175,16 +175,26 @@ public class TableRecordReaderImpl {
     Result result;
     try {
       result = this.scanner.next();
-    } catch (UnknownScannerException e) {
+    } catch (IOException e) {
       LOG.debug("recovered from " + StringUtils.stringifyException(e));
-      restart(lastRow);
-      this.scanner.next();    // skip presumed already mapped row
+      if (lastSuccessfulRow == null) {
+        LOG.warn("We are restarting the first next() invocation," +
+            " if your mapper's restarted a few other times like this" +
+            " then you should consider killing this job and investigate" +
+            " why it's taking so long.");
+      }
+      if (lastSuccessfulRow == null) {
+        restart(startRow);
+      } else {
+        restart(lastSuccessfulRow);
+        this.scanner.next();    // skip presumed already mapped row
+      }
       result = this.scanner.next();
     }
 
     if (result != null && result.size() > 0) {
       key.set(result.getRow());
-      lastRow = key.get();
+      lastSuccessfulRow = key.get();
       Writables.copyWritable(result, value);
       return true;
     }

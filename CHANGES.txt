@@ -433,6 +433,7 @@ Release 0.90.5 - Unreleased
                or server includes binary-encoded data (Jonathan Hsieh)
    HBASE-4168  A client continues to try and connect to a powered down
                regionserver (Anirudh Todi)
+   HBASE-4196  TableRecordReader may skip first row of region (Ming Ma)
 
 Release 0.90.4 - August 10, 2011
 
