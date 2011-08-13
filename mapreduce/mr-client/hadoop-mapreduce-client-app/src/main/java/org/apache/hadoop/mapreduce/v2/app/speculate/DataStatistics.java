@@ -2,7 +2,6 @@
 * Licensed to the Apache Software Foundation (ASF) under one
 * or more contributor license agreements.  See the NOTICE file
 * distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
 * to you under the Apache License, Version 2.0 (the
 * "License"); you may not use this file except in compliance
 * with the License.  You may obtain a copy of the License at
@@ -38,15 +37,9 @@ public class DataStatistics {
     this.sumSquares += newNum * newNum;
   }
 
-  public void updateStatistics(double old, double update) {
-    sub(old);
-    add(update);
-  }
-
-  private synchronized void sub(double oldNum) {
-    this.count--;
-    this.sum = Math.max(this.sum - oldNum, 0.0d);
-    this.sumSquares = Math.max(this.sumSquares - oldNum * oldNum, 0.0d);
+  public synchronized void updateStatistics(double old, double update) {
+	this.sum += update - old;
+	this.sumSquares += (update * update) - (old * old);
   }
 
   public synchronized double mean() {
@@ -55,6 +48,9 @@ public class DataStatistics {
 
   public synchronized double var() {
     // E(X^2) - E(X)^2
+    if (count <= 1) {
+      return 0.0;
+    }
     double mean = mean();
     return Math.max((sumSquares/count) - mean * mean, 0.0d);
   }
