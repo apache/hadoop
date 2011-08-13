@@ -57,6 +57,10 @@ public class PoolMap<K, V> implements Map<K, V> {
 
   private Map<K, Pool<V>> pools = new ConcurrentHashMap<K, Pool<V>>();
 
+  public PoolMap(PoolType poolType) {
+    this.poolType = poolType;
+  }
+
   public PoolMap(PoolType poolType, int poolMaxSize) {
     this.poolType = poolType;
     this.poolMaxSize = poolMaxSize;
@@ -262,7 +266,7 @@ public class PoolMap<K, V> implements Map<K, V> {
     case RoundRobin:
       return new RoundRobinPool<V>(poolMaxSize);
     case ThreadLocal:
-      return new ThreadLocalPool<V>(poolMaxSize);
+      return new ThreadLocalPool<V>();
     }
     return null;
   }
@@ -368,13 +372,9 @@ public class PoolMap<K, V> implements Map<K, V> {
    * to the thread from which it is accessed.
    *
    * <p>
-   * If {@link #maxSize} is set to {@link Integer#MAX_VALUE}, then the size of
-   * the pool is bounded only by the number of threads that add resources to
-   * this pool. Otherwise, it caps the number of threads that can set a value on
-   * this {@link ThreadLocal} instance to the (non-zero positive) value
-   * specified in {@link #maxSize}.
+   * Note that the size of the pool is essentially bounded by the number of threads
+   * that add resources to this pool.
    * </p>
-   *
    *
    * @param <R>
    *          the type of the resource
@@ -382,10 +382,7 @@ public class PoolMap<K, V> implements Map<K, V> {
   static class ThreadLocalPool<R> extends ThreadLocal<R> implements Pool<R> {
     private static final Map<ThreadLocalPool<?>, AtomicInteger> poolSizes = new HashMap<ThreadLocalPool<?>, AtomicInteger>();
 
-    private int maxSize;
-
-    public ThreadLocalPool(int maxSize) {
-      this.maxSize = maxSize;
+    public ThreadLocalPool() {
     }
 
     @Override
