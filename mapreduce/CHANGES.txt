@@ -7,9 +7,6 @@ Trunk (unreleased changes)
     MAPREDUCE-2639. Bug fixes in speculate.DataStatistics. (Josh Wills via
     acmurthy)
 
-    Ensure NM uses the right LocalDirAllocator.getLocalPathForWrite call which
-    doesn't interfere with disk-fail-in-place. (acmurthy)
-
     MAPREDUCE-2808. pull MAPREDUCE-2797 into mr279 branch (thomas graves via mahadev)
 
     Fixed CS locality wait factor. (acmurthy)
