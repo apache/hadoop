@@ -399,6 +399,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2541. Fixed a race condition in IndexCache.removeMap. (Binglin
     Chang via acmurthy) 
 
+    MAPREDUCE-2839. Fixed TokenCache to get delegation tokens using both new
+    and old apis. (Siddharth Seth via acmurthy)
+
 
 Release 0.22.0 - Unreleased
 

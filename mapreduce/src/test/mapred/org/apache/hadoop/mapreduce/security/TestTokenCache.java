@@ -30,7 +30,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.crypto.KeyGenerator;
@@ -38,8 +40,10 @@ import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.viewfs.ViewFileSystem;
 import org.apache.hadoop.hdfs.HftpFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -149,6 +153,7 @@ public class TestTokenCache {
   
   @BeforeClass
   public static void setUp() throws Exception {
+    
     Configuration conf = new Configuration();
     conf.set("hadoop.security.auth_to_local", "RULE:[2:$1]");
     dfsCluster = new MiniDFSCluster(conf, numSlaves, true, null);
@@ -334,6 +339,14 @@ public class TestTokenCache {
         return t;
       }}).when(hfs).getDelegationToken(renewer);
     
+    //when(hfs.getDelegationTokens()).thenReturn((Token<? extends TokenIdentifier>) t);
+    Mockito.doAnswer(new Answer<List<Token<DelegationTokenIdentifier>>>(){
+      @Override
+      public List<Token<DelegationTokenIdentifier>>  answer(InvocationOnMock invocation)
+      throws Throwable {
+        return Collections.singletonList(t);
+      }}).when(hfs).getDelegationTokens(renewer);
+    
     //when(hfs.getCanonicalServiceName).thenReturn(fs_addr);
     Mockito.doAnswer(new Answer<String>(){
       @Override
@@ -377,5 +390,41 @@ public class TestTokenCache {
         + domainName);
     assertEquals("Failed to substitute HOSTNAME_PATTERN with hostName",
         serviceName + hostName + domainName, TokenCache.getJTPrincipal(conf));
+  }
+
+  @Test
+  public void testGetTokensForViewFS() throws IOException, URISyntaxException {
+    Configuration conf = new Configuration(jConf);
+    FileSystem dfs = dfsCluster.getFileSystem();
+    String serviceName = dfs.getCanonicalServiceName();
+
+    Path p1 = new Path("/mount1");
+    Path p2 = new Path("/mount2");
+    p1 = dfs.makeQualified(p1);
+    p2 = dfs.makeQualified(p2);
+
+    conf.set("fs.viewfs.mounttable.default.link./dir1", p1.toString());
+    conf.set("fs.viewfs.mounttable.default.link./dir2", p2.toString());
+    Credentials credentials = new Credentials();
+    Path lp1 = new Path("viewfs:///dir1");
+    Path lp2 = new Path("viewfs:///dir2");
+    Path[] paths = new Path[2];
+    paths[0] = lp1;
+    paths[1] = lp2;
+    TokenCache.obtainTokensForNamenodesInternal(credentials, paths, conf);
+
+    Collection<Token<? extends TokenIdentifier>> tns =
+        credentials.getAllTokens();
+    assertEquals("number of tokens is not 1", 1, tns.size());
+
+    boolean found = false;
+    for (Token<? extends TokenIdentifier> tt : tns) {
+      System.out.println("token=" + tt);
+      if (tt.getKind().equals(DelegationTokenIdentifier.HDFS_DELEGATION_KIND)
+          && tt.getService().equals(new Text(serviceName))) {
+        found = true;
+      }
+      assertTrue("didn't find token for [" + lp1 + ", " + lp2 + "]", found);
+    }
   }
 }
