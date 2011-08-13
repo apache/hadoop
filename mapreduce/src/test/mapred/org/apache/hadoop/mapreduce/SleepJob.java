@@ -97,6 +97,9 @@ public class SleepJob extends Configured implements Tool {
 
         public boolean nextKeyValue()
             throws IOException {
+          if (count == 0) {
+            return false;
+          }
           key = new IntWritable();
           key.set(emitCount);
           int emit = emitPerMapTask / count;
@@ -112,7 +115,7 @@ public class SleepJob extends Configured implements Tool {
         public IntWritable getCurrentValue() { return value; }
         public void close() throws IOException { }
         public float getProgress() throws IOException {
-          return records / ((float)count);
+          return count == 0 ? 100 : records / ((float)count);
         }
       };
     }
@@ -129,7 +132,7 @@ public class SleepJob extends Configured implements Tool {
       Configuration conf = context.getConfiguration();
       this.mapSleepCount =
         conf.getInt(MAP_SLEEP_COUNT, mapSleepCount);
-      this.mapSleepDuration =
+      this.mapSleepDuration = mapSleepCount == 0 ? 0 :
         conf.getLong(MAP_SLEEP_TIME , 100) / mapSleepCount;
     }
 
@@ -166,7 +169,7 @@ public class SleepJob extends Configured implements Tool {
       Configuration conf = context.getConfiguration();
       this.reduceSleepCount =
         conf.getInt(REDUCE_SLEEP_COUNT, reduceSleepCount);
-      this.reduceSleepDuration =
+      this.reduceSleepDuration = reduceSleepCount == 0 ? 0 : 
         conf.getLong(REDUCE_SLEEP_TIME , 100) / reduceSleepCount;
     }
 
