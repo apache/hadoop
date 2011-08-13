@@ -130,12 +130,19 @@ class IndexCache {
   }
 
   /**
-   * This method removes the map from the cache. It should be called when
-   * a map output on this tracker is discarded.
+   * This method removes the map from the cache if index information for this
+   * map is loaded(size>0), index information entry in cache will not be 
+   * removed if it is in the loading phrase(size=0), this prevents corruption  
+   * of totalMemoryUsed. It should be called when a map output on this tracker 
+   * is discarded.
    * @param mapId The taskID of this map.
    */
   public void removeMap(String mapId) {
-    IndexInformation info = cache.remove(mapId);
+    IndexInformation info = cache.get(mapId);
+    if ((info != null) && (info.getSize() == 0)) {
+      return;
+    }
+    info = cache.remove(mapId);
     if (info != null) {
       totalMemoryUsed.addAndGet(-info.getSize());
       if (!queue.remove(mapId)) {
@@ -144,6 +151,19 @@ class IndexCache {
     } else {
       LOG.info("Map ID " + mapId + " not found in cache");
     }
+  }
+
+  /**
+   * This method checks if cache and totolMemoryUsed is consistent.
+   * It is only used for unit test.
+   * @return True if cache and totolMemoryUsed is consistent
+   */
+  boolean checkTotalMemoryUsed() {
+    int totalSize = 0;
+    for (IndexInformation info : cache.values()) {
+      totalSize += info.getSize();
+    }
+    return totalSize == totalMemoryUsed.get();
   }
 
   /**

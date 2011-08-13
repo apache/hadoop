@@ -396,6 +396,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2837. Ported bug fixes from y-merge to prepare for MAPREDUCE-279
     merge. (acmurthy) 
 
+    MAPREDUCE-2541. Fixed a race condition in IndexCache.removeMap. (Binglin
+    Chang via acmurthy) 
+
 
 Release 0.22.0 - Unreleased
 

@@ -193,6 +193,60 @@ public class TestIndexCache extends TestCase {
     }
   }
 
+  public void testRemoveMap() throws Exception {
+    // This test case use two thread to call getIndexInformation and 
+    // removeMap concurrently, in order to construct race condition.
+    // This test case may not repeatable. But on my macbook this test 
+    // fails with probability of 100% on code before MAPREDUCE-2541,
+    // so it is repeatable in practice.
+    JobConf conf = new JobConf();
+    FileSystem fs = FileSystem.getLocal(conf).getRaw();
+    Path p = new Path(System.getProperty("test.build.data", "/tmp"),
+                      "cache").makeQualified(fs);
+    fs.delete(p, true);
+    conf.setInt(TTConfig.TT_INDEX_CACHE, 10);
+    // Make a big file so removeMapThread almost surely runs faster than 
+    // getInfoThread 
+    final int partsPerMap = 100000;
+    final int bytesPerFile = partsPerMap * 24;
+    final IndexCache cache = new IndexCache(conf);
+
+    final Path big = new Path(p, "bigIndex");
+    final String user = 
+      UserGroupInformation.getCurrentUser().getShortUserName();
+    writeFile(fs, big, bytesPerFile, partsPerMap);
+    
+    // run multiple times
+    for (int i = 0; i < 20; ++i) {
+      Thread getInfoThread = new Thread() {
+        @Override
+        public void run() {
+          try {
+            cache.getIndexInformation("bigIndex", partsPerMap, big, user);
+          } catch (Exception e) {
+            // should not be here
+          }
+        }
+      };
+      Thread removeMapThread = new Thread() {
+        @Override
+        public void run() {
+          cache.removeMap("bigIndex");
+        }
+      };
+      if (i%2==0) {
+        getInfoThread.start();
+        removeMapThread.start();        
+      } else {
+        removeMapThread.start();        
+        getInfoThread.start();
+      }
+      getInfoThread.join();
+      removeMapThread.join();
+      assertEquals(true, cache.checkTotalMemoryUsed());
+    }      
+  }
+  
   private static void checkRecord(IndexRecord rec, long fill) {
     assertEquals(fill, rec.startOffset);
     assertEquals(fill, rec.rawLength);
