@@ -1251,11 +1251,6 @@ public class JobInProgress {
    * @return the job-level counters.
    */
   public synchronized Counters getJobCounters() {
-    try {
-      throw new IOException("");
-    } catch (IOException ioe) {
-      LOG.info("getJC", ioe);
-    }
     return jobCounters;
   }
   
