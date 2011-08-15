@@ -82,31 +82,22 @@ public class TestDatanodeJsp {
     try {
       cluster = new MiniDFSCluster.Builder(CONF).build();
       cluster.waitActive();
-      
-      testViewingFile(cluster, "/test-file", false);
-      testViewingFile(cluster, "/tmp/test-file", false);
-      testViewingFile(cluster, "/tmp/test-file%with goofy&characters", false);
-      
-      testViewingFile(cluster, "/test-file", true);
-      testViewingFile(cluster, "/tmp/test-file", true);
-      testViewingFile(cluster, "/tmp/test-file%with goofy&characters", true);
-
-      testViewingFile(cluster, "/foo bar", true);
-      testViewingFile(cluster, "/foo+bar", true);
-      testViewingFile(cluster, "/foo;bar", true);
-      testViewingFile(cluster, "/foo=bar", true);
-      testViewingFile(cluster, "/foo,bar", true);
-      testViewingFile(cluster, "/foo?bar", true);
-      testViewingFile(cluster, "/foo\">bar", true);
-      
-      testViewingFile(cluster, "/foo bar", false);
-      // See HDFS-2233
-      //testViewingFile(cluster, "/foo+bar", false);
-      //testViewingFile(cluster, "/foo;bar", false);
-      testViewingFile(cluster, "/foo=bar", false);
-      testViewingFile(cluster, "/foo,bar", false);
-      testViewingFile(cluster, "/foo?bar", false);
-      testViewingFile(cluster, "/foo\">bar", false);
+      String paths[] = {
+        "/test-file",
+        "/tmp/test-file",
+        "/tmp/test-file%with goofy&characters",
+        "/foo bar/foo bar",
+        "/foo+bar/foo+bar",
+        "/foo;bar/foo;bar",
+        "/foo=bar/foo=bar",
+        "/foo,bar/foo,bar",
+        "/foo?bar/foo?bar",
+        "/foo\">bar/foo\">bar"
+      };
+      for (String p : paths) {
+        testViewingFile(cluster, p, false);
+        testViewingFile(cluster, p, true);
+      }
     } finally {
       if (cluster != null) {
         cluster.shutdown();
