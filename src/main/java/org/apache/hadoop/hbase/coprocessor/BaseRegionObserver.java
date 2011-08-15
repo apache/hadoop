@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
@@ -196,14 +197,14 @@ public abstract class BaseRegionObserver implements RegionObserver {
   }
 
   @Override
-  public InternalScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final Scan scan, final InternalScanner s) throws IOException {
+  public RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
+      final Scan scan, final RegionScanner s) throws IOException {
     return s;
   }
 
   @Override
-  public InternalScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final Scan scan, final InternalScanner s) throws IOException {
+  public RegionScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
+      final Scan scan, final RegionScanner s) throws IOException {
     return s;
   }
 

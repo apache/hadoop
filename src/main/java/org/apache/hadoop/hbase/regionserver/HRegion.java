@@ -1322,10 +1322,10 @@ public class HRegion implements HeapSize { // , Writable{
    * This Iterator must be closed by the caller.
    *
    * @param scan configured {@link Scan}
-   * @return InternalScanner
+   * @return RegionScanner
    * @throws IOException read exceptions
    */
-  public InternalScanner getScanner(Scan scan) throws IOException {
+  public RegionScanner getScanner(Scan scan) throws IOException {
    return getScanner(scan, null);
   }
 
@@ -1338,7 +1338,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
   }
 
-  protected InternalScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners) throws IOException {
+  protected RegionScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners) throws IOException {
     startRegionOperation();
     this.readRequestsCount.increment();
     try {
@@ -1349,16 +1349,16 @@ public class HRegion implements HeapSize { // , Writable{
           checkFamily(family);
         }
       }
-      return instantiateInternalScanner(scan, additionalScanners);
+      return instantiateRegionScanner(scan, additionalScanners);
 
     } finally {
       closeRegionOperation();
     }
   }
 
-  protected InternalScanner instantiateInternalScanner(Scan scan,
+  protected RegionScanner instantiateRegionScanner(Scan scan,
       List<KeyValueScanner> additionalScanners) throws IOException {
-    return new RegionScanner(scan, additionalScanners);
+    return new RegionScannerImpl(scan, additionalScanners);
   }
 
   /*
@@ -2582,11 +2582,9 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
-   * RegionScanner is an iterator through a bunch of rows in an HRegion.
-   * <p>
-   * It is used to combine scanners from multiple Stores (aka column families).
+   * RegionScannerImpl is used to combine scanners from multiple Stores (aka column families).
    */
-  class RegionScanner implements InternalScanner {
+  class RegionScannerImpl implements RegionScanner {
     // Package local for testability
     KeyValueHeap storeHeap = null;
     private final byte [] stopRow;
@@ -2597,10 +2595,10 @@ public class HRegion implements HeapSize { // , Writable{
     private boolean filterClosed = false;
     private long readPt;
 
-    public HRegionInfo getRegionName() {
+    public HRegionInfo getRegionInfo() {
       return regionInfo;
     }
-    RegionScanner(Scan scan, List<KeyValueScanner> additionalScanners) throws IOException {
+    RegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners) throws IOException {
       //DebugPrint.println("HRegionScanner.<init>");
       this.filter = scan.getFilter();
       this.batch = scan.getBatch();
@@ -2628,7 +2626,7 @@ public class HRegion implements HeapSize { // , Writable{
       this.storeHeap = new KeyValueHeap(scanners, comparator);
     }
 
-    RegionScanner(Scan scan) throws IOException {
+    RegionScannerImpl(Scan scan) throws IOException {
       this(scan, null);
     }
 
@@ -2681,7 +2679,7 @@ public class HRegion implements HeapSize { // , Writable{
     /*
      * @return True if a filter rules the scanner is over, done.
      */
-    synchronized boolean isFilterDone() {
+    public synchronized boolean isFilterDone() {
       return this.filter != null && this.filter.filterAllRemaining();
     }
 
@@ -3360,7 +3358,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     // memstore scan
     iscan.checkOnlyMemStore();
-    InternalScanner scanner = null;
+    RegionScanner scanner = null;
     try {
       scanner = getScanner(iscan);
       scanner.next(results);
@@ -3440,7 +3438,7 @@ public class HRegion implements HeapSize { // , Writable{
        }
     }
 
-    InternalScanner scanner = null;
+    RegionScanner scanner = null;
     try {
       scanner = getScanner(scan);
       scanner.next(results);
@@ -3831,7 +3829,7 @@ public class HRegion implements HeapSize { // , Writable{
         // Default behavior
         Scan scan = new Scan();
         // scan.addFamily(HConstants.CATALOG_FAMILY);
-        InternalScanner scanner = region.getScanner(scan);
+        RegionScanner scanner = region.getScanner(scan);
         try {
           List<KeyValue> kvs = new ArrayList<KeyValue>();
           boolean done = false;

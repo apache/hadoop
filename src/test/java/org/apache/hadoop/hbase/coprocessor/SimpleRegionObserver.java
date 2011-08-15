@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -144,16 +145,16 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
 
   @Override
-  public InternalScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
+  public RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Scan scan,
-      final InternalScanner s) throws IOException {
+      final RegionScanner s) throws IOException {
     hadPreScannerOpen = true;
     return null;
   }
 
   @Override
-  public InternalScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Scan scan, final InternalScanner s)
+  public RegionScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Scan scan, final RegionScanner s)
       throws IOException {
     hadPostScannerOpen = true;
     return s;

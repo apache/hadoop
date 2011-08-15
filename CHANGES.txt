@@ -14,6 +14,8 @@ Release 0.91.0 - Unreleased
    HBASE-451   Remove HTableDescriptor from HRegionInfo
                addendum that fixes TestTableMapReduce
    HBASE-3534  Action should not store or serialize regionName (Ted Yu)
+   HBASE-4197  RegionServer expects all scanner to be subclasses of
+               HRegion.RegionScanner (Lars Hofhansl)
 
   BUG FIXES
    HBASE-3280  YouAreDeadException being swallowed in HRS getMaster

@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
@@ -451,12 +452,12 @@ public interface RegionObserver extends Coprocessor {
    * @param c the environment provided by the region server
    * @param scan the Scan specification
    * @param s if not null, the base scanner
-   * @return an InternalScanner instance to use instead of the base scanner if
+   * @return an RegionScanner instance to use instead of the base scanner if
    * overriding default behavior, null otherwise
    * @throws IOException if an error occurred on the coprocessor
    */
-  InternalScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Scan scan, final InternalScanner s)
+  RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Scan scan, final RegionScanner s)
     throws IOException;
 
   /**
@@ -470,8 +471,8 @@ public interface RegionObserver extends Coprocessor {
    * @return the scanner instance to use
    * @throws IOException if an error occurred on the coprocessor
    */
-  InternalScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Scan scan, final InternalScanner s)
+  RegionScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Scan scan, final RegionScanner s)
     throws IOException;
 
   /**

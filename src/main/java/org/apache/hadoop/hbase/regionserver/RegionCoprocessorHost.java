@@ -803,9 +803,9 @@ public class RegionCoprocessorHost
    * bypassed, false otherwise
    * @exception IOException Exception
    */
-  public InternalScanner preScannerOpen(Scan scan) throws IOException {
+  public RegionScanner preScannerOpen(Scan scan) throws IOException {
     boolean bypass = false;
-    InternalScanner s = null;
+    RegionScanner s = null;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
@@ -826,7 +826,7 @@ public class RegionCoprocessorHost
    * @return the scanner instance to use
    * @exception IOException Exception
    */
-  public InternalScanner postScannerOpen(final Scan scan, InternalScanner s)
+  public RegionScanner postScannerOpen(final Scan scan, RegionScanner s)
       throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {

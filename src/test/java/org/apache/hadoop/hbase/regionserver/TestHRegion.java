@@ -66,7 +66,7 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.NullComparator;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
-import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -1439,22 +1439,22 @@ public class TestHRegion extends HBaseTestCase {
     region.put(put);
 
     Scan scan = null;
-    HRegion.RegionScanner is = null;
+    HRegion.RegionScannerImpl is = null;
 
     //Testing to see how many scanners that is produced by getScanner, starting
     //with known number, 2 - current = 1
     scan = new Scan();
     scan.addFamily(fam2);
     scan.addFamily(fam4);
-    is = (RegionScanner) region.getScanner(scan);
+    is = (RegionScannerImpl) region.getScanner(scan);
     ReadWriteConsistencyControl.resetThreadReadPoint(region.getRWCC());
-    assertEquals(1, ((RegionScanner)is).storeHeap.getHeap().size());
+    assertEquals(1, ((RegionScannerImpl)is).storeHeap.getHeap().size());
 
     scan = new Scan();
-    is = (RegionScanner) region.getScanner(scan);
+    is = (RegionScannerImpl) region.getScanner(scan);
     ReadWriteConsistencyControl.resetThreadReadPoint(region.getRWCC());
     assertEquals(families.length -1,
-        ((RegionScanner)is).storeHeap.getHeap().size());
+        ((RegionScannerImpl)is).storeHeap.getHeap().size());
   }
 
   /**
