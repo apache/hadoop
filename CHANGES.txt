@@ -177,18 +177,14 @@ Release 0.91.0 - Unreleased
                (Prakash Khemani and ramkrishna.s.vasudevan)
    HBASE-4083  If Enable table is not completed and is partial, then scanning of
                the table is not working (ramkrishna.s.vasudevan)
-   HBASE-4144  RS does not abort if the initialization of RS fails (ramkrishna.s.vasudevan)
    HBASE-4138  If zookeeper.znode.parent is not specifed explicitly in Client
                code then HTable object loops continuously waiting for the root region
                by using /hbase as the base node.(ramkrishna.s.vasudevan)
    HBASE-4032  HBASE-451 improperly breaks public API HRegionInfo#getTableDesc
-   HBASE-4148  HFileOutputFormat doesn't fill in TIMERANGE_KEY metadata (Jonathan Hsieh)
    HBASE-4003  Cleanup Calls Conservatively On Timeout (Karthick)
    HBASE-3857  Fix TestHFileBlock.testBlockHeapSize test failure (Mikhail)
    HBASE-4150  Don't enforce pool size limit with ThreadLocalPool
                (Karthick Sankarachary via garyh)
-   HBASE-4159  HBaseServer - IPC Reader threads are not daemons (Douglas
-               Campbell)
    HBASE-4171  HBase shell broken in trunk (Lars Hofhansl)
    HBASE-4162  Fix TestHRegionInfo.testGetSetOfHTD: delete /tmp/hbase-<username>
                if it already exists (Mikhail Bautin)
@@ -436,6 +432,10 @@ Release 0.90.5 - Unreleased
                regionserver (Anirudh Todi)
    HBASE-4196  TableRecordReader may skip first row of region (Ming Ma)
    HBASE-4170  createTable java doc needs to be improved (Mubarak Seyed)
+   HBASE-4144  RS does not abort if the initialization of RS fails (ramkrishna.s.vasudevan)
+   HBASE-4148  HFileOutputFormat doesn't fill in TIMERANGE_KEY metadata (Jonathan Hsieh)
+   HBASE-4159  HBaseServer - IPC Reader threads are not daemons (Douglas
+               Campbell)
 
 Release 0.90.4 - August 10, 2011
 
