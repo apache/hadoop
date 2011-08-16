@@ -564,29 +564,71 @@ public class TestAdmin {
    */
   @Test
   public void testForceSplit() throws Exception {
-      splitTest(null);
-      splitTest(Bytes.toBytes("pwn"));
-    }
+    byte[][] familyNames = new byte[][] { Bytes.toBytes("cf") };
+    int[] rowCounts = new int[] { 6000 };
+    int numVersions = HColumnDescriptor.DEFAULT_VERSIONS;
+    int blockSize = 256;
+    splitTest(null, familyNames, rowCounts, numVersions, blockSize);
 
-  void splitTest(byte[] splitPoint) throws Exception {
-    byte [] familyName = HConstants.CATALOG_FAMILY;
+    byte[] splitKey = Bytes.toBytes(3500);
+    splitTest(splitKey, familyNames, rowCounts, numVersions, blockSize);
+  }
+
+  /**
+   * Multi-family scenario. Tests forcing split from client and
+   * having scanners successfully ride over split.
+   * @throws Exception
+   * @throws IOException
+   */
+  @Test
+  public void testForceSplitMultiFamily() throws Exception {
+    int numVersions = HColumnDescriptor.DEFAULT_VERSIONS;
+
+    // use small HFile block size so that we can have lots of blocks in HFile
+    // Otherwise, if there is only one block,
+    // HFileBlockIndex.midKey()'s value == startKey
+    int blockSize = 256;
+    byte[][] familyNames = new byte[][] { Bytes.toBytes("cf1"),
+      Bytes.toBytes("cf2") };
+
+    // one of the column families isn't splittable
+    int[] rowCounts = new int[] { 6000, 1 };
+    splitTest(null, familyNames, rowCounts, numVersions, blockSize);
+
+    rowCounts = new int[] { 1, 6000 };
+    splitTest(null, familyNames, rowCounts, numVersions, blockSize);
+
+    // one column family has much smaller data than the other
+    // the split key should be based on the largest column family
+    rowCounts = new int[] { 6000, 300 };
+    splitTest(null, familyNames, rowCounts, numVersions, blockSize);
+
+    rowCounts = new int[] { 300, 6000 };
+    splitTest(null, familyNames, rowCounts, numVersions, blockSize);
+
+  }
+
+  void splitTest(byte[] splitPoint, byte[][] familyNames, int[] rowCounts,
+    int numVersions, int blockSize) throws Exception {
     byte [] tableName = Bytes.toBytes("testForceSplit");
     assertFalse(admin.tableExists(tableName));
-    final HTable table = TEST_UTIL.createTable(tableName, familyName);
+    final HTable table = TEST_UTIL.createTable(tableName, familyNames,
+      numVersions, blockSize);
     try {
-      byte[] k = new byte[3];
       int rowCount = 0;
-      for (byte b1 = 'a'; b1 < 'z'; b1++) {
-        for (byte b2 = 'a'; b2 < 'z'; b2++) {
-          for (byte b3 = 'a'; b3 < 'z'; b3++) {
-            k[0] = b1;
-            k[1] = b2;
-            k[2] = b3;
-            Put put = new Put(k);
-            put.add(familyName, new byte[0], k);
-            table.put(put);
-            rowCount++;
-          }
+
+      // insert rows into column families. The number of rows that have values
+      // in a specific column family is decided by rowCounts[familyIndex]
+      for (int index = 0; index < familyNames.length; index++) {
+        for (int i = 0; i < rowCounts[index]; i++) {
+          byte[] k = Bytes.toBytes(i);
+          Put put = new Put(k);
+          put.add(familyNames[index], new byte[0], k);
+          table.put(put);
+        }
+
+        if ( rowCount < rowCounts[index] ) {
+          rowCount = rowCounts[index];
         }
       }
 
@@ -651,21 +693,32 @@ public class TestAdmin {
       scanner.close();
       assertEquals(rowCount, rows);
 
+      Map<HRegionInfo, HServerAddress> regions = null;
+      try {
+        regions = table.getRegionsInfo();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      assertEquals(2, regions.size());
+      HRegionInfo[] r = regions.keySet().toArray(new HRegionInfo[0]);
       if (splitPoint != null) {
         // make sure the split point matches our explicit configuration
-        Map<HRegionInfo, HServerAddress> regions = null;
-        try {
-          regions = table.getRegionsInfo();
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
-        assertEquals(2, regions.size());
-        HRegionInfo[] r = regions.keySet().toArray(new HRegionInfo[0]);
         assertEquals(Bytes.toString(splitPoint),
             Bytes.toString(r[0].getEndKey()));
         assertEquals(Bytes.toString(splitPoint),
             Bytes.toString(r[1].getStartKey()));
         LOG.debug("Properly split on " + Bytes.toString(splitPoint));
+      } else {
+        if (familyNames.length > 1) {
+          int splitKey = Bytes.toInt(r[0].getEndKey());
+          // check if splitKey is based on the largest column family
+          // in terms of it store size
+          int deltaForLargestFamily = Math.abs(rowCount/2 - splitKey);
+          for (int index = 0; index < familyNames.length; index++) {
+            int delta = Math.abs(rowCounts[index]/2 - splitKey);
+            assertTrue(delta >= deltaForLargestFamily);
+          }
+        }
       }
     } finally {
       TEST_UTIL.deleteTable(tableName);

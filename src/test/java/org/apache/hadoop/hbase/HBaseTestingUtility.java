@@ -708,6 +708,31 @@ public class HBaseTestingUtility {
    * @throws IOException
    */
   public HTable createTable(byte[] tableName, byte[][] families,
+    int numVersions, int blockSize) throws IOException {
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    for (byte[] family : families) {
+      HColumnDescriptor hcd = new HColumnDescriptor(family, numVersions,
+          HColumnDescriptor.DEFAULT_COMPRESSION,
+          HColumnDescriptor.DEFAULT_IN_MEMORY,
+          HColumnDescriptor.DEFAULT_BLOCKCACHE,
+          blockSize, HColumnDescriptor.DEFAULT_TTL,
+          HColumnDescriptor.DEFAULT_BLOOMFILTER,
+          HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
+      desc.addFamily(hcd);
+    }
+    getHBaseAdmin().createTable(desc);
+    return new HTable(new Configuration(getConfiguration()), tableName);
+  }
+
+  /**
+   * Create a table.
+   * @param tableName
+   * @param families
+   * @param numVersions
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(byte[] tableName, byte[][] families,
       int[] numVersions)
   throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);

@@ -3875,18 +3875,27 @@ public class HRegion implements HeapSize { // , Writable{
     // nothing
   }
 
+  /**
+   * Return the splitpoint. null indicates the region isn't splittable
+   * If the splitpoint isn't explicitly specified, it will go over the stores
+   * to find the best splitpoint. Currently the criteria of best splitpoint
+   * is based on the size of the store.
+   */
   public byte[] checkSplit() {
     if (this.splitPoint != null) {
       return this.splitPoint;
     }
-    byte[] splitPoint = null;
+    byte[] splitPointFromLargestStore = null;
+    long largestStoreSize = 0;
     for (Store s : stores.values()) {
-      splitPoint = s.checkSplit();
-      if (splitPoint != null) {
-        return splitPoint;
+      byte[] splitPoint = s.checkSplit();
+      long storeSize = s.getSize();
+      if (splitPoint != null && largestStoreSize < storeSize) {
+        splitPointFromLargestStore = splitPoint;
+        largestStoreSize = storeSize;
       }
     }
-    return null;
+    return splitPointFromLargestStore;
   }
 
   /**
