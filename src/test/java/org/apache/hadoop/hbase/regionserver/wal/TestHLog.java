@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.coprocessor.Coprocessor;
+import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
 import org.apache.hadoop.hdfs.DFSClient;

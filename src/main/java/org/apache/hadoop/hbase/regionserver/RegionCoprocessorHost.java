@@ -28,6 +28,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.coprocessor.*;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -42,7 +44,6 @@ import org.apache.hadoop.util.StringUtils;
 import java.io.IOException;
 import java.util.*;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Implements the coprocessor environment and runtime support for coprocessors
@@ -92,16 +93,6 @@ public class RegionCoprocessorHost
     }
   }
 
-  public static final Pattern CP_KEY_PATTERN = Pattern.compile
-      ("coprocessor\\$([0-9]+)", Pattern.CASE_INSENSITIVE);
-  public static final Pattern CP_VALUE_PATTERN =
-      Pattern.compile("([^\\|]*)\\|([^\\|]+)\\|[\\s]*([\\d]*)[\\s]*(\\|.*)?");
-
-  public static final String PARAMETER_KEY_PATTERN = "[^=,]+";
-  public static final String PARAMETER_VALUE_PATTERN = "[^,]+";
-  public static final Pattern CFG_SPEC_MATCH = Pattern.compile(
-      "(" + PARAMETER_KEY_PATTERN + ")=(" + PARAMETER_VALUE_PATTERN  + "),?");
-
   /** The region server services */
   RegionServerServices rsServices;
   /** The region */
@@ -134,10 +125,10 @@ public class RegionCoprocessorHost
         region.getTableDesc().getValues().entrySet()) {
       String key = Bytes.toString(e.getKey().get()).trim();
       String spec = Bytes.toString(e.getValue().get()).trim();
-      if (CP_KEY_PATTERN.matcher(key).matches()) {
+      if (HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(key).matches()) {
         // found one
         try {
-          Matcher matcher = CP_VALUE_PATTERN.matcher(spec);
+          Matcher matcher = HConstants.CP_HTD_ATTR_VALUE_PATTERN.matcher(spec);
           if (matcher.matches()) {
             // jar file path can be empty if the cp class can be loaded
             // from class loader.
@@ -155,7 +146,7 @@ public class RegionCoprocessorHost
             if (cfgSpec != null) {
               cfgSpec = cfgSpec.substring(cfgSpec.indexOf('|') + 1);
               Configuration newConf = HBaseConfiguration.create(conf);
-              Matcher m = CFG_SPEC_MATCH.matcher(cfgSpec);
+              Matcher m = HConstants.CP_HTD_ATTR_VALUE_PARAM_PATTERN.matcher(cfgSpec);
               while (m.find()) {
                 newConf.set(m.group(1), m.group(2));
               }

@@ -375,6 +375,8 @@ Release 0.91.0 - Unreleased
    HBASE-3807  Fix units in RS UI metrics (subramanian raghunathan)
    HBASE-4193  Enhance RPC debug logging to provide more details on
                call contents
+   HBASE-4190  Coprocessors: pull up some cp constants from cp package to
+               o.a.h.h.HConstants (Mingjie Lai)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

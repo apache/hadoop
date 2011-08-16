@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import org.apache.hadoop.hbase.CoprocessorEnvironment;
+
 /**
  * Carries the execution state for a given invocation of an Observer coprocessor
  * ({@link RegionObserver}, {@link MasterObserver}, or {@link WALObserver})

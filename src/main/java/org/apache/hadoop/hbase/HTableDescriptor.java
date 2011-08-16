@@ -32,10 +32,8 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.coprocessor.Coprocessor;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.Compression;
-import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableComparable;
@@ -705,14 +703,13 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       throw new IOException("Coprocessor " + className + " already exists.");
     }
     // validate parameter kvs
-    //String kvString = "";
     StringBuilder kvString = new StringBuilder();
     if (kvs != null) {
       for (Map.Entry<String, String> e: kvs.entrySet()) {
-        if (!e.getKey().matches(RegionCoprocessorHost.PARAMETER_KEY_PATTERN)) {
+        if (!e.getKey().matches(HConstants.CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN)) {
           throw new IOException("Illegal parameter key = " + e.getKey());
         }
-        if (!e.getValue().matches(RegionCoprocessorHost.PARAMETER_VALUE_PATTERN)) {
+        if (!e.getValue().matches(HConstants.CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN)) {
           throw new IOException("Illegal parameter (" + e.getKey() +
               ") value = " + e.getValue());
         }
@@ -731,7 +728,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
         this.values.entrySet()) {
       keyMatcher =
-          RegionCoprocessorHost.CP_KEY_PATTERN.matcher(
+          HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(
               Bytes.toString(e.getKey().get()));
       if (!keyMatcher.matches()) {
         continue;
@@ -754,13 +751,13 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
         this.values.entrySet()) {
       keyMatcher =
-          RegionCoprocessorHost.CP_KEY_PATTERN.matcher(
+          HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(
               Bytes.toString(e.getKey().get()));
       if (!keyMatcher.matches()) {
         continue;
       }
       valueMatcher =
-        RegionCoprocessorHost.CP_VALUE_PATTERN.matcher(
+        HConstants.CP_HTD_ATTR_VALUE_PATTERN.matcher(
             Bytes.toString(e.getValue().get()));
       if (!valueMatcher.matches()) {
         continue;

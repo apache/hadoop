@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.coprocessor.*;
 import org.apache.hadoop.conf.Configuration;

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.coprocessor;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;

@@ -18,6 +18,8 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.ipc.VersionedProtocol;
 

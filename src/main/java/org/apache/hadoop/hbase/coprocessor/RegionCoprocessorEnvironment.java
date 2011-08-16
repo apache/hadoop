@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 

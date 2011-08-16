@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.master.MasterServices;
 
 public interface MasterCoprocessorEnvironment extends CoprocessorEnvironment {

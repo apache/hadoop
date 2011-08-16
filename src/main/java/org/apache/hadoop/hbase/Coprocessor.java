@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.coprocessor;
+package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 

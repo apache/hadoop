@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * HConstants holds a bunch of HBase-related constants
@@ -495,6 +496,17 @@ public final class HConstants {
       Arrays.asList(new String[]{ HREGION_LOGDIR_NAME, HREGION_OLDLOGDIR_NAME,
           CORRUPT_DIR_NAME, Bytes.toString(META_TABLE_NAME),
           Bytes.toString(ROOT_TABLE_NAME), SPLIT_LOGDIR_NAME }));
+
+  public static final Pattern CP_HTD_ATTR_KEY_PATTERN = Pattern.compile
+      ("coprocessor\\$([0-9]+)", Pattern.CASE_INSENSITIVE);
+  public static final Pattern CP_HTD_ATTR_VALUE_PATTERN =
+      Pattern.compile("([^\\|]*)\\|([^\\|]+)\\|[\\s]*([\\d]*)[\\s]*(\\|.*)?");
+
+  public static final String CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN = "[^=,]+";
+  public static final String CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN = "[^,]+";
+  public static final Pattern CP_HTD_ATTR_VALUE_PARAM_PATTERN = Pattern.compile(
+      "(" + CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN + ")=(" +
+      CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN + "),?");
 
   private HConstants() {
     // Can't be instantiated with this ctor.
