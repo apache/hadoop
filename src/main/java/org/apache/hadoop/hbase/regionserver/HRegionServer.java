@@ -452,8 +452,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         }
         String scannerIdString = Long.toString(scannerId);
         RegionScanner scanner = scanners.get(scannerIdString);
-        HRegionInfo regionName = scanner.getRegionInfo();
-        if (regionName.isMetaRegion()) {
+        if (scanner != null && scanner.getRegionInfo().isMetaRegion()) {
           // LOG.debug("High priority scanner request: " + scannerId);
           return HIGH_QOS;
         }
