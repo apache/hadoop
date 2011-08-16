@@ -336,4 +336,25 @@ htable.close();</programlisting></para>
    </section>
     
   </section>  <!--  reading -->
+  
+  <section xml:id="perf.deleting">
+    <title>Deleting from HBase</title>
+     <section xml:id="perf.deleting.queue">
+       <title>Using HBase Tables as Queues</title>
+       <para>HBase tables are sometimes used as queues.  In this case, special care must be taken to regularly perform major compactions on tables used in
+       this manner.  As is documented in <xref linkend="datamodel" />, marking rows as deleted creates additional StoreFiles which then need to be processed
+       on reads.  Tombstones only get cleaned up with major compactions.
+       </para>
+       <para>See also <xref linkend="compaction" /> and <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html#majorCompact%28java.lang.String%29">HBaseAdmin.majorCompact</link>.
+       </para>
+     </section>
+     <section xml:id="perf.deleting.rpc">
+       <title>Delete RPC Behavior</title>
+       <para>Be aware that <code>htable.delete(Delete)</code> doesn't use the writeBuffer.  It will execute an RegionServer RPC with each invocation.
+       For a large number of deletes, consider <code>htable.delete(List)</code>.
+       </para>
+       <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#delete%28org.apache.hadoop.hbase.client.Delete%29"></link>
+       </para>
+     </section>
+  </section>  <!--  deleting -->
 </chapter>

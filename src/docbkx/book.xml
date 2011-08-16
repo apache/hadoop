@@ -108,10 +108,10 @@ TableMapReduceUtil.initTableMapperJob(
   job			// job instance
   );</programlisting>
   ...and the mapper instance would extend <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableMapper.html">TableMapper</link>...
-	<programlisting>public class MyMapper extends TableMapper&lt;Text, LongWritable&gt; {
-public void map(ImmutableBytesWritable row, Result value, Context context) 
-throws InterruptedException, IOException {
-// process data for the row from the Result instance.</programlisting>
+	<programlisting>
+public class MyMapper extends TableMapper&lt;Text, LongWritable&gt; {
+  public void map(ImmutableBytesWritable row, Result value, Context context) throws InterruptedException, IOException {
+  // process data for the row from the Result instance.</programlisting>
   	</para>
    </section>
    <section xml:id="mapreduce.htable.access">
@@ -211,7 +211,7 @@ admin.enableTable(table);
   </section>
   <section xml:id="keysize">
       <title>Try to minimize row and column sizes</title>
-      <subtitle>Or why are my storefile indices large?</subtitle>
+      <subtitle>Or why are my StoreFile indices large?</subtitle>
       <para>In HBase, values are always freighted with their coordinates; as a
           cell value passes through the system, it'll be accompanied by its
           row, column name, and timestamp - always.  If your rows and column names
@@ -230,9 +230,25 @@ admin.enableTable(table);
                   Compression will also make for larger indices.  See
                   the thread <link xlink:href="http://search-hadoop.com/m/hemBv1LiN4Q1/a+question+storefileIndexSize&amp;subj=a+question+storefileIndexSize">a question storefileIndexSize</link>
                   up on the user mailing list.
-      `</para>
-      <para>In summary, although verbose attribute names (e.g., "myImportantAttribute") are easier to read, you pay for the clarity in storage and increased I/O - use shorter attribute names and constants. 
-      Also, try to keep the row-keys as small as possible too.</para>
+       </para>
+       <para>Most frequently small inefficiencies don't matter all that much.  Unfortunately,
+         this is a case where it does.  Whatever patterns are selected for ColumnFamilies, attributes, and rowkeys they could be repeated
+       several billion times in your data</para>
+       <section xml:id="keysize.cf"><title>Column Families</title>
+         <para>Try to keep the ColumnFamily names as small as possible, preferably one character (e.g. "d" for data/default).
+         </para> 
+       </section>
+       <section xml:id="keysize.atttributes"><title>Attributes</title>
+         <para>Although verbose attribute names (e.g., "myVeryImportantAttribute") are easier to read, prefer shorter attribute names (e.g., "via")
+         to store in HBase.
+         </para> 
+       </section>
+       <section xml:id="keysize.row"><title>Row Key</title>
+         <para>Keep them as short as is reasonable such that they can still be useful for required data access (e.g., Get vs. Scan). 
+         A short key that is useless for data access is not better than a longer key with better get/scan properties.  Expect tradeoffs
+         when designing rowkeys.
+         </para> 
+       </section>
   </section>
   <section xml:id="schema.versions">
   <title>
@@ -285,6 +301,14 @@ admin.enableTable(table);
   <para>ColumnFamilies can optionally be defined as in-memory.  Data is still persisted to disk, just like any other ColumnFamily.  
   In-memory blocks have the highest priority in the <xref linkend="block.cache" />, but it is not a guarantee that the entire table
   will be in memory.
+  </para>
+  <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link> for more information.
+  </para>
+  </section>
+  <section xml:id="ttl">
+  <title>Time To Live (TTL)</title>
+  <para>ColumnFamilies can set a TTL length in seconds, and HBase will automatically delete rows once the expiration time is reached.
+  This applies to <emphasis>all</emphasis> versions of a row - even the current one.  The TTL time encoded in the HBase for the row is specified in UTC.
   </para>
   <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link> for more information.
   </para>
