@@ -47,8 +47,8 @@ import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.StringUtils;
-import org.mortbay.util.URIUtil;
 
 @InterfaceAudience.Private
 public class DatanodeJspHelper {
@@ -289,7 +289,7 @@ public class DatanodeJspHelper {
     // Add the various links for looking at the file contents
     // URL for downloading the full file
     String downloadUrl = "http://" + req.getServerName() + ":"
-        + req.getServerPort() + "/streamFile" + URIUtil.encodePath(filename)
+        + req.getServerPort() + "/streamFile" + ServletUtil.encodePath(filename)
         + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnAddr, true)
         + JspHelper.getDelegationTokenUrlParam(tokenString);
     out.print("<a name=\"viewOptions\"></a>");

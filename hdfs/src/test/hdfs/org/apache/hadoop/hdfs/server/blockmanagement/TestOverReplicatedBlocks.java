@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,8 +33,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.TestDatanodeBlockScanner;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 
 public class TestOverReplicatedBlocks extends TestCase {
   /** Test processOverReplicatedBlock can handle corrupt replicas fine.
@@ -83,25 +84,26 @@ public class TestOverReplicatedBlocks extends TestCase {
             cluster.getDataNodes().get(2), blockPoolId);
          
       final FSNamesystem namesystem = cluster.getNamesystem();
+      final BlockManager bm = namesystem.getBlockManager();
+      final HeartbeatManager hm = bm.getDatanodeManager().getHeartbeatManager();
       try {
         namesystem.writeLock();
-        synchronized (namesystem.heartbeats) {
+        synchronized(hm) {
           // set live datanode's remaining space to be 0 
           // so they will be chosen to be deleted when over-replication occurs
           String corruptMachineName = corruptDataNode.getName();
-          for (DatanodeDescriptor datanode : namesystem.heartbeats) {
+          for (DatanodeDescriptor datanode : hm.getDatanodes()) {
             if (!corruptMachineName.equals(datanode.getName())) {
               datanode.updateHeartbeat(100L, 100L, 0L, 100L, 0, 0);
             }
           }
 
           // decrease the replication factor to 1; 
-          namesystem.setReplication(fileName.toString(), (short)1);
+          NameNodeAdapter.setReplication(namesystem, fileName.toString(), (short)1);
 
           // corrupt one won't be chosen to be excess one
           // without 4910 the number of live replicas would be 0: block gets lost
-          assertEquals(1, namesystem.getBlockManager().countNodes(block.getLocalBlock())
-              .liveReplicas());
+          assertEquals(1, bm.countNodes(block.getLocalBlock()).liveReplicas());
         }
       } finally {
         namesystem.writeUnlock();

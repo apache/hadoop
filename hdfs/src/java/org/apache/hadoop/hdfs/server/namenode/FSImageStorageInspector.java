@@ -96,4 +96,36 @@ abstract class FSImageStorageInspector {
       return sb.toString();
     }
   }
+
+  /**
+   * Record of an image that has been located and had its filename parsed.
+   */
+  static class FSImageFile {
+    final StorageDirectory sd;    
+    final long txId;
+    private final File file;
+    
+    FSImageFile(StorageDirectory sd, File file, long txId) {
+      assert txId >= 0 : "Invalid txid on " + file +": " + txId;
+      
+      this.sd = sd;
+      this.txId = txId;
+      this.file = file;
+    } 
+    
+    File getFile() {
+      return file;
+    }
+
+    public long getCheckpointTxId() {
+      return txId;
+    }
+    
+    @Override
+    public String toString() {
+      return String.format("FSImageFile(file=%s, cpktTxId=%019d)", 
+                           file.toString(), txId);
+    }
+  }
+
 }

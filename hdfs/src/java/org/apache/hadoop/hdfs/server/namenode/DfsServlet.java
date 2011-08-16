@@ -19,8 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServlet;
@@ -33,8 +31,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -86,48 +82,6 @@ abstract class DfsServlet extends HttpServlet {
     return DFSUtil.createNamenode(nnAddr, conf);
   }
 
-  /** Create a URI for redirecting request to a datanode */
-  protected URI createRedirectUri(String servletpath, 
-                                  UserGroupInformation ugi,
-                                  DatanodeID host, 
-                                  HttpServletRequest request,
-                                  NameNode nn
-                                  ) throws IOException, URISyntaxException {
-    final String hostname = host instanceof DatanodeInfo?
-        ((DatanodeInfo)host).getHostName(): host.getHost();
-    final String scheme = request.getScheme();
-    final int port = "https".equals(scheme)?
-        (Integer)getServletContext().getAttribute("datanode.https.port")
-        : host.getInfoPort();
-    final String filename = request.getPathInfo();
-    StringBuilder params = new StringBuilder();
-    params.append("filename=");
-    params.append(filename);
-    if (UserGroupInformation.isSecurityEnabled()) {
-      String tokenString = ugi.getTokens().iterator().next().encodeToUrlString();
-      params.append(JspHelper.getDelegationTokenUrlParam(tokenString));
-    } else {
-      params.append("&ugi=");
-      params.append(ugi.getShortUserName());
-    }
-    
-    // Add namenode address to the URL params
-    String nnAddr = NameNode.getHostPortString(nn.getNameNodeAddress());
-    params.append(JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnAddr));
-    return new URI(scheme, null, hostname, port, servletpath,
-                   params.toString(), null);
-  }
-
-  /** Get filename from the request */
-  protected String getFilename(HttpServletRequest request,
-      HttpServletResponse response) throws IOException {
-    final String filename = request.getParameter("filename");
-    if (filename == null || filename.length() == 0) {
-      throw new IOException("Invalid filename");
-    }
-    return filename;
-  }
-  
   protected UserGroupInformation getUGI(HttpServletRequest request,
                                         Configuration conf) throws IOException {
     return JspHelper.getUGI(getServletContext(), request, conf);

@@ -38,6 +38,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-2323. Add metrics to the fair scheduler. (todd)
 
+    MAPREDUCE-2037. Capture intermediate progress, CPU and memory usage for
+    tasks. (Dick King via acmurthy) 
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via
@@ -212,6 +215,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2705. Permits parallel multiple task launches. 
     (Thomas Graves via ddas)
 
+    MAPREDUCE-2489. Jobsplits with random hostnames can make the queue 
+    unusable (jeffrey naisbit via mahadev)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
@@ -220,6 +226,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-2740. MultipleOutputs in new API creates needless
     TaskAttemptContexts. (todd)
+
+    MAPREDUCE-901. Efficient framework counters. (llu via acmurthy)
 
   BUG FIXES
 
@@ -380,6 +388,23 @@ Trunk (unreleased changes)
 
     MAPREDUCE-2760. mapreduce.jobtracker.split.metainfo.maxsize typoed
     in mapred-default.xml. (todd via eli)
+
+    MAPREDUCE-2797. Update mapreduce tests and RAID for HDFS-2239.  (szetszwo)
+
+    MAPREDUCE-2805. Update RAID for HDFS-2241.  (szetszwo)
+    
+    MAPREDUCE-2837. Ported bug fixes from y-merge to prepare for MAPREDUCE-279
+    merge. (acmurthy) 
+
+    MAPREDUCE-2541. Fixed a race condition in IndexCache.removeMap. (Binglin
+    Chang via acmurthy) 
+
+    MAPREDUCE-2839. Fixed TokenCache to get delegation tokens using both new
+    and old apis. (Siddharth Seth via acmurthy)
+
+    MAPREDUCE-2727. Fix divide-by-zero error in SleepJob for sleepCount equals
+    0. (Jeffrey Naisbitt via acmurthy)
+
 
 Release 0.22.0 - Unreleased
 

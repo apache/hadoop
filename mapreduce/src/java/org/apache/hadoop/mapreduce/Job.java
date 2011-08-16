@@ -122,7 +122,7 @@ public class Job extends JobContextImpl implements JobContext {
   private JobStatus status;
   private long statustime;
   private Cluster cluster;
-  
+
   @Deprecated
   public Job() throws IOException {
     this(new Configuration());
@@ -360,8 +360,11 @@ public class Job extends JobContextImpl implements JobContext {
   @Override
   public String toString() {
     ensureState(JobState.RUNNING);
+    String reasonforFailure = " ";
     try {
       updateStatus();
+      if (status.getState().equals(JobStatus.State.FAILED))
+        reasonforFailure = getTaskFailureEventString();
     } catch (IOException e) {
     } catch (InterruptedException ie) {
     }
@@ -378,10 +381,34 @@ public class Job extends JobContextImpl implements JobContext {
     sb.append(status.getState()).append("\n");
     sb.append("history URL: ");
     sb.append(status.getHistoryFile()).append("\n");
-    sb.append("retired: ").append(status.isRetired());
+    sb.append("retired: ").append(status.isRetired()).append("\n");
+    sb.append("reason for failure: ").append(reasonforFailure);
     return sb.toString();
   }
-      
+
+  /**
+   * @return taskid which caused job failure
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  String getTaskFailureEventString() throws IOException,
+      InterruptedException {
+    int failCount = 1;
+    TaskCompletionEvent lastEvent = null;
+    for (TaskCompletionEvent event : cluster.getClient().getTaskCompletionEvents(
+        status.getJobID(), 0, 10)) {
+      if (event.getStatus().equals(TaskCompletionEvent.Status.FAILED)) {
+        failCount++;
+        lastEvent = event;
+      }
+    }
+    String[] taskAttemptID = lastEvent.getTaskAttemptId().toString().split("_", 2);
+    String taskID = taskAttemptID[1].substring(0, taskAttemptID[1].length()-2);
+    return (" task " + taskID + " failed " +
+      failCount + " times " + "For details check tasktracker at: " +
+      lastEvent.getTaskTrackerHttp());
+  }
+
   /**
    * Get the information of the current state of the tasks of a job.
    * 

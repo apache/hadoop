@@ -26,11 +26,11 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.TreeSet;
 
 import javax.servlet.ServletContext;
@@ -190,13 +190,15 @@ public class JspHelper {
     s.connect(addr, HdfsConstants.READ_TIMEOUT);
     s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
       
-      long amtToRead = Math.min(chunkSizeToView, blockSize - offsetIntoBlock);     
+    long amtToRead = Math.min(chunkSizeToView, blockSize - offsetIntoBlock);
       
       // Use the block name for file name. 
-      String file = BlockReader.getFileName(addr, poolId, blockId);
-      BlockReader blockReader = BlockReader.newBlockReader(s, file,
+    int bufferSize = conf.getInt(DFSConfigKeys.IO_FILE_BUFFER_SIZE_KEY,
+        DFSConfigKeys.IO_FILE_BUFFER_SIZE_DEFAULT);
+    String file = BlockReader.getFileName(addr, poolId, blockId);
+    BlockReader blockReader = BlockReader.newBlockReader(s, file,
         new ExtendedBlock(poolId, blockId, 0, genStamp), blockToken,
-        offsetIntoBlock, amtToRead, conf.getInt("io.file.buffer.size", 4096));
+        offsetIntoBlock, amtToRead, bufferSize);
         
     byte[] buf = new byte[(int)amtToRead];
     int readOffset = 0;
@@ -249,7 +251,7 @@ public class JspHelper {
     out.print("</tbody></table>");
   }
 
-  public static void sortNodeList(ArrayList<DatanodeDescriptor> nodes,
+  public static void sortNodeList(final List<DatanodeDescriptor> nodes,
                            String field, String order) {
         
     class NodeComapare implements Comparator<DatanodeDescriptor> {

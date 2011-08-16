@@ -42,7 +42,7 @@ import org.apache.hadoop.util.DataChecksum;
 /**
  * Reads a block from the disk and sends it to a recipient.
  */
-class BlockSender implements java.io.Closeable, FSConstants {
+class BlockSender implements java.io.Closeable {
   public static final Log LOG = DataNode.LOG;
   static final Log ClientTraceLog = DataNode.ClientTraceLog;
   
@@ -155,7 +155,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
 
       if ( !corruptChecksumOk || datanode.data.metaFileExists(block) ) {
         checksumIn = new DataInputStream(new BufferedInputStream(datanode.data
-            .getMetaDataInputStream(block), BUFFER_SIZE));
+            .getMetaDataInputStream(block), FSConstants.IO_FILE_BUFFER_SIZE));
 
         // read and handle the common header here. For now just a version
        BlockMetadataHeader header = BlockMetadataHeader.readHeader(checksumIn);
@@ -472,15 +472,15 @@ class BlockSender implements java.io.Closeable, FSConstants {
         streamForSendChunks = baseStream;
         
         // assure a mininum buffer size.
-        maxChunksPerPacket = (Math.max(BUFFER_SIZE, 
+        maxChunksPerPacket = (Math.max(FSConstants.IO_FILE_BUFFER_SIZE, 
                                        MIN_BUFFER_WITH_TRANSFERTO)
                               + bytesPerChecksum - 1)/bytesPerChecksum;
         
         // allocate smaller buffer while using transferTo(). 
         pktSize += checksumSize * maxChunksPerPacket;
       } else {
-        maxChunksPerPacket = Math.max(1,
-                 (BUFFER_SIZE + bytesPerChecksum - 1)/bytesPerChecksum);
+        maxChunksPerPacket = Math.max(1, (FSConstants.IO_FILE_BUFFER_SIZE
+            + bytesPerChecksum - 1) / bytesPerChecksum);
         pktSize += (bytesPerChecksum + checksumSize) * maxChunksPerPacket;
       }
 

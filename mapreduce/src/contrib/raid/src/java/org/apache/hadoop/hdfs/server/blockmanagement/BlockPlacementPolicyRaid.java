@@ -543,7 +543,7 @@ public class BlockPlacementPolicyRaid extends BlockPlacementPolicy {
     }
     // remove the prefix
     String src = parity.substring(prefix.length());
-    if (NameNodeRaidUtil.getFileInfo(namesystem.dir, src, true) == null) {
+    if (NameNodeRaidUtil.getFileInfo(namesystem, src, true) == null) {
       return null;
     }
     return src;
@@ -575,7 +575,7 @@ public class BlockPlacementPolicyRaid extends BlockPlacementPolicy {
   private String getParityFile(String parityPrefix, String src)
       throws IOException {
     String parity = parityPrefix + src;
-    if (NameNodeRaidUtil.getFileInfo(namesystem.dir, parity, true) == null) {
+    if (NameNodeRaidUtil.getFileInfo(namesystem, parity, true) == null) {
       return null;
     }
     return parity;

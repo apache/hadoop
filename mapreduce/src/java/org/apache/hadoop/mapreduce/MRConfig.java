@@ -59,4 +59,6 @@ public interface MRConfig {
     7*24*60*60*1000; // 7 days
   
   public static final String FRAMEWORK_NAME  = "mapreduce.framework.name";
+  public static final String TASK_LOCAL_OUTPUT_CLASS =
+  "mapreduce.task.local.output.class";
 }

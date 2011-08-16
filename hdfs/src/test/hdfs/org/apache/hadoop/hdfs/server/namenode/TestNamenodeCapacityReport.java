@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.List;
 
 import junit.framework.TestCase;
 
@@ -32,6 +33,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 
 
 
@@ -59,11 +61,13 @@ public class TestNamenodeCapacityReport extends TestCase {
       cluster.waitActive();
       
       final FSNamesystem namesystem = cluster.getNamesystem();
+      final DatanodeManager dm = cluster.getNamesystem().getBlockManager(
+          ).getDatanodeManager();
       
       // Ensure the data reported for each data node is right
-      ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-      ArrayList<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
-      namesystem.DFSNodesStatus(live, dead);
+      final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+      final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
+      dm.fetchDatanodes(live, dead, false);
       
       assertTrue(live.size() == 1);
       
@@ -112,10 +116,10 @@ public class TestNamenodeCapacityReport extends TestCase {
       
       configCapacity = namesystem.getCapacityTotal();
       used = namesystem.getCapacityUsed();
-      nonDFSUsed = namesystem.getCapacityUsedNonDFS();
+      nonDFSUsed = namesystem.getNonDfsUsedSpace();
       remaining = namesystem.getCapacityRemaining();
-      percentUsed = namesystem.getCapacityUsedPercent();
-      percentRemaining = namesystem.getCapacityRemainingPercent();
+      percentUsed = namesystem.getPercentUsed();
+      percentRemaining = namesystem.getPercentRemaining();
       bpUsed = namesystem.getBlockPoolUsedSpace();
       percentBpUsed = namesystem.getPercentBlockPoolUsed();
       

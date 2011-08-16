@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.util.PureJavaCrc32;
 
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.*;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
@@ -1323,71 +1324,17 @@ public abstract class FSEditLogOp {
       return longWritable.get();
     }
   }
-  
-  /**
-   * Class to encapsulate the header at the top of a log file.
-   */
-  static class LogHeader {
-    final int logVersion;
-    final Checksum checksum;
-
-    public LogHeader(int logVersion, Checksum checksum) {
-      this.logVersion = logVersion;
-      this.checksum = checksum;
-    }
-
-    static LogHeader read(DataInputStream in) throws IOException {
-      int logVersion = 0;
-
-      logVersion = FSEditLogOp.LogHeader.readLogVersion(in);
-      Checksum checksum = null;
-      if (LayoutVersion.supports(Feature.EDITS_CHESKUM, logVersion)) {
-        checksum = FSEditLog.getChecksum();
-      }
-      return new LogHeader(logVersion, checksum);
-    }
-    
-    /**
-     * Read the header of fsedit log
-     * @param in fsedit stream
-     * @return the edit log version number
-     * @throws IOException if error occurs
-     */
-    private static int readLogVersion(DataInputStream in) throws IOException {
-      int logVersion = 0;
-      // Read log file version. Could be missing.
-      in.mark(4);
-      // If edits log is greater than 2G, available method will return negative
-      // numbers, so we avoid having to call available
-      boolean available = true;
-      try {
-        logVersion = in.readByte();
-      } catch (EOFException e) {
-        available = false;
-      }
-      if (available) {
-        in.reset();
-        logVersion = in.readInt();
-        if (logVersion < FSConstants.LAYOUT_VERSION) // future version
-          throw new IOException(
-              "Unexpected version of the file system log file: "
-              + logVersion + ". Current version = "
-              + FSConstants.LAYOUT_VERSION + ".");
-      }
-      assert logVersion <= Storage.LAST_UPGRADABLE_LAYOUT_VERSION :
-        "Unsupported version " + logVersion;
-      return logVersion;
-    }
-  }
 
   /**
    * Class for writing editlog ops
    */
   public static class Writer {
     private final DataOutputBuffer buf;
+    private final Checksum checksum;
 
     public Writer(DataOutputBuffer out) {
       this.buf = out;
+      this.checksum = new PureJavaCrc32();
     }
 
     /**
@@ -1402,7 +1349,6 @@ public abstract class FSEditLogOp {
       buf.writeLong(op.txid);
       op.writeFields(buf);
       int end = buf.getLength();
-      Checksum checksum = FSEditLog.getChecksum();
       checksum.reset();
       checksum.update(buf.getData(), start, end-start);
       int sum = (int)checksum.getValue();
@@ -1422,19 +1368,22 @@ public abstract class FSEditLogOp {
      * Construct the reader
      * @param in The stream to read from.
      * @param logVersion The version of the data coming from the stream.
-     * @param checksum Checksum being used with input stream.
      */
     @SuppressWarnings("deprecation")
-    public Reader(DataInputStream in, int logVersion,
-                  Checksum checksum) {
-      if (checksum != null) {
+    public Reader(DataInputStream in, int logVersion) {
+      this.logVersion = logVersion;
+      if (LayoutVersion.supports(Feature.EDITS_CHESKUM, logVersion)) {
+        this.checksum = new PureJavaCrc32();
+      } else {
+        this.checksum = null;
+      }
+
+      if (this.checksum != null) {
         this.in = new DataInputStream(
-            new CheckedInputStream(in, checksum));
+            new CheckedInputStream(in, this.checksum));
       } else {
         this.in = in;
       }
-      this.logVersion = logVersion;
-      this.checksum = checksum;
     }
 
     /**

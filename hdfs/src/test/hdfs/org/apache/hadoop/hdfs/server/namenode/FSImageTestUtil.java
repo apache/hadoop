@@ -24,25 +24,27 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
+import org.apache.commons.logging.Log;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.FoundEditLog;
-import org.apache.hadoop.hdfs.server.namenode.FSImageTransactionalStorageInspector.FoundFSImage;
+import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
+import org.apache.hadoop.hdfs.server.namenode.FSImageStorageInspector.FSImageFile;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.mockito.Mockito;
 
 import com.google.common.base.Joiner;
-import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -110,6 +112,40 @@ public abstract class FSImageTestUtil {
     return sd;
   }
   
+  /**
+   * Make a mock storage directory that returns some set of file contents.
+   * @param type type of storage dir
+   * @param previousExists should we mock that the previous/ dir exists?
+   * @param fileNames the names of files contained in current/
+   */
+  static StorageDirectory mockStorageDirectory(
+      StorageDirType type,
+      boolean previousExists,
+      String...  fileNames) {
+    StorageDirectory sd = mock(StorageDirectory.class);
+    
+    doReturn(type).when(sd).getStorageDirType();
+  
+    // Version file should always exist
+    doReturn(mockFile(true)).when(sd).getVersionFile();
+    
+    // Previous dir optionally exists
+    doReturn(mockFile(previousExists))
+      .when(sd).getPreviousDir();   
+  
+    // Return a mock 'current' directory which has the given paths
+    File[] files = new File[fileNames.length];
+    for (int i = 0; i < fileNames.length; i++) {
+      files[i] = new File(fileNames[i]);
+    }
+    
+    File mockDir = Mockito.spy(new File("/dir/current"));
+    doReturn(files).when(mockDir).listFiles();
+    doReturn(mockDir).when(sd).getCurrentDir();
+    
+    return sd;
+  }
+  
   static File mockFile(boolean exists) {
     File mockFile = mock(File.class);
     doReturn(exists).when(mockFile).exists();
@@ -154,9 +190,9 @@ public abstract class FSImageTestUtil {
     for (File dir : dirs) {
       FSImageTransactionalStorageInspector inspector =
         inspectStorageDirectory(dir, NameNodeDirType.IMAGE);
-      FoundFSImage latestImage = inspector.getLatestImage();
+      FSImageFile latestImage = inspector.getLatestImage();
       assertNotNull("No image in " + dir, latestImage);      
-      long thisTxId = latestImage.getTxId();
+      long thisTxId = latestImage.getCheckpointTxId();
       if (imageTxId != -1 && thisTxId != imageTxId) {
         fail("Storage directory " + dir + " does not have the same " +
             "last image index " + imageTxId + " as another");
@@ -283,7 +319,7 @@ public abstract class FSImageTestUtil {
       new FSImageTransactionalStorageInspector();
     inspector.inspectDirectory(sd);
 
-    FoundFSImage latestImage = inspector.getLatestImage();
+    FSImageFile latestImage = inspector.getLatestImage();
     return (latestImage == null) ? null : latestImage.getFile();
   }
 
@@ -316,23 +352,15 @@ public abstract class FSImageTestUtil {
    * @return the latest edits log, finalized or otherwise, from the given
    * storage directory.
    */
-  public static FoundEditLog findLatestEditsLog(StorageDirectory sd)
+  public static EditLogFile findLatestEditsLog(StorageDirectory sd)
   throws IOException {
     FSImageTransactionalStorageInspector inspector =
       new FSImageTransactionalStorageInspector();
     inspector.inspectDirectory(sd);
     
-    List<FoundEditLog> foundEditLogs = Lists.newArrayList(
-        inspector.getFoundEditLogs());
-    return Collections.max(foundEditLogs, new Comparator<FoundEditLog>() {
-      @Override
-      public int compare(FoundEditLog a, FoundEditLog b) {
-        return ComparisonChain.start()
-          .compare(a.getStartTxId(), b.getStartTxId())
-          .compare(a.getLastTxId(), b.getLastTxId())
-          .result();
-      }
-    });
+    List<EditLogFile> foundEditLogs = Lists.newArrayList(
+        inspector.getEditLogFiles());
+    return Collections.max(foundEditLogs, EditLogFile.COMPARE_BY_START_TXID);
   }
 
   /**
@@ -371,5 +399,16 @@ public abstract class FSImageTestUtil {
     assertNotNull(image);
   }
 
-
+  public static void logStorageContents(Log LOG, NNStorage storage) {
+    LOG.info("current storages and corresponding sizes:");
+    for (StorageDirectory sd : storage.dirIterable(null)) {
+      File curDir = sd.getCurrentDir();
+      LOG.info("In directory " + curDir);
+      File[] files = curDir.listFiles();
+      Arrays.sort(files);
+      for (File f : files) {
+        LOG.info("  file " + f.getAbsolutePath() + "; len = " + f.length());  
+      }
+    }
+  }
 }

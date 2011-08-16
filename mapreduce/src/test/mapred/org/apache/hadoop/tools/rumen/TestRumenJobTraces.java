@@ -852,6 +852,30 @@ public class TestRumenJobTraces {
   public void testTopologyBuilder() throws Exception {
     final TopologyBuilder subject = new TopologyBuilder();
 
+    // This 4 comes from 
+    //   TaskInProgress.ProgressibleSplitsBlock.burst().size , which 
+    //   is invisible here.
+
+    int[][] splits = new int[4][];
+
+    splits[0] = new int[12];
+    splits[1] = new int[12];
+    splits[2] = new int[12];
+    splits[3] = new int[12];
+
+    for (int j = 0; j < 4; ++j) {
+      for (int i = 0; i < 12; ++i) {
+        splits[j][i] = -1;
+      }
+    }
+
+    for (int i = 0; i < 6; ++i) {
+      splits[0][i] = 500000 * i;
+      splits[1][i] = 300000 * i;
+      splits[2][i] = 500000;
+      splits[3][i] = 700000;
+    }
+
     // currently we extract no host names from the Properties
     subject.process(new Properties());
 
@@ -860,16 +884,16 @@ public class TestRumenJobTraces {
         .valueOf("MAP"), "STATUS", 1234567890L,
         "/194\\.6\\.134\\.64/cluster50261\\.secondleveldomain\\.com",
         "SUCCESS", null));
-    subject.process(new TaskAttemptUnsuccessfulCompletionEvent(TaskAttemptID
-        .forName("attempt_200904211745_0003_m_000004_1"), TaskType
-        .valueOf("MAP"), "STATUS", 1234567890L,
-        "/194\\.6\\.134\\.80/cluster50262\\.secondleveldomain\\.com",
-        "MACHINE_EXPLODED"));
-    subject.process(new TaskAttemptUnsuccessfulCompletionEvent(TaskAttemptID
-        .forName("attempt_200904211745_0003_m_000004_2"), TaskType
-        .valueOf("MAP"), "STATUS", 1234567890L,
-        "/194\\.6\\.134\\.80/cluster50263\\.secondleveldomain\\.com",
-        "MACHINE_EXPLODED"));
+    subject.process(new TaskAttemptUnsuccessfulCompletionEvent
+                    (TaskAttemptID.forName("attempt_200904211745_0003_m_000004_1"),
+                     TaskType.valueOf("MAP"), "STATUS", 1234567890L,
+                     "/194\\.6\\.134\\.80/cluster50262\\.secondleveldomain\\.com",
+                     "MACHINE_EXPLODED", splits));
+    subject.process(new TaskAttemptUnsuccessfulCompletionEvent
+                    (TaskAttemptID.forName("attempt_200904211745_0003_m_000004_2"),
+                     TaskType.valueOf("MAP"), "STATUS", 1234567890L,
+                     "/194\\.6\\.134\\.80/cluster50263\\.secondleveldomain\\.com",
+                     "MACHINE_EXPLODED", splits));
     subject.process(new TaskStartedEvent(TaskID
         .forName("task_200904211745_0003_m_000004"), 1234567890L, TaskType
         .valueOf("MAP"),

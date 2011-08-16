@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
@@ -52,7 +53,7 @@ public class TestViewFsHdfs extends ViewFsBaseTest {
     SupportsBlocks = true;
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
     cluster.waitClusterUp();
-    cluster.getNamesystem().getDelegationTokenSecretManager().startThreads();
+    NameNodeAdapter.getDtSecretManager(cluster.getNamesystem()).startThreads();
     fc = FileContext.getFileContext(cluster.getURI(0), CONF);
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
         UserGroupInformation.getCurrentUser().getShortUserName()));

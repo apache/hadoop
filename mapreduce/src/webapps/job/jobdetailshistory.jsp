@@ -45,6 +45,7 @@
 <%! static SimpleDateFormat dateFormat = new SimpleDateFormat("d-MMM-yyyy HH:mm:ss") ; %>
 <%
     String logFile = request.getParameter("logFile");
+    String reasonforFailure = " ";
     final Path jobFile = new Path(logFile);
     String jobid = JobHistory.getJobIDFromHistoryFilePath(jobFile).toString();
 
@@ -55,6 +56,8 @@
     if (job == null) {
       return;
     }
+    if (job.getJobStatus().equals("FAILED")) 
+      reasonforFailure = job.getErrorInfo();
 %>
 
 <html>
@@ -78,6 +81,7 @@
 <b>Launched At: </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLaunchTime(), job.getSubmitTime()) %><br/>
 <b>Finished At: </b>  <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getFinishTime(), job.getLaunchTime()) %><br/>
 <b>Status: </b> <%= ((job.getJobStatus()) == null ? "Incomplete" :job.getJobStatus()) %><br/> 
+<b>ReasonForFailure: </b> <%=reasonforFailure %><br/>
 <%
     HistoryViewer.SummarizedJob sj = new HistoryViewer.SummarizedJob(job);
 %>

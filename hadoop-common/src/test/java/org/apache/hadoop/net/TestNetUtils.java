@@ -72,4 +72,20 @@ public class TestNetUtils {
     assertNull(NetUtils.getLocalInetAddress("invalid-address-for-test"));
     assertNull(NetUtils.getLocalInetAddress(null));
   }
+
+  @Test(expected=UnknownHostException.class)
+  public void testVerifyHostnamesException() throws UnknownHostException {
+    String[] names = {"valid.host.com", "1.com", "invalid host here"};
+    NetUtils.verifyHostnames(names);
+  }  
+
+  @Test
+  public void testVerifyHostnamesNoException() {
+    String[] names = {"valid.host.com", "1.com"};
+    try {
+      NetUtils.verifyHostnames(names);
+    } catch (UnknownHostException e) {
+      fail("NetUtils.verifyHostnames threw unexpected UnknownHostException");
+    }
+  }
 }

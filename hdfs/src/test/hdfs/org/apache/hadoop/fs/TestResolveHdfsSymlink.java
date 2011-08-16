@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
@@ -47,8 +48,8 @@ public class TestResolveHdfsSymlink {
   public static void setUp() throws IOException {
     Configuration conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).build();
-    cluster.getNamesystem().getDelegationTokenSecretManager().startThreads();
     cluster.waitActive();
+    NameNodeAdapter.getDtSecretManager(cluster.getNamesystem()).startThreads();
   }
 
   @AfterClass

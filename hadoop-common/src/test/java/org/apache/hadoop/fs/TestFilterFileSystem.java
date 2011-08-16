@@ -126,6 +126,8 @@ public class TestFilterFileSystem extends TestCase {
     public void moveFromLocalFile(Path[] srcs, Path dst) { }
     public void moveFromLocalFile(Path src, Path dst) { }
     public void copyToLocalFile(Path src, Path dst) { }
+    public void copyToLocalFile(boolean delSrc, Path src, Path dst, 
+            boolean useRawLocalFileSystem) { }
     public void moveToLocalFile(Path src, Path dst) { }
     public long getBlockSize(Path f) { return 0; }
     public FSDataOutputStream primitiveCreate(final Path f,

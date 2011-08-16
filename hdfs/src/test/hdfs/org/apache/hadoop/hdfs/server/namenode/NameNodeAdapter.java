@@ -19,10 +19,12 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.ipc.Server;
 
 /**
@@ -52,7 +54,33 @@ public class NameNodeAdapter {
   public static Server getRpcServer(NameNode namenode) {
     return namenode.server;
   }
+
+  public static DelegationTokenSecretManager getDtSecretManager(
+      final FSNamesystem ns) {
+    return ns.getDelegationTokenSecretManager();
+  }
+
+  public static DatanodeCommand[] sendHeartBeat(DatanodeRegistration nodeReg,
+      DatanodeDescriptor dd, FSNamesystem namesystem) throws IOException {
+    return namesystem.handleHeartbeat(nodeReg, dd.getCapacity(), 
+        dd.getDfsUsed(), dd.getRemaining(), dd.getBlockPoolUsed(), 0, 0, 0);
+  }
+
+  public static boolean setReplication(final FSNamesystem ns,
+      final String src, final short replication) throws IOException {
+    return ns.setReplication(src, replication);
+  }
   
+  public static LeaseManager getLeaseManager(final FSNamesystem ns) {
+    return ns.leaseManager;
+  }
+
+  /** Set the softLimit and hardLimit of client lease periods. */
+  public static void setLeasePeriod(final FSNamesystem namesystem, long soft, long hard) {
+    getLeaseManager(namesystem).setLeasePeriod(soft, hard);
+    namesystem.lmthread.interrupt();
+  }
+
   public static String getLeaseHolderForPath(NameNode namenode, String path) {
     return namenode.getNamesystem().leaseManager.getLeaseByPath(path).getHolder();
   }

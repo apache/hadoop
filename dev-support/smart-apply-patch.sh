@@ -53,16 +53,22 @@ if ! grep -qv '^a/\|^b/' $TMP ; then
   sed -i -e 's,^[ab]/,,' $TMP
 fi
 
-# if all of the lines start with common/, hdfs/, or mapreduce/, this is
+PREFIX_DIRS=$(cut -d '/' -f 1 $TMP | sort | uniq)
+
+# if we are at the project root then nothing more to do
+if [[ -d hadoop-common ]]; then
+  echo Looks like this is being run at project root
+
+# if all of the lines start with hadoop-common/, hdfs/, or mapreduce/, this is
 # relative to the hadoop root instead of the subproject root, so we need
 # to chop off another layer
-PREFIX_DIRS=$(cut -d '/' -f 1 $TMP | sort | uniq)
-if [[ "$PREFIX_DIRS" =~ ^(hdfs|common|mapreduce)$ ]]; then
+elif [[ "$PREFIX_DIRS" =~ ^(hdfs|hadoop-common|mapreduce)$ ]]; then
 
   echo Looks like this is relative to project root. Increasing PLEVEL
   PLEVEL=$[$PLEVEL + 1]
-elif ! echo "$PREFIX_DIRS" | grep -vxq 'common\|hdfs\|mapreduce' ; then
-  echo Looks like this is a cross-subproject patch. Not supported!
+
+elif ! echo "$PREFIX_DIRS" | grep -vxq 'hadoop-common\|hdfs\|mapreduce' ; then
+  echo Looks like this is a cross-subproject patch. Try applying from the project root
   exit 1
 fi
 

@@ -61,19 +61,32 @@ public class TeraInputFormat extends FileInputFormat<Text,Text> {
   private static List<InputSplit> lastResult = null;
 
   static class TeraFileSplit extends FileSplit {
+    static private String[] ZERO_LOCATIONS = new String[0];
+
     private String[] locations;
-    public TeraFileSplit() {}
+
+    public TeraFileSplit() {
+      locations = ZERO_LOCATIONS;
+    }
     public TeraFileSplit(Path file, long start, long length, String[] hosts) {
       super(file, start, length, hosts);
-      locations = hosts;
+      try {
+        locations = super.getLocations();
+      } catch (IOException e) {
+        locations = ZERO_LOCATIONS;
+      }
     }
+
+    // XXXXXX should this also be null-protected?
     protected void setLocations(String[] hosts) {
       locations = hosts;
     }
+
     @Override
     public String[] getLocations() {
       return locations;
     }
+
     public String toString() {
       StringBuffer result = new StringBuffer();
       result.append(getPath());

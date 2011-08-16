@@ -19,15 +19,12 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
-import java.util.zip.Checksum;
+import java.util.EnumMap;
 
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
@@ -37,8 +34,7 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.LogHeader;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.Reader;
+import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream.LogHeaderCorruptException;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCloseOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.CancelDelegationTokenOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ClearNSQuotaOp;
@@ -60,6 +56,10 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
+import org.apache.hadoop.hdfs.util.Holder;
+import org.apache.hadoop.io.IOUtils;
+
+import com.google.common.base.Joiner;
 
 public class FSEditLogLoader {
   private final FSNamesystem fsNamesys;
@@ -84,49 +84,36 @@ public class FSEditLogLoader {
   }
 
   int loadFSEdits(EditLogInputStream edits, boolean closeOnExit,
-      long expectedStartingTxId)
-  throws IOException {
-    BufferedInputStream bin = new BufferedInputStream(edits);
-    DataInputStream in = new DataInputStream(bin);
-
+                  long expectedStartingTxId)
+      throws IOException {
     int numEdits = 0;
+    int logVersion = edits.getVersion();
 
     try {
-      LogHeader header = LogHeader.read(in);
-      numEdits = loadEditRecords(
-          header.logVersion, in, header.checksum, false,
-          expectedStartingTxId);
+      numEdits = loadEditRecords(logVersion, edits, false, 
+                                 expectedStartingTxId);
     } finally {
-      if(closeOnExit)
-        in.close();
+      if(closeOnExit) {
+        edits.close();
+      }
     }
     
     return numEdits;
   }
 
   @SuppressWarnings("deprecation")
-  int loadEditRecords(int logVersion, DataInputStream in,
-                      Checksum checksum, boolean closeOnExit,
+  int loadEditRecords(int logVersion, EditLogInputStream in, boolean closeOnExit,
                       long expectedStartingTxId)
       throws IOException {
     FSDirectory fsDir = fsNamesys.dir;
     int numEdits = 0;
 
-    int numOpAdd = 0, numOpClose = 0, numOpDelete = 0,
-        numOpRenameOld = 0, numOpSetRepl = 0, numOpMkDir = 0,
-        numOpSetPerm = 0, numOpSetOwner = 0, numOpSetGenStamp = 0,
-        numOpTimes = 0, numOpRename = 0, numOpConcatDelete = 0, 
-        numOpSymlink = 0, numOpGetDelegationToken = 0,
-        numOpRenewDelegationToken = 0, numOpCancelDelegationToken = 0, 
-        numOpUpdateMasterKey = 0, numOpReassignLease = 0, numOpOther = 0;
+    EnumMap<FSEditLogOpCodes, Holder<Integer>> opCounts =
+      new EnumMap<FSEditLogOpCodes, Holder<Integer>>(FSEditLogOpCodes.class);
 
     fsNamesys.writeLock();
     fsDir.writeLock();
 
-    // Keep track of the file offsets of the last several opcodes.
-    // This is handy when manually recovering corrupted edits files.
-    PositionTrackingInputStream tracker = new PositionTrackingInputStream(in);
-    in = new DataInputStream(tracker);
     long recentOpcodeOffsets[] = new long[4];
     Arrays.fill(recentOpcodeOffsets, -1);
 
@@ -134,12 +121,10 @@ public class FSEditLogLoader {
       long txId = expectedStartingTxId - 1;
 
       try {
-        FSEditLogOp.Reader reader = new FSEditLogOp.Reader(in, logVersion,
-                                                           checksum);
         FSEditLogOp op;
-        while ((op = reader.readOp()) != null) {
+        while ((op = in.readOp()) != null) {
           recentOpcodeOffsets[numEdits % recentOpcodeOffsets.length] =
-              tracker.getPos();
+            in.getPosition();
           if (LayoutVersion.supports(Feature.STORED_TXIDS, logVersion)) {
             long thisTxId = op.txid;
             if (thisTxId != txId + 1) {
@@ -150,6 +135,7 @@ public class FSEditLogLoader {
           }
 
           numEdits++;
+          incrOpCount(op.opCode, opCounts);
           switch (op.opCode) {
           case OP_ADD:
           case OP_CLOSE: {
@@ -157,8 +143,8 @@ public class FSEditLogLoader {
 
             // versions > 0 support per file replication
             // get name and replication
-            short replication
-              = fsNamesys.adjustReplication(addCloseOp.replication);
+            final short replication  = fsNamesys.getBlockManager(
+                ).adjustReplication(addCloseOp.replication);
 
             long blockSize = addCloseOp.blockSize;
             BlockInfo blocks[] = new BlockInfo[addCloseOp.blocks.length];
@@ -209,7 +195,6 @@ public class FSEditLogLoader {
                 blocks, replication,
                 addCloseOp.mtime, addCloseOp.atime, blockSize);
             if (addCloseOp.opCode == FSEditLogOpCodes.OP_ADD) {
-              numOpAdd++;
               //
               // Replace current node with a INodeUnderConstruction.
               // Recreate in-memory lease record.
@@ -231,24 +216,20 @@ public class FSEditLogLoader {
             break;
           }
           case OP_SET_REPLICATION: {
-            numOpSetRepl++;
             SetReplicationOp setReplicationOp = (SetReplicationOp)op;
-            short replication
-              = fsNamesys.adjustReplication(setReplicationOp.replication);
+            short replication = fsNamesys.getBlockManager().adjustReplication(
+                setReplicationOp.replication);
             fsDir.unprotectedSetReplication(setReplicationOp.path,
                                             replication, null);
             break;
           }
           case OP_CONCAT_DELETE: {
-            numOpConcatDelete++;
-
             ConcatDeleteOp concatDeleteOp = (ConcatDeleteOp)op;
             fsDir.unprotectedConcat(concatDeleteOp.trg, concatDeleteOp.srcs,
                 concatDeleteOp.timestamp);
             break;
           }
           case OP_RENAME_OLD: {
-            numOpRenameOld++;
             RenameOldOp renameOp = (RenameOldOp)op;
             HdfsFileStatus dinfo = fsDir.getFileInfo(renameOp.dst, false);
             fsDir.unprotectedRenameTo(renameOp.src, renameOp.dst,
@@ -257,14 +238,11 @@ public class FSEditLogLoader {
             break;
           }
           case OP_DELETE: {
-            numOpDelete++;
-
             DeleteOp deleteOp = (DeleteOp)op;
             fsDir.unprotectedDelete(deleteOp.path, deleteOp.timestamp);
             break;
           }
           case OP_MKDIR: {
-            numOpMkDir++;
             MkdirOp mkdirOp = (MkdirOp)op;
             PermissionStatus permissions = fsNamesys.getUpgradePermission();
             if (mkdirOp.permissions != null) {
@@ -276,22 +254,17 @@ public class FSEditLogLoader {
             break;
           }
           case OP_SET_GENSTAMP: {
-            numOpSetGenStamp++;
             SetGenstampOp setGenstampOp = (SetGenstampOp)op;
             fsNamesys.setGenerationStamp(setGenstampOp.genStamp);
             break;
           }
           case OP_SET_PERMISSIONS: {
-            numOpSetPerm++;
-
             SetPermissionsOp setPermissionsOp = (SetPermissionsOp)op;
             fsDir.unprotectedSetPermission(setPermissionsOp.src,
                                            setPermissionsOp.permissions);
             break;
           }
           case OP_SET_OWNER: {
-            numOpSetOwner++;
-
             SetOwnerOp setOwnerOp = (SetOwnerOp)op;
             fsDir.unprotectedSetOwner(setOwnerOp.src, setOwnerOp.username,
                                       setOwnerOp.groupname);
@@ -320,7 +293,6 @@ public class FSEditLogLoader {
             break;
 
           case OP_TIMES: {
-            numOpTimes++;
             TimesOp timesOp = (TimesOp)op;
 
             fsDir.unprotectedSetTimes(timesOp.path,
@@ -329,8 +301,6 @@ public class FSEditLogLoader {
             break;
           }
           case OP_SYMLINK: {
-            numOpSymlink++;
-
             SymlinkOp symlinkOp = (SymlinkOp)op;
             fsDir.unprotectedSymlink(symlinkOp.path, symlinkOp.value,
                                      symlinkOp.mtime, symlinkOp.atime,
@@ -338,7 +308,6 @@ public class FSEditLogLoader {
             break;
           }
           case OP_RENAME: {
-            numOpRename++;
             RenameOp renameOp = (RenameOp)op;
 
             HdfsFileStatus dinfo = fsDir.getFileInfo(renameOp.dst, false);
@@ -348,7 +317,6 @@ public class FSEditLogLoader {
             break;
           }
           case OP_GET_DELEGATION_TOKEN: {
-            numOpGetDelegationToken++;
             GetDelegationTokenOp getDelegationTokenOp
               = (GetDelegationTokenOp)op;
 
@@ -358,8 +326,6 @@ public class FSEditLogLoader {
             break;
           }
           case OP_RENEW_DELEGATION_TOKEN: {
-            numOpRenewDelegationToken++;
-
             RenewDelegationTokenOp renewDelegationTokenOp
               = (RenewDelegationTokenOp)op;
             fsNamesys.getDelegationTokenSecretManager()
@@ -368,8 +334,6 @@ public class FSEditLogLoader {
             break;
           }
           case OP_CANCEL_DELEGATION_TOKEN: {
-            numOpCancelDelegationToken++;
-
             CancelDelegationTokenOp cancelDelegationTokenOp
               = (CancelDelegationTokenOp)op;
             fsNamesys.getDelegationTokenSecretManager()
@@ -378,14 +342,12 @@ public class FSEditLogLoader {
             break;
           }
           case OP_UPDATE_MASTER_KEY: {
-            numOpUpdateMasterKey++;
             UpdateMasterKeyOp updateMasterKeyOp = (UpdateMasterKeyOp)op;
             fsNamesys.getDelegationTokenSecretManager()
               .updatePersistedMasterKey(updateMasterKeyOp.key);
             break;
           }
           case OP_REASSIGN_LEASE: {
-            numOpReassignLease++;
             ReassignLeaseOp reassignLeaseOp = (ReassignLeaseOp)op;
 
             Lease lease = fsNamesys.leaseManager.getLease(
@@ -400,17 +362,16 @@ public class FSEditLogLoader {
           case OP_START_LOG_SEGMENT:
           case OP_END_LOG_SEGMENT: {
             // no data in here currently.
-            numOpOther++;
             break;
           }
           case OP_DATANODE_ADD:
           case OP_DATANODE_REMOVE:
-            numOpOther++;
             break;
           default:
             throw new IOException("Invalid operation read " + op.opCode);
           }
         }
+
       } catch (IOException ex) {
         check203UpgradeFailure(logVersion, ex);
       } finally {
@@ -421,7 +382,7 @@ public class FSEditLogLoader {
       // Catch Throwable because in the case of a truly corrupt edits log, any
       // sort of error might be thrown (NumberFormat, NullPointer, EOF, etc.)
       StringBuilder sb = new StringBuilder();
-      sb.append("Error replaying edit log at offset " + tracker.getPos());
+      sb.append("Error replaying edit log at offset " + in.getPosition());
       if (recentOpcodeOffsets[0] != -1) {
         Arrays.sort(recentOpcodeOffsets);
         sb.append("\nRecent opcode offsets:");
@@ -439,24 +400,29 @@ public class FSEditLogLoader {
       fsNamesys.writeUnlock();
     }
     if (FSImage.LOG.isDebugEnabled()) {
-      FSImage.LOG.debug("numOpAdd = " + numOpAdd + " numOpClose = " + numOpClose 
-          + " numOpDelete = " + numOpDelete 
-          + " numOpRenameOld = " + numOpRenameOld 
-          + " numOpSetRepl = " + numOpSetRepl + " numOpMkDir = " + numOpMkDir
-          + " numOpSetPerm = " + numOpSetPerm 
-          + " numOpSetOwner = " + numOpSetOwner
-          + " numOpSetGenStamp = " + numOpSetGenStamp 
-          + " numOpTimes = " + numOpTimes
-          + " numOpConcatDelete  = " + numOpConcatDelete
-          + " numOpRename = " + numOpRename
-          + " numOpGetDelegationToken = " + numOpGetDelegationToken
-          + " numOpRenewDelegationToken = " + numOpRenewDelegationToken
-          + " numOpCancelDelegationToken = " + numOpCancelDelegationToken
-          + " numOpUpdateMasterKey = " + numOpUpdateMasterKey
-          + " numOpReassignLease = " + numOpReassignLease
-          + " numOpOther = " + numOpOther);
+      dumpOpCounts(opCounts);
     }
     return numEdits;
+  }
+
+
+  private static void dumpOpCounts(
+      EnumMap<FSEditLogOpCodes, Holder<Integer>> opCounts) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("Summary of operations loaded from edit log:\n  ");
+    Joiner.on("\n  ").withKeyValueSeparator("=").appendTo(sb, opCounts);
+    FSImage.LOG.debug(sb.toString());
+  }
+
+  private void incrOpCount(FSEditLogOpCodes opCode,
+      EnumMap<FSEditLogOpCodes, Holder<Integer>> opCounts) {
+    Holder<Integer> holder = opCounts.get(opCode);
+    if (holder == null) {
+      holder = new Holder<Integer>(1);
+      opCounts.put(opCode, holder);
+    } else {
+      holder.held++;
+    }
   }
 
   /**
@@ -480,49 +446,50 @@ public class FSEditLogLoader {
     }
   }
   
+  static EditLogValidation validateEditLog(File file) throws IOException {
+    EditLogFileInputStream in;
+    try {
+      in = new EditLogFileInputStream(file);
+    } catch (LogHeaderCorruptException corrupt) {
+      // If it's missing its header, this is equivalent to no transactions
+      FSImage.LOG.warn("Log at " + file + " has no valid header",
+          corrupt);
+      return new EditLogValidation(0, 0);
+    }
+    
+    try {
+      return validateEditLog(in);
+    } finally {
+      IOUtils.closeStream(in);
+    }
+  }
+
   /**
-   * Return the number of valid transactions in the file. If the file is
+   * Return the number of valid transactions in the stream. If the stream is
    * truncated during the header, returns a value indicating that there are
-   * 0 valid transactions.
-   * @throws IOException if the file cannot be read due to an IO error (eg
+   * 0 valid transactions. This reads through the stream but does not close
+   * it.
+   * @throws IOException if the stream cannot be read due to an IO error (eg
    *                     if the log does not exist)
    */
-  static EditLogValidation validateEditLog(File f) throws IOException {
-    FileInputStream fis = new FileInputStream(f);
+  static EditLogValidation validateEditLog(EditLogInputStream in) {
+    long numValid = 0;
+    long lastPos = 0;
     try {
-      PositionTrackingInputStream tracker = new PositionTrackingInputStream(
-          new BufferedInputStream(fis));
-      DataInputStream dis = new DataInputStream(tracker);
-      LogHeader header; 
-      try {
-        header = LogHeader.read(dis);
-      } catch (Throwable t) {
-        FSImage.LOG.debug("Unable to read header from " + f +
-            " -> no valid transactions in this file.");
-        return new EditLogValidation(0, 0);
-      }
-      
-      Reader reader = new FSEditLogOp.Reader(dis, header.logVersion, header.checksum);
-      long numValid = 0;
-      long lastPos = 0;
-      try {
-        while (true) {
-          lastPos = tracker.getPos();
-          if (reader.readOp() == null) {
-            break;
-          }
-          numValid++;
+      while (true) {
+        lastPos = in.getPosition();
+        if (in.readOp() == null) {
+          break;
         }
-      } catch (Throwable t) {
-        // Catch Throwable and not just IOE, since bad edits may generate
-        // NumberFormatExceptions, AssertionErrors, OutOfMemoryErrors, etc.
-        FSImage.LOG.debug("Caught exception after reading " + numValid +
-            " ops from " + f + " while determining its valid length.", t);
+        numValid++;
       }
-      return new EditLogValidation(lastPos, numValid);
-    } finally {
-      fis.close();
+    } catch (Throwable t) {
+      // Catch Throwable and not just IOE, since bad edits may generate
+      // NumberFormatExceptions, AssertionErrors, OutOfMemoryErrors, etc.
+      FSImage.LOG.debug("Caught exception after reading " + numValid +
+          " ops from " + in + " while determining its valid length.", t);
     }
+    return new EditLogValidation(lastPos, numValid);
   }
   
   static class EditLogValidation {
@@ -536,9 +503,9 @@ public class FSEditLogLoader {
   }
 
   /**
-   * Stream wrapper that keeps track of the current file position.
+   * Stream wrapper that keeps track of the current stream position.
    */
-  private static class PositionTrackingInputStream extends FilterInputStream {
+  static class PositionTrackingInputStream extends FilterInputStream {
     private long curPos = 0;
     private long markPos = -1;
 
@@ -582,4 +549,5 @@ public class FSEditLogLoader {
       return curPos;
     }
   }
+
 }

@@ -52,7 +52,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  *         timestamp = in.readLong();
  *       }
  *       
- *       public int compareTo(MyWritableComparable w) {
+ *       public int compareTo(MyWritableComparable o) {
  *         int thisValue = this.value;
  *         int thatValue = ((IntWritable)o).value;
  *         return (thisValue &lt; thatValue ? -1 : (thisValue==thatValue ? 0 : 1));

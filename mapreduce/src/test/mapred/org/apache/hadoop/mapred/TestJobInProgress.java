@@ -324,7 +324,7 @@ public class TestJobInProgress extends TestCase {
 
     verify(jspy).getStatus();
     verify(jspy).getProfile();
-    verify(jspy).getJobCounters();
+    verify(jspy, atLeastOnce()).getJobCounters();
     verify(jspy, atLeastOnce()).getJobID();
     verify(jspy).getStartTime();
     verify(jspy).getFirstTaskLaunchTimes();

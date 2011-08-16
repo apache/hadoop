@@ -17,21 +17,26 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.NavigableSet;
+import java.util.TreeSet;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 
-/* Class for keeping track of under replication blocks
+/** Keep track of under replication blocks.
  * Blocks have replication priority, with priority 0 indicating the highest
  * Blocks have only one replicas has the highest
  */
-public class UnderReplicatedBlocks implements Iterable<Block> {
+class UnderReplicatedBlocks implements Iterable<Block> {
   static final int LEVEL = 5;
-  static public final int QUEUE_WITH_CORRUPT_BLOCKS = 4;
-  private List<TreeSet<Block>> priorityQueues = new ArrayList<TreeSet<Block>>();
+  static final int QUEUE_WITH_CORRUPT_BLOCKS = 4;
+  private final List<NavigableSet<Block>> priorityQueues
+      = new ArrayList<NavigableSet<Block>>();
       
-  /* constructor */
+  /** Create an object. */
   UnderReplicatedBlocks() {
     for(int i=0; i<LEVEL; i++) {
       priorityQueues.add(new TreeSet<Block>());
@@ -47,8 +52,8 @@ public class UnderReplicatedBlocks implements Iterable<Block> {
     }
   }
 
-  /* Return the total number of under replication blocks */
-  public synchronized int size() {
+  /** Return the total number of under replication blocks */
+  synchronized int size() {
     int size = 0;
     for (int i=0; i<LEVEL; i++) {
       size += priorityQueues.get(i).size();
@@ -56,7 +61,7 @@ public class UnderReplicatedBlocks implements Iterable<Block> {
     return size;
   }
 
-  /* Return the number of under replication blocks excluding corrupt blocks */
+  /** Return the number of under replication blocks excluding corrupt blocks */
   synchronized int getUnderReplicatedBlockCount() {
     int size = 0;
     for (int i=0; i<QUEUE_WITH_CORRUPT_BLOCKS; i++) {
@@ -70,15 +75,15 @@ public class UnderReplicatedBlocks implements Iterable<Block> {
     return priorityQueues.get(QUEUE_WITH_CORRUPT_BLOCKS).size();
   }
   
-  /* Check if a block is in the neededReplication queue */
-  public synchronized boolean contains(Block block) {
-    for(TreeSet<Block> set:priorityQueues) {
+  /** Check if a block is in the neededReplication queue */
+  synchronized boolean contains(Block block) {
+    for(NavigableSet<Block> set : priorityQueues) {
       if(set.contains(block)) { return true; }
     }
     return false;
   }
       
-  /* Return the priority of a block
+  /** Return the priority of a block
    * @param block a under replication block
    * @param curReplicas current number of replicas of the block
    * @param expectedReplicas expected number of replicas of the block
@@ -106,7 +111,7 @@ public class UnderReplicatedBlocks implements Iterable<Block> {
     }
   }
       
-  /* add a block to a under replication queue according to its priority
+  /** add a block to a under replication queue according to its priority
    * @param block a under replication block
    * @param curReplicas current number of replicas of the block
    * @param expectedReplicas expected number of replicas of the block
@@ -134,7 +139,7 @@ public class UnderReplicatedBlocks implements Iterable<Block> {
     return false;
   }
 
-  /* remove a block from a under replication queue */
+  /** remove a block from a under replication queue */
   synchronized boolean remove(Block block, 
                               int oldReplicas, 
                               int decommissionedReplicas,
@@ -145,7 +150,7 @@ public class UnderReplicatedBlocks implements Iterable<Block> {
     return remove(block, priLevel);
   }
       
-  /* remove a block from a under replication queue given a priority*/
+  /** remove a block from a under replication queue given a priority*/
   boolean remove(Block block, int priLevel) {
     if(priLevel >= 0 && priLevel < LEVEL 
         && priorityQueues.get(priLevel).remove(block)) {
@@ -174,7 +179,7 @@ public class UnderReplicatedBlocks implements Iterable<Block> {
     return false;
   }
       
-  /* update the priority level of a block */
+  /** update the priority level of a block */
   synchronized void update(Block block, int curReplicas, 
                            int decommissionedReplicas,
                            int curExpectedReplicas,
@@ -209,30 +214,29 @@ public class UnderReplicatedBlocks implements Iterable<Block> {
     }
   }
 
-  /* returns an iterator of all blocks in a given priority queue */
+  /** returns an iterator of all blocks in a given priority queue */
   synchronized BlockIterator iterator(int level) {
     return new BlockIterator(level);
   }
     
-  /* return an iterator of all the under replication blocks */
+  /** return an iterator of all the under replication blocks */
   public synchronized BlockIterator iterator() {
     return new BlockIterator();
   }
   
-  public class BlockIterator implements Iterator<Block> {
+  class BlockIterator implements Iterator<Block> {
     private int level;
     private boolean isIteratorForLevel = false;
     private List<Iterator<Block>> iterators = new ArrayList<Iterator<Block>>();
 
-    BlockIterator()  
-    {
+    private BlockIterator() {
       level=0;
       for(int i=0; i<LEVEL; i++) {
         iterators.add(priorityQueues.get(i).iterator());
       }
     }
 
-    BlockIterator(int l) {
+    private BlockIterator(int l) {
       level = l;
       isIteratorForLevel = true;
       iterators.add(priorityQueues.get(level).iterator());
@@ -246,6 +250,7 @@ public class UnderReplicatedBlocks implements Iterable<Block> {
       }
     }
 
+    @Override
     public Block next() {
       if (isIteratorForLevel)
         return iterators.get(0).next();
@@ -253,6 +258,7 @@ public class UnderReplicatedBlocks implements Iterable<Block> {
       return iterators.get(level).next();
     }
 
+    @Override
     public boolean hasNext() {
       if (isIteratorForLevel)
         return iterators.get(0).hasNext();
@@ -260,6 +266,7 @@ public class UnderReplicatedBlocks implements Iterable<Block> {
       return iterators.get(level).hasNext();
     }
 
+    @Override
     public void remove() {
       if (isIteratorForLevel) 
         iterators.get(0).remove();
@@ -267,8 +274,8 @@ public class UnderReplicatedBlocks implements Iterable<Block> {
         iterators.get(level).remove();
     }
 
-    public int getPriority() {
+    int getPriority() {
       return level;
-    };
+    }
   }  
 }

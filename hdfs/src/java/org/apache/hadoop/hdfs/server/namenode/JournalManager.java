@@ -55,7 +55,7 @@ interface JournalManager {
    * @param purger the purging implementation to use
    * @throws IOException if purging fails
    */
-  void purgeLogsOlderThan(long minTxIdToKeep, StoragePurger purger)
+  void purgeLogsOlderThan(long minTxIdToKeep)
     throws IOException;
 
   /**

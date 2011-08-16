@@ -27,6 +27,9 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
 
+import org.apache.hadoop.mapred.ProgressSplitsBlock;
+import org.apache.hadoop.mapred.TaskStatus;
+
 import org.apache.avro.util.Utf8;
 
 /**
@@ -47,11 +50,16 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
    * @param finishTime Finish time of the attempt
    * @param hostname Name of the host where the attempt executed
    * @param error Error string
+   * @param allSplits the "splits", or a pixelated graph of various
+   *        measurable worker node state variables against progress.
+   *        Currently there are four; wallclock time, CPU time,
+   *        virtual memory and physical memory.  
    */
-  public TaskAttemptUnsuccessfulCompletionEvent(TaskAttemptID id, 
-      TaskType taskType,
-      String status, long finishTime, 
-      String hostname, String error) {
+  public TaskAttemptUnsuccessfulCompletionEvent
+       (TaskAttemptID id, TaskType taskType,
+        String status, long finishTime, 
+        String hostname, String error,
+        int[][] allSplits) {
     datum.taskid = new Utf8(id.getTaskID().toString());
     datum.taskType = new Utf8(taskType.name());
     datum.attemptId = new Utf8(id.toString());
@@ -59,6 +67,40 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
     datum.hostname = new Utf8(hostname);
     datum.error = new Utf8(error);
     datum.status = new Utf8(status);
+
+    datum.clockSplits 
+      = AvroArrayUtils.toAvro
+           (ProgressSplitsBlock.arrayGetWallclockTime(allSplits));
+    datum.cpuUsages 
+      = AvroArrayUtils.toAvro
+           (ProgressSplitsBlock.arrayGetCPUTime(allSplits));
+    datum.vMemKbytes 
+      = AvroArrayUtils.toAvro
+           (ProgressSplitsBlock.arrayGetVMemKbytes(allSplits));
+    datum.physMemKbytes 
+      = AvroArrayUtils.toAvro
+           (ProgressSplitsBlock.arrayGetPhysMemKbytes(allSplits));
+  }
+
+  /** 
+   * @deprecated please use the constructor with an additional
+   *              argument, an array of splits arrays instead.  See
+   *              {@link org.apache.hadoop.mapred.ProgressSplitsBlock}
+   *              for an explanation of the meaning of that parameter.
+   *
+   * Create an event to record the unsuccessful completion of attempts
+   * @param id Attempt ID
+   * @param taskType Type of the task
+   * @param status Status of the attempt
+   * @param finishTime Finish time of the attempt
+   * @param hostname Name of the host where the attempt executed
+   * @param error Error string
+   */
+  public TaskAttemptUnsuccessfulCompletionEvent
+       (TaskAttemptID id, TaskType taskType,
+        String status, long finishTime, 
+        String hostname, String error) {
+    this(id, taskType, status, finishTime, hostname, error, null);
   }
 
   TaskAttemptUnsuccessfulCompletionEvent() {}
@@ -99,6 +141,21 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
            : (failed
               ? EventType.REDUCE_ATTEMPT_FAILED
               : EventType.REDUCE_ATTEMPT_KILLED);
+  }
+
+
+
+  public int[] getClockSplits() {
+    return AvroArrayUtils.fromAvro(datum.clockSplits);
+  }
+  public int[] getCpuUsages() {
+    return AvroArrayUtils.fromAvro(datum.cpuUsages);
+  }
+  public int[] getVMemKbytes() {
+    return AvroArrayUtils.fromAvro(datum.vMemKbytes);
+  }
+  public int[] getPhysMemKbytes() {
+    return AvroArrayUtils.fromAvro(datum.physMemKbytes);
   }
 
 }

@@ -309,10 +309,28 @@ Trunk (unreleased changes)
     HADOOP-7501. Publish Hadoop Common artifacts (post HADOOP-6671) to Apache
     SNAPSHOTs repo. (Alejandro Abdelnur via tomwhite)
 
+    HADOOP-7525. Make arguments to test-patch optional. (tomwhite)
+
+    HADOOP-7472. RPC client should deal with IP address change.
+    (Kihwal Lee via suresh)
+  
+    HADOOP-7499. Add method for doing a sanity check on hostnames in NetUtils.
+    (Jeffrey Naisbit via mahadev)
+
+    HADOOP-6158. Move CyclicIteration to HDFS. (eli)
+
+    HADOOP-7526. Add TestPath tests for URI conversion and reserved
+    characters. (eli)
+
+    HADOOP-7531. Add servlet util methods for handling paths in requests. (eli)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
     via todd)
+
+    HADOOP-7445. Implement bulk checksum verification using efficient native
+    code. (todd)
 
   BUG FIXES
 
@@ -451,6 +469,34 @@ Trunk (unreleased changes)
 
     HADOOP-7508. Compiled nativelib is in wrong directory and it is not picked
     up by surefire setup. (Alejandro Abdelnur via tomwhite)
+   
+    HADOOP-7520. Fix to add distribution management info to hadoop-main
+    (Alejandro Abdelnur via gkesavan)
+
+    HADOOP-7515. test-patch reports the wrong number of javadoc warnings.
+    (tomwhite)
+
+    HADOOP-7523. Test org.apache.hadoop.fs.TestFilterFileSystem fails due to
+    java.lang.NoSuchMethodException. (John Lee via tomwhite)
+
+    HADOOP-7528. Maven build fails in Windows. (Alejandro Abdelnur via
+    tomwhite)
+
+    HADOOP-7533. Allow test-patch to be run from any subproject directory.
+    (tomwhite)
+
+    HADOOP-7512. Fix example mistake in WritableComparable javadocs.
+    (Harsh J via eli)
+
+    HADOOP-7357. hadoop.io.compress.TestCodec#main() should exit with
+    non-zero exit code if test failed. (Philip Zeyliger via eli)
+
+    HADOOP-6622. Token should not print the password in toString. (eli)
+
+    HADOOP-7529. Fix lock cycles in metrics system. (llu)
+
+    HADOOP-7545. Common -tests JAR should not include properties and configs.
+    (todd)
 
 Release 0.22.0 - Unreleased
 

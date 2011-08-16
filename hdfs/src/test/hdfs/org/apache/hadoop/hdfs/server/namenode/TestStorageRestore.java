@@ -140,17 +140,9 @@ public class TestStorageRestore {
   /**
    * test
    */
-  public void printStorages(FSImage fs) {
-    LOG.info("current storages and corresponding sizes:");
-    for(Iterator<StorageDirectory> it = fs.getStorage().dirIterator(); it.hasNext(); ) {
-      StorageDirectory sd = it.next();
-
-      File curDir = sd.getCurrentDir();
-      for (File f : curDir.listFiles()) {
-        LOG.info("  file " + f.getAbsolutePath() + "; len = " + f.length());  
-      }
-    }
-  }
+  private void printStorages(FSImage image) {
+    FSImageTestUtil.logStorageContents(LOG, image.getStorage());
+  }    
 
   /**
    * test 

@@ -67,7 +67,7 @@ public class TaskFinishedEvent implements HistoryEvent {
   /** Get the task finish time */
   public long getFinishTime() { return datum.finishTime; }
   /** Get task counters */
-  Counters getCounters() { return EventReader.fromAvro(datum.counters); }
+  public Counters getCounters() { return EventReader.fromAvro(datum.counters); }
   /** Get task type */
   public TaskType getTaskType() {
     return TaskType.valueOf(datum.taskType.toString());

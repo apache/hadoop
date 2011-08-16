@@ -2778,7 +2778,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    */
   synchronized boolean processHeartbeat(
                                  TaskTrackerStatus trackerStatus, 
-                                 boolean initialContact) {
+                                 boolean initialContact)
+                                 throws UnknownHostException {
     
     getInstrumentation().heartbeat();
 

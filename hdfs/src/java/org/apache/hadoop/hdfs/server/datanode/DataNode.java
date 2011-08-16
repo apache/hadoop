@@ -169,7 +169,7 @@ import org.mortbay.util.ajax.JSON;
  **********************************************************/
 @InterfaceAudience.Private
 public class DataNode extends Configured 
-    implements InterDatanodeProtocol, ClientDatanodeProtocol, FSConstants,
+    implements InterDatanodeProtocol, ClientDatanodeProtocol,
     DataNodeMXBean {
   public static final Log LOG = LogFactory.getLog(DataNode.class);
   
@@ -348,7 +348,7 @@ public class DataNode extends Configured
   ThreadGroup threadGroup = null;
   long blockReportInterval;
   boolean resetBlockReportTime = true;
-  long initialBlockReportDelay = BLOCKREPORT_INITIAL_DELAY * 1000L;
+  long initialBlockReportDelay = DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT * 1000L;
   long heartBeatInterval;
   private boolean heartbeatsDisabledForTests = false;
   private DataStorage storage = null;
@@ -440,21 +440,23 @@ public class DataNode extends Configured
                                           HdfsConstants.WRITE_TIMEOUT);
     /* Based on results on different platforms, we might need set the default 
      * to false on some of them. */
-    this.transferToAllowed = conf.getBoolean("dfs.datanode.transferTo.allowed", 
-                                             true);
+    this.transferToAllowed = conf.getBoolean(
+        DFS_DATANODE_TRANSFERTO_ALLOWED_KEY,
+        DFS_DATANODE_TRANSFERTO_ALLOWED_DEFAULT);
     this.writePacketSize = conf.getInt(DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 
                                        DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
-
-    this.blockReportInterval =
-      conf.getLong(DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, BLOCKREPORT_INTERVAL);
-    this.initialBlockReportDelay = conf.getLong(DFS_BLOCKREPORT_INITIAL_DELAY_KEY,
-                                            BLOCKREPORT_INITIAL_DELAY)* 1000L; 
+    this.blockReportInterval = conf.getLong(DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,
+        DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT);
+    this.initialBlockReportDelay = conf.getLong(
+        DFS_BLOCKREPORT_INITIAL_DELAY_KEY,
+        DFS_BLOCKREPORT_INITIAL_DELAY_DEFAULT) * 1000L;
     if (this.initialBlockReportDelay >= blockReportInterval) {
       this.initialBlockReportDelay = 0;
       LOG.info("dfs.blockreport.initialDelay is greater than " +
         "dfs.blockreport.intervalMsec." + " Setting initial delay to 0 msec:");
     }
-    this.heartBeatInterval = conf.getLong(DFS_HEARTBEAT_INTERVAL_KEY, HEARTBEAT_INTERVAL) * 1000L;
+    this.heartBeatInterval = conf.getLong(DFS_HEARTBEAT_INTERVAL_KEY,
+        DFS_HEARTBEAT_INTERVAL_DEFAULT) * 1000L;
 
     // do we need to sync block file contents to disk when blockfile is closed?
     this.syncOnClose = conf.getBoolean(DFS_DATANODE_SYNCONCLOSE_KEY, 
@@ -617,7 +619,7 @@ public class DataNode extends Configured
     } else {
       ss = secureResources.getStreamingSocket();
     }
-    ss.setReceiveBufferSize(DEFAULT_DATA_SOCKET_SIZE); 
+    ss.setReceiveBufferSize(FSConstants.DEFAULT_DATA_SOCKET_SIZE); 
     // adjust machine name with the actual port
     int tmpPort = ss.getLocalPort();
     selfAddr = new InetSocketAddress(ss.getInetAddress().getHostAddress(),
@@ -1967,8 +1969,8 @@ public class DataNode extends Configured
         long writeTimeout = socketWriteTimeout + 
                             HdfsConstants.WRITE_TIMEOUT_EXTENSION * (targets.length-1);
         OutputStream baseStream = NetUtils.getOutputStream(sock, writeTimeout);
-        out = new DataOutputStream(new BufferedOutputStream(baseStream, 
-                                                            SMALL_BUFFER_SIZE));
+        out = new DataOutputStream(new BufferedOutputStream(baseStream,
+            FSConstants.SMALL_BUFFER_SIZE));
         blockSender = new BlockSender(b, 0, b.getNumBytes(), 
             false, false, false, DataNode.this);
         DatanodeInfo srcNode = new DatanodeInfo(bpReg);

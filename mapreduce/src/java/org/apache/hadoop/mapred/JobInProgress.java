@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -52,6 +53,7 @@ import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.counters.LimitExceededException;
 import org.apache.hadoop.mapreduce.jobhistory.JobFinishedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistory;
 import org.apache.hadoop.mapreduce.jobhistory.JobInfoChangeEvent;
@@ -622,7 +624,7 @@ public class JobInProgress {
    * at {@link JobTracker#initJob(JobInProgress)} for more details.
    */
   public synchronized void initTasks() 
-  throws IOException, KillInterruptedException {
+  throws IOException, KillInterruptedException, UnknownHostException {
     if (tasksInited.get() || isComplete()) {
       return;
     }
@@ -652,6 +654,11 @@ public class JobInProgress {
     numMapTasks = taskSplitMetaInfo.length;
 
     checkTaskLimits();
+
+    // Sanity check the locations so we don't create/initialize unnecessary tasks
+    for (TaskSplitMetaInfo split : taskSplitMetaInfo) {
+      NetUtils.verifyHostnames(split.getLocations());
+    }
 
     jobtracker.getInstrumentation().addWaitingMaps(getJobID(), numMapTasks);
     jobtracker.getInstrumentation().addWaitingReduces(getJobID(), numReduceTasks);
@@ -1285,8 +1292,12 @@ public class JobInProgress {
    */
   private Counters incrementTaskCounters(Counters counters,
                                          TaskInProgress[] tips) {
-    for (TaskInProgress tip : tips) {
-      counters.incrAllCounters(tip.getCounters());
+    try {
+      for (TaskInProgress tip : tips) {
+        counters.incrAllCounters(tip.getCounters());
+      }
+    } catch (LimitExceededException e) {
+      // too many user counters/groups, leaving existing counters intact.
     }
     return counters;
   }
@@ -2667,25 +2678,29 @@ public class JobInProgress {
         status.getTaskTracker(),  ttStatus.getHttpPort());
     
     jobHistory.logEvent(tse, status.getTaskID().getJobID());
-    
+    TaskAttemptID statusAttemptID = status.getTaskID();
 
     if (status.getIsMap()){
       MapAttemptFinishedEvent mfe = new MapAttemptFinishedEvent(
-          status.getTaskID(), taskType, TaskStatus.State.SUCCEEDED.toString(),
+          statusAttemptID, taskType, TaskStatus.State.SUCCEEDED.toString(),
           status.getMapFinishTime(),
           status.getFinishTime(),  trackerHostname,
           status.getStateString(), 
-          new org.apache.hadoop.mapreduce.Counters(status.getCounters()));
+          new org.apache.hadoop.mapreduce.Counters(status.getCounters()),
+          tip.getSplits(statusAttemptID).burst()
+          );
       
       jobHistory.logEvent(mfe,  status.getTaskID().getJobID());
       
     }else{
       ReduceAttemptFinishedEvent rfe = new ReduceAttemptFinishedEvent(
-          status.getTaskID(), taskType, TaskStatus.State.SUCCEEDED.toString(), 
+          statusAttemptID, taskType, TaskStatus.State.SUCCEEDED.toString(), 
           status.getShuffleFinishTime(),
           status.getSortFinishTime(), status.getFinishTime(),
           trackerHostname, status.getStateString(),
-          new org.apache.hadoop.mapreduce.Counters(status.getCounters()));
+          new org.apache.hadoop.mapreduce.Counters(status.getCounters()),
+          tip.getSplits(statusAttemptID).burst()
+          );
       
       jobHistory.logEvent(rfe,  status.getTaskID().getJobID());
       
@@ -2738,6 +2753,9 @@ public class JobInProgress {
       retireMap(tip);
       if ((finishedMapTasks + failedMapTIPs) == (numMapTasks)) {
         this.status.setMapProgress(1.0f);
+        if (canLaunchJobCleanupTask()) {
+          checkCountersLimitsOrFail();
+        }
       }
     } else {
       runningReduceTasks -= 1;
@@ -2750,6 +2768,9 @@ public class JobInProgress {
       retireReduce(tip);
       if ((finishedReduceTasks + failedReduceTIPs) == (numReduceTasks)) {
         this.status.setReduceProgress(1.0f);
+        if (canLaunchJobCleanupTask()) {
+          checkCountersLimitsOrFail();
+        }
       }
     }
     decrementSpeculativeCount(wasSpeculating, tip);
@@ -2758,6 +2779,19 @@ public class JobInProgress {
       jobComplete();
     }
     return true;
+  }
+
+  /*
+   * add up the counters and fail the job if it exceeds the limits.
+   * Make sure we do not recalculate the counters after we fail the job.
+   * Currently this is taken care by terminateJob() since it does not
+   * calculate the counters.
+   */
+  private void checkCountersLimitsOrFail() {
+    Counters counters = getCounters();
+    if (counters.limits().violation() != null) {
+      jobtracker.failJob(this);
+    }
   }
   
   private void updateTaskTrackerStats(TaskInProgress tip, TaskTrackerStatus ttStatus, 
@@ -3165,12 +3199,16 @@ public class JobInProgress {
         taskid, taskType, startTime, taskTrackerName, taskTrackerPort);
     
     jobHistory.logEvent(tse, taskid.getJobID());
+
+    ProgressSplitsBlock splits = tip.getSplits(taskStatus.getTaskID());
    
-    TaskAttemptUnsuccessfulCompletionEvent tue = 
-      new TaskAttemptUnsuccessfulCompletionEvent(taskid, 
-          taskType, taskStatus.getRunState().toString(),
-          finishTime, 
-          taskTrackerHostName, diagInfo);
+    TaskAttemptUnsuccessfulCompletionEvent tue =
+      new TaskAttemptUnsuccessfulCompletionEvent
+            (taskid, 
+             taskType, taskStatus.getRunState().toString(),
+             finishTime, 
+             taskTrackerHostName, diagInfo,
+             splits.burst());
     jobHistory.logEvent(tue, taskid.getJobID());
         
     // After this, try to assign tasks with the one after this, so that

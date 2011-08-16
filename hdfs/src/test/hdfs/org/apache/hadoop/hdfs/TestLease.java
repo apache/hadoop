@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Assert;
 import org.junit.Test;
@@ -31,7 +32,8 @@ import org.mockito.Mockito;
 
 public class TestLease {
   static boolean hasLease(MiniDFSCluster cluster, Path src) {
-    return cluster.getNamesystem().leaseManager.getLeaseByPath(src.toString()) != null;
+    return NameNodeAdapter.getLeaseManager(cluster.getNamesystem()
+        ).getLeaseByPath(src.toString()) != null;
   }
   
   final Path dir = new Path("/test/lease/");

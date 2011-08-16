@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -48,7 +49,8 @@ import org.junit.Test;
 
 public class TestDelegationToken {
   private MiniDFSCluster cluster;
-  Configuration config;
+  private DelegationTokenSecretManager dtSecretManager;
+  private Configuration config;
   private static final Log LOG = LogFactory.getLog(TestDelegationToken.class);
   
   @Before
@@ -61,7 +63,9 @@ public class TestDelegationToken {
     FileSystem.setDefaultUri(config, "hdfs://localhost:" + "0");
     cluster = new MiniDFSCluster.Builder(config).build();
     cluster.waitActive();
-    cluster.getNamesystem().getDelegationTokenSecretManager().startThreads();
+    dtSecretManager = NameNodeAdapter.getDtSecretManager(
+        cluster.getNamesystem());
+    dtSecretManager.startThreads();
   }
 
   @After
@@ -73,8 +77,6 @@ public class TestDelegationToken {
 
   private Token<DelegationTokenIdentifier> generateDelegationToken(
       String owner, String renewer) {
-    DelegationTokenSecretManager dtSecretManager = cluster.getNamesystem()
-        .getDelegationTokenSecretManager();
     DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(new Text(
         owner), new Text(renewer), null);
     return new Token<DelegationTokenIdentifier>(dtId, dtSecretManager);
@@ -82,8 +84,6 @@ public class TestDelegationToken {
   
   @Test
   public void testDelegationTokenSecretManager() throws Exception {
-    DelegationTokenSecretManager dtSecretManager = cluster.getNamesystem()
-        .getDelegationTokenSecretManager();
     Token<DelegationTokenIdentifier> token = generateDelegationToken(
         "SomeUser", "JobTracker");
     // Fake renewer should not be able to renew
@@ -122,8 +122,6 @@ public class TestDelegationToken {
   
   @Test 
   public void testCancelDelegationToken() throws Exception {
-    DelegationTokenSecretManager dtSecretManager = cluster.getNamesystem()
-        .getDelegationTokenSecretManager();
     Token<DelegationTokenIdentifier> token = generateDelegationToken(
         "SomeUser", "JobTracker");
     //Fake renewer should not be able to renew
@@ -144,7 +142,6 @@ public class TestDelegationToken {
   
   @Test
   public void testDelegationTokenDFSApi() throws Exception {
-    DelegationTokenSecretManager dtSecretManager = cluster.getNamesystem().getDelegationTokenSecretManager();
     DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
     Token<DelegationTokenIdentifier> token = dfs.getDelegationToken("JobTracker");
     DelegationTokenIdentifier identifier = new DelegationTokenIdentifier();

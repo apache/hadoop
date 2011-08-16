@@ -309,10 +309,10 @@ public class Balancer {
             target.datanode.getName()), HdfsConstants.READ_TIMEOUT);
         sock.setKeepAlive(true);
         out = new DataOutputStream( new BufferedOutputStream(
-            sock.getOutputStream(), FSConstants.BUFFER_SIZE));
+            sock.getOutputStream(), FSConstants.IO_FILE_BUFFER_SIZE));
         sendRequest(out);
         in = new DataInputStream( new BufferedInputStream(
-            sock.getInputStream(), FSConstants.BUFFER_SIZE));
+            sock.getInputStream(), FSConstants.IO_FILE_BUFFER_SIZE));
         receiveResponse(in);
         bytesMoved.inc(block.getNumBytes());
         LOG.info( "Moving block " + block.getBlock().getBlockId() +

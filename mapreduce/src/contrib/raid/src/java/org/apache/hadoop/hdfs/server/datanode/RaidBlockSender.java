@@ -41,7 +41,7 @@ import org.apache.hadoop.util.StringUtils;
 /**
  * Reads a block from the disk and sends it to a recipient.
  */
-public class RaidBlockSender implements java.io.Closeable, FSConstants {
+public class RaidBlockSender implements java.io.Closeable {
   public static final Log LOG = DataNode.LOG;
   static final Log ClientTraceLog = DataNode.ClientTraceLog;
   
@@ -389,7 +389,7 @@ public class RaidBlockSender implements java.io.Closeable, FSConstants {
         streamForSendChunks = baseStream;
         
         // assure a mininum buffer size.
-        maxChunksPerPacket = (Math.max(BUFFER_SIZE, 
+        maxChunksPerPacket = (Math.max(FSConstants.IO_FILE_BUFFER_SIZE, 
                                        MIN_BUFFER_WITH_TRANSFERTO)
                               + bytesPerChecksum - 1)/bytesPerChecksum;
         
@@ -397,7 +397,7 @@ public class RaidBlockSender implements java.io.Closeable, FSConstants {
         pktSize += checksumSize * maxChunksPerPacket;
       } else {
         maxChunksPerPacket = Math.max(1,
-                 (BUFFER_SIZE + bytesPerChecksum - 1)/bytesPerChecksum);
+            (FSConstants.IO_FILE_BUFFER_SIZE + bytesPerChecksum - 1)/bytesPerChecksum);
         pktSize += (bytesPerChecksum + checksumSize) * maxChunksPerPacket;
       }
 

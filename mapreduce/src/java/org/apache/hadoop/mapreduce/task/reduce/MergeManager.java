@@ -133,7 +133,7 @@ public class MergeManager<K, V> {
                       Counters.Counter reduceCombineInputCounter,
                       Counters.Counter mergedMapOutputsCounter,
                       ExceptionReporter exceptionReporter,
-                      Progress mergePhase) {
+                      Progress mergePhase, MapOutputFile mapOutputFile) {
     this.reduceId = reduceId;
     this.jobConf = jobConf;
     this.localDirAllocator = localDirAllocator;
@@ -146,7 +146,7 @@ public class MergeManager<K, V> {
     this.reduceCombineInputCounter = reduceCombineInputCounter;
     this.spilledRecordsCounter = spilledRecordsCounter;
     this.mergedMapOutputsCounter = mergedMapOutputsCounter;
-    this.mapOutputFile = new MapOutputFile();
+    this.mapOutputFile = mapOutputFile;
     this.mapOutputFile.setConf(jobConf);
     
     this.localFS = localFS;

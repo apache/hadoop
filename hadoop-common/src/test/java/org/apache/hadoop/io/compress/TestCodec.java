@@ -501,7 +501,7 @@ public class TestCodec {
     LOG.info("SUCCESS! Completed SequenceFileCodecTest with codec \"" + codecClass + "\"");
   }
   
-  public static void main(String[] args) {
+  public static void main(String[] args) throws IOException {
     int count = 10000;
     String codecClass = "org.apache.hadoop.io.compress.DefaultCodec";
 
@@ -511,25 +511,20 @@ public class TestCodec {
       System.exit(-1);
     }
 
-    try {
-      for (int i=0; i < args.length; ++i) {       // parse command line
-        if (args[i] == null) {
-          continue;
-        } else if (args[i].equals("-count")) {
-          count = Integer.parseInt(args[++i]);
-        } else if (args[i].equals("-codec")) {
-          codecClass = args[++i];
-        }
+    for (int i=0; i < args.length; ++i) {       // parse command line
+      if (args[i] == null) {
+        continue;
+      } else if (args[i].equals("-count")) {
+        count = Integer.parseInt(args[++i]);
+      } else if (args[i].equals("-codec")) {
+        codecClass = args[++i];
       }
-
-      Configuration conf = new Configuration();
-      int seed = 0;
-      codecTest(conf, seed, count, codecClass);
-    } catch (Exception e) {
-      System.err.println("Caught: " + e);
-      e.printStackTrace();
     }
 
+    Configuration conf = new Configuration();
+    int seed = 0;
+    // Note that exceptions will propagate out.
+    codecTest(conf, seed, count, codecClass);
   }
 
   @Test

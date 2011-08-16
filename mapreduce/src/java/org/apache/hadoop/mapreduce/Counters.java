@@ -17,200 +17,121 @@
  */
 package org.apache.hadoop.mapreduce;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.TreeMap;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapreduce.counters.Limits;
+import org.apache.hadoop.mapreduce.counters.GenericCounter;
+import org.apache.hadoop.mapreduce.counters.AbstractCounterGroup;
+import org.apache.hadoop.mapreduce.counters.CounterGroupBase;
+import org.apache.hadoop.mapreduce.counters.FileSystemCounterGroup;
+import org.apache.hadoop.mapreduce.counters.AbstractCounters;
+import org.apache.hadoop.mapreduce.counters.CounterGroupFactory;
+import org.apache.hadoop.mapreduce.counters.FrameworkCounterGroup;
 
+/**
+ * <p><code>Counters</code> holds per job/task counters, defined either by the
+ * Map-Reduce framework or applications. Each <code>Counter</code> can be of
+ * any {@link Enum} type.</p>
+ *
+ * <p><code>Counters</code> are bunched into {@link CounterGroup}s, each
+ * comprising of counters from a particular <code>Enum</code> class.
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class Counters implements Writable,Iterable<CounterGroup> {
-  /**
-   * A cache from enum values to the associated counter. Dramatically speeds up
-   * typical usage.
-   */
-  private Map<Enum<?>, Counter> cache = new IdentityHashMap<Enum<?>, Counter>();
+public class Counters extends AbstractCounters<Counter, CounterGroup> {
 
-  private TreeMap<String, CounterGroup> groups = 
-      new TreeMap<String, CounterGroup>();
-  
-  public Counters() {
-  }
-  
-  /**
-   * Utility method to  create a Counters object from the 
-   * org.apache.hadoop.mapred counters
-   * @param counters
-   */
-  public Counters(org.apache.hadoop.mapred.Counters counters) {
-    for(org.apache.hadoop.mapred.Counters.Group group: counters) {
-      String name = group.getName();
-      CounterGroup newGroup = new CounterGroup(name, group.getDisplayName());
-      groups.put(name, newGroup);
-      for(Counter counter: group) {
-        newGroup.addCounter(counter);
-      }
+  // Mix framework group implementation into CounterGroup interface
+  private static class FrameworkGroupImpl<T extends Enum<T>>
+      extends FrameworkCounterGroup<T, Counter> implements CounterGroup {
+
+    FrameworkGroupImpl(Class<T> cls) {
+      super(cls);
+    }
+
+    @Override
+    protected FrameworkCounter newCounter(T key) {
+      return new FrameworkCounter(key);
     }
   }
 
-  /** Add a group. */
-  public void addGroup(CounterGroup group) {
-    groups.put(group.getName(), group);
-  }
+  // Mix generic group implementation into CounterGroup interface
+  // and provide some mandatory group factory methods.
+  private static class GenericGroup extends AbstractCounterGroup<Counter>
+      implements CounterGroup {
 
-  public Counter findCounter(String groupName, String counterName) {
-    CounterGroup grp = getGroup(groupName);
-    return grp.findCounter(counterName);
-  }
-
-  /**
-   * Find the counter for the given enum. The same enum will always return the
-   * same counter.
-   * @param key the counter key
-   * @return the matching counter object
-   */
-  public synchronized Counter findCounter(Enum<?> key) {
-    Counter counter = cache.get(key);
-    if (counter == null) {
-      counter = findCounter(key.getDeclaringClass().getName(), key.toString());
-      cache.put(key, counter);
+    GenericGroup(String name, String displayName, Limits limits) {
+      super(name, displayName, limits);
     }
-    return counter;    
-  }
 
-  /**
-   * Returns the names of all counter classes.
-   * @return Set of counter names.
-   */
-  public synchronized Collection<String> getGroupNames() {
-    return groups.keySet();
-  }
-
-  @Override
-  public Iterator<CounterGroup> iterator() {
-    return groups.values().iterator();
-  }
-
-  /**
-   * Returns the named counter group, or an empty group if there is none
-   * with the specified name.
-   */
-  public synchronized CounterGroup getGroup(String groupName) {
-    CounterGroup grp = groups.get(groupName);
-    if (grp == null) {
-      grp = new CounterGroup(groupName);
-      groups.put(groupName, grp);
+    @Override
+    protected Counter newCounter(String name, String displayName, long value) {
+      return new GenericCounter(name, displayName, value);
     }
-    return grp;
-  }
 
-  /**
-   * Returns the total number of counters, by summing the number of counters
-   * in each group.
-   */
-  public synchronized  int countCounters() {
-    int result = 0;
-    for (CounterGroup group : this) {
-      result += group.size();
-    }
-    return result;
-  }
-
-  /**
-   * Write the set of groups.
-   * The external format is:
-   *     #groups (groupName group)*
-   *
-   * i.e. the number of groups followed by 0 or more groups, where each 
-   * group is of the form:
-   *
-   *     groupDisplayName #counters (false | true counter)*
-   *
-   * where each counter is of the form:
-   *
-   *     name (false | true displayName) value
-   */
-  @Override
-  public synchronized void write(DataOutput out) throws IOException {
-    out.writeInt(groups.size());
-    for (org.apache.hadoop.mapreduce.CounterGroup group: groups.values()) {
-      Text.writeString(out, group.getName());
-      group.write(out);
+    @Override
+    protected Counter newCounter() {
+      return new GenericCounter();
     }
   }
-  
-  /**
-   * Read a set of groups.
-   */
-  @Override
-  public synchronized void readFields(DataInput in) throws IOException {
-    int numClasses = in.readInt();
-    groups.clear();
-    while (numClasses-- > 0) {
-      String groupName = Text.readString(in);
-      CounterGroup group = new CounterGroup(groupName);
-      group.readFields(in);
-      groups.put(groupName, group);
+
+  // Mix file system group implementation into the CounterGroup interface
+  private static class FileSystemGroup extends FileSystemCounterGroup<Counter>
+      implements CounterGroup {
+
+    @Override
+    protected Counter newCounter(String scheme, FileSystemCounter key) {
+      return new FSCounter(scheme, key);
     }
   }
 
   /**
-   * Return textual representation of the counter values.
+   * Provide factory methods for counter group factory implementation.
+   * See also the GroupFactory in
+   *  {@link org.apache.hadoop.mapred.Counters mapred.Counters}
    */
-  public synchronized String toString() {
-    StringBuilder sb = new StringBuilder("Counters: " + countCounters());
-    for (CounterGroup group: this) {
-      sb.append("\n\t" + group.getDisplayName());
-      for (Counter counter: group) {
-        sb.append("\n\t\t" + counter.getDisplayName() + "=" + 
-                  counter.getValue());
-      }
-    }
-    return sb.toString();
-  }
+  private static class GroupFactory
+      extends CounterGroupFactory<Counter, CounterGroup> {
 
-  /**
-   * Increments multiple counters by their amounts in another Counters 
-   * instance.
-   * @param other the other Counters instance
-   */
-  public synchronized void incrAllCounters(Counters other) {
-    for(Map.Entry<String, CounterGroup> rightEntry: other.groups.entrySet()) {
-      CounterGroup left = groups.get(rightEntry.getKey());
-      CounterGroup right = rightEntry.getValue();
-      if (left == null) {
-        left = new CounterGroup(right.getName(), right.getDisplayName());
-        groups.put(rightEntry.getKey(), left);
-      }
-      left.incrAllCounters(right);
-    }
-  }
-
-  public boolean equals(Object genericRight) {
-    if (genericRight instanceof Counters) {
-      Iterator<CounterGroup> right = ((Counters) genericRight).groups.
-                                       values().iterator();
-      Iterator<CounterGroup> left = groups.values().iterator();
-      while (left.hasNext()) {
-        if (!right.hasNext() || !left.next().equals(right.next())) {
-          return false;
+    @Override
+    protected <T extends Enum<T>>
+    FrameworkGroupFactory<CounterGroup>
+        newFrameworkGroupFactory(final Class<T> cls) {
+      return new FrameworkGroupFactory<CounterGroup>() {
+        @Override public CounterGroup newGroup(String name) {
+          return new FrameworkGroupImpl<T>(cls); // impl in this package
         }
-      }
-      return !right.hasNext();
+      };
     }
-    return false;
+
+    @Override
+    protected CounterGroup newGenericGroup(String name, String displayName,
+                                           Limits limits) {
+      return new GenericGroup(name, displayName, limits);
+    }
+
+    @Override
+    protected CounterGroup newFileSystemGroup() {
+      return new FileSystemGroup();
+    }
   }
-  
-  public int hashCode() {
-    return groups.hashCode();
+
+  private static final GroupFactory groupFactory = new GroupFactory();
+
+  /**
+   * Default constructor
+   */
+  public Counters() {
+    super(groupFactory);
+  }
+
+  /**
+   * Construct the Counters object from the another counters object
+   * @param <C> the type of counter
+   * @param <G> the type of counter group
+   * @param counters the old counters object
+   */
+  public <C extends Counter, G extends CounterGroupBase<C>>
+  Counters(AbstractCounters<C, G> counters) {
+    super(counters, groupFactory);
   }
 }

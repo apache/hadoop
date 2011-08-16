@@ -180,7 +180,7 @@
   <property name="hadoop-hdfs-test.pom" location="${ivy.dir}/hadoop-hdfs-test.xml"/>
 
   <!--this is the naming policy for artifacts we want pulled down-->
-  <property name="ivy.artifact.retrieve.pattern" value="${ant.project.name}/[conf]/[artifact]-[revision].[ext]"/>
+  <property name="ivy.artifact.retrieve.pattern" value="${ant.project.name}/[conf]/[artifact]-[revision](-[classifier]).[ext]"/>
 
   <!--this is how artifacts that get built are named-->
   <property name="ivy.publish.pattern" value="hadoop-hdfs-[revision].[ext]"/>
@@ -247,8 +247,8 @@
     <pathelement location="${build.tools}"/>
     <pathelement path="${clover.jar}"/>
     <path refid="ivy-test.classpath"/>
-    <fileset dir="${lib.dir}">
-      <include name="hadoop-common-test-${hadoop-common.version}.jar" />
+    <fileset dir="${test.ivy.lib.dir}">
+      <include name="hadoop-common-${hadoop-common.version}-tests.jar" />
       <exclude name="**/excluded/" />
     </fileset>
     <pathelement location="${build.classes}"/>

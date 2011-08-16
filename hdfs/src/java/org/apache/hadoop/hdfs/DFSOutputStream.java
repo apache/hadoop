@@ -36,7 +36,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -48,6 +47,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsProtoUtil;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -62,7 +62,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseP
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.io.EnumSetWritable;
@@ -167,7 +166,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       this.seqno = HEART_BEAT_SEQNO;
       
       buffer = null;
-      int packetSize = PacketHeader.PKT_HEADER_LEN + DFSClient.SIZE_OF_INTEGER; // TODO(todd) strange
+      int packetSize = PacketHeader.PKT_HEADER_LEN + FSConstants.BYTES_IN_INTEGER;
       buf = new byte[packetSize];
       
       checksumStart = dataStart = packetSize;
@@ -235,12 +234,12 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
                          dataStart - checksumLen , checksumLen); 
       }
       
-      int pktLen = DFSClient.SIZE_OF_INTEGER + dataLen + checksumLen;
+      int pktLen = FSConstants.BYTES_IN_INTEGER + dataLen + checksumLen;
       
       //normally dataStart == checksumPos, i.e., offset is zero.
       buffer = ByteBuffer.wrap(
         buf, dataStart - checksumPos,
-        PacketHeader.PKT_HEADER_LEN + pktLen - DFSClient.SIZE_OF_INTEGER);
+        PacketHeader.PKT_HEADER_LEN + pktLen - FSConstants.BYTES_IN_INTEGER);
       buf = null;
       buffer.mark();
 
@@ -605,6 +604,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         try {
           blockStream.close();
         } catch (IOException e) {
+          setLastException(e);
         } finally {
           blockStream = null;
         }
@@ -613,8 +613,18 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         try {
           blockReplyStream.close();
         } catch (IOException e) {
+          setLastException(e);
         } finally {
           blockReplyStream = null;
+        }
+      }
+      if (null != s) {
+        try {
+          s.close();
+        } catch (IOException e) {
+          setLastException(e);
+        } finally {
+          s = null;
         }
       }
     }
@@ -839,7 +849,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         final long writeTimeout = dfsClient.getDatanodeWriteTimeout(2);
         out = new DataOutputStream(new BufferedOutputStream(
             NetUtils.getOutputStream(sock, writeTimeout),
-            DataNode.SMALL_BUFFER_SIZE));
+            FSConstants.SMALL_BUFFER_SIZE));
 
         //send the TRANSFER_BLOCK request
         new Sender(out).transferBlock(block, blockToken, dfsClient.clientName,
@@ -1002,16 +1012,20 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       persistBlocks.set(true);
 
       boolean result = false;
+      DataOutputStream out = null;
       try {
+        assert null == s : "Previous socket unclosed";
         s = createSocketForPipeline(nodes[0], nodes.length, dfsClient);
         long writeTimeout = dfsClient.getDatanodeWriteTimeout(nodes.length);
 
         //
         // Xmit header info to datanode
         //
-        DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
+        out = new DataOutputStream(new BufferedOutputStream(
             NetUtils.getOutputStream(s, writeTimeout),
-            DataNode.SMALL_BUFFER_SIZE));
+            FSConstants.SMALL_BUFFER_SIZE));
+        
+        assert null == blockReplyStream : "Previous blockReplyStream unclosed";
         blockReplyStream = new DataInputStream(NetUtils.getInputStream(s));
 
         // send the request
@@ -1037,7 +1051,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
                 + firstBadLink);
           }
         }
-
+        assert null == blockStream : "Previous blockStream unclosed";
         blockStream = out;
         result =  true; // success
 
@@ -1058,12 +1072,15 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         }
         hasError = true;
         setLastException(ie);
-        blockReplyStream = null;
         result =  false;  // error
       } finally {
         if (!result) {
           IOUtils.closeSocket(s);
           s = null;
+          IOUtils.closeStream(out);
+          out = null;
+          IOUtils.closeStream(blockReplyStream);
+          blockReplyStream = null;
         }
       }
       return result;
@@ -1156,7 +1173,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
     final int timeout = client.getDatanodeReadTimeout(length);
     NetUtils.connect(sock, isa, timeout);
     sock.setSoTimeout(timeout);
-    sock.setSendBufferSize(DFSClient.DEFAULT_DATA_SOCKET_SIZE);
+    sock.setSendBufferSize(FSConstants.DEFAULT_DATA_SOCKET_SIZE);
     if(DFSClient.LOG.isDebugEnabled()) {
       DFSClient.LOG.debug("Send buf size " + sock.getSendBufferSize());
     }

@@ -30,7 +30,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.crypto.KeyGenerator;
@@ -38,13 +40,16 @@ import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.viewfs.ViewFileSystem;
 import org.apache.hadoop.hdfs.HftpFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
@@ -148,7 +153,9 @@ public class TestTokenCache {
   
   @BeforeClass
   public static void setUp() throws Exception {
+    
     Configuration conf = new Configuration();
+    conf.set("hadoop.security.auth_to_local", "RULE:[2:$1]");
     dfsCluster = new MiniDFSCluster(conf, numSlaves, true, null);
     jConf = new JobConf(conf);
     mrCluster = new MiniMRCluster(0, 0, numSlaves, 
@@ -157,7 +164,7 @@ public class TestTokenCache {
     
     createTokenFileJson();
     verifySecretKeysInJSONFile();
-    dfsCluster.getNamesystem().getDelegationTokenSecretManager().startThreads();
+    NameNodeAdapter.getDtSecretManager(dfsCluster.getNamesystem()).startThreads();
     FileSystem fs = dfsCluster.getFileSystem();
     
     p1 = new Path("file1");
@@ -223,10 +230,10 @@ public class TestTokenCache {
     jConf = mrCluster.createJobConf();
     
     // provide namenodes names for the job to get the delegation tokens for
-    String nnUri = dfsCluster.getURI().toString();
+    String nnUri = dfsCluster.getURI(0).toString();
     jConf.set(MRJobConfig.JOB_NAMENODES, nnUri + "," + nnUri);
     // job tracker principla id..
-    jConf.set(JTConfig.JT_USER_NAME, "jt_id");
+    jConf.set(JTConfig.JT_USER_NAME, "jt_id/foo@BAR");
     
     // using argument to pass the file name
     String[] args = {
@@ -303,7 +310,7 @@ public class TestTokenCache {
     HftpFileSystem hfs = mock(HftpFileSystem.class);
 
     DelegationTokenSecretManager dtSecretManager = 
-      dfsCluster.getNamesystem().getDelegationTokenSecretManager();
+        NameNodeAdapter.getDtSecretManager(dfsCluster.getNamesystem());
     String renewer = "renewer";
     jConf.set(JTConfig.JT_USER_NAME,renewer);
     DelegationTokenIdentifier dtId = 
@@ -331,6 +338,14 @@ public class TestTokenCache {
       throws Throwable {
         return t;
       }}).when(hfs).getDelegationToken(renewer);
+    
+    //when(hfs.getDelegationTokens()).thenReturn((Token<? extends TokenIdentifier>) t);
+    Mockito.doAnswer(new Answer<List<Token<DelegationTokenIdentifier>>>(){
+      @Override
+      public List<Token<DelegationTokenIdentifier>>  answer(InvocationOnMock invocation)
+      throws Throwable {
+        return Collections.singletonList(t);
+      }}).when(hfs).getDelegationTokens(renewer);
     
     //when(hfs.getCanonicalServiceName).thenReturn(fs_addr);
     Mockito.doAnswer(new Answer<String>(){
@@ -360,4 +375,56 @@ public class TestTokenCache {
     }
   }
 
+  /** 
+   * verify _HOST substitution
+   * @throws IOException
+   */
+  @Test
+  public void testGetJTPrincipal() throws IOException {
+    String serviceName = "jt/";
+    String hostName = "foo";
+    String domainName = "@BAR";
+    Configuration conf = new Configuration();
+    conf.set(JTConfig.JT_IPC_ADDRESS, hostName + ":8888");
+    conf.set(JTConfig.JT_USER_NAME, serviceName + SecurityUtil.HOSTNAME_PATTERN
+        + domainName);
+    assertEquals("Failed to substitute HOSTNAME_PATTERN with hostName",
+        serviceName + hostName + domainName, TokenCache.getJTPrincipal(conf));
+  }
+
+  @Test
+  public void testGetTokensForViewFS() throws IOException, URISyntaxException {
+    Configuration conf = new Configuration(jConf);
+    FileSystem dfs = dfsCluster.getFileSystem();
+    String serviceName = dfs.getCanonicalServiceName();
+
+    Path p1 = new Path("/mount1");
+    Path p2 = new Path("/mount2");
+    p1 = dfs.makeQualified(p1);
+    p2 = dfs.makeQualified(p2);
+
+    conf.set("fs.viewfs.mounttable.default.link./dir1", p1.toString());
+    conf.set("fs.viewfs.mounttable.default.link./dir2", p2.toString());
+    Credentials credentials = new Credentials();
+    Path lp1 = new Path("viewfs:///dir1");
+    Path lp2 = new Path("viewfs:///dir2");
+    Path[] paths = new Path[2];
+    paths[0] = lp1;
+    paths[1] = lp2;
+    TokenCache.obtainTokensForNamenodesInternal(credentials, paths, conf);
+
+    Collection<Token<? extends TokenIdentifier>> tns =
+        credentials.getAllTokens();
+    assertEquals("number of tokens is not 1", 1, tns.size());
+
+    boolean found = false;
+    for (Token<? extends TokenIdentifier> tt : tns) {
+      System.out.println("token=" + tt);
+      if (tt.getKind().equals(DelegationTokenIdentifier.HDFS_DELEGATION_KIND)
+          && tt.getService().equals(new Text(serviceName))) {
+        found = true;
+      }
+      assertTrue("didn't find token for [" + lp1 + ", " + lp2 + "]", found);
+    }
+  }
 }

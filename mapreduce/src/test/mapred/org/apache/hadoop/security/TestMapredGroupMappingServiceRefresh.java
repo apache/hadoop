@@ -108,7 +108,7 @@ public class TestMapredGroupMappingServiceRefresh {
     cluster = new MiniDFSCluster(0, config, 1, true, true, true,  null, null, 
         null, null);
     cluster.waitActive();
-    URI uri = cluster.getURI();
+    URI uri = cluster.getURI(0);
     
     MiniMRCluster miniMRCluster = new MiniMRCluster(0, uri.toString() , 
       3, null, null, config);

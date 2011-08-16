@@ -42,7 +42,7 @@ import org.apache.hadoop.util.Daemon;
  * other DataNodes.  This small server does not use the 
  * Hadoop IPC mechanism.
  */
-class DataXceiverServer implements Runnable, FSConstants {
+class DataXceiverServer implements Runnable {
   public static final Log LOG = DataNode.LOG;
   
   ServerSocket ss;
@@ -119,8 +119,8 @@ class DataXceiverServer implements Runnable, FSConstants {
       conf.getInt(DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY,
                   DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT);
     
-    this.estimateBlockSize = 
-      conf.getLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
+    this.estimateBlockSize = conf.getLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
+        DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT);
     
     //set up parameter for cluster balancing
     this.balanceThrottler = new BlockBalanceThrottler(

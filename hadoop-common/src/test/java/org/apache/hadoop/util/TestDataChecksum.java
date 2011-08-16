@@ -111,6 +111,7 @@ public class TestDataChecksum {
     } catch (ChecksumException ce) {
       int expectedPos = checksum.getBytesPerChecksum() * (numSums - 1);
       assertEquals(expectedPos, ce.getPos());
+      assertTrue(ce.getMessage().contains("fake file"));
     }
   }
 

@@ -1450,7 +1450,7 @@ public class TestCheckpoint extends TestCase {
 
       // Make a finalized log on the server side. 
       nn.rollEditLog();
-      RemoteEditLogManifest manifest = nn.getEditLogManifest(0);
+      RemoteEditLogManifest manifest = nn.getEditLogManifest(1);
       RemoteEditLog log = manifest.getLogs().get(0);
       
       NNStorage dstImage = Mockito.mock(NNStorage.class);

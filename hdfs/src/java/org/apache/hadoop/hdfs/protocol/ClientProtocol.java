@@ -565,7 +565,6 @@ public interface ClientProtocol extends VersionedProtocol {
    * <li> [3] contains number of under replicated blocks in the system.</li>
    * <li> [4] contains number of blocks with a corrupt replica. </li>
    * <li> [5] contains number of blocks without any good replicas left. </li>
-   * <li> [5] contains number of blocks without any good replicas left. </li>
    * <li> [6] contains the total used space of the block pool. </li>
    * </ul>
    * Use public constants like {@link #GET_STATS_CAPACITY_IDX} in place of 

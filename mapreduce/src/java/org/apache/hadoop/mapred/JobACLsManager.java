@@ -29,7 +29,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 
 @InterfaceAudience.Private
-class JobACLsManager {
+public class JobACLsManager {
 
   Configuration conf;
 
@@ -37,7 +37,7 @@ class JobACLsManager {
     this.conf = conf;
   }
 
-  boolean areACLsEnabled() {
+  public boolean areACLsEnabled() {
     return conf.getBoolean(MRConfig.MR_ACLS_ENABLED, false);
   }
 
@@ -86,7 +86,7 @@ class JobACLsManager {
    * @param jobACL
    * @throws AccessControlException
    */
-  boolean checkAccess(UserGroupInformation callerUGI,
+  public boolean checkAccess(UserGroupInformation callerUGI,
       JobACL jobOperation, String jobOwner, AccessControlList jobACL) {
 
     String user = callerUGI.getShortUserName();

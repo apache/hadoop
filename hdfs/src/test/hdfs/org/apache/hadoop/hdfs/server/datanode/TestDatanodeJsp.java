@@ -28,7 +28,6 @@ import java.net.URLEncoder;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.jsp.JspWriter;
 
-import org.apache.commons.httpclient.util.URIUtil;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -36,6 +35,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.util.ServletUtil;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -71,7 +71,7 @@ public class TestDatanodeJsp {
     
     if (!doTail) {
       assertTrue("page should show link to download file", viewFilePage
-          .contains("/streamFile" + URIUtil.encodePath(testPath.toString()) +
+          .contains("/streamFile" + ServletUtil.encodePath(testPath.toString()) +
               "?nnaddr=localhost:" + nnIpcAddress.getPort()));
     }
   }
@@ -82,15 +82,22 @@ public class TestDatanodeJsp {
     try {
       cluster = new MiniDFSCluster.Builder(CONF).build();
       cluster.waitActive();
-      
-      testViewingFile(cluster, "/test-file", false);
-      testViewingFile(cluster, "/tmp/test-file", false);
-      testViewingFile(cluster, "/tmp/test-file%with goofy&characters", false);
-      
-      testViewingFile(cluster, "/test-file", true);
-      testViewingFile(cluster, "/tmp/test-file", true);
-      testViewingFile(cluster, "/tmp/test-file%with goofy&characters", true);
-      
+      String paths[] = {
+        "/test-file",
+        "/tmp/test-file",
+        "/tmp/test-file%with goofy&characters",
+        "/foo bar/foo bar",
+        "/foo+bar/foo+bar",
+        "/foo;bar/foo;bar",
+        "/foo=bar/foo=bar",
+        "/foo,bar/foo,bar",
+        "/foo?bar/foo?bar",
+        "/foo\">bar/foo\">bar"
+      };
+      for (String p : paths) {
+        testViewingFile(cluster, p, false);
+        testViewingFile(cluster, p, true);
+      }
     } finally {
       if (cluster != null) {
         cluster.shutdown();

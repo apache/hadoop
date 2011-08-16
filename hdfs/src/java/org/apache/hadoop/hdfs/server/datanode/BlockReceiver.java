@@ -54,7 +54,7 @@ import org.apache.hadoop.util.PureJavaCrc32;
  * may copies it to another site. If a throttler is provided,
  * streaming throttling is also supported.
  **/
-class BlockReceiver implements Closeable, FSConstants {
+class BlockReceiver implements Closeable {
   public static final Log LOG = DataNode.LOG;
   static final Log ClientTraceLog = DataNode.ClientTraceLog;
   
@@ -179,8 +179,7 @@ class BlockReceiver implements Closeable, FSConstants {
         this.out = streams.dataOut;
         this.cout = streams.checksumOut;
         this.checksumOut = new DataOutputStream(new BufferedOutputStream(
-                                                  streams.checksumOut,
-                                                  SMALL_BUFFER_SIZE));
+            streams.checksumOut, FSConstants.SMALL_BUFFER_SIZE));
         // write data chunk header if creating a new replica
         if (isCreate) {
           BlockMetadataHeader.writeHeader(checksumOut, checksum);
@@ -399,7 +398,7 @@ class BlockReceiver implements Closeable, FSConstants {
       buf.limit(bufRead);
     }
     
-    while (buf.remaining() < SIZE_OF_INTEGER) {
+    while (buf.remaining() < FSConstants.BYTES_IN_INTEGER) {
       if (buf.position() > 0) {
         shiftBufData();
       }
@@ -418,9 +417,10 @@ class BlockReceiver implements Closeable, FSConstants {
                             payloadLen);
     }
     
-    // Subtract SIZE_OF_INTEGER since that accounts for the payloadLen that
+    // Subtract BYTES_IN_INTEGER since that accounts for the payloadLen that
     // we read above.
-    int pktSize = payloadLen + PacketHeader.PKT_HEADER_LEN - SIZE_OF_INTEGER;
+    int pktSize = payloadLen + PacketHeader.PKT_HEADER_LEN
+        - FSConstants.BYTES_IN_INTEGER;
     
     if (buf.remaining() < pktSize) {
       //we need to read more data
@@ -817,7 +817,7 @@ class BlockReceiver implements Closeable, FSConstants {
    * Processed responses from downstream datanodes in the pipeline
    * and sends back replies to the originator.
    */
-  class PacketResponder implements Runnable, Closeable, FSConstants {   
+  class PacketResponder implements Runnable, Closeable {   
 
     /** queue for packets waiting for ack */
     private final LinkedList<Packet> ackQueue = new LinkedList<Packet>(); 

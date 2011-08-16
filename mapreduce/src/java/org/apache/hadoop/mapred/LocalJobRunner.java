@@ -240,7 +240,7 @@ public class LocalJobRunner implements ClientProtocol {
               getShortUserName());
           TaskRunner.setupChildMapredLocalDirs(map, localConf);
 
-          MapOutputFile mapOutput = new MapOutputFile();
+          MapOutputFile mapOutput = new MROutputFiles();
           mapOutput.setConf(localConf);
           mapOutputFiles.put(mapId, mapOutput);
 
@@ -404,7 +404,7 @@ public class LocalJobRunner implements ClientProtocol {
               if (!this.isInterrupted()) {
                 TaskAttemptID mapId = mapIds.get(i);
                 Path mapOut = mapOutputFiles.get(mapId).getOutputFile();
-                MapOutputFile localOutputFile = new MapOutputFile();
+                MapOutputFile localOutputFile = new MROutputFiles();
                 localOutputFile.setConf(localConf);
                 Path reduceIn =
                   localOutputFile.getInputFileForWrite(mapId.getTaskID(),

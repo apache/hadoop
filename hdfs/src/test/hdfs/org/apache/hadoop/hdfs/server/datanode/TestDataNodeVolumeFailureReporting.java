@@ -37,7 +37,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
@@ -113,10 +113,11 @@ public class TestDataNodeVolumeFailureReporting {
      * heartbeat their capacities.
      */
     Thread.sleep(WAIT_FOR_HEARTBEATS);
-    FSNamesystem ns = cluster.getNamesystem();
+    final DatanodeManager dm = cluster.getNamesystem().getBlockManager(
+        ).getDatanodeManager();
 
-    long origCapacity = DFSTestUtil.getLiveDatanodeCapacity(ns);
-    long dnCapacity = DFSTestUtil.getDatanodeCapacity(ns, 0);
+    final long origCapacity = DFSTestUtil.getLiveDatanodeCapacity(dm);
+    long dnCapacity = DFSTestUtil.getDatanodeCapacity(dm, 0);
 
     File dn1Vol1 = new File(dataDir, "data"+(2*0+1));
     File dn2Vol1 = new File(dataDir, "data"+(2*1+1));
@@ -160,7 +161,7 @@ public class TestDataNodeVolumeFailureReporting {
     assert (WAIT_FOR_HEARTBEATS * 10) > WAIT_FOR_DEATH;
 
     // Eventually the NN should report two volume failures
-    DFSTestUtil.waitForDatanodeStatus(ns, 3, 0, 2, 
+    DFSTestUtil.waitForDatanodeStatus(dm, 3, 0, 2, 
         origCapacity - (1*dnCapacity), WAIT_FOR_HEARTBEATS);
 
     /*
@@ -177,10 +178,10 @@ public class TestDataNodeVolumeFailureReporting {
 
     ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
     ArrayList<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
-    ns.DFSNodesStatus(live, dead);
+    dm.fetchDatanodes(live, dead, false);
     live.clear();
     dead.clear();
-    ns.DFSNodesStatus(live, dead);
+    dm.fetchDatanodes(live, dead, false);
     assertEquals("DN3 should have 1 failed volume",
         1, live.get(2).getVolumeFailures());
 
@@ -189,8 +190,8 @@ public class TestDataNodeVolumeFailureReporting {
      * total capacity should be down by three volumes (assuming the host
      * did not grow or shrink the data volume while the test was running).
      */
-    dnCapacity = DFSTestUtil.getDatanodeCapacity(ns, 0);
-    DFSTestUtil.waitForDatanodeStatus(ns, 3, 0, 3, 
+    dnCapacity = DFSTestUtil.getDatanodeCapacity(dm, 0);
+    DFSTestUtil.waitForDatanodeStatus(dm, 3, 0, 3, 
         origCapacity - (3*dnCapacity), WAIT_FOR_HEARTBEATS);
 
     /*
@@ -212,7 +213,7 @@ public class TestDataNodeVolumeFailureReporting {
         getMetrics(dns.get(2).getMetrics().name()));
 
     // The NN considers the DN dead
-    DFSTestUtil.waitForDatanodeStatus(ns, 2, 1, 2, 
+    DFSTestUtil.waitForDatanodeStatus(dm, 2, 1, 2, 
         origCapacity - (4*dnCapacity), WAIT_FOR_HEARTBEATS);
 
     /*
@@ -236,7 +237,7 @@ public class TestDataNodeVolumeFailureReporting {
      * and that the volume failure count should be reported as zero by
      * both the metrics and the NN.
      */
-    DFSTestUtil.waitForDatanodeStatus(ns, 3, 0, 0, origCapacity, 
+    DFSTestUtil.waitForDatanodeStatus(dm, 3, 0, 0, origCapacity, 
         WAIT_FOR_HEARTBEATS);
   }
 
@@ -251,9 +252,10 @@ public class TestDataNodeVolumeFailureReporting {
     cluster.startDataNodes(conf, 2, true, null, null);
     cluster.waitActive();
 
-    FSNamesystem ns = cluster.getNamesystem();
-    long origCapacity = DFSTestUtil.getLiveDatanodeCapacity(ns);
-    long dnCapacity = DFSTestUtil.getDatanodeCapacity(ns, 0);
+    final DatanodeManager dm = cluster.getNamesystem().getBlockManager(
+        ).getDatanodeManager();
+    long origCapacity = DFSTestUtil.getLiveDatanodeCapacity(dm);
+    long dnCapacity = DFSTestUtil.getDatanodeCapacity(dm, 0);
 
     // Fail the first volume on both datanodes (we have to keep the 
     // third healthy so one node in the pipeline will not fail). 
@@ -267,13 +269,13 @@ public class TestDataNodeVolumeFailureReporting {
     DFSTestUtil.waitReplication(fs, file1, (short)2);
 
     // The NN reports two volumes failures
-    DFSTestUtil.waitForDatanodeStatus(ns, 3, 0, 2, 
+    DFSTestUtil.waitForDatanodeStatus(dm, 3, 0, 2, 
         origCapacity - (1*dnCapacity), WAIT_FOR_HEARTBEATS);
 
     // After restarting the NN it still see the two failures
     cluster.restartNameNode(0);
     cluster.waitActive();
-    DFSTestUtil.waitForDatanodeStatus(ns, 3, 0, 2,
+    DFSTestUtil.waitForDatanodeStatus(dm, 3, 0, 2,
         origCapacity - (1*dnCapacity), WAIT_FOR_HEARTBEATS);
   }
 }

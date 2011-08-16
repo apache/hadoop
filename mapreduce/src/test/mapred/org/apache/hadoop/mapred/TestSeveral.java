@@ -279,7 +279,7 @@ public class TestSeveral extends TestCase {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     int exitCode = TestJobClient.runTool(conf, new JobClient(),
         new String[] { "-counter", jobId.toString(),
-      "org.apache.hadoop.mapred.Task$Counter", "MAP_INPUT_RECORDS" },
+      "org.apache.hadoop.mapreduce.TaskCounter", "MAP_INPUT_RECORDS" },
       out);
     assertEquals(0, exitCode);
     assertEquals(numReduces, Integer.parseInt(out.toString().trim()));

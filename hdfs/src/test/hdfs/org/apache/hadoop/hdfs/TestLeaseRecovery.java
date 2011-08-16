@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.TestInterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 
 public class TestLeaseRecovery extends junit.framework.TestCase {
   static final int BLOCK_SIZE = 1024;
@@ -133,7 +134,7 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
       DFSTestUtil.waitReplication(dfs, filepath, (short)1);
       waitLeaseRecovery(cluster);
       // verify that we still cannot recover the lease
-      LeaseManager lm = cluster.getNamesystem().leaseManager;
+      LeaseManager lm = NameNodeAdapter.getLeaseManager(cluster.getNamesystem());
       assertTrue("Found " + lm.countLease() + " lease, expected 1", lm.countLease() == 1);
       cluster.getNameNode().setSafeMode(FSConstants.SafeModeAction.SAFEMODE_LEAVE);
     }

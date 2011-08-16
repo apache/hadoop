@@ -146,8 +146,8 @@ public class TestFileCorruption extends TestCase {
       // report corrupted block by the third datanode
       DatanodeRegistration dnR = 
         DataNodeTestUtils.getDNRegistrationForBP(dataNode, blk.getBlockPoolId());
-      cluster.getNamesystem().markBlockAsCorrupt(blk, 
-          new DatanodeInfo(dnR));
+      cluster.getNamesystem().getBlockManager().findAndMarkBlockAsCorrupt(
+          blk, new DatanodeInfo(dnR));
       
       // open the file
       fs.open(FILE_PATH);

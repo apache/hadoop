@@ -1735,13 +1735,13 @@ class MapTask extends Task {
       }
       if (numSpills == 1) { //the spill is the final output
         rfs.rename(filename[0],
-            new Path(filename[0].getParent(), "file.out"));
+            mapOutputFile.getOutputFileForWriteInVolume(filename[0]));
         if (indexCacheList.size() == 0) {
           rfs.rename(mapOutputFile.getSpillIndexFile(0),
-              new Path(filename[0].getParent(),"file.out.index"));
+            mapOutputFile.getOutputIndexFileForWriteInVolume(filename[0]));
         } else {
           indexCacheList.get(0).writeToFile(
-                new Path(filename[0].getParent(),"file.out.index"), job);
+            mapOutputFile.getOutputIndexFileForWriteInVolume(filename[0]), job);
         }
         return;
       }

@@ -91,7 +91,7 @@ public class TestFileStatus {
       int fileSize, int blockSize) throws IOException {
     // Create and write a file that contains three blocks of data
     FSDataOutputStream stm = fileSys.create(name, true,
-        FSConstants.BUFFER_SIZE, (short)repl, (long)blockSize);
+        FSConstants.IO_FILE_BUFFER_SIZE, (short)repl, (long)blockSize);
     byte[] buffer = new byte[fileSize];
     Random rand = new Random(seed);
     rand.nextBytes(buffer);

@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -100,23 +101,23 @@ public class TestFileCreation extends junit.framework.TestCase {
    */
   public void testServerDefaults() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, FSConstants.DEFAULT_BLOCK_SIZE);
-    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, FSConstants.DEFAULT_BYTES_PER_CHECKSUM);
-    conf.setInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, FSConstants.DEFAULT_WRITE_PACKET_SIZE);
-    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, FSConstants.DEFAULT_REPLICATION_FACTOR + 1);
-    conf.setInt("io.file.buffer.size", FSConstants.DEFAULT_FILE_BUFFER_SIZE);
+    conf.setLong(DFS_BLOCK_SIZE_KEY, DFS_BLOCK_SIZE_DEFAULT);
+    conf.setInt(DFS_BYTES_PER_CHECKSUM_KEY, DFS_BYTES_PER_CHECKSUM_DEFAULT);
+    conf.setInt(DFS_CLIENT_WRITE_PACKET_SIZE_KEY, DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
+    conf.setInt(DFS_REPLICATION_KEY, DFS_REPLICATION_DEFAULT + 1);
+    conf.setInt(IO_FILE_BUFFER_SIZE_KEY, IO_FILE_BUFFER_SIZE_DEFAULT);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-                     .numDataNodes(FSConstants.DEFAULT_REPLICATION_FACTOR + 1)
+                     .numDataNodes(DFSConfigKeys.DFS_REPLICATION_DEFAULT + 1)
                      .build();
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
     try {
       FsServerDefaults serverDefaults = fs.getServerDefaults();
-      assertEquals(FSConstants.DEFAULT_BLOCK_SIZE, serverDefaults.getBlockSize());
-      assertEquals(FSConstants.DEFAULT_BYTES_PER_CHECKSUM, serverDefaults.getBytesPerChecksum());
-      assertEquals(FSConstants.DEFAULT_WRITE_PACKET_SIZE, serverDefaults.getWritePacketSize());
-      assertEquals(FSConstants.DEFAULT_REPLICATION_FACTOR + 1, serverDefaults.getReplication());
-      assertEquals(FSConstants.DEFAULT_FILE_BUFFER_SIZE, serverDefaults.getFileBufferSize());
+      assertEquals(DFS_BLOCK_SIZE_DEFAULT, serverDefaults.getBlockSize());
+      assertEquals(DFS_BYTES_PER_CHECKSUM_DEFAULT, serverDefaults.getBytesPerChecksum());
+      assertEquals(DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT, serverDefaults.getWritePacketSize());
+      assertEquals(DFS_REPLICATION_DEFAULT + 1, serverDefaults.getReplication());
+      assertEquals(IO_FILE_BUFFER_SIZE_DEFAULT, serverDefaults.getFileBufferSize());
     } finally {
       fs.close();
       cluster.shutdown();
@@ -269,8 +270,8 @@ public class TestFileCreation extends junit.framework.TestCase {
    */
   public void testFileCreationError1() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
-    conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    conf.setInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
+    conf.setInt(DFS_HEARTBEAT_INTERVAL_KEY, 1);
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
@@ -343,8 +344,8 @@ public class TestFileCreation extends junit.framework.TestCase {
     long leasePeriod = 1000;
     System.out.println("testFileCreationError2 start");
     Configuration conf = new HdfsConfiguration();
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
-    conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    conf.setInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
+    conf.setInt(DFS_HEARTBEAT_INTERVAL_KEY, 1);
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
@@ -403,6 +404,36 @@ public class TestFileCreation extends junit.framework.TestCase {
     }
   }
 
+  /** test addBlock(..) when replication<min and excludeNodes==null. */
+  public void testFileCreationError3() throws IOException {
+    System.out.println("testFileCreationError3 start");
+    Configuration conf = new HdfsConfiguration();
+    // create cluster
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+    DistributedFileSystem dfs = null;
+    try {
+      cluster.waitActive();
+      dfs = (DistributedFileSystem)cluster.getFileSystem();
+      DFSClient client = dfs.dfs;
+
+      // create a new file.
+      final Path f = new Path("/foo.txt");
+      createFile(dfs, f, 3);
+      try {
+        cluster.getNameNode().addBlock(f.toString(), 
+            client.clientName, null, null);
+        fail();
+      } catch(IOException ioe) {
+        FileSystem.LOG.info("GOOD!", ioe);
+      }
+
+      System.out.println("testFileCreationError3 successful");
+    } finally {
+      IOUtils.closeStream(dfs);
+      cluster.shutdown();
+    }
+  }
+
   /**
    * Test that file leases are persisted across namenode restarts.
    * This test is currently not triggered because more HDFS work is 
@@ -412,8 +443,8 @@ public class TestFileCreation extends junit.framework.TestCase {
     Configuration conf = new HdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
-    conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    conf.setInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
+    conf.setInt(DFS_HEARTBEAT_INTERVAL_KEY, 1);
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
@@ -724,7 +755,7 @@ public class TestFileCreation extends junit.framework.TestCase {
    */
   public void testFileCreationSyncOnClose() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_SYNCONCLOSE_KEY, true);
+    conf.setBoolean(DFS_DATANODE_SYNCONCLOSE_KEY, true);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
 
     try {
@@ -763,8 +794,8 @@ public class TestFileCreation extends junit.framework.TestCase {
     final int DATANODE_NUM = 3;
 
     Configuration conf = new HdfsConfiguration();
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
-    conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    conf.setInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
+    conf.setInt(DFS_HEARTBEAT_INTERVAL_KEY, 1);
 
     // create cluster
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_NUM).build();
@@ -853,7 +884,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     final int DATANODE_NUM = 3;
 
     Configuration conf = new HdfsConfiguration();
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY, 3);
+    conf.setInt(DFS_NAMENODE_REPLICATION_MIN_KEY, 3);
     conf.setBoolean("ipc.client.ping", false); // hdfs timeout is default 60 seconds
     conf.setInt("ipc.ping.interval", 10000); // hdfs timeout is now 10 second
 

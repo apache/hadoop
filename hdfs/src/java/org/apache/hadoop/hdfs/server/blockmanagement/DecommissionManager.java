@@ -24,7 +24,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.util.CyclicIteration;
 
 /**
  * Manage node decommissioning.
@@ -35,11 +34,9 @@ class DecommissionManager {
   static final Log LOG = LogFactory.getLog(DecommissionManager.class);
 
   private final FSNamesystem fsnamesystem;
-  private final BlockManager blockManager;
 
-  DecommissionManager(FSNamesystem namesystem) {
+  DecommissionManager(final FSNamesystem namesystem) {
     this.fsnamesystem = namesystem;
-    this.blockManager = fsnamesystem.getBlockManager();
   }
 
   /** Periodically check decommission status. */
@@ -81,16 +78,16 @@ class DecommissionManager {
     }
     
     private void check() {
+      final DatanodeManager dm = fsnamesystem.getBlockManager().getDatanodeManager();
       int count = 0;
       for(Map.Entry<String, DatanodeDescriptor> entry
-          : blockManager.getDatanodeManager().getDatanodeCyclicIteration(
-              firstkey)) {
+          : dm.getDatanodeCyclicIteration(firstkey)) {
         final DatanodeDescriptor d = entry.getValue();
         firstkey = entry.getKey();
 
         if (d.isDecommissionInProgress()) {
           try {
-            blockManager.checkDecommissionStateInternal(d);
+            dm.checkDecommissionState(d);
           } catch(Exception e) {
             LOG.warn("entry=" + entry, e);
           }

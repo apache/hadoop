@@ -17,16 +17,18 @@
  */
 package org.apache.hadoop.hdfs;
 
-import java.io.*;
+import java.io.DataOutputStream;
+import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 
 public class TestDFSRename extends junit.framework.TestCase {
   static int countLease(MiniDFSCluster cluster) {
-    return cluster.getNamesystem().leaseManager.countLease();
+    return NameNodeAdapter.getLeaseManager(cluster.getNamesystem()).countLease();
   }
   
   final Path dir = new Path("/test/rename/");

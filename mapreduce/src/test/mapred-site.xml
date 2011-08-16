@@ -48,4 +48,8 @@
   <name>mapreduce.jobtracker.persist.jobstatus.active</name>
   <value>false</value>
 </property>
+<property>
+  <name>mapreduce.task.local.output.class</name>
+  <value>org.apache.hadoop.mapred.MROutputFiles</value>
+</property>
 </configuration>

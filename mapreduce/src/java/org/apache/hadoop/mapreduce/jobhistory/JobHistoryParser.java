@@ -262,6 +262,8 @@ public class JobHistoryParser {
     taskInfo.finishTime = event.getFinishTime();
     taskInfo.error = event.getError();
     taskInfo.failedDueToAttemptId = event.getFailedAttemptID();
+    info.errorInfo = "Task " + taskInfo.taskId +" failed " +
+    taskInfo.attemptsMap.size() + " times ";
   }
 
   private void handleTaskStartedEvent(TaskStartedEvent event) {
@@ -321,6 +323,7 @@ public class JobHistoryParser {
    * The class where job information is aggregated into after parsing
    */
   public static class JobInfo {
+    String errorInfo = "None";
     long submitTime;
     long finishTime;
     JobID jobid;
@@ -406,6 +409,7 @@ public class JobHistoryParser {
     public long getFinishedReduces() { return finishedReduces; }
     /** Get the job status */
     public String getJobStatus() { return jobStatus; }
+    public String getErrorInfo() { return errorInfo; }
     /** Get the counters for the job */
     public Counters getTotalCounters() { return totalCounters; }
     /** Get the map counters for the job */

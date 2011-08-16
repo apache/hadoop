@@ -45,8 +45,8 @@ public class TestComputeInvalidateWork extends TestCase {
       final FSNamesystem namesystem = cluster.getNamesystem();
       final BlockManager bm = namesystem.getBlockManager();
       final int blockInvalidateLimit = bm.getDatanodeManager().blockInvalidateLimit;
-      DatanodeDescriptor[] nodes =
-        namesystem.heartbeats.toArray(new DatanodeDescriptor[NUM_OF_DATANODES]);
+      final DatanodeDescriptor[] nodes = bm.getDatanodeManager(
+          ).getHeartbeatManager().getDatanodes();
       assertEquals(nodes.length, NUM_OF_DATANODES);
       
       namesystem.writeLock();

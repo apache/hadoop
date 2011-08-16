@@ -15,7 +15,7 @@
    limitations under the License.
 -->
 
-<ivy-module version="1.0">
+<ivy-module version="1.0" xmlns:m="http://ant.apache.org/ivy/maven">
   <info organisation="org.apache.hadoop" module="${ant.project.name}" revision="${version}">
     <license name="Apache 2.0"/>
     <ivyauthor name="Apache Hadoop Team" url="http://hadoop.apache.org"/>
@@ -87,7 +87,9 @@
 
     <dependency org="org.slf4j" name="slf4j-api" rev="${slf4j-api.version}" conf="test->master"/>
     <dependency org="org.slf4j" name="slf4j-log4j12" rev="${slf4j-log4j12.version}" conf="test->master"/>
-    <dependency org="org.apache.hadoop" name="hadoop-common-test" rev="${hadoop-common.version}" conf="test->master"/>
+    <dependency org="org.apache.hadoop" name="hadoop-common" rev="${hadoop-common.version}" conf="test->master">
+      <artifact name="hadoop-common" type="tests" ext="jar" m:classifier="tests"/>
+    </dependency> 
 
     <dependency org="checkstyle" name="checkstyle" rev="${checkstyle.version}" conf="checkstyle->default"/>
 

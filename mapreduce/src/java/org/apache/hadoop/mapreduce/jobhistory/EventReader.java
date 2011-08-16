@@ -22,18 +22,15 @@ import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.EOFException;
-import java.io.StringBufferInputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.CounterGroup;
 import org.apache.hadoop.mapreduce.Counters;
 
 import org.apache.avro.Schema;
-import org.apache.avro.AvroRuntimeException;
 import org.apache.avro.io.Decoder;
 import org.apache.avro.io.JsonDecoder;
 import org.apache.avro.io.DatumReader;
@@ -171,13 +168,10 @@ public class EventReader implements Closeable {
     Counters result = new Counters();
     for (JhCounterGroup g : counters.groups) {
       CounterGroup group =
-        new CounterGroup(g.name.toString(), g.displayName.toString());
+          result.addGroup(g.name.toString(), g.displayName.toString());
       for (JhCounter c : g.counts) {
-        group.addCounter(new Counter(c.name.toString(),
-                                     c.displayName.toString(),
-                                     c.value));
+        group.addCounter(c.name.toString(), c.displayName.toString(), c.value);
       }
-      result.addGroup(group);
     }
     return result;
   }

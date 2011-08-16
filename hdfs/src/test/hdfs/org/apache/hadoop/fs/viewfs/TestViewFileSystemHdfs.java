@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
@@ -52,7 +53,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     SupportsBlocks = true;
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
     cluster.waitClusterUp();
-    cluster.getNamesystem().getDelegationTokenSecretManager().startThreads();
+    NameNodeAdapter.getDtSecretManager(cluster.getNamesystem()).startThreads();
     fHdfs = cluster.getFileSystem();
     defaultWorkingDirectory = fHdfs.makeQualified( new Path("/user/" + 
         UserGroupInformation.getCurrentUser().getShortUserName()));

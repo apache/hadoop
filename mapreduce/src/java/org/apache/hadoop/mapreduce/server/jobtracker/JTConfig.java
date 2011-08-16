@@ -89,6 +89,9 @@ public interface JTConfig extends MRConfig {
     "mapreduce.jobtracker.jobhistory.completed.location";
   public static final String JT_JOBHISTORY_LOCATION = 
     "mapreduce.jobtracker.jobhistory.location";
+  // number of partial task progress reports we retain in job history
+  public static final String JT_JOBHISTORY_TASKPROGRESS_NUMBER_SPLITS =
+    "mapreduce.jobtracker.jobhistory.task.numberprogresssplits";
   public static final String JT_AVG_BLACKLIST_THRESHOLD = 
     "mapreduce.jobtracker.blacklist.average.threshold";
   public static final String JT_SYSTEM_DIR = "mapreduce.jobtracker.system.dir";

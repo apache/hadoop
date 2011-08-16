@@ -19,7 +19,9 @@
 package org.apache.hadoop.mapreduce.security;
 
 import java.io.IOException;
-import java.net.URI;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,16 +30,13 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.HftpFileSystem;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobTracker;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.KerberosName;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -92,6 +91,13 @@ public class TokenCache {
     }
   }
   
+  static String getJTPrincipal(Configuration conf) throws IOException {
+    String jtHostname = JobTracker.getAddress(conf).getHostName();
+    // get jobtracker principal for use as delegation token renewer
+    return SecurityUtil.getServerPrincipal(conf.get(JTConfig.JT_USER_NAME),
+        jtHostname);
+  }
+  
   /**
    * get delegation token for a specific FS
    * @param fs
@@ -102,12 +108,11 @@ public class TokenCache {
    */
   static void obtainTokensForNamenodesInternal(FileSystem fs, 
       Credentials credentials, Configuration conf) throws IOException {
-
-    // get jobtracker principal id (for the renewer)
-    KerberosName jtKrbName = 
-      new KerberosName(conf.get(JTConfig.JT_USER_NAME,""));
-    
-    String delegTokenRenewer = jtKrbName.getShortName();
+    String delegTokenRenewer = getJTPrincipal(conf);
+    if (delegTokenRenewer == null || delegTokenRenewer.length() == 0) {
+      throw new IOException(
+          "Can't get JobTracker Kerberos principal for use as renewer");
+    }
     boolean readFile = true;
 
     String fsName = fs.getCanonicalServiceName();
@@ -133,6 +138,16 @@ public class TokenCache {
           return;
         }
       }
+      List<Token<?>> tokens = fs.getDelegationTokens(delegTokenRenewer);
+      if (tokens != null) {
+        for (Token<?> token : tokens) {
+          credentials.addToken(token.getService(), token);
+          LOG.info("Got dt for " + fs.getUri() + ";uri="+ fsName + 
+              ";t.service="+token.getService());
+        }
+      }
+      //Call getDelegationToken as well for now - for FS implementations
+      // which may not have implmented getDelegationTokens (hftp)
       Token<?> token = fs.getDelegationToken(delegTokenRenewer);
       if (token != null) {
         Text fsNameText = new Text(fsName);

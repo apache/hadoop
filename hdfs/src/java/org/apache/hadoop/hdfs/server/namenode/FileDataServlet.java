@@ -18,8 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 
 import javax.servlet.http.HttpServletRequest;
@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ServletUtil;
 
 /** Redirect queries about the hosted filesystem to an appropriate datanode.
  * @see org.apache.hadoop.hdfs.HftpFileSystem
@@ -44,22 +45,25 @@ public class FileDataServlet extends DfsServlet {
   /** For java.io.Serializable */
   private static final long serialVersionUID = 1L;
 
-  /** Create a redirection URI */
-  protected URI createUri(String parent, HdfsFileStatus i, UserGroupInformation ugi,
-      ClientProtocol nnproxy, HttpServletRequest request, String dt)
-      throws IOException, URISyntaxException {
+  /** Create a redirection URL */
+  private URL createRedirectURL(String path, String encodedPath, HdfsFileStatus status, 
+      UserGroupInformation ugi, ClientProtocol nnproxy, HttpServletRequest request, String dt)
+      throws IOException {
     String scheme = request.getScheme();
     final LocatedBlocks blks = nnproxy.getBlockLocations(
-        i.getFullPath(new Path(parent)).toUri().getPath(), 0, 1);
-    final DatanodeID host = pickSrcDatanode(blks, i);
+        status.getFullPath(new Path(path)).toUri().getPath(), 0, 1);
+    final DatanodeID host = pickSrcDatanode(blks, status);
     final String hostname;
     if (host instanceof DatanodeInfo) {
       hostname = ((DatanodeInfo)host).getHostName();
     } else {
       hostname = host.getHost();
     }
-        
-    String dtParam="";
+    final int port = "https".equals(scheme)
+      ? (Integer)getServletContext().getAttribute("datanode.https.port")
+      : host.getInfoPort();
+
+    String dtParam = "";
     if (dt != null) {
       dtParam=JspHelper.getDelegationTokenUrlParam(dt);
     }
@@ -70,12 +74,10 @@ public class FileDataServlet extends DfsServlet {
     String addr = NameNode.getHostPortString(nn.getNameNodeAddress());
     String addrParam = JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, addr);
     
-    return new URI(scheme, null, hostname,
-        "https".equals(scheme)
-          ? (Integer)getServletContext().getAttribute("datanode.https.port")
-          : host.getInfoPort(),
-            "/streamFile" + i.getFullName(parent), 
-            "ugi=" + ugi.getShortUserName() + dtParam + addrParam, null);
+    return new URL(scheme, hostname, port,
+        "/streamFile" + encodedPath + '?' +
+        "ugi=" + ServletUtil.encodeQueryValue(ugi.getShortUserName()) +
+        dtParam + addrParam);
   }
 
   /** Select a datanode to service this request.
@@ -112,20 +114,15 @@ public class FileDataServlet extends DfsServlet {
         @Override
         public Void run() throws IOException {
           ClientProtocol nn = createNameNodeProxy();
-          final String path = request.getPathInfo() != null ? request
-              .getPathInfo() : "/";
-
+          final String path = ServletUtil.getDecodedPath(request, "/data");
+          final String encodedPath = ServletUtil.getRawPath(request, "/data");
           String delegationToken = request
               .getParameter(JspHelper.DELEGATION_PARAMETER_NAME);
 
           HdfsFileStatus info = nn.getFileInfo(path);
           if (info != null && !info.isDir()) {
-            try {
-              response.sendRedirect(createUri(path, info, ugi, nn, request,
-                  delegationToken).toURL().toString());
-            } catch (URISyntaxException e) {
-              response.getWriter().println(e.toString());
-            }
+            response.sendRedirect(createRedirectURL(path, encodedPath,
+                info, ugi, nn, request, delegationToken).toString());
           } else if (info == null) {
             response.sendError(400, "File not found " + path);
           } else {

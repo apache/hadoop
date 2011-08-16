@@ -75,6 +75,7 @@ public class TestNameNodeMetrics extends TestCase {
   private DistributedFileSystem fs;
   private Random rand = new Random();
   private FSNamesystem namesystem;
+  private BlockManager bm;
 
   private static Path getTestPath(String fileName) {
     return new Path(TEST_ROOT_DIR_PATH, fileName);
@@ -85,6 +86,7 @@ public class TestNameNodeMetrics extends TestCase {
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(DATANODE_COUNT).build();
     cluster.waitActive();
     namesystem = cluster.getNamesystem();
+    bm = namesystem.getBlockManager();
     fs = (DistributedFileSystem) cluster.getFileSystem();
   }
   
@@ -167,7 +169,7 @@ public class TestNameNodeMetrics extends TestCase {
     // Corrupt first replica of the block
     LocatedBlock block = NameNodeAdapter.getBlockLocations(
         cluster.getNameNode(), file.toString(), 0, 1).get(0);
-    namesystem.markBlockAsCorrupt(block.getBlock(), block.getLocations()[0]);
+    bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0]);
     updateMetrics();
     MetricsRecordBuilder rb = getMetrics(NS_METRICS);
     assertGauge("CorruptBlocks", 1L, rb);
@@ -188,7 +190,7 @@ public class TestNameNodeMetrics extends TestCase {
     Path file = getTestPath("testExcessBlocks");
     createFile(file, 100, (short)2);
     long totalBlocks = 1;
-    namesystem.setReplication(file.toString(), (short)1);
+    NameNodeAdapter.setReplication(namesystem, file.toString(), (short)1);
     updateMetrics();
     MetricsRecordBuilder rb = getMetrics(NS_METRICS);
     assertGauge("ExcessBlocks", totalBlocks, rb);
@@ -204,7 +206,7 @@ public class TestNameNodeMetrics extends TestCase {
     // Corrupt the only replica of the block to result in a missing block
     LocatedBlock block = NameNodeAdapter.getBlockLocations(
         cluster.getNameNode(), file.toString(), 0, 1).get(0);
-    namesystem.markBlockAsCorrupt(block.getBlock(), block.getLocations()[0]);
+    bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0]);
     updateMetrics();
     MetricsRecordBuilder rb = getMetrics(NS_METRICS);
     assertGauge("UnderReplicatedBlocks", 1L, rb);

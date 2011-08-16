@@ -18,10 +18,10 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.zip.Checksum;
-import java.util.zip.CheckedOutputStream;
+import java.util.SortedSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -29,28 +29,26 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
-import org.apache.hadoop.hdfs.server.namenode.NNStorageRetentionManager.StoragePurger;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
-import org.apache.hadoop.util.PureJavaCrc32;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.Sets;
 
-import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.*;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.*;
 
 /**
@@ -116,18 +114,6 @@ public class FSEditLog  {
 
   private NNStorage storage;
 
-  private static ThreadLocal<Checksum> localChecksum =
-    new ThreadLocal<Checksum>() {
-    protected Checksum initialValue() {
-      return new PureJavaCrc32();
-    }
-  };
-
-  /** Get a thread local checksum */
-  public static Checksum getChecksum() {
-    return localChecksum.get();
-  }
-
   private static class TransactionId {
     public long txid;
 
@@ -148,15 +134,6 @@ public class FSEditLog  {
     this.storage = storage;
     metrics = NameNode.getNameNodeMetrics();
     lastPrintTime = now();
-  }
-  
-  /**
-   * Initialize the list of edit journals
-   */
-  synchronized void initJournals() {
-    assert journals.isEmpty();
-    Preconditions.checkState(state == State.UNINITIALIZED,
-        "Bad state: %s", state);
     
     for (StorageDirectory sd : storage.dirIterable(NameNodeDirType.EDITS)) {
       journals.add(new JournalAndStream(new FileJournalManager(sd)));
@@ -174,8 +151,7 @@ public class FSEditLog  {
    * log segment.
    */
   synchronized void open() throws IOException {
-    Preconditions.checkState(state == State.UNINITIALIZED);
-    initJournals();
+    Preconditions.checkState(state == State.BETWEEN_LOG_SEGMENTS);
 
     startLogSegment(getLastWrittenTxId() + 1, true);
     assert state == State.IN_SEGMENT : "Bad state: " + state;
@@ -755,18 +731,64 @@ public class FSEditLog  {
   /**
    * Return a manifest of what finalized edit logs are available
    */
-  public RemoteEditLogManifest getEditLogManifest(long sinceTxId)
-      throws IOException {
-    FSImageTransactionalStorageInspector inspector =
-        new FSImageTransactionalStorageInspector();
-
-    for (StorageDirectory sd : storage.dirIterable(NameNodeDirType.EDITS)) {
-      inspector.inspectDirectory(sd);
+  public synchronized RemoteEditLogManifest getEditLogManifest(
+      long fromTxId) throws IOException {
+    // Collect RemoteEditLogs available from each FileJournalManager
+    List<RemoteEditLog> allLogs = Lists.newArrayList();
+    for (JournalAndStream j : journals) {
+      if (j.getManager() instanceof FileJournalManager) {
+        FileJournalManager fjm = (FileJournalManager)j.getManager();
+        try {
+          allLogs.addAll(fjm.getRemoteEditLogs(fromTxId));
+        } catch (Throwable t) {
+          LOG.warn("Cannot list edit logs in " + fjm, t);
+        }
+      }
     }
     
-    return inspector.getEditLogManifest(sinceTxId);
+    // Group logs by their starting txid
+    ImmutableListMultimap<Long, RemoteEditLog> logsByStartTxId =
+      Multimaps.index(allLogs, RemoteEditLog.GET_START_TXID);
+    long curStartTxId = fromTxId;
+
+    List<RemoteEditLog> logs = Lists.newArrayList();
+    while (true) {
+      ImmutableList<RemoteEditLog> logGroup = logsByStartTxId.get(curStartTxId);
+      if (logGroup.isEmpty()) {
+        // we have a gap in logs - for example because we recovered some old
+        // storage directory with ancient logs. Clear out any logs we've
+        // accumulated so far, and then skip to the next segment of logs
+        // after the gap.
+        SortedSet<Long> startTxIds = Sets.newTreeSet(logsByStartTxId.keySet());
+        startTxIds = startTxIds.tailSet(curStartTxId);
+        if (startTxIds.isEmpty()) {
+          break;
+        } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Found gap in logs at " + curStartTxId + ": " +
+                "not returning previous logs in manifest.");
+          }
+          logs.clear();
+          curStartTxId = startTxIds.first();
+          continue;
+        }
+      }
+
+      // Find the one that extends the farthest forward
+      RemoteEditLog bestLog = Collections.max(logGroup);
+      logs.add(bestLog);
+      // And then start looking from after that point
+      curStartTxId = bestLog.getEndTxId() + 1;
+    }
+    RemoteEditLogManifest ret = new RemoteEditLogManifest(logs);
+    
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Generated manifest for logs since " + fromTxId + ":"
+          + ret);      
+    }
+    return ret;
   }
-  
+ 
   /**
    * Finalizes the current edit log and opens a new log segment.
    * @return the transaction id of the BEGIN_LOG_SEGMENT transaction
@@ -877,8 +899,7 @@ public class FSEditLog  {
   /**
    * Archive any log files that are older than the given txid.
    */
-  public void purgeLogsOlderThan(
-      final long minTxIdToKeep, final StoragePurger purger) {
+  public void purgeLogsOlderThan(final long minTxIdToKeep) {
     synchronized (this) {
       // synchronized to prevent findbugs warning about inconsistent
       // synchronization. This will be JIT-ed out if asserts are
@@ -892,7 +913,7 @@ public class FSEditLog  {
     mapJournalsAndReportErrors(new JournalClosure() {
       @Override
       public void apply(JournalAndStream jas) throws IOException {
-        jas.manager.purgeLogsOlderThan(minTxIdToKeep, purger);
+        jas.manager.purgeLogsOlderThan(minTxIdToKeep);
       }
     }, "purging logs older than " + minTxIdToKeep);
   }
@@ -1080,7 +1101,8 @@ public class FSEditLog  {
       stream = null;
     }
     
-    private void abort() {
+    @VisibleForTesting
+    void abort() {
       if (stream == null) return;
       try {
         stream.abort();

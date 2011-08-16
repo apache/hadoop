@@ -227,8 +227,12 @@ class TaskMemoryManagerThread extends Thread {
             continue; // processTree cannot be tracked
           }
 
-          if (taskTracker.runningTasks.get(tid).wasKilled()) {
-            continue; // this task has been killed already
+          TaskInProgress tip = taskTracker.getRunningTask(tid);
+          if (tip == null) {
+            continue;
+          }
+          if (tip.wasKilled()) {
+            continue;
           }
 
           LOG.debug("Constructing ProcessTree for : PID = " + pId + " TID = "
@@ -514,6 +518,12 @@ class TaskMemoryManagerThread extends Thread {
    * @param msg diagnostics message
    */
   private void killTask(TaskAttemptID tid, String msg) {
+    TaskInProgress tip = taskTracker.getRunningTask(tid);
+    if (tip != null) {
+      //for the task identified to be killed update taskDiagnostic 
+      TaskStatus taskStatus = tip.getStatus();
+      taskStatus.setDiagnosticInfo(msg);
+    }
     // Kill the task and mark it as killed.
     taskTracker.cleanUpOverMemoryTask(tid, false, msg);
     // Now destroy the ProcessTree, remove it from monitoring map.
@@ -530,7 +540,7 @@ class TaskMemoryManagerThread extends Thread {
    * @return true if the task can be killed
    */
   private boolean isKillable(TaskAttemptID tid) {
-      TaskInProgress tip = taskTracker.runningTasks.get(tid);
+      TaskInProgress tip = taskTracker.getRunningTask(tid);
       return tip != null && !tip.wasKilled() &&
              (tip.getRunState() == TaskStatus.State.RUNNING ||
               tip.getRunState() == TaskStatus.State.COMMIT_PENDING);

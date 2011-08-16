@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.mapreduce.jobhistory;
 
+import java.util.List;
+import java.util.ArrayList;
+
 import org.apache.hadoop.mapred.TaskStatus;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
@@ -28,6 +31,15 @@ import junit.framework.TestCase;
  * Test various jobhistory events
  */
 public class TestJobHistoryEvents extends TestCase {
+  static final int[][] NULL_SPLITS_ARRAY
+    = new int[org.apache.hadoop.tools.rumen.LoggedTaskAttempt.SplitVectorKind.values().length][];
+
+  static {
+    for (int i = 0; i < NULL_SPLITS_ARRAY.length; ++i) {
+      NULL_SPLITS_ARRAY[i] = new int[0];
+    }
+  }
+ 
   /**
    * Test {@link TaskAttemptStartedEvent} for various task types.
    */
@@ -73,7 +85,8 @@ public class TestJobHistoryEvents extends TestCase {
                                                      String state) {
     for (TaskType t : types) {
       TaskAttemptUnsuccessfulCompletionEvent tauce = 
-        new TaskAttemptUnsuccessfulCompletionEvent(id, t, state, 0L, "", "");
+        new TaskAttemptUnsuccessfulCompletionEvent
+           (id, t, state, 0L, "", "", NULL_SPLITS_ARRAY);
       assertEquals(expected, tauce.getEventType());
     }
   }

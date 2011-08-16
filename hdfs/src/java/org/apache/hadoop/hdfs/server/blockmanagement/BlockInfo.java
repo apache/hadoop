@@ -259,26 +259,6 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     return head;
   }
 
-  boolean listIsConsistent(DatanodeDescriptor dn) {
-    // going forward
-    int count = 0;
-    BlockInfo next, nextPrev;
-    BlockInfo cur = this;
-    while(cur != null) {
-      next = cur.getNext(cur.findDatanode(dn));
-      if(next != null) {
-        nextPrev = next.getPrevious(next.findDatanode(dn));
-        if(cur != nextPrev) {
-          System.out.println("Inconsistent list: cur->next->prev != cur");
-          return false;
-        }
-      }
-      cur = next;
-      count++;
-    }
-    return true;
-  }
-
   /**
    * BlockInfo represents a block that is not being constructed.
    * In order to start modifying the block, the BlockInfo should be converted

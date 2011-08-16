@@ -21,6 +21,8 @@ import java.io.DataInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
+import com.google.common.base.Preconditions;
+
 /**
  * An implementation of the abstract class {@link EditLogInputStream},
  * which is used to updates HDFS meta-data state on a backup node.
@@ -33,6 +35,9 @@ class EditLogBackupInputStream extends EditLogInputStream {
   String address; // sender address 
   private ByteBufferInputStream inner;
   private DataInputStream in;
+  private FSEditLogOp.Reader reader = null;
+  private FSEditLogLoader.PositionTrackingInputStream tracker = null;
+  private int version = 0;
 
   /**
    * A ByteArrayInputStream, which lets modify the underlying byte array.
@@ -60,7 +65,8 @@ class EditLogBackupInputStream extends EditLogInputStream {
   EditLogBackupInputStream(String name) throws IOException {
     address = name;
     inner = new ByteBufferInputStream();
-    in = new DataInputStream(inner);
+    in = null;
+    reader = null;
   }
 
   @Override // JournalStream
@@ -74,18 +80,20 @@ class EditLogBackupInputStream extends EditLogInputStream {
   }
 
   @Override
-  public int available() throws IOException {
-    return in.available();
+  public FSEditLogOp readOp() throws IOException {
+    Preconditions.checkState(reader != null,
+        "Must call setBytes() before readOp()");
+    return reader.readOp();
   }
 
   @Override
-  public int read() throws IOException {
-    return in.read();
+  public int getVersion() throws IOException {
+    return this.version;
   }
 
   @Override
-  public int read(byte[] b, int off, int len) throws IOException {
-    return in.read(b, off, len);
+  public long getPosition() {
+    return tracker.getPos();
   }
 
   @Override
@@ -99,16 +107,19 @@ class EditLogBackupInputStream extends EditLogInputStream {
     return inner.length();
   }
 
-  DataInputStream getDataInputStream() {
-    return in;
-  }
-
-  void setBytes(byte[] newBytes) throws IOException {
+  void setBytes(byte[] newBytes, int version) throws IOException {
     inner.setData(newBytes);
-    in.reset();
+    tracker = new FSEditLogLoader.PositionTrackingInputStream(inner);
+    in = new DataInputStream(tracker);
+
+    this.version = version;
+
+    reader = new FSEditLogOp.Reader(in, version);
   }
 
   void clear() throws IOException {
-    setBytes(null);
+    setBytes(null, 0);
+    reader = null;
+    this.version = 0;
   }
 }

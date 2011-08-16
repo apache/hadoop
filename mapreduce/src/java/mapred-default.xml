@@ -33,6 +33,29 @@
 </property>
 
 <property>
+  <name>mapreduce.jobtracker.jobhistory.task.numberprogresssplits</name>
+  <value>12</value>
+  <description> Every task attempt progresses from 0.0 to 1.0 [unless
+  it fails or is killed].  We record, for each task attempt, certain 
+  statistics over each twelfth of the progress range.  You can change
+  the number of intervals we divide the entire range of progress into
+  by setting this property.  Higher values give more precision to the
+  recorded data, but costs more memory in the job tracker at runtime.
+  Each increment in this attribute costs 16 bytes per running task.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.userhistorylocation</name>
+  <value></value>
+  <description> User can specify a location to store the history files of 
+  a particular job. If nothing is specified, the logs are stored in 
+  output directory. The files are stored in "_logs/history/" in the directory.
+  User can stop logging by giving the value "none". 
+  </description>
+</property>
+
+<property>
   <name>mapreduce.jobtracker.jobhistory.completed.location</name>
   <value></value>
   <description> The completed job history files are stored at this single well 

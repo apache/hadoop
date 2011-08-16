@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 
 /**
  * The test makes sure that NameNode detects presense blocks that do not have
@@ -56,6 +57,7 @@ public class TestMissingBlocksAlert extends TestCase {
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
 
+      final BlockManager bm = cluster.getNamesystem().getBlockManager();
       DistributedFileSystem dfs = 
                             (DistributedFileSystem) cluster.getFileSystem();
 
@@ -86,8 +88,7 @@ public class TestMissingBlocksAlert extends TestCase {
       }
       assertTrue(dfs.getMissingBlocksCount() == 1);
       assertEquals(4, dfs.getUnderReplicatedBlocksCount());
-      assertEquals(3, 
-          cluster.getNamesystem().getUnderReplicatedNotMissingBlocks());
+      assertEquals(3, bm.getUnderReplicatedNotMissingBlocks());
 
 
       // Now verify that it shows up on webui
@@ -109,8 +110,7 @@ public class TestMissingBlocksAlert extends TestCase {
       }
 
       assertEquals(2, dfs.getUnderReplicatedBlocksCount());
-      assertEquals(2, 
-          cluster.getNamesystem().getUnderReplicatedNotMissingBlocks());
+      assertEquals(2, bm.getUnderReplicatedNotMissingBlocks());
 
       // and make sure WARNING disappears
       // Now verify that it shows up on webui
