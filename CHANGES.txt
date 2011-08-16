@@ -440,6 +440,9 @@ Release 0.90.5 - Unreleased
    HBASE-4159  HBaseServer - IPC Reader threads are not daemons (Douglas
                Campbell)
 
+  IMPROVEMENT
+   HBASE-4205  Enhance HTable javadoc (Eric Charles)
+
 Release 0.90.4 - August 10, 2011
 
   BUG FIXES

@@ -65,10 +65,18 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
 
 /**
- * Used to communicate with a single HBase table.
+ * <p>Used to communicate with a single HBase table.
  *
- * This class is not thread safe for updates; the underlying write buffer can
+ * <p>This class is not thread safe for reads nor write.
+ * 
+ * <p>In case of writes (Put, Delete), the underlying write buffer can
  * be corrupted if multiple threads contend over a single HTable instance.
+ * 
+ * <p>In case of reads, some fields used by a Scan are shared among all threads.
+ * The HTable implementation can either not contract to be safe in case of a Get
+ *
+ * <p>To access a table in a multi threaded environment, please consider
+ * using the {@link HTablePool} class to create your HTable instances.
  *
  * <p>Instances of HTable passed the same {@link Configuration} instance will
  * share connections to servers out on the cluster and to the zookeeper ensemble
@@ -90,7 +98,8 @@ import org.apache.hadoop.hbase.util.Writables;
  *
  * <p>Note that this class implements the {@link Closeable} interface. When a
  * HTable instance is no longer required, it *should* be closed in order to ensure
- * that the underlying resources are promptly released.
+ * that the underlying resources are promptly released. Please note that the close 
+ * method can throw java.io.IOException that must be handled.
  *
  * @see HBaseAdmin for create, drop, list, enable and disable of tables.
  * @see HConnection
