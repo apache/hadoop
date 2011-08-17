@@ -200,6 +200,8 @@ Release 0.91.0 - Unreleased
    HBASE-4186  No region is added to regionsInTransitionInRS
    HBASE-4194  RegionSplitter: Split on under-loaded region servers first
    HBASE-2399  Forced splits only act on the first family in a table (Ming Ma)
+   HBASE-4211  Do init-sizing of the StringBuilder making a ServerName
+               (Benoît Sigoure)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

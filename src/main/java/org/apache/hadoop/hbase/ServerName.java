@@ -128,7 +128,8 @@ public class ServerName implements Comparable<ServerName> {
    * startcode formatted as <code>&lt;hostname> ',' &lt;port> ',' &lt;startcode></code>
    */
   public static String getServerName(String hostName, int port, long startcode) {
-    StringBuilder name = new StringBuilder(hostName);
+    final StringBuilder name = new StringBuilder(hostName.length() + 1 + 5 + 1 + 13);
+    name.append(hostName);
     name.append(SERVERNAME_SEPARATOR);
     name.append(port);
     name.append(SERVERNAME_SEPARATOR);
@@ -142,7 +143,7 @@ public class ServerName implements Comparable<ServerName> {
    * @return Server name made of the concatenation of hostname, port and
    * startcode formatted as <code>&lt;hostname> ',' &lt;port> ',' &lt;startcode></code>
    */
-  public static synchronized String getServerName(final String hostAndPort,
+  public static String getServerName(final String hostAndPort,
       final long startcode) {
     int index = hostAndPort.indexOf(":");
     if (index <= 0) throw new IllegalArgumentException("Expected <hostname> ':' <port>");
