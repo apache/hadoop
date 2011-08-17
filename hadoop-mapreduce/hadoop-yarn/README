@@ -1,0 +1,73 @@
+YARN (YET ANOTHER RESOURCE NEGOTIATOR or YARN Application Resource Negotiator)
+------------------------------------------------------------------------------
+
+Requirements
+-------------
+Java: JDK 1.6
+Maven: Maven 2
+
+Setup
+-----
+Install protobuf 2.4.0a or higher (Download from http://code.google.com/p/protobuf/downloads/list)
+ - install the protoc executable (configure, make, make install)
+ - install the maven artifact (cd java; mvn install)
+Installing protoc requires gcc 4.1.x or higher.
+If the make step fails with (Valid until a fix is released for protobuf 2.4.0a)
+    ./google/protobuf/descriptor.h:1152: error:
+    `google::protobuf::internal::Mutex*google::protobuf::DescriptorPool::mutex_'
+    is private
+  Replace descriptor.cc with http://protobuf.googlecode.com/svn-history/r380/trunk/src/google/protobuf/descriptor.cc
+
+
+Quick Maven Tips
+----------------
+clean workspace: mvn clean
+compile and test: mvn install
+skip tests: mvn install -DskipTests
+skip test execution but compile: mvn install -Dmaven.test.skip.exec=true
+skip native build: mvn -fn install -P-cbuild
+clean and test: mvn clean install
+run selected test after compile: mvn test -Dtest=TestClassName (combined: mvn clean install -Dtest=TestClassName)
+create runnable binaries after install: mvn assembly:assembly (combined: mvn clean install assembly:assembly)
+
+
+Eclipse Projects
+----------------
+http://maven.apache.org/guides/mini/guide-ide-eclipse.html
+
+1. Generate .project and .classpath files in all maven modules
+mvn eclipse:eclipse
+CAUTION: If the project structure has changed from your previous workspace, clean up all .project and .classpath files recursively. Then run:
+mvn eclipse:eclipse
+
+2. Import the projects in eclipse.
+
+3. Set the environment variable M2_REPO to point to your .m2/repository location.
+
+NetBeans Projects
+-----------------
+
+NetBeans has builtin support of maven projects. Just "Open Project..."
+and everything is setup automatically. Verified with NetBeans 6.9.1.
+
+
+Custom Hadoop Dependencies
+--------------------------
+
+By default Hadoop dependencies are specified in the top-level pom.xml
+properties section. One can override them via -Dhadoop-common.version=...
+on the command line. ~/.m2/settings.xml can also be used to specify
+these properties in different profiles, which is useful for IDEs.
+
+Modules
+-------
+YARN consists of multiple modules. The modules are listed below as per the directory structure:
+
+yarn-api - Yarn's cross platform external interface
+
+yarn-common - Utilities which can be used by yarn clients and server
+
+yarn-server - Implementation of the yarn-api
+	yarn-server-common - APIs shared between resourcemanager and nodemanager
+	yarn-server-nodemanager (TaskTracker replacement)
+	yarn-server-resourcemanager (JobTracker replacement)

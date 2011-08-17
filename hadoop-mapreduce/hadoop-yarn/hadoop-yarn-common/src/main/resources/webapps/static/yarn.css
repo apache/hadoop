@@ -1,0 +1,28 @@
+/* Styles for YARN */
+* { margin: 0; border: 0 }
+html, body { height: 100% }
+body { padding: 0; font: 90% sans-serif }
+a { text-decoration: none }
+a:hover { text-decoration: underline }
+.content { padding-right: 1em }
+.content h1, .content h2, .content h3 { margin: 0 0 0.3em; font-weight: normal }
+table { border-collapse: collapse; border-spacing: 0; width: 100% }
+table br { display: none }
+table.info th { text-align: right }
+.info-wrap { margin: 0 0 1em }
+th, td { padding: 0.2em 0.5em 0 }
+td.table { padding: 0 }
+.ui-dialog, .shadow {
+  -moz-box-shadow: 0 8px 38px #000;
+  -webkit-box-shadow: 0 8px 38px #000;
+  box-shadow: 0 8px 38px #000 }
+/* styles for common objects */
+#logo { float: left; position: relative; line-height: 0.5em; top: -1.3em }
+#user { float: right; position: relative; top: -1.5em; font-size: 0.77em }
+#header { padding: 1.5em 0.5em; text-align: center }
+#nav h3 { padding: 0 0 0 1.6em }
+#nav ul {
+  padding: 0.3em 1em 0.8em 2em; line-height: 0.5em; list-style: none;
+  line-height: 1.2em; font-size: 90% }
+#themeswitcher { margin: 1em 0.25em }
+#footer { padding: 1em; text-align: center }
