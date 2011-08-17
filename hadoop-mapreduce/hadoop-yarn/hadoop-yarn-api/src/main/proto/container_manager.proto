@@ -1,0 +1,12 @@
+option java_package = "org.apache.hadoop.yarn.proto";
+option java_outer_classname = "ContainerManager";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+
+import "yarn_service_protos.proto";
+
+service ContainerManagerService {
+  rpc startContainer(StartContainerRequestProto) returns (StartContainerResponseProto);
+  rpc stopContainer(StopContainerRequestProto) returns (StopContainerResponseProto);
+  rpc getContainerStatus(GetContainerStatusRequestProto) returns (GetContainerStatusResponseProto);
+}

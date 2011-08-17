@@ -1,0 +1,143 @@
+option java_package = "org.apache.hadoop.yarn.proto";
+option java_outer_classname = "YarnServiceProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+
+import "yarn_protos.proto";
+
+//////////////////////////////////////////////////////
+/////// AM_RM_Protocol ///////////////////////////////
+//////////////////////////////////////////////////////
+message RegisterApplicationMasterRequestProto {
+  optional ApplicationAttemptIdProto application_attempt_id = 1;
+  optional string host = 2;
+  optional int32 rpc_port = 3;
+  optional string tracking_url = 4;
+}
+
+message RegisterApplicationMasterResponseProto {
+  optional ResourceProto minimumCapability = 1;
+  optional ResourceProto maximumCapability = 2;
+}
+
+message FinishApplicationMasterRequestProto {
+  optional ApplicationAttemptIdProto application_attempt_id = 1;
+  optional string diagnostics = 2;
+  optional string tracking_url = 3;
+  optional string final_state = 4;
+}
+
+message FinishApplicationMasterResponseProto {
+}
+
+message AllocateRequestProto {
+  optional ApplicationAttemptIdProto application_attempt_id = 1;
+  repeated ResourceRequestProto ask = 2;
+  repeated ContainerIdProto release = 3;
+  optional int32 response_id = 4;
+  optional float progress = 5;
+}
+
+message AllocateResponseProto {
+  optional AMResponseProto AM_response = 1;
+}
+
+
+
+//////////////////////////////////////////////////////
+/////// client_RM_Protocol ///////////////////////////
+//////////////////////////////////////////////////////
+
+message GetNewApplicationIdRequestProto {
+}
+
+message GetNewApplicationIdResponseProto {
+  optional ApplicationIdProto application_id = 1;
+}
+
+message GetApplicationReportRequestProto {
+  optional ApplicationIdProto application_id = 1;
+}
+
+message GetApplicationReportResponseProto {
+  optional ApplicationReportProto application_report = 1;
+}
+
+message SubmitApplicationRequestProto {
+  optional ApplicationSubmissionContextProto application_submission_context= 1;
+}
+
+message SubmitApplicationResponseProto {
+}
+
+message FinishApplicationRequestProto {
+  optional ApplicationIdProto application_id = 1;
+}
+
+message FinishApplicationResponseProto {
+}
+
+message GetClusterMetricsRequestProto {
+}
+
+message GetClusterMetricsResponseProto {
+  optional YarnClusterMetricsProto cluster_metrics = 1;
+}
+
+message GetAllApplicationsRequestProto {
+}
+
+message GetAllApplicationsResponseProto {
+  repeated ApplicationReportProto applications = 1;
+}
+
+message GetClusterNodesRequestProto {
+}
+
+message GetClusterNodesResponseProto {
+  repeated NodeReportProto nodeReports = 1; 
+}
+
+message GetQueueInfoRequestProto {
+  optional string queueName = 1;
+  optional bool includeApplications = 2;
+  optional bool includeChildQueues = 3;
+  optional bool recursive = 4;
+}
+
+message GetQueueInfoResponseProto {
+  optional QueueInfoProto queueInfo = 1;
+}
+
+message GetQueueUserAclsInfoRequestProto {
+}
+
+message GetQueueUserAclsInfoResponseProto {
+  repeated QueueUserACLInfoProto queueUserAcls = 1; 
+}
+
+//////////////////////////////////////////////////////
+/////// client_NM_Protocol ///////////////////////////
+//////////////////////////////////////////////////////
+
+message StartContainerRequestProto {
+  optional ContainerLaunchContextProto container_launch_context = 1;
+}
+
+message StartContainerResponseProto {
+}
+
+message StopContainerRequestProto {
+  optional ContainerIdProto container_id = 1;
+}
+
+message StopContainerResponseProto {
+}
+
+message GetContainerStatusRequestProto {
+  optional ContainerIdProto container_id = 1;
+}
+
+message GetContainerStatusResponseProto {
+  optional ContainerStatusProto status = 1;
+}
