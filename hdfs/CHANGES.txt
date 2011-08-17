@@ -972,6 +972,9 @@ Trunk (unreleased changes)
     HDFS-73. DFSOutputStream does not close all the sockets.
     (Uma Maheswara Rao G via eli)
 
+    HDFS-1257. Fix a race condition on BlockManager.recentInvalidateSets.
+    (Eric Payne via szetszwo)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.
