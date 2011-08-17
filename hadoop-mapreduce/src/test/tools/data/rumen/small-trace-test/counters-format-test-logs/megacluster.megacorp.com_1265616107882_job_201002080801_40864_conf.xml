@@ -1,3 +1,0 @@
-<configuration>
-<property><name>mapred.child.java.opts</name><value>-Xmx1024M -Djava.io.tmpdir=./tmp</value></property>
-</configuration>
