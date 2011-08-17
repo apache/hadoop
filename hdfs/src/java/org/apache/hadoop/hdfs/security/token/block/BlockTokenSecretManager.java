@@ -52,7 +52,7 @@ public class BlockTokenSecretManager extends
   public static final Token<BlockTokenIdentifier> DUMMY_TOKEN = new Token<BlockTokenIdentifier>();
 
   private final boolean isMaster;
-  /*
+  /**
    * keyUpdateInterval is the interval that NN updates its block keys. It should
    * be set long enough so that all live DN's and Balancer should have sync'ed
    * their block keys with NN at least once during each interval.
@@ -151,11 +151,23 @@ public class BlockTokenSecretManager extends
   }
 
   /**
+   * Update block keys if update time > update interval.
+   * @return true if the keys are updated.
+   */
+  public boolean updateKeys(final long updateTime) throws IOException {
+    if (updateTime > keyUpdateInterval) {
+      return updateKeys();
+    }
+    return false;
+  }
+
+  /**
    * Update block keys, only to be used in master mode
    */
-  public synchronized void updateKeys() throws IOException {
+  synchronized boolean updateKeys() throws IOException {
     if (!isMaster)
-      return;
+      return false;
+
     LOG.info("Updating block keys");
     removeExpiredKeys();
     // set final expiry date of retiring currentKey
@@ -171,6 +183,7 @@ public class BlockTokenSecretManager extends
     nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 3
         * keyUpdateInterval + tokenLifetime, generateSecret());
     allKeys.put(nextKey.getKeyId(), nextKey);
+    return true;
   }
 
   /** Generate an block token for current user */

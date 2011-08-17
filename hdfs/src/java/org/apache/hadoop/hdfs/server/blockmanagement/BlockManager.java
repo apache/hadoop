@@ -80,21 +80,16 @@ public class BlockManager {
 
   private final FSNamesystem namesystem;
 
+  private final DatanodeManager datanodeManager;
+  private final HeartbeatManager heartbeatManager;
+  private final BlockTokenSecretManager blockTokenSecretManager;
+
   private volatile long pendingReplicationBlocksCount = 0L;
   private volatile long corruptReplicaBlocksCount = 0L;
   private volatile long underReplicatedBlocksCount = 0L;
   private volatile long scheduledReplicationBlocksCount = 0L;
   private volatile long excessBlocksCount = 0L;
   private volatile long pendingDeletionBlocksCount = 0L;
-  private boolean isBlockTokenEnabled;
-  private long blockKeyUpdateInterval;
-  private long blockTokenLifetime;
-  private BlockTokenSecretManager blockTokenSecretManager;
-
-  /** get the BlockTokenSecretManager */
-  public BlockTokenSecretManager getBlockTokenSecretManager() {
-    return blockTokenSecretManager;
-  }
   
   /** Used by metrics */
   public long getPendingReplicationBlocksCount() {
@@ -129,9 +124,6 @@ public class BlockManager {
    * Updated only in response to client-sent information.
    */
   final BlocksMap blocksMap;
-
-  private final DatanodeManager datanodeManager;
-  private final HeartbeatManager heartbeatManager;
 
   /** Replication thread. */
   final Daemon replicationThread = new Daemon(new ReplicationMonitor());
@@ -197,26 +189,9 @@ public class BlockManager {
     pendingReplications = new PendingReplicationBlocks(conf.getInt(
       DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
       DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_DEFAULT) * 1000L);
-    this.isBlockTokenEnabled = conf.getBoolean(
-        DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, 
-        DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_DEFAULT);
-    if (isBlockTokenEnabled) {
-      if (isBlockTokenEnabled) {
-        this.blockKeyUpdateInterval = conf.getLong(
-            DFSConfigKeys.DFS_BLOCK_ACCESS_KEY_UPDATE_INTERVAL_KEY, 
-            DFSConfigKeys.DFS_BLOCK_ACCESS_KEY_UPDATE_INTERVAL_DEFAULT) * 60 * 1000L; // 10 hrs
-        this.blockTokenLifetime = conf.getLong(
-            DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY, 
-            DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_DEFAULT) * 60 * 1000L; // 10 hrs
-      }
-   
-      blockTokenSecretManager = new BlockTokenSecretManager(true,
-          blockKeyUpdateInterval, blockTokenLifetime);
-    }
-    LOG.info("isBlockTokenEnabled=" + isBlockTokenEnabled
-        + " blockKeyUpdateInterval=" + blockKeyUpdateInterval / (60 * 1000)
-        + " min(s), blockTokenLifetime=" + blockTokenLifetime / (60 * 1000)
-        + " min(s)");
+
+    blockTokenSecretManager = createBlockTokenSecretManager(conf);
+
     this.maxCorruptFilesReturned = conf.getInt(
       DFSConfigKeys.DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED_KEY,
       DFSConfigKeys.DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED);
@@ -258,6 +233,46 @@ public class BlockManager {
     LOG.info("maxReplicationStreams      = " + maxReplicationStreams);
     LOG.info("shouldCheckForEnoughRacks  = " + shouldCheckForEnoughRacks);
     LOG.info("replicationRecheckInterval = " + replicationRecheckInterval);
+  }
+
+  private static BlockTokenSecretManager createBlockTokenSecretManager(
+      final Configuration conf) throws IOException {
+    final boolean isEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, 
+        DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_DEFAULT);
+    LOG.info(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY + "=" + isEnabled);
+
+    if (!isEnabled) {
+      return null;
+    }
+
+    final long updateMin = conf.getLong(
+        DFSConfigKeys.DFS_BLOCK_ACCESS_KEY_UPDATE_INTERVAL_KEY, 
+        DFSConfigKeys.DFS_BLOCK_ACCESS_KEY_UPDATE_INTERVAL_DEFAULT);
+    final long lifetimeMin = conf.getLong(
+        DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY, 
+        DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_DEFAULT);
+    LOG.info(DFSConfigKeys.DFS_BLOCK_ACCESS_KEY_UPDATE_INTERVAL_KEY
+        + "=" + updateMin + " min(s), "
+        + DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY
+        + "=" + lifetimeMin + " min(s)");
+    return new BlockTokenSecretManager(true,
+        updateMin*60*1000L, lifetimeMin*60*1000L);
+  }
+
+  /** get the BlockTokenSecretManager */
+  BlockTokenSecretManager getBlockTokenSecretManager() {
+    return blockTokenSecretManager;
+  }
+
+  private boolean isBlockTokenEnabled() {
+    return blockTokenSecretManager != null;
+  }
+
+  /** Should the access keys be updated? */
+  boolean shouldUpdateBlockKey(final long updateTime) throws IOException {
+    return isBlockTokenEnabled()? blockTokenSecretManager.updateKeys(updateTime)
+        : false;
   }
 
   public void activate(Configuration conf) {
@@ -599,7 +614,7 @@ public class BlockManager {
           : fileSizeExcludeBlocksUnderConstruction;
       final LocatedBlock lastlb = createLocatedBlock(last, lastPos);
 
-      if (isBlockTokenEnabled && needBlockToken) {
+      if (isBlockTokenEnabled() && needBlockToken) {
         for(LocatedBlock lb : locatedblocks) {
           setBlockToken(lb, AccessMode.READ);
         }
@@ -613,14 +628,14 @@ public class BlockManager {
 
   /** @return current access keys. */
   public ExportedBlockKeys getBlockKeys() {
-    return isBlockTokenEnabled? blockTokenSecretManager.exportKeys()
+    return isBlockTokenEnabled()? blockTokenSecretManager.exportKeys()
         : ExportedBlockKeys.DUMMY_KEYS;
   }
 
   /** Generate a block token for the located block. */
   public void setBlockToken(final LocatedBlock b,
       final BlockTokenSecretManager.AccessMode mode) throws IOException {
-    if (isBlockTokenEnabled) {
+    if (isBlockTokenEnabled()) {
       b.setBlockToken(blockTokenSecretManager.generateToken(b.getBlock(), 
           EnumSet.of(mode)));
     }    
@@ -629,7 +644,7 @@ public class BlockManager {
   void addKeyUpdateCommand(final List<DatanodeCommand> cmds,
       final DatanodeDescriptor nodeinfo) {
     // check access key update
-    if (isBlockTokenEnabled && nodeinfo.needKeyUpdate) {
+    if (isBlockTokenEnabled() && nodeinfo.needKeyUpdate) {
       cmds.add(new KeyUpdateCommand(blockTokenSecretManager.exportKeys()));
       nodeinfo.needKeyUpdate = false;
     }
@@ -2366,16 +2381,6 @@ public class BlockManager {
 
   public BlockInfo getStoredBlock(Block block) {
     return blocksMap.getStoredBlock(block);
-  }
-
-
-  /** Should the access keys be updated? */
-  boolean shouldUpdateBlockKey(final long updateTime) throws IOException {
-    final boolean b = isBlockTokenEnabled && blockKeyUpdateInterval < updateTime;
-    if (b) {
-      blockTokenSecretManager.updateKeys();
-    }
-    return b;
   }
 
   /** updates a block in under replication queue */

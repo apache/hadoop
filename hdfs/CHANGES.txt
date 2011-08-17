@@ -665,6 +665,9 @@ Trunk (unreleased changes)
 
     HDFS-2233. Add WebUI tests with URI reserved chars. (eli)
 
+    HDFS-2265. Remove unnecessary BlockTokenSecretManager fields/methods from
+    BlockManager.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
