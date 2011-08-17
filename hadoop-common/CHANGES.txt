@@ -324,6 +324,8 @@ Trunk (unreleased changes)
 
     HADOOP-7531. Add servlet util methods for handling paths in requests. (eli)
 
+    HADOOP-7493. Add ShortWritable.  (Uma Maheswara Rao G via szetszwo)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

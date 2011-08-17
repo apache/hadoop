@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.io;
 
-import java.io.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.Random;
 
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -68,6 +69,10 @@ public class TestWritable extends TestCase {
   public void testByteWritable() throws Exception {
     testWritable(new ByteWritable((byte)128));
   }
+  
+  public void testShortWritable() throws Exception {
+    testWritable(new ShortWritable((byte)256));
+  }
 
   public void testDoubleWritable() throws Exception {
     testWritable(new DoubleWritable(1.0));
@@ -104,13 +109,13 @@ public class TestWritable extends TestCase {
     }
   }
 
-  private static class Frob implements WritableComparable {
+  private static class Frob implements WritableComparable<Frob> {
     static {                                     // register default comparator
       WritableComparator.define(Frob.class, new FrobComparator());
     }
     @Override public void write(DataOutput out) throws IOException {}
     @Override public void readFields(DataInput in) throws IOException {}
-    @Override public int compareTo(Object o) { return 0; }
+    @Override public int compareTo(Frob o) { return 0; }
   }
 
   /** Test that comparator is defined. */
@@ -118,5 +123,31 @@ public class TestWritable extends TestCase {
     assert(WritableComparator.get(Frob.class) instanceof FrobComparator);
   }
 
+  /**
+   * Test a user comparator that relies on deserializing both arguments for each
+   * compare.
+   */
+  public void testShortWritableComparator() throws Exception {
+    ShortWritable writable1 = new ShortWritable((short)256);
+    ShortWritable writable2 = new ShortWritable((short) 128);
+    ShortWritable writable3 = new ShortWritable((short) 256);
+    
+    final String SHOULD_NOT_MATCH_WITH_RESULT_ONE = "Result should be 1, should not match the writables";
+    assertTrue(SHOULD_NOT_MATCH_WITH_RESULT_ONE,
+        writable1.compareTo(writable2) == 1);
+    assertTrue(SHOULD_NOT_MATCH_WITH_RESULT_ONE, WritableComparator.get(
+        ShortWritable.class).compare(writable1, writable2) == 1);
+
+    final String SHOULD_NOT_MATCH_WITH_RESULT_MINUS_ONE = "Result should be -1, should not match the writables";
+    assertTrue(SHOULD_NOT_MATCH_WITH_RESULT_MINUS_ONE, writable2
+        .compareTo(writable1) == -1);
+    assertTrue(SHOULD_NOT_MATCH_WITH_RESULT_MINUS_ONE, WritableComparator.get(
+        ShortWritable.class).compare(writable2, writable1) == -1);
+
+    final String SHOULD_MATCH = "Result should be 0, should match the writables";
+    assertTrue(SHOULD_MATCH, writable1.compareTo(writable1) == 0);
+    assertTrue(SHOULD_MATCH, WritableComparator.get(ShortWritable.class)
+        .compare(writable1, writable3) == 0);
+  }
 
 }
