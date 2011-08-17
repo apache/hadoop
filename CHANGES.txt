@@ -16,7 +16,7 @@ Release 0.20.205.0 - unreleased
     job log directory creation. (Bharath Mundlapudi via llu)
 
     HADOOP-6833. IPC leaks call parameters when exceptions thrown.
-    (Todd Lipcon via Eli Collins)
+    (Todd Lipcon via eli)
   
     HADOOP-7400. Fix HdfsProxyTests fails when the -Dtest.build.dir 
     and -Dbuild.test is set a dir other than build dir (gkesavan).
@@ -35,6 +35,8 @@ Release 0.20.205.0 - unreleased
 
     HDFS-2190. NN fails to start if it encounters an empty or malformed fstime
     file. (atm)
+
+    HDFS-2259. DN web-UI doesn't work with paths that contain html. (eli)
 
   IMPROVEMENTS
 
