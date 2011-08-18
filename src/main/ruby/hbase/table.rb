@@ -236,7 +236,13 @@ module Hbase
         end
 
         columns.each { |c| scan.addColumns(c) }
-        scan.setFilter(filter) if filter
+
+        unless filter.class == String
+          scan.setFilter(filter)
+        else
+          scan.setFilter(org.apache.hadoop.hbase.filter.ParseFilter.new.parseFilterString(filter))
+        end
+
         scan.setTimeStamp(timestamp) if timestamp
         scan.setCacheBlocks(cache)
         scan.setMaxVersions(versions) if versions > 1

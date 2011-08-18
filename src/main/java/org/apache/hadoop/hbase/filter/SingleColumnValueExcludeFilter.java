@@ -23,6 +23,8 @@ package org.apache.hadoop.hbase.filter;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 
+import java.util.ArrayList;
+
 /**
  * A {@link Filter} that checks a single column value, but does not emit the
  * tested column. This will enable a performance boost over
@@ -84,5 +86,19 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
       }
     }
     return superRetCode;
+  }
+
+  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
+    SingleColumnValueFilter tempFilter = (SingleColumnValueFilter)
+      SingleColumnValueFilter.createFilterFromArguments(filterArguments);
+    SingleColumnValueExcludeFilter filter = new SingleColumnValueExcludeFilter (
+      tempFilter.getFamily(), tempFilter.getQualifier(),
+      tempFilter.getOperator(), tempFilter.getComparator());
+
+    if (filterArguments.size() == 6) {
+      filter.setFilterIfMissing(tempFilter.getFilterIfMissing());
+      filter.setLatestVersionOnly(tempFilter.getLatestVersionOnly());
+}
+    return filter;
   }
 }

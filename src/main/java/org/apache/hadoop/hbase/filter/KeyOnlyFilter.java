@@ -25,6 +25,10 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import java.util.ArrayList;
+
+import com.google.common.base.Preconditions;
+
 /**
  * A filter that will only return the key component of each KV (the value will
  * be rewritten as empty).
@@ -42,6 +46,12 @@ public class KeyOnlyFilter extends FilterBase {
   public ReturnCode filterKeyValue(KeyValue kv) {
     kv.convertToKeyOnly(this.lenAsVal);
     return ReturnCode.INCLUDE;
+  }
+
+  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
+    Preconditions.checkArgument(filterArguments.size() == 0,
+                                "Expected: 0 but got: %s", filterArguments.size());
+    return new KeyOnlyFilter();
   }
 
   public void write(DataOutput out) throws IOException {

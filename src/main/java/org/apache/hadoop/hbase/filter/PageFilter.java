@@ -25,7 +25,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
+import java.util.ArrayList;
 
+import com.google.common.base.Preconditions;
 /**
  * Implementation of Filter interface that limits results to a specific page
  * size. It terminates scanning once the number of filter-passed rows is >
@@ -55,6 +57,7 @@ public class PageFilter extends FilterBase {
    * @param pageSize Maximum result size.
    */
   public PageFilter(final long pageSize) {
+    Preconditions.checkArgument(pageSize >= 0, "must be positive %s", pageSize);
     this.pageSize = pageSize;
   }
 
@@ -69,6 +72,13 @@ public class PageFilter extends FilterBase {
   public boolean filterRow() {
     this.rowsAccepted++;
     return this.rowsAccepted > this.pageSize;
+  }
+
+  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
+    Preconditions.checkArgument(filterArguments.size() == 1,
+                                "Expected 1 but got: %s", filterArguments.size());
+    long pageSize = ParseFilter.convertByteArrayToLong(filterArguments.get(0));
+    return new PageFilter(pageSize);
   }
 
   public void readFields(final DataInput in) throws IOException {

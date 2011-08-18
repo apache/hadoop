@@ -25,6 +25,9 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.DataInput;
 import java.util.List;
+import java.util.ArrayList;
+
+import com.google.common.base.Preconditions;
 
 /**
  * A filter that will only return the first KV from each row.
@@ -45,6 +48,12 @@ public class FirstKeyOnlyFilter extends FilterBase {
     if(foundKV) return ReturnCode.NEXT_ROW;
     foundKV = true;
     return ReturnCode.INCLUDE;
+  }
+
+  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
+    Preconditions.checkArgument(filterArguments.size() == 0,
+                                "Expected 0 but got: %s", filterArguments.size());
+    return new FirstKeyOnlyFilter();
   }
 
   public void write(DataOutput out) throws IOException {

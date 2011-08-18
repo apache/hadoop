@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.filter;
 import org.apache.hadoop.hbase.KeyValue;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Abstract base class to help you implement new Filters.  Common "ignore" or NOOP type
@@ -119,4 +120,13 @@ public abstract class FilterBase implements Filter {
     return null;
   }
 
+  /**
+   * Given the filter's arguments it constructs the filter
+   * <p>
+   * @param filterArguments the filter's arguments
+   * @return constructed filter object
+   */
+  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
+    throw new IllegalArgumentException("This method has not been implemented");
+}
 }

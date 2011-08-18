@@ -26,17 +26,25 @@ module Shell
 Scan a table; pass table name and optionally a dictionary of scanner
 specifications.  Scanner specifications may include one or more of:
 TIMERANGE, FILTER, LIMIT, STARTROW, STOPROW, TIMESTAMP, MAXLENGTH,
-or COLUMNS. If no columns are specified, all columns will be scanned.
+or COLUMNS.
+
+If no columns are specified, all columns will be scanned.
 To scan all members of a column family, leave the qualifier empty as in
 'col_family:'.
+
+The filter can be specified in two ways:
+1. Using a filterString - more information on this is available in the
+Filter Language document attached to the HBASE-4176 JIRA
+2. Using the entire package name of the filter.
 
 Some examples:
 
   hbase> scan '.META.'
   hbase> scan '.META.', {COLUMNS => 'info:regioninfo'}
   hbase> scan 't1', {COLUMNS => ['c1', 'c2'], LIMIT => 10, STARTROW => 'xyz'}
-  hbase> scan 't1', {FILTER => org.apache.hadoop.hbase.filter.ColumnPaginationFilter.new(1, 0)}
   hbase> scan 't1', {COLUMNS => 'c1', TIMERANGE => [1303668804, 1303668904]}
+  hbase> scan 't1', {FILTER => "(PrefixFilter ('row2') AND (QualifierFilter (>=, 'binary:xyz'))) AND (TimestampsFilter ( 123, 456))"}
+  hbase> scan 't1', {FILTER => org.apache.hadoop.hbase.filter.ColumnPaginationFilter.new(1, 0)}
 
 For experts, there is an additional option -- CACHE_BLOCKS -- which
 switches block caching for the scanner on (true) or off (false).  By

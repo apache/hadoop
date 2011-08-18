@@ -429,6 +429,7 @@ Release 0.91.0 - Unreleased
    HBASE-2233  Support both Hadoop 0.20 and 0.22
    HBASE-3857  Change the HFile Format (Mikhail & Liyin)
    HBASE-4114  Metrics for HFile HDFS block locality (Ming Ma)
+   HBASE-4176  Exposing HBase Filters to the Thrift API (Anirudh Todi)
 
 Release 0.90.5 - Unreleased
 

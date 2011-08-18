@@ -26,6 +26,7 @@ import java.io.DataInput;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.TreeSet;
+import java.util.ArrayList;
 
 /**
  * This filter is used for selecting only those keys with columns that matches
@@ -90,6 +91,15 @@ public class MultipleColumnPrefixFilter extends FilterBase {
       hint = sortedPrefixes.first();
       return ReturnCode.SEEK_NEXT_USING_HINT;
     }
+  }
+
+  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
+    byte [][] prefixes = new byte [filterArguments.size()][];
+    for (int i = 0 ; i < filterArguments.size(); i++) {
+      byte [] columnPrefix = ParseFilter.removeQuotesFromByteArray(filterArguments.get(i));
+      prefixes[i] = columnPrefix;
+    }
+    return new MultipleColumnPrefixFilter(prefixes);
   }
 
   public void write(DataOutput out) throws IOException {

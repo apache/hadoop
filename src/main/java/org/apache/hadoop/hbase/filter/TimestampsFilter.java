@@ -6,8 +6,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
+import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.KeyValue;
+import com.google.common.base.Preconditions;
 
 /**
  * Filter that returns only cells whose timestamp (version) is
@@ -41,6 +43,9 @@ public class TimestampsFilter extends FilterBase {
    * @param timestamps
    */
   public TimestampsFilter(List<Long> timestamps) {
+    for (Long timestamp : timestamps) {
+      Preconditions.checkArgument(timestamp >= 0, "must be positive %s", timestamp);
+    }
     this.timestamps = new TreeSet<Long>(timestamps);
     init();
   }
@@ -78,6 +83,15 @@ public class TimestampsFilter extends FilterBase {
       return ReturnCode.NEXT_COL;
     }
     return ReturnCode.SKIP;
+  }
+
+  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
+    ArrayList<Long> timestamps = new ArrayList<Long>();
+    for (int i = 0; i<filterArguments.size(); i++) {
+      long timestamp = ParseFilter.convertByteArrayToLong(filterArguments.get(i));
+      timestamps.add(timestamp);
+    }
+    return new TimestampsFilter(timestamps);
   }
 
   @Override

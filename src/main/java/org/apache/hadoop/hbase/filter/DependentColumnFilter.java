@@ -26,9 +26,12 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import com.google.common.base.Preconditions;
 
 /**
  * A filter for adding inter-column timestamp matching
@@ -120,6 +123,10 @@ public class DependentColumnFilter extends CompareFilter {
     return this.dropDependentColumn;
   }
 
+  public boolean getDropDependentColumn() {
+    return this.dropDependentColumn;
+  }
+
   @Override
   public boolean filterAllRemaining() {
     return false;
@@ -169,10 +176,39 @@ public class DependentColumnFilter extends CompareFilter {
   public boolean filterRowKey(byte[] buffer, int offset, int length) {
     return false;
   }
-
   @Override
   public void reset() {
     stampSet.clear();    
+  }
+
+  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
+    Preconditions.checkArgument(filterArguments.size() == 2 ||
+                                filterArguments.size() == 3 ||
+                                filterArguments.size() == 5,
+                                "Expected 2, 3 or 5 but got: %s", filterArguments.size());
+    if (filterArguments.size() == 2) {
+      byte [] family = ParseFilter.removeQuotesFromByteArray(filterArguments.get(0));
+      byte [] qualifier = ParseFilter.removeQuotesFromByteArray(filterArguments.get(1));
+      return new DependentColumnFilter(family, qualifier);
+
+    } else if (filterArguments.size() == 3) {
+      byte [] family = ParseFilter.removeQuotesFromByteArray(filterArguments.get(0));
+      byte [] qualifier = ParseFilter.removeQuotesFromByteArray(filterArguments.get(1));
+      boolean dropDependentColumn = ParseFilter.convertByteArrayToBoolean(filterArguments.get(2));
+      return new DependentColumnFilter(family, qualifier, dropDependentColumn);
+
+    } else if (filterArguments.size() == 5) {
+      byte [] family = ParseFilter.removeQuotesFromByteArray(filterArguments.get(0));
+      byte [] qualifier = ParseFilter.removeQuotesFromByteArray(filterArguments.get(1));
+      boolean dropDependentColumn = ParseFilter.convertByteArrayToBoolean(filterArguments.get(2));
+      CompareOp compareOp = ParseFilter.createCompareOp(filterArguments.get(3));
+      WritableByteArrayComparable comparator = ParseFilter.createComparator(
+        ParseFilter.removeQuotesFromByteArray(filterArguments.get(4)));
+      return new DependentColumnFilter(family, qualifier, dropDependentColumn,
+                                       compareOp, comparator);
+    } else {
+      throw new IllegalArgumentException("Expected 2, 3 or 5 but got: " + filterArguments.size());
+    }
   }
 
   @Override

@@ -124,7 +124,8 @@ struct TScan {
   2:optional Text stopRow,
   3:optional i64 timestamp,
   4:optional list<Text> columns,
-  5:optional i32 caching
+  5:optional i32 caching,
+  6:optional Text filterString
 }
 
 //

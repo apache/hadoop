@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
+import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.thrift.generated.AlreadyExists;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
@@ -747,6 +748,10 @@ public class ThriftServer {
                 scan.addColumn(famQf[0], famQf[1]);
               }
             }
+          }
+          if (tScan.isSetFilterString()) {
+            ParseFilter parseFilter = new ParseFilter();
+            scan.setFilter(parseFilter.parseFilterString(tScan.getFilterString()));
           }
           return addScanner(table.getScanner(scan));
         } catch (IOException e) {

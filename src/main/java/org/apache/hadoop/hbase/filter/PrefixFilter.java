@@ -27,6 +27,9 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.DataInput;
 import java.util.List;
+import java.util.ArrayList;
+
+import com.google.common.base.Preconditions;
 
 /**
  * Pass results that have same row prefix.
@@ -65,6 +68,13 @@ public class PrefixFilter extends FilterBase {
 
   public boolean filterAllRemaining() {
     return passedPrefix;
+  }
+
+  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
+    Preconditions.checkArgument(filterArguments.size() == 1,
+                                "Expected 1 but got: %s", filterArguments.size());
+    byte [] prefix = ParseFilter.removeQuotesFromByteArray(filterArguments.get(0));
+    return new PrefixFilter(prefix);
   }
 
   public void write(DataOutput out) throws IOException {

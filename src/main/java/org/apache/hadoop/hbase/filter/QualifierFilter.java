@@ -23,6 +23,8 @@ package org.apache.hadoop.hbase.filter;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 
+import java.util.ArrayList;
+
 /**
  * This filter is used to filter based on the column qualifier. It takes an
  * operator (equal, greater, not equal, etc) and a byte [] comparator for the
@@ -65,4 +67,11 @@ public class QualifierFilter extends CompareFilter {
     }
     return ReturnCode.INCLUDE;
   }
+
+  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
+    ArrayList arguments = CompareFilter.extractArguments(filterArguments);
+    CompareOp compareOp = (CompareOp)arguments.get(0);
+    WritableByteArrayComparable comparator = (WritableByteArrayComparable)arguments.get(1);
+    return new QualifierFilter(compareOp, comparator);
+}
 }

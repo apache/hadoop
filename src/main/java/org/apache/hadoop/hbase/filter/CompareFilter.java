@@ -27,7 +27,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.ArrayList;
 
+import com.google.common.base.Preconditions;
 /**
  * This is a generic filter to be used to filter by comparison.  It takes an
  * operator (equal, greater, not equal, etc) and a byte [] comparator.
@@ -123,6 +125,27 @@ public abstract class CompareFilter extends FilterBase {
         throw new RuntimeException("Unknown Compare op " +
           compareOp.name());
     }
+  }
+
+  public static ArrayList extractArguments(ArrayList<byte []> filterArguments) {
+    Preconditions.checkArgument(filterArguments.size() == 2,
+                                "Expected 2 but got: %s", filterArguments.size());
+    CompareOp compareOp = ParseFilter.createCompareOp(filterArguments.get(0));
+    WritableByteArrayComparable comparator = ParseFilter.createComparator(
+      ParseFilter.removeQuotesFromByteArray(filterArguments.get(1)));
+
+    if (comparator instanceof RegexStringComparator ||
+        comparator instanceof SubstringComparator) {
+      if (compareOp != CompareOp.EQUAL &&
+          compareOp != CompareOp.NOT_EQUAL) {
+        throw new IllegalArgumentException ("A regexstring comparator and substring comparator" +
+                                            " can only be used with EQUAL and NOT_EQUAL");
+      }
+    }
+    ArrayList arguments = new ArrayList();
+    arguments.add(compareOp);
+    arguments.add(comparator);
+    return arguments;
   }
 
   public void readFields(DataInput in) throws IOException {

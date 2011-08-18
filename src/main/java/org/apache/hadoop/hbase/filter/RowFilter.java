@@ -21,9 +21,9 @@
 package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Scan;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * This filter is used to filter based on the key. It takes an operator
@@ -82,5 +82,12 @@ public class RowFilter extends CompareFilter {
   @Override
   public boolean filterRow() {
     return this.filterOutRow;
+  }
+
+  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
+    ArrayList arguments = CompareFilter.extractArguments(filterArguments);
+    CompareOp compareOp = (CompareOp)arguments.get(0);
+    WritableByteArrayComparable comparator = (WritableByteArrayComparable)arguments.get(1);
+    return new RowFilter(compareOp, comparator);
   }
 }
