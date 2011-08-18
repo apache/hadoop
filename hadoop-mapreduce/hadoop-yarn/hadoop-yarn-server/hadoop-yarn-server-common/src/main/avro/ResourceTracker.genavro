@@ -1,0 +1,40 @@
+@namespace("org.apache.hadoop.yarn")
+protocol ResourceTracker {
+
+  import idl "yarn/yarn-api/src/main/avro/yarn-types.genavro";
+  
+  // ResourceTracker
+  record NodeID {
+    int id;
+  }
+
+  record NodeHealthStatus {
+    boolean isNodeHealthy;
+    union {string, null} healthReport;
+    long lastHealthReportTime;
+  }
+
+  record NodeStatus {
+    NodeID nodeId;
+	int responseId;
+	long lastSeen;
+    map<array<org.apache.hadoop.yarn.Container>> containers;
+	NodeHealthStatus nodeHealthStatus;
+  }
+
+  record RegistrationResponse {
+    NodeID nodeID;
+    union {bytes, null} secretKey;
+  }
+
+  record HeartbeatResponse {
+    int responseId;
+    boolean reboot;
+    array<org.apache.hadoop.yarn.Container> containersToCleanup;
+    array<org.apache.hadoop.yarn.ApplicationID> appplicationsToCleanup;
+  }
+  
+  RegistrationResponse registerNodeManager(string node, org.apache.hadoop.yarn.Resource resource) throws YarnRemoteException;
+  HeartbeatResponse nodeHeartbeat(NodeStatus nodeStatus) throws YarnRemoteException;
+  
+}
