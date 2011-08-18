@@ -218,6 +218,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2489. Jobsplits with random hostnames can make the queue 
     unusable (jeffrey naisbit via mahadev)
 
+    MAPREDUCE-2854. update INSTALL with config necessary run mapred on yarn.
+    (thomas graves via mahadev)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

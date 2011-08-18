@@ -4,7 +4,7 @@ YARN (YET ANOTHER RESOURCE NEGOTIATOR or YARN Application Resource Negotiator)
 Requirements
 -------------
 Java: JDK 1.6
-Maven: Maven 2
+Maven: Maven 3
 
 Setup
 -----
@@ -63,11 +63,11 @@ Modules
 -------
 YARN consists of multiple modules. The modules are listed below as per the directory structure:
 
-yarn-api - Yarn's cross platform external interface
+hadoop-yarn-api - Yarn's cross platform external interface
 
-yarn-common - Utilities which can be used by yarn clients and server
+hadoop-yarn-common - Utilities which can be used by yarn clients and server
 
-yarn-server - Implementation of the yarn-api
-	yarn-server-common - APIs shared between resourcemanager and nodemanager
-	yarn-server-nodemanager (TaskTracker replacement)
-	yarn-server-resourcemanager (JobTracker replacement)
+hadoop-yarn-server - Implementation of the hadoop-yarn-api
+	hadoop-yarn-server-common - APIs shared between resourcemanager and nodemanager
+	hadoop-yarn-server-nodemanager (TaskTracker replacement)
+	hadoop-yarn-server-resourcemanager (JobTracker replacement)
