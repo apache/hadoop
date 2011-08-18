@@ -28,6 +28,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.RemoteBlockReader;
+import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSInputStream;
+import org.apache.hadoop.hdfs.SocketCache;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -72,13 +76,13 @@ public class TestConnCache {
    * It verifies that all invocation to DFSInputStream.getBlockReader()
    * use the same socket.
    */
-  private class MockGetBlockReader implements Answer<BlockReader> {
-    public BlockReader reader = null;
+  private class MockGetBlockReader implements Answer<RemoteBlockReader> {
+    public RemoteBlockReader reader = null;
     private Socket sock = null;
 
-    public BlockReader answer(InvocationOnMock invocation) throws Throwable {
-      BlockReader prevReader = reader;
-      reader = (BlockReader) invocation.callRealMethod();
+    public RemoteBlockReader answer(InvocationOnMock invocation) throws Throwable {
+      RemoteBlockReader prevReader = reader;
+      reader = (RemoteBlockReader) invocation.callRealMethod();
       if (sock == null) {
         sock = reader.dnSock;
       } else if (prevReader != null && prevReader.hasSentStatusCode()) {

@@ -43,6 +43,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
+import org.apache.hadoop.hdfs.BlockReaderFactory;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -195,8 +196,8 @@ public class JspHelper {
       // Use the block name for file name. 
     int bufferSize = conf.getInt(DFSConfigKeys.IO_FILE_BUFFER_SIZE_KEY,
         DFSConfigKeys.IO_FILE_BUFFER_SIZE_DEFAULT);
-    String file = BlockReader.getFileName(addr, poolId, blockId);
-    BlockReader blockReader = BlockReader.newBlockReader(s, file,
+    String file = BlockReaderFactory.getFileName(addr, poolId, blockId);
+    BlockReader blockReader = BlockReaderFactory.newBlockReader(s, file,
         new ExtendedBlock(poolId, blockId, 0, genStamp), blockToken,
         offsetIntoBlock, amtToRead, bufferSize);
         

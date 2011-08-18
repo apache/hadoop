@@ -668,6 +668,9 @@ Trunk (unreleased changes)
     HDFS-2265. Remove unnecessary BlockTokenSecretManager fields/methods from
     BlockManager.  (szetszwo)
 
+    HDFS-2260. Refactor BlockReader into an interface and implementation.
+    (todd)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
