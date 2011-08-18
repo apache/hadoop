@@ -114,7 +114,7 @@ public class DefaultTaskController extends TaskController {
       }
       //read the configuration for the job
       FileSystem rawFs = FileSystem.getLocal(getConf()).getRaw();
-      long logSize = 0; //TODO: Ref BUG:2854624
+      long logSize = 0; //TODO MAPREDUCE-1100
       // get the JVM command line.
       String cmdLine = 
         TaskLog.buildCommandLine(setup, jvmArguments,

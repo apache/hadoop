@@ -66,7 +66,9 @@ Release 0.20.205.0 - unreleased
   
     MAPREDUCE-2489. Jobsplits with random hostnames can make the queue unusable
     (Jeffrey Naisbit via mahadev)
-    
+
+    MAPREDUCE-2852. Jira for YDH bug 2854624. (Kihwal Lee via eli)
+
 Release 0.20.204.0 - unreleased
 
   NEW FEATURES

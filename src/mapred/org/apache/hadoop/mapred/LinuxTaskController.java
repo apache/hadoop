@@ -204,7 +204,7 @@ class LinuxTaskController extends TaskController {
     ShellCommandExecutor shExec = null;
     try {
       FileSystem rawFs = FileSystem.getLocal(getConf()).getRaw();
-      long logSize = 0; //TODO, Ref BUG:2854624
+      long logSize = 0; //TODO MAPREDUCE-1100
       // get the JVM command line.
       String cmdLine = 
         TaskLog.buildCommandLine(setup, jvmArguments,
