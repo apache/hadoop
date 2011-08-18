@@ -410,11 +410,13 @@ public class MasterFileSystem {
     return tableInfoPath;
   }
 
-    /**
+  /**
    * Create new HTableDescriptor in HDFS.
+   * 
    * @param htableDescriptor
    */
-  public void createTableDescriptor(HTableDescriptor htableDescriptor) {
+  public void createTableDescriptor(HTableDescriptor htableDescriptor)
+      throws IOException {
     FSUtils.createTableDescriptor(htableDescriptor, conf);
   }
 

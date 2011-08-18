@@ -938,42 +938,72 @@ public abstract class FSUtils {
   }
 
   /**
-   * Create new HTableDescriptor in HDFS.  Happens when we are creating table.
-  /**
+   * Create new HTableDescriptor in HDFS. Happens when we are creating table.
+   * 
    * @param htableDescriptor
    * @param conf
    */
-  public static void createTableDescriptor(HTableDescriptor htableDescriptor,
-      Configuration conf) {
-    try {
-      FileSystem fs = getCurrentFileSystem(conf);
-      createTableDescriptor(fs, getRootDir(conf), htableDescriptor);
-    } catch(IOException ioe) {
-      LOG.info("IOException while trying to create tableInfo in HDFS", ioe);
-    }
+  public static boolean createTableDescriptor(
+      HTableDescriptor htableDescriptor, Configuration conf) throws IOException {
+    return createTableDescriptor(htableDescriptor, conf, false);
   }
 
   /**
+   * Create new HTableDescriptor in HDFS. Happens when we are creating table. If
+   * forceCreation is true then even if previous table descriptor is present it
+   * will be overwritten
+   * 
+   * @param htableDescriptor
+   * @param conf
+   * @param forceCreation
+   */
+  public static boolean createTableDescriptor(
+      HTableDescriptor htableDescriptor, Configuration conf,
+      boolean forceCreation) throws IOException {
+    FileSystem fs = getCurrentFileSystem(conf);
+    return createTableDescriptor(fs, getRootDir(conf), htableDescriptor,
+        forceCreation);
+  }
+
+  /**
+   * Create new HTableDescriptor in HDFS. Happens when we are creating table.
+   * 
    * @param fs
    * @param htableDescriptor
    * @param rootdir
    */
-  public static void createTableDescriptor(FileSystem fs,
-      Path rootdir, HTableDescriptor htableDescriptor) {
-    try {
-      Path tableInfoPath =
-        getTableInfoPath(rootdir, htableDescriptor.getNameAsString());
-      LOG.info("Current tableInfoPath = " + tableInfoPath) ;
-      if (fs.exists(tableInfoPath) &&
-          fs.getFileStatus(tableInfoPath).getLen() > 0) {
+  public static boolean createTableDescriptor(FileSystem fs, Path rootdir,
+      HTableDescriptor htableDescriptor) throws IOException {
+    return createTableDescriptor(fs, rootdir, htableDescriptor, false);
+  }
+
+  /**
+   * Create new HTableDescriptor in HDFS. Happens when we are creating table. If
+   * forceCreation is true then even if previous table descriptor is present it
+   * will be overwritten
+   * 
+   * @param fs
+   * @param htableDescriptor
+   * @param rootdir
+   * @param forceCreation
+   */
+  public static boolean createTableDescriptor(FileSystem fs, Path rootdir,
+      HTableDescriptor htableDescriptor, boolean forceCreation)
+      throws IOException {
+    Path tableInfoPath = getTableInfoPath(rootdir, htableDescriptor
+        .getNameAsString());
+    LOG.info("Current tableInfoPath = " + tableInfoPath);
+    if (!forceCreation) {
+      if (fs.exists(tableInfoPath)
+          && fs.getFileStatus(tableInfoPath).getLen() > 0) {
         LOG.info("TableInfo already exists.. Skipping creation");
-        return;
+        return false;
       }
-      writeTableDescriptor(fs, htableDescriptor,
-        getTablePath(rootdir, htableDescriptor.getNameAsString()));
-    } catch(IOException ioe) {
-      LOG.info("IOException while trying to create tableInfo in HDFS", ioe);
     }
+    writeTableDescriptor(fs, htableDescriptor, getTablePath(rootdir,
+        htableDescriptor.getNameAsString()), forceCreation);
+
+    return true;
   }
 
   /**
@@ -990,25 +1020,42 @@ public abstract class FSUtils {
 
   /**
    * Called when we are creating a table to write out the tables' descriptor.
+   * 
    * @param fs
    * @param hTableDescriptor
    * @param tableDir
    * @throws IOException
    */
   private static void writeTableDescriptor(FileSystem fs,
-      HTableDescriptor hTableDescriptor, Path tableDir)
-  throws IOException {
+      HTableDescriptor hTableDescriptor, Path tableDir, boolean forceCreation)
+      throws IOException {
     // Create in tmpdir and then move into place in case we crash after
-    // create but before close.  If we don't successfully close the file,
+    // create but before close. If we don't successfully close the file,
     // subsequent region reopens will fail the below because create is
     // registered in NN.
     Path tableInfoPath = new Path(tableDir, HConstants.TABLEINFO_NAME);
-    Path tmpPath = new Path(new Path(tableDir,".tmp"), HConstants.TABLEINFO_NAME);
+    Path tmpPath = new Path(new Path(tableDir, ".tmp"),
+        HConstants.TABLEINFO_NAME);
     LOG.info("TableInfoPath = " + tableInfoPath + " tmpPath = " + tmpPath);
-    writeHTD(fs, tmpPath, hTableDescriptor);
+    try {
+      writeHTD(fs, tmpPath, hTableDescriptor);
+    } catch (IOException e) {
+      LOG.error("Unable to write the tabledescriptor in the path" + tmpPath
+          + ".", e);
+      throw e;
+    }
+    if (forceCreation) {
+      if (!fs.delete(tableInfoPath, false)) {
+        String errMsg = "Unable to delete " + tableInfoPath
+            + " while forcefully writing the table descriptor.";
+        LOG.error(errMsg);
+        throw new IOException(errMsg);
+      }
+    }
     if (!fs.rename(tmpPath, tableInfoPath)) {
-      throw new IOException("Unable to rename " + tmpPath + " to " +
-        tableInfoPath);
+      String errMsg = "Unable to rename " + tmpPath + " to " + tableInfoPath;
+      LOG.error(errMsg);
+      throw new IOException(errMsg);
     } else {
       LOG.info("TableDescriptor stored. TableInfoPath = " + tableInfoPath);
     }
