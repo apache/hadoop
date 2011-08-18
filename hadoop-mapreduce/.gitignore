@@ -14,10 +14,7 @@
 # limitations under the License.
 
 *~
-.classpath
-.project
 .launches
-.settings
 *.iml
 *.ipr
 *.iws

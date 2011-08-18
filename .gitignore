@@ -4,4 +4,6 @@
 .idea
 .svn
 .classpath
+.project
+.settings
 target
