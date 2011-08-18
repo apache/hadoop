@@ -399,6 +399,715 @@ Trunk (unreleased changes)
     MAPREDUCE-2541. Fixed a race condition in IndexCache.removeMap. (Binglin
     Chang via acmurthy) 
 
+    MAPREDUCE-2458. Rename sanitized pom.xml in build directory to work around IDE
+    bug (Luke Lu via mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Clear application notification if sent once
+    to NodeManager (mahadev)
+
+    MAPREDUCE-2433. YARNApplicationConstants hard code app master jar version (Luke
+    Lu via mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Implement restart for resource manager
+    phase 1 - Helper classes to store and restore the data structures. (mahadev)
+
+    MAPREDUCE-2414. Change MRv2 to use generic interfaces. (Siddharth Seth via
+    acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Implement health-checks for the node -
+    server side(ResourceManager) changes. (vinodkv)
+
+    MAPREDUCE-2405: Implement uber-AppMaster (in-cluster LocalJobRunner for MRv2)
+    (Greg Roelofs via mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Implementing Containers' memory monitoring.
+    (vinodkv)
+
+    MAPREDUCE-2440. Name clashes in TypeConverter (luke via mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Add fail count to the command line of the
+    application master. (mahadev)
+
+    MAPREDUCE-2424. Polish uber-AppMaster: add uber-AM counters and GUI indicators.
+    (Greg Roelofs via mahadev)
+
+    MAPREDUCE-2405. Implement uber-AppMaster (in-cluster LocalJobRunner for MRv2).
+    (Greg Roelofs and Sharad Agarwal via mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix YarnRemoteException to give more
+    details. (Siddharth Seth via mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. WebApp for Job History (Krishna
+    Ramachandran via mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Install sanitized poms for downstream
+    sanity (Luke Lu via mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Add HistoryCleanerService to Job History
+    server. (Krishna Ramachandran via sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Implement 'bin/mapred job -list' and
+    'bin/mapred job -list-active-trackers'. (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Implement 'bin/mapred queue [-info
+    [-showJobs]] [-list] and enhanced 'bin/mapred job -list' to show queue and
+    ApplicationMaster information. (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixed computation of user-limits at
+    runtime. (acmurthy) 
+
+    MAPREDUCE-279. Fix in MR-279 branch. Added functionality to refresh queues at
+    runtime via the 'bin/yarn rmadmin' command. (acmurthy) 
+
+    MAPREDUCE-279. Fix in MR-279 branch. Added functionality to stop/start queues.
+    (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Introducing web-UI for NodeManager and
+    linking it from RM UI. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix race condition in TestJobHistoryEvents
+    and TestJobHistoryParsing. (sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Add Containers' logs' view to NM UI and
+    link it from AM UI. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Add ACLs for queues and command-line
+    utilities for viewing them. (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Recovery of MR Application Master from
+    failures. (sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Added support High-RAM applications in
+    CapacityScheduler. (acmurthy) 
+
+    MAPREDUCE-279. Fix in MR-279 branch. Completing the ZooKeeper Store for
+    ResourceManager state. (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Reorient container localization to be
+    per-container rather than per-application. (cdouglas)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix file creation in
+    JobHistoryEventHandler. (sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Disable ContainerMonitoring for non-linux
+    systems. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix container launch w/ inconsistent
+    credential file naming. (cdouglas)
+
+    MAPREDUCE-2434. Metrics for ResourceManager. (Luke Lu via acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. RM Restart Phase 2 - Completed the recovery
+    of components in the RM (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix to send finish application event only
+    when the application is finished (mahadev)
+
+    MAPREDUCE-2462. Write job conf along with JobHistory, other minor improvements.
+    (Siddharth Seth via sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Implement 'delay scheduling' for better
+    locality in CapacityScheduler and improved high-ram applications. (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Implement Job Acls in MR Application
+    Master. (sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Moving userlogs out of container work-dir
+    into a separate directory structure. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Completing RM Restart. Completed Phase 3 of
+    making sure events are logged and restored (mahadev)
+
+    MAPREDUCE-2468. Add metrics for NM Shuffle. (Luke Lu via cdouglas)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Adding user log handling for YARN. Making
+    NM put the user-logs on DFS and providing log-dump tools. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixing three tight-loops in RM that are
+    causing high cpu-usage. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Replacing FileContext usage with FileSystem
+    to work around security authentication issues with FileContext against a secure
+    DFS. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Client reconnect to restarted AM. (sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix refreshProxy in ClientServiceDelegate.
+    (sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix Null Pointer in TestUberAM. (sharad) 
+
+    MAPREDUCE-2478. Improve history server. (Siddharth Seth via sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Improved TestJobHistoryEvents and
+    TestJobHistoryParsing. (sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix NM to use multiple disks for local
+    files and the userlogs. (vinodkv)
+
+    MAPREDUCE-2480: MR App should not depend on hard coded version of shuffle (luke
+    lu via mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Propagate error back to client in case of a
+    job submission failure (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix assembly to add mapreduce shell scripts
+    to the assembly package. (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix TestQueueMetrics. (Luke Lu via sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Removal of stale application-log dirs from
+    NM local disks. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Add license header and minor cleanup in
+    history server. (Siddharth Seth via sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Minor fix for install instructions.
+    (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix a race in MR task that was causing MR
+    containers to overwrite each other's job.xml. Also fix leaking attempt-dirs in
+    app-local-dir. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Adding valid state to ASM on a finish when
+    its already completed and also disble UberAM. (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixed CS user limits. (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixed reservation's bad interaction with
+    delay scheduling in CS. (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Support mapreduce old (0.20) APIs. (sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Support fail-fast for MR jobs. (ddas)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix for clearing container requests on an
+    AM failure and add tostring methods to taskids and taskattemptids for better
+    grep support. (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Speed up communication between MR AM and RM
+    by relying on a new config rather than AM_EXPIRY_INTERVAL which is too large.
+    (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix calculation of maximum capacity to use
+    parent's absolute-capacity rather than the leaf queue's absolute-capacity.
+    (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixing a bug in JobIDPbImpl that's causing
+    AM to crash randomly. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix calculation of maximum capacity in
+    ParentQueue to use its parent's absolute-capacity rather than its own
+    absolute-capacity. (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Launching bin/yarn and bin/mapred only
+    *once* in AM for constructing classpaths to avoid multiple forks and huge vmem
+    usage by AM. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix CapacityScheduler to release unused
+    reservations on application completion. (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix CapacityScheduler (LeafQueue) to not
+    allocate DATA_LOCAL containers when they are not required on the rack.
+    (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Makes uber-task disabled by default (ddas)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Make logging and memory for AM configurable
+    for the user via command line (mahadev) 
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixing a bug in previous patch (r1103657).
+    Now bin/yarn truly shouldn't be launched multiple times in a single AM.
+    (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixing a bug to do with setting the staging
+    dir. (ddas)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixed Composite Service to shutdown
+    services if an error occurs on starting any one of those (mahadev & chris)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix the tests to use jvm fork mode to avoid
+    errors in shutting down services (sidharth seth)
+
+    MAPREDUCE-2500. PB factories are not thread safe (Siddharth Seth via mahadev) 
+
+    MAPREDUCE-2504. race in JobHistoryEventHandler stop (Siddharth Seth via mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix job hang if the AM launch fails.
+    (mahadev) 
+
+    MAPREDUCE-2509. Fix NPE in UI for pending attempts. (Luke Lu via mahadev) 
+
+    MAPREDUCE-279. Fix in MR-279 branch. Add junit jar to lib in assembly (mahadev
+    and luke)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Distributed cache bug fix to pass Terasort.
+    (vinodkv)
+     
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix null pointer exception in kill task
+    attempt (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Refactored RMContainerAllocator to release
+    unused containers. (sharad) 
+
+    MAPREDUCE-279. Fix in MR-279 branch. Changed Scheduler to return available limit
+    to AM in the allocate api. (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix nodemanager expiry to not throw OOM.
+    (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Use DefaultContainerExecutor for
+    integration tests. (cdouglas)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix NPE in test case (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix for regression on the scheduling of
+    reduces before maps are done (ddas)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix distributed-cache related bugs.
+    (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Ensure unused containers released by AM are
+    correctly counted for queue-capacity. (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix TestRuntimeEstimators (Siddharth Seth
+    via ddas)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix queue refresh to correctly record newly
+    added queues in CapacityScheduler. (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Added metrics for tracking reservations in
+    CapacityScheduler. (Luke Lu via acmurthy)
+
+    MAPREDUCE-2522. Security for JobHistory service. (Siddharth Seth via mahadev)
+
+    MAPREDUCE-2534. Fix CI breaking hard coded version in jobclient pom. (Luke Lu
+    via mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Add public cache. (cdouglas)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Made number of RPC server threads
+    configurable. (acmurthy) 
+
+    MAPREDUCE-279. Fix in MR-279 branch. Added acl check for RMAdmin. (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Adding job kill for any state that the job
+    is in with access control. (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Add debug statements for AM not launching
+    (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixing race condition leader to hung jobs
+    in scheduler negotiator (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Add debug config for delaying delete of
+    local files. (cdouglas)
+
+    MAPREDUCE-2527. Metrics for MRAppMaster (Luke lu via mahadev)
+
+    MAPREDUCE-2532. Metrics for NodeManager (Luke Lu via mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixed an NPE during handling of unnecessary
+    reservations in CS. (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix for public dist cache to work with non
+    default hdfs (mahadev &ddas)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Making streaming -file option work. Also
+    minor fixes for successful compilation of contrib tests. (vinodkv)
+
+    MAPREDUCE-2536. Backporting changes to MR-279.
+
+    MAPREDUCE-279. Fix in MR-279 branch. Bugfix for using user staging directory for
+    history files (Siddharth Seth via mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. First fix for making basic speculative
+    execution work (ddas)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixes for TestFail/Kill (ddas)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Set correct version of avro-maven-plugin
+    that is available in apache maven repositories. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixing and reneabling
+    TestContainerTokenSecretManager. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Cleaning up configuration constants in
+    mapreduce modules. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixing NPE on speculator in MRAppMaster and
+    making job-history optional in tests to make test goal succeed. (vinodk and
+    sharadag).
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixed NPE in CS by checking Application
+    state before scheduling and fixing synchronization in CS. (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Making pipes work with YARN. Changed pipes
+    to get log-locations from an environmental variable. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Ensure 'lost' NodeManagers are dealt
+    appropriately, the containers are released correctly. (acmurthy) 
+
+    MAPREDUCE-279. Fix in MR-279 branch. Adding some more logging for AM expiry logs
+    (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Reduce ramp up and zero maps support.
+    (sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Allowing hdfs calls from streaming/pipes
+    tasks. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Added ability to decommission nodes and
+    completed RM administration tools to achieve parity with JobTracker. (acmurthy) 
+
+    MAPREDUCE-2551. Added JobSummaryLog. (Siddharth Seth via acmurthy)
+
+    MAPREDUCE-2552. Fixed NPE in CompletedJob in JobHistoryServer. (Siddharth Seth
+    via acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix reduce slow start. (sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixed TestFifoScheduler. (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix build issue for using yarn.version
+    instead of hadoop-mapred.version (mahadev and giri)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixes in the handling of KILL events in the
+    SUCCEEDED state for tasks in the application master (ddas)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix for NPE in TestRMNMRPCResponseId.
+    (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix a deadlock in the resourcemanager.
+    (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. NodeStatus.getNodeHealthStatus().setBlah
+    broken (Siddharth Seth)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix another NPE in TestRMNMRPCResponseId.
+    (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix for NPE in TestNMExpiry (siddharth
+    seth)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Making each node aggregate all its
+    user-logs to a separate hdfs file. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix calculation of max-capacity for a
+    queue, also fixed a bug in registration of NodeManagers. (acmurthy) 
+
+    MAPREDUCE-279. Fix in MR-279 branch. More cleaning up constants, removing stale
+    code, and making conspicuous the envs that apps depend on to be provided by
+    YARN. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix container size rounding in AM and
+    headroom in RM. (acmurthy and sharad) 
+
+    MAPREDUCE-279. Fix in MR-279 branch. Disable Job acls until fixed (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix to report job status if the application
+    is KILLED/FAILED. (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix a corner case in headroom computation -
+    now reservations are taken into account and headroom is computed much later to
+    account for allocations/reservations. (acmurthy) 
+
+    MAPREDUCE-2537. The RM writes its log to
+    yarn-mapred-resourcemanager-<RM_Host>.out (Robert Evans via mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix logging for showing the state of job
+    (FAILED/KILLED/SUCCEEDED) when it completes (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Re-enabled TestCapacityScheduler.
+    (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Support for min and max container capacity.
+    (acmurthy and sharad)
+
+    MAPREDUCE-2531. Fixed jobcontrol to downgrade JobID. (Robert Evans via acmurthy) 
+
+    MAPREDUCE-2539. Fixed NPE in getMapTaskReports in JobClient. (Robert Evans via
+    acmurthy) 
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixing the wrong config key used in
+    JobHistory that prevented configuring move-thread interval. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixed inconsistency in QueueACL enums.
+    (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix various issues with Web UI's. (Luke Lu)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix class cast exception in Task abort for
+    old mapreduce apis. (sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Add deletion of distributed cache
+    resources. (cdouglas)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Disable aggregation of logs onto DFS till
+    JobHistoryServer starts serving logs. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Cleanup redundant code in TaskAttemptImpl.
+    (sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Work around broken signaling in public
+    cache. (cdouglas)
+
+    MAPREDUCE-2566. YarnConfiguration should reloadConfiguration if instantiated
+    with a non YarnConfiguration object. (Siddharth Seth)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fully resolve paths when launching
+    containers. (Siddharth Seth)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Re-enabling Uber-AM feature. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixed deadlock during expiring NMs.
+    (acmurthy)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Solving NPEs during
+    ContainerManager#StopContainer. Also removing the unused
+    ContainerManager#CleanupContainer api. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Remove retries in dist cache so that NM's
+    do not shutdown (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix classpath construction for Task.
+    (vinodkv via sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Sending Job diagnostics from AM to RM and
+    redirect to history-url on job completion. (vinodkv and sharadag)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Added clover in pom dependency. (sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Intermittent TestMRApp failures on faster
+    Linux desktop. (Luke lu via mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Including source files in release
+    distribution (Luke Lu via mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Intermittent TestMRApp failures on faster
+    Linux desktop (part 2) (Luke lu via mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Disable Uber AM. (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Added few job diagnostic messages. (sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Add ability to includes src files in
+    assembly target for maven (Luke Lu via mahadev)
+
+    MAPREDUCE-2582. Cleanup JobHistory event generation.(Siddharth Seth via sharad)  
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix rounding off problem in reduce ramp up.
+    (sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix more rounding off problems in reduce
+    ramp up. Also fix a bug preventing the application of the cap on reduce ramp-up.
+    (Sharad Agarwal via vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix to exclude images dir into the tar
+    distribution (Luke Lu via gkesavan)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Changes a couple of usages of FileContext
+    to FileSystem in YarnRunner to handle distributed cache path resolutions on
+    non-default filesystems. (ddas)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Display failed/killed attempts of the task
+    on MR AM UI separately. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Miscellaneous UI fixes + source code
+    formatting for MR JobHistoryEventHandler. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixing broken link to logs for container on
+    NM web UI. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixing the bug which was causing FAILED
+    jobs to be displayed as COMPLETED on the RM UI. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Job level node blacklisting. (sharad)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix NPE in history event handling
+    (Siddharth Seth via mahadev)
+
+    MAPREDUCE-2569. Ensure root queue allocated 100% capacity. (Jonathan Eagles via
+    cdouglas)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix ClassCastException in JobHistoryServer
+    for certain jobs. (Siddharth Seth via llu)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Changes for invoking rack resolution in the
+    RM and in the AM (ddas)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix concurrent modification exception in
+    the Capacity Scheduler (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix stopContainer for setsid challenged
+    platforms. (llu)
+
+    MAPREDUCE-2587. Generate yarn version for UI. (Thomas Graves via lluts page to
+    the history server UI. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Bug fix to set correct state on containers
+    so as to avoid duplicate containers from RM to AM. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Hack until MAPREDUCE-2365 is fixed to make
+    PIG work with MRV2. (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Changes a couple of usages of FileContext
+    to FileSystem in TaskAttemptImpl to handle distributed cache path resolutions on
+    non-default filesystems. (ddas)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix NPE when requesting attempts for
+    completed jobs. (Siddharth Seth via llu)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Improve logging for AM when requesting
+    containers to show the right ask and release fields (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix race condition between multiple
+    localizers on a single node. (cdouglas via mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix RM app start/finish time and
+    diagnostics. (llu)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix to schedule reduces irrespective of the
+    headroom when all maps are done so as to avoid stall in reduce-scheduling when
+    slow-start is disabled. (Sharad Agarwal via vinodkv).
+
+    MAPREDUCE-279. Fix in MR-279 branch. Disabling locality-wait in
+    CapacityScheduler for now to prevent uber-slow scheduling for apps with no
+    data-locality constraints (sleep-job like). (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixing scheduling deadlock in AM because of
+    incorrect headRoom values from RM. The bug happens when AM releases containers
+    and RM decrements current memory usage twice for all those containers. (vinodkv)
+
+    MAPREDUCE-2611. Fix counters, finish times etc. in job history. (Siddharth Seth
+    via llu)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix for ConcurrentModification exception
+    while iterating through tokens in a UGI in ContainerLauncherImpl. (ddas)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix for NPE in YarnChild that was causing
+    lots of tasks to fail. (vinodkv)
+
+    MAPREDUCE-2615. Make killJob go through AM and fix JobSummaryLog. (Siddharth
+    Seth via llu)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix class cast exception in release
+    reserved containers in capacity scheduler (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix diagnostics display for more than 100
+    apps in RM. (llu)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix some invalid transitions in the RM.
+    (vinodkv via ddas)
+
+    MAPREDUCE-2618. Fix NPE in 0 map 0 reduce jobs. (Jeffrey Naisbitt via llu)
+
+    MAPREDUCE-2625. Add version info to nodemanager info page. (Jonathan Eagles via
+    llu)
+
+    MAPREDUCE-279. Fix in MR-279 branch. (1) Faster retries from AM to HistoryServer
+    (2) Correct diagnostics for containers. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Major ASM cleanup. Streamlining classes,
+    interface and events. (vinodkv)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Reinstate resolve path fixes for viewfs.
+    (Siddharth Seth via llu)
+
+    MAPREDUCE-2633. Add a getCounter(Enum) method to the Counters record. (Josh
+    Wills via sharad)
+
+    MAPREDUCE-2645. Updates to MRv2 INSTALL and README documentation. (Josh Wills
+    via vinodkv)
+
+    MAPREDUCE-2628. Add compiled on date to NM and RM info/about page.
+
+    MAPREDUCE-2400. Remove Cluster's dependency on JobTracker via a ServiceProvider
+    for the actual implementation. (tomwhite via acmurthy) 
+
+    MAPREDUCE-2663. Refactoring StateMachineFactory inner classes. (ahmed radwan via
+    mahadev)
+
+    MAPREDUCE-2678. minimum-user-limit-percent no longer honored. (naisbitt via
+    mahadev)
+
+    MAPREDUCE-2630. refreshQueues leads to NPEs when used w/FifoScheduler. (Josh
+    Wills via mahadev)
+
+    MAPREDUCE-2644. NodeManager fails to create containers when NM_LOG_DIR is not
+    explicitly set in the Configuration. (Josh Wills via vinodkv)
+
+    MAPREDUCE-2661. Fix TaskImpl to not access MapTaskImpl. (Ahmed Radwan via
+    sharad) 
+
+    HADOOP-6929. Backport changes to MR-279 (mahadev and owen)
+
+    HADOOP-6929. Making Security Info abstract and not an interface (mahadev)
+
+    MAPREDUCE-2667. mapred job -kill leaves application in RUNNING state (thomas
+    graves via mahadev)
+
+    MAPREDUCE-2664. Implement JobCounters for Mtions as asynchronous. (vinodkv,
+    sharad and acmurthy)
+
+    MAPREDUCE-2773. server.api.records.NodeHealthStatus renamed but not updated in
+    client NodeHealthStatus.java (Thomas Graves via mahadev)
+
+    MAPREDUCE-2772. Fix MR-279 build after common mavenization. (Robert Joseph Evans
+    via llu)
+
+    MAPREDUCE-2772. Fix MR-279 build after common mavenization, part 2. (Thomas
+    Graves via llu)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Harmonize slf4j versions. (llu)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix NPE in FifoScheduler. (mahadev)
+
+    MAPREDUCE-2776. Fix some of the yarn findbug warnings. (Siddharth Seth via
+    mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix findbugs warnings in mr-client modules,
+    part 1 (mahadev) 
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix findbugs warnings in mr-client modules
+    part 2 (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix findbugs warnings in mr-client modules
+    part 3 (mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix the poms to enable 0.23 snapshots for
+    hdfs/common from apache nightly builds (gkesavan)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix ivy conf to work with the hadoop common
+    trunk maven build changes. (Giridharan Kesavan)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Patch for findbugs warnings in Resource
+    Manager (Siddharth Seth via mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fix for running ant targets to use the
+    right set of common/test jars (gkesavan via mahadev)
+
+    MAPREDUCE-2782. Unit tests for CapacityScheduler. (acmurthy) 
+
+    MAPREDUCE-2706. Log job submission failures. (Jeffrey Naisbitt via acmurthy) 
+
+    MAPREDUCE-2781. mr279 RM application finishtime not set (Thomas Graves via
+    mahadev)
+
+    MAPREDUCE-279. Fix in MR-279 branch. Fixed CS locality wait factor. (acmurthy)
+
+    MAPREDUCE-2808. pull MAPREDUCE-2797 into mr279 branch (Thomas Graves via
+    mahadev)
+
+    MAPREDUCE-2639. Bug fixes in speculate.DataStatistics. (Josh Wills via acmurthy)
+
+    MAPREDUCE-2839. Fixed TokenCache to get delegation tokens using both new and old
+    apis. (Siddharth Seth via acmurthy)
+
+    MAPREDUCE-2727. Fix divide-by-zero error in SleepJob for sleepCount equals 0.
+    (Jeffrey Naisbitt via acmurthy)
+
     MAPREDUCE-2839. Fixed TokenCache to get delegation tokens using both new
     and old apis. (Siddharth Seth via acmurthy)
 
