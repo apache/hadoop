@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -29,23 +31,21 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -54,8 +54,6 @@ import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test log deletion as logs are rolled.
@@ -137,6 +135,10 @@ public class TestLogRolling  {
    // the namenode might still try to choose the recently-dead datanode
    // for a pipeline, so try to a new pipeline multiple times
     TEST_UTIL.getConfiguration().setInt("dfs.client.block.write.retries", 30);
+    TEST_UTIL.getConfiguration().setInt(
+        "hbase.regionserver.hlog.tolerable.lowreplication", 2);
+    TEST_UTIL.getConfiguration().setInt(
+        "hbase.regionserver.hlog.lowreplication.rolllimit", 3);
     TEST_UTIL.startMiniCluster(2);
 
     cluster = TEST_UTIL.getHBaseCluster();
@@ -225,6 +227,30 @@ public class TestLogRolling  {
     }
   }
 
+  void batchWriteAndWait(HTable table, int start, boolean expect, int timeout)
+      throws IOException {
+    for (int i = 0; i < 10; i++) {
+      Put put = new Put(Bytes.toBytes("row"
+          + String.format("%1$04d", (start + i))));
+      put.add(HConstants.CATALOG_FAMILY, null, value);
+      table.put(put);
+    }
+    long startTime = System.currentTimeMillis();
+    long remaining = timeout;
+    while (remaining > 0) {
+      if (log.isLowReplicationRollEnabled() == expect) {
+        break;
+      } else {
+        try {
+          Thread.sleep(200);
+        } catch (InterruptedException e) {
+          // continue
+        }
+        remaining = timeout - (System.currentTimeMillis() - startTime);
+      }
+    }
+  }
+  
   /**
    * Give me the HDFS pipeline for this log file
    */
@@ -267,7 +293,7 @@ public class TestLogRolling  {
 
     this.server = cluster.getRegionServer(0);
     this.log = server.getWAL();
-    
+
     // Create the test table and open it
     String tableName = getName();
     HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -320,7 +346,23 @@ public class TestLogRolling  {
     // write some more log data (this should use a new hdfs_out)
     writeData(table, 3);
     assertTrue("The log should not roll again.", log.getFilenum() == newFilenum);
-    assertTrue("New log file should have the default replication", log
-        .getLogReplication() == fs.getDefaultReplication());
+    // kill another datanode in the pipeline, so the replicas will be lower than
+    // the configured value 2.
+    assertTrue(dfsCluster.stopDataNode(pipeline[1].getName()) != null);
+    Thread.sleep(10000);
+    batchWriteAndWait(table, 3, false, 10000);
+    assertTrue("LowReplication Roller should've been disabled",
+        !log.isLowReplicationRollEnabled());
+    dfsCluster
+        .startDataNodes(TEST_UTIL.getConfiguration(), 1, true, null, null);
+    dfsCluster.waitActive();
+    // Force roll writer. The new log file will have the default replications,
+    // and the LowReplication Roller will be enabled.
+    log.rollWriter();
+    batchWriteAndWait(table, 13, true, 10000);
+    assertTrue("LowReplication Roller should've been enabled",
+        log.isLowReplicationRollEnabled());
+    assertTrue("New log file should have the default replication",
+        log.getLogReplication() == fs.getDefaultReplication());
   }
 }

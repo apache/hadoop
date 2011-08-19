@@ -442,10 +442,14 @@ Release 0.90.5 - Unreleased
                regionserver (Anirudh Todi)
    HBASE-4196  TableRecordReader may skip first row of region (Ming Ma)
    HBASE-4170  createTable java doc needs to be improved (Mubarak Seyed)
-   HBASE-4144  RS does not abort if the initialization of RS fails (ramkrishna.s.vasudevan)
-   HBASE-4148  HFileOutputFormat doesn't fill in TIMERANGE_KEY metadata (Jonathan Hsieh)
+   HBASE-4144  RS does not abort if the initialization of RS fails
+               (ramkrishna.s.vasudevan)
+   HBASE-4148  HFileOutputFormat doesn't fill in TIMERANGE_KEY metadata
+               (Jonathan Hsieh)
    HBASE-4159  HBaseServer - IPC Reader threads are not daemons (Douglas
                Campbell)
+   HBASE-4095  Hlog may not be rolled in a long time if checkLowReplication's
+               request of LogRoll is blocked (Jieshan Bean)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)

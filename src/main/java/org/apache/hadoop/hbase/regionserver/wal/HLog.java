@@ -29,11 +29,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
-import java.util.Arrays;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -55,7 +55,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.Syncable;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -125,8 +130,7 @@ public class HLog implements Syncable {
   private final long blocksize;
   private final String prefix;
   private final Path oldLogDir;
-  private boolean logRollRequested;
-
+  private boolean logRollRunning;
 
   private static Class<? extends Writer> logWriterClass;
   private static Class<? extends Reader> logReaderClass;
@@ -138,7 +142,9 @@ public class HLog implements Syncable {
   }
 
   private FSDataOutputStream hdfs_out; // FSDataOutputStream associated with the current SequenceFile.writer
-  private int initialReplication; // initial replication factor of SequenceFile.writer
+  // Minimum tolerable replicas, if the actual value is lower than it, 
+  // rollWriter will be triggered
+  private int minTolerableReplication;
   private Method getNumCurrentReplicas; // refers to DFSOutputStream.getNumCurrentReplicas
   final static Object [] NO_ARGS = new Object []{};
 
@@ -186,6 +192,17 @@ public class HLog implements Syncable {
 
   //number of transactions in the current Hlog.
   private final AtomicInteger numEntries = new AtomicInteger(0);
+  // If live datanode count is lower than the default replicas value,
+  // RollWriter will be triggered in each sync(So the RollWriter will be
+  // triggered one by one in a short time). Using it as a workaround to slow
+  // down the roll frequency triggered by checkLowReplication().
+  private volatile int consecutiveLogRolls = 0;
+  private final int lowReplicationRollLimit;
+
+  // If consecutiveLogRolls is larger than lowReplicationRollLimit,
+  // then disable the rolling in checkLowReplication().
+  // Enable it if the replications recover.
+  private volatile boolean lowReplicationRollEnabled = true;
 
   // If > than this size, roll the log. This is typically 0.95 times the size
   // of the default Hdfs block size.
@@ -353,6 +370,11 @@ public class HLog implements Syncable {
       }
     }
     this.maxLogs = conf.getInt("hbase.regionserver.maxlogs", 32);
+    this.minTolerableReplication = conf.getInt(
+        "hbase.regionserver.hlog.tolerable.lowreplication",
+        this.fs.getDefaultReplication());
+    this.lowReplicationRollLimit = conf.getInt(
+        "hbase.regionserver.hlog.lowreplication.rolllimit", 5);
     this.enabled = conf.getBoolean("hbase.regionserver.hlog.enabled", true);
     LOG.info("HLog configuration: blocksize=" +
       StringUtils.byteDesc(this.blocksize) +
@@ -481,6 +503,7 @@ public class HLog implements Syncable {
     }
     byte [][] regionsToFlush = null;
     this.cacheFlushLock.lock();
+    this.logRollRunning = true;
     try {
       if (closed) {
         return regionsToFlush;
@@ -491,7 +514,6 @@ public class HLog implements Syncable {
       this.filenum = System.currentTimeMillis();
       Path newPath = computeFilename();
       HLog.Writer nextWriter = this.createWriterInstance(fs, newPath, conf);
-      int nextInitialReplication = fs.getFileStatus(newPath).getReplication();
       // Can we get at the dfsclient outputstream?  If an instance of
       // SFLW, it'll have done the necessary reflection to get at the
       // protected field name.
@@ -510,7 +532,6 @@ public class HLog implements Syncable {
         // Clean up current writer.
         Path oldFile = cleanupCurrentWriter(currentFilenum);
         this.writer = nextWriter;
-        this.initialReplication = nextInitialReplication;
         this.hdfs_out = nextHdfsOut;
 
         LOG.info((oldFile != null?
@@ -520,7 +541,6 @@ public class HLog implements Syncable {
             this.fs.getFileStatus(oldFile).getLen() + ". ": "") +
           "New hlog " + FSUtils.getPath(newPath));
         this.numEntries.set(0);
-        this.logRollRequested = false;
       }
       // Can we delete any of the old log files?
       if (this.outputfiles.size() > 0) {
@@ -538,6 +558,7 @@ public class HLog implements Syncable {
         }
       }
     } finally {
+      this.logRollRunning = false;
       this.cacheFlushLock.unlock();
     }
     return regionsToFlush;
@@ -977,7 +998,7 @@ public class HLog implements Syncable {
       synchronized (this.updateLock) {
         syncTime += System.currentTimeMillis() - now;
         syncOps++;
-        if (!logRollRequested) {
+        if (!this.logRollRunning) {
           checkLowReplication();
           if (this.writer.getLength() > this.logrollsize) {
             requestLogRoll();
@@ -993,18 +1014,44 @@ public class HLog implements Syncable {
   }
 
   private void checkLowReplication() {
-    // if the number of replicas in HDFS has fallen below the initial
+    // if the number of replicas in HDFS has fallen below the configured
     // value, then roll logs.
     try {
       int numCurrentReplicas = getLogReplication();
-      if (numCurrentReplicas != 0 &&
-          numCurrentReplicas < this.initialReplication) {
-        LOG.warn("HDFS pipeline error detected. " +
-            "Found " + numCurrentReplicas + " replicas but expecting " +
-            this.initialReplication + " replicas. " +
-            " Requesting close of hlog.");
-        requestLogRoll();
-        logRollRequested = true;
+      if (numCurrentReplicas != 0
+          && numCurrentReplicas < this.minTolerableReplication) {
+        if (this.lowReplicationRollEnabled) {
+          if (this.consecutiveLogRolls < this.lowReplicationRollLimit) {
+            LOG.warn("HDFS pipeline error detected. " + "Found "
+                + numCurrentReplicas + " replicas but expecting no less than "
+                + this.minTolerableReplication + " replicas. "
+                + " Requesting close of hlog.");
+            requestLogRoll();
+            // If rollWriter is requested, increase consecutiveLogRolls. Once it
+            // is larger than lowReplicationRollLimit, disable the
+            // LowReplication-Roller
+            this.consecutiveLogRolls++;
+          } else {
+            LOG.warn("Too many consecutive RollWriter requests, it's a sign of "
+                + "the total number of live datanodes is lower than the tolerable replicas.");
+            this.consecutiveLogRolls = 0;
+            this.lowReplicationRollEnabled = false;
+          }
+        }
+      } else if (numCurrentReplicas >= this.minTolerableReplication) {
+
+        if (!this.lowReplicationRollEnabled) {
+          // The new writer's log replicas is always the default value.
+          // So we should not enable LowReplication-Roller. If numEntries
+          // is lower than or equals 1, we consider it as a new writer.
+          if (this.numEntries.get() <= 1) {
+            return;
+          }
+          // Once the live datanode number and the replicas return to normal,
+          // enable the LowReplication-Roller.
+          this.lowReplicationRollEnabled = true;
+          LOG.info("LowReplication-Roller was enabled.");
+        }
       }
     } catch (Exception e) {
       LOG.warn("Unable to invoke DFSOutputStream.getNumCurrentReplicas" + e +
@@ -1260,6 +1307,15 @@ public class HLog implements Syncable {
    */
   public static boolean isMetaFamily(byte [] family) {
     return Bytes.equals(METAFAMILY, family);
+  }
+
+  /**
+   * Get LowReplication-Roller status
+   * 
+   * @return lowReplicationRollEnabled
+   */
+  public boolean isLowReplicationRollEnabled() {
+    return lowReplicationRollEnabled;
   }
 
   @SuppressWarnings("unchecked")
