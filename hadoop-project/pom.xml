@@ -34,6 +34,14 @@
     </snapshotRepository>
   </distributionManagement>
 
+  <repositories>
+    <repository>
+      <id>apache.snapshots.https</id>
+      <name>${distMgmtSnapshotsName}</name>
+      <url>${distMgmtSnapshotsUrl}</url>
+    </repository>
+  </repositories>
+
   <licenses>
     <license>
       <name>The Apache Software License, Version 2.0</name>
@@ -84,11 +92,6 @@
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-annotations</artifactId>
         <version>${hadoop.annotations.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-common-docs</artifactId>
-        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
@@ -316,6 +319,11 @@
       </dependency>
       <dependency>
         <groupId>org.aspectj</groupId>
+        <artifactId>aspectjtools</artifactId>
+        <version>1.6.5</version>
+      </dependency>
+      <dependency>
+        <groupId>org.aspectj</groupId>
         <artifactId>aspectjrt</artifactId>
         <version>1.6.5</version>
       </dependency>
@@ -348,6 +356,11 @@
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
         <version>2.4.0a</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-daemon</groupId>
+        <artifactId>commons-daemon</artifactId>
+        <version>1.0.1</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -450,6 +463,11 @@
           <artifactId>avro-maven-plugin</artifactId>
           <version>1.5.2</version>
         </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo.jspc</groupId>
+          <artifactId>jspc-maven-plugin</artifactId>
+          <version>2.0-alpha-3</version>
+        </plugin>
       </plugins>
     </pluginManagement>
 
@@ -498,6 +516,41 @@
         <configuration>
           <source>1.6</source>
           <target>1.6</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <forkMode>always</forkMode>
+          <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
+          <argLine>-Xmx1024m</argLine>
+          <environmentVariables>
+            <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib</LD_LIBRARY_PATH>
+          </environmentVariables>
+          <systemPropertyVariables>
+
+
+            <!-- TODO: all references in testcases should be updated to this default -->
+            <test.build.dir>${test.build.dir}</test.build.dir>
+            <hadoop.tmp.dir>${hadoop.tmp.dir}</hadoop.tmp.dir>
+            <test.build.data>${test.build.data}</test.build.data>
+            <test.build.webapps>${test.build.webapps}</test.build.webapps>
+            <test.cache.data>${test.cache.data}</test.cache.data>
+            <hadoop.log.dir>${hadoop.log.dir}</hadoop.log.dir>
+            <test.build.classes>${test.build.classes}</test.build.classes>
+
+            <java.net.preferIPv4Stack>true</java.net.preferIPv4Stack>
+            <java.security.krb5.conf>${basedir}/src/test/resources/krb5.conf</java.security.krb5.conf>
+          </systemPropertyVariables>
+          <includes>
+            <include>**/Test*.java</include>
+          </includes>
+          <excludes>
+            <exclude>**/${test.exclude}.java</exclude>
+            <exclude>${test.exclude.pattern}</exclude>
+            <exclude>**/Test*$*.java</exclude>
+          </excludes>
         </configuration>
       </plugin>
     </plugins>
@@ -606,5 +659,4 @@
       </build>
     </profile>
   </profiles>
-
 </project>
