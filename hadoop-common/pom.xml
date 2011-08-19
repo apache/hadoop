@@ -219,8 +219,13 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
+      <groupId>org.apache.avro</groupId>
       <artifactId>avro</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.avro</groupId>
+      <artifactId>avro-ipc</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -323,6 +328,23 @@
         </configuration>
       </plugin>
       <plugin>
+        <groupId>org.apache.avro</groupId>
+        <artifactId>avro-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>generate-avro-test-sources</id>
+            <phase>generate-test-sources</phase>
+            <goals>
+              <goal>schema</goal>
+              <goal>protocol</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <testOutputDirectory>${project.build.directory}/generated-test-sources/java</testOutputDirectory>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
@@ -359,24 +381,6 @@
                 <recordcc destdir="${project.build.directory}/generated-test-sources/java">
                   <fileset dir="${basedir}/src/test/ddl" includes="**/*.jr"/>
                 </recordcc>
-
-                <taskdef name="schema" classname="org.apache.avro.specific.SchemaTask">
-                  <classpath refid="maven.test.classpath"/>
-                </taskdef>
-                <schema destdir="${project.build.directory}/generated-test-sources/java">
-                  <fileset dir="${basedir}/src/test">
-                    <include name="**/*.avsc"/>
-                  </fileset>
-                </schema>
-
-                <taskdef name="schema" classname="org.apache.avro.specific.ProtocolTask">
-                  <classpath refid="maven.test.classpath"/>
-                </taskdef>
-                <schema destdir="${project.build.directory}/generated-test-sources/java">
-                  <fileset dir="${basedir}/src/test">
-                    <include name="**/*.avpr"/>
-                  </fileset>
-                </schema>
               </target>
             </configuration>
           </execution>
