@@ -381,6 +381,8 @@ Release 0.91.0 - Unreleased
                call contents
    HBASE-4190  Coprocessors: pull up some cp constants from cp package to
                o.a.h.h.HConstants (Mingjie Lai)
+   HBASE-4227  Modify the webUI so that default values of column families are
+               not shown (Nileema Shingte)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

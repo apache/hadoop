@@ -518,6 +518,52 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
+   * @return Name of this table and then a map of all of the column family
+   * descriptors (with only the non-default column family attributes)
+   */
+  public String toStringCustomizedValues() {
+    StringBuilder s = new StringBuilder();
+    s.append('{');
+    s.append(HConstants.NAME);
+    s.append(" => '");
+    s.append(Bytes.toString(name));
+    s.append("'");
+    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
+        values.entrySet()) {
+      String key = Bytes.toString(e.getKey().get());
+      String value = Bytes.toString(e.getValue().get());
+      if (key == null) {
+        continue;
+      }
+      String upperCase = key.toUpperCase();
+      if (upperCase.equals(IS_ROOT) || upperCase.equals(IS_META)) {
+        // Skip. Don't bother printing out read-only values if false.
+        if (value.toLowerCase().equals(Boolean.FALSE.toString())) {
+          continue;
+        }
+      }
+      s.append(", ");
+      s.append(Bytes.toString(e.getKey().get()));
+      s.append(" => '");
+      s.append(Bytes.toString(e.getValue().get()));
+      s.append("'");
+    }
+    s.append(", ");
+    s.append(FAMILIES);
+    s.append(" => [");
+    int size = families.values().size();
+    int i = 0;
+    for(HColumnDescriptor hcd : families.values()) {
+      s.append(hcd.toStringCustomizedValues());
+      i++;
+      if( i != size)
+        s.append(", ");
+    }
+    s.append("]}");
+    return s.toString();
+  }
+
+  /**
    * @see java.lang.Object#equals(java.lang.Object)
    */
   @Override

@@ -135,6 +135,18 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    */
   public static final int DEFAULT_REPLICATION_SCOPE = HConstants.REPLICATION_SCOPE_LOCAL;
 
+  private final static Map<String, String> DEFAULT_VALUES = new HashMap<String, String>();
+  static {
+      DEFAULT_VALUES.put(BLOOMFILTER, DEFAULT_BLOOMFILTER);
+      DEFAULT_VALUES.put(REPLICATION_SCOPE, String.valueOf(DEFAULT_REPLICATION_SCOPE));
+      DEFAULT_VALUES.put(HConstants.VERSIONS, String.valueOf(DEFAULT_VERSIONS));
+      DEFAULT_VALUES.put(COMPRESSION, DEFAULT_COMPRESSION);
+      DEFAULT_VALUES.put(TTL, String.valueOf(DEFAULT_TTL));
+      DEFAULT_VALUES.put(BLOCKSIZE, String.valueOf(DEFAULT_BLOCKSIZE));
+      DEFAULT_VALUES.put(HConstants.IN_MEMORY, String.valueOf(DEFAULT_IN_MEMORY));
+      DEFAULT_VALUES.put(BLOCKCACHE, String.valueOf(DEFAULT_BLOCKCACHE));
+  }
+
   // Column family name
   private byte [] name;
 
@@ -569,6 +581,32 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       s.append(" => '");
       s.append(value);
       s.append("'");
+    }
+    s.append('}');
+    return s.toString();
+  }
+
+  /**
+   * @return Column family descriptor with only the customized attributes.
+   */
+  public String toStringCustomizedValues() {
+    StringBuilder s = new StringBuilder();
+    s.append('{');
+    s.append(HConstants.NAME);
+    s.append(" => '");
+    s.append(Bytes.toString(name));
+    s.append("'");
+    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
+        values.entrySet()) {
+      String key = Bytes.toString(e.getKey().get());
+      String value = Bytes.toString(e.getValue().get());
+      if(DEFAULT_VALUES.get(key) == null || !DEFAULT_VALUES.get(key).equalsIgnoreCase(value)) {
+        s.append(", ");
+        s.append(key);
+        s.append(" => '");
+        s.append(value);
+        s.append("'");
+      }
     }
     s.append('}');
     return s.toString();

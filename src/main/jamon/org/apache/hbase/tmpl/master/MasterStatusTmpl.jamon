@@ -158,11 +158,11 @@ org.apache.hadoop.hbase.HTableDescriptor;
     <%if (frags != null) %>
         <td align="center"><% frags.get(htDesc.getNameAsString()) != null ? frags.get(htDesc.getNameAsString()).intValue() + "%" : "n/a" %></td>
     </%if>
-    <td><% htDesc.toString() %></td>
+    <td><% htDesc.toStringCustomizedValues() %></td>
 </tr>
 </%for>
 
-<p> <% tables.length %> table(s) in set.</p>
+<p> <% tables.length %> table(s) in set. [<a href=tablesDetailed.jsp>Details</a>]</p>
 </table>
 </%if>
 </%def>
