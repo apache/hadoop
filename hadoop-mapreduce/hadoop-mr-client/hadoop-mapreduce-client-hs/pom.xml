@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<project>
+  <parent>
+    <artifactId>hadoop-mapreduce-client</artifactId>
+    <groupId>org.apache.hadoop</groupId>
+    <version>${hadoop-mapreduce.version}</version>
+  </parent>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.apache.hadoop</groupId>
+  <artifactId>hadoop-mapreduce-client-hs</artifactId>
+  <name>hadoop-mapreduce-client-hs</name>
+
+  <properties>
+    <install.file>${project.artifact.file}</install.file>
+    <mr.basedir>${project.parent.parent.basedir}</mr.basedir>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-common</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-app</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-app</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <excludes>
+          </excludes>
+        </configuration>
+      </plugin>
+    </plugins>
+   </build>
+</project>

@@ -324,6 +324,13 @@ Trunk (unreleased changes)
 
     HADOOP-7531. Add servlet util methods for handling paths in requests. (eli)
 
+    HADOOP-7493. Add ShortWritable.  (Uma Maheswara Rao G via szetszwo)
+
+    HADOOP-7555. Add a eclipse-generated files to .gitignore. (atm)
+
+    HADOOP-7264. Bump avro version to at least 1.4.1. (Alejandro Abdelnur via
+    tomwhite)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
@@ -497,6 +504,9 @@ Trunk (unreleased changes)
 
     HADOOP-7545. Common -tests JAR should not include properties and configs.
     (todd)
+
+    HADOOP-7536. Correct the dependency version regressions introduced in
+    HADOOP-6671. (Alejandro Abdelnur via tomwhite)
 
 Release 0.22.0 - Unreleased
 

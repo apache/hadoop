@@ -24,9 +24,9 @@
     <fileSet>
       <directory>${basedir}/src/main/bin</directory>
       <outputDirectory>/bin</outputDirectory>
-      <includes>
-        <include>hadoop</include>
-      </includes>
+      <excludes>
+        <exclude>*.sh</exclude>
+      </excludes>
       <fileMode>0755</fileMode>
     </fileSet>
     <fileSet>
@@ -37,7 +37,7 @@
       <directory>${basedir}/src/main/bin</directory>
       <outputDirectory>/libexec</outputDirectory>
       <includes>
-        <include>hadoop-config.sh</include>
+        <include>*-config.sh</include>
       </includes>
       <fileMode>0755</fileMode>
     </fileSet>
@@ -68,7 +68,7 @@
       </includes>
     </fileSet>
     <fileSet>
-      <directory>${basedir}/src/main/webapps</directory>
+      <directory>${project.build.directory}/webapps</directory>
       <outputDirectory>/share/hadoop/${hadoop.component}/webapps</outputDirectory>
     </fileSet>
     <fileSet>
@@ -101,7 +101,7 @@
     <dependencySet>
       <outputDirectory>/share/hadoop/${hadoop.component}/lib</outputDirectory>
       <unpack>false</unpack>
-      <scope>compile</scope>
+      <scope>runtime</scope>
       <useProjectArtifact>false</useProjectArtifact>
       <excludes>
         <exclude>org.apache.ant:*:jar</exclude>

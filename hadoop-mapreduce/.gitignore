@@ -1,0 +1,46 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+*~
+.launches
+*.iml
+*.ipr
+*.iws
+.idea
+.svn
+build/
+build-fi/
+build.properties
+conf/masters
+conf/slaves
+conf/core-site.xml
+conf/hdfs-site.xml
+conf/hadoop-env.sh
+conf/hadoop-site.xml
+conf/mapred-site.xml
+conf/hadoop-policy.xml
+conf/capacity-scheduler.xml
+conf/fair-scheduler.xml
+conf/mapred-queue-acls.xml
+conf/mapred-queue-acls.xml.template
+conf/mapred-queues.xml
+docs/api/
+logs/
+src/contrib/capacity-scheduler/src/java/mapred-queues.xml
+src/contrib/index/conf/index-config.xml
+src/docs/build
+src/docs/cn/build
+src/docs/cn/src/documentation/sitemap.xmap
+src/docs/cn/uming.conf

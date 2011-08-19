@@ -1,0 +1,98 @@
+To compile  Hadoop Mapreduce next following, do the following:
+
+Step 1) Install dependencies for yarn
+
+See http://svn.apache.org/repos/asf/hadoop/common/trunk/hadoop-mapreduce/hadoop-yarn/README
+Make sure protbuf library is in your library path or set: export LD_LIBRARY_PATH=/usr/local/lib
+
+Step 2) Checkout
+
+svn checkout http://svn.apache.org/repos/asf/hadoop/common/trunk
+
+Step 3) Build common
+
+Go to common directory - choose your regular common build command
+Example: mvn clean install package -Pbintar -DskipTests
+
+Step 4) Build HDFS 
+
+Go to hdfs directory
+ant veryclean mvn-install -Dresolvers=internal 
+
+Step 5) Build yarn and mapreduce
+
+Go to mapreduce directory
+export MAVEN_OPTS=-Xmx512m
+
+mvn clean install assembly:assembly -DskipTests
+
+Copy in build.properties if appropriate - make sure eclipse.home not set
+ant veryclean tar -Dresolvers=internal 
+
+You will see a tarball in
+ls target/hadoop-mapreduce-1.0-SNAPSHOT-all.tar.gz  
+
+Step 6) Untar the tarball in a clean and different directory.
+say YARN_HOME. 
+
+Make sure you aren't picking up avro-1.3.2.jar, remove:
+  $HADOOP_COMMON_HOME/share/hadoop/common/lib/avro-1.3.2.jar
+  $YARN_HOME/lib/avro-1.3.2.jar
+
+Step 7)
+Install hdfs/common and start hdfs
+
+To run Hadoop Mapreduce next applications: 
+
+Step 8) export the following variables to where you have things installed:
+You probably want to export these in hadoop-env.sh and yarn-env.sh also.
+
+export HADOOP_MAPRED_HOME=<mapred loc>
+export HADOOP_COMMON_HOME=<common loc>
+export HADOOP_HDFS_HOME=<hdfs loc>
+export YARN_HOME=directory where you untarred yarn
+export HADOOP_CONF_DIR=<conf loc>
+export YARN_CONF_DIR=$HADOOP_CONF_DIR
+
+Step 9) Setup config: for running mapreduce applications, which now are in user land, you need to setup nodemanager with the following configuration in your yarn-site.xml before you start the nodemanager.
+    <property>
+      <name>nodemanager.auxiluary.services</name>
+      <value>mapreduce.shuffle</value>
+    </property>
+
+    <property>
+      <name>nodemanager.aux.service.mapreduce.shuffle.class</name>
+      <value>org.apache.hadoop.mapred.ShuffleHandler</value>
+    </property>
+
+Step 10) Modify mapred-site.xml to use yarn framework
+    <property>    
+      <name> mapreduce.framework.name</name>
+      <value>yarn</value>  
+    </property>
+
+Step 11) Create the following symlinks in $HADOOP_COMMON_HOME/share/hadoop/common/lib
+
+ln -s $YARN_HOME/modules/hadoop-mapreduce-client-app-1.0-SNAPSHOT.jar .	
+ln -s $YARN_HOME/modules/hadoop-yarn-api-1.0-SNAPSHOT.jar .
+ln -s $YARN_HOME/modules/hadoop-mapreduce-client-common-1.0-SNAPSHOT.jar .	
+ln -s $YARN_HOME/modules/hadoop-yarn-common-1.0-SNAPSHOT.jar .
+ln -s $YARN_HOME/modules/hadoop-mapreduce-client-core-1.0-SNAPSHOT.jar .	
+ln -s $YARN_HOME/modules/hadoop-yarn-server-common-1.0-SNAPSHOT.jar .
+ln -s $YARN_HOME/modules/hadoop-mapreduce-client-jobclient-1.0-SNAPSHOT.jar .
+
+Step 12) cd $YARN_HOME
+
+Step 13) bin/yarn-daemon.sh start resourcemanager
+
+Step 14) bin/yarn-daemon.sh start nodemanager
+
+Step 15) bin/yarn-daemon.sh start historyserver
+
+Step 16) You are all set, an example on how to run a mapreduce job is:
+cd $HADOOP_MAPRED_HOME
+ant examples -Dresolvers=internal 
+$HADOOP_COMMON_HOME/bin/hadoop jar $HADOOP_MAPRED_HOME/build/hadoop-mapreduce-examples-0.23.0-SNAPSHOT.jar randomwriter -Dmapreduce.job.user.name=$USER -Dmapreduce.clientfactory.class.name=org.apache.hadoop.mapred.YarnClientFactory -Dmapreduce.randomwriter.bytespermap=10000 -Ddfs.blocksize=536870912 -Ddfs.block.size=536870912 -libjars $YARN_HOME/modules/hadoop-mapreduce-client-jobclient-1.0-SNAPSHOT.jar output 
+
+The output on the command line should be almost similar to what you see in the JT/TT setup (Hadoop 0.20/0.21)
+
