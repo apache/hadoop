@@ -1116,7 +1116,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-2727. Fix divide-by-zero error in SleepJob for sleepCount equals
     0. (Jeffrey Naisbitt via acmurthy)
-
+ 
+    MAPREDUCE-2860. Fix log4j logging in the maven test cases. (mahadev)
 
 Release 0.22.0 - Unreleased
 

@@ -258,6 +258,7 @@
             <systemPropertyVariables>
               <build.dir>${project.build.directory}</build.dir>
               <build.output.dir>${project.build.outputDirectory}</build.output.dir>
+              <log4j.configuration>file:///${yarn.basedir}/../src/test/log4j.properties</log4j.configuration>
             </systemPropertyVariables>
           </configuration>
         </plugin>

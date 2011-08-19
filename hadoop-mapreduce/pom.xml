@@ -210,7 +210,7 @@
             <systemPropertyVariables>
               <build.dir>${project.build.directory}</build.dir>
               <build.output.dir>${project.build.outputDirectory}</build.output.dir>
-              <log4j.configuration>file:/home/vinodkv/Workspace/eclipse-workspace/apache-git/hadoop-common/mapreduce/src/test/log4j.properties</log4j.configuration>  
+              <log4j.configuration>file:///${mr.basedir}/src/test/log4j.properties</log4j.configuration>  
             </systemPropertyVariables>
           </configuration>
         </plugin>
