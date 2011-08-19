@@ -308,9 +308,11 @@ public class TaskLog {
     }
   }
   
-  static void writeToIndexFile(String logLocation,
-      TaskAttemptID currentTaskid, boolean isCleanup,
-      Map<LogName, Long[]> lengths) throws IOException {
+  static synchronized 
+  void writeToIndexFile(String logLocation,
+                        TaskAttemptID currentTaskid, 
+                        boolean isCleanup,
+                        Map<LogName, Long[]> lengths) throws IOException {
     // To ensure atomicity of updates to index file, write to temporary index
     // file first and then rename.
     File tmpIndexFile = getTmpIndexFile(currentTaskid, isCleanup);

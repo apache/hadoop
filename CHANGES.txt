@@ -13,6 +13,9 @@ Release 0.20.204.0 - 2011-8-19
 
   BUG FIXES
 
+    MAPREDUCE-2846. Fixed a race condition in writing the log index file that
+    caused tasks to fail. (omalley)
+
     MAPREDUCE-2651. Fix race condition in Linux task controller for
     job log directory creation. (Bharath Mundlapudi via llu)
 
