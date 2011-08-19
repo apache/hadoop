@@ -290,7 +290,7 @@ public class SecurityUtil {
    * @return host name if the the string conforms to the above format, else null
    */
   public static String getHostFromPrincipal(String principalName) {
-    return new KerberosName(principalName).getHostName();
+    return new HadoopKerberosName(principalName).getHostName();
   }
 
   private static ServiceLoader<SecurityInfo> securityInfoProviders = 

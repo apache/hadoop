@@ -35,11 +35,10 @@ import javax.crypto.SecretKey;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.KerberosName;
+import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.util.Daemon;
-import org.apache.hadoop.util.StringUtils;
 
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
@@ -284,7 +283,7 @@ extends AbstractDelegationTokenIdentifier>
     }
     String owner = id.getUser().getUserName();
     Text renewer = id.getRenewer();
-    KerberosName cancelerKrbName = new KerberosName(canceller);
+    HadoopKerberosName cancelerKrbName = new HadoopKerberosName(canceller);
     String cancelerShortName = cancelerKrbName.getShortName();
     if (!canceller.equals(owner)
         && (renewer == null || "".equals(renewer.toString()) || !cancelerShortName

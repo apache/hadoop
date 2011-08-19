@@ -38,6 +38,7 @@
     <module>hadoop-project-distro</module>
     <module>hadoop-assemblies</module>
     <module>hadoop-annotations</module>
+    <module>hadoop-alfredo</module>
     <module>hadoop-common</module>
     <module>hadoop-hdfs</module>
   </modules>

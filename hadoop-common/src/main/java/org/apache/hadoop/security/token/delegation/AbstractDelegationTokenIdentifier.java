@@ -27,7 +27,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.security.KerberosName;
+import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
@@ -58,7 +58,7 @@ extends TokenIdentifier {
     if (renewer == null) {
       this.renewer = new Text();
     } else {
-      KerberosName renewerKrbName = new KerberosName(renewer.toString());
+      HadoopKerberosName renewerKrbName = new HadoopKerberosName(renewer.toString());
       try {
         this.renewer = new Text(renewerKrbName.getShortName());
       } catch (IOException e) {

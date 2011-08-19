@@ -63,6 +63,9 @@ Trunk (unreleased changes)
     HADOOP-6385. dfs should support -rmdir (was HDFS-639). (Daryn Sharp
     via mattf)
 
+    HADOOP-7119. add Kerberos HTTP SPNEGO authentication support to Hadoop
+    JT/NN/DN/TT web-consoles. (Alejandro Abdelnur via atm)
+
   IMPROVEMENTS
 
     HADOOP-7042. Updates to test-patch.sh to include failed test names and

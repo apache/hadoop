@@ -1,0 +1,181 @@
+~~ Licensed under the Apache License, Version 2.0 (the "License");
+~~ you may not use this file except in compliance with the License.
+~~ You may obtain a copy of the License at
+~~
+~~   http://www.apache.org/licenses/LICENSE-2.0
+~~
+~~ Unless required by applicable law or agreed to in writing, software
+~~ distributed under the License is distributed on an "AS IS" BASIS,
+~~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~~ See the License for the specific language governing permissions and
+~~ limitations under the License. See accompanying LICENSE file.
+
+  ---
+  Hadoop Alfredo, Java HTTP SPNEGO ${project.version} - Server Side
+  Configuration
+  ---
+  ---
+  ${maven.build.timestamp}
+
+Hadoop Alfredo, Java HTTP SPNEGO ${project.version} - Server Side
+Configuration
+
+  \[ {{{./index.html}Go Back}} \]
+
+* Server Side Configuration Setup
+
+  The {{{./apidocs/org/apache/hadoop/alfredo/server/AuthenticationFilter.html}
+  AuthenticationFilter filter}} is Alfredo's server side component.
+
+  This filter must be configured in front of all the web application resources
+  that required authenticated requests. For example:
+
+  The Alfredo and dependent JAR files must be in the web application classpath
+  (commonly the <<<WEB-INF/lib>>> directory).
+
+  Alfredo uses SLF4J-API for logging. Alfredo Maven POM dependencies define the
+  SLF4J API dependency but it does not define the dependency on a concrete
+  logging implementation, this must be addded explicitly to the web
+  application. For example, if the web applicationan uses Log4j, the
+  SLF4J-LOG4J12 and LOG4J jar files must be part part of the web application
+  classpath as well as the Log4j configuration file.
+
+** Common Configuration parameters
+
+  * <<<config.prefix>>>: If specified, all other configuration parameter names
+    must start with the prefix. The default value is no prefix.
+
+  * <<<[PREFIX.]type>>>: the authentication type keyword (<<<simple>>> or
+    <<<kerberos>>>) or a
+    {{{./apidocs/org/apache/hadoop/alfredo/server/AuthenticationHandler.html}
+    Authentication handler implementation}}.
+
+  * <<<[PREFIX.]signature.secret>>>: The secret to SHA-sign the generated
+    authentication tokens. If a secret is not provided a random secret is
+    generated at start up time. If using multiple web application instances
+    behind a load-balancer a secret must be set for the application to work
+    properly.
+
+  * <<<[PREFIX.]token.validity>>>: The validity -in seconds- of the generated
+    authentication token. The default value is <<<3600>>> seconds.
+
+  * <<<[PREFIX.]cookie.domain>>>: domain to use for the HTTP cookie that stores
+    the authentication token.
+
+  * <<<[PREFIX.]cookie.path>>>: path to use for the HTTP cookie that stores the
+    authentication token.
+
+** Kerberos Configuration
+
+  <<IMPORTANT>>: A KDC must be configured and running.
+
+  To use Kerberos SPNEGO as the authentication mechanism, the authentication
+  filter must be configured with the following init parameters:
+
+    * <<<[PREFIX.]type>>>: the keyword <<<kerberos>>>.
+
+    * <<<[PREFIX.]kerberos.principal>>>: The web-application Kerberos principal
+      name. The Kerberos principal name must start with <<<HTTP/...>>>. For
+      example: <<<HTTP/localhost@LOCALHOST>>>.  There is no default value.
+
+    * <<<[PREFIX.]kerberos.keytab>>>: The path to the keytab file containing
+      the credentials for the kerberos principal. For example:
+      <<</Users/tucu/alfredo.keytab>>>. There is no default value.
+
+  <<Example>>:
+
++---+
+<web-app version="2.5" xmlns="http://java.sun.com/xml/ns/javaee">
+    ...
+
+    <filter>
+        <filter-name>kerberosFilter</filter-name>
+        <filter-class>org.apache.hadoop.alfredo.server.AuthenticationFilter</filter-class>
+        <init-param>
+            <param-name>type</param-name>
+            <param-value>kerberos</param-value>
+        </init-param>
+        <init-param>
+            <param-name>token.validity</param-name>
+            <param-value>30</param-value>
+        </init-param>
+        <init-param>
+            <param-name>cookie.domain</param-name>
+            <param-value>.foo.com</param-value>
+        </init-param>
+        <init-param>
+            <param-name>cookie.path</param-name>
+            <param-value>/</param-value>
+        </init-param>
+        <init-param>
+            <param-name>kerberos.principal</param-name>
+            <param-value>HTTP/localhost@LOCALHOST</param-value>
+        </init-param>
+        <init-param>
+            <param-name>kerberos.keytab</param-name>
+            <param-value>/tmp/alfredo.keytab</param-value>
+        </init-param>
+    </filter>
+
+    <filter-mapping>
+        <filter-name>kerberosFilter</filter-name>
+        <url-pattern>/kerberos/*</url-pattern>
+    </filter-mapping>
+
+    ...
+</web-app>
++---+
+
+** Pseudo/Simple Configuration
+
+  To use Pseudo/Simple as the authentication mechanism (trusting the value of
+  the query string parameter 'user.name'), the authentication filter must be
+  configured with the following init parameters:
+
+    * <<<[PREFIX.]type>>>: the keyword <<<simple>>>.
+
+    * <<<[PREFIX.]simple.anonymous.allowed>>>: is a boolean parameter that
+      indicates if anonymous requests are allowed or not. The default value is
+      <<<false>>>.
+
+  <<Example>>:
+
++---+
+<web-app version="2.5" xmlns="http://java.sun.com/xml/ns/javaee">
+    ...
+
+    <filter>
+        <filter-name>simpleFilter</filter-name>
+        <filter-class>org.apache.hadoop.alfredo.server.AuthenticationFilter</filter-class>
+        <init-param>
+            <param-name>type</param-name>
+            <param-value>simple</param-value>
+        </init-param>
+        <init-param>
+            <param-name>token.validity</param-name>
+            <param-value>30</param-value>
+        </init-param>
+        <init-param>
+            <param-name>cookie.domain</param-name>
+            <param-value>.foo.com</param-value>
+        </init-param>
+        <init-param>
+            <param-name>cookie.path</param-name>
+            <param-value>/</param-value>
+        </init-param>
+        <init-param>
+            <param-name>simple.anonymous.allowed</param-name>
+            <param-value>false</param-value>
+        </init-param>
+    </filter>
+
+    <filter-mapping>
+        <filter-name>simpleFilter</filter-name>
+        <url-pattern>/simple/*</url-pattern>
+    </filter-mapping>
+
+    ...
+</web-app>
++---+
+
+  \[ {{{./index.html}Go Back}} \]

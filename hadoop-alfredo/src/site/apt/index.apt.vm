@@ -1,0 +1,53 @@
+~~ Licensed under the Apache License, Version 2.0 (the "License");
+~~ you may not use this file except in compliance with the License.
+~~ You may obtain a copy of the License at
+~~
+~~   http://www.apache.org/licenses/LICENSE-2.0
+~~
+~~ Unless required by applicable law or agreed to in writing, software
+~~ distributed under the License is distributed on an "AS IS" BASIS,
+~~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~~ See the License for the specific language governing permissions and
+~~ limitations under the License. See accompanying LICENSE file.
+
+  ---
+  Hadoop Alfredo, Java HTTP SPNEGO ${project.version}
+  ---
+  ---
+  ${maven.build.timestamp}
+
+Hadoop Alfredo, Java HTTP SPNEGO ${project.version}
+
+  Hadoop Alfredo is a Java library consisting of a client and a server
+  components to enable Kerberos SPNEGO authentication for HTTP.
+
+  Alfredo also supports additional authentication mechanisms on the client
+  and the server side via 2 simple interfaces.
+
+* License
+
+  Alfredo is distributed under {{{http://www.apache.org/licenses/}Apache
+  License 2.0}}.
+
+* How Does Alfredo Works?
+
+  Alfredo enforces authentication on protected resources, once authentiation
+  has been established it sets a signed HTTP Cookie that contains an
+  authentication token with the user name, user principal, authentication type
+  and expiration time.
+
+  Subsequent HTTP client requests presenting the signed HTTP Cookie have access
+  to the protected resources until the HTTP Cookie expires.
+
+* User Documentation
+
+  * {{{./Examples.html}Examples}}
+
+  * {{{./Configuration.html}Configuration}}
+
+  * {{{./BuildingIt.html}Building It}}
+
+  * {{{./apidocs/index.html}JavaDocs}}
+
+  * {{{./dependencies.html}Dependencies}}
+

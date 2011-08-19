@@ -194,7 +194,7 @@ public class UserGroupInformation {
     initUGI(conf);
     // give the configuration on how to translate Kerberos names
     try {
-      KerberosName.setConfiguration(conf);
+      HadoopKerberosName.setConfiguration(conf);
     } catch (IOException ioe) {
       throw new RuntimeException("Problem with Kerberos auth_to_local name " +
           "configuration", ioe);
