@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 0.20.204.0 - 2011-8-5
+Release 0.20.204.0 - 2011-8-19
 
   NEW FEATURES
 
@@ -12,6 +12,9 @@ Release 0.20.204.0 - 2011-8-5
     HADOOP-7324. Ganglia plugins for metrics v2. (Priyo Mustafi via llu)
 
   BUG FIXES
+
+    MAPREDUCE-2651. Fix race condition in Linux task controller for
+    job log directory creation. (Bharath Mundlapudi via llu)
 
     MAPREDUCE-2621. TestCapacityScheduler fails with "Queue "q1" does not 
     exist". (Sherry Chen via mahadev)
