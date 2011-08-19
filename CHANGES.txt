@@ -203,6 +203,7 @@ Release 0.91.0 - Unreleased
    HBASE-4211  Do init-sizing of the StringBuilder making a ServerName
                (Benoît Sigoure)
    HBASE-4175  Fix FSUtils.createTableDescriptor() (Ramkrishna)
+   HBASE-4008  Problem while stopping HBase (Akash Ashok)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

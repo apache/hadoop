@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.ServerCommandLine;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.zookeeper.KeeperException;
@@ -138,6 +139,7 @@ public class HMasterCommandLine extends ServerCommandLine {
                                                           LocalHMaster.class, HRegionServer.class);
         ((LocalHMaster)cluster.getMaster(0)).setZKCluster(zooKeeperCluster);
         cluster.startup();
+        waitOnMasterThreads(cluster);
       } else {
         HMaster master = HMaster.constructMaster(masterClass, conf);
         if (master.isStopped()) {
@@ -146,6 +148,8 @@ public class HMasterCommandLine extends ServerCommandLine {
         }
         master.start();
         master.join();
+        if(master.isAborted())
+          throw new RuntimeException("HMaster Aborted");
       }
     } catch (Throwable t) {
       LOG.error("Failed to start master", t);
@@ -177,6 +181,27 @@ public class HMasterCommandLine extends ServerCommandLine {
     return 0;
   }
 
+  private void waitOnMasterThreads(LocalHBaseCluster cluster) throws InterruptedException{
+    List<JVMClusterUtil.MasterThread> masters = cluster.getMasters();
+    List<JVMClusterUtil.RegionServerThread> regionservers = cluster.getRegionServers();
+	  
+    if (masters != null) { 
+      for (JVMClusterUtil.MasterThread t : masters) {
+        t.join();
+        if(t.getMaster().isAborted()) {
+          closeAllRegionServerThreads(regionservers);
+          throw new RuntimeException("HMaster Aborted");
+        }
+      }
+    }
+  }
+
+  private static void closeAllRegionServerThreads(List<JVMClusterUtil.RegionServerThread> regionservers) {
+    for(JVMClusterUtil.RegionServerThread t : regionservers){
+      t.getRegionServer().stop("HMaster Aborted; Bringing down regions servers");
+    }
+  }
+  
   /*
    * Version of master that will shutdown the passed zk cluster on its way out.
    */

@@ -1336,6 +1336,11 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     return this.stopped;
   }
 
+  boolean isAborted() {
+    return this.abort;
+  }
+  
+  
   /**
    * Report whether this master is currently the active master or not.
    * If not active master, we are parked on ZK waiting to become active.
