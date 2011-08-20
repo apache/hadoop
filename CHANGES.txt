@@ -385,6 +385,7 @@ Release 0.91.0 - Unreleased
                not shown (Nileema Shingte)
    HBASE-4229  Replace Jettison JSON encoding with Jackson in HLogPrettyPrinter
                (Riley Patterson)
+   HBASE-4230  Compaction threads need names
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
