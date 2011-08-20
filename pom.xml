@@ -638,6 +638,7 @@
     https://issues.apache.org/jira/secure/attachment/12459473/hdfs-895-branch-20-append.txt
     -->
     <hadoop.version>0.20-append-r1057313</hadoop.version>
+    <jackson.version>1.5.5</jackson.version>
     <jasper.version>5.5.23</jasper.version>
     <jaxb-api.version>2.1</jaxb-api.version>
     <jetty.version>6.1.26</jetty.version>
@@ -677,9 +678,6 @@
           implementation of the same, because Hadoop also uses this version
         * javax.servlet:jsp-api in favour of org.mortbay.jetty:jsp-api-2.1
         * javax.xml.stream:stax-api in favour of stax:stax-api
-
-      Note: Both org.apache.avro:avro and com.sun.jersey:jersey-json depend on Jackson so the version
-        is chosen which comes first in the list of dependencies (jersey in this case)
     -->
 
     <!-- General dependencies -->
@@ -828,6 +826,29 @@
       <groupId>org.mortbay.jetty</groupId>
       <artifactId>servlet-api-2.5</artifactId>
       <version>${jetty.jspapi.version}</version>
+    </dependency>
+    <!-- While jackson is also a dependency of both jersey and avro, these 
+         can bring in jars from different, incompatible versions. We force 
+         the same version with these dependencies -->
+    <dependency>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-core-asl</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-mapper-asl</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-jaxrs</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-xc</artifactId>
+      <version>${jackson.version}</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>

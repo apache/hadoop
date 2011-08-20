@@ -20,8 +20,11 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -36,9 +39,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.codehaus.jettison.json.JSONArray;
-import org.codehaus.jettison.json.JSONException;
-import org.codehaus.jettison.json.JSONObject;
+import org.codehaus.jackson.map.ObjectMapper;
 
 /**
  * HLogPrettyPrinter prints the contents of a given HLog with a variety of
@@ -65,6 +66,8 @@ public class HLogPrettyPrinter {
   private boolean firstTxn;
   // useful for programatic capture of JSON output
   private PrintStream out;
+  // for JSON encoding
+  private ObjectMapper mapper;
 
   /**
    * Basic constructor that simply initializes values to reasonable defaults.
@@ -78,6 +81,7 @@ public class HLogPrettyPrinter {
     persistentOutput = false;
     firstTxn = true;
     out = System.out;
+    mapper = new ObjectMapper();
   }
 
   /**
@@ -239,23 +243,25 @@ public class HLogPrettyPrinter {
         HLogKey key = entry.getKey();
         WALEdit edit = entry.getEdit();
         // begin building a transaction structure
-        JSONObject txn = new JSONObject(key.toStringMap());
+        Map<String, Object> txn = key.toStringMap();
         // check output filters
         if (sequence >= 0 && ((Long) txn.get("sequence")) != sequence)
           continue;
         if (region != null && !((String) txn.get("region")).equals(region))
           continue;
         // initialize list into which we will store atomic actions
-        JSONArray actions = new JSONArray();
+        List<Map> actions = new ArrayList<Map>();
         for (KeyValue kv : edit.getKeyValues()) {
           // add atomic operation to txn
-          JSONObject op = new JSONObject(kv.toStringMap());
+          Map<String, Object> op = 
+            new HashMap<String, Object>(kv.toStringMap());
           if (outputValues)
             op.put("value", Bytes.toStringBinary(kv.getValue()));
+          // check row output filter
           if (row == null || ((String) op.get("row")).equals(row))
-            actions.put(op);
+            actions.add(op);
         }
-        if (actions.length() == 0)
+        if (actions.size() == 0)
           continue;
         txn.put("actions", actions);
         if (outputJSON) {
@@ -264,27 +270,26 @@ public class HLogPrettyPrinter {
             firstTxn = false;
           else
             out.print(",");
-          out.print(txn);
+          // encode and print JSON
+          out.print(mapper.writeValueAsString(txn));
         } else {
           // Pretty output, complete with indentation by atomic action
-          out.println("Sequence " + txn.getLong("sequence") + " "
-              + "from region " + txn.getString("region") + " " + "in table "
-              + txn.getString("table"));
-          for (int i = 0; i < actions.length(); i++) {
-            JSONObject op = actions.getJSONObject(i);
+          out.println("Sequence " + txn.get("sequence") + " "
+              + "from region " + txn.get("region") + " " + "in table "
+              + txn.get("table"));
+          for (int i = 0; i < actions.size(); i++) {
+            Map op = actions.get(i);
             out.println("  Action:");
-            out.println("    row: " + op.getString("row"));
-            out.println("    column: " + op.getString("family") + ":"
-                + op.getString("qualifier"));
+            out.println("    row: " + op.get("row"));
+            out.println("    column: " + op.get("family") + ":"
+                + op.get("qualifier"));
             out.println("    at time: "
-                + (new Date(op.getLong("timestamp"))));
+                + (new Date((Long) op.get("timestamp"))));
             if (outputValues)
               out.println("    value: " + op.get("value"));
           }
         }
       }
-    } catch (JSONException e) {
-      e.printStackTrace();
     } finally {
       log.close();
     }

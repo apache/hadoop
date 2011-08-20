@@ -383,6 +383,8 @@ Release 0.91.0 - Unreleased
                o.a.h.h.HConstants (Mingjie Lai)
    HBASE-4227  Modify the webUI so that default values of column families are
                not shown (Nileema Shingte)
+   HBASE-4229  Replace Jettison JSON encoding with Jackson in HLogPrettyPrinter
+               (Riley Patterson)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
