@@ -3407,6 +3407,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     boolean gotException = false;
     if (nodes == null)
       return;
+    // Make a copy of this list, since calling invalidateBlock will modify
+    // the original (avoid CME)
+    nodes = new ArrayList<DatanodeDescriptor>(nodes);
+    NameNode.stateChangeLog.debug("NameNode.invalidateCorruptReplicas: " +
+        "invalidating corrupt replicas on " + nodes.size() + "nodes");
     for (Iterator<DatanodeDescriptor> it = nodes.iterator(); it.hasNext(); ) {
       DatanodeDescriptor node = it.next();
       try {
