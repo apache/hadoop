@@ -437,9 +437,6 @@ Trunk (unreleased changes)
     HADOOP-7389. Use of TestingGroups by tests causes subsequent tests to fail.
     (atm via tomwhite)
 
-    HADOOP-7390. VersionInfo not generated properly in git after unsplit. (todd
-    via atm)
-
     HADOOP-7377. Fix command name handling affecting DFSAdmin. (Daryn Sharp
     via mattf)
 
@@ -1025,6 +1022,9 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7349. HADOOP-7121 accidentally disabled some tests in TestIPC.
     (todd)
+
+    HADOOP-7390. VersionInfo not generated properly in git after unsplit. (todd
+    via atm)
 
 Release 0.21.1 - Unreleased
 
