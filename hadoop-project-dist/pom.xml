@@ -21,10 +21,10 @@
     <relativePath>../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
-  <artifactId>hadoop-project-distro</artifactId>
+  <artifactId>hadoop-project-dist</artifactId>
   <version>0.23.0-SNAPSHOT</version>
-  <description>Apache Hadoop Project Distro POM</description>
-  <name>Apache Hadoop Project Distro POM</name>
+  <description>Apache Hadoop Project Dist POM</description>
+  <name>Apache Hadoop Project Dist POM</name>
   <packaging>pom</packaging>
 
   <properties>
@@ -356,7 +356,7 @@
     </profile>
 
     <profile>
-      <id>tar</id>
+      <id>dist</id>
       <activation>
         <activeByDefault>false</activeByDefault>
       </activation>
@@ -367,7 +367,7 @@
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
               <execution>
-                <id>pre-tar</id>
+                <id>pre-dist</id>
                 <phase>prepare-package</phase>
                 <goals>
                   <goal>run</goal>
@@ -375,7 +375,7 @@
                 <configuration>
                   <target>
                     <!-- Using Unix script to preserve symlinks -->
-                    <echo file="${project.build.directory}/tar-copynativelibs.sh">
+                    <echo file="${project.build.directory}/dist-copynativelibs.sh">
 
                       which cygpath 2> /dev/null
                       if [ $? = 1 ]; then
@@ -398,7 +398,7 @@
                       fi
                     </echo>
                     <exec executable="sh" dir="${project.build.directory}" failonerror="true">
-                      <arg line="./tar-copynativelibs.sh"/>
+                      <arg line="./dist-copynativelibs.sh"/>
                     </exec>
                   </target>
                 </configuration>
@@ -410,9 +410,9 @@
                   <goal>run</goal>
                 </goals>
                 <configuration>
-                  <target>
+                  <target if="tar">
                     <!-- Using Unix script to preserve symlinks -->
-                    <echo file="${project.build.directory}/tar-maketar.sh">
+                    <echo file="${project.build.directory}/dist-maketar.sh">
 
                       which cygpath 2> /dev/null
                       if [ $? = 1 ]; then
@@ -424,7 +424,7 @@
                       tar czf ${project.artifactId}-${project.version}.tar.gz ${project.artifactId}-${project.version}
                     </echo>
                     <exec executable="sh" dir="${project.build.directory}" failonerror="true">
-                      <arg line="./tar-maketar.sh"/>
+                      <arg line="./dist-maketar.sh"/>
                     </exec>
                   </target>
                 </configuration>
@@ -443,7 +443,7 @@
             </dependencies>
             <executions>
               <execution>
-                <id>pre-tar</id>
+                <id>dist</id>
                 <phase>prepare-package</phase>
                 <goals>
                   <goal>single</goal>
@@ -453,7 +453,7 @@
                   <attach>false</attach>
                   <finalName>${project.artifactId}-${project.version}</finalName>
                   <descriptorRefs>
-                    <descriptorRef>hadoop-tar</descriptorRef>
+                    <descriptorRef>hadoop-dist</descriptorRef>
                   </descriptorRefs>
                 </configuration>
               </execution>

@@ -35,7 +35,7 @@
 
   <modules>
     <module>hadoop-project</module>
-    <module>hadoop-project-distro</module>
+    <module>hadoop-project-dist</module>
     <module>hadoop-assemblies</module>
     <module>hadoop-annotations</module>
     <module>hadoop-alfredo</module>

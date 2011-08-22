@@ -16,9 +16,9 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
-    <artifactId>hadoop-project-distro</artifactId>
+    <artifactId>hadoop-project-dist</artifactId>
     <version>0.23.0-SNAPSHOT</version>
-    <relativePath>../hadoop-project-distro</relativePath>
+    <relativePath>../hadoop-project-dist</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-hdfs</artifactId>

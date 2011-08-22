@@ -337,6 +337,9 @@ Trunk (unreleased changes)
     HADOOP-7498. Remove legacy TAR layout creation. (Alejandro Abdelnur via
     tomwhite)
 
+    HADOOP-7496. Break Maven TAR & bintar profiles into just LAYOUT & TAR proper.
+    (Alejandro Abdelnur via tomwhite)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

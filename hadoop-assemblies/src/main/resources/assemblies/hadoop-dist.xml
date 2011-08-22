@@ -15,7 +15,7 @@
    limitations under the License.
 -->
 <assembly>
-  <id>hadoop-bintar</id>
+  <id>hadoop-distro</id>
   <formats>
     <format>dir</format>
   </formats>

@@ -15,12 +15,13 @@ Requirements:
 ----------------------------------------------------------------------------------
 Maven modules:
 
-  hadoop                      (Main Hadoop project)
-         - hadoop-project     (Parent POM for all Hadoop Maven modules.             )
-                              (All plugins & dependencies versions are defined here.)
-         - hadoop-annotations (Generates the Hadoop doclet used to generated the Javadocs)
-         - hadoop-common      (Hadoop Common)
-         - hadoop-hdfs        (Hadoop HDFS)
+  hadoop                       (Main Hadoop project)
+         - hadoop-project      (Parent POM for all Hadoop Maven modules.             )
+                               (All plugins & dependencies versions are defined here.)
+         - hadoop-project-dist (Parent POM for modules that generate distributions.)
+         - hadoop-annotations  (Generates the Hadoop doclet used to generated the Javadocs)
+         - hadoop-common       (Hadoop Common)
+         - hadoop-hdfs         (Hadoop HDFS)
 
 ----------------------------------------------------------------------------------
 Where to run Maven from?
@@ -43,15 +44,16 @@ Maven build goals:
  * Run clover                : mvn test -Pclover [-DcloverLicenseLocation=${user.name}/.clover.license]
  * Run Rat                   : mvn apache-rat:check
  * Build javadocs            : mvn javadoc:javadoc
- * Build TAR                 : mvn package [-Ptar][-Pdocs][-Psrc][-Pnative]
+ * Build distribution        : mvn package [-Pdist][-Pdocs][-Psrc][-Pnative][-Dtar]
 
  Build options:
 
   * Use -Pnative to compile/bundle native code
   * Use -Dsnappy.prefix=(/usr/local) & -Dbundle.snappy=(false) to compile
     Snappy JNI bindings and to bundle Snappy SO files
-  * Use -Pdocs to generate & bundle the documentation in the TAR (using -Ptar)
-  * Use -Psrc to bundle the source in the TAR (using -Ptar)
+  * Use -Pdocs to generate & bundle the documentation in the distribution (using -Pdist)
+  * Use -Psrc to bundle the source in the distribution (using -Pdist)
+  * Use -Dtar to create a TAR with the distribution (using -Pdist)
 
    Tests options:
 
