@@ -178,6 +178,9 @@ implements Configurable {
   public void setConf(Configuration otherConf) {
     this.conf = HBaseConfiguration.create(otherConf);
     String tableName = this.conf.get(OUTPUT_TABLE);
+    if(tableName == null || tableName.length() <= 0) {
+      throw new IllegalArgumentException("Must specify table name");
+    }
     String address = this.conf.get(QUORUM_ADDRESS);
     String serverClass = this.conf.get(REGION_SERVER_CLASS);
     String serverImpl = this.conf.get(REGION_SERVER_IMPL);
@@ -194,6 +197,7 @@ implements Configurable {
       LOG.info("Created table instance for "  + tableName);
     } catch(IOException e) {
       LOG.error(e);
+      throw new RuntimeException(e);
     }
   }
 }

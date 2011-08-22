@@ -204,6 +204,8 @@ Release 0.91.0 - Unreleased
                (Benoît Sigoure)
    HBASE-4175  Fix FSUtils.createTableDescriptor() (Ramkrishna)
    HBASE-4008  Problem while stopping HBase (Akash Ashok)
+   HBASE-4065  TableOutputFormat ignores failure to create table instance
+               (Brock Noland)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
