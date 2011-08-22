@@ -1724,14 +1724,6 @@
         <include name="hadoop-hdfs-${herriot.suffix}-test.xml"/>
       </fileset>
     </replaceregexp>
-    <replaceregexp byline="true">
-      <regexp pattern="@hadoop-common.version"/>
-      <substitution expression="${hadoop-common.version}"/>
-      <fileset dir="${basedir}/ivy">
-        <include name="hadoop-hdfs.xml"/>
-        <include name="hadoop-hdfs-${herriot.suffix}.xml"/>
-      </fileset>
-    </replaceregexp>
   </target>
 
   <!--
