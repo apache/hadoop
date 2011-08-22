@@ -208,6 +208,7 @@ Release 0.91.0 - Unreleased
                (Brock Noland)
    HBASE-4167  Potential leak of HTable instances when using HTablePool with
                PoolType.ThreadLocal (Karthick Sankarachary)
+   HBASE-4239  HBASE-4012 introduced duplicate variable Bytes.LONG_BYTES
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

@@ -972,12 +972,6 @@ public class Bytes {
       compareTo(buffer1, offset1, length1, buffer2, offset2, length2);
   }
   
-  /**
-   * The number of bytes required to represent a primitive {@code long}
-   * value.
-   */
-  public static final int LONG_BYTES = Long.SIZE / Byte.SIZE;
- 
   interface Comparer<T> {
     abstract public int compareTo(T buffer1, int offset1, int length1,
         T buffer2, int offset2, int length2);
@@ -1113,7 +1107,7 @@ public class Bytes {
           return 0;
         }
         int minLength = Math.min(length1, length2);
-        int minWords = minLength / LONG_BYTES;
+        int minWords = minLength / SIZEOF_LONG;
         int offset1Adj = offset1 + BYTE_ARRAY_BASE_OFFSET;
         int offset2Adj = offset2 + BYTE_ARRAY_BASE_OFFSET;
 
@@ -1122,7 +1116,7 @@ public class Bytes {
          * time is no slower than comparing 4 bytes at a time even on 32-bit.
          * On the other hand, it is substantially faster on 64-bit.
          */
-        for (int i = 0; i < minWords * LONG_BYTES; i += LONG_BYTES) {
+        for (int i = 0; i < minWords * SIZEOF_LONG; i += SIZEOF_LONG) {
           long lw = theUnsafe.getLong(buffer1, offset1Adj + (long) i);
           long rw = theUnsafe.getLong(buffer2, offset2Adj + (long) i);
           long diff = lw ^ rw;
@@ -1157,7 +1151,7 @@ public class Bytes {
         }
 
         // The epilogue to cover the last (minLength % 8) elements.
-        for (int i = minWords * LONG_BYTES; i < minLength; i++) {
+        for (int i = minWords * SIZEOF_LONG; i < minLength; i++) {
           int a = (buffer1[offset1 + i] & 0xff);
           int b = (buffer2[offset2 + i] & 0xff);
           if (a != b) {
