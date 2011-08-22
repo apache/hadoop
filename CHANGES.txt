@@ -39,6 +39,9 @@ Release 0.20.205.0 - unreleased
 
     HDFS-2259. DN web-UI doesn't work with paths that contain html. (eli)
 
+    HDFS-561. Fix write pipeline READ_TIMEOUT.
+    (Todd Lipcon via dhruba)
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via

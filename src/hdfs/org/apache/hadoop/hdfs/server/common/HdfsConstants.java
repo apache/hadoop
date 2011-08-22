@@ -48,6 +48,7 @@ public interface HdfsConstants {
 
   // Timeouts for communicating with DataNode for streaming writes/reads
   public static int READ_TIMEOUT = 60 * 1000;
+  public static int READ_TIMEOUT_EXTENSION = 3 * 1000;
   public static int WRITE_TIMEOUT = 8 * 60 * 1000;
   public static int WRITE_TIMEOUT_EXTENSION = 5 * 1000; //for write pipeline
 

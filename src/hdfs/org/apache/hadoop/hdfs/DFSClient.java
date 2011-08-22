@@ -719,7 +719,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       final DatanodeInfo[] datanodes = lb.getLocations();
       
       //try each datanode location of the block
-      final int timeout = 3000 * datanodes.length + socketTimeout;
+      final int timeout = (socketTimeout > 0) ? (socketTimeout + 
+        HdfsConstants.READ_TIMEOUT_EXTENSION * datanodes.length) : 0;
+     
       boolean done = false;
       for(int j = 0; !done && j < datanodes.length; j++) {
         //connect to a datanode
