@@ -514,23 +514,22 @@ public class HBaseClient {
         return;
       }
 
-      DataOutputBuffer d=null;
+      // For serializing the data to be written.
+
+      final DataOutputBuffer d = new DataOutputBuffer();
       try {
+        if (LOG.isDebugEnabled())
+          LOG.debug(getName() + " sending #" + call.id);
+
+        d.writeInt(0xdeadbeef); // placeholder for data length
+        d.writeInt(call.id);
+        call.param.write(d);
+        byte[] data = d.getData();
+        int dataLength = d.getLength();
+        // fill in the placeholder
+        Bytes.putInt(data, 0, dataLength - 4);
         //noinspection SynchronizeOnNonFinalField
         synchronized (this.out) { // FindBugs IS2_INCONSISTENT_SYNC
-          if (LOG.isDebugEnabled())
-            LOG.debug(getName() + " sending #" + call.id);
-
-          //for serializing the
-          //data to be written
-          d = new DataOutputBuffer();
-          d.writeInt(0xdeadbeef); // placeholder for data length
-          d.writeInt(call.id);
-          call.param.write(d);
-          byte[] data = d.getData();
-          int dataLength = d.getLength();
-          // fill in the placeholder
-          Bytes.putInt(data, 0, dataLength - 4);
           out.write(data, 0, dataLength);
           out.flush();
         }
