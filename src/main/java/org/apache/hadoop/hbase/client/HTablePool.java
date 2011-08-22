@@ -259,6 +259,7 @@ public class HTablePool implements Closeable {
     String tableName = Bytes.toString(table.getTableName());
     if (tables.size(tableName) >= maxSize) {
       // release table instance since we're not reusing it
+      this.tables.remove(tableName, table);
       this.tableFactory.releaseHTableInterface(table);
       return;
     }
@@ -309,6 +310,7 @@ public class HTablePool implements Closeable {
     for (String tableName : tables.keySet()) {
       closeTablePool(tableName);
     }
+    this.tables.clear();
   }
 
   int getCurrentPoolSize(String tableName) {

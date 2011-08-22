@@ -206,6 +206,8 @@ Release 0.91.0 - Unreleased
    HBASE-4008  Problem while stopping HBase (Akash Ashok)
    HBASE-4065  TableOutputFormat ignores failure to create table instance
                (Brock Noland)
+   HBASE-4167  Potential leak of HTable instances when using HTablePool with
+               PoolType.ThreadLocal (Karthick Sankarachary)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
