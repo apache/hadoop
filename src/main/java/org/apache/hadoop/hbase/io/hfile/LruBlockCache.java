@@ -19,21 +19,32 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -725,6 +736,46 @@ public class LruBlockCache implements BlockCache, HeapSize {
         (concurrency * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
   }
 
+  @Override
+  public List<BlockCacheColumnFamilySummary> getBlockCacheColumnFamilySummaries(Configuration conf) throws IOException {
+   
+    Map<String, Path> sfMap = FSUtils.getTableStoreFilePathMap(
+        FileSystem.get(conf),
+        FSUtils.getRootDir(conf));
+        
+    // quirky, but it's a compound key and this is a shortcut taken instead of 
+    // creating a class that would represent only a key.
+    Map<BlockCacheColumnFamilySummary, BlockCacheColumnFamilySummary> bcs = 
+      new HashMap<BlockCacheColumnFamilySummary, BlockCacheColumnFamilySummary>();
+
+    final String pattern = "\\" + HFile.CACHE_KEY_SEPARATOR;
+    
+    for (CachedBlock cb : map.values()) {
+      // split name and get the first part (e.g., "8351478435190657655_0")
+      // see HFile.getBlockCacheKey for structure of block cache key.
+      String s[] = cb.getName().split(pattern);
+      if (s.length > 0) {
+        String sf = s[0];
+        Path path = sfMap.get(sf);
+        if ( path != null) {
+          BlockCacheColumnFamilySummary lookup = 
+            BlockCacheColumnFamilySummary.createFromStoreFilePath(path);
+          BlockCacheColumnFamilySummary bcse = bcs.get(lookup);
+          if (bcse == null) {
+            bcse = BlockCacheColumnFamilySummary.create(lookup);
+            bcs.put(lookup,bcse);
+          }
+          bcse.incrementBlocks();
+          bcse.incrementHeapSize(cb.heapSize());
+        }
+      }
+    }
+    List<BlockCacheColumnFamilySummary> list = 
+        new ArrayList<BlockCacheColumnFamilySummary>(bcs.values());
+    Collections.sort( list );  
+    return list;
+  }
+    
   // Simple calculators of sizes given factors and maxSize
 
   private long acceptableSize() {

@@ -1091,4 +1091,61 @@ public abstract class FSUtils {
       out.close();
     }
   }
+  
+  /**
+   * Runs through the HBase rootdir and creates a reverse lookup map for 
+   * table StoreFile names to the full Path. 
+   * <br>
+   * Example...<br>
+   * Key = 3944417774205889744  <br>
+   * Value = hdfs://localhost:51169/user/userid/-ROOT-/70236052/info/3944417774205889744
+   *
+   * @param fs  The file system to use.
+   * @param hbaseRootDir  The root directory to scan.
+   * @return Map keyed by StoreFile name with a value of the full Path.
+   * @throws IOException When scanning the directory fails.
+   */
+  public static Map<String, Path> getTableStoreFilePathMap(
+    final FileSystem fs, final Path hbaseRootDir)
+  throws IOException {
+    Map<String, Path> map = new HashMap<String, Path>();
+    
+    // if this method looks similar to 'getTableFragmentation' that is because 
+    // it was borrowed from it.
+    
+    DirFilter df = new DirFilter(fs);
+    // presumes any directory under hbase.rootdir is a table
+    FileStatus [] tableDirs = fs.listStatus(hbaseRootDir, df);
+    for (FileStatus tableDir : tableDirs) {
+      // Skip the .log directory.  All others should be tables.  Inside a table,
+      // there are compaction.dir directories to skip.  Otherwise, all else
+      // should be regions. 
+      Path d = tableDir.getPath();
+      if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) {
+        continue;
+      }
+      FileStatus[] regionDirs = fs.listStatus(d, df);
+      for (FileStatus regionDir : regionDirs) {
+        Path dd = regionDir.getPath();
+        if (dd.getName().equals(HConstants.HREGION_COMPACTIONDIR_NAME)) {
+          continue;
+        }
+        // else its a region name, now look in region for families
+        FileStatus[] familyDirs = fs.listStatus(dd, df);
+        for (FileStatus familyDir : familyDirs) {
+          Path family = familyDir.getPath();
+          // now in family, iterate over the StoreFiles and
+          // put in map
+          FileStatus[] familyStatus = fs.listStatus(family);
+          for (FileStatus sfStatus : familyStatus) {
+            Path sf = sfStatus.getPath();
+            map.put( sf.getName(), sf);
+          }
+          
+        }
+      }
+    }
+      return map;
+  }
+
 }

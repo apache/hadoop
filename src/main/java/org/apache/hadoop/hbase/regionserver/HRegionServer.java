@@ -98,7 +98,7 @@ import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheColumnFamilySummary;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
@@ -119,7 +119,6 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenRootHandler;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
-import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -3024,4 +3023,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
     new HRegionServerCommandLine(regionServerClass).doMain(args);
   }
+
+  @Override
+  public List<BlockCacheColumnFamilySummary> getBlockCacheColumnFamilySummaries() throws IOException {
+    BlockCache c = StoreFile.getBlockCache(this.conf);
+    return c.getBlockCacheColumnFamilySummaries(this.conf);
+  }
+
 }

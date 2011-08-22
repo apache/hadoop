@@ -19,6 +19,10 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.io.IOException;
+import java.util.List;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 
@@ -90,4 +94,18 @@ public interface BlockCache {
   public long getCurrentSize();
 
   public long getEvictedCount();
+  
+  /**
+   * Performs a BlockCache summary and returns a List of BlockCacheColumnFamilySummary objects.
+   * This method could be fairly heavyweight in that it evaluates the entire HBase file-system
+   * against what is in the RegionServer BlockCache. 
+   * <br><br>
+   * The contract of this interface is to return the List in sorted order by Table name, then
+   * ColumnFamily.
+   * 
+   * @param conf HBaseConfiguration
+   * @return List of BlockCacheColumnFamilySummary
+   * @throws IOException exception
+   */
+  public List<BlockCacheColumnFamilySummary> getBlockCacheColumnFamilySummaries(Configuration conf) throws IOException;
 }

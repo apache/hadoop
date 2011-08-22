@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheColumnFamilySummary;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.ipc.RemoteException;
@@ -487,4 +488,14 @@ public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortabl
      final byte[] family, final byte[] qualifier, final CompareOp compareOp,
      final WritableByteArrayComparable comparator, final Delete delete)
      throws IOException;
+  
+  /**
+   * Performs a BlockCache summary and returns a List of BlockCacheColumnFamilySummary objects.
+   * This method could be fairly heavyweight in that it evaluates the entire HBase file-system
+   * against what is in the RegionServer BlockCache. 
+   * 
+   * @return BlockCacheColumnFamilySummary
+   * @throws IOException exception
+   */
+  public List<BlockCacheColumnFamilySummary> getBlockCacheColumnFamilySummaries() throws IOException;
 }

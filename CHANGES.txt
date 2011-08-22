@@ -393,6 +393,7 @@ Release 0.91.0 - Unreleased
    HBASE-4236  Don't lock the stream while serializing the response (Benoit Sigoure)
    HBASE-4237  Directly remove the call being handled from the map of outstanding RPCs
                (Benoit Sigoure)
+   HBASE-4199  blockCache summary - backend (Doug Meil)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

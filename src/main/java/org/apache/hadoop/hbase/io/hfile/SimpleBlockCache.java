@@ -21,10 +21,11 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.SoftReference;
-import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 
@@ -123,5 +124,11 @@ public class SimpleBlockCache implements BlockCache {
   public int evictBlocksByPrefix(String string) {
     throw new UnsupportedOperationException();
   }
+ 
+  @Override
+  public List<BlockCacheColumnFamilySummary> getBlockCacheColumnFamilySummaries(Configuration conf) {
+    throw new UnsupportedOperationException();
+  }
+
 }
 
