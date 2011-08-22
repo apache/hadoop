@@ -389,6 +389,8 @@ Release 0.91.0 - Unreleased
                (Riley Patterson)
    HBASE-4230  Compaction threads need names
    HBASE-4236  Don't lock the stream while serializing the response (Benoit Sigoure)
+   HBASE-4237  Directly remove the call being handled from the map of outstanding RPCs
+               (Benoit Sigoure)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

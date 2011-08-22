@@ -557,14 +557,13 @@ public class HBaseClient {
         if (LOG.isDebugEnabled())
           LOG.debug(getName() + " got value #" + id);
 
-        Call call = calls.get(id);
+        Call call = calls.remove(id);
 
         boolean isError = in.readBoolean();     // read if error
         if (isError) {
           //noinspection ThrowableInstanceNeverThrown
           call.setException(new RemoteException( WritableUtils.readString(in),
               WritableUtils.readString(in)));
-          calls.remove(id);
         } else {
           Writable value = ReflectionUtils.newInstance(valueClass, conf);
           value.readFields(in);                 // read value
@@ -573,7 +572,6 @@ public class HBaseClient {
           if (call != null) {
             call.setValue(value);
           }
-          calls.remove(id);
         }
       } catch (IOException e) {
         if (e instanceof SocketTimeoutException && remoteId.rpcTimeout > 0) {
