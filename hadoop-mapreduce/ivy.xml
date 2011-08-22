@@ -116,6 +116,12 @@
 
    <dependency org="org.apache.lucene" name="lucene-core" 
                rev="${lucene-core.version}" conf="javadoc->default"/>
+   <dependency org="org.apache.avro" name="avro-compiler" rev="${avro.version}" 
+               conf="compile->master">
+      <exclude module="ant"/>
+      <exclude module="jetty"/>
+      <exclude module="slf4j-simple"/>
+    </dependency>
    <dependency org="org.apache.avro" name="avro" rev="${avro.version}" 
                conf="compile->default">
       <exclude module="ant"/>

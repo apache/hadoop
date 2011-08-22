@@ -31,7 +31,7 @@
       <plugin>
         <groupId>org.apache.avro</groupId>
         <artifactId>avro-maven-plugin</artifactId>
-        <version>1.5.1</version>
+        <version>1.5.2</version>
         <executions>
           <execution>
             <phase>generate-sources</phase>

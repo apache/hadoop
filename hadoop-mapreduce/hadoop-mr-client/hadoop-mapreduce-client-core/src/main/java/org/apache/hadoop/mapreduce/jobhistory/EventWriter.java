@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import org.apache.avro.Schema;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.Encoder;
+import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.io.JsonEncoder;
 import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.avro.util.Utf8;
@@ -56,7 +57,7 @@ class EventWriter {
     out.writeBytes("\n");
     out.writeBytes(Event.SCHEMA$.toString());
     out.writeBytes("\n");
-    this.encoder = new JsonEncoder(Event.SCHEMA$, out);
+    this.encoder =  EncoderFactory.get().jsonEncoder(Event.SCHEMA$, out);
   }
   
   synchronized void write(HistoryEvent event) throws IOException { 

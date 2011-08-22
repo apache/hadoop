@@ -1125,6 +1125,8 @@ Trunk (unreleased changes)
     MAPREDUCE-2867. Remove Unused TestApplicaitonCleanup in resourcemanager/applicationsmanager.
     (mahadev)
 
+    MAPREDUCE-2868. ant build broken in hadoop-mapreduce dir (mahadev, giri and arun via mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
