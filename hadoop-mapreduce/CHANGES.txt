@@ -1119,6 +1119,9 @@ Trunk (unreleased changes)
  
     MAPREDUCE-2860. Fix log4j logging in the maven test cases. (mahadev)
 
+    MAPREDUCE-2867. Remove Unused TestApplicaitonCleanup in resourcemanager/applicationsmanager.
+    (mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
