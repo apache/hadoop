@@ -456,6 +456,11 @@ public class TestRuntimeEstimators {
         JobACL jobOperation) {
       return true;
     }
+    
+    @Override
+    public String getUserName() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
   }
 
   /*

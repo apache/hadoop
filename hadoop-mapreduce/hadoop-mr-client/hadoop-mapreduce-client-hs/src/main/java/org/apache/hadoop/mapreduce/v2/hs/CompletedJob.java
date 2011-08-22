@@ -69,17 +69,20 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   private final Map<TaskId, Task> tasks = new HashMap<TaskId, Task>();
   private final Map<TaskId, Task> mapTasks = new HashMap<TaskId, Task>();
   private final Map<TaskId, Task> reduceTasks = new HashMap<TaskId, Task>();
+  private final String user;
   
   private List<TaskAttemptCompletionEvent> completionEvents = null;
   private JobInfo jobInfo;
 
-  public CompletedJob(Configuration conf, JobId jobId, Path historyFile, boolean loadTasks) throws IOException {
+  public CompletedJob(Configuration conf, JobId jobId, Path historyFile, 
+      boolean loadTasks, String userName) throws IOException {
     LOG.info("Loading job: " + jobId + " from file: " + historyFile);
     this.conf = conf;
     this.jobId = jobId;
     
     loadFullHistoryData(loadTasks, historyFile);
 
+    user = userName;
     counters = TypeConverter.toYarn(jobInfo.getTotalCounters());
     diagnostics.add(jobInfo.getErrorInfo());
     report = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(JobReport.class);
@@ -296,5 +299,10 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     JobACLsManager aclsMgr = new JobACLsManager(conf);
     return aclsMgr.checkAccess(callerUGI, jobOperation, 
         jobInfo.getUsername(), jobACL);
+  }
+  
+  @Override
+  public String getUserName() {
+    return user;
   }
 }

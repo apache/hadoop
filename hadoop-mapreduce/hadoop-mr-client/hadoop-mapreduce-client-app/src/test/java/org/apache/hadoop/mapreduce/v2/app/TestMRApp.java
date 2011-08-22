@@ -48,6 +48,7 @@ public class TestMRApp {
     Job job = app.submit(new Configuration());
     app.waitForState(job, JobState.SUCCEEDED);
     app.verifyCompleted();
+    Assert.assertEquals(System.getProperty("user.name"),job.getUserName());
   }
 
   @Test

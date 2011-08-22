@@ -51,6 +51,7 @@ public interface Job {
   int getCompletedMaps();
   int getCompletedReduces();
   boolean isUber();
+  String getUserName();
 
   TaskAttemptCompletionEvent[]
       getTaskAttemptCompletionEvents(int fromEventId, int maxEvents);

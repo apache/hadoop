@@ -221,6 +221,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2854. update INSTALL with config necessary run mapred on yarn.
     (thomas graves via mahadev)
 
+    MAPREDUCE-2701. app/Job.java needs UGI for the user that launched it.
+    (Robert Evans via mahadev)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

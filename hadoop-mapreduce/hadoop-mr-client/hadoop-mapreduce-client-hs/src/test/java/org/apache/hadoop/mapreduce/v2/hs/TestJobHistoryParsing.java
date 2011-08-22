@@ -83,26 +83,26 @@ public class TestJobHistoryParsing {
     JobHistoryParser parser = new JobHistoryParser(in);
     JobInfo jobInfo = parser.parse();
     
-    Assert.assertTrue ("Incorrect username ",
-        jobInfo.getUsername().equals("mapred"));
-    Assert.assertTrue("Incorrect jobName ",
-        jobInfo.getJobname().equals("test"));
-    Assert.assertTrue("Incorrect queuename ",
-        jobInfo.getJobQueueName().equals("default"));
-    Assert.assertTrue("incorrect conf path",
-        jobInfo.getJobConfPath().equals("test"));
-    Assert.assertTrue("incorrect finishedMap ",
-        jobInfo.getFinishedMaps() == 2);
-    Assert.assertTrue("incorrect finishedReduces ",
-        jobInfo.getFinishedReduces() == 1);
+    Assert.assertEquals ("Incorrect username ",
+        "mapred", jobInfo.getUsername());
+    Assert.assertEquals("Incorrect jobName ",
+        "test", jobInfo.getJobname());
+    Assert.assertEquals("Incorrect queuename ",
+        "default", jobInfo.getJobQueueName());
+    Assert.assertEquals("incorrect conf path",
+        "test", jobInfo.getJobConfPath());
+    Assert.assertEquals("incorrect finishedMap ",
+        2, jobInfo.getFinishedMaps());
+    Assert.assertEquals("incorrect finishedReduces ",
+        1, jobInfo.getFinishedReduces());
     int totalTasks = jobInfo.getAllTasks().size();
-    Assert.assertTrue("total number of tasks is incorrect  ", totalTasks == 3);
+    Assert.assertEquals("total number of tasks is incorrect  ", 3, totalTasks);
 
     //Assert at taskAttempt level
     for (TaskInfo taskInfo :  jobInfo.getAllTasks().values()) {
       int taskAttemptCount = taskInfo.getAllTaskAttempts().size();
-      Assert.assertTrue("total number of task attempts ", 
-          taskAttemptCount == 1);
+      Assert.assertEquals("total number of task attempts ", 
+          1, taskAttemptCount);
     }
     
     String summaryFileName = JobHistoryUtils

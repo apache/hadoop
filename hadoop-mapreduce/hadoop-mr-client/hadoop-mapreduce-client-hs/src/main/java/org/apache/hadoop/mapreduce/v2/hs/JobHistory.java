@@ -612,7 +612,8 @@ public class JobHistory extends AbstractService implements HistoryContext   {
   private Job loadJob(MetaInfo metaInfo) {
     synchronized(metaInfo) {
       try {
-        Job job = new CompletedJob(conf, metaInfo.getJobIndexInfo().getJobId(), metaInfo.getHistoryFile(), true);
+        Job job = new CompletedJob(conf, metaInfo.getJobIndexInfo().getJobId(), 
+            metaInfo.getHistoryFile(), true, metaInfo.getJobIndexInfo().getUser());
         addToLoadedJobCache(job);
         return job;
       } catch (IOException e) {

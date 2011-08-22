@@ -70,7 +70,7 @@ public class TestJobHistoryEvents {
     Job parsedJob = context.getJob(jobId);
     Assert.assertEquals("CompletedMaps not correct", 2,
         parsedJob.getCompletedMaps());
-    
+    Assert.assertEquals(System.getProperty("user.name"), parsedJob.getUserName());
     
     Map<TaskId, Task> tasks = parsedJob.getTasks();
     Assert.assertEquals("No of tasks not correct", 3, tasks.size());

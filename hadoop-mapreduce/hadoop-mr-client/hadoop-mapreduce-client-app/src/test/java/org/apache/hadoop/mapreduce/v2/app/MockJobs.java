@@ -448,6 +448,11 @@ public class MockJobs extends MockApps {
           JobACL jobOperation) {
         return true;
       }
+
+      @Override
+      public String getUserName() {
+        throw new UnsupportedOperationException("Not supported yet.");
+      }
     };
   }
 }

@@ -64,6 +64,7 @@ import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleanupEvent;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHConfig;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -235,9 +236,11 @@ public class MRApp extends MRAppMaster {
   }
 
   @Override
-  protected Job createJob(Configuration conf, Credentials fsTokens) {
+  protected Job createJob(Configuration conf, Credentials fsTokens,
+      String user) {
     Job newJob = new TestJob(getAppID(), getDispatcher().getEventHandler(),
-                             getTaskAttemptListener(), getContext().getClock());
+                             getTaskAttemptListener(), getContext().getClock(),
+                             user);
     ((AppContext) getContext()).getAllJobs().put(newJob.getID(), newJob);
 
     getDispatcher().register(JobFinishEvent.Type.class,
@@ -382,10 +385,11 @@ public class MRApp extends MRAppMaster {
     }
 
     public TestJob(ApplicationId appID, EventHandler eventHandler,
-        TaskAttemptListener taskAttemptListener, Clock clock) {
+        TaskAttemptListener taskAttemptListener, Clock clock, 
+        String user) {
       super(appID, new Configuration(), eventHandler, taskAttemptListener,
           new JobTokenSecretManager(), new Credentials(), clock, getStartCount(), 
-          getCompletedTaskFromPreviousRun(), metrics);
+          getCompletedTaskFromPreviousRun(), metrics, user);
 
       // This "this leak" is okay because the retained pointer is in an
       //  instance variable.

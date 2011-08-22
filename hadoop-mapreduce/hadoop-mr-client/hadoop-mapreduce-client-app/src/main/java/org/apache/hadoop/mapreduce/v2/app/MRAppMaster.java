@@ -206,30 +206,33 @@ public class MRAppMaster extends CompositeService {
         new SpeculatorEventDispatcher());
 
     Credentials fsTokens = new Credentials();
-    if (UserGroupInformation.isSecurityEnabled()) {
-      // Read the file-system tokens from the localized tokens-file.
-      try {
-        Path jobSubmitDir =
+
+    UserGroupInformation currentUser = null;
+
+    try {
+      currentUser = UserGroupInformation.getCurrentUser();
+
+      if (UserGroupInformation.isSecurityEnabled()) {
+        // Read the file-system tokens from the localized tokens-file.
+        Path jobSubmitDir = 
             FileContext.getLocalFSFileContext().makeQualified(
                 new Path(new File(MRConstants.JOB_SUBMIT_DIR)
                     .getAbsolutePath()));
-        Path jobTokenFile =
+        Path jobTokenFile = 
             new Path(jobSubmitDir, MRConstants.APPLICATION_TOKENS_FILE);
         fsTokens.addAll(Credentials.readTokenStorageFile(jobTokenFile, conf));
         LOG.info("jobSubmitDir=" + jobSubmitDir + " jobTokenFile="
             + jobTokenFile);
 
-        UserGroupInformation currentUser =
-            UserGroupInformation.getCurrentUser();
         for (Token<? extends TokenIdentifier> tk : fsTokens.getAllTokens()) {
           LOG.info(" --- DEBUG: Token of kind " + tk.getKind()
               + "in current ugi in the AppMaster for service "
               + tk.getService());
           currentUser.addToken(tk); // For use by AppMaster itself.
         }
-      } catch (IOException e) {
-        throw new YarnException(e);
       }
+    } catch (IOException e) {
+      throw new YarnException(e);
     }
 
     super.init(conf);
@@ -238,7 +241,7 @@ public class MRAppMaster extends CompositeService {
 
     Configuration config = getConfig();
 
-    job = createJob(config, fsTokens);
+    job = createJob(config, fsTokens, currentUser.getUserName());
 
     /** create a job event for job intialization */
     JobEvent initJobEvent = new JobEvent(job.getID(), JobEventType.JOB_INIT);
@@ -284,12 +287,13 @@ public class MRAppMaster extends CompositeService {
 
   /** Create and initialize (but don't start) a single job. 
    * @param fsTokens */
-  protected Job createJob(Configuration conf, Credentials fsTokens) {
+  protected Job createJob(Configuration conf, Credentials fsTokens, 
+      String user) {
 
     // create single job
     Job newJob = new JobImpl(appID, conf, dispatcher.getEventHandler(),
         taskAttemptListener, jobTokenSecretManager, fsTokens, clock, startCount,
-        completedTasksFromPreviousRun, metrics);
+        completedTasksFromPreviousRun, metrics, user);
     ((RunningAppContext) context).jobs.put(newJob.getID(), newJob);
 
     dispatcher.register(JobFinishEvent.Type.class,

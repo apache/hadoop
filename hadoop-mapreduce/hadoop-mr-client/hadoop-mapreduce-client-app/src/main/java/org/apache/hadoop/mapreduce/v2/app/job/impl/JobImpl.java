@@ -146,6 +146,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private final Set<TaskId> reduceTasks = new LinkedHashSet<TaskId>();
   private final EventHandler eventHandler;
   private final MRAppMetrics metrics;
+  private final String userName;
 
   private boolean lazyTasksCopyNeeded = false;
   private volatile Map<TaskId, Task> tasks = new LinkedHashMap<TaskId, Task>();
@@ -368,7 +369,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       EventHandler eventHandler, TaskAttemptListener taskAttemptListener,
       JobTokenSecretManager jobTokenSecretManager,
       Credentials fsTokenCredentials, Clock clock, int startCount, 
-      Set<TaskId> completedTasksFromPreviousRun, MRAppMetrics metrics) {
+      Set<TaskId> completedTasksFromPreviousRun, MRAppMetrics metrics,
+      String userName) {
 
     this.jobId = recordFactory.newRecordInstance(JobId.class);
     this.jobName = conf.get(JobContext.JOB_NAME, "<missing job name>");
@@ -377,6 +379,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     this.clock = clock;
     this.completedTasksFromPreviousRun = completedTasksFromPreviousRun;
     this.startCount = startCount;
+    this.userName = userName;
     jobId.setAppId(appID);
     jobId.setId(appID.getId());
     oldJobId = TypeConverter.fromYarn(jobId);
@@ -762,6 +765,11 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     return finalState;
   }
 
+  @Override
+  public String getUserName() {
+    return userName;
+  }
+  
   @Override
   public String getName() {
     return jobName;
@@ -1412,5 +1420,4 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       job.finished(JobState.ERROR);
     }
   }
-
 }
