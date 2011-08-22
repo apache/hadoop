@@ -673,6 +673,9 @@ Trunk (unreleased changes)
 
     HDFS-2096. Mavenization of hadoop-hdfs (Alejandro Abdelnur via tomwhite)
 
+    HDFS-2273.  Refactor BlockManager.recentInvalidateSets to a new class.
+    (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

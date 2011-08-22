@@ -24,7 +24,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -89,7 +88,6 @@ public class BlockManager {
   private volatile long underReplicatedBlocksCount = 0L;
   private volatile long scheduledReplicationBlocksCount = 0L;
   private volatile long excessBlocksCount = 0L;
-  private volatile long pendingDeletionBlocksCount = 0L;
   
   /** Used by metrics */
   public long getPendingReplicationBlocksCount() {
@@ -109,7 +107,7 @@ public class BlockManager {
   }
   /** Used by metrics */
   public long getPendingDeletionBlocksCount() {
-    return pendingDeletionBlocksCount;
+    return invalidateBlocks.numBlocks();
   }
   /** Used by metrics */
   public long getExcessBlocksCount() {
@@ -131,14 +129,8 @@ public class BlockManager {
   /** Store blocks -> datanodedescriptor(s) map of corrupt replicas */
   final CorruptReplicasMap corruptReplicas = new CorruptReplicasMap();
 
-  //
-  // Keeps a Collection for every named machine containing
-  // blocks that have recently been invalidated and are thought to live
-  // on the machine in question.
-  // Mapping: StorageID -> ArrayList<Block>
-  //
-  private final Map<String, Collection<Block>> recentInvalidateSets =
-    new TreeMap<String, Collection<Block>>();
+  /** Blocks to be invalidated. */
+  private final InvalidateBlocks invalidateBlocks;
 
   //
   // Keeps a TreeSet for every named node. Each treeset contains
@@ -182,6 +174,7 @@ public class BlockManager {
     namesystem = fsn;
     datanodeManager = new DatanodeManager(this, fsn, conf);
     heartbeatManager = datanodeManager.getHeartbeatManager();
+    invalidateBlocks = new InvalidateBlocks(datanodeManager);
 
     blocksMap = new BlocksMap(DEFAULT_MAP_LOAD_FACTOR);
     blockplacement = BlockPlacementPolicy.getInstance(
@@ -306,7 +299,9 @@ public class BlockManager {
     this.blockplacement = newpolicy;
   }
 
+  /** Dump meta data to out. */
   public void metaSave(PrintWriter out) {
+    assert namesystem.hasWriteLock();
     //
     // Dump contents of neededReplication
     //
@@ -357,7 +352,7 @@ public class BlockManager {
     pendingReplications.metaSave(out);
 
     // Dump blocks that are waiting to be deleted
-    dumpRecentInvalidateSets(out);
+    invalidateBlocks.dump(out);
 
     // Dump all datanodes
     getDatanodeManager().datanodeDump(out);
@@ -493,7 +488,7 @@ public class BlockManager {
     // remove this block from the list of pending blocks to be deleted. 
     for (DatanodeDescriptor dd : targets) {
       String datanodeId = dd.getStorageID();
-      removeFromInvalidates(datanodeId, oldBlock);
+      invalidateBlocks.remove(datanodeId, oldBlock);
     }
 
     long fileLength = fileINode.computeContentSummary().getLength();
@@ -510,7 +505,7 @@ public class BlockManager {
       blocksMap.nodeIterator(block); it.hasNext();) {
       String storageID = it.next().getStorageID();
       // filter invalidate replicas
-      if( ! belongsToInvalidates(storageID, block)) {
+      if(!invalidateBlocks.contains(storageID, block)) {
         machineSet.add(storageID);
       }
     }
@@ -754,64 +749,15 @@ public class BlockManager {
     }
 
     node.resetBlocks();
-    removeFromInvalidates(node.getStorageID());
-  }
-  
-  private void removeFromInvalidates(String storageID, Block block) {
-    synchronized(recentInvalidateSets) {
-      Collection<Block> v = recentInvalidateSets.get(storageID);
-      if (v != null && v.remove(block)) {
-        pendingDeletionBlocksCount--;
-        if (v.isEmpty()) {
-          recentInvalidateSets.remove(storageID);
-        }
-      }
-    }
-  }
-
-  boolean belongsToInvalidates(String storageID, Block block) {
-    Collection<Block> invalidateSet;
-    synchronized(recentInvalidateSets) {
-      invalidateSet = recentInvalidateSets.get(storageID);
-      return invalidateSet != null && invalidateSet.contains(block);
-    }
-  }
-
-  /**
-   * Adds block to list of blocks which will be invalidated on specified
-   * datanode
-   *
-   * @param b block
-   * @param dn datanode
-   * @param log true to create an entry in the log 
-   */
-  private void addToInvalidates(Block b, DatanodeInfo dn, boolean log) {
-    synchronized(recentInvalidateSets) {
-      Collection<Block> invalidateSet = recentInvalidateSets
-          .get(dn.getStorageID());
-      if (invalidateSet == null) {
-        invalidateSet = new HashSet<Block>();
-        recentInvalidateSets.put(dn.getStorageID(), invalidateSet);
-      }
-      if (invalidateSet.add(b)) {
-        pendingDeletionBlocksCount++;
-        if (log) {
-          NameNode.stateChangeLog.info("BLOCK* addToInvalidates: "
-              + b + " to " + dn.getName());
-        }
-      }
-    }
+    invalidateBlocks.remove(node.getStorageID());
   }
 
   /**
    * Adds block to list of blocks which will be invalidated on specified
    * datanode and log the operation
-   *
-   * @param b block
-   * @param dn datanode
    */
-  void addToInvalidates(Block b, DatanodeInfo dn) {
-    addToInvalidates(b, dn, true);
+  void addToInvalidates(final Block block, final DatanodeInfo datanode) {
+    invalidateBlocks.add(block, datanode, true);
   }
 
   /**
@@ -823,36 +769,12 @@ public class BlockManager {
     for (Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(b); it
         .hasNext();) {
       DatanodeDescriptor node = it.next();
-      addToInvalidates(b, node, false);
+      invalidateBlocks.add(b, node, false);
       datanodes.append(node.getName()).append(" ");
     }
     if (datanodes.length() != 0) {
       NameNode.stateChangeLog.info("BLOCK* addToInvalidates: "
           + b + " to " + datanodes.toString());
-    }
-  }
-
-  /**
-   * dumps the contents of recentInvalidateSets
-   */
-  private void dumpRecentInvalidateSets(PrintWriter out) {
-    assert namesystem.hasWriteLock();
-    int size;
-    synchronized(recentInvalidateSets) {
-      size = recentInvalidateSets.values().size();
-    }
-    out.println("Metasave: Blocks " + pendingDeletionBlocksCount 
-        + " waiting deletion from " + size + " datanodes.");
-    if (size == 0) {
-      return;
-    }
-    synchronized(recentInvalidateSets) {
-      for(Map.Entry<String,Collection<Block>> entry : recentInvalidateSets.entrySet()) {
-        Collection<Block> blocks = entry.getValue();
-        if (blocks.size() > 0) {
-          out.println(datanodeManager.getDatanode(entry.getKey()).getName() + blocks);
-        }
-      }
     }
   }
 
@@ -962,35 +884,14 @@ public class BlockManager {
    * @return total number of block for deletion
    */
   int computeInvalidateWork(int nodesToProcess) {
-    int numOfNodes;
-    ArrayList<String> keyArray;
+    final List<String> nodes = invalidateBlocks.getStorageIDs();
+    Collections.shuffle(nodes);
 
-    synchronized(recentInvalidateSets) {
-      numOfNodes = recentInvalidateSets.size();
-      // get an array of the keys
-      keyArray = new ArrayList<String>(recentInvalidateSets.keySet());
-    }
-
-    nodesToProcess = Math.min(numOfNodes, nodesToProcess);
-
-    // randomly pick up <i>nodesToProcess</i> nodes
-    // and put them at [0, nodesToProcess)
-    int remainingNodes = numOfNodes - nodesToProcess;
-    if (nodesToProcess < remainingNodes) {
-      for(int i=0; i<nodesToProcess; i++) {
-        int keyIndex = DFSUtil.getRandom().nextInt(numOfNodes-i)+i;
-        Collections.swap(keyArray, keyIndex, i); // swap to front
-      }
-    } else {
-      for(int i=0; i<remainingNodes; i++) {
-        int keyIndex = DFSUtil.getRandom().nextInt(numOfNodes-i);
-        Collections.swap(keyArray, keyIndex, numOfNodes-i-1); // swap to end
-      }
-    }
+    nodesToProcess = Math.min(nodes.size(), nodesToProcess);
 
     int blockCnt = 0;
     for(int nodeCnt = 0; nodeCnt < nodesToProcess; nodeCnt++ ) {
-      blockCnt += invalidateWorkForOneNode(keyArray.get(nodeCnt));
+      blockCnt += invalidateWorkForOneNode(nodes.get(nodeCnt));
     }
     return blockCnt;
   }
@@ -1592,7 +1493,7 @@ public class BlockManager {
     }
 
     // Ignore replicas already scheduled to be removed from the DN
-    if(belongsToInvalidates(dn.getStorageID(), block)) {
+    if(invalidateBlocks.contains(dn.getStorageID(), block)) {
       assert storedBlock.findDatanode(dn) < 0 : "Block " + block
         + " in recentInvalidatesSet should not appear in DN " + dn;
       return storedBlock;
@@ -2371,7 +2272,7 @@ public class BlockManager {
   }
 
   public int getActiveBlockCount() {
-    return blocksMap.size() - (int)pendingDeletionBlocksCount;
+    return blocksMap.size() - (int)invalidateBlocks.numBlocks();
   }
 
   public DatanodeDescriptor[] getNodes(BlockInfo block) {
@@ -2441,16 +2342,6 @@ public class BlockManager {
     return fileINode.getReplication();
   }
 
-  /** Remove a datanode from the invalidatesSet */
-  private void removeFromInvalidates(String storageID) {
-    Collection<Block> blocks;
-    synchronized(recentInvalidateSets) {
-      blocks = recentInvalidateSets.remove(storageID);
-    }
-    if (blocks != null) {
-      pendingDeletionBlocksCount -= blocks.size();
-    }
-  }
 
   /**
    * Get blocks to invalidate for <i>nodeId</i>
@@ -2466,49 +2357,7 @@ public class BlockManager {
         return 0;
       // get blocks to invalidate for the nodeId
       assert nodeId != null;
-      final DatanodeDescriptor dn = datanodeManager.getDatanode(nodeId);
-      if (dn == null) {
-        removeFromInvalidates(nodeId);
-        return 0;
-      }
-
-      Collection<Block> invalidateSet;
-      ArrayList<Block> blocksToInvalidate;
-      synchronized(recentInvalidateSets) {
-        invalidateSet = recentInvalidateSets.get(nodeId);
-        if (invalidateSet == null)
-          return 0;
-
-        blocksToInvalidate = new ArrayList<Block>(
-          getDatanodeManager().blockInvalidateLimit);
-
-        // # blocks that can be sent in one message is limited
-        Iterator<Block> it = invalidateSet.iterator();
-        for (int blkCount = 0; blkCount < getDatanodeManager().blockInvalidateLimit
-            && it.hasNext(); blkCount++) {
-          blocksToInvalidate.add(it.next());
-          it.remove();
-        }
-
-        // If we send everything in this message, remove this node entry
-        if (!it.hasNext()) {
-          removeFromInvalidates(nodeId);
-        }
-
-        dn.addBlocksToBeInvalidated(blocksToInvalidate);
-
-        if (NameNode.stateChangeLog.isInfoEnabled()) {
-          StringBuilder blockList = new StringBuilder();
-          for (Block blk : blocksToInvalidate) {
-            blockList.append(' ');
-            blockList.append(blk);
-          }
-          NameNode.stateChangeLog.info("BLOCK* ask " + dn.getName()
-              + " to delete " + blockList);
-        }
-        pendingDeletionBlocksCount -= blocksToInvalidate.size();
-        return blocksToInvalidate.size();
-      }
+      return invalidateBlocks.invalidateWork(nodeId);
     } finally {
       namesystem.writeUnlock();
     }
