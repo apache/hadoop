@@ -58,6 +58,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -77,7 +78,7 @@ public class BlockManager {
   /** Default load factor of map */
   public static final float DEFAULT_MAP_LOAD_FACTOR = 0.75f;
 
-  private final FSNamesystem namesystem;
+  private final Namesystem namesystem;
 
   private final DatanodeManager datanodeManager;
   private final HeartbeatManager heartbeatManager;
@@ -178,7 +179,7 @@ public class BlockManager {
 
     blocksMap = new BlocksMap(DEFAULT_MAP_LOAD_FACTOR);
     blockplacement = BlockPlacementPolicy.getInstance(
-        conf, namesystem, datanodeManager.getNetworkTopology());
+        conf, fsn, datanodeManager.getNetworkTopology());
     pendingReplications = new PendingReplicationBlocks(conf.getInt(
       DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
       DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_DEFAULT) * 1000L);
@@ -374,23 +375,21 @@ public class BlockManager {
   /**
    * Commit a block of a file
    * 
-   * @param fileINode file inode
    * @param block block to be committed
    * @param commitBlock - contains client reported block length and generation
+   * @return true if the block is changed to committed state.
    * @throws IOException if the block does not have at least a minimal number
    * of replicas reported from data-nodes.
    */
-  private void commitBlock(INodeFileUnderConstruction fileINode,
-                       BlockInfoUnderConstruction block,
-                       Block commitBlock) throws IOException {
+  private boolean commitBlock(final BlockInfoUnderConstruction block,
+      final Block commitBlock) throws IOException {
     if (block.getBlockUCState() == BlockUCState.COMMITTED)
-      return;
+      return false;
     assert block.getNumBytes() <= commitBlock.getNumBytes() :
       "commitBlock length is less than the stored one "
       + commitBlock.getNumBytes() + " vs. " + block.getNumBytes();
     block.commitBlock(commitBlock);
-
-    namesystem.updateDiskSpaceConsumed(fileINode, commitBlock);
+    return true;
   }
   
   /**
@@ -399,24 +398,24 @@ public class BlockManager {
    * 
    * @param fileINode file inode
    * @param commitBlock - contains client reported block length and generation
+   * @return true if the last block is changed to committed state.
    * @throws IOException if the block does not have at least a minimal number
    * of replicas reported from data-nodes.
    */
-  public void commitOrCompleteLastBlock(INodeFileUnderConstruction fileINode, 
+  public boolean commitOrCompleteLastBlock(INodeFileUnderConstruction fileINode, 
       Block commitBlock) throws IOException {
-    
     if(commitBlock == null)
-      return; // not committing, this is a block allocation retry
+      return false; // not committing, this is a block allocation retry
     BlockInfo lastBlock = fileINode.getLastBlock();
     if(lastBlock == null)
-      return; // no blocks in file yet
+      return false; // no blocks in file yet
     if(lastBlock.isComplete())
-      return; // already completed (e.g. by syncBlock)
+      return false; // already completed (e.g. by syncBlock)
     
-    commitBlock(fileINode, (BlockInfoUnderConstruction)lastBlock, commitBlock);
-
+    final boolean b = commitBlock((BlockInfoUnderConstruction)lastBlock, commitBlock);
     if(countNodes(lastBlock).liveReplicas() >= minReplication)
       completeBlock(fileINode,fileINode.numBlocks()-1);
+    return b;
   }
 
   /**
@@ -426,8 +425,8 @@ public class BlockManager {
    * @throws IOException if the block does not have at least a minimal number
    * of replicas reported from data-nodes.
    */
-  BlockInfo completeBlock(INodeFile fileINode, int blkIndex)
-  throws IOException {
+  private BlockInfo completeBlock(final INodeFile fileINode,
+      final int blkIndex) throws IOException {
     if(blkIndex < 0)
       return null;
     BlockInfo curBlock = fileINode.getBlocks()[blkIndex];
@@ -444,8 +443,8 @@ public class BlockManager {
     return blocksMap.replaceBlock(completeBlock);
   }
 
-  BlockInfo completeBlock(INodeFile fileINode, BlockInfo block)
-  throws IOException {
+  private BlockInfo completeBlock(final INodeFile fileINode,
+      final BlockInfo block) throws IOException {
     BlockInfo[] fileBlocks = fileINode.getBlocks();
     for(int idx = 0; idx < fileBlocks.length; idx++)
       if(fileBlocks[idx] == block) {
@@ -491,8 +490,9 @@ public class BlockManager {
       invalidateBlocks.remove(datanodeId, oldBlock);
     }
 
-    long fileLength = fileINode.computeContentSummary().getLength();
-    return createLocatedBlock(ucBlock, fileLength - ucBlock.getNumBytes());
+    final long fileLength = fileINode.computeContentSummary().getLength();
+    final long pos = fileLength - ucBlock.getNumBytes();
+    return createLocatedBlock(ucBlock, pos, AccessMode.WRITE);
   }
 
   /**
@@ -513,8 +513,8 @@ public class BlockManager {
   }
 
   private List<LocatedBlock> createLocatedBlockList(final BlockInfo[] blocks,
-      final long offset, final long length, final int nrBlocksToReturn
-      ) throws IOException {
+      final long offset, final long length, final int nrBlocksToReturn,
+      final AccessMode mode) throws IOException {
     int curBlk = 0;
     long curPos = 0, blkSize = 0;
     int nrBlocks = (blocks[0].getNumBytes() == 0) ? 0 : blocks.length;
@@ -533,13 +533,22 @@ public class BlockManager {
     long endOff = offset + length;
     List<LocatedBlock> results = new ArrayList<LocatedBlock>(blocks.length);
     do {
-      results.add(createLocatedBlock(blocks[curBlk], curPos));
+      results.add(createLocatedBlock(blocks[curBlk], curPos, mode));
       curPos += blocks[curBlk].getNumBytes();
       curBlk++;
     } while (curPos < endOff 
           && curBlk < blocks.length
           && results.size() < nrBlocksToReturn);
     return results;
+  }
+
+  private LocatedBlock createLocatedBlock(final BlockInfo blk, final long pos,
+    final BlockTokenSecretManager.AccessMode mode) throws IOException {
+    final LocatedBlock lb = createLocatedBlock(blk, pos);
+    if (mode != null) {
+      setBlockToken(lb, mode);
+    }
+    return lb;
   }
 
   /** @return a LocatedBlock for the given block */
@@ -600,21 +609,15 @@ public class BlockManager {
       if (LOG.isDebugEnabled()) {
         LOG.debug("blocks = " + java.util.Arrays.asList(blocks));
       }
+      final AccessMode mode = needBlockToken? AccessMode.READ: null;
       final List<LocatedBlock> locatedblocks = createLocatedBlockList(
-          blocks, offset, length, Integer.MAX_VALUE);
+          blocks, offset, length, Integer.MAX_VALUE, mode);
 
       final BlockInfo last = blocks[blocks.length - 1];
       final long lastPos = last.isComplete()?
           fileSizeExcludeBlocksUnderConstruction - last.getNumBytes()
           : fileSizeExcludeBlocksUnderConstruction;
-      final LocatedBlock lastlb = createLocatedBlock(last, lastPos);
-
-      if (isBlockTokenEnabled() && needBlockToken) {
-        for(LocatedBlock lb : locatedblocks) {
-          setBlockToken(lb, AccessMode.READ);
-        }
-        setBlockToken(lastlb, AccessMode.READ);
-      }
+      final LocatedBlock lastlb = createLocatedBlock(last, lastPos, mode);
       return new LocatedBlocks(
           fileSizeExcludeBlocksUnderConstruction, isFileUnderConstruction,
           locatedblocks, lastlb, last.isComplete());

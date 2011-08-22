@@ -676,6 +676,9 @@ Trunk (unreleased changes)
     HDFS-2273.  Refactor BlockManager.recentInvalidateSets to a new class.
     (szetszwo)
 
+    HDFS-2266.  Add Namesystem and SafeMode interfaces to avoid directly
+    referring to FSNamesystem in BlockManager. (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

@@ -303,7 +303,7 @@ public class DFSTestUtil {
     }
   }
 
-  /*
+  /**
    * Keep accessing the given file until the namenode reports that the
    * given block in the file contains the given number of corrupt replicas.
    */
@@ -312,7 +312,7 @@ public class DFSTestUtil {
       throws IOException, TimeoutException {
     int count = 0;
     final int ATTEMPTS = 50;
-    int repls = ns.numCorruptReplicas(b.getLocalBlock());
+    int repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
     while (repls != corruptRepls && count < ATTEMPTS) {
       try {
         IOUtils.copyBytes(fs.open(file), new IOUtils.NullOutputStream(),
@@ -321,7 +321,7 @@ public class DFSTestUtil {
         // Swallow exceptions
       }
       System.out.println("Waiting for "+corruptRepls+" corrupt replicas");
-      repls = ns.numCorruptReplicas(b.getLocalBlock());
+      repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
       count++;
     }
     if (count == ATTEMPTS) {

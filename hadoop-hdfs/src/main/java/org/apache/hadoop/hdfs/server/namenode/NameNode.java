@@ -1050,7 +1050,7 @@ public class NameNode implements NamenodeProtocols {
 
   @Override // NamenodeProtocol
   public long getTransactionID() {
-    return namesystem.getTransactionID();
+    return namesystem.getEditLog().getSyncTxId();
   }
 
   @Override // NamenodeProtocol
