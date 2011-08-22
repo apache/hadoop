@@ -514,6 +514,9 @@ Trunk (unreleased changes)
     HADOOP-7536. Correct the dependency version regressions introduced in
     HADOOP-6671. (Alejandro Abdelnur via tomwhite)
 
+    HADOOP-7566. MR tests are failing webapps/hdfs not found in CLASSPATH.
+    (Alejandro Abdelnur via mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

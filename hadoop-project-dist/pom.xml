@@ -69,6 +69,7 @@
             <configuration>
               <includes>
                 <include>**/*.class</include>
+                <include>webapps/**</include>
               </includes>
             </configuration>
           </execution>
