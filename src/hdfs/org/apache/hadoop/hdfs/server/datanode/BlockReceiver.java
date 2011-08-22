@@ -627,10 +627,12 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       computePartialChunkCrc(offsetInBlock, offsetInChecksum, bytesPerChecksum);
     }
 
-    LOG.info("Changing block file offset of block " + block + " from " + 
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Changing block file offset of block " + block + " from " + 
         datanode.data.getChannelPosition(block, streams) +
              " to " + offsetInBlock +
              " meta file offset to " + offsetInChecksum);
+    }
 
     // set the position of the block file
     datanode.data.setChannelPosition(block, streams, offsetInBlock, offsetInChecksum);
