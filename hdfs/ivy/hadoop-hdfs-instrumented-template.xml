@@ -33,7 +33,7 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common-instrumented</artifactId>
-      <version>0.22.0-SNAPSHOT</version>
+      <version>@hadoop-common.version</version>
     </dependency>
   </dependencies>
 </project>
