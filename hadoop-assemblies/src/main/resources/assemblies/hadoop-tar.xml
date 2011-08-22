@@ -15,26 +15,23 @@
    limitations under the License.
 -->
 <assembly>
-  <id>hadoop-tar</id>
+  <id>hadoop-bintar</id>
   <formats>
     <format>dir</format>
   </formats>
   <includeBaseDirectory>false</includeBaseDirectory>
   <fileSets>
     <fileSet>
-      <directory>${basedir}</directory>
-      <outputDirectory>/</outputDirectory>
-      <includes>
-        <include>*.txt</include>
-      </includes>
-    </fileSet>
-    <fileSet>
       <directory>${basedir}/src/main/bin</directory>
       <outputDirectory>/bin</outputDirectory>
-      <includes>
-        <include>*</include>
-      </includes>
+      <excludes>
+        <exclude>*.sh</exclude>
+      </excludes>
       <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
+      <directory>${basedir}/src/main/conf</directory>
+      <outputDirectory>/etc/hadoop</outputDirectory>
     </fileSet>
     <fileSet>
       <directory>${basedir}/src/main/bin</directory>
@@ -45,49 +42,78 @@
       <fileMode>0755</fileMode>
     </fileSet>
     <fileSet>
-      <directory>${basedir}/src/main/conf</directory>
-      <outputDirectory>/conf</outputDirectory>
-    </fileSet>
-    <fileSet>
-      <directory>${basedir}/src/main/webapps</directory>
-      <outputDirectory>/webapps</outputDirectory>
-      <excludes>
-        <exclude>proto-*-web.xml</exclude>
-      </excludes>
-    </fileSet>
-    <fileSet>
-      <directory>${project.build.directory}/webapps</directory>
-      <outputDirectory>/webapps</outputDirectory>
-      <excludes>
-        <exclude>proto-*-web.xml</exclude>
-      </excludes>
-    </fileSet>
-    <fileSet>
-      <directory>${project.build.directory}/site</directory>
-      <outputDirectory>/docs</outputDirectory>
-    </fileSet>
-    <fileSet>
-      <directory>${project.build.directory}</directory>
-      <outputDirectory>/</outputDirectory>
+      <directory>${basedir}/src/main/bin</directory>
+      <outputDirectory>/sbin</outputDirectory>
       <includes>
-        <include>${project.artifactId}-${project.version}.jar</include>
-        <include>${project.artifactId}-${project.version}-tests.jar</include>
+        <include>*.sh</include>
+      </includes>
+      <excludes>
+        <exclude>hadoop-config.sh</exclude>
+      </excludes>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
+      <directory>${basedir}/src/main/packages</directory>
+      <outputDirectory>/sbin</outputDirectory>
+      <includes>
+        <include>*.sh</include>
+      </includes>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
+      <directory>${basedir}</directory>
+      <outputDirectory>/share/doc/hadoop/${hadoop.component}</outputDirectory>
+      <includes>
+        <include>*.txt</include>
       </includes>
     </fileSet>
     <fileSet>
+      <directory>${project.build.directory}/webapps</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/webapps</outputDirectory>
+    </fileSet>
+    <fileSet>
+      <directory>${basedir}/src/main/conf</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/templates</outputDirectory>
+      <includes>
+        <include>*-site.xml</include>
+      </includes>
+    </fileSet>
+    <fileSet>
+      <directory>${project.build.directory}</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}</outputDirectory>
+      <includes>
+        <include>${project.artifactId}-${project.version}.jar</include>
+        <include>${project.artifactId}-${project.version}-tests.jar</include>
+        <include>${project.artifactId}-${project.version}-sources.jar</include>
+        <include>${project.artifactId}-${project.version}-test-sources.jar</include>
+      </includes>
+    </fileSet>
+    <fileSet>
+      <directory>${basedir}/dev-support/jdiff</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/jdiff</outputDirectory>
+    </fileSet>
+    <fileSet>
+      <directory>${project.build.directory}/site/jdiff/xml</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/jdiff</outputDirectory>
+    </fileSet>
+    <fileSet>
+      <directory>${project.build.directory}/site</directory>
+      <outputDirectory>/share/doc/hadoop/${hadoop.component}</outputDirectory>
+    </fileSet>
+    <fileSet>
       <directory>${project.build.directory}/src</directory>
-      <outputDirectory>/src</outputDirectory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/src</outputDirectory>
     </fileSet>
   </fileSets>
   <dependencySets>
     <dependencySet>
-      <outputDirectory>/lib</outputDirectory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/lib</outputDirectory>
       <unpack>false</unpack>
       <scope>runtime</scope>
       <useProjectArtifact>false</useProjectArtifact>
       <excludes>
         <exclude>org.apache.ant:*:jar</exclude>
-        <exclude>org.apache.hadoop:hadoop-*:*:*:*</exclude>
+        <exclude>org.apache.hadoop:hadoop-*:jar</exclude>
         <exclude>jdiff:jdiff:jar</exclude>
       </excludes>
     </dependencySet>
