@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.util.Addressing;
 
 import java.util.Collection;
@@ -126,7 +127,12 @@ extends RetriesExhaustedException {
     Map<String, Integer> cls = new HashMap<String, Integer>();
     for (Throwable t : ths) {
       if (t == null) continue;
-      String name = t.getClass().getSimpleName();
+      String name = "";
+      if (t instanceof NoSuchColumnFamilyException) {
+        name = t.getMessage();
+      } else {
+        name = t.getClass().getSimpleName();
+      }
       Integer i = cls.get(name);
       if (i == null) {
         i = 0;

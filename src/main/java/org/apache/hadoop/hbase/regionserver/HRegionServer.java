@@ -1741,9 +1741,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       }
 
       this.requestCount.addAndGet(puts.size());
-      OperationStatusCode[] codes = region.put(putsWithLocks);
+      OperationStatus codes[] = region.put(putsWithLocks);
       for (i = 0; i < codes.length; i++) {
-        if (codes[i] != OperationStatusCode.SUCCESS) {
+        if (codes[i].getOperationStatusCode() != OperationStatusCode.SUCCESS) {
           return i;
         }
       }
@@ -2833,19 +2833,20 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
           this.requestCount.addAndGet(puts.size());
 
-          OperationStatusCode[] codes =
+          OperationStatus[] codes =
               region.put(putsWithLocks.toArray(new Pair[]{}));
 
           for( int i = 0 ; i < codes.length ; i++) {
-            OperationStatusCode code = codes[i];
+            OperationStatus code = codes[i];
 
             Action<R> theAction = puts.get(i);
             Object result = null;
 
-            if (code == OperationStatusCode.SUCCESS) {
+            if (code.getOperationStatusCode() == OperationStatusCode.SUCCESS) {
               result = new Result();
-            } else if (code == OperationStatusCode.BAD_FAMILY) {
-              result = new NoSuchColumnFamilyException();
+            } else if (code.getOperationStatusCode()
+                == OperationStatusCode.BAD_FAMILY) {
+              result = new NoSuchColumnFamilyException(code.getExceptionMsg());
             }
             // FAILURE && NOT_RUN becomes null, aka: need to run again.
 
