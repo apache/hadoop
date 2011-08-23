@@ -989,6 +989,9 @@ Trunk (unreleased changes)
     HDFS-2267. DataXceiver thread name incorrect while waiting on op during
     keepalive. (todd)
 
+    HDFS-1480. All replicas of a block can end up on the same rack when
+    some datanodes are decommissioning. (todd)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.

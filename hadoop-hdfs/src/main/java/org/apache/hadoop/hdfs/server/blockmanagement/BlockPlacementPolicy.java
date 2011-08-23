@@ -127,9 +127,10 @@ public abstract class BlockPlacementPolicy {
                                     int numOfReplicas,
                                     DatanodeDescriptor writer,
                                     List<DatanodeDescriptor> chosenNodes,
+                                    HashMap<Node, Node> excludedNodes,
                                     long blocksize) {
     return chooseTarget(srcInode.getFullPathName(), numOfReplicas, writer,
-                        chosenNodes, blocksize);
+                        chosenNodes, excludedNodes, blocksize);
   }
 
   /**

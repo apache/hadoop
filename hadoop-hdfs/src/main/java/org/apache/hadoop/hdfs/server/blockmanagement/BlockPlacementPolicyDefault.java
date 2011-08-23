@@ -102,16 +102,6 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         excludedNodes, blocksize);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public DatanodeDescriptor[] chooseTarget(FSInodeInfo srcInode,
-                                    int numOfReplicas,
-                                    DatanodeDescriptor writer,
-                                    List<DatanodeDescriptor> chosenNodes,
-                                    long blocksize) {
-    return chooseTarget(numOfReplicas, writer, chosenNodes, false,
-        null, blocksize);
-  }
 
   /** This is the implementation. */
   DatanodeDescriptor[] chooseTarget(int numOfReplicas,

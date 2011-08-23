@@ -66,6 +66,8 @@ import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.util.Daemon;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Keeps information related to the blocks stored in the Hadoop cluster.
  * This class is a helper class for {@link FSNamesystem} and requires several
@@ -147,7 +149,8 @@ public class BlockManager {
   // We also store pending replication-orders.
   //
   public final UnderReplicatedBlocks neededReplications = new UnderReplicatedBlocks();
-  private final PendingReplicationBlocks pendingReplications;
+  @VisibleForTesting
+  final PendingReplicationBlocks pendingReplications;
 
   /** The maximum number of replicas allowed for a block */
   public final short maxReplication;
@@ -312,9 +315,14 @@ public class BlockManager {
       for (Block block : neededReplications) {
         List<DatanodeDescriptor> containingNodes =
                                           new ArrayList<DatanodeDescriptor>();
+        List<DatanodeDescriptor> containingLiveReplicasNodes =
+          new ArrayList<DatanodeDescriptor>();
+        
         NumberReplicas numReplicas = new NumberReplicas();
         // source node returned is not used
-        chooseSourceDatanode(block, containingNodes, numReplicas);
+        chooseSourceDatanode(block, containingNodes,
+            containingLiveReplicasNodes, numReplicas);
+        assert containingLiveReplicasNodes.size() == numReplicas.liveReplicas();
         int usableReplicas = numReplicas.liveReplicas() +
                              numReplicas.decommissionedReplicas();
        
@@ -993,9 +1001,10 @@ public class BlockManager {
    * @param priority a hint of its priority in the neededReplication queue
    * @return if the block gets replicated or not
    */
-  private boolean computeReplicationWorkForBlock(Block block, int priority) {
+  @VisibleForTesting
+  boolean computeReplicationWorkForBlock(Block block, int priority) {
     int requiredReplication, numEffectiveReplicas;
-    List<DatanodeDescriptor> containingNodes;
+    List<DatanodeDescriptor> containingNodes, liveReplicaNodes;
     DatanodeDescriptor srcNode;
     INodeFile fileINode = null;
     int additionalReplRequired;
@@ -1016,11 +1025,14 @@ public class BlockManager {
 
         // get a source data-node
         containingNodes = new ArrayList<DatanodeDescriptor>();
+        liveReplicaNodes = new ArrayList<DatanodeDescriptor>();
         NumberReplicas numReplicas = new NumberReplicas();
-        srcNode = chooseSourceDatanode(block, containingNodes, numReplicas);
+        srcNode = chooseSourceDatanode(
+            block, containingNodes, liveReplicaNodes, numReplicas);
         if(srcNode == null) // block can not be replicated from any node
           return false;
 
+        assert liveReplicaNodes.size() == numReplicas.liveReplicas();
         // do not schedule more if enough replicas is already pending
         numEffectiveReplicas = numReplicas.liveReplicas() +
                                 pendingReplications.getNumReplicas(block);
@@ -1047,13 +1059,20 @@ public class BlockManager {
     } finally {
       namesystem.writeUnlock();
     }
+    
+    // Exclude all of the containing nodes from being targets.
+    // This list includes decommissioning or corrupt nodes.
+    HashMap<Node, Node> excludedNodes = new HashMap<Node, Node>();
+    for (DatanodeDescriptor dn : containingNodes) {
+      excludedNodes.put(dn, dn);
+    }
 
     // choose replication targets: NOT HOLDING THE GLOBAL LOCK
     // It is costly to extract the filename for which chooseTargets is called,
     // so for now we pass in the Inode itself.
     DatanodeDescriptor targets[] = 
                        blockplacement.chooseTarget(fileINode, additionalReplRequired,
-                       srcNode, containingNodes, block.getNumBytes());
+                       srcNode, liveReplicaNodes, excludedNodes, block.getNumBytes());
     if(targets.length == 0)
       return false;
 
@@ -1182,8 +1201,10 @@ public class BlockManager {
   private DatanodeDescriptor chooseSourceDatanode(
                                     Block block,
                                     List<DatanodeDescriptor> containingNodes,
+                                    List<DatanodeDescriptor> nodesContainingLiveReplicas,
                                     NumberReplicas numReplicas) {
     containingNodes.clear();
+    nodesContainingLiveReplicas.clear();
     DatanodeDescriptor srcNode = null;
     int live = 0;
     int decommissioned = 0;
@@ -1202,6 +1223,7 @@ public class BlockManager {
       else if (excessBlocks != null && excessBlocks.contains(block)) {
         excess++;
       } else {
+        nodesContainingLiveReplicas.add(node);
         live++;
       }
       containingNodes.add(node);
@@ -2049,7 +2071,8 @@ public class BlockManager {
   /**
    * The given node is reporting that it received a certain block.
    */
-  private void addBlock(DatanodeDescriptor node, Block block, String delHint)
+  @VisibleForTesting
+  void addBlock(DatanodeDescriptor node, Block block, String delHint)
       throws IOException {
     // decrement number of blocks scheduled to this datanode.
     node.decBlocksScheduled();
