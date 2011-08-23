@@ -127,8 +127,6 @@ class DataXceiver extends Receiver implements Runnable {
    * Read/write data from/to the DataXceiverServer.
    */
   public void run() {
-    updateCurrentThreadName("Waiting for operation");
-
     int opsProcessed = 0;
     Op op = null;
     try {
@@ -138,6 +136,8 @@ class DataXceiver extends Receiver implements Runnable {
       // This optimistic behaviour allows the other end to reuse connections.
       // Setting keepalive timeout to 0 disable this behavior.
       do {
+        updateCurrentThreadName("Waiting for operation #" + (opsProcessed + 1));
+
         try {
           if (opsProcessed != 0) {
             assert socketKeepaliveTimeout > 0;
