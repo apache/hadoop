@@ -65,20 +65,28 @@ fi
 # if no args specified, show usage
 if [ $# = 0 ]; then
   echo "Usage: hbase <command>"
-  echo "where <command> is one of:"
+  echo "where <command> an option from one of these categories:"
+  echo ""
+  echo "DBA TOOLS"
   echo "  shell            run the HBase shell"
+  echo "  hbck             run the hbase 'fsck' tool"
+  echo "  hlog             write-ahead-log analyzer"
+  echo "  hfile            store file analyzer"
+  echo "  migrate          upgrade an hbase.rootdir"
   echo "  zkcli            run the ZooKeeper shell"
+  echo ""
+  echo "PROCESS MANAGEMENT"
   echo "  master           run an HBase HMaster node" 
   echo "  regionserver     run an HBase HRegionServer node" 
   echo "  zookeeper        run a Zookeeper server"
   echo "  rest             run an HBase REST server" 
   echo "  thrift           run an HBase Thrift server" 
   echo "  avro             run an HBase Avro server" 
-  echo "  migrate          upgrade an hbase.rootdir"
-  echo "  hbck             run the hbase 'fsck' tool"
+  echo ""
+  echo "PACKAGE MANAGEMENT"
   echo "  classpath        dump hbase CLASSPATH"
   echo "  version          print the version"
-
+  echo ""
   echo " or"
   echo "  CLASSNAME        run the class named CLASSNAME"
   echo "Most commands print help when invoked w/o parameters."
@@ -243,6 +251,19 @@ unset IFS
 # figure out which class to run
 if [ "$COMMAND" = "shell" ] ; then
   CLASS="org.jruby.Main ${HBASE_HOME}/bin/hirb.rb"
+elif [ "$COMMAND" = "hbck" ] ; then
+  CLASS='org.apache.hadoop.hbase.util.HBaseFsck'
+elif [ "$COMMAND" = "hlog" ] ; then
+  CLASS='org.apache.hadoop.hbase.regionserver.wal.HLogPrettyPrinter'
+elif [ "$COMMAND" = "hfile" ] ; then
+  CLASS='org.apache.hadoop.hbase.io.hfile.HFile'
+elif [ "$COMMAND" = "migrate" ] ; then
+  CLASS='org.apache.hadoop.hbase.util.Migrate'
+elif [ "$COMMAND" = "zkcli" ] ; then
+  # ZooKeeperMainServerArg returns '-server HOST:PORT' or empty string.
+  SERVER_ARG=`"$bin"/hbase org.apache.hadoop.hbase.zookeeper.ZooKeeperMainServerArg`
+  CLASS="org.apache.zookeeper.ZooKeeperMain ${SERVER_ARG}"
+
 elif [ "$COMMAND" = "master" ] ; then
   CLASS='org.apache.hadoop.hbase.master.HMaster'
   if [ "$1" != "stop" ] ; then
@@ -268,19 +289,12 @@ elif [ "$COMMAND" = "avro" ] ; then
   if [ "$1" != "stop" ] ; then
     HBASE_OPTS="$HBASE_OPTS $HBASE_AVRO_OPTS"
   fi
-elif [ "$COMMAND" = "migrate" ] ; then
-  CLASS='org.apache.hadoop.hbase.util.Migrate'
-elif [ "$COMMAND" = "hbck" ] ; then
-  CLASS='org.apache.hadoop.hbase.util.HBaseFsck'
 elif [ "$COMMAND" = "zookeeper" ] ; then
   CLASS='org.apache.hadoop.hbase.zookeeper.HQuorumPeer'
   if [ "$1" != "stop" ] ; then
     HBASE_OPTS="$HBASE_OPTS $HBASE_ZOOKEEPER_OPTS"
   fi
-elif [ "$COMMAND" = "zkcli" ] ; then
-  # ZooKeeperMainServerArg returns '-server HOST:PORT' or empty string.
-  SERVER_ARG=`"$bin"/hbase org.apache.hadoop.hbase.zookeeper.ZooKeeperMainServerArg` 
-  CLASS="org.apache.zookeeper.ZooKeeperMain ${SERVER_ARG}"
+
 elif [ "$COMMAND" = "classpath" ] ; then
   echo $CLASSPATH
   exit 0

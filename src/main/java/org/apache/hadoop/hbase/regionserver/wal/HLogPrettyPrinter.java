@@ -298,6 +298,10 @@ public class HLogPrettyPrinter {
     }
   }
 
+  public static void main(String[] args) throws IOException {
+    run(args);
+  }
+
   /**
    * Pass one or more log file names and formatting options and it will dump out
    * a text version of the contents on <code>stdout</code>.
@@ -329,7 +333,7 @@ public class HLogPrettyPrinter {
       files = cmd.getArgList();
       if (files.size() == 0 || cmd.hasOption("h")) {
         HelpFormatter formatter = new HelpFormatter();
-        formatter.printHelp("HFile filename(s) ", options, true);
+        formatter.printHelp("HLog <filename...>", options, true);
         System.exit(-1);
       }
       // configure the pretty printer using command line options

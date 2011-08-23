@@ -396,6 +396,7 @@ Release 0.91.0 - Unreleased
                (Benoit Sigoure)
    HBASE-4199  blockCache summary - backend (Doug Meil)
    HBASE-4240  Allow Loadbalancer to be pluggable
+   HBASE-4244  Refactor bin/hbase help
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
