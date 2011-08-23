@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;

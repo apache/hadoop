@@ -237,8 +237,7 @@ public class TestHFileOutputFormat  {
    * metadata used by time-restricted scans.
    */
   @Test
-  public void test_TIMERANGE()
-  throws IOException, InterruptedException {
+  public void test_TIMERANGE() throws Exception { 
     Configuration conf = new Configuration(this.util.getConfiguration());
     RecordWriter<ImmutableBytesWritable, KeyValue> writer = null;
     TaskAttemptContext context = null;
@@ -249,8 +248,7 @@ public class TestHFileOutputFormat  {
       // build a record writer using HFileOutputFormat
       Job job = new Job(conf);
       FileOutputFormat.setOutputPath(job, dir);
-      context = new TaskAttemptContext(job.getConfiguration(),
-        new TaskAttemptID());
+      context = getTestTaskAttemptContext(job);
       HFileOutputFormat hof = new HFileOutputFormat();
       writer = hof.getRecordWriter(context);
 

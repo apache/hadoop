@@ -1,6 +1,4 @@
 /**
- * Copyright 2010 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,24 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.hbase.ipc.VersionedProtocol;
+import java.io.IOException;
 
 /**
- * All custom RPC protocols to be exported by Coprocessors must extend this interface.
+ * Superclass of all protocols that use Hadoop RPC.
+ * Subclasses of this interface are also supposed to have
+ * a static final long versionID field.
  *
- * <p>
- * <strong>Note that all callable methods must have a return type handled by
- * {@link org.apache.hadoop.hbase.io.HbaseObjectWritable#writeObject(java.io.DataOutput, Object, Class, org.apache.hadoop.conf.Configuration)}.</strong>
- * That is:
- * <ul>
- *   <li>a Java primitive type ({@code int}, {@code float}, etc)</li>
- *   <li>a Java {@code String}</li>
- *   <li>a {@link org.apache.hadoop.io.Writable}</li>
- *   <li>an array or {@code java.util.List} of one of the above</li>
- * </ul>
- * </p>
+ * This has been copied from the Hadoop IPC project so that
+ * we can run on multiple different versions of Hadoop.
  */
-public interface CoprocessorProtocol extends VersionedProtocol {
+public interface VersionedProtocol {
+  
+  /**
+   * Return protocol version corresponding to protocol interface.
+   * @param protocol The classname of the protocol interface
+   * @param clientVersion The version of the protocol that the client speaks
+   * @return the version that the server will speak
+   * @throws IOException if any IO error occurs
+   */
+  @Deprecated
+  public long getProtocolVersion(String protocol,
+                                 long clientVersion) throws IOException;
 }

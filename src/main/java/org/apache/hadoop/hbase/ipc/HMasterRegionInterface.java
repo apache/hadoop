@@ -24,7 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.io.MapWritable;
-import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 
 /**
  * The Master publishes this Interface for RegionServers to register themselves

@@ -69,6 +69,7 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.zookeeper.ZooKeeper;
@@ -1443,7 +1444,11 @@ public class HBaseTestingUtility {
     field = nn.getClass().getDeclaredField("namesystem");
     field.setAccessible(true);
     FSNamesystem namesystem = (FSNamesystem)field.get(nn);
-    namesystem.leaseManager.setLeasePeriod(100, 50000);
+
+    field = namesystem.getClass().getDeclaredField("leaseManager");
+    field.setAccessible(true);
+    LeaseManager lm = (LeaseManager)field.get(namesystem);
+    lm.setLeasePeriod(100, 50000);
   }
 
   /**

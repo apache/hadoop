@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCacheColumnFamilySummary;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 
 /**
  * Clients interact with HRegionServers using a handle to the HRegionInterface.

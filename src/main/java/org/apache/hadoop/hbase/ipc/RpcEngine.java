@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import javax.net.SocketFactory;
 
-import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.conf.Configuration;
 

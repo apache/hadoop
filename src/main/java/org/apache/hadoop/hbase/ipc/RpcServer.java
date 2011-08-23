@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import com.google.common.base.Function;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

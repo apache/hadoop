@@ -195,7 +195,7 @@ public class HConnectionManager {
    * @param stopProxy
    *          Shuts down all the proxy's put up to cluster members including to
    *          cluster HMaster. Calls
-   *          {@link HBaseRPC#stopProxy(org.apache.hadoop.ipc.VersionedProtocol)}
+   *          {@link HBaseRPC#stopProxy(org.apache.hadoop.hbase.ipc.VersionedProtocol)}
    *          .
    */
   public static void deleteConnection(Configuration conf, boolean stopProxy) {
