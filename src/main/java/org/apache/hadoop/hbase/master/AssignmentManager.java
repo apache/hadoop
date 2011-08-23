@@ -59,7 +59,7 @@ import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
-import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
+import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
@@ -100,6 +100,8 @@ public class AssignmentManager extends ZooKeeperListener {
   private CatalogTracker catalogTracker;
 
   private TimeoutMonitor timeoutMonitor;
+
+  private LoadBalancer balancer;
 
   /*
    * Maximum times we recurse an assignment.  See below in {@link #assign()}.
@@ -172,6 +174,7 @@ public class AssignmentManager extends ZooKeeperListener {
     this.zkTable = new ZKTable(this.master.getZooKeeper());
     this.maximumAssignmentAttempts =
       this.master.getConfiguration().getInt("hbase.assignment.maximum.attempts", 10);
+    this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
   }
 
   /**
@@ -1364,7 +1367,7 @@ public class AssignmentManager extends ZooKeeperListener {
     if (serverToExclude != null) servers.remove(serverToExclude);
     if (servers.isEmpty()) return null;
     RegionPlan randomPlan = new RegionPlan(state.getRegion(), null,
-      LoadBalancer.randomAssignment(servers));
+      balancer.randomAssignment(servers));
     boolean newPlan = false;
     RegionPlan existingPlan = null;
     synchronized (this.regionPlans) {
@@ -1564,7 +1567,7 @@ public class AssignmentManager extends ZooKeeperListener {
       return;
     Map<ServerName, List<HRegionInfo>> bulkPlan = null;
     // Generate a round-robin bulk assignment plan
-    bulkPlan = LoadBalancer.roundRobinAssignment(regions, servers);
+    bulkPlan = balancer.roundRobinAssignment(regions, servers);
     LOG.info("Bulk assigning " + regions.size() + " region(s) round-robin across " +
                servers.size() + " server(s)");
     // Use fixed count thread pool assigning.
@@ -1598,7 +1601,7 @@ public class AssignmentManager extends ZooKeeperListener {
     Map<ServerName, List<HRegionInfo>> bulkPlan = null;
     if (retainAssignment) {
       // Reuse existing assignment info
-      bulkPlan = LoadBalancer.retainAssignment(allRegions, servers);
+      bulkPlan = balancer.retainAssignment(allRegions, servers);
     } else {
       // assign regions in round-robin fashion
       assignUserRegions(new ArrayList<HRegionInfo>(allRegions.keySet()), servers);

@@ -63,7 +63,7 @@ import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
+import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.handler.DeleteTableHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
@@ -354,7 +354,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
     this.assignmentManager = new AssignmentManager(this, serverManager,
         this.catalogTracker, this.executorService);
-    this.balancer = new LoadBalancer(conf);
+    this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
     zooKeeper.registerListenerFirst(assignmentManager);
 
     this.regionServerTracker = new RegionServerTracker(zooKeeper, this,
