@@ -8,11 +8,48 @@ public final class ScannerMessage {
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistry registry) {
   }
+  public interface ScannerOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+    
+    // optional bytes startRow = 1;
+    boolean hasStartRow();
+    com.google.protobuf.ByteString getStartRow();
+    
+    // optional bytes endRow = 2;
+    boolean hasEndRow();
+    com.google.protobuf.ByteString getEndRow();
+    
+    // repeated bytes columns = 3;
+    java.util.List<com.google.protobuf.ByteString> getColumnsList();
+    int getColumnsCount();
+    com.google.protobuf.ByteString getColumns(int index);
+    
+    // optional int32 batch = 4;
+    boolean hasBatch();
+    int getBatch();
+    
+    // optional int64 startTime = 5;
+    boolean hasStartTime();
+    long getStartTime();
+    
+    // optional int64 endTime = 6;
+    boolean hasEndTime();
+    long getEndTime();
+    
+    // optional int32 maxVersions = 7;
+    boolean hasMaxVersions();
+    int getMaxVersions();
+    
+    // optional string filter = 8;
+    boolean hasFilter();
+    String getFilter();
+  }
   public static final class Scanner extends
-      com.google.protobuf.GeneratedMessage {
+      com.google.protobuf.GeneratedMessage
+      implements ScannerOrBuilder {
     // Use Scanner.newBuilder() to construct.
-    private Scanner() {
-      initFields();
+    private Scanner(Builder builder) {
+      super(builder);
     }
     private Scanner(boolean noInit) {}
     
@@ -35,99 +72,158 @@ public final class ScannerMessage {
       return org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_Scanner_fieldAccessorTable;
     }
     
+    private int bitField0_;
     // optional bytes startRow = 1;
     public static final int STARTROW_FIELD_NUMBER = 1;
-    private boolean hasStartRow;
-    private com.google.protobuf.ByteString startRow_ = com.google.protobuf.ByteString.EMPTY;
-    public boolean hasStartRow() { return hasStartRow; }
-    public com.google.protobuf.ByteString getStartRow() { return startRow_; }
+    private com.google.protobuf.ByteString startRow_;
+    public boolean hasStartRow() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    public com.google.protobuf.ByteString getStartRow() {
+      return startRow_;
+    }
     
     // optional bytes endRow = 2;
     public static final int ENDROW_FIELD_NUMBER = 2;
-    private boolean hasEndRow;
-    private com.google.protobuf.ByteString endRow_ = com.google.protobuf.ByteString.EMPTY;
-    public boolean hasEndRow() { return hasEndRow; }
-    public com.google.protobuf.ByteString getEndRow() { return endRow_; }
+    private com.google.protobuf.ByteString endRow_;
+    public boolean hasEndRow() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public com.google.protobuf.ByteString getEndRow() {
+      return endRow_;
+    }
     
     // repeated bytes columns = 3;
     public static final int COLUMNS_FIELD_NUMBER = 3;
-    private java.util.List<com.google.protobuf.ByteString> columns_ =
-      java.util.Collections.emptyList();
-    public java.util.List<com.google.protobuf.ByteString> getColumnsList() {
+    private java.util.List<com.google.protobuf.ByteString> columns_;
+    public java.util.List<com.google.protobuf.ByteString>
+        getColumnsList() {
       return columns_;
     }
-    public int getColumnsCount() { return columns_.size(); }
+    public int getColumnsCount() {
+      return columns_.size();
+    }
     public com.google.protobuf.ByteString getColumns(int index) {
       return columns_.get(index);
     }
     
     // optional int32 batch = 4;
     public static final int BATCH_FIELD_NUMBER = 4;
-    private boolean hasBatch;
-    private int batch_ = 0;
-    public boolean hasBatch() { return hasBatch; }
-    public int getBatch() { return batch_; }
+    private int batch_;
+    public boolean hasBatch() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    public int getBatch() {
+      return batch_;
+    }
     
     // optional int64 startTime = 5;
     public static final int STARTTIME_FIELD_NUMBER = 5;
-    private boolean hasStartTime;
-    private long startTime_ = 0L;
-    public boolean hasStartTime() { return hasStartTime; }
-    public long getStartTime() { return startTime_; }
+    private long startTime_;
+    public boolean hasStartTime() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    public long getStartTime() {
+      return startTime_;
+    }
     
     // optional int64 endTime = 6;
     public static final int ENDTIME_FIELD_NUMBER = 6;
-    private boolean hasEndTime;
-    private long endTime_ = 0L;
-    public boolean hasEndTime() { return hasEndTime; }
-    public long getEndTime() { return endTime_; }
+    private long endTime_;
+    public boolean hasEndTime() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    public long getEndTime() {
+      return endTime_;
+    }
     
     // optional int32 maxVersions = 7;
     public static final int MAXVERSIONS_FIELD_NUMBER = 7;
-    private boolean hasMaxVersions;
-    private int maxVersions_ = 0;
-    public boolean hasMaxVersions() { return hasMaxVersions; }
-    public int getMaxVersions() { return maxVersions_; }
+    private int maxVersions_;
+    public boolean hasMaxVersions() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    public int getMaxVersions() {
+      return maxVersions_;
+    }
     
     // optional string filter = 8;
     public static final int FILTER_FIELD_NUMBER = 8;
-    private boolean hasFilter;
-    private java.lang.String filter_ = "";
-    public boolean hasFilter() { return hasFilter; }
-    public java.lang.String getFilter() { return filter_; }
+    private java.lang.Object filter_;
+    public boolean hasFilter() {
+      return ((bitField0_ & 0x00000040) == 0x00000040);
+    }
+    public String getFilter() {
+      java.lang.Object ref = filter_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          filter_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getFilterBytes() {
+      java.lang.Object ref = filter_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        filter_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
     
     private void initFields() {
+      startRow_ = com.google.protobuf.ByteString.EMPTY;
+      endRow_ = com.google.protobuf.ByteString.EMPTY;
+      columns_ = java.util.Collections.emptyList();;
+      batch_ = 0;
+      startTime_ = 0L;
+      endTime_ = 0L;
+      maxVersions_ = 0;
+      filter_ = "";
     }
+    private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      memoizedIsInitialized = 1;
       return true;
     }
     
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
-      if (hasStartRow()) {
-        output.writeBytes(1, getStartRow());
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, startRow_);
       }
-      if (hasEndRow()) {
-        output.writeBytes(2, getEndRow());
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, endRow_);
       }
-      for (com.google.protobuf.ByteString element : getColumnsList()) {
-        output.writeBytes(3, element);
+      for (int i = 0; i < columns_.size(); i++) {
+        output.writeBytes(3, columns_.get(i));
       }
-      if (hasBatch()) {
-        output.writeInt32(4, getBatch());
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeInt32(4, batch_);
       }
-      if (hasStartTime()) {
-        output.writeInt64(5, getStartTime());
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeInt64(5, startTime_);
       }
-      if (hasEndTime()) {
-        output.writeInt64(6, getEndTime());
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeInt64(6, endTime_);
       }
-      if (hasMaxVersions()) {
-        output.writeInt32(7, getMaxVersions());
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeInt32(7, maxVersions_);
       }
-      if (hasFilter()) {
-        output.writeString(8, getFilter());
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeBytes(8, getFilterBytes());
       }
       getUnknownFields().writeTo(output);
     }
@@ -138,46 +234,53 @@ public final class ScannerMessage {
       if (size != -1) return size;
     
       size = 0;
-      if (hasStartRow()) {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(1, getStartRow());
+          .computeBytesSize(1, startRow_);
       }
-      if (hasEndRow()) {
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(2, getEndRow());
+          .computeBytesSize(2, endRow_);
       }
       {
         int dataSize = 0;
-        for (com.google.protobuf.ByteString element : getColumnsList()) {
+        for (int i = 0; i < columns_.size(); i++) {
           dataSize += com.google.protobuf.CodedOutputStream
-            .computeBytesSizeNoTag(element);
+            .computeBytesSizeNoTag(columns_.get(i));
         }
         size += dataSize;
         size += 1 * getColumnsList().size();
       }
-      if (hasBatch()) {
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt32Size(4, getBatch());
+          .computeInt32Size(4, batch_);
       }
-      if (hasStartTime()) {
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(5, getStartTime());
+          .computeInt64Size(5, startTime_);
       }
-      if (hasEndTime()) {
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(6, getEndTime());
+          .computeInt64Size(6, endTime_);
       }
-      if (hasMaxVersions()) {
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt32Size(7, getMaxVersions());
+          .computeInt32Size(7, maxVersions_);
       }
-      if (hasFilter()) {
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeStringSize(8, getFilter());
+          .computeBytesSize(8, getFilterBytes());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
     }
     
     public static org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner parseFrom(
@@ -254,34 +357,65 @@ public final class ScannerMessage {
     }
     public Builder toBuilder() { return newBuilder(this); }
     
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
     public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder> {
-      private org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner result;
-      
-      // Construct using org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner.newBuilder()
-      private Builder() {}
-      
-      private static Builder create() {
-        Builder builder = new Builder();
-        builder.result = new org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner();
-        return builder;
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.ScannerOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_Scanner_descriptor;
       }
       
-      protected org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner internalGetResult() {
-        return result;
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_Scanner_fieldAccessorTable;
+      }
+      
+      // Construct using org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private Builder(BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
       }
       
       public Builder clear() {
-        if (result == null) {
-          throw new IllegalStateException(
-            "Cannot call clear() after build().");
-        }
-        result = new org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner();
+        super.clear();
+        startRow_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        endRow_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        columns_ = java.util.Collections.emptyList();;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        batch_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000008);
+        startTime_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000010);
+        endTime_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000020);
+        maxVersions_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000040);
+        filter_ = "";
+        bitField0_ = (bitField0_ & ~0x00000080);
         return this;
       }
       
       public Builder clone() {
-        return create().mergeFrom(result);
+        return create().mergeFrom(buildPartial());
       }
       
       public com.google.protobuf.Descriptors.Descriptor
@@ -293,37 +427,64 @@ public final class ScannerMessage {
         return org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner.getDefaultInstance();
       }
       
-      public boolean isInitialized() {
-        return result.isInitialized();
-      }
       public org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner build() {
-        if (result != null && !isInitialized()) {
+        org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner result = buildPartial();
+        if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
-        return buildPartial();
+        return result;
       }
       
       private org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner buildParsed()
           throws com.google.protobuf.InvalidProtocolBufferException {
-        if (!isInitialized()) {
+        org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner result = buildPartial();
+        if (!result.isInitialized()) {
           throw newUninitializedMessageException(
             result).asInvalidProtocolBufferException();
         }
-        return buildPartial();
+        return result;
       }
       
       public org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner buildPartial() {
-        if (result == null) {
-          throw new IllegalStateException(
-            "build() has already been called on this Builder.");
+        org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner result = new org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
         }
-        if (result.columns_ != java.util.Collections.EMPTY_LIST) {
-          result.columns_ =
-            java.util.Collections.unmodifiableList(result.columns_);
+        result.startRow_ = startRow_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
         }
-        org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner returnMe = result;
-        result = null;
-        return returnMe;
+        result.endRow_ = endRow_;
+        if (((bitField0_ & 0x00000004) == 0x00000004)) {
+          columns_ = java.util.Collections.unmodifiableList(columns_);
+          bitField0_ = (bitField0_ & ~0x00000004);
+        }
+        result.columns_ = columns_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.batch_ = batch_;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.startTime_ = startTime_;
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.endTime_ = endTime_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.maxVersions_ = maxVersions_;
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        result.filter_ = filter_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
       }
       
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -344,10 +505,14 @@ public final class ScannerMessage {
           setEndRow(other.getEndRow());
         }
         if (!other.columns_.isEmpty()) {
-          if (result.columns_.isEmpty()) {
-            result.columns_ = new java.util.ArrayList<com.google.protobuf.ByteString>();
+          if (columns_.isEmpty()) {
+            columns_ = other.columns_;
+            bitField0_ = (bitField0_ & ~0x00000004);
+          } else {
+            ensureColumnsIsMutable();
+            columns_.addAll(other.columns_);
           }
-          result.columns_.addAll(other.columns_);
+          onChanged();
         }
         if (other.hasBatch()) {
           setBatch(other.getBatch());
@@ -368,6 +533,10 @@ public final class ScannerMessage {
         return this;
       }
       
+      public final boolean isInitialized() {
+        return true;
+      }
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -380,225 +549,280 @@ public final class ScannerMessage {
           switch (tag) {
             case 0:
               this.setUnknownFields(unknownFields.build());
+              onChanged();
               return this;
             default: {
               if (!parseUnknownField(input, unknownFields,
                                      extensionRegistry, tag)) {
                 this.setUnknownFields(unknownFields.build());
+                onChanged();
                 return this;
               }
               break;
             }
             case 10: {
-              setStartRow(input.readBytes());
+              bitField0_ |= 0x00000001;
+              startRow_ = input.readBytes();
               break;
             }
             case 18: {
-              setEndRow(input.readBytes());
+              bitField0_ |= 0x00000002;
+              endRow_ = input.readBytes();
               break;
             }
             case 26: {
-              addColumns(input.readBytes());
+              ensureColumnsIsMutable();
+              columns_.add(input.readBytes());
               break;
             }
             case 32: {
-              setBatch(input.readInt32());
+              bitField0_ |= 0x00000008;
+              batch_ = input.readInt32();
               break;
             }
             case 40: {
-              setStartTime(input.readInt64());
+              bitField0_ |= 0x00000010;
+              startTime_ = input.readInt64();
               break;
             }
             case 48: {
-              setEndTime(input.readInt64());
+              bitField0_ |= 0x00000020;
+              endTime_ = input.readInt64();
               break;
             }
             case 56: {
-              setMaxVersions(input.readInt32());
+              bitField0_ |= 0x00000040;
+              maxVersions_ = input.readInt32();
               break;
             }
             case 66: {
-              setFilter(input.readString());
+              bitField0_ |= 0x00000080;
+              filter_ = input.readBytes();
               break;
             }
           }
         }
       }
       
+      private int bitField0_;
       
       // optional bytes startRow = 1;
+      private com.google.protobuf.ByteString startRow_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasStartRow() {
-        return result.hasStartRow();
+        return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       public com.google.protobuf.ByteString getStartRow() {
-        return result.getStartRow();
+        return startRow_;
       }
       public Builder setStartRow(com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  result.hasStartRow = true;
-        result.startRow_ = value;
+  bitField0_ |= 0x00000001;
+        startRow_ = value;
+        onChanged();
         return this;
       }
       public Builder clearStartRow() {
-        result.hasStartRow = false;
-        result.startRow_ = getDefaultInstance().getStartRow();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        startRow_ = getDefaultInstance().getStartRow();
+        onChanged();
         return this;
       }
       
       // optional bytes endRow = 2;
+      private com.google.protobuf.ByteString endRow_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasEndRow() {
-        return result.hasEndRow();
+        return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       public com.google.protobuf.ByteString getEndRow() {
-        return result.getEndRow();
+        return endRow_;
       }
       public Builder setEndRow(com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  result.hasEndRow = true;
-        result.endRow_ = value;
+  bitField0_ |= 0x00000002;
+        endRow_ = value;
+        onChanged();
         return this;
       }
       public Builder clearEndRow() {
-        result.hasEndRow = false;
-        result.endRow_ = getDefaultInstance().getEndRow();
+        bitField0_ = (bitField0_ & ~0x00000002);
+        endRow_ = getDefaultInstance().getEndRow();
+        onChanged();
         return this;
       }
       
       // repeated bytes columns = 3;
-      public java.util.List<com.google.protobuf.ByteString> getColumnsList() {
-        return java.util.Collections.unmodifiableList(result.columns_);
+      private java.util.List<com.google.protobuf.ByteString> columns_ = java.util.Collections.emptyList();;
+      private void ensureColumnsIsMutable() {
+        if (!((bitField0_ & 0x00000004) == 0x00000004)) {
+          columns_ = new java.util.ArrayList<com.google.protobuf.ByteString>(columns_);
+          bitField0_ |= 0x00000004;
+         }
+      }
+      public java.util.List<com.google.protobuf.ByteString>
+          getColumnsList() {
+        return java.util.Collections.unmodifiableList(columns_);
       }
       public int getColumnsCount() {
-        return result.getColumnsCount();
+        return columns_.size();
       }
       public com.google.protobuf.ByteString getColumns(int index) {
-        return result.getColumns(index);
+        return columns_.get(index);
       }
-      public Builder setColumns(int index, com.google.protobuf.ByteString value) {
+      public Builder setColumns(
+          int index, com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  result.columns_.set(index, value);
+  ensureColumnsIsMutable();
+        columns_.set(index, value);
+        onChanged();
         return this;
       }
       public Builder addColumns(com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  if (result.columns_.isEmpty()) {
-          result.columns_ = new java.util.ArrayList<com.google.protobuf.ByteString>();
-        }
-        result.columns_.add(value);
+  ensureColumnsIsMutable();
+        columns_.add(value);
+        onChanged();
         return this;
       }
       public Builder addAllColumns(
           java.lang.Iterable<? extends com.google.protobuf.ByteString> values) {
-        if (result.columns_.isEmpty()) {
-          result.columns_ = new java.util.ArrayList<com.google.protobuf.ByteString>();
-        }
-        super.addAll(values, result.columns_);
+        ensureColumnsIsMutable();
+        super.addAll(values, columns_);
+        onChanged();
         return this;
       }
       public Builder clearColumns() {
-        result.columns_ = java.util.Collections.emptyList();
+        columns_ = java.util.Collections.emptyList();;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        onChanged();
         return this;
       }
       
       // optional int32 batch = 4;
+      private int batch_ ;
       public boolean hasBatch() {
-        return result.hasBatch();
+        return ((bitField0_ & 0x00000008) == 0x00000008);
       }
       public int getBatch() {
-        return result.getBatch();
+        return batch_;
       }
       public Builder setBatch(int value) {
-        result.hasBatch = true;
-        result.batch_ = value;
+        bitField0_ |= 0x00000008;
+        batch_ = value;
+        onChanged();
         return this;
       }
       public Builder clearBatch() {
-        result.hasBatch = false;
-        result.batch_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000008);
+        batch_ = 0;
+        onChanged();
         return this;
       }
       
       // optional int64 startTime = 5;
+      private long startTime_ ;
       public boolean hasStartTime() {
-        return result.hasStartTime();
+        return ((bitField0_ & 0x00000010) == 0x00000010);
       }
       public long getStartTime() {
-        return result.getStartTime();
+        return startTime_;
       }
       public Builder setStartTime(long value) {
-        result.hasStartTime = true;
-        result.startTime_ = value;
+        bitField0_ |= 0x00000010;
+        startTime_ = value;
+        onChanged();
         return this;
       }
       public Builder clearStartTime() {
-        result.hasStartTime = false;
-        result.startTime_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000010);
+        startTime_ = 0L;
+        onChanged();
         return this;
       }
       
       // optional int64 endTime = 6;
+      private long endTime_ ;
       public boolean hasEndTime() {
-        return result.hasEndTime();
+        return ((bitField0_ & 0x00000020) == 0x00000020);
       }
       public long getEndTime() {
-        return result.getEndTime();
+        return endTime_;
       }
       public Builder setEndTime(long value) {
-        result.hasEndTime = true;
-        result.endTime_ = value;
+        bitField0_ |= 0x00000020;
+        endTime_ = value;
+        onChanged();
         return this;
       }
       public Builder clearEndTime() {
-        result.hasEndTime = false;
-        result.endTime_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000020);
+        endTime_ = 0L;
+        onChanged();
         return this;
       }
       
       // optional int32 maxVersions = 7;
+      private int maxVersions_ ;
       public boolean hasMaxVersions() {
-        return result.hasMaxVersions();
+        return ((bitField0_ & 0x00000040) == 0x00000040);
       }
       public int getMaxVersions() {
-        return result.getMaxVersions();
+        return maxVersions_;
       }
       public Builder setMaxVersions(int value) {
-        result.hasMaxVersions = true;
-        result.maxVersions_ = value;
+        bitField0_ |= 0x00000040;
+        maxVersions_ = value;
+        onChanged();
         return this;
       }
       public Builder clearMaxVersions() {
-        result.hasMaxVersions = false;
-        result.maxVersions_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000040);
+        maxVersions_ = 0;
+        onChanged();
         return this;
       }
       
       // optional string filter = 8;
+      private java.lang.Object filter_ = "";
       public boolean hasFilter() {
-        return result.hasFilter();
+        return ((bitField0_ & 0x00000080) == 0x00000080);
       }
-      public java.lang.String getFilter() {
-        return result.getFilter();
+      public String getFilter() {
+        java.lang.Object ref = filter_;
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          filter_ = s;
+          return s;
+        } else {
+          return (String) ref;
+        }
       }
-      public Builder setFilter(java.lang.String value) {
+      public Builder setFilter(String value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  result.hasFilter = true;
-        result.filter_ = value;
+  bitField0_ |= 0x00000080;
+        filter_ = value;
+        onChanged();
         return this;
       }
       public Builder clearFilter() {
-        result.hasFilter = false;
-        result.filter_ = getDefaultInstance().getFilter();
+        bitField0_ = (bitField0_ & ~0x00000080);
+        filter_ = getDefaultInstance().getFilter();
+        onChanged();
         return this;
+      }
+      void setFilter(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000080;
+        filter_ = value;
+        onChanged();
       }
       
       // @@protoc_insertion_point(builder_scope:org.apache.hadoop.hbase.rest.protobuf.generated.Scanner)
@@ -606,7 +830,6 @@ public final class ScannerMessage {
     
     static {
       defaultInstance = new Scanner(true);
-      org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.internalForceInit();
       defaultInstance.initFields();
     }
     
@@ -655,8 +878,6 @@ public final class ScannerMessage {
         new com.google.protobuf.Descriptors.FileDescriptor[] {
         }, assigner);
   }
-  
-  public static void internalForceInit() {}
   
   // @@protoc_insertion_point(outer_class_scope)
 }

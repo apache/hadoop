@@ -8,11 +8,31 @@ public final class CellMessage {
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistry registry) {
   }
+  public interface CellOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+    
+    // optional bytes row = 1;
+    boolean hasRow();
+    com.google.protobuf.ByteString getRow();
+    
+    // optional bytes column = 2;
+    boolean hasColumn();
+    com.google.protobuf.ByteString getColumn();
+    
+    // optional int64 timestamp = 3;
+    boolean hasTimestamp();
+    long getTimestamp();
+    
+    // optional bytes data = 4;
+    boolean hasData();
+    com.google.protobuf.ByteString getData();
+  }
   public static final class Cell extends
-      com.google.protobuf.GeneratedMessage {
+      com.google.protobuf.GeneratedMessage
+      implements CellOrBuilder {
     // Use Cell.newBuilder() to construct.
-    private Cell() {
-      initFields();
+    private Cell(Builder builder) {
+      super(builder);
     }
     private Cell(boolean noInit) {}
     
@@ -35,54 +55,76 @@ public final class CellMessage {
       return org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_Cell_fieldAccessorTable;
     }
     
+    private int bitField0_;
     // optional bytes row = 1;
     public static final int ROW_FIELD_NUMBER = 1;
-    private boolean hasRow;
-    private com.google.protobuf.ByteString row_ = com.google.protobuf.ByteString.EMPTY;
-    public boolean hasRow() { return hasRow; }
-    public com.google.protobuf.ByteString getRow() { return row_; }
+    private com.google.protobuf.ByteString row_;
+    public boolean hasRow() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    public com.google.protobuf.ByteString getRow() {
+      return row_;
+    }
     
     // optional bytes column = 2;
     public static final int COLUMN_FIELD_NUMBER = 2;
-    private boolean hasColumn;
-    private com.google.protobuf.ByteString column_ = com.google.protobuf.ByteString.EMPTY;
-    public boolean hasColumn() { return hasColumn; }
-    public com.google.protobuf.ByteString getColumn() { return column_; }
+    private com.google.protobuf.ByteString column_;
+    public boolean hasColumn() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public com.google.protobuf.ByteString getColumn() {
+      return column_;
+    }
     
     // optional int64 timestamp = 3;
     public static final int TIMESTAMP_FIELD_NUMBER = 3;
-    private boolean hasTimestamp;
-    private long timestamp_ = 0L;
-    public boolean hasTimestamp() { return hasTimestamp; }
-    public long getTimestamp() { return timestamp_; }
+    private long timestamp_;
+    public boolean hasTimestamp() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    public long getTimestamp() {
+      return timestamp_;
+    }
     
     // optional bytes data = 4;
     public static final int DATA_FIELD_NUMBER = 4;
-    private boolean hasData;
-    private com.google.protobuf.ByteString data_ = com.google.protobuf.ByteString.EMPTY;
-    public boolean hasData() { return hasData; }
-    public com.google.protobuf.ByteString getData() { return data_; }
+    private com.google.protobuf.ByteString data_;
+    public boolean hasData() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    public com.google.protobuf.ByteString getData() {
+      return data_;
+    }
     
     private void initFields() {
+      row_ = com.google.protobuf.ByteString.EMPTY;
+      column_ = com.google.protobuf.ByteString.EMPTY;
+      timestamp_ = 0L;
+      data_ = com.google.protobuf.ByteString.EMPTY;
     }
+    private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      memoizedIsInitialized = 1;
       return true;
     }
     
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
-      if (hasRow()) {
-        output.writeBytes(1, getRow());
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, row_);
       }
-      if (hasColumn()) {
-        output.writeBytes(2, getColumn());
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, column_);
       }
-      if (hasTimestamp()) {
-        output.writeInt64(3, getTimestamp());
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeInt64(3, timestamp_);
       }
-      if (hasData()) {
-        output.writeBytes(4, getData());
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeBytes(4, data_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -93,25 +135,32 @@ public final class CellMessage {
       if (size != -1) return size;
     
       size = 0;
-      if (hasRow()) {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(1, getRow());
+          .computeBytesSize(1, row_);
       }
-      if (hasColumn()) {
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(2, getColumn());
+          .computeBytesSize(2, column_);
       }
-      if (hasTimestamp()) {
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(3, getTimestamp());
+          .computeInt64Size(3, timestamp_);
       }
-      if (hasData()) {
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(4, getData());
+          .computeBytesSize(4, data_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
     }
     
     public static org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell parseFrom(
@@ -188,34 +237,57 @@ public final class CellMessage {
     }
     public Builder toBuilder() { return newBuilder(this); }
     
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
     public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder> {
-      private org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell result;
-      
-      // Construct using org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell.newBuilder()
-      private Builder() {}
-      
-      private static Builder create() {
-        Builder builder = new Builder();
-        builder.result = new org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell();
-        return builder;
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.CellOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_Cell_descriptor;
       }
       
-      protected org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell internalGetResult() {
-        return result;
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_Cell_fieldAccessorTable;
+      }
+      
+      // Construct using org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private Builder(BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
       }
       
       public Builder clear() {
-        if (result == null) {
-          throw new IllegalStateException(
-            "Cannot call clear() after build().");
-        }
-        result = new org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell();
+        super.clear();
+        row_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        column_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        timestamp_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        data_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
       
       public Builder clone() {
-        return create().mergeFrom(result);
+        return create().mergeFrom(buildPartial());
       }
       
       public com.google.protobuf.Descriptors.Descriptor
@@ -227,33 +299,47 @@ public final class CellMessage {
         return org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell.getDefaultInstance();
       }
       
-      public boolean isInitialized() {
-        return result.isInitialized();
-      }
       public org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell build() {
-        if (result != null && !isInitialized()) {
+        org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell result = buildPartial();
+        if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
-        return buildPartial();
+        return result;
       }
       
       private org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell buildParsed()
           throws com.google.protobuf.InvalidProtocolBufferException {
-        if (!isInitialized()) {
+        org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell result = buildPartial();
+        if (!result.isInitialized()) {
           throw newUninitializedMessageException(
             result).asInvalidProtocolBufferException();
         }
-        return buildPartial();
+        return result;
       }
       
       public org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell buildPartial() {
-        if (result == null) {
-          throw new IllegalStateException(
-            "build() has already been called on this Builder.");
+        org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell result = new org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
         }
-        org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell returnMe = result;
-        result = null;
-        return returnMe;
+        result.row_ = row_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.column_ = column_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.timestamp_ = timestamp_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.data_ = data_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
       }
       
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -283,6 +369,10 @@ public final class CellMessage {
         return this;
       }
       
+      public final boolean isInitialized() {
+        return true;
+      }
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -295,114 +385,133 @@ public final class CellMessage {
           switch (tag) {
             case 0:
               this.setUnknownFields(unknownFields.build());
+              onChanged();
               return this;
             default: {
               if (!parseUnknownField(input, unknownFields,
                                      extensionRegistry, tag)) {
                 this.setUnknownFields(unknownFields.build());
+                onChanged();
                 return this;
               }
               break;
             }
             case 10: {
-              setRow(input.readBytes());
+              bitField0_ |= 0x00000001;
+              row_ = input.readBytes();
               break;
             }
             case 18: {
-              setColumn(input.readBytes());
+              bitField0_ |= 0x00000002;
+              column_ = input.readBytes();
               break;
             }
             case 24: {
-              setTimestamp(input.readInt64());
+              bitField0_ |= 0x00000004;
+              timestamp_ = input.readInt64();
               break;
             }
             case 34: {
-              setData(input.readBytes());
+              bitField0_ |= 0x00000008;
+              data_ = input.readBytes();
               break;
             }
           }
         }
       }
       
+      private int bitField0_;
       
       // optional bytes row = 1;
+      private com.google.protobuf.ByteString row_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasRow() {
-        return result.hasRow();
+        return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       public com.google.protobuf.ByteString getRow() {
-        return result.getRow();
+        return row_;
       }
       public Builder setRow(com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  result.hasRow = true;
-        result.row_ = value;
+  bitField0_ |= 0x00000001;
+        row_ = value;
+        onChanged();
         return this;
       }
       public Builder clearRow() {
-        result.hasRow = false;
-        result.row_ = getDefaultInstance().getRow();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        row_ = getDefaultInstance().getRow();
+        onChanged();
         return this;
       }
       
       // optional bytes column = 2;
+      private com.google.protobuf.ByteString column_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasColumn() {
-        return result.hasColumn();
+        return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       public com.google.protobuf.ByteString getColumn() {
-        return result.getColumn();
+        return column_;
       }
       public Builder setColumn(com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  result.hasColumn = true;
-        result.column_ = value;
+  bitField0_ |= 0x00000002;
+        column_ = value;
+        onChanged();
         return this;
       }
       public Builder clearColumn() {
-        result.hasColumn = false;
-        result.column_ = getDefaultInstance().getColumn();
+        bitField0_ = (bitField0_ & ~0x00000002);
+        column_ = getDefaultInstance().getColumn();
+        onChanged();
         return this;
       }
       
       // optional int64 timestamp = 3;
+      private long timestamp_ ;
       public boolean hasTimestamp() {
-        return result.hasTimestamp();
+        return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       public long getTimestamp() {
-        return result.getTimestamp();
+        return timestamp_;
       }
       public Builder setTimestamp(long value) {
-        result.hasTimestamp = true;
-        result.timestamp_ = value;
+        bitField0_ |= 0x00000004;
+        timestamp_ = value;
+        onChanged();
         return this;
       }
       public Builder clearTimestamp() {
-        result.hasTimestamp = false;
-        result.timestamp_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        timestamp_ = 0L;
+        onChanged();
         return this;
       }
       
       // optional bytes data = 4;
+      private com.google.protobuf.ByteString data_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasData() {
-        return result.hasData();
+        return ((bitField0_ & 0x00000008) == 0x00000008);
       }
       public com.google.protobuf.ByteString getData() {
-        return result.getData();
+        return data_;
       }
       public Builder setData(com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  result.hasData = true;
-        result.data_ = value;
+  bitField0_ |= 0x00000008;
+        data_ = value;
+        onChanged();
         return this;
       }
       public Builder clearData() {
-        result.hasData = false;
-        result.data_ = getDefaultInstance().getData();
+        bitField0_ = (bitField0_ & ~0x00000008);
+        data_ = getDefaultInstance().getData();
+        onChanged();
         return this;
       }
       
@@ -411,7 +520,6 @@ public final class CellMessage {
     
     static {
       defaultInstance = new Cell(true);
-      org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.internalForceInit();
       defaultInstance.initFields();
     }
     
@@ -458,8 +566,6 @@ public final class CellMessage {
         new com.google.protobuf.Descriptors.FileDescriptor[] {
         }, assigner);
   }
-  
-  public static void internalForceInit() {}
   
   // @@protoc_insertion_point(outer_class_scope)
 }

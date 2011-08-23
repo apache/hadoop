@@ -8,11 +8,25 @@ public final class CellSetMessage {
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistry registry) {
   }
+  public interface CellSetOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+    
+    // repeated .org.apache.hadoop.hbase.rest.protobuf.generated.CellSet.Row rows = 1;
+    java.util.List<org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row> 
+        getRowsList();
+    org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row getRows(int index);
+    int getRowsCount();
+    java.util.List<? extends org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.RowOrBuilder> 
+        getRowsOrBuilderList();
+    org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.RowOrBuilder getRowsOrBuilder(
+        int index);
+  }
   public static final class CellSet extends
-      com.google.protobuf.GeneratedMessage {
+      com.google.protobuf.GeneratedMessage
+      implements CellSetOrBuilder {
     // Use CellSet.newBuilder() to construct.
-    private CellSet() {
-      initFields();
+    private CellSet(Builder builder) {
+      super(builder);
     }
     private CellSet(boolean noInit) {}
     
@@ -35,11 +49,29 @@ public final class CellSetMessage {
       return org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_CellSet_fieldAccessorTable;
     }
     
+    public interface RowOrBuilder
+        extends com.google.protobuf.MessageOrBuilder {
+      
+      // required bytes key = 1;
+      boolean hasKey();
+      com.google.protobuf.ByteString getKey();
+      
+      // repeated .org.apache.hadoop.hbase.rest.protobuf.generated.Cell values = 2;
+      java.util.List<org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell> 
+          getValuesList();
+      org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell getValues(int index);
+      int getValuesCount();
+      java.util.List<? extends org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.CellOrBuilder> 
+          getValuesOrBuilderList();
+      org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.CellOrBuilder getValuesOrBuilder(
+          int index);
+    }
     public static final class Row extends
-        com.google.protobuf.GeneratedMessage {
+        com.google.protobuf.GeneratedMessage
+        implements RowOrBuilder {
       // Use Row.newBuilder() to construct.
-      private Row() {
-        initFields();
+      private Row(Builder builder) {
+        super(builder);
       }
       private Row(boolean noInit) {}
       
@@ -62,40 +94,63 @@ public final class CellSetMessage {
         return org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_CellSet_Row_fieldAccessorTable;
       }
       
+      private int bitField0_;
       // required bytes key = 1;
       public static final int KEY_FIELD_NUMBER = 1;
-      private boolean hasKey;
-      private com.google.protobuf.ByteString key_ = com.google.protobuf.ByteString.EMPTY;
-      public boolean hasKey() { return hasKey; }
-      public com.google.protobuf.ByteString getKey() { return key_; }
+      private com.google.protobuf.ByteString key_;
+      public boolean hasKey() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public com.google.protobuf.ByteString getKey() {
+        return key_;
+      }
       
       // repeated .org.apache.hadoop.hbase.rest.protobuf.generated.Cell values = 2;
       public static final int VALUES_FIELD_NUMBER = 2;
-      private java.util.List<org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell> values_ =
-        java.util.Collections.emptyList();
+      private java.util.List<org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell> values_;
       public java.util.List<org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell> getValuesList() {
         return values_;
       }
-      public int getValuesCount() { return values_.size(); }
+      public java.util.List<? extends org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.CellOrBuilder> 
+          getValuesOrBuilderList() {
+        return values_;
+      }
+      public int getValuesCount() {
+        return values_.size();
+      }
       public org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell getValues(int index) {
+        return values_.get(index);
+      }
+      public org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.CellOrBuilder getValuesOrBuilder(
+          int index) {
         return values_.get(index);
       }
       
       private void initFields() {
+        key_ = com.google.protobuf.ByteString.EMPTY;
+        values_ = java.util.Collections.emptyList();
       }
+      private byte memoizedIsInitialized = -1;
       public final boolean isInitialized() {
-        if (!hasKey) return false;
+        byte isInitialized = memoizedIsInitialized;
+        if (isInitialized != -1) return isInitialized == 1;
+        
+        if (!hasKey()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+        memoizedIsInitialized = 1;
         return true;
       }
       
       public void writeTo(com.google.protobuf.CodedOutputStream output)
                           throws java.io.IOException {
         getSerializedSize();
-        if (hasKey()) {
-          output.writeBytes(1, getKey());
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          output.writeBytes(1, key_);
         }
-        for (org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell element : getValuesList()) {
-          output.writeMessage(2, element);
+        for (int i = 0; i < values_.size(); i++) {
+          output.writeMessage(2, values_.get(i));
         }
         getUnknownFields().writeTo(output);
       }
@@ -106,17 +161,24 @@ public final class CellSetMessage {
         if (size != -1) return size;
       
         size = 0;
-        if (hasKey()) {
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeBytesSize(1, getKey());
+            .computeBytesSize(1, key_);
         }
-        for (org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell element : getValuesList()) {
+        for (int i = 0; i < values_.size(); i++) {
           size += com.google.protobuf.CodedOutputStream
-            .computeMessageSize(2, element);
+            .computeMessageSize(2, values_.get(i));
         }
         size += getUnknownFields().getSerializedSize();
         memoizedSerializedSize = size;
         return size;
+      }
+      
+      private static final long serialVersionUID = 0L;
+      @java.lang.Override
+      protected java.lang.Object writeReplace()
+          throws java.io.ObjectStreamException {
+        return super.writeReplace();
       }
       
       public static org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row parseFrom(
@@ -193,34 +255,58 @@ public final class CellSetMessage {
       }
       public Builder toBuilder() { return newBuilder(this); }
       
+      @java.lang.Override
+      protected Builder newBuilderForType(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        Builder builder = new Builder(parent);
+        return builder;
+      }
       public static final class Builder extends
-          com.google.protobuf.GeneratedMessage.Builder<Builder> {
-        private org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row result;
-        
-        // Construct using org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row.newBuilder()
-        private Builder() {}
-        
-        private static Builder create() {
-          Builder builder = new Builder();
-          builder.result = new org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row();
-          return builder;
+          com.google.protobuf.GeneratedMessage.Builder<Builder>
+         implements org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.RowOrBuilder {
+        public static final com.google.protobuf.Descriptors.Descriptor
+            getDescriptor() {
+          return org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_CellSet_Row_descriptor;
         }
         
-        protected org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row internalGetResult() {
-          return result;
+        protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+            internalGetFieldAccessorTable() {
+          return org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_CellSet_Row_fieldAccessorTable;
+        }
+        
+        // Construct using org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row.newBuilder()
+        private Builder() {
+          maybeForceBuilderInitialization();
+        }
+        
+        private Builder(BuilderParent parent) {
+          super(parent);
+          maybeForceBuilderInitialization();
+        }
+        private void maybeForceBuilderInitialization() {
+          if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+            getValuesFieldBuilder();
+          }
+        }
+        private static Builder create() {
+          return new Builder();
         }
         
         public Builder clear() {
-          if (result == null) {
-            throw new IllegalStateException(
-              "Cannot call clear() after build().");
+          super.clear();
+          key_ = com.google.protobuf.ByteString.EMPTY;
+          bitField0_ = (bitField0_ & ~0x00000001);
+          if (valuesBuilder_ == null) {
+            values_ = java.util.Collections.emptyList();
+            bitField0_ = (bitField0_ & ~0x00000002);
+          } else {
+            valuesBuilder_.clear();
           }
-          result = new org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row();
           return this;
         }
         
         public Builder clone() {
-          return create().mergeFrom(result);
+          return create().mergeFrom(buildPartial());
         }
         
         public com.google.protobuf.Descriptors.Descriptor
@@ -232,37 +318,44 @@ public final class CellSetMessage {
           return org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row.getDefaultInstance();
         }
         
-        public boolean isInitialized() {
-          return result.isInitialized();
-        }
         public org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row build() {
-          if (result != null && !isInitialized()) {
+          org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row result = buildPartial();
+          if (!result.isInitialized()) {
             throw newUninitializedMessageException(result);
           }
-          return buildPartial();
+          return result;
         }
         
         private org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row buildParsed()
             throws com.google.protobuf.InvalidProtocolBufferException {
-          if (!isInitialized()) {
+          org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row result = buildPartial();
+          if (!result.isInitialized()) {
             throw newUninitializedMessageException(
               result).asInvalidProtocolBufferException();
           }
-          return buildPartial();
+          return result;
         }
         
         public org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row buildPartial() {
-          if (result == null) {
-            throw new IllegalStateException(
-              "build() has already been called on this Builder.");
+          org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row result = new org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row(this);
+          int from_bitField0_ = bitField0_;
+          int to_bitField0_ = 0;
+          if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+            to_bitField0_ |= 0x00000001;
           }
-          if (result.values_ != java.util.Collections.EMPTY_LIST) {
-            result.values_ =
-              java.util.Collections.unmodifiableList(result.values_);
+          result.key_ = key_;
+          if (valuesBuilder_ == null) {
+            if (((bitField0_ & 0x00000002) == 0x00000002)) {
+              values_ = java.util.Collections.unmodifiableList(values_);
+              bitField0_ = (bitField0_ & ~0x00000002);
+            }
+            result.values_ = values_;
+          } else {
+            result.values_ = valuesBuilder_.build();
           }
-          org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row returnMe = result;
-          result = null;
-          return returnMe;
+          result.bitField0_ = to_bitField0_;
+          onBuilt();
+          return result;
         }
         
         public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -279,14 +372,42 @@ public final class CellSetMessage {
           if (other.hasKey()) {
             setKey(other.getKey());
           }
-          if (!other.values_.isEmpty()) {
-            if (result.values_.isEmpty()) {
-              result.values_ = new java.util.ArrayList<org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell>();
+          if (valuesBuilder_ == null) {
+            if (!other.values_.isEmpty()) {
+              if (values_.isEmpty()) {
+                values_ = other.values_;
+                bitField0_ = (bitField0_ & ~0x00000002);
+              } else {
+                ensureValuesIsMutable();
+                values_.addAll(other.values_);
+              }
+              onChanged();
             }
-            result.values_.addAll(other.values_);
+          } else {
+            if (!other.values_.isEmpty()) {
+              if (valuesBuilder_.isEmpty()) {
+                valuesBuilder_.dispose();
+                valuesBuilder_ = null;
+                values_ = other.values_;
+                bitField0_ = (bitField0_ & ~0x00000002);
+                valuesBuilder_ = 
+                  com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                     getValuesFieldBuilder() : null;
+              } else {
+                valuesBuilder_.addAllMessages(other.values_);
+              }
+            }
           }
           this.mergeUnknownFields(other.getUnknownFields());
           return this;
+        }
+        
+        public final boolean isInitialized() {
+          if (!hasKey()) {
+            
+            return false;
+          }
+          return true;
         }
         
         public Builder mergeFrom(
@@ -301,17 +422,20 @@ public final class CellSetMessage {
             switch (tag) {
               case 0:
                 this.setUnknownFields(unknownFields.build());
+                onChanged();
                 return this;
               default: {
                 if (!parseUnknownField(input, unknownFields,
                                        extensionRegistry, tag)) {
                   this.setUnknownFields(unknownFields.build());
+                  onChanged();
                   return this;
                 }
                 break;
               }
               case 10: {
-                setKey(input.readBytes());
+                bitField0_ |= 0x00000001;
+                key_ = input.readBytes();
                 break;
               }
               case 18: {
@@ -324,77 +448,216 @@ public final class CellSetMessage {
           }
         }
         
+        private int bitField0_;
         
         // required bytes key = 1;
+        private com.google.protobuf.ByteString key_ = com.google.protobuf.ByteString.EMPTY;
         public boolean hasKey() {
-          return result.hasKey();
+          return ((bitField0_ & 0x00000001) == 0x00000001);
         }
         public com.google.protobuf.ByteString getKey() {
-          return result.getKey();
+          return key_;
         }
         public Builder setKey(com.google.protobuf.ByteString value) {
           if (value == null) {
     throw new NullPointerException();
   }
-  result.hasKey = true;
-          result.key_ = value;
+  bitField0_ |= 0x00000001;
+          key_ = value;
+          onChanged();
           return this;
         }
         public Builder clearKey() {
-          result.hasKey = false;
-          result.key_ = getDefaultInstance().getKey();
+          bitField0_ = (bitField0_ & ~0x00000001);
+          key_ = getDefaultInstance().getKey();
+          onChanged();
           return this;
         }
         
         // repeated .org.apache.hadoop.hbase.rest.protobuf.generated.Cell values = 2;
+        private java.util.List<org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell> values_ =
+          java.util.Collections.emptyList();
+        private void ensureValuesIsMutable() {
+          if (!((bitField0_ & 0x00000002) == 0x00000002)) {
+            values_ = new java.util.ArrayList<org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell>(values_);
+            bitField0_ |= 0x00000002;
+           }
+        }
+        
+        private com.google.protobuf.RepeatedFieldBuilder<
+            org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell, org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell.Builder, org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.CellOrBuilder> valuesBuilder_;
+        
         public java.util.List<org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell> getValuesList() {
-          return java.util.Collections.unmodifiableList(result.values_);
+          if (valuesBuilder_ == null) {
+            return java.util.Collections.unmodifiableList(values_);
+          } else {
+            return valuesBuilder_.getMessageList();
+          }
         }
         public int getValuesCount() {
-          return result.getValuesCount();
+          if (valuesBuilder_ == null) {
+            return values_.size();
+          } else {
+            return valuesBuilder_.getCount();
+          }
         }
         public org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell getValues(int index) {
-          return result.getValues(index);
-        }
-        public Builder setValues(int index, org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell value) {
-          if (value == null) {
-            throw new NullPointerException();
+          if (valuesBuilder_ == null) {
+            return values_.get(index);
+          } else {
+            return valuesBuilder_.getMessage(index);
           }
-          result.values_.set(index, value);
+        }
+        public Builder setValues(
+            int index, org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell value) {
+          if (valuesBuilder_ == null) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            ensureValuesIsMutable();
+            values_.set(index, value);
+            onChanged();
+          } else {
+            valuesBuilder_.setMessage(index, value);
+          }
           return this;
         }
-        public Builder setValues(int index, org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell.Builder builderForValue) {
-          result.values_.set(index, builderForValue.build());
+        public Builder setValues(
+            int index, org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell.Builder builderForValue) {
+          if (valuesBuilder_ == null) {
+            ensureValuesIsMutable();
+            values_.set(index, builderForValue.build());
+            onChanged();
+          } else {
+            valuesBuilder_.setMessage(index, builderForValue.build());
+          }
           return this;
         }
         public Builder addValues(org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell value) {
-          if (value == null) {
-            throw new NullPointerException();
+          if (valuesBuilder_ == null) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            ensureValuesIsMutable();
+            values_.add(value);
+            onChanged();
+          } else {
+            valuesBuilder_.addMessage(value);
           }
-          if (result.values_.isEmpty()) {
-            result.values_ = new java.util.ArrayList<org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell>();
-          }
-          result.values_.add(value);
           return this;
         }
-        public Builder addValues(org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell.Builder builderForValue) {
-          if (result.values_.isEmpty()) {
-            result.values_ = new java.util.ArrayList<org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell>();
+        public Builder addValues(
+            int index, org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell value) {
+          if (valuesBuilder_ == null) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            ensureValuesIsMutable();
+            values_.add(index, value);
+            onChanged();
+          } else {
+            valuesBuilder_.addMessage(index, value);
           }
-          result.values_.add(builderForValue.build());
+          return this;
+        }
+        public Builder addValues(
+            org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell.Builder builderForValue) {
+          if (valuesBuilder_ == null) {
+            ensureValuesIsMutable();
+            values_.add(builderForValue.build());
+            onChanged();
+          } else {
+            valuesBuilder_.addMessage(builderForValue.build());
+          }
+          return this;
+        }
+        public Builder addValues(
+            int index, org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell.Builder builderForValue) {
+          if (valuesBuilder_ == null) {
+            ensureValuesIsMutable();
+            values_.add(index, builderForValue.build());
+            onChanged();
+          } else {
+            valuesBuilder_.addMessage(index, builderForValue.build());
+          }
           return this;
         }
         public Builder addAllValues(
             java.lang.Iterable<? extends org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell> values) {
-          if (result.values_.isEmpty()) {
-            result.values_ = new java.util.ArrayList<org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell>();
+          if (valuesBuilder_ == null) {
+            ensureValuesIsMutable();
+            super.addAll(values, values_);
+            onChanged();
+          } else {
+            valuesBuilder_.addAllMessages(values);
           }
-          super.addAll(values, result.values_);
           return this;
         }
         public Builder clearValues() {
-          result.values_ = java.util.Collections.emptyList();
+          if (valuesBuilder_ == null) {
+            values_ = java.util.Collections.emptyList();
+            bitField0_ = (bitField0_ & ~0x00000002);
+            onChanged();
+          } else {
+            valuesBuilder_.clear();
+          }
           return this;
+        }
+        public Builder removeValues(int index) {
+          if (valuesBuilder_ == null) {
+            ensureValuesIsMutable();
+            values_.remove(index);
+            onChanged();
+          } else {
+            valuesBuilder_.remove(index);
+          }
+          return this;
+        }
+        public org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell.Builder getValuesBuilder(
+            int index) {
+          return getValuesFieldBuilder().getBuilder(index);
+        }
+        public org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.CellOrBuilder getValuesOrBuilder(
+            int index) {
+          if (valuesBuilder_ == null) {
+            return values_.get(index);  } else {
+            return valuesBuilder_.getMessageOrBuilder(index);
+          }
+        }
+        public java.util.List<? extends org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.CellOrBuilder> 
+             getValuesOrBuilderList() {
+          if (valuesBuilder_ != null) {
+            return valuesBuilder_.getMessageOrBuilderList();
+          } else {
+            return java.util.Collections.unmodifiableList(values_);
+          }
+        }
+        public org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell.Builder addValuesBuilder() {
+          return getValuesFieldBuilder().addBuilder(
+              org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell.getDefaultInstance());
+        }
+        public org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell.Builder addValuesBuilder(
+            int index) {
+          return getValuesFieldBuilder().addBuilder(
+              index, org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell.getDefaultInstance());
+        }
+        public java.util.List<org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell.Builder> 
+             getValuesBuilderList() {
+          return getValuesFieldBuilder().getBuilderList();
+        }
+        private com.google.protobuf.RepeatedFieldBuilder<
+            org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell, org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell.Builder, org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.CellOrBuilder> 
+            getValuesFieldBuilder() {
+          if (valuesBuilder_ == null) {
+            valuesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+                org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell, org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell.Builder, org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.CellOrBuilder>(
+                    values_,
+                    ((bitField0_ & 0x00000002) == 0x00000002),
+                    getParentForChildren(),
+                    isClean());
+            values_ = null;
+          }
+          return valuesBuilder_;
         }
         
         // @@protoc_insertion_point(builder_scope:org.apache.hadoop.hbase.rest.protobuf.generated.CellSet.Row)
@@ -402,7 +665,6 @@ public final class CellSetMessage {
       
       static {
         defaultInstance = new Row(true);
-        org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.internalForceInit();
         defaultInstance.initFields();
       }
       
@@ -411,30 +673,48 @@ public final class CellSetMessage {
     
     // repeated .org.apache.hadoop.hbase.rest.protobuf.generated.CellSet.Row rows = 1;
     public static final int ROWS_FIELD_NUMBER = 1;
-    private java.util.List<org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row> rows_ =
-      java.util.Collections.emptyList();
+    private java.util.List<org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row> rows_;
     public java.util.List<org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row> getRowsList() {
       return rows_;
     }
-    public int getRowsCount() { return rows_.size(); }
+    public java.util.List<? extends org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.RowOrBuilder> 
+        getRowsOrBuilderList() {
+      return rows_;
+    }
+    public int getRowsCount() {
+      return rows_.size();
+    }
     public org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row getRows(int index) {
+      return rows_.get(index);
+    }
+    public org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.RowOrBuilder getRowsOrBuilder(
+        int index) {
       return rows_.get(index);
     }
     
     private void initFields() {
+      rows_ = java.util.Collections.emptyList();
     }
+    private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
-      for (org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row element : getRowsList()) {
-        if (!element.isInitialized()) return false;
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      for (int i = 0; i < getRowsCount(); i++) {
+        if (!getRows(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
       }
+      memoizedIsInitialized = 1;
       return true;
     }
     
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
-      for (org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row element : getRowsList()) {
-        output.writeMessage(1, element);
+      for (int i = 0; i < rows_.size(); i++) {
+        output.writeMessage(1, rows_.get(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -445,13 +725,20 @@ public final class CellSetMessage {
       if (size != -1) return size;
     
       size = 0;
-      for (org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row element : getRowsList()) {
+      for (int i = 0; i < rows_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, element);
+          .computeMessageSize(1, rows_.get(i));
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
     }
     
     public static org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet parseFrom(
@@ -528,34 +815,56 @@ public final class CellSetMessage {
     }
     public Builder toBuilder() { return newBuilder(this); }
     
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
     public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder> {
-      private org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet result;
-      
-      // Construct using org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.newBuilder()
-      private Builder() {}
-      
-      private static Builder create() {
-        Builder builder = new Builder();
-        builder.result = new org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet();
-        return builder;
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSetOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_CellSet_descriptor;
       }
       
-      protected org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet internalGetResult() {
-        return result;
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_CellSet_fieldAccessorTable;
+      }
+      
+      // Construct using org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private Builder(BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getRowsFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
       }
       
       public Builder clear() {
-        if (result == null) {
-          throw new IllegalStateException(
-            "Cannot call clear() after build().");
+        super.clear();
+        if (rowsBuilder_ == null) {
+          rows_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000001);
+        } else {
+          rowsBuilder_.clear();
         }
-        result = new org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet();
         return this;
       }
       
       public Builder clone() {
-        return create().mergeFrom(result);
+        return create().mergeFrom(buildPartial());
       }
       
       public com.google.protobuf.Descriptors.Descriptor
@@ -567,37 +876,38 @@ public final class CellSetMessage {
         return org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.getDefaultInstance();
       }
       
-      public boolean isInitialized() {
-        return result.isInitialized();
-      }
       public org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet build() {
-        if (result != null && !isInitialized()) {
+        org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet result = buildPartial();
+        if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
-        return buildPartial();
+        return result;
       }
       
       private org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet buildParsed()
           throws com.google.protobuf.InvalidProtocolBufferException {
-        if (!isInitialized()) {
+        org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet result = buildPartial();
+        if (!result.isInitialized()) {
           throw newUninitializedMessageException(
             result).asInvalidProtocolBufferException();
         }
-        return buildPartial();
+        return result;
       }
       
       public org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet buildPartial() {
-        if (result == null) {
-          throw new IllegalStateException(
-            "build() has already been called on this Builder.");
+        org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet result = new org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet(this);
+        int from_bitField0_ = bitField0_;
+        if (rowsBuilder_ == null) {
+          if (((bitField0_ & 0x00000001) == 0x00000001)) {
+            rows_ = java.util.Collections.unmodifiableList(rows_);
+            bitField0_ = (bitField0_ & ~0x00000001);
+          }
+          result.rows_ = rows_;
+        } else {
+          result.rows_ = rowsBuilder_.build();
         }
-        if (result.rows_ != java.util.Collections.EMPTY_LIST) {
-          result.rows_ =
-            java.util.Collections.unmodifiableList(result.rows_);
-        }
-        org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet returnMe = result;
-        result = null;
-        return returnMe;
+        onBuilt();
+        return result;
       }
       
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -611,14 +921,44 @@ public final class CellSetMessage {
       
       public Builder mergeFrom(org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet other) {
         if (other == org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.getDefaultInstance()) return this;
-        if (!other.rows_.isEmpty()) {
-          if (result.rows_.isEmpty()) {
-            result.rows_ = new java.util.ArrayList<org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row>();
+        if (rowsBuilder_ == null) {
+          if (!other.rows_.isEmpty()) {
+            if (rows_.isEmpty()) {
+              rows_ = other.rows_;
+              bitField0_ = (bitField0_ & ~0x00000001);
+            } else {
+              ensureRowsIsMutable();
+              rows_.addAll(other.rows_);
+            }
+            onChanged();
           }
-          result.rows_.addAll(other.rows_);
+        } else {
+          if (!other.rows_.isEmpty()) {
+            if (rowsBuilder_.isEmpty()) {
+              rowsBuilder_.dispose();
+              rowsBuilder_ = null;
+              rows_ = other.rows_;
+              bitField0_ = (bitField0_ & ~0x00000001);
+              rowsBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getRowsFieldBuilder() : null;
+            } else {
+              rowsBuilder_.addAllMessages(other.rows_);
+            }
+          }
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
+      }
+      
+      public final boolean isInitialized() {
+        for (int i = 0; i < getRowsCount(); i++) {
+          if (!getRows(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        return true;
       }
       
       public Builder mergeFrom(
@@ -633,11 +973,13 @@ public final class CellSetMessage {
           switch (tag) {
             case 0:
               this.setUnknownFields(unknownFields.build());
+              onChanged();
               return this;
             default: {
               if (!parseUnknownField(input, unknownFields,
                                      extensionRegistry, tag)) {
                 this.setUnknownFields(unknownFields.build());
+                onChanged();
                 return this;
               }
               break;
@@ -652,56 +994,192 @@ public final class CellSetMessage {
         }
       }
       
+      private int bitField0_;
       
       // repeated .org.apache.hadoop.hbase.rest.protobuf.generated.CellSet.Row rows = 1;
+      private java.util.List<org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row> rows_ =
+        java.util.Collections.emptyList();
+      private void ensureRowsIsMutable() {
+        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
+          rows_ = new java.util.ArrayList<org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row>(rows_);
+          bitField0_ |= 0x00000001;
+         }
+      }
+      
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row, org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row.Builder, org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.RowOrBuilder> rowsBuilder_;
+      
       public java.util.List<org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row> getRowsList() {
-        return java.util.Collections.unmodifiableList(result.rows_);
+        if (rowsBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(rows_);
+        } else {
+          return rowsBuilder_.getMessageList();
+        }
       }
       public int getRowsCount() {
-        return result.getRowsCount();
+        if (rowsBuilder_ == null) {
+          return rows_.size();
+        } else {
+          return rowsBuilder_.getCount();
+        }
       }
       public org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row getRows(int index) {
-        return result.getRows(index);
-      }
-      public Builder setRows(int index, org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row value) {
-        if (value == null) {
-          throw new NullPointerException();
+        if (rowsBuilder_ == null) {
+          return rows_.get(index);
+        } else {
+          return rowsBuilder_.getMessage(index);
         }
-        result.rows_.set(index, value);
+      }
+      public Builder setRows(
+          int index, org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row value) {
+        if (rowsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureRowsIsMutable();
+          rows_.set(index, value);
+          onChanged();
+        } else {
+          rowsBuilder_.setMessage(index, value);
+        }
         return this;
       }
-      public Builder setRows(int index, org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row.Builder builderForValue) {
-        result.rows_.set(index, builderForValue.build());
+      public Builder setRows(
+          int index, org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row.Builder builderForValue) {
+        if (rowsBuilder_ == null) {
+          ensureRowsIsMutable();
+          rows_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          rowsBuilder_.setMessage(index, builderForValue.build());
+        }
         return this;
       }
       public Builder addRows(org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row value) {
-        if (value == null) {
-          throw new NullPointerException();
+        if (rowsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureRowsIsMutable();
+          rows_.add(value);
+          onChanged();
+        } else {
+          rowsBuilder_.addMessage(value);
         }
-        if (result.rows_.isEmpty()) {
-          result.rows_ = new java.util.ArrayList<org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row>();
-        }
-        result.rows_.add(value);
         return this;
       }
-      public Builder addRows(org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row.Builder builderForValue) {
-        if (result.rows_.isEmpty()) {
-          result.rows_ = new java.util.ArrayList<org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row>();
+      public Builder addRows(
+          int index, org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row value) {
+        if (rowsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureRowsIsMutable();
+          rows_.add(index, value);
+          onChanged();
+        } else {
+          rowsBuilder_.addMessage(index, value);
         }
-        result.rows_.add(builderForValue.build());
+        return this;
+      }
+      public Builder addRows(
+          org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row.Builder builderForValue) {
+        if (rowsBuilder_ == null) {
+          ensureRowsIsMutable();
+          rows_.add(builderForValue.build());
+          onChanged();
+        } else {
+          rowsBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      public Builder addRows(
+          int index, org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row.Builder builderForValue) {
+        if (rowsBuilder_ == null) {
+          ensureRowsIsMutable();
+          rows_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          rowsBuilder_.addMessage(index, builderForValue.build());
+        }
         return this;
       }
       public Builder addAllRows(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row> values) {
-        if (result.rows_.isEmpty()) {
-          result.rows_ = new java.util.ArrayList<org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row>();
+        if (rowsBuilder_ == null) {
+          ensureRowsIsMutable();
+          super.addAll(values, rows_);
+          onChanged();
+        } else {
+          rowsBuilder_.addAllMessages(values);
         }
-        super.addAll(values, result.rows_);
         return this;
       }
       public Builder clearRows() {
-        result.rows_ = java.util.Collections.emptyList();
+        if (rowsBuilder_ == null) {
+          rows_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000001);
+          onChanged();
+        } else {
+          rowsBuilder_.clear();
+        }
         return this;
+      }
+      public Builder removeRows(int index) {
+        if (rowsBuilder_ == null) {
+          ensureRowsIsMutable();
+          rows_.remove(index);
+          onChanged();
+        } else {
+          rowsBuilder_.remove(index);
+        }
+        return this;
+      }
+      public org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row.Builder getRowsBuilder(
+          int index) {
+        return getRowsFieldBuilder().getBuilder(index);
+      }
+      public org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.RowOrBuilder getRowsOrBuilder(
+          int index) {
+        if (rowsBuilder_ == null) {
+          return rows_.get(index);  } else {
+          return rowsBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      public java.util.List<? extends org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.RowOrBuilder> 
+           getRowsOrBuilderList() {
+        if (rowsBuilder_ != null) {
+          return rowsBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(rows_);
+        }
+      }
+      public org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row.Builder addRowsBuilder() {
+        return getRowsFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row.getDefaultInstance());
+      }
+      public org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row.Builder addRowsBuilder(
+          int index) {
+        return getRowsFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row.getDefaultInstance());
+      }
+      public java.util.List<org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row.Builder> 
+           getRowsBuilderList() {
+        return getRowsFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row, org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row.Builder, org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.RowOrBuilder> 
+          getRowsFieldBuilder() {
+        if (rowsBuilder_ == null) {
+          rowsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row, org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.Row.Builder, org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet.RowOrBuilder>(
+                  rows_,
+                  ((bitField0_ & 0x00000001) == 0x00000001),
+                  getParentForChildren(),
+                  isClean());
+          rows_ = null;
+        }
+        return rowsBuilder_;
       }
       
       // @@protoc_insertion_point(builder_scope:org.apache.hadoop.hbase.rest.protobuf.generated.CellSet)
@@ -709,7 +1187,6 @@ public final class CellSetMessage {
     
     static {
       defaultInstance = new CellSet(true);
-      org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.internalForceInit();
       defaultInstance.initFields();
     }
     
@@ -773,8 +1250,6 @@ public final class CellSetMessage {
           org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.getDescriptor(),
         }, assigner);
   }
-  
-  public static void internalForceInit() {}
   
   // @@protoc_insertion_point(outer_class_scope)
 }

@@ -649,7 +649,7 @@
     <junit.version>4.8.2</junit.version>
     <log4j.version>1.2.16</log4j.version>
     <mockito-all.version>1.8.5</mockito-all.version>
-    <protobuf.version>2.3.0</protobuf.version>
+    <protobuf.version>2.4.0a</protobuf.version>
     <slf4j.version>1.5.8</slf4j.version><!-- newer version available -->
     <stax-api.version>1.0.1</stax-api.version>
     <thrift.version>0.6.1</thrift.version>

@@ -8,11 +8,35 @@ public final class VersionMessage {
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistry registry) {
   }
+  public interface VersionOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+    
+    // optional string restVersion = 1;
+    boolean hasRestVersion();
+    String getRestVersion();
+    
+    // optional string jvmVersion = 2;
+    boolean hasJvmVersion();
+    String getJvmVersion();
+    
+    // optional string osVersion = 3;
+    boolean hasOsVersion();
+    String getOsVersion();
+    
+    // optional string serverVersion = 4;
+    boolean hasServerVersion();
+    String getServerVersion();
+    
+    // optional string jerseyVersion = 5;
+    boolean hasJerseyVersion();
+    String getJerseyVersion();
+  }
   public static final class Version extends
-      com.google.protobuf.GeneratedMessage {
+      com.google.protobuf.GeneratedMessage
+      implements VersionOrBuilder {
     // Use Version.newBuilder() to construct.
-    private Version() {
-      initFields();
+    private Version(Builder builder) {
+      super(builder);
     }
     private Version(boolean noInit) {}
     
@@ -35,64 +59,200 @@ public final class VersionMessage {
       return org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_Version_fieldAccessorTable;
     }
     
+    private int bitField0_;
     // optional string restVersion = 1;
     public static final int RESTVERSION_FIELD_NUMBER = 1;
-    private boolean hasRestVersion;
-    private java.lang.String restVersion_ = "";
-    public boolean hasRestVersion() { return hasRestVersion; }
-    public java.lang.String getRestVersion() { return restVersion_; }
+    private java.lang.Object restVersion_;
+    public boolean hasRestVersion() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    public String getRestVersion() {
+      java.lang.Object ref = restVersion_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          restVersion_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getRestVersionBytes() {
+      java.lang.Object ref = restVersion_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        restVersion_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
     
     // optional string jvmVersion = 2;
     public static final int JVMVERSION_FIELD_NUMBER = 2;
-    private boolean hasJvmVersion;
-    private java.lang.String jvmVersion_ = "";
-    public boolean hasJvmVersion() { return hasJvmVersion; }
-    public java.lang.String getJvmVersion() { return jvmVersion_; }
+    private java.lang.Object jvmVersion_;
+    public boolean hasJvmVersion() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public String getJvmVersion() {
+      java.lang.Object ref = jvmVersion_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          jvmVersion_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getJvmVersionBytes() {
+      java.lang.Object ref = jvmVersion_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        jvmVersion_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
     
     // optional string osVersion = 3;
     public static final int OSVERSION_FIELD_NUMBER = 3;
-    private boolean hasOsVersion;
-    private java.lang.String osVersion_ = "";
-    public boolean hasOsVersion() { return hasOsVersion; }
-    public java.lang.String getOsVersion() { return osVersion_; }
+    private java.lang.Object osVersion_;
+    public boolean hasOsVersion() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    public String getOsVersion() {
+      java.lang.Object ref = osVersion_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          osVersion_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getOsVersionBytes() {
+      java.lang.Object ref = osVersion_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        osVersion_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
     
     // optional string serverVersion = 4;
     public static final int SERVERVERSION_FIELD_NUMBER = 4;
-    private boolean hasServerVersion;
-    private java.lang.String serverVersion_ = "";
-    public boolean hasServerVersion() { return hasServerVersion; }
-    public java.lang.String getServerVersion() { return serverVersion_; }
+    private java.lang.Object serverVersion_;
+    public boolean hasServerVersion() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    public String getServerVersion() {
+      java.lang.Object ref = serverVersion_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          serverVersion_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getServerVersionBytes() {
+      java.lang.Object ref = serverVersion_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        serverVersion_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
     
     // optional string jerseyVersion = 5;
     public static final int JERSEYVERSION_FIELD_NUMBER = 5;
-    private boolean hasJerseyVersion;
-    private java.lang.String jerseyVersion_ = "";
-    public boolean hasJerseyVersion() { return hasJerseyVersion; }
-    public java.lang.String getJerseyVersion() { return jerseyVersion_; }
+    private java.lang.Object jerseyVersion_;
+    public boolean hasJerseyVersion() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    public String getJerseyVersion() {
+      java.lang.Object ref = jerseyVersion_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          jerseyVersion_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getJerseyVersionBytes() {
+      java.lang.Object ref = jerseyVersion_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        jerseyVersion_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
     
     private void initFields() {
+      restVersion_ = "";
+      jvmVersion_ = "";
+      osVersion_ = "";
+      serverVersion_ = "";
+      jerseyVersion_ = "";
     }
+    private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      memoizedIsInitialized = 1;
       return true;
     }
     
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
-      if (hasRestVersion()) {
-        output.writeString(1, getRestVersion());
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, getRestVersionBytes());
       }
-      if (hasJvmVersion()) {
-        output.writeString(2, getJvmVersion());
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, getJvmVersionBytes());
       }
-      if (hasOsVersion()) {
-        output.writeString(3, getOsVersion());
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBytes(3, getOsVersionBytes());
       }
-      if (hasServerVersion()) {
-        output.writeString(4, getServerVersion());
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeBytes(4, getServerVersionBytes());
       }
-      if (hasJerseyVersion()) {
-        output.writeString(5, getJerseyVersion());
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeBytes(5, getJerseyVersionBytes());
       }
       getUnknownFields().writeTo(output);
     }
@@ -103,29 +263,36 @@ public final class VersionMessage {
       if (size != -1) return size;
     
       size = 0;
-      if (hasRestVersion()) {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeStringSize(1, getRestVersion());
+          .computeBytesSize(1, getRestVersionBytes());
       }
-      if (hasJvmVersion()) {
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeStringSize(2, getJvmVersion());
+          .computeBytesSize(2, getJvmVersionBytes());
       }
-      if (hasOsVersion()) {
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeStringSize(3, getOsVersion());
+          .computeBytesSize(3, getOsVersionBytes());
       }
-      if (hasServerVersion()) {
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeStringSize(4, getServerVersion());
+          .computeBytesSize(4, getServerVersionBytes());
       }
-      if (hasJerseyVersion()) {
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeStringSize(5, getJerseyVersion());
+          .computeBytesSize(5, getJerseyVersionBytes());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
     }
     
     public static org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version parseFrom(
@@ -202,34 +369,59 @@ public final class VersionMessage {
     }
     public Builder toBuilder() { return newBuilder(this); }
     
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
     public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder> {
-      private org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version result;
-      
-      // Construct using org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version.newBuilder()
-      private Builder() {}
-      
-      private static Builder create() {
-        Builder builder = new Builder();
-        builder.result = new org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version();
-        return builder;
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.VersionOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_Version_descriptor;
       }
       
-      protected org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version internalGetResult() {
-        return result;
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_Version_fieldAccessorTable;
+      }
+      
+      // Construct using org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private Builder(BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
       }
       
       public Builder clear() {
-        if (result == null) {
-          throw new IllegalStateException(
-            "Cannot call clear() after build().");
-        }
-        result = new org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version();
+        super.clear();
+        restVersion_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        jvmVersion_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        osVersion_ = "";
+        bitField0_ = (bitField0_ & ~0x00000004);
+        serverVersion_ = "";
+        bitField0_ = (bitField0_ & ~0x00000008);
+        jerseyVersion_ = "";
+        bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
       
       public Builder clone() {
-        return create().mergeFrom(result);
+        return create().mergeFrom(buildPartial());
       }
       
       public com.google.protobuf.Descriptors.Descriptor
@@ -241,33 +433,51 @@ public final class VersionMessage {
         return org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version.getDefaultInstance();
       }
       
-      public boolean isInitialized() {
-        return result.isInitialized();
-      }
       public org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version build() {
-        if (result != null && !isInitialized()) {
+        org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version result = buildPartial();
+        if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
-        return buildPartial();
+        return result;
       }
       
       private org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version buildParsed()
           throws com.google.protobuf.InvalidProtocolBufferException {
-        if (!isInitialized()) {
+        org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version result = buildPartial();
+        if (!result.isInitialized()) {
           throw newUninitializedMessageException(
             result).asInvalidProtocolBufferException();
         }
-        return buildPartial();
+        return result;
       }
       
       public org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version buildPartial() {
-        if (result == null) {
-          throw new IllegalStateException(
-            "build() has already been called on this Builder.");
+        org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version result = new org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
         }
-        org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version returnMe = result;
-        result = null;
-        return returnMe;
+        result.restVersion_ = restVersion_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.jvmVersion_ = jvmVersion_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.osVersion_ = osVersion_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.serverVersion_ = serverVersion_;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.jerseyVersion_ = jerseyVersion_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
       }
       
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -300,6 +510,10 @@ public final class VersionMessage {
         return this;
       }
       
+      public final boolean isInitialized() {
+        return true;
+      }
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -312,143 +526,226 @@ public final class VersionMessage {
           switch (tag) {
             case 0:
               this.setUnknownFields(unknownFields.build());
+              onChanged();
               return this;
             default: {
               if (!parseUnknownField(input, unknownFields,
                                      extensionRegistry, tag)) {
                 this.setUnknownFields(unknownFields.build());
+                onChanged();
                 return this;
               }
               break;
             }
             case 10: {
-              setRestVersion(input.readString());
+              bitField0_ |= 0x00000001;
+              restVersion_ = input.readBytes();
               break;
             }
             case 18: {
-              setJvmVersion(input.readString());
+              bitField0_ |= 0x00000002;
+              jvmVersion_ = input.readBytes();
               break;
             }
             case 26: {
-              setOsVersion(input.readString());
+              bitField0_ |= 0x00000004;
+              osVersion_ = input.readBytes();
               break;
             }
             case 34: {
-              setServerVersion(input.readString());
+              bitField0_ |= 0x00000008;
+              serverVersion_ = input.readBytes();
               break;
             }
             case 42: {
-              setJerseyVersion(input.readString());
+              bitField0_ |= 0x00000010;
+              jerseyVersion_ = input.readBytes();
               break;
             }
           }
         }
       }
       
+      private int bitField0_;
       
       // optional string restVersion = 1;
+      private java.lang.Object restVersion_ = "";
       public boolean hasRestVersion() {
-        return result.hasRestVersion();
+        return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      public java.lang.String getRestVersion() {
-        return result.getRestVersion();
+      public String getRestVersion() {
+        java.lang.Object ref = restVersion_;
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          restVersion_ = s;
+          return s;
+        } else {
+          return (String) ref;
+        }
       }
-      public Builder setRestVersion(java.lang.String value) {
+      public Builder setRestVersion(String value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  result.hasRestVersion = true;
-        result.restVersion_ = value;
+  bitField0_ |= 0x00000001;
+        restVersion_ = value;
+        onChanged();
         return this;
       }
       public Builder clearRestVersion() {
-        result.hasRestVersion = false;
-        result.restVersion_ = getDefaultInstance().getRestVersion();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        restVersion_ = getDefaultInstance().getRestVersion();
+        onChanged();
         return this;
+      }
+      void setRestVersion(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000001;
+        restVersion_ = value;
+        onChanged();
       }
       
       // optional string jvmVersion = 2;
+      private java.lang.Object jvmVersion_ = "";
       public boolean hasJvmVersion() {
-        return result.hasJvmVersion();
+        return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-      public java.lang.String getJvmVersion() {
-        return result.getJvmVersion();
+      public String getJvmVersion() {
+        java.lang.Object ref = jvmVersion_;
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          jvmVersion_ = s;
+          return s;
+        } else {
+          return (String) ref;
+        }
       }
-      public Builder setJvmVersion(java.lang.String value) {
+      public Builder setJvmVersion(String value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  result.hasJvmVersion = true;
-        result.jvmVersion_ = value;
+  bitField0_ |= 0x00000002;
+        jvmVersion_ = value;
+        onChanged();
         return this;
       }
       public Builder clearJvmVersion() {
-        result.hasJvmVersion = false;
-        result.jvmVersion_ = getDefaultInstance().getJvmVersion();
+        bitField0_ = (bitField0_ & ~0x00000002);
+        jvmVersion_ = getDefaultInstance().getJvmVersion();
+        onChanged();
         return this;
+      }
+      void setJvmVersion(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000002;
+        jvmVersion_ = value;
+        onChanged();
       }
       
       // optional string osVersion = 3;
+      private java.lang.Object osVersion_ = "";
       public boolean hasOsVersion() {
-        return result.hasOsVersion();
+        return ((bitField0_ & 0x00000004) == 0x00000004);
       }
-      public java.lang.String getOsVersion() {
-        return result.getOsVersion();
+      public String getOsVersion() {
+        java.lang.Object ref = osVersion_;
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          osVersion_ = s;
+          return s;
+        } else {
+          return (String) ref;
+        }
       }
-      public Builder setOsVersion(java.lang.String value) {
+      public Builder setOsVersion(String value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  result.hasOsVersion = true;
-        result.osVersion_ = value;
+  bitField0_ |= 0x00000004;
+        osVersion_ = value;
+        onChanged();
         return this;
       }
       public Builder clearOsVersion() {
-        result.hasOsVersion = false;
-        result.osVersion_ = getDefaultInstance().getOsVersion();
+        bitField0_ = (bitField0_ & ~0x00000004);
+        osVersion_ = getDefaultInstance().getOsVersion();
+        onChanged();
         return this;
+      }
+      void setOsVersion(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000004;
+        osVersion_ = value;
+        onChanged();
       }
       
       // optional string serverVersion = 4;
+      private java.lang.Object serverVersion_ = "";
       public boolean hasServerVersion() {
-        return result.hasServerVersion();
+        return ((bitField0_ & 0x00000008) == 0x00000008);
       }
-      public java.lang.String getServerVersion() {
-        return result.getServerVersion();
+      public String getServerVersion() {
+        java.lang.Object ref = serverVersion_;
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          serverVersion_ = s;
+          return s;
+        } else {
+          return (String) ref;
+        }
       }
-      public Builder setServerVersion(java.lang.String value) {
+      public Builder setServerVersion(String value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  result.hasServerVersion = true;
-        result.serverVersion_ = value;
+  bitField0_ |= 0x00000008;
+        serverVersion_ = value;
+        onChanged();
         return this;
       }
       public Builder clearServerVersion() {
-        result.hasServerVersion = false;
-        result.serverVersion_ = getDefaultInstance().getServerVersion();
+        bitField0_ = (bitField0_ & ~0x00000008);
+        serverVersion_ = getDefaultInstance().getServerVersion();
+        onChanged();
         return this;
+      }
+      void setServerVersion(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000008;
+        serverVersion_ = value;
+        onChanged();
       }
       
       // optional string jerseyVersion = 5;
+      private java.lang.Object jerseyVersion_ = "";
       public boolean hasJerseyVersion() {
-        return result.hasJerseyVersion();
+        return ((bitField0_ & 0x00000010) == 0x00000010);
       }
-      public java.lang.String getJerseyVersion() {
-        return result.getJerseyVersion();
+      public String getJerseyVersion() {
+        java.lang.Object ref = jerseyVersion_;
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          jerseyVersion_ = s;
+          return s;
+        } else {
+          return (String) ref;
+        }
       }
-      public Builder setJerseyVersion(java.lang.String value) {
+      public Builder setJerseyVersion(String value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  result.hasJerseyVersion = true;
-        result.jerseyVersion_ = value;
+  bitField0_ |= 0x00000010;
+        jerseyVersion_ = value;
+        onChanged();
         return this;
       }
       public Builder clearJerseyVersion() {
-        result.hasJerseyVersion = false;
-        result.jerseyVersion_ = getDefaultInstance().getJerseyVersion();
+        bitField0_ = (bitField0_ & ~0x00000010);
+        jerseyVersion_ = getDefaultInstance().getJerseyVersion();
+        onChanged();
         return this;
+      }
+      void setJerseyVersion(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000010;
+        jerseyVersion_ = value;
+        onChanged();
       }
       
       // @@protoc_insertion_point(builder_scope:org.apache.hadoop.hbase.rest.protobuf.generated.Version)
@@ -456,7 +753,6 @@ public final class VersionMessage {
     
     static {
       defaultInstance = new Version(true);
-      org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.internalForceInit();
       defaultInstance.initFields();
     }
     
@@ -504,8 +800,6 @@ public final class VersionMessage {
         new com.google.protobuf.Descriptors.FileDescriptor[] {
         }, assigner);
   }
-  
-  public static void internalForceInit() {}
   
   // @@protoc_insertion_point(outer_class_scope)
 }

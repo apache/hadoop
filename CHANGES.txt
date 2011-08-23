@@ -16,6 +16,7 @@ Release 0.91.0 - Unreleased
    HBASE-3534  Action should not store or serialize regionName (Ted Yu)
    HBASE-4197  RegionServer expects all scanner to be subclasses of
                HRegion.RegionScanner (Lars Hofhansl)
+   HBASE-4233  Update protobuf dependency to 2.4.0a (todd)
 
   BUG FIXES
    HBASE-3280  YouAreDeadException being swallowed in HRS getMaster
