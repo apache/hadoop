@@ -1130,6 +1130,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2649. Handling of finished applications in RM. (Thomas Graves
     via acmurthy) 
 
+    MAPREDUCE-2838. Fix MapReduce builds to use new hadoop-common test jars.
+    (gkesavan via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

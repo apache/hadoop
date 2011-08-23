@@ -211,7 +211,7 @@
   <property name="hadoop-mapred-tools.pom" location="${ivy.dir}/hadoop-mapred-tools.xml"/>
 
   <!--this is the naming policy for artifacts we want pulled down-->
-  <property name="ivy.artifact.retrieve.pattern" value="${ant.project.name}/[conf]/[artifact]-[revision].[ext]"/>
+  <property name="ivy.artifact.retrieve.pattern" value="${ant.project.name}/[conf]/[artifact]-[revision](-[classifier]).[ext]"/>
 
   <!--this is how artifacts that get built are named-->
   <property name="ivy.publish.pattern" value="hadoop-[revision]-core.[ext]"/>

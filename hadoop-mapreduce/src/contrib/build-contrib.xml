@@ -92,7 +92,7 @@
 
   <!--this is the naming policy for artifacts we want pulled down-->
   <property name="ivy.artifact.retrieve.pattern"
-    			value="${ant.project.name}/[conf]/[artifact]-[revision].[ext]"/>
+    			value="${ant.project.name}/[conf]/[artifact]-[revision](-[classifier]).[ext]"/>
 
   <!-- the normal classpath -->
   <path id="contrib-classpath">

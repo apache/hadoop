@@ -15,7 +15,8 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 -->
-<ivy-module version="1.0">
+
+<ivy-module version="1.0" xmlns:m="http://ant.apache.org/ivy/maven">
   <info organisation="org.apache.hadoop" module="${ant.project.name}">
     <license name="Apache 2.0"/>
     <ivyauthor name="Apache Hadoop Team" url="http://hadoop.apache.org"/>
@@ -43,12 +44,16 @@
    <dependency org="org.apache.hadoop" name="hadoop-annotations" rev="${hadoop-common.version}" conf="common->default"/>
     <dependency org="org.apache.hadoop" name="hadoop-common" 
                 rev="${hadoop-common.version}" conf="common->default"/>
-    <dependency org="org.apache.hadoop" name="hadoop-common-test" 
-                rev="${hadoop-common.version}" conf="test->default"/>
+    <dependency org="org.apache.hadoop" name="hadoop-common" 
+                rev="${hadoop-common.version}" conf="test->default">
+      <artifact name="hadoop-common" type="tests" ext="jar" m:classifier="tests"/>
+    </dependency>
     <dependency org="org.apache.hadoop" name="hadoop-hdfs" 
                 rev="${hadoop-hdfs.version}" conf="common->default"/>
-    <dependency org="org.apache.hadoop" name="hadoop-hdfs-test"
-                rev="${hadoop-hdfs.version}" conf="test->default"/>
+    <dependency org="org.apache.hadoop" name="hadoop-hdfs"
+                rev="${hadoop-hdfs.version}" conf="test->default">
+      <artifact name="hadoop-hdfs" type="tests" ext="jar" m:classifier="tests"/>
+    </dependency>
    <dependency org="org.apache.hadoop" name="hadoop-mapreduce-client-core" 
                rev="${yarn.version}" conf="common->default"/>
    <dependency org="org.apache.hadoop" name="hadoop-yarn-common"
