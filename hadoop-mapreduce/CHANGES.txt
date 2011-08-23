@@ -1127,6 +1127,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-2868. ant build broken in hadoop-mapreduce dir (mahadev, giri and arun via mahadev)
 
+    MAPREDUCE-2649. Handling of finished applications in RM. (Thomas Graves
+    via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

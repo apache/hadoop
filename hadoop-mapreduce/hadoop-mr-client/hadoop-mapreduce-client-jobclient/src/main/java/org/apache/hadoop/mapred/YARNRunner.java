@@ -244,8 +244,8 @@ public class YARNRunner implements ClientProtocol {
     
     ApplicationReport appMaster = resMgrDelegate
         .getApplicationReport(applicationId);
-    if (appMaster.getState() == ApplicationState.FAILED || appMaster.getState() ==
-      ApplicationState.KILLED) {
+    if (appMaster == null || appMaster.getState() == ApplicationState.FAILED 
+        || appMaster.getState() == ApplicationState.KILLED) {
       throw RPCUtil.getRemoteException("failed to run job");
     }
     return clientServiceDelegate.getJobStatus(jobId);

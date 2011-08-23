@@ -42,8 +42,13 @@ public class MockRM extends ResourceManager {
 
   public void waitForState(ApplicationId appId, RMAppState finalState) 
       throws Exception {
-    RMApp app = getRMContext().getRMApps().get(appId);
     int timeoutSecs = 0;
+    RMApp app = null;
+    while ((app == null) && timeoutSecs++ < 20) {
+      app = getRMContext().getRMApps().get(appId);
+      Thread.sleep(500);
+    }
+    timeoutSecs = 0;
     while (!finalState.equals(app.getState()) &&
         timeoutSecs++ < 20) {
       System.out.println("App State is : " + app.getState() +
@@ -108,8 +113,7 @@ public class MockRM extends ResourceManager {
 
   @Override
   protected ClientRMService createClientRMService() {
-    return new ClientRMService(getRMContext(),
-        clientToAMSecretManager, getResourceScheduler(), masterService) {
+    return new ClientRMService(getRMContext(), getResourceScheduler()) {
       @Override
       public void start() {
         //override to not start rpc handler

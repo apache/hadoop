@@ -263,6 +263,18 @@ public class TestRMAppTransitions {
   }
 
   @Test
+  public void testAppNewReject() throws IOException {
+    LOG.info("--- START: testAppNewReject ---");
+
+    RMApp application = createNewTestApp();
+    // NEW => FAILED event RMAppEventType.APP_REJECTED
+    String rejectedText = "Test Application Rejected";
+    RMAppEvent event = new RMAppRejectedEvent(application.getApplicationId(), rejectedText);
+    application.handle(event);
+    assertFailed(application, rejectedText);
+  }
+
+  @Test
   public void testAppSubmittedRejected() throws IOException {
     LOG.info("--- START: testAppSubmittedRejected ---");
 

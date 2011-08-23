@@ -45,6 +45,14 @@
     <value>/etc/krb5.keytab</value>
   </property>
 
+  <property>
+    <name>yarn.server.resourcemanager.expire.applications.completed.max</name>
+    <value>10000</value>
+    <description>the maximum number of completed applications the RM 
+      keeps in memory
+    </description>
+  </property>
+
 <!-- All nodemanager related configuration properties -->
 
   <property>

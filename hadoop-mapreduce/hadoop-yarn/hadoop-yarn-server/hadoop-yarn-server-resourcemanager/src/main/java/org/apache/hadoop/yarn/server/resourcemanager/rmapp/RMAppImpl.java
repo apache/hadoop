@@ -24,6 +24,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
@@ -89,6 +91,8 @@ public class RMAppImpl implements RMApp {
         RMAppEventType.START, new StartAppAttemptTransition())
     .addTransition(RMAppState.NEW, RMAppState.KILLED, RMAppEventType.KILL,
         new AppKilledTransition())
+    .addTransition(RMAppState.NEW, RMAppState.FAILED,
+        RMAppEventType.APP_REJECTED, new AppRejectedTransition())
 
      // Transitions from SUBMITTED state
     .addTransition(RMAppState.SUBMITTED, RMAppState.FAILED,
@@ -429,6 +433,9 @@ public class RMAppImpl implements RMApp {
             new RMNodeCleanAppEvent(nodeId, app.applicationId));
       }
       app.finishTime = System.currentTimeMillis();
+      app.dispatcher.getEventHandler().handle(
+          new RMAppManagerEvent(app.applicationId, 
+          RMAppManagerEventType.APP_COMPLETED));
     };
   }
 

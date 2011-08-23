@@ -36,7 +36,6 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationResponse;
@@ -70,10 +69,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientRMSecurityInfo;
-import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -97,8 +93,6 @@ public class ClientRMService extends AbstractService implements
   final private AtomicInteger applicationCounter = new AtomicInteger(0);
   final private YarnScheduler scheduler;
   final private RMContext rmContext;
-  private final ApplicationMasterService masterService;
-  private final ClientToAMSecretManager clientToAMSecretManager;
   private final AMLivelinessMonitor amLivelinessMonitor;
 
   private String clientServiceBindAddress;
@@ -109,15 +103,11 @@ public class ClientRMService extends AbstractService implements
   private  ApplicationACLsManager aclsManager;
   private Map<ApplicationACL, AccessControlList> applicationACLs;
   
-  public ClientRMService(RMContext rmContext,
-      ClientToAMSecretManager clientToAMSecretManager,
-      YarnScheduler scheduler, ApplicationMasterService masterService) {
+  public ClientRMService(RMContext rmContext, YarnScheduler scheduler) {
     super(ClientRMService.class.getName());
     this.scheduler = scheduler;
     this.rmContext = rmContext;
-    this.masterService = masterService;
     this.amLivelinessMonitor = rmContext.getAMLivelinessMonitor();
-    this.clientToAMSecretManager = clientToAMSecretManager;
   }
   
   @Override
@@ -206,42 +196,17 @@ public class ClientRMService extends AbstractService implements
     ApplicationSubmissionContext submissionContext = request
         .getApplicationSubmissionContext();
     try {
-
-      ApplicationId applicationId = submissionContext.getApplicationId();
-      String clientTokenStr = null;
       String user = UserGroupInformation.getCurrentUser().getShortUserName();
-      if (UserGroupInformation.isSecurityEnabled()) {
-        Token<ApplicationTokenIdentifier> clientToken = new Token<ApplicationTokenIdentifier>(
-            new ApplicationTokenIdentifier(applicationId),
-            this.clientToAMSecretManager);
-        clientTokenStr = clientToken.encodeToUrlString();
-        LOG.debug("Sending client token as " + clientTokenStr);
-      }
-
-      submissionContext.setQueue(submissionContext.getQueue() == null
-          ? "default" : submissionContext.getQueue());
-      submissionContext.setApplicationName(submissionContext
-          .getApplicationName() == null ? "N/A" : submissionContext
-          .getApplicationName());
-
-      ApplicationStore appStore = rmContext.getApplicationsStore()
-          .createApplicationStore(submissionContext.getApplicationId(),
-              submissionContext);
-      RMApp application = new RMAppImpl(applicationId, rmContext,
-          getConfig(), submissionContext.getApplicationName(), user,
-          submissionContext.getQueue(), submissionContext, clientTokenStr,
-          appStore, this.amLivelinessMonitor, this.scheduler,
-          this.masterService);
-      if (rmContext.getRMApps().putIfAbsent(applicationId, application) != null) {
+      ApplicationId applicationId = submissionContext.getApplicationId();
+      if (rmContext.getRMApps().get(applicationId) != null) {
         throw new IOException("Application with id " + applicationId
             + " is already present! Cannot add a duplicate!");
       }
-
       this.rmContext.getDispatcher().getEventHandler().handle(
-          new RMAppEvent(applicationId, RMAppEventType.START));
+          new RMAppManagerSubmitEvent(submissionContext));
 
-      LOG.info("Application with id " + applicationId.getId()
-          + " submitted by user " + user + " with " + submissionContext);
+      LOG.info("Application with id " + applicationId.getId() + 
+          " submitted by user " + user + " with " + submissionContext);
     } catch (IOException ie) {
       LOG.info("Exception in submitting application", ie);
       throw RPCUtil.getRemoteException(ie);
