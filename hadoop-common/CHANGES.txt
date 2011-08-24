@@ -340,6 +340,8 @@ Trunk (unreleased changes)
     HADOOP-7496. Break Maven TAR & bintar profiles into just LAYOUT & TAR proper.
     (Alejandro Abdelnur via tomwhite)
 
+    HADOOP-7561. Make test-patch only run tests for changed modules. (tomwhite)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

@@ -446,7 +446,7 @@ checkReleaseAuditWarnings () {
   echo ""
   echo "$MVN apache-rat:check -D${PROJECT_NAME}PatchProcess 2>&1"
   $MVN apache-rat:check -D${PROJECT_NAME}PatchProcess 2>&1
-  find . -name rat.txt | xargs cat > $PATCH_DIR/patchReleaseAuditWarnings.txt
+  find $BASEDIR -name rat.txt | xargs cat > $PATCH_DIR/patchReleaseAuditWarnings.txt
 
   ### Compare trunk and patch release audit warning numbers
   if [[ -f $PATCH_DIR/patchReleaseAuditWarnings.txt ]] ; then
@@ -549,7 +549,7 @@ checkFindbugsWarnings () {
     $FINDBUGS_HOME/bin/convertXmlToText -html \
       $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.xml \
       $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.html
-    JIRA_COMMENT_FOOTER="Findbugs warnings: $BUILD_URL/artifact/trunk/target/newPatchFindbugsWarnings${module_suffix}.html
+    JIRA_COMMENT_FOOTER="Findbugs warnings: $BUILD_URL/artifact/trunk/patchprocess/newPatchFindbugsWarnings${module_suffix}.html
 $JIRA_COMMENT_FOOTER"
   done
 
@@ -567,40 +567,81 @@ $JIRA_COMMENT_FOOTER"
 }
 
 ###############################################################################
-### Run the test-core target
-runCoreTests () {
+### Run the tests
+runTests () {
   echo ""
   echo ""
   echo "======================================================================"
   echo "======================================================================"
-  echo "    Running core tests."
+  echo "    Running tests."
   echo "======================================================================"
   echo "======================================================================"
   echo ""
   echo ""
   
-  ### Kill any rogue build processes from the last attempt
-  $PS auxwww | $GREP ${PROJECT_NAME}PatchProcess | $AWK '{print $2}' | /usr/bin/xargs -t -I {} /bin/kill -9 {} > /dev/null
-  PreTestTarget=""
-  if [[ $defect == MAPREDUCE-* ]] ; then
-     PreTestTarget="create-c++-configure"
-  fi
+  failed_tests=""
+  modules=$(findModules)
+  for module in $modules;
+  do
+    pushd $module
+      echo "    Running tests in $module"
+      ### Kill any rogue build processes from the last attempt
+      $PS auxwww | $GREP ${PROJECT_NAME}PatchProcess | $AWK '{print $2}' | /usr/bin/xargs -t -I {} /bin/kill -9 {} > /dev/null
 
-  echo "$MVN clean test -Pnative -D${PROJECT_NAME}PatchProcess"
-  $MVN clean test -Pnative -D${PROJECT_NAME}PatchProcess
-  if [[ $? != 0 ]] ; then
-    ### Find and format names of failed tests
-    failed_tests=`grep -l -E "<failure|<error" $WORKSPACE/trunk/target/hadoop-common/surefire-reports/*.xml | sed -e "s|.*target/surefire-reports/TEST-|                  |g" | sed -e "s|\.xml||g"`
+      echo "$MVN clean test -Pnative -D${PROJECT_NAME}PatchProcess"
+      $MVN clean test -Pnative -D${PROJECT_NAME}PatchProcess
+      if [[ $? != 0 ]] ; then
+        ### Find and format names of failed tests
+        module_failed_tests=`find . -name 'TEST*.xml' | xargs $GREP  -l -E "<failure|<error" | sed -e "s|.*target/surefire-reports/TEST-|                  |g" | sed -e "s|\.xml||g"`
+        failed_tests="${failed_tests}
+${module_failed_tests}"
+      fi
+    popd
+  done
+  echo $failed_tests
+  
+  if [[ -n "$failed_tests" ]] ; then
+  
     JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 core tests.  The patch failed these core unit tests:
+    -1 core tests.  The patch failed these unit tests:
 $failed_tests"
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    +1 core tests.  The patch passed core unit tests."
+    +1 core tests.  The patch passed unit tests in $modules."
   return 0
+}
+
+###############################################################################
+### Find the modules changed by the patch
+
+findModules () {
+  # Come up with a list of changed files into $TMP
+  TMP=/tmp/tmp.paths.$$
+  $GREP '^+++\|^---' $PATCH_DIR/patch | cut -c '5-' | $GREP -v /dev/null | sort | uniq > $TMP
+
+  # if all of the lines start with a/ or b/, then this is a git patch that
+  # was generated without --no-prefix
+  if ! $GREP -qv '^a/\|^b/' $TMP ; then
+    sed -i -e 's,^[ab]/,,' $TMP
+  fi
+
+  PREFIX_DIRS=$(cut -d '/' -f 1 $TMP | sort | uniq)
+
+  # if all of the lines start with hadoop-common/, hadoop-hdfs/, or hadoop-mapreduce/, this is
+  # relative to the hadoop root instead of the subproject root
+  if [[ "$PREFIX_DIRS" =~ ^(hadoop-alfredo|hadoop-annotations|hadoop-common|hadoop-hdfs|hadoop-mapreduce)$ ]]; then
+    echo $PREFIX_DIRS
+    return 0
+  elif ! echo "$PREFIX_DIRS" | grep -vxq 'hadoop-alfredo\|hadoop-annotations\|hadoop-common\|hadoop-hdfs\|hadoop-mapreduce' ; then
+    echo $PREFIX_DIRS
+    return 0
+  fi
+  
+  # No modules found. Running from current directory.
+  echo .
 }
 
 ###############################################################################
@@ -658,6 +699,7 @@ checkInjectSystemFaults () {
   #echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=no -Dcompile.c++=yes -Dforrest.home=$FORREST_HOME inject-system-faults"
   #$ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=no -Dcompile.c++=yes -Dforrest.home=$FORREST_HOME inject-system-faults
   echo "NOP"
+  return 0
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
@@ -779,7 +821,7 @@ checkReleaseAuditWarnings
 (( RESULT = RESULT + $? ))
 ### Do not call these when run by a developer 
 if [[ $JENKINS == "true" ]] ; then
-  runCoreTests
+  runTests
   (( RESULT = RESULT + $? ))
   runContribTests
   (( RESULT = RESULT + $? ))
