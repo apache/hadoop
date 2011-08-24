@@ -49,8 +49,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.NoServerForRegionException;
@@ -373,11 +373,11 @@ public class RegionSplitter {
     // requests to the same RS can stall the outstanding split queue.
     // To fix, group the regions into an RS pool and round-robin through it
     LOG.debug("Bucketing regions by regionserver...");
-    TreeMap<HServerAddress, LinkedList<Pair<byte[], byte[]>>> daughterRegions = Maps
-        .newTreeMap();
+    TreeMap<String, LinkedList<Pair<byte[], byte[]>>> daughterRegions =
+      Maps.newTreeMap();
     for (Pair<byte[], byte[]> dr : tmpRegionSet) {
-      HServerAddress rsLocation = table.getRegionLocation(dr.getSecond())
-          .getServerAddress();
+      String rsLocation = table.getRegionLocation(dr.getSecond()).
+        getHostnamePort();
       if (!daughterRegions.containsKey(rsLocation)) {
         LinkedList<Pair<byte[], byte[]>> entry = Lists.newLinkedList();
         daughterRegions.put(rsLocation, entry);
@@ -401,9 +401,9 @@ public class RegionSplitter {
         LOG.debug(daughterRegions.size() + " RS have regions to splt.");
 
         // Get RegionServer : region count mapping
-        final TreeMap<HServerAddress, Integer> rsSizes = Maps.newTreeMap();
-        Map<HRegionInfo, HServerAddress> regionsInfo = table.getRegionsInfo();
-        for (HServerAddress rs : regionsInfo.values()) {
+        final TreeMap<ServerName, Integer> rsSizes = Maps.newTreeMap();
+        Map<HRegionInfo, ServerName> regionsInfo = table.getRegionLocations();
+        for (ServerName rs : regionsInfo.values()) {
           if (rsSizes.containsKey(rs)) {
             rsSizes.put(rs, rsSizes.get(rs) + 1);
           } else {
@@ -412,17 +412,16 @@ public class RegionSplitter {
         }
 
         // sort the RS by the number of regions they have
-        List<HServerAddress> serversLeft = Lists.newArrayList(daughterRegions
-            .keySet());
-        Collections.sort(serversLeft, new Comparator<HServerAddress>() {
-          public int compare(HServerAddress o1, HServerAddress o2) {
+        List<String> serversLeft = Lists.newArrayList(daughterRegions .keySet());
+        Collections.sort(serversLeft, new Comparator<String>() {
+          public int compare(String o1, String o2) {
             return rsSizes.get(o1).compareTo(rsSizes.get(o2));
           }
         });
 
         // round-robin through the RS list. Choose the lightest-loaded servers
         // first to keep the master from load-balancing regions as we split.
-        for (HServerAddress rsLoc : serversLeft) {
+        for (String rsLoc : serversLeft) {
           Pair<byte[], byte[]> dr = null;
 
           // find a region in the RS list that hasn't been moved
@@ -437,7 +436,7 @@ public class RegionSplitter {
             HRegionLocation regionLoc = table.getRegionLocation(split);
 
             // if this region moved locations
-            HServerAddress newRs = regionLoc.getServerAddress();
+            String newRs = regionLoc.getHostnamePort();
             if (newRs.compareTo(rsLoc) != 0) {
               LOG.debug("Region with " + splitAlgo.rowToStr(split)
                   + " moved to " + newRs + ". Relocating...");

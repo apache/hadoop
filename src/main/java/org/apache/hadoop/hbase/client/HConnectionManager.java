@@ -35,7 +35,6 @@ import java.util.NoSuchElementException;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -1122,7 +1121,7 @@ public class HConnectionManager {
       if (tableLocations.put(startKey, location) == null) {
         LOG.debug("Cached location for " +
             location.getRegionInfo().getRegionNameAsString() +
-            " is " + location.getServerAddress());
+            " is " + location.getHostnamePort());
       }
     }
 

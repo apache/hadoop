@@ -20,18 +20,15 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.io.IOException;
+import java.net.SocketTimeoutException;
+import java.util.concurrent.Callable;
+
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.retry.RetryPolicy;
-
-import java.io.IOException;
-import java.net.SocketTimeoutException;
-import java.util.concurrent.Callable;
 
 /**
  * Abstract class that implements Callable, used by retryable actions.
@@ -68,7 +65,8 @@ public abstract class ServerCallable<T> implements Callable<T> {
    */
   public void instantiateServer(boolean reload) throws IOException {
     this.location = connection.getRegionLocation(tableName, row, reload);
-    this.server = connection.getHRegionConnection(location.getServerAddress());
+    this.server = connection.getHRegionConnection(location.getHostname(),
+      location.getPort());
   }
 
   /** @return the server name */
@@ -76,7 +74,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
     if (location == null) {
       return null;
     }
-    return location.getServerAddress().toString();
+    return location.getHostnamePort();
   }
 
   /** @return the region name */

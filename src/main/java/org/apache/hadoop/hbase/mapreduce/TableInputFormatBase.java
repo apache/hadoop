@@ -141,7 +141,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
         continue;
       }
       String regionLocation = table.getRegionLocation(keys.getFirst()[i]).
-        getServerAddress().getHostname();
+        getHostname();
       byte[] startRow = scan.getStartRow();
       byte[] stopRow = scan.getStopRow();
       // determine if the given start an stop key fall into the region

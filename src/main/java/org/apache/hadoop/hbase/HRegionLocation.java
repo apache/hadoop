@@ -94,10 +94,12 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
     return regionInfo;
   }
 
-  /** @return HServerAddress
+  /**
+   * Do not use!!! Creates a HServerAddress instance which will do a resolve.
+   * @return HServerAddress
    * @deprecated Use {@link #getHostnamePort}
    */
-  public HServerAddress getServerAddress(){
+  public HServerAddress getServerAddress() {
     return new HServerAddress(this.hostname, this.port);
   }
 
