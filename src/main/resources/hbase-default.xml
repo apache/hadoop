@@ -200,6 +200,15 @@
     of how many edits it has.</description>
   </property>
   <property>
+    <name>hbase.regionserver.logroll.errors.tolerated</name>
+    <value>2</value>
+    <description>The number of consecutive WAL close errors we will allow
+    before triggering a server abort.  A setting of 0 will cause the
+    region server to abort if closing the current WAL writer fails during
+    log rolling.  Even a small value (2 or 3) will allow a region server
+    to ride over transient HDFS errors.</description>
+  </property>
+  <property>
     <name>hbase.regionserver.hlog.reader.impl</name>
     <value>org.apache.hadoop.hbase.regionserver.wal.SequenceFileLogReader</value>
     <description>The HLog file reader implementation.</description>

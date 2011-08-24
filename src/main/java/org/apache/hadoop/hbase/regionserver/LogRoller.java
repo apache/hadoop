@@ -83,12 +83,14 @@ class LogRoller extends Thread implements WALActionsListener {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Hlog roll period " + this.rollperiod + "ms elapsed");
         }
+      } else if (LOG.isDebugEnabled()) {
+        LOG.debug("HLog roll manually triggered");
       }
       rollLock.lock(); // FindBugs UL_UNRELEASED_LOCK_EXCEPTION_PATH
       try {
         this.lastrolltime = now;
         // This is array of actual region names.
-        byte [][] regionsToFlush = this.services.getWAL().rollWriter();
+        byte [][] regionsToFlush = this.services.getWAL().rollWriter(rollLog.get());
         if (regionsToFlush != null) {
           for (byte [] r: regionsToFlush) scheduleFlush(r);
         }

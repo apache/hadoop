@@ -231,6 +231,11 @@ public class HLog implements Syncable {
    */
   private final LogSyncer logSyncerThread;
 
+  /** Number of log close errors tolerated before we abort */
+  private final int closeErrorsTolerated;
+
+  private final AtomicInteger closeErrorCount = new AtomicInteger();
+
   /**
    * Pattern used to validate a HLog file name
    */
@@ -376,6 +381,9 @@ public class HLog implements Syncable {
     this.lowReplicationRollLimit = conf.getInt(
         "hbase.regionserver.hlog.lowreplication.rolllimit", 5);
     this.enabled = conf.getBoolean("hbase.regionserver.hlog.enabled", true);
+    this.closeErrorsTolerated = conf.getInt(
+        "hbase.regionserver.logroll.errors.tolerated", 0);
+
     LOG.info("HLog configuration: blocksize=" +
       StringUtils.byteDesc(this.blocksize) +
       ", rollsize=" + StringUtils.byteDesc(this.logrollsize) +
@@ -497,8 +505,35 @@ public class HLog implements Syncable {
    * @throws IOException
    */
   public byte [][] rollWriter() throws FailedLogCloseException, IOException {
+    return rollWriter(false);
+  }
+
+  /**
+   * Roll the log writer. That is, start writing log messages to a new file.
+   *
+   * Because a log cannot be rolled during a cache flush, and a cache flush
+   * spans two method calls, a special lock needs to be obtained so that a cache
+   * flush cannot start when the log is being rolled and the log cannot be
+   * rolled during a cache flush.
+   *
+   * <p>Note that this method cannot be synchronized because it is possible that
+   * startCacheFlush runs, obtaining the cacheFlushLock, then this method could
+   * start which would obtain the lock on this but block on obtaining the
+   * cacheFlushLock and then completeCacheFlush could be called which would wait
+   * for the lock on this and consequently never release the cacheFlushLock
+   *
+   * @param force If true, force creation of a new writer even if no entries
+   * have been written to the current writer
+   * @return If lots of logs, flush the returned regions so next time through
+   * we can clean logs. Returns null if nothing to flush.  Names are actual
+   * region names as returned by {@link HRegionInfo#getEncodedName()}
+   * @throws org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException
+   * @throws IOException
+   */
+  public byte [][] rollWriter(boolean force)
+      throws FailedLogCloseException, IOException {
     // Return if nothing to flush.
-    if (this.writer != null && this.numEntries.get() <= 0) {
+    if (!force && this.writer != null && this.numEntries.get() <= 0) {
       return null;
     }
     byte [][] regionsToFlush = null;
@@ -506,6 +541,7 @@ public class HLog implements Syncable {
     this.logRollRunning = true;
     try {
       if (closed) {
+        LOG.debug("HLog closed.  Skipping rolling of writer");
         return regionsToFlush;
       }
       // Do all the preparation outside of the updateLock to block
@@ -513,6 +549,9 @@ public class HLog implements Syncable {
       long currentFilenum = this.filenum;
       this.filenum = System.currentTimeMillis();
       Path newPath = computeFilename();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Enabling new writer for "+FSUtils.getPath(newPath));
+      }
       HLog.Writer nextWriter = this.createWriterInstance(fs, newPath, conf);
       // Can we get at the dfsclient outputstream?  If an instance of
       // SFLW, it'll have done the necessary reflection to get at the
@@ -745,14 +784,21 @@ public class HLog implements Syncable {
       // Close the current writer, get a new one.
       try {
         this.writer.close();
+        closeErrorCount.set(0);
       } catch (IOException e) {
-        // Failed close of log file.  Means we're losing edits.  For now,
-        // shut ourselves down to minimize loss.  Alternative is to try and
-        // keep going.  See HBASE-930.
-        FailedLogCloseException flce =
-          new FailedLogCloseException("#" + currentfilenum);
-        flce.initCause(e);
-        throw e;
+        LOG.error("Failed close of HLog writer", e);
+        int errors = closeErrorCount.incrementAndGet();
+        if (errors <= closeErrorsTolerated) {
+          LOG.warn("Riding over HLog close failure! error count="+errors);
+        } else {
+          // Failed close of log file.  Means we're losing edits.  For now,
+          // shut ourselves down to minimize loss.  Alternative is to try and
+          // keep going.  See HBASE-930.
+          FailedLogCloseException flce =
+            new FailedLogCloseException("#" + currentfilenum);
+          flce.initCause(e);
+          throw flce;
+        }
       }
       if (currentfilenum >= 0) {
         oldFile = computeFilename(currentfilenum);
@@ -971,12 +1017,14 @@ public class HLog implements Syncable {
         // throw exceptions on interrupt
         while(!this.isInterrupted()) {
 
-          Thread.sleep(this.optionalFlushInterval);
-          sync();
+          try {
+            Thread.sleep(this.optionalFlushInterval);
+            sync();
+          } catch (IOException e) {
+            LOG.error("Error while syncing, requesting close of hlog ", e);
+            requestLogRoll();
+          }
         }
-      } catch (IOException e) {
-        LOG.error("Error while syncing, requesting close of hlog ", e);
-        requestLogRoll();
       } catch (InterruptedException e) {
         LOG.debug(getName() + " interrupted while waiting for sync requests");
       } finally {
@@ -1007,7 +1055,7 @@ public class HLog implements Syncable {
       }
 
     } catch (IOException e) {
-      LOG.fatal("Could not append. Requesting close of hlog", e);
+      LOG.fatal("Could not sync. Requesting close of hlog", e);
       requestLogRoll();
       throw e;
     }
