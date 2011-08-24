@@ -664,6 +664,8 @@ Release 0.21.1 - Unreleased
     HDFS-1855. TestDatanodeBlockScanner.testBlockCorruptionRecoveryPolicy()
     part 2 fails in two different ways. (Matt Foley via eli)
 
+    HDFS-2258. Reset lease limits to default values in TestLeaseRecovery2. (shv)
+
 Release 0.21.0 - 2010-08-13
 
   INCOMPATIBLE CHANGES
