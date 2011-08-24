@@ -91,13 +91,6 @@
           <include>krb5.conf</include>
         </includes>
       </testResource>
-      <testResource>
-        <directory>${basedir}/src/test/resources</directory>
-        <filtering>false</filtering>
-        <excludes>
-          <exclude>krb5.conf</exclude>
-        </excludes>
-      </testResource>
     </testResources>
     <plugins>
       <plugin>

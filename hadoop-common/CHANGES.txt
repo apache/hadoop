@@ -519,6 +519,9 @@ Trunk (unreleased changes)
     HADOOP-7566. MR tests are failing webapps/hdfs not found in CLASSPATH.
     (Alejandro Abdelnur via mahadev)
 
+    HADOOP-7567. 'mvn eclipse:eclipse' fails for hadoop-alfredo (auth).
+    (Alejandro Abdelnur via tomwhite)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
