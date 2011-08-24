@@ -263,6 +263,21 @@ admin.enableTable(table);
       compactions.  The number of versions may need to be increased or decreased depending on application needs.
   </para>
   </section>
+  <section xml:id="schema.minversions">
+  <title>
+  Minimum Number of Versions
+  </title>
+  <para>Like number of row versions, the minimum number of row versions to keep is configured per column
+      family via <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link>.
+      The default is 0, which means the feature is disabled.
+      The minimum number of row versions parameter is used together with the time-to-live parameter and can be combined with the
+      number of row versions parameter to allow configurations such as
+      "keep the last T minutes worth of data, at most N versions, <emphasis>but keep at least M versions around</emphasis>"
+      (where M is the value for minimum number of row versions, M&lt;=N).
+      This parameter should only be set when time-to-live is enabled for a column family and must be less or equal to the 
+      number of row versions.
+  </para>
+  </section>
   <section xml:id="changing.rowkeys">
   <title>
   Immutability of Rowkeys
