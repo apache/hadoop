@@ -183,9 +183,9 @@ public class TaskLog {
   private static long prevErrLength;
   private static long prevLogLength;
   
-  private static void writeToIndexFile(String logLocation,
-                                       boolean isCleanup) 
-  throws IOException {
+  private static synchronized 
+  void writeToIndexFile(String logLocation,
+                        boolean isCleanup) throws IOException {
     // To ensure atomicity of updates to index file, write to temporary index
     // file first and then rename.
     File tmpIndexFile = getTmpIndexFile(currentTaskid, isCleanup);
