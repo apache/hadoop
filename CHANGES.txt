@@ -453,6 +453,8 @@ Release 0.91.0 - Unreleased
    HBASE-4176  Exposing HBase Filters to the Thrift API (Anirudh Todi)
    HBASE-4221  Changes necessary to build and run against Hadoop 0.23
                (todd)
+   HBASE-4071  Data GC: Remove all versions > TTL EXCEPT the last
+               written version (Lars Hofhansl)
 
 Release 0.90.5 - Unreleased
 

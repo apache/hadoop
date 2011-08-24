@@ -37,16 +37,22 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
   private int columnLength = 0;
   private int currentCount = 0;
   private int maxVersions;
+  private int minVersions;
   /* Keeps track of the latest timestamp included for current column.
    * Used to eliminate duplicates. */
   private long latestTSOfCurrentColumn;
+  private long oldestStamp;
 
   /**
    * Return maxVersions of every row.
-   * @param maxVersion
+   * @param minVersion Minimum number of versions to keep
+   * @param maxVersion Maximum number of versions to return
+   * @param ttl TimeToLive to enforce
    */
-  public ScanWildcardColumnTracker(int maxVersion) {
+  public ScanWildcardColumnTracker(int minVersion, int maxVersion, long ttl) {
     this.maxVersions = maxVersion;
+    this.minVersions = minVersion;
+    this.oldestStamp = System.currentTimeMillis() - ttl;
   }
 
   /**
@@ -65,16 +71,8 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
       long timestamp) {
     if (columnBuffer == null) {
       // first iteration.
-      columnBuffer = bytes;
-      columnOffset = offset;
-      columnLength = length;
-      currentCount = 0;
-
-      if (++currentCount > maxVersions) {
-        return ScanQueryMatcher.MatchCode.SEEK_NEXT_COL;
-      }
-      setTS(timestamp);
-      return ScanQueryMatcher.MatchCode.INCLUDE;
+      resetBuffer(bytes, offset, length);
+      return checkVersion(++currentCount, timestamp);
     }
     int cmp = Bytes.compareTo(bytes, offset, length,
         columnBuffer, columnOffset, columnLength);
@@ -83,11 +81,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
       if (sameAsPreviousTS(timestamp)) {
         return ScanQueryMatcher.MatchCode.SKIP;
       }
-      if (++currentCount > maxVersions) {
-        return ScanQueryMatcher.MatchCode.SEEK_NEXT_COL; // skip to next col
-      }
-      setTS(timestamp);
-      return ScanQueryMatcher.MatchCode.INCLUDE;
+      return checkVersion(++currentCount, timestamp);
     }
 
     resetTS();
@@ -95,14 +89,8 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
     // new col > old col
     if (cmp > 0) {
       // switched columns, lets do something.x
-      columnBuffer = bytes;
-      columnOffset = offset;
-      columnLength = length;
-      currentCount = 0;
-      if (++currentCount > maxVersions)
-        return ScanQueryMatcher.MatchCode.SEEK_NEXT_COL;
-      setTS(timestamp);
-      return ScanQueryMatcher.MatchCode.INCLUDE;
+      resetBuffer(bytes, offset, length);
+      return checkVersion(++currentCount, timestamp);
     }
 
     // new col < oldcol
@@ -111,18 +99,32 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
     // was incorrectly stored into the store for this one. Continue, but
     // complain.
     LOG.error("ScanWildcardColumnTracker.checkColumn ran " +
-  		"into a column actually smaller than the previous column: " +
+        "into a column actually smaller than the previous column: " +
       Bytes.toStringBinary(bytes, offset, length));
     // switched columns
+    resetBuffer(bytes, offset, length);
+    return checkVersion(++currentCount, timestamp);
+  }
+
+  private void resetBuffer(byte[] bytes, int offset, int length) {
     columnBuffer = bytes;
     columnOffset = offset;
     columnLength = length;
     currentCount = 0;
-    if (++currentCount > maxVersions) {
-      return ScanQueryMatcher.MatchCode.SEEK_NEXT_COL;
+  }
+
+  private MatchCode checkVersion(int version, long timestamp) {
+    if (version > maxVersions) {
+      return ScanQueryMatcher.MatchCode.SEEK_NEXT_COL; // skip to next col
     }
-    setTS(timestamp);
-    return ScanQueryMatcher.MatchCode.INCLUDE;
+    // keep the KV if required by minversions or it is not expired, yet
+    if (version <= minVersions || !isExpired(timestamp)) {
+      setTS(timestamp);
+      return ScanQueryMatcher.MatchCode.INCLUDE;
+    } else {
+      return MatchCode.SEEK_NEXT_COL;
+    }
+
   }
 
   @Override
@@ -150,6 +152,10 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
     return timestamp == latestTSOfCurrentColumn;
   }
 
+  private boolean isExpired(long timestamp) {
+    return timestamp < oldestStamp;
+  }
+
   /**
    * Used by matcher and scan/get to get a hint of the next column
    * to seek to after checkColumn() returns SKIP.  Returns the next interesting
@@ -170,4 +176,14 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
   public boolean done() {
     return false;
   }
+
+  public MatchCode getNextRowOrNextColumn(byte[] bytes, int offset,
+      int qualLength) {
+    return MatchCode.SEEK_NEXT_COL;
+  }
+
+  public boolean isDone(long timestamp) {
+    return minVersions <=0 && isExpired(timestamp);
+  }
+
 }

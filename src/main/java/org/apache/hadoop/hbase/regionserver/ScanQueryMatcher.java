@@ -53,9 +53,6 @@ public class ScanQueryMatcher {
   /** Key to seek to in memstore and StoreFiles */
   protected KeyValue startKey;
 
-  /** Oldest allowed version stamp for TTL enforcement */
-  protected long oldestStamp;
-
   /** Row comparator for the region this query is for */
   KeyValue.KeyComparator rowComparator;
 
@@ -72,10 +69,9 @@ public class ScanQueryMatcher {
    */
   public ScanQueryMatcher(Scan scan, byte [] family,
       NavigableSet<byte[]> columns, long ttl,
-      KeyValue.KeyComparator rowComparator, int maxVersions,
+      KeyValue.KeyComparator rowComparator, int minVersions, int maxVersions,
       boolean retainDeletesInOutput) {
     this.tr = scan.getTimeRange();
-    this.oldestStamp = System.currentTimeMillis() - ttl;
     this.rowComparator = rowComparator;
     this.deletes =  new ScanDeleteTracker();
     this.stopRow = scan.getStopRow();
@@ -86,19 +82,26 @@ public class ScanQueryMatcher {
     // Single branch to deal with two types of reads (columns vs all in family)
     if (columns == null || columns.size() == 0) {
       // use a specialized scan for wildcard column tracker.
-      this.columns = new ScanWildcardColumnTracker(maxVersions);
+      this.columns = new ScanWildcardColumnTracker(minVersions, maxVersions, ttl);
     } else {
       // We can share the ExplicitColumnTracker, diff is we reset
       // between rows, not between storefiles.
-      this.columns = new ExplicitColumnTracker(columns,maxVersions);
+      this.columns = new ExplicitColumnTracker(columns, minVersions, maxVersions,
+          ttl);
     }
   }
   public ScanQueryMatcher(Scan scan, byte [] family,
       NavigableSet<byte[]> columns, long ttl,
-      KeyValue.KeyComparator rowComparator, int maxVersions) {
+      KeyValue.KeyComparator rowComparator, int minVersions, int maxVersions) {
       /* By default we will not include deletes */
       /* deletes are included explicitly (for minor compaction) */
-      this(scan, family, columns, ttl, rowComparator, maxVersions, false);
+      this(scan, family, columns, ttl, rowComparator, minVersions, maxVersions,
+          false);
+  }
+  public ScanQueryMatcher(Scan scan, byte [] family,
+      NavigableSet<byte[]> columns, long ttl,
+      KeyValue.KeyComparator rowComparator, int maxVersions) {
+    this(scan, family, columns, ttl, rowComparator, 0, maxVersions);
   }
 
   /**
@@ -158,9 +161,9 @@ public class ScanQueryMatcher {
       (offset - initialOffset) - KeyValue.TIMESTAMP_TYPE_SIZE;
 
     long timestamp = kv.getTimestamp();
-    if (isExpired(timestamp)) {
-      // done, the rest of this column will also be expired as well.
-      return getNextRowOrNextColumn(bytes, offset, qualLength);
+    // check for early out based on timestamp alone
+    if (columns.isDone(timestamp)) {
+        return columns.getNextRowOrNextColumn(bytes, offset, qualLength);
     }
 
     byte type = kv.getType();
@@ -192,7 +195,7 @@ public class ScanQueryMatcher {
     if (timestampComparison >= 1) {
       return MatchCode.SKIP;
     } else if (timestampComparison <= -1) {
-      return getNextRowOrNextColumn(bytes, offset, qualLength);
+      return columns.getNextRowOrNextColumn(bytes, offset, qualLength);
     }
 
     /**
@@ -206,7 +209,7 @@ public class ScanQueryMatcher {
       if (filterResponse == ReturnCode.SKIP) {
         return MatchCode.SKIP;
       } else if (filterResponse == ReturnCode.NEXT_COL) {
-        return getNextRowOrNextColumn(bytes, offset, qualLength);
+        return columns.getNextRowOrNextColumn(bytes, offset, qualLength);
       } else if (filterResponse == ReturnCode.NEXT_ROW) {
         stickyNextRow = true;
         return MatchCode.SEEK_NEXT_ROW;
@@ -226,23 +229,6 @@ public class ScanQueryMatcher {
     }
     return colChecker;
 
-  }
-
-  public MatchCode getNextRowOrNextColumn(byte[] bytes, int offset,
-      int qualLength) {
-    if (columns instanceof ExplicitColumnTracker) {
-      //We only come here when we know that columns is an instance of
-      //ExplicitColumnTracker so we should never have a cast exception
-      ((ExplicitColumnTracker)columns).doneWithColumn(bytes, offset,
-          qualLength);
-      if (columns.getColumnHint() == null) {
-        return MatchCode.SEEK_NEXT_ROW;
-      } else {
-        return MatchCode.SEEK_NEXT_COL;
-      }
-    } else {
-      return MatchCode.SEEK_NEXT_COL;
-    }
   }
 
   public boolean moreRowsMayExistAfter(KeyValue kv) {
@@ -276,10 +262,6 @@ public class ScanQueryMatcher {
   // should be in KeyValue.
   protected boolean isDelete(byte type) {
     return (type != KeyValue.Type.Put.getCode());
-  }
-
-  protected boolean isExpired(long timestamp) {
-    return (timestamp < oldestStamp);
   }
 
   /**

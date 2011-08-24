@@ -1297,9 +1297,8 @@ public class HRegion implements HeapSize { // , Writable{
     this.readRequestsCount.increment();
     try {
       Store store = getStore(family);
-      KeyValue kv = new KeyValue(row, HConstants.LATEST_TIMESTAMP);
       // get the closest key. (HStore.getRowKeyAtOrBefore can return null)
-      KeyValue key = store.getRowKeyAtOrBefore(kv);
+      KeyValue key = store.getRowKeyAtOrBefore(row);
       Result result = null;
       if (key != null) {
         Get get = new Get(key.getRow());

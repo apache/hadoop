@@ -44,7 +44,7 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
                        List<byte[]> scannerColumns,
                        List<MatchCode> expected) {
     ColumnTracker exp = new ExplicitColumnTracker(
-      trackColumns, maxVersions);
+      trackColumns, 0, maxVersions, Long.MAX_VALUE);
 
 
     //Initialize result
@@ -161,7 +161,8 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
       columns.add(Bytes.toBytes("col"+i));
     }
 
-    ColumnTracker explicit = new ExplicitColumnTracker(columns, maxVersions);
+    ColumnTracker explicit = new ExplicitColumnTracker(columns, 0, maxVersions,
+        Long.MAX_VALUE);
     for (int i = 0; i < 100000; i+=2) {
       byte [] col = Bytes.toBytes("col"+i);
       explicit.checkColumn(col, 0, col.length, 1);

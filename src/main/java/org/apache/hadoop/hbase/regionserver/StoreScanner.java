@@ -64,7 +64,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     this.cacheBlocks = scan.getCacheBlocks();
     matcher = new ScanQueryMatcher(scan, store.getFamily().getName(),
         columns, store.ttl, store.comparator.getRawComparator(),
-        store.versionsToReturn(scan.getMaxVersions()), 
+        store.minVersions, store.versionsToReturn(scan.getMaxVersions()),
         false);
 
     this.isGet = scan.isGetScan();
@@ -98,7 +98,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     this.cacheBlocks = false;
     this.isGet = false;
     matcher = new ScanQueryMatcher(scan, store.getFamily().getName(),
-        null, store.ttl, store.comparator.getRawComparator(),
+        null, store.ttl, store.comparator.getRawComparator(), store.minVersions,
         store.versionsToReturn(scan.getMaxVersions()), retainDeletesInOutput);
 
     // Seek all scanners to the initial key
@@ -120,7 +120,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     this.isGet = false;
     this.cacheBlocks = scan.getCacheBlocks();
     this.matcher = new ScanQueryMatcher(scan, colFamily, columns, ttl,
-        comparator.getRawComparator(), scan.getMaxVersions(), false);
+        comparator.getRawComparator(), 0, scan.getMaxVersions(), false);
 
     // Seek all scanners to the initial key
     for(KeyValueScanner scanner : scanners) {

@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.NavigableSet;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -48,6 +49,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class ExplicitColumnTracker implements ColumnTracker {
 
   private final int maxVersions;
+  private final int minVersions;
   private final List<ColumnCount> columns;
   private final List<ColumnCount> columnsToReuse;
   private int index;
@@ -55,23 +57,29 @@ public class ExplicitColumnTracker implements ColumnTracker {
   /** Keeps track of the latest timestamp included for current column.
    * Used to eliminate duplicates. */
   private long latestTSOfCurrentColumn;
+  private long oldestStamp;
 
   /**
    * Default constructor.
    * @param columns columns specified user in query
+   * @param minVersions minimum number of versions to keep
    * @param maxVersions maximum versions to return per column
+   * @param ttl The timeToLive to enforce
    */
-  public ExplicitColumnTracker(NavigableSet<byte[]> columns, int maxVersions) {
+  public ExplicitColumnTracker(NavigableSet<byte[]> columns, int minVersions,
+      int maxVersions, long ttl) {
     this.maxVersions = maxVersions;
+    this.minVersions = minVersions;
+    this.oldestStamp = System.currentTimeMillis() - ttl;
     this.columns = new ArrayList<ColumnCount>(columns.size());
     this.columnsToReuse = new ArrayList<ColumnCount>(columns.size());
     for(byte [] column : columns) {
-      this.columnsToReuse.add(new ColumnCount(column,maxVersions));
+      this.columnsToReuse.add(new ColumnCount(column));
     }
     reset();
   }
 
-  /**
+    /**
    * Done when there are no more columns to match against.
    */
   public boolean done() {
@@ -108,7 +116,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
       int ret = Bytes.compareTo(column.getBuffer(), column.getOffset(),
           column.getLength(), bytes, offset, length);
 
-      // Column Matches. If it is not a duplicate key, decrement versions left
+      // Column Matches. If it is not a duplicate key, increment the version count
       // and include.
       if(ret == 0) {
         //If column matches, check if it is a duplicate timestamp
@@ -116,7 +124,8 @@ public class ExplicitColumnTracker implements ColumnTracker {
           //If duplicate, skip this Key
           return ScanQueryMatcher.MatchCode.SKIP;
         }
-        if(this.column.decrement() == 0) {
+        int count = this.column.increment();
+        if(count >= maxVersions || (count >= minVersions && isExpired(timestamp))) {
           // Done with versions for this column
           this.columns.remove(this.index);
           resetTS();
@@ -185,11 +194,15 @@ public class ExplicitColumnTracker implements ColumnTracker {
     return timestamp == latestTSOfCurrentColumn;
   }
 
+  private boolean isExpired(long timestamp) {
+    return timestamp < oldestStamp;
+  }
+
   private void buildColumnList() {
     this.columns.clear();
     this.columns.addAll(this.columnsToReuse);
     for(ColumnCount col : this.columns) {
-      col.setCount(this.maxVersions);
+      col.setCount(0);
     }
   }
 
@@ -227,5 +240,18 @@ public class ExplicitColumnTracker implements ColumnTracker {
       }
     }
   }
+  public MatchCode getNextRowOrNextColumn(byte[] bytes, int offset,
+      int qualLength) {
+    doneWithColumn(bytes, offset,qualLength);
 
+    if (getColumnHint() == null) {
+      return MatchCode.SEEK_NEXT_ROW;
+    } else {
+      return MatchCode.SEEK_NEXT_COL;
+    }
+  }
+
+  public boolean isDone(long timestamp) {
+    return minVersions <=0 && isExpired(timestamp);
+  }
 }

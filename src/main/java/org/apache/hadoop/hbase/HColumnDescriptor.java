@@ -87,6 +87,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final String BLOOMFILTER = "BLOOMFILTER";
   public static final String FOREVER = "FOREVER";
   public static final String REPLICATION_SCOPE = "REPLICATION_SCOPE";
+  public static final String MIN_VERSIONS = "MIN_VERSIONS";
 
   /**
    * Default compression type.
@@ -98,6 +99,11 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * Default number of versions of a record to keep.
    */
   public static final int DEFAULT_VERSIONS = 3;
+
+  /**
+   * Default is not to keep a minimum of versions.
+   */
+  public static final int DEFAULT_MIN_VERSIONS = 0;
 
   /*
    * Cache here the HCD value.
@@ -259,6 +265,37 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       final String compression, final boolean inMemory,
       final boolean blockCacheEnabled, final int blocksize,
       final int timeToLive, final String bloomFilter, final int scope) {
+    this(familyName, DEFAULT_MIN_VERSIONS, maxVersions, compression, inMemory,
+        blockCacheEnabled, blocksize, timeToLive, bloomFilter, scope);
+  }
+
+  /**
+   * Constructor
+   * @param familyName Column family name. Must be 'printable' -- digit or
+   * letter -- and may not contain a <code>:<code>
+   * @param minVersions Minimum number of versions to keep
+   * @param maxVersions Maximum number of versions to keep
+   * @param compression Compression type
+   * @param inMemory If true, column data should be kept in an HRegionServer's
+   * cache
+   * @param blockCacheEnabled If true, MapFile blocks should be cached
+   * @param blocksize Block size to use when writing out storefiles.  Use
+   * smaller blocksizes for faster random-access at expense of larger indices
+   * (more memory consumption).  Default is usually 64k.
+   * @param timeToLive Time-to-live of cell contents, in seconds
+   * (use HConstants.FOREVER for unlimited TTL)
+   * @param bloomFilter Bloom filter type for this column
+   * @param scope The scope tag for this column
+   *
+   * @throws IllegalArgumentException if passed a family name that is made of
+   * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> or contains
+   * a <code>:</code>
+   * @throws IllegalArgumentException if the number of versions is &lt;= 0
+   */
+  public HColumnDescriptor(final byte [] familyName, final int minVersions,
+      final int maxVersions, final String compression, final boolean inMemory,
+      final boolean blockCacheEnabled, final int blocksize,
+      final int timeToLive, final String bloomFilter, final int scope) {
     isLegalFamilyName(familyName);
     this.name = familyName;
 
@@ -267,7 +304,19 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       // Until there is support, consider 0 or < 0 -- a configuration error.
       throw new IllegalArgumentException("Maximum versions must be positive");
     }
+
+    if (minVersions > 0) {
+      if (timeToLive == HConstants.FOREVER) {
+        throw new IllegalArgumentException("Minimum versions requires TTL.");
+      }
+      if (minVersions > maxVersions) {
+        throw new IllegalArgumentException("Minimum versions must be <= "+
+            "maximum versions.");
+      }
+    }
+
     setMaxVersions(maxVersions);
+    setMinVersions(minVersions);
     setInMemory(inMemory);
     setBlockCacheEnabled(blockCacheEnabled);
     setTimeToLive(timeToLive);
@@ -506,6 +555,22 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    */
   public void setTimeToLive(int timeToLive) {
     setValue(TTL, Integer.toString(timeToLive));
+  }
+
+  /**
+   * @return The minimum number of versions to keep.
+   */
+  public int getMinVersions() {
+    String value = getValue(MIN_VERSIONS);
+    return (value != null)? Integer.valueOf(value).intValue(): 0;
+  }
+
+  /**
+   * @param minVersions The minimum number of versions to keep.
+   * (used when timeToLive is set)
+   */
+  public void setMinVersions(int minVersions) {
+    setValue(MIN_VERSIONS, Integer.toString(minVersions));
   }
 
   /**

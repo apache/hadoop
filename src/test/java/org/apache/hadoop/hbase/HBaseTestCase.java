@@ -197,20 +197,33 @@ public abstract class HBaseTestCase extends TestCase {
    */
   protected HTableDescriptor createTableDescriptor(final String name,
       final int versions) {
+    return createTableDescriptor(name, HColumnDescriptor.DEFAULT_MIN_VERSIONS,
+        versions, HConstants.FOREVER);
+  }
+
+  /**
+   * Create a table of name <code>name</code> with {@link COLUMNS} for
+   * families.
+   * @param name Name to give table.
+   * @param versions How many versions to allow per column.
+   * @return Column descriptor.
+   */
+  protected HTableDescriptor createTableDescriptor(final String name,
+      final int minVersions, final int versions, final int ttl) {
     HTableDescriptor htd = new HTableDescriptor(name);
-    htd.addFamily(new HColumnDescriptor(fam1, versions,
+    htd.addFamily(new HColumnDescriptor(fam1, minVersions, versions,
       HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
-      HColumnDescriptor.DEFAULT_BLOCKSIZE, HConstants.FOREVER,
+      HColumnDescriptor.DEFAULT_BLOCKSIZE, ttl,
       HColumnDescriptor.DEFAULT_BLOOMFILTER,
       HConstants.REPLICATION_SCOPE_LOCAL));
-    htd.addFamily(new HColumnDescriptor(fam2, versions,
+    htd.addFamily(new HColumnDescriptor(fam2, minVersions, versions,
         HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
-        HColumnDescriptor.DEFAULT_BLOCKSIZE, HConstants.FOREVER,
+        HColumnDescriptor.DEFAULT_BLOCKSIZE, ttl,
         HColumnDescriptor.DEFAULT_BLOOMFILTER,
         HConstants.REPLICATION_SCOPE_LOCAL));
-    htd.addFamily(new HColumnDescriptor(fam3, versions,
+    htd.addFamily(new HColumnDescriptor(fam3, minVersions, versions,
         HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
-        HColumnDescriptor.DEFAULT_BLOCKSIZE,  HConstants.FOREVER,
+        HColumnDescriptor.DEFAULT_BLOCKSIZE,  ttl,
         HColumnDescriptor.DEFAULT_BLOOMFILTER,
         HConstants.REPLICATION_SCOPE_LOCAL));
     return htd;

@@ -33,7 +33,7 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
 
   public void testCheckColumn_Ok() {
     ScanWildcardColumnTracker tracker =
-      new ScanWildcardColumnTracker(VERSIONS);
+      new ScanWildcardColumnTracker(0, VERSIONS, Long.MAX_VALUE);
 
     //Create list of qualifiers
     List<byte[]> qualifiers = new ArrayList<byte[]>();
@@ -65,7 +65,7 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
 
   public void testCheckColumn_EnforceVersions() {
     ScanWildcardColumnTracker tracker =
-      new ScanWildcardColumnTracker(VERSIONS);
+      new ScanWildcardColumnTracker(0, VERSIONS, Long.MAX_VALUE);
 
     //Create list of qualifiers
     List<byte[]> qualifiers = new ArrayList<byte[]>();
@@ -98,7 +98,7 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
 
   public void DisabledTestCheckColumn_WrongOrder() {
     ScanWildcardColumnTracker tracker =
-      new ScanWildcardColumnTracker(VERSIONS);
+      new ScanWildcardColumnTracker(0, VERSIONS, Long.MAX_VALUE);
 
     //Create list of qualifiers
     List<byte[]> qualifiers = new ArrayList<byte[]>();
