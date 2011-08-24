@@ -219,8 +219,13 @@ public class ZKUtil {
   throws KeeperException {
     try {
       Stat s = zkw.getRecoverableZooKeeper().exists(znode, zkw);
-      LOG.debug(zkw.prefix("Set watcher on existing znode " + znode));
-      return s != null ? true : false;
+      boolean exists = s != null ? true : false;
+      if (exists) {
+        LOG.debug(zkw.prefix("Set watcher on existing znode " + znode));
+      } else {
+        LOG.debug(zkw.prefix(znode+" does not exist. Watcher is set."));        
+      }
+      return exists;
     } catch (KeeperException e) {
       LOG.warn(zkw.prefix("Unable to set watcher on znode " + znode), e);
       zkw.keeperException(e);
