@@ -83,6 +83,8 @@ Access restriction: The method getLong(Object, long) from the type Unsafe is not
        <title>Maven Build Commands</title>
        <para>All commands executed from the local HBase project directory.
        </para>
+       <para>Note:  use Maven 2, not Maven 3.
+       </para>
        <section xml:id="maven.build.commands.compile"> 
           <title>Compile</title>
           <programlisting>
@@ -103,30 +105,7 @@ mvn test -Dtest=TestXYZ
        </section>       
            
     </section>
-    <section xml:id="unit.tests"> 
-        <title>Unit Tests</title>
-        <para>In HBase we use <link xlink:href="http://junit.org">JUnit</link> 4.
-            If you need to run miniclusters of HDFS, ZooKeeper, HBase, or MapReduce testing,
-            be sure to checkout the <classname>HBaseTestingUtility</classname>.
-            Alex Baranau of Sematext describes how it can be used in
-            <link xlink:href="http://blog.sematext.com/2010/08/30/hbase-case-study-using-hbasetestingutility-for-local-testing-development/">HBase Case-Study: Using HBaseTestingUtility for Local Testing and Development</link> (2010).
-        </para>
-        <section xml:id="mockito">
-          <title>Mockito</title>
-          <para>Sometimes you don't need a full running server
-              unit testing.  For example, some methods can make do with a
-              a <classname>org.apache.hadoop.hbase.Server</classname> instance
-              or a <classname>org.apache.hadoop.hbase.master.MasterServices</classname>
-              Interface reference rather than a full-blown
-              <classname>org.apache.hadoop.hbase.master.HMaster</classname>.
-              In these cases, you maybe able to get away with a mocked
-              <classname>Server</classname> instance.  For example:
-              <programlisting>
-              </programlisting>
-           </para>
-        </section>
-    </section> 
-
+  
     <section xml:id="getting.involved"> 
         <title>Getting Involved</title>
         <para>HBase gets better only when people contribute!
@@ -156,13 +135,50 @@ mvn test -Dtest=TestXYZ
                 <listitem>Trivial: Useful enhancements but generally cosmetic.</listitem> 
                 </itemizedlist>  
              </para> 
-          </section>
         </section>
+       </section>
+      </section>  <!--  getting involved -->
+      
+      <section xml:id="developing">
+        <title>Developing</title>
         <section xml:id="codelines"><title>Codelines</title>
           <para>Most development is done on TRUNK.  However, there are branches for minor releases (e.g., 0.90.1, 0.90.2, and 0.90.3 are on the 0.90 branch).</para>
           <para>If you have any questions on this just send an email to the dev dist-list.</para>
         </section>
-        <section xml:id="submitting.patches">
+  
+        <section xml:id="unit.tests"> 
+          <title>Unit Tests</title>
+          <para>In HBase we use <link xlink:href="http://junit.org">JUnit</link> 4.
+            If you need to run miniclusters of HDFS, ZooKeeper, HBase, or MapReduce testing,
+            be sure to checkout the <classname>HBaseTestingUtility</classname>.
+            Alex Baranau of Sematext describes how it can be used in
+            <link xlink:href="http://blog.sematext.com/2010/08/30/hbase-case-study-using-hbasetestingutility-for-local-testing-development/">HBase Case-Study: Using HBaseTestingUtility for Local Testing and Development</link> (2010).
+          </para>
+          <section xml:id="mockito">
+           <title>Mockito</title>
+           <para>Sometimes you don't need a full running server
+              unit testing.  For example, some methods can make do with a
+              a <classname>org.apache.hadoop.hbase.Server</classname> instance
+              or a <classname>org.apache.hadoop.hbase.master.MasterServices</classname>
+              Interface reference rather than a full-blown
+              <classname>org.apache.hadoop.hbase.master.HMaster</classname>.
+              In these cases, you maybe able to get away with a mocked
+              <classname>Server</classname> instance.  For example:
+              <programlisting>
+              TODO...
+              </programlisting>
+           </para>
+         </section>
+          <section xml:id="code.standards">
+           <title>Code Standards</title>
+           <para>See <xref linkend="eclipse.code.formatting"/> and <xref linkend="common.patch.feedback"/>.
+           </para>
+           </section>
+        </section>   <!--  unit tests  -->       
+
+      </section>  <!--  developing -->
+
+       <section xml:id="submitting.patches">
           <title>Submitting Patches</title>
           <section xml:id="submitting.patches.create">
             <title>Create Patch</title>
@@ -185,23 +201,145 @@ mvn test -Dtest=TestXYZ
           </section>
           <section xml:id="submitting.patches.jira">
             <title>Attach Patch to Jira</title>
-          <para>The patch should be attached to the associated Jira ticket "More Actions -&gt; Attach Files".  Make sure you click the
-          ASF license inclusion, otherwise the patch can't be considered for inclusion.
+            <para>The patch should be attached to the associated Jira ticket "More Actions -&gt; Attach Files".  Make sure you click the
+            ASF license inclusion, otherwise the patch can't be considered for inclusion.
+            </para>
+            <para>Once attached to the ticket, click "Submit Patch" and 
+            the status of the ticket will change.  Committers will review submitted patches for inclusion into the codebase.  Please
+            understand that not every patch may get committed, and that feedback will likely be provided on the patch.  Fear not, though,
+            because the HBase community is helpful!
+            </para>
+         </section>
+          
+        <section xml:id="common.patch.feedback">
+            <title>Common Patch Feedback</title>
+          <para>The following items are representative of common patch feedback. Your patch process will go faster if these are
+          taken into account <emphasis>before</emphasis> submission.
           </para>
-          <para>Once attached to the ticket, click "Submit Patch" and 
-          the status of the ticket will change.  Committers will review submitted patches for inclusion into the codebase.  Please
-          understand that not every patch may get committed, and that feedback will likely be provided on the patch.  Fear not, though,
-          because the HBase community is helpful!
+          <para>
+          See the <link xlink:href="http://www.oracle.com/technetwork/java/codeconv-138413.html">Java coding standards</link> 
+          for more information on coding conventions in Java.
+          </para>
+          <section xml:id="common.patch.feedback.space.invaders">
+            <title>Space Invaders</title>
+            <para>Rather than do this...
+<programlisting>
+if ( foo.equals( bar ) ) {     // don't do this
+</programlisting>
+			... do this instead...        
+<programlisting>
+if (foo.equals(bar)) {
+</programlisting>
+          </para>
+          <para>Also, rather than do this...
+<programlisting>
+foo = barArray[ i ];     // don't do this
+</programlisting>
+			... do this instead...        
+<programlisting>
+foo = barArray[i];   
+</programlisting>
           </para>
           </section>
-        </section>
+          <section xml:id="common.patch.feedback.autogen">
+            <title>Auto Generated Code</title>
+            <para>Auto-generated code in Eclipse often looks like this...
+<programlisting>
+ public void readFields(DataInput arg0) throws IOException {    // don't do this
+   foo = arg0.readUTF();                                       // don't do this
+</programlisting>
+			... do this instead ...        
+<programlisting>
+ public void readFields(DataInput di) throws IOException {
+   foo = di.readUTF();
+</programlisting>
+           See the difference?  'arg0' is what Eclipse uses for arguments by default.
+           </para>
+          </section>
+          <section xml:id="common.patch.feedback.longlines">
+            <title>Long Lines</title>
+            <para>
+            Keep lines less than 80 characters.
+<programlisting>
+Bar bar = foo.veryLongMethodWithManyArguments(argument1, argument2, argument3, argument4, argument5);  // don't do this
+</programlisting>
+			... do this instead ...        
+<programlisting>
+Bar bar = foo.veryLongMethodWithManyArguments(argument1,
+ argument2, argument3,argument4, argument5); 
+</programlisting>
+           ... or this, whichever looks better ...
+<programlisting>
+Bar bar = foo.veryLongMethodWithManyArguments(
+ argument1, argument2, argument3,argument4, argument5); 
+</programlisting>
+           </para>
+          </section>
+          <section xml:id="common.patch.feedback.trailingspaces">
+            <title>Trailing Spaces</title>
+            <para>
+            This happens more than people would imagine.
+<programlisting>
+Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the semicolon instead of a line break.
+</programlisting>
+            Make sure there's a line-break after the end of your code, and also avoid lines that have nothing
+            but whitespace. 
+            </para>
+         </section> 
+          <section xml:id="common.patch.feedback.writable">
+            <title>Implementing Writable</title>
+            <para>Every class returned by RegionServers must implement <code>Writable</code>.  If you
+            are creating a new class that needs to implement this interface, don't forget the default constructor.
+            </para>
+          </section>
+          <section xml:id="common.patch.feedback.javadoc">
+            <title>Javadoc</title>
+            <para>This is also a very common feedback item.  Don't forget Javadoc!
+            </para>
+          </section>
+          <section xml:id="common.patch.feedback.javadoc.defaults">
+            <title>Javadoc - Useless Defaults</title>
+            <para>Don't just leave the @param arguments the way your IDE generated them.  Don't do this...
+<programlisting>
+  /**
+   * 
+   * @param bar             &lt;---- don't do this!!!!
+   * @return                &lt;---- or this!!!!
+   */
+  public Foo getFoo(Bar bar);
+</programlisting> 
+            ... either add something descriptive to the @param and @return lines, or just remove them. 
+            But the preference is to add something descriptive and useful.          
+            </para>
+          </section>
+          <section xml:id="common.patch.feedback.massreformat">
+            <title>Unrelated Code Formating or Auto-Reformating</title>
+            <para>If you submit a patch for one thing, don't do auto-reformatting or unrelated reformatting of code on a completely
+            different area of code. 
+            </para>
+          </section>
+          <section xml:id="common.patch.feedback.tests">
+            <title>Ambigious Unit Tests</title>
+            <para>Make sure that you're clear about what you are testing in your unit tests and why. 
+            </para>
+          </section>
+
+        </section>   <!--  patch feedback -->
+ 
+         <section xml:id="reviewboard">
+            <title>ReviewBoard</title>
+          <para>Larger patches should go through <link xlink:href="http://reviews.apache.org">ReviewBoard</link>.
+          </para>
+        </section> 
         <section xml:id="committing.patches">
           <title>Committing Patches</title>
           <para>
           Committers do this.  See <link xlink:href="http://wiki.apache.org/hadoop/Hbase/HowToCommit">How To Commit</link> in the HBase wiki.
           </para>
+          <para>Commiters will also resolve the Jira, typically after the patch passes a build.
+          </para>
         </section>
+
+       </section>   <!--  submitting patches -->
     
-    </section>
-          
     </chapter>
