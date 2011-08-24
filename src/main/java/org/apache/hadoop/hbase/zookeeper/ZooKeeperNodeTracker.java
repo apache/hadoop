@@ -79,6 +79,7 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
           this.data = data;
         } else {
           // It existed but now does not, try again to ensure a watch is set
+          LOG.debug("Try starting again because there is no data from " + node);
           start();
         }
       }
