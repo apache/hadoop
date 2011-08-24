@@ -1132,6 +1132,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-2838. Fix MapReduce builds to use new hadoop-common test jars.
     (gkesavan via acmurthy) 
+   
+    MAPREDUCE-2859 - Fix eclipse plugin contrib module compilation (gkesavan) 
 
 Release 0.22.0 - Unreleased
 

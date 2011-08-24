@@ -68,7 +68,7 @@
   <target name="jar" depends="compile" unless="skip.contrib">
     <mkdir dir="${build.dir}/lib"/>
     <copy tofile="${build.dir}/lib/hadoop-common.jar">
-      <fileset dir="${hadoop.root}/build/ivy/lib/Hadoop/common" includes="hadoop-common-*.jar" excludes="hadoop-common-test-*.jar"/>
+      <fileset dir="${hadoop.root}/build/ivy/lib/Hadoop/common" includes="hadoop-common-*.jar" excludes="hadoop-common-*tests.jar"/>
     </copy> 
     <copy file="${hadoop.root}/build/ivy/lib/Hadoop/common/commons-cli-${commons-cli.version}.jar"  todir="${build.dir}/lib" verbose="true"/>
     <jar

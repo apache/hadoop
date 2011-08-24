@@ -44,7 +44,7 @@
         checkmodified="true" changingPattern=".*SNAPSHOT"/>
 
     <filesystem name="fs" m2compatible="true" force="${force-resolve}">
-       <artifact pattern="${repo.dir}/[organisation]/[module]/[revision]/[module]-[revision].[ext]"/>
+       <artifact pattern="${repo.dir}/${maven2.pattern.ext}"/>
        <ivy pattern="${repo.dir}/[organisation]/[module]/[revision]/[module]-[revision].pom"/>
     </filesystem>
 
