@@ -18,6 +18,21 @@
 
 
 <ul>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2846">MAPREDUCE-2846</a>.
+     Blocker bug reported by aw and fixed by owen.omalley (task, task-controller, tasktracker)<br>
+     <b>a small % of all tasks fail with DefaultTaskController</b><br>
+     <blockquote>Fixed a race condition in writing the log index file that caused tasks to &apos;fail&apos;.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2804">MAPREDUCE-2804</a>.
+     Blocker bug reported by aw and fixed by owen.omalley <br>
+     <b>&quot;Creation of symlink to attempt log dir failed.&quot; message is not useful</b><br>
+     <blockquote>Removed duplicate chmods of job log dir that were vulnerable to race conditions between tasks. Also improved the messages when the symlinks failed to be created.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2651">MAPREDUCE-2651</a>.
+     Major bug reported by bharathm and fixed by bharathm (task-controller)<br>
+     <b>Race condition in Linux Task Controller for job log directory creation</b><br>
+     <blockquote>There is a rare race condition in linux task controller when concurrent task processes tries to create job log directory at the same time. </blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2621">MAPREDUCE-2621</a>.
      Minor bug reported by sherri_chen and fixed by sherri_chen <br>
      <b>TestCapacityScheduler fails with &quot;Queue &quot;q1&quot; does not exist&quot;</b><br>
@@ -28,15 +43,20 @@
      <b>Add queue-level metrics 0.20-security branch</b><br>
      <blockquote>We would like to record and present the jobtracker metrics on a per-queue basis.</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2555">MAPREDUCE-2555</a>.
+     Minor bug reported by tgraves and fixed by tgraves (tasktracker)<br>
+     <b>JvmInvalidate errors in the gridmix TT logs</b><br>
+     <blockquote>Observing a  lot of jvmValidate exceptions in TT logs for grid mix run<br><br><br><br>************************<br>2011-04-28 02:00:37,578 INFO org.apache.hadoop.ipc.Server: IPC Server handler 7 on 46121, call<br>statusUpdate(attempt_201104270735_5993_m_003305_0, org.apache.hadoop.mapred.MapTaskStatus@1840a9c,<br>org.apache.hadoop.mapred.JvmContext@1d4ab6b) from 127.0.0.1:50864: error: java.io.IOException: JvmValidate Failed.<br>Ignoring request from task: attempt_201104270735_5993_m_003305_0, with JvmId:<br>jvm_201104270735_5993_m_103399012gsbl20430: java.io.IOException: JvmValidate Failed. Ignoring request from task:<br>attempt_201104270735_5993_m_003305_0, with JvmId: jvm_201104270735_5993_m_103399012gsbl20430: --<br>      at org.apache.hadoop.ipc.Server$Handler$1.run(Server.java:1386)<br>      at java.security.AccessController.doPrivileged(Native Method)<br>      at javax.security.auth.Subject.doAs(Subject.java:396)<br>      at org.apache.hadoop.security.UserGroupInformation.doAs(UserGroupInformation.java:1059)<br>      at org.apache.hadoop.ipc.Server$Handler.run(Server.java:1384)<br><br><br>*********************<br><br></blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2529">MAPREDUCE-2529</a>.
      Major bug reported by tgraves and fixed by tgraves (tasktracker)<br>
      <b>Recognize Jetty bug 1342 and handle it</b><br>
-     <blockquote>We are seeing many instances of the Jetty-1342 (http://jira.codehaus.org/browse/JETTY-1342). The bug doesn&apos;t cause Jetty to stop responding altogether, some fetches go through but a lot of them throw exceptions and eventually fail. The only way we have found to get the TT out of this state is to restart the TT.  This jira is to catch this particular exception (or perhaps a configurable regex) and handle it in an automated way to either blacklist or shutdown the TT after seeing it a configurable number of them.<br></blockquote></li>
+     <blockquote>Added 2 new config parameters:<br><br><br><br>mapreduce.reduce.shuffle.catch.exception.stack.regex<br><br>mapreduce.reduce.shuffle.catch.exception.message.regex</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2524">MAPREDUCE-2524</a>.
      Minor improvement reported by tgraves and fixed by tgraves (tasktracker)<br>
      <b>Backport trunk heuristics for failing maps when we get fetch failures retrieving map output during shuffle</b><br>
-     <blockquote>The heuristics for failing maps when we get map output fetch failures during the shuffle is pretty conservative in 20. Backport the heuristics from trunk which are more aggressive, simpler, and configurable.<br><br></blockquote></li>
+     <blockquote>Added a new configuration option: mapreduce.reduce.shuffle.maxfetchfailures, and removed a no longer used option: mapred.reduce.copy.backoff.</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2514">MAPREDUCE-2514</a>.
      Trivial bug reported by jeagles and fixed by jeagles (tasktracker)<br>
@@ -56,7 +76,7 @@
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2479">MAPREDUCE-2479</a>.
      Major improvement reported by revans2 and fixed by revans2 (tasktracker)<br>
      <b>Backport MAPREDUCE-1568 to hadoop security branch</b><br>
-     <blockquote></blockquote></li>
+     <blockquote>Added mapreduce.tasktracker.distributedcache.checkperiod to the task tracker that defined the period to wait while cleaning up the distributed cache.  The default is 1 min.</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2456">MAPREDUCE-2456</a>.
      Trivial improvement reported by naisbitt and fixed by naisbitt (jobtracker)<br>
@@ -78,13 +98,23 @@
      <b>Fix FI build - broken after MR-2429</b><br>
      <blockquote>src/test/system/aop/org/apache/hadoop/mapred/TaskAspect.aj:72 [warning] advice defined in org.apache.hadoop.mapred.TaskAspect has not been applied [Xlint:adviceDidNotMatch]<br><br>After the fix in MR-2429, the call to ping in TaskAspect needs to be fixed.</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2429">MAPREDUCE-2429</a>.
+     Major bug reported by acmurthy and fixed by sseth (tasktracker)<br>
+     <b>Check jvmid during task status report</b><br>
+     <blockquote>Currently TT doens&apos;t check to ensure jvmid is relevant during communication with the Child via TaskUmbilicalProtocol.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2418">MAPREDUCE-2418</a>.
+     Minor bug reported by sseth and fixed by sseth <br>
+     <b>Errors not shown in the JobHistory servlet (specifically Counter Limit Exceeded)</b><br>
+     <blockquote>Job error details are not displayed in the JobHistory servlet. e.g. Errors like &apos;Counter limit exceeded for a job&apos;. <br>jobdetails.jsp has &apos;Failure Info&apos;, but this is missing in jobdetailshistory.jsp</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2415">MAPREDUCE-2415</a>.
-     Major improvement reported by bharathm and fixed by bharathm (task-controller, tasktracker)<br>
+     Major sub-task reported by bharathm and fixed by bharathm (task-controller, tasktracker)<br>
      <b>Distribute TaskTracker userlogs onto multiple disks</b><br>
      <blockquote>Currently, userlogs directory in TaskTracker is placed under hadoop.log.dir like &lt;hadoop.log.dir&gt;/userlogs. I am proposing to spread these userlogs onto multiple configured mapred.local.dirs to strengthen TaskTracker reliability w.r.t disk failures.  </blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2413">MAPREDUCE-2413</a>.
-     Major improvement reported by bharathm and fixed by ravidotg (task-controller, tasktracker)<br>
+     Major sub-task reported by bharathm and fixed by ravidotg (task-controller, tasktracker)<br>
      <b>TaskTracker should handle disk failures at both startup and runtime</b><br>
      <blockquote>At present, TaskTracker doesn&apos;t handle disk failures properly both at startup and runtime.<br><br>(1) Currently TaskTracker doesn&apos;t come up if any of the mapred-local-dirs is on a bad disk. TaskTracker should ignore that particular mapred-local-dir and start up and use only the remaining good mapred-local-dirs.<br>(2) If a disk goes bad while TaskTracker is running, currently TaskTracker doesn&apos;t do anything special. This results in either<br>   (a) TaskTracker continues to &quot;try to use that bad disk&quot; and this results in lots of task failures and possibly job failures(because of multiple TTs having bad disks) and eventually these TTs getting graylisted for all jobs. And this needs manual restart of TT with modified configuration of mapred-local-dirs avoiding the bad disk. OR<br>   (b) Health check script identifying the disk as bad and the TT gets blacklisted. And this also needs manual restart of TT with modified configuration of mapred-local-dirs avoiding the bad disk.<br><br>This JIRA is to make TaskTracker more fault-tolerant to disk failures solving (1) and (2). i.e. TT should start even if at least one of the mapred-local-dirs is on a good disk and TT should adjust its in-memory list of mapred-local-dirs and avoid using bad mapred-local-dirs.<br></blockquote></li>
 
@@ -98,6 +128,51 @@
      <b>Distributed Cache does not differentiate between file /archive for files with the same path</b><br>
      <blockquote>If a &apos;global&apos; file is specified as a &apos;file&apos; by one job - subsequent jobs cannot override this source file to be an &apos;archive&apos; (until the TT cleans up it&apos;s cache or a TT restart).<br>The other way around as well -&gt; &apos;archive&apos; to &apos;file&apos;<br><br>In case of an accidental submission using the wrong type - some of the tasks for the second job will end up seeing the source file as an archive, others as a file.</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2366">MAPREDUCE-2366</a>.
+     Major bug reported by owen.omalley and fixed by dking (tasktracker)<br>
+     <b>TaskTracker can&apos;t retrieve stdout and stderr from web UI</b><br>
+     <blockquote>Problem where the task browser UI can&apos;t retrieve the stdxxx printouts of streaming jobs that abend in the unix code, in the common case where the containing job doesn&apos;t reuse JVM&apos;s.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2364">MAPREDUCE-2364</a>.
+     Major bug reported by owen.omalley and fixed by devaraj (tasktracker)<br>
+     <b>Shouldn&apos;t hold lock on rjob while localizing resources.</b><br>
+     <blockquote>There is a deadlock while localizing resources on the TaskTracker.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2362">MAPREDUCE-2362</a>.
+     Major bug reported by owen.omalley and fixed by roelofs (test)<br>
+     <b>Unit test failures: TestBadRecords and TestTaskTrackerMemoryManager</b><br>
+     <blockquote>Fix unit-test failures: TestBadRecords (NPE due to rearranged MapTask code) and TestTaskTrackerMemoryManager (need hostname in output-string pattern).</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2360">MAPREDUCE-2360</a>.
+     Major bug reported by owen.omalley and fixed by  (client)<br>
+     <b>Pig fails when using non-default FileSystem</b><br>
+     <blockquote>The job client strips the file system from the user&apos;s job jar, which causes breakage when it isn&apos;t the default file system.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2359">MAPREDUCE-2359</a>.
+     Major bug reported by owen.omalley and fixed by ramach <br>
+     <b>Distributed cache doesn&apos;t use non-default FileSystems correctly</b><br>
+     <blockquote>We are passing fs.deafult.name as viewfs:/// in core site.xml on oozie server.<br>We have default name node in configuration also viewfs:///<br><br>We are using hdfs://path in our path for application.<br>Its giving following error:<br><br>IllegalArgumentException: Wrong FS:<br>hdfs://nn/user/strat_ci/oozie-oozi/0000002-110217014830452-oozie-oozi-W/hadoop1--map-reduce/map-reduce-launcher.jar,<br>expected: viewfs:/</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2358">MAPREDUCE-2358</a>.
+     Major bug reported by owen.omalley and fixed by ramach <br>
+     <b>MapReduce assumes HDFS as the default filesystem</b><br>
+     <blockquote>Mapred assumes hdfs as the default fs even when defined otherwise.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2357">MAPREDUCE-2357</a>.
+     Major bug reported by owen.omalley and fixed by vicaya (task)<br>
+     <b>When extending inputsplit (non-FileSplit), all exceptions are ignored</b><br>
+     <blockquote>if you&apos;re using a custom RecordReader/InputFormat setup and using an<br>InputSplit that does NOT extend FileSplit, then any exceptions you throw in your RecordReader.nextKeyValue() function<br>are silently ignored.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2356">MAPREDUCE-2356</a>.
+     Major bug reported by owen.omalley and fixed by vicaya <br>
+     <b>A task succeeded even though there were errors on all attempts.</b><br>
+     <blockquote>From Luke Lu:<br><br>Here is a summary of why the failed map task was considered &quot;successful&quot; (Thanks to Mahadev, Arun and Devaraj<br>for insightful discussions).<br><br>1. The map task was hanging BEFORE being initialized (probably in localization, but it doesn&apos;t matter in this case).<br>Its state is UNASSIGNED.<br><br>2. The jt decided to kill it due to timeout and scheduled a cleanup task on the same node.<br><br>3. The cleanup task has the same attempt id (by design.) but runs in a different JVM. Its initial state is<br>FAILED_UNCLEAN.<br><br>4. The JVM of the original attempt is getting killed, while proceeding to setupWorkDir and throwed an<br>IllegalStateException while FileSystem.getLocal, which causes taskFinal.taskCleanup being called in Child, and<br>triggered the NPE due to the task is not yet initialized (committer is null). Before the NPE, however it sent a<br>statusUpdate to TT, and in tip.reportProgress, changed the task state (currently FAILED_UNCLEAN) to UNASSIGNED.<br><br>5. The cleanup attempt succeeded and report done to TT. In tip.reportDone, the isCleanup() check returned false due to<br>the UNASSIGNED state and set the task state as SUCCEEDED.<br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-517">MAPREDUCE-517</a>.
+     Critical bug reported by acmurthy and fixed by acmurthy <br>
+     <b>The capacity-scheduler should assign multiple tasks per heartbeat</b><br>
+     <blockquote>HADOOP-3136 changed the default o.a.h.mapred.JobQueueTaskScheduler to assign multiple tasks per TaskTracker heartbeat, the capacity-scheduler should do the same.</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-118">MAPREDUCE-118</a>.
      Blocker bug reported by amar_kamat and fixed by amareshwari (client)<br>
      <b>Job.getJobID() will always return null</b><br>
@@ -106,7 +181,7 @@
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2218">HDFS-2218</a>.
      Blocker test reported by mattf and fixed by mattf (contrib/hdfsproxy, test)<br>
      <b>Disable TestHdfsProxy.testHdfsProxyInterface in automated test suite for 0.20-security-204 release</b><br>
-     <blockquote>To enable release of 0.20-security-204, despite the existence of unsolved bug HDFS-2217, remove this test case for 204.  This is acceptable because HDFS-2217 is believed to be a bug in the test case and/or its interaction with the Hudson environment, not the HdfsProxy functionality.<br><br>To be fixed and restored for the next release.</blockquote></li>
+     <blockquote>Test case TestHdfsProxy.testHdfsProxyInterface has been temporarily disabled for this release, due to failure in the Hudson automated test environment.</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2057">HDFS-2057</a>.
      Major bug reported by bharathm and fixed by bharathm (data-node)<br>
@@ -127,11 +202,6 @@
      Minor bug reported by mattf and fixed by mattf (name-node)<br>
      <b>TestHDFSServerPorts unit test failure - race condition in FSNamesystem.close() causes NullPointerException without serious consequence</b><br>
      <blockquote>In 20.204, TestHDFSServerPorts was observed to intermittently throw a NullPointerException.  This only happens when FSNamesystem.close() is called, which means system termination for the Namenode, so this is not a serious bug for .204.  TestHDFSServerPorts is more likely than normal execution to stimulate the race, because it runs two Namenodes in the same JVM, causing more interleaving and more potential to see a race condition.<br><br>The race is in FSNamesystem.close(), line 566, we have:<br>      if (replthread != null) replthread.interrupt();<br>      if (replmon != null) replmon = null;<br><br>Since the interrupted replthread is not waited on, there is a potential race condition with replmon being nulled before replthread is dead, but replthread references replmon in computeDatanodeWork() where the NullPointerException occurs.<br><br>The solution is either to wait on replthread or just don&apos;t null replmon.  The latter is preferred, since none of the sibling Namenode processing threads are waited on in close().<br><br>I&apos;ll attach a patch for .205.<br></blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-1836">HDFS-1836</a>.
-     Major bug reported by hkdennis2k and fixed by bharathm (hdfs client)<br>
-     <b>Thousand of CLOSE_WAIT socket </b><br>
-     <blockquote>$ /usr/sbin/lsof -i TCP:50010 | grep -c CLOSE_WAIT<br>4471<br><br>It is better if everything runs normal. <br>However, from time to time there are some &quot;DataStreamer Exception: java.net.SocketTimeoutException&quot; and &quot;DFSClient.processDatanodeError(2507) | Error Recovery for&quot; can be found from log file and the number of CLOSE_WAIT socket just keep increasing<br><br>The CLOSE_WAIT handles may remain for hours and days; then &quot;Too many open file&quot; some day.<br></blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-1822">HDFS-1822</a>.
      Blocker bug reported by sureshms and fixed by sureshms (name-node)<br>
@@ -176,7 +246,7 @@
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-1445">HDFS-1445</a>.
      Major sub-task reported by mattf and fixed by mattf (data-node)<br>
      <b>Batch the calls in DataStorage to FileUtil.createHardLink(), so we call it once per directory instead of once per file</b><br>
-     <blockquote>It was a bit of a puzzle why we can do a full scan of a disk in about 30 seconds during FSDir() or getVolumeMap(), but the same disk took 11 minutes to do Upgrade replication via hardlinks.  It turns out that the org.apache.hadoop.fs.FileUtil.createHardLink() method does an outcall to Runtime.getRuntime().exec(), to utilize native filesystem hardlink capability.  So it is forking a full-weight external process, and we call it on each individual file to be replicated.<br><br>As a simple check on the possible cost of this approach, I built a Perl test script (under Linux on a production-class datanode).  Perl also uses a compiled and optimized p-code engine, and it has both native support for hardlinks and the ability to do &quot;exec&quot;.  <br>-  A simple script to create 256,000 files in a directory tree organized like the Datanode, took 10 seconds to run.<br>-  Replicating that directory tree using hardlinks, the same way as the Datanode, took 12 seconds using native hardlink support.<br>-  The same replication using outcalls to exec, one per file, took 256 seconds!<br>-  Batching the calls, and doing &apos;exec&apos; once per directory instead of once per file, took 16 seconds.<br><br>Obviously, your mileage will vary based on the number of blocks per volume.  A volume with less than about 4000 blocks will have only 65 directories.  A volume with more than 4K and less than about 250K blocks will have 4200 directories (more or less).  And there are two files per block (the data file and the .meta file).  So the average number of files per directory may vary from 2:1 to 500:1.  A node with 50K blocks and four volumes will have 25K files per volume, or an average of about 6:1.  So this change may be expected to take it down from, say, 12 minutes per volume to 2.<br></blockquote></li>
+     <blockquote>Batch hardlinking during &quot;upgrade&quot; snapshots, cutting time from aprx 8 minutes per volume to aprx 8 seconds.  Validated in both Linux and Windows.  Depends on prior integration with patch for HADOOP-7133.</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-1377">HDFS-1377</a>.
      Blocker bug reported by eli and fixed by eli (name-node)<br>
@@ -256,8 +326,7 @@
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-6255">HADOOP-6255</a>.
      Major new feature reported by owen.omalley and fixed by eyang <br>
      <b>Create an rpm integration project</b><br>
-     <blockquote>We should be able to create RPMs for Hadoop releases.</blockquote></li>
-
+     <blockquote>Added RPM/DEB packages to build system.</blockquote></li>
 </ul>
 
 <h2>Changes Since Hadoop 0.20.2</h2>

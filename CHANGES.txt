@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 0.20.204.0 - 2011-8-19
+Release 0.20.204.0 - 2011-8-25
 
   NEW FEATURES
 
