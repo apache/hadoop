@@ -92,7 +92,7 @@ Step 15) bin/yarn-daemon.sh start historyserver
 Step 16) You are all set, an example on how to run a mapreduce job is:
 cd $HADOOP_MAPRED_HOME
 ant examples -Dresolvers=internal 
-$HADOOP_COMMON_HOME/bin/hadoop jar $HADOOP_MAPRED_HOME/build/hadoop-mapreduce-examples-0.23.0-SNAPSHOT.jar randomwriter -Dmapreduce.job.user.name=$USER -Dmapreduce.clientfactory.class.name=org.apache.hadoop.mapred.YarnClientFactory -Dmapreduce.randomwriter.bytespermap=0.23.000 -Ddfs.blocksize=536870912 -Ddfs.block.size=536870912 -libjars $YARN_HOME/modules/hadoop-mapreduce-client-jobclient-0.23.0-SNAPSHOT.jar output 
+$HADOOP_COMMON_HOME/bin/hadoop jar $HADOOP_MAPRED_HOME/build/hadoop-mapreduce-examples-0.23.0-SNAPSHOT.jar randomwriter -Dmapreduce.job.user.name=$USER -Dmapreduce.clientfactory.class.name=org.apache.hadoop.mapred.YarnClientFactory -Dmapreduce.randomwriter.bytespermap=10000 -Ddfs.blocksize=536870912 -Ddfs.block.size=536870912 -libjars $YARN_HOME/modules/hadoop-mapreduce-client-jobclient-0.23.0-SNAPSHOT.jar output 
 
 The output on the command line should be almost similar to what you see in the JT/TT setup (Hadoop 0.20/0.21)
 
