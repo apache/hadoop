@@ -192,22 +192,23 @@ admin.enableTable(table);
         i.e. you query one column family or the other but usually not both at the one time.
     </para>
   </section>
-  <section xml:id="timeseries">
-  <title>
-  Monotonically Increasing Row Keys/Timeseries Data
-  </title>
-  <para>
-      In the HBase chapter of Tom White's book <link xlink:url="http://oreilly.com/catalog/9780596521981">Hadoop: The Definitive Guide</link> (O'Reilly) there is a an optimization note on watching out for a phenomenon where an import process walks in lock-step with all clients in concert pounding one of the table's regions (and thus, a single node), then moving onto the next region, etc.  With monotonically increasing row-keys (i.e., using a timestamp), this will happen.  See this comic by IKai Lan on why monotically increasing row keys are problematic in BigTable-like datastores:
+  <section xml:id="rowkey.design"><title>Rowkey Design</title>
+    <section xml:id="timeseries">
+    <title>
+    Monotonically Increasing Row Keys/Timeseries Data
+    </title>
+    <para>
+      In the HBase chapter of Tom White's book <link xlink:url="http://oreilly.com/catalog/9780596521981">Hadoop: The Definitive Guide</link> (O'Reilly) there is a an optimization note on watching out for a phenomenon where an import process walks in lock-step with all clients in concert pounding one of the table's regions (and thus, a single node), then moving onto the next region, etc.  With monotonically increasing row-keys (i.e., using a timestamp), this will happen.  See this comic by IKai Lan on why monotonically increasing row keys are problematic in BigTable-like datastores:
       <link xlink:href="http://ikaisays.com/2011/01/25/app-engine-datastore-tip-monotonically-increasing-values-are-bad/">monotonically increasing values are bad</link>.  The pile-up on a single region brought on
-      by monoticially increasing keys can be mitigated by randomizing the input records to not be in sorted order, but in general its best to avoid using a timestamp or a sequence (e.g. 1, 2, 3) as the row-key. 
-  </para>
+      by monotonically increasing keys can be mitigated by randomizing the input records to not be in sorted order, but in general its best to avoid using a timestamp or a sequence (e.g. 1, 2, 3) as the row-key. 
+    </para>
 
 
-  <para>If you do need to upload time series data into HBase, you should
-  study <link xlink:href="http://opentsdb.net/">OpenTSDB</link> as a
-  successful example.  It has a page describing the <link xlink:href=" http://opentsdb.net/schema.html">schema</link> it uses in
-  HBase.  The key format in OpenTSDB is effectively [metric_type][event_timestamp], which would appear at first glance to contradict the previous advice about not using a timestamp as the key.  However, the difference is that the timestamp is not in the <emphasis>lead</emphasis> position of the key, and the design assumption is that there are dozens or hundreds (or more) of different metric types.  Thus, even with a continual stream of input data with a mix of metric types, the Puts are distributed across various points of regions in the table.
- </para>
+    <para>If you do need to upload time series data into HBase, you should
+    study <link xlink:href="http://opentsdb.net/">OpenTSDB</link> as a
+    successful example.  It has a page describing the <link xlink:href=" http://opentsdb.net/schema.html">schema</link> it uses in
+    HBase.  The key format in OpenTSDB is effectively [metric_type][event_timestamp], which would appear at first glance to contradict the previous advice about not using a timestamp as the key.  However, the difference is that the timestamp is not in the <emphasis>lead</emphasis> position of the key, and the design assumption is that there are dozens or hundreds (or more) of different metric types.  Thus, even with a continual stream of input data with a mix of metric types, the Puts are distributed across various points of regions in the table.
+   </para>
   </section>
   <section xml:id="keysize">
       <title>Try to minimize row and column sizes</title>
@@ -231,8 +232,8 @@ admin.enableTable(table);
                   the thread <link xlink:href="http://search-hadoop.com/m/hemBv1LiN4Q1/a+question+storefileIndexSize&amp;subj=a+question+storefileIndexSize">a question storefileIndexSize</link>
                   up on the user mailing list.
        </para>
-       <para>Most frequently small inefficiencies don't matter all that much.  Unfortunately,
-         this is a case where it does.  Whatever patterns are selected for ColumnFamilies, attributes, and rowkeys they could be repeated
+       <para>Most of the time small inefficiencies don't matter all that much.  Unfortunately,
+         this is a case where they do.  Whatever patterns are selected for ColumnFamilies, attributes, and rowkeys they could be repeated
        several billion times in your data</para>
        <section xml:id="keysize.cf"><title>Column Families</title>
          <para>Try to keep the ColumnFamily names as small as possible, preferably one character (e.g. "d" for data/default).
@@ -243,14 +244,33 @@ admin.enableTable(table);
          to store in HBase.
          </para> 
        </section>
-       <section xml:id="keysize.row"><title>Row Key</title>
+       <section xml:id="keysize.row"><title>Rowkey Length</title>
          <para>Keep them as short as is reasonable such that they can still be useful for required data access (e.g., Get vs. Scan). 
          A short key that is useless for data access is not better than a longer key with better get/scan properties.  Expect tradeoffs
          when designing rowkeys.
          </para> 
        </section>
-  </section>
-  <section xml:id="schema.versions">
+    </section>
+    <section xml:id="reverse.timestamp"><title>Reverse Timestamps</title>
+    <para>A common problem in database processing is quickly finding the most recent version of a value.  A technique using reverse timestamps
+    as a part of the key can help greatly with a special case of this problem.  Also found in the HBase chapter of Tom White's book Hadoop:  The Definitive Guide (O'Reilly), 
+    the technique involves appending (<code>Long.MAX_VALUE - timestamp</code>) to the end of any key, e.g., [key][reverse_timestamp].
+    </para>
+    <para>The most recent value for [key] in a table can be found by performing a Scan for [key] and obtaining the first record.  Since HBase keys
+    are in sorted order, this key sorts before any older row-keys for [key] and thus is first.
+    </para>
+    <para>This technique would be used instead of using <xref linkend="schema.versions">HBase Versioning</xref> where the intent is to hold onto all versions
+    "forever" (or a very long time) and at the same time quickly obtain access to any other version by using the same Scan technique.
+    </para>
+    </section>
+    <section xml:id="changing.rowkeys"><title>Immutability of Rowkeys</title>
+    <para>Rowkeys cannot be changed.  The only way they can be "changed" in a table is if the row is deleted and then re-inserted.
+    This is a fairly common question on the HBase dist-list so it pays to get the rowkeys right the first time (and/or before you've 
+    inserted a lot of data).
+    </para>
+    </section>
+    </section>  <!--  rowkey design -->  
+    <section xml:id="schema.versions">
   <title>
   Number of Versions
   </title>
@@ -262,12 +282,14 @@ admin.enableTable(table);
       stores different values per row by time (and qualifier).  Excess versions are removed during major
       compactions.  The number of versions may need to be increased or decreased depending on application needs.
   </para>
-  </section>
-  <section xml:id="schema.minversions">
-  <title>
-  Minimum Number of Versions
-  </title>
-  <para>Like number of row versions, the minimum number of row versions to keep is configured per column
+  <para>It is not recommended setting the number of versions to an exceedingly high level (e.g., hundreds or more) unless those old values are 
+  very dear to you because this will greatly increase StoreFile size. 
+  </para>
+    <section xml:id="schema.minversions">
+    <title>
+    Minimum Number of Versions
+    </title>
+    <para>Like number of row versions, the minimum number of row versions to keep is configured per column
       family via <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link>.
       The default is 0, which means the feature is disabled.
       The minimum number of row versions parameter is used together with the time-to-live parameter and can be combined with the
@@ -276,16 +298,8 @@ admin.enableTable(table);
       (where M is the value for minimum number of row versions, M&lt;=N).
       This parameter should only be set when time-to-live is enabled for a column family and must be less or equal to the 
       number of row versions.
-  </para>
-  </section>
-  <section xml:id="changing.rowkeys">
-  <title>
-  Immutability of Rowkeys
-  </title>
-  <para>Rowkeys cannot be changed.  The only way they can be "changed" in a table is if the row is deleted and then re-inserted.
-  This is a fairly common question on the HBase dist-list so it pays to get the rowkeys right the first time (and/or before you've 
-  inserted a lot of data).
-  </para>
+    </para>
+    </section>
   </section>
   <section xml:id="supported.datatypes">
   <title>
@@ -861,6 +875,64 @@ admin.enableTable(table);
   <chapter xml:id="architecture">
     <title>Architecture</title>
 
+	<section xml:id="arch.catalog">
+	 <title>Catalog Tables</title>
+	  <para>
+     </para>
+	  <section xml:id="arch.catalog.root">
+	   <title>ROOT</title>
+	   <para>-ROOT- keeps track of where the .META. table is.  The -ROOT- table structure is as follows: 
+       </para>
+       <para>Key:   
+            <itemizedlist>
+              <listitem>.META. region key (<code>.META.,,1</code>)</listitem>
+            </itemizedlist>
+       </para>
+       <para>Values:   
+            <itemizedlist>
+              <listitem><code>info:regioninfo</code> (serialized <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HRegionInfo.html">HRegionInfo</link>
+               instance of .META.)</listitem>
+              <listitem><code>info:server</code> (server:port of the RegionServer holding .META.)</listitem>
+              <listitem><code>info:serverstartcode</code> (start-time of the RegionServer process holding .META.)</listitem>
+            </itemizedlist>
+       </para>
+	   </section>
+	  <section xml:id="arch.catalog.meta">
+	   <title>META</title>
+	   <para>The .META. table keeps a list of all regions in the system. The .META. table structure is as follows: 
+       </para>
+       <para>Key:   
+            <itemizedlist>
+              <listitem>Region key of the format (<code>[table],[region start key],[region id]</code>)</listitem>
+            </itemizedlist>
+       </para>
+       <para>Values:   
+            <itemizedlist>
+              <listitem><code>info:regioninfo</code> (serialized <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HRegionInfo.html">
+              HRegionInfo</link> instance for this region)
+              </listitem>
+              <listitem><code>info:server</code> (server:port of the RegionServer containing this region)</listitem>
+              <listitem><code>info:serverstartcode</code> (start-time of the RegionServer process containing this region)</listitem>
+            </itemizedlist>
+       </para>
+       <para>When a table is in the process of splitting two other columns will be created, <code>info:splitA</code> and <code>info:splitB</code> 
+       which represent the two daughter regions.  The values for these columns are also serialized HRegionInfo instances.
+       After the region has been split eventually this row will be deleted.
+       </para>
+       <para>Notes on HRegionInfo:  the empty key is used to denote table start and table end.  A region with an empty start key
+       is the first region in a table.  If region has both an empty start and an empty end key, its the only region in the table
+       </para>
+       <para>In the (hopefully unlikely) event that programmatic processing of catalog metadata is required, see the
+         <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/util/Writables.html#getHRegionInfo%28byte[]%29">Writables</link> utility.
+       </para>
+	   </section>
+	   <section xml:id="arch.catalog.startup">
+	    <title>Startup Sequencing</title>
+	    <para>The META location is set in ROOT first.  Then META is updated with server and startcode values.
+	    </para>
+	    </section>	   
+     </section>  <!--  catalog -->
+     
 	<section xml:id="client">
 	 <title>Client</title>
      <para>The HBase client
