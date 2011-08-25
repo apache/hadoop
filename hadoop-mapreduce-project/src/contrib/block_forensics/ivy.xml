@@ -46,5 +46,7 @@
                 rev="${hadoop-common.version}" conf="common->default"/>  
    <dependency org="org.apache.hadoop" name="hadoop-mapreduce-client-core" 
                rev="${yarn.version}" conf="common->default"/>
+   <dependency org="log4j" name="log4j" rev="${log4j.version}"
+               conf="common->master"/> 
   </dependencies>
 </ivy-module>

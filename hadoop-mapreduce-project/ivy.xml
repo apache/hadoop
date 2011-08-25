@@ -71,9 +71,6 @@
                rev="${hadoop-hdfs.version}" conf="system->default"/>
    <dependency org="commons-logging" name="commons-logging" 
                rev="${commons-logging.version}" conf="compile->master"/>
-  <!-- <dependency org="log4j" name="log4j" rev="${log4j.version}" 
-               conf="compile->master"/>-->
-
    <dependency org="org.slf4j" name="slf4j-api" rev="${slf4j-api.version}" 
                conf="compile->master"/>
    <dependency org="org.slf4j" name="slf4j-log4j12" 
