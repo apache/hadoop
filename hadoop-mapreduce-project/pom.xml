@@ -363,7 +363,7 @@
 
   <modules>
     <module>hadoop-yarn</module>
-    <module>hadoop-mr-client</module>
+    <module>hadoop-mapreduce-client</module>
   </modules>
 
   <reporting>

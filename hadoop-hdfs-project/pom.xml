@@ -18,21 +18,37 @@
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
     <version>0.23.0-SNAPSHOT</version>
-    <relativePath>../../hadoop-project</relativePath>
+    <relativePath>../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
-  <artifactId>hadoop-annotations</artifactId>
+  <artifactId>hadoop-hdfs-project</artifactId>
   <version>0.23.0-SNAPSHOT</version>
-  <description>Apache Hadoop Annotations</description>
-  <name>Apache Hadoop Annotations</name>
-  <packaging>jar</packaging>
+  <description>Apache Hadoop HDFS Project</description>
+  <name>Apache Hadoop HDFS Project</name>
+  <packaging>pom</packaging>
 
-  <dependencies>
-    <dependency>
-      <groupId>jdiff</groupId>
-      <artifactId>jdiff</artifactId>
-      <scope>compile</scope>
-    </dependency>
-  </dependencies>
+  <modules>
+    <module>hadoop-hdfs</module>
+  </modules>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+        <configuration>
+          <includes>
+            <include>pom.xml</include>
+          </includes>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 
 </project>

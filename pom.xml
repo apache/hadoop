@@ -37,10 +37,9 @@
     <module>hadoop-project</module>
     <module>hadoop-project-dist</module>
     <module>hadoop-assemblies</module>
-    <module>hadoop-annotations</module>
-    <module>hadoop-alfredo</module>
-    <module>hadoop-common</module>
-    <module>hadoop-hdfs</module>
+    <module>hadoop-common-project</module>
+    <module>hadoop-hdfs-project</module>
+    <module>hadoop-mapreduce-project</module>
   </modules>
 
   <build>
