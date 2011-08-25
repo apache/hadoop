@@ -215,6 +215,8 @@ Release 0.91.0 - Unreleased
    HBASE-4220  Lots of DNS queries from client
    HBASE-4253  Intermittent test failure because of missing config parameter in new
                HTable(tablename) (Ramkrishna)
+   HBASE-4217  HRS.closeRegion should be able to close regions with only
+               the encoded name (ramkrishna.s.vasudevan)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
@@ -478,8 +480,6 @@ Release 0.90.5 - Unreleased
                Campbell)
    HBASE-4095  Hlog may not be rolled in a long time if checkLowReplication's
                request of LogRoll is blocked (Jieshan Bean)
-   HBASE-4217  HRS.closeRegion should be able to close regions with only
-               the encoded name (ramkrishna.s.vasudevan)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
