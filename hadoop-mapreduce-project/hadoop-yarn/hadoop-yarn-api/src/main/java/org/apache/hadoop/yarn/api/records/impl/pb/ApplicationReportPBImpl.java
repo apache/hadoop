@@ -279,4 +279,16 @@ implements ApplicationReport {
       ApplicationIdProto applicationId) {
     return new ApplicationIdPBImpl(applicationId);
   }
+
+  @Override
+  public long getStartTime() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getStartTime();
+  }
+
+  @Override
+  public void setStartTime(long startTime) {
+    maybeInitBuilder();
+    builder.setStartTime(startTime);
+  }
 }

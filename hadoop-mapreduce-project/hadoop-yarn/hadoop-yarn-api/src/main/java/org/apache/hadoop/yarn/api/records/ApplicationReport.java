@@ -49,4 +49,7 @@ public interface ApplicationReport {
 
   String getTrackingUrl();
   void setTrackingUrl(String url);
+  
+  long getStartTime();
+  void setStartTime(long startTime);
 }

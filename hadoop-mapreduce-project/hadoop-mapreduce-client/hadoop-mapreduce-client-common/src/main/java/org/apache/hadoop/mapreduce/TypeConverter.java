@@ -409,6 +409,7 @@ public class TypeConverter {
           application.getQueue(), "", trackingUrl
       ); 
     jobStatus.setSchedulingInfo(trackingUrl); // Set AM tracking url
+    jobStatus.setStartTime(application.getStartTime());
     return jobStatus;
   }
 

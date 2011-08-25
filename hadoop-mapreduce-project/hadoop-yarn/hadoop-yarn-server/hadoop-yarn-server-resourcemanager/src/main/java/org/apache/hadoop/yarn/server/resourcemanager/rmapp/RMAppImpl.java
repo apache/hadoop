@@ -300,7 +300,7 @@ public class RMAppImpl implements RMApp {
       return BuilderUtils.newApplicationReport(this.applicationId, this.user,
           this.queue, this.name, host, rpcPort, clientToken,
           createApplicationState(this.stateMachine.getCurrentState()),
-          this.diagnostics.toString(), trackingUrl);
+          this.diagnostics.toString(), trackingUrl, this.startTime);
     } finally {
       this.readLock.unlock();
     }

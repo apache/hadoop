@@ -139,6 +139,7 @@ message ApplicationReportProto {
   optional ContainerProto masterContainer = 10;
   optional string trackingUrl = 11;
   optional string diagnostics = 12 [default = "N/A"];
+  optional int64 startTime = 13;
 }
 
 message NodeIdProto {

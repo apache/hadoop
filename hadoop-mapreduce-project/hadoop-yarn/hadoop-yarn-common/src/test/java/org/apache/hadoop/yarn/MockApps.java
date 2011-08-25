@@ -155,6 +155,18 @@ public class MockApps {
         // TODO Auto-generated method stub
         
       }
+      
+      @Override
+      public long getStartTime() {
+        // TODO Auto-generated method stub
+        return 0;
+      }
+
+      @Override
+      public void setStartTime(long startTime) {
+        // TODO Auto-generated method stub
+
+      }
     };
   }
 

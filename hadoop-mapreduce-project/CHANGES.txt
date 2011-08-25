@@ -1143,6 +1143,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2877. Add missing Apache license header in some files in MR 
     and also add the rat plugin to the poms. (mahadev)
 
+    MAPREDUCE-2796. Set start times for MR applications for clients to see.
+    (Devaraj K via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
