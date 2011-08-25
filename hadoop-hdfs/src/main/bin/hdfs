@@ -19,11 +19,7 @@ bin=`which $0`
 bin=`dirname ${bin}`
 bin=`cd "$bin"; pwd`
 
-if [ -e "$bin/../libexec/hdfs-config.sh" ]; then
-  . "$bin"/../libexec/hdfs-config.sh
-else
-  . "$bin/hdfs-config.sh"
-fi
+. "$bin"/../libexec/hdfs-config.sh
 
 function print_usage(){
   echo "Usage: hdfs [--config confdir] COMMAND"
@@ -109,45 +105,6 @@ else
   CLASS="$COMMAND"
 fi
 
-# for developers, add hdfs classes to CLASSPATH
-if [ -d "$HADOOP_HDFS_HOME/build/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/build/classes
-fi
-if [ -d "$HADOOP_HDFS_HOME/build/web/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/build/web
-fi
-if [ -d "$HADOOP_HDFS_HOME/build/test/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/build/test/classes
-fi
-if [ -d "$HADOOP_HDFS_HOME/build/tools" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/build/tools
-fi
-
-if [ -d "$HADOOP_HDFS_HOME/build/ivy/lib/hadoop-hdfs/common" ]; then
-  for f in $HADOOP_HDFS_HOME/build/ivy/lib/hadoop-hdfs/common/*.jar; do
-    CLASSPATH=${CLASSPATH}:$f;
-  done
-fi
-
-if [ -d "$HADOOP_HDFS_HOME/build/ivy/lib/hadoop-hdfs/hdfs" ]; then
-  for f in $HADOOP_HDFS_HOME/build/ivy/lib/hadoop-hdfs/hdfs/*.jar; do
-    CLASSPATH=${CLASSPATH}:$f;
-  done
-fi
-
-# for releases, add core hdfs jar & webapps to CLASSPATH
-if [ -d "$HADOOP_PREFIX/share/hadoop/hdfs/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_PREFIX/share/hadoop/hdfs
-fi
-for f in $HADOOP_PREFIX/share/hadoop-hdfs/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-
-# add libs to CLASSPATH
-for f in $HADOOP_PREFIX/lib/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-
 if $cygwin; then
   CLASSPATH=`cygpath -p -w "$CLASSPATH"`
 fi
@@ -161,7 +118,7 @@ if [ "$starting_secure_dn" = "true" ]; then
    HADOOP_SECURE_DN_PID="$HADOOP_PID_DIR/hadoop_secure_dn.pid"
   fi
 
-  exec "$HADOOP_PREFIX/bin/jsvc" \
+  exec "$HADOOP_HDFS_HOME/bin/jsvc" \
            -Dproc_$COMMAND -outfile "$HADOOP_LOG_DIR/jsvc.out" \
            -errfile "$HADOOP_LOG_DIR/jsvc.err" \
            -pidfile "$HADOOP_SECURE_DN_PID" \

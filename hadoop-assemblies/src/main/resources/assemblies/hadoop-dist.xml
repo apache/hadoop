@@ -113,7 +113,6 @@
       <useProjectArtifact>false</useProjectArtifact>
       <excludes>
         <exclude>org.apache.ant:*:jar</exclude>
-        <exclude>org.apache.hadoop:hadoop-*:jar</exclude>
         <exclude>jdiff:jdiff:jar</exclude>
       </excludes>
     </dependencySet>

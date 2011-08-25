@@ -18,11 +18,7 @@
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin"; pwd`
 
-if [ -e "$bin/../libexec/hdfs-config.sh" ]; then
-  . "$bin"/../libexec/hdfs-config.sh
-else
-  . "$bin/hdfs-config.sh"
-fi
+. "$bin"/../libexec/hdfs-config.sh
 
 #---------------------------------------------------------
 # namenodes

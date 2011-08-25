@@ -82,6 +82,7 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
       <version>${hadoop-common.version}</version>
+      <scope>provided</scope>
       <exclusions>
         <exclusion>
           <groupId>commons-el</groupId>

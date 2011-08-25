@@ -23,11 +23,7 @@
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-if [ -e "$bin/../libexec/hdfs-config.sh" ]; then
-  . "$bin/../libexec/hdfs-config.sh"
-else
-  . "$bin/hdfs-config.sh"
-fi
+. "$bin/../libexec/hdfs-config.sh"
 
 namenodes=$("$HADOOP_PREFIX/bin/hdfs" getconf -nnRpcAddresses)
 if [ "$?" != '0' ] ; then errorFlag='1' ; 
