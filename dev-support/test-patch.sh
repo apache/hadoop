@@ -370,8 +370,8 @@ checkJavadocWarnings () {
   if [ -d hadoop-project ]; then
     (cd hadoop-project; $MVN install)
   fi
-  if [ -d hadoop-annotations ]; then  
-    (cd hadoop-annotations; $MVN install)
+  if [ -d hadoop-common-project/hadoop-annotations ]; then  
+    (cd hadoop-common-project/hadoop-annotations; $MVN install)
   fi
   $MVN clean compile javadoc:javadoc -DskipTests -Pdocs -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchJavadocWarnings.txt 2>&1
   javadocWarnings=`$GREP '\[WARNING\]' $PATCH_DIR/patchJavadocWarnings.txt | $AWK '/Javadoc Warnings/,EOF' | $GREP warning | $AWK 'BEGIN {total = 0} {total += 1} END {print total}'`
@@ -520,8 +520,8 @@ checkFindbugsWarnings () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$MVN clean compile findbugs:findbugs -D${PROJECT_NAME}PatchProcess"
-  $MVN clean compile findbugs:findbugs -D${PROJECT_NAME}PatchProcess
+  echo "$MVN clean compile findbugs:findbugs -D${PROJECT_NAME}PatchProcess" 
+  $MVN clean compile findbugs:findbugs -D${PROJECT_NAME}PatchProcess < /dev/null
 
   if [ $? != 0 ] ; then
     JIRA_COMMENT="$JIRA_COMMENT
@@ -536,6 +536,7 @@ checkFindbugsWarnings () {
     relative_file=${file#$BASEDIR/} # strip leading $BASEDIR prefix
     if [ ! $relative_file == "target/findbugsXml.xml" ]; then
       module_suffix=${relative_file%/target/findbugsXml.xml} # strip trailing path
+      module_suffix=`basename ${module_suffix}`
     fi
     
     cp $file $PATCH_DIR/patchFindbugsWarnings${module_suffix}.xml
@@ -630,12 +631,12 @@ findModules () {
 
   PREFIX_DIRS=$(cut -d '/' -f 1 $TMP | sort | uniq)
 
-  # if all of the lines start with hadoop-common/, hadoop-hdfs/, or hadoop-mapreduce/, this is
+  # if all of the lines start with hadoop-common-project/, hadoop-hdfs-project/, or hadoop-mapreduce-project/, this is
   # relative to the hadoop root instead of the subproject root
-  if [[ "$PREFIX_DIRS" =~ ^(hadoop-alfredo|hadoop-annotations|hadoop-common|hadoop-hdfs|hadoop-mapreduce)$ ]]; then
+  if [[ "$PREFIX_DIRS" =~ ^(hadoop-common-project|hadoop-hdfs-project|hadoop-mapreduce-project)$ ]]; then
     echo $PREFIX_DIRS
     return 0
-  elif ! echo "$PREFIX_DIRS" | grep -vxq 'hadoop-alfredo\|hadoop-annotations\|hadoop-common\|hadoop-hdfs\|hadoop-mapreduce' ; then
+  elif ! echo "$PREFIX_DIRS" | grep -vxq 'hadoop-common-project\|hadoop-hdfs-project\|hadoop-mapreduce-project' ; then
     echo $PREFIX_DIRS
     return 0
   fi

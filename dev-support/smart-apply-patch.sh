@@ -56,18 +56,18 @@ fi
 PREFIX_DIRS=$(cut -d '/' -f 1 $TMP | sort | uniq)
 
 # if we are at the project root then nothing more to do
-if [[ -d hadoop-common ]]; then
+if [[ -d hadoop-common-project ]]; then
   echo Looks like this is being run at project root
 
 # if all of the lines start with hadoop-common/, hadoop-hdfs/, or hadoop-mapreduce/, this is
 # relative to the hadoop root instead of the subproject root, so we need
 # to chop off another layer
-elif [[ "$PREFIX_DIRS" =~ ^(hadoop-alfredo|hadoop-annotations|hadoop-common|hadoop-hdfs|hadoop-mapreduce)$ ]]; then
+elif [[ "$PREFIX_DIRS" =~ ^(hadoop-common-project|hadoop-hdfs-project|hadoop-mapreduce-project)$ ]]; then
 
   echo Looks like this is relative to project root. Increasing PLEVEL
   PLEVEL=$[$PLEVEL + 1]
 
-elif ! echo "$PREFIX_DIRS" | grep -vxq 'hadoop-alfredo\|hadoop-annotations\|hadoop-common\|hadoop-hdfs\|hadoop-mapreduce' ; then
+elif ! echo "$PREFIX_DIRS" | grep -vxq 'hadoop-common-project\|hadoop-hdfs-project\|hadoop-mapreduce-project' ; then
   echo Looks like this is a cross-subproject patch. Try applying from the project root
   exit 1
 fi
