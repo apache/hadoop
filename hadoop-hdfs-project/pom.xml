@@ -17,12 +17,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>0.23.0-SNAPSHOT</version>
+    <version>0.24.0-SNAPSHOT</version>
     <relativePath>../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-hdfs-project</artifactId>
-  <version>0.23.0-SNAPSHOT</version>
+  <version>0.24.0-SNAPSHOT</version>
   <description>Apache Hadoop HDFS Project</description>
   <name>Apache Hadoop HDFS Project</name>
   <packaging>pom</packaging>

@@ -40,7 +40,7 @@ public interface MRConstants {
   public static final String JOB_JAR = "job.jar";
 
   public static final String HADOOP_MAPREDUCE_CLIENT_APP_JAR_NAME =
-      "hadoop-mapreduce-client-app-0.23.0-SNAPSHOT.jar";
+      "hadoop-mapreduce-client-app-0.24.0-SNAPSHOT.jar";
 
   public static final String YARN_MAPREDUCE_APP_JAR_PATH =
     "$YARN_HOME/modules/" + HADOOP_MAPREDUCE_CLIENT_APP_JAR_NAME;

@@ -188,7 +188,7 @@
   <property>
     <name>mapreduce.job.jar</name>
     <value></value>
-    <!--<value>~/Workspace/eclipse-workspace/yarn/yarn-mapreduce/yarn-mapreduce-app/target/yarn-mapreduce-app-0.23.0-SNAPSHOT.jar</value>-->
+    <!--<value>~/Workspace/eclipse-workspace/yarn/yarn-mapreduce/yarn-mapreduce-app/target/yarn-mapreduce-app-0.24.0-SNAPSHOT.jar</value>-->
   </property>
 
   <property>

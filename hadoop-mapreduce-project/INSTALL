@@ -30,7 +30,7 @@ Copy in build.properties if appropriate - make sure eclipse.home not set
 ant veryclean tar -Dresolvers=internal 
 
 You will see a tarball in
-ls target/hadoop-mapreduce-0.23.0-SNAPSHOT-all.tar.gz  
+ls target/hadoop-mapreduce-0.24.0-SNAPSHOT-all.tar.gz  
 
 Step 6) Untar the tarball in a clean and different directory.
 say YARN_HOME. 
@@ -73,13 +73,13 @@ Step 10) Modify mapred-site.xml to use yarn framework
 
 Step 11) Create the following symlinks in $HADOOP_COMMON_HOME/share/hadoop/common/lib
 
-ln -s $YARN_HOME/modules/hadoop-mapreduce-client-app-0.23.0-SNAPSHOT.jar .	
-ln -s $YARN_HOME/modules/hadoop-yarn-api-0.23.0-SNAPSHOT.jar .
-ln -s $YARN_HOME/modules/hadoop-mapreduce-client-common-0.23.0-SNAPSHOT.jar .	
-ln -s $YARN_HOME/modules/hadoop-yarn-common-0.23.0-SNAPSHOT.jar .
-ln -s $YARN_HOME/modules/hadoop-mapreduce-client-core-0.23.0-SNAPSHOT.jar .	
-ln -s $YARN_HOME/modules/hadoop-yarn-server-common-0.23.0-SNAPSHOT.jar .
-ln -s $YARN_HOME/modules/hadoop-mapreduce-client-jobclient-0.23.0-SNAPSHOT.jar .
+ln -s $YARN_HOME/modules/hadoop-mapreduce-client-app-0.24.0-SNAPSHOT.jar .	
+ln -s $YARN_HOME/modules/hadoop-yarn-api-0.24.0-SNAPSHOT.jar .
+ln -s $YARN_HOME/modules/hadoop-mapreduce-client-common-0.24.0-SNAPSHOT.jar .	
+ln -s $YARN_HOME/modules/hadoop-yarn-common-0.24.0-SNAPSHOT.jar .
+ln -s $YARN_HOME/modules/hadoop-mapreduce-client-core-0.24.0-SNAPSHOT.jar .	
+ln -s $YARN_HOME/modules/hadoop-yarn-server-common-0.24.0-SNAPSHOT.jar .
+ln -s $YARN_HOME/modules/hadoop-mapreduce-client-jobclient-0.24.0-SNAPSHOT.jar .
 
 Step 12) cd $YARN_HOME
 
@@ -92,7 +92,7 @@ Step 15) bin/yarn-daemon.sh start historyserver
 Step 16) You are all set, an example on how to run a mapreduce job is:
 cd $HADOOP_MAPRED_HOME
 ant examples -Dresolvers=internal 
-$HADOOP_COMMON_HOME/bin/hadoop jar $HADOOP_MAPRED_HOME/build/hadoop-mapreduce-examples-0.23.0-SNAPSHOT.jar randomwriter -Dmapreduce.job.user.name=$USER -Dmapreduce.clientfactory.class.name=org.apache.hadoop.mapred.YarnClientFactory -Dmapreduce.randomwriter.bytespermap=0.23.000 -Ddfs.blocksize=536870912 -Ddfs.block.size=536870912 -libjars $YARN_HOME/modules/hadoop-mapreduce-client-jobclient-0.23.0-SNAPSHOT.jar output 
+$HADOOP_COMMON_HOME/bin/hadoop jar $HADOOP_MAPRED_HOME/build/hadoop-mapreduce-examples-0.24.0-SNAPSHOT.jar randomwriter -Dmapreduce.job.user.name=$USER -Dmapreduce.clientfactory.class.name=org.apache.hadoop.mapred.YarnClientFactory -Dmapreduce.randomwriter.bytespermap=10000 -Ddfs.blocksize=536870912 -Ddfs.block.size=536870912 -libjars $YARN_HOME/modules/hadoop-mapreduce-client-jobclient-0.24.0-SNAPSHOT.jar output 
 
 The output on the command line should be almost similar to what you see in the JT/TT setup (Hadoop 0.20/0.21)
 

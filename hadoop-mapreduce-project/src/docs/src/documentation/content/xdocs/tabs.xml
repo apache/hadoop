@@ -32,6 +32,6 @@
 
   <tab label="Project" href="http://hadoop.apache.org/mapreduce/" />
   <tab label="Wiki" href="http://wiki.apache.org/hadoop/MapReduce" />
-  <tab label="MapReduce 0.23 Documentation" dir="" />  
+  <tab label="MapReduce 0.24 Documentation" dir="" />  
   
 </tabs>

@@ -1,5 +1,7 @@
 Hadoop HDFS Change Log
 
+Trunk (unreleased changes)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -101,7 +101,7 @@
               <target>
                 <symlink link="${applink.base}.jar"
                     resource="mr-app.jar" failonerror="false"/>
-                <symlink link="${applink.base}-0.23.0-SNAPSHOT.jar"
+                <symlink link="${applink.base}-0.24.0-SNAPSHOT.jar"
                     resource="mr-app.jar" failonerror="false"/>
               </target>
             </configuration>
