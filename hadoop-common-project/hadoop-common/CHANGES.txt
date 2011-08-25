@@ -525,6 +525,9 @@ Trunk (unreleased changes)
     HADOOP-7563. Setup HADOOP_HDFS_HOME, HADOOP_MAPRED_HOME and classpath
     correction. (Eric Yang via acmurthy) 
 
+    HADOOP-7560. Change src layout to be heirarchical. (Alejandro Abdelnur
+    via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
