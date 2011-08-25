@@ -474,7 +474,7 @@ public class TestLogRolling  {
     writeData(table, 5);
 
     // force a log roll to read back and verify previously written logs
-    log.rollWriter();
+    log.rollWriter(true);
 
     // read back the data written
     Set<String> loggedRows = new HashSet<String>();
