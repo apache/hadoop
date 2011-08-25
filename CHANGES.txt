@@ -213,6 +213,8 @@ Release 0.91.0 - Unreleased
    HBASE-4225  NoSuchColumnFamilyException in multi doesn't say which family
                is bad (Ramkrishna Vasudevan)
    HBASE-4220  Lots of DNS queries from client
+   HBASE-4253  Intermittent test failure because of missing config parameter in new
+               HTable(tablename) (Ramkrishna)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

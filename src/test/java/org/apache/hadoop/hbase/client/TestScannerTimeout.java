@@ -157,7 +157,7 @@ public class TestScannerTimeout {
     scan.setCaching(SCANNER_CACHING);
     LOG.info("************ TEST3686A");
     MetaReader.fullScanMetaAndPrint(TEST_UTIL.getHBaseCluster().getMaster().getCatalogTracker());
-    HTable table = new HTable(TABLE_NAME);
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLE_NAME);
     LOG.info("START ************ TEST3686A---22");
 
     ResultScanner r = table.getScanner(scan);

@@ -162,7 +162,8 @@ public class TestHTablePool {
 
       // get table will return proxy implementation
       final HTableInterface table = pool.getTable(tableName);
-      HTableInterface alienTable = new HTable(TABLENAME) {
+      HTableInterface alienTable = new HTable(TEST_UTIL.getConfiguration(),
+          TABLENAME) {
         // implementation doesn't matter as long the table is not from
         // pool
       };
