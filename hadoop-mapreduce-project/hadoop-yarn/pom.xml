@@ -27,7 +27,7 @@
     <test.timeout>600000</test.timeout>
     <hadoop-common.version>0.23.0-SNAPSHOT</hadoop-common.version>
     <hadoop-hdfs.version>0.23.0-SNAPSHOT</hadoop-hdfs.version>
-    <yarn.version>1.0-SNAPSHOT</yarn.version>
+    <yarn.version>0.23.0-SNAPSHOT</yarn.version>
     <install.pom>${project.build.directory}/saner-pom.xml</install.pom>
     <install.file>${install.pom}</install.file>
     <yarn.basedir>${basedir}</yarn.basedir>

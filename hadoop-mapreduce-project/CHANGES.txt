@@ -1146,6 +1146,8 @@ Trunk (unreleased changes)
     MAPREDUCE-2796. Set start times for MR applications for clients to see.
     (Devaraj K via acmurthy) 
 
+    MAPREDUCE-2879. Fix version for MR-279 to 0.23.0. (acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
