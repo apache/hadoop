@@ -29,6 +29,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 
 
 public class TestKeyValueHeap extends HBaseTestCase {
@@ -208,31 +209,11 @@ public class TestKeyValueHeap extends HBaseTestCase {
     }
   }
 
-  private static class Scanner implements KeyValueScanner {
-    private Iterator<KeyValue> iter;
-    private KeyValue current;
+  private static class Scanner extends CollectionBackedScanner {
     private boolean closed = false;
 
     public Scanner(List<KeyValue> list) {
-      Collections.sort(list, KeyValue.COMPARATOR);
-      iter = list.iterator();
-      if(iter.hasNext()){
-        current = iter.next();
-      }
-    }
-
-    public KeyValue peek() {
-      return current;
-    }
-
-    public KeyValue next() {
-      KeyValue oldCurrent = current;
-      if(iter.hasNext()){
-        current = iter.next();
-      } else {
-        current = null;
-      }
-      return oldCurrent;
+      super(list);
     }
 
     public void close(){
@@ -241,28 +222,6 @@ public class TestKeyValueHeap extends HBaseTestCase {
 
     public boolean isClosed() {
       return closed;
-    }
-
-    public boolean seek(KeyValue seekKv) {
-      while(iter.hasNext()){
-        KeyValue next = iter.next();
-        int ret = KeyValue.COMPARATOR.compare(next, seekKv);
-        if(ret >= 0){
-          current = next;
-          return true;
-        }
-      }
-      return false;
-    }
-
-    @Override
-    public boolean reseek(KeyValue key) throws IOException {
-      return seek(key);
-    }
-
-    @Override
-    public long getSequenceID() {
-      return 0;
     }
   }
 

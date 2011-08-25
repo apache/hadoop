@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
@@ -90,6 +91,7 @@ public class Store implements HeapSize {
   // ttl in milliseconds.
   protected long ttl;
   protected int minVersions;
+  protected int maxVersions;
   long majorCompactionTime;
   private final int minFilesToCompact;
   private final int maxFilesToCompact;
@@ -178,6 +180,7 @@ public class Store implements HeapSize {
       this.ttl *= 1000;
     }
     this.minVersions = family.getMinVersions();
+    this.maxVersions = family.getMaxVersions();
     this.memstore = new MemStore(conf, this.comparator);
     this.storeNameStr = Bytes.toString(this.family.getName());
 
@@ -481,34 +484,45 @@ public class Store implements HeapSize {
     if (set.size() == 0) {
       return null;
     }
-    long oldestTimestamp = System.currentTimeMillis() - ttl;
-    // TODO:  We can fail in the below block before we complete adding this
-    // flush to list of store files.  Add cleanup of anything put on filesystem
-    // if we fail.
-    synchronized (flushLock) {
-      status.setStatus("Flushing " + this + ": creating writer");
-      // A. Write the map out to the disk
-      writer = createWriterInTmp(set.size());
-      writer.setTimeRangeTracker(snapshotTimeRangeTracker);
-      try {
-        for (KeyValue kv: set) {
-          // If minVersion > 0 we will wait until the next compaction to
-          // collect expired KVs. (following the logic for maxVersions).
-          // TODO: As Jonathan Gray points this can be optimized
-          // (see HBASE-4241)
-          if (minVersions > 0 || !isExpired(kv, oldestTimestamp)) {
-            writer.append(kv);
-            flushed += this.memstore.heapSizeChange(kv, true);
+    Scan scan = new Scan();
+    scan.setMaxVersions(maxVersions);
+    // Use a store scanner to find which rows to flush.
+    // Note that we need to retain deletes, hence
+    // pass true as the StoreScanner's retainDeletesInOutput argument.
+    InternalScanner scanner = new StoreScanner(this, scan,
+        Collections.singletonList(new CollectionBackedScanner(set,
+            this.comparator)), true);
+    try {
+      // TODO:  We can fail in the below block before we complete adding this
+      // flush to list of store files.  Add cleanup of anything put on filesystem
+      // if we fail.
+      synchronized (flushLock) {
+        status.setStatus("Flushing " + this + ": creating writer");
+        // A. Write the map out to the disk
+        writer = createWriterInTmp(set.size());
+        writer.setTimeRangeTracker(snapshotTimeRangeTracker);
+        try {
+          List<KeyValue> kvs = new ArrayList<KeyValue>();
+          while (scanner.next(kvs)) {
+            if (!kvs.isEmpty()) {
+              for (KeyValue kv : kvs) {
+                writer.append(kv);
+                flushed += this.memstore.heapSizeChange(kv, true);
+              }
+              kvs.clear();
+            }
           }
+        } finally {
+          // Write out the log sequence number that corresponds to this output
+          // hfile.  The hfile is current up to and including logCacheFlushId.
+          status.setStatus("Flushing " + this + ": appending metadata");
+          writer.appendMetadata(logCacheFlushId, false);
+          status.setStatus("Flushing " + this + ": closing flushed file");
+          writer.close();
         }
-      } finally {
-        // Write out the log sequence number that corresponds to this output
-        // hfile.  The hfile is current up to and including logCacheFlushId.
-        status.setStatus("Flushing " + this + ": appending metadata");
-        writer.appendMetadata(logCacheFlushId, false);
-        status.setStatus("Flushing " + this + ": closing flushed file");
-        writer.close();
       }
+    } finally {
+      scanner.close();
     }
 
     // Write-out finished successfully, move into the right spot
@@ -1734,7 +1748,7 @@ public class Store implements HeapSize {
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT + (15 * ClassSize.REFERENCE) +
       (8 * Bytes.SIZEOF_LONG) + (1 * Bytes.SIZEOF_DOUBLE) +
-      (5 * Bytes.SIZEOF_INT) + (3 * Bytes.SIZEOF_BOOLEAN));
+      (6 * Bytes.SIZEOF_INT) + (3 * Bytes.SIZEOF_BOOLEAN));
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + ClassSize.REENTRANT_LOCK +

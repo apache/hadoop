@@ -122,6 +122,9 @@ public class TestStore extends TestCase {
     Path logdir = new Path(DIR+methodName+"/logs");
     Path oldLogDir = new Path(basedir, HConstants.HREGION_OLDLOGDIR_NAME);
     HColumnDescriptor hcd = new HColumnDescriptor(family);
+    // some of the tests write 4 versions and then flush
+    // (with HBASE-4241, lower versions are collected on flush)
+    hcd.setMaxVersions(4);
     FileSystem fs = FileSystem.get(conf);
 
     fs.delete(logdir, true);

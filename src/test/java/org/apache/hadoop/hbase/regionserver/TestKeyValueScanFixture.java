@@ -42,8 +42,6 @@ public class TestKeyValueScanFixture extends TestCase {
     KeyValueScanner scan = new KeyValueScanFixture(
         KeyValue.COMPARATOR, kvs);
 
-    // test simple things.
-    assertNull(scan.peek());
     KeyValue kv = KeyValue.createFirstOnRow(Bytes.toBytes("RowA"));
     // should seek to this:
     assertTrue(scan.seek(kv));

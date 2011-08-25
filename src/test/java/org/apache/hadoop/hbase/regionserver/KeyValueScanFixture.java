@@ -21,11 +21,10 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
+import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 import org.apache.hadoop.hbase.KeyValue;
 
 import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -34,21 +33,10 @@ import java.util.List;
  * to the provided comparator, and then the whole thing pretends
  * to be a store file scanner.
  */
-public class KeyValueScanFixture implements KeyValueScanner {
-  ArrayList<KeyValue> data;
-  Iterator<KeyValue> iter = null;
-  KeyValue current = null;
-  KeyValue.KVComparator comparator;
-
+public class KeyValueScanFixture extends CollectionBackedScanner {
   public KeyValueScanFixture(KeyValue.KVComparator comparator,
                              KeyValue... incData) {
-    this.comparator = comparator;
-
-    data = new ArrayList<KeyValue>(incData.length);
-    for( int i = 0; i < incData.length ; ++i) {
-      data.add(incData[i]);
-    }
-    Collections.sort(data, this.comparator);
+    super(comparator, incData);
   }
 
   public static List<KeyValueScanner> scanFixture(KeyValue[] ... kvArrays) {
@@ -57,55 +45,5 @@ public class KeyValueScanFixture implements KeyValueScanner {
       scanners.add(new KeyValueScanFixture(KeyValue.COMPARATOR, kvs));
     }
     return scanners;
-  }
-
-
-  @Override
-  public KeyValue peek() {
-    return this.current;
-  }
-
-  @Override
-  public KeyValue next() {
-    KeyValue res = current;
-
-    if (iter.hasNext())
-      current = iter.next();
-    else
-      current = null;
-    return res;
-  }
-
-  @Override
-  public boolean seek(KeyValue key) {
-    // start at beginning.
-    iter = data.iterator();
-      int cmp;
-    KeyValue kv = null;
-    do {
-      if (!iter.hasNext()) {
-        current = null;
-        return false;
-      }
-      kv = iter.next();
-      cmp = comparator.compare(key, kv);
-    } while (cmp > 0);
-    current = kv;
-    return true;
-  }
-
-  @Override
-  public boolean reseek(KeyValue key) {
-    return seek(key);
-  }
-
-  @Override
-  public void close() {
-    // noop.
-  }
-
-  @Override
-  public long getSequenceID() {
-    return 0;
   }
 }

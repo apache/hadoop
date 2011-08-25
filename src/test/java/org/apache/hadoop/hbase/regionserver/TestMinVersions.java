@@ -315,14 +315,12 @@ public class TestMinVersions extends HBaseTestCase {
 
     // now flush
     region.flushcache();
-    region.compactStores();
 
-    // oldest version still exists
-    // flushing/minor compactions can't get rid of these, anymore
+    // with HBASE-4241 a flush will eliminate the expired rows
     g = new Get(T1);
     g.setTimeRange(0L, ts-2);
     r = region.get(g, null);
-    checkResult(r, c0, T1);
+    assertTrue(r.isEmpty());
 
     // major compaction
     region.compactStores(true);
