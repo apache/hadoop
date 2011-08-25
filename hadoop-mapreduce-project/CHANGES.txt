@@ -1140,6 +1140,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-2807. Fix AM restart and client redirection. (sharad)
 
+    MAPREDUCE-2877. Add missing Apache license header in some files in MR 
+    and also add the rat plugin to the poms. (mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
