@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -284,8 +285,12 @@ public class TestContainerTokenSecretManager {
                   .newRecordInstance(GetContainerStatusRequest.class);
           ContainerId containerID =
               recordFactory.newRecordInstance(ContainerId.class);
+          ApplicationAttemptId appAttemptId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
+          appAttemptId.setApplicationId(appID);
+          appAttemptId.setAttemptId(1);
           containerID.setAppId(appID);
           containerID.setId(1);
+          containerID.setAppAttemptId(appAttemptId);
           request.setContainerId(containerID);
           client.getContainerStatus(request);
         } catch (YarnRemoteException e) {
@@ -331,8 +336,12 @@ public class TestContainerTokenSecretManager {
                   .newRecordInstance(GetContainerStatusRequest.class);
         containerID =
               recordFactory.newRecordInstance(ContainerId.class);
+        ApplicationAttemptId appAttemptId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
+        appAttemptId.setApplicationId(appID);
+        appAttemptId.setAttemptId(1);
         containerID.setAppId(appID);
         containerID.setId(1);
+        containerID.setAppAttemptId(appAttemptId);
         request.setContainerId(containerID);
         try {
           client.getContainerStatus(request);

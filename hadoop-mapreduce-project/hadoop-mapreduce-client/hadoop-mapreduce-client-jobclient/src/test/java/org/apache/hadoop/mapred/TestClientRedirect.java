@@ -21,6 +21,7 @@ package org.apache.hadoop.mapred;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Iterator;
 
 import junit.framework.Assert;
@@ -30,7 +31,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Cluster;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptResponse;
@@ -60,6 +64,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHConfig;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
@@ -86,7 +91,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
-import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -111,6 +115,7 @@ public class TestClientRedirect {
   private volatile boolean amContact = false; 
   private volatile boolean hsContact = false;
   private volatile boolean amRunning = false;
+  private volatile boolean amRestarting = false;
 
   @Test
   public void testRedirect() throws Exception {
@@ -138,17 +143,9 @@ public class TestClientRedirect {
       new org.apache.hadoop.mapred.JobID("201103121733", 1);
     org.apache.hadoop.mapreduce.Counters counters = cluster.getJob(jobID)
         .getCounters();
-    Iterator<org.apache.hadoop.mapreduce.CounterGroup> it = counters.iterator();
-    while (it.hasNext()) {
-      org.apache.hadoop.mapreduce.CounterGroup group = it.next();
-      LOG.info("Group " + group.getDisplayName());
-      Iterator<org.apache.hadoop.mapreduce.Counter> itc = group.iterator();
-      while (itc.hasNext()) {
-        LOG.info("Counter is " + itc.next().getDisplayName());
-      }
-    }
+    validateCounters(counters);
     Assert.assertTrue(amContact);
-
+   
     LOG.info("Sleeping for 5 seconds before stop for" +
     " the client socket to not get EOF immediately..");
     Thread.sleep(5000);
@@ -160,10 +157,51 @@ public class TestClientRedirect {
     LOG.info("Sleeping for 5 seconds after stop for" +
     		" the server to exit cleanly..");
     Thread.sleep(5000);
+    
+    amRestarting = true;
+    // Same client
+    //results are returned from fake (not started job)
+    counters = cluster.getJob(jobID).getCounters();
+    Assert.assertEquals(0, counters.countCounters());
+    Job job = cluster.getJob(jobID);
+    org.apache.hadoop.mapreduce.TaskID taskId = 
+      new org.apache.hadoop.mapreduce.TaskID(jobID, TaskType.MAP, 0);
+    TaskAttemptID tId = new TaskAttemptID(taskId, 0);
+    
+    //invoke all methods to check that no exception is thrown
+    job.killJob();
+    job.killTask(tId);
+    job.failTask(tId);
+    job.getTaskCompletionEvents(0, 100);
+    job.getStatus();
+    job.getTaskDiagnostics(tId);
+    job.getTaskReports(TaskType.MAP);
+    job.getTrackingURL();
+    
+    amRestarting = false;
+    amService = new AMService();
+    amService.init(conf);
+    amService.start(conf);
+    amRunning = true;
+    amContact = false; //reset
+    
+    counters = cluster.getJob(jobID).getCounters();
+    validateCounters(counters);
+    Assert.assertTrue(amContact);
+    
+    amRunning = false;
 
     // Same client
     counters = cluster.getJob(jobID).getCounters();
-    it = counters.iterator();
+    validateCounters(counters);
+    Assert.assertTrue(hsContact);
+    
+    rmService.stop();
+    historyService.stop();
+  }
+
+  private void validateCounters(org.apache.hadoop.mapreduce.Counters counters) {
+    Iterator<org.apache.hadoop.mapreduce.CounterGroup> it = counters.iterator();
     while (it.hasNext()) {
       org.apache.hadoop.mapreduce.CounterGroup group = it.next();
       LOG.info("Group " + group.getDisplayName());
@@ -172,11 +210,7 @@ public class TestClientRedirect {
         LOG.info("Counter is " + itc.next().getDisplayName());
       }
     }
-
-    Assert.assertTrue(hsContact);
-    
-    rmService.stop();
-    historyService.stop();
+    Assert.assertEquals(1, counters.countCounters());
   }
 
   class RMService extends AbstractService implements ClientRMProtocol {
@@ -226,6 +260,8 @@ public class TestClientRedirect {
       application.setApplicationId(applicationId);
       if (amRunning) {
         application.setState(ApplicationState.RUNNING);
+      } else if (amRestarting) {
+        application.setState(ApplicationState.SUBMITTED);
       } else {
         application.setState(ApplicationState.SUCCEEDED);
       }

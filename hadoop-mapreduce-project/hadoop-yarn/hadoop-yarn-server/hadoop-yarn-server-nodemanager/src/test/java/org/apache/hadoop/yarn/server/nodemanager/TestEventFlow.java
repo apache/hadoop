@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -104,6 +105,9 @@ public class TestEventFlow {
     ContainerLaunchContext launchContext = recordFactory.newRecordInstance(ContainerLaunchContext.class);
     ContainerId cID = recordFactory.newRecordInstance(ContainerId.class);
     cID.setAppId(recordFactory.newRecordInstance(ApplicationId.class));
+    ApplicationAttemptId atId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
+    atId.setApplicationId(cID.getAppId());
+    cID.setAppAttemptId(atId);
     launchContext.setContainerId(cID);
     launchContext.setUser("testing");
     launchContext.setResource(recordFactory.newRecordInstance(Resource.class));

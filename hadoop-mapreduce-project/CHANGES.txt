@@ -1138,6 +1138,8 @@ Trunk (unreleased changes)
     MAPREDUCE-2846. Fix missing synchronization in the task log management.
     (omalley)
 
+    MAPREDUCE-2807. Fix AM restart and client redirection. (sharad)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

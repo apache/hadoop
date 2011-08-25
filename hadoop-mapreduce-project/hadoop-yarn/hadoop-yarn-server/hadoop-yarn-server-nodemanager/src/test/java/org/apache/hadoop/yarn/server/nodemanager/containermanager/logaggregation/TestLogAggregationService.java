@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -110,8 +111,11 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
             application1, this.user, null,
             ContainerLogsRetentionPolicy.ALL_CONTAINERS));
 
+    ApplicationAttemptId appAttemptId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
+    appAttemptId.setApplicationId(application1);
+    appAttemptId.setAttemptId(1);
     ContainerId container11 =
-        BuilderUtils.newContainerId(recordFactory, application1, 1);
+        BuilderUtils.newContainerId(recordFactory, application1, appAttemptId, 1);
     // Simulate log-file creation
     writeContainerLogs(app1LogDir, container11);
     logAggregationService.handle(new LogAggregatorContainerFinishedEvent(
@@ -188,14 +192,18 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
             application1, this.user, null,
             ContainerLogsRetentionPolicy.ALL_CONTAINERS));
 
+    ApplicationAttemptId appAttemptId1 = recordFactory.newRecordInstance(ApplicationAttemptId.class);
+    appAttemptId1.setApplicationId(application1);
     ContainerId container11 =
-        BuilderUtils.newContainerId(recordFactory, application1, 1);
+        BuilderUtils.newContainerId(recordFactory, application1, appAttemptId1, 1);
     // Simulate log-file creation
     writeContainerLogs(app1LogDir, container11);
     logAggregationService.handle(new LogAggregatorContainerFinishedEvent(
         container11, "0"));
 
     ApplicationId application2 = BuilderUtils.newApplicationId(1234, 2);
+    ApplicationAttemptId appAttemptId2 = recordFactory.newRecordInstance(ApplicationAttemptId.class);
+    appAttemptId1.setApplicationId(application2);
 
     File app2LogDir =
       new File(localLogDir, ConverterUtils.toString(application2));
@@ -204,19 +212,22 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         application2, this.user, null,
         ContainerLogsRetentionPolicy.APPLICATION_MASTER_ONLY));
 
+    
     ContainerId container21 =
-        BuilderUtils.newContainerId(recordFactory, application2, 1);
+        BuilderUtils.newContainerId(recordFactory, application2, appAttemptId2, 1);
     writeContainerLogs(app2LogDir, container21);
     logAggregationService.handle(new LogAggregatorContainerFinishedEvent(
         container21, "0"));
 
     ContainerId container12 =
-        BuilderUtils.newContainerId(recordFactory, application1, 2);
+        BuilderUtils.newContainerId(recordFactory, application1, appAttemptId1, 2);
     writeContainerLogs(app1LogDir, container12);
     logAggregationService.handle(new LogAggregatorContainerFinishedEvent(
         container12, "0"));
 
     ApplicationId application3 = BuilderUtils.newApplicationId(1234, 3);
+    ApplicationAttemptId appAttemptId3 = recordFactory.newRecordInstance(ApplicationAttemptId.class);
+    appAttemptId1.setApplicationId(application3);
 
     File app3LogDir =
       new File(localLogDir, ConverterUtils.toString(application3));
@@ -226,25 +237,25 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         ContainerLogsRetentionPolicy.AM_AND_FAILED_CONTAINERS_ONLY));
 
     ContainerId container31 =
-        BuilderUtils.newContainerId(recordFactory, application3, 1);
+        BuilderUtils.newContainerId(recordFactory, application3, appAttemptId3, 1);
     writeContainerLogs(app3LogDir, container31);
     logAggregationService.handle(new LogAggregatorContainerFinishedEvent(
         container31, "0"));
 
     ContainerId container32 =
-        BuilderUtils.newContainerId(recordFactory, application3, 2);
+        BuilderUtils.newContainerId(recordFactory, application3, appAttemptId3, 2);
     writeContainerLogs(app3LogDir, container32);
     logAggregationService.handle(new LogAggregatorContainerFinishedEvent(
         container32, "1")); // Failed container
 
     ContainerId container22 =
-        BuilderUtils.newContainerId(recordFactory, application2, 2);
+        BuilderUtils.newContainerId(recordFactory, application2, appAttemptId2, 2);
     writeContainerLogs(app2LogDir, container22);
     logAggregationService.handle(new LogAggregatorContainerFinishedEvent(
         container22, "0"));
 
     ContainerId container33 =
-        BuilderUtils.newContainerId(recordFactory, application3, 3);
+        BuilderUtils.newContainerId(recordFactory, application3, appAttemptId3, 3);
     writeContainerLogs(app3LogDir, container33);
     logAggregationService.handle(new LogAggregatorContainerFinishedEvent(
         container33, "0"));

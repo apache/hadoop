@@ -369,7 +369,6 @@ public class TypeConverter {
     case SUBMITTED:
       return State.PREP;
     case RUNNING:
-    case RESTARTING:
       return State.RUNNING;
     case SUCCEEDED:
       return State.SUCCEEDED;

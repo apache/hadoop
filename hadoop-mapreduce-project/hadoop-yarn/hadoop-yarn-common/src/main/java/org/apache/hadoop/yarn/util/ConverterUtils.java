@@ -104,18 +104,7 @@ public class ConverterUtils {
       }
     };
 
-  // TODO: Why thread local?
-  // ^ NumberFormat instances are not threadsafe
-  private static final ThreadLocal<NumberFormat> containerIdFormat =
-      new ThreadLocal<NumberFormat>() {
-        @Override
-        public NumberFormat initialValue() {
-          NumberFormat fmt = NumberFormat.getInstance();
-          fmt.setGroupingUsed(false);
-          fmt.setMinimumIntegerDigits(6);
-          return fmt;
-        }
-      };
+  
 
   public static String toString(ApplicationId appId) {
     StringBuilder sb = new StringBuilder();
@@ -142,12 +131,7 @@ public class ConverterUtils {
   }
 
   public static String toString(ContainerId cId) {
-    StringBuilder sb = new StringBuilder();
-    ApplicationId appId = cId.getAppId();
-    sb.append("container_").append(appId.getClusterTimestamp()).append("_");
-    sb.append(appIdFormat.get().format(appId.getId())).append("_");
-    sb.append(containerIdFormat.get().format(cId.getId()));
-    return sb.toString();
+    return cId.toString();
   }
 
   public static ContainerId toContainerId(RecordFactory recordFactory,

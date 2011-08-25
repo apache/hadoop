@@ -18,40 +18,34 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 
 import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -306,6 +300,9 @@ public class TestRMAppTransitions {
     for (int i=1; i<maxRetries; i++) {
       RMAppEvent event = new RMAppEvent(application.getApplicationId(), RMAppEventType.ATTEMPT_FAILED);
       application.handle(event);
+      assertAppState(RMAppState.SUBMITTED, application);
+      event = new RMAppEvent(application.getApplicationId(), RMAppEventType.APP_ACCEPTED);
+      application.handle(event);
       assertAppState(RMAppState.ACCEPTED, application);
     }
 
@@ -342,9 +339,21 @@ public class TestRMAppTransitions {
     LOG.info("--- START: testAppRunningFailed ---");
 
     RMApp application = testCreateAppRunning();
+    RMAppAttempt appAttempt = application.getCurrentAppAttempt();
+    int expectedAttemptId = 1;
+    Assert.assertEquals(expectedAttemptId, appAttempt.getAppAttemptId().getAttemptId());
     // RUNNING => FAILED/RESTARTING event RMAppEventType.ATTEMPT_FAILED
     for (int i=1; i<maxRetries; i++) {
       RMAppEvent event = new RMAppEvent(application.getApplicationId(), RMAppEventType.ATTEMPT_FAILED);
+      application.handle(event);
+      assertAppState(RMAppState.SUBMITTED, application);
+      appAttempt = application.getCurrentAppAttempt();
+      Assert.assertEquals(++expectedAttemptId, 
+          appAttempt.getAppAttemptId().getAttemptId());
+      event = new RMAppEvent(application.getApplicationId(), RMAppEventType.APP_ACCEPTED);
+      application.handle(event);
+      assertAppState(RMAppState.ACCEPTED, application);
+      event = new RMAppEvent(application.getApplicationId(), RMAppEventType.ATTEMPT_REGISTERED);
       application.handle(event);
       assertAppState(RMAppState.RUNNING, application);
     }

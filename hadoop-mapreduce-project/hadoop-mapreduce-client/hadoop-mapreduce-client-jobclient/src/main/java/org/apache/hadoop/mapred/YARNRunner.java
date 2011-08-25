@@ -61,6 +61,7 @@ import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.v2.ClientConstants;
 import org.apache.hadoop.mapreduce.v2.MRConstants;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -98,7 +99,7 @@ public class YARNRunner implements ClientProtocol {
   
   private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private ResourceMgrDelegate resMgrDelegate;
-  private ClientServiceDelegate clientServiceDelegate;
+  private ClientCache clientCache;
   private YarnConfiguration conf;
   private final FileContext defaultFileContext;
 
@@ -111,7 +112,7 @@ public class YARNRunner implements ClientProtocol {
     this.conf = new YarnConfiguration(conf);
     try {
       this.resMgrDelegate = new ResourceMgrDelegate(this.conf);
-      this.clientServiceDelegate = new ClientServiceDelegate(this.conf,
+      this.clientCache = new ClientCache(this.conf,
           resMgrDelegate);
       this.defaultFileContext = FileContext.getFileContext(this.conf);
     } catch (UnsupportedFileSystemException ufe) {
@@ -248,7 +249,7 @@ public class YARNRunner implements ClientProtocol {
         || appMaster.getState() == ApplicationState.KILLED) {
       throw RPCUtil.getRemoteException("failed to run job");
     }
-    return clientServiceDelegate.getJobStatus(jobId);
+    return clientCache.getClient(jobId).getJobStatus(jobId);
   }
 
   private LocalResource createApplicationResource(FileContext fs, Path p)
@@ -519,43 +520,43 @@ public class YARNRunner implements ClientProtocol {
   @Override
   public Counters getJobCounters(JobID arg0) throws IOException,
       InterruptedException {
-    return clientServiceDelegate.getJobCounters(arg0);
+    return clientCache.getClient(arg0).getJobCounters(arg0);
   }
 
   @Override
   public String getJobHistoryDir() throws IOException, InterruptedException {
-    return clientServiceDelegate.getJobHistoryDir();
+    return JobHistoryUtils.getConfiguredHistoryServerDoneDirPrefix(conf);
   }
 
   @Override
   public JobStatus getJobStatus(JobID jobID) throws IOException,
       InterruptedException {
-    JobStatus status = clientServiceDelegate.getJobStatus(jobID);
+    JobStatus status = clientCache.getClient(jobID).getJobStatus(jobID);
     return status;
   }
   
   @Override
   public TaskCompletionEvent[] getTaskCompletionEvents(JobID arg0, int arg1,
       int arg2) throws IOException, InterruptedException {
-    return clientServiceDelegate.getTaskCompletionEvents(arg0, arg1, arg2);
+    return clientCache.getClient(arg0).getTaskCompletionEvents(arg0, arg1, arg2);
   }
 
   @Override
   public String[] getTaskDiagnostics(TaskAttemptID arg0) throws IOException,
       InterruptedException {
-    return clientServiceDelegate.getTaskDiagnostics(arg0);
+    return clientCache.getClient(arg0.getJobID()).getTaskDiagnostics(arg0);
   }
 
   @Override
   public TaskReport[] getTaskReports(JobID jobID, TaskType taskType)
   throws IOException, InterruptedException {
-    return clientServiceDelegate
+    return clientCache.getClient(jobID)
         .getTaskReports(jobID, taskType);
   }
 
   @Override
   public void killJob(JobID arg0) throws IOException, InterruptedException {
-    if (!clientServiceDelegate.killJob(arg0)) {
+    if (!clientCache.getClient(arg0).killJob(arg0)) {
     resMgrDelegate.killApplication(TypeConverter.toYarn(arg0).getAppId());
   }
   }
@@ -563,7 +564,7 @@ public class YARNRunner implements ClientProtocol {
   @Override
   public boolean killTask(TaskAttemptID arg0, boolean arg1) throws IOException,
       InterruptedException {
-    return clientServiceDelegate.killTask(arg0, arg1);
+    return clientCache.getClient(arg0.getJobID()).killTask(arg0, arg1);
   }
 
   @Override

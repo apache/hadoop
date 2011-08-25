@@ -106,9 +106,9 @@ public class RMAppImpl implements RMApp {
     .addTransition(RMAppState.ACCEPTED, RMAppState.RUNNING,
         RMAppEventType.ATTEMPT_REGISTERED)
     .addTransition(RMAppState.ACCEPTED,
-        EnumSet.of(RMAppState.ACCEPTED, RMAppState.FAILED),
+        EnumSet.of(RMAppState.SUBMITTED, RMAppState.FAILED),
         RMAppEventType.ATTEMPT_FAILED,
-        new AttemptFailedTransition(RMAppState.ACCEPTED))
+        new AttemptFailedTransition(RMAppState.SUBMITTED))
     .addTransition(RMAppState.ACCEPTED, RMAppState.KILLED,
         RMAppEventType.KILL, new AppKilledTransition())
 
@@ -116,21 +116,10 @@ public class RMAppImpl implements RMApp {
     .addTransition(RMAppState.RUNNING, RMAppState.FINISHED,
         RMAppEventType.ATTEMPT_FINISHED, FINAL_TRANSITION)
     .addTransition(RMAppState.RUNNING,
-        EnumSet.of(RMAppState.RUNNING, RMAppState.FAILED),
+        EnumSet.of(RMAppState.SUBMITTED, RMAppState.FAILED),
         RMAppEventType.ATTEMPT_FAILED,
-        new AttemptFailedTransition(RMAppState.RUNNING))
+        new AttemptFailedTransition(RMAppState.SUBMITTED))
     .addTransition(RMAppState.RUNNING, RMAppState.KILLED,
-        RMAppEventType.KILL, new AppKilledTransition())
-
-     // Transitions from RESTARTING state
-     // TODO - no way to get to RESTARTING state right now
-    .addTransition(RMAppState.RESTARTING, RMAppState.RUNNING,
-        RMAppEventType.ATTEMPT_REGISTERED)
-    .addTransition(RMAppState.RESTARTING,
-        EnumSet.of(RMAppState.RESTARTING, RMAppState.FAILED),
-        RMAppEventType.ATTEMPT_FAILED,
-        new AttemptFailedTransition(RMAppState.RESTARTING))
-    .addTransition(RMAppState.RESTARTING, RMAppState.KILLED,
         RMAppEventType.KILL, new AppKilledTransition())
 
      // Transitions from FINISHED state
@@ -263,8 +252,6 @@ public class RMAppImpl implements RMApp {
     case SUBMITTED:
     case ACCEPTED:
       return ApplicationState.SUBMITTED;
-    case RESTARTING:
-      return ApplicationState.RESTARTING;
     case RUNNING:
       return ApplicationState.RUNNING;
     case FINISHED:
@@ -375,6 +362,21 @@ public class RMAppImpl implements RMApp {
     }
   }
 
+  private void createNewAttempt() {
+    ApplicationAttemptId appAttemptId = Records
+        .newRecord(ApplicationAttemptId.class);
+    appAttemptId.setApplicationId(applicationId);
+    appAttemptId.setAttemptId(attempts.size() + 1);
+
+    RMAppAttempt attempt = new RMAppAttemptImpl(appAttemptId,
+        clientTokenStr, rmContext, scheduler, masterService,
+        submissionContext);
+    attempts.put(appAttemptId, attempt);
+    currentAttempt = attempt;
+    dispatcher.getEventHandler().handle(
+        new RMAppAttemptEvent(appAttemptId, RMAppAttemptEventType.START));
+  }
+
   private static class RMAppTransition implements
       SingleArcTransition<RMAppImpl, RMAppEvent> {
     public void transition(RMAppImpl app, RMAppEvent event) {
@@ -384,19 +386,7 @@ public class RMAppImpl implements RMApp {
 
   private static final class StartAppAttemptTransition extends RMAppTransition {
     public void transition(RMAppImpl app, RMAppEvent event) {
-
-      ApplicationAttemptId appAttemptId = Records
-          .newRecord(ApplicationAttemptId.class);
-      appAttemptId.setApplicationId(app.applicationId);
-      appAttemptId.setAttemptId(app.attempts.size() + 1);
-
-      RMAppAttempt attempt = new RMAppAttemptImpl(appAttemptId,
-          app.clientTokenStr, app.rmContext, app.scheduler,
-          app.masterService, app.submissionContext);
-      app.attempts.put(appAttemptId, attempt);
-      app.currentAttempt = attempt;
-      app.dispatcher.getEventHandler().handle(
-          new RMAppAttemptEvent(appAttemptId, RMAppAttemptEventType.START));
+      app.createNewAttempt();
     };
   }
 
@@ -452,27 +442,17 @@ public class RMAppImpl implements RMApp {
     public RMAppState transition(RMAppImpl app, RMAppEvent event) {
 
       if (app.attempts.size() == app.maxRetries) {
-        app.diagnostics.append("Application " + app.getApplicationId()
-            + " failed " + app.maxRetries
-            + " times. Failing the application.");
+        String msg = "Application " + app.getApplicationId()
+        + " failed " + app.maxRetries
+        + " times. Failing the application.";
+        LOG.info(msg);
+        app.diagnostics.append(msg);
         // Inform the node for app-finish
         FINAL_TRANSITION.transition(app, event);
         return RMAppState.FAILED;
       }
 
-      ApplicationAttemptId appAttemptId = Records
-          .newRecord(ApplicationAttemptId.class);
-      appAttemptId.setApplicationId(app.applicationId);
-      appAttemptId.setAttemptId(app.attempts.size() + 1);
-
-      // Create a new attempt.
-      RMAppAttempt attempt = new RMAppAttemptImpl(appAttemptId,
-          app.clientTokenStr, app.rmContext, app.scheduler,
-          app.masterService, app.submissionContext);
-      app.attempts.put(appAttemptId, attempt);
-      app.currentAttempt = attempt;
-      app.dispatcher.getEventHandler().handle(
-          new RMAppAttemptEvent(appAttemptId, RMAppAttemptEventType.START));
+      app.createNewAttempt();     
       return initialState;
     }
 

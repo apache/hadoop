@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.Writer;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -87,10 +88,13 @@ public class TestNMWebServer {
     when(app.getUser()).thenReturn(user);
     when(app.getAppId()).thenReturn(appId);
     nmContext.getApplications().put(appId, app);
+    ApplicationAttemptId appAttemptId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
+    appAttemptId.setApplicationId(appId);
+    appAttemptId.setAttemptId(1);
     ContainerId container1 =
-        BuilderUtils.newContainerId(recordFactory, appId, 0);
+        BuilderUtils.newContainerId(recordFactory, appId, appAttemptId, 0);
     ContainerId container2 =
-        BuilderUtils.newContainerId(recordFactory, appId, 1);
+        BuilderUtils.newContainerId(recordFactory, appId, appAttemptId, 1);
     NodeManagerMetrics metrics = mock(NodeManagerMetrics.class);
     for (ContainerId containerId : new ContainerId[] { container1,
         container2}) {

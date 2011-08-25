@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -190,9 +191,13 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     // ////// Construct the Container-id
     ApplicationId appId =
         recordFactory.newRecordInstance(ApplicationId.class);
+    ApplicationAttemptId appAttemptId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
+    appAttemptId.setApplicationId(appId);
+    appAttemptId.setAttemptId(1);
     ContainerId cId = recordFactory.newRecordInstance(ContainerId.class);
     cId.setAppId(appId);
     cId.setId(0);
+    cId.setAppAttemptId(appAttemptId);
     containerLaunchContext.setContainerId(cId);
 
     containerLaunchContext.setUser(user);

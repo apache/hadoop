@@ -11,6 +11,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProtoOrBuilder;
+import org.mortbay.log.Log;
 
 
     
@@ -33,7 +34,40 @@ public class ContainerIdPBImpl extends ProtoBase<ContainerIdProto> implements Co
     counterFormat.setMinimumIntegerDigits(6);
   }
   
-  
+  // TODO: Why thread local?
+  // ^ NumberFormat instances are not threadsafe
+  private static final ThreadLocal<NumberFormat> appIdFormat = new ThreadLocal<NumberFormat>() {
+    @Override
+    public NumberFormat initialValue() {
+      NumberFormat fmt = NumberFormat.getInstance();
+      fmt.setGroupingUsed(false);
+      fmt.setMinimumIntegerDigits(4);
+      return fmt;
+    }
+  };
+
+  // TODO: fail the app submission if attempts are more than 10 or something
+  private static final ThreadLocal<NumberFormat> appAttemptIdFormat = new ThreadLocal<NumberFormat>() {
+    @Override
+    public NumberFormat initialValue() {
+      NumberFormat fmt = NumberFormat.getInstance();
+      fmt.setGroupingUsed(false);
+      fmt.setMinimumIntegerDigits(2);
+      return fmt;
+    }
+  };
+  // TODO: Why thread local?
+  // ^ NumberFormat instances are not threadsafe
+  private static final ThreadLocal<NumberFormat> containerIdFormat = new ThreadLocal<NumberFormat>() {
+    @Override
+    public NumberFormat initialValue() {
+      NumberFormat fmt = NumberFormat.getInstance();
+      fmt.setGroupingUsed(false);
+      fmt.setMinimumIntegerDigits(6);
+      return fmt;
+    }
+  };
+    
   public ContainerIdPBImpl() {
     builder = ContainerIdProto.newBuilder();
   }
@@ -162,18 +196,23 @@ public class ContainerIdPBImpl extends ProtoBase<ContainerIdProto> implements Co
 
   @Override
   public int compareTo(ContainerId other) {
-    if (this.getAppId().compareTo(other.getAppId()) == 0) {
+    if (this.getAppAttemptId().compareTo(other.getAppAttemptId()) == 0) {
       return this.getId() - other.getId();
     } else {
-      return this.getAppId().compareTo(other.getAppId());
+      return this.getAppAttemptId().compareTo(other.getAppAttemptId());
     }
     
   }
   
   @Override
   public String toString() {
-    String id = (this.getAppId() != null) ? this.getAppId().getClusterTimestamp() + "_" +
-        idFormat.format(this.getAppId().getId()): "none";
-    return "containerid_" + id + "_" + counterFormat.format(getId());
+    StringBuilder sb = new StringBuilder();
+    ApplicationId appId = getAppId();
+    sb.append("container_").append(appId.getClusterTimestamp()).append("_");
+    sb.append(appIdFormat.get().format(appId.getId())).append("_");
+    sb.append(appAttemptIdFormat.get().format(getAppAttemptId().
+        getAttemptId())).append("_");
+    sb.append(containerIdFormat.get().format(getId()));
+    return sb.toString();
   }
 }  

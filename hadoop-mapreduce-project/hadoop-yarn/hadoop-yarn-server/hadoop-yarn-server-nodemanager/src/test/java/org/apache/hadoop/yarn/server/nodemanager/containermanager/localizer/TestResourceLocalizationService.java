@@ -21,6 +21,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -47,6 +48,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ContainerLocalizationRequestEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEventType;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.Records;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -195,7 +197,7 @@ public class TestResourceLocalizationService {
       Thread.sleep(500);
       dispatcher.await();
       String appStr = ConverterUtils.toString(appId);
-      String ctnrStr = ConverterUtils.toString(c.getContainerID());
+      String ctnrStr = c.getContainerID().toString();
       verify(exec).startLocalizer(isA(Path.class), isA(InetSocketAddress.class),
             eq("user0"), eq(appStr), eq(ctnrStr), isA(List.class));
 
@@ -270,9 +272,13 @@ public class TestResourceLocalizationService {
 
   static Container getMockContainer(ApplicationId appId, int id) {
     Container c = mock(Container.class);
-    ContainerId cId = mock(ContainerId.class);
-    when(cId.getAppId()).thenReturn(appId);
-    when(cId.getId()).thenReturn(id);
+    ApplicationAttemptId appAttemptId = Records.newRecord(ApplicationAttemptId.class);
+    appAttemptId.setApplicationId(appId);
+    appAttemptId.setAttemptId(1);
+    ContainerId cId = Records.newRecord(ContainerId.class);
+    cId.setAppAttemptId(appAttemptId);
+    cId.setAppId(appId);
+    cId.setId(id);
     when(c.getUser()).thenReturn("user0");
     when(c.getContainerID()).thenReturn(cId);
     Credentials creds = new Credentials();

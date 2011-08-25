@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -46,9 +47,9 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedAppsEvent;
+import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
-import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
@@ -74,7 +75,14 @@ public class TestContainerManager extends BaseContainerManagerTest {
     boolean throwsException = false;
     try {
       GetContainerStatusRequest request = recordFactory.newRecordInstance(GetContainerStatusRequest.class);
-      request.setContainerId(recordFactory.newRecordInstance(ContainerId.class));
+      ApplicationId appId = recordFactory.newRecordInstance(ApplicationId.class);
+      ApplicationAttemptId appAttemptId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
+      appAttemptId.setApplicationId(appId);
+      appAttemptId.setAttemptId(1);
+      ContainerId cId = recordFactory.newRecordInstance(ContainerId.class);
+      cId.setAppId(appId);
+      cId.setAppAttemptId(appAttemptId);
+      request.setContainerId(cId);
       containerManager.getContainerStatus(request);
     } catch (YarnRemoteException e) {
       throwsException = true;
@@ -99,8 +107,12 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
     // ////// Construct the Container-id
     ApplicationId appId = recordFactory.newRecordInstance(ApplicationId.class);
+    ApplicationAttemptId appAttemptId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
+    appAttemptId.setApplicationId(appId);
+    appAttemptId.setAttemptId(1);
     ContainerId cId = recordFactory.newRecordInstance(ContainerId.class);
     cId.setAppId(appId);
+    cId.setAppAttemptId(appAttemptId);
     container.setContainerId(cId);
 
     container.setUser(user);
@@ -184,8 +196,12 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
     // ////// Construct the Container-id
     ApplicationId appId = recordFactory.newRecordInstance(ApplicationId.class);
+    ApplicationAttemptId appAttemptId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
+    appAttemptId.setApplicationId(appId);
+    appAttemptId.setAttemptId(1);
     ContainerId cId = recordFactory.newRecordInstance(ContainerId.class);
     cId.setAppId(appId);
+    cId.setAppAttemptId(appAttemptId);
     containerLaunchContext.setContainerId(cId);
 
     containerLaunchContext.setUser(user);
@@ -282,8 +298,12 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
     // ////// Construct the Container-id
     ApplicationId appId = recordFactory.newRecordInstance(ApplicationId.class);
+    ApplicationAttemptId appAttemptId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
+    appAttemptId.setApplicationId(appId);
+    appAttemptId.setAttemptId(1);
     ContainerId cId = recordFactory.newRecordInstance(ContainerId.class);
     cId.setAppId(appId);
+    cId.setAppAttemptId(appAttemptId);
     container.setContainerId(cId);
 
     container.setUser(user);

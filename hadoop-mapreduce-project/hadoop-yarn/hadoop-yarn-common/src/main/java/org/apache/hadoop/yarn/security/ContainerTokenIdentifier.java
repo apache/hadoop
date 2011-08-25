@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -68,6 +69,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
   public void write(DataOutput out) throws IOException {
     LOG.debug("Writing ContainerTokenIdentifier to RPC layer");
     out.writeInt(this.containerId.getAppId().getId());
+    out.writeInt(this.containerId.getAppAttemptId().getAttemptId());
     out.writeInt(this.containerId.getId());
     // TODO: Cluster time-stamp?
     out.writeUTF(this.nmHostName);
@@ -78,7 +80,10 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
   public void readFields(DataInput in) throws IOException {
     this.containerId = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ContainerId.class);
     this.containerId.setAppId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationId.class));
+    this.containerId.setAppAttemptId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationAttemptId.class));
     this.containerId.getAppId().setId(in.readInt());
+    this.containerId.getAppAttemptId().setApplicationId(this.containerId.getAppId());
+    this.containerId.getAppAttemptId().setAttemptId(in.readInt());
     this.containerId.setId(in.readInt());
     this.nmHostName = in.readUTF();
     this.resource = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(Resource.class);

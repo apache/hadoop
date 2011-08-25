@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.NodeHealthCheckerService;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -93,6 +94,7 @@ public class TestNodeStatusUpdater {
     }
 
     ApplicationId applicationID = recordFactory.newRecordInstance(ApplicationId.class);
+    ApplicationAttemptId appAttemptID = recordFactory.newRecordInstance(ApplicationAttemptId.class);
     ContainerId firstContainerID = recordFactory.newRecordInstance(ContainerId.class);
     ContainerId secondContainerID = recordFactory.newRecordInstance(ContainerId.class);
 
@@ -106,7 +108,9 @@ public class TestNodeStatusUpdater {
 
         // Give a container to the NM.
         applicationID.setId(heartBeatID);
+        appAttemptID.setApplicationId(applicationID);
         firstContainerID.setAppId(applicationID);
+        firstContainerID.setAppAttemptId(appAttemptID);
         firstContainerID.setId(heartBeatID);
         ContainerLaunchContext launchContext = recordFactory.newRecordInstance(ContainerLaunchContext.class);
         launchContext.setContainerId(firstContainerID);
@@ -130,7 +134,9 @@ public class TestNodeStatusUpdater {
 
         // Give another container to the NM.
         applicationID.setId(heartBeatID);
+        appAttemptID.setApplicationId(applicationID);
         secondContainerID.setAppId(applicationID);
+        secondContainerID.setAppAttemptId(appAttemptID);
         secondContainerID.setId(heartBeatID);
         ContainerLaunchContext launchContext = recordFactory.newRecordInstance(ContainerLaunchContext.class);
         launchContext.setContainerId(secondContainerID);

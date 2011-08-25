@@ -19,5 +19,5 @@
 package org.apache.hadoop.yarn.api.records;
 
 public enum ApplicationState {
-  NEW, SUBMITTED, RUNNING, RESTARTING, SUCCEEDED, FAILED, KILLED
+  NEW, SUBMITTED, RUNNING, SUCCEEDED, FAILED, KILLED
 }
