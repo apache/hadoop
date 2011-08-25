@@ -2361,6 +2361,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     return closeRegion(region, false, zk);
   }
+  
+  @Override
+  @QosPriority(priority=HIGH_QOS)
+  public boolean closeRegion(byte[] encodedRegionName, boolean zk) throws IOException {
+    return closeRegion(encodedRegionName, false, zk);
+  }
 
   /**
    * @param region Region to close
@@ -2388,6 +2394,29 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     this.service.submit(crh);
     return true;
+  }
+  
+  /**
+   * @param encodedRegionName
+   *          encodedregionName to close
+   * @param abort
+   *          True if we are aborting
+   * @param zk
+   *          True if we are to update zk about the region close; if the close
+   *          was orchestrated by master, then update zk. If the close is being
+   *          run by the regionserver because its going down, don't update zk.
+   * @return True if closed a region.
+   */
+  protected boolean closeRegion(byte[] encodedRegionName, final boolean abort,
+      final boolean zk) throws IOException {
+    String encodedRegionNameStr = Bytes.toString(encodedRegionName);
+    HRegion region = this.getFromOnlineRegions(encodedRegionNameStr);
+    if (null != region) {
+      return closeRegion(region.getRegionInfo(), abort, zk);
+    }
+    LOG.error("The specified region name" + encodedRegionNameStr
+        + " does not exist to close the region.");
+    return false;
   }
 
   // Manual remote region administration RPCs
@@ -3030,5 +3059,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     BlockCache c = StoreFile.getBlockCache(this.conf);
     return c.getBlockCacheColumnFamilySummaries(this.conf);
   }
+
+
 
 }

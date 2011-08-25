@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,6 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -49,7 +51,11 @@ import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -904,6 +910,157 @@ public class TestAdmin {
     new HTable(TEST_UTIL.getConfiguration(),
         "testTableNotFoundExceptionWithoutAnyTables");
   }
+  @Test
+  public void testShouldCloseTheRegionBasedOnTheEncodedRegionName()
+      throws Exception {
+    byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegion");
+    HBaseAdmin admin = createTable(TABLENAME);
+
+    HRegionInfo info = null;
+    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
+    List<HRegionInfo> onlineRegions = rs.getOnlineRegions();
+    for (HRegionInfo regionInfo : onlineRegions) {
+      if (!regionInfo.isMetaRegion() && !regionInfo.isRootRegion()) {
+        info = regionInfo;
+        admin.closeRegionWithEncodedRegionName(regionInfo.getEncodedName(), rs
+            .getServerName().getServerName());
+      }
+    }
+    Thread.sleep(1000);
+    onlineRegions = rs.getOnlineRegions();
+    assertFalse("The region should not be present in online regions list.",
+        onlineRegions.contains(info));
+  }
+
+  @Test
+  public void testCloseRegionIfInvalidRegionNameIsPassed() throws Exception {
+    byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegion1");
+    HBaseAdmin admin = createTable(TABLENAME);
+
+    HRegionInfo info = null;
+    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
+    List<HRegionInfo> onlineRegions = rs.getOnlineRegions();
+    for (HRegionInfo regionInfo : onlineRegions) {
+      if (!regionInfo.isMetaRegion() && !regionInfo.isRootRegion()) {
+        if (regionInfo.getRegionNameAsString().contains("TestHBACloseRegion1")) {
+          info = regionInfo;
+          admin.closeRegionWithEncodedRegionName("sample", rs.getServerName()
+              .getServerName());
+        }
+      }
+    }
+    onlineRegions = rs.getOnlineRegions();
+    assertTrue("The region should be present in online regions list.",
+        onlineRegions.contains(info));
+  }
+
+  @Test
+  public void testCloseRegionThatFetchesTheHRIFromMeta() throws Exception {
+    byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegion2");
+    HBaseAdmin admin = createTable(TABLENAME);
+
+    HRegionInfo info = null;
+    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
+    List<HRegionInfo> onlineRegions = rs.getOnlineRegions();
+    for (HRegionInfo regionInfo : onlineRegions) {
+      if (!regionInfo.isMetaRegion() && !regionInfo.isRootRegion()) {
+
+        if (regionInfo.getRegionNameAsString().contains("TestHBACloseRegion2")) {
+          info = regionInfo;
+          admin.closeRegion(regionInfo.getRegionNameAsString(), rs
+              .getServerName().getServerName());
+        }
+      }
+    }
+    Thread.sleep(1000);
+    onlineRegions = rs.getOnlineRegions();
+    assertFalse("The region should not be present in online regions list.",
+        onlineRegions.contains(info));
+  }
+
+  @Test
+  public void testCloseRegionWhenServerNameIsNull() throws Exception {
+    byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegion3");
+    HBaseAdmin admin = createTable(TABLENAME);
+
+    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
+
+    try {
+      List<HRegionInfo> onlineRegions = rs.getOnlineRegions();
+      for (HRegionInfo regionInfo : onlineRegions) {
+        if (!regionInfo.isMetaRegion() && !regionInfo.isRootRegion()) {
+          if (regionInfo.getRegionNameAsString()
+              .contains("TestHBACloseRegion3")) {
+            admin.closeRegionWithEncodedRegionName(regionInfo.getEncodedName(),
+                null);
+          }
+        }
+      }
+      fail("The test should throw exception if the servername passed is null.");
+    } catch (IllegalArgumentException e) {
+    }
+  }
+  
+
+  @Test
+  public void testCloseRegionWhenServerNameIsEmpty() throws Exception {
+    byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegion3");
+    HBaseAdmin admin = createTable(TABLENAME);
+
+    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
+
+    try {
+      List<HRegionInfo> onlineRegions = rs.getOnlineRegions();
+      for (HRegionInfo regionInfo : onlineRegions) {
+        if (!regionInfo.isMetaRegion() && !regionInfo.isRootRegion()) {
+          if (regionInfo.getRegionNameAsString()
+              .contains("TestHBACloseRegion3")) {
+            admin.closeRegionWithEncodedRegionName(regionInfo.getEncodedName(),
+                " ");
+          }
+        }
+      }
+      fail("The test should throw exception if the servername passed is empty.");
+    } catch (IllegalArgumentException e) {
+    }
+  }
+
+  @Test
+  public void testCloseRegionWhenEncodedRegionNameIsNotGiven() throws Exception {
+    byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegion4");
+    HBaseAdmin admin = createTable(TABLENAME);
+
+    HRegionInfo info = null;
+    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
+
+    List<HRegionInfo> onlineRegions = rs.getOnlineRegions();
+    for (HRegionInfo regionInfo : onlineRegions) {
+      if (!regionInfo.isMetaRegion() && !regionInfo.isRootRegion()) {
+        if (regionInfo.getRegionNameAsString().contains("TestHBACloseRegion4")) {
+          info = regionInfo;
+          admin.closeRegionWithEncodedRegionName(regionInfo
+              .getRegionNameAsString(), rs.getServerName().getServerName());
+        }
+      }
+    }
+    onlineRegions = rs.getOnlineRegions();
+    assertTrue("The region should be present in online regions list.",
+        onlineRegions.contains(info));
+  }
+
+  private HBaseAdmin createTable(byte[] TABLENAME) throws IOException {
+
+    Configuration config = TEST_UTIL.getConfiguration();
+    HBaseAdmin admin = new HBaseAdmin(config);
+
+    HTableDescriptor htd = new HTableDescriptor(TABLENAME);
+    HColumnDescriptor hcd = new HColumnDescriptor("value");
+
+    htd.addFamily(hcd);
+    admin.createTable(htd, null);
+    return admin;
+  }
+
 
   @Test
   public void testHundredsOfTable() throws IOException{

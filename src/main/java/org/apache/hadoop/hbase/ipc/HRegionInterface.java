@@ -366,6 +366,21 @@ public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortabl
    */
   public boolean closeRegion(final HRegionInfo region, final boolean zk)
   throws IOException;
+  
+  /**
+   * Closes the region in the RS with the specified encoded regionName and will
+   * use or not use ZK during the close according to the specified flag. Note
+   * that the encoded region name is in byte format.
+   * 
+   * @param encodedRegionName
+   *          in bytes
+   * @param zk
+   *          true if to use zookeeper, false if need not.
+   * @return true if region is closed, false if not.
+   * @throws IOException
+   */
+  public boolean closeRegion(byte[] encodedRegionName, final boolean zk)
+      throws IOException;
 
   // Region administrative methods
 

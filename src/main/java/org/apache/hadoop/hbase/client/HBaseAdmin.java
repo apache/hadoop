@@ -1010,6 +1010,45 @@ public class HBaseAdmin implements Abortable, Closeable {
   }
 
   /**
+   * For expert-admins. Runs close on the regionserver. Closes a region based on
+   * the encoded region name. The region server name is mandatory. If the
+   * servername is provided then based on the online regions in the specified
+   * regionserver the specified region will be closed. The master will not be
+   * informed of the close. Note that the regionname is the encoded regionname.
+   * 
+   * @param encodedRegionName
+   *          The encoded region name; i.e. the hash that makes up the region
+   *          name suffix: e.g. if regionname is
+   *          <code>TestTable,0094429456,1289497600452.527db22f95c8a9e0116f0cc13c680396.</code>
+   *          , then the encoded region name is:
+   *          <code>527db22f95c8a9e0116f0cc13c680396</code>.
+   * @param serverName
+   *          The servername of the regionserver. A server name is made of host,
+   *          port and startcode. This is mandatory. Here is an example:
+   *          <code> host187.example.com,60020,1289493121758</code>
+   * @return true if the region was closed, false if not.
+   * @throws IOException
+   *           if a remote or network exception occurs
+   */
+  public boolean closeRegionWithEncodedRegionName(final String encodedRegionName,
+      final String serverName) throws IOException {
+    byte[] encodedRegionNameInBytes = Bytes.toBytes(encodedRegionName);
+    if (null == serverName || ("").equals(serverName.trim())) {
+      throw new IllegalArgumentException(
+          "The servername cannot be null or empty.");
+    }
+    ServerName sn = new ServerName(serverName);
+    HRegionInterface rs = this.connection.getHRegionConnection(
+        sn.getHostname(), sn.getPort());
+    // Close the region without updating zk state.
+    boolean isRegionClosed = rs.closeRegion(encodedRegionNameInBytes, false);
+    if (false == isRegionClosed) {
+      LOG.error("Not able to close the region " + encodedRegionName + ".");
+    }
+    return isRegionClosed;
+  }
+
+  /**
    * Close a region.  For expert-admins  Runs close on the regionserver.  The
    * master will not be informed of the close.
    * @param sn
