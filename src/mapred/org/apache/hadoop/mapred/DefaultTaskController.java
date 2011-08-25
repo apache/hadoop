@@ -68,12 +68,8 @@ public class DefaultTaskController extends TaskController {
   @Override
   public void createLogDir(TaskAttemptID taskID, 
 		  			boolean isCleanup) throws IOException {
-	boolean b = TaskLog.createTaskAttemptLogDir(taskID, isCleanup, 
-	    		 		localStorage.getGoodLocalDirs());
-	if (!b) {
-	    LOG.warn("Creation of attempt log dir for " + taskID
-	                 + " failed. Ignoring");
-	}
+    TaskLog.createTaskAttemptLogDir(taskID, isCleanup, 
+                                    localStorage.getGoodLocalDirs());
   }
   
   /**

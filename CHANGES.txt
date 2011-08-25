@@ -13,6 +13,9 @@ Release 0.20.204.0 - 2011-8-19
 
   BUG FIXES
 
+    MAPREDUCE-2804. Fixed a race condition in setting up the log directories
+    for tasks that are starting at the same time. (omalley)
+
     MAPREDUCE-2846. Fixed a race condition in writing the log index file that
     caused tasks to fail. (omalley)
 

@@ -25,6 +25,8 @@ import java.util.zip.ZipFile;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell;
@@ -561,9 +563,25 @@ public class FileUtil {
     } catch(InterruptedException e){
       //do nothing as of yet
     }
+    if (returnVal != 0) {
+      LOG.warn("Command '" + cmd + "' failed " + returnVal + 
+               " with: " + copyStderr(p));
+    }
     return returnVal;
   }
   
+  private static String copyStderr(Process p) throws IOException {
+    InputStream err = p.getErrorStream();
+    StringBuilder result = new StringBuilder();
+    byte[] buff = new byte[4096];
+    int len = err.read(buff);
+    while (len > 0) {
+      result.append(new String(buff, 0 , len));
+      len = err.read(buff);
+    }
+    return result.toString();
+  }
+
   /**
    * Change the permissions on a filename.
    * @param filename the name of the file to change
@@ -607,6 +625,75 @@ public class FileUtil {
       }
     }
     return shExec.getExitCode();
+  }
+
+  /**
+   * Set permissions to the required value. Uses the java primitives instead
+   * of forking if group == other.
+   * @param f the file to change
+   * @param permission the new permissions
+   * @throws IOException
+   */
+  public static void setPermission(File f, FsPermission permission
+                                   ) throws IOException {
+    FsAction user = permission.getUserAction();
+    FsAction group = permission.getGroupAction();
+    FsAction other = permission.getOtherAction();
+    
+    // Fork chmod if group and other permissions are different...
+    if (group != other) {
+      execSetPermission(f, permission);
+      return;
+    }
+    
+    boolean rv = true;
+    
+    // read perms
+    rv = f.setReadable(group.implies(FsAction.READ), false);
+    checkReturnValue(rv, f, permission);
+    if (group.implies(FsAction.READ) != user.implies(FsAction.READ)) {
+      f.setReadable(user.implies(FsAction.READ), true);
+      checkReturnValue(rv, f, permission);
+    }
+
+    // write perms
+    rv = f.setWritable(group.implies(FsAction.WRITE), false);
+    checkReturnValue(rv, f, permission);
+    if (group.implies(FsAction.WRITE) != user.implies(FsAction.WRITE)) {
+      f.setWritable(user.implies(FsAction.WRITE), true);
+      checkReturnValue(rv, f, permission);
+    }
+
+    // exec perms
+    rv = f.setExecutable(group.implies(FsAction.EXECUTE), false);
+    checkReturnValue(rv, f, permission);
+    if (group.implies(FsAction.EXECUTE) != user.implies(FsAction.EXECUTE)) {
+      f.setExecutable(user.implies(FsAction.EXECUTE), true);
+      checkReturnValue(rv, f, permission);
+    }
+  }
+
+  private static void checkReturnValue(boolean rv, File p, 
+                                       FsPermission permission
+                                       ) throws IOException {
+    if (!rv) {
+      throw new IOException("Failed to set permissions of path: " + p + " to " + 
+                            String.format("%04o", permission.toShort()));
+    }
+  }
+  
+  private static void execSetPermission(File f, FsPermission permission) 
+  throws IOException {
+    execCommand(f, Shell.SET_PERMISSION_COMMAND,
+        String.format("%04o", permission.toShort()));
+  }
+  
+  static String execCommand(File f, String... cmd) throws IOException {
+    String[] args = new String[cmd.length + 1];
+    System.arraycopy(cmd, 0, args, 0, cmd.length);
+    args[cmd.length] = f.getCanonicalPath();
+    String output = Shell.execCommand(args);
+    return output;
   }
   
   /**
