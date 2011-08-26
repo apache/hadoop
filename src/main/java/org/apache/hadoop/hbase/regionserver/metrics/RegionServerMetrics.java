@@ -364,8 +364,8 @@ public class RegionServerMetrics implements Updater {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb = Strings.appendKeyValue(sb, "requestsPerSecond",
-      Float.valueOf(this.requests.getPreviousIntervalValue()));
+    sb = Strings.appendKeyValue(sb, "requestsPerSecond", Integer
+        .valueOf((int) this.requests.getPreviousIntervalValue()));
     sb = Strings.appendKeyValue(sb, "numberOfOnlineRegions",
       Integer.valueOf(this.regions.get()));
     sb = Strings.appendKeyValue(sb, "numberOfStores",

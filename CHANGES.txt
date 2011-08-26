@@ -484,6 +484,7 @@ Release 0.90.5 - Unreleased
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
    HBASE-4222  Make HLog more resilient to write pipeline failures
+   HBASE-4315  RS requestsPerSecond counter seems to be off (subramanian raghunathan)
 
 Release 0.90.4 - August 10, 2011
 

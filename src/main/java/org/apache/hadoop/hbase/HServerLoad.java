@@ -40,11 +40,15 @@ implements WritableComparable<HServerLoad> {
   // Empty load instance.
   public static final HServerLoad EMPTY_HSERVERLOAD = new HServerLoad();
 
-  /** Number of requests since last report
+  /** Number of requests per second since last report.
    */
   // TODO: Instead build this up out of region counters.
   private int numberOfRequests = 0;
 
+  /** Total Number of requests from the start of the region server.
+   */
+  private int totalNumberOfRequests = 0;
+  
   /** the amount of used heap, in MB */
   private int usedHeapMB = 0;
 
@@ -367,12 +371,14 @@ implements WritableComparable<HServerLoad> {
    * @param usedHeapMB
    * @param maxHeapMB
    */
-  public HServerLoad(final int numberOfRequests, final int usedHeapMB,
-      final int maxHeapMB, final Map<byte[], RegionLoad> regionLoad) {
+  public HServerLoad(final int totalNumberOfRequests,
+      final int numberOfRequests, final int usedHeapMB, final int maxHeapMB,
+      final Map<byte[], RegionLoad> regionLoad) {
     this.numberOfRequests = numberOfRequests;
     this.usedHeapMB = usedHeapMB;
     this.maxHeapMB = maxHeapMB;
     this.regionLoad = regionLoad;
+    this.totalNumberOfRequests = totalNumberOfRequests;
   }
 
   /**
@@ -380,7 +386,8 @@ implements WritableComparable<HServerLoad> {
    * @param hsl the template HServerLoad
    */
   public HServerLoad(final HServerLoad hsl) {
-    this(hsl.numberOfRequests, hsl.usedHeapMB, hsl.maxHeapMB, hsl.getRegionsLoad());
+    this(hsl.totalNumberOfRequests, hsl.numberOfRequests, hsl.usedHeapMB,
+        hsl.maxHeapMB, hsl.getRegionsLoad());
     for (Map.Entry<byte[], RegionLoad> e : hsl.regionLoad.entrySet()) {
       this.regionLoad.put(e.getKey(), e.getValue());
     }
@@ -456,10 +463,17 @@ implements WritableComparable<HServerLoad> {
   }
 
   /**
-   * @return the numberOfRequests
+   * @return the numberOfRequests per second.
    */
   public int getNumberOfRequests() {
     return numberOfRequests;
+  }
+  
+  /**
+   * @return the numberOfRequests
+   */
+  public int getTotalNumberOfRequests() {
+    return totalNumberOfRequests;
   }
 
   /**
@@ -538,6 +552,7 @@ implements WritableComparable<HServerLoad> {
       rl.readFields(in);
       regionLoad.put(rl.getName(), rl);
     }
+    totalNumberOfRequests = in.readInt();
   }
 
   public void write(DataOutput out) throws IOException {
@@ -549,6 +564,7 @@ implements WritableComparable<HServerLoad> {
     out.writeInt(this.regionLoad.size());
     for (RegionLoad rl: regionLoad.values())
       rl.write(out);
+    out.writeInt(totalNumberOfRequests);
   }
 
   // Comparable

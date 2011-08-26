@@ -198,7 +198,7 @@ org.apache.hadoop.hbase.HTableDescriptor;
 <%java>
     }
 </%java>
-<tr><th>Total: </th><td>servers: <% servers.size() %></td><td>&nbsp;</td><td>requests=<% totalRequests %>, regions=<% totalRegions %></td></tr>
+<tr><th>Total: </th><td>servers: <% servers.size() %></td><td>&nbsp;</td><td>requestsPerSecond=<% totalRequests %>, numberOfOnlineRegions=<% totalRegions %></td></tr>
 </table>
 
 <p>Load is requests per second and count of regions loaded</p>

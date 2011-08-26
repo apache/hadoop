@@ -754,7 +754,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     this.serverManager.regionServerReport(new ServerName(sn), hsl);
     if (hsl != null && this.metrics != null) {
       // Up our metrics.
-      this.metrics.incrementRequests(hsl.getNumberOfRequests());
+      this.metrics.incrementRequests(hsl.getTotalNumberOfRequests());
     }
   }
 

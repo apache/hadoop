@@ -765,7 +765,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     MemoryUsage memory =
       ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
-    return new HServerLoad(requestCount.get(),
+    return new HServerLoad(requestCount.get(),(int)metrics.getRequests(),
       (int)(memory.getUsed() / 1024 / 1024),
       (int) (memory.getMax() / 1024 / 1024), regionLoads);
   }
