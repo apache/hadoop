@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 /** A WritableComparable for a single byte. */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class ByteWritable implements WritableComparable {
+public class ByteWritable implements WritableComparable<ByteWritable> {
   private byte value;
 
   public ByteWritable() {}
@@ -48,6 +48,7 @@ public class ByteWritable implements WritableComparable {
   }
 
   /** Returns true iff <code>o</code> is a ByteWritable with the same value. */
+  @Override
   public boolean equals(Object o) {
     if (!(o instanceof ByteWritable)) {
       return false;
@@ -56,17 +57,20 @@ public class ByteWritable implements WritableComparable {
     return this.value == other.value;
   }
 
+  @Override
   public int hashCode() {
     return (int)value;
   }
 
   /** Compares two ByteWritables. */
-  public int compareTo(Object o) {
+  @Override
+  public int compareTo(ByteWritable o) {
     int thisValue = this.value;
-    int thatValue = ((ByteWritable)o).value;
+    int thatValue = o.value;
     return (thisValue < thatValue ? -1 : (thisValue == thatValue ? 0 : 1));
   }
 
+  @Override
   public String toString() {
     return Byte.toString(value);
   }
@@ -77,6 +81,7 @@ public class ByteWritable implements WritableComparable {
       super(ByteWritable.class);
     }
 
+    @Override
     public int compare(byte[] b1, int s1, int l1,
                        byte[] b2, int s2, int l2) {
       byte thisValue = b1[s1];

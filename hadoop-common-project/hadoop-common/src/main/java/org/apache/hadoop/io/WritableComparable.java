@@ -37,7 +37,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  *  
  * <p>Example:</p>
  * <p><blockquote><pre>
- *     public class MyWritableComparable implements WritableComparable {
+ *     public class MyWritableComparable implements WritableComparable<MyWritableComparable> {
  *       // Some data
  *       private int counter;
  *       private long timestamp;
@@ -54,7 +54,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  *       
  *       public int compareTo(MyWritableComparable o) {
  *         int thisValue = this.value;
- *         int thatValue = ((IntWritable)o).value;
+ *         int thatValue = o.value;
  *         return (thisValue &lt; thatValue ? -1 : (thisValue==thatValue ? 0 : 1));
  *       }
  *

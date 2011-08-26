@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.io;
 
-import java.io.*;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -26,7 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 /** A WritableComparable for longs. */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class LongWritable implements WritableComparable {
+public class LongWritable implements WritableComparable<LongWritable> {
   private long value;
 
   public LongWritable() {}
@@ -60,9 +63,9 @@ public class LongWritable implements WritableComparable {
   }
 
   /** Compares two LongWritables. */
-  public int compareTo(Object o) {
+  public int compareTo(LongWritable o) {
     long thisValue = this.value;
-    long thatValue = ((LongWritable)o).value;
+    long thatValue = o.value;
     return (thisValue<thatValue ? -1 : (thisValue==thatValue ? 0 : 1));
   }
 
@@ -86,6 +89,8 @@ public class LongWritable implements WritableComparable {
 
   /** A decreasing Comparator optimized for LongWritable. */ 
   public static class DecreasingComparator extends Comparator {
+    
+    @Override
     public int compare(WritableComparable a, WritableComparable b) {
       return -super.compare(a, b);
     }

@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.io;
 
-import java.io.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.Random;
 
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.ReflectionUtils;
 
 import junit.framework.TestCase;
 
@@ -97,7 +97,7 @@ public class TestWritableName extends TestCase {
   public void testBadName() throws Exception {
     Configuration conf = new Configuration();
     try {
-      Class<?> test = WritableName.getClass("unknown_junk",conf);
+      WritableName.getClass("unknown_junk",conf);
       assertTrue(false);
     } catch(IOException e) {
       assertTrue(e.getMessage().matches(".*unknown_junk.*"));

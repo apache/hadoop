@@ -183,6 +183,7 @@ public class BytesWritable extends BinaryComparable
     out.write(bytes, 0, size);
   }
   
+  @Override
   public int hashCode() {
     return super.hashCode();
   }
@@ -190,6 +191,7 @@ public class BytesWritable extends BinaryComparable
   /**
    * Are the two byte sequences equal?
    */
+  @Override
   public boolean equals(Object right_obj) {
     if (right_obj instanceof BytesWritable)
       return super.equals(right_obj);
@@ -199,6 +201,7 @@ public class BytesWritable extends BinaryComparable
   /**
    * Generate the stream of bytes as hex pairs separated by ' '.
    */
+  @Override
   public String toString() { 
     StringBuilder sb = new StringBuilder(3*size);
     for (int idx = 0; idx < size; idx++) {
@@ -225,6 +228,7 @@ public class BytesWritable extends BinaryComparable
     /**
      * Compare the buffers in serialized form.
      */
+    @Override
     public int compare(byte[] b1, int s1, int l1,
                        byte[] b2, int s2, int l2) {
       return compareBytes(b1, s1+LENGTH_BYTES, l1-LENGTH_BYTES, 

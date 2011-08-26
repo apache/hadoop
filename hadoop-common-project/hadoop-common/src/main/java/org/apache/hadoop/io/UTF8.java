@@ -36,7 +36,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @Deprecated
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Stable
-public class UTF8 implements WritableComparable {
+public class UTF8 implements WritableComparable<UTF8> {
   private static final Log LOG= LogFactory.getLog(UTF8.class);
   private static final DataInputBuffer IBUF = new DataInputBuffer();
 
@@ -129,13 +129,14 @@ public class UTF8 implements WritableComparable {
   }
 
   /** Compare two UTF8s. */
-  public int compareTo(Object o) {
-    UTF8 that = (UTF8)o;
+  @Override
+  public int compareTo(UTF8 o) {
     return WritableComparator.compareBytes(bytes, 0, length,
-                                           that.bytes, 0, that.length);
+                                           o.bytes, 0, o.length);
   }
 
   /** Convert to a String. */
+  @Override
   public String toString() {
     StringBuilder buffer = new StringBuilder(length);
     try {
@@ -150,6 +151,7 @@ public class UTF8 implements WritableComparable {
   }
 
   /** Returns true iff <code>o</code> is a UTF8 with the same contents.  */
+  @Override
   public boolean equals(Object o) {
     if (!(o instanceof UTF8))
       return false;
@@ -161,6 +163,7 @@ public class UTF8 implements WritableComparable {
                                              that.bytes, 0, that.length) == 0;
   }
 
+  @Override
   public int hashCode() {
     return WritableComparator.hashBytes(bytes, length);
   }
@@ -171,6 +174,7 @@ public class UTF8 implements WritableComparable {
       super(UTF8.class);
     }
 
+    @Override
     public int compare(byte[] b1, int s1, int l1,
                        byte[] b2, int s2, int l2) {
       int n1 = readUnsignedShort(b1, s1);

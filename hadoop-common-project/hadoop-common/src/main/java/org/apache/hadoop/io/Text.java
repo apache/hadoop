@@ -265,6 +265,7 @@ public class Text extends BinaryComparable
    * Convert text back to string
    * @see java.lang.Object#toString()
    */
+  @Override
   public String toString() {
     try {
       return decode(bytes, 0, length);
@@ -305,6 +306,7 @@ public class Text extends BinaryComparable
     return false;
   }
 
+  @Override
   public int hashCode() {
     return super.hashCode();
   }

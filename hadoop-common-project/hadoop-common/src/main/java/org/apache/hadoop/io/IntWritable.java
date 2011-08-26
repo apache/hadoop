@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.io;
 
-import java.io.*;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -26,7 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 /** A WritableComparable for ints. */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class IntWritable implements WritableComparable {
+public class IntWritable implements WritableComparable<IntWritable> {
   private int value;
 
   public IntWritable() {}
@@ -48,6 +51,7 @@ public class IntWritable implements WritableComparable {
   }
 
   /** Returns true iff <code>o</code> is a IntWritable with the same value. */
+  @Override
   public boolean equals(Object o) {
     if (!(o instanceof IntWritable))
       return false;
@@ -55,17 +59,20 @@ public class IntWritable implements WritableComparable {
     return this.value == other.value;
   }
 
+  @Override
   public int hashCode() {
     return value;
   }
 
   /** Compares two IntWritables. */
-  public int compareTo(Object o) {
+  @Override
+  public int compareTo(IntWritable o) {
     int thisValue = this.value;
-    int thatValue = ((IntWritable)o).value;
+    int thatValue = o.value;
     return (thisValue<thatValue ? -1 : (thisValue==thatValue ? 0 : 1));
   }
 
+  @Override
   public String toString() {
     return Integer.toString(value);
   }
@@ -75,7 +82,8 @@ public class IntWritable implements WritableComparable {
     public Comparator() {
       super(IntWritable.class);
     }
-
+    
+    @Override
     public int compare(byte[] b1, int s1, int l1,
                        byte[] b2, int s2, int l2) {
       int thisValue = readInt(b1, s1);
