@@ -72,7 +72,8 @@ Release 0.20.205.0 - unreleased
     priority (Robert Joseph Evans via mahadev)
 
     HADOOP-6889. Make RPC to have an option to timeout - backport to 
-    0.20-security. (John George and Ravi Prakash via mattf)
+    0.20-security. Unit tests updated to 17/Aug/2011 version.
+    (John George and Ravi Prakash via mattf)
 
     MAPREDUCE-2780. Use a utility method to set service in token. 
     (Daryn Sharp via jitendra)
