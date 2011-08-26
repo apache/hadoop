@@ -1,0 +1,396 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<chapter version="5.0" xml:id="external_apis"
+         xmlns="http://docbook.org/ns/docbook"
+         xmlns:xlink="http://www.w3.org/1999/xlink"
+         xmlns:xi="http://www.w3.org/2001/XInclude"
+         xmlns:svg="http://www.w3.org/2000/svg"
+         xmlns:m="http://www.w3.org/1998/Math/MathML"
+         xmlns:html="http://www.w3.org/1999/xhtml"
+         xmlns:db="http://docbook.org/ns/docbook">
+  <title>External APIs</title>
+  This chapter will cover access to HBase either through non-Java languages, or through custom protocols.
+  
+  <section xml:id="nonjava.jvm">
+    <title>Non-Java Languages Talking to the JVM</title>
+    <para>Currently the documentation on this topic in the 
+      <link xlink:href="http://wiki.apache.org/hadoop/Hbase">HBase Wiki</link>.
+    </para>
+  </section>
+
+  <section xml:id="rest">
+    <title>REST</title>
+    <para>Currently most of the documentation on REST exists in the 
+      <link xlink:href="http://wiki.apache.org/hadoop/Hbase/Stargate">HBase Wiki on REST</link>.
+    </para>
+  </section>   <!-- rest -->
+
+  <section xml:id="thrift">
+    <title>Thrift</title>
+      <para>Currently most of the documentation on Thrift exists in the 
+      <link xlink:href="http://wiki.apache.org/hadoop/Hbase/ThriftApi">HBase Wiki on Thrift</link>.
+    </para>
+          <section xml:id="thrift.filter-language"><title>Filter Language</title>
+             <section xml:id="use-case"><title>Use Case</title>
+               <para>This allows the user to perform server-side filtering when accessing HBase over Thrift. The user specifies a filter via a string. The string is parsed on the server to construct the filter</para>
+             </section>
+
+             <section xml:id="general-syntax"><title>General Filter String Syntax</title>
+               <para>A simple filter expression is expressed as: <code>“FilterName (argument, argument, ... , argument)”</code></para>
+               <para>You must specify the name of the filter followed by the argument list in parenthesis. Commas separate the individual arguments</para>
+               <para>If the argument represents a string, it should be enclosed in single quotes.</para>
+               <para>If it represents a boolean, an integer or a comparison operator like &lt;,
+                 >, != etc. it should not be enclosed in quotes</para>
+               <para>The filter name must be one word. All ASCII characters are allowed except for whitespace, single quotes and parenthesis.</para>
+               <para>The filter’s arguments can contain any ASCII character. <code>If single quotes are present in the argument, they must be escaped by a
+                   preceding single quote</code></para>
+             </section>
+
+             <section xml:id="compound-filters-and-operators"><title>Compound Filters and Operators</title>
+               <para>Currently, two binary operators – AND/OR and two unary operators – WHILE/SKIP are supported.</para>
+               <para>Note: the operators are all in uppercase</para>
+               <para><emphasis role="bold">AND</emphasis> – as the name suggests, if this
+                 operator is used, the key-value must pass both the filters</para>
+               <para><emphasis role="bold">OR</emphasis> – as the name suggests, if this operator
+                 is used, the key-value must pass at least one of the filters</para>
+               <para><emphasis role="bold">SKIP</emphasis> – For a particular row, if any of the
+                 key-values don’t pass the filter condition, the entire row is skipped</para>
+               <para><emphasis role="bold">WHILE</emphasis> - For a particular row, it continues
+                 to emit key-values until a key-value is reached that fails the filter condition</para>
+               <para><emphasis role="bold">Compound Filters:</emphasis> Using these operators, a
+                 hierarchy of filters can be created. For example: <code>“(Filter1 AND Filter2) OR (Filter3 AND Filter4)”</code></para>
+             </section>
+
+             <section xml:id="order-of-evaluation"><title>Order of Evaluation</title>
+               <para>Parenthesis have the highest precedence. The SKIP and WHILE operators are next and have the same precedence.The AND operator has the next highest precedence followed by the OR operator.</para>
+               <para>For example:</para>
+               <para>A filter string of the form:<code>“Filter1 AND Filter2 OR Filter3”</code>
+                 will be evaluated as:<code>“(Filter1 AND Filter2) OR Filter3”</code></para>
+               <para>A filter string of the form:<code>“Filter1 AND SKIP Filter2 OR Filter3”</code>
+                 will be evaluated as:<code>“(Filter1 AND (SKIP Filter2)) OR Filter3”</code></para>
+             </section>
+
+             <section xml:id="compare-operator"><title>Compare Operator</title>
+               <para>A compare operator can be any of the following:</para>
+               <orderedlist>
+                 <listitem>
+                   <para>LESS (&lt;)</para>
+                 </listitem>
+                 <listitem>
+                   <para>LESS_OR_EQUAL (&lt;=)</para>
+                 </listitem>
+                 <listitem>
+                   <para>EQUAL (=)</para>
+                 </listitem>
+                 <listitem>
+                   <para>NOT_EQUAL (!=)</para>
+                 </listitem>
+                 <listitem>
+                   <para>GREATER_OR_EQUAL (&gt;=)</para>
+                 </listitem>
+                 <listitem>
+                   <para>GREATER (&gt;)</para>
+                 </listitem>
+                 <listitem>
+                   <para>NO_OP (no operation)</para>
+                 </listitem>
+               </orderedlist>
+               <para>The client should use the symbols (&lt;, &lt;=, =, !=, >, >=) to express
+                 compare operators.</para>
+             </section>
+
+             <section xml:id="comparator"><title>Comparator</title>
+               <para>A comparator can be any of the following:</para>
+               <orderedlist>
+                 <listitem>
+                   <para><emphasis role="bold">BinaryComparator</emphasis> - This
+                     lexicographically compares against the specified byte array using
+                     Bytes.compareTo(byte[], byte[])</para>
+                 </listitem>
+                 <listitem>
+                   <para><emphasis role="bold">BinaryPrefixComparator</emphasis> - This
+                     lexicographically compares against a specified byte array. It only compares up to
+                     the length of this byte array.</para>
+                 </listitem>
+                 <listitem>
+                   <para><emphasis role="bold">RegexStringComparator</emphasis> - This compares
+                     against the specified byte array using the given regular expression. Only EQUAL
+                     and NOT_EQUAL comparisons are valid with this comparator</para>
+                 </listitem>
+                 <listitem>
+                   <para><emphasis role="bold">SubStringComparator</emphasis> - This tests if
+                     the given substring appears in a specified byte array. The comparison is case
+                     insensitive. Only EQUAL and NOT_EQUAL comparisons are valid with this
+                     comparator</para>
+                 </listitem>
+               </orderedlist>
+               <para>The general syntax of a comparator is:<code> ComparatorType:ComparatorValue</code></para>
+               <para>The ComparatorType for the various comparators is as follows:</para>
+               <orderedlist>
+                 <listitem>
+                   <para><emphasis role="bold">BinaryComparator</emphasis> - binary</para>
+                 </listitem>
+                 <listitem>
+                   <para><emphasis role="bold">BinaryPrefixComparator</emphasis> - binaryprefix</para>
+                 </listitem>
+                 <listitem>
+                   <para><emphasis role="bold">RegexStringComparator</emphasis> - regexstring</para>
+                 </listitem>
+                 <listitem>
+                   <para><emphasis role="bold">SubStringComparator</emphasis> - substring</para>
+                 </listitem>
+               </orderedlist>
+               <para>The ComparatorValue can be any value.</para>
+               <para>Example1:<code> >, 'binary:abc' </code>will match everything that is lexicographically greater than "abc" </para>
+               <para>Example2:<code> =, 'binaryprefix:abc' </code>will match everything whose first 3 characters are lexicographically equal to "abc"</para>
+               <para>Example3:<code> !=, 'regexstring:ab*yz' </code>will match everything that doesn't begin with "ab" and ends with "yz"</para>
+               <para>Example4:<code> =, 'substring:abc123' </code>will match everything that begins with the substring "abc123"</para>
+             </section>
+
+             <section xml:id="example PHP Client Program"><title>Example PHP Client Program that uses the Filter Language</title>
+               <programlisting>
+&lt;? $_SERVER['PHP_ROOT'] = realpath(dirname(__FILE__).'/..');
+   require_once $_SERVER['PHP_ROOT'].'/flib/__flib.php';
+   flib_init(FLIB_CONTEXT_SCRIPT);
+   require_module('storage/hbase');
+   $hbase = new HBase('&lt;server_name_running_thrift_server&gt;', &lt;port on which thrift server is running&gt;);
+   $hbase->open();
+   $client = $hbase->getClient();
+   $result = $client-&gt;scannerOpenWithFilterString('table_name', "(PrefixFilter ('row2') AND (QualifierFilter (&gt;=, 'binary:xyz'))) AND (TimestampsFilter ( 123, 456))");
+   $to_print = $client-&gt;scannerGetList($result,1);
+   while ($to_print) {
+      print_r($to_print);
+      $to_print = $client-&gt;scannerGetList($result,1);
+    }
+   $client-&gt;scannerClose($result);
+?>
+        </programlisting>
+      </section>
+
+      <section xml:id="example-filter-strings"><title>Example Filter Strings</title>
+        <para>
+          <itemizedlist>
+            <listitem>
+              <para><code>“PrefixFilter (‘Row’) AND PageFilter (1) AND FirstKeyOnlyFilter ()”</code> will return all key-value pairs that match the following conditions:</para>
+              <para>1) The row containing the key-value should have prefix “Row” </para>
+              <para>2) The key-value must be located in the first row of the table </para>
+              <para>3) The key-value pair must be the first key-value in the row </para>
+            </listitem>
+          </itemizedlist>
+        </para>
+
+        <orderedlist>
+          <para>
+            <itemizedlist>
+              <listitem>
+                <para><code>“(RowFilter (=, ‘binary:Row 1’) AND TimeStampsFilter (74689, 89734)) OR
+                    ColumnRangeFilter (‘abc’, true, ‘xyz’, false))”</code> will return all key-value pairs that match both the following conditions:</para>
+                <para>1) The key-value is in a row having row key “Row 1” </para>
+                <para>2) The key-value must have a timestamp of either 74689 or 89734.</para>
+                <para>Or it must match the following condition:</para>
+                <para>1) The key-value pair must be in a column that is lexicographically >= abc and &lt; xyz </para>
+              </listitem>
+            </itemizedlist>
+          </para>
+        </orderedlist>
+
+        <para>
+          <itemizedlist>
+            <listitem>
+              <para><code>“SKIP ValueFilter (0)”</code> will skip the entire row if any of the values in the row is not 0</para>
+            </listitem>
+          </itemizedlist>
+        </para>
+      </section>
+
+      <section xml:id="Individual Filter Syntax"><title>Individual Filter Syntax</title>
+        <orderedlist>
+          <listitem>
+            <para><emphasis role="bold"><emphasis role="underline">KeyOnlyFilter</emphasis></emphasis></para>
+            <para><emphasis role="bold">Description:</emphasis> This filter doesn’t take any
+              arguments. It returns only the key component of each key-value. </para>
+            <para><emphasis role="bold">Syntax:</emphasis> KeyOnlyFilter () </para>
+            <para><emphasis role="bold">Example:</emphasis> "KeyOnlyFilter ()"</para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis role="bold"><emphasis role="underline">FirstKeyOnlyFilter</emphasis></emphasis></para>
+            <para><emphasis role="bold">Description:</emphasis> This filter doesn’t take any
+              arguments. It returns only the first key-value from each row. </para>
+            <para><emphasis role="bold">Syntax:</emphasis> FirstKeyOnlyFilter () </para>
+            <para><emphasis role="bold">Example:</emphasis> "FirstKeyOnlyFilter ()" </para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis role="bold"><emphasis role="underline">PrefixFilter</emphasis></emphasis></para>
+            <para><emphasis role="bold">Description:</emphasis> This filter takes one argument – a prefix of a
+              row key. It returns only those key-values present in a row that starts with the
+              specified row prefix</para>
+            <para><emphasis role="bold">Syntax:</emphasis> PrefixFilter (‘&lt;row_prefix>’) </para>
+            <para><emphasis role="bold">Example:</emphasis> "PrefixFilter (‘Row’)" </para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis role="bold"><emphasis role="underline">
+                  ColumnPrefixFilter</emphasis></emphasis></para>
+            <para><emphasis role="bold">Description:</emphasis> This filter takes one argument
+              – a column prefix. It returns only those key-values present in a column that starts
+              with the specified column prefix. The column prefix must be of the form: <code>“qualifier” </code></para>
+            <para><emphasis role="bold">Syntax:</emphasis>ColumnPrefixFilter(‘&lt;column_prefix>’)</para>
+            <para><emphasis role="bold">Example:</emphasis> "ColumnPrefixFilter(‘Col’)"</para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis role="underline"><emphasis role="bold">MultipleColumnPrefixFilter</emphasis></emphasis></para>
+            <para><emphasis role="bold">Description:</emphasis> This filter takes a list of
+              column prefixes. It returns key-values that are present in a column that starts with
+              any of the specified column prefixes. Each of the column prefixes must be of the form: <code>“qualifier”</code></para>
+            <para><emphasis role="bold">Syntax:</emphasis>MultipleColumnPrefixFilter(‘&lt;column_prefix>’, ‘&lt;column_prefix>’, …, ‘&lt;column_prefix>’)</para>
+            <para><emphasis role="bold">Example:</emphasis> "MultipleColumnPrefixFilter(‘Col1’, ‘Col2’)" </para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis role="bold"><emphasis role="underline">ColumnCountGetFilter</emphasis></emphasis></para>
+            <para><emphasis role="bold">Description:</emphasis> This filter takes one argument
+              – a limit. It returns the first limit number of columns in the table</para>
+            <para><emphasis role="bold">Syntax:</emphasis> ColumnCountGetFilter (‘&lt;limit>’)</para>
+            <para><emphasis role="bold">Example:</emphasis> "ColumnCountGetFilter (4)"</para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis role="bold"><emphasis role="underline">PageFilter</emphasis></emphasis></para>
+            <para><emphasis role="bold">Description:</emphasis> This filter takes one argument
+              – a page size. It returns page size number of rows from the table. </para>
+            <para><emphasis role="bold">Syntax:</emphasis> PageFilter (‘&lt;page_size>’)</para>
+            <para><emphasis role="bold">Example:</emphasis> "PageFilter (2)" </para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis role="bold"><emphasis role="underline">ColumnPaginationFilter</emphasis></emphasis></para>
+            <para><emphasis role="bold">Description:</emphasis> This filter takes two
+              arguments – a limit and offset. It returns limit number of columns after offset number
+              of columns. It does this for all the rows</para>
+            <para><emphasis role="bold">Syntax:</emphasis> ColumnPaginationFilter(‘&lt;limit>’, ‘&lt;offest>’) </para>
+            <para><emphasis role="bold">Example:</emphasis> "ColumnPaginationFilter (3, 5)" </para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis role="bold"><emphasis role="underline">InclusiveStopFilter</emphasis></emphasis></para>
+            <para><emphasis role="bold">Description:</emphasis> This filter takes one argument
+              – a row key on which to stop scanning. It returns all key-values present in rows up to
+              and including the specified row</para>
+            <para><emphasis role="bold">Syntax:</emphasis> InclusiveStopFilter(‘&lt;stop_row_key>’) </para>
+            <para><emphasis role="bold">Example:</emphasis> "InclusiveStopFilter ('Row2')" </para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis role="bold"><emphasis role="underline">TimeStampsFilter</emphasis></emphasis></para>
+            <para><emphasis role="bold">Description:</emphasis> This filter takes a list of
+              timestamps. It returns those key-values whose timestamps matches any of the specified
+              timestamps</para>
+            <para> <emphasis role="bold">Syntax:</emphasis> TimeStampsFilter (&lt;timestamp>, &lt;timestamp>, ... ,&lt;timestamp>) </para>
+            <para> <emphasis role="bold">Example:</emphasis> "TimeStampsFilter (5985489, 48895495, 58489845945)"</para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis role="bold"><emphasis role="underline">RowFilter</emphasis></emphasis></para>
+            <para><emphasis role="bold">Description:</emphasis> This filter takes a compare
+              operator and a comparator. It compares each row key with the comparator using the
+              compare operator and if the comparison returns true, it returns all the key-values in
+              that row</para>
+            <para><emphasis role="bold">Syntax:</emphasis> RowFilter (&lt;compareOp>, ‘&lt;row_comparator>’) </para>
+            <para><emphasis role="bold">Example: </emphasis>"RowFilter (&lt;=, ‘xyz)" </para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis role="bold"><emphasis role="underline">Family Filter</emphasis></emphasis></para>
+            <para><emphasis role="bold">Description:</emphasis> This filter takes a compare
+              operator and a comparator. It compares each qualifier name with the comparator using
+              the compare operator and if the comparison returns true, it returns all the key-values
+              in that column</para>
+            <para><emphasis role="bold">Syntax:</emphasis> QualifierFilter (&lt;compareOp&gt;, ‘&lt;qualifier_comparator>’) </para>
+            <para><emphasis role="bold">Example:</emphasis> "QualifierFilter (=, ‘Column1’)"</para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis role="bold"><emphasis role="underline">QualifierFilter</emphasis></emphasis></para>
+            <para><emphasis role="bold">Description:</emphasis> This filter takes a compare
+              operator and a comparator. It compares each qualifier name with the comparator using
+              the compare operator and if the comparison returns true, it returns all the key-values
+              in that column</para>
+            <para><emphasis role="bold">Syntax:</emphasis> QualifierFilter (&lt;compareOp>,‘&lt;qualifier_comparator>’) </para>
+            <para><emphasis role="bold">Example:</emphasis> "QualifierFilter (=,‘Column1’)"</para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis role="bold"><emphasis role="underline">ValueFilter</emphasis></emphasis></para>
+            <para><emphasis role="bold">Description:</emphasis> This filter takes a compare operator and a
+              comparator. It compares each value with the comparator using the compare operator and
+              if the comparison returns true, it returns that key-value</para>
+            <para><emphasis role="bold">Syntax:</emphasis> ValueFilter (&lt;compareOp>,‘&lt;value_comparator>’) </para>
+            <para><emphasis role="bold">Example:</emphasis> "ValueFilter (!=, ‘Value’)" </para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis role="bold"><emphasis role="underline">DependentColumnFilter</emphasis></emphasis></para>
+            <para><emphasis role="bold">Description:</emphasis> This filter takes two arguments – a family
+              and a qualifier. It tries to locate this column in each row and returns all key-values
+              in that row that have the same timestamp. If the row doesn’t contain the specified
+              column – none of the key-values in that row will be returned.</para>
+            <para>The filter can also take an optional boolean argument – dropDependentColumn. If set to true, the column we were depending on doesn’t get returned.</para>
+            <para>The filter can also take two more additional optional arguments – a compare operator and a value comparator, which are further checks in addition to the family and qualifier. If the dependent column is found, its value should also pass the value check and then only is its timestamp taken into consideration</para>
+            <para><emphasis role="bold">Syntax:</emphasis> DependentColumnFilter (‘&lt;family>’, ‘&lt;qualifier>’, &lt;boolean>, &lt;compare operator>, ‘&lt;value comparator’)</para>
+            <para><emphasis role="bold">Syntax:</emphasis> DependentColumnFilter (‘&lt;family>’, ‘&lt;qualifier>’, &lt;boolean>) </para>
+            <para><emphasis role="bold">Syntax:</emphasis> DependentColumnFilter (‘&lt;family>’, ‘&lt;qualifier>’) </para>
+            <para><emphasis role="bold">Example:</emphasis> "DependentColumnFilter (‘conf’, ‘blacklist’, false, >=, ‘zebra’)" </para>
+            <para><emphasis role="bold">Example:</emphasis> "DependentColumnFilter (‘conf’, 'blacklist', true)"</para>
+            <para><emphasis role="bold">Example:</emphasis> "DependentColumnFilter (‘conf’, 'blacklist')"</para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis role="bold"><emphasis role="underline">SingleColumnValueFilter</emphasis></emphasis></para>
+            <para><emphasis role="bold">Description:</emphasis> This filter takes a column family, a
+              qualifier, a compare operator and a comparator. If the specified column is not found –
+              all the columns of that row will be emitted. If the column is found and the comparison
+              with the comparator returns true, all the columns of the row will be emitted. If the
+              condition fails, the row will not be emitted. </para>
+            <para>This filter also takes two additional optional boolean arguments – filterIfColumnMissing and setLatestVersionOnly</para>
+            <para>If the filterIfColumnMissing flag is set to true the columns of the row will not be emitted if the specified column to check is not found in the row. The default value is false.</para>
+            <para>If the setLatestVersionOnly flag is set to false, it will test previous versions (timestamps) too. The default value is true.</para>
+            <para>These flags are optional and if you must set neither or both</para>
+            <para><emphasis role="bold">Syntax:</emphasis> SingleColumnValueFilter(&lt;compare operator>, ‘&lt;comparator>’, ‘&lt;family>’, ‘&lt;qualifier>’,&lt;filterIfColumnMissing_boolean>, &lt;latest_version_boolean>) </para>
+            <para><emphasis role="bold">Syntax:</emphasis> SingleColumnValueFilter(&lt;compare operator>, ‘&lt;comparator>’, ‘&lt;family>’, ‘&lt;qualifier>) </para>
+            <para><emphasis role="bold">Example:</emphasis> "SingleColumnValueFilter (&lt;=, ‘abc’,‘FamilyA’, ‘Column1’, true, false)" </para>
+            <para><emphasis role="bold">Example:</emphasis> "SingleColumnValueFilter (&lt;=, ‘abc’,‘FamilyA’, ‘Column1’)" </para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis role="bold"><emphasis role="underline">SingleColumnValueExcludeFilter</emphasis></emphasis></para>
+            <para><emphasis role="bold">Description:</emphasis> This filter takes the same arguments and
+              behaves same as SingleColumnValueFilter – however, if the column is found and the
+              condition passes, all the columns of the row will be emitted except for the tested
+              column value. </para>
+            <para><emphasis role="bold">Syntax:</emphasis> SingleColumnValueExcludeFilter(&lt;compare operator>, '&lt;comparator>', '&lt;family>', '&lt;qualifier>',&lt;latest_version_boolean>, &lt;filterIfColumnMissing_boolean>)</para>
+            <para><emphasis role="bold">Syntax:</emphasis> SingleColumnValueExcludeFilter(&lt;compare operator>, '&lt;comparator>', '&lt;family>', '&lt;qualifier>') </para>
+            <para><emphasis role="bold">Example:</emphasis> "SingleColumnValueExcludeFilter (‘&lt;=’, ‘abc’,‘FamilyA’, ‘Column1’, ‘false’, ‘true’)"</para>
+            <para><emphasis role="bold">Example:</emphasis> "SingleColumnValueExcludeFilter (‘&lt;=’, ‘abc’, ‘FamilyA’, ‘Column1’)" </para>
+          </listitem>
+
+          <listitem>
+            <para><emphasis role="bold"><emphasis role="underline">ColumnRangeFilter</emphasis></emphasis></para>
+            <para><emphasis role="bold">Description:</emphasis> This filter is used for selecting only those
+              keys with columns that are between minColumn and maxColumn. It also takes two boolean
+              variables to indicate whether to include the minColumn and maxColumn or not.</para>
+            <para>If you don’t want to set the minColumn or the maxColumn – you can pass in an empty argument.</para>
+            <para><emphasis role="bold">Syntax:</emphasis> ColumnRangeFilter (‘&lt;minColumn>’, &lt;minColumnInclusive_bool>, ‘&lt;maxColumn>’, &lt;maxColumnInclusive_bool>)</para>
+            <para><emphasis role="bold">Example:</emphasis> "ColumnRangeFilter (‘abc’, true, ‘xyz’, false)"</para>
+          </listitem>
+
+          </orderedlist>
+        </section>
+        
+        </section>
+    
+  </section>  <!-- thrift -->
+
+
+</chapter>
