@@ -164,10 +164,28 @@ public class ZKTable {
   throws KeeperException {
     synchronized (this.cache) {
       if (!isDisabledOrEnablingTable(tableName)) {
-        LOG.warn("Moving table " + tableName + " state to disabling but was " +
-          "not first in enabled state: " + this.cache.get(tableName));
+        LOG.warn("Moving table " + tableName + " state to enabling but was " +
+          "not first in disabled state: " + this.cache.get(tableName));
       }
       setTableState(tableName, TableState.ENABLING);
+    }
+  }
+
+  /**
+   * Sets the specified table as ENABLING in zookeeper atomically
+   * If the table is already in ENABLING state, no operation is performed
+   * @param tableName
+   * @return if the operation succeeds or not
+   * @throws KeeperException unexpected zookeeper exception
+   */
+  public boolean checkAndSetEnablingTable(final String tableName)
+    throws KeeperException {
+    synchronized (this.cache) {
+      if (isEnablingTable(tableName)) {
+        return false;
+      }
+      setTableState(tableName, TableState.ENABLING);
+      return true;
     }
   }
 

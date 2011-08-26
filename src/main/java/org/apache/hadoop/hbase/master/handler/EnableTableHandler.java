@@ -1,5 +1,5 @@
 /**
- * Copyright 2010 The Apache Software Foundation
+ * Copyright 2011 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -66,9 +66,10 @@ public class EnableTableHandler extends EventHandler {
     if(server != null && server.getServerName() != null) {
       name = server.getServerName().toString();
     }
-    return getClass().getSimpleName() + "-" + name + "-" + getSeqid() + "-" + tableNameStr;
+    return getClass().getSimpleName() + "-" + name + "-" + getSeqid() + "-" +
+      tableNameStr;
   }
-  
+
   @Override
   public void process() {
     try {
@@ -119,7 +120,7 @@ public class EnableTableHandler extends EventHandler {
         break;
       }
     }
-    // Flip the table to disabled.
+    // Flip the table to enabled.
     if (done) this.assignmentManager.getZKTable().setEnabledTable(this.tableNameStr);
     LOG.info("Enabled table is done=" + done);
   }

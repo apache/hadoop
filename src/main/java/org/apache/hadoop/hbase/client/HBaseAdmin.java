@@ -352,7 +352,8 @@ public class HBaseAdmin implements Abortable, Closeable {
     }
     int numRegs = splitKeys == null ? 1 : splitKeys.length + 1;
     int prevRegCount = 0;
-    for (int tries = 0; tries < numRetries; ++tries) {
+    for (int tries = 0; tries < this.numRetries * this.retryLongerMultiplier;
+      ++tries) {
       // Wait for new table to come on-line
       final AtomicInteger actualRegCount = new AtomicInteger(0);
       MetaScannerVisitor visitor = new MetaScannerVisitor() {
@@ -383,9 +384,9 @@ public class HBaseAdmin implements Abortable, Closeable {
       };
       MetaScanner.metaScan(conf, visitor, desc.getName());
       if (actualRegCount.get() != numRegs) {
-        if (tries == numRetries - 1) {
-          throw new RegionOfflineException("Only " + actualRegCount.get() + 
-              " of " + numRegs + " regions are online; retries exhausted.");
+        if (tries == this.numRetries * this.retryLongerMultiplier - 1) {
+          throw new RegionOfflineException("Only " + actualRegCount.get() +
+            " of " + numRegs + " regions are online; retries exhausted.");
         }
         try { // Sleep
           Thread.sleep(getPauseTime(tries));

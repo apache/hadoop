@@ -54,9 +54,9 @@ public interface HMasterInterface extends VersionedProtocol {
   // Admin tools would use these cmds
 
   /**
-   * Creates a new table.  If splitKeys are specified, then the table will be
-   * created with an initial set of multiple regions.  If splitKeys is null,
-   * the table will be created with a single region.
+   * Creates a new table asynchronously.  If splitKeys are specified, then the
+   * table will be created with an initial set of multiple regions.
+   * If splitKeys is null, the table will be created with a single region.
    * @param desc table descriptor
    * @param splitKeys
    * @throws IOException

@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.master.handler.ModifyTableHandler;
 import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
+import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -914,14 +915,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     }
   }
 
-  public void createTable(HTableDescriptor desc, byte [][] splitKeys)
-  throws IOException {
-    createTable(desc, splitKeys, false);
-  }
-
   public void createTable(HTableDescriptor hTableDescriptor,
-                          byte [][] splitKeys,
-                          boolean sync)
+    byte [][] splitKeys)
   throws IOException {
     if (!isMasterRunning()) {
       throw new MasterNotRunningException();
@@ -930,117 +925,38 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       cpHost.preCreateTable(hTableDescriptor, splitKeys);
     }
     HRegionInfo [] newRegions = getHRegionInfos(hTableDescriptor, splitKeys);
-    int timeout = conf.getInt("hbase.client.catalog.timeout", 10000);
-    // Need META availability to create a table
-    try {
-      if(catalogTracker.waitForMeta(timeout) == null) {
-        throw new NotAllMetaRegionsOnlineException();
-      }
-    } catch (InterruptedException e) {
-      LOG.warn("Interrupted waiting for meta availability", e);
-      throw new IOException(e);
+
+    this.executorService.submit(new CreateTableHandler(this,
+      this.fileSystemManager, this.serverManager, hTableDescriptor, conf,
+      newRegions, catalogTracker, assignmentManager));
+
+    if (cpHost != null) {
+      // TODO, remove sync parameter from postCreateTable method
+      cpHost.postCreateTable(newRegions, false);
     }
-    createTable(hTableDescriptor ,newRegions, sync);
   }
 
   private HRegionInfo[] getHRegionInfos(HTableDescriptor hTableDescriptor,
-                                        byte[][] splitKeys) {
-  HRegionInfo[] hRegionInfos = null;
-  if (splitKeys == null || splitKeys.length == 0) {
-    hRegionInfos = new HRegionInfo[]{
-        new HRegionInfo(hTableDescriptor.getName(), null, null)};
-  } else {
-    int numRegions = splitKeys.length + 1;
-    hRegionInfos = new HRegionInfo[numRegions];
-    byte[] startKey = null;
-    byte[] endKey = null;
-    for (int i = 0; i < numRegions; i++) {
-      endKey = (i == splitKeys.length) ? null : splitKeys[i];
-      hRegionInfos[i] =
-          new HRegionInfo(hTableDescriptor.getName(), startKey, endKey);
-      startKey = endKey;
+    byte[][] splitKeys) {
+    HRegionInfo[] hRegionInfos = null;
+    if (splitKeys == null || splitKeys.length == 0) {
+      hRegionInfos = new HRegionInfo[]{
+          new HRegionInfo(hTableDescriptor.getName(), null, null)};
+    } else {
+      int numRegions = splitKeys.length + 1;
+      hRegionInfos = new HRegionInfo[numRegions];
+      byte[] startKey = null;
+      byte[] endKey = null;
+      for (int i = 0; i < numRegions; i++) {
+        endKey = (i == splitKeys.length) ? null : splitKeys[i];
+        hRegionInfos[i] =
+            new HRegionInfo(hTableDescriptor.getName(), startKey, endKey);
+        startKey = endKey;
+      }
     }
+    return hRegionInfos;
   }
-  return hRegionInfos;
-}
 
-  private synchronized void createTable(final HTableDescriptor hTableDescriptor,
-                                        final HRegionInfo [] newRegions,
-      final boolean sync)
-  throws IOException {
-    String tableName = newRegions[0].getTableNameAsString();
-    if (MetaReader.tableExists(catalogTracker, tableName)) {
-      throw new TableExistsException(tableName);
-    }
-    // TODO: Currently we make the table descriptor and as side-effect the
-    // tableDir is created.  Should we change below method to be createTable
-    // where we create table in tmp dir with its table descriptor file and then
-    // do rename to move it into place?
-    FSUtils.createTableDescriptor(hTableDescriptor, conf);
-
-    // 1. Set table enabling flag up in zk.
-    try {
-      assignmentManager.getZKTable().setEnabledTable(tableName);
-    } catch (KeeperException e) {
-      throw new IOException("Unable to ensure that the table will be" +
-          " enabled because of a ZooKeeper issue", e);
-    }
-
-    List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>();
-    final int batchSize = this.conf.getInt("hbase.master.createtable.batchsize", 100);
-    HLog hlog = null;
-    for (int regionIdx = 0; regionIdx < newRegions.length; regionIdx++) {
-      HRegionInfo newRegion = newRegions[regionIdx];
-      // 2. Create HRegion
-      HRegion region = HRegion.createHRegion(newRegion,
-          fileSystemManager.getRootDir(), conf, hTableDescriptor, hlog);
-      if (hlog == null) {
-        hlog = region.getLog();
-      }
-
-      regionInfos.add(region.getRegionInfo());
-      if (regionIdx % batchSize == 0) {
-        // 3. Insert into META
-        MetaEditor.addRegionsToMeta(catalogTracker, regionInfos);
-        regionInfos.clear();
-      }
-
-      // 4. Close the new region to flush to disk.  Close log file too.
-      region.close();
-    }
-    hlog.closeAndDelete();
-    if (regionInfos.size() > 0) {
-      MetaEditor.addRegionsToMeta(catalogTracker, regionInfos);
-    }
-
-    // 5. Trigger immediate assignment of the regions in round-robin fashion
-    List<ServerName> servers = serverManager.getOnlineServersList();
-    try {
-      this.assignmentManager.assignUserRegions(Arrays.asList(newRegions), servers);
-    } catch (InterruptedException ie) {
-      LOG.error("Caught " + ie + " during round-robin assignment");
-      throw new IOException(ie);
-    }
-
-    // 6. If sync, wait for assignment of regions
-    if (sync) {
-      LOG.debug("Waiting for " + newRegions.length + " region(s) to be assigned");
-      for (HRegionInfo regionInfo : newRegions) {
-        try {
-          this.assignmentManager.waitForAssignment(regionInfo);
-        } catch (InterruptedException e) {
-          LOG.info("Interrupted waiting for region to be assigned during " +
-              "create table call", e);
-          Thread.currentThread().interrupt();
-          return;
-        }
-      }
-    }
-
-    if (cpHost != null) {
-      cpHost.postCreateTable(newRegions, sync);
-    }
-  }
 
   private static boolean isCatalogTable(final byte [] tableName) {
     return Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME) ||

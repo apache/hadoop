@@ -126,6 +126,7 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
     C_M_ADD_FAMILY            (44),   // Client asking Master to add family to table
     C_M_DELETE_FAMILY         (45),   // Client asking Master to delete family of table
     C_M_MODIFY_FAMILY         (46),   // Client asking Master to modify family of table
+    C_M_CREATE_TABLE          (47),   // Client asking Master to create a table
 
     // Updates from master to ZK. This is done by the master and there is
     // nothing to process by either Master or RS
