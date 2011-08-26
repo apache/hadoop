@@ -1,6 +1,9 @@
 Hadoop HDFS Change Log
 
 Trunk (unreleased changes)
+  NEW FEATURES
+    HDFS-349.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
+               via hairong)
 
 Release 0.23.0 - Unreleased
 
@@ -1044,9 +1047,6 @@ Release 0.23.0 - Unreleased
                (todd)
     HDFS-2027. Image inspector should return finalized logs before unfinalized
                logs. (todd)
-
-    HDFS-349.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
-               via hairong)
 
 Release 0.22.0 - Unreleased
 
