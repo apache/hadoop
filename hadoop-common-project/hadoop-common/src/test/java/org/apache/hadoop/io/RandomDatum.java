@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.io;
 
-import java.util.*;
-import java.io.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Random;
 
-public class RandomDatum implements WritableComparable {
+
+public class RandomDatum implements WritableComparable<RandomDatum> {
   private int length;
   private byte[] data;
 
@@ -49,20 +52,22 @@ public class RandomDatum implements WritableComparable {
     in.readFully(data, 0, length);
   }
 
-  public int compareTo(Object o) {
-    RandomDatum that = (RandomDatum)o;
+  @Override
+  public int compareTo(RandomDatum o) {
     return WritableComparator.compareBytes(this.data, 0, this.length,
-                                           that.data, 0, that.length);
+                                           o.data, 0, o.length);
   }
 
+  @Override
   public boolean equals(Object o) {
-    return compareTo(o) == 0;
+    return compareTo((RandomDatum)o) == 0;
   }
 
   private static final char[] HEX_DIGITS =
   {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
 
   /** Returns a string representation of this object. */
+  @Override
   public String toString() {
     StringBuilder buf = new StringBuilder(length*2);
     for (int i = 0; i < length; i++) {

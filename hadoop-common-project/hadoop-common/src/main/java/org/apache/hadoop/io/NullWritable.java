@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 /** Singleton Writable with no data. */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class NullWritable implements WritableComparable {
+public class NullWritable implements WritableComparable<NullWritable> {
 
   private static final NullWritable THIS = new NullWritable();
 
@@ -39,12 +39,11 @@ public class NullWritable implements WritableComparable {
     return "(null)";
   }
 
+  @Override
   public int hashCode() { return 0; }
-  public int compareTo(Object other) {
-    if (!(other instanceof NullWritable)) {
-      throw new ClassCastException("can't compare " + other.getClass().getName() 
-                                   + " to NullWritable");
-    }
+  
+  @Override
+  public int compareTo(NullWritable other) {
     return 0;
   }
   public boolean equals(Object other) { return other instanceof NullWritable; }
@@ -60,6 +59,7 @@ public class NullWritable implements WritableComparable {
     /**
      * Compare the buffers in serialized form.
      */
+    @Override
     public int compare(byte[] b1, int s1, int l1,
                        byte[] b2, int s2, int l2) {
       assert 0 == l1;

@@ -28,7 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class BooleanWritable implements WritableComparable {
+public class BooleanWritable implements WritableComparable<BooleanWritable> {
   private boolean value;
 
   /** 
@@ -69,6 +69,7 @@ public class BooleanWritable implements WritableComparable {
 
   /**
    */
+  @Override
   public boolean equals(Object o) {
     if (!(o instanceof BooleanWritable)) {
       return false;
@@ -77,6 +78,7 @@ public class BooleanWritable implements WritableComparable {
     return this.value == other.value;
   }
 
+  @Override
   public int hashCode() {
     return value ? 0 : 1;
   }
@@ -85,12 +87,14 @@ public class BooleanWritable implements WritableComparable {
 
   /**
    */
-  public int compareTo(Object o) {
+  @Override
+  public int compareTo(BooleanWritable o) {
     boolean a = this.value;
-    boolean b = ((BooleanWritable) o).value;
+    boolean b = o.value;
     return ((a == b) ? 0 : (a == false) ? -1 : 1);
   }
   
+  @Override
   public String toString() {
     return Boolean.toString(get());
   }
@@ -103,6 +107,7 @@ public class BooleanWritable implements WritableComparable {
       super(BooleanWritable.class);
     }
 
+    @Override
     public int compare(byte[] b1, int s1, int l1,
                        byte[] b2, int s2, int l2) {
       return compareBytes(b1, s1, l1, b2, s2, l2);

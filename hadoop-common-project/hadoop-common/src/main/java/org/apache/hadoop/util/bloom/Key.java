@@ -167,7 +167,7 @@ public class Key implements WritableComparable<Key> {
   }
   
   // Comparable
-  
+  @Override
   public int compareTo(Key other) {
     int result = this.bytes.length - other.getBytes().length;
     for (int i = 0; result == 0 && i < bytes.length; i++) {

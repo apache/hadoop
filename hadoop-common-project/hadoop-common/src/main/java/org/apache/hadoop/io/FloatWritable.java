@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 /** A WritableComparable for floats. */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class FloatWritable implements WritableComparable {
+public class FloatWritable implements WritableComparable<FloatWritable> {
   private float value;
 
   public FloatWritable() {}
@@ -48,6 +48,7 @@ public class FloatWritable implements WritableComparable {
   }
 
   /** Returns true iff <code>o</code> is a FloatWritable with the same value. */
+  @Override
   public boolean equals(Object o) {
     if (!(o instanceof FloatWritable))
       return false;
@@ -55,17 +56,20 @@ public class FloatWritable implements WritableComparable {
     return this.value == other.value;
   }
 
+  @Override
   public int hashCode() {
     return Float.floatToIntBits(value);
   }
 
   /** Compares two FloatWritables. */
-  public int compareTo(Object o) {
+  @Override
+  public int compareTo(FloatWritable o) {
     float thisValue = this.value;
-    float thatValue = ((FloatWritable)o).value;
+    float thatValue = o.value;
     return (thisValue<thatValue ? -1 : (thisValue==thatValue ? 0 : 1));
   }
 
+  @Override
   public String toString() {
     return Float.toString(value);
   }
@@ -75,7 +79,7 @@ public class FloatWritable implements WritableComparable {
     public Comparator() {
       super(FloatWritable.class);
     }
-
+    @Override
     public int compare(byte[] b1, int s1, int l1,
                        byte[] b2, int s2, int l2) {
       float thisValue = readFloat(b1, s1);

@@ -21,14 +21,10 @@ package org.apache.hadoop.io;
 import junit.framework.TestCase;
 
 import java.nio.charset.MalformedInputException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.util.*;
 import java.util.Arrays;
 
 /** Unit tests for NonUTF8. */
 public class TestTextNonUTF8 extends TestCase {
-  private static final Log LOG= LogFactory.getLog(TestTextNonUTF8.class);
 
   public void testNonUTF8() throws Exception{
     // this is a non UTF8 byte array

@@ -30,7 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class VLongWritable implements WritableComparable {
+public class VLongWritable implements WritableComparable<VLongWritable> {
   private long value;
 
   public VLongWritable() {}
@@ -52,6 +52,7 @@ public class VLongWritable implements WritableComparable {
   }
 
   /** Returns true iff <code>o</code> is a VLongWritable with the same value. */
+  @Override
   public boolean equals(Object o) {
     if (!(o instanceof VLongWritable))
       return false;
@@ -59,17 +60,20 @@ public class VLongWritable implements WritableComparable {
     return this.value == other.value;
   }
 
+  @Override
   public int hashCode() {
     return (int)value;
   }
 
   /** Compares two VLongWritables. */
-  public int compareTo(Object o) {
+  @Override
+  public int compareTo(VLongWritable o) {
     long thisValue = this.value;
-    long thatValue = ((VLongWritable)o).value;
+    long thatValue = o.value;
     return (thisValue < thatValue ? -1 : (thisValue == thatValue ? 0 : 1));
   }
 
+  @Override
   public String toString() {
     return Long.toString(value);
   }

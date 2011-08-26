@@ -344,6 +344,9 @@ Release 0.23.0 - Unreleased
 
     HADOOP-7561. Make test-patch only run tests for changed modules. (tomwhite)
 
+    HADOOP-7547. Add generic type in WritableComparable subclasses.
+    (Uma Maheswara Rao G via szetszwo)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
