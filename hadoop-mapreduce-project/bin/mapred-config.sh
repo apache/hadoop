@@ -24,6 +24,8 @@ bin=`cd "$bin"; pwd`
 
 if [ -e "$bin/../libexec/hadoop-config.sh" ]; then
   . "$bin/../libexec/hadoop-config.sh"
+elif [ -e "${HADOOP_COMMON_HOME}/libexec/hadoop-config.sh" ]; then
+  . "$HADOOP_COMMON_HOME"/libexec/hadoop-config.sh
 elif [ -e "${HADOOP_COMMON_HOME}/bin/hadoop-config.sh" ]; then
   . "$HADOOP_COMMON_HOME"/bin/hadoop-config.sh
 elif [ -e "${HADOOP_HOME}/bin/hadoop-config.sh" ]; then
