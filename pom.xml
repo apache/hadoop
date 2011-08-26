@@ -16,7 +16,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-main</artifactId>
-  <version>0.23.0-SNAPSHOT</version>
+  <version>0.24.0-SNAPSHOT</version>
   <description>Apache Hadoop Main</description>
   <name>Apache Hadoop Main</name>
   <packaging>pom</packaging>
@@ -35,11 +35,11 @@
 
   <modules>
     <module>hadoop-project</module>
-    <module>hadoop-project-distro</module>
+    <module>hadoop-project-dist</module>
     <module>hadoop-assemblies</module>
-    <module>hadoop-annotations</module>
-    <module>hadoop-common</module>
-    <module>hadoop-hdfs</module>
+    <module>hadoop-common-project</module>
+    <module>hadoop-hdfs-project</module>
+    <module>hadoop-mapreduce-project</module>
   </modules>
 
   <build>

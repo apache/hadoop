@@ -1,0 +1,212 @@
+<?xml version="1.0"?>
+<configuration>
+
+ <property>
+    <name>yarn.resourcemanager.principal</name>
+    <value>rm/sightbusy-lx@LOCALHOST</value>
+  </property>
+
+ <property>
+    <name>yarn.nodemanager.principal</name>
+    <value>nm/sightbusy-lx@LOCALHOST</value>
+  </property>
+
+
+<!-- All resourcemanager related configuration properties -->
+
+  <property>
+    <name>yarn.server.resourcemanager.address</name>
+    <value>0.0.0.0:8020</value>
+  </property>
+
+ <property>
+    <name>yarn.server.resourcemanager.resourcetracker.address</name>
+    <value>0.0.0.0:8025</value>
+  </property>
+
+ <property>
+    <name>yarn.server.resourcemanager.scheduler.address</name>
+    <value>0.0.0.0:8030</value>
+  </property>
+
+ <property>
+    <name>yarn.server.resourcemanager.admin.address</name>
+    <value>0.0.0.0:8141</value>
+  </property>
+
+  <property>
+    <name>yarn.server.resourcemanager.application.max.retries</name>
+    <value>1</value>
+    <description>The number of times an application will be retried in case
+    of AM failure.</description>
+  </property>
+  <property>
+    <name>yarn.server.resourcemanager.keytab</name>
+    <value>/etc/krb5.keytab</value>
+  </property>
+
+  <property>
+    <name>yarn.server.resourcemanager.expire.applications.completed.max</name>
+    <value>10000</value>
+    <description>the maximum number of completed applications the RM 
+      keeps in memory
+    </description>
+  </property>
+
+<!-- All nodemanager related configuration properties -->
+
+  <property>
+    <name>yarn.server.nodemanager.local-dir</name>
+    <value>/tmp/nm-local-dir</value>
+  </property>
+
+  <property>
+    <name>yarn.server.nodemanager.log.dir</name>
+    <value>/tmp/logs</value>
+  </property>
+
+  <property>
+    <name>yarn.apps.stagingDir</name>
+    <value>/tmp/hadoop-yarn/${user.name}/staging</value>
+   </property>
+
+  <property>
+    <name>yarn.apps.history.stagingDir</name>
+    <value>/tmp/hadoop-yarn/${user.name}/staging</value>
+   </property>
+
+  <property>
+    <name>yarn.server.nodemanager.keytab</name>
+    <value>/etc/krb5.keytab</value>
+  </property>
+
+  <property>
+    <name>yarn.server.nodemanager.container-executor.class</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor</value>
+    <!--<value>org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor</value>-->
+  </property>
+
+  <property><name>NM_HOSTS</name><value>0.0.0.0:45454</value></property> 
+
+  <property>
+    <name>yarn.server.nodemanager.address</name>
+    <value>0.0.0.0:45454</value>
+  </property>
+
+  <!--  HealthChecker's properties -->
+  <property>
+    <name>yarn.server.nodemanager.healthchecker.script.path</name>
+    <value></value>
+    <description>Location of the node's health-check script on the local
+    file-system.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.server.nodemanager.healthchecker.interval</name>
+    <value>600000</value>
+    <description>Frequency of the health-check run by the NodeManager
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.server.nodemanager.healthchecker.script.timeout</name>
+    <value>1200000</value>
+    <description>Timeout for the health-check run by the NodeManager
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.server.nodemanager.healthchecker.script.args</name>
+    <value></value>
+    <description>Arguments to be passed to the health-check script run
+    by the NodeManager</description>
+  </property>
+
+  <property>
+    <name>yarn.server.nodemanager.healthchecker.script.path</name>
+    <value></value>
+    <description>Location of the node's health-check script on the local
+    file-system.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.server.nodemanager.healthchecker.interval</name>
+    <value>600000</value>
+    <description>Frequency of the health-check run by the NodeManager
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.server.nodemanager.healthchecker.script.timeout</name>
+    <value>1200000</value>
+    <description>Timeout for the health-check run by the NodeManager
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.server.nodemanager.healthchecker.script.args</name>
+    <value></value>
+    <description>Arguments to be passed to the health-check script run
+    by the NodeManager</description>
+  </property>
+  <!-- End of HealthChecker's properties -->
+
+  <!-- ContainerMonitor related properties -->
+
+  <property>
+    <name>yarn.server.nodemanager.containers-monitor.monitoring-interval</name>
+    <value>3000</value>
+  </property>
+
+  <property>
+    <name>yarn.server.nodemanager.containers-monitor.resourcecalculatorplugin</name>
+    <value></value>
+  </property>
+
+   <property>
+     <name>yarn.server.nodemanager.reserved-physical-memory.mb</name>
+     <value>-1</value>
+   </property>
+
+  <!-- End of ContainerMonitor related properties -->
+
+<!-- All MRAppMaster related configuration properties -->
+
+  <property>
+    <name>yarn.server.mapreduce-appmanager.attempt-listener.bindAddress</name>
+    <value>0.0.0.0</value>
+  </property>
+
+  <property>
+    <name>yarn.server.mapreduce-appmanager.client-service.bindAddress</name>
+    <value>0.0.0.0</value>
+  </property>
+
+
+  <property>
+    <name>mapreduce.job.jar</name>
+    <value></value>
+    <!--<value>~/Workspace/eclipse-workspace/yarn/yarn-mapreduce/yarn-mapreduce-app/target/yarn-mapreduce-app-0.24.0-SNAPSHOT.jar</value>-->
+  </property>
+
+  <property>
+   <name>mapreduce.job.hdfs-servers</name>
+   <value>${fs.default.name}</value>
+ </property>
+
+  <property>
+  <name>nodemanager.auxiluary.services</name>
+  <value></value>
+  <!-- <value>mapreduce.shuffle</value> -->
+  </property>
+
+<!--
+  <property>
+  <name>nodemanager.aux.service.mapreduce.shuffle.class</name>
+  <value>org.apache.hadoop.mapred.ShuffleHandler</value>
+  </property>
+-->
+
+</configuration>
