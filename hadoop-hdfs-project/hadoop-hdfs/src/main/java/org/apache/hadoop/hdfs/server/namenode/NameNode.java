@@ -83,7 +83,6 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.NodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.io.EnumSetWritable;
@@ -1210,16 +1209,17 @@ public class NameNode implements NamenodeProtocols {
   }
 
   @Override // DatanodeProtocol
-  public void blockReceivedAndDeleted(DatanodeRegistration nodeReg, String poolId,
-      ReceivedDeletedBlockInfo[] receivedAndDeletedBlocks) throws IOException {
+  public void blockReceived(DatanodeRegistration nodeReg, String poolId,
+      Block blocks[], String delHints[]) throws IOException {
     verifyRequest(nodeReg);
     if(stateChangeLog.isDebugEnabled()) {
-      stateChangeLog.debug("*BLOCK* NameNode.blockReceivedAndDeleted: "
-          +"from "+nodeReg.getName()+" "+receivedAndDeletedBlocks.length
-          +" blocks.");
+      stateChangeLog.debug("*BLOCK* NameNode.blockReceived: "
+          +"from "+nodeReg.getName()+" "+blocks.length+" blocks.");
     }
-    namesystem.getBlockManager().blockReceivedAndDeleted(
-        nodeReg, poolId, receivedAndDeletedBlocks);
+    for (int i = 0; i < blocks.length; i++) {
+      namesystem.getBlockManager().blockReceived(
+          nodeReg, poolId, blocks[i], delHints[i]);
+    }
   }
 
   @Override // DatanodeProtocol
