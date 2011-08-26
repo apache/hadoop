@@ -93,6 +93,9 @@ Release 0.20.205.0 - unreleased
 
     HDFS-1164. TestHdfsProxy is failing. (Todd Lipcon)
 
+    HDFS-1202. DataBlockScanner throws NPE when updated before initialized. 
+    (Todd Lipcon)
+
 Release 0.20.204.0 - 2011-8-25
 
   NEW FEATURES
