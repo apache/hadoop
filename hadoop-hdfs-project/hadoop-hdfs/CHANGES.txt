@@ -1045,6 +1045,9 @@ Release 0.23.0 - Unreleased
     HDFS-2027. Image inspector should return finalized logs before unfinalized
                logs. (todd)
 
+    HDFS-349.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
+               via hairong)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

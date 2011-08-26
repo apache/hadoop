@@ -44,6 +44,16 @@ import org.apache.hadoop.io.WritableFactory;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class BlockCommand extends DatanodeCommand {
+  
+  /**
+   * This constant is used to indicate that the block deletion does not need
+   * explicit ACK from the datanode. When a block is put into the list of blocks
+   * to be deleted, it's size is set to this constant. We assume that no block
+   * would actually have this size. Otherwise, we would miss ACKs for blocks
+   * with such size. Positive number is used for compatibility reasons.
+   */
+  public static final long NO_ACK = Long.MAX_VALUE;
+  
   String poolId;
   Block blocks[];
   DatanodeInfo targets[][];
