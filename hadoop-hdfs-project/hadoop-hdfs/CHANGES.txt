@@ -5,6 +5,9 @@ Trunk (unreleased changes)
     HDFS-395.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
                via hairong)
 
+  BUG FIXES
+    HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
