@@ -997,6 +997,9 @@ Release 0.23.0 - Unreleased
     HDFS-1480. All replicas of a block can end up on the same rack when
     some datanodes are decommissioning. (todd)
 
+    HDFS-2286. DataXceiverServer logs AsynchronousCloseException at shutdown
+    (todd)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.

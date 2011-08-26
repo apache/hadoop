@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.nio.channels.AsynchronousCloseException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -144,6 +145,12 @@ class DataXceiverServer implements Runnable {
         new Daemon(datanode.threadGroup, exciver).start();
       } catch (SocketTimeoutException ignored) {
         // wake up to see if should continue to run
+      } catch (AsynchronousCloseException ace) {
+        // another thread closed our listener socket - that's expected during shutdown,
+        // but not in other circumstances
+        if (datanode.shouldRun) {
+          LOG.warn(datanode.getMachineName() + ":DataXceiverServer: ", ace);
+        }
       } catch (IOException ie) {
         LOG.warn(datanode.getMachineName() + ":DataXceiverServer: ", ie);
       } catch (Throwable te) {
