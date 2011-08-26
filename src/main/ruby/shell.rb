@@ -227,6 +227,7 @@ Shell.load_command_group(
     is_enabled
     exists
     list
+    show_filters
   ]
 )
 

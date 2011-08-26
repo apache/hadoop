@@ -26,6 +26,7 @@ import java.util.TreeSet;
 import java.util.ArrayList;
 import java.util.Stack;
 import java.util.HashMap;
+import java.util.Set;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
@@ -50,14 +51,50 @@ import java.util.EmptyStackException;
  */
 public class ParseFilter {
 
-  private HashMap<ByteBuffer, Integer> operatorPrecedenceHashMap;
+  private static HashMap<ByteBuffer, Integer> operatorPrecedenceHashMap;
+  private static HashMap<String, String> filterHashMap;
 
-  /**
-   * Constructor
-   * <p>
-   * Creates the operatorPrecedenceHashMap
-   */
-  public ParseFilter() {
+  static {
+    // Registers all the filter supported by the Filter Language
+    filterHashMap = new HashMap<String, String>();
+    filterHashMap.put("KeyOnlyFilter", ParseConstants.FILTER_PACKAGE + "." +
+                      "KeyOnlyFilter");
+    filterHashMap.put("FirstKeyOnlyFilter", ParseConstants.FILTER_PACKAGE + "." +
+                      "FirstKeyOnlyFilter");
+    filterHashMap.put("PrefixFilter", ParseConstants.FILTER_PACKAGE + "." +
+                      "PrefixFilter");
+    filterHashMap.put("ColumnPrefixFilter", ParseConstants.FILTER_PACKAGE + "." +
+                      "ColumnPrefixFilter");
+    filterHashMap.put("MultipleColumnPrefixFilter", ParseConstants.FILTER_PACKAGE + "." +
+                      "MultipleColumnPrefixFilter");
+    filterHashMap.put("ColumnCountGetFilter", ParseConstants.FILTER_PACKAGE + "." +
+                      "ColumnCountGetFilter");
+    filterHashMap.put("PageFilter", ParseConstants.FILTER_PACKAGE + "." +
+                      "PageFilter");
+    filterHashMap.put("ColumnPaginationFilter", ParseConstants.FILTER_PACKAGE + "." +
+                      "ColumnPaginationFilter");
+    filterHashMap.put("InclusiveStopFilter", ParseConstants.FILTER_PACKAGE + "." +
+                      "InclusiveStopFilter");
+    filterHashMap.put("TimestampsFilter", ParseConstants.FILTER_PACKAGE + "." +
+                      "TimestampsFilter");
+    filterHashMap.put("RowFilter", ParseConstants.FILTER_PACKAGE + "." +
+                      "RowFilter");
+    filterHashMap.put("FamilyFilter", ParseConstants.FILTER_PACKAGE + "." +
+                      "FamilyFilter");
+    filterHashMap.put("QualifierFilter", ParseConstants.FILTER_PACKAGE + "." +
+                      "QualifierFilter");
+    filterHashMap.put("ValueFilter", ParseConstants.FILTER_PACKAGE + "." +
+                      "ValueFilter");
+    filterHashMap.put("ColumnRangeFilter", ParseConstants.FILTER_PACKAGE + "." +
+                      "ColumnRangeFilter");
+    filterHashMap.put("SingleColumnValueFilter", ParseConstants.FILTER_PACKAGE + "." +
+                      "SingleColumnValueFilter");
+    filterHashMap.put("SingleColumnValueExcludeFilter", ParseConstants.FILTER_PACKAGE + "." +
+                      "SingleColumnValueExcludeFilter");
+    filterHashMap.put("DependentColumnFilter", ParseConstants.FILTER_PACKAGE + "." +
+                      "DependentColumnFilter");
+
+    // Creates the operatorPrecedenceHashMap
     operatorPrecedenceHashMap = new HashMap<ByteBuffer, Integer>();
     operatorPrecedenceHashMap.put(ParseConstants.SKIP_BUFFER, 1);
     operatorPrecedenceHashMap.put(ParseConstants.WHILE_BUFFER, 1);
@@ -199,8 +236,11 @@ public class ParseFilter {
 
     String filterName = Bytes.toString(getFilterName(filterStringAsByteArray));
     ArrayList<byte []> filterArguments = getFilterArguments(filterStringAsByteArray);
+    if (!filterHashMap.containsKey(filterName)) {
+      throw new IllegalArgumentException("Filter Name " + filterName + " not supported");
+    }
     try {
-      filterName = ParseConstants.FILTER_PACKAGE + "." + filterName;
+      filterName = filterHashMap.get(filterName);
       Class c = Class.forName(filterName);
       Class[] argTypes = new Class [] {ArrayList.class};
       Method m = c.getDeclaredMethod("createFilterFromArguments", argTypes);
@@ -792,5 +832,12 @@ public class ParseFilter {
     System.arraycopy(comparator, index + 1, result[1], 0, len);
 
     return result;
+  }
+
+/**
+ * Return a Set of filters supported by the Filter Language
+ */
+  public Set<String> getSupportedFilters () {
+    return filterHashMap.keySet();
   }
 }
