@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.io.EnumSetWritable;
@@ -877,10 +878,10 @@ public class NNThroughputBenchmark {
           receivedDNReg.setStorageInfo(
                           new DataStorage(nsInfo, dnInfo.getStorageID()));
           receivedDNReg.setInfoPort(dnInfo.getInfoPort());
-          nameNode.blockReceived( receivedDNReg, 
-                                  nameNode.getNamesystem().getBlockPoolId(),
-                                  new Block[] {blocks[i]},
-                                  new String[] {DataNode.EMPTY_DEL_HINT});
+          nameNode.blockReceivedAndDeleted(receivedDNReg, nameNode
+              .getNamesystem().getBlockPoolId(),
+              new ReceivedDeletedBlockInfo[] { new ReceivedDeletedBlockInfo(
+                  blocks[i], DataNode.EMPTY_DEL_HINT) });
         }
       }
       return blocks.length;
@@ -992,11 +993,10 @@ public class NNThroughputBenchmark {
         for(DatanodeInfo dnInfo : loc.getLocations()) {
           int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getName());
           datanodes[dnIdx].addBlock(loc.getBlock().getLocalBlock());
-          nameNode.blockReceived(
-              datanodes[dnIdx].dnRegistration, 
-              loc.getBlock().getBlockPoolId(),
-              new Block[] {loc.getBlock().getLocalBlock()},
-              new String[] {""});
+          nameNode.blockReceivedAndDeleted(datanodes[dnIdx].dnRegistration, loc
+              .getBlock().getBlockPoolId(),
+              new ReceivedDeletedBlockInfo[] { new ReceivedDeletedBlockInfo(loc
+                  .getBlock().getLocalBlock(), "") });
         }
       }
       return prevBlock;
