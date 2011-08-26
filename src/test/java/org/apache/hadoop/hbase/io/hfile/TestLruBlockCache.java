@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.nio.ByteBuffer;
 import java.util.Random;
 
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -510,7 +511,7 @@ public class TestLruBlockCache extends TestCase {
         LruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
   }
 
-  private static class CachedItem implements HeapSize {
+  private static class CachedItem implements Cacheable {
     String blockName;
     int size;
 
@@ -531,5 +532,20 @@ public class TestLruBlockCache extends TestCase {
           + ClassSize.align(blockName.length())
           + ClassSize.align(size);
     }
+
+    @Override
+    public int getSerializedLength() {
+      return 0;
+    }
+
+    @Override
+    public CacheableDeserializer<Cacheable> getDeserializer() {
+      return null;
+    }
+
+    @Override
+    public void serialize(ByteBuffer destination) {
+    }
+
   }
 }

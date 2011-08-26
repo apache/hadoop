@@ -463,6 +463,7 @@ Release 0.91.0 - Unreleased
    HBASE-4071  Data GC: Remove all versions > TTL EXCEPT the last
                written version (Lars Hofhansl)
    HBASE-4242  Add documentation for HBASE-4071 (Lars Hofhansl)
+   HBASE-4027  Enable direct byte buffers LruBlockCache (Li Pi)
 
 Release 0.90.5 - Unreleased
 

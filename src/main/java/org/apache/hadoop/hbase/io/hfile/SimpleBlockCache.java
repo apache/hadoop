@@ -26,17 +26,15 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 
 
 /**
  * Simple one RFile soft reference cache.
  */
 public class SimpleBlockCache implements BlockCache {
-  private static class Ref extends SoftReference<HeapSize> {
+  private static class Ref extends SoftReference<Cacheable> {
     public String blockId;
-    public Ref(String blockId, HeapSize block, ReferenceQueue q) {
+    public Ref(String blockId, Cacheable block, ReferenceQueue q) {
       super(block, q);
       this.blockId = blockId;
     }
@@ -70,7 +68,7 @@ public class SimpleBlockCache implements BlockCache {
     return cache.size();
   }
 
-  public synchronized HeapSize getBlock(String blockName, boolean caching) {
+  public synchronized Cacheable getBlock(String blockName, boolean caching) {
     processQueue(); // clear out some crap.
     Ref ref = cache.get(blockName);
     if (ref == null)
@@ -78,11 +76,11 @@ public class SimpleBlockCache implements BlockCache {
     return ref.get();
   }
 
-  public synchronized void cacheBlock(String blockName, HeapSize block) {
+  public synchronized void cacheBlock(String blockName, Cacheable block) {
     cache.put(blockName, new Ref(blockName, block, q));
   }
 
-  public synchronized void cacheBlock(String blockName, HeapSize block,
+  public synchronized void cacheBlock(String blockName, Cacheable block,
       boolean inMemory) {
     cache.put(blockName, new Ref(blockName, block, q));
   }
@@ -124,7 +122,7 @@ public class SimpleBlockCache implements BlockCache {
   public int evictBlocksByPrefix(String string) {
     throw new UnsupportedOperationException();
   }
- 
+
   @Override
   public List<BlockCacheColumnFamilySummary> getBlockCacheColumnFamilySummaries(Configuration conf) {
     throw new UnsupportedOperationException();

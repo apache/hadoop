@@ -39,6 +39,11 @@ export HBASE_OPTS="-ea -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode"
 # Uncomment below to enable java garbage collection logging in the .out file.
 # export HBASE_OPTS="$HBASE_OPTS -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps" 
 
+# Uncomment below if you intend to use the EXPERIMENTAL off heap cache.
+# export HBASE_OPTS="$HBASE_OPTS -XX:MaxDirectMemorySize="
+# Set hbase.offheapcachesize in hbase-site.xml
+
+
 # Uncomment and adjust to enable JMX exporting
 # See jmxremote.password and jmxremote.access in $JRE_HOME/lib/management to configure remote password access.
 # More details at: http://java.sun.com/javase/6/docs/technotes/guides/management/agent.html

@@ -99,7 +99,8 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheColumnFamilySummary;
-import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
+import org.apache.hadoop.hbase.io.hfile.CacheStats;
+import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
@@ -630,9 +631,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             closeUserRegions(this.abortRequested);
           } else if (this.stopping) {
             LOG.info("Stopping meta regions, if the HRegionServer hosts any");
-            
+
             boolean allUserRegionsOffline = areAllUserRegionsOffline();
-            
+
             if (allUserRegionsOffline) {
               // Set stopped if no requests since last time we went around the loop.
               // The remaining meta regions will be closed on our way out.
@@ -1072,13 +1073,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       super("CompactionChecker", sleepTime, h);
       this.instance = h;
       LOG.info("Runs every " + StringUtils.formatTime(sleepTime));
-      
+
       /* MajorCompactPriority is configurable.
        * If not set, the compaction will use default priority.
        */
       this.majorCompactPriority = this.instance.conf.
         getInt("hbase.regionserver.compactionChecker.majorCompactPriority",
-        DEFAULT_PRIORITY);      
+        DEFAULT_PRIORITY);
     }
 
     @Override
@@ -1093,14 +1094,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
               this.instance.compactSplitThread.requestCompaction(r, s,
                 getName() + " requests compaction");
             } else if (s.isMajorCompaction()) {
-              if (majorCompactPriority == DEFAULT_PRIORITY || 
+              if (majorCompactPriority == DEFAULT_PRIORITY ||
                   majorCompactPriority > r.getCompactPriority()) {
                 this.instance.compactSplitThread.requestCompaction(r, s,
                     getName() + " requests major compaction; use default priority");
               } else {
                this.instance.compactSplitThread.requestCompaction(r, s,
                   getName() + " requests major compaction; use configured priority",
-                  this.majorCompactPriority); 
+                  this.majorCompactPriority);
               }
             }
           } catch (IOException e) {
@@ -1225,7 +1226,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             totalStaticBloomSize += store.getTotalStaticBloomSize();
           }
         }
-        
+
         hdfsBlocksDistribution.add(r.getHDFSBlocksDistribution());
       }
     this.metrics.stores.set(stores);
@@ -1262,7 +1263,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       getServerName().getHostname());
     int percent = (int) (localityIndex * 100);
     this.metrics.hdfsBlocksLocalityIndex.set(percent);
-    
+
   }
 
   /**
@@ -1351,7 +1352,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     while (true) {
       try {
         this.infoServer = new InfoServer("regionserver", addr, port, false, this.conf);
-        this.infoServer.addServlet("status", "/rs-status", RSStatusServlet.class); 
+        this.infoServer.addServlet("status", "/rs-status", RSStatusServlet.class);
         this.infoServer.setAttribute(REGIONSERVER, this);
         this.infoServer.start();
         break;
@@ -1834,7 +1835,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           + "regionName is null");
     }
     HRegion region = getRegion(regionName);
-    Integer lock = getLockFromId(put.getLockId());    
+    Integer lock = getLockFromId(put.getLockId());
     if (region.getCoprocessorHost() != null) {
       Boolean result = region.getCoprocessorHost()
         .preCheckAndPut(row, family, qualifier, compareOp, comparator, put);
@@ -1873,7 +1874,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           + "regionName is null");
     }
     HRegion region = getRegion(regionName);
-    Integer lock = getLockFromId(delete.getLockId());        
+    Integer lock = getLockFromId(delete.getLockId());
     WritableByteArrayComparable comparator = new BinaryComparator(value);
     if (region.getCoprocessorHost() != null) {
       Boolean result = region.getCoprocessorHost().preCheckAndDelete(row,
@@ -1914,7 +1915,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         + "regionName is null");
     }
     HRegion region = getRegion(regionName);
-    Integer lock = getLockFromId(delete.getLockId());        
+    Integer lock = getLockFromId(delete.getLockId());
     if (region.getCoprocessorHost() != null) {
       Boolean result = region.getCoprocessorHost().preCheckAndDelete(row,
         family, qualifier, compareOp, comparator, delete);

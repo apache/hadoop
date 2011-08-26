@@ -21,9 +21,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.io.HeapSize;
 import java.util.LinkedList;
-
 
 import junit.framework.TestCase;
 
@@ -132,10 +130,26 @@ public class TestCachedBlockQueue extends TestCase {
   {
     public CachedBlock(final long heapSize, String name, long accessTime) {
       super(name,
-          new HeapSize(){
+          new Cacheable(){
             @Override
             public long heapSize() {
               return ((int)(heapSize - CachedBlock.PER_BLOCK_OVERHEAD));
+            }
+
+            @Override
+            public int getSerializedLength() {
+              return 0;
+            }
+
+            @Override
+            public void serialize(ByteBuffer destination) {
+            }
+
+
+            @Override
+            public CacheableDeserializer<Cacheable> getDeserializer() {
+              // TODO Auto-generated method stub
+              return null;
             }},
           accessTime,false);
     }

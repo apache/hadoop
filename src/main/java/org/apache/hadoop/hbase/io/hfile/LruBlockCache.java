@@ -261,7 +261,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
    * @param buf block buffer
    * @param inMemory if block is in-memory
    */
-  public void cacheBlock(String blockName, HeapSize buf, boolean inMemory) {
+  public void cacheBlock(String blockName, Cacheable buf, boolean inMemory) {
     CachedBlock cb = map.get(blockName);
     if(cb != null) {
       throw new RuntimeException("Cached an already cached block");
@@ -285,7 +285,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
    * @param blockName block name
    * @param buf block buffer
    */
-  public void cacheBlock(String blockName, HeapSize buf) {
+  public void cacheBlock(String blockName, Cacheable buf) {
     cacheBlock(blockName, buf, false);
   }
 
@@ -294,7 +294,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
    * @param blockName block name
    * @return buffer of specified block name, or null if not in cache
    */
-  public HeapSize getBlock(String blockName, boolean caching) {
+  public Cacheable getBlock(String blockName, boolean caching) {
     CachedBlock cb = map.get(blockName);
     if(cb == null) {
       stats.miss(caching);
@@ -624,100 +624,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
   public CacheStats getStats() {
     return this.stats;
   }
-
-  public static class CacheStats {
-    /** The number of getBlock requests that were cache hits */
-    private final AtomicLong hitCount = new AtomicLong(0);
-    /**
-     * The number of getBlock requests that were cache hits, but only from
-     * requests that were set to use the block cache.  This is because all reads
-     * attempt to read from the block cache even if they will not put new blocks
-     * into the block cache.  See HBASE-2253 for more information.
-     */
-    private final AtomicLong hitCachingCount = new AtomicLong(0);
-    /** The number of getBlock requests that were cache misses */
-    private final AtomicLong missCount = new AtomicLong(0);
-    /**
-     * The number of getBlock requests that were cache misses, but only from
-     * requests that were set to use the block cache.
-     */
-    private final AtomicLong missCachingCount = new AtomicLong(0);
-    /** The number of times an eviction has occurred */
-    private final AtomicLong evictionCount = new AtomicLong(0);
-    /** The total number of blocks that have been evicted */
-    private final AtomicLong evictedCount = new AtomicLong(0);
-
-    public void miss(boolean caching) {
-      missCount.incrementAndGet();
-      if (caching) missCachingCount.incrementAndGet();
-    }
-
-    public void hit(boolean caching) {
-      hitCount.incrementAndGet();
-      if (caching) hitCachingCount.incrementAndGet();
-    }
-
-    public void evict() {
-      evictionCount.incrementAndGet();
-    }
-
-    public void evicted() {
-      evictedCount.incrementAndGet();
-    }
-
-    public long getRequestCount() {
-      return getHitCount() + getMissCount();
-    }
-
-    public long getRequestCachingCount() {
-      return getHitCachingCount() + getMissCachingCount();
-    }
-
-    public long getMissCount() {
-      return missCount.get();
-    }
-
-    public long getMissCachingCount() {
-      return missCachingCount.get();
-    }
-
-    public long getHitCount() {
-      return hitCount.get();
-    }
-
-    public long getHitCachingCount() {
-      return hitCachingCount.get();
-    }
-
-    public long getEvictionCount() {
-      return evictionCount.get();
-    }
-
-    public long getEvictedCount() {
-      return evictedCount.get();
-    }
-
-    public double getHitRatio() {
-      return ((float)getHitCount()/(float)getRequestCount());
-    }
-
-    public double getHitCachingRatio() {
-      return ((float)getHitCachingCount()/(float)getRequestCachingCount());
-    }
-
-    public double getMissRatio() {
-      return ((float)getMissCount()/(float)getRequestCount());
-    }
-
-    public double getMissCachingRatio() {
-      return ((float)getMissCachingCount()/(float)getRequestCachingCount());
-    }
-
-    public double evictedPerEviction() {
-      return ((float)getEvictedCount()/(float)getEvictionCount());
-    }
-  }
-
+  
   public final static long CACHE_FIXED_OVERHEAD = ClassSize.align(
       (3 * Bytes.SIZEOF_LONG) + (8 * ClassSize.REFERENCE) +
       (5 * Bytes.SIZEOF_FLOAT) + Bytes.SIZEOF_BOOLEAN

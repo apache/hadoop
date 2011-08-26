@@ -19,8 +19,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -55,16 +53,16 @@ public class CachedBlock implements HeapSize, Comparable<CachedBlock> {
   };
 
   private final String blockName;
-  private final HeapSize buf;
+  private final Cacheable buf;
   private volatile long accessTime;
   private long size;
   private BlockPriority priority;
 
-  public CachedBlock(String blockName, HeapSize buf, long accessTime) {
+  public CachedBlock(String blockName, Cacheable buf, long accessTime) {
     this(blockName, buf, accessTime, false);
   }
 
-  public CachedBlock(String blockName, HeapSize buf, long accessTime,
+  public CachedBlock(String blockName, Cacheable buf, long accessTime,
       boolean inMemory) {
     this.blockName = blockName;
     this.buf = buf;
@@ -97,7 +95,7 @@ public class CachedBlock implements HeapSize, Comparable<CachedBlock> {
     return this.accessTime < that.accessTime ? 1 : -1;
   }
 
-  public HeapSize getBuffer() {
+  public Cacheable getBuffer() {
     return this.buf;
   }
 

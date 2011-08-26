@@ -29,12 +29,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 
 import org.apache.hadoop.hbase.io.DoubleOutputStream;
-import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -75,7 +73,7 @@ import static org.apache.hadoop.hbase.io.hfile.Compression.Algorithm.NONE;
  * The version 2 block representation in the block cache is the same as above,
  * except that the data section is always uncompressed in the cache.
  */
-public class HFileBlock implements HeapSize {
+public class HFileBlock implements Cacheable {
 
   /** The size of a version 2 {@link HFile} block header */
   public static final int HEADER_SIZE = MAGIC_LENGTH + 2 * Bytes.SIZEOF_INT
@@ -87,6 +85,27 @@ public class HFileBlock implements HeapSize {
   public static final int BYTE_BUFFER_HEAP_SIZE = (int) ClassSize.estimateBase(
       ByteBuffer.wrap(new byte[0], 0, 0).getClass(), false);
 
+  static final int EXTRA_SERIALIZATION_SPACE = Bytes.SIZEOF_LONG + Bytes.SIZEOF_INT;
+
+
+  private static final CacheableDeserializer<Cacheable> blockDeserializer =
+  new CacheableDeserializer<Cacheable>() {
+    public HFileBlock deserialize(ByteBuffer buf) throws IOException{
+      ByteBuffer tempCopy = buf.duplicate();
+      ByteBuffer newByteBuffer = ByteBuffer.allocate(tempCopy.limit()
+          - HFileBlock.EXTRA_SERIALIZATION_SPACE);
+      tempCopy.limit(tempCopy.limit()
+          - HFileBlock.EXTRA_SERIALIZATION_SPACE).rewind();
+      newByteBuffer.put(tempCopy);
+      HFileBlock ourBuffer = new HFileBlock(newByteBuffer);
+
+      tempCopy.position(tempCopy.limit());
+      tempCopy.limit(tempCopy.limit() + HFileBlock.EXTRA_SERIALIZATION_SPACE);
+      ourBuffer.offset = tempCopy.getLong();
+      ourBuffer.nextBlockOnDiskSizeWithHeader = tempCopy.getInt();
+      return ourBuffer;
+    }
+  };
   private BlockType blockType;
   private final int onDiskSizeWithoutHeader;
   private final int uncompressedSizeWithoutHeader;
@@ -398,9 +417,20 @@ public class HFileBlock implements HeapSize {
     // uncompressed size, next block's on-disk size, offset and previous
     // offset, byte buffer object, and its byte array. Might also need to add
     // some fields inside the byte buffer.
-    return ClassSize.align(ClassSize.OBJECT + 2 * ClassSize.REFERENCE + 3
-        * Bytes.SIZEOF_INT + 2 * Bytes.SIZEOF_LONG + BYTE_BUFFER_HEAP_SIZE) +
-        ClassSize.align(buf.capacity());
+
+    // We only add one BYTE_BUFFER_HEAP_SIZE because at any given moment, one of
+    // the bytebuffers will be null. But we do account for both references.
+
+    // If we are on heap, then we add the capacity of buf.
+    if (buf != null) {
+      return ClassSize.align(ClassSize.OBJECT + 2 * ClassSize.REFERENCE + 3
+          * Bytes.SIZEOF_INT + 2 * Bytes.SIZEOF_LONG + BYTE_BUFFER_HEAP_SIZE)
+          + ClassSize.align(buf.capacity());
+    } else {
+
+      return ClassSize.align(ClassSize.OBJECT + 2 * ClassSize.REFERENCE + 3
+          * Bytes.SIZEOF_INT + 2 * Bytes.SIZEOF_LONG + BYTE_BUFFER_HEAP_SIZE);
+    }
   }
 
   /**
@@ -1437,5 +1467,71 @@ public class HFileBlock implements HeapSize {
     }
 
   }
+
+  @Override
+  public int getSerializedLength() {
+    if (buf != null) {
+      return this.buf.limit() + HFileBlock.EXTRA_SERIALIZATION_SPACE;
+    }
+    return 0;
+  }
+
+  @Override
+  public void serialize(ByteBuffer destination) {
+    destination.put(this.buf.duplicate());
+    destination.putLong(this.offset);
+    destination.putInt(this.nextBlockOnDiskSizeWithHeader);
+    destination.rewind();
+  }
+
+  @Override
+  public CacheableDeserializer<Cacheable> getDeserializer() {
+    return HFileBlock.blockDeserializer;
+  }
+
+  @Override
+  public boolean equals(Object comparison) {
+    if (this == comparison) {
+      return true;
+    }
+    if (comparison == null) {
+      return false;
+    }
+    if (comparison.getClass() != this.getClass()) {
+      return false;
+    }
+
+    HFileBlock castedComparison = (HFileBlock) comparison;
+
+    if (castedComparison.blockType != this.blockType) {
+      return false;
+    }
+    if (castedComparison.nextBlockOnDiskSizeWithHeader != this.nextBlockOnDiskSizeWithHeader) {
+      return false;
+    }
+    if (castedComparison.offset != this.offset) {
+      return false;
+    }
+    if (castedComparison.onDiskSizeWithoutHeader != this.onDiskSizeWithoutHeader) {
+      return false;
+    }
+    if (castedComparison.prevBlockOffset != this.prevBlockOffset) {
+      return false;
+    }
+    if (castedComparison.uncompressedSizeWithoutHeader != this.uncompressedSizeWithoutHeader) {
+      return false;
+    }
+    if (this.buf.compareTo(castedComparison.buf) != 0) {
+      return false;
+    }
+    if (this.buf.position() != castedComparison.buf.position()){
+      return false;
+    }
+    if (this.buf.limit() != castedComparison.buf.limit()){
+      return false;
+    }
+    return true;
+  }
+
 
 }
