@@ -137,7 +137,7 @@ public class TestLogRolling  {
     TEST_UTIL.getConfiguration().setInt("hbase.hregion.memstore.flush.size", 8192);
 
     // Increase the amount of time between client retries
-    TEST_UTIL.getConfiguration().setLong("hbase.client.pause", 15 * 1000);
+    TEST_UTIL.getConfiguration().setLong("hbase.client.pause", 10 * 1000);
 
     // Reduce thread wake frequency so that other threads can get
     // a chance to run.
@@ -167,6 +167,9 @@ public class TestLogRolling  {
     dfsCluster = TEST_UTIL.getDFSCluster();
     fs = TEST_UTIL.getTestFileSystem();
     admin = TEST_UTIL.getHBaseAdmin();
+
+    // disable region rebalancing (interferes with log watching)
+    cluster.getMaster().balanceSwitch(false);
   }
 
   @After
@@ -391,6 +394,7 @@ public class TestLogRolling  {
    */
   @Test
   public void testLogRollOnPipelineRestart() throws Exception {
+    LOG.info("Starting testLogRollOnPipelineRestart");
     assertTrue("This test requires HLog file replication.",
       fs.getDefaultReplication() > 1);
     LOG.info("Replication=" + fs.getDefaultReplication());
@@ -434,7 +438,7 @@ public class TestLogRolling  {
     assertTrue("Need append support for this test", FSUtils
         .isAppendSupported(TEST_UTIL.getConfiguration()));
 
-    writeData(table, 2);
+    writeData(table, 1002);
 
     table.setAutoFlush(true);
 
@@ -444,8 +448,6 @@ public class TestLogRolling  {
         curTime > oldFilenum && oldFilenum != -1);
 
     assertTrue("The log shouldn't have rolled yet", oldFilenum == log.getFilenum());
-    DatanodeInfo[] pipeline = getPipeline(log);
-    assertTrue(pipeline.length == fs.getDefaultReplication());
 
     // roll all datanodes in the pipeline
     dfsCluster.restartDataNodes();
@@ -455,14 +457,14 @@ public class TestLogRolling  {
 
     //this.log.sync();
     // this write should succeed, but trigger a log roll
-    writeData(table, 3);
+    writeData(table, 1003);
     long newFilenum = log.getFilenum();
 
     assertTrue("Missing datanode should've triggered a log roll",
         newFilenum > oldFilenum && newFilenum > curTime);
 
     //this.log.sync();
-    writeData(table, 4);
+    writeData(table, 1004);
 
     // roll all datanode again
     dfsCluster.restartDataNodes();
@@ -471,7 +473,7 @@ public class TestLogRolling  {
     LOG.info("Data Nodes restarted");
 
     // this write should succeed, but trigger a log roll
-    writeData(table, 5);
+    writeData(table, 1005);
 
     // force a log roll to read back and verify previously written logs
     log.rollWriter(true);
@@ -498,10 +500,10 @@ public class TestLogRolling  {
     }
 
     // verify the written rows are there
-    assertTrue(loggedRows.contains("row0002"));
-    assertTrue(loggedRows.contains("row0003"));
-    assertTrue(loggedRows.contains("row0004"));
-    assertTrue(loggedRows.contains("row0005"));
+    assertTrue(loggedRows.contains("row1002"));
+    assertTrue(loggedRows.contains("row1003"));
+    assertTrue(loggedRows.contains("row1004"));
+    assertTrue(loggedRows.contains("row1005"));
 
     // flush all regions
     List<HRegion> regions =
@@ -516,7 +518,7 @@ public class TestLogRolling  {
         Result r = scanner.next();
         assertNotNull(r);
         assertFalse(r.isEmpty());
-        assertEquals("row000"+i, Bytes.toString(r.getRow()));
+        assertEquals("row100"+i, Bytes.toString(r.getRow()));
       }
     } finally {
       scanner.close();
