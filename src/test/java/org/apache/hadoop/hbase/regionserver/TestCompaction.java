@@ -19,9 +19,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.spy;
+
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,20 +37,18 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.spy;
 
 
 /**
@@ -161,8 +165,25 @@ public class TestCompaction extends HBaseTestCase {
     Result result = r.get(new Get(STARTROW).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100), null);
     assertEquals(compactionThreshold, result.size());
 
+    // see if CompactionProgress is in place but null
+    for (Store store: this.r.stores.values()) {
+      assertNull(store.getCompactionProgress());
+    }
+
     r.flushcache();
     r.compactStores(true);
+
+    // see if CompactionProgress has done its thing on at least one store
+    int storeCount = 0;
+    for (Store store: this.r.stores.values()) {
+      CompactionProgress progress = store.getCompactionProgress();
+      if( progress != null ) {
+        ++storeCount;
+        assert(progress.currentCompactedKVs > 0);
+        assert(progress.totalCompactingKVs > 0);
+      }
+      assert(storeCount > 0);
+    }
 
     // look at the second row
     // Increment the least significant character so we get to next row.

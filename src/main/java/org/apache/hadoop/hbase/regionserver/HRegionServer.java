@@ -111,6 +111,7 @@ import org.apache.hadoop.hbase.ipc.Invocation;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRootHandler;
@@ -631,9 +632,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             closeUserRegions(this.abortRequested);
           } else if (this.stopping) {
             LOG.info("Stopping meta regions, if the HRegionServer hosts any");
-
             boolean allUserRegionsOffline = areAllUserRegionsOffline();
-
             if (allUserRegionsOffline) {
               // Set stopped if no requests since last time we went around the loop.
               // The remaining meta regions will be closed on our way out.
@@ -926,6 +925,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     int rootIndexSizeKB = 0;
     int totalStaticIndexSizeKB = 0;
     int totalStaticBloomSizeKB = 0;
+    long totalCompactingKVs = 0;
+    long currentCompactedKVs = 0;
     synchronized (r.stores) {
       stores += r.stores.size();
       for (Store store : r.stores.values()) {
@@ -934,6 +935,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             / 1024 / 1024);
         storefileSizeMB += (int) (store.getStorefilesSize() / 1024 / 1024);
         storefileIndexSizeMB += (int) (store.getStorefilesIndexSize() / 1024 / 1024);
+        CompactionProgress progress = store.getCompactionProgress();
+        if (progress != null) {
+          totalCompactingKVs += progress.totalCompactingKVs;
+          currentCompactedKVs += progress.currentCompactedKVs;
+        }
 
         rootIndexSizeKB +=
             (int) (store.getStorefilesIndexSize() / 1024);
@@ -949,7 +955,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         storeUncompressedSizeMB,
         storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB, rootIndexSizeKB,
         totalStaticIndexSizeKB, totalStaticBloomSizeKB,
-        (int) r.readRequestsCount.get(), (int) r.writeRequestsCount.get());
+        (int) r.readRequestsCount.get(), (int) r.writeRequestsCount.get(),
+        totalCompactingKVs, currentCompactedKVs);
   }
 
   /**
@@ -2531,6 +2538,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     int storefileSizeMB = 0;
     int memstoreSizeMB = (int) (r.memstoreSize.get() / 1024 / 1024);
     int storefileIndexSizeMB = 0;
+    long totalCompactingKVs = 0;
+    long currentCompactedKVs = 0;
     synchronized (r.stores) {
       stores += r.stores.size();
       for (Store store : r.stores.values()) {

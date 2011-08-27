@@ -410,6 +410,8 @@ Release 0.91.0 - Unreleased
    HBASE-4241  Optimize flushing of the Memstore (Lars Hofhansl)
    HBASE-4248  Enhancements for Filter Language exposing HBase filters through
                the Thrift API (Anirudh Todi)
+   HBASE-3900  Expose progress of a major compaction in UI and/or in shell
+               (Brad Anderson)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

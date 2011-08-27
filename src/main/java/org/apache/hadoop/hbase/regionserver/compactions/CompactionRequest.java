@@ -77,7 +77,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
     /**
      * This function will define where in the priority queue the request will
      * end up.  Those with the highest priorities will be first.  When the
-     * priorities are the same it will It will first compare priority then date
+     * priorities are the same it will first compare priority then date
      * to maintain a FIFO functionality.
      *
      * <p>Note: The date is only accurate to the millisecond which means it is
