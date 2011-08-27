@@ -74,6 +74,8 @@
 
     <distMgmtSnapshotsName>Apache Development Snapshot Repository</distMgmtSnapshotsName>
     <distMgmtSnapshotsUrl>https://repository.apache.org/content/repositories/snapshots</distMgmtSnapshotsUrl>
+
+    <commons-daemon.version>1.0.3</commons-daemon.version>
   </properties>
 
   <dependencyManagement>
@@ -365,7 +367,7 @@
       <dependency>
         <groupId>commons-daemon</groupId>
         <artifactId>commons-daemon</artifactId>
-        <version>1.0.1</version>
+        <version>${commons-daemon.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
