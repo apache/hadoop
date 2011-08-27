@@ -629,6 +629,7 @@ public class KeyValue implements Writable, HeapSize {
     stringMap.put("family", Bytes.toStringBinary(getFamily()));
     stringMap.put("qualifier", Bytes.toStringBinary(getQualifier()));
     stringMap.put("timestamp", getTimestamp());
+    stringMap.put("vlen", getValueLength());
     return stringMap;
   }
 

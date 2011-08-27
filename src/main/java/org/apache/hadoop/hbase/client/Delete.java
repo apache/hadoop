@@ -34,7 +34,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  * Used to perform Delete operations on a single row.
@@ -68,7 +70,8 @@ import java.util.TreeMap;
  * deleteFamily -- then you need to use the method overrides that take a
  * timestamp.  The constructor timestamp is not referenced.
  */
-public class Delete implements Writable, Row, Comparable<Row> {
+public class Delete extends Operation
+  implements Writable, Row, Comparable<Row> {
   private static final byte DELETE_VERSION = (byte)3;
 
   private byte [] row = null;
@@ -340,39 +343,67 @@ public class Delete implements Writable, Row, Comparable<Row> {
   }
 
   /**
-   * @return string
+   * Compile the column family (i.e. schema) information
+   * into a Map. Useful for parsing and aggregation by debugging,
+   * logging, and administration tools.
+   * @return Map
    */
   @Override
-  public String toString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append("row=");
-    sb.append(Bytes.toStringBinary(this.row));
-    sb.append(", ts=");
-    sb.append(this.ts);
-    sb.append(", families={");
-    boolean moreThanOne = false;
-    for(Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
-      if(moreThanOne) {
-        sb.append(", ");
-      } else {
-        moreThanOne = true;
-      }
-      sb.append("(family=");
-      sb.append(Bytes.toString(entry.getKey()));
-      sb.append(", keyvalues=(");
-      boolean moreThanOneB = false;
-      for(KeyValue kv : entry.getValue()) {
-        if(moreThanOneB) {
-          sb.append(", ");
-        } else {
-          moreThanOneB = true;
-        }
-        sb.append(kv.toString());
-      }
-      sb.append(")");
+  public Map<String, Object> getFingerprint() {
+    Map<String, Object> map = new HashMap<String, Object>();
+    List<String> families = new ArrayList<String>();
+    // ideally, we would also include table information, but that information
+    // is not stored in each Operation instance.
+    map.put("families", families);
+    for (Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
+      families.add(Bytes.toStringBinary(entry.getKey()));
     }
-    sb.append("}");
-    return sb.toString();
+    return map;
+  }
+
+  /**
+   * Compile the details beyond the scope of getFingerprint (row, columns,
+   * timestamps, etc.) into a Map along with the fingerprinted information.
+   * Useful for debugging, logging, and administration tools.
+   * @param maxCols a limit on the number of columns output prior to truncation
+   * @return Map
+   */
+  @Override
+  public Map<String, Object> toMap(int maxCols) {
+    // we start with the fingerprint map and build on top of it.
+    Map<String, Object> map = getFingerprint();
+    // replace the fingerprint's simple list of families with a 
+    // map from column families to lists of qualifiers and kv details
+    Map<String, List<Map<String, Object>>> columns =
+      new HashMap<String, List<Map<String, Object>>>();
+    map.put("families", columns);
+    map.put("row", Bytes.toStringBinary(this.row));
+    map.put("ts", this.ts);
+    int colCount = 0;
+    // iterate through all column families affected by this Delete
+    for (Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
+      // map from this family to details for each kv affected within the family
+      List<Map<String, Object>> qualifierDetails =
+        new ArrayList<Map<String, Object>>();
+      columns.put(Bytes.toStringBinary(entry.getKey()), qualifierDetails);
+      colCount += entry.getValue().size();
+      if (maxCols <= 0) {
+        continue;
+      }
+      // add details for each kv
+      for (KeyValue kv : entry.getValue()) {
+        if (--maxCols <= 0 ) {
+          continue;
+        }
+        Map<String, Object> kvMap = kv.toStringMap();
+        // row and family information are already available in the bigger map
+        kvMap.remove("row");
+        kvMap.remove("family");
+        qualifierDetails.add(kvMap);
+      }
+    }
+    map.put("totalColumns", colCount);
+    return map;
   }
 
   //Writable

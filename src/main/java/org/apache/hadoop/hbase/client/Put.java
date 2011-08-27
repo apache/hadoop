@@ -37,7 +37,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 
 /**
@@ -47,7 +49,8 @@ import java.util.TreeMap;
  * for each column to be inserted, execute {@link #add(byte[], byte[], byte[]) add} or
  * {@link #add(byte[], byte[], long, byte[]) add} if setting the timestamp.
  */
-public class Put implements HeapSize, Writable, Row, Comparable<Row> {
+public class Put extends Operation
+  implements HeapSize, Writable, Row, Comparable<Row> {
   private static final byte PUT_VERSION = (byte)2;
 
   private byte [] row = null;
@@ -462,39 +465,67 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
     return Collections.unmodifiableMap(attributes);
   }
 
-
   /**
-   * @return String
+   * Compile the column family (i.e. schema) information
+   * into a Map. Useful for parsing and aggregation by debugging,
+   * logging, and administration tools.
+   * @return Map
    */
   @Override
-  public String toString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append("row=");
-    sb.append(Bytes.toStringBinary(this.row));
-    sb.append(", families={");
-    boolean moreThanOne = false;
-    for(Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
-      if(moreThanOne) {
-        sb.append(", ");
-      } else {
-        moreThanOne = true;
+  public Map<String, Object> getFingerprint() {
+    Map<String, Object> map = new HashMap<String, Object>();
+    List<String> families = new ArrayList<String>();
+    // ideally, we would also include table information, but that information
+    // is not stored in each Operation instance.
+    map.put("families", families);
+    for (Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
+      families.add(Bytes.toStringBinary(entry.getKey()));
+    } 
+    return map;
+  }
+
+  /**
+   * Compile the details beyond the scope of getFingerprint (row, columns,
+   * timestamps, etc.) into a Map along with the fingerprinted information.
+   * Useful for debugging, logging, and administration tools.
+   * @param maxCols a limit on the number of columns output prior to truncation
+   * @return Map
+   */
+  @Override
+  public Map<String, Object> toMap(int maxCols) {
+    // we start with the fingerprint map and build on top of it.
+    Map<String, Object> map = getFingerprint();
+    // replace the fingerprint's simple list of families with a 
+    // map from column families to lists of qualifiers and kv details
+    Map<String, List<Map<String, Object>>> columns =
+      new HashMap<String, List<Map<String, Object>>>();
+    map.put("families", columns);
+    map.put("row", Bytes.toStringBinary(this.row));
+    int colCount = 0;
+    // iterate through all column families affected by this Put
+    for (Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
+      // map from this family to details for each kv affected within the family
+      List<Map<String, Object>> qualifierDetails =
+        new ArrayList<Map<String, Object>>();
+      columns.put(Bytes.toStringBinary(entry.getKey()), qualifierDetails);
+      colCount += entry.getValue().size();
+      if (maxCols <= 0) {
+        continue;
       }
-      sb.append("(family=");
-      sb.append(Bytes.toString(entry.getKey()));
-      sb.append(", keyvalues=(");
-      boolean moreThanOneB = false;
-      for(KeyValue kv : entry.getValue()) {
-        if(moreThanOneB) {
-          sb.append(", ");
-        } else {
-          moreThanOneB = true;
+      // add details for each kv
+      for (KeyValue kv : entry.getValue()) {
+        if (--maxCols <= 0 ) {
+          continue;
         }
-        sb.append(kv.toString());
+        Map<String, Object> kvMap = kv.toStringMap();
+        // row and family information are already available in the bigger map
+        kvMap.remove("row");
+        kvMap.remove("family");
+        qualifierDetails.add(kvMap);
       }
-      sb.append(")");
     }
-    sb.append("}");
-    return sb.toString();
+    map.put("totalColumns", colCount);
+    return map;
   }
 
   public int compareTo(Row p) {

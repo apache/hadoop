@@ -22,14 +22,13 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.HServerAddress;
 
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.DataInput;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.ArrayList;
 import java.util.Set;
 import java.util.TreeMap;
 

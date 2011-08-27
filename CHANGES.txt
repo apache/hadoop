@@ -468,6 +468,8 @@ Release 0.91.0 - Unreleased
                written version (Lars Hofhansl)
    HBASE-4242  Add documentation for HBASE-4071 (Lars Hofhansl)
    HBASE-4027  Enable direct byte buffers LruBlockCache (Li Pi)
+   HBASE-4117  Slow Query Log and Client Operation Fingerprints
+               (Riley Patterson)
 
 Release 0.90.5 - Unreleased
 

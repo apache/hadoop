@@ -93,15 +93,7 @@ public abstract class HBaseServer implements RpcServer {
    */
   private static final int DEFAULT_MAX_QUEUE_SIZE_PER_HANDLER = 10;
 
-  private static final String WARN_RESPONSE_SIZE =
-      "hbase.ipc.warn.response.size";
-
-  /** Default value for above param */
-  private static final int DEFAULT_WARN_RESPONSE_SIZE = 100 * 1024 * 1024;
-
   static final int BUFFER_INITIAL_SIZE = 1024;
-
-  private final int warnResponseSize;
 
   private static final String WARN_DELAYED_CALLS =
       "hbase.ipc.warn.delayedrpc.number";
@@ -335,11 +327,6 @@ public abstract class HBaseServer implements RpcServer {
         }
       } catch (IOException e) {
         LOG.warn("Error sending response to call: ", e);
-      }
-
-      if (buf.size() > warnResponseSize) {
-        LOG.warn("responseTooLarge for: "+this+": Size: "
-            + StringUtils.humanReadableInt(buf.size()));
       }
 
       this.response = buf.getByteBuffer();
@@ -1328,8 +1315,6 @@ public abstract class HBaseServer implements RpcServer {
     this.tcpNoDelay = conf.getBoolean("ipc.server.tcpnodelay", false);
     this.tcpKeepAlive = conf.getBoolean("ipc.server.tcpkeepalive", true);
 
-    this.warnResponseSize = conf.getInt(WARN_RESPONSE_SIZE,
-                                        DEFAULT_WARN_RESPONSE_SIZE);
     this.warnDelayedCalls = conf.getInt(WARN_DELAYED_CALLS,
                                         DEFAULT_WARN_DELAYED_CALLS);
     this.delayedCalls = new AtomicInteger(0);
