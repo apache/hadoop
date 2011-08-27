@@ -1025,7 +1025,7 @@ public class TestAdmin {
 
   @Test
   public void testCloseRegionWhenServerNameIsEmpty() throws Exception {
-    byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegion3");
+    byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegionWhenServerNameIsEmpty");
     HBaseAdmin admin = createTable(TABLENAME);
 
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
@@ -1035,7 +1035,7 @@ public class TestAdmin {
       for (HRegionInfo regionInfo : onlineRegions) {
         if (!regionInfo.isMetaRegion() && !regionInfo.isRootRegion()) {
           if (regionInfo.getRegionNameAsString()
-              .contains("TestHBACloseRegion3")) {
+              .contains("TestHBACloseRegionWhenServerNameIsEmpty")) {
             admin.closeRegionWithEncodedRegionName(regionInfo.getEncodedName(),
                 " ");
           }
