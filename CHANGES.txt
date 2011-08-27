@@ -486,6 +486,9 @@ Release 0.90.5 - Unreleased
                Campbell)
    HBASE-4095  Hlog may not be rolled in a long time if checkLowReplication's
                request of LogRoll is blocked (Jieshan Bean)
+   HBASE-4253  TestScannerTimeOut.test3686a and TestHTablePool.
+               testReturnDifferentTable() failure because of using new
+               HTable(tablename) (ramkrishna.s.vasudevan)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
