@@ -1158,6 +1158,8 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2893. Remove duplicate entry of YarnClientProtocolProvider in
     ClientProtocolProvider services file. (Liang-Chi Hsieh via acmurthy) 
 
+    MAPREDUCE-2891. Javadoc for AMRMProtocol and related records. (acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -18,6 +18,20 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.yarn.api.AMRMProtocol;
+
+/**
+ * <p>The response sent by the <code>ResourceManager</code> to a 
+ * <code>ApplicationMaster</code> on it's completion via the
+ * {@link AMRMProtocol#finishApplicationMaster(FinishApplicationMasterRequest)}
+ * api.</p>
+ * 
+ * <p>Currently, this is empty.</p>
+ */
+@Public
+@Stable
 public interface FinishApplicationMasterResponse {
 
 }

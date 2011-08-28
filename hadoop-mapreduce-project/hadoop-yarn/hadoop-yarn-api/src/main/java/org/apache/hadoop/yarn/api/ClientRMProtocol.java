@@ -40,9 +40,10 @@ import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 
 public interface ClientRMProtocol {
   public GetNewApplicationIdResponse getNewApplicationId(GetNewApplicationIdRequest request) throws YarnRemoteException;
-  public GetApplicationReportResponse getApplicationReport(GetApplicationReportRequest request) throws YarnRemoteException;
   public SubmitApplicationResponse submitApplication(SubmitApplicationRequest request) throws YarnRemoteException;
   public FinishApplicationResponse finishApplication(FinishApplicationRequest request) throws YarnRemoteException;
+
+  public GetApplicationReportResponse getApplicationReport(GetApplicationReportRequest request) throws YarnRemoteException;
   public GetClusterMetricsResponse getClusterMetrics(GetClusterMetricsRequest request) throws YarnRemoteException;
   public GetAllApplicationsResponse getAllApplications(GetAllApplicationsRequest request) throws YarnRemoteException;
   public GetClusterNodesResponse getClusterNodes(GetClusterNodesRequest request) throws YarnRemoteException;
