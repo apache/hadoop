@@ -299,7 +299,7 @@ implements WritableComparable<HServerLoad> {
     /**
      * @param totalCompactingKVs the number of kvs total in current compaction
      */
-    public void setTotalCompactingKVs(int totalCompactingKVs) {
+    public void setTotalCompactingKVs(long totalCompactingKVs) {
       this.totalCompactingKVs = totalCompactingKVs;
     }
 
@@ -307,7 +307,7 @@ implements WritableComparable<HServerLoad> {
      * @param currentCompactedKVs the number of kvs already compacted in
      * current compaction
      */
-    public void setCurrentCompactedKVs(int currentCompactedKVs) {
+    public void setCurrentCompactedKVs(long currentCompactedKVs) {
       this.currentCompactedKVs = currentCompactedKVs;
     }
 
@@ -330,8 +330,8 @@ implements WritableComparable<HServerLoad> {
       this.rootIndexSizeKB = in.readInt();
       this.totalStaticIndexSizeKB = in.readInt();
       this.totalStaticBloomSizeKB = in.readInt();
-      this.totalCompactingKVs = in.readInt();
-      this.currentCompactedKVs = in.readInt();
+      this.totalCompactingKVs = in.readLong();
+      this.currentCompactedKVs = in.readLong();
     }
 
     public void write(DataOutput out) throws IOException {
