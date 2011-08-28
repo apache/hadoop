@@ -18,21 +18,85 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 
-
+/**
+ * <p>The finalization request sent by the <code>ApplicationMaster</code> to 
+ * inform the <code>ResourceManager</code> about its completion via the
+ * {@link AMRMProtocol#finishApplicationMaster(FinishApplicationMasterRequest)}
+ * api.</p>
+ * 
+ * <p>The final request includes details such:
+ *   <ul>
+ *     <li>
+ *         {@link ApplicationAttemptId} being managed by the 
+ *         <code>ApplicationMaster</code>
+ *     </li>
+ *     <li>Final state of the <code>ApplicationMaster</code></li>
+ *     <li>
+ *       Diagnostic information in case of failure of the
+ *       <code>ApplicationMaster</code>
+ *     </li>
+ *     <li>Tracking URL</li>
+ *   </ul>
+ * </p>
+ *
+ */
 public interface FinishApplicationMasterRequest {
 
+  /**
+   * Get the {@link ApplicationAttemptId} being managed by the 
+   * <code>ApplicationMaster</code>.
+   * @return <code>ApplicationAttemptId</code> being managed by the 
+   *         <code>ApplicationMaster</code>
+   */
+  @Public
+  @Stable
   ApplicationAttemptId getApplicationAttemptId();
+  
+  @Private
+  @Unstable
   void setAppAttemptId(ApplicationAttemptId applicationAttemptId);
 
+  /**
+   * Get final state of the <code>ApplicationMaster</code>.
+   * @return final state of the <code>ApplicationMaster</code>
+   */
+  @Public
+  @Stable
   String getFinalState();
+  
+  @Private
+  @Unstable
   void setFinalState(String string);
 
+  /**
+   * Get diagnostic information if the application failed.
+   * @return diagnostic information if the application failed
+   */
+  @Public
+  @Stable
   String getDiagnostics();
+  
+  @Private
+  @Unstable
   void setDiagnostics(String string);
 
+  /**
+   * Get the tracking URL for the <code>ApplicationMaster</code>.
+   * @return the tracking URL for the <code>ApplicationMaster</code>
+   */
+  @Public
+  @Stable
   String getTrackingUrl();
+  
+  @Private
+  @Unstable
   void setTrackingUrl(String historyUrl);
 
 }
