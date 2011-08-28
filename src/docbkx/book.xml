@@ -1663,15 +1663,6 @@ When I build, why do I always get <code>Unable to find resource 'VM_global_libra
 <appendix xml:id="hfilev2">
    <title>HFile format version 2</title>
 
-   <appendixinfo>
-           <personname>Mikhail Bautin</personname>
-       <authorgroup>
-           <author><personname>Mikhail Bautin</personname></author>
-           <author><personname>Liyin Tang</personname></author>
-           <author><personname>Kannan Muthukarrupan</personname></author>
-       </authorgroup>
-   </appendixinfo>
-
    <section><title>Motivation </title>
    <para>We found it necessary to revise the HFile format after encountering high memory usage and slow startup times caused by large Bloom filters and block indexes in the region server. Bloom filters can get as large as 100 MB per HFile, which adds up to 2 GB when aggregated over 20 regions. Block indexes can grow as large as 6 GB in aggregate size over the same set of regions. A region is not considered opened until all of its block index data is loaded. Large Bloom filters produce a different performance problem: the first get request that requires a Bloom filter lookup will incur the latency of loading the entire Bloom filter bit array.</para>
    <para>To speed up region server startup we break Bloom filters and block indexes into multiple blocks and write those blocks out as they fill up, which also reduces the HFile writer’s memory footprint. In the Bloom filter case, “filling up a block” means accumulating enough keys to efficiently utilize a fixed-size bit array, and in the block index case we accumulate an “index block” of the desired size. Bloom filter blocks and index blocks (we call these “inline blocks”) become interspersed with data blocks, and as a side effect we can no longer rely on the difference between block offsets to determine data block length, as it was done in version 1.</para>
