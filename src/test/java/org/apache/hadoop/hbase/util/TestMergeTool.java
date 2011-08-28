@@ -186,7 +186,7 @@ public class TestMergeTool extends HBaseTestCase {
     int errCode = ToolRunner.run(this.conf, merger,
       new String[] {this.desc.getNameAsString(), regionName1, regionName2}
     );
-    assertTrue("'" + msg + "' failed", errCode == 0);
+    assertTrue("'" + msg + "' failed with errCode " + errCode, errCode == 0);
     HRegionInfo mergedInfo = merger.getMergedHRegionInfo();
 
     // Now verify that we can read all the rows from regions 0, 1
