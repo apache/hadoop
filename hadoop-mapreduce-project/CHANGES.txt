@@ -1153,6 +1153,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2885. Fix mapred-config.sh to look for hadoop-config.sh in
     HADOOP_COMMON_HOME/libexec. (acmurthy) 
 
+    MAPREDUCE-2893. Remove duplicate entry of YarnClientProtocolProvider in
+    ClientProtocolProvider services file. (Liang-Chi Hsieh via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
