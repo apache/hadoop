@@ -1160,6 +1160,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-2891. Javadoc for AMRMProtocol and related records. (acmurthy)
 
+    MAPREDUCE-2898. Javadoc for ContainerManager protocol and related records. 
+    (acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
