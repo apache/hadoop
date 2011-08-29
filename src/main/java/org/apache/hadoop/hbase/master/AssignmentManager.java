@@ -369,8 +369,11 @@ public class AssignmentManager extends ZooKeeperListener {
     synchronized (regionsInTransition) {
       switch (data.getEventType()) {
       case RS_ZK_REGION_CLOSING:
-        if (isOnDeadServer(regionInfo, deadServers)) {
-          // If was on dead server, its closed now.  Force to OFFLINE and this
+        // If zk node of the region was updated by a live server skip this
+        // region and just add it into RIT.
+        if (isOnDeadServer(regionInfo, deadServers) &&
+            (data.getOrigin() == null || !serverManager.isServerOnline(data.getOrigin()))) {
+          // If was on dead server, its closed now. Force to OFFLINE and this
           // will get it reassigned if appropriate
           forceOffline(regionInfo, data);
         } else {
@@ -416,10 +419,10 @@ public class AssignmentManager extends ZooKeeperListener {
           LOG.warn("Region in transition " + regionInfo.getEncodedName() +
             " references a null server; letting RIT timeout so will be " +
             "assigned elsewhere");
-          break;
-        }
-        if (isOnDeadServer(regionInfo, deadServers)) {
-          // If was on a dead server, then its not open any more; needs handling.
+        } else if (isOnDeadServer(regionInfo, deadServers) &&
+            !serverManager.isServerOnline(sn)) {
+          // If was on a dead server, then its not open any more; needs
+          // handling.
           forceOffline(regionInfo, data);
         } else {
           new OpenedRegionHandler(master, this, regionInfo, sn).process();
@@ -1957,6 +1960,18 @@ public class AssignmentManager extends ZooKeeperListener {
         Result result = region.getSecond();
         // If region was in transition (was in zk) force it offline for reassign
         try {
+          RegionTransitionData data = ZKAssign.getData(watcher,
+              regionInfo.getEncodedName());
+
+          // If zk node of this region has been updated by a live server,
+          // we consider that this region is being handled.
+          // So we should skip it and process it in processRegionsInTransition.
+          if (data != null && data.getOrigin() != null &&
+	      serverManager.isServerOnline(data.getOrigin())) {
+            LOG.info("The region " + regionInfo.getEncodedName()
+                + "is being handled on " + data.getOrigin());
+            continue;
+          }
           // Process with existing RS shutdown code
           boolean assign =
             ServerShutdownHandler.processDeadRegion(regionInfo, result, this,

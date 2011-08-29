@@ -496,6 +496,9 @@ Release 0.90.5 - Unreleased
    HBASE-4253  TestScannerTimeOut.test3686a and TestHTablePool.
                testReturnDifferentTable() failure because of using new
                HTable(tablename) (ramkrishna.s.vasudevan)
+   HBASE-4124  ZK restarted while a region is being assigned, new active HM
+               re-assigns it but the RS warns 'already online on this server'
+               (Gaojinchao)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
