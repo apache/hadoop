@@ -113,7 +113,6 @@ public interface AMResponse {
   
   /**
    * Get available headroom for resources in the cluster for the application.
-   * @param limit available headroom for resources in the cluster for the application
    */
   @Public
   @Stable

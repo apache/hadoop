@@ -43,8 +43,6 @@ import org.apache.hadoop.io.Text;
  * 
  * @see TaskID
  * @see TaskAttemptID
- * @see org.apache.hadoop.mapred.JobTracker#getNewJobId()
- * @see org.apache.hadoop.mapred.JobTracker#getStartTime()
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable

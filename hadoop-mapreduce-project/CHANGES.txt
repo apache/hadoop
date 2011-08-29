@@ -1168,6 +1168,8 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2737. Update the progress of jobs on client side. (Siddharth Seth
     and Mahadev Konar via mahadev)
 
+    MAPREDUCE-2886. Fix Javadoc warnings in MapReduce. (mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

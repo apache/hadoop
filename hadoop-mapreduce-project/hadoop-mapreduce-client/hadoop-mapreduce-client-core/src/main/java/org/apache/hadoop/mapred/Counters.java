@@ -372,7 +372,7 @@ public class Counters
    * @param id the id of the counter within the group (0 to N-1)
    * @param name the internal name of the counter
    * @return the counter for that name
-   * @deprecated use {@link findCounter(String, String)} instead
+   * @deprecated use {@link #findCounter(String, String)} instead
    */
   @Deprecated
   public Counter findCounter(String group, int id, String name) {

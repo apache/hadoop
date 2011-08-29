@@ -360,7 +360,7 @@ public class SchedulerApp {
    * given <code>priority</code>?
    * @param node node to be checked
    * @param priority priority of reserved container
-   * @return
+   * @return true is reserved, false if not
    */
   public synchronized boolean isReserved(SchedulerNode node, Priority priority) {
     Map<NodeId, RMContainer> reservedContainers = 

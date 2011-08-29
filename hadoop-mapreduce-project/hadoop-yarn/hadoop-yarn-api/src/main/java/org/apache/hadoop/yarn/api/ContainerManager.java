@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -114,7 +115,7 @@ public interface ContainerManager {
    *
    * @param request request to get <code>ContainerStatus</code> of a container
    *                with the specified <code>ContainerId</code>
-   * @return
+   * @return the <code>ContainerStatus</code> of the container
    * @throws YarnRemoteException
    */
   @Public

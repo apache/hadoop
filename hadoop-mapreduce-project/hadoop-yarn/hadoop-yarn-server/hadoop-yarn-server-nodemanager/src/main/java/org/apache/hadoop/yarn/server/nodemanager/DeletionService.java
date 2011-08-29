@@ -60,11 +60,14 @@ public class DeletionService extends AbstractService {
     this.exec = exec;
     this.debugDelay = 0;
   }
-
+  
+  /**
+   * 
   /**
    * Delete the path(s) as this user.
    * @param user The user to delete as, or the JVM user if null
-   * @param p Paths to delete
+   * @param subDir the sub directory name
+   * @param baseDirs the base directories which contains the subDir's
    */
   public void delete(String user, Path subDir, Path... baseDirs) {
     // TODO if parent owned by NM, rename within parent inline
