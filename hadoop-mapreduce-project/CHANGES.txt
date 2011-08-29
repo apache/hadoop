@@ -1167,6 +1167,9 @@ Release 0.23.0 - Unreleased
     clean up of stale refs to pre-mavenized Hadoop Common and HDFS. 
     (Sharad Agarwal and Arun C. Murthy via acmurthy)
 
+    MAPREDUCE-2737. Update the progress of jobs on client side. (Siddharth Seth
+    and Mahadev Konar via mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
