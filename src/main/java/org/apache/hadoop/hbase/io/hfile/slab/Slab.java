@@ -113,8 +113,11 @@ class Slab implements org.apache.hadoop.hbase.io.HeapSize {
    */
   ByteBuffer alloc(int bufferSize) {
     int newCapacity = Preconditions.checkPositionIndex(bufferSize, blockSize);
-    while (buffers.isEmpty()); // Spinlock
-    ByteBuffer returnedBuffer = buffers.remove();
+
+    ByteBuffer returnedBuffer = buffers.poll();
+    while(returnedBuffer == null){
+      returnedBuffer = buffers.poll();
+    }
     returnedBuffer.clear().limit(newCapacity);
     return returnedBuffer;
   }

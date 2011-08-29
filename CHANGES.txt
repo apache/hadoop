@@ -220,6 +220,8 @@ Release 0.91.0 - Unreleased
    HBASE-3229  HBASE-3229 Table creation, though using "async" call to master,
                can actually run for a while and cause RPC timeout (Ming Ma)
    HBASE-4252  TestLogRolling's low-probability failure (Jieshan Bean)
+   HBASE-4278  Race condition in Slab.java that occurs due to spinlock unlocking
+               early (Li Pi)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
