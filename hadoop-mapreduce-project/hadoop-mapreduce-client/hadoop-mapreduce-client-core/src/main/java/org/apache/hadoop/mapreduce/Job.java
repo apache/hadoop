@@ -1124,8 +1124,14 @@ public class Job extends JobContextImpl implements JobContext {
     IntegerRanges reduceRanges = getProfileTaskRange(false);
     int progMonitorPollIntervalMillis = 
       Job.getProgressPollInterval(clientConf);
-    while (!isComplete()) {
-      Thread.sleep(progMonitorPollIntervalMillis);
+    /* make sure to report full progress after the job is done */
+    boolean reportedAfterCompletion = false;
+    while (!isComplete() || !reportedAfterCompletion) {
+      if (isComplete()) {
+        reportedAfterCompletion = true;
+      } else {
+        Thread.sleep(progMonitorPollIntervalMillis);
+      }
       String report = 
         (" map " + StringUtils.formatPercent(mapProgress(), 0)+
             " reduce " + 
