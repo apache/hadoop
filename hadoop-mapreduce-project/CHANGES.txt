@@ -1161,6 +1161,10 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2898. Javadoc for ContainerManager protocol and related records. 
     (acmurthy)
 
+    MAPREDUCE-2904. Fixed bin/yarn to correctly include HDFS jars and
+    clean up of stale refs to pre-mavenized Hadoop Common and HDFS. 
+    (Sharad Agarwal and Arun C. Murthy via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
