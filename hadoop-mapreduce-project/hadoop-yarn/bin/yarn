@@ -148,132 +148,18 @@ IFS=
 
 # add hadoop-common libs to CLASSPATH
 
-if [ -d "$HADOOP_COMMON_HOME/build/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/build/classes
-fi
-if [ -d "$HADOOP_COMMON_HOME/build/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/build
-fi
-if [ -d "$HADOOP_COMMON_HOME/build/test/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/build/test/classes
-fi
-if [ -d "$HADOOP_COMMON_HOME/build/test/core/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/build/test/core/classes
-fi
-
-for f in $HADOOP_COMMON_HOME/hadoop-*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-
-for f in $HADOOP_COMMON_HOME/lib/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-
-for f in $HADOOP_COMMON_HOME/share/hadoop/common/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-
-for f in $HADOOP_COMMON_HOME/share/hadoop/common/lib/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-
-for f in $HADOOP_COMMON_HOME/share/hadoop/hdfs/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-
-if [ -d "$HADOOP_COMMON_HOME/build/ivy/lib/Hadoop-Common/common" ]; then
-for f in $HADOOP_COMMON_HOME/build/ivy/lib/Hadoop-Common/common/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-fi
-
-if [ -d "$HADOOP_COMMON_HOME/build/ivy/lib/Hadoop-Hdfs/common" ]; then
-for f in $HADOOP_COMMON_HOME/build/ivy/lib/Hadoop-Hdfs/common/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-fi
-
-if [ -d "$HADOOP_COMMON_HOME/build/ivy/lib/Hadoop/common" ]; then
-for f in $HADOOP_COMMON_HOME/build/ivy/lib/Hadoop/common/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-fi
+CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/share/hadoop/common'/*'
+CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/share/hadoop/common/lib'/*'
 
 # add hadoop-hdfs libs to CLASSPATH
 
-for f in $HADOOP_HDFS_HOME/hadoop-*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-
-for f in $HADOOP_HDFS_HOME/lib/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-
-if [ -d "$HADOOP_HDFS_HOME/build/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/build/classes
-fi
-if [ -d "$HADOOP_HDFS_HOME/build/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/build
-fi
-if [ -d "$HADOOP_HDFS_HOME/build/test/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/build/test/classes
-fi
-if [ -d "$HADOOP_HDFS_HOME/build/tools" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/build/tools
-fi
-
-# add hadoop-mapred libs to CLASSPATH
-
-for f in $HADOOP_HDFS_HOME/hadoop-*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-
-for f in $HADOOP_HDFS_HOME/lib/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-
-if [ -d "$HADOOP_MAPRED_HOME/build/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME/build/classes
-fi
-if [ -d "$HADOOP_MAPRED_HOME/build/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME/build
-fi
-if [ -d "$HADOOP_MAPRED_HOME/build/test/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME/build/test/classes
-fi
-if [ -d "$HADOOP_MAPRED_HOME/build/tools" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME/build/tools
-fi
-
-# for releases, add core mapred jar & webapps to CLASSPATH
-if [ -d "$HADOOP_MAPRED_HOME/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME
-fi
-
-# add libs to CLASSPATH
-for f in $HADOOP_MAPRED_HOME/lib/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-
-# add libs to CLASSPATH
-for f in $HADOOP_MAPRED_HOME/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-
-# add libs to CLASSPATH
-for f in $YARN_HOME/lib/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
+CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/share/hadoop/hdfs'/*'
+CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib'/*'
 
 # add yarn libs to CLASSPATH
-for f in $YARN_HOME/modules/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
 
-# add user-specified CLASSPATH last
-if [ "$YARN_USER_CLASSPATH_FIRST" = "" ] && [ "$YARN_CLASSPATH" != "" ]; then
-  CLASSPATH=${CLASSPATH}:${YARN_CLASSPATH}
-fi
+CLASSPATH=${CLASSPATH}:$YARN_HOME/modules'/*'
+CLASSPATH=${CLASSPATH}:$YARN_HOME/lib'/*'
 
 # default log directory & file
 if [ "$YARN_LOG_DIR" = "" ]; then
