@@ -249,8 +249,8 @@ setup () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$MVN clean compile -DskipTests -D${PROJECT_NAME}PatchProcess -Ptest-patch > $PATCH_DIR/trunkJavacWarnings.txt 2>&1"
-  $MVN clean compile -DskipTests -D${PROJECT_NAME}PatchProcess -Ptest-patch > $PATCH_DIR/trunkJavacWarnings.txt 2>&1
+  echo "$MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess -Ptest-patch > $PATCH_DIR/trunkJavacWarnings.txt 2>&1"
+  $MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess -Ptest-patch > $PATCH_DIR/trunkJavacWarnings.txt 2>&1
   if [[ $? != 0 ]] ; then
     echo "Trunk compilation is broken?"
     cleanupAndExit 1
@@ -366,14 +366,14 @@ checkJavadocWarnings () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$MVN clean compile javadoc:javadoc -DskipTests -Pdocs -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchJavadocWarnings.txt 2>&1"
+  echo "$MVN clean test javadoc:javadoc -DskipTests -Pdocs -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchJavadocWarnings.txt 2>&1"
   if [ -d hadoop-project ]; then
     (cd hadoop-project; $MVN install)
   fi
   if [ -d hadoop-common-project/hadoop-annotations ]; then  
     (cd hadoop-common-project/hadoop-annotations; $MVN install)
   fi
-  $MVN clean compile javadoc:javadoc -DskipTests -Pdocs -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchJavadocWarnings.txt 2>&1
+  $MVN clean test javadoc:javadoc -DskipTests -Pdocs -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchJavadocWarnings.txt 2>&1
   javadocWarnings=`$GREP '\[WARNING\]' $PATCH_DIR/patchJavadocWarnings.txt | $AWK '/Javadoc Warnings/,EOF' | $GREP warning | $AWK 'BEGIN {total = 0} {total += 1} END {print total}'`
   echo ""
   echo ""
@@ -404,8 +404,8 @@ checkJavacWarnings () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$MVN clean compile -DskipTests -D${PROJECT_NAME}PatchProcess -Ptest-patch > $PATCH_DIR/patchJavacWarnings.txt 2>&1"
-  $MVN clean compile -DskipTests -D${PROJECT_NAME}PatchProcess -Ptest-patch > $PATCH_DIR/patchJavacWarnings.txt 2>&1
+  echo "$MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess -Ptest-patch > $PATCH_DIR/patchJavacWarnings.txt 2>&1"
+  $MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess -Ptest-patch > $PATCH_DIR/patchJavacWarnings.txt 2>&1
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
@@ -488,8 +488,8 @@ checkStyle () {
   echo "THIS IS NOT IMPLEMENTED YET"
   echo ""
   echo ""
-  echo "$MVN compile checkstyle:checkstyle -D${PROJECT_NAME}PatchProcess"
-  $MVN compile checkstyle:checkstyle -D${PROJECT_NAME}PatchProcess
+  echo "$MVN test checkstyle:checkstyle -DskipTests -D${PROJECT_NAME}PatchProcess"
+  $MVN test checkstyle:checkstyle -DskipTests -D${PROJECT_NAME}PatchProcess
 
   JIRA_COMMENT_FOOTER="Checkstyle results: $BUILD_URL/artifact/trunk/build/test/checkstyle-errors.html
 $JIRA_COMMENT_FOOTER"
@@ -520,8 +520,8 @@ checkFindbugsWarnings () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$MVN clean compile findbugs:findbugs -D${PROJECT_NAME}PatchProcess" 
-  $MVN clean compile findbugs:findbugs -D${PROJECT_NAME}PatchProcess < /dev/null
+  echo "$MVN clean test findbugs:findbugs -DskipTests -D${PROJECT_NAME}PatchProcess" 
+  $MVN clean test findbugs:findbugs -DskipTests -D${PROJECT_NAME}PatchProcess < /dev/null
 
   if [ $? != 0 ] ; then
     JIRA_COMMENT="$JIRA_COMMENT
