@@ -88,7 +88,17 @@
 --starttime=1265875194289 --endtime=1265878794289
 --peer.adr=server1,server2,server3:2181:/hbase TestTable</programlisting>
         </para>
-    </section>       
+    </section>
+    <section xml:id="rowcounter">
+       <title>RowCounter</title>
+       <para>RowCounter is a utility that will count all the rows of a table.  This is a good utility to use
+       as a sanity check to ensure that HBase can read all the blocks of a table if there are any concerns of metadata inconsistency.
+<programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.RowCounter
+</programlisting>
+
+       </para>
+    </section>
+           
     </section>  <!--  tools -->
     
     <section xml:id="node.management"><title>Node Management</title>
