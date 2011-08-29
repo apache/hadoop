@@ -90,7 +90,7 @@ public class SchedulerNode {
    * given application.
    * 
    * @param applicationId application
-   * @param containers allocated containers
+   * @param rmContainer allocated container
    */
   public synchronized void allocateContainer(ApplicationId applicationId, 
       RMContainer rmContainer) {

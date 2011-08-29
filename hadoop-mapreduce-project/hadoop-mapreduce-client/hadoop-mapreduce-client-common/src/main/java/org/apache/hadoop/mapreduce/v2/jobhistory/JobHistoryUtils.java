@@ -127,7 +127,7 @@ public class JobHistoryUtils {
   /**
    * Checks whether the provided path string is a valid job history file.
    * @param pathString the path to be checked.
-   * @return
+   * @return true is the path is a valid job history filename else return false
    */
   public static boolean isValidJobHistoryFileName(String pathString) {
     return pathString.endsWith(JOB_HISTORY_FILE_EXTENSION);
@@ -148,7 +148,7 @@ public class JobHistoryUtils {
 
   /**
    * Gets a PathFilter which would match configuration files.
-   * @return
+   * @return the patch filter {@link PathFilter} for matching conf files.
    */
   public static PathFilter getConfFileFilter() {
     return CONF_FILTER;
@@ -156,7 +156,7 @@ public class JobHistoryUtils {
   
   /**
    * Gets a PathFilter which would match job history file names.
-   * @return
+   * @return the path filter {@link PathFilter} matching job history files.
    */
   public static PathFilter getHistoryFileFilter() {
     return JOB_HISTORY_FILE_FILTER;
@@ -194,8 +194,8 @@ public class JobHistoryUtils {
   
   /**
    * Gets the configured directory prefix for Done history files.
-   * @param conf
-   * @return
+   * @param conf the configuration object
+   * @return the done history directory
    */
   public static String getConfiguredHistoryServerDoneDirPrefix(
       Configuration conf) {
@@ -209,8 +209,8 @@ public class JobHistoryUtils {
 
   /**
    * Gets the user directory for intermediate done history files.
-   * @param conf
-   * @return
+   * @param conf the configuration object
+   * @return the intermediate done directory for jobhistory files.
    */
   public static String getHistoryIntermediateDoneDirForUser(Configuration conf) throws IOException {
     return getConfiguredHistoryIntermediateDoneDirPrefix(conf) + File.separator
@@ -262,7 +262,7 @@ public class JobHistoryUtils {
    * @param logDir the log directory prefix.
    * @param jobId the jobId.
    * @param attempt attempt number for this job.
-   * @return
+   * @return the conf file path for jobs in progress.
    */
   public static Path getStagingConfFile(Path logDir, JobId jobId, int attempt) {
     Path jobFilePath = null;
@@ -277,7 +277,7 @@ public class JobHistoryUtils {
    * Gets the serial number part of the path based on the jobId and serialNumber format.
    * @param id
    * @param serialNumberFormat
-   * @return
+   * @return the serial number part of the patch based on the jobId and serial number format.
    */
   public static String serialNumberDirectoryComponent(JobId id, String serialNumberFormat) {
     return String.format(serialNumberFormat,
@@ -287,7 +287,7 @@ public class JobHistoryUtils {
   
   /**Extracts the timstamp component from the path.
    * @param path
-   * @return
+   * @return the timestamp component from the path
    */
   public static String getTimestampPartFromPath(String path) {
     Matcher matcher = TIMESTAMP_DIR_PATTERN.matcher(path);
@@ -305,7 +305,7 @@ public class JobHistoryUtils {
    * @param id
    * @param timestampComponent
    * @param serialNumberFormat
-   * @return
+   * @return the history sub directory based on the jobid, timestamp and serial number format
    */
   public static String historyLogSubdirectory(JobId id, String timestampComponent, String serialNumberFormat) {
 //    String result = LOG_VERSION_STRING;
@@ -324,7 +324,7 @@ public class JobHistoryUtils {
    * Gets the timestamp component based on millisecond time.
    * @param millisecondTime
    * @param debugMode
-   * @return
+   * @return the timestamp component based on millisecond time
    */
   public static String timestampDirectoryComponent(long millisecondTime, boolean debugMode) {
     Calendar timestamp = Calendar.getInstance();
@@ -350,7 +350,7 @@ public class JobHistoryUtils {
   /**
    * Computes a serial number used as part of directory naming for the given jobId.
    * @param id the jobId.
-   * @return
+   * @return the serial number used as part of directory naming for the given jobid
    */
   public static int jobSerialNumber(JobId id) {
     return id.getId();

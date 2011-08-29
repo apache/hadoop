@@ -22,8 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 /**
  * Place holder for cluster level configuration keys.
  * 
- * These keys are used by both {@link JobTracker} and {@link TaskTracker}. The 
- * keys should have "mapreduce.cluster." as the prefix. 
+ * The keys should have "mapreduce.cluster." as the prefix. 
  *
  */
 @InterfaceAudience.Private

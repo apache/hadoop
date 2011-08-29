@@ -460,7 +460,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   
   /**
    * return the scheduler.
-   * @return
+   * @return the scheduler for the Resource Manager.
    */
   @Private
   public ResourceScheduler getResourceScheduler() {
@@ -469,7 +469,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   /**
    * return the resource tracking component.
-   * @return
+   * @return the resource tracking component.
    */
   @Private
   public ResourceTrackerService getResourceTrackerService() {
