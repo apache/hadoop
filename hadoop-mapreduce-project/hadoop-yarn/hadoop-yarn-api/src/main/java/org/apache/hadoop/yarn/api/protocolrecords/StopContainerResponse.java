@@ -18,6 +18,18 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.yarn.api.ContainerManager;
+
+/**
+ * <p>The response sent by the <code>NodeManager</code> to the 
+ * <code>ApplicationMaster</code> when asked to <em>stop</em> an
+ * allocated container via
+ * {@link ContainerManager#stopContainer(StopContainerRequest)}.</p>
+ */
+@Public
+@Stable
 public interface StopContainerResponse {
 
 }
