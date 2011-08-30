@@ -1360,6 +1360,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       try {
         this.infoServer = new InfoServer("regionserver", addr, port, false, this.conf);
         this.infoServer.addServlet("status", "/rs-status", RSStatusServlet.class);
+        this.infoServer.addServlet("dump", "/dump", RSDumpServlet.class);
         this.infoServer.setAttribute(REGIONSERVER, this);
         this.infoServer.start();
         break;
@@ -3002,6 +3003,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   public Set<byte[]> getRegionsInTransitionInRS() {
     return this.regionsInTransitionInRS;
+  }
+  
+  public ExecutorService getExecutorService() {
+    return service;
   }
 
   //

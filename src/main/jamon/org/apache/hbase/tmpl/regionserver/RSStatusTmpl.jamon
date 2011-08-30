@@ -56,7 +56,12 @@ org.apache.hadoop.hbase.HRegionInfo;
 <body>
 <a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="HBase Logo" title="HBase Logo" /></a>
 <h1 id="page_title">Region Server: <% serverInfo.getServerAddress().getHostname() %>:<% serverInfo.getServerAddress().getPort() %></h1>
-<p id="links_menu"><a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a>, <a href="/logLevel">Log Level</a></p>
+<p id="links_menu">
+  <a href="/logs/">Local logs</a>,
+  <a href="/stacks">Thread Dump</a>,
+  <a href="/logLevel">Log Level</a>,
+  <a href="/dump">Debug dump</a>
+</p>
 <hr id="head_rule" />
 
 <h2>Region Server Attributes</h2>

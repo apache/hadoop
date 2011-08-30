@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.monitoring;
 
+import java.io.PrintWriter;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -120,6 +121,28 @@ public class TaskMonitor {
     return (cts > 0 && System.currentTimeMillis() - cts > EXPIRATION_TIME);
   }
   
+
+  public void dumpAsText(PrintWriter out) {
+    long now = System.currentTimeMillis();
+    
+    List<MonitoredTask> tasks = TaskMonitor.get().getTasks();
+    for (MonitoredTask task : tasks) {
+      out.println("Task: " + task.getDescription());
+      out.println("Status: " + task.getState() + ":" + task.getStatus());
+      long running = (now - task.getStartTime())/1000;
+      if (task.getCompletionTimestamp() != -1) {
+        long completed = (now - task.getCompletionTimestamp()) / 1000;
+        out.println("Completed " + completed + "s ago");
+        out.println("Ran for " +
+            (task.getCompletionTimestamp() - task.getStartTime())/1000
+            + "s");
+      } else {
+        out.println("Running for " + running + "s");
+      }
+      out.println();
+    }
+  }
+
   /**
    * This class encapsulates an object as well as a weak reference to a proxy
    * that passes through calls to that object. In art form:

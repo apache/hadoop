@@ -21,6 +21,8 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.commons.logging.LogFactory;
+import java.io.PrintWriter;
+
 import org.apache.hadoop.hbase.VersionAnnotation;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.commons.logging.Log;
@@ -87,15 +89,27 @@ public class VersionInfo {
     return version != null ? version.url() : "Unknown";
   }
   
-  public static void logVersion(){
-	  LOG.info("HBase " + getVersion());
-	  LOG.info("Subversion " + getUrl() + " -r " + getRevision());
-	  LOG.info("Compiled by " + getUser() + " on " + getDate());
+  static String[] versionReport() {
+    return new String[] {
+      "HBase " + getVersion(),
+      "Subversion " + getUrl() + " -r " + getRevision(),
+      "Compiled by " + getUser() + " on " + getDate()
+      };
+  }
+
+  public static void writeTo(PrintWriter out) {
+    for (String line : versionReport()) {
+      out.println(line);
+    }
+  }
+
+  public static void logVersion() {
+    for (String line : versionReport()) {
+      LOG.info(line);
+    }
   }
 
   public static void main(String[] args) {
-    System.out.println("HBase " + getVersion());
-    System.out.println("Subversion " + getUrl() + " -r " + getRevision());
-    System.out.println("Compiled by " + getUser() + " on " + getDate());
+    logVersion();
   }
 }

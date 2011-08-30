@@ -485,6 +485,8 @@ Release 0.91.0 - Unreleased
    HBASE-4027  Enable direct byte buffers LruBlockCache (Li Pi)
    HBASE-4117  Slow Query Log and Client Operation Fingerprints
                (Riley Patterson)
+   HBASE-4292  Add a debugging dump servlet to the master and regionserver
+               (todd)
 
 Release 0.90.5 - Unreleased
 
