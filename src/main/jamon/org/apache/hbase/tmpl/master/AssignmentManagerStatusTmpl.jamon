@@ -36,7 +36,7 @@ No regions in transition.
 	<table>
 		<tr><th>Region</th><th>State</th></tr>
 		<%for Map.Entry<String, RegionState> entry : rit.entrySet() %>
-		<tr><td><% entry.getKey() %></td><td><% entry.getValue() %></td>
+		<tr><td><% entry.getKey() %></td><td><% entry.getValue().toDescriptiveString() %></td>
 		</%for>
 	</table>
 </%if>

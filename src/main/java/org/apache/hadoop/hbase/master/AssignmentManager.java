@@ -24,6 +24,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -2517,6 +2518,19 @@ public class AssignmentManager extends ZooKeeperListener {
       return region.getRegionNameAsString()
         + " state=" + state
         + ", ts=" + stamp
+        + ", server=" + serverName;
+    }
+
+    /**
+     * A slower (but more easy-to-read) stringification 
+     */
+    public String toDescriptiveString() {
+      long lstamp = stamp.get();
+      long relTime = System.currentTimeMillis() - lstamp;
+      
+      return region.getRegionNameAsString()
+        + " state=" + state
+        + ", ts=" + new Date(lstamp) + " (" + (relTime/1000) + "s ago)"
         + ", server=" + serverName;
     }
 

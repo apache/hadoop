@@ -419,6 +419,8 @@ Release 0.91.0 - Unreleased
                the Thrift API (Anirudh Todi)
    HBASE-3900  Expose progress of a major compaction in UI and/or in shell
                (Brad Anderson)
+   HBASE-4291  Improve display of regions in transition in UI to be more
+               readable (todd)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
