@@ -995,7 +995,10 @@ public class HLogSplitter {
     }
 
     void finish() {
-      shouldStop = true;
+      synchronized (dataAvailable) {
+        shouldStop = true;
+        dataAvailable.notifyAll();
+      }
     }
   }
 

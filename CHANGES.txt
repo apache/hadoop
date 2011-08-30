@@ -511,6 +511,7 @@ Release 0.90.5 - Unreleased
    HBASE-4124  ZK restarted while a region is being assigned, new active HM
                re-assigns it but the RS warns 'already online on this server'
                (Gaojinchao)
+   HBASE-4294  HLogSplitter sleeps with 1-second granularity (todd)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
