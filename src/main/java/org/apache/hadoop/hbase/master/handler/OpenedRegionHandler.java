@@ -90,7 +90,7 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
   
   @Override
   public void process() {
-    LOG.debug("Handling OPENED event for " + this.regionInfo.getEncodedName() +
+    debugLog(regionInfo, "Handling OPENED event for " + this.regionInfo.getEncodedName() +
       "; deleting unassigned node");
     // Remove region from in-memory transition and unassigned node from ZK
     try {
@@ -110,12 +110,21 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
     }
     if (this.assignmentManager.getZKTable().isDisablingOrDisabledTable(
         regionInfo.getTableNameAsString())) {
-      LOG.debug("Opened region " + regionInfo.getRegionNameAsString() + " but "
+      debugLog(regionInfo,
+          "Opened region " + regionInfo.getRegionNameAsString() + " but "
           + "this table is disabled, triggering close of region");
       assignmentManager.unassign(regionInfo);
     } else {
-      LOG.debug("Opened region " + regionInfo.getRegionNameAsString() +
+      debugLog(regionInfo, "Opened region " + regionInfo.getRegionNameAsString() +
           " on " + this.sn.toString());
+    }
+  }
+  
+  private void debugLog(HRegionInfo region, String string) {
+    if (region.isMetaTable() || region.isRootRegion()) {
+      LOG.info(string);
+    } else {
+      LOG.debug(string);
     }
   }
 }
