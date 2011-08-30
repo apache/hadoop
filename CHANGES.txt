@@ -222,6 +222,8 @@ Release 0.91.0 - Unreleased
    HBASE-4252  TestLogRolling's low-probability failure (Jieshan Bean)
    HBASE-4278  Race condition in Slab.java that occurs due to spinlock unlocking
                early (Li Pi)
+   HBASE-4269  Add tests and restore semantics to TableInputFormat/TableRecordReader
+               (Jonathan Hsieh)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
