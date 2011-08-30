@@ -114,13 +114,8 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
           + "this table is disabled, triggering close of region");
       assignmentManager.unassign(regionInfo);
     } else {
-      String msg = "Opened region " + regionInfo.getRegionNameAsString() +
-          " on " + this.sn.toString();
-      if (regionInfo.isMetaRegion()) {
-        LOG.info(msg);
-      } else {
-        LOG.debug(msg);
-      }
+      LOG.debug("Opened region " + regionInfo.getRegionNameAsString() +
+          " on " + this.sn.toString());
     }
   }
 }

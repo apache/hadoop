@@ -518,8 +518,6 @@ Release 0.90.5 - Unreleased
    HBASE-4222  Make HLog more resilient to write pipeline failures
    HBASE-4293  More verbose logging in ServerShutdownHandler for meta/root
                cases (todd)
-   HBASE-4276  AssignmentManager debug logs should be at INFO level for
-               META/ROOT regions (todd)
 
 Release 0.90.4 - August 10, 2011
 
