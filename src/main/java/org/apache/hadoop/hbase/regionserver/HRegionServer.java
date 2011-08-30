@@ -1471,15 +1471,28 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    *          the exception that caused the abort, or null
    */
   public void abort(String reason, Throwable cause) {
+    String msg = "ABORTING region server " + this + ": " + reason;
     if (cause != null) {
-      LOG.fatal("ABORTING region server " + this + ": " + reason, cause);
+      LOG.fatal(msg, cause);
     } else {
-      LOG.fatal("ABORTING region server " + this + ": " + reason);
+      LOG.fatal(msg);
     }
     this.abortRequested = true;
     this.reservedSpace.clear();
     if (this.metrics != null) {
       LOG.info("Dump of metrics: " + this.metrics);
+    }
+    // Do our best to report our abort to the master, but this may not work
+    try {
+      if (cause != null) {
+        msg += "\nCause:\n" + StringUtils.stringifyException(cause);
+      }
+      if (hbaseMaster != null) {
+        hbaseMaster.reportRSFatalError(
+            this.serverNameFromMasterPOV.getBytes(), msg);
+      }
+    } catch (Throwable t) {
+      LOG.warn("Unable to report fatal error to master", t);
     }
     stop(reason);
   }

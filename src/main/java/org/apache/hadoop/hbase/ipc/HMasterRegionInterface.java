@@ -61,4 +61,12 @@ public interface HMasterRegionInterface extends VersionedProtocol {
    */
   public void regionServerReport(byte [] sn, HServerLoad hsl)
   throws IOException;
+  
+  /**
+   * Called by a region server to report a fatal error that is causing
+   * it to abort.
+   * @param sn {@link ServerName#getBytes()}
+   * @param errorMessage informative text to expose in the master logs and UI
+   */
+  public void reportRSFatalError(byte [] sn, String errorMessage);
 }

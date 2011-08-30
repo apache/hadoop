@@ -73,6 +73,7 @@ import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
+import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -156,6 +157,11 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   private CatalogTracker catalogTracker;
   // Cluster status zk tracker and local setter
   private ClusterStatusTracker clusterStatusTracker;
+  
+  // buffer for "fatal error" notices from region servers
+  // in the cluster. This is only used for assisting
+  // operations/debugging.
+  private MemoryBoundedLogMessageBuffer rsFatals;
 
   // This flag is for stopping this Master instance.  Its set when we are
   // stopping or aborting
@@ -223,6 +229,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     this.isa = this.rpcServer.getListenerAddress();
     this.serverName = new ServerName(this.isa.getHostName(),
       this.isa.getPort(), System.currentTimeMillis());
+    this.rsFatals = new MemoryBoundedLogMessageBuffer(
+        conf.getLong("hbase.master.buffer.for.rs.fatals", 1*1024*1024));
 
     // initialize server principal (if using secure Hadoop)
     User.login(conf, "hbase.master.keytab.file",
@@ -759,6 +767,15 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     }
   }
 
+  @Override
+  public void reportRSFatalError(byte [] sn, String errorText) {
+    ServerName serverName = new ServerName(sn);
+    String msg = "Region server " + serverName + " reported a fatal error:\n"
+        + errorText;
+    LOG.error(msg);
+    rsFatals.add(msg);
+  }
+
   public boolean isMasterRunning() {
     return !isStopped();
   }
@@ -1206,6 +1223,10 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   @Override
   public AssignmentManager getAssignmentManager() {
     return this.assignmentManager;
+  }
+  
+  public MemoryBoundedLogMessageBuffer getRegionServerFatalLogBuffer() {
+    return rsFatals;
   }
 
   @Override
