@@ -118,8 +118,16 @@ public class SingleSizeCache implements BlockCache {
 
   @Override
   public synchronized void cacheBlock(String blockName, Cacheable toBeCached) {
-    ByteBuffer storedBlock = backingStore.alloc(toBeCached
-        .getSerializedLength());
+    ByteBuffer storedBlock;
+
+    /*
+     * Spinlock if empty, Guava Mapmaker guarantees that we will not store more
+     * items than the memory we have allocated, but the Slab Allocator may still
+     * be empty if we have not yet completed eviction
+     */
+    do {
+      storedBlock = backingStore.alloc(toBeCached.getSerializedLength());
+    } while (storedBlock == null);
 
     CacheablePair newEntry = new CacheablePair(toBeCached.getDeserializer(),
         storedBlock);

@@ -108,16 +108,17 @@ class Slab implements org.apache.hadoop.hbase.io.HeapSize {
   }
 
   /*
-   * This spinlocks if empty. Make sure your program can deal with that, and
-   * will complete eviction on time.
+   * This returns null if empty. Throws an exception if you try to allocate a
+   * bigger size than the allocator can handle.
    */
   ByteBuffer alloc(int bufferSize) {
     int newCapacity = Preconditions.checkPositionIndex(bufferSize, blockSize);
 
     ByteBuffer returnedBuffer = buffers.poll();
-    while(returnedBuffer == null){
-      returnedBuffer = buffers.poll();
+    if (returnedBuffer == null) {
+      return null;
     }
+
     returnedBuffer.clear().limit(newCapacity);
     return returnedBuffer;
   }
