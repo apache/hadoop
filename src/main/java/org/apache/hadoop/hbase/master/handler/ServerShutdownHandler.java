@@ -177,11 +177,15 @@ public class ServerShutdownHandler extends EventHandler {
 
     // Assign root and meta if we were carrying them.
     if (isCarryingRoot()) { // -ROOT-
+      LOG.info("Server " + serverName + " was carrying ROOT. Trying to assign.");
       verifyAndAssignRootWithRetries();
     }
 
     // Carrying meta?
-    if (isCarryingMeta()) this.services.getAssignmentManager().assignMeta();
+    if (isCarryingMeta()) {
+      LOG.info("Server " + serverName + " was carrying META. Trying to assign.");
+      this.services.getAssignmentManager().assignMeta();
+    }
 
     // Wait on meta to come online; we need it to progress.
     // TODO: Best way to hold strictly here?  We should build this retry logic
