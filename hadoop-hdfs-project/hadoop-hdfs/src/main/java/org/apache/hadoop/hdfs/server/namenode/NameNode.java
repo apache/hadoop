@@ -300,7 +300,7 @@ public class NameNode implements NamenodeProtocols {
    * @param filesystemURI
    * @return address of file system
    */
-  public static InetSocketAddress getAddress(URI filesystemURI) {
+  static InetSocketAddress getAddress(URI filesystemURI) {
     String authority = filesystemURI.getAuthority();
     if (authority == null) {
       throw new IllegalArgumentException(String.format(
@@ -1262,7 +1262,7 @@ public class NameNode implements NamenodeProtocols {
    * @param nodeReg data node registration
    * @throws IOException
    */
-  public void verifyRequest(NodeRegistration nodeReg) throws IOException {
+  void verifyRequest(NodeRegistration nodeReg) throws IOException {
     verifyVersion(nodeReg.getVersion());
     if (!namesystem.getRegistrationID().equals(nodeReg.getRegistrationID())) {
       LOG.warn("Invalid registrationID - expected: "
@@ -1278,12 +1278,13 @@ public class NameNode implements NamenodeProtocols {
    * @param version
    * @throws IOException
    */
-  public void verifyVersion(int version) throws IOException {
+  void verifyVersion(int version) throws IOException {
     if (version != FSConstants.LAYOUT_VERSION)
       throw new IncorrectVersionException(version, "data node");
   }
     
-  public FSImage getFSImage() {
+  /** get FSImage */
+  FSImage getFSImage() {
     return namesystem.dir.fsImage;
   }
 

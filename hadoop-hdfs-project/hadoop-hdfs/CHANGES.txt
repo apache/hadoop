@@ -679,6 +679,9 @@ Release 0.23.0 - Unreleased
     HDFS-2266.  Add Namesystem and SafeMode interfaces to avoid directly
     referring to FSNamesystem in BlockManager. (szetszwo)
 
+    HDFS-1217.  Change some NameNode methods from public to package private.
+    (Laxman via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

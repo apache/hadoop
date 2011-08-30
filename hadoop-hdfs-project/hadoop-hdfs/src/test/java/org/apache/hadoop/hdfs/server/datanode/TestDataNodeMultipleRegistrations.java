@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode.BPOfferService;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.VolumeInfo;
+import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.junit.Assert;
 import org.junit.Before;
@@ -65,14 +66,14 @@ public class TestDataNodeMultipleRegistrations {
       assertNotNull("cannot create nn1", nn1);
       assertNotNull("cannot create nn2", nn2);
 
-      String bpid1 = nn1.getFSImage().getBlockPoolID();
-      String bpid2 = nn2.getFSImage().getBlockPoolID();
-      String cid1 = nn1.getFSImage().getClusterID();
-      String cid2 = nn2.getFSImage().getClusterID();
-      int lv1 = nn1.getFSImage().getLayoutVersion();
-      int lv2 = nn2.getFSImage().getLayoutVersion();
-      int ns1 = nn1.getFSImage().getNamespaceID();
-      int ns2 = nn2.getFSImage().getNamespaceID();
+      String bpid1 = FSImageTestUtil.getFSImage(nn1).getBlockPoolID();
+      String bpid2 = FSImageTestUtil.getFSImage(nn2).getBlockPoolID();
+      String cid1 = FSImageTestUtil.getFSImage(nn1).getClusterID();
+      String cid2 = FSImageTestUtil.getFSImage(nn2).getClusterID();
+      int lv1 =FSImageTestUtil.getFSImage(nn1).getLayoutVersion();
+      int lv2 = FSImageTestUtil.getFSImage(nn2).getLayoutVersion();
+      int ns1 = FSImageTestUtil.getFSImage(nn1).getNamespaceID();
+      int ns2 = FSImageTestUtil.getFSImage(nn2).getNamespaceID();
       assertNotSame("namespace ids should be different", ns1, ns2);
       LOG.info("nn1: lv=" + lv1 + ";cid=" + cid1 + ";bpid=" + bpid1 + ";uri="
           + nn1.getNameNodeAddress());
@@ -135,9 +136,9 @@ public class TestDataNodeMultipleRegistrations {
       NameNode nn1 = cluster.getNameNode();
       assertNotNull("cannot create nn1", nn1);
 
-      String bpid1 = nn1.getFSImage().getBlockPoolID();
-      String cid1 = nn1.getFSImage().getClusterID();
-      int lv1 = nn1.getFSImage().getLayoutVersion();
+      String bpid1 = FSImageTestUtil.getFSImage(nn1).getBlockPoolID();
+      String cid1 = FSImageTestUtil.getFSImage(nn1).getClusterID();
+      int lv1 = FSImageTestUtil.getFSImage(nn1).getLayoutVersion();
       LOG.info("nn1: lv=" + lv1 + ";cid=" + cid1 + ";bpid=" + bpid1 + ";uri="
           + nn1.getNameNodeAddress());
 
