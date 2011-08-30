@@ -421,6 +421,7 @@ Release 0.91.0 - Unreleased
                (Brad Anderson)
    HBASE-4291  Improve display of regions in transition in UI to be more
                readable (todd)
+   HBASE-4281  Add facility to dump current state of all executors (todd)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

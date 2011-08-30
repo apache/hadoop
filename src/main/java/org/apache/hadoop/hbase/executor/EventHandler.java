@@ -229,4 +229,21 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
   public synchronized void setListener(EventHandlerListener listener) {
     this.listener = listener;
   }
+  
+  @Override
+  public String toString() {
+    return "Event #" + getSeqid() +
+      " of type " + eventType +
+      " (" + getInformativeName() + ")";
+  }
+
+  /**
+   * Event implementations should override thie class to provide an
+   * informative name about what event they are handling. For example,
+   * event-specific information such as which region or server is
+   * being processed should be included if possible.
+   */
+  public String getInformativeName() {
+    return this.getClass().toString();
+  }
 }

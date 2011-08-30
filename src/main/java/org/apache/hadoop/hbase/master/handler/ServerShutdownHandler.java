@@ -71,6 +71,15 @@ public class ServerShutdownHandler extends EventHandler {
       LOG.warn(this.serverName + " is NOT in deadservers; it should be!");
     }
   }
+  
+  @Override
+  public String getInformativeName() {
+    if (serverName != null) {
+      return this.getClass().getSimpleName() + " for " + serverName;
+    } else {
+      return super.getInformativeName();
+    }
+  }
 
   /**
    * Before assign the ROOT region, ensure it haven't 

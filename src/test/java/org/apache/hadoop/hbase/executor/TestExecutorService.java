@@ -19,9 +19,12 @@
  */
 package org.apache.hadoop.hbase.executor;
 
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -32,6 +35,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService.Executor;
+import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorStatus;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.junit.Test;
 import static org.mockito.Mockito.*;
@@ -82,6 +86,12 @@ public class TestExecutorService {
     assertEquals(maxThreads, counter.get());
     assertEquals(maxThreads, pool.getPoolSize());
 
+    ExecutorStatus status = executor.getStatus();
+    assertTrue(status.queuedEvents.isEmpty());
+    assertEquals(5, status.running.size());
+    checkStatusDump(status);
+    
+    
     // Now interrupt the running Executor
     synchronized (lock) {
       lock.set(false);
@@ -114,6 +124,15 @@ public class TestExecutorService {
     // Make sure threads are still around even after their timetolive expires.
     Thread.sleep(executor.keepAliveTimeInMillis * 2);
     assertEquals(maxThreads, pool.getPoolSize());
+  }
+
+  private void checkStatusDump(ExecutorStatus status) throws IOException {
+    StringWriter sw = new StringWriter();
+    status.dumpTo(sw, "");
+    String dump = sw.toString();
+    LOG.info("Got status dump:\n" + dump);
+    
+    assertTrue(dump.contains("Waiting on java.util.concurrent.atomic.AtomicBoolean"));
   }
 
   public static class TestEventHandler extends EventHandler {
