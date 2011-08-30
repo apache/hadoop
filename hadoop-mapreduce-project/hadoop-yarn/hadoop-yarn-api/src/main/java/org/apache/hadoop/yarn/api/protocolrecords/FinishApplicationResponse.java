@@ -18,6 +18,20 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.yarn.api.ClientRMProtocol;
+
+/**
+ * <p>The response sent by the <code>ResourceManager</code> to the client
+ * aborting a submitted application.</p>
+ *
+ * <p>Currently it's empty.</p>
+ * 
+ * @see ClientRMProtocol#finishApplication(FinishApplicationRequest)
+ */
+@Public
+@Stable
 public interface FinishApplicationResponse {
 
 }

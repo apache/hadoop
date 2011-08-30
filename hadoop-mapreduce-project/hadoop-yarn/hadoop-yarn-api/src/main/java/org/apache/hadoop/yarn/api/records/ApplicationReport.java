@@ -18,38 +18,172 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.ClientRMProtocol;
+
+/**
+ * <p><code>ApplicationReport</code> is a report of an application.</p>
+ *
+ * <p>It includes details such as:
+ *   <ul>
+ *     <li>{@link ApplicationId} of the application.</li>
+ *     <li>Applications user.</li>
+ *     <li>Application queue.</li>
+ *     <li>Application name.</li>
+ *     <li>Host on which the <code>ApplicationMaster</code>is running.</li>
+ *     <li>RPC port of the <code>ApplicationMaster</code>.</li>
+ *     <li>Tracking URL.</li>
+ *     <li>{@link ApplicationState} of the application.</li>
+ *     <li>Diagnostic information in case of errors.</li>
+ *     <li>Start time of the application.</li>
+ *     <li>Client token of the application (if security is enabled).</li>
+ *   </ul>
+ * </p>
+ * 
+ * @see ClientRMProtocol#getApplicationReport(org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest)
+ */
+@Public
+@Stable
 public interface ApplicationReport {
 
+  /**
+   * Get the <code>ApplicationId</code> of the application.
+   * @return <code>ApplicationId</code> of the application
+   */
+  @Public
+  @Stable
   ApplicationId getApplicationId();
+  
+  @Private
+  @Unstable
   void setApplicationId(ApplicationId applicationId);
 
+  /**
+   * Get the <em>user</em> who submitted the application.
+   * @return <em>user</em> who submitted the application
+   */
+  @Public
+  @Stable
   String getUser();
+  
+  @Private
+  @Unstable
   void setUser(String user);
 
+  /**
+   * Get the <em>queue</em> to which the application was submitted.
+   * @return <em>queue</em> to which the application was submitted
+   */
+  @Public
+  @Stable
   String getQueue();
+  
+  @Private
+  @Unstable
   void setQueue(String queue);
 
+  /**
+   * Get the user-defined <em>name</em> of the application.
+   * @return <em>name</em> of the application
+   */
+  @Public
+  @Stable
   String getName();
+  
+  @Private
+  @Unstable
   void setName(String name);
 
+  /**
+   * Get the <em>host</em> on which the <code>ApplicationMaster</code> 
+   * is running.
+   * @return <em>host</em> on which the <code>ApplicationMaster</code> 
+   *         is running
+   */
+  @Public
+  @Stable
   String getHost();
+  
+  @Private
+  @Unstable
   void setHost(String host);
 
+  /**
+   * Get the <em>RPC port</em> of the <code>ApplicationMaster</code>.
+   * @return <em>RPC port</em> of the <code>ApplicationMaster</code>
+   */
+  @Public
+  @Stable
   int getRpcPort();
+  
+  @Private
+  @Unstable
   void setRpcPort(int rpcPort);
 
+  /**
+   * Get the <em>client token</em> for communicating with the 
+   * <code>ApplicationMaster</code>.
+   * @return <em>client token</em> for communicating with the 
+   * <code>ApplicationMaster</code>
+   */
+  @Public
+  @Stable
   String getClientToken();
+  
+  @Private
+  @Unstable
   void setClientToken(String clientToken);
 
+  /**
+   * Get the <code>ApplicationState</code> of the application.
+   * @return <code>ApplicationState</code> of the application
+   */
+  @Public
+  @Stable
   ApplicationState getState();
+  
+  @Private
+  @Unstable
   void setState(ApplicationState state);
 
+  /**
+   * Get  the <em>diagnositic information</em> of the application in case of 
+   * errors.
+   * @return <em>diagnositic information</em> of the application in case 
+   *         of errors
+   */
+  @Public
+  @Stable
   String getDiagnostics();
+  
+  @Private
+  @Unstable
   void setDiagnostics(String diagnostics);
 
+  /**
+   * Get the <em>tracking url</em> for the application.
+   * @return <em>tracking url</em> for the application
+   */
+  @Public
+  @Stable
   String getTrackingUrl();
+  
+  @Private
+  @Unstable
   void setTrackingUrl(String url);
   
+  /**
+   * Get the <em>start time</em> of the application.
+   * @return <em>start time</em> of the application
+   */
+  @Public
+  @Stable
   long getStartTime();
+  
+  @Private
+  @Unstable
   void setStartTime(long startTime);
 }

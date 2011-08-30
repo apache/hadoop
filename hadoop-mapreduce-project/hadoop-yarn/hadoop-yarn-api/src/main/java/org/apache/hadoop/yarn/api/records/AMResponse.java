@@ -29,8 +29,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 
 /**
  * <p>The response sent by the <code>ResourceManager</code> the  
- * <code>ApplicationMaster</code> during resource negotiation via
- * {@link AMRMProtocol#allocate(AllocateRequest)}.</p>
+ * <code>ApplicationMaster</code> during resource negotiation.</p>
  *
  * <p>The response includes:
  *   <ul>
@@ -46,6 +45,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
  *     </li>
  *   </ul>
  * </p>
+ * 
+ * @see AMRMProtocol#allocate(AllocateRequest)
  */
 @Public
 @Unstable
@@ -67,8 +68,8 @@ public interface AMResponse {
   public void setReboot(boolean reboot);
 
   /**
-   * Get the last response id.
-   * @return the last response id
+   * Get the <em>last response id</em>.
+   * @return <em>last response id</em>
    */
   @Public
   @Stable
@@ -79,9 +80,9 @@ public interface AMResponse {
   public void setResponseId(int responseId);
 
   /**
-   * Get the list of newly allocated {@link Container} by the 
+   * Get the list of <em>newly allocated</em> <code>Container</code> by the 
    * <code>ResourceManager</code>.
-   * @return list of newly allocated <code>Container</code> 
+   * @return list of <em>newly allocated</em> <code>Container</code>
    */
   @Public
   @Stable
@@ -112,7 +113,10 @@ public interface AMResponse {
   public void clearNewContainers();
   
   /**
-   * Get available headroom for resources in the cluster for the application.
+   * Get the <em>available headroom</em> for resources in the cluster for the 
+   * application.
+   * @return limit available headroom for resources in the cluster for the 
+   * application
    */
   @Public
   @Stable
@@ -123,8 +127,8 @@ public interface AMResponse {
   public void setAvailableResources(Resource limit);
   
   /**
-   * Get the list of completed containers.
-   * @return the list of completed containers
+   * Get the list of <em>completed containers</em>.
+   * @return the list of <em>completed containers</em>
    */
   @Public
   @Stable

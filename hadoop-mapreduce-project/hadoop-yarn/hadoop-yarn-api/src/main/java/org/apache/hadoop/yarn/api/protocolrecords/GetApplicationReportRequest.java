@@ -18,9 +18,34 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 
+/**
+ * <p>The request sent by a client to the <code>ResourceManager</code> to 
+ * get an {@link ApplicationReport} for an application.</p>
+ * 
+ * <p>The request should include the {@link ApplicationId} of the 
+ * application.</p>
+ * 
+ * @see ClientRMProtocol#getApplicationReport(GetApplicationReportRequest)
+ * @see ApplicationReport
+ */
+@Public
+@Stable
 public interface GetApplicationReportRequest {
-  public abstract ApplicationId getApplicationId();
-  public abstract void setApplicationId(ApplicationId applicationId);
+  /**
+   * Get the <code>ApplicationId</code> of the application.
+   * @return <code>ApplicationId</code> of the application
+   */
+  public ApplicationId getApplicationId();
+  
+  /**
+   * Set the <code>ApplicationId</code> of the application
+   * @param applicationId <code>ApplicationId</code> of the application
+   */
+  public void setApplicationId(ApplicationId applicationId);
 }

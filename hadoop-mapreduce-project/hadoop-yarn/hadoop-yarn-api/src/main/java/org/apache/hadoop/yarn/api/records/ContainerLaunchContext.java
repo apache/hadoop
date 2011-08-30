@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.ContainerManager;
 
 /**
  * <p><code>ContainerLaunchContext</code> represents the all of the information
@@ -43,17 +44,11 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
  *     </li>
  *     <li>Optional, application-specific binary service data.</li>
  *     <li>Environment variables for the launched process.</li>
- *     <li>Command to be executed to launch the container.</li>
- *     <li></li>
- *     <li></li>
- *     <li></li>
- *     <li></li>
- *     <li></li>
- *     <li></li>
- *     <li></li>
- *     <li></li>
+ *     <li>Command to launch the container.</li>
  *   </ul>
  * </p>
+ * 
+ * @see ContainerManager#startContainer(org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest)
  */
 @Public
 @Stable
@@ -66,8 +61,12 @@ public interface ContainerLaunchContext {
   @Stable
   ContainerId getContainerId();
 
-  @Private
-  @Unstable
+  /**
+   * Set <code>ContainerId</code> of container to be launched.
+   * @param containerId et <code>ContainerId</code> of container to be launched
+   */
+  @Public
+  @Stable
   void setContainerId(ContainerId containerId);
 
   /**
@@ -78,8 +77,12 @@ public interface ContainerLaunchContext {
   @Stable
   String getUser();
   
-  @Private
-  @Unstable
+  /**
+   * Set the <em>user</em> to whom the container has been allocated
+   * @param user <em>user</em> to whom the container has been allocated
+   */
+  @Public
+  @Stable
   void setUser(String user);
 
   /**
@@ -91,9 +94,14 @@ public interface ContainerLaunchContext {
   @Public
   @Stable
   Resource getResource();
-  
-  @Private
-  @Unstable
+
+  /**
+   * Set the <code>Resource</code> allocated to the container by the
+   * <code>ResourceManager</code>.
+   * @param resource allocated resource
+   */
+  @Public
+  @Stable
   void setResource(Resource resource);
 
   /**
@@ -104,8 +112,12 @@ public interface ContainerLaunchContext {
   @Stable
   ByteBuffer getContainerTokens();
 
-  @Private
-  @Unstable
+  /**
+   * Set security tokens (if security is enabled).
+   * @param containerToken security tokens 
+   */
+  @Public
+  @Stable
   void setContainerTokens(ByteBuffer containerToken);
 
   /**
@@ -119,9 +131,13 @@ public interface ContainerLaunchContext {
   @Private
   @Unstable
   LocalResource getLocalResource(String key);
-  
-  @Private
-  @Unstable
+
+  /**
+   * Add all <code>LocalResource</code> required by the container.
+   * @param localResources <code>LocalResource</code> required by the container
+   */
+  @Public
+  @Stable
   void addAllLocalResources(Map<String, LocalResource> localResources);
 
   @Private
@@ -147,9 +163,13 @@ public interface ContainerLaunchContext {
   @Private
   @Unstable
   ByteBuffer getServiceData(String key);
-  
-  @Private
-  @Unstable
+
+  /**
+   * Add add application-specific binary service data.
+   * @param serviceData application-specific binary service data
+   */
+  @Public
+  @Stable
   void addAllServiceData(Map<String, ByteBuffer> serviceData);
 
   @Private
@@ -176,8 +196,12 @@ public interface ContainerLaunchContext {
   @Unstable
   String getEnv(String key);
   
-  @Private
-  @Unstable
+  /**
+   * Add <em>environment variables</em> for the launched container.
+   * @param env <em>environment variables</em> for the launched container
+   */
+  @Public
+  @Stable
   void addAllEnv(Map<String, String> env);
 
   @Private
@@ -208,8 +232,12 @@ public interface ContainerLaunchContext {
   @Unstable
   int getCommandCount();
   
-  @Private
-  @Unstable
+  /**
+   * Add the list of <em>commands</em> for launching the container.
+   * @param commands the list of <em>commands</em> for launching the container
+   */
+  @Public
+  @Stable
   void addAllCommands(List<String> commands);
   
   @Private

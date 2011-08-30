@@ -18,9 +18,43 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.Resource;
 
+/**
+ * <p>The request sent by a client to <em>submit an application</em> to the 
+ * <code>ResourceManager</code>.</p>
+ * 
+ * <p>The request, via {@link ApplicationSubmissionContext}, contains
+ * details such as queue, {@link Resource} required to run the 
+ * <code>ApplicationMaster</code>, the equivalent of 
+ * {@link ContainerLaunchContext} for launching the 
+ * <code>ApplicationMaster</code> etc.
+ * 
+ * @see ClientRMProtocol#submitApplication(SubmitApplicationRequest)
+ */
+@Public
+@Stable
 public interface SubmitApplicationRequest {
+  /**
+   * Get the <code>ApplicationSubmissionContext</code> for the application.
+   * @return <code>ApplicationSubmissionContext</code> for the application
+   */
+  @Public
+  @Stable
   public abstract ApplicationSubmissionContext getApplicationSubmissionContext();
-  public abstract void setApplicationSubmissionContext(ApplicationSubmissionContext context);
+
+  /**
+   * Set the <code>ApplicationSubmissionContext</code> for the application.
+   * @param context <code>ApplicationSubmissionContext</code> for the 
+   *                application
+   */
+  @Public
+  @Stable
+  public abstract void setApplicationSubmissionContext(
+      ApplicationSubmissionContext context);
 }

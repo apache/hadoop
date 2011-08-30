@@ -18,6 +18,18 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.yarn.api.ClientRMProtocol;
+
+/**
+ * <p>The request sent by clients to the <code>ResourceManager</code> to 
+ * get queue acls for the <em>current user</em>.</p>
+ *
+ * @see ClientRMProtocol#getQueueUserAcls(GetQueueUserAclsInfoRequest)
+ */
+@Public
+@Stable
 public interface GetQueueUserAclsInfoRequest {
 
 }

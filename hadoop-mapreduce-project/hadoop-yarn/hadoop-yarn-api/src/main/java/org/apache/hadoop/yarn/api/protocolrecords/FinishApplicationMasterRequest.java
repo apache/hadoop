@@ -18,18 +18,14 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 
 /**
  * <p>The finalization request sent by the <code>ApplicationMaster</code> to 
- * inform the <code>ResourceManager</code> about its completion via the
- * {@link AMRMProtocol#finishApplicationMaster(FinishApplicationMasterRequest)}
- * api.</p>
+ * inform the <code>ResourceManager</code> about its completion.</p>
  * 
  * <p>The final request includes details such:
  *   <ul>
@@ -46,11 +42,12 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
  *   </ul>
  * </p>
  *
+ * @see AMRMProtocol#finishApplicationMaster(FinishApplicationMasterRequest)
  */
 public interface FinishApplicationMasterRequest {
 
   /**
-   * Get the {@link ApplicationAttemptId} being managed by the 
+   * Get the <code>ApplicationAttemptId</code> being managed by the 
    * <code>ApplicationMaster</code>.
    * @return <code>ApplicationAttemptId</code> being managed by the 
    *         <code>ApplicationMaster</code>
@@ -59,44 +56,63 @@ public interface FinishApplicationMasterRequest {
   @Stable
   ApplicationAttemptId getApplicationAttemptId();
   
-  @Private
-  @Unstable
+  /**
+   * Set the <code>ApplicationAttemptId</code> being managed by the 
+   * <code>ApplicationMaster</code>.
+   * @param applicationAttemptId <code>ApplicationAttemptId</code> being managed 
+   *                             by the <code>ApplicationMaster</code>
+   */
+  @Public
+  @Stable
   void setAppAttemptId(ApplicationAttemptId applicationAttemptId);
 
   /**
-   * Get final state of the <code>ApplicationMaster</code>.
-   * @return final state of the <code>ApplicationMaster</code>
+   * Get <em>final state</em> of the <code>ApplicationMaster</code>.
+   * @return <em>final state</em> of the <code>ApplicationMaster</code>
    */
   @Public
   @Stable
   String getFinalState();
   
-  @Private
-  @Unstable
-  void setFinalState(String string);
+  /**
+   * Set <em>final state</em> of the <code>ApplicationMaster</code>
+   * @param finalState <em>final state</em> of the <code>ApplicationMaster</code>
+   */
+  @Public
+  @Stable
+  void setFinalState(String finalState);
 
   /**
-   * Get diagnostic information if the application failed.
-   * @return diagnostic information if the application failed
+   * Get <em>diagnostic information</em> on application failure.
+   * @return <em>diagnostic information</em> on application failure
    */
   @Public
   @Stable
   String getDiagnostics();
   
-  @Private
-  @Unstable
-  void setDiagnostics(String string);
+  /**
+   * Set <em>diagnostic information</em> on application failure.
+   * @param diagnostics <em>diagnostic information</em> on application failure
+   */
+  @Public
+  @Stable
+  void setDiagnostics(String diagnostics);
 
   /**
-   * Get the tracking URL for the <code>ApplicationMaster</code>.
-   * @return the tracking URL for the <code>ApplicationMaster</code>
+   * Get the <em>tracking URL</em> for the <code>ApplicationMaster</code>.
+   * @return <em>tracking URL</em>for the <code>ApplicationMaster</code>
    */
   @Public
   @Stable
   String getTrackingUrl();
   
-  @Private
-  @Unstable
-  void setTrackingUrl(String historyUrl);
+  /**
+   * Set the <em>tracking URL</em>for the <code>ApplicationMaster</code>
+   * @param url <em>tracking URL</em>for the 
+   *                   <code>ApplicationMaster</code>
+   */
+  @Public
+  @Stable
+  void setTrackingUrl(String url);
 
 }

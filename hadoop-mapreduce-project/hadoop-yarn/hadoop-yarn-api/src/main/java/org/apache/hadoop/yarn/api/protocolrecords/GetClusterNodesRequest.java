@@ -18,6 +18,18 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.yarn.api.ClientRMProtocol;
+
+/**
+ * <p>The request from clients to get a report of all nodes
+ * in the cluster from the <code>ResourceManager</code>.</p>
+ *
+ * @see ClientRMProtocol#getClusterNodes(GetClusterNodesRequest) 
+ */
+@Public
+@Stable
 public interface GetClusterNodesRequest {
 
 }
