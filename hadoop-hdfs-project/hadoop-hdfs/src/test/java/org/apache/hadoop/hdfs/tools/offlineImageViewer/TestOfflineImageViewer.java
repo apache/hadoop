@@ -129,7 +129,8 @@ public class TestOfflineImageViewer extends TestCase {
       
       // Determine location of fsimage file
       orig = FSImageTestUtil.findLatestImageFile(
-          cluster.getNameNode().getFSImage().getStorage().getStorageDir(0));
+          FSImageTestUtil.getFSImage(
+          cluster.getNameNode()).getStorage().getStorageDir(0));
       if (orig == null) {
         fail("Didn't generate or can't find fsimage");
       }

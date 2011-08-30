@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -410,5 +409,10 @@ public abstract class FSImageTestUtil {
         LOG.info("  file " + f.getAbsolutePath() + "; len = " + f.length());  
       }
     }
+  }
+  
+  /** get the fsImage*/
+  public static FSImage getFSImage(NameNode node) {
+    return node.getFSImage();
   }
 }
