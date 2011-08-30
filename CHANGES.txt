@@ -224,6 +224,8 @@ Release 0.91.0 - Unreleased
                early (Li Pi)
    HBASE-4269  Add tests and restore semantics to TableInputFormat/TableRecordReader
                (Jonathan Hsieh)
+   HBASE-4290  HLogSplitter doesn't mark its MonitoredTask as complete in
+               non-distributed case (todd)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
