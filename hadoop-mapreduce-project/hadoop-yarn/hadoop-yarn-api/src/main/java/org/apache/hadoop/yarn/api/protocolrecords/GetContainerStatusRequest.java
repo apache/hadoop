@@ -18,18 +18,17 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 
 /**
  * <p>The request sent by the <code>ApplicationMaster</code> to the
- * <code>NodeManager</code> to get {@link ContainerStatus} of a container via
- * {@link ContainerManager#getContainerStatus(GetContainerStatusRequest)}.</p>
+ * <code>NodeManager</code> to get {@link ContainerStatus} of a container.</p>
+ * 
+ * @see ContainerManager#getContainerStatus(GetContainerStatusRequest)
  */
 @Public
 @Stable
@@ -44,7 +43,13 @@ public interface GetContainerStatusRequest {
   @Stable
   public abstract ContainerId getContainerId();
   
-  @Private
-  @Unstable
+  /**
+   * Set the <code>ContainerId</code> of container for which to obtain the
+   * <code>ContainerStatus</code>
+   * @param containerId <code>ContainerId</code> of container for which to 
+   *                    obtain the <code>ContainerStatus</code>
+   */
+  @Public
+  @Stable
   public abstract void setContainerId(ContainerId containerId);
 }

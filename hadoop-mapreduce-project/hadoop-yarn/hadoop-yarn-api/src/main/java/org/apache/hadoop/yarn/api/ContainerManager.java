@@ -115,7 +115,7 @@ public interface ContainerManager {
    *
    * @param request request to get <code>ContainerStatus</code> of a container
    *                with the specified <code>ContainerId</code>
-   * @return the <code>ContainerStatus</code> of the container
+   * @return <code>ContainerStatus</code> of the container
    * @throws YarnRemoteException
    */
   @Public

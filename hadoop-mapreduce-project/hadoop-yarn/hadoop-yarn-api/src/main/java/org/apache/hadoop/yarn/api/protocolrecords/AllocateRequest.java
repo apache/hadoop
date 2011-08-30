@@ -32,8 +32,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 
 /**
  * <p>The core request sent by the <code>ApplicationMaster</code> to the 
- * <code>ResourceManager</code> to obtain resources in the cluster via
- * {@link AMRMProtocol#allocate(AllocateRequest)}.</p> 
+ * <code>ResourceManager</code> to obtain resources in the cluster.</p> 
  *
  * <p>The request includes:
  *   <ul>
@@ -55,13 +54,14 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
  *   </ul>
  * </p>
  * 
+ * @see AMRMProtocol#allocate(AllocateRequest)
  */
 @Public
 @Stable
 public interface AllocateRequest {
 
   /**
-   * Get the {@link ApplicationAttemptId} being managed by the 
+   * Get the <code>ApplicationAttemptId</code> being managed by the 
    * <code>ApplicationMaster</code>.
    * @return <code>ApplicationAttemptId</code> being managed by the 
    *         <code>ApplicationMaster</code>
@@ -70,32 +70,46 @@ public interface AllocateRequest {
   @Stable
   ApplicationAttemptId getApplicationAttemptId();
   
-  @Private
-  @Unstable
+  /**
+   * Set the <code>ApplicationAttemptId</code> being managed by the 
+   * <code>ApplicationMaster</code>.
+   * @param applicationAttemptId <code>ApplicationAttemptId</code> being managed 
+   *                             by the <code>ApplicationMaster</code>
+   */
+  @Public
+  @Stable
   void setApplicationAttemptId(ApplicationAttemptId applicationAttemptId);
 
   /**
-   * Get the response id.
-   * @return the response id
+   * Get the <em>response id</em>.
+   * @return <em>response id</em>
    */
   @Public
   @Stable
   int getResponseId();
-  
-  @Private
-  @Unstable
+
+  /**
+   * Set the <em>response id</em>
+   * @param id <em>response id</em>
+   */
+  @Public
+  @Stable
   void setResponseId(int id);
 
   /**
-   * Get the current progress of application. 
-   * @return the current progress of application
+   * Get the <em>current progress</em> of application. 
+   * @return <em>current progress</em> of application
    */
   @Public
   @Stable
   float getProgress();
   
-  @Private
-  @Unstable
+  /**
+   * Set the <em>current progress</em> of application
+   * @param progress <em>current progress</em> of application
+   */
+  @Public
+  @Stable
   void setProgress(float progress);
 
   /**
@@ -116,6 +130,29 @@ public interface AllocateRequest {
   int getAskCount();
   
   /**
+   * Add list of <code>ResourceRequest</code> to upate the 
+   * <code>ResourceManager</code> about the application's resource requirements.
+   * @param resourceRequest list of <code>ResourceRequest</code> to upate the 
+   *                        <code>ResourceManager</code> about the application's 
+   *                        resource requirements
+   */
+  @Public
+  @Stable
+  void addAllAsks(List<ResourceRequest> resourceRequest);
+
+  @Private
+  @Unstable
+  void addAsk(ResourceRequest request);
+
+  @Private
+  @Unstable
+  void removeAsk(int index);
+
+  @Private
+  @Unstable
+  void clearAsks();
+
+  /**
    * Get the list of <code>ContainerId</code> of unused containers being 
    * released by the <code>ApplicationMaster</code>.
    * @return list of <code>ContainerId</code> of unused containers being 
@@ -133,26 +170,15 @@ public interface AllocateRequest {
   @Unstable
   int getReleaseCount();
 
-  
-  @Private
-  @Unstable
-  void addAllAsks(List<ResourceRequest> resourceRequest);
-  
-  @Private
-  @Unstable
-  void addAsk(ResourceRequest request);
-  
-  @Private
-  @Unstable
-  void removeAsk(int index);
-  
-  @Private
-  @Unstable
-  void clearAsks();
-  
-  
-  @Private
-  @Unstable
+  /**
+   * Add the list of <code>ContainerId</code> of unused containers being 
+   * released by the <code>ApplicationMaster</code>
+   * @param releaseContainers list of <code>ContainerId</code> of unused 
+   *                          containers being released by the <
+   *                          code>ApplicationMaster</code>
+   */
+  @Public
+  @Stable
   void addAllReleases(List<ContainerId> releaseContainers);
   
   @Private

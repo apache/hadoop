@@ -18,8 +18,39 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.yarn.api.ClientRMProtocol;
+
+/**
+ * <p><code>QueueACL</code> enumerates the various ACLs for queues.</p>
+ * 
+ * <p>The ACLs are one of:
+ *   <ul>
+ *     <li>{@link #SUBMIT_JOB} - ACL to submit jobs to the queue.</li>
+ *     <li>{@link #ADMINISTER_QUEUE} - ACL to administer the queue.</li>
+ *     <li>{@link #ADMINISTER_JOBS} - ACL to administer jobs in the queue.</li>
+ *   </ul>
+ * </p>
+ * 
+ * @see QueueInfo
+ * @see ClientRMProtocol#getQueueUserAcls(org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest)
+ */
+@Public
+@Stable
 public enum QueueACL {
+  /**
+   * ACL to submit jobs to the queue.
+   */
   SUBMIT_JOB,
+  
+  /**
+   * ACL to administer the queue.
+   */
   ADMINISTER_QUEUE,    
+  
+  /**
+   * ACL to administer jobs in the queue.
+   */
   ADMINISTER_JOBS;            // currently unused
 }

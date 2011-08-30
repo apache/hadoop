@@ -20,10 +20,43 @@ package org.apache.hadoop.yarn.api.records;
 
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.ClientRMProtocol;
+
+/**
+ * <p><code>QueueUserACLInfo</code> provides information {@link QueueACL} for
+ * the given user.</p>
+ * 
+ * @see QueueACL
+ * @see ClientRMProtocol#getQueueUserAcls(org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest)
+ */
+@Public
+@Stable
 public interface QueueUserACLInfo {
+  /**
+   * Get the <em>queue name</em> of the queue.
+   * @return <em>queue name</em> of the queue
+   */
+  @Public
+  @Stable
   String getQueueName();
-  void setQueueName(String queueName);
   
+  @Private
+  @Unstable
+  void setQueueName(String queueName);
+
+  /**
+   * Get the list of <code>QueueACL</code> for the given user.
+   * @return list of <code>QueueACL</code> for the given user
+   */
+  @Public
+  @Stable
   List<QueueACL> getUserAcls();
+
+  @Private
+  @Unstable
   void setUserAcls(List<QueueACL> acls);
 }

@@ -27,9 +27,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 
 /**
  * <p>The response sent by the <code>ResourceManager</code> to a new 
- * <code>ApplicationMaster</code> on registration via the 
- * {@link AMRMProtocol#registerApplicationMaster(RegisterApplicationMasterRequest)} 
- * api.</p>
+ * <code>ApplicationMaster</code> on registration.</p>
  * 
  * <p>The response contains critical details such as:
  * <ul>
@@ -37,6 +35,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
  *   <li>Maximum capability for allocated resources in the cluster.</li>
  * </ul>
  * </p>
+ * 
+ * @see AMRMProtocol#registerApplicationMaster(RegisterApplicationMasterRequest)
  */
 @Public
 @Stable

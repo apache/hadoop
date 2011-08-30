@@ -25,8 +25,9 @@ import org.apache.hadoop.yarn.api.ContainerManager;
 /**
  * <p>The response sent by the <code>NodeManager</code> to the 
  * <code>ApplicationMaster</code> when asked to <em>start</em> an
- * allocated container via
- * {@link ContainerManager#startContainer(StartContainerRequest)}.</p>
+ * allocated container.</p>
+ * 
+ * @see ContainerManager#startContainer(StartContainerRequest)
  */
 @Public
 @Stable

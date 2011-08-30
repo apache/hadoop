@@ -18,17 +18,14 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 
 /**
  * <p>The request sent by the <code>ApplicationMaster</code> to the
- * <code>NodeManager</code> to <em>start</em> a container via
- * {@link ContainerManager#startContainer(StartContainerRequest)}.</p>
+ * <code>NodeManager</code> to <em>start</em> a container.</p>
  * 
  * <p>The <code>ApplicationMaster</code> has to provide details such as
  * allocated resource capability, security tokens (if enabled), command
@@ -36,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
  * necessary binaries/jar/shared-objects etc. via the 
  * {@link ContainerLaunchContext}.</p>
  *
+ * @see ContainerManager#startContainer(StartContainerRequest)
  */
 @Public
 @Stable
@@ -51,7 +49,13 @@ public interface StartContainerRequest {
   @Stable
   public abstract ContainerLaunchContext getContainerLaunchContext();
   
-  @Private
-  @Unstable
+  /**
+   * Set the <code>ContainerLaunchContext</code> for the container to be started
+   * by the <code>NodeManager</code>
+   * @param context <code>ContainerLaunchContext</code> for the container to be 
+   *                started by the <code>NodeManager</code>
+   */
+  @Public
+  @Stable
   public abstract void setContainerLaunchContext(ContainerLaunchContext context);
 }

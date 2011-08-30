@@ -28,8 +28,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 
 /**
  * <p>The response sent by the <code>ResourceManager</code> the  
- * <code>ApplicationMaster</code> during resource negotiation via
- * {@link AMRMProtocol#allocate(AllocateRequest)}.</p>
+ * <code>ApplicationMaster</code> during resource negotiation.</p>
  *
  * <p>The response, via {@link AMResponse}, includes:
  *   <ul>
@@ -45,6 +44,8 @@ import org.apache.hadoop.yarn.api.records.Container;
  *     </li>
  *   </ul>
  * </p>
+ * 
+ * @see AMRMProtocol#allocate(AllocateRequest)
  */
 @Public
 @Stable
