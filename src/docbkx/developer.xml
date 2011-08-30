@@ -183,6 +183,7 @@ mvn test -Dtest=TestXYZ
           <section xml:id="submitting.patches.create">
             <title>Create Patch</title>
           <para>Patch files can be easily generated from Eclipse, for example by selecting "Team -&gt; Create Patch".
+          Patches can also be created by git diff and svn diff.
           </para>
           <para>Please submit one patch-file per Jira.  For example, if multiple files are changed make sure the 
           selected resource when generating the patch is a directory.  Patch files can reflect changes in multiple files. </para>
@@ -191,13 +192,16 @@ mvn test -Dtest=TestXYZ
           <section xml:id="submitting.patches.naming">
             <title>Patch File Naming</title>
           <para>The patch file should have the HBase Jira ticket in the name.  For example, if a patch was submitted for <filename>Foo.java</filename>, then
-          a patch file called <filename>Foo_HBASE_XXX.patch</filename> would be acceptable where XXX is the HBase Jira number.
+          a patch file called <filename>Foo_HBASE_XXXX.patch</filename> would be acceptable where XXXX is the HBase Jira number.
+          </para>
+          <para>If you generating from a branch, then including the target branch in the filename is advised, e.g., <filename>HBASE-XXXX-0.90.patch</filename>.
           </para>
           </section>
           <section xml:id="submitting.patches.tests">
             <title>Unit Tests</title>
-            <para>Yes, please.  Please try to include unit tests with every code patch (and especially new classes and large changes).</para>
-            <para>Also, please make sure unit tests pass locally before submitting the patch.</para>
+            <para>Yes, please.  Please try to include unit tests with every code patch (and especially new classes and large changes).
+            Make sure unit tests pass locally before submitting the patch.</para>
+            <para>Also, see <xref linkend="mockito"/>.</para>
           </section>
           <section xml:id="submitting.patches.jira">
             <title>Attach Patch to Jira</title>
@@ -312,10 +316,12 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
             But the preference is to add something descriptive and useful.          
             </para>
           </section>
-          <section xml:id="common.patch.feedback.massreformat">
-            <title>Unrelated Code Formating or Auto-Reformating</title>
+          <section xml:id="common.patch.feedback.onething">
+            <title>One Thing At A Time, Folks</title>
             <para>If you submit a patch for one thing, don't do auto-reformatting or unrelated reformatting of code on a completely
             different area of code. 
+            </para>
+            <para>Likewise, don't add unrelated cleanup or refactorings outside the scope of your Jira. 
             </para>
           </section>
           <section xml:id="common.patch.feedback.tests">
