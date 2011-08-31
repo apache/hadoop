@@ -50,6 +50,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.http.HttpServer.QuotingInputFilter.RequestQuoter;
+import org.apache.hadoop.http.resource.JerseyResource;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -57,6 +58,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mortbay.util.ajax.JSON;
 
 public class TestHttpServer extends HttpServerFunctionalTest {
   static final Log LOG = LogFactory.getLog(TestHttpServer.class);
@@ -73,7 +75,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
                       ) throws ServletException, IOException {
       PrintWriter out = response.getWriter();
       Map<String, String[]> params = request.getParameterMap();
-      SortedSet<String> keys = new TreeSet(params.keySet());
+      SortedSet<String> keys = new TreeSet<String>(params.keySet());
       for(String key: keys) {
         out.print(key);
         out.print(':');
@@ -99,7 +101,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
                       HttpServletResponse response
                       ) throws ServletException, IOException {
       PrintWriter out = response.getWriter();
-      SortedSet<String> sortedKeys = new TreeSet();
+      SortedSet<String> sortedKeys = new TreeSet<String>();
       Enumeration<String> keys = request.getParameterNames();
       while(keys.hasMoreElements()) {
         sortedKeys.add(keys.nextElement());
@@ -116,7 +118,6 @@ public class TestHttpServer extends HttpServerFunctionalTest {
 
   @SuppressWarnings("serial")
   public static class HtmlContentServlet extends HttpServlet {
-    @SuppressWarnings("unchecked")
     @Override
     public void doGet(HttpServletRequest request, 
                       HttpServletResponse response
@@ -135,6 +136,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     server.addServlet("echo", "/echo", EchoServlet.class);
     server.addServlet("echomap", "/echomap", EchoMapServlet.class);
     server.addServlet("htmlcontent", "/htmlcontent", HtmlContentServlet.class);
+    server.addJerseyResourcePackage(
+        JerseyResource.class.getPackage().getName(), "/jersey/*");
     server.start();
     baseUrl = getServerURL(server);
     LOG.info("HTTP server started: "+ baseUrl);
@@ -405,4 +408,18 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         values, parameterValues));
   }
 
+  @SuppressWarnings("unchecked")
+  private static Map<String, Object> parse(String jsonString) {
+    return (Map<String, Object>)JSON.parse(jsonString);
+  }
+
+  @Test public void testJersey() throws Exception {
+    LOG.info("BEGIN testJersey()");
+    final String js = readOutput(new URL(baseUrl, "/jersey/foo?op=bar"));
+    final Map<String, Object> m = parse(js);
+    LOG.info("m=" + m);
+    assertEquals("foo", m.get(JerseyResource.PATH));
+    assertEquals("bar", m.get(JerseyResource.OP));
+    LOG.info("END testJersey()");
+  }
 }
