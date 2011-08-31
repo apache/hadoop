@@ -18,9 +18,7 @@
 package org.apache.hadoop.http;
 
 import java.io.IOException;
-import java.io.PrintStream;
 import java.io.PrintWriter;
-import java.net.URLConnection;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
@@ -131,7 +129,9 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   }
 
   @BeforeClass public static void setup() throws Exception {
-    server = createTestServer();
+    Configuration conf = new Configuration();
+    conf.setInt(HttpServer.HTTP_MAX_THREADS, 10);
+    server = createTestServer(conf);
     server.addServlet("echo", "/echo", EchoServlet.class);
     server.addServlet("echomap", "/echomap", EchoMapServlet.class);
     server.addServlet("htmlcontent", "/htmlcontent", HtmlContentServlet.class);
@@ -161,7 +161,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
             assertEquals("a:b\nc:d\n",
                          readOutput(new URL(baseUrl, "/echo?a=b&c=d")));
             int serverThreads = server.webServer.getThreadPool().getThreads();
-            assertTrue(serverThreads <= MAX_THREADS);
+            assertTrue("More threads are started than expected, Server Threads count: "
+                    + serverThreads, serverThreads <= MAX_THREADS);
             System.out.println("Number of threads = " + serverThreads +
                 " which is less or equal than the max = " + MAX_THREADS);
           } catch (Exception e) {
