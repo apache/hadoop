@@ -86,7 +86,9 @@ public class LeafQueue implements Queue {
   Map<ApplicationAttemptId, SchedulerApp> applicationsMap = 
       new HashMap<ApplicationAttemptId, SchedulerApp>();
   
-  public final Resource minimumAllocation;
+  private final Resource minimumAllocation;
+  private final Resource maximumAllocation;
+  private final float minimumAllocationFactor;
 
   private ContainerTokenSecretManager containerTokenSecretManager;
 
@@ -118,6 +120,10 @@ public class LeafQueue implements Queue {
         cs.getConfiguration().getEnableUserMetrics());
     
     this.minimumAllocation = cs.getMinimumResourceCapability();
+    this.maximumAllocation = cs.getMaximumResourceCapability();
+    this.minimumAllocationFactor = 
+        (float)(maximumAllocation.getMemory() - minimumAllocation.getMemory()) / 
+         maximumAllocation.getMemory();
     this.containerTokenSecretManager = cs.getContainerTokenSecretManager();
 
     float capacity = 
@@ -237,6 +243,30 @@ public class LeafQueue implements Queue {
   @Override
   public String getQueuePath() {
     return parent.getQueuePath() + "." + getQueueName();
+  }
+
+  /**
+   * Used only by tests.
+   */
+  @Private
+  public Resource getMinimumAllocation() {
+    return minimumAllocation;
+  }
+
+  /**
+   * Used only by tests.
+   */
+  @Private
+  public Resource getMaximumAllocation() {
+    return maximumAllocation;
+  }
+
+  /**
+   * Used only by tests.
+   */
+  @Private
+  public float getMinimumAllocationFactor() {
+    return minimumAllocationFactor;
   }
 
   @Override
@@ -536,25 +566,24 @@ public class LeafQueue implements Queue {
         setUserResourceLimit(application, userLimit);
         
         for (Priority priority : application.getPriorities()) {
+          // Required resource
+          Resource required = 
+              application.getResourceRequest(priority, RMNode.ANY).getCapability();
 
           // Do we need containers at this 'priority'?
-          if (!needContainers(application, priority)) {
+          if (!needContainers(application, priority, required)) {
             continue;
           }
 
           // Are we going over limits by allocating to this application?
-          ResourceRequest required = 
-            application.getResourceRequest(priority, RMNode.ANY);
-
           // Maximum Capacity of the queue
-          if (!assignToQueue(clusterResource, required.getCapability())) {
+          if (!assignToQueue(clusterResource, required)) {
             return Resources.none();
           }
 
           // User limits
           userLimit = 
-            computeUserLimit(application, clusterResource, 
-                required.getCapability());
+            computeUserLimit(application, clusterResource, required); 
           if (!assignToUser(application.getUser(), userLimit)) {
             break; 
           }
@@ -732,10 +761,32 @@ public class LeafQueue implements Queue {
     return (a + (b - 1)) / b;
   }
 
-  boolean needContainers(SchedulerApp application, Priority priority) {
+  boolean needContainers(SchedulerApp application, Priority priority, Resource required) {
     int requiredContainers = application.getTotalRequiredResources(priority);
     int reservedContainers = application.getNumReservedContainers(priority);
-    return ((requiredContainers - reservedContainers) > 0);
+    int starvation = 0;
+    if (reservedContainers > 0) {
+      float nodeFactor = 
+          ((float)required.getMemory() / getMaximumAllocation().getMemory());
+      
+      // Use percentage of node required to bias against large containers...
+      // Protect against corner case where you need the whole node with
+      // Math.min(nodeFactor, minimumAllocationFactor)
+      starvation = 
+          (int)((application.getReReservations(priority) / reservedContainers) * 
+                (1.0f - (Math.min(nodeFactor, getMinimumAllocationFactor())))
+               );
+      
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("needsContainers:" +
+            " app.#re-reserve=" + application.getReReservations(priority) + 
+            " reserved=" + reservedContainers + 
+            " nodeFactor=" + nodeFactor + 
+            " minAllocFactor=" + minimumAllocationFactor +
+            " starvation=" + starvation);
+      }
+    }
+    return (((starvation + requiredContainers) - reservedContainers) > 0);
   }
 
   private Resource assignContainersOnNode(Resource clusterResource, 
