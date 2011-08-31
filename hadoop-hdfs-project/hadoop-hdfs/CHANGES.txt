@@ -1084,6 +1084,7 @@ Release 0.22.0 - Unreleased
     (jghoman)
 
     HDFS-1330. Make RPCs to DataNodes timeout. (hairong)
+    Added additional unit tests per HADOOP-6889. (John George via mattf)
 
     HDFS-202.  HDFS support of listLocatedStatus introduced in HADOOP-6870.
     HDFS piggyback block locations to each file status when listing a
