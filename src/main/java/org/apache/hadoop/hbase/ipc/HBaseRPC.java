@@ -114,7 +114,7 @@ public class HBaseRPC {
       // check for a per interface override
       Class<?> impl = conf.getClass(RPC_ENGINE_PROP+"."+protocol.getName(),
                                     defaultEngine);
-      LOG.info("Using "+impl.getName()+" for "+protocol.getName());
+      LOG.debug("Using "+impl.getName()+" for "+protocol.getName());
       engine = (RpcEngine) ReflectionUtils.newInstance(impl, conf);
       if (protocol.isInterface())
         PROXY_ENGINES.put(Proxy.getProxyClass(protocol.getClassLoader(),
