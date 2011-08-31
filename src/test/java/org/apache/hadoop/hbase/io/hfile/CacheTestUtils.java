@@ -56,7 +56,12 @@ public class CacheTestUtils {
         @Override
         public void doAnAction() throws Exception {
           if (!blocksToTest.isEmpty()) {
-            HFileBlockPair ourBlock = blocksToTest.remove();
+            HFileBlockPair ourBlock = blocksToTest.poll();
+            //if we run out of blocks to test, then we should stop the tests.
+            if(ourBlock == null){
+              ctx.stop();
+              return;
+            }
             toBeTested.cacheBlock(ourBlock.blockName, ourBlock.block);
             Cacheable retrievedBlock = toBeTested.getBlock(ourBlock.blockName,
                 false);

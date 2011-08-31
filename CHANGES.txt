@@ -227,6 +227,7 @@ Release 0.91.0 - Unreleased
    HBASE-4290  HLogSplitter doesn't mark its MonitoredTask as complete in
                non-distributed case (todd)
    HBASE-4303  HRegionInfo.toString has bad quoting (todd)
+   HBASE-4307  race condition in CacheTestUtils (Li Pi)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
