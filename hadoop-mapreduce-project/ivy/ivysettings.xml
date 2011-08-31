@@ -39,11 +39,11 @@
   <settings defaultResolver="${resolvers}"/>
 
   <resolvers>
-    <ibiblio name="maven2" root="${repo.maven.org}" pattern="${maven2.pattern.ext}" m2compatible="true"/>
+    <ibiblio name="maven2" root="${repo.maven.org}" pattern="${maven2.pattern.ext}" m2compatible="true"  checkconsistency="false"/>
     <ibiblio name="apache-snapshot" root="${snapshot.apache.org}" m2compatible="true"
-        checkmodified="true" changingPattern=".*SNAPSHOT"/>
+        checkmodified="true" changingPattern=".*SNAPSHOT" checkconsistency="false"/>
 
-    <filesystem name="fs" m2compatible="true" force="${force-resolve}">
+    <filesystem name="fs" m2compatible="true" checkconsistency="false" force="${force-resolve}">
        <artifact pattern="${repo.dir}/${maven2.pattern.ext}"/>
        <ivy pattern="${repo.dir}/[organisation]/[module]/[revision]/[module]-[revision].pom"/>
     </filesystem>
