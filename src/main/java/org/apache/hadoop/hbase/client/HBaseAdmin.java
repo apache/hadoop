@@ -104,6 +104,9 @@ public class HBaseAdmin implements Abortable, Closeable {
       try {
         this.connection.getMaster();
         break;
+      } catch (MasterNotRunningException mnre) {
+        HConnectionManager.deleteStaleConnection(this.connection);
+        this.connection = HConnectionManager.getConnection(this.conf);        
       } catch (UndeclaredThrowableException ute) {
         HConnectionManager.deleteStaleConnection(this.connection);
         this.connection = HConnectionManager.getConnection(this.conf);        

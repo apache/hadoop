@@ -229,6 +229,7 @@ Release 0.91.0 - Unreleased
    HBASE-4303  HRegionInfo.toString has bad quoting (todd)
    HBASE-4307  race condition in CacheTestUtils (Li Pi)
    HBASE-4310  SlabCache metrics bugfix (Li Pi)
+   HBASE-4283  HBaseAdmin never recovers from restarted cluster (Lars Hofhansl)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

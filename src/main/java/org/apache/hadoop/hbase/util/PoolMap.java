@@ -93,7 +93,14 @@ public class PoolMap<K, V> implements Map<K, V> {
 
   public boolean remove(K key, V value) {
     Pool<V> pool = pools.get(key);
-    return pool != null ? pool.remove(value) : false;
+    boolean res = false;
+    if (pool != null) {
+      res = pool.remove(value);
+      if (res && pool.size() == 0) {
+        pools.remove(key);
+      }
+    }
+    return res;
   }
 
   @Override
