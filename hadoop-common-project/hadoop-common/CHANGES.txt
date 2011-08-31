@@ -350,6 +350,8 @@ Release 0.23.0 - Unreleased
     HADOOP-7579. Rename package names from alfredo to auth.
     (Alejandro Abdelnur via szetszwo)
 
+    HADOOP-7594. Support HTTP REST in HttpServer.  (szetszwo)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
