@@ -536,6 +536,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7576. Fix findbugs warnings and javac warnings in hadoop-auth.
     (szetszwo)
 
+    HADOOP-7593. Fix AssertionError in TestHttpServer.testMaxThreads().
+    (Uma Maheswara Rao G via szetszwo)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
