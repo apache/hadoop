@@ -1175,6 +1175,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2897. Javadoc for ClientRMProtocol protocol and related records. 
     (acmurthy)
 
+   MAPREDUCE-2916. Ivy build for MRv1 fails with bad organization for 
+   common daemon. (mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
