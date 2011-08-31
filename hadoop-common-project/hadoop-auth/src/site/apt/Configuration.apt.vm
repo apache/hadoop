@@ -11,30 +11,30 @@
 ~~ limitations under the License. See accompanying LICENSE file.
 
   ---
-  Hadoop Alfredo, Java HTTP SPNEGO ${project.version} - Server Side
+  Hadoop Auth, Java HTTP SPNEGO ${project.version} - Server Side
   Configuration
   ---
   ---
   ${maven.build.timestamp}
 
-Hadoop Alfredo, Java HTTP SPNEGO ${project.version} - Server Side
+Hadoop Auth, Java HTTP SPNEGO ${project.version} - Server Side
 Configuration
 
   \[ {{{./index.html}Go Back}} \]
 
 * Server Side Configuration Setup
 
-  The {{{./apidocs/org/apache/hadoop/alfredo/server/AuthenticationFilter.html}
-  AuthenticationFilter filter}} is Alfredo's server side component.
+  The {{{./apidocs/org/apache/hadoop/auth/server/AuthenticationFilter.html}
+  AuthenticationFilter filter}} is Hadoop Auth's server side component.
 
   This filter must be configured in front of all the web application resources
   that required authenticated requests. For example:
 
-  The Alfredo and dependent JAR files must be in the web application classpath
-  (commonly the <<<WEB-INF/lib>>> directory).
+  The Hadoop Auth and dependent JAR files must be in the web application
+  classpath (commonly the <<<WEB-INF/lib>>> directory).
 
-  Alfredo uses SLF4J-API for logging. Alfredo Maven POM dependencies define the
-  SLF4J API dependency but it does not define the dependency on a concrete
+  Hadoop Auth uses SLF4J-API for logging. Auth Maven POM dependencies define
+  the SLF4J API dependency but it does not define the dependency on a concrete
   logging implementation, this must be addded explicitly to the web
   application. For example, if the web applicationan uses Log4j, the
   SLF4J-LOG4J12 and LOG4J jar files must be part part of the web application
@@ -47,7 +47,7 @@ Configuration
 
   * <<<[PREFIX.]type>>>: the authentication type keyword (<<<simple>>> or
     <<<kerberos>>>) or a
-    {{{./apidocs/org/apache/hadoop/alfredo/server/AuthenticationHandler.html}
+    {{{./apidocs/org/apache/hadoop/auth/server/AuthenticationHandler.html}
     Authentication handler implementation}}.
 
   * <<<[PREFIX.]signature.secret>>>: The secret to SHA-sign the generated
@@ -80,7 +80,7 @@ Configuration
 
     * <<<[PREFIX.]kerberos.keytab>>>: The path to the keytab file containing
       the credentials for the kerberos principal. For example:
-      <<</Users/tucu/alfredo.keytab>>>. There is no default value.
+      <<</Users/tucu/tucu.keytab>>>. There is no default value.
 
   <<Example>>:
 
@@ -90,7 +90,7 @@ Configuration
 
     <filter>
         <filter-name>kerberosFilter</filter-name>
-        <filter-class>org.apache.hadoop.alfredo.server.AuthenticationFilter</filter-class>
+        <filter-class>org.apache.hadoop.security.auth.server.AuthenticationFilter</filter-class>
         <init-param>
             <param-name>type</param-name>
             <param-value>kerberos</param-value>
@@ -113,7 +113,7 @@ Configuration
         </init-param>
         <init-param>
             <param-name>kerberos.keytab</param-name>
-            <param-value>/tmp/alfredo.keytab</param-value>
+            <param-value>/tmp/auth.keytab</param-value>
         </init-param>
     </filter>
 
@@ -146,7 +146,7 @@ Configuration
 
     <filter>
         <filter-name>simpleFilter</filter-name>
-        <filter-class>org.apache.hadoop.alfredo.server.AuthenticationFilter</filter-class>
+        <filter-class>org.apache.hadoop.security.auth.server.AuthenticationFilter</filter-class>
         <init-param>
             <param-name>type</param-name>
             <param-value>simple</param-value>

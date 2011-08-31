@@ -11,16 +11,16 @@
 ~~ limitations under the License. See accompanying LICENSE file.
 
   ---
-  Hadoop Alfredo, Java HTTP SPNEGO ${project.version} - Examples
+  Hadoop Auth, Java HTTP SPNEGO ${project.version} - Examples
   ---
   ---
   ${maven.build.timestamp}
 
-Hadoop Alfredo, Java HTTP SPNEGO ${project.version} - Examples
+Hadoop Auth, Java HTTP SPNEGO ${project.version} - Examples
 
   \[ {{{./index.html}Go Back}} \]
 
-* Accessing a Alfredo protected URL Using a browser
+* Accessing a Hadoop Auth protected URL Using a browser
 
   <<IMPORTANT:>> The browser must support HTTP Kerberos SPNEGO. For example,
   Firefox or Internet Explorer.
@@ -31,7 +31,7 @@ Hadoop Alfredo, Java HTTP SPNEGO ${project.version} - Examples
   the domain of the web server that is HTTP Kerberos SPNEGO protected (if using
   multiple domains and hostname use comma to separate them).
   
-* Accessing a Alfredo protected URL Using <<<curl>>>
+* Accessing a Hadoop Auth protected URL Using <<<curl>>>
 
   <<IMPORTANT:>> The <<<curl>>> version must support GSS, run <<<curl -V>>>.
 
@@ -48,10 +48,10 @@ Features: GSS-Negotiate IPv6 Largefile NTLM SSL libz
 +---+
 $ kinit
 Please enter the password for tucu@LOCALHOST:
-$ curl --negotiate -u foo -b ~/cookiejar.txt -c ~/cookiejar.txt http://localhost:8080/alfredo-examples/kerberos/who
+$ curl --negotiate -u foo -b ~/cookiejar.txt -c ~/cookiejar.txt http://localhost:8080/hadoop-auth-examples/kerberos/who
 Enter host password for user 'tucu':
 
-Hello Alfredo!
+Hello Hadoop Auth Examples!
 +---+
 
   * The <<<--negotiate>>> option enables SPNEGO in <<<curl>>>.
@@ -68,7 +68,7 @@ Hello Alfredo!
 
 +---+
 ...
-URL url = new URL("http://localhost:8080/alfredo/kerberos/who");
+URL url = new URL("http://localhost:8080/hadoop-auth/kerberos/who");
 AuthenticatedURL.Token token = new AuthenticatedURL.Token();
 ...
 HttpURLConnection conn = new AuthenticatedURL(url, token).openConnection();
@@ -79,12 +79,12 @@ conn = new AuthenticatedURL(url, token).openConnection();
 
 * Building and Running the Examples
 
-  Download Alfredo's source code, the examples are in the
+  Download Hadoop-Auth's source code, the examples are in the
   <<<src/main/examples>>> directory.
 
 ** Server Example:
 
-  Edit the <<<src/main/examples/src/main/webapp/WEB-INF/web.xml>>> and set the
+  Edit the <<<hadoop-auth-examples/src/main/webapp/WEB-INF/web.xml>>> and set the
   right configuration init parameters for the <<<AuthenticationFilter>>>
   definition configured for Kerberos (the right Kerberos principal and keytab
   file must be specified). Refer to the {{{./Configuration.html}Configuration
@@ -106,11 +106,11 @@ conn = new AuthenticatedURL(url, token).openConnection();
 $ kinit
 Please enter the password for tucu@LOCALHOST:
 
-$ curl http://localhost:8080/alfredo-examples/anonymous/who
+$ curl http://localhost:8080/hadoop-auth-examples/anonymous/who
 
-$ curl http://localhost:8080/alfredo-examples/simple/who?user.name=foo
+$ curl http://localhost:8080/hadoop-auth-examples/simple/who?user.name=foo
 
-$ curl --negotiate -u foo -b ~/cookiejar.txt -c ~/cookiejar.txt http://localhost:8080/alfredo-examples/kerberos/who
+$ curl --negotiate -u foo -b ~/cookiejar.txt -c ~/cookiejar.txt http://localhost:8080/hadoop-auth-examples/kerberos/who
 +---+
 
 ** Accessing the server using the Java client example
@@ -121,7 +121,7 @@ Please enter the password for tucu@LOCALHOST:
 
 $ cd examples
 
-$ mvn exec:java -Durl=http://localhost:8080/alfredo-examples/kerberos/who
+$ mvn exec:java -Durl=http://localhost:8080/hadoop-auth-examples/kerberos/who
 
 ....
 

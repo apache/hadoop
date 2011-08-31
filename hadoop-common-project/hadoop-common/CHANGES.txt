@@ -347,6 +347,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7547. Add generic type in WritableComparable subclasses.
     (Uma Maheswara Rao G via szetszwo)
 
+    HADOOP-7579. Rename package names from alfredo to auth.
+    (Alejandro Abdelnur via szetszwo)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

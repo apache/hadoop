@@ -1,20 +1,20 @@
 
-Build instructions for Hadoop Alfredo
+Build instructions for Hadoop Auth
 
 Same as for Hadoop.
 
-For more details refer to the Alfredo documentation pages.
+For more details refer to the Hadoop Auth documentation pages.
 
 -----------------------------------------------------------------------------
 Caveats:
 
-* Alfredo has profile to enable Kerberos testcases (testKerberos)
+* Hadoop Auth has profile to enable Kerberos testcases (testKerberos)
 
   To run Kerberos testcases a KDC, 2 kerberos principals and a keytab file
-  are required (refer to the Alfredo documentation pages for details).
+  are required (refer to the Hadoop Auth documentation pages for details).
 
-* Alfredo does not have a distribution profile (dist)
+* Hadoop Auth does not have a distribution profile (dist)
 
-* Alfredo does not have a native code profile (native)
+* Hadoop Auth does not have a native code profile (native)
 
 -----------------------------------------------------------------------------

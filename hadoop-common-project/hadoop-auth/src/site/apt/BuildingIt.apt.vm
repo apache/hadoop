@@ -11,12 +11,12 @@
 ~~ limitations under the License. See accompanying LICENSE file.
 
   ---
-  Hadoop Alfredo, Java HTTP SPNEGO ${project.version} - Building It
+  Hadoop Auth, Java HTTP SPNEGO ${project.version} - Building It
   ---
   ---
   ${maven.build.timestamp}
 
-Hadoop Alfredo, Java HTTP SPNEGO ${project.version} - Building It
+Hadoop Auth, Java HTTP SPNEGO ${project.version} - Building It
 
   \[ {{{./index.html}Go Back}} \]
 
@@ -50,14 +50,14 @@ $ mvn test -PtestKerberos
   The following Maven <<<-D>>> options can be used to change the default
   values:
 
-  * <<<alfredo.test.kerberos.realm>>>: default value <<LOCALHOST>>
+  * <<<hadoop-auth.test.kerberos.realm>>>: default value <<LOCALHOST>>
 
-  * <<<alfredo.test.kerberos.client.principal>>>: default value <<client>>
+  * <<<hadoop-auth.test.kerberos.client.principal>>>: default value <<client>>
 
-  * <<<alfredo.test.kerberos.server.principal>>>: default value
+  * <<<hadoop-auth.test.kerberos.server.principal>>>: default value
     <<HTTP/localhost>> (it must start 'HTTP/')
 
-  * <<<alfredo.test.kerberos.keytab.file>>>: default value
+  * <<<hadoop-auth.test.kerberos.keytab.file>>>: default value
     <<${HOME}/${USER}.keytab>>
 
 ** Generating Documentation
@@ -69,7 +69,7 @@ $ mvn package -Pdocs
 +---+
 
   The generated documentation is available at
-  <<<hadoop-alfredo/target/site/>>>.
+  <<<hadoop-auth/target/site/>>>.
 
   \[ {{{./index.html}Go Back}} \]
 

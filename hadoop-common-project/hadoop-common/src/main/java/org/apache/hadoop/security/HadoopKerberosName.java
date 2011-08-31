@@ -23,7 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.alfredo.util.KerberosName;
+import org.apache.hadoop.security.authentication.util.KerberosName;
 
 import sun.security.krb5.Config;
 import sun.security.krb5.KrbException;

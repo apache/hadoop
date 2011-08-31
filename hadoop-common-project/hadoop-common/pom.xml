@@ -239,7 +239,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-alfredo</artifactId>
+      <artifactId>hadoop-auth</artifactId>
       <scope>compile</scope>
     </dependency>
   </dependencies>
