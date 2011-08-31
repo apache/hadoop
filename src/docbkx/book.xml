@@ -126,7 +126,7 @@ TableMapReduceUtil.initTableMapperJob(
 job.setOutputFormatClass(NullOutputFormat.class);   // because we aren't emitting anything from mapper
 	    
 boolean b = job.waitForCompletion(true);
-if ( b == false) {
+if (!b) {
   throw new IOException("error with job!");
 }
   </programlisting>
@@ -169,14 +169,14 @@ TableMapReduceUtil.initTableReducerJob(
 job.setNumReduceTasks(0);
 	        
 boolean b = job.waitForCompletion(true);
-if ( b == false) {
-	throw new IOException("error with job!");
+if (!b) {
+    throw new IOException("error with job!");
 }
     </programlisting>
 	An explanation is required of what <classname>TableMapReduceUtil</classname> is doing, especially with the reducer.  
 	<link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableOutputFormat.html">TableOutputFormat</link> is being used
 	as the outputFormat class, and several parameters are being set on the config (e.g., TableOutputFormat.OUTPUT_TABLE), as
-	well as setting the reducer output keys to <classname>ImmutableBytesWritable</classname> and <classname>Writable</classname>.
+	well as setting the reducer output key to <classname>ImmutableBytesWritable</classname> and reducer value to <classname>Writable</classname>.
 	These could be set by the programmer on the job and conf, but <classname>TableMapReduceUtil</classname> tries to make things easier.    
 	<para>The following is the example mapper, which will create a <classname>Put</classname> and matching the input <classname>Result</classname>
 	and emit it.  Note:  this is what the CopyTable utility does.
@@ -189,13 +189,12 @@ public static class MyMapper extends TableMapper&lt;ImmutableBytesWritable, Put&
    		context.write(row, resultToPut(row,value));
    	}
         
-  	private static Put resultToPut(ImmutableBytesWritable key, Result result)
-        throws IOException {
-   		Put put = new Put(key.get());
-       	for (KeyValue kv : result.raw()) {
-       		put.add(kv);
-       	}
-       	return put;
+  	private static Put resultToPut(ImmutableBytesWritable key, Result result) throws IOException {
+  		Put put = new Put(key.get());
+ 		for (KeyValue kv : result.raw()) {
+			put.add(kv);
+		}
+		return put;
    	}
 }
     </programlisting>
@@ -235,7 +234,7 @@ TableMapReduceUtil.initTableReducerJob(
 job.setNumReduceTasks(1);   // at least one, adjust as required
 	    
 boolean b = job.waitForCompletion(true);
-if ( b == false) {
+if (!b) {
 	throw new IOException("error with job!");
 }    
     </programlisting>
