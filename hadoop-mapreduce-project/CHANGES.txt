@@ -224,6 +224,10 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2701. app/Job.java needs UGI for the user that launched it.
     (Robert Evans via mahadev)
 
+    MAPREDUCE-2652. Enabled multiple NMs to be runnable on a single node by
+    making shuffle service port to be truely configurable. (Robert Evans via
+    vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
@@ -650,7 +654,6 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-279. Fix in MR-279 branch. Distributed cache bug fix to pass Terasort.
     (vinodkv)
      
-
     MAPREDUCE-279. Fix in MR-279 branch. Fix null pointer exception in kill task
     attempt (mahadev)
 

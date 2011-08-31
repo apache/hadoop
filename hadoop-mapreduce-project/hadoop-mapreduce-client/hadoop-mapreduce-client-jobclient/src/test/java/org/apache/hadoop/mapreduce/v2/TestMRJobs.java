@@ -105,7 +105,8 @@ public class TestMRJobs {
 
     if (mrCluster == null) {
       mrCluster = new MiniMRYarnCluster(TestMRJobs.class.getName());
-      mrCluster.init(new Configuration());
+      Configuration conf = new Configuration();
+      mrCluster.init(conf);
       mrCluster.start();
     }
 

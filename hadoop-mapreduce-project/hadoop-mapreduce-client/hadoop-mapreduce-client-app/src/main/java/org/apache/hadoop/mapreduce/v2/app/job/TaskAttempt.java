@@ -63,4 +63,9 @@ public interface TaskAttempt {
    *  yet, returns 0.
    */
   long getFinishTime();
+
+  /**
+   * @return the port shuffle is on.
+   */
+  public int getShufflePort();
 }
