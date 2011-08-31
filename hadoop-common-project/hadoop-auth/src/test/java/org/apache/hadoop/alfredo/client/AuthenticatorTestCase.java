@@ -57,6 +57,7 @@ public abstract class AuthenticatorTestCase extends TestCase {
     }
   }
 
+  @SuppressWarnings("serial")
   public static class TestServlet extends HttpServlet {
 
     @Override

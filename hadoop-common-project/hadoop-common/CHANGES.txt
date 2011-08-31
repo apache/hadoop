@@ -531,6 +531,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7560. Change src layout to be heirarchical. (Alejandro Abdelnur
     via acmurthy)
 
+    HADOOP-7576. Fix findbugs warnings and javac warnings in hadoop-auth.
+    (szetszwo)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
