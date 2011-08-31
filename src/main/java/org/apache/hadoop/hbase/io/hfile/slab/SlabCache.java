@@ -64,7 +64,8 @@ public class SlabCache implements SlabItemEvictionWatcher, BlockCache, HeapSize 
 
   long size;
   private final CacheStats stats;
-  final SlabStats slabstats;
+  final SlabStats requestStats;
+  final SlabStats successfullyCachedStats;
   private final long avgBlockSize;
   private static final long CACHE_FIXED_OVERHEAD = ClassSize.estimateBase(
       SlabCache.class, false);
@@ -80,7 +81,9 @@ public class SlabCache implements SlabItemEvictionWatcher, BlockCache, HeapSize 
     this.avgBlockSize = avgBlockSize;
     this.size = size;
     this.stats = new CacheStats();
-    this.slabstats = new SlabStats();
+    this.requestStats = new SlabStats();
+    this.successfullyCachedStats = new SlabStats();
+
     backingStore = new ConcurrentHashMap<String, SingleSizeCache>();
     sizer = new TreeMap<Integer, SingleSizeCache>();
     this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this),
@@ -191,12 +194,13 @@ public class SlabCache implements SlabItemEvictionWatcher, BlockCache, HeapSize 
     Entry<Integer, SingleSizeCache> scacheEntry = getHigherBlock(cachedItem
         .getSerializedLength());
 
-    this.slabstats.addin(cachedItem.getSerializedLength());
+    this.requestStats.addin(cachedItem.getSerializedLength());
 
     if (scacheEntry == null) {
       return; // we can't cache, something too big.
     }
 
+    this.successfullyCachedStats.addin(cachedItem.getSerializedLength());
     SingleSizeCache scache = scacheEntry.getValue();
     scache.cacheBlock(blockName, cachedItem); // if this
                                               // fails, due to
@@ -312,7 +316,10 @@ public class SlabCache implements SlabItemEvictionWatcher, BlockCache, HeapSize 
 
     @Override
     public void run() {
-      ourcache.slabstats.logStats(ourcache);
+      LOG.info("Request Stats");
+      ourcache.requestStats.logStats(ourcache);
+      LOG.info("Successfully Cached Stats");
+      ourcache.successfullyCachedStats.logStats(ourcache);
     }
 
   }
@@ -353,17 +360,19 @@ public class SlabCache implements SlabItemEvictionWatcher, BlockCache, HeapSize 
       SlabCache.LOG.info("Current heap size is: "
           + StringUtils.humanReadableInt(slabCache.heapSize()));
       for (int i = 0; i < fineGrainedStats.length; i++) {
-        double lowerbound = Math.pow(Math.E, (double) i / (double) multiplier
-            - 0.5);
-        double upperbound = Math.pow(Math.E, (double) i / (double) multiplier
-            + 0.5);
+        double lowerbound = Math.pow(Math.E,
+            ((double) i / (double) multiplier) - 0.5);
+        double upperbound = Math.pow(Math.E,
+            ((double) i / (double) multiplier) + 0.5);
 
-        SlabCache.LOG.info("From  "
-            + StringUtils.humanReadableInt((long) lowerbound) + "- "
-            + StringUtils.humanReadableInt((long) upperbound) + ": "
-            + StringUtils.humanReadableInt(fineGrainedStats[i].get())
-            + " requests");
+        if (fineGrainedStats[i].get() > 0) {
+          SlabCache.LOG.info("From  "
+              + StringUtils.humanReadableInt((long) lowerbound) + "- "
+              + StringUtils.humanReadableInt((long) upperbound) + ": "
+              + StringUtils.humanReadableInt(fineGrainedStats[i].get())
+              + " requests");
 
+        }
       }
     }
   }
