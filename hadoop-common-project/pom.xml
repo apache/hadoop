@@ -29,6 +29,7 @@
 
   <modules>
     <module>hadoop-auth</module>
+    <module>hadoop-auth-examples</module>
     <module>hadoop-common</module>
     <module>hadoop-annotations</module>
   </modules>
