@@ -48,17 +48,17 @@ public class KerberosAuthenticator implements Authenticator {
   /**
    * HTTP header used by the SPNEGO server endpoint during an authentication sequence.
    */
-  public static String WWW_AUTHENTICATE = "WWW-Authenticate";
+  public static final String WWW_AUTHENTICATE = "WWW-Authenticate";
 
   /**
    * HTTP header used by the SPNEGO client endpoint during an authentication sequence.
    */
-  public static String AUTHORIZATION = "Authorization";
+  public static final String AUTHORIZATION = "Authorization";
 
   /**
    * HTTP header prefix used by the SPNEGO client/server endpoints during an authentication sequence.
    */
-  public static String NEGOTIATE = "Negotiate";
+  public static final String NEGOTIATE = "Negotiate";
 
   private static final String AUTH_HTTP_METHOD = "OPTIONS";
 

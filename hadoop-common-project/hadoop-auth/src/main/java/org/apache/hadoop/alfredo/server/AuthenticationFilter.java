@@ -103,6 +103,8 @@ public class AuthenticationFilter implements Filter {
    */
   public static final String COOKIE_PATH = "cookie.path";
 
+  private static final Random RAN = new Random();
+
   private Signer signer;
   private AuthenticationHandler authHandler;
   private boolean randomSecret;
@@ -139,7 +141,7 @@ public class AuthenticationFilter implements Filter {
     }
 
     try {
-      Class klass = Thread.currentThread().getContextClassLoader().loadClass(authHandlerClassName);
+      Class<?> klass = Thread.currentThread().getContextClassLoader().loadClass(authHandlerClassName);
       authHandler = (AuthenticationHandler) klass.newInstance();
       authHandler.init(config);
     } catch (ClassNotFoundException ex) {
@@ -151,7 +153,7 @@ public class AuthenticationFilter implements Filter {
     }
     String signatureSecret = config.getProperty(configPrefix + SIGNATURE_SECRET);
     if (signatureSecret == null) {
-      signatureSecret = Long.toString(new Random(System.currentTimeMillis()).nextLong());
+      signatureSecret = Long.toString(RAN.nextLong());
       randomSecret = true;
       LOG.warn("'signature.secret' configuration not set, using a random value as secret");
     }
@@ -237,7 +239,7 @@ public class AuthenticationFilter implements Filter {
    */
   protected Properties getConfiguration(String configPrefix, FilterConfig filterConfig) throws ServletException {
     Properties props = new Properties();
-    Enumeration names = filterConfig.getInitParameterNames();
+    Enumeration<?> names = filterConfig.getInitParameterNames();
     while (names.hasMoreElements()) {
       String name = (String) names.nextElement();
       if (name.startsWith(configPrefix)) {
