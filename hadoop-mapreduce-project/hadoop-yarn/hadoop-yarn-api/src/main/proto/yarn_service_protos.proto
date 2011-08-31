@@ -143,6 +143,7 @@ message StartContainerRequestProto {
 }
 
 message StartContainerResponseProto {
+  repeated StringBytesMapProto service_response = 1;
 }
 
 message StopContainerRequestProto {

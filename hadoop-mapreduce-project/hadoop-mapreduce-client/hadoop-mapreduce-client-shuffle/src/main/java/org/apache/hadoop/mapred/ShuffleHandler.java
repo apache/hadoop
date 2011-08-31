@@ -120,7 +120,8 @@ public class ShuffleHandler extends AbstractService
   private static final JobTokenSecretManager secretManager =
     new JobTokenSecretManager();
 
-  public static final String SHUFFLE_PORT = "mapreduce.shuffle.port";
+  public static final String SHUFFLE_PORT_CONFIG_KEY = "mapreduce.shuffle.port";
+  public static final int DEFAULT_SHUFFLE_PORT = 8080;
 
   @Metrics(about="Shuffle output metrics", context="mapred")
   static class ShuffleMetrics implements ChannelFutureListener {
@@ -155,15 +156,59 @@ public class ShuffleHandler extends AbstractService
     this(DefaultMetricsSystem.instance());
   }
 
+  /**
+   * Serialize the shuffle port into a ByteBuffer for use later on.
+   * @param port the port to be sent to the ApplciationMaster
+   * @return the serialized form of the port.
+   */
+  static ByteBuffer serializeMetaData(int port) throws IOException {
+    //TODO these bytes should be versioned
+    DataOutputBuffer port_dob = new DataOutputBuffer();
+    port_dob.writeInt(port);
+    return ByteBuffer.wrap(port_dob.getData(), 0, port_dob.getLength());
+  }
+
+  /**
+   * A helper function to deserialize the metadata returned by ShuffleHandler.
+   * @param meta the metadata returned by the ShuffleHandler
+   * @return the port the Shuffle Handler is listening on to serve shuffle data.
+   */
+  public static int deserializeMetaData(ByteBuffer meta) throws IOException {
+    //TODO this should be returning a class not just an int
+    DataInputByteBuffer in = new DataInputByteBuffer();
+    in.reset(meta);
+    int port = in.readInt();
+    return port;
+  }
+
+  /**
+   * A helper function to serialize the JobTokenIdentifier to be sent to the
+   * ShuffleHandler as ServiceData.
+   * @param jobToken the job token to be used for authentication of
+   * shuffle data requests.
+   * @return the serialized version of the jobToken.
+   */
+  public static ByteBuffer serializeServiceData(Token<JobTokenIdentifier> jobToken) throws IOException {
+    //TODO these bytes should be versioned
+    DataOutputBuffer jobToken_dob = new DataOutputBuffer();
+    jobToken.write(jobToken_dob);
+    return ByteBuffer.wrap(jobToken_dob.getData(), 0, jobToken_dob.getLength());
+  }
+
+  static Token<JobTokenIdentifier> deserializeServiceData(ByteBuffer secret) throws IOException {
+    DataInputByteBuffer in = new DataInputByteBuffer();
+    in.reset(secret);
+    Token<JobTokenIdentifier> jt = new Token<JobTokenIdentifier>();
+    jt.readFields(in);
+    return jt;
+  }
+
   @Override
   public void initApp(String user, ApplicationId appId, ByteBuffer secret) {
     // TODO these bytes should be versioned
     try {
-      DataInputByteBuffer in = new DataInputByteBuffer();
-      in.reset(secret);
-      Token<JobTokenIdentifier> jt = new Token<JobTokenIdentifier>();
-      jt.readFields(in);
-      // TODO: Once SHuffle is out of NM, this can use MR APIs
+      Token<JobTokenIdentifier> jt = deserializeServiceData(secret);
+       // TODO: Once SHuffle is out of NM, this can use MR APIs
       JobID jobId = new JobID(Long.toString(appId.getClusterTimestamp()), appId.getId());
       userRsrc.put(jobId.toString(), user);
       LOG.info("Added token for " + jobId.toString());
@@ -193,7 +238,7 @@ public class ShuffleHandler extends AbstractService
     Configuration conf = getConfig();
     ServerBootstrap bootstrap = new ServerBootstrap(selector);
     bootstrap.setPipelineFactory(new HttpPipelineFactory(conf));
-    port = conf.getInt("mapreduce.shuffle.port", 8080);
+    port = conf.getInt(SHUFFLE_PORT_CONFIG_KEY, DEFAULT_SHUFFLE_PORT);
     accepted.add(bootstrap.bind(new InetSocketAddress(port)));
     LOG.info(getName() + " listening on port " + port);
     super.start();
@@ -205,6 +250,17 @@ public class ShuffleHandler extends AbstractService
     ServerBootstrap bootstrap = new ServerBootstrap(selector);
     bootstrap.releaseExternalResources();
     super.stop();
+  }
+
+  @Override
+  public synchronized ByteBuffer getMeta() {
+    try {
+      return serializeMetaData(port); 
+    } catch (IOException e) {
+      LOG.error("Error during getMeta", e);
+      // TODO add API to AuxiliaryServices to report failures
+      return null;
+    }
   }
 
   Shuffle createShuffle() {
@@ -306,7 +362,7 @@ public class ShuffleHandler extends AbstractService
       HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
       try {
         verifyRequest(jobId, ctx, request, response,
-            new URL("http", "", 8080, reqUri));
+            new URL("http", "", port, reqUri));
       } catch (IOException e) {
         LOG.warn("Shuffle failure ", e);
         sendError(ctx, e.getMessage(), UNAUTHORIZED);

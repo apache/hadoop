@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import java.nio.ByteBuffer;
+import java.util.Map;
+
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ContainerManager;
@@ -32,5 +35,11 @@ import org.apache.hadoop.yarn.api.ContainerManager;
 @Public
 @Stable
 public interface StartContainerResponse {
+  Map<String, ByteBuffer> getAllServiceResponse();
+  ByteBuffer getServiceResponse(String key);
 
+  void addAllServiceResponse(Map<String, ByteBuffer> serviceResponse);
+  void setServiceResponse(String key, ByteBuffer value);
+  void removeServiceResponse(String key);
+  void clearServiceResponse();
 }

@@ -559,8 +559,9 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     if (attempt.getNodeHttpAddress() != null) {
       TaskAttemptCompletionEvent tce = recordFactory.newRecordInstance(TaskAttemptCompletionEvent.class);
       tce.setEventId(-1);
-      //TODO: XXXXXX  hardcoded port
-      tce.setMapOutputServerAddress("http://" + attempt.getNodeHttpAddress().split(":")[0] + ":8080");
+      tce.setMapOutputServerAddress("http://"
+          + attempt.getNodeHttpAddress().split(":")[0] + ":"
+          + attempt.getShufflePort());
       tce.setStatus(status);
       tce.setAttemptId(attempt.getID());
       int runTime = 0;

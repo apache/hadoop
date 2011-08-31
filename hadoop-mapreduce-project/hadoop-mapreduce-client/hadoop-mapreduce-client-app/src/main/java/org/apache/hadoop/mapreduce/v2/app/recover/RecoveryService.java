@@ -42,6 +42,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssignedEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerLaunchedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent;
@@ -295,8 +296,8 @@ public class RecoveryService extends CompositeService implements Recovery {
         TaskAttemptId aId = ((ContainerRemoteLaunchEvent) event)
             .getTaskAttemptID();
         TaskAttemptInfo attInfo = getTaskAttemptInfo(aId);
-        actualHandler.handle(new TaskAttemptEvent(aId,
-            TaskAttemptEventType.TA_CONTAINER_LAUNCHED));
+        //TODO need to get the real port number MAPREDUCE-2666
+        actualHandler.handle(new TaskAttemptContainerLaunchedEvent(aId, -1));
         // send the status update event
         sendStatusUpdateEvent(aId, attInfo);
 

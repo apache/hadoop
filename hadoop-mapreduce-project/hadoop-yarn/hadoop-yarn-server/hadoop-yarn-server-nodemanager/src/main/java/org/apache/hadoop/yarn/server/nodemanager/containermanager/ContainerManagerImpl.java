@@ -283,6 +283,7 @@ public class ContainerManagerImpl extends CompositeService implements
     dispatcher.getEventHandler().handle(new ApplicationInitEvent(container));
     StartContainerResponse response =
         recordFactory.newRecordInstance(StartContainerResponse.class);
+    response.addAllServiceResponse(auxiluaryServices.getMeta());
     metrics.launchedContainer();
     metrics.allocateContainer(launchContext.getResource());
     return response;

@@ -18,28 +18,28 @@
 
 package org.apache.hadoop.mapreduce.v2.app.job.event;
 
-import org.apache.hadoop.yarn.event.AbstractEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 
-/**
- * This class encapsulates task attempt related events.
- *
- */
-public class TaskAttemptEvent extends AbstractEvent<TaskAttemptEventType> {
+public class TaskAttemptContainerLaunchedEvent extends TaskAttemptEvent {
+  private int shufflePort;
 
-  private TaskAttemptId attemptID;
-  
   /**
    * Create a new TaskAttemptEvent.
    * @param id the id of the task attempt
-   * @param type the type of event that happened.
+   * @param shufflePort the port that shuffle is listening on.
    */
-  public TaskAttemptEvent(TaskAttemptId id, TaskAttemptEventType type) {
-    super(type);
-    this.attemptID = id;
+  public TaskAttemptContainerLaunchedEvent(TaskAttemptId id, int shufflePort) {
+    super(id, TaskAttemptEventType.TA_CONTAINER_LAUNCHED);
+    this.shufflePort = shufflePort;
   }
 
-  public TaskAttemptId getTaskAttemptID() {
-    return attemptID;
+  
+  /**
+   * Get the port that the shuffle handler is listening on. This is only
+   * valid if the type of the event is TA_CONTAINER_LAUNCHED
+   * @return the port the shuffle handler is listening on.
+   */
+  public int getShufflePort() {
+    return shufflePort;
   }
 }

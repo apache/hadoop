@@ -26,10 +26,20 @@ import static org.apache.hadoop.test.MetricsAsserts.*;
 import org.jboss.netty.channel.ChannelFuture;
 
 import org.junit.Test;
+import static org.junit.Assert.*;
 import static org.apache.hadoop.test.MockitoMaker.*;
 
 public class TestShuffleHandler {
   static final long MiB = 1024 * 1024;
+
+  @Test public void testSerializeMeta()  throws Exception {
+    assertEquals(1, ShuffleHandler.deserializeMetaData(
+        ShuffleHandler.serializeMetaData(1)));
+    assertEquals(-1, ShuffleHandler.deserializeMetaData(
+        ShuffleHandler.serializeMetaData(-1)));
+    assertEquals(8080, ShuffleHandler.deserializeMetaData(
+        ShuffleHandler.serializeMetaData(8080)));
+  }
 
   @Test public void testShuffleMetrics() throws Exception {
     MetricsSystem ms = new MetricsSystemImpl();

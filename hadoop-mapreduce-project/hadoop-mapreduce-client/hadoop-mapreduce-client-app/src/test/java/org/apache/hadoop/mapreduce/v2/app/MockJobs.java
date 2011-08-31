@@ -25,6 +25,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.hadoop.mapred.ShuffleHandler;
 import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobCounter;
@@ -198,6 +200,11 @@ public class MockJobs extends MockApps {
       @Override
       public long getFinishTime() {
         return 0;
+      }
+
+      @Override
+      public int getShufflePort() {
+        return ShuffleHandler.DEFAULT_SHUFFLE_PORT;
       }
 
       @Override

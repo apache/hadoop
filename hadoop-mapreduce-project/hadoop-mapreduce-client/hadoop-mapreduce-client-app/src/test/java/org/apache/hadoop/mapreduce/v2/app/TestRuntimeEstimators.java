@@ -515,6 +515,11 @@ public class TestRuntimeEstimators {
       throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
+    public int getShufflePort() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+
     private float getCodeRuntime() {
       int taskIndex = myAttemptID.getTaskId().getId();
       int attemptIndex = myAttemptID.getId();

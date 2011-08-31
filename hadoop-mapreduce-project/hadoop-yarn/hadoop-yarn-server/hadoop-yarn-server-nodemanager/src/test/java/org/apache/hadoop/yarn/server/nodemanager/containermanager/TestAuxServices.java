@@ -22,6 +22,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -44,10 +45,16 @@ public class TestAuxServices {
     private final int expected_appId;
     private int remaining_init;
     private int remaining_stop;
+    private ByteBuffer meta = null;
+
     LightService(String name, char idef, int expected_appId) {
+      this(name, idef, expected_appId, null);
+    } 
+    LightService(String name, char idef, int expected_appId, ByteBuffer meta) {
       super(name);
       this.idef = idef;
       this.expected_appId = expected_appId;
+      this.meta = meta;
     }
     @Override
     public void init(Configuration conf) {
@@ -71,14 +78,18 @@ public class TestAuxServices {
     public void stopApp(ApplicationId appId) {
       assertEquals(expected_appId, appId.getId());
     }
+    @Override
+    public ByteBuffer getMeta() {
+      return meta;
+    }
   }
 
   static class ServiceA extends LightService {
-    public ServiceA() { super("A", 'A', 65); }
+    public ServiceA() { super("A", 'A', 65, ByteBuffer.wrap("A".getBytes())); }
   }
 
   static class ServiceB extends LightService {
-    public ServiceB() { super("B", 'B', 66); }
+    public ServiceB() { super("B", 'B', 66, ByteBuffer.wrap("B".getBytes())); }
   }
 
   @Test
@@ -138,6 +149,44 @@ public class TestAuxServices {
       assertEquals(STOPPED, s.getServiceState());
     }
   }
+
+
+  @Test
+  public void testAuxServicesMeta() {
+    Configuration conf = new Configuration();
+    conf.setStrings(AuxServices.AUX_SERVICES, new String[] { "Asrv", "Bsrv" });
+    conf.setClass(String.format(AuxServices.AUX_SERVICE_CLASS_FMT, "Asrv"),
+        ServiceA.class, Service.class);
+    conf.setClass(String.format(AuxServices.AUX_SERVICE_CLASS_FMT, "Bsrv"),
+        ServiceB.class, Service.class);
+    final AuxServices aux = new AuxServices();
+    aux.init(conf);
+
+    int latch = 1;
+    for (Service s : aux.getServices()) {
+      assertEquals(INITED, s.getServiceState());
+      if (s instanceof ServiceA) { latch *= 2; }
+      else if (s instanceof ServiceB) { latch *= 3; }
+      else fail("Unexpected service type " + s.getClass());
+    }
+    assertEquals("Invalid mix of services", 6, latch);
+    aux.start();
+    for (Service s : aux.getServices()) {
+      assertEquals(STARTED, s.getServiceState());
+    }
+
+    Map<String, ByteBuffer> meta = aux.getMeta();
+    assertEquals(2, meta.size());
+    assertEquals("A", new String(meta.get("Asrv").array()));
+    assertEquals("B", new String(meta.get("Bsrv").array()));
+
+    aux.stop();
+    for (Service s : aux.getServices()) {
+      assertEquals(STOPPED, s.getServiceState());
+    }
+  }
+
+
 
   @Test
   public void testAuxUnexpectedStop() {
