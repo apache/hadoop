@@ -196,6 +196,9 @@
   <property name="build.dir.eclipse-main-generated-classes" value="${build.dir.eclipse}/classes-main-generated"/>
   <property name="build.dir.eclipse-test-classes" value="${build.dir.eclipse}/classes-test"/>
   <property name="build.dir.eclipse-contrib-classes" value="${build.dir.eclipse}/classes-contrib"/>
+	
+  <!-- These args are passed along to FindBugs -->
+  <property name="findbugs.jvmargs" value="-Xmx512M" />
 
   <property name="clover.jar" location="${clover.home}/lib/clover.jar"/>
   <available property="clover.present" file="${clover.jar}" />
@@ -817,7 +820,7 @@
 
     <findbugs home="${findbugs.home}" output="xml:withMessages"
         outputFile="${findbugs.report.xmlfile}" effort="max"
-        excludeFilter="${findbugs.exclude.file}" jvmargs="-Xmx512M">
+        excludeFilter="${findbugs.exclude.file}" jvmargs="${findbugs.jvmargs}">
       <auxClasspath>
         <fileset dir="${lib.dir}">
           <include name="**/*.jar"/>

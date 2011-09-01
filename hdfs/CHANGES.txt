@@ -611,6 +611,8 @@ Release 0.22.0 - Unreleased
     HDFS-2232. Generalize regular expressions in TestHDFSCLI.
     (Plamen Jeliazkov via shv)
 
+    HDFS-2297. ant should pass jvmargs to findbugs. (Joep Rottinghuis via shv)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
