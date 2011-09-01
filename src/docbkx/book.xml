@@ -508,6 +508,20 @@ admin.enableTable(table);
   <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link> for more information.
   </para>
   </section>
+  <section xml:id="schema.bloom">
+  <title>Bloom Filters</title>
+  <para>Bloom Filters can be enabled per-ColumnFamily.
+        Use <code>HColumnDescriptor.setBloomFilterType(NONE | ROW |
+        ROWCOL)</code> to enable blooms per Column Family. Default =
+        <varname>NONE</varname> for no bloom filters. If
+        <varname>ROW</varname>, the hash of the row will be added to the bloom
+        on each insert. If <varname>ROWCOL</varname>, the hash of the row +
+        column family + column family qualifier will be added to the bloom on
+        each key insert.</para>
+  <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link> and 
+  <xref linkend="blooms"/> for more information.
+  </para>
+  </section>
   <section xml:id="secondary.indexes">
   <title>
   Secondary Indexes and Alternate Query Paths
@@ -1420,6 +1434,65 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
       </section>
 
      </section>  <!--  store -->
+      
+     <section xml:id="blooms">
+     <title>Bloom Filters</title>
+         <para><link xlink:href="http://en.wikipedia.org/wiki/Bloom_filter">Bloom filters</link> were developed over in <link
+    xlink:href="https://issues.apache.org/jira/browse/HBASE-1200">HBase-1200
+    Add bloomfilters</link>.<footnote>
+        <para>For description of the development process -- why static blooms
+        rather than dynamic -- and for an overview of the unique properties
+        that pertain to blooms in HBase, as well as possible future
+        directions, see the <emphasis>Development Process</emphasis> section
+        of the document <link
+        xlink:href="https://issues.apache.org/jira/secure/attachment/12444007/Bloom_Filters_in_HBase.pdf">BloomFilters
+        in HBase</link> attached to <link
+        xlink:href="https://issues.apache.org/jira/browse/HBASE-1200">HBase-1200</link>.</para>
+      </footnote><footnote>
+        <para>The bloom filters described here are actually version two of
+        blooms in HBase. In versions up to 0.19.x, HBase had a dynamic bloom
+        option based on work done by the <link
+        xlink:href="http://www.one-lab.org">European Commission One-Lab
+        Project 034819</link>. The core of the HBase bloom work was later
+        pulled up into Hadoop to implement org.apache.hadoop.io.BloomMapFile.
+        Version 1 of HBase blooms never worked that well. Version 2 is a
+        rewrite from scratch though again it starts with the one-lab
+        work.</para>
+      </footnote></para>
+        <para>See also <xref linkend="schema.bloom" /> and <xref linkend="config.bloom" />.
+        </para>
+     
+     <section xml:id="bloom_footprint">
+      <title>Bloom StoreFile footprint</title>
+
+      <para>Bloom filters add an entry to the <classname>StoreFile</classname>
+      general <classname>FileInfo</classname> data structure and then two
+      extra entries to the <classname>StoreFile</classname> metadata
+      section.</para>
+
+      <section>
+        <title>BloomFilter in the <classname>StoreFile</classname>
+        <classname>FileInfo</classname> data structure</title>
+
+          <para><classname>FileInfo</classname> has a
+          <varname>BLOOM_FILTER_TYPE</varname> entry which is set to
+          <varname>NONE</varname>, <varname>ROW</varname> or
+          <varname>ROWCOL.</varname></para>
+      </section>
+
+      <section>
+        <title>BloomFilter entries in <classname>StoreFile</classname>
+        metadata</title>
+
+          <para><varname>BLOOM_FILTER_META</varname> holds Bloom Size, Hash
+          Function used, etc. Its small in size and is cached on
+          <classname>StoreFile.Reader</classname> load</para>
+          <para><varname>BLOOM_FILTER_DATA</varname> is the actual bloomfilter
+          data. Obtained on-demand. Stored in the LRU cache, if it is enabled
+          (Its enabled by default).</para>
+      </section>
+     </section>   
+     </section>   <!--  bloom  -->  
      
   <section xml:id="block.cache">
      <title>Block Cache</title>
@@ -1502,126 +1575,6 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
   </chapter>
   
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="performance.xml" />
-
-  <chapter xml:id="blooms">
-    <title>Bloom Filters</title>
-
-    <para>Bloom filters were developed over in <link
-    xlink:href="https://issues.apache.org/jira/browse/HBASE-1200">HBase-1200
-    Add bloomfilters</link>.<footnote>
-        <para>For description of the development process -- why static blooms
-        rather than dynamic -- and for an overview of the unique properties
-        that pertain to blooms in HBase, as well as possible future
-        directions, see the <emphasis>Development Process</emphasis> section
-        of the document <link
-        xlink:href="https://issues.apache.org/jira/secure/attachment/12444007/Bloom_Filters_in_HBase.pdf">BloomFilters
-        in HBase</link> attached to <link
-        xlink:href="https://issues.apache.org/jira/browse/HBASE-1200">HBase-1200</link>.</para>
-      </footnote><footnote>
-        <para>The bloom filters described here are actually version two of
-        blooms in HBase. In versions up to 0.19.x, HBase had a dynamic bloom
-        option based on work done by the <link
-        xlink:href="http://www.one-lab.org">European Commission One-Lab
-        Project 034819</link>. The core of the HBase bloom work was later
-        pulled up into Hadoop to implement org.apache.hadoop.io.BloomMapFile.
-        Version 1 of HBase blooms never worked that well. Version 2 is a
-        rewrite from scratch though again it starts with the one-lab
-        work.</para>
-      </footnote></para>
-
-    <section xml:id="bloom.config">
-      <title>Configurations</title>
-
-      <para>Blooms are enabled by specifying options on a column family in the
-      HBase shell or in java code as specification on
-      <classname>org.apache.hadoop.hbase.HColumnDescriptor</classname>.</para>
-
-      <section>
-        <title><code>HColumnDescriptor</code> option</title>
-
-        <para>Use <code>HColumnDescriptor.setBloomFilterType(NONE | ROW |
-        ROWCOL)</code> to enable blooms per Column Family. Default =
-        <varname>NONE</varname> for no bloom filters. If
-        <varname>ROW</varname>, the hash of the row will be added to the bloom
-        on each insert. If <varname>ROWCOL</varname>, the hash of the row +
-        column family + column family qualifier will be added to the bloom on
-        each key insert.</para>
-      </section>
-
-      <section>
-        <title><varname>io.hfile.bloom.enabled</varname> global kill
-        switch</title>
-
-        <para><code>io.hfile.bloom.enabled</code> in
-        <classname>Configuration</classname> serves as the kill switch in case
-        something goes wrong. Default = <varname>true</varname>.</para>
-      </section>
-
-      <section>
-        <title><varname>io.hfile.bloom.error.rate</varname></title>
-
-        <para><varname>io.hfile.bloom.error.rate</varname> = average false
-        positive rate. Default = 1%. Decrease rate by ½ (e.g. to .5%) == +1
-        bit per bloom entry.</para>
-      </section>
-
-      <section>
-        <title><varname>io.hfile.bloom.max.fold</varname></title>
-
-        <para><varname>io.hfile.bloom.max.fold</varname> = guaranteed minimum
-        fold rate. Most people should leave this alone. Default = 7, or can
-        collapse to at least 1/128th of original size. See the
-        <emphasis>Development Process</emphasis> section of the document <link
-        xlink:href="https://issues.apache.org/jira/secure/attachment/12444007/Bloom_Filters_in_HBase.pdf">BloomFilters
-        in HBase</link> for more on what this option means.</para>
-      </section>
-    </section>
-
-    <section xml:id="bloom_footprint">
-      <title>Bloom StoreFile footprint</title>
-
-      <para>Bloom filters add an entry to the <classname>StoreFile</classname>
-      general <classname>FileInfo</classname> data structure and then two
-      extra entries to the <classname>StoreFile</classname> metadata
-      section.</para>
-
-      <section>
-        <title>BloomFilter in the <classname>StoreFile</classname>
-        <classname>FileInfo</classname> data structure</title>
-
-        <section>
-          <title><varname>BLOOM_FILTER_TYPE</varname></title>
-
-          <para><classname>FileInfo</classname> has a
-          <varname>BLOOM_FILTER_TYPE</varname> entry which is set to
-          <varname>NONE</varname>, <varname>ROW</varname> or
-          <varname>ROWCOL.</varname></para>
-        </section>
-      </section>
-
-      <section>
-        <title>BloomFilter entries in <classname>StoreFile</classname>
-        metadata</title>
-
-        <section>
-          <title><varname>BLOOM_FILTER_META</varname></title>
-
-          <para><varname>BLOOM_FILTER_META</varname> holds Bloom Size, Hash
-          Function used, etc. Its small in size and is cached on
-          <classname>StoreFile.Reader</classname> load</para>
-        </section>
-
-        <section>
-          <title><varname>BLOOM_FILTER_DATA</varname></title>
-
-          <para><varname>BLOOM_FILTER_DATA</varname> is the actual bloomfilter
-          data. Obtained on-demand. Stored in the LRU cache, if it is enabled
-          (Its enabled by default).</para>
-        </section>
-      </section>
-    </section>
-  </chapter>
-
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="troubleshooting.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="build.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="developer.xml" />

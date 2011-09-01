@@ -1092,4 +1092,34 @@ of all regions.
 
       </section>
 
+	  <section xml:id="config.bloom">
+	    <title>Bloom Filter Configuration</title>
+        <section>
+        <title><varname>io.hfile.bloom.enabled</varname> global kill
+        switch</title>
+
+        <para><code>io.hfile.bloom.enabled</code> in
+        <classname>Configuration</classname> serves as the kill switch in case
+        something goes wrong. Default = <varname>true</varname>.</para>
+        </section>
+
+        <section>
+        <title><varname>io.hfile.bloom.error.rate</varname></title>
+
+        <para><varname>io.hfile.bloom.error.rate</varname> = average false
+        positive rate. Default = 1%. Decrease rate by ½ (e.g. to .5%) == +1
+        bit per bloom entry.</para>
+        </section>
+
+        <section>
+        <title><varname>io.hfile.bloom.max.fold</varname></title>
+
+        <para><varname>io.hfile.bloom.max.fold</varname> = guaranteed minimum
+        fold rate. Most people should leave this alone. Default = 7, or can
+        collapse to at least 1/128th of original size. See the
+        <emphasis>Development Process</emphasis> section of the document <link
+        xlink:href="https://issues.apache.org/jira/secure/attachment/12444007/Bloom_Filters_in_HBase.pdf">BloomFilters
+        in HBase</link> for more on what this option means.</para>
+        </section>
+      </section>
   </chapter>
