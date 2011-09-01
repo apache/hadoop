@@ -1236,7 +1236,11 @@ public class AssignmentManager extends ZooKeeperListener {
         return;
       }
       RegionPlan plan = getRegionPlan(state, forceNewPlan);
-      if (plan == null) return; // Should get reassigned later when RIT times out.
+      if (plan == null) {
+        debugLog(state.getRegion(),
+            "Unable to determine a plan to assign " + state);
+        return; // Should get reassigned later when RIT times out.
+      }
       try {
         debugLog(state.getRegion(),
           "Assigning region " + state.getRegion().getRegionNameAsString() +

@@ -527,6 +527,8 @@ Release 0.90.5 - Unreleased
                cases (todd)
    HBASE-4276  AssignmentManager debug logs should be at INFO level for
                META/ROOT regions (todd)
+   HBASE-4323  Add debug logging when AssignmentManager can't make a plan
+               for a region (todd)
 
 Release 0.90.4 - August 10, 2011
 
