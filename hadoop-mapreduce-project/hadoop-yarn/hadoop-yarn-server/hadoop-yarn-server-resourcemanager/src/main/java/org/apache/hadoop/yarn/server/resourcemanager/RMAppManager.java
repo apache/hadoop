@@ -34,11 +34,14 @@ import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * This class manages the list of applications for the resource manager. 
@@ -67,6 +70,86 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
     setCompletedAppsMax(conf.getInt(
         RMConfig.EXPIRE_APPLICATIONS_COMPLETED_MAX,
         RMConfig.DEFAULT_EXPIRE_APPLICATIONS_COMPLETED_MAX));
+  }
+
+  /**
+   *  This class is for logging the application summary.
+   */
+  static class ApplicationSummary {
+    static final Log LOG = LogFactory.getLog(ApplicationSummary.class);
+
+    // Escape sequences 
+    static final char EQUALS = '=';
+    static final char[] charsToEscape =
+      {StringUtils.COMMA, EQUALS, StringUtils.ESCAPE_CHAR};
+
+    static class SummaryBuilder {
+      final StringBuilder buffer = new StringBuilder();
+
+      // A little optimization for a very common case
+      SummaryBuilder add(String key, long value) {
+        return _add(key, Long.toString(value));
+      }
+
+      <T> SummaryBuilder add(String key, T value) {
+        return _add(key, StringUtils.escapeString(String.valueOf(value),
+                    StringUtils.ESCAPE_CHAR, charsToEscape));
+      }
+
+      SummaryBuilder add(SummaryBuilder summary) {
+        if (buffer.length() > 0) buffer.append(StringUtils.COMMA);
+        buffer.append(summary.buffer);
+        return this;
+      }
+
+      SummaryBuilder _add(String key, String value) {
+        if (buffer.length() > 0) buffer.append(StringUtils.COMMA);
+        buffer.append(key).append(EQUALS).append(value);
+        return this;
+      }
+
+      @Override public String toString() {
+        return buffer.toString();
+      }
+    }
+
+    /**
+     * create a summary of the application's runtime.
+     * 
+     * @param app {@link RMApp} whose summary is to be created, cannot
+     *            be <code>null</code>.
+     */
+    public static SummaryBuilder createAppSummary(RMApp app) {
+      String trackingUrl = "N/A";
+      String host = "N/A";
+      RMAppAttempt attempt = app.getCurrentAppAttempt();
+      if (attempt != null) {
+        trackingUrl = attempt.getTrackingUrl();
+        host = attempt.getHost();
+      }
+      SummaryBuilder summary = new SummaryBuilder()
+          .add("appId", app.getApplicationId())
+          .add("name", app.getName())
+          .add("user", app.getUser())
+          .add("queue", app.getQueue())
+          .add("state", app.getState())
+          .add("trackingUrl", trackingUrl)
+          .add("appMasterHost", host)
+          .add("startTime", app.getStartTime())
+          .add("finishTime", app.getFinishTime());
+      return summary;
+    }
+
+    /**
+     * Log a summary of the application's runtime.
+     * 
+     * @param app {@link RMApp} whose summary is to be logged
+     */
+    public static void logAppSummary(RMApp app) {
+      if (app != null) {
+        LOG.info(createAppSummary(app));
+      }
+    }
   }
 
   protected void setCompletedAppsMax(int max) {
@@ -154,6 +237,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
       case APP_COMPLETED: 
       {
         addCompletedApp(appID);
+        ApplicationSummary.logAppSummary(rmContext.getRMApps().get(appID));
         checkAppNumCompletedLimit(); 
       } 
       break;

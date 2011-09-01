@@ -230,6 +230,9 @@ Release 0.23.0 - Unreleased
     making shuffle service port to be truely configurable. (Robert Evans via
     vinodkv)
 
+    MAPREDUCE-2735. Add an applications summary log to ResourceManager.
+    (Thomas Graves via acmurthy) 
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
