@@ -1182,6 +1182,9 @@ Release 0.23.0 - Unreleased
    MAPREDUCE-2917. Fixed corner case in container reservation which led to
    starvation and hung jobs. (acmurthy) 
 
+   MAPREDUCE-2756. Better error handling in JobControl for failed jobs.
+   (Robert Evans via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
