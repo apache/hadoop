@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -79,6 +80,29 @@ public class TestMapReduceJobControlWithMocks {
     assertTrue(job4.getJobState() == ControlledJob.State.DEPENDENT_FAILED);
     
     jobControl.stop();
+  }
+
+  @Test
+  public void testErrorWhileSubmitting() throws Exception {
+    JobControl jobControl = new JobControl("Test");
+    
+    Job mockJob = mock(Job.class);
+    
+    ControlledJob job1 = new ControlledJob(mockJob, null);
+    when(mockJob.getConfiguration()).thenReturn(new Configuration());
+    doThrow(new IncompatibleClassChangeError("This is a test")).when(mockJob).submit();
+    
+    jobControl.addJob(job1);
+    
+    runJobControl(jobControl);
+    try {
+      assertEquals("Success list", 0, jobControl.getSuccessfulJobList().size());
+      assertEquals("Failed list", 1, jobControl.getFailedJobList().size());
+
+      assertTrue(job1.getJobState() == ControlledJob.State.FAILED);
+    } finally {
+      jobControl.stop();
+    }
   }
   
   @Test
