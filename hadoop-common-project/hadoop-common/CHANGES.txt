@@ -350,6 +350,8 @@ Release 0.23.0 - Unreleased
 
     HADOOP-7594. Support HTTP REST in HttpServer.  (szetszwo)
 
+    HADOOP-7595. Upgrade dependency to Avro 1.5.3. (Alejandro Abdelnur via atm)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
