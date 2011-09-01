@@ -428,6 +428,8 @@ Release 0.91.0 - Unreleased
                readable (todd)
    HBASE-4281  Add facility to dump current state of all executors (todd)
    HBASE-4275  RS should communicate fatal "aborts" back to the master (todd)
+   HBASE-4263  New config property for user-table only RegionObservers
+               (Lars Hofhansl)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
