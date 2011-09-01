@@ -533,6 +533,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7390. VersionInfo not generated properly in git after unsplit.
     (todd via shv)
 
+    HADOOP-7577. Add EventCounter wrapper to provide compatibility between
+    metrics 1 and 2. (Joep Rottinghuis via shv)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
