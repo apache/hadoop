@@ -60,6 +60,24 @@ import org.mortbay.log.Log;
  ***************************************************/
 public class FSDataset implements FSConstants, FSDatasetInterface {
 
+  /**
+   * A data structure than encapsulates a Block along with the full pathname
+   * of the block file
+   */
+  static class BlockAndFile implements Comparable<BlockAndFile> {
+    final Block block;
+    final File pathfile;
+
+    BlockAndFile(File fullpathname, Block block) {
+      this.pathfile = fullpathname;
+      this.block = block;
+    }
+
+    public int compareTo(BlockAndFile o)
+    {
+      return this.block.compareTo(o.block);
+    }
+  }
 
   /**
    * A node type that can be built into a tree reflecting the
@@ -214,6 +232,28 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       }
     }
 
+    /**
+     * Populate the given blockSet with any child blocks
+     * found at this node. With each block, return the full path
+     * of the block file.
+     */
+    void getBlockAndFileInfo(TreeSet<BlockAndFile> blockSet) {
+      if (children != null) {
+        for (int i = 0; i < children.length; i++) {
+          children[i].getBlockAndFileInfo(blockSet);
+        }
+      }
+
+      File blockFiles[] = dir.listFiles();
+      for (int i = 0; i < blockFiles.length; i++) {
+        if (Block.isBlockFilename(blockFiles[i])) {
+          long genStamp = getGenerationStampFromFile(blockFiles, blockFiles[i]);
+          Block block = new Block(blockFiles[i], blockFiles[i].length(), genStamp);
+          blockSet.add(new BlockAndFile(blockFiles[i].getAbsoluteFile(), block));
+        }
+      }
+    }    
+    
     void getVolumeMap(HashMap<Block, DatanodeBlockInfo> volumeMap, FSVolume volume) {
       if (children != null) {
         for (int i = 0; i < children.length; i++) {
@@ -313,6 +353,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   class FSVolume {
     private FSDir dataDir;
     private File tmpDir;
+    private File blocksBeingWritten;     // clients write here
     private File detachDir; // copy on write for blocks in snapshot
     private DF usage;
     private DU dfsUsage;
@@ -321,6 +362,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     
     FSVolume(File currentDir, Configuration conf) throws IOException {
       this.reserved = conf.getLong("dfs.datanode.du.reserved", 0);
+      this.dataDir = new FSDir(currentDir);
       boolean supportAppends = conf.getBoolean("dfs.support.append", false);
       File parent = currentDir.getParentFile();
 
@@ -329,20 +371,30 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
         recoverDetachedBlocks(currentDir, detachDir);
       }
 
-      // Files that were being written when the datanode was last shutdown
-      // are now moved back to the data directory. It is possible that
-      // in the future, we might want to do some sort of datanode-local
-      // recovery for these blocks. For example, crc validation.
-      //
+      // remove all blocks from "tmp" directory. These were either created
+      // by pre-append clients (0.18.x) or are part of replication request.
+      // They can be safely removed.
       this.tmpDir = new File(parent, "tmp");
       if (tmpDir.exists()) {
+        FileUtil.fullyDelete(tmpDir);
+      }
+      
+      // Files that were being written when the datanode was last shutdown
+      // should not be deleted.
+      blocksBeingWritten = new File(parent, "blocksBeingWritten");
+      if (blocksBeingWritten.exists()) {
         if (supportAppends) {
-          recoverDetachedBlocks(currentDir, tmpDir);
+          recoverBlocksBeingWritten(blocksBeingWritten);
         } else {
-          FileUtil.fullyDelete(tmpDir);
+          FileUtil.fullyDelete(blocksBeingWritten);
         }
       }
-      this.dataDir = new FSDir(currentDir);
+      
+      if (!blocksBeingWritten.mkdirs()) {
+        if (!blocksBeingWritten.isDirectory()) {
+          throw new IOException("Mkdirs failed to create " + blocksBeingWritten.toString());
+        }
+      }
       if (!tmpDir.mkdirs()) {
         if (!tmpDir.isDirectory()) {
           throw new IOException("Mkdirs failed to create " + tmpDir.toString());
@@ -399,8 +451,13 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
      * Temporary files. They get moved to the real block directory either when
      * the block is finalized or the datanode restarts.
      */
-    File createTmpFile(Block b) throws IOException {
-      File f = new File(tmpDir, b.getBlockName());
+    File createTmpFile(Block b, boolean replicationRequest) throws IOException {
+      File f= null;
+      if (!replicationRequest) {
+        f = new File(blocksBeingWritten, b.getBlockName());
+      } else {
+        f = new File(tmpDir, b.getBlockName());
+      }
       return createTmpFile(b, f);
     }
 
@@ -432,6 +489,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       try {
         fileCreated = f.createNewFile();
       } catch (IOException ioe) {
+        DataNode.LOG.warn("createTmpFile failed for file " + f + " Block " + b);
         throw (IOException)new IOException(DISK_ERROR +f).initCause(ioe);
       }
       if (!fileCreated) {
@@ -451,12 +509,13 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     void checkDirs() throws DiskErrorException {
       dataDir.checkDirTree();
       DiskChecker.checkDir(tmpDir);
+      DiskChecker.checkDir(blocksBeingWritten);
     }
       
     void getBlockInfo(TreeSet<Block> blockSet) {
       dataDir.getBlockInfo(blockSet);
     }
-      
+
     void getVolumeMap(HashMap<Block, DatanodeBlockInfo> volumeMap) {
       dataDir.getVolumeMap(volumeMap, this);
     }
@@ -469,6 +528,29 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       return dataDir.dir.getAbsolutePath();
     }
 
+    /**
+     * Recover blocks that were being written when the datanode
+     * was earlier shut down. These blocks get re-inserted into
+     * ongoingCreates. Also, send a blockreceived message to the NN
+     * for each of these blocks because these are not part of a 
+     * block report.
+     */
+    private void recoverBlocksBeingWritten(File bbw) throws IOException {
+      FSDir fsd = new FSDir(bbw);
+      TreeSet<BlockAndFile> blockSet = new TreeSet<BlockAndFile>();
+      fsd.getBlockAndFileInfo(blockSet);
+      for (BlockAndFile b : blockSet) {
+        File f = b.pathfile;  // full path name of block file
+        volumeMap.put(b.block, new DatanodeBlockInfo(this, f));
+        ongoingCreates.put(b.block, new ActiveFile(f));
+        if (DataNode.LOG.isDebugEnabled()) {
+          DataNode.LOG.debug("recoverBlocksBeingWritten for block " + b.block);
+        }
+        DataNode.getDataNode().notifyNamenodeReceivedBlock(b.block, 
+                               DataNode.EMPTY_DEL_HINT);
+      }
+    } 
+    
     /**
      * Recover detached files on datanode restart. If a detached block
      * does not exist in the original directory, then it is moved to the
@@ -651,6 +733,11 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       }
       threads.add(Thread.currentThread());
     }
+
+    // no active threads associated with this ActiveFile
+    ActiveFile(File f) {
+      file = f;
+    }
     
     public String toString() {
       return getClass().getSimpleName() + "(file=" + file
@@ -671,7 +758,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   }
 
   /** Find the corresponding meta data file from a given block file */
-  private static File findMetaFile(final File blockFile) throws IOException {
+  static File findMetaFile(final File blockFile) throws IOException {
     final String prefix = blockFile.getName() + "_";
     final File parent = blockFile.getParentFile();
     File[] matches = parent.listFiles(new FilenameFilter() {
@@ -755,7 +842,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   FSVolumeSet volumes;
   private HashMap<Block,ActiveFile> ongoingCreates = new HashMap<Block,ActiveFile>();
   private int maxBlocksPerDir = 0;
-  private HashMap<Block,DatanodeBlockInfo> volumeMap = null;
+  HashMap<Block,DatanodeBlockInfo> volumeMap = new HashMap<Block, DatanodeBlockInfo>();;
   static  Random random = new Random();
   private int validVolsRequired;
   
@@ -798,7 +885,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       volArray[idx] = new FSVolume(storage.getStorageDir(idx).getCurrentDir(), conf);
     }
     volumes = new FSVolumeSet(volArray);
-    volumeMap = new HashMap<Block, DatanodeBlockInfo>();
     volumes.getVolumeMap(volumeMap);
     registerMBean(storage.getStorageID());
   }
@@ -877,7 +963,10 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       throw new IOException("Block " + b + " does not exist in volumeMap.");
     }
     FSVolume v = info.getVolume();
-    File blockFile = v.getTmpFile(b);
+    File blockFile = info.getFile();
+    if (blockFile == null) {
+      blockFile = v.getTmpFile(b);
+    }
     RandomAccessFile blockInFile = new RandomAccessFile(blockFile, "r");
     if (blkOffset > 0) {
       blockInFile.seek(blkOffset);
@@ -929,6 +1018,22 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       throw new IOException("Cannot update oldblock (=" + oldblock
           + ") to newblock (=" + newblock + ").");
     }
+
+
+    // Protect against a straggler updateblock call moving a block backwards
+    // in time.
+    boolean isValidUpdate =
+      (newblock.getGenerationStamp() > oldblock.getGenerationStamp()) ||
+      (newblock.getGenerationStamp() == oldblock.getGenerationStamp() &&
+       newblock.getNumBytes() == oldblock.getNumBytes());
+
+    if (!isValidUpdate) {
+      throw new IOException(
+        "Cannot update oldblock=" + oldblock +
+        " to newblock=" + newblock + " since generation stamps must " +
+        "increase, or else length must not change.");
+    }
+
     
     for(;;) {
       final List<Thread> threads = tryUpdateBlock(oldblock, newblock);
@@ -945,6 +1050,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
           t.join();
         } catch (InterruptedException e) {
           DataNode.LOG.warn("interruptOngoingCreates: t=" + t, e);
+          break; // retry with new threadlist from the beginning
         }
       }
     }
@@ -1023,13 +1129,13 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     return null;
   }
 
-  static private void truncateBlock(File blockFile, File metaFile,
+  static void truncateBlock(File blockFile, File metaFile,
       long oldlen, long newlen) throws IOException {
     if (newlen == oldlen) {
       return;
     }
     if (newlen > oldlen) {
-      throw new IOException("Cannout truncate block to from oldlen (=" + oldlen
+      throw new IOException("Cannot truncate block to from oldlen (=" + oldlen
           + ") to newlen (=" + newlen + ")");
     }
 
@@ -1089,8 +1195,11 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       volumeMap.put(b, v);
       volumeMap.put(b, v);
    * other threads that might be writing to this block, and then reopen the file.
+   * If replicationRequest is true, then this operation is part of a block
+   * replication request.
    */
-  public BlockWriteStreams writeToBlock(Block b, boolean isRecovery) throws IOException {
+  public BlockWriteStreams writeToBlock(Block b, boolean isRecovery,
+                           boolean replicationRequest) throws IOException {
     //
     // Make sure the block isn't a valid one - we're still creating it!
     //
@@ -1135,8 +1244,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       if (!isRecovery) {
         v = volumes.getNextVolume(blockSize);
         // create temporary file to hold block in the designated volume
-        f = createTmpFile(v, b);
-        volumeMap.put(b, new DatanodeBlockInfo(v, f));
+        f = createTmpFile(v, b, replicationRequest);
       } else if (f != null) {
         DataNode.LOG.info("Reopen already-open Block for append " + b);
         // create or reuse temporary file to hold block in the designated volume
@@ -1146,7 +1254,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
         // reopening block for appending to it.
         DataNode.LOG.info("Reopen Block for append " + b);
         v = volumeMap.get(b).getVolume();
-        f = createTmpFile(v, b);
+        f = createTmpFile(v, b, replicationRequest);
         File blkfile = getBlockFile(b);
         File oldmeta = getMetaFile(b);
         File newmeta = getMetaFile(f, b);
@@ -1172,13 +1280,20 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
                                   " to tmp dir " + f);
           }
         }
-        volumeMap.put(b, new DatanodeBlockInfo(v, f));
       }
       if (f == null) {
         DataNode.LOG.warn("Block " + b + " reopen failed " +
                           " Unable to locate tmp file.");
         throw new IOException("Block " + b + " reopen failed " +
                               " Unable to locate tmp file.");
+      }
+      // If this is a replication request, then this is not a permanent
+      // block yet, it could get removed if the datanode restarts. If this
+      // is a write or append request, then it is a valid block.
+      if (replicationRequest) {
+        volumeMap.put(b, new DatanodeBlockInfo(v));
+      } else {
+        volumeMap.put(b, new DatanodeBlockInfo(v, f));
       }
       ongoingCreates.put(b, new ActiveFile(f, threads));
     }
@@ -1221,32 +1336,29 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   public void setChannelPosition(Block b, BlockWriteStreams streams, 
                                  long dataOffset, long ckOffset) 
                                  throws IOException {
-    long size = 0;
-    synchronized (this) {
-      FSVolume vol = volumeMap.get(b).getVolume();
-      size = vol.getTmpFile(b).length();
-    }
-    if (size < dataOffset) {
+    FileOutputStream file = (FileOutputStream) streams.dataOut;
+    if (file.getChannel().size() < dataOffset) {
       String msg = "Trying to change block file offset of block " + b +
+                     " file " + volumeMap.get(b).getVolume().getTmpFile(b) +
                      " to " + dataOffset +
                      " but actual size of file is " +
-                     size;
+                     file.getChannel().size();
       throw new IOException(msg);
     }
-    FileOutputStream file = (FileOutputStream) streams.dataOut;
     file.getChannel().position(dataOffset);
     file = (FileOutputStream) streams.checksumOut;
     file.getChannel().position(ckOffset);
   }
 
-  synchronized File createTmpFile( FSVolume vol, Block blk ) throws IOException {
+  synchronized File createTmpFile( FSVolume vol, Block blk,
+                        boolean replicationRequest) throws IOException {
     if ( vol == null ) {
       vol = volumeMap.get( blk ).getVolume();
       if ( vol == null ) {
         throw new IOException("Could not find volume for block " + blk);
       }
     }
-    return vol.createTmpFile(blk);
+    return vol.createTmpFile(blk, replicationRequest);
   }
 
   //
@@ -1257,13 +1369,29 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   // we can GC it safely.
   //
 
+
+  @Override
+  public void finalizeBlock(Block b) throws IOException {
+    finalizeBlockInternal(b, false);
+  }
+
+  @Override
+  public void finalizeBlockIfNeeded(Block b) throws IOException {
+    finalizeBlockInternal(b, true);
+  }
+
   /**
    * Complete the block write!
    */
-  public synchronized void finalizeBlock(Block b) throws IOException {
+  private synchronized void finalizeBlockInternal(Block b, boolean reFinalizeOk) 
+    throws IOException {
     ActiveFile activeFile = ongoingCreates.get(b);
     if (activeFile == null) {
-      throw new IOException("Block " + b + " is already finalized.");
+      if (reFinalizeOk) {
+        return;
+      } else {
+        throw new IOException("Block " + b + " is already finalized.");
+      }
     }
     File f = activeFile.file;
     if (f == null || !f.exists()) {
@@ -1281,6 +1409,28 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     ongoingCreates.remove(b);
   }
 
+  /**
+   * is this block finalized? Returns true if the block is already
+   * finalized, otherwise returns false.
+   */
+  private synchronized boolean isFinalized(Block b) {
+    FSVolume v = volumeMap.get(b).getVolume();
+    if (v == null) {
+      DataNode.LOG.warn("No volume for block " + b);
+      return false;             // block is not finalized
+    }
+    ActiveFile activeFile = ongoingCreates.get(b);
+    if (activeFile == null) {
+      return true;            // block is already finalized
+    }
+    File f = activeFile.file;
+    if (f == null || !f.exists()) {
+      // we shud never get into this position.
+      DataNode.LOG.warn("No temporary file " + f + " for block " + b);
+    }
+    return false;             // block is not finalized
+  }
+  
   /**
    * Remove the temporary block file (if any)
    */
@@ -1342,14 +1492,13 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
    * Check whether the given block is a valid one.
    */
   public boolean isValidBlock(Block b) {
-    File f = null;;
+    File f = null;
     try {
       f = validateBlockFile(b);
     } catch(IOException e) {
       Log.warn("Block " + b + " is not valid:",e);
     }
-    
-    return f != null;
+    return ((f != null) ? isFinalized(b) : false);
   }
 
   /**
@@ -1375,7 +1524,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   }
 
   /** {@inheritDoc} */
-  public void validateBlockMetadata(Block b) throws IOException {
+  public synchronized void validateBlockMetadata(Block b) throws IOException {
     DatanodeBlockInfo info = volumeMap.get(b);
     if (info == null) {
       throw new IOException("Block " + b + " does not exist in volumeMap.");
@@ -1420,6 +1569,30 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
                             " does not match meta file stamp " +
                             stamp);
     }
+    // verify that checksum file has an integral number of checkum values.
+    DataChecksum dcs = BlockMetadataHeader.readHeader(meta).getChecksum();
+    int checksumsize = dcs.getChecksumSize();
+    long actual = meta.length() - BlockMetadataHeader.getHeaderSize();
+    long numChunksInMeta = actual/checksumsize;
+    if (actual % checksumsize != 0) {
+      throw new IOException("Block " + b +
+                            " has a checksum file of size " + meta.length() +
+                            " but it does not align with checksum size of " +
+                            checksumsize);
+    }
+    int bpc = dcs.getBytesPerChecksum();
+    long minDataSize = (numChunksInMeta - 1) * bpc;
+    long maxDataSize = numChunksInMeta * bpc;
+    if (f.length() > maxDataSize || f.length() <= minDataSize) {
+      throw new IOException("Block " + b +
+                            " is of size " + f.length() +
+                            " but has " + (numChunksInMeta + 1) +
+                            " checksums and each checksum size is " +
+                            checksumsize + " bytes.");
+    }
+    // We could crc-check the entire block here, but it will be a costly 
+    // operation. Instead we rely on the above check (file length mismatch)
+    // to detect corrupt blocks.
   }
 
   /**

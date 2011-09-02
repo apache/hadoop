@@ -80,6 +80,8 @@ import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
@@ -297,6 +299,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   private int minReplication;
   // Default replication
   private int defaultReplication;
+  // Variable to stall new replication checks for testing purposes
+  private boolean stallReplicationWork = false;
   // heartbeatRecheckInterval is how often namenode checks for expired datanodes
   private long heartbeatRecheckInterval;
   // heartbeatExpireInterval is how long namenode waits for datanode to report
@@ -1233,7 +1237,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
         // period, then start lease recovery.
         //
         if (lease.expiredSoftLimit()) {
-          LOG.info("startFile: recover lease " + lease + ", src=" + src);
+          LOG.info("startFile: recover lease " + lease + ", src=" + src +
+                   " from client " + pendingFile.clientName);
           internalReleaseLease(lease, src);
         }
         throw new AlreadyBeingCreatedException("failed to create file " + src + " for " + holder +
@@ -1335,7 +1340,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     //
     LocatedBlock lb = null;
     synchronized (this) {
-      INodeFileUnderConstruction file = (INodeFileUnderConstruction)dir.getFileINode(src);
+      // Need to re-check existence here, since the file may have been deleted
+      // in between the synchronized blocks
+      INodeFileUnderConstruction file = checkLease(src, holder);
 
       Block[] blocks = file.getBlocks();
       if (blocks != null && blocks.length > 0) {
@@ -1368,9 +1375,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
           // remove this block from the list of pending blocks to be deleted. 
           // This reduces the possibility of triggering HADOOP-1349.
           //
-          for(Collection<Block> v : recentInvalidateSets.values()) {
+          for (Iterator<Collection<Block>> iter = recentInvalidateSets.values().iterator();
+               iter.hasNext();
+               ) {
+            Collection<Block> v = iter.next();
             if (v.remove(last)) {
               pendingDeletionBlocksCount--;
+              if (v.isEmpty()) {
+                iter.remove();
+              }
             }
           }
         }
@@ -2057,7 +2070,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       if (pendingFile.getBlocks().length == 0) {
         finalizeINodeFileUnderConstruction(src, pendingFile);
         NameNode.stateChangeLog.warn("BLOCK*"
-          + " internalReleaseLease: No blocks found, lease removed.");
+          + " internalReleaseLease: No blocks found, lease removed for " +  src);
         return;
       }
       // setup the Inode.targets for the last block from the blocksMap
@@ -2074,11 +2087,24 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     }
     // start lease recovery of the last block for this file.
     pendingFile.assignPrimaryDatanode();
-    leaseManager.renewLease(lease);
+    Lease reassignedLease = reassignLease(
+      lease, src, HdfsConstants.NN_RECOVERY_LEASEHOLDER, pendingFile);
+    leaseManager.renewLease(reassignedLease);
   }
+
+  private Lease reassignLease(Lease lease, String src, String newHolder,
+                      INodeFileUnderConstruction pendingFile) {
+    if(newHolder == null)
+      return lease;
+    pendingFile.setClientName(newHolder);
+    return leaseManager.reassignLease(lease, src, newHolder);
+  }
+
 
   private void finalizeINodeFileUnderConstruction(String src,
       INodeFileUnderConstruction pendingFile) throws IOException {
+    NameNode.stateChangeLog.info("Removing lease on  file " + src + 
+                                 " from client " + pendingFile.clientName);
     leaseManager.removeLease(pendingFile.clientName, src);
 
     // The file is no longer pending.
@@ -2138,12 +2164,21 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       // There should be no locations in the blocksMap till now because the
       // file is underConstruction
       DatanodeDescriptor[] descriptors = null;
-      if (newtargets.length > 0) {
-        descriptors = new DatanodeDescriptor[newtargets.length];
-        for(int i = 0; i < newtargets.length; i++) {
-          descriptors[i] = getDatanode(newtargets[i]);
-          descriptors[i].addBlock(newblockinfo);
+      List<DatanodeDescriptor> descriptorsList =
+        new ArrayList<DatanodeDescriptor>(newtargets.length);
+      for(int i = 0; i < newtargets.length; i++) {
+        DatanodeDescriptor node =
+          datanodeMap.get(newtargets[i].getStorageID());
+        if (node != null) {
+          node.addBlock(newblockinfo);
+          descriptorsList.add(node);
+        } else {
+          LOG.warn("commitBlockSynchronization included a target DN " +
+            newtargets[i] + " which is not known to DN. Ignoring.");
         }
+      }
+      if (!descriptorsList.isEmpty()) {
+        descriptors = descriptorsList.toArray(new DatanodeDescriptor[0]);
       }
       // add locations into the INodeUnderConstruction
       pendingFile.setLastBlock(newblockinfo, descriptors);
@@ -2714,6 +2749,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    */
   private int computeReplicationWork(
                                   int blocksToProcess) throws IOException {
+    // stall only useful for unit tests (see TestFileAppend4.java)
+    if (stallReplicationWork)  {
+      return 0;
+    }
+    
     // Choose the blocks to be replicated
     List<List<Block>> blocksToReplicate = 
       chooseUnderReplicatedBlocks(blocksToProcess);
@@ -2836,7 +2876,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       }
     }
 
-    // choose replication targets: NOT HODING THE GLOBAL LOCK
+    // choose replication targets: NOT HOLDING THE GLOBAL LOCK
     DatanodeDescriptor targets[] = replicator.chooseTarget(
         requiredReplication - numEffectiveReplicas,
         srcNode, containingNodes, null, block.getNumBytes());
@@ -3265,12 +3305,14 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
                                     DatanodeDescriptor delNodeHint) {
     BlockInfo storedBlock = blocksMap.getStoredBlock(block);
     if (storedBlock == null) {
-      // if the block with a WILDCARD generation stamp matches and the
-      // corresponding file is under construction, then accept this block.
-      // This block has a diferent generation stamp on the datanode 
-      // because of a lease-recovery-attempt.
-      Block nblk = new Block(block.getBlockId());
-      storedBlock = blocksMap.getStoredBlock(nblk);
+      // If we have a block in the block map with the same ID, but a different
+      // generation stamp, and the corresponding file is under construction,
+      // then we need to do some special processing.
+      storedBlock = blocksMap.getStoredBlockWithoutMatchingGS(block);
+
+      // If the block ID is valid, and it either (a) belongs to a file under
+      // construction, or (b) the reported genstamp is higher than what we
+      // know about, then we accept the block.
       if (storedBlock != null && storedBlock.getINode() != null &&
           (storedBlock.getGenerationStamp() <= block.getGenerationStamp() ||
            storedBlock.getINode().isUnderConstruction())) {
@@ -3289,9 +3331,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
                                    + block + " on " + node.getName()
                                    + " size " + block.getNumBytes()
                                    + " But it does not belong to any file.");
-      // we could add this block to invalidate set of this datanode. 
-      // it will happen in next block report otherwise.
-      return block;      
+      addToInvalidates(block, node);
+      return block;
     }
      
     // add block to the data-node
@@ -3411,6 +3452,18 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     INodeFile fileINode = null;
     fileINode = storedBlock.getINode();
     if (fileINode.isUnderConstruction()) {
+      INodeFileUnderConstruction cons = (INodeFileUnderConstruction) fileINode;
+      Block[] blocks = fileINode.getBlocks();
+      // If this is the last block of this
+      // file, then set targets. This enables lease recovery to occur.
+      // This is especially important after a restart of the NN.
+      Block last = blocks[blocks.length-1];
+      if (last.equals(storedBlock)) {
+        Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(last);
+        for (int i = 0; it != null && it.hasNext(); i++) {
+          cons.addTarget(it.next());
+        }
+      }
       return block;
     }
 
@@ -4016,6 +4069,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   short getMaxReplication()     { return (short)maxReplication; }
   short getMinReplication()     { return (short)minReplication; }
   short getDefaultReplication() { return (short)defaultReplication; }
+  
+  public void stallReplicationWork()   { stallReplicationWork = true;   }
+  public void restartReplicationWork() { stallReplicationWork = false;  }
     
   /**
    * A immutable object that stores the number of live replicas and
@@ -5097,7 +5153,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       throw new IOException(msg);
     }
     if (!((INodeFileUnderConstruction)fileINode).setLastRecoveryTime(now())) {
-      String msg = block + " is beening recovered, ignoring this request.";
+      String msg = block + " is already being recovered, ignoring this request.";
       LOG.info(msg);
       throw new IOException(msg);
     }

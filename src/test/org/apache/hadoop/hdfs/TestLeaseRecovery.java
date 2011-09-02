@@ -27,6 +27,8 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.TestInterDatanodeProtocol;
+import org.apache.hadoop.hdfs.server.datanode.FSDatasetTestUtil;
+
 import org.apache.hadoop.hdfs.server.protocol.BlockMetaDataInfo;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 
@@ -104,9 +106,10 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
       //update blocks with random block sizes
       Block[] newblocks = new Block[REPLICATION_NUM];
       for(int i = 0; i < REPLICATION_NUM; i++) {
+        DataNode dn = datanodes[i];
+        FSDatasetTestUtil.truncateBlock(dn, lastblock, newblocksizes[i]);
         newblocks[i] = new Block(lastblock.getBlockId(), newblocksizes[i],
             lastblock.getGenerationStamp());
-        datanodes[i].updateBlock(lastblock, newblocks[i], false);
         checkMetaInfo(newblocks[i], datanodes[i]);
       }
 

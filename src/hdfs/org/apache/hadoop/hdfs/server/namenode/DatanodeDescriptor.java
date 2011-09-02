@@ -435,8 +435,13 @@ public class DatanodeDescriptor extends DatanodeInfo {
     // collect blocks that have not been reported
     // all of them are next to the delimiter
     Iterator<Block> it = new BlockIterator(delimiter.getNext(0), this);
-    while(it.hasNext())
-      toRemove.add(it.next());
+    while(it.hasNext()) {
+      BlockInfo storedBlock = (BlockInfo)it.next();
+      INodeFile file = storedBlock.getINode();
+      if (file == null || !file.isUnderConstruction()) {
+        toRemove.add(storedBlock);
+      }
+    }
     this.removeBlock(delimiter);
   }
 

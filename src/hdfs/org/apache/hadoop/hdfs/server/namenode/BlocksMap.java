@@ -408,6 +408,11 @@ class BlocksMap {
     return blocks.get(b);
   }
 
+  /** Return the block object without matching against generation stamp. */
+  BlockInfo getStoredBlockWithoutMatchingGS(Block b) {
+    return blocks.get(new Block(b.getBlockId()));
+  }
+
   /** Returned Iterator does not support. */
   Iterator<DatanodeDescriptor> nodeIterator(Block b) {
     return new NodeIterator(blocks.get(b));

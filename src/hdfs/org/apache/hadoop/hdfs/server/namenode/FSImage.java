@@ -112,7 +112,7 @@ public class FSImage extends Storage {
   }
   
   protected long checkpointTime = -1L;
-  private FSEditLog editLog = null;
+  protected FSEditLog editLog = null;
   private boolean isUpgradeFinalized = false;
   
   /**

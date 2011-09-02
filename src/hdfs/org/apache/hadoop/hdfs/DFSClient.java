@@ -2970,16 +2970,24 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                                  bytesPerChecksum);
         }
 
-        // setup pipeline to append to the last block XXX retries??
+        // setup pipeline to append to the last block
         nodes = lastBlock.getLocations();
         errorIndex = -1;   // no errors yet.
         if (nodes.length < 1) {
           throw new IOException("Unable to retrieve blocks locations " +
                                 " for last block " + block +
                                 "of file " + src);
-                        
         }
-        processDatanodeError(true, true);
+        // keep trying to setup a pipeline until you know all DNs are dead
+        while (processDatanodeError(true, true)) {
+          try {
+            Thread.sleep(1000);
+          } catch (InterruptedException  e) {
+          }
+        }
+        if (lastException != null) {
+          throw lastException;
+        }
         streamer.start();
       }
       else {
