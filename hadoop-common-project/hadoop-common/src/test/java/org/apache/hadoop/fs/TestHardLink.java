@@ -98,7 +98,7 @@ public class TestHardLink {
    * @throws IOException
    */
   @BeforeClass
-  public static void setupClean() throws IOException {
+  public static void setupClean() {
     //delete source and target directories if they exist
     FileUtil.fullyDelete(src);
     FileUtil.fullyDelete(tgt_one);

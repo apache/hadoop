@@ -228,10 +228,10 @@ public class RawLocalFileSystem extends FileSystem {
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
     if (!exists(f)) {
-      throw new FileNotFoundException("File " + f + " not found.");
+      throw new FileNotFoundException("File " + f + " not found");
     }
     if (getFileStatus(f).isDirectory()) {
-      throw new IOException("Cannot append to a diretory (=" + f + " ).");
+      throw new IOException("Cannot append to a diretory (=" + f + " )");
     }
     return new FSDataOutputStream(new BufferedOutputStream(
         new LocalFSFileOutputStream(f, true), bufferSize), statistics);
@@ -242,7 +242,7 @@ public class RawLocalFileSystem extends FileSystem {
     short replication, long blockSize, Progressable progress)
     throws IOException {
     if (exists(f) && !overwrite) {
-      throw new IOException("File already exists:"+f);
+      throw new IOException("File already exists: "+f);
     }
     Path parent = f.getParent();
     if (parent != null && !mkdirs(parent)) {
@@ -271,11 +271,18 @@ public class RawLocalFileSystem extends FileSystem {
     return FileUtil.copy(this, src, this, dst, true, getConf());
   }
   
+  /**
+   * Delete the given path to a file or directory.
+   * @param p the path to delete
+   * @param recursive to delete sub-directories
+   * @return true if the file or directory and all its contents were deleted
+   * @throws IOException if p is non-empty and recursive is false 
+   */
   public boolean delete(Path p, boolean recursive) throws IOException {
     File f = pathToFile(p);
     if (f.isFile()) {
       return f.delete();
-    } else if ((!recursive) && f.isDirectory() && 
+    } else if (!recursive && f.isDirectory() && 
         (FileUtil.listFiles(f).length != 0)) {
       throw new IOException("Directory " + f.toString() + " is not empty");
     }
@@ -287,7 +294,7 @@ public class RawLocalFileSystem extends FileSystem {
     FileStatus[] results;
 
     if (!localf.exists()) {
-      throw new FileNotFoundException("File " + f + " does not exist.");
+      throw new FileNotFoundException("File " + f + " does not exist");
     }
     if (localf.isFile()) {
       return new FileStatus[] {
@@ -421,7 +428,7 @@ public class RawLocalFileSystem extends FileSystem {
     if (path.exists()) {
       return new RawLocalFileStatus(pathToFile(f), getDefaultBlockSize(), this);
     } else {
-      throw new FileNotFoundException("File " + f + " does not exist.");
+      throw new FileNotFoundException("File " + f + " does not exist");
     }
   }
 

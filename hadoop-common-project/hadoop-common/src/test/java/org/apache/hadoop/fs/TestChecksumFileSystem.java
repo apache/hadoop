@@ -18,10 +18,9 @@
 
 package org.apache.hadoop.fs;
 
-import java.net.URI;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 import org.apache.hadoop.conf.Configuration;
 import junit.framework.TestCase;
 
@@ -56,13 +55,13 @@ public class TestChecksumFileSystem extends TestCase {
 
     // Exercise some boundary cases - a divisor of the chunk size
     // the chunk size, 2x chunk size, and +/-1 around these.
-    TestLocalFileSystem.readFile(localFs, testPath, 128);
-    TestLocalFileSystem.readFile(localFs, testPath, 511);
-    TestLocalFileSystem.readFile(localFs, testPath, 512);
-    TestLocalFileSystem.readFile(localFs, testPath, 513);
-    TestLocalFileSystem.readFile(localFs, testPath, 1023);
-    TestLocalFileSystem.readFile(localFs, testPath, 1024);
-    TestLocalFileSystem.readFile(localFs, testPath, 1025);
+    readFile(localFs, testPath, 128);
+    readFile(localFs, testPath, 511);
+    readFile(localFs, testPath, 512);
+    readFile(localFs, testPath, 513);
+    readFile(localFs, testPath, 1023);
+    readFile(localFs, testPath, 1024);
+    readFile(localFs, testPath, 1025);
 
     localFs.delete(localFs.getChecksumFile(testPath), true);
     assertTrue("checksum deleted", !localFs.exists(localFs.getChecksumFile(testPath)));
@@ -74,7 +73,7 @@ public class TestChecksumFileSystem extends TestCase {
     
     boolean errorRead = false;
     try {
-      TestLocalFileSystem.readFile(localFs, testPath, 1024);
+      readFile(localFs, testPath, 1024);
     }catch(ChecksumException ie) {
       errorRead = true;
     }
@@ -83,7 +82,7 @@ public class TestChecksumFileSystem extends TestCase {
     //now setting verify false, the read should succeed
     try {
       localFs.setVerifyChecksum(false);
-      String str = TestLocalFileSystem.readFile(localFs, testPath, 1024);
+      String str = readFile(localFs, testPath, 1024).toString();
       assertTrue("read", "testing".equals(str));
     } finally {
       // reset for other tests
@@ -104,13 +103,13 @@ public class TestChecksumFileSystem extends TestCase {
 
     // Exercise some boundary cases - a divisor of the chunk size
     // the chunk size, 2x chunk size, and +/-1 around these.
-    TestLocalFileSystem.readFile(localFs, testPath, 128);
-    TestLocalFileSystem.readFile(localFs, testPath, 511);
-    TestLocalFileSystem.readFile(localFs, testPath, 512);
-    TestLocalFileSystem.readFile(localFs, testPath, 513);
-    TestLocalFileSystem.readFile(localFs, testPath, 1023);
-    TestLocalFileSystem.readFile(localFs, testPath, 1024);
-    TestLocalFileSystem.readFile(localFs, testPath, 1025);
+    readFile(localFs, testPath, 128);
+    readFile(localFs, testPath, 511);
+    readFile(localFs, testPath, 512);
+    readFile(localFs, testPath, 513);
+    readFile(localFs, testPath, 1023);
+    readFile(localFs, testPath, 1024);
+    readFile(localFs, testPath, 1025);
   }
 
   /**
@@ -140,7 +139,7 @@ public class TestChecksumFileSystem extends TestCase {
 
     // Now reading the file should fail with a ChecksumException
     try {
-      TestLocalFileSystem.readFile(localFs, testPath, 1024);
+      readFile(localFs, testPath, 1024);
       fail("Did not throw a ChecksumException when reading truncated " +
            "crc file");
     } catch(ChecksumException ie) {
@@ -149,7 +148,7 @@ public class TestChecksumFileSystem extends TestCase {
     // telling it not to verify checksums, should avoid issue.
     try {
       localFs.setVerifyChecksum(false);
-      String str = TestLocalFileSystem.readFile(localFs, testPath, 1024);
+      String str = readFile(localFs, testPath, 1024).toString();
       assertTrue("read", "testing truncation".equals(str));
     } finally {
       // reset for other tests

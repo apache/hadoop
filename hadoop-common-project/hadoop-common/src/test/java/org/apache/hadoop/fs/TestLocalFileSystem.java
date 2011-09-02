@@ -18,37 +18,23 @@
 package org.apache.hadoop.fs;
 
 import org.apache.hadoop.conf.Configuration;
+import static org.apache.hadoop.fs.FileSystemTestHelper.*;
+
 import java.io.*;
-import junit.framework.*;
+
+import static org.junit.Assert.*;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * This class tests the local file system via the FileSystem abstraction.
  */
-public class TestLocalFileSystem extends TestCase {
+public class TestLocalFileSystem {
   private static String TEST_ROOT_DIR
     = System.getProperty("test.build.data","build/test/data/work-dir/localfs");
 
-
-  static void writeFile(FileSystem fs, Path name) throws IOException {
-    FSDataOutputStream stm = fs.create(name);
-    stm.writeBytes("42\n");
-    stm.close();
-  }
-  
-  static String readFile(FileSystem fs, Path name, int buflen) throws IOException {
-    byte[] b = new byte[buflen];
-    int offset = 0;
-    FSDataInputStream in = fs.open(name);
-    for(int remaining, n;
-        (remaining = b.length - offset) > 0 && (n = in.read(b, offset, remaining)) != -1;
-        offset += n); 
-    assertEquals(offset, Math.min(b.length, in.getPos()));
-    in.close();
-
-    String s = new String(b, 0, offset);
-    System.out.println("s=" + s);
-    return s;
-  }
+  private Configuration conf;
+  private FileSystem fileSys;
 
   private void cleanupFile(FileSystem fs, Path name) throws IOException {
     assertTrue(fs.exists(name));
@@ -56,12 +42,18 @@ public class TestLocalFileSystem extends TestCase {
     assertTrue(!fs.exists(name));
   }
   
+  @Before
+  public void setup() throws IOException {
+    conf = new Configuration();
+    fileSys = FileSystem.getLocal(conf);
+    fileSys.delete(new Path(TEST_ROOT_DIR), true);
+  }
+
   /**
    * Test the capability of setting the working directory.
    */
+  @Test
   public void testWorkingDirectory() throws IOException {
-    Configuration conf = new Configuration();
-    FileSystem fileSys = FileSystem.getLocal(conf);
     Path origDir = fileSys.getWorkingDirectory();
     Path subdir = new Path(TEST_ROOT_DIR, "new");
     try {
@@ -85,7 +77,7 @@ public class TestLocalFileSystem extends TestCase {
       // create files and manipulate them.
       Path file1 = new Path("file1");
       Path file2 = new Path("sub/file2");
-      writeFile(fileSys, file1);
+      String contents = writeFile(fileSys, file1, 1);
       fileSys.copyFromLocalFile(file1, file2);
       assertTrue(fileSys.exists(file1));
       assertTrue(fileSys.isFile(file1));
@@ -103,11 +95,10 @@ public class TestLocalFileSystem extends TestCase {
       InputStream stm = fileSys.open(file1);
       byte[] buffer = new byte[3];
       int bytesRead = stm.read(buffer, 0, 3);
-      assertEquals("42\n", new String(buffer, 0, bytesRead));
+      assertEquals(contents, new String(buffer, 0, bytesRead));
       stm.close();
     } finally {
       fileSys.setWorkingDirectory(origDir);
-      fileSys.delete(subdir, true);
     }
   }
 
@@ -115,6 +106,7 @@ public class TestLocalFileSystem extends TestCase {
    * test Syncable interface on raw local file system
    * @throws IOException
    */
+  @Test
   public void testSyncable() throws IOException {
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getLocal(conf).getRawFileSystem();
@@ -148,12 +140,13 @@ public class TestLocalFileSystem extends TestCase {
     }
   }
   
+  @Test
   public void testCopy() throws IOException {
     Configuration conf = new Configuration();
     LocalFileSystem fs = FileSystem.getLocal(conf);
     Path src = new Path(TEST_ROOT_DIR, "dingo");
     Path dst = new Path(TEST_ROOT_DIR, "yak");
-    writeFile(fs, src);
+    writeFile(fs, src, 1);
     assertTrue(FileUtil.copy(fs, src, fs, dst, true, false, conf));
     assertTrue(!fs.exists(src) && fs.exists(dst));
     assertTrue(FileUtil.copy(fs, dst, fs, src, false, false, conf));
@@ -170,9 +163,12 @@ public class TestLocalFileSystem extends TestCase {
     try {
       FileUtil.copy(fs, dst, fs, src, true, true, conf);
       fail("Failed to detect existing dir");
-    } catch (IOException e) { }
+    } catch (IOException e) {
+      // Expected
+    }
   }
 
+  @Test
   public void testHomeDirectory() throws IOException {
     Configuration conf = new Configuration();
     FileSystem fileSys = FileSystem.getLocal(conf);
@@ -182,16 +178,18 @@ public class TestLocalFileSystem extends TestCase {
     assertEquals(home, fsHome);
   }
 
+  @Test
   public void testPathEscapes() throws IOException {
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getLocal(conf);
     Path path = new Path(TEST_ROOT_DIR, "foo%bar");
-    writeFile(fs, path);
+    writeFile(fs, path, 1);
     FileStatus status = fs.getFileStatus(path);
     assertEquals(path.makeQualified(fs), status.getPath());
     cleanupFile(fs, path);
   }
   
+  @Test
   public void testMkdirs() throws IOException {
     Configuration conf = new Configuration();
     LocalFileSystem fs = FileSystem.getLocal(conf);
@@ -199,18 +197,40 @@ public class TestLocalFileSystem extends TestCase {
     Path test_file = new Path(TEST_ROOT_DIR, "file1");
     assertTrue(fs.mkdirs(test_dir));
    
-    writeFile(fs, test_file);
+    writeFile(fs, test_file, 1);
     // creating dir over a file
     Path bad_dir = new Path(test_file, "another_dir");
     
     try {
       fs.mkdirs(bad_dir);
       fail("Failed to detect existing file in path");
-    } catch (FileAlreadyExistsException e) { }
+    } catch (FileAlreadyExistsException e) { 
+      // Expected
+    }
     
     try {
       fs.mkdirs(null);
       fail("Failed to detect null in mkdir arg");
-    } catch (IllegalArgumentException e) { }
+    } catch (IllegalArgumentException e) {
+      // Expected
+    }
+  }
+
+  /** Test deleting a file, directory, and non-existent path */
+  @Test
+  public void testBasicDelete() throws IOException {
+    Configuration conf = new Configuration();
+    LocalFileSystem fs = FileSystem.getLocal(conf);
+    Path dir1 = new Path(TEST_ROOT_DIR, "dir1");
+    Path file1 = new Path(TEST_ROOT_DIR, "file1");
+    Path file2 = new Path(TEST_ROOT_DIR+"/dir1", "file2");
+    Path file3 = new Path(TEST_ROOT_DIR, "does-not-exist");
+    assertTrue(fs.mkdirs(dir1));
+    writeFile(fs, file1, 1);
+    writeFile(fs, file2, 1);
+    assertFalse("Returned true deleting non-existant path", 
+        fs.delete(file3));
+    assertTrue("Did not delete file", fs.delete(file1));
+    assertTrue("Did not delete non-empty dir", fs.delete(dir1));
   }
 }

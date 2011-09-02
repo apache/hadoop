@@ -356,6 +356,9 @@ Release 0.23.0 - Unreleased
 
     HADOOP-7594. Support HTTP REST in HttpServer.  (szetszwo)
 
+    HADOOP-7552. FileUtil#fullyDelete doesn't throw IOE but lists it
+    in the throws clause. (eli)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

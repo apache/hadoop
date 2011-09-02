@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.fs;
 
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.FileNotFoundException;
 import java.net.URI;
+import java.util.Random;
 
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
-
+import static org.junit.Assert.*;
 
 /**
  * Helper class for unit tests.
@@ -143,23 +142,33 @@ public final class FileSystemTestHelper {
     }
   }
   
-  
-  public static void writeFile(FileSystem fSys, Path path,byte b[])
-    throws Exception {
-    FSDataOutputStream out = 
-      fSys.create(path);
-    out.write(b);
-    out.close();
+  static String writeFile(FileSystem fileSys, Path name, int fileSize)
+    throws IOException {
+    final long seed = 0xDEADBEEFL;
+    // Create and write a file that contains three blocks of data
+    FSDataOutputStream stm = fileSys.create(name);
+    byte[] buffer = new byte[fileSize];
+    Random rand = new Random(seed);
+    rand.nextBytes(buffer);
+    stm.write(buffer);
+    stm.close();
+    return new String(buffer);
   }
   
-  public static byte[] readFile(FileSystem fSys, Path path, int len )
-    throws Exception {
-    DataInputStream dis = fSys.open(path);
-    byte[] buffer = new byte[len];
-    IOUtils.readFully(dis, buffer, 0, len);
-    dis.close();
-    return buffer;
+  static String readFile(FileSystem fs, Path name, int buflen) 
+    throws IOException {
+    byte[] b = new byte[buflen];
+    int offset = 0;
+    FSDataInputStream in = fs.open(name);
+    for (int remaining, n;
+        (remaining = b.length - offset) > 0 && (n = in.read(b, offset, remaining)) != -1;
+        offset += n); 
+    assertEquals(offset, Math.min(b.length, in.getPos()));
+    in.close();
+    String s = new String(b, 0, offset);
+    return s;
   }
+
   public static FileStatus containsPath(FileSystem fSys, Path path,
       FileStatus[] dirList)
     throws IOException {

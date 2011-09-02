@@ -49,8 +49,7 @@ public class TestRunJar extends TestCase {
   }
 
   @After
-  protected void tearDown()
-      throws Exception {
+  protected void tearDown() {
     FileUtil.fullyDelete(TEST_ROOT_DIR);
   }
 

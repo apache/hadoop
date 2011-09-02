@@ -84,6 +84,7 @@ public class TestListFilesInFileContext {
   public static void testShutdown() throws Exception {
     cluster.shutdown();
   }
+
   /** Test when input path is a file */
   @Test
   public void testFile() throws IOException {
