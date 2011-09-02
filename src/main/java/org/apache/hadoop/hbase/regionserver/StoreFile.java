@@ -223,7 +223,7 @@ public class StoreFile {
           "bloomType=" + bt + " (disabled in config)");
       this.bloomType = BloomType.NONE;
     }
-    
+
     // cache the modification time stamp of this store file
     FileStatus[] stats = fs.listStatus(p);
     if (stats != null && stats.length == 1) {
@@ -384,7 +384,7 @@ public class StoreFile {
     if(offHeapCacheSize <= 0) {
       hfileBlockCache = new LruBlockCache(cacheSize, DEFAULT_BLOCKSIZE_SMALL);
     } else {
-      hfileBlockCache = new DoubleBlockCache(cacheSize, offHeapCacheSize, DEFAULT_BLOCKSIZE_SMALL, blockSize);
+      hfileBlockCache = new DoubleBlockCache(cacheSize, offHeapCacheSize, DEFAULT_BLOCKSIZE_SMALL, blockSize, conf);
     }
     return hfileBlockCache;
   }
@@ -400,7 +400,7 @@ public class StoreFile {
   /**
    * @return the cached value of HDFS blocks distribution. The cached value is
    * calculated when store file is opened.
-   */  
+   */
   public HDFSBlocksDistribution getHDFSBlockDistribution() {
     return this.hdfsBlocksDistribution;
   }
@@ -417,17 +417,17 @@ public class StoreFile {
    * @param reference  The reference
    * @param reference  The referencePath
    * @return HDFS blocks distribution
-   */    
+   */
   static private HDFSBlocksDistribution computeRefFileHDFSBlockDistribution(
     FileSystem fs, Reference reference, Path referencePath) throws IOException {
     if ( referencePath == null) {
       return null;
     }
-    
+
     FileStatus status = fs.getFileStatus(referencePath);
     long start = 0;
     long length = 0;
-    
+
     if (Reference.isTopFileRegion(reference.getFileRegion())) {
       start = status.getLen()/2;
       length = status.getLen() - status.getLen()/2;
@@ -437,14 +437,14 @@ public class StoreFile {
     }
     return FSUtils.computeHDFSBlocksDistribution(fs, status, start, length);
   }
-  
+
   /**
    * helper function to compute HDFS blocks distribution of a given file.
    * For reference file, it is an estimate
    * @param fs  The FileSystem
    * @param o  The path of the file
    * @return HDFS blocks distribution
-   */    
+   */
   static public HDFSBlocksDistribution computeHDFSBlockDistribution(
     FileSystem fs, Path p) throws IOException {
     if (isReference(p)) {
@@ -457,8 +457,8 @@ public class StoreFile {
       return FSUtils.computeHDFSBlocksDistribution(fs, status, 0, length);
     }
   }
-  
-  
+
+
   /**
    * compute HDFS block distribution, for reference file, it is an estimate
    */
@@ -473,7 +473,7 @@ public class StoreFile {
         this.fs, status, 0, length);
     }
   }
-  
+
   /**
    * Opens reader on this store file.  Called by Constructor.
    * @return Reader for the store file.
@@ -492,9 +492,9 @@ public class StoreFile {
           this.inMemory,
           this.conf.getBoolean(HFile.EVICT_BLOCKS_ON_CLOSE_KEY, true));
     }
-    
+
     computeHDFSBlockDistribution();
-    
+
     // Load up indices and fileinfo.
     metadataMap = Collections.unmodifiableMap(this.reader.loadFileInfo());
     // Read in our metadata.
@@ -950,8 +950,8 @@ public class StoreFile {
     public Path getPath() {
       return this.writer.getPath();
     }
-    
-    boolean hasBloom() { 
+
+    boolean hasBloom() {
       return this.bloomFilterWriter != null;
     }
 

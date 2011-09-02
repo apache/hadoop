@@ -234,6 +234,7 @@ Release 0.91.0 - Unreleased
    HBASE-4273  java.lang.NullPointerException when a table is being disabled and
                HMaster restarts (Ming Ma)
    HBASE-4310  SlabCache metrics bugfix (Li Pi)
+   HBASE-4027  Off Heap Cache never creates Slabs (Li Pi)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

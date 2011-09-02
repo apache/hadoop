@@ -45,7 +45,6 @@ public class DoubleBlockCache implements BlockCache, HeapSize {
   private final SlabCache offHeapCache;
   private final CacheStats stats;
 
-
   /**
    * Default constructor. Specify maximum size and expected average block size
    * (approximation is fine).
@@ -53,26 +52,28 @@ public class DoubleBlockCache implements BlockCache, HeapSize {
    * All other factors will be calculated based on defaults specified in this
    * class.
    *
-   * @param maxSize
-   *          maximum size of cache, in bytes
-   * @param blockSize
-   *          approximate size of each block, in bytes
+   * @param onHeapSize maximum size of the onHeapCache, in bytes.
+   * @param offHeapSize maximum size of the offHeapCache, in bytes.
+   * @param onHeapBlockSize average block size of the on heap cache.
+   * @param offHeapBlockSize average block size for the off heap cache
+   * @param conf configuration file. currently used only by the off heap cache.
    */
-  public DoubleBlockCache(long onHeapSize, long offHeapSize, long blockSizeLru,
-      long blockSizeSlab) {
+  public DoubleBlockCache(long onHeapSize, long offHeapSize,
+      long onHeapBlockSize, long offHeapBlockSize, Configuration conf) {
 
     LOG.info("Creating on-heap cache of size "
         + StringUtils.humanReadableInt(onHeapSize)
         + "bytes with an average block size of "
-        + StringUtils.humanReadableInt(blockSizeLru) + " bytes.");
-    onHeapCache = new LruBlockCache(onHeapSize, blockSizeLru);
+        + StringUtils.humanReadableInt(onHeapBlockSize) + " bytes.");
+    onHeapCache = new LruBlockCache(onHeapSize, onHeapBlockSize);
 
     LOG.info("Creating off-heap cache of size "
         + StringUtils.humanReadableInt(offHeapSize)
         + "bytes with an average block size of "
-        + StringUtils.humanReadableInt(blockSizeSlab) + " bytes.");
-    offHeapCache = new SlabCache(offHeapSize, blockSizeSlab);
+        + StringUtils.humanReadableInt(offHeapBlockSize) + " bytes.");
+    offHeapCache = new SlabCache(offHeapSize, offHeapBlockSize);
 
+    offHeapCache.addSlabByConf(conf);
     this.stats = new CacheStats();
   }
 
