@@ -15,7 +15,9 @@ Release 0.20.205.0 - unreleased
     HDFS-142. Blocks that are being written by a client are stored in the
     blocksBeingWritten directory. 
     (Dhruba Borthakur, Nicolas Spiegelberg, Todd Lipcon via dhruba)
-    
+
+    HDFS-630. Client can exclude specific nodes in the write pipeline.
+    (Nicolas Spiegelberg via dhruba)
 
   BUG FIXES
 

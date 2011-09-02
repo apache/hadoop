@@ -205,6 +205,13 @@ public class TestDFSClientRetries extends TestCase {
     public LocatedBlock addBlock(String src, String clientName)
     throws IOException
     {
+      return addBlock(src, clientName, null);
+    }
+
+
+    public LocatedBlock addBlock(String src, String clientName,
+                                 DatanodeInfo[] excludedNode)
+      throws IOException {
       num_calls++;
       if (num_calls > num_calls_allowed) { 
         throw new IOException("addBlock called more times than "
@@ -218,7 +225,6 @@ public class TestDFSClientRetries extends TestCase {
     
     
     // The following methods are stub methods that are not needed by this mock class
-
     public LocatedBlocks  getBlockLocations(String src, long offset, long length) throws IOException { return null; }
 
     public void create(String src, FsPermission masked, String clientName, boolean overwrite, short replication, long blockSize) throws IOException {}

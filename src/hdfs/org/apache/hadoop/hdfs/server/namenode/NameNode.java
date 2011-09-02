@@ -49,6 +49,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
+import org.apache.hadoop.net.Node;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
@@ -65,7 +67,11 @@ import java.io.*;
 import java.net.*;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
+import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
+
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 
 /**********************************************************
@@ -588,12 +594,30 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   /**
+   * Stub for 0.20 clients that don't support HDFS-630
    */
   public LocatedBlock addBlock(String src, 
                                String clientName) throws IOException {
+    return addBlock(src, clientName, null);
+  }
+
+  public LocatedBlock addBlock(String src,
+                               String clientName,
+                               DatanodeInfo[] excludedNodes)
+    throws IOException {
+
+    List<Node> excludedNodeList = null;
+    if (excludedNodes != null) {
+      // We must copy here, since this list gets modified later on
+      // in ReplicationTargetChooser
+      excludedNodeList = new ArrayList<Node>(
+        Arrays.<Node>asList(excludedNodes));
+    }
+
     stateChangeLog.debug("*BLOCK* NameNode.addBlock: file "
                          +src+" for "+clientName);
-    LocatedBlock locatedBlock = namesystem.getAdditionalBlock(src, clientName);
+    LocatedBlock locatedBlock = namesystem.getAdditionalBlock(
+      src, clientName, excludedNodeList);
     if (locatedBlock != null)
       myMetrics.incrNumAddBlockOps();
     return locatedBlock;

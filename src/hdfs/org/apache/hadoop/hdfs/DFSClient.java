@@ -88,7 +88,13 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   final int writePacketSize;
   private final FileSystem.Statistics stats;
   private int maxBlockAcquireFailures;
-    
+
+  /**
+   * We assume we're talking to another CDH server, which supports
+   * HDFS-630's addBlock method. If we get a RemoteException indicating
+   * it doesn't, we'll set this false and stop trying.
+   */
+  private volatile boolean serverSupportsHdfs630 = true;
  
   public static ClientProtocol createNamenode(Configuration conf) throws IOException {
     return createNamenode(NameNode.getAddress(conf), conf);
@@ -2330,6 +2336,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     private int packetSize = 0; // write packet size, including the header.
     private int chunksPerPacket = 0;
     private DatanodeInfo[] nodes = null; // list of targets for current block
+    private ArrayList<DatanodeInfo> excludedNodes = new ArrayList<DatanodeInfo>();
     private volatile boolean hasError = false;
     private volatile int errorIndex = 0;
     private volatile IOException lastException = null;
@@ -3030,7 +3037,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         success = false;
                 
         long startTime = System.currentTimeMillis();
-        lb = locateFollowingBlock(startTime);
+
+        DatanodeInfo[] excluded = excludedNodes.toArray(new DatanodeInfo[0]);
+        lb = locateFollowingBlock(startTime, excluded.length > 0 ? excluded : null);
         block = lb.getBlock();
         accessToken = lb.getBlockToken();
         nodes = lb.getLocations();
@@ -3043,6 +3052,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         if (!success) {
           LOG.info("Abandoning block " + block);
           namenode.abandonBlock(block, src, clientName);
+
+          if (errorIndex < nodes.length) {
+            LOG.debug("Excluding datanode " + nodes[errorIndex]);
+            excludedNodes.add(nodes[errorIndex]);
+          }
 
           // Connection failed.  Let's wait a little bit and retry
           retry = true;
@@ -3158,7 +3172,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       return result;
     }
   
-    private LocatedBlock locateFollowingBlock(long start
+    private LocatedBlock locateFollowingBlock(long start,
+                                              DatanodeInfo[] excludedNodes
                                               ) throws IOException {     
       int retries = conf.getInt("dfs.client.block.write.locateFollowingBlock.retries", 5);
       long sleeptime = 400;
@@ -3166,7 +3181,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         long localstart = System.currentTimeMillis();
         while (true) {
           try {
-            return namenode.addBlock(src, clientName);
+            if (serverSupportsHdfs630) {
+              return namenode.addBlock(src, clientName, excludedNodes);
+            } else {
+              return namenode.addBlock(src, clientName);
+            }
           } catch (RemoteException e) {
             IOException ue = 
               e.unwrapRemoteException(FileNotFoundException.class,
@@ -3176,7 +3195,18 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             if (ue != e) { 
               throw ue; // no need to retry these exceptions
             }
-            
+
+            if (e.getMessage().startsWith(
+                  "java.io.IOException: java.lang.NoSuchMethodException: " +
+                  "org.apache.hadoop.hdfs.protocol.ClientProtocol.addBlock(" +
+                  "java.lang.String, java.lang.String, " +
+                  "[Lorg.apache.hadoop.hdfs.protocol.DatanodeInfo;)")) {
+              // We're talking to a server that doesn't implement HDFS-630.
+              // Mark that and try again
+              serverSupportsHdfs630 = false;
+              continue;
+            }
+
             if (NotReplicatedYetException.class.getName().
                 equals(e.getClassName())) {
 

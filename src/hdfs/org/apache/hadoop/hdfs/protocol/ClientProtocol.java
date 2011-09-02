@@ -187,9 +187,25 @@ public interface ClientProtocol extends VersionedProtocol {
    * addBlock() allocates a new block and datanodes the block data
    * should be replicated to.
    * 
+   * @deprecated use the 3-arg form below
    * @return LocatedBlock allocated block information.
    */
   public LocatedBlock addBlock(String src, String clientName) throws IOException;
+
+  /**
+   * A client that wants to write an additional block to the 
+   * indicated filename (which must currently be open for writing)
+   * should call addBlock().  
+   *
+   * addBlock() allocates a new block and datanodes the block data
+   * should be replicated to.
+   *
+   * @param excludedNodes a list of nodes that should not be allocated
+   * 
+   * @return LocatedBlock allocated block information.
+   */
+  public LocatedBlock addBlock(String src, String clientName,
+                               DatanodeInfo[] excludedNodes) throws IOException;
 
   /**
    * The client is done writing data to the given filename, and would 
