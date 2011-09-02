@@ -301,7 +301,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   // Default replication
   private int defaultReplication;
   // Variable to stall new replication checks for testing purposes
-  private boolean stallReplicationWork = false;
+  private volatile boolean stallReplicationWork = false;
   // heartbeatRecheckInterval is how often namenode checks for expired datanodes
   private long heartbeatRecheckInterval;
   // heartbeatExpireInterval is how long namenode waits for datanode to report

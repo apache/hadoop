@@ -66,6 +66,9 @@ Release 0.20.205.0 - unreleased
     HDFS-1054. remove sleep before retry for allocating a block.
     (Todd Lipcon via dhruba)
 
+    HDFS-1207. FSNamesystem.stallReplicationWork should be volatile.
+    (Todd Lipcon via dhruba)
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via
