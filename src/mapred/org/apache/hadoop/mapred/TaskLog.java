@@ -23,7 +23,6 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -50,7 +49,6 @@ import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
 import org.apache.hadoop.util.ProcessTree;
 import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Appender;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -92,48 +90,29 @@ public class TaskLog {
    * @param taskID attempt-id for which log dir is to be created
    * @param isCleanup Is this attempt a cleanup attempt ?
    * @param localDirs mapred local directories
-   * @return true if attempt log directory creation is succeeded
    * @throws IOException
    */
-  public static boolean createTaskAttemptLogDir(TaskAttemptID taskID,
+  public static void createTaskAttemptLogDir(TaskAttemptID taskID,
       boolean isCleanup, String[] localDirs) throws IOException{
     String cleanupSuffix = isCleanup ? ".cleanup" : "";
     String strAttemptLogDir = getTaskAttemptLogDir(taskID, 
         cleanupSuffix, localDirs);
     File attemptLogDir = new File(strAttemptLogDir);
-    boolean isSucceeded = attemptLogDir.mkdirs();
-    if(isSucceeded) {
-      String strLinkAttemptLogDir = getJobDir(
-          taskID.getJobID()).getAbsolutePath() + File.separatorChar + 
-          taskID.toString() + cleanupSuffix;
-      if (FileUtil.symLink(strAttemptLogDir, strLinkAttemptLogDir) != 0) {
-        LOG.warn("Creation of symlink to attempt log dir failed.");
-        isSucceeded = false;
-      } 
-
-      File linkAttemptLogDir = new File(strLinkAttemptLogDir);
-      if (!linkAttemptLogDir.isDirectory() && !linkAttemptLogDir.mkdirs()) {
-        LOG.warn("Unable to create linkAttemptLogDir directory : "
-                 + linkAttemptLogDir.getPath());
-        isSucceeded = false;
-      }
-
-      FileSystem localFS = FileSystem.getLocal(new Configuration());
-
-      //Set permissions for target attempt log dir 
-      localFS.setPermission(new Path(attemptLogDir.getCanonicalPath()),
-                            new FsPermission((short)0700));
-
-      //Set permissions for target job log dir
-      localFS.setPermission(new Path(attemptLogDir.getParentFile().getCanonicalPath()),
-                            new FsPermission((short)0700));
-
-      // Set permissions for job dir in userlogs
-      localFS.setPermission(
-          new Path(linkAttemptLogDir.getParentFile().getCanonicalPath()),
-          new FsPermission((short)0700));
+    if (!attemptLogDir.mkdirs()) {
+      throw new IOException("Creation of " + attemptLogDir + " failed.");
     }
-    return isSucceeded;
+    String strLinkAttemptLogDir = 
+        getJobDir(taskID.getJobID()).getAbsolutePath() + File.separatorChar + 
+        taskID.toString() + cleanupSuffix;
+    if (FileUtil.symLink(strAttemptLogDir, strLinkAttemptLogDir) != 0) {
+      throw new IOException("Creation of symlink from " + 
+                            strLinkAttemptLogDir + " to " + strAttemptLogDir +
+                            " failed.");
+    }
+
+    //Set permissions for target attempt log dir 
+    FsPermission userOnly = new FsPermission((short) 0700);
+    FileUtil.setPermission(attemptLogDir, userOnly);
   }
 
   /**
