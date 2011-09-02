@@ -189,6 +189,42 @@ public class ZKTable {
     }
   }
 
+  /**
+   * Sets the specified table as ENABLING in zookeeper atomically
+   * If the table isn't in DISABLED state, no operation is performed
+   * @param tableName
+   * @return if the operation succeeds or not
+   * @throws KeeperException unexpected zookeeper exception
+   */
+  public boolean checkDisabledAndSetEnablingTable(final String tableName)
+    throws KeeperException {
+    synchronized (this.cache) {
+      if (!isDisabledTable(tableName)) {
+        return false;
+      }
+      setTableState(tableName, TableState.ENABLING);
+      return true;
+    }
+  }
+
+  /**
+   * Sets the specified table as DISABLING in zookeeper atomically
+   * If the table isn't in ENABLED state, no operation is performed
+   * @param tableName
+   * @return if the operation succeeds or not
+   * @throws KeeperException unexpected zookeeper exception
+   */
+  public boolean checkEnabledAndSetDisablingTable(final String tableName)
+    throws KeeperException {
+    synchronized (this.cache) {
+      if (!isEnabledTable(tableName)) {
+        return false;
+      }
+      setTableState(tableName, TableState.DISABLING);
+      return true;
+    }
+  }
+
   private void setTableState(final String tableName, final TableState state)
   throws KeeperException {
     String znode = ZKUtil.joinZNode(this.watcher.tableZNode, tableName);

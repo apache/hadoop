@@ -171,7 +171,6 @@ public class TestAvroServer {
     impl.deleteFamily(tableAname, familyAname);
     assertEquals(impl.describeTable(tableAname).families.size(), 0);
 
-    impl.disableTable(tableAname);
     impl.deleteTable(tableAname);
   }
 

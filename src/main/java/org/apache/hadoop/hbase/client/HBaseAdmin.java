@@ -565,8 +565,12 @@ public class HBaseAdmin implements Abortable, Closeable {
   /**
    * Enable a table.  May timeout.  Use {@link #enableTableAsync(byte[])}
    * and {@link #isTableEnabled(byte[])} instead.
+   * The table has to be in disabled state for it to be enabled.
    * @param tableName name of the table
    * @throws IOException if a remote or network exception occurs
+   * There could be couple types of IOException
+   * TableNotFoundException means the table doesn't exist.
+   * TableNotDisabledException means the table isn't in disabled state.
    * @see #isTableEnabled(byte[])
    * @see #disableTable(byte[])
    * @see #enableTableAsync(byte[])
@@ -706,8 +710,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    * Disable table and wait on completion.  May timeout eventually.  Use
    * {@link #disableTableAsync(byte[])} and {@link #isTableDisabled(String)}
    * instead.
+   * The table has to be in enabled state for it to be disabled.
    * @param tableName
    * @throws IOException
+   * There could be couple types of IOException
+   * TableNotFoundException means the table doesn't exist.
+   * TableNotEnabledException means the table isn't in enabled state.
    */
   public void disableTable(final byte [] tableName)
   throws IOException {

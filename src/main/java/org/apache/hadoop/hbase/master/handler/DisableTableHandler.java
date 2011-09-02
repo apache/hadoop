@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
@@ -46,8 +47,9 @@ public class DisableTableHandler extends EventHandler {
   private final AssignmentManager assignmentManager;
 
   public DisableTableHandler(Server server, byte [] tableName,
-      CatalogTracker catalogTracker, AssignmentManager assignmentManager)
-  throws TableNotFoundException, IOException {
+      CatalogTracker catalogTracker, AssignmentManager assignmentManager,
+      boolean skipTableStateCheck)
+  throws TableNotFoundException, TableNotEnabledException, IOException {
     super(server, EventType.C_M_DISABLE_TABLE);
     this.tableName = tableName;
     this.tableNameStr = Bytes.toString(this.tableName);
@@ -57,7 +59,25 @@ public class DisableTableHandler extends EventHandler {
     //       part of old master rewrite, schema to zk to check for table
     //       existence and such
     if (!MetaReader.tableExists(catalogTracker, this.tableNameStr)) {
-      throw new TableNotFoundException(Bytes.toString(tableName));
+      throw new TableNotFoundException(this.tableNameStr);
+    }
+
+    // There could be multiple client requests trying to disable or enable
+    // the table at the same time. Ensure only the first request is honored
+    // After that, no other requests can be accepted until the table reaches
+    // DISABLED or ENABLED.
+    if (!skipTableStateCheck)
+    {
+      try {
+        if (!this.assignmentManager.getZKTable().checkEnabledAndSetDisablingTable
+          (this.tableNameStr)) {
+          LOG.info("Table " + tableNameStr + " isn't enabled; skipping disable");
+          throw new TableNotEnabledException(this.tableNameStr);
+        }
+      } catch (KeeperException e) {
+        throw new IOException("Unable to ensure that the table will be" +
+          " disabling because of a ZooKeeper issue", e);
+      }
     }
   }
 
@@ -67,9 +87,10 @@ public class DisableTableHandler extends EventHandler {
     if(server != null && server.getServerName() != null) {
       name = server.getServerName().toString();
     }
-    return getClass().getSimpleName() + "-" + name + "-" + getSeqid() + "-" + tableNameStr;
+    return getClass().getSimpleName() + "-" + name + "-" + getSeqid() + "-" +
+      tableNameStr;
   }
-  
+
   @Override
   public void process() {
     try {
@@ -83,18 +104,14 @@ public class DisableTableHandler extends EventHandler {
   }
 
   private void handleDisableTable() throws IOException, KeeperException {
-    if (this.assignmentManager.getZKTable().isDisabledTable(this.tableNameStr)) {
-      LOG.info("Table " + tableNameStr + " already disabled; skipping disable");
-      return;
-    }
     // Set table disabling flag up in zk.
     this.assignmentManager.getZKTable().setDisablingTable(this.tableNameStr);
     boolean done = false;
     while (true) {
       // Get list of online regions that are of this table.  Regions that are
       // already closed will not be included in this list; i.e. the returned
-      // list is not ALL regions in a table, its all online regions according to
-      // the in-memory state on this master.
+      // list is not ALL regions in a table, its all online regions according
+      // to the in-memory state on this master.
       final List<HRegionInfo> regions =
         this.assignmentManager.getRegionsOfTable(tableName);
       if (regions.size() == 0) {

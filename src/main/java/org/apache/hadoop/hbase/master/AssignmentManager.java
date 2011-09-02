@@ -1830,12 +1830,20 @@ public class AssignmentManager extends ZooKeeperListener {
       ServerName regionLocation = region.getSecond();
       String tableName = regionInfo.getTableNameAsString();
       if (regionLocation == null) {
-        // Region not being served, add to region map with no assignment
-        // If this needs to be assigned out, it will also be in ZK as RIT
-        // add if the table is not in disabled and enabling state
-        if (false == checkIfRegionBelongsToDisabled(regionInfo)
-            && false == checkIfRegionsBelongsToEnabling(regionInfo)) {
-          regions.put(regionInfo, regionLocation);
+        // regionLocation could be null if createTable didn't finish properly.
+        // When createTable is in progress, HMaster restarts.
+        // Some regions have been added to .META., but have not been assigned.
+        // When this happens, the region's table must be in ENABLING state.
+        // It can't be in ENABLED state as that is set when all regions are
+        // assigned.
+        // It can't be in DISABLING state, because DISABLING state transitions
+        // from ENABLED state when application calls disableTable.
+        // It can't be in DISABLED state, because DISABLED states transitions
+        // from DISABLING state.
+        if (false == checkIfRegionsBelongsToEnabling(regionInfo)) {
+          LOG.warn("Region " + regionInfo.getEncodedName() +
+            " has null regionLocation." + " But its table " + tableName +
+            " isn't in ENABLING state.");
         }
         addTheTablesInPartialState(disablingTables, enablingTables, regionInfo,
             tableName);
@@ -1901,7 +1909,7 @@ public class AssignmentManager extends ZooKeeperListener {
             + " is in DISABLING state.  Hence recovering by moving the table"
             + " to DISABLED state.");
         new DisableTableHandler(this.master, tableName.getBytes(),
-            catalogTracker, this).process();
+            catalogTracker, this, true).process();
       }
     }
     return isWatcherCreated;
@@ -1931,7 +1939,7 @@ public class AssignmentManager extends ZooKeeperListener {
             + " is in ENABLING state.  Hence recovering by moving the table"
             + " to ENABLED state.");
         new EnableTableHandler(this.master, tableName.getBytes(),
-            catalogTracker, this).process();
+            catalogTracker, this, true).process();
       }
     }
   }

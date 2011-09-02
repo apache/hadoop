@@ -1,5 +1,5 @@
 /**
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2011 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
@@ -916,10 +917,35 @@ public class TestAdmin {
    * @throws IOException
    */
   @Test (expected=TableExistsException.class)
-  public void testTableNotFoundExceptionWithATable() throws IOException {
-    final byte [] name = Bytes.toBytes("testTableNotFoundExceptionWithATable");
+  public void testTableExistsExceptionWithATable() throws IOException {
+    final byte [] name = Bytes.toBytes("testTableExistsExceptionWithATable");
     TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY);
     TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY);
+  }
+
+  /**
+   * Can't disable a table if the table isn't in enabled state
+   * @throws IOException
+   */
+  @Test (expected=TableNotEnabledException.class)
+  public void testTableNotEnabledExceptionWithATable() throws IOException {
+    final byte [] name = Bytes.toBytes(
+      "testTableNotEnabledExceptionWithATable");
+    TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY);
+    this.admin.disableTable(name);
+    this.admin.disableTable(name);
+  }
+
+  /**
+   * Can't enable a table if the table isn't in disabled state
+   * @throws IOException
+   */
+  @Test (expected=TableNotDisabledException.class)
+  public void testTableNotDisabledExceptionWithATable() throws IOException {
+    final byte [] name = Bytes.toBytes(
+      "testTableNotDisabledExceptionWithATable");
+    TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY);
+    this.admin.enableTable(name);
   }
 
   /**

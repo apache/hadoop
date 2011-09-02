@@ -1029,7 +1029,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       cpHost.preEnableTable(tableName);
     }
     this.executorService.submit(new EnableTableHandler(this, tableName,
-      catalogTracker, assignmentManager));
+      catalogTracker, assignmentManager, false));
     if (cpHost != null) {
       cpHost.postEnableTable(tableName);
     }
@@ -1040,7 +1040,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       cpHost.preDisableTable(tableName);
     }
     this.executorService.submit(new DisableTableHandler(this, tableName,
-      catalogTracker, assignmentManager));
+      catalogTracker, assignmentManager, false));
     if (cpHost != null) {
       cpHost.postDisableTable(tableName);
     }

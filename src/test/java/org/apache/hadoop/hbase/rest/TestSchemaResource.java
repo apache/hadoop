@@ -104,9 +104,6 @@ public class TestSchemaResource {
     response = client.put(schemaPath, Constants.MIMETYPE_XML, toXML(model));
     assertEquals(response.getCode(), 403);
 
-    // make sure HBase concurs, and wait for the table to come online
-    admin.enableTable(TABLE1);
-
     // retrieve the schema and validate it
     response = client.get(schemaPath, Constants.MIMETYPE_XML);
     assertEquals(response.getCode(), 200);
@@ -144,9 +141,6 @@ public class TestSchemaResource {
     response = client.put(schemaPath, Constants.MIMETYPE_PROTOBUF,
       model.createProtobufOutput());
     assertEquals(response.getCode(), 403);
-
-    // make sure HBase concurs, and wait for the table to come online
-    admin.enableTable(TABLE2);
 
     // retrieve the schema and validate it
     response = client.get(schemaPath, Constants.MIMETYPE_PROTOBUF);
