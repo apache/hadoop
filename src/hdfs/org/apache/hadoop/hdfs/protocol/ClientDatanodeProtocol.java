@@ -32,9 +32,9 @@ public interface ClientDatanodeProtocol extends VersionedProtocol {
   public static final Log LOG = LogFactory.getLog(ClientDatanodeProtocol.class);
 
   /**
-   * 4: never return null and always return a newly generated access token
+   * 5: added getBlockInfo
    */
-  public static final long versionID = 4L;
+  public static final long versionID = 5L;
 
   /** Start generation-stamp recovery for specified block
    * @param block the specified block
@@ -47,4 +47,12 @@ public interface ClientDatanodeProtocol extends VersionedProtocol {
    */
   LocatedBlock recoverBlock(Block block, boolean keepLength,
       DatanodeInfo[] targets) throws IOException;
+
+  /** Returns a block object that contains the specified block object
+   * from the specified Datanode.
+   * @param block the specified block
+   * @return the Block object from the specified Datanode
+   * @throws IOException if the block does not exist
+   */
+  Block getBlockInfo(Block block) throws IOException;
 }

@@ -1136,12 +1136,12 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
         v = volumes.getNextVolume(blockSize);
         // create temporary file to hold block in the designated volume
         f = createTmpFile(v, b);
-        volumeMap.put(b, new DatanodeBlockInfo(v));
+        volumeMap.put(b, new DatanodeBlockInfo(v, f));
       } else if (f != null) {
         DataNode.LOG.info("Reopen already-open Block for append " + b);
         // create or reuse temporary file to hold block in the designated volume
         v = volumeMap.get(b).getVolume();
-        volumeMap.put(b, new DatanodeBlockInfo(v));
+        volumeMap.put(b, new DatanodeBlockInfo(v, f));
       } else {
         // reopening block for appending to it.
         DataNode.LOG.info("Reopen Block for append " + b);
@@ -1172,7 +1172,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
                                   " to tmp dir " + f);
           }
         }
-        volumeMap.put(b, new DatanodeBlockInfo(v));
+        volumeMap.put(b, new DatanodeBlockInfo(v, f));
       }
       if (f == null) {
         DataNode.LOG.warn("Block " + b + " reopen failed " +

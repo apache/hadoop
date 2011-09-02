@@ -1604,12 +1604,48 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         throw new FileNotFoundException("File does not exist: " + src);
       }
 
-      if (locatedBlocks != null) {
+      // I think this check is not correct. A file could have been appended to
+      // between two calls to openInfo().
+      if (locatedBlocks != null && !locatedBlocks.isUnderConstruction() &&
+          !newInfo.isUnderConstruction()) {
         Iterator<LocatedBlock> oldIter = locatedBlocks.getLocatedBlocks().iterator();
         Iterator<LocatedBlock> newIter = newInfo.getLocatedBlocks().iterator();
         while (oldIter.hasNext() && newIter.hasNext()) {
           if (! oldIter.next().getBlock().equals(newIter.next().getBlock())) {
             throw new IOException("Blocklist for " + src + " has changed!");
+          }
+        }
+      }
+
+      // if the file is under construction, then fetch size of last block
+      // from datanode.
+      if (newInfo.isUnderConstruction() && newInfo.locatedBlockCount() > 0) {
+        LocatedBlock last = newInfo.get(newInfo.locatedBlockCount()-1);
+        boolean lastBlockInFile = (last.getStartOffset() + 
+                                   last.getBlockSize() == 
+                                   newInfo.getFileLength()); 
+        if (lastBlockInFile && last.getLocations().length > 0) {
+          ClientDatanodeProtocol primary =  null;
+          DatanodeInfo primaryNode = last.getLocations()[0];
+          try {
+            primary = createClientDatanodeProtocolProxy(primaryNode, conf,
+                last.getBlock(), last.getBlockToken(), socketTimeout);
+            Block newBlock = primary.getBlockInfo(last.getBlock());
+            long newBlockSize = newBlock.getNumBytes();
+            long delta = newBlockSize - last.getBlockSize();
+            // if the size of the block on the datanode is different
+            // from what the NN knows about, the datanode wins!
+            last.getBlock().setNumBytes(newBlockSize);
+            long newlength = newInfo.getFileLength() + delta;
+            newInfo.setFileLength(newlength);
+            LOG.debug("DFSClient setting last block " + last + 
+                      " to length " + newBlockSize +
+                      " filesize is now " + newInfo.getFileLength());
+          } catch (IOException e) {
+            LOG.debug("DFSClient file " + src + 
+                      " is being concurrently append to" +
+                      " but datanode " + primaryNode.getHostName() +
+                      " probably does not have block " + last.getBlock());
           }
         }
       }

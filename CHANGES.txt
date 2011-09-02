@@ -7,6 +7,8 @@ Release 0.20.205.0 - unreleased
     HDFS-2202. Add a new DFSAdmin command to set balancer bandwidth of
     datanodes without restarting.  (Eric Payne via szetszwo)
 
+    HDFS-200. Support append and sync for hadoop 0.20 branch. (dhruba)
+
   BUG FIXES
 
     MAPREDUCE-2324. Removed usage of broken

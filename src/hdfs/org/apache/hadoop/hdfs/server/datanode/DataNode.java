@@ -1841,6 +1841,12 @@ public class DataNode extends Configured
     return recoverBlock(block, keepLength, targets, false);
   }
 
+  /** {@inheritDoc} */
+  public Block getBlockInfo(Block block) throws IOException {
+    Block stored = data.getStoredBlock(block.getBlockId());
+    return stored;
+  }
+
   private static void logRecoverBlock(String who,
       Block block, DatanodeID[] targets) {
     StringBuilder msg = new StringBuilder(targets[0].getName());

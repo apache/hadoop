@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -391,10 +392,27 @@ public class DatanodeDescriptor extends DatanodeInfo {
     // Note we are taking special precaution to limit tmp blocks allocated
     // as part this block report - which why block list is stored as longs
     Block iblk = new Block(); // a fixed new'ed block to be reused with index i
+    Block oblk = new Block(); // for fixing genstamps
     for (int i = 0; i < newReport.getNumberOfBlocks(); ++i) {
       iblk.set(newReport.getBlockId(i), newReport.getBlockLen(i), 
                newReport.getBlockGenStamp(i));
       BlockInfo storedBlock = blocksMap.getStoredBlock(iblk);
+      if(storedBlock == null) {
+        // if the block with a WILDCARD generation stamp matches 
+        // then accept this block.
+        // This block has a diferent generation stamp on the datanode 
+        // because of a lease-recovery-attempt.
+        oblk.set(newReport.getBlockId(i), newReport.getBlockLen(i),
+                 GenerationStamp.WILDCARD_STAMP);
+        storedBlock = blocksMap.getStoredBlock(oblk);
+        if (storedBlock != null && storedBlock.getINode() != null &&
+            (storedBlock.getGenerationStamp() <= iblk.getGenerationStamp() ||
+             storedBlock.getINode().isUnderConstruction())) {
+          // accept block. It wil be cleaned up on cluster restart.
+        } else {
+          storedBlock = null;
+        }
+      }
       if(storedBlock == null) {
         // If block is not in blocksMap it does not belong to any file
         toInvalidate.add(new Block(iblk));
