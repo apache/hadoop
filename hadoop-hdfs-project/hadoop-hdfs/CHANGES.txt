@@ -8,6 +8,9 @@ Trunk (unreleased changes)
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
 
+    HDFS-2299. TestOfflineEditsViewer is failing on trunk. (Uma Maheswara Rao G
+               via atm)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
