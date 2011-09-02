@@ -50,6 +50,9 @@ Release 0.20.205.0 - unreleased
     HDFS-1118. Fix socketleak on DFSClient. 
     (Zheng Shao via dhruba)
 
+    HDFS-988. Fix bug where savenameSpace can corrupt edits log.
+    (Nicolas Spiegelberg via dhruba)
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via
