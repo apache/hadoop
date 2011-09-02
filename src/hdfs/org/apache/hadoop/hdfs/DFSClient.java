@@ -2340,6 +2340,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     private int maxRecoveryErrorCount = 5; // try block recovery 5 times
     private volatile boolean appendChunk = false;   // appending to existing partial block
     private long initialFileSize = 0; // at time of file open
+    private Progressable progress;
+    private short blockReplication; // replication factor of file
 
     Token<BlockTokenIdentifier> getAccessToken() {
       return accessToken;
@@ -2873,13 +2875,12 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       }
     }
 
-    private Progressable progress;
-
     private DFSOutputStream(String src, long blockSize, Progressable progress,
-        int bytesPerChecksum) throws IOException {
+        int bytesPerChecksum, short replication) throws IOException {
       super(new CRC32(), bytesPerChecksum, 4);
       this.src = src;
       this.blockSize = blockSize;
+      this.blockReplication = replication;
       this.progress = progress;
       if (progress != null) {
         LOG.debug("Set non-null progress callback on DFSOutputStream "+src);
@@ -2903,7 +2904,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     DFSOutputStream(String src, FsPermission masked, boolean overwrite,
         short replication, long blockSize, Progressable progress,
         int buffersize, int bytesPerChecksum) throws IOException {
-      this(src, blockSize, progress, bytesPerChecksum);
+      this(src, blockSize, progress, bytesPerChecksum, replication);
 
       computePacketChunkSize(writePacketSize, bytesPerChecksum);
 
@@ -2925,7 +2926,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     DFSOutputStream(String src, int buffersize, Progressable progress,
         LocatedBlock lastBlock, HdfsFileStatus stat,
         int bytesPerChecksum) throws IOException {
-      this(src, stat.getBlockSize(), progress, bytesPerChecksum);
+      this(src, stat.getBlockSize(), progress, bytesPerChecksum, stat.getReplication());
       initialFileSize = stat.getLen(); // length of file when opened
 
       //
@@ -3337,6 +3338,24 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           closed = true;
           closeThreads();
           throw e;
+      }
+    }
+
+    /**
+     * Returns the number of replicas of current block. This can be different
+     * from the designated replication factor of the file because the NameNode
+     * does not replicate the block to which a client is currently writing to.
+     * The client continues to write to a block even if a few datanodes in the
+     * write pipeline have failed. If the current block is full and the next
+     * block is not yet allocated, then this API will return 0 because there are
+     * no replicas in the pipeline.
+     */
+    public int getNumCurrentReplicas() throws IOException {
+      synchronized(dataQueue) {
+        if (nodes == null) {
+          return blockReplication;
+        }
+        return nodes.length;
       }
     }
 

@@ -9,6 +9,9 @@ Release 0.20.205.0 - unreleased
 
     HDFS-200. Support append and sync for hadoop 0.20 branch. (dhruba)
 
+    HDFS-826. Allow a mechanism for an application to detect that 
+    datanode(s) have died in the write pipeline. (dhruba)
+
   BUG FIXES
 
     MAPREDUCE-2324. Removed usage of broken
