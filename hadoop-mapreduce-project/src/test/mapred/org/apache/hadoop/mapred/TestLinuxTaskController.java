@@ -45,7 +45,7 @@ public class TestLinuxTaskController extends TestCase {
   }
 
   @After
-  protected void tearDown() throws Exception {
+  protected void tearDown() {
     FileUtil.fullyDelete(testDir);
   }
 

@@ -355,6 +355,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7604. Hadoop Auth examples pom in 0.23 point to 0.24 versions.
     (mahadev)
 
+    HADOOP-7552. FileUtil#fullyDelete doesn't throw IOE but lists it
+    in the throws clause. (eli)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

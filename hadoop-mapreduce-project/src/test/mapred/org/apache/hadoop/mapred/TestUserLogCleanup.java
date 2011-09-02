@@ -61,7 +61,7 @@ public class TestUserLogCleanup {
   }
 
   @After
-  public void tearDown() throws IOException {
+  public void tearDown() {
     FileUtil.fullyDelete(TaskLog.getUserLogDir());
   }
 

@@ -43,7 +43,7 @@ public class TestMRAsyncDiskService extends TestCase {
       "test.build.data", "/tmp")).toString();
   
   @Override
-  protected void setUp() throws Exception {
+  protected void setUp() {
     FileUtil.fullyDelete(new File(TEST_ROOT_DIR));
   }
 

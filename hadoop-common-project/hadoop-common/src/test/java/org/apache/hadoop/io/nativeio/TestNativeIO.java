@@ -50,7 +50,7 @@ public class TestNativeIO {
   }
 
   @Before
-  public void setupTestDir() throws IOException {
+  public void setupTestDir() {
     FileUtil.fullyDelete(TEST_DIR);
     TEST_DIR.mkdirs();
   }

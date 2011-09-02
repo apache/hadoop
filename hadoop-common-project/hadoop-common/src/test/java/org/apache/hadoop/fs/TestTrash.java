@@ -19,9 +19,9 @@ package org.apache.hadoop.fs;
 
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.*;
+import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 
 import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -41,14 +41,6 @@ public class TestTrash extends TestCase {
   private final static Path TEST_DIR =
     new Path(new File(System.getProperty("test.build.data","/tmp")
           ).toURI().toString().replace(' ', '+'), "testTrash");
-
-  protected static Path writeFile(FileSystem fs, Path f) throws IOException {
-    DataOutputStream out = fs.create(f);
-    out.writeBytes("dhruba: " + f);
-    out.close();
-    assertTrue(fs.exists(f));
-    return f;
-  }
 
   protected static Path mkdir(FileSystem fs, Path p) throws IOException {
     assertTrue(fs.mkdirs(p));
@@ -139,7 +131,7 @@ public class TestTrash extends TestCase {
 
     // Second, create a file in that directory.
     Path myFile = new Path(base, "test/mkdirs/myFile");
-    writeFile(fs, myFile);
+    writeFile(fs, myFile, 10);
 
     // Verify that expunge without Trash directory
     // won't throw Exception
@@ -176,7 +168,7 @@ public class TestTrash extends TestCase {
     }
 
     // Verify that we can recreate the file
-    writeFile(fs, myFile);
+    writeFile(fs, myFile, 10);
 
     // Verify that we succeed in removing the file we re-created
     {
@@ -194,7 +186,7 @@ public class TestTrash extends TestCase {
     }
 
     // Verify that we can recreate the file
-    writeFile(fs, myFile);
+    writeFile(fs, myFile, 10);
     
     // Verify that we succeed in removing the whole directory
     // along with the file inside it.
@@ -234,7 +226,7 @@ public class TestTrash extends TestCase {
     {
         Path toErase = new Path(trashRoot, "toErase");
         int retVal = -1;
-        writeFile(trashRootFs, toErase);
+        writeFile(trashRootFs, toErase, 10);
         try {
           retVal = shell.run(new String[] {"-rm", toErase.toString()});
         } catch (Exception e) {
@@ -265,7 +257,7 @@ public class TestTrash extends TestCase {
 
     // recreate directory and file
     mkdir(fs, myPath);
-    writeFile(fs, myFile);
+    writeFile(fs, myFile, 10);
 
     // remove file first, then remove directory
     {
@@ -316,7 +308,7 @@ public class TestTrash extends TestCase {
     
     // recreate directory and file
     mkdir(fs, myPath);
-    writeFile(fs, myFile);
+    writeFile(fs, myFile, 10);
     
     // Verify that skip trash option really skips the trash for files (rm)
     {
@@ -346,7 +338,7 @@ public class TestTrash extends TestCase {
     
     // recreate directory and file
     mkdir(fs, myPath);
-    writeFile(fs, myFile);
+    writeFile(fs, myFile, 10);
     
     // Verify that skip trash option really skips the trash for rmr
     {
@@ -392,7 +384,7 @@ public class TestTrash extends TestCase {
       for(int i=0;i<num_runs; i++) {
         
         //create file
-        writeFile(fs, myFile);
+        writeFile(fs, myFile, 10);
          
         // delete file
         try {
@@ -452,8 +444,7 @@ public class TestTrash extends TestCase {
         lfs.delete(p, true);
       }
       try {
-        f = writeFile(lfs, f);
-
+        writeFile(lfs, f, 10);
         FileSystem.closeAll();
         FileSystem localFs = FileSystem.get(URI.create("file:///"), conf);
         Trash lTrash = new Trash(localFs, conf);
@@ -515,7 +506,7 @@ public class TestTrash extends TestCase {
     while (true)  {
       // Create a file with a new name
       Path myFile = new Path(TEST_DIR, "test/mkdirs/myFile" + fileIndex++);
-      writeFile(fs, myFile);
+      writeFile(fs, myFile, 10);
 
       // Delete the file to trash
       String[] args = new String[2];
@@ -606,7 +597,7 @@ public class TestTrash extends TestCase {
     int iters = 1000;
     for(int i=0;i<iters; i++) {
       
-      writeFile(fs, myFile);
+      writeFile(fs, myFile, 10);
       
       start = System.currentTimeMillis();
       
