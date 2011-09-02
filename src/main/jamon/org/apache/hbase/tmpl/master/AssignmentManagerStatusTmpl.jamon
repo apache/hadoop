@@ -18,15 +18,40 @@ See the License for the specific language governing permissions and
 limitations under the License.
 </%doc>
 <%import>
+org.apache.hadoop.hbase.HRegionInfo;
 org.apache.hadoop.hbase.master.AssignmentManager;
 org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
+java.util.Iterator;
 java.util.Map;
 </%import>
 <%args>
 AssignmentManager assignmentManager;
+int limit = 100;
 </%args>
 <%java>
 Map<String, RegionState> rit = assignmentManager.getRegionsInTransition();
+
+int toRemove = rit.size() - limit;
+int removed = 0;
+if (toRemove > 0) {
+  // getRegionsInTransition returned a copy, so we can mutate it
+  for (Iterator<Map.Entry<String, RegionState>> it = rit.entrySet().iterator();
+       it.hasNext() && toRemove > 0;
+       ) {
+    Map.Entry<String, RegionState> e = it.next();
+    if (HRegionInfo.FIRST_META_REGIONINFO.getEncodedName().equals(
+          e.getKey()) ||
+        HRegionInfo.ROOT_REGIONINFO.getEncodedName().equals(
+          e.getKey())) {
+      // don't remove the meta regions, they're too interesting!
+      continue;
+    } 
+    it.remove();
+    toRemove--;
+    removed++;
+  }
+}
+
 </%java>
 
 <h2>Regions in Transition</h2>
@@ -39,4 +64,7 @@ No regions in transition.
 		<tr><td><% entry.getKey() %></td><td><% entry.getValue().toDescriptiveString() %></td>
 		</%for>
 	</table>
+	<%if removed > 0 %>
+	(<% removed %> more regions in transition not shown) 
+	</%if>
 </%if>
