@@ -87,7 +87,9 @@ public class TestSlabCache {
   public void testStatsArithmetic(){
     SlabStats test = cache.requestStats;
     for(int i = 0; i < test.NUMDIVISIONS; i++){
-      assert(test.getUpperBound(i) < test.getLowerBound(i + 1));
+      assertTrue("Upper for index " + i + " is " + test.getUpperBound(i) +
+          " lower " + test.getLowerBound(i + 1),
+          test.getUpperBound(i) <= test.getLowerBound(i + 1));
     }
   }
 }
