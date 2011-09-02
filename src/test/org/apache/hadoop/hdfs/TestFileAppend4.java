@@ -691,6 +691,85 @@ public class TestFileAppend4 extends TestCase {
     }
   }
 
+
+  /**
+   * Test case that stops a writer after finalizing a block but
+   * before calling completeFile, recovers a file from another writer,
+   * starts writing from that writer, and then has the old lease holder
+   * call completeFile
+   */
+  public void testCompleteOtherLeaseHoldersFile() throws Throwable {
+    cluster = new MiniDFSCluster(conf, 3, true, null);
+
+    try {
+      cluster.waitActive();
+      NameNode preSpyNN = cluster.getNameNode();
+      NameNode spyNN = spy(preSpyNN);
+
+      // Delay completeFile
+      DelayAnswer delayer = new DelayAnswer();
+      doAnswer(delayer).when(spyNN).complete(anyString(), anyString());
+
+      DFSClient client = new DFSClient(null, spyNN, conf, null);
+      file1 = new Path("/testRecoverFinalized");
+      final OutputStream stm = client.create("/testRecoverFinalized", true);
+
+      // write 1/2 block
+      AppendTestUtil.write(stm, 0, 4096);
+      final AtomicReference<Throwable> err = new AtomicReference<Throwable>();
+      Thread t = new Thread() { 
+          public void run() {
+            try {
+              stm.close();
+            } catch (Throwable t) {
+              err.set(t);
+            }
+          }};
+      t.start();
+      LOG.info("Waiting for close to get to latch...");
+      delayer.waitForCall();
+
+      // At this point, the block is finalized on the DNs, but the file
+      // has not been completed in the NN.
+      // Lose the leases
+      LOG.info("Killing lease checker");
+      client.leasechecker.interruptAndJoin();
+
+      FileSystem fs1 = cluster.getFileSystem();
+      FileSystem fs2 = AppendTestUtil.createHdfsWithDifferentUsername(
+        fs1.getConf());
+
+      LOG.info("Recovering file");
+      recoverFile(fs2);
+
+      LOG.info("Opening file for append from new fs");
+      FSDataOutputStream appenderStream = fs2.append(file1);
+      
+      LOG.info("Writing some data from new appender");
+      AppendTestUtil.write(appenderStream, 0, 4096);
+      
+      LOG.info("Telling old close to proceed.");
+      delayer.proceed();
+      LOG.info("Waiting for close to finish.");
+      t.join();
+      LOG.info("Close finished.");
+
+      // We expect that close will get a "Lease mismatch"
+      // error.
+      Throwable thrownByClose = err.get();
+      assertNotNull(thrownByClose);
+      assertTrue(thrownByClose instanceof IOException);
+      if (!thrownByClose.getMessage().contains(
+            "Lease mismatch"))
+        throw thrownByClose;
+      
+      // The appender should be able to close properly
+      appenderStream.close();
+    } finally {
+      cluster.shutdown();
+    }
+  }  
+  
   /**
    * Test for an intermittent failure of commitBlockSynchronization.
    * This could happen if the DN crashed between calling updateBlocks
@@ -727,6 +806,7 @@ public class TestFileAppend4 extends TestCase {
     LOG.info("STOP");
   }
 
+  
   /**
    * Test that when a DN starts up with bbws from a file that got
    * removed or finalized when it was down, the block gets deleted.

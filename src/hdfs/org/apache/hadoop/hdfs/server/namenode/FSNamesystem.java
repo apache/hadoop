@@ -1581,24 +1581,19 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     NameNode.stateChangeLog.debug("DIR* NameSystem.completeFile: " + src + " for " + holder);
     if (isInSafeMode())
       throw new SafeModeException("Cannot complete file " + src, safeMode);
-    INode iFile = dir.getFileINode(src);
-    INodeFileUnderConstruction pendingFile = null;
-    Block[] fileBlocks = null;
 
-    if (iFile != null && iFile.isUnderConstruction()) {
-      pendingFile = (INodeFileUnderConstruction) iFile;
-      fileBlocks =  dir.getFileBlocks(src);
-    }
-    if (fileBlocks == null ) {    
+    INodeFileUnderConstruction pendingFile  = checkLease(src, holder);
+    Block[] fileBlocks =  dir.getFileBlocks(src);
+
+    if (fileBlocks == null ) {
       NameNode.stateChangeLog.warn("DIR* NameSystem.completeFile: "
                                    + "failed to complete " + src
-                                   + " because dir.getFileBlocks() is null " + 
-                                   " and pendingFile is " + 
-                                   ((pendingFile == null) ? "null" : 
-                                     ("from " + pendingFile.getClientMachine()))
-                                  );                      
+                                   + " because dir.getFileBlocks() is null,"
+                                   + " pending from " + pendingFile.getClientMachine());
       return CompleteFileStatus.OPERATION_FAILED;
-    } else if (!checkFileProgress(pendingFile, true)) {
+    }
+
+    if (!checkFileProgress(pendingFile, true)) {
       return CompleteFileStatus.STILL_WAITING;
     }
 
