@@ -233,6 +233,7 @@ Release 0.91.0 - Unreleased
    HBASE-4315  RPC logging too verbose (todd)
    HBASE-4273  java.lang.NullPointerException when a table is being disabled and
                HMaster restarts (Ming Ma)
+   HBASE-4310  SlabCache metrics bugfix (Li Pi)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

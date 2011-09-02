@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.io.hfile.slab;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.slab.SlabCache;
+import org.apache.hadoop.hbase.io.hfile.slab.SlabCache.SlabStats;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -79,5 +80,14 @@ public class TestSlabCache {
   @Test
   public void testCacheMultiThreadedSingleKey() throws Exception {
     CacheTestUtils.hammerSingleKey(cache, BLOCK_SIZE, NUM_THREADS, NUM_QUERIES);
+  }
+
+  @Test
+  /*Just checks if ranges overlap*/
+  public void testStatsArithmetic(){
+    SlabStats test = cache.requestStats;
+    for(int i = 0; i < test.NUMDIVISIONS; i++){
+      assert(test.getUpperBound(i) < test.getLowerBound(i + 1));
+    }
   }
 }

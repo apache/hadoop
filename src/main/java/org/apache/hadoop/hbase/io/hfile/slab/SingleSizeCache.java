@@ -61,6 +61,7 @@ public class SingleSizeCache implements BlockCache {
   private final CacheStats stats;
   private final SlabItemEvictionWatcher evictionWatcher;
   private AtomicLong size;
+  private AtomicLong timeSinceLastAccess;
   public final static long CACHE_FIXED_OVERHEAD = ClassSize
       .align((2 * Bytes.SIZEOF_INT) + (5 * ClassSize.REFERENCE)
           + +ClassSize.OBJECT);
@@ -86,6 +87,7 @@ public class SingleSizeCache implements BlockCache {
     this.stats = new CacheStats();
     this.evictionWatcher = master;
     this.size = new AtomicLong(CACHE_FIXED_OVERHEAD + backingStore.heapSize());
+    this.timeSinceLastAccess = new AtomicLong();
 
     // This evictionListener is called whenever the cache automatically evicts
     // something.
@@ -94,6 +96,8 @@ public class SingleSizeCache implements BlockCache {
       public void onEviction(String key, CacheablePair value) {
         try {
           value.evictionLock.writeLock().lock();
+          timeSinceLastAccess.set(System.nanoTime()
+              - value.recentlyAccessed.get());
           backingStore.free(value.serializedData);
           stats.evict();
           /**
@@ -139,6 +143,7 @@ public class SingleSizeCache implements BlockCache {
       throw new RuntimeException("already cached " + blockName);
     }
     toBeCached.serialize(storedBlock);
+    newEntry.recentlyAccessed.set(System.nanoTime());
     this.size.addAndGet(newEntry.heapSize());
   }
 
@@ -154,6 +159,7 @@ public class SingleSizeCache implements BlockCache {
     // If lock cannot be obtained, that means we're undergoing eviction.
     if (contentBlock.evictionLock.readLock().tryLock()) {
       try {
+        contentBlock.recentlyAccessed.set(System.nanoTime());
         return contentBlock.deserializer
             .deserialize(contentBlock.serializedData);
       } catch (IOException e) {
@@ -193,11 +199,14 @@ public class SingleSizeCache implements BlockCache {
 
   public void logStats() {
 
+    long milliseconds = (long)this.timeSinceLastAccess.get() / 1000000;
+
     LOG.info("For Slab of size " + this.blockSize + ": "
         + this.getOccupiedSize() / this.blockSize
         + " occupied, out of a capacity of " + this.numBlocks
         + " blocks. HeapSize is "
-        + StringUtils.humanReadableInt(this.heapSize()) + " bytes.");
+        + StringUtils.humanReadableInt(this.heapSize()) + " bytes." + ", "
+        + "churnTime=" + StringUtils.formatTime(milliseconds));
 
     LOG.debug("Slab Stats: " + "accesses="
         + stats.getRequestCount()
@@ -292,9 +301,11 @@ public class SingleSizeCache implements BlockCache {
     final CacheableDeserializer<Cacheable> deserializer;
     final ByteBuffer serializedData;
     final ReentrantReadWriteLock evictionLock;
+    AtomicLong recentlyAccessed;
 
     private CacheablePair(CacheableDeserializer<Cacheable> deserializer,
         ByteBuffer serializedData) {
+      this.recentlyAccessed = new AtomicLong();
       this.deserializer = deserializer;
       this.serializedData = serializedData;
       evictionLock = new ReentrantReadWriteLock();

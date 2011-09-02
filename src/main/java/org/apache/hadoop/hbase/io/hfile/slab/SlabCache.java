@@ -175,6 +175,8 @@ public class SlabCache implements SlabItemEvictionWatcher, BlockCache, HeapSize 
   }
 
   private void addSlab(int blockSize, int numBlocks) {
+    LOG.info("Creating a slab of blockSize " + blockSize + " with " + numBlocks
+        + " blocks.");
     sizer.put(blockSize, new SingleSizeCache(blockSize, numBlocks, this));
   }
 
@@ -332,8 +334,8 @@ public class SlabCache implements SlabItemEvictionWatcher, BlockCache, HeapSize 
   static class SlabStats {
     // the maximum size somebody will ever try to cache, then we multiply by 10
     // so we have finer grained stats.
-    private final int MULTIPLIER = 10;
-    private final int NUMDIVISIONS = (int) (Math.log(Integer.MAX_VALUE) * MULTIPLIER);
+    final int MULTIPLIER = 10;
+    final int NUMDIVISIONS = (int) (Math.log(Integer.MAX_VALUE) * MULTIPLIER);
     private final AtomicLong[] counts = new AtomicLong[NUMDIVISIONS];
 
     public SlabStats() {
@@ -351,24 +353,27 @@ public class SlabCache implements SlabItemEvictionWatcher, BlockCache, HeapSize 
       return counts;
     }
 
+    double getUpperBound(int index) {
+      return Math.pow(Math.E, ((double) (index + 0.5) / (double) MULTIPLIER));
+    }
+
+    double getLowerBound(int index) {
+      return Math.pow(Math.E, ((double) (index - 0.5) / (double) MULTIPLIER));
+    }
+
     public void logStats(SlabCache slabCache) {
       for (SingleSizeCache s : slabCache.sizer.values()) {
         s.logStats();
       }
       AtomicLong[] fineGrainedStats = getUsage();
-      int multiplier = MULTIPLIER;
       SlabCache.LOG.info("Current heap size is: "
           + StringUtils.humanReadableInt(slabCache.heapSize()));
       for (int i = 0; i < fineGrainedStats.length; i++) {
-        double lowerbound = Math.pow(Math.E,
-            ((double) i / (double) multiplier) - 0.5);
-        double upperbound = Math.pow(Math.E,
-            ((double) i / (double) multiplier) + 0.5);
 
         if (fineGrainedStats[i].get() > 0) {
           SlabCache.LOG.info("From  "
-              + StringUtils.humanReadableInt((long) lowerbound) + "- "
-              + StringUtils.humanReadableInt((long) upperbound) + ": "
+              + StringUtils.humanReadableInt((long) getLowerBound(i)) + "- "
+              + StringUtils.humanReadableInt((long) getUpperBound(i)) + ": "
               + StringUtils.humanReadableInt(fineGrainedStats[i].get())
               + " requests");
 
