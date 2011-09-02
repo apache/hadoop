@@ -3054,19 +3054,12 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           namenode.abandonBlock(block, src, clientName);
 
           if (errorIndex < nodes.length) {
-            LOG.debug("Excluding datanode " + nodes[errorIndex]);
+            LOG.info("Excluding datanode " + nodes[errorIndex]);
             excludedNodes.add(nodes[errorIndex]);
           }
 
           // Connection failed.  Let's wait a little bit and retry
           retry = true;
-          try {
-            if (System.currentTimeMillis() - startTime > 5000) {
-              LOG.info("Waiting to find target node: " + nodes[0].getName());
-            }
-            Thread.sleep(6000);
-          } catch (InterruptedException iex) {
-          }
         }
       } while (retry && --count >= 0);
 
