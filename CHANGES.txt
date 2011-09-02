@@ -17,6 +17,8 @@ Release 0.91.0 - Unreleased
    HBASE-4197  RegionServer expects all scanner to be subclasses of
                HRegion.RegionScanner (Lars Hofhansl)
    HBASE-4233  Update protobuf dependency to 2.4.0a (todd)
+   HBASE-4299  Update to Avro 1.5.3 and use Avro Maven plugin to generate
+               Avro classes. (Alejandro Abdelnur)
 
   BUG FIXES
    HBASE-3280  YouAreDeadException being swallowed in HRS getMaster

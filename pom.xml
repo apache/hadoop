@@ -270,6 +270,16 @@
           <artifactId>maven-surefire-report-plugin</artifactId>
           <version>2.9</version>
         </plugin>
+        <plugin>
+          <groupId>org.apache.avro</groupId>
+          <artifactId>avro-maven-plugin</artifactId>
+          <version>${avro.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>build-helper-maven-plugin</artifactId>
+          <version>1.5</version>
+        </plugin>
       </plugins>
     </pluginManagement>
 
@@ -289,6 +299,23 @@
     </resources>
 
     <plugins>
+      <plugin>
+        <groupId>org.apache.avro</groupId>
+        <artifactId>avro-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>generate-avro-sources</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>schema</goal>
+              <goal>protocol</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <outputDirectory>${project.build.directory}/generated-sources/java</outputDirectory>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>xml-maven-plugin</artifactId>
@@ -475,18 +502,18 @@
 
                 <mkdir dir="${build.webapps}/master/WEB-INF"/>
                 <jspcompiler uriroot="${src.webapps}/master"
-                             outputdir="${generated.sources}"
+                             outputdir="${generated.sources}/java"
                              package="org.apache.hadoop.hbase.generated.master"
                              webxml="${build.webapps}/master/WEB-INF/web.xml"/>
 
                 <mkdir dir="${build.webapps}/regionserver/WEB-INF"/>
                 <jspcompiler uriroot="${src.webapps}/regionserver"
-                             outputdir="${generated.sources}"
+                             outputdir="${generated.sources}/java"
                              package="org.apache.hadoop.hbase.generated.regionserver"
                              webxml="${build.webapps}/regionserver/WEB-INF/web.xml"/>
 
                 <exec executable="sh">
-                  <arg line="${basedir}/src/saveVersion.sh ${project.version} ${generated.sources}"/>
+                  <arg line="${basedir}/src/saveVersion.sh ${project.version} ${generated.sources}/java"/>
                 </exec>
               </tasks>
             </configuration>
@@ -552,7 +579,7 @@
         <version>1.5</version>
         <executions>
           <execution>
-            <id>add-jspc-source</id>
+            <id>jspcSource-packageInfo-Avro-source</id>
             <phase>generate-sources</phase>
             <goals>
               <goal>add-source</goal>
@@ -560,18 +587,7 @@
             <configuration>
               <sources>
                 <source>${basedir}/target/jspc</source>
-              </sources>
-            </configuration>
-          </execution>
-          <execution>
-            <id>add-package-info</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>add-source</goal>
-            </goals>
-            <configuration>
-              <sources>
-                <source>${project.build.directory}/generated-sources</source>
+                <source>${project.build.directory}/generated-sources/java</source>
               </sources>
             </configuration>
           </execution>
@@ -625,7 +641,7 @@
     <compileSource>1.6</compileSource>
 
     <!-- Dependencies -->
-    <avro.version>1.4.1</avro.version>
+    <avro.version>1.5.3</avro.version>
     <commons-cli.version>1.2</commons-cli.version>
     <commons-codec.version>1.4</commons-codec.version>
     <commons-httpclient.version>3.1</commons-httpclient.version><!-- pretty outdated -->
@@ -730,6 +746,11 @@
           <artifactId>paranamer-ant</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.avro</groupId>
+      <artifactId>avro-ipc</artifactId>
+      <version>${avro.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.zookeeper</groupId>
