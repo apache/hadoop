@@ -75,6 +75,8 @@ Release 0.20.205.0 - unreleased
     HDFS-1204. Lease expiration should recover single files, 
     not entire lease holder (Sam Rash via dhruba)
 
+    HDFS-1346. DFSClient receives out of order packet ack. (hairong)
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via
