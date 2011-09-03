@@ -132,6 +132,11 @@ public class AssignmentManager extends ZooKeeperListener {
 
   private final ZKTable zkTable;
 
+  // store all the table names in disabling state
+  Set<String> disablingTables = new HashSet<String>(1);
+  // store all the enabling state tablenames.
+  Set<String> enablingTables = new HashSet<String>(1);
+
   /**
    * Server to regions assignment map.
    * Contains the set of regions currently assigned to a given server.
@@ -307,6 +312,11 @@ public class AssignmentManager extends ZooKeeperListener {
     processDeadServers(deadServers);
     // Check existing regions in transition
     processRegionsInTransition(deadServers);
+
+    // Recover the tables that were not fully moved to DISABLED state.
+    // These tables are in DISABLING state when the master restarted/switched.
+    boolean isWatcherCreated = recoverTableInDisablingState(this.disablingTables);
+    recoverTableInEnablingState(this.enablingTables, isWatcherCreated);
   }
 
   /**
@@ -1929,10 +1939,6 @@ public class AssignmentManager extends ZooKeeperListener {
     // Map of offline servers and their regions to be returned
     Map<ServerName, List<Pair<HRegionInfo,Result>>> offlineServers =
       new TreeMap<ServerName, List<Pair<HRegionInfo, Result>>>();
-    // store all the table names in disabling state
-    Set<String> disablingTables = new HashSet<String>(1);
-    // store all the enabling state tablenames.
-    Set<String> enablingTables = new HashSet<String>(1);
     // Iterate regions in META
     for (Result result : results) {
       Pair<HRegionInfo, ServerName> region = MetaReader.metaRowToRegionPair(result);
@@ -1956,7 +1962,7 @@ public class AssignmentManager extends ZooKeeperListener {
             " has null regionLocation." + " But its table " + tableName +
             " isn't in ENABLING state.");
         }
-        addTheTablesInPartialState(disablingTables, enablingTables, regionInfo,
+        addTheTablesInPartialState(this.disablingTables, this.enablingTables, regionInfo,
             tableName);
       } else if (!this.serverManager.isServerOnline(regionLocation)) {
         // Region is located on a server that isn't online
@@ -1975,17 +1981,13 @@ public class AssignmentManager extends ZooKeeperListener {
           regions.put(regionInfo, regionLocation);
           addToServers(regionLocation, regionInfo);
         }
-        addTheTablesInPartialState(disablingTables, enablingTables, regionInfo,
+        addTheTablesInPartialState(this.disablingTables, this.enablingTables, regionInfo,
             tableName);
       }
     }
-    // Recover the tables that were not fully moved to DISABLED state.
-    // These tables are in DISABLING state when the master restarted/switched.
-    boolean isWatcherCreated = recoverTableInDisablingState(disablingTables);
-    recoverTableInEnablingState(enablingTables, isWatcherCreated);
     return offlineServers;
   }
-  
+
   private void addTheTablesInPartialState(Set<String> disablingTables,
       Set<String> enablingTables, HRegionInfo regionInfo,
       String disablingTableName) {
