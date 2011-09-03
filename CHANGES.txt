@@ -19,6 +19,9 @@ Release 0.20.205.0 - unreleased
     HDFS-630. Client can exclude specific nodes in the write pipeline.
     (Nicolas Spiegelberg via dhruba)
 
+    HDFS-895. Allow hflush/sync to occur in parallel with new writes to
+    the file. (Todd Lipcon via hairong)
+
   BUG FIXES
 
     MAPREDUCE-2324. Removed usage of broken
