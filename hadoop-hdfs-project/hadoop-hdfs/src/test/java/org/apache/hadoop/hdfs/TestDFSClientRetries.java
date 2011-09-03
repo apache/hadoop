@@ -98,7 +98,7 @@ public class TestDFSClientRetries extends TestCase {
     }
 
     @Override
-    public Writable call(Class<?> protocol, Writable param, long receiveTime)
+    public Writable call(String protocol, Writable param, long receiveTime)
         throws IOException {
       if (sleep) {
         // sleep a bit

@@ -5,6 +5,10 @@ Trunk (unreleased changes)
     HDFS-395.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
                via hairong)
 
+  IMPROVEMENTS
+
+    HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)
+
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
 

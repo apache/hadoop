@@ -1483,7 +1483,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     taskScheduler = (TaskScheduler) ReflectionUtils.newInstance(schedulerClass, conf);
     
     int handlerCount = conf.getInt(JT_IPC_HANDLER_COUNT, 10);
-    this.interTrackerServer = RPC.getServer(ClientProtocol.class,
+    this.interTrackerServer = RPC.getServer(JobTracker.class, // All protocols in JobTracker
                                             this,
                                             addr.getHostName(), 
                                             addr.getPort(), handlerCount, 
