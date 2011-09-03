@@ -720,14 +720,15 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   //Find better place?
   public static final String METADATA_EXTENSION = ".meta";
   public static final short METADATA_VERSION = 1;
-    
+  
 
   static class ActiveFile {
     final File file;
     final List<Thread> threads = new ArrayList<Thread>(2);
+    private volatile long visibleLength;
 
     ActiveFile(File f, List<Thread> list) {
-      file = f;
+      this(f);
       if (list != null) {
         threads.addAll(list);
       }
@@ -737,13 +738,22 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     // no active threads associated with this ActiveFile
     ActiveFile(File f) {
       file = f;
+      visibleLength = f.length();
     }
-    
+
+    public long getVisibleLength() {
+      return visibleLength;
+    }
+
+    public void setVisibleLength(long value) {
+      visibleLength = value;
+    }
+
     public String toString() {
       return getClass().getSimpleName() + "(file=" + file
           + ", threads=" + threads + ")";
     }
-  } 
+  }
   
   static String getMetaFileName(String blockFileName, long genStamp) {
     return blockFileName + "_" + genStamp + METADATA_EXTENSION;
@@ -793,7 +803,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   }
 
   /** Return the block file for the given ID */ 
-  public File findBlockFile(long blockId) {
+  public synchronized File findBlockFile(long blockId) {
     final Block b = new Block(blockId);
     File blockfile = null;
     ActiveFile activefile = ongoingCreates.get(b);
@@ -819,7 +829,8 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       return null;
     }
     File metafile = findMetaFile(blockfile);
-    return new Block(blkid, blockfile.length(),
+    Block block = new Block(blkid);
+    return new Block(blkid, getVisibleLength(block),
         parseGenerationStamp(blockfile, metafile));
   }
 
@@ -922,6 +933,31 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
    */
   public long getLength(Block b) throws IOException {
     return getBlockFile(b).length();
+  }
+
+  @Override
+  public synchronized long getVisibleLength(Block b) throws IOException {
+    ActiveFile activeFile = ongoingCreates.get(b);
+
+    if (activeFile != null) {
+      return activeFile.getVisibleLength();
+    } else {
+      return getLength(b);
+    }
+  }
+
+  @Override
+  public synchronized void setVisibleLength(Block b, long length) 
+    throws IOException {
+    ActiveFile activeFile = ongoingCreates.get(b);
+
+    if (activeFile != null) {
+      activeFile.setVisibleLength(length);
+    } else {
+      throw new IOException(
+        String.format("block %s is not being written to", b)
+      );
+    }
   }
 
   /**

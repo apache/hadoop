@@ -990,18 +990,28 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
             blocks[curBlk] + "blockMap has " + numCorruptNodes + 
             " but corrupt replicas map has " + numCorruptReplicas);
       }
-      boolean blockCorrupt = (numCorruptNodes == numNodes);
-      int numMachineSet = blockCorrupt ? numNodes : 
+      DatanodeDescriptor[] machineSet = null;
+      boolean blockCorrupt = false;
+      if (inode.isUnderConstruction() && curBlk == blocks.length - 1
+          && blocksMap.numNodes(blocks[curBlk]) == 0) {
+        // get unfinished block locations
+        INodeFileUnderConstruction cons = (INodeFileUnderConstruction)inode;
+        machineSet = cons.getTargets();
+        blockCorrupt = false;
+      } else {
+        blockCorrupt = (numCorruptNodes == numNodes);
+        int numMachineSet = blockCorrupt ? numNodes : 
                             (numNodes - numCorruptNodes);
-      DatanodeDescriptor[] machineSet = new DatanodeDescriptor[numMachineSet];
-      if (numMachineSet > 0) {
-        numNodes = 0;
-        for(Iterator<DatanodeDescriptor> it = 
-            blocksMap.nodeIterator(blocks[curBlk]); it.hasNext();) {
-          DatanodeDescriptor dn = it.next();
-          boolean replicaCorrupt = corruptReplicas.isReplicaCorrupt(blocks[curBlk], dn);
-          if (blockCorrupt || (!blockCorrupt && !replicaCorrupt))
-            machineSet[numNodes++] = dn;
+        machineSet = new DatanodeDescriptor[numMachineSet];
+        if (numMachineSet > 0) {
+          numNodes = 0;
+          for(Iterator<DatanodeDescriptor> it = 
+              blocksMap.nodeIterator(blocks[curBlk]); it.hasNext();) {
+            DatanodeDescriptor dn = it.next();
+            boolean replicaCorrupt = corruptReplicas.isReplicaCorrupt(blocks[curBlk], dn);
+            if (blockCorrupt || (!blockCorrupt && !replicaCorrupt))
+              machineSet[numNodes++] = dn;
+          }
         }
       }
       LocatedBlock b = new LocatedBlock(blocks[curBlk], machineSet, curPos,

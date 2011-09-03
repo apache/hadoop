@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -66,6 +67,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   Configuration conf = null;
   
   static byte[] nullCrcFileData;
+
   {
     DataChecksum checksum = DataChecksum.newDataChecksum( DataChecksum.
                               CHECKSUM_NULL, 16*1024 );
@@ -323,6 +325,16 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       throw new IOException("Finalizing a non existing block " + b);
     }
     return binfo.getlength();
+  }
+
+  @Override
+  public long getVisibleLength(Block b) throws IOException {
+    return getLength(b);
+  }
+
+  @Override
+  public void setVisibleLength(Block b, long length) throws IOException {
+    //no-op
   }
 
   /** {@inheritDoc} */

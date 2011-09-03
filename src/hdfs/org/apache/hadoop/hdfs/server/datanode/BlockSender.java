@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.SocketOutputStream;
+import org.apache.hadoop.util.ChecksumUtil;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 
@@ -64,6 +65,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
   private boolean verifyChecksum; //if true, check is verified while reading
   private BlockTransferThrottler throttler;
   private final String clientTraceFmt; // format of client trace log message
+  private final MemoizedBlock memoizedBlock;
 
   /**
    * Minimum buffer used while sending data to clients. Used only if
@@ -89,7 +91,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
       this.chunkOffsetOK = chunkOffsetOK;
       this.corruptChecksumOk = corruptChecksumOk;
       this.verifyChecksum = verifyChecksum;
-      this.blockLength = datanode.data.getLength(block);
+      this.blockLength = datanode.data.getVisibleLength(block);
       this.transferToAllowed = datanode.transferToAllowed;
       this.clientTraceFmt = clientTraceFmt;
 
@@ -164,6 +166,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
       seqno = 0;
 
       blockIn = datanode.data.getBlockInputStream(block, offset); // seek to offset
+      memoizedBlock = new MemoizedBlock(blockIn, blockLength, datanode.data, block);
     } catch (IOException ioe) {
       IOUtils.closeStream(this);
       IOUtils.closeStream(blockIn);
@@ -234,6 +237,15 @@ class BlockSender implements java.io.Closeable, FSConstants {
 
     int len = Math.min((int) (endOffset - offset),
                        bytesPerChecksum*maxChunks);
+    
+    // truncate len so that any partial chunks will be sent as a final packet.
+    // this is not necessary for correctness, but partial chunks are 
+    // ones that may be recomputed and sent via buffer copy, so try to minimize
+    // those bytes
+    if (len > bytesPerChecksum && len % bytesPerChecksum != 0) {
+      len -= len % bytesPerChecksum;
+    }
+    
     if (len == 0) {
       return 0;
     }
@@ -298,32 +310,54 @@ class BlockSender implements java.io.Closeable, FSConstants {
           cOff += checksumSize;
         }
       }
-      //writing is done below (mainly to handle IOException)
-    }
-    
-    try {
-      if (blockInPosition >= 0) {
-        //use transferTo(). Checks on out and blockIn are already done. 
-
-        SocketOutputStream sockOut = (SocketOutputStream)out;
-        //first write the packet
-        sockOut.write(buf, 0, dataOff);
-        // no need to flush. since we know out is not a buffered stream. 
-
-        sockOut.transferToFully(((FileInputStream)blockIn).getChannel(), 
-                                blockInPosition, len);
-
-        blockInPosition += len;
-      } else {
-        // normal transfer
-        out.write(buf, 0, dataOff + len);
+      
+      // only recompute checksum if we can't trust the meta data due to 
+      // concurrent writes
+      if (memoizedBlock.hasBlockChanged(len)) {
+        ChecksumUtil.updateChunkChecksum(
+          buf, checksumOff, dataOff, len, checksum
+        );
       }
       
-    } catch (IOException e) {
+      try {
+        out.write(buf, 0, dataOff + len);
+      } catch (IOException e) {
+        throw ioeToSocketException(e);
+      }
+    } else {
+      try {
+        //use transferTo(). Checks on out and blockIn are already done. 
+        SocketOutputStream sockOut = (SocketOutputStream) out;
+        FileChannel fileChannel = ((FileInputStream) blockIn).getChannel();
+
+        if (memoizedBlock.hasBlockChanged(len)) {
+          fileChannel.position(blockInPosition);
+          IOUtils.readFileChannelFully(
+            fileChannel,
+            buf,
+            dataOff,
+            len
+          );
+          
+          ChecksumUtil.updateChunkChecksum(
+            buf, checksumOff, dataOff, len, checksum
+          );          
+          sockOut.write(buf, 0, dataOff + len);
+        } else {
+          //first write the packet
+          sockOut.write(buf, 0, dataOff);
+          // no need to flush. since we know out is not a buffered stream.
+          sockOut.transferToFully(fileChannel, blockInPosition, len);
+        }
+
+        blockInPosition += len;
+
+      } catch (IOException e) {
       /* exception while writing to the client (well, with transferTo(),
        * it could also be while reading from the local file).
        */
-      throw ioeToSocketException(e);
+        throw ioeToSocketException(e);
+      }
     }
 
     if (throttler != null) { // rebalancing so throttle
@@ -383,12 +417,13 @@ class BlockSender implements java.io.Closeable, FSConstants {
         streamForSendChunks = baseStream;
         
         // assure a mininum buffer size.
-        maxChunksPerPacket = (Math.max(BUFFER_SIZE, 
+        maxChunksPerPacket = (Math.max(BUFFER_SIZE,
                                        MIN_BUFFER_WITH_TRANSFERTO)
                               + bytesPerChecksum - 1)/bytesPerChecksum;
         
-        // allocate smaller buffer while using transferTo(). 
-        pktSize += checksumSize * maxChunksPerPacket;
+        // packet buffer has to be able to do a normal transfer in the case
+        // of recomputing checksum
+        pktSize += (bytesPerChecksum + checksumSize) * maxChunksPerPacket;
       } else {
         maxChunksPerPacket = Math.max(1,
                  (BUFFER_SIZE + bytesPerChecksum - 1)/bytesPerChecksum);
@@ -411,7 +446,13 @@ class BlockSender implements java.io.Closeable, FSConstants {
       } catch (IOException e) { //socket error
         throw ioeToSocketException(e);
       }
-    } finally {
+    }
+    catch (RuntimeException e) {
+      LOG.error("unexpected exception sending block", e);
+      
+      throw new IOException("unexpected runtime exception", e);
+    } 
+    finally {
       if (clientTraceFmt != null) {
         final long endTime = System.nanoTime();
         ClientTraceLog.info(String.format(clientTraceFmt, totalRead, initialOffset, endTime - startTime));
@@ -426,5 +467,50 @@ class BlockSender implements java.io.Closeable, FSConstants {
   
   boolean isBlockReadFully() {
     return blockReadFully;
+  }
+
+  /**
+   * helper class used to track if a block's meta data is verifiable or not
+   */
+  private class MemoizedBlock {
+    // block data stream 
+    private InputStream inputStream;
+    //  visible block length
+    private long blockLength;
+    private final FSDatasetInterface fsDataset;
+    private final Block block;
+
+    private MemoizedBlock(
+      InputStream inputStream,
+      long blockLength,
+      FSDatasetInterface fsDataset, Block block) {
+      this.inputStream = inputStream;
+      this.blockLength = blockLength;
+      this.fsDataset = fsDataset;
+      this.block = block;
+    }
+
+    // logic: if we are starting or ending on a partial chunk and the block
+    // has more data than we were told at construction, the block has 'changed'
+    // in a way that we care about (ie, we can't trust crc data) 
+    boolean hasBlockChanged(long dataLen) throws IOException {
+      // check if we are using transferTo since we tell if the file has changed
+      // (blockInPosition >= 0 => we are using transferTo and File Channels
+      if (BlockSender.this.blockInPosition >= 0) {
+        long currentLength = ((FileInputStream) inputStream).getChannel().size();
+        
+        return (blockInPosition % bytesPerChecksum != 0 || 
+            dataLen % bytesPerChecksum != 0) &&
+          currentLength > blockLength;
+
+      } else {
+        long currentLength = fsDataset.getLength(block);
+        
+        // offset is the offset into the block
+        return (BlockSender.this.offset % bytesPerChecksum != 0 || 
+            dataLen % bytesPerChecksum != 0) &&
+            currentLength > blockLength;
+      }
+    }
   }
 }
