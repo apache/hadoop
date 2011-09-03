@@ -1216,7 +1216,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
 
     try {
       INode myFile = dir.getFileINode(src);
-      recoverLeaseInternal(myFile, src, holder, clientMachine);
+      recoverLeaseInternal(myFile, src, holder, clientMachine, false);
 
       try {
         verifyReplication(src, replication, clientMachine);
@@ -1291,16 +1291,17 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   }
 
   /**
-   * Trigger to recover lease;
-   * When the method returns successfully, the lease has been recovered and
-   * the file is closed.
+   * Recover lease;
+   * Immediately revoke the lease of the current lease holder and start lease
+   * recovery so that the file can be forced to be closed.
    * 
-   * @param src the path of the file to trigger release
+   * @param src the path of the file to start lease recovery
    * @param holder the lease holder's name
    * @param clientMachine the client machine's name
+   * @return true if the file is already closed
    * @throws IOException
    */
-  synchronized void recoverLease(String src, String holder, String clientMachine)
+  synchronized boolean recoverLease(String src, String holder, String clientMachine)
   throws IOException {
     if (isInSafeMode()) {
       throw new SafeModeException(
@@ -1315,15 +1316,19 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       throw new FileNotFoundException("File not found " + src);
     }
 
+    if (!inode.isUnderConstruction()) {
+      return true;
+    }
     if (isPermissionEnabled) {
       checkPathAccess(src, FsAction.WRITE);
     }
 
-    recoverLeaseInternal(inode, src, holder, clientMachine);
+    recoverLeaseInternal(inode, src, holder, clientMachine, true);
+    return false;
   }
   
   private void recoverLeaseInternal(INode fileInode, 
-      String src, String holder, String clientMachine)
+      String src, String holder, String clientMachine, boolean force)
   throws IOException {
     if (fileInode != null && fileInode.isUnderConstruction()) {
       INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction) fileInode;
@@ -1336,7 +1341,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       // We found the lease for this file. And surprisingly the original
       // holder is trying to recreate this file. This should never occur.
       //
-      if (lease != null) {
+      if (!force && lease != null) {
         Lease leaseFile = leaseManager.getLeaseByPath(src);
         if (leaseFile != null && leaseFile.equals(lease)) { 
           throw new AlreadyBeingCreatedException(
@@ -1355,21 +1360,29 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
                     " on client " + clientMachine + 
                     " because pendingCreates is non-null but no leases found.");
       }
-      //
-      // If the original holder has not renewed in the last SOFTLIMIT 
-      // period, then start lease recovery.
-      //
-      if (lease.expiredSoftLimit()) {
-        LOG.info("startFile: recover lease " + lease + ", src=" + src +
+      if (force) {
+        // close now: no need to wait for soft lease expiration and 
+        // close only the file src
+        LOG.info("recoverLease: recover lease " + lease + ", src=" + src +
                  " from client " + pendingFile.clientName);
-        internalReleaseLease(lease, src);
+        internalReleaseLeaseOne(lease, src);
+      } else {
+        //
+        // If the original holder has not renewed in the last SOFTLIMIT 
+        // period, then start lease recovery.
+        //
+        if (lease.expiredSoftLimit()) {
+          LOG.info("startFile: recover lease " + lease + ", src=" + src +
+              " from client " + pendingFile.clientName);
+          internalReleaseLease(lease, src);
+        }
+        throw new AlreadyBeingCreatedException(
+            "failed to create file " + src + " for " + holder +
+            " on client " + clientMachine + 
+            ", because this file is already being created by " +
+            pendingFile.getClientName() + 
+            " on " + pendingFile.getClientMachine());
       }
-      throw new AlreadyBeingCreatedException(
-                    "failed to create file " + src + " for " + holder +
-                    " on client " + clientMachine + 
-                    ", because this file is already being created by " +
-                    pendingFile.getClientName() + 
-                    " on " + pendingFile.getClientMachine());
     }
 
   }

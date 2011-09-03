@@ -575,9 +575,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   /** {@inheritDoc} */
-  public void recoverLease(String src, String clientName) throws IOException {
+  public boolean recoverLease(String src, String clientName) throws IOException {
     String clientMachine = getClientMachine();
-    namesystem.recoverLease(src, clientName, clientMachine);
+    return namesystem.recoverLease(src, clientName, clientMachine);
   }
   
   /** {@inheritDoc} */
