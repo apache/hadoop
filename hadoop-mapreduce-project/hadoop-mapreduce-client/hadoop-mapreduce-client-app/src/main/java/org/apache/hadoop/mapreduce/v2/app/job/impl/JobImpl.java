@@ -599,6 +599,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       report.setCleanupProgress(cleanupProgress);
       report.setMapProgress(computeProgress(mapTasks));
       report.setReduceProgress(computeProgress(reduceTasks));
+      report.setJobName(jobName);
+      report.setUser(username);
 
       return report;
     } finally {

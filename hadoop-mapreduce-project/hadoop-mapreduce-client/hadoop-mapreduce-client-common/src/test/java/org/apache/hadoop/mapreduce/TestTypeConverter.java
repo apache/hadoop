@@ -21,8 +21,11 @@ import junit.framework.Assert;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationReportPBImpl;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import org.junit.Test;
 
 public class TestTypeConverter {
@@ -35,8 +38,33 @@ public class TestTypeConverter {
     applicationReport.setApplicationId(applicationId);
     applicationReport.setState(state);
     applicationReport.setStartTime(appStartTime);
-    JobStatus jobStatus = TypeConverter.fromYarn(applicationReport);
+    applicationReport.setUser("TestTypeConverter-user");
+    JobStatus jobStatus = TypeConverter.fromYarn(applicationReport, "dummy-jobfile");
     Assert.assertEquals(appStartTime, jobStatus.getStartTime());
     Assert.assertEquals(state.toString(), jobStatus.getState().toString());
+  }
+
+  @Test
+  public void testFromYarnApplicationReport() {
+    ApplicationId mockAppId = mock(ApplicationId.class);
+    when(mockAppId.getClusterTimestamp()).thenReturn(12345L);
+    when(mockAppId.getId()).thenReturn(6789);
+
+    ApplicationReport mockReport = mock(ApplicationReport.class);
+    when(mockReport.getTrackingUrl()).thenReturn("dummy-tracking-url");
+    when(mockReport.getApplicationId()).thenReturn(mockAppId);
+    when(mockReport.getState()).thenReturn(ApplicationState.KILLED);
+    when(mockReport.getUser()).thenReturn("dummy-user");
+    when(mockReport.getQueue()).thenReturn("dummy-queue");
+    String jobFile = "dummy-path/job.xml";
+    JobStatus status = TypeConverter.fromYarn(mockReport, jobFile);
+    Assert.assertNotNull("fromYarn returned null status", status);
+    Assert.assertEquals("jobFile set incorrectly", "dummy-path/job.xml", status.getJobFile());
+    Assert.assertEquals("queue set incorrectly", "dummy-queue", status.getQueue());
+    Assert.assertEquals("trackingUrl set incorrectly", "dummy-tracking-url", status.getTrackingUrl());
+    Assert.assertEquals("user set incorrectly", "dummy-user", status.getUsername());
+    Assert.assertEquals("schedulingInfo set incorrectly", "dummy-tracking-url", status.getSchedulingInfo());
+    Assert.assertEquals("jobId set incorrectly", 6789, status.getJobID().getId());
+    Assert.assertEquals("state set incorrectly", JobStatus.State.KILLED, status.getState());
   }
 }

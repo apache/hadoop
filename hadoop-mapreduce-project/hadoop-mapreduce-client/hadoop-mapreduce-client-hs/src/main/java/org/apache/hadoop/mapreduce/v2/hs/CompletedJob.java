@@ -90,7 +90,9 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     report.setJobState(JobState.valueOf(jobInfo.getJobStatus()));
     report.setStartTime(jobInfo.getLaunchTime());
     report.setFinishTime(jobInfo.getFinishTime());
-    //TOODO Possibly populate job progress. Never used.
+    report.setJobName(jobInfo.getJobname());
+    report.setUser(jobInfo.getUsername());
+    //TODO Possibly populate job progress. Never used.
     //report.setMapProgress(progress) 
     //report.setReduceProgress(progress)
   }
