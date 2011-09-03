@@ -22,6 +22,9 @@ Release 0.20.205.0 - unreleased
     HDFS-895. Allow hflush/sync to occur in parallel with new writes to
     the file. (Todd Lipcon via hairong)
 
+    HDFS-1520. Lightweight NameNode operation recoverLease to trigger 
+    lease recovery. (Hairong Kuang via dhruba)
+
   BUG FIXES
 
     MAPREDUCE-2324. Removed usage of broken

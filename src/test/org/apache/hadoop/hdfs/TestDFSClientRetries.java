@@ -289,6 +289,8 @@ public class TestDFSClientRetries extends TestCase {
 
     public void setTimes(String src, long mtime, long atime) throws IOException {}
 
+    public void recoverLease(String src, String clientName) throws IOException {}
+
     public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
         throws IOException {
       return null;

@@ -552,6 +552,22 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   }
 
   /**
+   * Recover a file's lease
+   * @param src a file's path
+   * @throws IOException
+   */
+  void recoverLease(String src) throws IOException {
+    checkOpen();
+    
+    try {
+      namenode.recoverLease(src, clientName);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(FileNotFoundException.class,
+                                     AccessControlException.class);
+    }
+  }
+  
+  /**
    * Append to an existing HDFS file.  
    * 
    * @param src file name

@@ -188,6 +188,15 @@ public class DistributedFileSystem extends FileSystem {
           dfs.open(getPathName(f), bufferSize, verifyChecksum, statistics));
   }
 
+  /** 
+   * Trigger the lease reovery of a file
+   * @param f a file
+   * @throws IOException if an error occurs
+   */
+  public void recoverLease(Path f) throws IOException {
+    dfs.recoverLease(getPathName(f));
+  }
+
   /** This optional operation is not yet supported. */
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
