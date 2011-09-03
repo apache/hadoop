@@ -4,8 +4,13 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
-  HADOOP-7595. Upgrade dependency to Avro 1.5.3. (Alejandro Abdelnur via atm)
+    HADOOP-7595. Upgrade dependency to Avro 1.5.3. (Alejandro Abdelnur via atm)
   HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)
+
+  BUGS
+
+    HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
+                 by Jersey (Alejandro Abdelnur via atm)
 
 Release 0.23.0 - Unreleased
 

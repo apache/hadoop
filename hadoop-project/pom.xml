@@ -344,7 +344,7 @@
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-mapper-asl</artifactId>
-        <version>1.6.9</version>
+        <version>1.7.1</version>
       </dependency>
       <dependency>
         <groupId>org.aspectj</groupId>
