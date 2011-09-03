@@ -201,6 +201,12 @@ public class LeaseManager {
       this.holder = holder;
       renew();
     }
+
+    /** Get the holder of the lease */
+    public String getHolder() {
+      return holder;
+    }
+
     /** Only LeaseManager object can renew a lease */
     private void renew() {
       this.lastUpdate = FSNamesystem.now();
@@ -276,10 +282,6 @@ public class LeaseManager {
     
     Collection<String> getPaths() {
       return paths;
-    }
-
-    String getHolder() {
-    	return holder;
     }
 
     void replacePath(String oldpath, String newpath) {

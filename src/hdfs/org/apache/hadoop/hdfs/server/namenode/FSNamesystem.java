@@ -5194,8 +5194,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   /**
    * Verifies that the block is associated with a file that has a lease.
    * Increments, logs and then returns the stamp
-   */
-  synchronized long nextGenerationStampForBlock(Block block) throws IOException {
+   *
+   * @param block block
+   * @param fromNN if it is for lease recovery initiated by NameNode
+   * @return a new generation stamp
+   */  
+  synchronized long nextGenerationStampForBlock(Block block, boolean fromNN) throws IOException {
     if (isInSafeMode()) {
       throw new SafeModeException("Cannot get nextGenStamp for " + block, safeMode);
     }
@@ -5208,6 +5212,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     INodeFile fileINode = storedBlock.getINode();
     if (!fileINode.isUnderConstruction()) {
       String msg = block + " is already commited, !fileINode.isUnderConstruction().";
+      LOG.info(msg);
+      throw new IOException(msg);
+    }
+    // Disallow client-initiated recovery once
+    // NameNode initiated lease recovery starts
+    if (!fromNN && HdfsConstants.NN_RECOVERY_LEASEHOLDER.equals(
+        leaseManager.getLeaseByPath(FSDirectory.getFullPathName(fileINode)).getHolder())) {
+      String msg = block +
+        "is being recovered by NameNode, ignoring the request from a client";
       LOG.info(msg);
       throw new IOException(msg);
     }
