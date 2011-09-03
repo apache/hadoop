@@ -982,7 +982,7 @@ public class TestFileAppend4 extends TestCase {
    * Mockito answer helper that triggers one latch as soon as the
    * method is called, then waits on another before continuing.
    */
-  private static class DelayAnswer implements Answer {
+  public static class DelayAnswer implements Answer {
     private final CountDownLatch fireLatch = new CountDownLatch(1);
     private final CountDownLatch waitLatch = new CountDownLatch(1);
 

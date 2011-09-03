@@ -36,11 +36,10 @@ public interface DataTransferProtocol {
    * when protocol changes. It is not very obvious. 
    */
   /*
-   * Version 18:
-   *    Change the block packet ack protocol to include seqno,
-   *    numberOfReplies, reply0, reply1, ...
+   * Version 19:
+   * A heartbeat is sent from the client to pipeline and then acked back
    */
-  public static final int DATA_TRANSFER_VERSION = 17;
+  public static final int DATA_TRANSFER_VERSION = 19;
 
   // Processed at datanode stream-handler
   public static final byte OP_WRITE_BLOCK = (byte) 80;
@@ -65,7 +64,7 @@ public interface DataTransferProtocol {
   public static class PipelineAck implements Writable {
     private long seqno;
     private short replies[];
-    final public static PipelineAck HEART_BEAT = new PipelineAck(-1, new short[0]);
+    final public static long UNKOWN_SEQNO = -2; 
 
     /** default constructor **/
     public PipelineAck() {

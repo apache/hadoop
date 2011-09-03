@@ -80,6 +80,9 @@ Release 0.20.205.0 - unreleased
     HDFS-1057.  Concurrent readers hit ChecksumExceptions if following 
     a writer to very end of file (Sam Rash via dhruba)
 
+    HDFS-724.  Use a bidirectional heartbeat to detect stuck
+    pipeline. (hairong)
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via

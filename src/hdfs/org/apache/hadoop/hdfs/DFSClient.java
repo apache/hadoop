@@ -85,6 +85,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   private SocketFactory socketFactory;
   private int socketTimeout;
   private int datanodeWriteTimeout;
+  private int timeoutValue;  // read timeout for the socket
   final int writePacketSize;
   private final FileSystem.Statistics stats;
   private int maxBlockAcquireFailures;
@@ -194,6 +195,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                                      HdfsConstants.READ_TIMEOUT);
     this.datanodeWriteTimeout = conf.getInt("dfs.datanode.socket.write.timeout",
                                             HdfsConstants.WRITE_TIMEOUT);
+    this.timeoutValue = this.socketTimeout;
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
     // dfs.write.packet.size is an internal config variable
     this.writePacketSize = conf.getInt("dfs.write.packet.size", 64*1024);
@@ -2372,7 +2374,28 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       int     dataPos;
       int     checksumStart;
       int     checksumPos;      
-  
+
+      private static final long HEART_BEAT_SEQNO = -1L;
+
+      /**
+       *  create a heartbeat packet
+       */
+      Packet() {
+        this.lastPacketInBlock = false;
+        this.numChunks = 0;
+        this.offsetInBlock = 0;
+        this.seqno = HEART_BEAT_SEQNO;
+
+        buffer = null;
+        int packetSize = DataNode.PKT_HEADER_LEN + SIZE_OF_INTEGER;
+        buf = new byte[packetSize];
+
+        checksumStart = dataStart = packetSize;
+        checksumPos = checksumStart;
+        dataPos = dataStart;
+        maxChunks = 0;
+      }
+
       // create a new packet
       Packet(int pktSize, int chunksPerPkt, long offsetInBlock) {
         this.lastPacketInBlock = false;
@@ -2453,6 +2476,14 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         buffer.reset();
         return buffer;
       }
+      
+      /**
+       * Check if this packet is a heart beat packet
+       * @return true if the sequence number is HEART_BEAT_SEQNO
+       */
+      private boolean isHeartbeatPacket() {
+        return seqno == HEART_BEAT_SEQNO;
+      }
     }
   
     //
@@ -2468,6 +2499,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       private volatile boolean closed = false;
   
       public void run() {
+        long lastPacket = 0;
+
         while (!closed && clientRunning) {
 
           // if the Responder encountered an error, shutdown Responder
@@ -2487,23 +2520,36 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             boolean doSleep = processDatanodeError(hasError, false);
 
             // wait for a packet to be sent.
+            long now = System.currentTimeMillis();
             while ((!closed && !hasError && clientRunning 
-                   && dataQueue.size() == 0) || doSleep) {
+                   && dataQueue.size() == 0  &&
+                   (blockStream == null || (
+                    blockStream != null && now - lastPacket < timeoutValue/2)))
+                   || doSleep) {
+              long timeout = timeoutValue/2 - (now-lastPacket);
+              timeout = timeout <= 0 ? 1000 : timeout;
+
               try {
-                dataQueue.wait(1000);
+                dataQueue.wait(timeout);
+                now = System.currentTimeMillis();
               } catch (InterruptedException  e) {
               }
               doSleep = false;
             }
-            if (closed || hasError || dataQueue.size() == 0 || !clientRunning) {
+            if (closed || hasError || !clientRunning) {
               continue;
             }
 
             try {
               // get packet to be sent.
-              one = dataQueue.getFirst();
+              if (dataQueue.isEmpty()) {
+                  one = new Packet();  // heartbeat packet
+              } else {
+                  one = dataQueue.getFirst(); // regular data packet
+              }
+              
               long offsetInBlock = one.offsetInBlock;
-  
+
               // get new block from namenode.
               if (blockStream == null) {
                 LOG.debug("Allocating new block");
@@ -2525,12 +2571,14 @@ public class DFSClient implements FSConstants, java.io.Closeable {
               ByteBuffer buf = one.getBuffer();
               
               // move packet from dataQueue to ackQueue
-              dataQueue.removeFirst();
-              dataQueue.notifyAll();
-              synchronized (ackQueue) {
-                ackQueue.addLast(one);
-                ackQueue.notifyAll();
-              } 
+              if (!one.isHeartbeatPacket()) {
+                dataQueue.removeFirst();
+                dataQueue.notifyAll();
+                synchronized (ackQueue) {
+                  ackQueue.addLast(one);
+                  ackQueue.notifyAll();
+                }
+              }
               
               // write out data to remote datanode
               blockStream.write(buf.array(), buf.position(), buf.remaining());
@@ -2539,6 +2587,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                 blockStream.writeInt(0); // indicate end-of-block 
               }
               blockStream.flush();
+              lastPacket = System.currentTimeMillis();
+
               if (LOG.isDebugEnabled()) {
                 LOG.debug("DataStreamer block " + block +
                           " wrote packet seqno:" + one.seqno +
@@ -2643,35 +2693,37 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             if (LOG.isDebugEnabled()) {
               LOG.debug("DFSClient for block " + block + " " + ack);
             }
-            long seqno = ack.getSeqno();
-            if (seqno == PipelineAck.HEART_BEAT.getSeqno()) {
-              continue;
-            } else if (seqno == -2) {
-              // no nothing
-            } else {
-              Packet one = null;
-              synchronized (ackQueue) {
-                one = ackQueue.getFirst();
-              }
-              if (one.seqno != seqno) {
-                throw new IOException("Responseprocessor: Expecting seqno " + 
-                                      " for block " + block + " " +
-                                      one.seqno + " but received " + seqno);
-              }
-              lastPacketInBlock = one.lastPacketInBlock;
+            
+            // processes response status from all datanodes.
+            for (int i = ack.getNumOfReplies()-1; i >=0 && clientRunning; i--) {
+                short reply = ack.getReply(i);  
+              if (reply != DataTransferProtocol.OP_STATUS_SUCCESS) {    
+                errorIndex = i; // first bad datanode   
+                throw new IOException("Bad response " + reply +   
+                      " for block " + block +   
+                      " from datanode " +     
+                      targets[i].getName());    
+              }   
             }
 
-            // processes response status from all datanodes.
-            for (int i = ack.getNumOfReplies()-1; i >=0  && clientRunning; i--) {
-              short reply = ack.getReply(i);
-              if (reply != DataTransferProtocol.OP_STATUS_SUCCESS) {
-                errorIndex = i; // first bad datanode
-                throw new IOException("Bad response " + reply +
-                                      " for block " + block +
-                                      " from datanode " + 
-                                      targets[i].getName());
-              }
+            long seqno = ack.getSeqno();
+            assert seqno != PipelineAck.UNKOWN_SEQNO :
+              "Ack for unkown seqno should be a failed ack: " + ack;
+            if (seqno == Packet.HEART_BEAT_SEQNO) {  // a heartbeat ack
+              continue;
             }
+
+            Packet one = null;
+            synchronized (ackQueue) {
+              one = ackQueue.getFirst();
+            }
+            
+            if (one.seqno != seqno) {
+              throw new IOException("Responseprocessor: Expecting seqno " + 
+                                    " for block " + block + " " +
+                                    one.seqno + " but received " + seqno);
+            }
+            lastPacketInBlock = one.lastPacketInBlock;
 
             synchronized (ackQueue) {
               ackQueue.removeFirst();
@@ -3090,7 +3142,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         LOG.debug("Connecting to " + nodes[0].getName());
         InetSocketAddress target = NetUtils.createSocketAddr(nodes[0].getName());
         s = socketFactory.createSocket();
-        int timeoutValue = 3000 * nodes.length + socketTimeout;
+        timeoutValue = 3000 * nodes.length + socketTimeout;
         NetUtils.connect(s, target, timeoutValue);
         s.setSoTimeout(timeoutValue);
         s.setSendBufferSize(DEFAULT_DATA_SOCKET_SIZE);
