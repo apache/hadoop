@@ -140,6 +140,14 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
      * Constructor
      */
     EventType(int value) {}
+    public boolean isOnlineSchemaChangeSupported() {
+      return (
+        this.equals(EventType.C_M_ADD_FAMILY) ||
+        this.equals(EventType.C_M_DELETE_FAMILY) ||
+        this.equals(EventType.C_M_MODIFY_FAMILY) ||
+        this.equals(EventType.C_M_MODIFY_TABLE)
+      );
+    }
   }
 
   /**

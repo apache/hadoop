@@ -438,6 +438,7 @@ Release 0.91.0 - Unreleased
                (Lars Hofhansl)
    HBASE-4257  Limit the number of regions in transitions displayed on
                master webpage. (todd)
+   HBASE-1730  Online Schema Changes
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

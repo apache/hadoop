@@ -98,6 +98,7 @@ public class ClosedRegionHandler extends EventHandler implements TotesHRegionInf
     }
     // ZK Node is in CLOSED state, assign it.
     assignmentManager.setOffline(regionInfo);
+    assignmentManager.removeClosedRegion(regionInfo);
     assignmentManager.assign(regionInfo, true);
   }
 }

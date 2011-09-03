@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -104,6 +105,12 @@ public class AssignmentManager extends ZooKeeperListener {
 
   private LoadBalancer balancer;
 
+  /**
+   * Map of regions to reopen after the schema of a table is changed. Key -
+   * encoded region name, value - HRegionInfo
+   */
+  private final Map <String, HRegionInfo> regionsToReopen;
+
   /*
    * Maximum times we recurse an assignment.  See below in {@link #assign()}.
    */
@@ -165,6 +172,8 @@ public class AssignmentManager extends ZooKeeperListener {
     this.serverManager = serverManager;
     this.catalogTracker = catalogTracker;
     this.executorService = service;
+    this.regionsToReopen = Collections.synchronizedMap
+                           (new HashMap<String, HRegionInfo> ());
     Configuration conf = master.getConfiguration();
     this.timeoutMonitor = new TimeoutMonitor(
       conf.getInt("hbase.master.assignment.timeoutmonitor.period", 10000),
@@ -206,7 +215,60 @@ public class AssignmentManager extends ZooKeeperListener {
     // sharing.
     return this.zkTable;
   }
+  /**
+   * Returns the RegionServer to which hri is assigned.
+   *
+   * @param hri
+   *          HRegion for which this function returns the region server
+   * @return HServerInfo The region server to which hri belongs
+   */
+  public ServerName getRegionServerOfRegion(HRegionInfo hri) {
+    synchronized (this.regions ) {
+      return regions.get(hri);
+    }
+  }
 
+  /**
+   * Add a regionPlan for the specified region.
+   */
+  public void addPlan(String encodedName, RegionPlan plan) {
+    synchronized (regionPlans) {
+      regionPlans.put(encodedName, plan);
+    }
+  }
+
+  /**
+   * Set the list of regions that will be reopened
+   * because of an update in table schema
+   *
+   * @param regions
+   *          list of regions that should be tracked for reopen
+   */
+  public void setRegionsToReopen(List <HRegionInfo> regions) {
+    for(HRegionInfo hri : regions) {
+      regionsToReopen.put(hri.getEncodedName(), hri);
+    }
+  }
+
+  /**
+   * Used by the client to identify if all regions have the schema updates
+   *
+   * @param tableName
+   * @return Pair indicating the status of the alter command
+   * @throws IOException
+   */
+  public Pair<Integer, Integer> getReopenStatus(byte[] tableName)
+      throws IOException {
+    List <HRegionInfo> hris = MetaReader.getTableRegions(
+                              this.master.getCatalogTracker(), tableName);
+    Integer pending = 0;
+    for(HRegionInfo hri : hris) {
+      if(regionsToReopen.get(hri.getEncodedName()) != null) {
+        pending++;
+      }
+    }
+    return new Pair<Integer, Integer>(pending, hris.size());
+  }
   /**
    * Reset all unassigned znodes.  Called on startup of master.
    * Call {@link #assignAllUserRegions()} after root and meta have been assigned.
@@ -467,6 +529,18 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
+   * When a region is closed, it should be removed from the regionsToReopen
+   * @param hri HRegionInfo of the region which was closed
+   */
+  public void removeClosedRegion(HRegionInfo hri) {
+    if (!regionsToReopen.isEmpty()) {
+      if (regionsToReopen.remove(hri.getEncodedName()) != null) {
+          LOG.debug("Removed region from reopening regions because it was closed");
+      }
+    }
+  }
+
+  /**
    * @param regionInfo
    * @param deadServers Map of deadServers and the regions they were carrying;
    * can be null.
@@ -601,6 +675,7 @@ public class AssignmentManager extends ZooKeeperListener {
           // what follows will fail because not in expected state.
           regionState.update(RegionState.State.CLOSED,
               data.getStamp(), data.getOrigin());
+	  removeClosedRegion(regionState.getRegion());
           this.executorService.submit(new ClosedRegionHandler(master,
             this, regionState.getRegion()));
           break;
@@ -1390,6 +1465,11 @@ public class AssignmentManager extends ZooKeeperListener {
     RegionPlan existingPlan = null;
     synchronized (this.regionPlans) {
       existingPlan = this.regionPlans.get(encodedName);
+      if (existingPlan != null && existingPlan.getDestination() != null) {
+        LOG.debug("Found an existing plan for " +
+            state.getRegion().getRegionNameAsString() +
+       " destination server is + " + existingPlan.getDestination().toString());
+      }
       if (forceNewPlan || existingPlan == null 
               || existingPlan.getDestination() == null 
               || existingPlan.getDestination().equals(serverToExclude)) {
@@ -1409,6 +1489,37 @@ public class AssignmentManager extends ZooKeeperListener {
       debugLog(state.getRegion(), "Using pre-existing plan for region " +
         state.getRegion().getRegionNameAsString() + "; plan=" + existingPlan);
       return existingPlan;
+  }
+
+  /**
+   * Unassign the list of regions. Configuration knobs:
+   * hbase.bulk.waitbetween.reopen indicates the number of milliseconds to
+   * wait before unassigning another region from this region server
+   *
+   * @param regions
+   * @throws InterruptedException
+   */
+  public void unassign(List<HRegionInfo> regions) {
+    int waitTime = this.master.getConfiguration().getInt(
+        "hbase.bulk.waitbetween.reopen", 0);
+    for (HRegionInfo region : regions) {
+      if (isRegionInTransition(region) != null)
+        continue;
+      unassign(region, false);
+      while (isRegionInTransition(region) != null) {
+        try {
+          Thread.sleep(10);
+        } catch (InterruptedException e) {
+          // Do nothing, continue
+        }
+      }
+      if (waitTime > 0)
+        try {
+          Thread.sleep(waitTime);
+        } catch (InterruptedException e) {
+          // Do nothing, continue
+        }
+    }
   }
 
   /**

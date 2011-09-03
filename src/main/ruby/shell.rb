@@ -228,6 +228,8 @@ Shell.load_command_group(
     exists
     list
     show_filters
+    alter_status
+    alter_async
   ]
 )
 

@@ -991,6 +991,18 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     }
   }
 
+  /**
+   * Get the number of regions of the table that have been updated by the alter.
+   *
+   * @return Pair indicating the number of regions updated Pair.getFirst is the
+   *         regions that are yet to be updated Pair.getSecond is the total number
+   *         of regions of the table
+   */
+  public Pair<Integer, Integer> getAlterStatus(byte[] tableName)
+  throws IOException {
+    return this.assignmentManager.getReopenStatus(tableName);
+  }
+
   public void addColumn(byte [] tableName, HColumnDescriptor column)
   throws IOException {
     if (cpHost != null) {

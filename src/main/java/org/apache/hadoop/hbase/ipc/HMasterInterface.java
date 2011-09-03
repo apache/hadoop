@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.UnknownRegionException;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 
 /**
@@ -70,6 +71,19 @@ public interface HMasterInterface extends VersionedProtocol {
    * @throws IOException e
    */
   public void deleteTable(final byte [] tableName) throws IOException;
+
+  /**
+   * Used by the client to get the number of regions that have received the
+   * updated schema
+   *
+   * @param tableName
+   * @return Pair indicating the number of regions updated Pair.getFirst() is the
+   *         regions that are yet to be updated Pair.getSecond() is the total number
+   *         of regions of the table
+   * @throws IOException
+   */
+  public Pair<Integer, Integer> getAlterStatus(byte[] tableName)
+      throws IOException;
 
   /**
    * Adds a column to the specified table

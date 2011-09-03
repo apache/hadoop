@@ -847,6 +847,28 @@ public class HBaseAdmin implements Abortable, Closeable {
   }
 
   /**
+   * Get the status of alter command - indicates how many regions have received
+   * the updated schema Asynchronous operation.
+   *
+   * @param tableName
+   *          name of the table to get the status of
+   * @return Pair indicating the number of regions updated Pair.getFirst() is the
+   *         regions that are yet to be updated Pair.getSecond() is the total number
+   *         of regions of the table
+   * @throws IOException
+   *           if a remote or network exception occurs
+   */
+  public Pair<Integer, Integer> getAlterStatus(final byte[] tableName)
+  throws IOException {
+    HTableDescriptor.isLegalTableName(tableName);
+    try {
+      return getMaster().getAlterStatus(tableName);
+    } catch (RemoteException e) {
+      throw RemoteExceptionHandler.decodeRemoteException(e);
+    }
+  }
+
+  /**
    * Add a column to an existing table.
    * Asynchronous operation.
    *

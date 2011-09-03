@@ -19,6 +19,7 @@
 #
 
 include Java
+java_import org.apache.hadoop.hbase.util.Pair
 
 # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
 
@@ -270,16 +271,31 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
-    # Change table structure or table options
-    def alter(table_name, *args)
+    # Check the status of alter command (number of regions reopened)
+    def alter_status(table_name)
       # Table name should be a string
       raise(ArgumentError, "Table name must be of type String") unless table_name.kind_of?(String)
 
       # Table should exist
       raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
 
-      # Table should be disabled
-      raise(ArgumentError, "Table #{table_name} is enabled. Disable it first before altering.") if enabled?(table_name)
+      status = Pair.new()
+      begin
+        status = @admin.getAlterStatus(table_name.to_java_bytes)
+        puts "#{status.getSecond() - status.getFirst()}/#{status.getSecond()} regions updated."
+	      sleep 1
+      end while status != nil && status.getFirst() != 0
+      puts "Done."
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Change table structure or table options
+    def alter(table_name, wait = true, *args)
+      # Table name should be a string
+      raise(ArgumentError, "Table name must be of type String") unless table_name.kind_of?(String)
+
+      # Table should exist
+      raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
 
       # There should be at least one argument
       raise(ArgumentError, "There should be at least one argument but the table name") if args.empty?
@@ -306,8 +322,16 @@ module Hbase
           # If column already exist, then try to alter it. Create otherwise.
           if htd.hasFamily(column_name.to_java_bytes)
             @admin.modifyColumn(table_name, column_name, descriptor)
+            if wait == true
+              puts "Updating all regions with the new schema..."
+              alter_status(table_name)
+            end
           else
             @admin.addColumn(table_name, descriptor)
+            if wait == true
+              puts "Updating all regions with the new schema..."
+              alter_status(table_name)
+            end
           end
           next
         end
@@ -316,6 +340,10 @@ module Hbase
         if method == "delete"
           raise(ArgumentError, "NAME parameter missing for delete method") unless arg[NAME]
           @admin.deleteColumn(table_name, arg[NAME])
+          if wait == true
+            puts "Updating all regions with the new schema..."
+            alter_status(table_name)
+          end
           next
         end
 
@@ -326,6 +354,10 @@ module Hbase
           htd.setMemStoreFlushSize(JLong.valueOf(arg[MEMSTORE_FLUSHSIZE])) if arg[MEMSTORE_FLUSHSIZE]
           htd.setDeferredLogFlush(JBoolean.valueOf(arg[DEFERRED_LOG_FLUSH])) if arg[DEFERRED_LOG_FLUSH]
           @admin.modifyTable(table_name.to_java_bytes, htd)
+          if wait == true
+            puts "Updating all regions with the new schema..."
+            alter_status(table_name)
+          end
           next
         end
 

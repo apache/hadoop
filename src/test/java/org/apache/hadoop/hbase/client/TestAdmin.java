@@ -42,8 +42,10 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotEnabledException;
@@ -51,6 +53,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -217,11 +220,13 @@ public class TestAdmin {
   /**
    * Verify schema modification takes.
    * @throws IOException
+   * @throws InterruptedException
    */
-  @Test
-  public void testChangeTableSchema() throws IOException {
-    final byte [] tableName = Bytes.toBytes("changeTableSchema");
+  @Test 
+  public void testOnlineChangeTableSchema() throws IOException, InterruptedException {
+    final byte [] tableName = Bytes.toBytes("changeTableSchemaOnline");
     HTableDescriptor [] tables = admin.listTables();
+    MasterServices masterServices = TEST_UTIL.getMiniHBaseCluster().getMaster();
     int numTables = tables.length;
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
     tables = this.admin.listTables();
@@ -240,14 +245,11 @@ public class TestAdmin {
     copy.setValue(key, key);
     boolean expectedException = false;
     try {
-      this.admin.modifyTable(tableName, copy);
+      modifyTable(tableName, copy);
     } catch (TableNotDisabledException re) {
       expectedException = true;
     }
-    assertTrue(expectedException);
-    this.admin.disableTable(tableName);
-    assertTrue(this.admin.isTableDisabled(tableName));
-    modifyTable(tableName, copy);
+    assertFalse(expectedException);
     HTableDescriptor modifiedHtd = this.admin.getTableDescriptor(tableName);
     // Assert returned modifiedhcd is same as the copy.
     assertFalse(htd.equals(modifiedHtd));
@@ -255,11 +257,8 @@ public class TestAdmin {
     assertEquals(newFlushSize, modifiedHtd.getMemStoreFlushSize());
     assertEquals(key, modifiedHtd.getValue(key));
 
-    // Reenable table to test it fails if not disabled.
-    this.admin.enableTable(tableName);
-    assertFalse(this.admin.isTableDisabled(tableName));
-
     // Now work on column family changes.
+    htd = this.admin.getTableDescriptor(tableName);
     int countOfFamilies = modifiedHtd.getFamilies().size();
     assertTrue(countOfFamilies > 0);
     HColumnDescriptor hcd = modifiedHtd.getFamilies().iterator().next();
@@ -273,31 +272,25 @@ public class TestAdmin {
     } catch (TableNotDisabledException re) {
       expectedException = true;
     }
-    assertTrue(expectedException);
-    this.admin.disableTable(tableName);
-    assertTrue(this.admin.isTableDisabled(tableName));
-    // Modify Column is synchronous
-    this.admin.modifyColumn(tableName, hcd);
+    assertFalse(expectedException);
     modifiedHtd = this.admin.getTableDescriptor(tableName);
     HColumnDescriptor modifiedHcd = modifiedHtd.getFamily(hcdName);
     assertEquals(newMaxVersions, modifiedHcd.getMaxVersions());
 
     // Try adding a column
-    // Reenable table to test it fails if not disabled.
-    this.admin.enableTable(tableName);
     assertFalse(this.admin.isTableDisabled(tableName));
     final String xtracolName = "xtracol";
+    htd = this.admin.getTableDescriptor(tableName);
     HColumnDescriptor xtracol = new HColumnDescriptor(xtracolName);
     xtracol.setValue(xtracolName, xtracolName);
+    expectedException = false;
     try {
       this.admin.addColumn(tableName, xtracol);
     } catch (TableNotDisabledException re) {
       expectedException = true;
     }
-    assertTrue(expectedException);
-    this.admin.disableTable(tableName);
-    assertTrue(this.admin.isTableDisabled(tableName));
-    this.admin.addColumn(tableName, xtracol);
+    // Add column should work even if the table is enabled
+    assertFalse(expectedException);
     modifiedHtd = this.admin.getTableDescriptor(tableName);
     hcd = modifiedHtd.getFamily(xtracol.getName());
     assertTrue(hcd != null);
@@ -310,6 +303,7 @@ public class TestAdmin {
     assertTrue(hcd == null);
 
     // Delete the table
+    this.admin.disableTable(tableName);
     this.admin.deleteTable(tableName);
     this.admin.listTables();
     assertFalse(this.admin.tableExists(tableName));
