@@ -139,6 +139,8 @@ message JobReportProto {
   optional float setup_progress = 6;
   optional int64 start_time = 7;
   optional int64 finish_time = 8;
+  optional string user = 9;
+  optional string jobName = 10;
 }
 
 enum TaskAttemptCompletionEventStatusProto {

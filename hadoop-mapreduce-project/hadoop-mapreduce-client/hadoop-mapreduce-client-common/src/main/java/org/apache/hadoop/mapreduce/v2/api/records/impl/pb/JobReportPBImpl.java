@@ -182,6 +182,30 @@ public class JobReportPBImpl extends ProtoBase<JobReportProto> implements JobRep
     builder.setFinishTime((finishTime));
   }
 
+  @Override
+  public String getUser() {
+    JobReportProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.getUser());
+  }
+
+  @Override
+  public void setUser(String user) {
+    maybeInitBuilder();
+    builder.setUser((user));
+  }
+
+  @Override
+  public String getJobName() {
+    JobReportProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.getJobName());
+  }
+
+  @Override
+  public void setJobName(String jobName) {
+    maybeInitBuilder();
+    builder.setJobName((jobName));
+  }
+
   private JobIdPBImpl convertFromProtoFormat(JobIdProto p) {
     return new JobIdPBImpl(p);
   }

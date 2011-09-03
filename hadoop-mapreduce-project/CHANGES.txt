@@ -1188,6 +1188,9 @@ Release 0.23.0 - Unreleased
    MAPREDUCE-2756. Better error handling in JobControl for failed jobs.
    (Robert Evans via acmurthy) 
 
+   MAPREDUCE-2716. MRReliabilityTest job fails because of missing
+   job-file. (Jeffrey Naisbitt via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

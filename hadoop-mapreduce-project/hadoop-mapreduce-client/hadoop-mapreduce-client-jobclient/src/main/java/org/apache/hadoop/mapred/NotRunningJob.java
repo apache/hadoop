@@ -63,8 +63,10 @@ public class NotRunningJob implements MRClientProtocol {
     RecordFactoryProvider.getRecordFactory(null);
   
   private final JobState jobState;
+  private final String user;
 
-  NotRunningJob(JobState jobState) {
+  NotRunningJob(String username, JobState jobState) {
+    this.user = username;
     this.jobState = jobState;
   }
 
@@ -104,7 +106,10 @@ public class NotRunningJob implements MRClientProtocol {
     JobReport jobReport =
       recordFactory.newRecordInstance(JobReport.class);
     jobReport.setJobId(request.getJobId());
-    jobReport.setJobState(jobState);
+    jobReport.setJobState(this.jobState);
+
+    jobReport.setUser(this.user);
+    // TODO: Add jobName & other job information that is available
     resp.setJobReport(jobReport);
     return resp;
   }

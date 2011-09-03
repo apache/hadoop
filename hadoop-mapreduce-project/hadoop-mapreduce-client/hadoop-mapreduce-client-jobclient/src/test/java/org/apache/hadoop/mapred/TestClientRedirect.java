@@ -268,6 +268,7 @@ public class TestClientRedirect {
       String[] split = AMHOSTADDRESS.split(":");
       application.setHost(split[0]);
       application.setRpcPort(Integer.parseInt(split[1]));
+      application.setUser("TestClientRedirect-user");
       GetApplicationReportResponse response = recordFactory
           .newRecordInstance(GetApplicationReportResponse.class);
       response.setApplicationReport(application);
@@ -397,6 +398,11 @@ public class TestClientRedirect {
       JobReport jobReport = recordFactory.newRecordInstance(JobReport.class);
       jobReport.setJobId(request.getJobId());
       jobReport.setJobState(JobState.RUNNING);
+      jobReport.setJobName("TestClientRedirect-jobname");
+      jobReport.setUser("TestClientRedirect-user");
+      jobReport.setStartTime(0L);
+      jobReport.setFinishTime(1L);
+
       GetJobReportResponse response = recordFactory
           .newRecordInstance(GetJobReportResponse.class);
       response.setJobReport(jobReport);
