@@ -26,9 +26,9 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
  * 
  ************************************/
 @InterfaceAudience.Private
-public final class FSConstants {
+public final class HdfsConstants {
   /* Hidden constructor */
-  private FSConstants() {
+  private HdfsConstants() {
   }
 
   public static int MIN_BLOCKS_FOR_WRITE = 5;
