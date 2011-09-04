@@ -441,6 +441,8 @@ Release 0.91.0 - Unreleased
    HBASE-4257  Limit the number of regions in transitions displayed on
                master webpage. (todd)
    HBASE-1730  Online Schema Changes
+   HBASE-4206  jenkins hash implementation uses longs unnecessarily
+               (Ron Yang)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

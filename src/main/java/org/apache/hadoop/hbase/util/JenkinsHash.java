@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.util;
 
+import static java.lang.Integer.rotateLeft;
+
 import java.io.FileInputStream;
 import java.io.IOException;
 
@@ -39,18 +41,12 @@ import java.io.IOException;
  * Dr. Dobbs Article</a>
  */
 public class JenkinsHash extends Hash {
-  private static long INT_MASK  = 0x00000000ffffffffL;
-  private static long BYTE_MASK = 0x00000000000000ffL;
+  private static final int BYTE_MASK = 0xff;
 
   private static JenkinsHash _instance = new JenkinsHash();
 
   public static Hash getInstance() {
     return _instance;
-  }
-
-  private static long rot(long val, int pos) {
-    return ((Integer.rotateLeft(
-        (int)(val & INT_MASK), pos)) & INT_MASK);
   }
 
   /**
@@ -82,23 +78,22 @@ public class JenkinsHash extends Hash {
   @SuppressWarnings("fallthrough")
   public int hash(byte[] key, int off, int nbytes, int initval) {
     int length = nbytes;
-    long a, b, c;       // We use longs because we don't have unsigned ints
-    a = b = c = (0x00000000deadbeefL + length + initval) & INT_MASK;
+    int a, b, c;
+    a = b = c = 0xdeadbeef + length + initval;
     int offset = off;
     for (; length > 12; offset += 12, length -= 12) {
-      //noinspection PointlessArithmeticExpression
-      a = (a + (key[offset + 0]    & BYTE_MASK)) & INT_MASK;
-      a = (a + (((key[offset + 1]  & BYTE_MASK) <<  8) & INT_MASK)) & INT_MASK;
-      a = (a + (((key[offset + 2]  & BYTE_MASK) << 16) & INT_MASK)) & INT_MASK;
-      a = (a + (((key[offset + 3]  & BYTE_MASK) << 24) & INT_MASK)) & INT_MASK;
-      b = (b + (key[offset + 4]    & BYTE_MASK)) & INT_MASK;
-      b = (b + (((key[offset + 5]  & BYTE_MASK) <<  8) & INT_MASK)) & INT_MASK;
-      b = (b + (((key[offset + 6]  & BYTE_MASK) << 16) & INT_MASK)) & INT_MASK;
-      b = (b + (((key[offset + 7]  & BYTE_MASK) << 24) & INT_MASK)) & INT_MASK;
-      c = (c + (key[offset + 8]    & BYTE_MASK)) & INT_MASK;
-      c = (c + (((key[offset + 9]  & BYTE_MASK) <<  8) & INT_MASK)) & INT_MASK;
-      c = (c + (((key[offset + 10] & BYTE_MASK) << 16) & INT_MASK)) & INT_MASK;
-      c = (c + (((key[offset + 11] & BYTE_MASK) << 24) & INT_MASK)) & INT_MASK;
+      a += (key[offset] & BYTE_MASK);
+      a += ((key[offset + 1] & BYTE_MASK) <<  8);
+      a += ((key[offset + 2] & BYTE_MASK) << 16);
+      a += ((key[offset + 3] & BYTE_MASK) << 24);
+      b += (key[offset + 4] & BYTE_MASK);
+      b += ((key[offset + 5] & BYTE_MASK) <<  8);
+      b += ((key[offset + 6] & BYTE_MASK) << 16);
+      b += ((key[offset + 7] & BYTE_MASK) << 24);
+      c += (key[offset + 8] & BYTE_MASK);
+      c += ((key[offset + 9] & BYTE_MASK) <<  8);
+      c += ((key[offset + 10] & BYTE_MASK) << 16);
+      c += ((key[offset + 11] & BYTE_MASK) << 24);
 
       /*
        * mix -- mix 3 32-bit values reversibly.
@@ -154,44 +149,44 @@ public class JenkinsHash extends Hash {
        *
        * mix(a,b,c);
        */
-      a = (a - c) & INT_MASK;  a ^= rot(c, 4);  c = (c + b) & INT_MASK;
-      b = (b - a) & INT_MASK;  b ^= rot(a, 6);  a = (a + c) & INT_MASK;
-      c = (c - b) & INT_MASK;  c ^= rot(b, 8);  b = (b + a) & INT_MASK;
-      a = (a - c) & INT_MASK;  a ^= rot(c,16);  c = (c + b) & INT_MASK;
-      b = (b - a) & INT_MASK;  b ^= rot(a,19);  a = (a + c) & INT_MASK;
-      c = (c - b) & INT_MASK;  c ^= rot(b, 4);  b = (b + a) & INT_MASK;
+      a -= c; a ^= rotateLeft(c, 4); c += b;
+      b -= a; b ^= rotateLeft(a, 6); a += c;
+      c -= b; c ^= rotateLeft(b, 8); b += a;
+      a -= c; a ^= rotateLeft(c, 16); c += b;
+      b -= a; b ^= rotateLeft(a, 19); a += c;
+      c -= b; c ^= rotateLeft(b, 4); b += a;
     }
 
     //-------------------------------- last block: affect all 32 bits of (c)
     switch (length) {                   // all the case statements fall through
     case 12:
-      c = (c + (((key[offset + 11] & BYTE_MASK) << 24) & INT_MASK)) & INT_MASK;
+    	c += ((key[offset + 11] & BYTE_MASK) << 24);
     case 11:
-      c = (c + (((key[offset + 10] & BYTE_MASK) << 16) & INT_MASK)) & INT_MASK;
+      c += ((key[offset + 10] & BYTE_MASK) << 16);
     case 10:
-      c = (c + (((key[offset + 9]  & BYTE_MASK) <<  8) & INT_MASK)) & INT_MASK;
+      c += ((key[offset + 9] & BYTE_MASK) <<  8);
     case  9:
-      c = (c + (key[offset + 8]    & BYTE_MASK)) & INT_MASK;
+      c += (key[offset + 8] & BYTE_MASK);
     case  8:
-      b = (b + (((key[offset + 7]  & BYTE_MASK) << 24) & INT_MASK)) & INT_MASK;
+      b += ((key[offset + 7] & BYTE_MASK) << 24);
     case  7:
-      b = (b + (((key[offset + 6]  & BYTE_MASK) << 16) & INT_MASK)) & INT_MASK;
+      b += ((key[offset + 6] & BYTE_MASK) << 16);
     case  6:
-      b = (b + (((key[offset + 5]  & BYTE_MASK) <<  8) & INT_MASK)) & INT_MASK;
+      b += ((key[offset + 5] & BYTE_MASK) <<  8);
     case  5:
-      b = (b + (key[offset + 4]    & BYTE_MASK)) & INT_MASK;
+      b += (key[offset + 4] & BYTE_MASK);
     case  4:
-      a = (a + (((key[offset + 3]  & BYTE_MASK) << 24) & INT_MASK)) & INT_MASK;
+      a += ((key[offset + 3] & BYTE_MASK) << 24);
     case  3:
-      a = (a + (((key[offset + 2]  & BYTE_MASK) << 16) & INT_MASK)) & INT_MASK;
+      a += ((key[offset + 2] & BYTE_MASK) << 16);
     case  2:
-      a = (a + (((key[offset + 1]  & BYTE_MASK) <<  8) & INT_MASK)) & INT_MASK;
+      a += ((key[offset + 1] & BYTE_MASK) <<  8);
     case  1:
       //noinspection PointlessArithmeticExpression
-      a = (a + (key[offset + 0]    & BYTE_MASK)) & INT_MASK;
+      a += (key[offset + 0] & BYTE_MASK);
       break;
     case  0:
-      return (int)(c & INT_MASK);
+      return c;
     }
     /*
      * final -- final mixing of 3 32-bit values (a,b,c) into c
@@ -230,15 +225,14 @@ public class JenkinsHash extends Hash {
      * }
      *
      */
-    c ^= b; c = (c - rot(b,14)) & INT_MASK;
-    a ^= c; a = (a - rot(c,11)) & INT_MASK;
-    b ^= a; b = (b - rot(a,25)) & INT_MASK;
-    c ^= b; c = (c - rot(b,16)) & INT_MASK;
-    a ^= c; a = (a - rot(c,4))  & INT_MASK;
-    b ^= a; b = (b - rot(a,14)) & INT_MASK;
-    c ^= b; c = (c - rot(b,24)) & INT_MASK;
-
-    return (int)(c & INT_MASK);
+    c ^= b; c -= rotateLeft(b, 14);
+    a ^= c; a -= rotateLeft(c, 11);
+    b ^= a; b -= rotateLeft(a, 25);
+    c ^= b; c -= rotateLeft(b, 16);
+    a ^= c; a -= rotateLeft(c, 4);
+    b ^= a; b -= rotateLeft(a, 14);
+    c ^= b; c -= rotateLeft(b, 24);
+    return c;
   }
 
   /**
@@ -255,7 +249,7 @@ public class JenkinsHash extends Hash {
     byte[] bytes = new byte[512];
     int value = 0;
     JenkinsHash hash = new JenkinsHash();
-    for (int length = in.read(bytes); length > 0 ; length = in.read(bytes)) {
+    for (int length = in.read(bytes); length > 0; length = in.read(bytes)) {
       value = hash.hash(bytes, length, value);
     }
     System.out.println(Math.abs(value));
