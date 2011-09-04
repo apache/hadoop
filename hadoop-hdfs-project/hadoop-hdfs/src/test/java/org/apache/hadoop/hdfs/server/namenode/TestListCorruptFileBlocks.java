@@ -40,7 +40,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -148,7 +148,7 @@ public class TestListCorruptFileBlocks {
                     0f);
       cluster = new MiniDFSCluster.Builder(conf).waitSafeMode(false).build();
       cluster.getNameNode().
-        setSafeMode(FSConstants.SafeModeAction.SAFEMODE_LEAVE);
+        setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
       FileSystem fs = cluster.getFileSystem();
 
       // create two files with one block each
@@ -245,7 +245,7 @@ public class TestListCorruptFileBlocks {
 
       // now leave safe mode so that we can clean up
       cluster.getNameNode().
-        setSafeMode(FSConstants.SafeModeAction.SAFEMODE_LEAVE);
+        setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
 
       util.cleanup(fs, "/srcdat10");
     } catch (Exception e) {

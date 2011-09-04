@@ -48,7 +48,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NodeBase;
@@ -502,8 +502,8 @@ public class NamenodeFsck {
       }
       try {
         s = new Socket();
-        s.connect(targetAddr, HdfsConstants.READ_TIMEOUT);
-        s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
+        s.connect(targetAddr, HdfsServerConstants.READ_TIMEOUT);
+        s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
         
         String file = BlockReaderFactory.getFileName(targetAddr, block.getBlockPoolId(),
             block.getBlockId());

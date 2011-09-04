@@ -49,9 +49,9 @@ import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
-import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -108,7 +108,7 @@ public class DistributedFileSystem extends FileSystem {
 
     InetSocketAddress namenode = NameNode.getAddress(uri.getAuthority());
     this.dfs = new DFSClient(namenode, conf, statistics);
-    this.uri = URI.create(FSConstants.HDFS_URI_SCHEME + "://" + uri.getAuthority());
+    this.uri = URI.create(HdfsConstants.HDFS_URI_SCHEME + "://" + uri.getAuthority());
     this.workingDir = getHomeDirectory();
   }
 
@@ -642,9 +642,9 @@ public class DistributedFileSystem extends FileSystem {
    * Enter, leave or get safe mode.
    *  
    * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setSafeMode(
-   *    FSConstants.SafeModeAction)
+   *    HdfsConstants.SafeModeAction)
    */
-  public boolean setSafeMode(FSConstants.SafeModeAction action) 
+  public boolean setSafeMode(HdfsConstants.SafeModeAction action) 
   throws IOException {
     return dfs.setSafeMode(action);
   }

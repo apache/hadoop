@@ -25,7 +25,7 @@ import java.util.zip.Checksum;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageState;
@@ -106,7 +106,7 @@ public class BackupImage extends FSImage {
       StorageDirectory sd = it.next();
       StorageState curState;
       try {
-        curState = sd.analyzeStorage(HdfsConstants.StartupOption.REGULAR, storage);
+        curState = sd.analyzeStorage(HdfsServerConstants.StartupOption.REGULAR, storage);
         // sd is locked but not opened
         switch(curState) {
         case NON_EXISTENT:

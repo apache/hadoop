@@ -27,7 +27,7 @@ import java.util.Arrays;
 import java.util.EnumMap;
 
 import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
@@ -274,14 +274,14 @@ public class FSEditLogLoader {
             SetNSQuotaOp setNSQuotaOp = (SetNSQuotaOp)op;
             fsDir.unprotectedSetQuota(setNSQuotaOp.src,
                                       setNSQuotaOp.nsQuota,
-                                      FSConstants.QUOTA_DONT_SET);
+                                      HdfsConstants.QUOTA_DONT_SET);
             break;
           }
           case OP_CLEAR_NS_QUOTA: {
             ClearNSQuotaOp clearNSQuotaOp = (ClearNSQuotaOp)op;
             fsDir.unprotectedSetQuota(clearNSQuotaOp.src,
-                                      FSConstants.QUOTA_RESET,
-                                      FSConstants.QUOTA_DONT_SET);
+                                      HdfsConstants.QUOTA_RESET,
+                                      HdfsConstants.QUOTA_DONT_SET);
             break;
           }
 
@@ -435,7 +435,7 @@ public class FSEditLogLoader {
     // The editlog must be emptied by restarting the namenode, before proceeding
     // with the upgrade.
     if (Storage.is203LayoutVersion(logVersion)
-        && logVersion != FSConstants.LAYOUT_VERSION) {
+        && logVersion != HdfsConstants.LAYOUT_VERSION) {
       String msg = "During upgrade failed to load the editlog version "
           + logVersion + " from release 0.20.203. Please go back to the old "
           + " release and restart the namenode. This empties the editlog "

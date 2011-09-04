@@ -26,8 +26,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
@@ -134,7 +134,7 @@ public class BackupNode extends NameNode implements JournalProtocol {
     // Backup node should never do lease recovery,
     // therefore lease hard limit should never expire.
     namesystem.leaseManager.setLeasePeriod(
-        FSConstants.LEASE_SOFTLIMIT_PERIOD, Long.MAX_VALUE);
+        HdfsConstants.LEASE_SOFTLIMIT_PERIOD, Long.MAX_VALUE);
     
     clusterId = nsInfo.getClusterID();
     blockPoolId = nsInfo.getBlockPoolID();
@@ -356,9 +356,9 @@ public class BackupNode extends NameNode implements JournalProtocol {
       LOG.fatal(errorMsg);
       throw new IOException(errorMsg);
     }
-    assert FSConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion() :
+    assert HdfsConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion() :
       "Active and backup node layout versions must be the same. Expected: "
-      + FSConstants.LAYOUT_VERSION + " actual "+ nsInfo.getLayoutVersion();
+      + HdfsConstants.LAYOUT_VERSION + " actual "+ nsInfo.getLayoutVersion();
     return nsInfo;
   }
   

@@ -22,7 +22,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -40,7 +40,7 @@ public class UpgradeObjectCollection {
 
   static class UOSignature implements Comparable<UOSignature> {
     int version;
-    HdfsConstants.NodeType type;
+    HdfsServerConstants.NodeType type;
     String className;
 
     UOSignature(Upgradeable uo) {
@@ -53,7 +53,7 @@ public class UpgradeObjectCollection {
       return version;
     }
 
-    HdfsConstants.NodeType getType() {
+    HdfsServerConstants.NodeType getType() {
       return type;
     }
 
@@ -111,13 +111,13 @@ public class UpgradeObjectCollection {
   }
 
   public static SortedSet<Upgradeable> getDistributedUpgrades(int versionFrom, 
-                                                       HdfsConstants.NodeType type
+                                                       HdfsServerConstants.NodeType type
                                                        ) throws IOException {
-    assert FSConstants.LAYOUT_VERSION <= versionFrom : "Incorrect version " 
-      + versionFrom + ". Expected to be <= " + FSConstants.LAYOUT_VERSION;
+    assert HdfsConstants.LAYOUT_VERSION <= versionFrom : "Incorrect version " 
+      + versionFrom + ". Expected to be <= " + HdfsConstants.LAYOUT_VERSION;
     SortedSet<Upgradeable> upgradeObjects = new TreeSet<Upgradeable>();
     for(UOSignature sig : upgradeTable) {
-      if(sig.getVersion() < FSConstants.LAYOUT_VERSION)
+      if(sig.getVersion() < HdfsConstants.LAYOUT_VERSION)
         continue;
       if(sig.getVersion() > versionFrom)
         break;

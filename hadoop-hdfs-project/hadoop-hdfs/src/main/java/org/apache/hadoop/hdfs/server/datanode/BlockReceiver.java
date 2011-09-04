@@ -36,7 +36,7 @@ import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
@@ -179,7 +179,7 @@ class BlockReceiver implements Closeable {
         this.out = streams.dataOut;
         this.cout = streams.checksumOut;
         this.checksumOut = new DataOutputStream(new BufferedOutputStream(
-            streams.checksumOut, FSConstants.SMALL_BUFFER_SIZE));
+            streams.checksumOut, HdfsConstants.SMALL_BUFFER_SIZE));
         // write data chunk header if creating a new replica
         if (isCreate) {
           BlockMetadataHeader.writeHeader(checksumOut, checksum);
@@ -398,7 +398,7 @@ class BlockReceiver implements Closeable {
       buf.limit(bufRead);
     }
     
-    while (buf.remaining() < FSConstants.BYTES_IN_INTEGER) {
+    while (buf.remaining() < HdfsConstants.BYTES_IN_INTEGER) {
       if (buf.position() > 0) {
         shiftBufData();
       }
@@ -420,7 +420,7 @@ class BlockReceiver implements Closeable {
     // Subtract BYTES_IN_INTEGER since that accounts for the payloadLen that
     // we read above.
     int pktSize = payloadLen + PacketHeader.PKT_HEADER_LEN
-        - FSConstants.BYTES_IN_INTEGER;
+        - HdfsConstants.BYTES_IN_INTEGER;
     
     if (buf.remaining() < pktSize) {
       //we need to read more data

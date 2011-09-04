@@ -32,8 +32,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
@@ -65,8 +65,8 @@ public class LeaseManager {
 
   private final FSNamesystem fsnamesystem;
 
-  private long softLimit = FSConstants.LEASE_SOFTLIMIT_PERIOD;
-  private long hardLimit = FSConstants.LEASE_HARDLIMIT_PERIOD;
+  private long softLimit = HdfsConstants.LEASE_SOFTLIMIT_PERIOD;
+  private long hardLimit = HdfsConstants.LEASE_HARDLIMIT_PERIOD;
 
   //
   // Used for handling lock-leases
@@ -379,7 +379,7 @@ public class LeaseManager {
 
 
         try {
-          Thread.sleep(HdfsConstants.NAMENODE_LEASE_RECHECK_INTERVAL);
+          Thread.sleep(HdfsServerConstants.NAMENODE_LEASE_RECHECK_INTERVAL);
         } catch(InterruptedException ie) {
           if (LOG.isDebugEnabled()) {
             LOG.debug(name + " is interrupted", ie);
@@ -409,7 +409,7 @@ public class LeaseManager {
       oldest.getPaths().toArray(leasePaths);
       for(String p : leasePaths) {
         try {
-          if(fsnamesystem.internalReleaseLease(oldest, p, HdfsConstants.NAMENODE_LEASE_HOLDER)) {
+          if(fsnamesystem.internalReleaseLease(oldest, p, HdfsServerConstants.NAMENODE_LEASE_HOLDER)) {
             LOG.info("Lease recovery for file " + p +
                           " is complete. File closed.");
             removing.add(p);

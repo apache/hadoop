@@ -24,7 +24,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
@@ -53,7 +53,7 @@ public class NamespaceInfo extends StorageInfo {
   
   public NamespaceInfo(int nsID, String clusterID, String bpID, 
       long cT, int duVersion) {
-    super(FSConstants.LAYOUT_VERSION, nsID, clusterID, cT);
+    super(HdfsConstants.LAYOUT_VERSION, nsID, clusterID, cT);
     blockPoolID = bpID;
     buildVersion = Storage.getBuildVersion();
     this.distributedUpgradeVersion = duVersion;

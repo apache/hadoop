@@ -166,8 +166,8 @@ public class JspHelper {
         
       try {
         s = new Socket();
-        s.connect(targetAddr, HdfsConstants.READ_TIMEOUT);
-        s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
+        s.connect(targetAddr, HdfsServerConstants.READ_TIMEOUT);
+        s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
       } catch (IOException e) {
         deadNodes.add(chosenNode);
         s.close();
@@ -188,8 +188,8 @@ public class JspHelper {
       JspWriter out, Configuration conf) throws IOException {
     if (chunkSizeToView == 0) return;
     Socket s = new Socket();
-    s.connect(addr, HdfsConstants.READ_TIMEOUT);
-    s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
+    s.connect(addr, HdfsServerConstants.READ_TIMEOUT);
+    s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
       
     long amtToRead = Math.min(chunkSizeToView, blockSize - offsetIntoBlock);
       

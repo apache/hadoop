@@ -53,10 +53,10 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
@@ -465,7 +465,7 @@ public class FSDataset implements FSDatasetInterface {
         }
         checksumIn = new DataInputStream(
             new BufferedInputStream(new FileInputStream(metaFile),
-                FSConstants.IO_FILE_BUFFER_SIZE));
+                HdfsConstants.IO_FILE_BUFFER_SIZE));
 
         // read and handle the common header here. For now just a version
         BlockMetadataHeader header = BlockMetadataHeader.readHeader(checksumIn);

@@ -40,7 +40,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -301,7 +301,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       // wait for the datanode to be declared dead
       while (true) {
         DatanodeInfo[] info = client.datanodeReport(
-            FSConstants.DatanodeReportType.LIVE);
+            HdfsConstants.DatanodeReportType.LIVE);
         if (info.length == 0) {
           break;
         }

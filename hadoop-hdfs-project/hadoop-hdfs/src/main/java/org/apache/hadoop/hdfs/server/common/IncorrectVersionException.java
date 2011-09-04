@@ -21,7 +21,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
 /**
  * The exception is thrown when external version does not match 
@@ -34,7 +34,7 @@ public class IncorrectVersionException extends IOException {
   private static final long serialVersionUID = 1L;
 
   public IncorrectVersionException(int versionReported, String ofWhat) {
-    this(versionReported, ofWhat, FSConstants.LAYOUT_VERSION);
+    this(versionReported, ofWhat, HdfsConstants.LAYOUT_VERSION);
   }
   
   public IncorrectVersionException(int versionReported,

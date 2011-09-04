@@ -23,7 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
@@ -85,7 +85,7 @@ public class TestAbandonBlock {
   public void testQuotaUpdatedWhenBlockAbandoned() throws IOException {
     DistributedFileSystem dfs = (DistributedFileSystem)fs;
     // Setting diskspace quota to 3MB
-    dfs.setQuota(new Path("/"), FSConstants.QUOTA_DONT_SET, 3 * 1024 * 1024);
+    dfs.setQuota(new Path("/"), HdfsConstants.QUOTA_DONT_SET, 3 * 1024 * 1024);
 
     // Start writing a file with 2 replicas to ensure each datanode has one.
     // Block Size is 1MB.

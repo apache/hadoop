@@ -47,8 +47,8 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
@@ -159,7 +159,7 @@ public class TestNNLeaseRecovery {
       new PermissionStatus("test", "test", new FsPermission((short)0777));
     
     mockFileBlocks(2, null, 
-      HdfsConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps, false);
+      HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps, false);
     
     releaseLease(fsn, lm, file);
     fail("FSNamesystem.internalReleaseLease suppose to throw " +
@@ -184,8 +184,8 @@ public class TestNNLeaseRecovery {
     PermissionStatus ps =
       new PermissionStatus("test", "test", new FsPermission((short)0777));
 
-    mockFileBlocks(2, HdfsConstants.BlockUCState.COMMITTED, 
-      HdfsConstants.BlockUCState.COMMITTED, file, dnd, ps, false);
+    mockFileBlocks(2, HdfsServerConstants.BlockUCState.COMMITTED, 
+      HdfsServerConstants.BlockUCState.COMMITTED, file, dnd, ps, false);
 
     releaseLease(fsn, lm, file);
     fail("FSNamesystem.internalReleaseLease suppose to throw " +
@@ -232,7 +232,7 @@ public class TestNNLeaseRecovery {
     PermissionStatus ps =
       new PermissionStatus("test", "test", new FsPermission((short)0777));
 
-    mockFileBlocks(1, null, HdfsConstants.BlockUCState.COMMITTED, file, dnd, ps, false);
+    mockFileBlocks(1, null, HdfsServerConstants.BlockUCState.COMMITTED, file, dnd, ps, false);
 
     releaseLease(fsn, lm, file);
     fail("FSNamesystem.internalReleaseLease suppose to throw " +
@@ -257,8 +257,8 @@ public class TestNNLeaseRecovery {
     PermissionStatus ps =
       new PermissionStatus("test", "test", new FsPermission((short)0777));
     
-    mockFileBlocks(2, HdfsConstants.BlockUCState.COMMITTED, 
-      HdfsConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps, false);
+    mockFileBlocks(2, HdfsServerConstants.BlockUCState.COMMITTED, 
+      HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps, false);
         
     assertFalse("False is expected in return in this case",
         releaseLease(fsn, lm, file));
@@ -278,8 +278,8 @@ public class TestNNLeaseRecovery {
     PermissionStatus ps =
       new PermissionStatus("test", "test", new FsPermission((short)0777));
     
-    mockFileBlocks(2, HdfsConstants.BlockUCState.COMMITTED, 
-      HdfsConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps, false);
+    mockFileBlocks(2, HdfsServerConstants.BlockUCState.COMMITTED, 
+      HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps, false);
     
     BlockInfo lastBlock = fsn.dir.getFileINode(anyString()).getLastBlock(); 
     try {
@@ -304,8 +304,8 @@ public class TestNNLeaseRecovery {
     PermissionStatus ps =
       new PermissionStatus("test", "test", new FsPermission((short)0777));
     
-    mockFileBlocks(2, HdfsConstants.BlockUCState.COMMITTED, 
-      HdfsConstants.BlockUCState.COMPLETE, file, dnd, ps, true);
+    mockFileBlocks(2, HdfsServerConstants.BlockUCState.COMMITTED, 
+      HdfsServerConstants.BlockUCState.COMPLETE, file, dnd, ps, true);
     
     BlockInfo lastBlock = fsn.dir.getFileINode(anyString()).getLastBlock();
     when(lastBlock.isComplete()).thenReturn(true);
@@ -332,8 +332,8 @@ public class TestNNLeaseRecovery {
     PermissionStatus ps =
       new PermissionStatus("test", "test", new FsPermission((short)0777));
     
-    mockFileBlocks(2, HdfsConstants.BlockUCState.COMMITTED, 
-      HdfsConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps, true);
+    mockFileBlocks(2, HdfsServerConstants.BlockUCState.COMMITTED, 
+      HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps, true);
     
     BlockInfo lastBlock = fsn.dir.getFileINode(anyString()).getLastBlock();
     when(((BlockInfoUnderConstruction)lastBlock).getBlockRecoveryId()).thenReturn(recoveryId-100);
@@ -360,8 +360,8 @@ public class TestNNLeaseRecovery {
     PermissionStatus ps =
       new PermissionStatus("test", "test", new FsPermission((short)0777));
     
-    mockFileBlocks(2, HdfsConstants.BlockUCState.COMMITTED, 
-      HdfsConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps, true);
+    mockFileBlocks(2, HdfsServerConstants.BlockUCState.COMMITTED, 
+      HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps, true);
     
     BlockInfo lastBlock = fsn.dir.getFileINode(anyString()).getLastBlock();
     when(((BlockInfoUnderConstruction)lastBlock).getBlockRecoveryId()).thenReturn(recoveryId+100);
@@ -388,8 +388,8 @@ public class TestNNLeaseRecovery {
     PermissionStatus ps =
       new PermissionStatus("test", "test", new FsPermission((short)0777));
     
-    mockFileBlocks(2, HdfsConstants.BlockUCState.COMMITTED, 
-      HdfsConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps, true);
+    mockFileBlocks(2, HdfsServerConstants.BlockUCState.COMMITTED, 
+      HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps, true);
     
     BlockInfo lastBlock = fsn.dir.getFileINode(anyString()).getLastBlock();
     when(((BlockInfoUnderConstruction)lastBlock).getBlockRecoveryId()).thenReturn(recoveryId);
@@ -407,8 +407,8 @@ public class TestNNLeaseRecovery {
   }
 
   private void mockFileBlocks(int fileBlocksNumber,
-                              HdfsConstants.BlockUCState penUltState,
-                              HdfsConstants.BlockUCState lastState,
+                              HdfsServerConstants.BlockUCState penUltState,
+                              HdfsServerConstants.BlockUCState lastState,
                               Path file, DatanodeDescriptor dnd,
                               PermissionStatus ps,
                               boolean setStoredBlock) throws IOException {

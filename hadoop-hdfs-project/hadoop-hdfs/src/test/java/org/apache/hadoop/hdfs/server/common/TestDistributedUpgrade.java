@@ -17,7 +17,7 @@
 */
 package org.apache.hadoop.hdfs.server.common;
 
-import static org.apache.hadoop.hdfs.protocol.FSConstants.LAYOUT_VERSION;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.LAYOUT_VERSION;
 
 import java.io.IOException;
 
@@ -30,7 +30,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDFSUpgradeFromImage;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.UpgradeObjectDatanode;
 import org.apache.hadoop.hdfs.server.namenode.UpgradeObjectNamenode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;

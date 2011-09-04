@@ -24,11 +24,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 
-import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.NAME_NODE;
-import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.DATA_NODE;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType.NAME_NODE;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType.DATA_NODE;
 
 /**
 * This test ensures the appropriate response (successful or failure) from

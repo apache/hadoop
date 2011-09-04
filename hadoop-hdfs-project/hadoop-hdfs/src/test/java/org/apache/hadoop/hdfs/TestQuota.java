@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
@@ -370,14 +370,14 @@ public class TestQuota {
 
       // 2: set the quota of /nqdir0/qdir1 to be 6
       final Path quotaDir1 = new Path("/nqdir0/qdir1");
-      dfs.setQuota(quotaDir1, 6, FSConstants.QUOTA_DONT_SET);
+      dfs.setQuota(quotaDir1, 6, HdfsConstants.QUOTA_DONT_SET);
       ContentSummary c = dfs.getContentSummary(quotaDir1);
       assertEquals(c.getDirectoryCount(), 3);
       assertEquals(c.getQuota(), 6);
 
       // 3: set the quota of /nqdir0/qdir1/qdir20 to be 7
       final Path quotaDir2 = new Path("/nqdir0/qdir1/qdir20");
-      dfs.setQuota(quotaDir2, 7, FSConstants.QUOTA_DONT_SET);
+      dfs.setQuota(quotaDir2, 7, HdfsConstants.QUOTA_DONT_SET);
       c = dfs.getContentSummary(quotaDir2);
       assertEquals(c.getDirectoryCount(), 2);
       assertEquals(c.getQuota(), 7);
@@ -385,7 +385,7 @@ public class TestQuota {
       // 4: Create directory /nqdir0/qdir1/qdir21 and set its quota to 2
       final Path quotaDir3 = new Path("/nqdir0/qdir1/qdir21");
       assertTrue(dfs.mkdirs(quotaDir3));
-      dfs.setQuota(quotaDir3, 2, FSConstants.QUOTA_DONT_SET);
+      dfs.setQuota(quotaDir3, 2, HdfsConstants.QUOTA_DONT_SET);
       c = dfs.getContentSummary(quotaDir3);
       assertEquals(c.getDirectoryCount(), 1);
       assertEquals(c.getQuota(), 2);
@@ -547,13 +547,13 @@ public class TestQuota {
 
       // set the quota of /nqdir0/qdir1 to 4 * fileSpace 
       final Path quotaDir1 = new Path("/nqdir0/qdir1");
-      dfs.setQuota(quotaDir1, FSConstants.QUOTA_DONT_SET, 4 * fileSpace);
+      dfs.setQuota(quotaDir1, HdfsConstants.QUOTA_DONT_SET, 4 * fileSpace);
       ContentSummary c = dfs.getContentSummary(quotaDir1);
       assertEquals(c.getSpaceQuota(), 4 * fileSpace);
       
       // set the quota of /nqdir0/qdir1/qdir20 to 6 * fileSpace 
       final Path quotaDir20 = new Path("/nqdir0/qdir1/qdir20");
-      dfs.setQuota(quotaDir20, FSConstants.QUOTA_DONT_SET, 6 * fileSpace);
+      dfs.setQuota(quotaDir20, HdfsConstants.QUOTA_DONT_SET, 6 * fileSpace);
       c = dfs.getContentSummary(quotaDir20);
       assertEquals(c.getSpaceQuota(), 6 * fileSpace);
 
@@ -561,7 +561,7 @@ public class TestQuota {
       // Create /nqdir0/qdir1/qdir21 and set its space quota to 2 * fileSpace
       final Path quotaDir21 = new Path("/nqdir0/qdir1/qdir21");
       assertTrue(dfs.mkdirs(quotaDir21));
-      dfs.setQuota(quotaDir21, FSConstants.QUOTA_DONT_SET, 2 * fileSpace);
+      dfs.setQuota(quotaDir21, HdfsConstants.QUOTA_DONT_SET, 2 * fileSpace);
       c = dfs.getContentSummary(quotaDir21);
       assertEquals(c.getSpaceQuota(), 2 * fileSpace);
 
@@ -661,7 +661,7 @@ public class TestQuota {
       assertEquals(c.getSpaceConsumed(), 4 * fileSpace);
       
       // now increase the quota for quotaDir1
-      dfs.setQuota(quotaDir1, FSConstants.QUOTA_DONT_SET, 5 * fileSpace);
+      dfs.setQuota(quotaDir1, HdfsConstants.QUOTA_DONT_SET, 5 * fileSpace);
       // Now, appending more than 1 fileLen should result in an error
       out = dfs.append(file2);
       hasException = false;
@@ -704,8 +704,8 @@ public class TestQuota {
       assertEquals(c.getSpaceConsumed(), 5 * fileSpace - file2Len);
       
       // now increase the quota for quotaDir1 and quotaDir20
-      dfs.setQuota(quotaDir1, FSConstants.QUOTA_DONT_SET, 10 * fileSpace);
-      dfs.setQuota(quotaDir20, FSConstants.QUOTA_DONT_SET, 10 * fileSpace);
+      dfs.setQuota(quotaDir1, HdfsConstants.QUOTA_DONT_SET, 10 * fileSpace);
+      dfs.setQuota(quotaDir20, HdfsConstants.QUOTA_DONT_SET, 10 * fileSpace);
       
       // then increasing replication should be ok.
       dfs.setReplication(file2, (short)(replication+1));
@@ -735,7 +735,7 @@ public class TestQuota {
       int sizeFactorC = 4;
 
       // Set space quota for subdirectory C
-      dfs.setQuota(quotaDir2053_C, FSConstants.QUOTA_DONT_SET,
+      dfs.setQuota(quotaDir2053_C, HdfsConstants.QUOTA_DONT_SET,
           (sizeFactorC + 1) * fileSpace);
       c = dfs.getContentSummary(quotaDir2053_C);
       assertEquals(c.getSpaceQuota(), (sizeFactorC + 1) * fileSpace);

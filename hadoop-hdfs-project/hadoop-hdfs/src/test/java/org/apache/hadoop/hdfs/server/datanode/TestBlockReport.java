@@ -31,7 +31,7 @@ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
@@ -526,12 +526,12 @@ public class TestBlockReport {
           tooLongWait);
     }
 
-    HdfsConstants.ReplicaState state = r.getState();
+    HdfsServerConstants.ReplicaState state = r.getState();
     if(LOG.isDebugEnabled()) {
       LOG.debug("Replica state before the loop " + state.getValue());
     }
     start = System.currentTimeMillis();
-    while (state != HdfsConstants.ReplicaState.TEMPORARY) {
+    while (state != HdfsServerConstants.ReplicaState.TEMPORARY) {
       waitTil(5);
       state = r.getState();
       if(LOG.isDebugEnabled()) {

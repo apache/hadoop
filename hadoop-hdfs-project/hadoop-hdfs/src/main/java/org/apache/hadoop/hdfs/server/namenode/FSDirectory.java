@@ -43,7 +43,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
@@ -55,8 +55,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.util.ByteArray;
 
 /*************************************************
@@ -1876,10 +1876,10 @@ public class FSDirectory implements Closeable {
       UnresolvedLinkException {
     assert hasWriteLock();
     // sanity check
-    if ((nsQuota < 0 && nsQuota != FSConstants.QUOTA_DONT_SET && 
-         nsQuota < FSConstants.QUOTA_RESET) || 
-        (dsQuota < 0 && dsQuota != FSConstants.QUOTA_DONT_SET && 
-          dsQuota < FSConstants.QUOTA_RESET)) {
+    if ((nsQuota < 0 && nsQuota != HdfsConstants.QUOTA_DONT_SET && 
+         nsQuota < HdfsConstants.QUOTA_RESET) || 
+        (dsQuota < 0 && dsQuota != HdfsConstants.QUOTA_DONT_SET && 
+          dsQuota < HdfsConstants.QUOTA_RESET)) {
       throw new IllegalArgumentException("Illegal value for nsQuota or " +
                                          "dsQuota : " + nsQuota + " and " +
                                          dsQuota);
@@ -1893,16 +1893,16 @@ public class FSDirectory implements Closeable {
       throw new FileNotFoundException("Directory does not exist: " + srcs);
     } else if (!targetNode.isDirectory()) {
       throw new FileNotFoundException("Cannot set quota on a file: " + srcs);  
-    } else if (targetNode.isRoot() && nsQuota == FSConstants.QUOTA_RESET) {
+    } else if (targetNode.isRoot() && nsQuota == HdfsConstants.QUOTA_RESET) {
       throw new IllegalArgumentException("Cannot clear namespace quota on root.");
     } else { // a directory inode
       INodeDirectory dirNode = (INodeDirectory)targetNode;
       long oldNsQuota = dirNode.getNsQuota();
       long oldDsQuota = dirNode.getDsQuota();
-      if (nsQuota == FSConstants.QUOTA_DONT_SET) {
+      if (nsQuota == HdfsConstants.QUOTA_DONT_SET) {
         nsQuota = oldNsQuota;
       }
-      if (dsQuota == FSConstants.QUOTA_DONT_SET) {
+      if (dsQuota == HdfsConstants.QUOTA_DONT_SET) {
         dsQuota = oldDsQuota;
       }        
 

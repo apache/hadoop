@@ -29,9 +29,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
@@ -91,7 +91,7 @@ public class FSEditLog  {
 
   // the first txid of the log that's currently open for writing.
   // If this value is N, we are currently writing to edits_inprogress_N
-  private long curSegmentTxId = FSConstants.INVALID_TXID;
+  private long curSegmentTxId = HdfsConstants.INVALID_TXID;
 
   // the time of printing the statistics to the log file.
   private long lastPrintTime;
@@ -904,7 +904,7 @@ public class FSEditLog  {
       // synchronized to prevent findbugs warning about inconsistent
       // synchronization. This will be JIT-ed out if asserts are
       // off.
-      assert curSegmentTxId == FSConstants.INVALID_TXID || // on format this is no-op
+      assert curSegmentTxId == HdfsConstants.INVALID_TXID || // on format this is no-op
         minTxIdToKeep <= curSegmentTxId :
         "cannot purge logs older than txid " + minTxIdToKeep +
         " when current segment starts at " + curSegmentTxId;
@@ -1078,7 +1078,7 @@ public class FSEditLog  {
   static class JournalAndStream {
     private final JournalManager manager;
     private EditLogOutputStream stream;
-    private long segmentStartsAtTxId = FSConstants.INVALID_TXID;
+    private long segmentStartsAtTxId = HdfsConstants.INVALID_TXID;
     
     private JournalAndStream(JournalManager manager) {
       this.manager = manager;
@@ -1110,7 +1110,7 @@ public class FSEditLog  {
         LOG.error("Unable to abort stream " + stream, ioe);
       }
       stream = null;
-      segmentStartsAtTxId = FSConstants.INVALID_TXID;
+      segmentStartsAtTxId = HdfsConstants.INVALID_TXID;
     }
 
     private boolean isActive() {

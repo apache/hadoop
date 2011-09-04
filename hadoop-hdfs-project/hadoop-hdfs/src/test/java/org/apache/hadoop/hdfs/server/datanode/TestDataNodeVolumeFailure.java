@@ -38,7 +38,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -265,8 +265,8 @@ public class TestDataNodeVolumeFailure {
     targetAddr = NetUtils.createSocketAddr(datanode.getName());
       
     s = new Socket();
-    s.connect(targetAddr, HdfsConstants.READ_TIMEOUT);
-    s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
+    s.connect(targetAddr, HdfsServerConstants.READ_TIMEOUT);
+    s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
 
     String file = BlockReaderFactory.getFileName(targetAddr, 
         "test-blockpoolid",

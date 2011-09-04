@@ -37,7 +37,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -265,7 +265,7 @@ public class NNThroughputBenchmark {
     }
 
     void cleanUp() throws IOException {
-      nameNode.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_LEAVE);
+      nameNode.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
       if(!keepResults)
         nameNode.delete(getBaseDir(), true);
     }
@@ -459,7 +459,7 @@ public class NNThroughputBenchmark {
      */
     long executeOp(int daemonId, int inputIdx, String ignore) 
     throws IOException {
-      nameNode.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_LEAVE);
+      nameNode.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
       long start = System.currentTimeMillis();
       nameNode.delete(BASE_DIR_NAME, true);
       long end = System.currentTimeMillis();
@@ -523,7 +523,7 @@ public class NNThroughputBenchmark {
 
     void generateInputs(int[] opsPerThread) throws IOException {
       assert opsPerThread.length == numThreads : "Error opsPerThread.length"; 
-      nameNode.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_LEAVE);
+      nameNode.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
       // int generatedFileIdx = 0;
       LOG.info("Generate " + numOpsRequired + " intputs for " + getOpName());
       fileNames = new String[numThreads][];
@@ -969,7 +969,7 @@ public class NNThroughputBenchmark {
       FileNameGenerator nameGenerator;
       nameGenerator = new FileNameGenerator(getBaseDir(), 100);
       String clientName = getClientName(007);
-      nameNode.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_LEAVE);
+      nameNode.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
       for(int idx=0; idx < nrFiles; idx++) {
         String fileName = nameGenerator.getNextFileName("ThroughputBench");
         nameNode.create(fileName, FsPermission.getDefault(), clientName,

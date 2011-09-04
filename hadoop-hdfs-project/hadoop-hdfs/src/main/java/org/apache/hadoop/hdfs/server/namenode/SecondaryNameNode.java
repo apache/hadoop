@@ -45,8 +45,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtil.ErrorSimulator;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -456,7 +456,7 @@ public class SecondaryNameNode implements Runnable {
    */
   private String getInfoServer() throws IOException {
     URI fsName = FileSystem.getDefaultUri(conf);
-    if (!FSConstants.HDFS_URI_SCHEME.equalsIgnoreCase(fsName.getScheme())) {
+    if (!HdfsConstants.HDFS_URI_SCHEME.equalsIgnoreCase(fsName.getScheme())) {
       throw new IOException("This is not a DFS");
     }
 
@@ -793,7 +793,7 @@ public class SecondaryNameNode implements Runnable {
         
         StorageState curState;
         try {
-          curState = sd.analyzeStorage(HdfsConstants.StartupOption.REGULAR, storage);
+          curState = sd.analyzeStorage(HdfsServerConstants.StartupOption.REGULAR, storage);
           // sd is locked but not opened
           switch(curState) {
           case NON_EXISTENT:

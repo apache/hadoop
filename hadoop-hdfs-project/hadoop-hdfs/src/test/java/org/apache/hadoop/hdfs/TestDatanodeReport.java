@@ -24,7 +24,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import static org.apache.hadoop.test.MetricsAsserts.*;
 

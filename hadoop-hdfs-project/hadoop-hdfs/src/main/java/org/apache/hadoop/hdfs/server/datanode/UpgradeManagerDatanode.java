@@ -19,8 +19,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeManager;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
@@ -47,8 +47,8 @@ class UpgradeManagerDatanode extends UpgradeManager {
     this.bpid = bpid;
   }
 
-  public HdfsConstants.NodeType getType() {
-    return HdfsConstants.NodeType.DATA_NODE;
+  public HdfsServerConstants.NodeType getType() {
+    return HdfsServerConstants.NodeType.DATA_NODE;
   }
 
   synchronized void initializeUpgrade(NamespaceInfo nsInfo) throws IOException {
@@ -57,7 +57,7 @@ class UpgradeManagerDatanode extends UpgradeManager {
     DataNode.LOG.info("\n   Distributed upgrade for DataNode " 
         + dataNode.getMachineName() 
         + " version " + getUpgradeVersion() + " to current LV " 
-        + FSConstants.LAYOUT_VERSION + " is initialized.");
+        + HdfsConstants.LAYOUT_VERSION + " is initialized.");
     UpgradeObjectDatanode curUO = (UpgradeObjectDatanode)currentUpgrades.first();
     curUO.setDatanode(dataNode, this.bpid);
     upgradeState = curUO.preUpgradeAction(nsInfo);
@@ -102,7 +102,7 @@ class UpgradeManagerDatanode extends UpgradeManager {
     if(currentUpgrades == null) {
       DataNode.LOG.info("\n   Distributed upgrade for DataNode version " 
           + getUpgradeVersion() + " to current LV " 
-          + FSConstants.LAYOUT_VERSION + " cannot be started. "
+          + HdfsConstants.LAYOUT_VERSION + " cannot be started. "
           + "The upgrade object is not defined.");
       return false;
     }
@@ -115,7 +115,7 @@ class UpgradeManagerDatanode extends UpgradeManager {
     DataNode.LOG.info("\n   Distributed upgrade for DataNode " 
         + dataNode.getMachineName() 
         + " version " + getUpgradeVersion() + " to current LV " 
-        + FSConstants.LAYOUT_VERSION + " is started.");
+        + HdfsConstants.LAYOUT_VERSION + " is started.");
     return true;
   }
 
@@ -130,7 +130,7 @@ class UpgradeManagerDatanode extends UpgradeManager {
     throw new IOException(
         "Distributed upgrade for DataNode " + dataNode.getMachineName() 
         + " version " + getUpgradeVersion() + " to current LV " 
-        + FSConstants.LAYOUT_VERSION + " cannot be started. "
+        + HdfsConstants.LAYOUT_VERSION + " cannot be started. "
         + "The upgrade object is not defined.");
   }
 
@@ -145,7 +145,7 @@ class UpgradeManagerDatanode extends UpgradeManager {
     DataNode.LOG.info("\n   Distributed upgrade for DataNode " 
         + dataNode.getMachineName()
         + " version " + getUpgradeVersion() + " to current LV " 
-        + FSConstants.LAYOUT_VERSION + " is complete.");
+        + HdfsConstants.LAYOUT_VERSION + " is complete.");
   }
 
   synchronized void shutdownUpgrade() {

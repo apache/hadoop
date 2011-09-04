@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.DATA_NODE;
-import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.NAME_NODE;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType.DATA_NODE;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType.NAME_NODE;
 
 import java.io.File;
 
@@ -27,11 +27,11 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 
 /**
  * This test ensures the appropriate response (successful or failure) from 
@@ -198,7 +198,7 @@ public class TestDFSStartupVersions extends TestCase {
       return false;
     }
     // check #3
-    int softwareLV = FSConstants.LAYOUT_VERSION;  // will also be Namenode's LV
+    int softwareLV = HdfsConstants.LAYOUT_VERSION;  // will also be Namenode's LV
     int storedLV = datanodeVer.getLayoutVersion();
     if (softwareLV == storedLV &&  
         datanodeVer.getCTime() == namenodeVer.getCTime()) 

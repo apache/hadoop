@@ -9,6 +9,9 @@ Trunk (unreleased changes)
 
     HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)
 
+    HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
+               HdfsConstants. (Harsh J Chouraria via atm)
+
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
 

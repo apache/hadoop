@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.Writer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
@@ -129,7 +129,7 @@ class EditsDoubleBuffer {
     }
 
     public void writeOp(FSEditLogOp op) throws IOException {
-      if (firstTxId == FSConstants.INVALID_TXID) {
+      if (firstTxId == HdfsConstants.INVALID_TXID) {
         firstTxId = op.txid;
       } else {
         assert op.txid > firstTxId;
@@ -141,7 +141,7 @@ class EditsDoubleBuffer {
     @Override
     public DataOutputBuffer reset() {
       super.reset();
-      firstTxId = FSConstants.INVALID_TXID;
+      firstTxId = HdfsConstants.INVALID_TXID;
       numTxns = 0;
       return this;
     }
