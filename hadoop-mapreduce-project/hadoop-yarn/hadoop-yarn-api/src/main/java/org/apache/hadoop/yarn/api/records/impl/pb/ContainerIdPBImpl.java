@@ -29,8 +29,6 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProtoOrBuilder;
-import org.mortbay.log.Log;
-
 
     
 public class ContainerIdPBImpl extends ProtoBase<ContainerIdProto> implements ContainerId {

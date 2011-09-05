@@ -83,8 +83,12 @@ public class TestLeafQueue {
     
     csContext = mock(CapacitySchedulerContext.class);
     when(csContext.getConfiguration()).thenReturn(csConf);
-    when(csContext.getMinimumResourceCapability()).thenReturn(Resources.createResource(GB));
-    when(csContext.getMaximumResourceCapability()).thenReturn(Resources.createResource(16*GB));
+    when(csContext.getMinimumResourceCapability()).
+        thenReturn(Resources.createResource(GB));
+    when(csContext.getMaximumResourceCapability()).
+        thenReturn(Resources.createResource(16*GB));
+    when(csContext.getClusterResources()).
+        thenReturn(Resources.createResource(100 * 16 * GB));
     root = 
         CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
             queues, queues, 

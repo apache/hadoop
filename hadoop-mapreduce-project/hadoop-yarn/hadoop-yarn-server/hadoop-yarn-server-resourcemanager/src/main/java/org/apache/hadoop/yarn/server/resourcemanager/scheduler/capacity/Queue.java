@@ -190,7 +190,7 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * Update the cluster resource for queues as we add/remove nodes
    * @param clusterResource the current cluster resource
    */
-  public void updateResource(Resource clusterResource);
+  public void updateClusterResource(Resource clusterResource);
   
   /**
    * Recover the state of the queue

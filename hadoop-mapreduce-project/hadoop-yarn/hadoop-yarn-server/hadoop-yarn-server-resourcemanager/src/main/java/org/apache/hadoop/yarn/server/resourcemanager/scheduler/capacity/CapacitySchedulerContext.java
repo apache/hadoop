@@ -37,4 +37,6 @@ public interface CapacitySchedulerContext {
   int getNumClusterNodes();
 
   RMContext getRMContext();
+  
+  Resource getClusterResources();
 }

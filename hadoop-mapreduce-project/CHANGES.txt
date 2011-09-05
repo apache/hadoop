@@ -231,6 +231,11 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2735. Add an applications summary log to ResourceManager.
     (Thomas Graves via acmurthy) 
 
+    MAPREDUCE-2697. Enhance CapacityScheduler to cap concurrently running
+    applications per-queue & per-user. (acmurthy) 
+    Configuration changes:
+      add yarn.capacity-scheduler.maximum-am-resource-percent
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

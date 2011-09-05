@@ -646,7 +646,14 @@ public class ParentQueue implements Queue {
   }
 
   @Override
-  public synchronized void updateResource(Resource clusterResource) {
+  public synchronized void updateClusterResource(Resource clusterResource) {
+    // Update all children
+    for (Queue childQueue : childQueues) {
+      childQueue.updateClusterResource(clusterResource);
+    }
+  }
+  
+  private synchronized void updateResource(Resource clusterResource) {
     float queueLimit = clusterResource.getMemory() * absoluteCapacity; 
     setUtilization(usedResources.getMemory() / queueLimit);
     setUsedCapacity(
