@@ -18,9 +18,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.io.Reader;
 import java.io.Writer;
 
 import junit.framework.TestCase;
@@ -32,7 +30,6 @@ import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
-import org.apache.tools.ant.util.FileUtils;
 import org.junit.Test;
 
 public class TestLineRecordReader extends TestCase {
@@ -66,10 +63,7 @@ public class TestLineRecordReader extends TestCase {
   public String readOutputFile(Configuration conf) throws IOException {
     FileSystem localFs = FileSystem.getLocal(conf);
     Path file = new Path(outputDir, "part-00000");
-    Reader reader = new InputStreamReader(localFs.open(file));
-    String r = FileUtils.readFully(reader);
-    reader.close();
-    return r;
+    return UtilsForTests.slurpHadoop(file, localFs);
   }
 
   /**
