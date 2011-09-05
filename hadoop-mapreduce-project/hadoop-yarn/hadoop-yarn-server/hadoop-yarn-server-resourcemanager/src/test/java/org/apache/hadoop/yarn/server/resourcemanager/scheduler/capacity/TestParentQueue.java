@@ -60,6 +60,8 @@ public class TestParentQueue {
         Resources.createResource(GB));
     when(csContext.getMaximumResourceCapability()).thenReturn(
         Resources.createResource(16*GB));
+    when(csContext.getClusterResources()).
+        thenReturn(Resources.createResource(100 * 16 * GB));
   }
   
   private static final String A = "a";

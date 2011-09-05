@@ -6,6 +6,11 @@
   </property>
 
   <property>
+    <name>yarn.capacity-scheduler.maximum-am-resource-percent</name>
+    <value>0.1</value>
+  </property>
+
+  <property>
     <name>yarn.capacity-scheduler.root.queues</name>
     <value>default</value>
   </property>

@@ -50,6 +50,10 @@ public class CapacitySchedulerConfiguration extends Configuration {
     PREFIX + "maximum-applications";
   
   @Private
+  public static final String MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT =
+    PREFIX + "maximum-am-resource-percent";
+  
+  @Private
   public static final String QUEUES = "queues";
   
   @Private
@@ -81,6 +85,10 @@ public class CapacitySchedulerConfiguration extends Configuration {
 
   @Private
   public static final int DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS = 10000;
+  
+  @Private
+  public static final float 
+  DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT = 0.1f;
   
   @Private
   public static final int UNDEFINED = -1;
@@ -122,6 +130,11 @@ public class CapacitySchedulerConfiguration extends Configuration {
     int maxApplications = 
       getInt(MAXIMUM_SYSTEM_APPLICATIONS, DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS);
     return maxApplications;
+  }
+  
+  public float getMaximumApplicationMasterResourcePercent() {
+    return getFloat(MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT, 
+        DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT);
   }
   
   public int getCapacity(String queue) {

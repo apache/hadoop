@@ -167,6 +167,11 @@ implements ResourceScheduler, CapacitySchedulerContext {
   }
 
   @Override
+  public Resource getClusterResources() {
+    return clusterResource;
+  }
+  
+  @Override
   public synchronized void reinitialize(Configuration conf,
       ContainerTokenSecretManager containerTokenSecretManager, RMContext rmContext) 
   throws IOException {
@@ -621,6 +626,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
   private synchronized void addNode(RMNode nodeManager) {
     this.nodes.put(nodeManager.getNodeID(), new SchedulerNode(nodeManager));
     Resources.addTo(clusterResource, nodeManager.getTotalCapability());
+    root.updateClusterResource(clusterResource);
     ++numNodeManagers;
     LOG.info("Added node " + nodeManager.getNodeAddress() + 
         " clusterResource: " + clusterResource);
@@ -629,6 +635,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
   private synchronized void removeNode(RMNode nodeInfo) {
     SchedulerNode node = this.nodes.get(nodeInfo.getNodeID());
     Resources.subtractFrom(clusterResource, nodeInfo.getTotalCapability());
+    root.updateClusterResource(clusterResource);
     --numNodeManagers;
 
     // Remove running containers

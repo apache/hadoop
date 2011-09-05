@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -77,14 +78,21 @@ public class LeafQueue implements Queue {
 
   private int maxApplications;
   private int maxApplicationsPerUser;
+  
+  private float maxAMResourcePercent;
+  private int maxActiveApplications;
+  private int maxActiveApplicationsPerUser;
+  
   private Resource usedResources = Resources.createResource(0);
   private float utilization = 0.0f;
   private float usedCapacity = 0.0f;
   private volatile int numContainers;
 
-  Set<SchedulerApp> applications;
+  Set<SchedulerApp> activeApplications;
   Map<ApplicationAttemptId, SchedulerApp> applicationsMap = 
       new HashMap<ApplicationAttemptId, SchedulerApp>();
+  
+  Set<SchedulerApp> pendingApplications;
   
   private final Resource minimumAllocation;
   private final Resource maximumAllocation;
@@ -107,6 +115,8 @@ public class LeafQueue implements Queue {
     RecordFactoryProvider.getRecordFactory(null);
 
   private CapacitySchedulerContext scheduler;
+  
+  final static int DEFAULT_AM_RESOURCE = 2 * 1024;
   
   public LeafQueue(CapacitySchedulerContext cs, 
       String queueName, Queue parent, 
@@ -144,6 +154,15 @@ public class LeafQueue implements Queue {
     int maxApplicationsPerUser = 
       (int)(maxApplications * (userLimit / 100.0f) * userLimitFactor);
 
+    this.maxAMResourcePercent = 
+        cs.getConfiguration().getMaximumApplicationMasterResourcePercent();
+    int maxActiveApplications = 
+        computeMaxActiveApplications(cs.getClusterResources(), 
+            maxAMResourcePercent, absoluteCapacity);
+    int maxActiveApplicationsPerUser = 
+        computeMaxActiveApplicationsPerUser(maxActiveApplications, userLimit, 
+            userLimitFactor);
+
     this.queueInfo = recordFactory.newRecordInstance(QueueInfo.class);
     this.queueInfo.setQueueName(queueName);
     this.queueInfo.setChildQueues(new ArrayList<QueueInfo>());
@@ -157,20 +176,38 @@ public class LeafQueue implements Queue {
         maximumCapacity, absoluteMaxCapacity, 
         userLimit, userLimitFactor, 
         maxApplications, maxApplicationsPerUser,
+        maxActiveApplications, maxActiveApplicationsPerUser,
         state, acls);
 
     LOG.info("DEBUG --- LeafQueue:" +
         " name=" + queueName + 
         ", fullname=" + getQueuePath());
 
-    this.applications = new TreeSet<SchedulerApp>(applicationComparator);
+    this.pendingApplications = 
+        new TreeSet<SchedulerApp>(applicationComparator);
+    this.activeApplications = new TreeSet<SchedulerApp>(applicationComparator);
   }
 
+  private int computeMaxActiveApplications(Resource clusterResource,
+      float maxAMResourcePercent, float absoluteCapacity) {
+    return 
+        Math.max(
+            (int)((clusterResource.getMemory() / DEFAULT_AM_RESOURCE) * 
+                   maxAMResourcePercent * absoluteCapacity), 
+            1);
+  }
+  
+  private int computeMaxActiveApplicationsPerUser(int maxActiveApplications, 
+      int userLimit, float userLimitFactor) {
+    return (int)(maxActiveApplications * (userLimit / 100.0f) * userLimitFactor);
+  }
+  
   private synchronized void setupQueueConfigs(
       float capacity, float absoluteCapacity, 
       float maxCapacity, float absoluteMaxCapacity,
       int userLimit, float userLimitFactor,
       int maxApplications, int maxApplicationsPerUser,
+      int maxActiveApplications, int maxActiveApplicationsPerUser,
       QueueState state, Map<QueueACL, AccessControlList> acls)
   {
     this.capacity = capacity; 
@@ -185,6 +222,9 @@ public class LeafQueue implements Queue {
     this.maxApplications = maxApplications;
     this.maxApplicationsPerUser = maxApplicationsPerUser;
 
+    this.maxActiveApplications = maxActiveApplications;
+    this.maxActiveApplicationsPerUser = maxActiveApplicationsPerUser;
+    
     this.state = state;
 
     this.acls = acls;
@@ -269,6 +309,22 @@ public class LeafQueue implements Queue {
     return minimumAllocationFactor;
   }
 
+  public int getMaxApplications() {
+    return maxApplications;
+  }
+
+  public int getMaxApplicationsPerUser() {
+    return maxApplicationsPerUser;
+  }
+
+  public int getMaximumActiveApplications() {
+    return maxActiveApplications;
+  }
+
+  public int getMaximumActiveApplicationsPerUser() {
+    return maxActiveApplicationsPerUser;
+  }
+
   @Override
   public synchronized float getUsedCapacity() {
     return usedCapacity;
@@ -329,10 +385,34 @@ public class LeafQueue implements Queue {
     this.parent = parent;
   }
   
+  @Override
   public synchronized int getNumApplications() {
-    return applications.size();
+    return getNumPendingApplications() + getNumActiveApplications();
   }
 
+  public synchronized int getNumPendingApplications() {
+    return pendingApplications.size();
+  }
+
+  public synchronized int getNumActiveApplications() {
+    return activeApplications.size();
+  }
+
+  @Private
+  public synchronized int getNumApplications(String user) {
+    return getUser(user).getTotalApplications();
+  }
+
+  @Private
+  public synchronized int getNumPendingApplications(String user) {
+    return getUser(user).getPendingApplications();
+  }
+
+  @Private
+  public synchronized int getNumActiveApplications(String user) {
+    return getUser(user).getActiveApplications();
+  }
+  
   public synchronized int getNumContainers() {
     return numContainers;
   }
@@ -340,6 +420,16 @@ public class LeafQueue implements Queue {
   @Override
   public synchronized QueueState getState() {
     return state;
+  }
+
+  @Private
+  public int getUserLimit() {
+    return userLimit;
+  }
+
+  @Private
+  public float getUserLimitFactor() {
+    return userLimitFactor;
   }
 
   @Override
@@ -404,6 +494,8 @@ public class LeafQueue implements Queue {
         leafQueue.maximumCapacity, leafQueue.absoluteMaxCapacity, 
         leafQueue.userLimit, leafQueue.userLimitFactor, 
         leafQueue.maxApplications, leafQueue.maxApplicationsPerUser,
+        leafQueue.maxActiveApplications, 
+        leafQueue.maxActiveApplicationsPerUser,
         leafQueue.state, leafQueue.acls);
     
     updateResource(clusterResource);
@@ -443,7 +535,7 @@ public class LeafQueue implements Queue {
     synchronized (this) {
 
       // Check if the queue is accepting jobs
-      if (state != QueueState.RUNNING) {
+      if (getState() != QueueState.RUNNING) {
         String msg = "Queue " + getQueuePath() +
         " is STOPPED. Cannot accept submission of application: " +
         application.getApplicationId();
@@ -452,7 +544,7 @@ public class LeafQueue implements Queue {
       }
 
       // Check submission limits for queues
-      if (getNumApplications() >= maxApplications) {
+      if (getNumApplications() >= getMaxApplications()) {
         String msg = "Queue " + getQueuePath() + 
         " already has " + getNumApplications() + " applications," +
         " cannot accept submission of application: " + 
@@ -463,9 +555,9 @@ public class LeafQueue implements Queue {
 
       // Check submission limits for the user on this queue
       user = getUser(userName);
-      if (user.getApplications() >= maxApplicationsPerUser) {
+      if (user.getTotalApplications() >= getMaxApplicationsPerUser()) {
         String msg = "Queue " + getQueuePath() + 
-        " already has " + user.getApplications() + 
+        " already has " + user.getTotalApplications() + 
         " applications from user " + userName + 
         " cannot accept submission of application: " + 
         application.getApplicationId();
@@ -490,17 +582,46 @@ public class LeafQueue implements Queue {
     }
   }
 
+  private synchronized void activateApplications() {
+    for (Iterator<SchedulerApp> i=pendingApplications.iterator(); 
+         i.hasNext(); ) {
+      SchedulerApp application = i.next();
+      
+      // Check queue limit
+      if (getNumActiveApplications() >= getMaximumActiveApplications()) {
+        break;
+      }
+      
+      // Check user limit
+      User user = getUser(application.getUser());
+      if (user.getActiveApplications() < getMaximumActiveApplicationsPerUser()) {
+        user.activateApplication();
+        activeApplications.add(application);
+        i.remove();
+        LOG.info("Application " + application.getApplicationId().getId() + 
+            " from user: " + application.getUser() + 
+            " activated in queue: " + getQueueName());
+      }
+    }
+  }
+  
   private synchronized void addApplication(SchedulerApp application, User user) {
     // Accept 
     user.submitApplication();
-    applications.add(application);
+    pendingApplications.add(application);
     applicationsMap.put(application.getApplicationAttemptId(), application);
 
+    // Activate applications
+    activateApplications();
+    
     LOG.info("Application added -" +
         " appId: " + application.getApplicationId() +
         " user: " + user + "," + " leaf-queue: " + getQueueName() +
-        " #user-applications: " + user.getApplications() + 
-        " #queue-applications: " + getNumApplications());
+        " #user-pending-applications: " + user.getPendingApplications() +
+        " #user-active-applications: " + user.getActiveApplications() +
+        " #queue-pending-applications: " + getNumPendingApplications() +
+        " #queue-active-applications: " + getNumActiveApplications()
+        );
   }
 
   @Override
@@ -515,20 +636,26 @@ public class LeafQueue implements Queue {
   }
 
   public synchronized void removeApplication(SchedulerApp application, User user) {
-    applications.remove(application);
+    activeApplications.remove(application);
     applicationsMap.remove(application.getApplicationAttemptId());
 
     user.finishApplication();
-    if (user.getApplications() == 0) {
+    if (user.getTotalApplications() == 0) {
       users.remove(application.getUser());
     }
 
+    // Check if we can activate more applications
+    activateApplications();
+    
     LOG.info("Application removed -" +
         " appId: " + application.getApplicationId() + 
         " user: " + application.getUser() + 
         " queue: " + getQueueName() +
-        " #user-applications: " + user.getApplications() + 
-        " #queue-applications: " + getNumApplications());
+        " #user-pending-applications: " + user.getPendingApplications() +
+        " #user-active-applications: " + user.getActiveApplications() +
+        " #queue-pending-applications: " + getNumPendingApplications() +
+        " #queue-active-applications: " + getNumActiveApplications()
+        );
   }
   
   private synchronized SchedulerApp getApplication(
@@ -542,7 +669,7 @@ public class LeafQueue implements Queue {
 
     LOG.info("DEBUG --- assignContainers:" +
         " node=" + node.getHostName() + 
-        " #applications=" + applications.size());
+        " #applications=" + activeApplications.size());
     
     // Check for reserved resources
     RMContainer reservedContainer = node.getReservedContainer();
@@ -554,7 +681,7 @@ public class LeafQueue implements Queue {
     }
     
     // Try to assign containers to applications in order
-    for (SchedulerApp application : applications) {
+    for (SchedulerApp application : activeApplications) {
       
       LOG.info("DEBUG --- pre-assignContainers for application "
           + application.getApplicationId());
@@ -1119,7 +1246,16 @@ public class LeafQueue implements Queue {
   }
 
   @Override
-  public synchronized void updateResource(Resource clusterResource) {
+  public synchronized void updateClusterResource(Resource clusterResource) {
+    maxActiveApplications = 
+        computeMaxActiveApplications(clusterResource, maxAMResourcePercent, 
+            absoluteCapacity);
+    maxActiveApplicationsPerUser = 
+        computeMaxActiveApplicationsPerUser(maxActiveApplications, userLimit, 
+            userLimitFactor);
+  }
+  
+  private synchronized void updateResource(Resource clusterResource) {
     float queueLimit = clusterResource.getMemory() * absoluteCapacity; 
     setUtilization(usedResources.getMemory() / queueLimit);
     setUsedCapacity(
@@ -1138,22 +1274,36 @@ public class LeafQueue implements Queue {
 
   static class User {
     Resource consumed = Resources.createResource(0);
-    int applications = 0;
+    int pendingApplications = 0;
+    int activeApplications = 0;
 
     public Resource getConsumedResources() {
       return consumed;
     }
 
-    public int getApplications() {
-      return applications;
+    public int getPendingApplications() {
+      return pendingApplications;
     }
 
+    public int getActiveApplications() {
+      return activeApplications;
+    }
+
+    public int getTotalApplications() {
+      return getPendingApplications() + getActiveApplications();
+    }
+    
     public synchronized void submitApplication() {
-      ++applications;
+      ++pendingApplications;
+    }
+    
+    public synchronized void activateApplication() {
+      --pendingApplications;
+      ++activeApplications;
     }
 
     public synchronized void finishApplication() {
-      --applications;
+      --activeApplications;
     }
 
     public synchronized void assignContainer(Resource resource) {
@@ -1175,4 +1325,5 @@ public class LeafQueue implements Queue {
     parent.recoverContainer(clusterResource, application, container);
 
   }
+  
 }
