@@ -1202,6 +1202,8 @@ Release 0.23.0 - Unreleased
    MAPREDUCE-2716. MRReliabilityTest job fails because of missing
    job-file. (Jeffrey Naisbitt via vinodkv)
 
+   MAPREDUCE-2882. TestLineRecordReader depends on ant jars. (todd)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

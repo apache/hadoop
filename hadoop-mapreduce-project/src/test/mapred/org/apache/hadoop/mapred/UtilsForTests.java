@@ -172,7 +172,7 @@ public class UtilsForTests {
     return contents;
   }
 
-  static String slurpHadoop(Path p, FileSystem fs) throws IOException {
+  public static String slurpHadoop(Path p, FileSystem fs) throws IOException {
     int len = (int) fs.getFileStatus(p).getLen();
     byte[] buf = new byte[len];
     InputStream in = fs.open(p);
