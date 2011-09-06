@@ -420,7 +420,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       final Path f = new Path("/foo.txt");
       createFile(dfs, f, 3);
       try {
-        cluster.getNameNode().addBlock(f.toString(), 
+        cluster.getNameNodeRpc().addBlock(f.toString(), 
             client.clientName, null, null);
         fail();
       } catch(IOException ioe) {

@@ -124,8 +124,8 @@ public class TestOfflineImageViewer extends TestCase {
       }
 
       // Write results to the fsimage file
-      cluster.getNameNode().setSafeMode(SafeModeAction.SAFEMODE_ENTER);
-      cluster.getNameNode().saveNamespace();
+      cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      cluster.getNameNodeRpc().saveNamespace();
       
       // Determine location of fsimage file
       orig = FSImageTestUtil.findLatestImageFile(

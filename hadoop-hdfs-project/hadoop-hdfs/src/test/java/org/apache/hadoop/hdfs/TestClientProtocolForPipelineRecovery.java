@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.io.IOUtils;
 
@@ -45,7 +46,7 @@ public class TestClientProtocolForPipelineRecovery {
     try {
       cluster.waitActive();
       FileSystem fileSys = cluster.getFileSystem();
-      NameNode namenode = cluster.getNameNode();
+      NamenodeProtocols namenode = cluster.getNameNodeRpc();
 
       /* Test writing to finalized replicas */
       Path file = new Path("dataprotocol.dat");    

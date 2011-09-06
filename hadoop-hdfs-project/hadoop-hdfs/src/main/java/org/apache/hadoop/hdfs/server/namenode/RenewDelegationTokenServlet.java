@@ -70,7 +70,7 @@ public class RenewDelegationTokenServlet extends DfsServlet {
     try {
       long result = ugi.doAs(new PrivilegedExceptionAction<Long>() {
         public Long run() throws Exception {
-          return nn.renewDelegationToken(token);
+          return nn.getRpcServer().renewDelegationToken(token);
         }
       });
       PrintStream os = new PrintStream(resp.getOutputStream());

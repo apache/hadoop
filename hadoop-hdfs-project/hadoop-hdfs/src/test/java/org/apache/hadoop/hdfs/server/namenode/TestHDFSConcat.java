@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
@@ -52,7 +53,7 @@ public class TestHDFSConcat {
   private static final short REPL_FACTOR = 2;
   
   private MiniDFSCluster cluster;
-  private NameNode nn;
+  private NamenodeProtocols nn;
   private DistributedFileSystem dfs;
 
   private static long blockSize = 512;
@@ -72,7 +73,7 @@ public class TestHDFSConcat {
     cluster.waitClusterUp();
     dfs = (DistributedFileSystem) cluster.getFileSystem();
     assertNotNull("Failed to get FileSystem", dfs);
-    nn = cluster.getNameNode();
+    nn = cluster.getNameNodeRpc();
     assertNotNull("Failed to get NameNode", nn);
   }
 
@@ -283,7 +284,7 @@ public class TestHDFSConcat {
     Path filePath1 = new Path(name1);
     DFSTestUtil.createFile(dfs, filePath1, trgFileLen, REPL_FACTOR, 1);
     
-    HdfsFileStatus fStatus = cluster.getNameNode().getFileInfo(name1);
+    HdfsFileStatus fStatus = nn.getFileInfo(name1);
     long fileLen = fStatus.getLen();
     assertEquals(fileLen, trgFileLen);
     
@@ -293,11 +294,11 @@ public class TestHDFSConcat {
     stm.readFully(0, byteFile1);
     stm.close();
     
-    LocatedBlocks lb1 = cluster.getNameNode().getBlockLocations(name1, 0, trgFileLen);
+    LocatedBlocks lb1 = nn.getBlockLocations(name1, 0, trgFileLen);
     
     Path filePath2 = new Path(name2);
     DFSTestUtil.createFile(dfs, filePath2, srcFileLen, REPL_FACTOR, 1);
-    fStatus = cluster.getNameNode().getFileInfo(name2);
+    fStatus = nn.getFileInfo(name2);
     fileLen = fStatus.getLen();
     assertEquals(srcFileLen, fileLen);
     
@@ -307,7 +308,7 @@ public class TestHDFSConcat {
     stm.readFully(0, byteFile2);
     stm.close();
     
-    LocatedBlocks lb2 = cluster.getNameNode().getBlockLocations(name2, 0, srcFileLen);
+    LocatedBlocks lb2 = nn.getBlockLocations(name2, 0, srcFileLen);
     
     
     System.out.println("trg len="+trgFileLen+"; src len="+srcFileLen);
@@ -316,7 +317,7 @@ public class TestHDFSConcat {
     dfs.concat(filePath1, new Path [] {filePath2});
     
     long totalLen = trgFileLen + srcFileLen;
-    fStatus = cluster.getNameNode().getFileInfo(name1);
+    fStatus = nn.getFileInfo(name1);
     fileLen = fStatus.getLen();
     
     // read the resulting file
@@ -325,7 +326,7 @@ public class TestHDFSConcat {
     stm.readFully(0, byteFileConcat);
     stm.close();
     
-    LocatedBlocks lbConcat = cluster.getNameNode().getBlockLocations(name1, 0, fileLen);
+    LocatedBlocks lbConcat = nn.getBlockLocations(name1, 0, fileLen);
     
     //verifications
     // 1. number of blocks
@@ -337,7 +338,7 @@ public class TestHDFSConcat {
     assertEquals(fileLen, totalLen);
     
     // 3. removal of the src file
-    fStatus = cluster.getNameNode().getFileInfo(name2);
+    fStatus = nn.getFileInfo(name2);
     assertNull("File "+name2+ "still exists", fStatus); // file shouldn't exist
   
     // 4. content

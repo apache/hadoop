@@ -69,7 +69,7 @@ public class CancelDelegationTokenServlet extends DfsServlet {
     try {
       ugi.doAs(new PrivilegedExceptionAction<Void>() {
         public Void run() throws Exception {
-          nn.cancelDelegationToken(token);
+          nn.getRpcServer().cancelDelegationToken(token);
           return null;
         }
       });

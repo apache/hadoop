@@ -109,7 +109,7 @@ public class TestTransferRbw {
         
         final DatanodeInfo oldnodeinfo;
         {
-          final DatanodeInfo[] datatnodeinfos = cluster.getNameNode(
+          final DatanodeInfo[] datatnodeinfos = cluster.getNameNodeRpc(
               ).getDatanodeReport(DatanodeReportType.LIVE);
           Assert.assertEquals(2, datatnodeinfos.length);
           int i = 0;

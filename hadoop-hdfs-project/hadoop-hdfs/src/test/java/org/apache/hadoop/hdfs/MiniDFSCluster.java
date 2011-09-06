@@ -1026,6 +1026,14 @@ public class MiniDFSCluster {
   }
   
   /**
+   * Get an instance of the NameNode's RPC handler.
+   */
+  public NamenodeProtocols getNameNodeRpc() {
+    checkSingleNameNode();
+    return getNameNode(0).getRpcServer();
+  }
+  
+  /**
    * Gets the NameNode for the index.  May be null.
    */
   public NameNode getNameNode(int nnIndex) {
@@ -1361,7 +1369,15 @@ public class MiniDFSCluster {
     if (nameNode == null) {
       return false;
     }
-    long[] sizes = nameNode.getStats();
+    long[] sizes;
+    try {
+      sizes = nameNode.getRpcServer().getStats();
+    } catch (IOException ioe) {
+      // This method above should never throw.
+      // It only throws IOE since it is exposed via RPC
+      throw new AssertionError("Unexpected IOE thrown: "
+          + StringUtils.stringifyException(ioe));
+    }
     boolean isUp = false;
     synchronized (this) {
       isUp = ((!nameNode.isInSafeMode() || !waitSafeMode) && sizes[0] != 0);

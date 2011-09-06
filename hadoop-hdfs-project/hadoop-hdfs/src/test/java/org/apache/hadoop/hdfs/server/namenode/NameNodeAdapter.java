@@ -47,14 +47,6 @@ public class NameNodeAdapter {
         src, offset, length, false, true);
   }
 
-  /**
-   * Get the internal RPC server instance.
-   * @return rpc server
-   */
-  public static Server getRpcServer(NameNode namenode) {
-    return namenode.server;
-  }
-
   public static DelegationTokenSecretManager getDtSecretManager(
       final FSNamesystem ns) {
     return ns.getDelegationTokenSecretManager();

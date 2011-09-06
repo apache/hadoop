@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.security.token.block.SecurityTestUtil;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
@@ -314,6 +315,7 @@ public class TestBlockTokenWithDFS {
       assertEquals(numDataNodes, cluster.getDataNodes().size());
 
       final NameNode nn = cluster.getNameNode();
+      final NamenodeProtocols nnProto = nn.getRpcServer();
       final BlockManager bm = nn.getNamesystem().getBlockManager();
       final BlockTokenSecretManager sm = bm.getBlockTokenSecretManager();
 
@@ -344,7 +346,7 @@ public class TestBlockTokenWithDFS {
 
       new DFSClient(new InetSocketAddress("localhost",
           cluster.getNameNodePort()), conf);
-      List<LocatedBlock> locatedBlocks = nn.getBlockLocations(
+      List<LocatedBlock> locatedBlocks = nnProto.getBlockLocations(
           FILE_TO_READ, 0, FILE_SIZE).getLocatedBlocks();
       LocatedBlock lblock = locatedBlocks.get(0); // first block
       Token<BlockTokenIdentifier> myToken = lblock.getBlockToken();

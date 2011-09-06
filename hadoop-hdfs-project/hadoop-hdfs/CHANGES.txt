@@ -11,6 +11,7 @@ Trunk (unreleased changes)
 
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
                HdfsConstants. (Harsh J Chouraria via atm)
+    HDFS-2197. Refactor RPC call implementations out of NameNode class (todd)
 
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)

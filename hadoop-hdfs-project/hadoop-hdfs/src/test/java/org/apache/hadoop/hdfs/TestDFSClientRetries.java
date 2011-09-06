@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Client;
@@ -190,7 +191,7 @@ public class TestDFSClientRetries extends TestCase {
     final int maxRetries = 1; // Allow one retry (total of two calls)
     conf.setInt(DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY, maxRetries);
     
-    NameNode mockNN = mock(NameNode.class);
+    NamenodeProtocols mockNN = mock(NamenodeProtocols.class);
     Answer<Object> answer = new ThrowsException(new IOException()) {
       int retryCount = 0;
       
@@ -240,8 +241,8 @@ public class TestDFSClientRetries extends TestCase {
     try {
       cluster.waitActive();
       FileSystem fs = cluster.getFileSystem();
-      NameNode preSpyNN = cluster.getNameNode();
-      NameNode spyNN = spy(preSpyNN);
+      NamenodeProtocols preSpyNN = cluster.getNameNodeRpc();
+      NamenodeProtocols spyNN = spy(preSpyNN);
       DFSClient client = new DFSClient(null, spyNN, conf, null);
       int maxBlockAcquires = client.getMaxBlockAcquireFailures();
       assertTrue(maxBlockAcquires > 0);
@@ -305,11 +306,11 @@ public class TestDFSClientRetries extends TestCase {
    */
   private static class FailNTimesAnswer implements Answer<LocatedBlocks> {
     private int failuresLeft;
-    private NameNode realNN;
+    private NamenodeProtocols realNN;
 
-    public FailNTimesAnswer(NameNode realNN, int timesToFail) {
+    public FailNTimesAnswer(NamenodeProtocols preSpyNN, int timesToFail) {
       failuresLeft = timesToFail;
-      this.realNN = realNN;
+      this.realNN = preSpyNN;
     }
 
     public LocatedBlocks answer(InvocationOnMock invocation) throws IOException {
@@ -603,7 +604,8 @@ public class TestDFSClientRetries extends TestCase {
 
       //stop the first datanode
       final List<LocatedBlock> locatedblocks = DFSClient.callGetBlockLocations(
-          cluster.getNameNode(), f, 0, Long.MAX_VALUE).getLocatedBlocks();
+          cluster.getNameNodeRpc(), f, 0, Long.MAX_VALUE)
+            .getLocatedBlocks();
       final DatanodeInfo first = locatedblocks.get(0).getLocations()[0];
       cluster.stopDataNode(first.getName());
 

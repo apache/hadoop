@@ -293,10 +293,11 @@ public class TestDecommission {
   }
   
   private void verifyStats(NameNode namenode, FSNamesystem fsn,
-      DatanodeInfo node, boolean decommissioning) throws InterruptedException {
+      DatanodeInfo node, boolean decommissioning)
+      throws InterruptedException, IOException {
     // Do the stats check over 10 iterations
     for (int i = 0; i < 10; i++) {
-      long[] newStats = namenode.getStats();
+      long[] newStats = namenode.getRpcServer().getStats();
 
       // For decommissioning nodes, ensure capacity of the DN is no longer
       // counted. Only used space of the DN is counted in cluster capacity

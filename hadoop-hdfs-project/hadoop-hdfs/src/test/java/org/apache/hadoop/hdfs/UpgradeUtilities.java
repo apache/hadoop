@@ -51,7 +51,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.datanode.BlockPoolSliceStorage;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 
 /**
  * This class defines a number of static helper methods used by the
@@ -121,7 +121,7 @@ public class UpgradeUtilities {
                                    .manageNameDfsDirs(false)
                                    .build();
         
-      NameNode namenode = cluster.getNameNode();
+      NamenodeProtocols namenode = cluster.getNameNodeRpc();
       namenodeStorageNamespaceID = namenode.versionRequest().getNamespaceID();
       namenodeStorageFsscTime = namenode.versionRequest().getCTime();
       namenodeStorageClusterID = namenode.versionRequest().getClusterID();
@@ -517,7 +517,7 @@ public class UpgradeUtilities {
    */
   public static int getCurrentNamespaceID(MiniDFSCluster cluster) throws IOException {
     if (cluster != null) {
-      return cluster.getNameNode().versionRequest().getNamespaceID();
+      return cluster.getNameNodeRpc().versionRequest().getNamespaceID();
     }
     return namenodeStorageNamespaceID;
   }
@@ -528,7 +528,7 @@ public class UpgradeUtilities {
    */
   public static String getCurrentClusterID(MiniDFSCluster cluster) throws IOException {
     if (cluster != null) {
-      return cluster.getNameNode().versionRequest().getClusterID();
+      return cluster.getNameNodeRpc().versionRequest().getClusterID();
     }
     return namenodeStorageClusterID;
   }
@@ -539,7 +539,7 @@ public class UpgradeUtilities {
    */
   public static String getCurrentBlockPoolID(MiniDFSCluster cluster) throws IOException {
     if (cluster != null) {
-      return cluster.getNameNode().versionRequest().getBlockPoolID();
+      return cluster.getNameNodeRpc().versionRequest().getBlockPoolID();
     }
     return namenodeStorageBlockPoolID;
   }
@@ -554,7 +554,7 @@ public class UpgradeUtilities {
    */
   public static long getCurrentFsscTime(MiniDFSCluster cluster) throws IOException {
     if (cluster != null) {
-      return cluster.getNameNode().versionRequest().getCTime();
+      return cluster.getNameNodeRpc().versionRequest().getCTime();
     }
     return namenodeStorageFsscTime;
   }

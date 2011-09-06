@@ -147,7 +147,7 @@ public class TestListCorruptFileBlocks {
       conf.setFloat(DFSConfigKeys.DFS_NAMENODE_REPL_QUEUE_THRESHOLD_PCT_KEY,
                     0f);
       cluster = new MiniDFSCluster.Builder(conf).waitSafeMode(false).build();
-      cluster.getNameNode().
+      cluster.getNameNodeRpc().
         setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
       FileSystem fs = cluster.getFileSystem();
 
@@ -244,7 +244,7 @@ public class TestListCorruptFileBlocks {
                  cluster.getNameNode().isInSafeMode());
 
       // now leave safe mode so that we can clean up
-      cluster.getNameNode().
+      cluster.getNameNodeRpc().
         setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
 
       util.cleanup(fs, "/srcdat10");

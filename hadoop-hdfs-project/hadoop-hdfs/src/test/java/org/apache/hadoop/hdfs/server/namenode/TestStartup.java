@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.util.StringUtils;
@@ -379,9 +380,10 @@ public class TestStartup extends TestCase {
     NameNode namenode = new NameNode(conf);
     namenode.getNamesystem().mkdirs("/test",
         new PermissionStatus("hairong", null, FsPermission.getDefault()), true);
-    assertTrue(namenode.getFileInfo("/test").isDir());
-    namenode.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
-    namenode.saveNamespace();
+    NamenodeProtocols nnRpc = namenode.getRpcServer();
+    assertTrue(nnRpc.getFileInfo("/test").isDir());
+    nnRpc.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    nnRpc.saveNamespace();
     namenode.stop();
     namenode.join();
 
@@ -408,9 +410,10 @@ public class TestStartup extends TestCase {
 
   private void checkNameSpace(Configuration conf) throws IOException {
     NameNode namenode = new NameNode(conf);
-    assertTrue(namenode.getFileInfo("/test").isDir());
-    namenode.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
-    namenode.saveNamespace();
+    NamenodeProtocols nnRpc = namenode.getRpcServer();
+    assertTrue(nnRpc.getFileInfo("/test").isDir());
+    nnRpc.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    nnRpc.saveNamespace();
     namenode.stop();
     namenode.join();
   }
@@ -515,7 +518,7 @@ public class TestStartup extends TestCase {
       cluster.waitActive();
   
       cluster.restartNameNode();
-      NameNode nn = cluster.getNameNode();
+      NamenodeProtocols nn = cluster.getNameNodeRpc();
       assertNotNull(nn);
       Assert.assertTrue(cluster.isDataNodeUp());
       
