@@ -214,7 +214,7 @@ public class NameNode implements NamenodeProtocols {
   protected FSNamesystem namesystem; 
   protected NamenodeRole role;
   /** RPC server. Package-protected for use in tests. */
-  Server server;
+  RPC.Server server;
   /** RPC server for HDFS Services communication.
       BackupNode, Datanodes and all other services
       should be connecting to this server if it is

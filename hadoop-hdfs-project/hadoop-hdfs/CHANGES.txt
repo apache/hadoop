@@ -17,6 +17,8 @@ Trunk (unreleased changes)
 
     HDFS-2299. TestOfflineEditsViewer is failing on trunk. (Uma Maheswara Rao G
                via atm)
+    HDFS-2310. TestBackupNode fails since HADOOP-7524 went in.
+               (Ivan Kelly via todd)
 
 Release 0.23.0 - Unreleased
 

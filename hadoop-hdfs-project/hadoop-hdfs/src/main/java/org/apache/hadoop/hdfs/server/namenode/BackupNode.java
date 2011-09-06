@@ -74,6 +74,7 @@ public class BackupNode extends NameNode implements JournalProtocol {
   
   BackupNode(Configuration conf, NamenodeRole role) throws IOException {
     super(conf, role);
+    this.server.addProtocol(JournalProtocol.class, this);
   }
 
   /////////////////////////////////////////////////////
