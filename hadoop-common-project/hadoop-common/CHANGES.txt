@@ -358,6 +358,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7552. FileUtil#fullyDelete doesn't throw IOE but lists it
     in the throws clause. (eli)
 
+    HADOOP-7580. Add a version of getLocalPathForWrite to LocalDirAllocator
+    which doesn't create dirs. (Chris Douglas & Siddharth Seth via acmurthy) 
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
