@@ -46,6 +46,14 @@ public class NameNodeAdapter {
     return namenode.getNamesystem().getBlockLocations(
         src, offset, length, false, true);
   }
+  
+  /**
+   * Get the internal RPC server instance.
+   * @return rpc server
+   */
+  public static Server getRpcServer(NameNode namenode) {
+    return ((NameNodeRpcServer)namenode.getRpcServer()).server;
+  }
 
   public static DelegationTokenSecretManager getDtSecretManager(
       final FSNamesystem ns) {

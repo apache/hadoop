@@ -26,6 +26,8 @@ Trunk (unreleased changes)
 
     HDFS-2313. Rat excludes has a typo for excluding editsStored files. (atm)
 
+    HDFS-2314. MRV1 test compilation broken after HDFS-2197 (todd)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
