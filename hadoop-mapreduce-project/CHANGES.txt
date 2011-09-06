@@ -1222,6 +1222,8 @@ Release 0.22.0 - Unreleased
     MAPREDUCE-2169. Integrated Reed-Solomon code with RaidNode. (Ramkumar
     Vadali via schen)
 
+    MAPREDUCE-2936. Contrib Raid compilation broken after HDFS-1620. (vinodkv)
+
   IMPROVEMENTS
 
     MAPREDUCE-2141. Add an "extra data" field to Task for use by Mesos. (matei)
