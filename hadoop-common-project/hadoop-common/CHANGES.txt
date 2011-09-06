@@ -553,6 +553,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7593. Fix AssertionError in TestHttpServer.testMaxThreads().
     (Uma Maheswara Rao G via szetszwo)
 
+    HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
+    by Jersey (Alejandro Abdelnur via atm)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
