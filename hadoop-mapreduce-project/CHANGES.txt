@@ -1201,6 +1201,9 @@ Release 0.23.0 - Unreleased
    MAPREDUCE-2687. Fix NodeManager to use the right version of
    LocalDirAllocator.getLocalPathToWrite. (mahadev & acmurthy) 
 
+   MAPREDUCE-2800. Set final progress for tasks to ensure all task information
+   is correctly logged to JobHistory. (Siddharth Seth via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

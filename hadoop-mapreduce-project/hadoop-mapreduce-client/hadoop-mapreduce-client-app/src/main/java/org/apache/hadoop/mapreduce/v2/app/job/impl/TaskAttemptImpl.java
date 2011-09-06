@@ -1380,6 +1380,8 @@ public abstract class TaskAttemptImpl implements
       // for it
       taskAttempt.taskAttemptListener.unregister(
           taskAttempt.attemptId, taskAttempt.jvmID);
+      taskAttempt.reportedStatus.progress = 1.0f;
+      taskAttempt.updateProgressSplits();
       //send the cleanup event to containerLauncher
       taskAttempt.eventHandler.handle(new ContainerLauncherEvent(
           taskAttempt.attemptId, 
