@@ -63,8 +63,8 @@ public class TestEditLogFileOutputStream {
 
     EditLogValidation validation = EditLogFileInputStream.validateEditLog(editLog);
     assertEquals("Edit log should contain a header as valid length",
-        HEADER_LEN, validation.validLength);
-    assertEquals(1, validation.numTransactions);
+        HEADER_LEN, validation.getValidLength());
+    assertEquals(1, validation.getNumTransactions());
     assertEquals("Edit log should have 1MB of bytes allocated",
         1024*1024, editLog.length());
     
@@ -72,12 +72,12 @@ public class TestEditLogFileOutputStream {
     cluster.getFileSystem().mkdirs(new Path("/tmp"),
         new FsPermission((short)777));
 
-    long oldLength = validation.validLength;
+    long oldLength = validation.getValidLength();
     validation = EditLogFileInputStream.validateEditLog(editLog);
     assertTrue("Edit log should have more valid data after writing a txn " +
-        "(was: " + oldLength + " now: " + validation.validLength + ")",
-        validation.validLength > oldLength);
-    assertEquals(2, validation.numTransactions);
+        "(was: " + oldLength + " now: " + validation.getValidLength() + ")",
+        validation.getValidLength() > oldLength);
+    assertEquals(2, validation.getNumTransactions());
 
     assertEquals("Edit log should be 1MB long",
         1024 * 1024, editLog.length());

@@ -353,12 +353,9 @@ public abstract class FSImageTestUtil {
    */
   public static EditLogFile findLatestEditsLog(StorageDirectory sd)
   throws IOException {
-    FSImageTransactionalStorageInspector inspector =
-      new FSImageTransactionalStorageInspector();
-    inspector.inspectDirectory(sd);
-    
-    List<EditLogFile> foundEditLogs = Lists.newArrayList(
-        inspector.getEditLogFiles());
+    File currentDir = sd.getCurrentDir();
+    List<EditLogFile> foundEditLogs 
+      = Lists.newArrayList(FileJournalManager.matchEditLogs(currentDir.listFiles()));
     return Collections.max(foundEditLogs, EditLogFile.COMPARE_BY_START_TXID);
   }
 

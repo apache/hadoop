@@ -13,6 +13,9 @@ Trunk (unreleased changes)
                HdfsConstants. (Harsh J Chouraria via atm)
     HDFS-2197. Refactor RPC call implementations out of NameNode class (todd)
 
+    HDFS-2018. Move all journal stream management code into one place.
+               (Ivan Kelly via jitendra)
+
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
 
