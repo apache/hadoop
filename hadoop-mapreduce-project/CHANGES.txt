@@ -1781,6 +1781,8 @@ Release 0.22.0 - Unreleased
     MAPREDUCE-2571. CombineFileInputFormat.getSplits throws a
     java.lang.ArrayStoreException. (Bochun Bai via todd)
 
+    MAPREDUCE-2767. Remove Linux task-controller. (Milind Bhandarkar via shv)
+
 Release 0.21.1 - Unreleased
 
   NEW FEATURES
