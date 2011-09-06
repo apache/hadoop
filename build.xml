@@ -168,10 +168,23 @@
   <property name="patch.cmd" value="patch"/>
   <property name="make.cmd" value="make"/>
 
-  <property name="jsvc.build.dir" value="${build.dir}/jsvc" />
+  <property name="jsvc.build.dir" value="${build.dir}/jsvc.${os.arch}" />
   <property name="jsvc.install.dir" value="${dist.dir}/libexec" /> 
-  <property name="jsvc.location" value="http://archive.apache.org/dist/commons/daemon/binaries/1.0.2/linux/commons-daemon-1.0.2-bin-linux-i386.tar.gz" />
-  <property name="jsvc.dest.name" value="jsvc.tar.gz" />
+  <condition property="os-arch" value="x86_64">
+    <and>
+      <os arch="amd64" />
+    </and>
+  </condition>
+  <condition property="os-arch" value="i386">
+    <or>
+      <os arch="i386" />
+      <os arch="i486" />
+      <os arch="i586" />
+      <os arch="i686" />
+    </or>
+  </condition>
+  <property name="jsvc.location" value="http://archive.apache.org/dist/commons/daemon/binaries/1.0.2/linux/commons-daemon-1.0.2-bin-linux-${os-arch}.tar.gz" />
+  <property name="jsvc.dest.name" value="jsvc.${os.arch}.tar.gz" />
 
   <!-- task-controller properties set here -->
   <!-- Source directory from where configure is run and files are copied
@@ -2606,9 +2619,9 @@
 
     <untar compression="gzip" src="${jsvc.build.dir}/${jsvc.dest.name}" dest="${jsvc.build.dir}" />
 
-    <copy file="${jsvc.build.dir}/jsvc" todir="${jsvc.install.dir}" verbose="true" />
+    <copy file="${jsvc.build.dir}/jsvc" toFile="${jsvc.install.dir}/jsvc.${os.arch}" verbose="true" />
     <chmod perm="ugo+x" type="file">
-      <fileset file="${jsvc.install.dir}/jsvc"/>
+      <fileset file="${jsvc.install.dir}/jsvc.${os.arch}"/>
     </chmod>
  </target>
 

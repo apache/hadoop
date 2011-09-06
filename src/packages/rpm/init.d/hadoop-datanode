@@ -30,7 +30,11 @@ desc="Hadoop datanode daemon"
 
 start() {
   echo -n $"Starting $desc (hadoop-datanode): "
-  daemon --user hdfs ${HADOOP_PREFIX}/sbin/hadoop-daemon.sh --config "${HADOOP_CONF_DIR}" start datanode
+  if [ -n "$HADOOP_SECURE_DN_USER" ]; then
+    daemon ${HADOOP_PREFIX}/sbin/hadoop-daemon.sh --config "${HADOOP_CONF_DIR}" start datanode
+  else
+    daemon --user hdfs ${HADOOP_PREFIX}/sbin/hadoop-daemon.sh --config "${HADOOP_CONF_DIR}" start datanode
+  fi
   RETVAL=$?
   echo
   [ $RETVAL -eq 0 ] && touch /var/lock/subsys/hadoop-datanode
@@ -39,7 +43,11 @@ start() {
 
 stop() {
   echo -n $"Stopping $desc (hadoop-datanode): "
-  daemon --user hdfs ${HADOOP_PREFIX}/sbin/hadoop-daemon.sh --config "${HADOOP_CONF_DIR}" stop datanode
+  if [ -n "$HADOOP_SECURE_DN_USER" ]; then
+    daemon ${HADOOP_PREFIX}/sbin/hadoop-daemon.sh --config "${HADOOP_CONF_DIR}" stop datanode
+  else
+    daemon --user hdfs ${HADOOP_PREFIX}/sbin/hadoop-daemon.sh --config "${HADOOP_CONF_DIR}" stop datanode
+  fi
   RETVAL=$?
   sleep 5
   echo

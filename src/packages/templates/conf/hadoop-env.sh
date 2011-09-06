@@ -10,7 +10,6 @@ export JAVA_HOME=${JAVA_HOME}
 
 # Location where Hadoop is installed
 export HADOOP_PREFIX=${HADOOP_PREFIX}
-export HADOOP_HOME=${HADOOP_PREFIX}/share/hadoop
 
 # Extra Java CLASSPATH elements.  Optional.
 # export HADOOP_CLASSPATH=
@@ -56,9 +55,9 @@ export HADOOP_IDENT_STRING=`whoami`
 # export HADOOP_NICENESS=10
 
 # Where log files are stored.  $HADOOP_HOME/logs by default.
-HADOOP_LOG_DIR=${HADOOP_LOG_DIR}/$HADOOP_IDENT_STRING
-export HADOOP_LOG_DIR=${HADOOP_LOG_DIR:-$HADOOP_HOME/var/log}
+HADOOP_LOG_DIR=${HADOOP_LOG_DIR}
+export HADOOP_LOG_DIR=${HADOOP_LOG_DIR:-$HADOOP_PREFIX/var/log}
 
 # Hadoop configuration directory
 HADOOP_CONF_DIR=${HADOOP_CONF_DIR}
-export HADOOP_CONF_DIR=${HADOOP_CONF_DIR:-$HADOOP_PREFIX/conf}
+export HADOOP_CONF_DIR=${HADOOP_CONF_DIR:-$HADOOP_PREFIX/etc/hadoop}
