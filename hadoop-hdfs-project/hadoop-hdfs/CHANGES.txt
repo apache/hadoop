@@ -21,6 +21,8 @@ Trunk (unreleased changes)
     HDFS-2310. TestBackupNode fails since HADOOP-7524 went in.
                (Ivan Kelly via todd)
 
+    HDFS-2313. Rat excludes has a typo for excluding editsStored files. (atm)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
