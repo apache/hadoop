@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -488,6 +489,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
   
   public static void main(String argv[]) {
+    StringUtils.startupShutdownMessage(ResourceManager.class, argv, LOG);
     ResourceManager resourceManager = null;
     try {
       Configuration conf = new YarnConfiguration();
