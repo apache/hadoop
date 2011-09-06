@@ -1736,6 +1736,7 @@ class MapTask extends Task {
           indexCacheList.get(0).writeToFile(
             mapOutputFile.getOutputIndexFileForWriteInVolume(filename[0]), job);
         }
+        sortPhase.complete();
         return;
       }
 
@@ -1776,6 +1777,7 @@ class MapTask extends Task {
         } finally {
           finalOut.close();
         }
+        sortPhase.complete();
         return;
       }
       {

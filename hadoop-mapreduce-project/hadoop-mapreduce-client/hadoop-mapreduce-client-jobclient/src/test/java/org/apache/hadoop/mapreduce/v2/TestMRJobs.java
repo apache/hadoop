@@ -57,6 +57,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.TaskID;
+import org.apache.hadoop.mapreduce.TaskReport;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
@@ -151,7 +152,7 @@ public class TestMRJobs {
     Assert.assertTrue(succeeded);
     Assert.assertEquals(JobStatus.State.SUCCEEDED, job.getJobState());
     verifySleepJobCounters(job);
-    
+    verifyTaskProgress(job);
     
     // TODO later:  add explicit "isUber()" checks of some sort (extend
     // JobStatus?)--compare against MRJobConfig.JOB_UBERTASK_ENABLE value
@@ -172,6 +173,18 @@ public class TestMRJobs {
     Assert
         .assertTrue(counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS) != null
             && counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS).getValue() != 0);
+  }
+  
+  protected void verifyTaskProgress(Job job) throws InterruptedException,
+      IOException {
+    for (TaskReport taskReport : job.getTaskReports(TaskType.MAP)) {
+      Assert.assertTrue(0.9999f < taskReport.getProgress()
+          && 1.0001f > taskReport.getProgress());
+    }
+    for (TaskReport taskReport : job.getTaskReports(TaskType.REDUCE)) {
+      Assert.assertTrue(0.9999f < taskReport.getProgress()
+          && 1.0001f > taskReport.getProgress());
+    }
   }
 
   @Test
@@ -198,6 +211,7 @@ public class TestMRJobs {
     boolean succeeded = job.waitForCompletion(true);
     Assert.assertTrue(succeeded);
     Assert.assertEquals(JobStatus.State.SUCCEEDED, job.getJobState());
+    
     // Make sure there are three files in the output-dir
     
     RemoteIterator<FileStatus> iterator =
