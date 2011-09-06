@@ -146,6 +146,8 @@ Release 0.20.205.0 - unreleased
     HADOOP-7539. merge hadoop archive goodness from trunk to .20 (John George 
     via mahadev)
 
+    HADOOP-7594. Support HTTP REST in HttpServer.  (szetszwo)
+
 Release 0.20.204.0 - 2011-8-25
 
   NEW FEATURES

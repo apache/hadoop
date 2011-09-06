@@ -48,14 +48,18 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.http.resource.JerseyResource;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mortbay.util.ajax.JSON;
 
 public class TestHttpServer {
+  static final Log LOG = LogFactory.getLog(TestHttpServer.class);
+
   private HttpServer server;
   private URL baseUrl;
   
@@ -68,7 +72,7 @@ public class TestHttpServer {
                       ) throws ServletException, IOException {
       PrintStream out = new PrintStream(response.getOutputStream());
       Map<String, String[]> params = request.getParameterMap();
-      SortedSet<String> keys = new TreeSet(params.keySet());
+      SortedSet<String> keys = new TreeSet<String>(params.keySet());
       for(String key: keys) {
         out.print(key);
         out.print(':');
@@ -94,7 +98,7 @@ public class TestHttpServer {
                       HttpServletResponse response
                       ) throws ServletException, IOException {
       PrintStream out = new PrintStream(response.getOutputStream());
-      SortedSet<String> sortedKeys = new TreeSet();
+      SortedSet<String> sortedKeys = new TreeSet<String>();
       Enumeration<String> keys = request.getParameterNames();
       while(keys.hasMoreElements()) {
         sortedKeys.add(keys.nextElement());
@@ -127,6 +131,8 @@ public class TestHttpServer {
     server = new HttpServer("test", "0.0.0.0", 0, true);
     server.addServlet("echo", "/echo", EchoServlet.class);
     server.addServlet("echomap", "/echomap", EchoMapServlet.class);
+    server.addJerseyResourcePackage(
+        JerseyResource.class.getPackage().getName(), "/jersey/*");
     server.start();
     int port = server.getPort();
     baseUrl = new URL("http://localhost:" + port + "/");
@@ -158,9 +164,6 @@ public class TestHttpServer {
    * 
    */
   public static class DummyServletFilter implements Filter {
-
-    private static final Log LOG = LogFactory.getLog(
-        DummyServletFilter.class);
     @Override
     public void destroy() { }
 
@@ -305,5 +308,20 @@ public class TestHttpServer {
           serverURL + servlet, "userE"));
     }
     myServer.stop();
+  }
+
+  @SuppressWarnings("unchecked")
+  private static Map<String, Object> parse(String jsonString) {
+    return (Map<String, Object>)JSON.parse(jsonString);
+  }
+
+  @Test public void testJersey() throws Exception {
+    LOG.info("BEGIN testJersey()");
+    final String js = readOutput(new URL(baseUrl, "/jersey/foo?op=bar"));
+    final Map<String, Object> m = parse(js);
+    LOG.info("m=" + m);
+    assertEquals("foo", m.get(JerseyResource.PATH));
+    assertEquals("bar", m.get(JerseyResource.OP));
+    LOG.info("END testJersey()");
   }
 }
