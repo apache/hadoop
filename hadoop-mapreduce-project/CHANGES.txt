@@ -236,6 +236,9 @@ Release 0.23.0 - Unreleased
     Configuration changes:
       add yarn.capacity-scheduler.maximum-am-resource-percent
 
+    MAPREDUCE-2774. Add startup message to ResourceManager & NodeManager on
+    startup. (Venu Gopala Rao via acmurthy) 
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
