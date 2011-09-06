@@ -379,6 +379,7 @@
         <property name="ivy_repo_url" value="${ivy_repo_url}"/>
         <property name="offline" value="${offline}"/>
         <property name="resolvers" value="${resolvers}"/>
+     	<property name="basedir" value="${basedir}"/>
         <fileset file="${contrib.dir}/build.xml"/>
      </subant>  	
   </target>
@@ -745,6 +746,7 @@
        <property name="ivy_repo_url" value="${ivy_repo_url}"/>
        <property name="offline" value="${offline}"/>
        <property name="resolvers" value="${resolvers}"/>
+       <property name="basedir" value="${basedir}"/>
        <fileset file="${contrib.dir}/build.xml"/>
     </subant> 
   </target>
@@ -765,6 +767,7 @@
       <property name="ivy_repo_url" value="${ivy_repo_url}"/>
       <property name="offline" value="${offline}"/>
       <property name="resolvers" value="${resolvers}"/>
+      <property name="basedir" value="${basedir}"/>
       <fileset file="${basedir}/build.xml"/>
      </subant>
   </target>
@@ -1017,6 +1020,7 @@
       <property name="ivy_repo_url" value="${ivy_repo_url}"/>
       <property name="offline" value="${offline}"/>
       <property name="resolvers" value="${resolvers}"/>
+      <property name="basedir" value="${basedir}"/>
       <fileset file="${contrib.dir}/build.xml"/>
     </subant>  	
 
@@ -1115,6 +1119,7 @@
       distribution directory so contribs know where to install to.-->
       <property name="version" value="${version}"/>
       <property name="dist.dir" value="${dist.dir}"/>
+      <property name="basedir" value="${basedir}"/>
       <fileset file="${contrib.dir}/build.xml"/>
     </subant>  	
 
@@ -1285,7 +1290,8 @@
   <!-- Using subant instead of ant as a workaround for 30569              -->
   <!-- ================================================================== -->
   <target name="clean-contrib">
-     <subant target="clean">        
+     <subant target="clean">
+     	<property name="basedir" value="${basedir}"/>
         <fileset file="src/contrib/build.xml"/>
      </subant>  	
   </target>

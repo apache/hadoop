@@ -613,6 +613,9 @@ Release 0.22.0 - Unreleased
 
     HDFS-2297. ant should pass jvmargs to findbugs. (Joep Rottinghuis via shv)
 
+    HDFS-2315. Fix build-contrib to work with ant older than 1.8.
+    (Joep Rottinghuis via shv)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
