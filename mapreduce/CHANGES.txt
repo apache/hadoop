@@ -596,6 +596,8 @@ Release 0.22.0 - Unreleased
     MAPREDUCE-2753. Generated POMs hardcode dependency on hadoop-common
     version 0.22.0-SNAPSHOT (Joep Rottinghuis via cos)
 
+    MAPREDUCE-2767. Remove Linux task-controller. (Milind Bhandarkar via shv) 
+
 Release 0.21.1 - Unreleased
 
   NEW FEATURES

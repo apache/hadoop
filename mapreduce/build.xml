@@ -161,20 +161,6 @@
   <property name="make.cmd" value="make"/>
 
   <property name="findbugs.heap.size" value="512M"/>
-  <!-- task-controller properties set here -->
-  <!-- Source directory from where configure is run and files are copied
-  -->
-	
-  <property name="c++.task-controller.src" 
-    value="${basedir}/src/c++/task-controller" />
-  <!-- directory where autoconf files + temporary files and src is 
-    stored for compilation -->
-  <property name="build.c++.task-controller" 
-    value="${build.c++}/task-controller" />
-  <!-- the default install dir is build directory override it using
-   -Dtask-controller.install.dir=$HADOOP_HOME/bin -->
-  <property name="task-controller.install.dir" value="${dist.dir}/bin" />
-  <!-- end of task-controller properties -->
 	
   <!-- IVY properteis set here -->
   <property name="ivy.dir" location="ivy" />
@@ -685,8 +671,6 @@
         <sysproperty key="test.debug.data" value="${test.debug.data}"/>
         <sysproperty key="hadoop.log.dir" value="@{test.dir}/logs"/>
         <sysproperty key="test.src.dir" value="@{fileset.dir}"/>
-        <sysproperty key="taskcontroller-path" value="${taskcontroller-path}"/>
-        <sysproperty key="taskcontroller-ugi" value="${taskcontroller-ugi}"/>
         <sysproperty key="test.build.extraconf" value="@{test.dir}/extraconf" />
         <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml"/>
         <sysproperty key="java.library.path"
@@ -1265,7 +1249,6 @@
         <fileset file="${dist.dir}/src/examples/pipes/configure"/>
         <fileset file="${dist.dir}/src/c++/utils/configure"/>
         <fileset file="${dist.dir}/src/c++/pipes/configure"/>
-        <fileset file="${dist.dir}/src/c++/task-controller/configure"/>
     </chmod>
     <chmod perm="ugo+x" type="file" parallel="false">
         <fileset dir="${dist.dir}/bin"/>
@@ -1291,7 +1274,6 @@
           <exclude name="${final.name}/src/examples/pipes/configure"/>
           <exclude name="${final.name}/src/c++/utils/configure"/>
           <exclude name="${final.name}/src/c++/pipes/configure"/>
-          <exclude name="${final.name}/src/c++/task-controller/configure"/>
           <include name="${final.name}/**" />
         </tarfileset>
         <tarfileset dir="${build.dir}" mode="755">
@@ -1300,7 +1282,6 @@
           <include name="${final.name}/src/examples/pipes/configure"/>
           <include name="${final.name}/src/c++/utils/configure"/>
           <include name="${final.name}/src/c++/pipes/configure"/>
-          <include name="${final.name}/src/c++/task-controller/configure"/>
         </tarfileset>
       </param.listofitems>
     </macro_tar>
@@ -1657,7 +1638,6 @@
         <exclude name="src/c++/librecordio/*"/>
         <exclude name="src/c++/pipes/*"/>
         <exclude name="src/c++/utils/*"/>
-        <exclude name="src/c++/task-controller/*"/>
         <exclude name="src/examples/pipes/*"/>
         <exclude name="src/c++/pipes/debug/*"/>
       </fileset>
@@ -1749,9 +1729,6 @@
     <condition property="need.c++.examples.pipes.configure">
        <not> <available file="${c++.examples.pipes.src}/configure"/> </not>
     </condition>
-    <condition property="need.c++.task-controller.configure">
-       <not> <available file="${c++.task-controller.src}/configure"/> </not>
-    </condition>
   </target>
 
   <target name="create-c++-utils-configure" depends="check-c++-configure" 
@@ -1781,19 +1758,9 @@
     </exec>
   </target>
 
-  <target name="create-c++-task-controller-configure" depends="check-c++-configure" 
-                                            if="need.c++.task-controller.configure">
-    <exec executable="autoreconf" dir="${c++.task-controller.src}" 
-          searchpath="yes" failonerror="yes">
-       <arg value="-i"/>
-       <arg value="-f"/>
-    </exec>
-  </target>
-
   <target name="create-c++-configure" depends="create-c++-utils-configure,
                                                create-c++-pipes-configure,
-                                               create-c++-examples-pipes-configure,
-                                               create-c++-task-controller-configure" 
+                                               create-c++-examples-pipes-configure"
                                       if="compile.c++">
   </target>
    
@@ -2233,67 +2200,6 @@
     </echo>
   </target>
 
-  <!-- taskcontroller targets -->
-  <target name="init-task-controller-build">
-    <antcall target="create-c++-task-controller-configure" inheritAll="true"/>
-    <mkdir dir="${build.c++.task-controller}" />
-    <copy todir="${build.c++.task-controller}">
-      <fileset dir="${c++.task-controller.src}" includes="*.c"/>
-      <fileset dir="${c++.task-controller.src}" includes="*.h"/>
-    </copy>
-    <chmod file="${c++.task-controller.src}/configure" perm="ugo+x"/> 
-    <condition property="task-controller.conf.dir.passed">
-      <not>
-        <equals arg1="${hadoop.conf.dir}" arg2="$${hadoop.conf.dir}"/>
-      </not>
-    </condition>
-  </target>
-  <target name="configure-task-controller" depends="init,
-          init-task-controller-build,
-          task-controller-configuration-with-confdir,
-          task-controller-configuration-with-no-confdir">
-  </target>
-  <target name="task-controller-configuration-with-confdir" 
-          if="task-controller.conf.dir.passed" >
-    <exec executable="${c++.task-controller.src}/configure" 
-          dir="${build.c++.task-controller}" failonerror="yes">
-      <arg value="--prefix=${task-controller.install.dir}" />
-      <arg value="--with-confdir=${hadoop.conf.dir}" />
-    </exec>
-  </target>
-  <target name="task-controller-configuration-with-no-confdir" 
-          unless="task-controller.conf.dir.passed">
-    <exec executable="${c++.task-controller.src}/configure" 
-          dir="${build.c++.task-controller}" failonerror="yes">
-      <arg value="--prefix=${task-controller.install.dir}" />
-    </exec>
-  </target>
-  <!--
-    * Create the installation directory.
-    * Do a make install.
-   -->
-  <target name="task-controller" depends="configure-task-controller">
-    <mkdir dir="${task-controller.install.dir}" />
-    <exec executable="${make.cmd}" dir="${build.c++.task-controller}" 
-        searchpath="yes" failonerror="yes">
-      <arg value="install" />
-    </exec>
-  </target>
-  <target name="test-task-controller" depends="task-controller">
-    <copy todir="${build.c++.task-controller}" verbose="true">
-      <fileset dir="${c++.task-controller.src}" includes="tests/"/>
-    </copy>
-    <exec executable="${make.cmd}" dir="${build.c++.task-controller}" 
-        searchpath="yes" failonerror="yes">
-      <arg value="clean" />
-      <arg value="test" />
-    </exec>
-    <exec executable="${build.c++.task-controller}/tests/test-task-controller"
-        dir="${build.c++.task-controller}/tests/"
-        failonerror="yes">
-    </exec>
-  </target>
-  <!-- end of task-controller targets -->
   
   <!-- Begining of fault-injection targets-->
   <import file="${test.src.dir}/aop/build/aop.xml"/>
