@@ -1204,6 +1204,9 @@ Release 0.23.0 - Unreleased
 
    MAPREDUCE-2882. TestLineRecordReader depends on ant jars. (todd)
 
+   MAPREDUCE-2687. Fix NodeManager to use the right version of
+   LocalDirAllocator.getLocalPathToWrite. (mahadev & acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
