@@ -46,11 +46,11 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.datatransfer.*;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset;
 import org.apache.hadoop.hdfs.server.datanode.RaidBlockSender;
 import org.apache.commons.logging.Log;
@@ -741,17 +741,17 @@ public abstract class BlockFixer extends Configured implements Runnable {
       
       int readTimeout =
         getConf().getInt(BLOCKFIX_READ_TIMEOUT,
-                         HdfsServerConstants.READ_TIMEOUT);
+                         HdfsConstants.READ_TIMEOUT);
       NetUtils.connect(sock, target, readTimeout);
       sock.setSoTimeout(readTimeout);
       
       int writeTimeout = getConf().getInt(BLOCKFIX_WRITE_TIMEOUT,
-                                          HdfsServerConstants.WRITE_TIMEOUT);
+                                          HdfsConstants.WRITE_TIMEOUT);
       
       OutputStream baseStream = NetUtils.getOutputStream(sock, writeTimeout);
       DataOutputStream out = 
         new DataOutputStream(new BufferedOutputStream(baseStream,
-                                                      HdfsConstants.
+                                                      FSConstants.
                                                       SMALL_BUFFER_SIZE));
       
       boolean corruptChecksumOk = false;
