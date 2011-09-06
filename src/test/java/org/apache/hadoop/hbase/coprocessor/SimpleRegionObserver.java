@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Arrays;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
@@ -38,6 +39,8 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -57,6 +60,8 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   boolean hadPostFlush;
   boolean hadPreSplit;
   boolean hadPostSplit;
+  boolean hadPreCompactSelect;
+  boolean hadPostCompactSelect;
   boolean hadPreCompact;
   boolean hadPostCompact;
   boolean hadPreGet = false;
@@ -135,13 +140,32 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
 
   @Override
-  public void preCompact(ObserverContext<RegionCoprocessorEnvironment> c, boolean willSplit) {
-    hadPreCompact = true;
+  public void preCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c,
+      Store store, List<StoreFile> candidates) {
+    hadPreCompactSelect = true;
   }
 
   @Override
-  public void postCompact(ObserverContext<RegionCoprocessorEnvironment> c, boolean willSplit) {
+  public void postCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c,
+      Store store, ImmutableList<StoreFile> selected) {
+    hadPostCompactSelect = true;
+  }
+
+  @Override
+  public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
+      Store store, InternalScanner scanner) {
+    hadPreCompact = true;
+    return scanner;
+  }
+
+  @Override
+  public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e,
+      Store store, StoreFile resultFile) {
     hadPostCompact = true;
+  }
+
+  public boolean wasCompacted() {
+    return hadPreCompact && hadPostCompact;
   }
 
   @Override
@@ -186,10 +210,6 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public void postScannerClose(final ObserverContext<RegionCoprocessorEnvironment> c,
       final InternalScanner s) throws IOException {
     hadPostScannerClose = true;
-  }
-
-  public boolean wasCompacted() {
-    return hadPreCompact && hadPostCompact;
   }
 
   @Override

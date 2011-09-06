@@ -22,18 +22,28 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
+import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 
 import org.junit.AfterClass;
@@ -239,6 +249,134 @@ public class TestRegionObserverInterface {
         new Boolean[] {true}
     );
     util.deleteTable(tableName);
+  }
+
+  /* Overrides compaction to only output rows with keys that are even numbers */
+  public static class EvenOnlyCompactor extends BaseRegionObserver {
+    long lastCompaction;
+    long lastFlush;
+
+    @Override
+    public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
+        Store store, final InternalScanner scanner) {
+      return new InternalScanner() {
+        @Override
+        public boolean next(List<KeyValue> results) throws IOException {
+          return next(results, -1);
+        }
+
+        @Override
+        public boolean next(List<KeyValue> results, int limit) throws IOException {
+          List<KeyValue> internalResults = new ArrayList<KeyValue>();
+          boolean hasMore;
+          do {
+            hasMore = scanner.next(internalResults, limit);
+            if (!internalResults.isEmpty()) {
+              long row = Bytes.toLong(internalResults.get(0).getRow());
+              if (row % 2 == 0) {
+                // return this row
+                break;
+              }
+              // clear and continue
+              internalResults.clear();
+            }
+          } while (hasMore);
+
+          if (!internalResults.isEmpty()) {
+            results.addAll(internalResults);
+          }
+          return hasMore;
+        }
+
+        @Override
+        public void close() throws IOException {
+          scanner.close();
+        }
+      };
+    }
+
+    @Override
+    public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e,
+        Store store, StoreFile resultFile) {
+      lastCompaction = EnvironmentEdgeManager.currentTimeMillis();
+    }
+
+    @Override
+    public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e) {
+      lastFlush = EnvironmentEdgeManager.currentTimeMillis();
+    }
+  }
+  /**
+   * Tests overriding compaction handling via coprocessor hooks
+   * @throws Exception
+   */
+  @Test
+  public void testCompactionOverride() throws Exception {
+    byte[] compactTable = Bytes.toBytes("TestCompactionOverride");
+    HBaseAdmin admin = util.getHBaseAdmin();
+    if (admin.tableExists(compactTable)) {
+      admin.disableTable(compactTable);
+      admin.deleteTable(compactTable);
+    }
+
+    HTableDescriptor htd = new HTableDescriptor(compactTable);
+    htd.addFamily(new HColumnDescriptor(A));
+    htd.addCoprocessor(EvenOnlyCompactor.class.getName());
+    admin.createTable(htd);
+
+    HTable table = new HTable(util.getConfiguration(), compactTable);
+    for (long i=1; i<=10; i++) {
+      byte[] iBytes = Bytes.toBytes(i);
+      Put p = new Put(iBytes);
+      p.add(A, A, iBytes);
+      table.put(p);
+    }
+
+    HRegion firstRegion = cluster.getRegions(compactTable).get(0);
+    Coprocessor cp = firstRegion.getCoprocessorHost().findCoprocessor(
+        EvenOnlyCompactor.class.getName());
+    assertNotNull("EvenOnlyCompactor coprocessor should be loaded", cp);
+    EvenOnlyCompactor compactor = (EvenOnlyCompactor)cp;
+
+    // force a compaction
+    long ts = System.currentTimeMillis();
+    admin.flush(compactTable);
+    // wait for flush
+    for (int i=0; i<10; i++) {
+      if (compactor.lastFlush >= ts) {
+        break;
+      }
+      Thread.sleep(1000);
+    }
+    assertTrue("Flush didn't complete", compactor.lastFlush >= ts);
+    LOG.debug("Flush complete");
+
+    ts = compactor.lastFlush;
+    admin.majorCompact(compactTable);
+    // wait for compaction
+    for (int i=0; i<30; i++) {
+      if (compactor.lastCompaction >= ts) {
+        break;
+      }
+      Thread.sleep(1000);
+    }
+    LOG.debug("Last compaction was at "+compactor.lastCompaction);
+    assertTrue("Compaction didn't complete", compactor.lastCompaction >= ts);
+
+    // only even rows should remain
+    ResultScanner scanner = table.getScanner(new Scan());
+    try {
+      for (long i=2; i<=10; i+=2) {
+        Result r = scanner.next();
+        assertNotNull(r);
+        assertFalse(r.isEmpty());
+        byte[] iBytes = Bytes.toBytes(i);
+        assertArrayEquals("Row should be "+i, r.getRow(), iBytes);
+        assertArrayEquals("Value should be "+i, r.getValue(A, A), iBytes);
+      }
+    } finally {
+      scanner.close();
+    }
   }
 
   // check each region whether the coprocessor upcalls are called or not.

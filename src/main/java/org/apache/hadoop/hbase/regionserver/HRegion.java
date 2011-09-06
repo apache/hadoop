@@ -937,10 +937,6 @@ public class HRegion implements HeapSize { // , Writable{
         LOG.debug("Skipping compaction on " + this + " because closed");
         return false;
       }
-      if (coprocessorHost != null) {
-        status.setStatus("Running coprocessor preCompact hooks");
-        coprocessorHost.preCompact(false);
-      }
       boolean decr = true;
       try {
         synchronized (writestate) {
@@ -975,10 +971,6 @@ public class HRegion implements HeapSize { // , Writable{
             }
           }
         }
-      }
-      if (coprocessorHost != null) {
-        status.setStatus("Running coprocessor post-compact hooks");
-        coprocessorHost.postCompact(false);
       }
       status.markComplete("Compaction complete");
       return true;

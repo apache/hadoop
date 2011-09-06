@@ -36,10 +36,13 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.SplitTransaction;
+import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.Server;
@@ -130,11 +133,14 @@ public class TestCoprocessorInterface extends HBaseTestCase {
       postCloseCalled = true;
     }
     @Override
-    public void preCompact(ObserverContext<RegionCoprocessorEnvironment> e, boolean willSplit) {
+    public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
+        Store store, InternalScanner scanner) {
       preCompactCalled = true;
+      return scanner;
     }
     @Override
-    public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e, boolean willSplit) {
+    public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e,
+        Store store, StoreFile resultFile) {
       postCompactCalled = true;
     }
     @Override

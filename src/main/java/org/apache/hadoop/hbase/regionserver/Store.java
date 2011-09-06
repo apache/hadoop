@@ -684,6 +684,9 @@ public class Store implements HeapSize {
           maxId);
       // Move the compaction into place.
       sf = completeCompaction(filesToCompact, writer);
+      if (region.getCoprocessorHost() != null) {
+        region.getCoprocessorHost().postCompact(this, sf);
+      }
     } finally {
       synchronized (filesCompacting) {
         filesCompacting.removeAll(filesToCompact);
@@ -739,7 +742,10 @@ public class Store implements HeapSize {
       // Ready to go. Have list of files to compact.
       StoreFile.Writer writer = compactStore(filesToCompact, isMajor, maxId);
       // Move the compaction into place.
-      completeCompaction(filesToCompact, writer);
+      StoreFile sf = completeCompaction(filesToCompact, writer);
+      if (region.getCoprocessorHost() != null) {
+        region.getCoprocessorHost().postCompact(this, sf);
+      }
     } finally {
       synchronized (filesCompacting) {
         filesCompacting.removeAll(filesToCompact);
@@ -900,7 +906,24 @@ public class Store implements HeapSize {
           Preconditions.checkArgument(idx != -1);
           candidates.subList(0, idx + 1).clear();
         }
-        List<StoreFile> filesToCompact = compactSelection(candidates);
+
+        boolean override = false;
+        if (region.getCoprocessorHost() != null) {
+          override = region.getCoprocessorHost().preCompactSelection(
+              this, candidates);
+        }
+        List<StoreFile> filesToCompact;
+        if (override) {
+          // coprocessor is overriding normal file selection
+          filesToCompact = candidates;
+        } else {
+          filesToCompact = compactSelection(candidates);
+        }
+
+        if (region.getCoprocessorHost() != null) {
+          region.getCoprocessorHost().postCompactSelection(this,
+              ImmutableList.copyOf(filesToCompact));
+        }
 
         // no files to compact
         if (filesToCompact.isEmpty()) {
@@ -1121,6 +1144,17 @@ public class Store implements HeapSize {
         scan.setMaxVersions(family.getMaxVersions());
         /* include deletes, unless we are doing a major compaction */
         scanner = new StoreScanner(this, scan, scanners, !majorCompaction);
+        if (region.getCoprocessorHost() != null) {
+          InternalScanner cpScanner = region.getCoprocessorHost().preCompact(
+              this, scanner);
+          // NULL scanner returned from coprocessor hooks means skip normal processing
+          if (cpScanner == null) {
+            return null;
+          }
+
+          scanner = cpScanner;
+        }
+
         int bytesWritten = 0;
         // since scanner.next() can return 'false' but still be delivering data,
         // we have to use a do/while loop.

@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -257,15 +258,43 @@ public class RegionCoprocessorHost
   }
 
   /**
-   * Invoked before a region is compacted.
-   * @param willSplit true if the compaction is about to trigger a split
+   * Called prior to selecting the {@link StoreFile}s for compaction from
+   * the list of currently available candidates.
+   * @param store The store where compaction is being requested
+   * @param candidates The currently available store files
+   * @return If {@code true}, skip the normal selection process and use the current list
    */
-  public void preCompact(boolean willSplit) {
+  public boolean preCompactSelection(Store store, List<StoreFile> candidates) {
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    boolean bypass = false;
+    for (RegionEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        ((RegionObserver)env.getInstance()).preCompactSelection(
+            ctx, store, candidates);
+        bypass |= ctx.shouldBypass();
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+    return bypass;
+  }
+
+  /**
+   * Called after the {@link StoreFile}s to be compacted have been selected
+   * from the available candidates.
+   * @param store The store where compaction is being requested
+   * @param selected The store files selected to compact
+   */
+  public void postCompactSelection(Store store,
+      ImmutableList<StoreFile> selected) {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
-        ((RegionObserver)env.getInstance()).preCompact(ctx, willSplit);
+        ((RegionObserver)env.getInstance()).postCompactSelection(
+            ctx, store, selected);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -274,15 +303,38 @@ public class RegionCoprocessorHost
   }
 
   /**
-   * Invoked after a region is compacted.
-   * @param willSplit true if the compaction is about to trigger a split
+   * Called prior to rewriting the store files selected for compaction
+   * @param store the store being compacted
+   * @param scanner the scanner used to read store data during compaction
    */
-  public void postCompact(boolean willSplit) {
+  public InternalScanner preCompact(Store store, InternalScanner scanner) {
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    boolean bypass = false;
+    for (RegionEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        scanner = ((RegionObserver)env.getInstance()).preCompact(
+            ctx, store, scanner);
+        bypass |= ctx.shouldBypass();
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+    return bypass ? null : scanner;
+  }
+
+  /**
+   * Called after the store compaction has completed.
+   * @param store the store being compacted
+   * @param resultFile the new store file written during compaction
+   */
+  public void postCompact(Store store, StoreFile resultFile) {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
-        ((RegionObserver)env.getInstance()).postCompact(ctx, willSplit);
+        ((RegionObserver)env.getInstance()).postCompact(ctx, store, resultFile);
         if (ctx.shouldComplete()) {
           break;
         }

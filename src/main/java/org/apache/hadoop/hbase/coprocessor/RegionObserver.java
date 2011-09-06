@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.coprocessor;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
@@ -33,6 +34,8 @@ import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
@@ -69,22 +72,61 @@ public interface RegionObserver extends Coprocessor {
   void postFlush(final ObserverContext<RegionCoprocessorEnvironment> c);
 
   /**
-   * Called before compaction.
+   * Called prior to selecting the {@link StoreFile}s to compact from the list
+   * of available candidates.  To alter the files used for compaction, you may
+   * mutate the passed in list of candidates.
    * @param c the environment provided by the region server
-   * @param willSplit true if compaction will result in a split, false
-   * otherwise
+   * @param store the store where compaction is being requested
+   * @param candidates the store files currently available for compaction
    */
-  void preCompact(final ObserverContext<RegionCoprocessorEnvironment> c,
-    final boolean willSplit);
+  void preCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Store store, final List<StoreFile> candidates);
 
   /**
-   * Called after compaction.
+   * Called after the {@link StoreFile}s to compact have been selected from the
+   * available candidates.
    * @param c the environment provided by the region server
-   * @param willSplit true if compaction will result in a split, false
-   * otherwise
+   * @param store the store being compacted
+   * @param selected the store files selected to compact
+   */
+  void postCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Store store, final ImmutableList<StoreFile> selected);
+
+  /**
+   * Called prior to writing the {@link StoreFile}s selected for compaction into
+   * a new {@code StoreFile}.  To override or modify the compaction process,
+   * implementing classes have two options:
+   * <ul>
+   *   <li>Wrap the provided {@link InternalScanner} with a custom
+   *   implementation that is returned from this method.  The custom scanner
+   *   can then inspect {@link KeyValue}s from the wrapped scanner, applying
+   *   its own policy to what gets written.</li>
+   *   <li>Call {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()}
+   *   and provide a custom implementation for writing of new
+   *   {@link StoreFile}s.  <strong>Note: any implementations bypassing
+   *   core compaction using this approach must write out new store files
+   *   themselves or the existing data will no longer be available after
+   *   compaction.</strong></li>
+   * </ul>
+   * @param c the environment provided by the region server
+   * @param store the store being compacted
+   * @param scanner the scanner over existing data used in the store file
+   * rewriting
+   * @return the scanner to use during compaction.  Should not be {@code null}
+   * unless the implementation is writing new store files on its own.
+   */
+  InternalScanner preCompact(final ObserverContext<RegionCoprocessorEnvironment> c,
+    final Store store, final InternalScanner scanner);
+
+  /**
+   * Called after compaction has completed and the new store file has been
+   * moved in to place.
+   * @param c the environment provided by the region server
+   * @param store the store being compacted
+   * @param resultFile the new store file written out during compaction
    */
   void postCompact(final ObserverContext<RegionCoprocessorEnvironment> c,
-    final boolean willSplit);
+    final Store store, StoreFile resultFile);
 
   /**
    * Called before the region is split.
