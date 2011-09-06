@@ -50,7 +50,7 @@
 <meta http-equiv="refresh" content="5,javascript:history.back()" />
 </head>
 <body>
-<a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="HBase Logo" title="HBase Logo" /></a>
+<a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo.png" alt="HBase Logo" title="HBase Logo" /></a>
 <h1 id="page_title">Table action request accepted</h1>
 <p><hr><p>
 <%
@@ -82,7 +82,7 @@
 <link rel="stylesheet" type="text/css" href="/static/hbase.css" />
 </head>
 <body>
-<a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="HBase Logo" title="HBase Logo" /></a>
+<a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo.png" alt="HBase Logo" title="HBase Logo" /></a>
 <h1 id="page_title">Table: <%= tableName %></h1>
 <p id="links_menu"><a href="/master.jsp">Master</a>, <a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a>, <a href="/logLevel">Log Level</a></p>
 <hr id="head_rule" />

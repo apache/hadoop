@@ -444,6 +444,7 @@ Release 0.91.0 - Unreleased
    HBASE-4206  jenkins hash implementation uses longs unnecessarily
                (Ron Yang)
    HBASE-3842  Refactor Coprocessor Compaction API
+   HBASE-4312  Deploy new hbase logo
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

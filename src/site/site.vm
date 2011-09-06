@@ -467,7 +467,9 @@
   <body class="composite">
     <div id="banner">
       #banner( $decoration.bannerLeft "bannerLeft" )
-      #banner( $decoration.bannerRight "bannerRight" )
+      <!-- Commented out since we do not use it.  St.Ack 20110906
+       -->
+      ##  #banner( $decoration.bannerRight "bannerRight" )
       <div class="clear">
         <hr/>
       </div>
@@ -476,7 +478,7 @@
       #publishDate( "left" $decoration.publishDate $decoration.version )
       <div class="xright" style="padding-left: 8px; margin-top: -4px;">
         <form method="GET" action="http://search-hadoop.com/">
-          <input type="text" style="width: 192px; height: 15px; font-size: inherit; border: 1px solid darkgray" name="q" value="Search wiki, mailing lists, sources & more" onfocus="this.value=''"/>
+          <input type="text" style="width: 192px; height: 15px; font-size: inherit; border: 1px solid darkgray" name="q" value="Search wiki, mailing lists & more" onfocus="this.value=''"/>
           <input type="hidden" name="fc_project" value="HBase"/>
           <button style="height: 20px; width: 60px;">Search</button>
         </form>

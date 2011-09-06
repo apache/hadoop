@@ -28,14 +28,14 @@
       xmlns:html="http://www.w3.org/1999/xhtml"
       xmlns:db="http://docbook.org/ns/docbook">
   <info>
-    <title>The Apache <link xlink:href="http://www.hbase.org">
+    <title><link xlink:href="http://www.hbase.org">
            <inlinemediaobject>
                <imageobject>
-                   <imagedata align="middle" valign="middle" fileref="hbase_small.gif" />
+                   <imagedata align="middle" valign="middle" fileref="hbase_logo.png" />
                </imageobject>
            </inlinemediaobject>
        </link>
-    Book</title>
+    </title>
       <copyright><year>2011</year><holder>Apache Software Foundation</holder></copyright>
       <abstract>
     <para>This is the official book of

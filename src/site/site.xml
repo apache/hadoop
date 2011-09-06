@@ -5,13 +5,10 @@
     xsi:schemaLocation="http://maven.apache.org/DECORATION/1.0.0 http://maven.apache.org/xsd/decoration-1.0.0.xsd">
   <bannerLeft>
     <name>HBase</name>
-    <src>images/hbase_logo_med.gif</src>
+    <src>images/hbase_logo.png</src>
     <href>http://hbase.apache.org/</href>
   </bannerLeft>
-  <bannerRight>
-      <src>images/asf_logo_wide.png</src>
-    <href>http://www.apache.org/</href>
-  </bannerRight>
+  <bannerRight />
   <version position="right" />
   <publishDate position="right" />
   <body>
