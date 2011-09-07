@@ -20,9 +20,17 @@
 
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.CompressionOutputStream;
+import org.apache.hadoop.util.NativeCodeLoader;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Test;
 
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 
 import static org.junit.Assert.*;
@@ -56,9 +64,53 @@ public class TestCompressionTest {
     assertTrue(CompressionTest.testCompression("GZ"));
 
     if (isCompressionAvailable("org.apache.hadoop.io.compress.SnappyCodec")) {
-      assertTrue(CompressionTest.testCompression("SNAPPY"));
+      if (NativeCodeLoader.isNativeCodeLoaded()) {
+        try {
+          System.loadLibrary("snappy");
+
+          try {
+            Configuration conf = new Configuration();
+            CompressionCodec codec = (CompressionCodec)
+              ReflectionUtils.newInstance(
+                conf.getClassByName("org.apache.hadoop.io.compress.SnappyCodec"), conf);
+
+            DataOutputBuffer compressedDataBuffer = new DataOutputBuffer();
+            CompressionOutputStream deflateFilter =
+              codec.createOutputStream(compressedDataBuffer);
+
+            byte[] data = new byte[1024];
+            DataOutputStream deflateOut = new DataOutputStream(
+              new BufferedOutputStream(deflateFilter));
+            deflateOut.write(data, 0, data.length);
+            deflateOut.flush();
+            deflateFilter.finish();
+
+            // Snappy Codec class, Snappy nativelib and Hadoop nativelib with 
+            // Snappy JNIs are present
+            assertTrue(CompressionTest.testCompression("SNAPPY"));
+          }
+          catch (UnsatisfiedLinkError ex) {
+            // Hadoop nativelib does not have Snappy JNIs
+            
+            // cannot assert the codec here because the current logic of 
+            // CompressionTest checks only classloading, not the codec
+            // usage.
+          }
+          catch (Exception ex) {
+          }
+        }
+        catch (UnsatisfiedLinkError ex) {
+          // Snappy nativelib is not available
+          assertFalse(CompressionTest.testCompression("SNAPPY"));
+        }
+      }
+      else {
+        // Hadoop nativelib is not available
+        assertFalse(CompressionTest.testCompression("SNAPPY"));
+      }
     }
     else {
+      // Snappy Codec class is not available
       assertFalse(CompressionTest.testCompression("SNAPPY"));
     }
   }
