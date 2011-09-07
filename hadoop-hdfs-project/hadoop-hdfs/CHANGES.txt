@@ -1540,6 +1540,9 @@ Release 0.22.0 - Unreleased
     HDFS-1981. NameNode does not saveNamespace() when editsNew is empty.
     (Uma Maheswara Rao G via shv)
 
+    HDFS-2232. Generalize regular expressions in TestHDFSCLI.
+    (Plamen Jeliazkov via shv)
+
 Release 0.21.1 - Unreleased
     HDFS-1466. TestFcHdfsSymlink relies on /tmp/test not existing. (eli)
 
