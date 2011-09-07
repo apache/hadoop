@@ -350,7 +350,7 @@ public class TestEditLogRace {
     Configuration conf = getConf();
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
-    final FSNamesystem namesystem = new FSNamesystem(conf);
+    final FSNamesystem namesystem = FSNamesystem.loadFromDisk(conf);
 
     try {
       FSImage fsimage = namesystem.getFSImage();
@@ -448,7 +448,7 @@ public class TestEditLogRace {
     Configuration conf = getConf();
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
-    final FSNamesystem namesystem = new FSNamesystem(conf);
+    final FSNamesystem namesystem = FSNamesystem.loadFromDisk(conf);
 
     try {
       FSImage fsimage = namesystem.getFSImage();

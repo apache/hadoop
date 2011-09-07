@@ -84,7 +84,7 @@ public class TestNNLeaseRecovery {
     FileSystem.setDefaultUri(conf, "hdfs://localhost:0");
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
     DFSTestUtil.formatNameNode(conf);
-    fsn = spy(new FSNamesystem(conf));
+    fsn = spy(FSNamesystem.loadFromDisk(conf));
   }
 
   /**
@@ -428,7 +428,6 @@ public class TestNNLeaseRecovery {
                             
     when(fsn.getFSImage()).thenReturn(fsImage);
     when(fsn.getFSImage().getEditLog()).thenReturn(editLog);
-    fsn.getFSImage().setFSNamesystem(fsn);
     
     switch (fileBlocksNumber) {
       case 0:

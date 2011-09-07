@@ -289,7 +289,7 @@ public class NameNode {
   }
 
   protected void loadNamesystem(Configuration conf) throws IOException {
-    this.namesystem = new FSNamesystem(conf);
+    this.namesystem = FSNamesystem.loadFromDisk(conf);
   }
 
   NamenodeRegistration getRegistration() {
@@ -592,16 +592,16 @@ public class NameNode {
     }
     System.out.println("Formatting using clusterid: " + clusterId);
     
-    FSImage fsImage = new FSImage(conf, null, dirsToFormat, editDirsToFormat);
-    FSNamesystem nsys = new FSNamesystem(fsImage, conf);
-    nsys.dir.fsImage.format(clusterId);
+    FSImage fsImage = new FSImage(conf, dirsToFormat, editDirsToFormat);
+    FSNamesystem fsn = new FSNamesystem(conf, fsImage);
+    fsImage.format(fsn, clusterId);
     return false;
   }
 
   private static boolean finalize(Configuration conf,
                                boolean isConfirmationNeeded
                                ) throws IOException {
-    FSNamesystem nsys = new FSNamesystem(new FSImage(conf), conf);
+    FSNamesystem nsys = new FSNamesystem(conf, new FSImage(conf));
     System.err.print(
         "\"finalize\" will remove the previous state of the files system.\n"
         + "Recent upgrade will become permanent.\n"

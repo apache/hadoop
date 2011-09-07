@@ -50,7 +50,7 @@ public class TestClusterId {
     // see if cluster id not empty.
     Collection<URI> dirsToFormat = FSNamesystem.getNamespaceDirs(config);
     Collection<URI> editsToFormat = new ArrayList<URI>(0);
-    FSImage fsImage = new FSImage(config, null, dirsToFormat, editsToFormat);
+    FSImage fsImage = new FSImage(config, dirsToFormat, editsToFormat);
     
     Iterator<StorageDirectory> sdit = 
       fsImage.getStorage().dirIterator(NNStorage.NameNodeDirType.IMAGE);

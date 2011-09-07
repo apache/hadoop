@@ -56,8 +56,9 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.util.ByteArray;
+
+import com.google.common.base.Preconditions;
 
 /*************************************************
  * FSDirectory stores the filesystem directory state.
@@ -72,6 +73,7 @@ public class FSDirectory implements Closeable {
 
   INodeDirectoryWithQuota rootDir;
   FSImage fsImage;  
+  private final FSNamesystem namesystem;
   private volatile boolean ready = false;
   private static final long UNKNOWN_DISK_SPACE = -1;
   private final int maxComponentLength;
@@ -113,15 +115,9 @@ public class FSDirectory implements Closeable {
    */
   private final NameCache<ByteArray> nameCache;
 
-  /** Access an existing dfs name directory. */
-  FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
-    this(new FSImage(conf), ns, conf);
-  }
-
   FSDirectory(FSImage fsImage, FSNamesystem ns, Configuration conf) {
     this.dirLock = new ReentrantReadWriteLock(true); // fair
     this.cond = dirLock.writeLock().newCondition();
-    fsImage.setFSNamesystem(ns);
     rootDir = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME,
         ns.createFsOwnerPermissions(new FsPermission((short)0755)),
         Integer.MAX_VALUE, UNKNOWN_DISK_SPACE);
@@ -145,10 +141,11 @@ public class FSDirectory implements Closeable {
     NameNode.LOG.info("Caching file names occuring more than " + threshold
         + " times ");
     nameCache = new NameCache<ByteArray>(threshold);
+    namesystem = ns;
   }
     
   private FSNamesystem getFSNamesystem() {
-    return fsImage.getFSNamesystem();
+    return namesystem;
   }
 
   private BlockManager getBlockManager() {
@@ -156,33 +153,11 @@ public class FSDirectory implements Closeable {
   }
 
   /**
-   * Load the filesystem image into memory.
-   *
-   * @param startOpt Startup type as specified by the user.
-   * @throws IOException If image or editlog cannot be read.
+   * Notify that loading of this FSDirectory is complete, and
+   * it is ready for use 
    */
-  void loadFSImage(StartupOption startOpt) 
-      throws IOException {
-    // format before starting up if requested
-    if (startOpt == StartupOption.FORMAT) {
-      fsImage.format(fsImage.getStorage().determineClusterId());// reuse current id
-
-      startOpt = StartupOption.REGULAR;
-    }
-    boolean success = false;
-    try {
-      if (fsImage.recoverTransitionRead(startOpt)) {
-        fsImage.saveNamespace();
-      }
-      fsImage.openEditLog();
-      
-      fsImage.setCheckpointDirectories(null, null);
-      success = true;
-    } finally {
-      if (!success) {
-        fsImage.close();
-      }
-    }
+  void imageLoadComplete() {
+    Preconditions.checkState(!ready, "FSDirectory already loaded");
     writeLock();
     try {
       setReady(true);

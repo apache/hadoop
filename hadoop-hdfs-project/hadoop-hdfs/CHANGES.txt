@@ -16,6 +16,8 @@ Trunk (unreleased changes)
     HDFS-2018. Move all journal stream management code into one place.
                (Ivan Kelly via jitendra)
 
+    HDFS-2223. Untangle depencencies between NN components (todd)
+
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
 
