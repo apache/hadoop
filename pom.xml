@@ -586,7 +586,7 @@
             </goals>
             <configuration>
               <sources>
-                <source>${basedir}/target/jspc</source>
+                <source>${project.build.directory}/generated-jamon</source>
                 <source>${project.build.directory}/generated-sources/java</source>
               </sources>
             </configuration>

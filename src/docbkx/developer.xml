@@ -47,7 +47,8 @@ git clone git://git.apache.org/hbase.git
             <programlisting>
 mvn eclipse:eclipse
             </programlisting>
-            ... from your local HBase project directory in your workspace to generate a new <filename>.project</filename> file.  Then reopen Eclipse.
+            ... from your local HBase project directory in your workspace to generate some new <filename>.project</filename> 
+            and <filename>.classpath</filename>files.  Then reopen Eclipse.
             </section>         
             <section xml:id="eclipse.maven.plugin">
             <title>Maven Plugin</title>
@@ -66,6 +67,16 @@ Unbound classpath variable: 'M2_REPO/com/github/stephenc/high-scale-lib/high-sca
 Unbound classpath variable: 'M2_REPO/com/google/guava/guava/r09/guava-r09.jar' in project 'hbase'	hbase		Build path	Build Path Problem
 Unbound classpath variable: 'M2_REPO/com/google/protobuf/protobuf-java/2.3.0/protobuf-java-2.3.0.jar' in project 'hbase'	hbase		Build path	Build Path Problem Unbound classpath variable:
             </programlisting>            
+            </section>
+            <section xml:id="eclipse.m2eclipse">
+            <title>Import via m2eclipse</title>
+            <para>If you install the m2eclipse and import the HBase pom.xml in your workspace, you will have to fix your eclipse Build Path.
+            Remove <filename>target</filename> folder, add <filename>target/generated-jamon</filename>
+            and <filename>target/generated-sources/java</filename> folders. You may also remove from your Build Path
+            the exclusions on the <filename>src/main/resources</filename> and <filename>src/test/resources</filename>
+            to avoid error message in the console 'Failed to execute goal org.apache.maven.plugins:maven-antrun-plugin:1.6:run (default) on project hbase: 
+            'An Ant BuildException has occured: Replace: source file .../target/classes/hbase-default.xml doesn't exist'. This will also
+            reduce the eclipse build cycles and make your life easier when developing.</para>
             </section>     
             <section xml:id="eclipse.issues">
             <title>Eclipse Known Issues</title>
