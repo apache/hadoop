@@ -1219,6 +1219,8 @@ Release 0.23.0 - Unreleased
    MAPREDUCE-2938. Log application submission failure in CapacityScheduler.
    (acmurthy) 
 
+   MAPREDUCE-2948. Hadoop streaming test failure, post MR-2767 (mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
