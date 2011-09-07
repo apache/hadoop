@@ -1122,12 +1122,12 @@
       </build>
     </profile>
 
-    <!-- profile for building against Hadoop 0.20.0 -->
+    <!-- profile for building against Hadoop 0.20.0 : This is the default. -->
     <profile>
       <id>hadoop-0.20</id>
       <activation>
         <property>
-          <name>!hadoop23</name>
+          <name>!hadoop.profile</name>
         </property>
       </activation>
       <properties>
@@ -1176,14 +1176,161 @@
     </profile>
 
     <!--
+      profile for building against Hadoop 0.22.0. Activate using:
+       mvn -Dhadoop.profile=22
+    -->
+    <profile>
+      <id>hadoop-0.22</id>
+      <activation>
+        <property>
+          <name>hadoop.profile</name>
+          <value>22</value>
+        </property>
+      </activation>
+      <properties>
+        <hadoop.version>0.22.0-SNAPSHOT</hadoop.version>
+      </properties>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+          <version>${hadoop.version}</version>
+          <exclusions>
+            <!--Needs more work, tightening-->
+            <exclusion>
+              <groupId>hsqldb</groupId>
+              <artifactId>hsqldb</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>net.sf.kosmosfs</groupId>
+              <artifactId>kfs</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.eclipse.jdt</groupId>
+              <artifactId>core</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>net.java.dev.jets3t</groupId>
+              <artifactId>jets3t</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>oro</groupId>
+              <artifactId>oro</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>jdiff</groupId>
+              <artifactId>jdiff</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.lucene</groupId>
+              <artifactId>lucene-core</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-hdfs</artifactId>
+          <version>${hadoop.version}</version>
+          <exclusions>
+            <!--Needs more work, tightening-->
+            <exclusion>
+              <groupId>hsqldb</groupId>
+              <artifactId>hsqldb</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>net.sf.kosmosfs</groupId>
+              <artifactId>kfs</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.eclipse.jdt</groupId>
+              <artifactId>core</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>net.java.dev.jets3t</groupId>
+              <artifactId>jets3t</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>oro</groupId>
+              <artifactId>oro</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>jdiff</groupId>
+              <artifactId>jdiff</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.lucene</groupId>
+              <artifactId>lucene-core</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-mapred</artifactId>
+          <version>${hadoop.version}</version>
+          <exclusions>
+            <!--Needs more work, tightening-->
+            <exclusion>
+              <groupId>hsqldb</groupId>
+              <artifactId>hsqldb</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>net.sf.kosmosfs</groupId>
+              <artifactId>kfs</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.eclipse.jdt</groupId>
+              <artifactId>core</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>net.java.dev.jets3t</groupId>
+              <artifactId>jets3t</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>oro</groupId>
+              <artifactId>oro</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>jdiff</groupId>
+              <artifactId>jdiff</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.lucene</groupId>
+              <artifactId>lucene-core</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <!-- test deps for hadoop-0.22 profile -->
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common-test</artifactId>
+          <version>${hadoop.version}</version>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-hdfs-test</artifactId>
+          <version>${hadoop.version}</version>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-mapred-test</artifactId>
+          <version>${hadoop.version}</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+
+    <!--
       profile for building against Hadoop 0.23.0. Activate using:
-       mvn -Dhadoop23
+       mvn -Dhadoop.profile=23
     -->
     <profile>
       <id>hadoop-0.23</id>
       <activation>
         <property>
-          <name>hadoop23</name>
+          <name>hadoop.profile</name>
+          <value>23</value>
         </property>
       </activation>
       <properties>

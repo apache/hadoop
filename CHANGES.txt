@@ -445,6 +445,7 @@ Release 0.91.0 - Unreleased
                (Ron Yang)
    HBASE-3842  Refactor Coprocessor Compaction API
    HBASE-4312  Deploy new hbase logo
+   HBASE-4327  Compile HBase against hadoop 0.22 (Joep Rottinghuis)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
