@@ -361,6 +361,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7580. Add a version of getLocalPathForWrite to LocalDirAllocator
     which doesn't create dirs. (Chris Douglas & Siddharth Seth via acmurthy) 
 
+    HADOOP-7507. Allow ganglia metrics to include the metrics system tags
+                 in the gmetric names. (Alejandro Abdelnur via todd)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
