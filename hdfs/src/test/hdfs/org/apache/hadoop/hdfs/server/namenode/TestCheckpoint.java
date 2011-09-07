@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import junit.framework.TestCase;
 import java.io.*;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Iterator;
@@ -55,83 +54,6 @@ public class TestCheckpoint extends TestCase {
   static final int numDatanodes = 3;
   short replication = 3;
 
-  
-  /**
-   * Tests EditLogFileOutputStream doesn't throw NullPointerException on being
-   * closed twice.
-   */
-  public void testEditLogFileOutputStreamCloses() throws IOException,
-      NullPointerException {
-    // Testing EditLogFileOutputStream doesn't throw NullPointerException on
-    // being closed twice
-    File testEdits = new File(System.getProperty("test.build.data", "/tmp"),
-        "editLogStream.dat");
-    try {
-      EditLogFileOutputStream editLogStream = new EditLogFileOutputStream(
-          testEdits, 0);
-      editLogStream.close();
-      // Closing an twice should not throw a NullPointerException
-      editLogStream.close();
-    } finally {
-      // Cleanup the editLogStream.dat file we created
-      testEdits.delete();
-    }
-    // Successfully tested EditLogFileOutputStream doesn't throw
-    // NullPointerException on being closed twice
-  }
-
-  public void testSetCheckpointTimeInStorageHandlesIOException()
-      throws Exception {
-    // Check IOException handled correctly by setCheckpointTime;
-    FSImage image = new FSImage(new HdfsConfiguration());
-    ArrayList<URI> fsImageDirs = new ArrayList<URI>();
-    ArrayList<URI> editsDirs = new ArrayList<URI>();
-    String TEST_DIR = System.getProperty("test.build.data", "/tmp");
-    File filePath1 = new File(TEST_DIR, "storageDirToCheck1/current");
-    File filePath2 = new File(TEST_DIR, "storageDirToCheck2/current");
-    assertTrue("Couldn't create directory storageDirToCheck1", filePath1
-        .exists()
-        || filePath1.mkdirs());
-    assertTrue("Couldn't create directory storageDirToCheck2", filePath2
-        .exists()
-        || filePath2.mkdirs());
-    File storageDir1 = filePath1.getParentFile();
-    File storageDir2 = filePath2.getParentFile();
-    try {
-      URI uri1 = storageDir1.toURI();
-      URI uri2 = storageDir2.toURI();
-      fsImageDirs.add(uri1);
-      fsImageDirs.add(uri2);
-      editsDirs.add(uri1);
-      editsDirs.add(uri2);
-      image.setStorageDirectories(fsImageDirs, editsDirs);
-      assertTrue("List of removed storage directories wasn't empty", image
-          .getRemovedStorageDirs().isEmpty());
-      image.getEditLog().open();
-    } finally {
-      ArrayList<EditLogOutputStream> editStreams = image.editLog
-          .getEditStreams();
-      // Closing the opened streams
-      for (EditLogOutputStream outStream : editStreams) {
-        outStream.close();
-      }
-      // Delete storage directory to cause IOException in
-      // setCheckpointTime
-      FileUtil.fullyDelete(storageDir1);
-    }
-    // Just call setCheckpointTime using any random number
-    image.setCheckpointTime(1);
-    List<StorageDirectory> listRsd = image.getRemovedStorageDirs();
-    assertTrue("Removed directory wasn't what was expected", listRsd.size() > 0
-        && listRsd.get(listRsd.size() - 1).getRoot().toString().indexOf(
-            "storageDirToCheck") != -1);
-    // Delete storage directory to cause IOException in
-    // setCheckpointTime
-    FileUtil.fullyDelete(storageDir2);
-    // Successfully checked IOException is handled correctly by
-    // setCheckpointTime
-  }
-    
   static void writeFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
     FSDataOutputStream stm = fileSys.create(name, true,

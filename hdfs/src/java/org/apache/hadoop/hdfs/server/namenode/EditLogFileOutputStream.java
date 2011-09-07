@@ -106,29 +106,19 @@ class EditLogFileOutputStream extends EditLogOutputStream {
   public void close() throws IOException {
     // close should have been called after all pending transactions
     // have been flushed & synced.
-    // if already closed, just skip
-    if (bufCurrent != null) {
-      int bufSize = bufCurrent.size();
-      if (bufSize != 0) {
-        throw new IOException("FSEditStream has " + bufSize
-            + " bytes still to be flushed and cannot " + "be closed.");
-      }
-      bufCurrent.close();
-      bufCurrent = null;
+    int bufSize = bufCurrent.size();
+    if (bufSize != 0) {
+      throw new IOException("FSEditStream has " + bufSize
+          + " bytes still to be flushed and cannot " + "be closed.");
     }
-    if (bufReady != null) {
-      bufReady.close();
-      bufReady = null;
-    }
-    // remove the last INVALID marker from transaction log.
-    if (fc != null && fc.isOpen()) {
-      fc.truncate(fc.position());
-      fc.close();
-    }
-    if (fp != null) {
-      fp.close();
-    }
+    bufCurrent.close();
+    bufReady.close();
 
+    // remove the last INVALID marker from transaction log.
+    fc.truncate(fc.position());
+    fp.close();
+
+    bufCurrent = bufReady = null;
   }
 
   /**

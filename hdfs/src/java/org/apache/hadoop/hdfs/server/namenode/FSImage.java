@@ -804,7 +804,6 @@ public class FSImage extends Storage {
 
   void setCheckpointTime(long newCpT) {
     checkpointTime = newCpT;
-    ArrayList<StorageDirectory> failingStorageDirs = new ArrayList<StorageDirectory>(1);
     // Write new checkpoint time in all storage directories
     for(Iterator<StorageDirectory> it =
                           dirIterator(); it.hasNext();) {
@@ -814,13 +813,8 @@ public class FSImage extends Storage {
       } catch(IOException e) {
         // Close any edits stream associated with this dir and remove directory
         LOG.warn("incrementCheckpointTime failed on " + sd.getRoot().getPath() + ";type="+sd.getStorageDirType());
-        // Since writeCheckpointTime may also encounter an IOException in case
-        // underlying storage fails
-        failingStorageDirs.add(sd);
       }
     }
-    if (failingStorageDirs.size() > 0)
-      processIOError(failingStorageDirs, true);
   }
 
   /**
