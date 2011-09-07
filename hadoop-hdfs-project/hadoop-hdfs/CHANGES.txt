@@ -1572,6 +1572,9 @@ Release 0.22.0 - Unreleased
 
     HDFS-2258. Reset lease limits to default values in TestLeaseRecovery2. (shv)
 
+    HDFS-2232. Generalize regular expressions in TestHDFSCLI.
+    (Plamen Jeliazkov via shv)
+
 Release 0.21.1 - Unreleased
     HDFS-1466. TestFcHdfsSymlink relies on /tmp/test not existing. (eli)
 
