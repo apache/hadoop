@@ -1210,6 +1210,9 @@ Release 0.23.0 - Unreleased
    MAPREDUCE-2800. Set final progress for tasks to ensure all task information
    is correctly logged to JobHistory. (Siddharth Seth via acmurthy)
 
+   MAPREDUCE-2938. Log application submission failure in CapacityScheduler.
+   (acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

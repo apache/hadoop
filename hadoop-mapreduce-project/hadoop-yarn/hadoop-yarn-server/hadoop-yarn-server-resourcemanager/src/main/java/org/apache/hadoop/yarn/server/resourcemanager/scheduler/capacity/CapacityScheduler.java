@@ -355,6 +355,8 @@ implements ResourceScheduler, CapacitySchedulerContext {
     try {
       queue.submitApplication(SchedulerApp, user, queueName);
     } catch (AccessControlException ace) {
+      LOG.info("Failed to submit application " + applicationAttemptId + 
+          " to queue " + queueName + " from user " + user, ace);
       this.rmContext.getDispatcher().getEventHandler().handle(
           new RMAppAttemptRejectedEvent(applicationAttemptId, 
               ace.toString()));
