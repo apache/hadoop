@@ -663,7 +663,7 @@
     <protobuf.version>2.4.0a</protobuf.version>
     <slf4j.version>1.5.8</slf4j.version><!-- newer version available -->
     <stax-api.version>1.0.1</stax-api.version>
-    <thrift.version>0.6.1</thrift.version>
+    <thrift.version>0.7.0</thrift.version>
     <zookeeper.version>3.3.3</zookeeper.version>
     <hadoop-snappy.version>0.0.1-SNAPSHOT</hadoop-snappy.version>
 

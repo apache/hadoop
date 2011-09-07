@@ -452,6 +452,7 @@ Release 0.91.0 - Unreleased
    HBASE-4327  Compile HBase against hadoop 0.22 (Joep Rottinghuis)
    HBASE-4339  Improve eclipse documentation and project file generation
                (Eric Charles)
+   HBASE-4342  Update Thrift to 0.7.0 (Moaz Reyad)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
