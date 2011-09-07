@@ -674,6 +674,7 @@
     <package.release>1</package.release>	       
     <!-- also must update this when we bump version -->
     <package.version>0.91.0</package.version>	       
+    <final.name>${artifactId}-${version}</final.name>
 
     <!-- For flaky tests exclusion -->
     <test.exclude></test.exclude>
