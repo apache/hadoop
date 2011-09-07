@@ -598,6 +598,7 @@ Release 0.22.0 - Unreleased
 
     MAPREDUCE-2767. Remove Linux task-controller. (Milind Bhandarkar via shv) 
 
+    MAPREDUCE-2948. Hadoop streaming test failure, post MR-2767 (mahadev)
 Release 0.21.1 - Unreleased
 
   NEW FEATURES
