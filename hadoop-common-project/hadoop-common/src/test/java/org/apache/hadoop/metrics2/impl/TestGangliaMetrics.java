@@ -26,12 +26,17 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.metrics2.AbstractMetric;
+import org.apache.hadoop.metrics2.MetricsRecord;
+import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
@@ -54,6 +59,44 @@ public class TestGangliaMetrics {
       "test.s1rec.S1NumOps",
       "test.s1rec.S1AvgTime" };
 
+  @Test
+  public void testTagsForPrefix() throws Exception {
+    ConfigBuilder cb = new ConfigBuilder()
+      .add("test.sink.ganglia.tagsForPrefix.all", "*")
+      .add("test.sink.ganglia.tagsForPrefix.some", "NumActiveSinks, NumActiveSources")
+      .add("test.sink.ganglia.tagsForPrefix.none", "");
+    GangliaSink30 sink = new GangliaSink30();
+    sink.init(cb.subset("test.sink.ganglia"));
+
+    List<MetricsTag> tags = new ArrayList<MetricsTag>();
+    tags.add(new MetricsTag(MsInfo.Context, "all"));
+    tags.add(new MetricsTag(MsInfo.NumActiveSources, "foo"));
+    tags.add(new MetricsTag(MsInfo.NumActiveSinks, "bar"));
+    tags.add(new MetricsTag(MsInfo.NumAllSinks, "haa"));
+    tags.add(new MetricsTag(MsInfo.Hostname, "host"));
+    Set<AbstractMetric> metrics = new HashSet<AbstractMetric>();
+    MetricsRecord record = new MetricsRecordImpl(MsInfo.Context, (long) 1, tags, metrics);
+
+    StringBuilder sb = new StringBuilder();
+    sink.appendPrefix(record, sb);
+    assertEquals(".NumActiveSources=foo.NumActiveSinks=bar.NumAllSinks=haa", sb.toString());
+
+    tags.set(0, new MetricsTag(MsInfo.Context, "some"));
+    sb = new StringBuilder();
+    sink.appendPrefix(record, sb);
+    assertEquals(".NumActiveSources=foo.NumActiveSinks=bar", sb.toString());
+
+    tags.set(0, new MetricsTag(MsInfo.Context, "none"));
+    sb = new StringBuilder();
+    sink.appendPrefix(record, sb);
+    assertEquals("", sb.toString());
+
+    tags.set(0, new MetricsTag(MsInfo.Context, "nada"));
+    sb = new StringBuilder();
+    sink.appendPrefix(record, sb);
+    assertEquals("", sb.toString());
+  }
+  
   @Test public void testGangliaMetrics2() throws Exception {
     ConfigBuilder cb = new ConfigBuilder().add("default.period", 10)
         .add("test.sink.gsink30.context", "test") // filter out only "test"

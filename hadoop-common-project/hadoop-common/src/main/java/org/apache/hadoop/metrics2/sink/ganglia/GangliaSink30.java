@@ -20,13 +20,21 @@ package org.apache.hadoop.metrics2.sink.ganglia;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
+import org.apache.commons.configuration.SubsetConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsRecord;
+import org.apache.hadoop.metrics2.MetricsTag;
+import org.apache.hadoop.metrics2.impl.MsInfo;
 import org.apache.hadoop.metrics2.util.MetricsCache;
 import org.apache.hadoop.metrics2.util.MetricsCache.Record;
 
@@ -38,8 +46,67 @@ public class GangliaSink30 extends AbstractGangliaSink {
 
   public final Log LOG = LogFactory.getLog(this.getClass());
 
+  private static final String TAGS_FOR_PREFIX_PROPERTY_PREFIX = "tagsForPrefix.";
+  
   private MetricsCache metricsCache = new MetricsCache();
 
+  // a key with a NULL value means ALL
+  private Map<String,Set<String>> useTagsMap = new HashMap<String,Set<String>>();
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public void init(SubsetConfiguration conf) {
+    super.init(conf);
+
+    conf.setListDelimiter(',');
+    Iterator<String> it = (Iterator<String>) conf.getKeys();
+    while (it.hasNext()) {
+      String propertyName = it.next();
+      if (propertyName.startsWith(TAGS_FOR_PREFIX_PROPERTY_PREFIX)) {
+        String contextName = propertyName.substring(TAGS_FOR_PREFIX_PROPERTY_PREFIX.length());
+        String[] tags = conf.getStringArray(propertyName);
+        boolean useAllTags = false;
+        Set<String> set = null;
+        if (tags.length > 0) {
+          set = new HashSet<String>();
+          for (String tag : tags) {
+            tag = tag.trim();
+            useAllTags |= tag.equals("*");
+            if (tag.length() > 0) {
+              set.add(tag);
+            }
+          }
+          if (useAllTags) {
+            set = null;
+          }
+        }
+        useTagsMap.put(contextName, set);
+      }
+    }
+  }
+
+  @InterfaceAudience.Private
+  public void appendPrefix(MetricsRecord record, StringBuilder sb) {
+    String contextName = record.context();
+    Collection<MetricsTag> tags = record.tags();
+    if (useTagsMap.containsKey(contextName)) {
+      Set<String> useTags = useTagsMap.get(contextName);
+      for (MetricsTag t : tags) {
+        if (useTags == null || useTags.contains(t.name())) {
+
+          // the context is always skipped here because it is always added
+          
+          // the hostname is always skipped to avoid case-mismatches 
+          // from different DNSes.
+
+          if (t.info() != MsInfo.Context && t.info() != MsInfo.Hostname && t.value() != null) {
+            sb.append('.').append(t.name()).append('=').append(t.value());
+          }
+        }
+      }
+    }          
+  }
+  
   @Override
   public void putMetrics(MetricsRecord record) {
     // The method handles both cases whether Ganglia support dense publish
@@ -53,6 +120,8 @@ public class GangliaSink30 extends AbstractGangliaSink {
       sb.append('.');
       sb.append(recordName);
 
+      appendPrefix(record, sb);
+      
       String groupName = sb.toString();
       sb.append('.');
       int sbBaseLen = sb.length();
