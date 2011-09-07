@@ -118,6 +118,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
   private long lastBlocksScheduledRollTime = 0;
   private static final int BLOCKS_SCHEDULED_ROLL_INTERVAL = 600*1000; //10min
   
+  // Set to false after processing first block report
+  private boolean firstBlockReport = true; 
+  
   /** Default constructor */
   public DatanodeDescriptor() {}
   
@@ -560,5 +563,13 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   public void setBalancerBandwidth(long bandwidth) {
     this.bandwidth = bandwidth;
+  }
+
+  boolean firstBlockReport() {
+    return firstBlockReport;
+  }
+  
+  void processedBlockReport() {
+    firstBlockReport = false;
   }
 }

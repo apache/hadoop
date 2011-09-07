@@ -84,7 +84,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.UnderReplicatedBlocks.BlockIterator;
@@ -3332,7 +3331,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     
     // To minimize startup time, we discard any second (or later) block reports
     // that we receive while still in startup phase.
-    if (isInStartupSafeMode() && node.numBlocks() > 0) {
+    if (isInStartupSafeMode() && !node.firstBlockReport()) {
       NameNode.stateChangeLog.info("BLOCK* NameSystem.processReport: "
           + "discarded non-initial block report from " + nodeID.getName()
           + " because namenode still in startup phase");
@@ -3365,6 +3364,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     NameNode.stateChangeLog.info("*BLOCK* NameSystem.processReport: from "
         + nodeID.getName() + ", blocks: " + newReport.getNumberOfBlocks()
         + ", processing time: " + (endTime - startTime) + " msecs");
+    node.processedBlockReport();
   }
 
   /**
@@ -3867,9 +3867,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       throw new DisallowedDatanodeException(node);
     }
 
-    // decrement number of blocks scheduled to this datanode.
-    node.decBlocksScheduled();
-    
     // get the deletion hint node
     DatanodeDescriptor delHintNode = null;
     if(delHint!=null && delHint.length()!=0) {
@@ -3887,6 +3884,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     // 
     pendingReplications.remove(block);
     addStoredBlock(block, node, delHintNode );
+    
+    // decrement number of blocks scheduled to this datanode.
+    node.decBlocksScheduled();    
   }
 
   public long getMissingBlocksCount() {

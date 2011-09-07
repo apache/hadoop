@@ -97,6 +97,8 @@ Release 0.20.205.0 - unreleased
     HADOOP-7596. Makes packaging of 64-bit jsvc possible. Has other
     bug fixes to do with packaging. (Eric Yang via ddas) 
 
+    HDFS-2309. TestRenameWhileOpen fails. (jitendra)
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via
