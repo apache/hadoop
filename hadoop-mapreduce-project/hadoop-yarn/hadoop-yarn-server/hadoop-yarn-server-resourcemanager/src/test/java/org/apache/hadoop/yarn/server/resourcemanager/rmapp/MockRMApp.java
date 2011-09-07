@@ -51,6 +51,11 @@ public class MockRMApp implements RMApp {
     user = userName;
   }
 
+  public MockRMApp(int newid, long time, RMAppState newState, String userName, String diag) {
+    this(newid, time, newState, userName);
+    this.diagnostics = new StringBuilder(diag);
+  }
+
   @Override
   public ApplicationId getApplicationId() {
     return id;

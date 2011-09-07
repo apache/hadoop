@@ -245,6 +245,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2774. Add startup message to ResourceManager & NodeManager on
     startup. (Venu Gopala Rao via acmurthy) 
 
+    MAPREDUCE-2655. Add audit logs to ResourceManager and NodeManager. (Thomas
+    Graves via acmurthy)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

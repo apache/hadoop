@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.Refresh
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.service.AbstractService;
 
 public class AdminService extends AbstractService implements RMAdminProtocol {
@@ -113,40 +114,54 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
     super.stop();
   }
 
-  private void checkAcls(String method) throws YarnRemoteException {
+  private UserGroupInformation checkAcls(String method) throws YarnRemoteException {
+    UserGroupInformation user;
     try {
-      UserGroupInformation user = UserGroupInformation.getCurrentUser();
-      if (!adminAcl.isUserAllowed(user)) {
-        LOG.warn("User " + user.getShortUserName() + " doesn't have permission" +
-        " to call '" + method + "'");
-
-        throw RPCUtil.getRemoteException(
-            new AccessControlException("User " + user.getShortUserName() + 
-                " doesn't have permission" +
-                " to call '" + method + "'")
-            );
-      }
-      
-      LOG.info("RM Admin: " + method + " invoked by user " + 
-          user.getShortUserName());
-      
+      user = UserGroupInformation.getCurrentUser();
     } catch (IOException ioe) {
       LOG.warn("Couldn't get current user", ioe);
+
+      RMAuditLogger.logFailure("UNKNOWN", method,
+          adminAcl.toString(), "AdminService",
+          "Couldn't get current user");
       throw RPCUtil.getRemoteException(ioe);
     }
+
+    if (!adminAcl.isUserAllowed(user)) {
+      LOG.warn("User " + user.getShortUserName() + " doesn't have permission" +
+      " to call '" + method + "'");
+
+      RMAuditLogger.logFailure(user.getShortUserName(), method,
+          adminAcl.toString(), "AdminService",
+          AuditConstants.UNAUTHORIZED_USER);
+
+      throw RPCUtil.getRemoteException(
+          new AccessControlException("User " + user.getShortUserName() + 
+              " doesn't have permission" +
+              " to call '" + method + "'")
+          );
+    }
+    LOG.info("RM Admin: " + method + " invoked by user " + 
+        user.getShortUserName());
+      
+    return user;
   }
   
   @Override
   public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request)
       throws YarnRemoteException {
-    checkAcls("refreshQueues");
-    
+    UserGroupInformation user = checkAcls("refreshQueues");
     try {
       scheduler.reinitialize(conf, null, null); // ContainerTokenSecretManager can't
                                                 // be 'refreshed'
+      RMAuditLogger.logSuccess(user.getShortUserName(), "refreshQueues", 
+          "AdminService");
       return recordFactory.newRecordInstance(RefreshQueuesResponse.class);
     } catch (IOException ioe) {
       LOG.info("Exception refreshing queues ", ioe);
+      RMAuditLogger.logFailure(user.getShortUserName(), "refreshQueues",
+          adminAcl.toString(), "AdminService",
+          "Exception refreshing queues");
       throw RPCUtil.getRemoteException(ioe);
     }
   }
@@ -154,12 +169,17 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
   @Override
   public RefreshNodesResponse refreshNodes(RefreshNodesRequest request)
       throws YarnRemoteException {
-    checkAcls("refreshNodes");
+    UserGroupInformation user = checkAcls("refreshNodes");
     try {
       this.nodesListManager.refreshNodes();
+      RMAuditLogger.logSuccess(user.getShortUserName(), "refreshNodes",
+          "AdminService");
       return recordFactory.newRecordInstance(RefreshNodesResponse.class);
     } catch (IOException ioe) {
       LOG.info("Exception refreshing nodes ", ioe);
+      RMAuditLogger.logFailure(user.getShortUserName(), "refreshNodes",
+          adminAcl.toString(), "AdminService",
+          "Exception refreshing nodes");
       throw RPCUtil.getRemoteException(ioe);
     }
   }
@@ -168,9 +188,11 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
   public RefreshSuperUserGroupsConfigurationResponse refreshSuperUserGroupsConfiguration(
       RefreshSuperUserGroupsConfigurationRequest request)
       throws YarnRemoteException {
-    checkAcls("refreshSuperUserGroupsConfiguration");
+    UserGroupInformation user = checkAcls("refreshSuperUserGroupsConfiguration");
     
     ProxyUsers.refreshSuperUserGroupsConfiguration(new Configuration());
+    RMAuditLogger.logSuccess(user.getShortUserName(),
+        "refreshSuperUserGroupsConfiguration", "AdminService");
     
     return recordFactory.newRecordInstance(
         RefreshSuperUserGroupsConfigurationResponse.class);
@@ -179,9 +201,11 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
   @Override
   public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
       RefreshUserToGroupsMappingsRequest request) throws YarnRemoteException {
-    checkAcls("refreshUserToGroupsMappings");
+    UserGroupInformation user = checkAcls("refreshUserToGroupsMappings");
     
     Groups.getUserToGroupsMappingService().refresh();
+    RMAuditLogger.logSuccess(user.getShortUserName(), 
+        "refreshUserToGroupsMappings", "AdminService");
 
     return recordFactory.newRecordInstance(
         RefreshUserToGroupsMappingsResponse.class);
@@ -190,12 +214,14 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
   @Override
   public RefreshAdminAclsResponse refreshAdminAcls(
       RefreshAdminAclsRequest request) throws YarnRemoteException {
-    checkAcls("refreshAdminAcls");
+    UserGroupInformation user = checkAcls("refreshAdminAcls");
     
     Configuration conf = new Configuration();
     adminAcl = 
       new AccessControlList(
           conf.get(RMConfig.RM_ADMIN_ACL, RMConfig.DEFAULT_RM_ADMIN_ACL));
+    RMAuditLogger.logSuccess(user.getShortUserName(), "refreshAdminAcls", 
+        "AdminService");
 
     return recordFactory.newRecordInstance(RefreshAdminAclsResponse.class);
   }

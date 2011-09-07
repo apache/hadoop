@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRespons
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.AMResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -49,6 +50,7 @@ import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.security.SchedulerSecurityInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -115,11 +117,16 @@ public class ApplicationMasterService extends AbstractService implements
 
     ApplicationAttemptId applicationAttemptId = request
         .getApplicationAttemptId();
+    ApplicationId appID = applicationAttemptId.getApplicationId();
     AMResponse lastResponse = responseMap.get(applicationAttemptId);
     if (lastResponse == null) {
       String message = "Application doesn't exist in cache "
           + applicationAttemptId;
       LOG.error(message);
+      RMAuditLogger.logFailure(this.rmContext.getRMApps().get(appID).getUser(), 
+          AuditConstants.REGISTER_AM, message, "ApplicationMasterService",
+          "Error in registering application master", appID,
+          applicationAttemptId);
       throw RPCUtil.getRemoteException(message);
     }
 
@@ -132,6 +139,10 @@ public class ApplicationMasterService extends AbstractService implements
       this.rmContext.getDispatcher().getEventHandler().handle(
           new RMAppAttemptRegistrationEvent(applicationAttemptId, request
               .getHost(), request.getRpcPort(), request.getTrackingUrl()));
+
+      RMAuditLogger.logSuccess(this.rmContext.getRMApps().get(appID).getUser(),
+          AuditConstants.REGISTER_AM, "ApplicationMasterService", appID, 
+          applicationAttemptId);
 
       // Pick up min/max resource from scheduler...
       RegisterApplicationMasterResponse response = recordFactory

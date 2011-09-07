@@ -32,6 +32,8 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -165,8 +167,39 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
       LOG.error("RMAppManager received completed appId of null, skipping");
     } else {
       completedApps.add(appId);  
+      writeAuditLog(appId);
     }
-  };
+  }
+
+  protected void writeAuditLog(ApplicationId appId) {
+    RMApp app = rmContext.getRMApps().get(appId);
+    String operation = "UNKONWN";
+    boolean success = false;
+    switch (app.getState()) {
+      case FAILED: 
+        operation = AuditConstants.FINISH_FAILED_APP;
+        break;
+      case FINISHED:
+        operation = AuditConstants.FINISH_SUCCESS_APP;
+        success = true;
+        break;
+      case KILLED: 
+        operation = AuditConstants.FINISH_KILLED_APP;
+        success = true;
+        break;
+      default:
+    }
+    
+    if (success) {
+      RMAuditLogger.logSuccess(app.getUser(), operation,
+          "RMAppManager", app.getApplicationId());
+    } else {
+      StringBuilder diag = app.getDiagnostics(); 
+      String msg = diag == null ? null : diag.toString();
+      RMAuditLogger.logFailure(app.getUser(), operation, msg, "RMAppManager",
+          "App failed with state: " + app.getState(), appId);
+    }
+  }
 
   /*
    * check to see if hit the limit for max # completed apps kept
