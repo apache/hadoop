@@ -683,7 +683,7 @@ public class TestFileAppend4 extends TestCase {
       Throwable thrownByClose = err.get();
       assertNotNull(thrownByClose);
       assertTrue(thrownByClose instanceof IOException);
-      if (!thrownByClose.getMessage().contains("Could not complete write")) {
+      if (!thrownByClose.getMessage().contains("does not have any open files")) {
         throw thrownByClose;
       }
     } finally {
