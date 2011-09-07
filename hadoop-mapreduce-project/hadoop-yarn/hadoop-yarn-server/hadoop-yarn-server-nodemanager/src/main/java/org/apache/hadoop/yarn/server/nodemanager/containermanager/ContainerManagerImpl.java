@@ -65,6 +65,8 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerManagerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
+import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
+import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.nodemanager.NMConfig;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -266,6 +268,10 @@ public class ContainerManagerImpl extends CompositeService implements
     ContainerId containerID = launchContext.getContainerId();
     ApplicationId applicationID = containerID.getAppId();
     if (context.getContainers().putIfAbsent(containerID, container) != null) {
+      NMAuditLogger.logFailure(launchContext.getUser(), 
+          AuditConstants.START_CONTAINER, "ContainerManagerImpl",
+          "Container already running on this node!",
+          applicationID, containerID);
       throw RPCUtil.getRemoteException("Container " + containerID
           + " already is running on this node!!");
     }
@@ -281,6 +287,11 @@ public class ContainerManagerImpl extends CompositeService implements
 
     // TODO: Validate the request
     dispatcher.getEventHandler().handle(new ApplicationInitEvent(container));
+
+    NMAuditLogger.logSuccess(launchContext.getUser(), 
+        AuditConstants.START_CONTAINER, "ContainerManageImpl", 
+        applicationID, containerID);
+
     StartContainerResponse response =
         recordFactory.newRecordInstance(StartContainerResponse.class);
     response.addAllServiceResponse(auxiluaryServices.getMeta());
@@ -300,11 +311,22 @@ public class ContainerManagerImpl extends CompositeService implements
     Container container = this.context.getContainers().get(containerID);
     if (container == null) {
       LOG.warn("Trying to stop unknown container " + containerID);
+      NMAuditLogger.logFailure(container.getUser(),
+          AuditConstants.STOP_CONTAINER, "ContainerManagerImpl",
+          "Trying to stop unknown container!",
+          containerID.getAppId(), containerID);
       return response; // Return immediately.
     }
     dispatcher.getEventHandler().handle(
         new ContainerKillEvent(containerID,
             "Container killed by the ApplicationMaster."));
+
+    // user logged here not ideal since just getting user from container but
+    // request doesn't have anything and should be coming from user of AM so 
+    // should be the same or should be rejected by auth before here. 
+    NMAuditLogger.logSuccess(container.getUser(), 
+        AuditConstants.STOP_CONTAINER, "ContainerManageImpl", 
+        containerID.getAppId(), containerID);
 
     // TODO: Move this code to appropriate place once kill_container is
     // implemented.

@@ -39,6 +39,8 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -182,6 +184,10 @@ public class SchedulerApp {
     
     // Remove from the list of containers
     liveContainers.remove(rmContainer.getContainerId());
+
+    RMAuditLogger.logSuccess(getUser(), 
+        AuditConstants.RELEASE_CONTAINER, "SchedulerApp", 
+        getApplicationId(), containerId);
     
     // Update usage metrics 
     Resource containerResource = rmContainer.getContainer().getResource();
@@ -217,6 +223,9 @@ public class SchedulerApp {
           + " container=" + container.getId() + " host="
           + container.getNodeId().getHost() + " type=" + type);
     }
+    RMAuditLogger.logSuccess(getUser(), 
+        AuditConstants.ALLOC_CONTAINER, "SchedulerApp", 
+        getApplicationId(), container.getId());
 
     // Add it to allContainers list.
     newlyAllocatedContainers.add(rmContainer);

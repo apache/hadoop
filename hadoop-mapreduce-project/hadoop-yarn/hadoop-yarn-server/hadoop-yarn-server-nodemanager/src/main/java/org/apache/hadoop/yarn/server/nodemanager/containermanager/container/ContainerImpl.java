@@ -42,6 +42,8 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
+import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationContainerFinishedEvent;
@@ -365,18 +367,28 @@ public class ContainerImpl implements Container {
       case EXITED_WITH_SUCCESS:
         metrics.endRunningContainer();
         metrics.completedContainer();
+        NMAuditLogger.logSuccess(getUser(),
+            AuditConstants.FINISH_SUCCESS_CONTAINER, "ContainerImpl",
+            getContainerID().getAppId(), getContainerID());
         break;
       case EXITED_WITH_FAILURE:
         metrics.endRunningContainer();
         // fall through
       case LOCALIZATION_FAILED:
         metrics.failedContainer();
+        NMAuditLogger.logFailure(getUser(),
+            AuditConstants.FINISH_FAILED_CONTAINER, "ContainerImpl",
+            "Container failed with state: " + getContainerState(),
+            getContainerID().getAppId(), getContainerID());
         break;
       case CONTAINER_CLEANEDUP_AFTER_KILL:
         metrics.endRunningContainer();
         // fall through
       case NEW:
         metrics.killedContainer();
+        NMAuditLogger.logSuccess(getUser(),
+            AuditConstants.FINISH_KILLED_CONTAINER, "ContainerImpl",
+            getContainerID().getAppId(), getContainerID());
     }
 
     metrics.releaseContainer(getLaunchContext().getResource());

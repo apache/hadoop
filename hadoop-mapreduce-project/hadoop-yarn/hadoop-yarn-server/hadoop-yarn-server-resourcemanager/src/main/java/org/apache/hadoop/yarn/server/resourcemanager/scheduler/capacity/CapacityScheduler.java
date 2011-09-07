@@ -46,6 +46,8 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
@@ -433,8 +435,15 @@ implements ResourceScheduler, CapacitySchedulerContext {
 
     // Release containers
     for (ContainerId releasedContainerId : release) {
-      completedContainer(getRMContainer(releasedContainerId), 
-          RMContainerEventType.RELEASED);
+      RMContainer rmContainer = getRMContainer(releasedContainerId);
+      if (rmContainer == null) {
+         RMAuditLogger.logFailure(application.getUser(),
+             AuditConstants.RELEASE_CONTAINER, 
+             "Unauthorized access or invalid container", "CapacityScheduler",
+             "Trying to release container not owned by app or with invalid id",
+             application.getApplicationId(), releasedContainerId);
+      }
+      completedContainer(rmContainer, RMContainerEventType.RELEASED);
     }
 
     synchronized (application) {
