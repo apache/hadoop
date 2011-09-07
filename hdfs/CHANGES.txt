@@ -619,6 +619,8 @@ Release 0.22.0 - Unreleased
     HDFS-2281. NPE in checkpoint during processIOError().
     (Uma Maheswara Rao G via shv)
 
+    HDFS-2280. BackupNode fails with MD5 checksum Exception. (shv)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

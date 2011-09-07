@@ -133,6 +133,7 @@ public class BackupStorage extends FSImage {
       // rename current to lastcheckpoint.tmp
       moveCurrent(sd);
     }
+    this.imageDigest = null;
   }
 
   /**
@@ -156,6 +157,8 @@ public class BackupStorage extends FSImage {
       StorageDirectory sdEdits = itEdits.next();
       getFSDirectoryRootLock().writeLock();
       try { // load image under rootDir lock
+        // make sure image checksum is verified against the expected value
+        imageDigest = sig.imageDigest; 
         loadFSImage(FSImage.getImageFile(sdName, NameNodeFile.IMAGE));
       } finally {
         getFSDirectoryRootLock().writeUnlock();
