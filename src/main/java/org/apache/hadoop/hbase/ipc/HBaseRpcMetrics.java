@@ -77,6 +77,7 @@ public class HBaseRpcMetrics implements Updater {
 
   public MetricsTimeVaryingRate rpcQueueTime = new MetricsTimeVaryingRate("RpcQueueTime", registry);
   public MetricsTimeVaryingRate rpcProcessingTime = new MetricsTimeVaryingRate("RpcProcessingTime", registry);
+  public MetricsTimeVaryingRate rpcSlowResponseTime = new MetricsTimeVaryingRate("RpcSlowResponse", registry);
 
   //public Map <String, MetricsTimeVaryingRate> metricsList = Collections.synchronizedMap(new HashMap<String, MetricsTimeVaryingRate>());
 
@@ -129,13 +130,48 @@ public class HBaseRpcMetrics implements Updater {
    *     "classname.method"
    */
   public void createMetrics(Class<?>[] ifaces, boolean prefixWithClass) {
+    createMetrics(ifaces, prefixWithClass, null);
+  }
+
+  /**
+  * Generate metrics entries for all the methods defined in the list of
+  * interfaces. A {@link MetricsTimeVaryingRate} counter will be created for
+  * each {@code Class.getMethods().getName()} entry.
+  *
+  * <p>
+  * If {@code prefixWithClass} is {@code true}, each metric will be named as
+  * {@code [Class.getSimpleName()].[Method.getName()]}. Otherwise each metric
+  * will just be named according to the method -- {@code Method.getName()}.
+  * </p>
+  *
+  * <p>
+  * Additionally, if {@code suffixes} is defined, additional metrics will be
+  * created for each method named as the original metric concatenated with
+  * the suffix.
+  * </p>
+  * @param ifaces Define metrics for all methods in the given classes
+  * @param prefixWithClass If {@code true}, each metric will be named as
+  * "classname.method"
+  * @param suffixes If not null, each method will get additional metrics ending
+  * in each of the suffixes.
+  */
+  public void createMetrics(Class<?>[] ifaces, boolean prefixWithClass,
+      String [] suffixes) {
     for (Class<?> iface : ifaces) {
       Method[] methods = iface.getMethods();
       for (Method method : methods) {
         String attrName = prefixWithClass ?
-            getMetricName(iface, method.getName()) : method.getName();
+        getMetricName(iface, method.getName()) : method.getName();
         if (get(attrName) == null)
           create(attrName);
+        if (suffixes != null) {
+          // create metrics for each requested suffix
+          for (String s : suffixes) {
+            String metricName = attrName + s;
+            if (get(metricName) == null)
+              create(metricName);
+          }
+        }
       }
     }
   }

@@ -240,6 +240,7 @@ Release 0.91.0 - Unreleased
    HBASE-4265  zookeeper.KeeperException$NodeExistsException if HMaster restarts
                while table is being disabled (Ming Ma)
    HBASE-4338  Package build for rpm and deb are broken (Eric Yang)
+   HBASE-4309  slow query log metrics spewing warnings (Riley Patterson)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

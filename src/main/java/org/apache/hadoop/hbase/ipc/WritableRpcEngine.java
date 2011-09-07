@@ -264,6 +264,9 @@ class WritableRpcEngine implements RpcEngine {
     private static final int DEFAULT_WARN_RESPONSE_TIME = 10000; // milliseconds
     private static final int DEFAULT_WARN_RESPONSE_SIZE = 100 * 1024 * 1024;
 
+    /** Names for suffixed metrics */
+    private static final String ABOVE_ONE_SEC_METRIC = ".aboveOneSec.";
+
     private final int warnResponseTime;
     private final int warnResponseSize;
 
@@ -298,7 +301,8 @@ class WritableRpcEngine implements RpcEngine {
       this.ifaces = ifaces;
 
       // create metrics for the advertised interfaces this server implements.
-      this.rpcMetrics.createMetrics(this.ifaces);
+      String [] metricSuffixes = new String [] {ABOVE_ONE_SEC_METRIC};
+      this.rpcMetrics.createMetrics(this.ifaces, false, metricSuffixes);
 
       this.authorize =
         conf.getBoolean(
@@ -368,15 +372,14 @@ class WritableRpcEngine implements RpcEngine {
               startTime, processingTime, qTime, responseSize);
           // provides a count of log-reported slow responses
           if (tooSlow) {
-            rpcMetrics.inc(call.getMethodName() + ".slowResponse.",
-                processingTime);
+            rpcMetrics.rpcSlowResponseTime.inc(processingTime);
           }
         }
         if (processingTime > 1000) {
           // we use a hard-coded one second period so that we can clearly
           // indicate the time period we're warning about in the name of the 
           // metric itself
-          rpcMetrics.inc(call.getMethodName() + ".aboveOneSec.",
+          rpcMetrics.inc(call.getMethodName() + ABOVE_ONE_SEC_METRIC,
               processingTime);
         }
 
@@ -440,7 +443,7 @@ class WritableRpcEngine implements RpcEngine {
       } else if (params.length == 1 && instance instanceof HRegionServer &&
           params[0] instanceof Operation) {
         // annotate the response map with operation details
-        responseInfo.putAll(((Operation) params[1]).toMap());
+        responseInfo.putAll(((Operation) params[0]).toMap());
         // report to the log file
         LOG.warn("(operation" + tag + "): " +
             mapper.writeValueAsString(responseInfo));
