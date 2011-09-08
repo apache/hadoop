@@ -249,6 +249,8 @@ Release 0.91.0 - Unreleased
                weak consistency (Jieshan Bean)
    HBASE-4297  TableMapReduceUtil overwrites user supplied options
                (Jan Lukavsky)
+   HBASE-4015  Refactor the TimeoutMonitor to make it less racy
+               (ramkrishna.s.vasudevan)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

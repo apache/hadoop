@@ -33,6 +33,12 @@ public class OpenMetaHandler extends OpenRegionHandler {
   public OpenMetaHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo,
       final HTableDescriptor htd) {
-    super(server,rsServices, regionInfo, htd, EventType.M_RS_OPEN_META);
+    this(server, rsServices, regionInfo, htd, -1);
+  }
+  public OpenMetaHandler(final Server server,
+      final RegionServerServices rsServices, HRegionInfo regionInfo,
+      final HTableDescriptor htd, int versionOfOfflineNode) {
+    super(server, rsServices, regionInfo, htd, EventType.M_RS_OPEN_META,
+        versionOfOfflineNode);
   }
 }
