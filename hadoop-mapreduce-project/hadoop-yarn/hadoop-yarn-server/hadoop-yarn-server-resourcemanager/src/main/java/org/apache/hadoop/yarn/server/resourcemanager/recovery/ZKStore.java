@@ -123,10 +123,9 @@ public class ZKStore implements Store {
   public synchronized void storeNode(RMNode node) throws IOException {
     /** create a storage node and store it in zk **/
     if (!doneWithRecovery) return;
-    NodeReportPBImpl nodeManagerInfo = createNodeManagerInfo(node);
-    // TODO FinBugs - will be fixed after the subsequent fixme
-    byte[] bytes = nodeManagerInfo.getProto().toByteArray();
     // TODO: FIXMEVinodkv
+//    NodeReportPBImpl nodeManagerInfo = createNodeManagerInfo(node);
+//    byte[] bytes = nodeManagerInfo.getProto().toByteArray();
 //    try {
 //      zkClient.create(NODES + Integer.toString(node.getNodeID().getId()), bytes, null,
 //          CreateMode.PERSISTENT);
@@ -476,12 +475,12 @@ public class ZKStore implements Store {
           continue;
         }
         int httpPort = Integer.valueOf(m.group(1));
-        // TODO: FindBugs Valid. Fix
-        RMNode nm = new RMNodeImpl(node.getNodeId(), null,
-            hostName, cmPort, httpPort,
-            ResourceTrackerService.resolve(node.getNodeId().getHost()), 
-            node.getCapability());
-        nodeManagers.add(nm);
+        // TODO: FindBugs warns passing null below. Commenting this for later.
+//        RMNode nm = new RMNodeImpl(node.getNodeId(), null,
+//            hostName, cmPort, httpPort,
+//            ResourceTrackerService.resolve(node.getNodeId().getHost()), 
+//            node.getCapability());
+//        nodeManagers.add(nm);
       }
       readLastNodeId();
       /* make sure we get all the applications */

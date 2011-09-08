@@ -66,6 +66,11 @@
     <Bug pattern="BC_UNCONFIRMED_CAST" />
   </Match>
   <Match>
+    <Class name="~org\.apache\.hadoop\.yarn\.server\.resourcemanager\.RMAppManager.*" />
+    <Method name="handle" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+  <Match>
     <Class name="~org\.apache\.hadoop\.yarn\.server\.resourcemanager\.scheduler\.capacity\.CapacityScheduler.*" />
     <Method name="handle" />
     <Bug pattern="BC_UNCONFIRMED_CAST" />

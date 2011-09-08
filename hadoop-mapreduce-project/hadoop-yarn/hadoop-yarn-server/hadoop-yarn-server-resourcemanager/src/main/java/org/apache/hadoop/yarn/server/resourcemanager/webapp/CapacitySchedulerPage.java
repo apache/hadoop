@@ -24,7 +24,7 @@ import com.google.inject.servlet.RequestScoped;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Queue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.*;
@@ -43,7 +43,7 @@ class CapacitySchedulerPage extends RmView {
 
   @RequestScoped
   static class Parent {
-    Queue queue;
+    CSQueue queue;
   }
 
   public static class QueueBlock extends HtmlBlock {
@@ -56,8 +56,8 @@ class CapacitySchedulerPage extends RmView {
     @Override
     public void render(Block html) {
       UL<Hamlet> ul = html.ul();
-      Queue parentQueue = parent.queue;
-      for (Queue queue : parentQueue.getChildQueues()) {
+      CSQueue parentQueue = parent.queue;
+      for (CSQueue queue : parentQueue.getChildQueues()) {
         float used = queue.getUsedCapacity();
         float set = queue.getCapacity();
         float delta = Math.abs(set - used) + 0.001f;
@@ -109,7 +109,7 @@ class CapacitySchedulerPage extends RmView {
               span().$style(Q_END)._("100% ")._().
               span(".q", "default")._()._();
       } else {
-        Queue root = cs.getRootQueue();
+        CSQueue root = cs.getRootQueue();
         parent.queue = root;
         float used = root.getUsedCapacity();
         float set = root.getCapacity();

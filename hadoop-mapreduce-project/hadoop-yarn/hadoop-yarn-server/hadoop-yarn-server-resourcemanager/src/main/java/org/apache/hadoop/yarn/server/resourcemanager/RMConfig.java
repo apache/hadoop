@@ -87,7 +87,7 @@ public class RMConfig {
   public static final String DEFAULT_RM_NODES_EXCLUDE_FILE = "";
 
   // the maximum number of completed applications RM keeps 
-  public static String EXPIRE_APPLICATIONS_COMPLETED_MAX =
+  public static final String EXPIRE_APPLICATIONS_COMPLETED_MAX =
     YarnConfiguration.RM_PREFIX + "expire.applications.completed.max";
   public static final int DEFAULT_EXPIRE_APPLICATIONS_COMPLETED_MAX = 10000;
 }

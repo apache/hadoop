@@ -38,8 +38,8 @@ public class TestApplicationLimits {
     when(csContext.getMaximumResourceCapability()).thenReturn(Resources.createResource(16*GB));
     when(csContext.getClusterResources()).thenReturn(Resources.createResource(10 * 16 * GB));
     
-    Map<String, Queue> queues = new HashMap<String, Queue>();
-    Queue root = 
+    Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
+    CSQueue root = 
         CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
             queues, queues, 
             CapacityScheduler.queueComparator, 
@@ -108,8 +108,8 @@ public class TestApplicationLimits {
     Resource clusterResource = Resources.createResource(100 * 16 * GB);
     when(csContext.getClusterResources()).thenReturn(clusterResource);
     
-    Map<String, Queue> queues = new HashMap<String, Queue>();
-    Queue root = 
+    Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
+    CSQueue root = 
         CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
             queues, queues, 
             CapacityScheduler.queueComparator, 

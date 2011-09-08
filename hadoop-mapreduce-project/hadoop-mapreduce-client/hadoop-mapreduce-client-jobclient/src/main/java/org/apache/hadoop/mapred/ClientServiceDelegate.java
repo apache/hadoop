@@ -149,8 +149,7 @@ class ClientServiceDelegate {
         LOG.info("Connecting to " + serviceAddr);
         instantiateAMProxy(serviceAddr);
         return realProxy;
-      } catch (Exception e) {
-        //possibly
+      } catch (IOException e) {
         //possibly the AM has crashed
         //there may be some time before AM is restarted
         //keep retrying by getting the address from RM
@@ -159,8 +158,13 @@ class ClientServiceDelegate {
         try {
           Thread.sleep(2000);
         } catch (InterruptedException e1) {
+          LOG.warn("getProxy() call interruped", e1);
+          throw new YarnException(e1);
         }
         application = rm.getApplicationReport(appId);
+      } catch (InterruptedException e) {
+        LOG.warn("getProxy() call interruped", e);
+        throw new YarnException(e);
       }
     }
 
@@ -304,7 +308,6 @@ class ClientServiceDelegate {
 
   org.apache.hadoop.mapreduce.TaskReport[] getTaskReports(JobID jobID, TaskType taskType)
        throws YarnRemoteException, YarnRemoteException {
-    org.apache.hadoop.mapreduce.v2.api.records.JobId nJobID = TypeConverter.toYarn(jobID);
     GetTaskReportsRequest request = recordFactory.newRecordInstance(GetTaskReportsRequest.class);
     
     List<org.apache.hadoop.mapreduce.v2.api.records.TaskReport> taskReports = 

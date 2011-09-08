@@ -65,8 +65,8 @@ public class TestLeafQueue {
   CapacitySchedulerConfiguration csConf;
   CapacitySchedulerContext csContext;
   
-  Queue root;
-  Map<String, Queue> queues = new HashMap<String, Queue>();
+  CSQueue root;
+  Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
   
   final static int GB = 1024;
   final static String DEFAULT_RACK = "/default";
@@ -145,7 +145,7 @@ public class TestLeafQueue {
               any(Resource.class));
     
     // 2. Stub out LeafQueue.parent.completedContainer
-    Queue parent = queue.getParent();
+    CSQueue parent = queue.getParent();
     doNothing().when(parent).completedContainer(
         any(Resource.class), any(SchedulerApp.class), any(SchedulerNode.class), 
         any(RMContainer.class), any(RMContainerEventType.class));

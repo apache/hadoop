@@ -157,6 +157,7 @@ public class MRApps extends Apps {
   public static void setInitialClasspath(
       Map<String, String> environment) throws IOException {
     InputStream classpathFileStream = null;
+    BufferedReader reader = null;
     try {
       // Get yarn mapreduce-app classpath from generated classpath
       // Works if compile time env is same as runtime. Mainly tests.
@@ -165,8 +166,7 @@ public class MRApps extends Apps {
       String mrAppGeneratedClasspathFile = "mrapp-generated-classpath";
       classpathFileStream =
           thisClassLoader.getResourceAsStream(mrAppGeneratedClasspathFile);
-      BufferedReader reader =
-          new BufferedReader(new InputStreamReader(classpathFileStream));
+      reader = new BufferedReader(new InputStreamReader(classpathFileStream));
       String cp = reader.readLine();
       if (cp != null) {
         addToClassPath(environment, cp.trim());
@@ -197,6 +197,9 @@ public class MRApps extends Apps {
     } finally {
       if (classpathFileStream != null) {
         classpathFileStream.close();
+      }
+      if (reader != null) {
+        reader.close();
       }
     }
     // TODO: Remove duplicates.

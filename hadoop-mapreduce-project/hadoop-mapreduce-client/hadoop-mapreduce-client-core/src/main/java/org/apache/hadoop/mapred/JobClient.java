@@ -868,15 +868,6 @@ public class JobClient extends CLI {
     Counters counters = Counters.downgrade(cntrs);
     return counters.findCounter(counterGroupName, counterName).getValue();
   }
-  
-  void displayJobList(JobStatus[] jobs) {
-    System.out.printf("JobId\tState\tStartTime\tUserName\tQueue\tPriority\tSchedulingInfo\n");
-    for (JobStatus job : jobs) {
-      System.out.printf("%s\t%d\t%d\t%s\t%s\t%s\t%s\n", job.getJobID(), job.getRunState(),
-          job.getStartTime(), job.getUsername(), job.getQueue(), 
-          job.getJobPriority().name(), job.getSchedulingInfo());
-    }
-  }
 
   /**
    * Get status information about the max available Maps in the cluster.
