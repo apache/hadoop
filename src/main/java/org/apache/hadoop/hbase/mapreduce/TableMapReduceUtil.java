@@ -126,10 +126,10 @@ public class TableMapReduceUtil {
     if (outputValueClass != null) job.setMapOutputValueClass(outputValueClass);
     if (outputKeyClass != null) job.setMapOutputKeyClass(outputKeyClass);
     job.setMapperClass(mapper);
-    HBaseConfiguration.addHbaseResources(job.getConfiguration());
-    job.getConfiguration().set(TableInputFormat.INPUT_TABLE, table);
-    job.getConfiguration().set(TableInputFormat.SCAN,
-      convertScanToString(scan));
+    Configuration conf = job.getConfiguration();
+    HBaseConfiguration.merge(conf, HBaseConfiguration.create(conf));
+    conf.set(TableInputFormat.INPUT_TABLE, table);
+    conf.set(TableInputFormat.SCAN, convertScanToString(scan));
     if (addDependencyJars) {
       addDependencyJars(job);
     }
@@ -333,8 +333,8 @@ public class TableMapReduceUtil {
     Class partitioner, String quorumAddress, String serverClass,
     String serverImpl, boolean addDependencyJars) throws IOException {
 
-    Configuration conf = job.getConfiguration();
-    HBaseConfiguration.addHbaseResources(conf);
+    Configuration conf = job.getConfiguration();    
+    HBaseConfiguration.merge(conf, HBaseConfiguration.create(conf));
     job.setOutputFormatClass(TableOutputFormat.class);
     if (reducer != null) job.setReducerClass(reducer);
     conf.set(TableOutputFormat.OUTPUT_TABLE, table);

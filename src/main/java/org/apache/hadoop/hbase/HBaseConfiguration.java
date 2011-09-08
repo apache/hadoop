@@ -54,9 +54,7 @@ public class HBaseConfiguration extends Configuration {
   public HBaseConfiguration(final Configuration c) {
     //TODO:replace with private constructor
     this();
-    for (Entry<String, String>e: c) {
-      set(e.getKey(), e.getValue());
-    }
+    merge(this, c);
   }
 
   private static void checkDefaultsVersion(Configuration conf) {
@@ -109,9 +107,19 @@ public class HBaseConfiguration extends Configuration {
    */
   public static Configuration create(final Configuration that) {
     Configuration conf = create();
-    for (Entry<String, String>e: that) {
-      conf.set(e.getKey(), e.getValue());
-    }
+    merge(conf, that);
     return conf;
+  }
+
+  /**
+   * Merge two configurations.
+   * @param destConf the configuration that will be overwritten with items
+   *                 from the srcConf
+   * @param srcConf the source configuration
+   **/
+  public static void merge(Configuration destConf, Configuration srcConf) {
+    for (Entry<String, String> e : srcConf) {
+      destConf.set(e.getKey(), e.getValue());
+    }
   }
 }
