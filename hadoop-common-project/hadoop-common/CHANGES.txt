@@ -566,6 +566,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7593. Fix AssertionError in TestHttpServer.testMaxThreads().
     (Uma Maheswara Rao G via szetszwo)
 
+    HADOOP-7598. Fix smart-apply-patch.sh to handle patching from a sub
+    directory correctly. (Robert Evans via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
