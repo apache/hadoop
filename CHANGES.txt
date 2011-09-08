@@ -245,6 +245,8 @@ Release 0.91.0 - Unreleased
                (Alejandro Abdelnur via todd)
    HBASE-4271  Clean up coprocessor handling of table operations
                (Ming Ma via garyh)
+   HBASE-4341  HRS#closeAllRegions should take care of HRS#onlineRegions's
+               weak consistency (Jieshan Bean)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
