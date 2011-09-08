@@ -1227,6 +1227,9 @@ Release 0.23.0 - Unreleased
 
    MAPREDUCE-2908. Fix all findbugs warnings. (vinodkv via acmurthy) 
 
+   MAPREDUCE-2942. TestNMAuditLogger.testNMAuditLoggerWithIP failing (Thomas Graves 
+   via mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
