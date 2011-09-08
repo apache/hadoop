@@ -16,14 +16,19 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.mapreduce.v2.app.webapp;
+package org.apache.hadoop.mapreduce.v2.hs.webapp;
+
+import static org.apache.hadoop.yarn.util.StringHelper.percent;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 
 import java.util.Collection;
 
-import com.google.common.base.Joiner;
-import com.google.inject.Inject;
-
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
+import org.apache.hadoop.mapreduce.v2.app.webapp.App;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -31,13 +36,23 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.*;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TD;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TR;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
-import static org.apache.hadoop.yarn.util.StringHelper.*;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
 
-public class TaskPage extends AppView {
+import com.google.common.base.Joiner;
+import com.google.inject.Inject;
 
+/**
+ * A Page the shows the status of a given task
+ */
+public class HsTaskPage extends HsView {
+
+  /**
+   * A Block of HTML that will render a given task attempt. 
+   */
   static class AttemptsBlock extends HtmlBlock {
     final App app;
 
@@ -97,27 +112,47 @@ public class TaskPage extends AppView {
       tbody._()._();
     }
 
+    /**
+     * @return true if this is a valid request else false.
+     */
     protected boolean isValidRequest() {
       return app.getTask() != null;
     }
 
+    /**
+     * @return all of the attempts to render.
+     */
     protected Collection<TaskAttempt> getTaskAttempts() {
       return app.getTask().getAttempts().values();
     }
   }
 
+  /*
+   * (non-Javadoc)
+   * @see org.apache.hadoop.mapreduce.v2.hs.webapp.HsView#preHead(org.apache.hadoop.yarn.webapp.hamlet.Hamlet.HTML)
+   */
   @Override protected void preHead(Page.HTML<_> html) {
     commonPreHead(html);
-    set(initID(ACCORDION, "nav"), "{autoHeight:false, active:2}");
+    //override the nav config from commonPReHead
+    set(initID(ACCORDION, "nav"), "{autoHeight:false, active:1}");
+    //Set up the java script and CSS for the attempts table
     set(DATATABLES_ID, "attempts");
     set(initID(DATATABLES, "attempts"), attemptsTableInit());
     setTableStyles(html, "attempts");
   }
 
+  /**
+   * The content of this page is the attempts block
+   * @return AttemptsBlock.class
+   */
   @Override protected Class<? extends SubView> content() {
     return AttemptsBlock.class;
   }
 
+  /**
+   * @return The end of the JS map that is the jquery datatable config for the
+   * attempts table. 
+   */
   private String attemptsTableInit() {
     return tableInit().append("}").toString();
   }

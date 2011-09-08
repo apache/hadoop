@@ -62,7 +62,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
-import org.apache.hadoop.mapreduce.v2.hs.webapp.HSWebApp;
+import org.apache.hadoop.mapreduce.v2.hs.webapp.HsWebApp;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHConfig;
 import org.apache.hadoop.mapreduce.v2.security.client.ClientHSSecurityInfo;
 import org.apache.hadoop.net.NetUtils;
@@ -132,7 +132,7 @@ public class HistoryClientService extends AbstractService {
   }
 
   private void initializeWebApp(Configuration conf) {
-    webApp = new HSWebApp(history);
+    webApp = new HsWebApp(history);
     String bindAddress = conf.get(JHConfig.HS_WEBAPP_BIND_ADDRESS,
         JHConfig.DEFAULT_HS_WEBAPP_BIND_ADDRESS);
     WebApps.$for("yarn", this).at(bindAddress).start(webApp); 

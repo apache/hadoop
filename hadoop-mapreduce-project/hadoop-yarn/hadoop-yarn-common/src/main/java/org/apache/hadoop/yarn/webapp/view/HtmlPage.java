@@ -26,6 +26,11 @@ import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 
+/**
+ * The parent class of all HTML pages.  Override 
+ * {@link #render(org.apache.hadoop.yarn.webapp.hamlet.Hamlet.HTML)}
+ * to actually render the page.
+ */
 public abstract class HtmlPage extends TextView {
 
   public static class _ implements Hamlet._ {
@@ -79,6 +84,10 @@ public abstract class HtmlPage extends TextView {
     }
   }
 
+  /**
+   * Render the the HTML page.
+   * @param html the page to render data to.
+   */
   protected abstract void render(Page.HTML<_> html);
 }
 
