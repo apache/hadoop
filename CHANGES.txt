@@ -155,6 +155,9 @@ Release 0.20.205.0 - unreleased
 
     HADOOP-7594. Support HTTP REST in HttpServer.  (szetszwo)
 
+    HDFS-1242. Add test for appendFile() race solved in HDFS-142.
+    (Todd Lipcon via jitendra)
+
 Release 0.20.204.0 - 2011-8-25
 
   NEW FEATURES

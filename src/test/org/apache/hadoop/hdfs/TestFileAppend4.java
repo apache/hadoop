@@ -47,6 +47,8 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
+import org.apache.hadoop.hdfs.server.namenode.FSImageAdapter;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -61,6 +63,7 @@ import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 
 /* File Append tests for HDFS-200 & HDFS-142, specifically focused on:
@@ -976,6 +979,69 @@ public class TestFileAppend4 extends TestCase {
       }
     }
     LOG.info("STOP");
+  }
+
+  /**
+   * Test for a race in appendFile where the file might get removed in between
+   * the two synchronized sections.
+   */
+  public void testAppendFileRace() throws Throwable {
+    LOG.info("START");
+    cluster = new MiniDFSCluster(conf, 1, true, null);
+    final FileSystem fs1 = cluster.getFileSystem();;
+
+    try {
+      createFile(fs1, "/testAppendFileRace", 1, BBW_SIZE);
+      stm.close();
+
+      NameNode nn = cluster.getNameNode();
+      FSEditLog editLogSpy = FSImageAdapter.injectEditLogSpy(nn.getNamesystem());
+      DelayAnswer  delayer = new DelayAnswer();
+      doAnswer(delayer).when(editLogSpy).logSync();
+
+      final AtomicReference<Throwable> err = new AtomicReference<Throwable>();
+      Thread appender = new Thread() {
+          public void run() {
+            try {
+              stm = fs1.append(file1);
+            } catch (Throwable t) {
+              err.set(t);
+            }
+          }
+        };
+      LOG.info("Triggering append in other thread");
+      appender.start();
+
+      LOG.info("Waiting for logsync");
+      delayer.waitForCall();
+
+      LOG.info("Resetting spy");
+      reset(editLogSpy);
+
+      LOG.info("Deleting file");
+      fs1.delete(file1, true);
+
+      LOG.info("Allowing append to proceed");
+      delayer.proceed();
+
+      LOG.info("Waiting for append to finish");
+
+      appender.join();
+
+      if (err.get() != null) {
+        if (err.get().getMessage().contains(
+              "File does not exist.")) {
+          LOG.info("Got expected exception", err.get());
+        } else {
+          throw err.get();
+        }
+      }
+      LOG.info("Closing stream");
+      stm.close();
+    } finally {
+      fs1.close();
+      cluster.shutdown();
+    }
   }
 
   /**
