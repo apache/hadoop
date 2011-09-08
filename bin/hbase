@@ -205,14 +205,6 @@ function append_path() {
 
 JAVA_PLATFORM=""
 
-#Try to guess HADOOP_HOME 
-if [ -z "$HADOOP_HOME" ]; then
-  HADOOP_IN_PATH=$(readlink -f "$(which hadoop 2>/dev/null)")
-  if [ -f "${HADOOP_IN_PATH}" ]; then
-    HADOOP_HOME=$(readlink -f "$(dirname  ${HADOOP_IN_PATH})"/..)
-  fi
-fi
-
 #If avail, add Hadoop to the CLASSPATH and to the JAVA_LIBRARY_PATH
 if [ ! -z $HADOOP_HOME ]; then
   HADOOPCPPATH=""
