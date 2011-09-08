@@ -52,8 +52,8 @@ class NodesPage extends RmView {
           thead().
           tr().
           th(".rack", "Rack").
-          th(".nodeid", "Node ID").
-          th(".host", "Host").
+          th(".nodeaddress", "Node Address").
+          th(".nodehttpaddress", "Node HTTP Address").
           th(".healthStatus", "Health-status").
           th(".lastHealthUpdate", "Last health-update").
           th(".healthReport", "Health-report").
