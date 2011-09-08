@@ -64,11 +64,11 @@ import org.apache.hadoop.yarn.util.BuilderUtils;
 
 @Private
 @Unstable
-public class LeafQueue implements Queue {
+public class LeafQueue implements CSQueue {
   private static final Log LOG = LogFactory.getLog(LeafQueue.class);
 
   private final String queueName;
-  private Queue parent;
+  private CSQueue parent;
   private float capacity;
   private float absoluteCapacity;
   private float maximumCapacity;
@@ -119,8 +119,8 @@ public class LeafQueue implements Queue {
   final static int DEFAULT_AM_RESOURCE = 2 * 1024;
   
   public LeafQueue(CapacitySchedulerContext cs, 
-      String queueName, Queue parent, 
-      Comparator<SchedulerApp> applicationComparator, Queue old) {
+      String queueName, CSQueue parent, 
+      Comparator<SchedulerApp> applicationComparator, CSQueue old) {
     this.scheduler = cs;
     this.queueName = queueName;
     this.parent = parent;
@@ -192,7 +192,7 @@ public class LeafQueue implements Queue {
       float maxAMResourcePercent, float absoluteCapacity) {
     return 
         Math.max(
-            (int)((clusterResource.getMemory() / DEFAULT_AM_RESOURCE) * 
+            (int)((clusterResource.getMemory() / (float)DEFAULT_AM_RESOURCE) * 
                    maxAMResourcePercent * absoluteCapacity), 
             1);
   }
@@ -271,7 +271,7 @@ public class LeafQueue implements Queue {
   }
 
   @Override
-  public Queue getParent() {
+  public CSQueue getParent() {
     return parent;
   }
 
@@ -313,15 +313,15 @@ public class LeafQueue implements Queue {
     return maxApplications;
   }
 
-  public int getMaxApplicationsPerUser() {
+  public synchronized int getMaxApplicationsPerUser() {
     return maxApplicationsPerUser;
   }
 
-  public int getMaximumActiveApplications() {
+  public synchronized int getMaximumActiveApplications() {
     return maxActiveApplications;
   }
 
-  public int getMaximumActiveApplicationsPerUser() {
+  public synchronized int getMaximumActiveApplicationsPerUser() {
     return maxActiveApplicationsPerUser;
   }
 
@@ -341,7 +341,7 @@ public class LeafQueue implements Queue {
   }
 
   @Override
-  public List<Queue> getChildQueues() {
+  public List<CSQueue> getChildQueues() {
     return null;
   }
 
@@ -381,7 +381,7 @@ public class LeafQueue implements Queue {
     this.userLimitFactor = userLimitFactor;
   }
 
-  synchronized void setParentQueue(Queue parent) {
+  synchronized void setParentQueue(CSQueue parent) {
     this.parent = parent;
   }
   
@@ -423,12 +423,12 @@ public class LeafQueue implements Queue {
   }
 
   @Private
-  public int getUserLimit() {
+  public synchronized int getUserLimit() {
     return userLimit;
   }
 
   @Private
-  public float getUserLimitFactor() {
+  public synchronized float getUserLimitFactor() {
     return userLimitFactor;
   }
 
@@ -480,7 +480,7 @@ public class LeafQueue implements Queue {
   }
 
   @Override
-  public synchronized void reinitialize(Queue queue, Resource clusterResource) 
+  public synchronized void reinitialize(CSQueue queue, Resource clusterResource) 
   throws IOException {
     // Sanity check
     if (!(queue instanceof LeafQueue) || 
@@ -493,9 +493,10 @@ public class LeafQueue implements Queue {
     setupQueueConfigs(leafQueue.capacity, leafQueue.absoluteCapacity, 
         leafQueue.maximumCapacity, leafQueue.absoluteMaxCapacity, 
         leafQueue.userLimit, leafQueue.userLimitFactor, 
-        leafQueue.maxApplications, leafQueue.maxApplicationsPerUser,
-        leafQueue.maxActiveApplications, 
-        leafQueue.maxActiveApplicationsPerUser,
+        leafQueue.maxApplications,
+        leafQueue.getMaxApplicationsPerUser(),
+        leafQueue.getMaximumActiveApplications(), 
+        leafQueue.getMaximumActiveApplicationsPerUser(),
         leafQueue.state, leafQueue.acls);
     
     updateResource(clusterResource);
@@ -900,7 +901,7 @@ public class LeafQueue implements Queue {
       // Protect against corner case where you need the whole node with
       // Math.min(nodeFactor, minimumAllocationFactor)
       starvation = 
-          (int)((application.getReReservations(priority) / reservedContainers) * 
+          (int)((application.getReReservations(priority) / (float)reservedContainers) * 
                 (1.0f - (Math.min(nodeFactor, getMinimumAllocationFactor())))
                );
       

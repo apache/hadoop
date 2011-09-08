@@ -311,7 +311,14 @@ public class ContainerManagerImpl extends CompositeService implements
     Container container = this.context.getContainers().get(containerID);
     if (container == null) {
       LOG.warn("Trying to stop unknown container " + containerID);
-      NMAuditLogger.logFailure(container.getUser(),
+      String userName;
+      try {
+        userName = UserGroupInformation.getCurrentUser().getUserName();
+      } catch (IOException e) {
+        LOG.error("Error finding userName", e);
+        return response;
+      }
+      NMAuditLogger.logFailure(userName,
           AuditConstants.STOP_CONTAINER, "ContainerManagerImpl",
           "Trying to stop unknown container!",
           containerID.getAppId(), containerID);

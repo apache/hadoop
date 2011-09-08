@@ -1215,6 +1215,8 @@ Release 0.23.0 - Unreleased
 
    MAPREDUCE-2948. Hadoop streaming test failure, post MR-2767 (mahadev)
 
+   MAPREDUCE-2908. Fix all findbugs warnings. (vinodkv via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

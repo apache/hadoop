@@ -278,10 +278,7 @@ public class SchedulerApp {
   }
 
   synchronized public void resetSchedulingOpportunities(Priority priority) {
-    Integer schedulingOpportunities = 
-        this.schedulingOpportunities.get(priority);
-    schedulingOpportunities = 0;
-    this.schedulingOpportunities.put(priority, schedulingOpportunities);
+    this.schedulingOpportunities.put(priority, Integer.valueOf(0));
   }
 
   synchronized public void addSchedulingOpportunity(Priority priority) {
@@ -305,9 +302,7 @@ public class SchedulerApp {
   }
 
   synchronized void resetReReservations(Priority priority) {
-    Integer reReservations = this.reReservations.get(priority);
-    reReservations = 0;
-    this.reReservations.put(priority, reReservations);
+    this.reReservations.put(priority, Integer.valueOf(0));
   }
 
   synchronized void addReReservation(Priority priority) {
