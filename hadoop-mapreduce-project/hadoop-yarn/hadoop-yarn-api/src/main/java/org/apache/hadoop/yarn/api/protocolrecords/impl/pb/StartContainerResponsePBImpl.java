@@ -48,20 +48,20 @@ public class StartContainerResponsePBImpl extends ProtoBase<StartContainerRespon
     viaProto = true;
   }
   
-  public StartContainerResponseProto getProto() {
+  public synchronized StartContainerResponseProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
   }
 
-  private void mergeLocalToBuilder() {
+  private synchronized void mergeLocalToBuilder() {
     if (this.serviceResponse != null) {
       addServiceResponseToProto();
     }
   }
   
-  private void mergeLocalToProto() {
+  private synchronized void mergeLocalToProto() {
     if (viaProto) {
       maybeInitBuilder();
     }
@@ -70,7 +70,7 @@ public class StartContainerResponsePBImpl extends ProtoBase<StartContainerRespon
     viaProto = true;
   }
 
-  private void maybeInitBuilder() {
+  private synchronized void maybeInitBuilder() {
     if (viaProto || builder == null) {
       builder = StartContainerResponseProto.newBuilder(proto);
     }
@@ -79,17 +79,17 @@ public class StartContainerResponsePBImpl extends ProtoBase<StartContainerRespon
    
 
   @Override
-  public Map<String, ByteBuffer> getAllServiceResponse() {
+  public synchronized Map<String, ByteBuffer> getAllServiceResponse() {
     initServiceResponse();
     return this.serviceResponse;
   }
   @Override
-  public ByteBuffer getServiceResponse(String key) {
+  public synchronized ByteBuffer getServiceResponse(String key) {
     initServiceResponse();
     return this.serviceResponse.get(key);
   }
   
-  private void initServiceResponse() {
+  private synchronized void initServiceResponse() {
     if (this.serviceResponse != null) {
       return;
     }
@@ -103,14 +103,14 @@ public class StartContainerResponsePBImpl extends ProtoBase<StartContainerRespon
   }
   
   @Override
-  public void addAllServiceResponse(final Map<String, ByteBuffer> serviceResponse) {
+  public synchronized void addAllServiceResponse(final Map<String, ByteBuffer> serviceResponse) {
     if (serviceResponse == null)
       return;
     initServiceResponse();
     this.serviceResponse.putAll(serviceResponse);
   }
   
-  private void addServiceResponseToProto() {
+  private synchronized void addServiceResponseToProto() {
     maybeInitBuilder();
     builder.clearServiceResponse();
     if (serviceResponse == null)
@@ -118,24 +118,24 @@ public class StartContainerResponsePBImpl extends ProtoBase<StartContainerRespon
     Iterable<StringBytesMapProto> iterable = new Iterable<StringBytesMapProto>() {
       
       @Override
-      public Iterator<StringBytesMapProto> iterator() {
+      public synchronized Iterator<StringBytesMapProto> iterator() {
         return new Iterator<StringBytesMapProto>() {
           
           Iterator<String> keyIter = serviceResponse.keySet().iterator();
           
           @Override
-          public void remove() {
+          public synchronized void remove() {
             throw new UnsupportedOperationException();
           }
           
           @Override
-          public StringBytesMapProto next() {
+          public synchronized StringBytesMapProto next() {
             String key = keyIter.next();
             return StringBytesMapProto.newBuilder().setKey(key).setValue(convertToProtoFormat(serviceResponse.get(key))).build();
           }
           
           @Override
-          public boolean hasNext() {
+          public synchronized boolean hasNext() {
             return keyIter.hasNext();
           }
         };
@@ -144,17 +144,17 @@ public class StartContainerResponsePBImpl extends ProtoBase<StartContainerRespon
     builder.addAllServiceResponse(iterable);
   }
   @Override
-  public void setServiceResponse(String key, ByteBuffer val) {
+  public synchronized void setServiceResponse(String key, ByteBuffer val) {
     initServiceResponse();
     this.serviceResponse.put(key, val);
   }
   @Override
-  public void removeServiceResponse(String key) {
+  public synchronized void removeServiceResponse(String key) {
     initServiceResponse();
     this.serviceResponse.remove(key);
   }
   @Override
-  public void clearServiceResponse() {
+  public synchronized void clearServiceResponse() {
     initServiceResponse();
     this.serviceResponse.clear();
   }
