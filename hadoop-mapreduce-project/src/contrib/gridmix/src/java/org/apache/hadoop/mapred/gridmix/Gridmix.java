@@ -314,9 +314,13 @@ public class Gridmix extends Configured implements Tool {
       }
     });
     
-    // print the run summary
-    System.out.print("\n\n");
-    System.out.println(summarizer.toString());
+    // print the gridmix summary if the run was successful
+    if (val == 0) {
+        // print the run summary
+        System.out.print("\n\n");
+        System.out.println(summarizer.toString());
+    }
+    
     return val; 
   }
 

@@ -6,6 +6,10 @@ Trunk (unreleased changes)
 
     MAPREDUCE-2887 due to HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)
 
+  BUG FIXES
+    MAPREDUCE-2784. [Gridmix] Bug fixes in ExecutionSummarizer and 
+    ResourceUsageMatcher. (amarrk)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
