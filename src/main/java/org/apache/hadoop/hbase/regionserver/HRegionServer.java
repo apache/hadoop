@@ -119,6 +119,7 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRootHandler;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
+import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
@@ -3086,6 +3087,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public List<BlockCacheColumnFamilySummary> getBlockCacheColumnFamilySummaries() throws IOException {
     BlockCache c = StoreFile.getBlockCache(this.conf);
     return c.getBlockCacheColumnFamilySummaries(this.conf);
+  }
+
+  @Override
+  public byte[][] rollHLogWriter() throws IOException, FailedLogCloseException {
+    HLog wal = this.getWAL();
+    return wal.rollWriter(true);
   }
 
 

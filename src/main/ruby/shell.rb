@@ -265,6 +265,7 @@ Shell.load_command_group(
     split
     unassign
     zk_dump
+    hlog_roll
   ]
 )
 

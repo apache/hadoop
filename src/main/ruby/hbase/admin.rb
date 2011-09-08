@@ -61,6 +61,12 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Requests a regionserver's HLog roll
+    def hlog_roll(server_name)
+      @admin.rollHLogWriter(server_name)
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Requests a table or region split
     def split(table_or_region_name, split_point)
       if split_point == nil

@@ -55,7 +55,10 @@ import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.TestHLogUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -1160,5 +1163,109 @@ public class TestAdmin {
         expectedRegions, RegionInfos.size());
     
  }
+
+  @Test
+  public void testHLogRollWriting() throws Exception {
+    setUpforLogRolling();
+    String className = this.getClass().getName();
+    StringBuilder v = new StringBuilder(className);
+    while (v.length() < 1000) {
+      v.append(className);
+    }
+    byte[] value = Bytes.toBytes(v.toString());
+    HRegionServer regionServer = startAndWriteData("TestLogRolling", value);
+    LOG.info("after writing there are "
+        + TestHLogUtils.getNumLogFiles(regionServer.getWAL()) + " log files");
+
+    // flush all regions
+
+    List<HRegion> regions = new ArrayList<HRegion>(regionServer
+        .getOnlineRegionsLocalContext());
+    for (HRegion r : regions) {
+      r.flushcache();
+    }
+    admin.rollHLogWriter(regionServer.getServerName().getServerName());
+    int count = TestHLogUtils.getNumLogFiles(regionServer.getWAL());
+    LOG.info("after flushing all regions and rolling logs there are " +
+        count + " log files");
+    assertTrue(("actual count: " + count), count <= 2);
+  }
+
+  private void setUpforLogRolling() {
+    // Force a region split after every 768KB
+    TEST_UTIL.getConfiguration().setLong("hbase.hregion.max.filesize",
+        768L * 1024L);
+
+    // We roll the log after every 32 writes
+    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.maxlogentries", 32);
+
+    TEST_UTIL.getConfiguration().setInt(
+        "hbase.regionserver.logroll.errors.tolerated", 2);
+    TEST_UTIL.getConfiguration().setInt("ipc.ping.interval", 10 * 1000);
+    TEST_UTIL.getConfiguration().setInt("ipc.socket.timeout", 10 * 1000);
+    TEST_UTIL.getConfiguration().setInt("hbase.rpc.timeout", 10 * 1000);
+
+    // For less frequently updated regions flush after every 2 flushes
+    TEST_UTIL.getConfiguration().setInt(
+        "hbase.hregion.memstore.optionalflushcount", 2);
+
+    // We flush the cache after every 8192 bytes
+    TEST_UTIL.getConfiguration().setInt("hbase.hregion.memstore.flush.size",
+        8192);
+
+    // Increase the amount of time between client retries
+    TEST_UTIL.getConfiguration().setLong("hbase.client.pause", 10 * 1000);
+
+    // Reduce thread wake frequency so that other threads can get
+    // a chance to run.
+    TEST_UTIL.getConfiguration().setInt(HConstants.THREAD_WAKE_FREQUENCY,
+        2 * 1000);
+
+    /**** configuration for testLogRollOnDatanodeDeath ****/
+    // make sure log.hflush() calls syncFs() to open a pipeline
+    TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
+    // lower the namenode & datanode heartbeat so the namenode
+    // quickly detects datanode failures
+    TEST_UTIL.getConfiguration().setInt("heartbeat.recheck.interval", 5000);
+    TEST_UTIL.getConfiguration().setInt("dfs.heartbeat.interval", 1);
+    // the namenode might still try to choose the recently-dead datanode
+    // for a pipeline, so try to a new pipeline multiple times
+    TEST_UTIL.getConfiguration().setInt("dfs.client.block.write.retries", 30);
+    TEST_UTIL.getConfiguration().setInt(
+        "hbase.regionserver.hlog.tolerable.lowreplication", 2);
+    TEST_UTIL.getConfiguration().setInt(
+        "hbase.regionserver.hlog.lowreplication.rolllimit", 3);
+  }
+  
+  private HRegionServer startAndWriteData(String tableName, byte[] value)
+      throws IOException {
+    // When the META table can be opened, the region servers are running
+    new HTable(TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME);
+    HRegionServer regionServer = TEST_UTIL.getHbaseCluster()
+        .getRegionServerThreads().get(0).getRegionServer();
+
+    // Create the test table and open it
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+    admin.createTable(desc);
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+
+    regionServer = TEST_UTIL.getRSForFirstRegionInTable(Bytes
+        .toBytes(tableName));
+    for (int i = 1; i <= 256; i++) { // 256 writes should cause 8 log rolls
+      Put put = new Put(Bytes.toBytes("row" + String.format("%1$04d", i)));
+      put.add(HConstants.CATALOG_FAMILY, null, value);
+      table.put(put);
+      if (i % 32 == 0) {
+        // After every 32 writes sleep to let the log roller run
+        try {
+          Thread.sleep(2000);
+        } catch (InterruptedException e) {
+          // continue
+        }
+      }
+    }
+    return regionServer;
+  }
   
 }

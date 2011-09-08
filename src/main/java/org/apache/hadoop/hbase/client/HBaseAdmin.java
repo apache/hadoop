@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -1581,4 +1582,24 @@ public class HBaseAdmin implements Abortable, Closeable {
     return this.connection.getHTableDescriptors(tableNames);
   }
 
+  /**
+   * Roll the log writer. That is, start writing log messages to a new file.
+   * 
+   * @param serverName
+   *          The servername of the regionserver. A server name is made of host,
+   *          port and startcode. This is mandatory. Here is an example:
+   *          <code> host187.example.com,60020,1289493121758</code>
+   * @return If lots of logs, flush the returned regions so next time through
+   * we can clean logs. Returns null if nothing to flush.  Names are actual
+   * region names as returned by {@link HRegionInfo#getEncodedName()}  
+   * @throws IOException if a remote or network exception occurs
+   * @throws FailedLogCloseException
+   */
+ public synchronized  byte[][] rollHLogWriter(String serverName)
+      throws IOException, FailedLogCloseException {
+    ServerName sn = new ServerName(serverName);
+    HRegionInterface rs = this.connection.getHRegionConnection(
+        sn.getHostname(), sn.getPort());
+    return rs.rollHLogWriter();
+  }
 }
