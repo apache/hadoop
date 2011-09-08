@@ -1217,6 +1217,9 @@ Release 0.23.0 - Unreleased
 
    MAPREDUCE-2908. Fix all findbugs warnings. (vinodkv via acmurthy) 
 
+   MAPREDUCE-2947. Fixed race condition in AuxiliaryServices. (vinodkv via
+   acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -72,7 +73,14 @@ public class AuxServices extends AbstractService
    * the the name of the service as defined in the configuration.
    */
   public Map<String, ByteBuffer> getMeta() {
-    return Collections.unmodifiableMap(serviceMeta);
+    Map<String, ByteBuffer> metaClone = new HashMap<String, ByteBuffer>(
+        serviceMeta.size());
+    synchronized (serviceMeta) {
+      for (Entry<String, ByteBuffer> entry : serviceMeta.entrySet()) {
+        metaClone.put(entry.getKey(), entry.getValue().duplicate());
+      }
+    }
+    return metaClone;
   }
 
   @Override
