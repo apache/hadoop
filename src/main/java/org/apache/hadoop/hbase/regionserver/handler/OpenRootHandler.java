@@ -33,12 +33,6 @@ public class OpenRootHandler extends OpenRegionHandler {
   public OpenRootHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo,
       final HTableDescriptor htd) {
-    super(server, rsServices, regionInfo, htd, EventType.M_RS_OPEN_ROOT, -1);
-  }
-  public OpenRootHandler(final Server server,
-      final RegionServerServices rsServices, HRegionInfo regionInfo,
-      final HTableDescriptor htd, int versionOfOfflineNode) {
-    super(server, rsServices, regionInfo, htd, EventType.M_RS_OPEN_ROOT,
-        versionOfOfflineNode);
+    super(server, rsServices, regionInfo, htd, EventType.M_RS_OPEN_ROOT);
   }
 }

@@ -392,11 +392,8 @@ public class ServerManager {
    * <p>
    * @param server server to open a region
    * @param region region to open
-   * @param versionOfOfflineNode that needs to be present in the offline node
-   * when RS tries to change the state from OFFLINE to other states.
    */
-  public RegionOpeningState sendRegionOpen(final ServerName server,
-      HRegionInfo region, int versionOfOfflineNode)
+  public RegionOpeningState sendRegionOpen(final ServerName server, HRegionInfo region)
   throws IOException {
     HRegionInterface hri = getServerConnection(server);
     if (hri == null) {
@@ -404,11 +401,7 @@ public class ServerManager {
         " failed because no RPC connection found to this server");
       return RegionOpeningState.FAILED_OPENING;
     }
-    if (versionOfOfflineNode == -1) {
-      return hri.openRegion(region);
-    } else {
-      return hri.openRegion(region, versionOfOfflineNode);
-    }
+    return hri.openRegion(region);
   }
 
   /**

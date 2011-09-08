@@ -2359,38 +2359,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     return RegionOpeningState.OPENED;
   }
-  @Override
-  @QosPriority(priority = HIGH_QOS)
-  public RegionOpeningState openRegion(HRegionInfo region, int versionOfOfflineNode)
-      throws IOException {
-    checkOpen();
-    if (this.regionsInTransitionInRS.contains(region.getEncodedNameAsBytes())) {
-      throw new RegionAlreadyInTransitionException("open", region
-          .getEncodedName());
-    }
-    HRegion onlineRegion = this.getFromOnlineRegions(region.getEncodedName());
-    if (null != onlineRegion) {
-      LOG.warn("Attempted open of " + region.getEncodedName()
-          + " but already online on this server");
-      return RegionOpeningState.ALREADY_OPENED;
-    }
-    LOG.info("Received request to open region: "
-        + region.getRegionNameAsString());
-    this.regionsInTransitionInRS.add(region.getEncodedNameAsBytes());
-    HTableDescriptor htd = this.tableDescriptors.get(region.getTableName());
-    // Need to pass the expected version in the constructor.
-    if (region.isRootRegion()) {
-      this.service.submit(new OpenRootHandler(this, this, region, htd,
-          versionOfOfflineNode));
-    } else if (region.isMetaRegion()) {
-      this.service.submit(new OpenMetaHandler(this, this, region, htd,
-          versionOfOfflineNode));
-    } else {
-      this.service.submit(new OpenRegionHandler(this, this, region, htd,
-          versionOfOfflineNode));
-    }
-    return RegionOpeningState.OPENED;
-  }
 
   @Override
   @QosPriority(priority=HIGH_QOS)
