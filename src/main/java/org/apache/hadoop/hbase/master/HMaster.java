@@ -188,7 +188,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   private final ServerName serverName;
 
   private TableDescriptors tableDescriptors;
-
+  
   /**
    * Initializes the HMaster. The steps are as follows:
    * <p>
@@ -1265,6 +1265,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         LOG.error("Error call master coprocessor preShutdown()", ioe);
       }
     }
+    this.assignmentManager.shutdown();
     this.serverManager.shutdownCluster();
     try {
       this.clusterStatusTracker.setClusterDown();

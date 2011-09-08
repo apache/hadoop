@@ -2336,6 +2336,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @QosPriority(priority=HIGH_QOS)
   public RegionOpeningState openRegion(HRegionInfo region)
   throws IOException {
+    return openRegion(region, -1);
+  }
+  @Override
+  @QosPriority(priority = HIGH_QOS)
+  public RegionOpeningState openRegion(HRegionInfo region, int versionOfOfflineNode)
+      throws IOException {
     checkOpen();
     if (this.regionsInTransitionInRS.contains(region.getEncodedNameAsBytes())) {
       throw new RegionAlreadyInTransitionException("open", region.getEncodedName());
@@ -2350,12 +2356,16 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       region.getRegionNameAsString());
     this.regionsInTransitionInRS.add(region.getEncodedNameAsBytes());
     HTableDescriptor htd = this.tableDescriptors.get(region.getTableName());
+    // Need to pass the expected version in the constructor.
     if (region.isRootRegion()) {
-      this.service.submit(new OpenRootHandler(this, this, region, htd));
-    } else if(region.isMetaRegion()) {
-      this.service.submit(new OpenMetaHandler(this, this, region, htd));
+      this.service.submit(new OpenRootHandler(this, this, region, htd,
+          versionOfOfflineNode));
+    } else if (region.isMetaRegion()) {
+      this.service.submit(new OpenMetaHandler(this, this, region, htd,
+          versionOfOfflineNode));
     } else {
-      this.service.submit(new OpenRegionHandler(this, this, region, htd));
+      this.service.submit(new OpenRegionHandler(this, this, region, htd,
+          versionOfOfflineNode));
     }
     return RegionOpeningState.OPENED;
   }
@@ -3104,7 +3114,4 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     HLog wal = this.getWAL();
     return wal.rollWriter(true);
   }
-
-
-
 }

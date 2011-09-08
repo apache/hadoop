@@ -38,6 +38,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -159,6 +160,9 @@ public class AssignmentManager extends ZooKeeperListener {
 
   private final ExecutorService executorService;
 
+  //Thread pool executor service for timeout monitor
+  private java.util.concurrent.ExecutorService threadPoolExecutorService;
+
   /**
    * Constructs a new assignment manager.
    *
@@ -190,6 +194,7 @@ public class AssignmentManager extends ZooKeeperListener {
     this.maximumAssignmentAttempts =
       this.master.getConfiguration().getInt("hbase.assignment.maximum.attempts", 10);
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
+    this.threadPoolExecutorService = Executors.newCachedThreadPool();
   }
 
   /**
@@ -475,9 +480,20 @@ public class AssignmentManager extends ZooKeeperListener {
 
         // Just insert region into RIT
         // If this never updates the timeout will trigger new assignment
-        regionsInTransition.put(encodedRegionName, new RegionState(
-            regionInfo, RegionState.State.OPENING,
-            data.getStamp(), data.getOrigin()));
+        if (regionInfo.isMetaRegion() || regionInfo.isRootRegion()) {
+          regionsInTransition.put(encodedRegionName, new RegionState(
+              regionInfo, RegionState.State.OPENING, data.getStamp(), data
+                  .getOrigin()));
+          // If ROOT or .META. table is waiting for timeout monitor to assign
+          // it may take lot of time when the assignment.timeout.period is
+          // the default value which may be very long.  We will not be able
+          // to serve any request during this time.
+          // So we will assign the ROOT and .META. region immediately.
+          processOpeningState(regionInfo);
+          break;
+        }
+        regionsInTransition.put(encodedRegionName, new RegionState(regionInfo,
+            RegionState.State.OPENING, data.getStamp(), data.getOrigin()));
         break;
 
       case RS_ZK_REGION_OPENED:
@@ -1109,12 +1125,21 @@ public class AssignmentManager extends ZooKeeperListener {
 
   public void assign(HRegionInfo region, boolean setOfflineInZK,
       boolean forceNewPlan) {
-    String tableName = region.getTableNameAsString();
-    boolean disabled = this.zkTable.isDisabledTable(tableName);
-    if (disabled || this.zkTable.isDisablingTable(tableName)) {
-      LOG.info("Table " + tableName + (disabled? " disabled;": " disabling;") +
-        " skipping assign of " + region.getRegionNameAsString());
-      offlineDisabledRegion(region);
+    assign(region, setOfflineInZK, forceNewPlan, false);
+  }
+
+  /**
+   * @param region
+   * @param setOfflineInZK
+   * @param forceNewPlan
+   * @param hijack
+   *          - true new assignment is needed, false otherwise
+   */
+  public void assign(HRegionInfo region, boolean setOfflineInZK,
+      boolean forceNewPlan, boolean hijack) {
+    //If hijack is true do not call disableRegionIfInRIT as 
+    // we have not yet moved the znode to OFFLINE state.
+    if (!hijack && isDisabledorDisablingRegionInRIT(region)) {
       return;
     }
     if (this.serverManager.isClusterShutdown()) {
@@ -1122,9 +1147,10 @@ public class AssignmentManager extends ZooKeeperListener {
         region.getRegionNameAsString());
       return;
     }
-    RegionState state = addToRegionsInTransition(region);
+    RegionState state = addToRegionsInTransition(region,
+        hijack);
     synchronized (state) {
-      assign(state, setOfflineInZK, forceNewPlan);
+      assign(region, state, setOfflineInZK, forceNewPlan, hijack);
     }
   }
 
@@ -1282,11 +1308,19 @@ public class AssignmentManager extends ZooKeeperListener {
    * @return The current RegionState
    */
   private RegionState addToRegionsInTransition(final HRegionInfo region) {
+    return addToRegionsInTransition(region, false);
+  }
+  /**
+   * @param region
+   * @param hijack
+   * @return The current RegionState
+   */
+  private RegionState addToRegionsInTransition(final HRegionInfo region,
+      boolean hijack) {
     synchronized (regionsInTransition) {
-      return forceRegionStateToOffline(region);
+      return forceRegionStateToOffline(region, hijack);
     }
   }
-
   /**
    * Sets regions {@link RegionState} to {@link RegionState.State#OFFLINE}.
    * Caller must hold lock on this.regionsInTransition.
@@ -1294,14 +1328,32 @@ public class AssignmentManager extends ZooKeeperListener {
    * @return Amended RegionState.
    */
   private RegionState forceRegionStateToOffline(final HRegionInfo region) {
+    return forceRegionStateToOffline(region, false);
+  }
+
+  /**
+   * Sets regions {@link RegionState} to {@link RegionState.State#OFFLINE}.
+   * Caller must hold lock on this.regionsInTransition.
+   * @param region
+   * @param hijack
+   * @return Amended RegionState.
+   */
+  private RegionState forceRegionStateToOffline(final HRegionInfo region,
+      boolean hijack) {
     String encodedName = region.getEncodedName();
     RegionState state = this.regionsInTransition.get(encodedName);
     if (state == null) {
       state = new RegionState(region, RegionState.State.OFFLINE);
       this.regionsInTransition.put(encodedName, state);
     } else {
-      LOG.debug("Forcing OFFLINE; was=" + state);
-      state.update(RegionState.State.OFFLINE);
+      // If we are reassigning the node do not force in-memory state to OFFLINE.
+      // Based on the znode state we will decide if to change
+      // in-memory state to OFFLINE or not. It will
+      // be done before setting the znode to OFFLINE state.
+      if (!hijack) {
+        LOG.debug("Forcing OFFLINE; was=" + state);
+        state.update(RegionState.State.OFFLINE);
+      }
     }
     return state;
   }
@@ -1311,11 +1363,29 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param state
    * @param setOfflineInZK
    * @param forceNewPlan
+   * @param hijack
    */
-  private void assign(final RegionState state, final boolean setOfflineInZK,
-      final boolean forceNewPlan) {
+  private void assign(final HRegionInfo region, final RegionState state,
+      final boolean setOfflineInZK, final boolean forceNewPlan,
+      boolean hijack) {
     for (int i = 0; i < this.maximumAssignmentAttempts; i++) {
-      if (setOfflineInZK && !setOfflineInZooKeeper(state)) return;
+      int versionOfOfflineNode = -1;
+      if (setOfflineInZK) {
+        // get the version of the znode after setting it to OFFLINE.
+        // versionOfOfflineNode will be -1 if the znode was not set to OFFLINE
+        versionOfOfflineNode = setOfflineInZooKeeper(state,
+            hijack);
+        if(versionOfOfflineNode != -1){
+          if (isDisabledorDisablingRegionInRIT(region)) {
+            return;
+          }
+        }
+      }
+      
+      if (setOfflineInZK && versionOfOfflineNode == -1) {
+        return;
+      }
+      
       if (this.master.isStopped()) {
         LOG.debug("Server stopped; skipping assign of " + state);
         return;
@@ -1334,8 +1404,9 @@ public class AssignmentManager extends ZooKeeperListener {
         state.update(RegionState.State.PENDING_OPEN, System.currentTimeMillis(),
             plan.getDestination());
         // Send OPEN RPC. This can fail if the server on other end is is not up.
+        // Pass the version that was obtained while setting the node to OFFLINE.
         RegionOpeningState regionOpenState = serverManager.sendRegionOpen(plan
-            .getDestination(), state.getRegion());
+            .getDestination(), state.getRegion(), versionOfOfflineNode);
         if (regionOpenState == RegionOpeningState.ALREADY_OPENED) {
           // Remove region from in-memory transition and unassigned node from ZK
           // While trying to enable the table the regions of the table were
@@ -1389,31 +1460,69 @@ public class AssignmentManager extends ZooKeeperListener {
     }
   }
 
+  private boolean isDisabledorDisablingRegionInRIT(final HRegionInfo region) {
+    String tableName = region.getTableNameAsString();
+    boolean disabled = this.zkTable.isDisabledTable(tableName);
+    if (disabled || this.zkTable.isDisablingTable(tableName)) {
+      LOG.info("Table " + tableName + (disabled ? " disabled;" : " disabling;") +
+        " skipping assign of " + region.getRegionNameAsString());
+      offlineDisabledRegion(region);
+      return true;
+    }
+    return false;
+  }
+
   /**
    * Set region as OFFLINED up in zookeeper
+   * 
    * @param state
-   * @return True if we succeeded, false otherwise (State was incorrect or failed
-   * updating zk).
+   * @param hijack
+   *          - true if needs to be hijacked and reassigned, false otherwise.
+   * @return the version of the offline node if setting of the OFFLINE node was
+   *         successful, -1 otherwise.
    */
-  boolean setOfflineInZooKeeper(final RegionState state) {
-    if (!state.isClosed() && !state.isOffline()) {
+  int setOfflineInZooKeeper(final RegionState state,
+      boolean hijack) {
+    // In case of reassignment the current state in memory need not be
+    // OFFLINE. 
+    if (!hijack && !state.isClosed() && !state.isOffline()) {
       this.master.abort("Unexpected state trying to OFFLINE; " + state,
-        new IllegalStateException());
-      return false;
+          new IllegalStateException());
+      return -1;
     }
-    state.update(RegionState.State.OFFLINE);
+    boolean allowZNodeCreation = false;
+    // Under reassignment if the current state is PENDING_OPEN
+    // or OPENING then refresh the in-memory state to PENDING_OPEN. This is
+    // important because if the region was in 
+    // RS_OPENING state for a long time the master will try to force the znode
+    // to OFFLINE state meanwhile the RS could have opened the corresponding
+    // region and the state in znode will be RS_ZK_REGION_OPENED.
+    // For all other cases we can change the in-memory state to OFFLINE.
+    if (hijack && 
+        (state.getState().equals(RegionState.State.PENDING_OPEN) || 
+            state.getState().equals(RegionState.State.OPENING))) {
+      state.update(RegionState.State.PENDING_OPEN);
+      allowZNodeCreation = false;
+    } else {
+      state.update(RegionState.State.OFFLINE);
+      allowZNodeCreation = true;
+    }
+    int versionOfOfflineNode = -1;
     try {
-      if(!ZKAssign.createOrForceNodeOffline(master.getZooKeeper(),
-          state.getRegion(), this.master.getServerName())) {
-        LOG.warn("Attempted to create/force node into OFFLINE state before " +
-          "completing assignment but failed to do so for " + state);
-        return false;
+      // get the version after setting the znode to OFFLINE
+      versionOfOfflineNode = ZKAssign.createOrForceNodeOffline(master.getZooKeeper(), 
+          state.getRegion(), this.master.getServerName(),
+          hijack, allowZNodeCreation);
+      if (versionOfOfflineNode == -1) {
+        LOG.warn("Attempted to create/force node into OFFLINE state before "
+            + "completing assignment but failed to do so for " + state);
+        return -1;
       }
     } catch (KeeperException e) {
       master.abort("Unexpected ZK exception creating/setting node OFFLINE", e);
-      return false;
+      return -1;
     }
-    return true;
+    return versionOfOfflineNode;
   }
 
   /**
@@ -2279,134 +2388,119 @@ public class AssignmentManager extends ZooKeeperListener {
     protected void chore() {
       // If bulkAssign in progress, suspend checks
       if (this.bulkAssign) return;
-      List<HRegionInfo> unassigns = new ArrayList<HRegionInfo>();
-      Map<HRegionInfo, Boolean> assigns =
-        new HashMap<HRegionInfo, Boolean>();
       synchronized (regionsInTransition) {
         // Iterate all regions in transition checking for time outs
         long now = System.currentTimeMillis();
         for (RegionState regionState : regionsInTransition.values()) {
           if (regionState.getStamp() + timeout <= now) {
-            HRegionInfo regionInfo = regionState.getRegion();
-            LOG.info("Regions in transition timed out:  " + regionState);
-            // Expired!  Do a retry.
-            switch (regionState.getState()) {
-              case CLOSED:
-                LOG.info("Region " + regionInfo.getEncodedName() +
-                  " has been CLOSED for too long, waiting on queued " +
-                  "ClosedRegionHandler to run or server shutdown");
-                // Update our timestamp.
-                regionState.updateTimestampToNow();
-                break;
-              case OFFLINE:
-                LOG.info("Region has been OFFLINE for too long, " +
-                  "reassigning " + regionInfo.getRegionNameAsString() +
-                  " to a random server");
-                assigns.put(regionState.getRegion(), Boolean.FALSE);
-                break;
-              case PENDING_OPEN:
-                LOG.info("Region has been PENDING_OPEN for too " +
-                    "long, reassigning region=" +
-                    regionInfo.getRegionNameAsString());
-                assigns.put(regionState.getRegion(), Boolean.TRUE);
-                break;
-              case OPENING:
-                LOG.info("Region has been OPENING for too " +
-                  "long, reassigning region=" +
-                  regionInfo.getRegionNameAsString());
-                // Should have a ZK node in OPENING state
-                try {
-                  String node = ZKAssign.getNodeName(watcher,
-                      regionInfo.getEncodedName());
-                  Stat stat = new Stat();
-                  RegionTransitionData data = ZKAssign.getDataNoWatch(watcher,
-                      node, stat);
-                  if (data == null) {
-                    LOG.warn("Data is null, node " + node + " no longer exists");
-                    break;
-                  }
-                  if (data.getEventType() == EventType.RS_ZK_REGION_OPENED) {
-                    LOG.debug("Region has transitioned to OPENED, allowing " +
-                        "watched event handlers to process");
-                    break;
-                  } else if (data.getEventType() !=
-                      EventType.RS_ZK_REGION_OPENING) {
-                    LOG.warn("While timing out a region in state OPENING, " +
-                        "found ZK node in unexpected state: " +
-                        data.getEventType());
-                    break;
-                  }
-                  // Attempt to transition node into OFFLINE
-                  try {
-                    data = new RegionTransitionData(
-                      EventType.M_ZK_REGION_OFFLINE, regionInfo.getRegionName(),
-                        master.getServerName());
-                    if (ZKUtil.setData(watcher, node, data.getBytes(),
-                        stat.getVersion())) {
-                      // Node is now OFFLINE, let's trigger another assignment
-                      ZKUtil.getDataAndWatch(watcher, node); // re-set the watch
-                      LOG.info("Successfully transitioned region=" +
-                          regionInfo.getRegionNameAsString() + " into OFFLINE" +
-                          " and forcing a new assignment");
-                      assigns.put(regionState.getRegion(), Boolean.TRUE);
-                    }
-                  } catch (KeeperException.NoNodeException nne) {
-                    // Node did not exist, can't time this out
-                  }
-                } catch (KeeperException ke) {
-                  LOG.error("Unexpected ZK exception timing out CLOSING region",
-                      ke);
-                  break;
-                }
-                break;
-              case OPEN:
-                LOG.error("Region has been OPEN for too long, " +
-                "we don't know where region was opened so can't do anything");
-                synchronized(regionState) {
-                  regionState.updateTimestampToNow();
-                }
-                break;
-
-              case PENDING_CLOSE:
-                LOG.info("Region has been PENDING_CLOSE for too " +
-                    "long, running forced unassign again on region=" +
-                    regionInfo.getRegionNameAsString());
-                  try {
-                    // If the server got the RPC, it will transition the node
-                    // to CLOSING, so only do something here if no node exists
-                    if (!ZKUtil.watchAndCheckExists(watcher,
-                      ZKAssign.getNodeName(watcher, regionInfo.getEncodedName()))) {
-                      // Queue running of an unassign -- do actual unassign
-                      // outside of the regionsInTransition lock.
-                      unassigns.add(regionInfo);
-                    }
-                  } catch (NoNodeException e) {
-                    LOG.debug("Node no longer existed so not forcing another " +
-                      "unassignment");
-                  } catch (KeeperException e) {
-                    LOG.warn("Unexpected ZK exception timing out a region " +
-                      "close", e);
-                  }
-                  break;
-              case CLOSING:
-                LOG.info("Region has been CLOSING for too " +
-                  "long, this should eventually complete or the server will " +
-                  "expire, doing nothing");
-                break;
-            }
+           //decide on action upon timeout
+            actOnTimeOut(regionState);
           }
         }
       }
-      // Finish the work for regions in PENDING_CLOSE state
-      for (HRegionInfo hri: unassigns) {
-        unassign(hri, true);
-      }
-      for (Map.Entry<HRegionInfo, Boolean> e: assigns.entrySet()){
-        assign(e.getKey(), false, e.getValue());
+    }
+
+    private void actOnTimeOut(RegionState regionState) {
+      HRegionInfo regionInfo = regionState.getRegion();
+      LOG.info("Regions in transition timed out:  " + regionState);
+      // Expired! Do a retry.
+      switch (regionState.getState()) {
+      case CLOSED:
+        LOG.info("Region " + regionInfo.getEncodedName()
+            + " has been CLOSED for too long, waiting on queued "
+            + "ClosedRegionHandler to run or server shutdown");
+        // Update our timestamp.
+        regionState.updateTimestampToNow();
+        break;
+      case OFFLINE:
+        LOG.info("Region has been OFFLINE for too long, " + "reassigning "
+            + regionInfo.getRegionNameAsString() + " to a random server");
+        invokeAssign(regionInfo);
+        break;
+      case PENDING_OPEN:
+        LOG.info("Region has been PENDING_OPEN for too "
+            + "long, reassigning region=" + regionInfo.getRegionNameAsString());
+        invokeAssign(regionInfo);
+        break;
+      case OPENING:
+        processOpeningState(regionInfo);
+        break;
+      case OPEN:
+        LOG.error("Region has been OPEN for too long, " +
+            "we don't know where region was opened so can't do anything");
+        synchronized (regionState) {
+          regionState.updateTimestampToNow();
+        }
+        break;
+
+      case PENDING_CLOSE:
+        LOG.info("Region has been PENDING_CLOSE for too "
+            + "long, running forced unassign again on region="
+            + regionInfo.getRegionNameAsString());
+        try {
+          // If the server got the RPC, it will transition the node
+          // to CLOSING, so only do something here if no node exists
+          if (!ZKUtil.watchAndCheckExists(watcher, 
+              ZKAssign.getNodeName(watcher, regionInfo.getEncodedName()))) {
+            // Queue running of an unassign -- do actual unassign
+            // outside of the regionsInTransition lock.
+            invokeUnassign(regionInfo);
+          }
+        } catch (NoNodeException e) {
+          LOG.debug("Node no longer existed so not forcing another "
+              + "unassignment");
+        } catch (KeeperException e) {
+          LOG.warn("Unexpected ZK exception timing out a region close", e);
+        }
+        break;
+      case CLOSING:
+        LOG.info("Region has been CLOSING for too " +
+          "long, this should eventually complete or the server will " +
+          "expire, doing nothing");
+        break;
       }
     }
   }
-
+  
+  private void processOpeningState(HRegionInfo regionInfo) {
+    LOG.info("Region has been OPENING for too " + "long, reassigning region="
+        + regionInfo.getRegionNameAsString());
+    // Should have a ZK node in OPENING state
+    try {
+      String node = ZKAssign.getNodeName(watcher, regionInfo.getEncodedName());
+      Stat stat = new Stat();
+      RegionTransitionData dataInZNode = ZKAssign.getDataNoWatch(watcher, node,
+          stat);
+      if (dataInZNode == null) {
+        LOG.warn("Data is null, node " + node + " no longer exists");
+        return;
+      }
+      if (dataInZNode.getEventType() == EventType.RS_ZK_REGION_OPENED) {
+        LOG.debug("Region has transitioned to OPENED, allowing "
+            + "watched event handlers to process");
+        return;
+      } else if (dataInZNode.getEventType() != EventType.RS_ZK_REGION_OPENING) {
+        LOG.warn("While timing out a region in state OPENING, "
+            + "found ZK node in unexpected state: "
+            + dataInZNode.getEventType());
+        return;
+      }
+      invokeAssign(regionInfo);
+    } catch (KeeperException ke) {
+      LOG.error("Unexpected ZK exception timing out CLOSING region", ke);
+      return;
+    }
+    return;
+  }
+  
+  private void invokeAssign(HRegionInfo regionInfo) {
+    threadPoolExecutorService.submit(new AssignCallable(this, regionInfo));
+  }
+  
+  private void invokeUnassign(HRegionInfo regionInfo) {
+    threadPoolExecutorService.submit(new UnAssignCallable(this, regionInfo));
+  }
+  
   /**
    * Process shutdown server removing any assignments.
    * @param sn Server that went down.
@@ -2696,5 +2790,13 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   public boolean isServerOnline(ServerName serverName) {
     return this.serverManager.isServerOnline(serverName);
+  }
+  /**
+   * Shutdown the threadpool executor service
+   */
+  public void shutdown() {
+    if (null != threadPoolExecutorService) {
+      this.threadPoolExecutorService.shutdown();
+    }
   }
 }
