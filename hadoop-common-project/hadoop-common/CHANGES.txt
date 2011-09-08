@@ -371,6 +371,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7507. Allow ganglia metrics to include the metrics system tags
                  in the gmetric names. (Alejandro Abdelnur via todd)
 
+    HADOOP-7612. Change test-patch to run tests for all nested modules.
+    (tomwhite)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
