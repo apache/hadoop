@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 The Apache Software Foundation
+ * Copyright 2011 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -33,142 +33,207 @@ public interface MasterObserver extends Coprocessor {
   /**
    * Called before a new table is created by
    * {@link org.apache.hadoop.hbase.master.HMaster}.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param desc the HTableDescriptor for the table
+   * @param regions the initial regions created for the table
+   * @throws IOException
    */
   void preCreateTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HTableDescriptor desc, byte[][] splitKeys) throws IOException;
+      HTableDescriptor desc, HRegionInfo[] regions) throws IOException;
 
   /**
-   * Called after the initial table regions have been created.
+   * Called after the createTable operation has been requested.
    * @param ctx the environment to interact with the framework and master
+   * @param desc the HTableDescriptor for the table
    * @param regions the initial regions created for the table
-   * @param sync whether the client call is waiting for region assignment to
-   * complete before returning
    * @throws IOException
    */
   void postCreateTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HRegionInfo[] regions, boolean sync) throws IOException;
+      HTableDescriptor desc, HRegionInfo[] regions) throws IOException;
 
   /**
    * Called before {@link org.apache.hadoop.hbase.master.HMaster} deletes a
    * table
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
    */
   void preDeleteTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       byte[] tableName) throws IOException;
 
   /**
-   * Called after the table has been deleted, before returning to the client.
+   * Called after the deleteTable operation has been requested.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
    */
   void postDeleteTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       byte[] tableName) throws IOException;
 
   /**
    * Called prior to modifying a table's properties.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param htd the HTableDescriptor
    */
   void preModifyTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final byte[] tableName, HTableDescriptor htd) throws IOException;
 
   /**
-   * Called after {@link org.apache.hadoop.hbase.master.HMaster} has modified
-   * the table's properties in all the table regions.
+   * Called after the modifyTable operation has been requested.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param htd the HTableDescriptor
    */
   void postModifyTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final byte[] tableName, HTableDescriptor htd) throws IOException;
 
   /**
    * Called prior to adding a new column family to the table.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param column the HColumnDescriptor
    */
   void preAddColumn(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       byte[] tableName, HColumnDescriptor column) throws IOException;
 
   /**
    * Called after the new column family has been created.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param column the HColumnDescriptor
    */
   void postAddColumn(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       byte[] tableName, HColumnDescriptor column) throws IOException;
 
   /**
    * Called prior to modifying a column family's attributes.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param descriptor the HColumnDescriptor
    */
   void preModifyColumn(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       byte [] tableName, HColumnDescriptor descriptor) throws IOException;
 
   /**
    * Called after the column family has been updated.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param descriptor the HColumnDescriptor
    */
   void postModifyColumn(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       byte[] tableName, HColumnDescriptor descriptor) throws IOException;
 
   /**
    * Called prior to deleting the entire column family.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param c the column
    */
   void preDeleteColumn(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final byte [] tableName, final byte[] c) throws IOException;
 
   /**
    * Called after the column family has been deleted.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param c the column
    */
   void postDeleteColumn(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final byte [] tableName, final byte[] c) throws IOException;
 
   /**
    * Called prior to enabling a table.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
    */
   void preEnableTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final byte[] tableName) throws IOException;
 
   /**
-   * Called after the table has been enabled.
+   * Called after the enableTable operation has been requested.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
    */
   void postEnableTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final byte[] tableName) throws IOException;
 
   /**
    * Called prior to disabling a table.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
    */
   void preDisableTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final byte[] tableName) throws IOException;
 
   /**
-   * Called after the table has been disabled.
+   * Called after the disableTable operation has been requested.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
    */
   void postDisableTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final byte[] tableName) throws IOException;
 
   /**
    * Called prior to moving a given region from one region server to another.
+   * @param ctx the environment to interact with the framework and master
+   * @param region the HRegionInfo
+   * @param srcServer the source ServerName
+   * @param destServer the destination ServerName
    */
   void preMove(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final HRegionInfo region, final ServerName srcServer, final ServerName destServer)
+      final HRegionInfo region, final ServerName srcServer,
+      final ServerName destServer)
     throws UnknownRegionException;
 
   /**
    * Called after the region move has been requested.
+   * @param ctx the environment to interact with the framework and master
+   * @param region the HRegionInfo
+   * @param srcServer the source ServerName
+   * @param destServer the destination ServerName
    */
   void postMove(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final HRegionInfo region, final ServerName srcServer, final ServerName destServer)
+      final HRegionInfo region, final ServerName srcServer,
+      final ServerName destServer)
     throws UnknownRegionException;
 
   /**
    * Called prior to assigning a specific region.
+   * @param ctx the environment to interact with the framework and master
+   * @param regionInfo the regionInfo of the region
+   * @param force whether to force assignment or not
    */
   void preAssign(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final byte [] regionName, final boolean force)
+      final HRegionInfo regionInfo, final boolean force)
   throws IOException;
 
   /**
    * Called after the region assignment has been requested.
+   * @param ctx the environment to interact with the framework and master
+   * @param regionInfo the regionInfo of the region
+   * @param force whether to force assignment or not
    */
   void postAssign(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final HRegionInfo regionInfo) throws IOException;
+      final HRegionInfo regionInfo, final boolean force) throws IOException;
 
   /**
    * Called prior to unassigning a given region.
+   * @param ctx the environment to interact with the framework and master
+   * @param regionName the name of the region
+   * @param force whether to force unassignment or not
    */
   void preUnassign(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final byte [] regionName, final boolean force) throws IOException;
+      final HRegionInfo regionInfo, final boolean force) throws IOException;
 
   /**
    * Called after the region unassignment has been requested.
+   * @param ctx the environment to interact with the framework and master
+   * @param regionName the name of the region
+   * @param force whether to force unassignment or not
    */
   void postUnassign(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final HRegionInfo regionInfo, final boolean force) throws IOException;
@@ -176,12 +241,14 @@ public interface MasterObserver extends Coprocessor {
   /**
    * Called prior to requesting rebalancing of the cluster regions, though after
    * the initial checks for regions in transition and the balance switch flag.
+   * @param ctx the environment to interact with the framework and master
    */
   void preBalance(final ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException;
 
   /**
    * Called after the balancing plan has been submitted.
+   * @param ctx the environment to interact with the framework and master
    */
   void postBalance(final ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException;
@@ -212,7 +279,7 @@ public interface MasterObserver extends Coprocessor {
 
 
   /**
-   * Called immediatly prior to stopping this
+   * Called immediately prior to stopping this
    * {@link org.apache.hadoop.hbase.master.HMaster} process.
    */
   void preStopMaster(final ObserverContext<MasterCoprocessorEnvironment> ctx)

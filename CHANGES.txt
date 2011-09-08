@@ -243,6 +243,8 @@ Release 0.91.0 - Unreleased
    HBASE-4309  slow query log metrics spewing warnings (Riley Patterson)
    HBASE-4302  Only run Snappy compression tests if Snappy is available
                (Alejandro Abdelnur via todd)
+   HBASE-4271  Clean up coprocessor handling of table operations
+               (Ming Ma via garyh)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

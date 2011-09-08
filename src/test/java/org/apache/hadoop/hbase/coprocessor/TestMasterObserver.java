@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 The Apache Software Foundation
+ * Copyright 2011 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -59,6 +59,7 @@ public class TestMasterObserver {
 
   public static class CPMasterObserver implements MasterObserver {
 
+    private boolean bypass = false;
     private boolean preCreateTableCalled;
     private boolean postCreateTableCalled;
     private boolean preDeleteTableCalled;
@@ -91,15 +92,51 @@ public class TestMasterObserver {
     private boolean startCalled;
     private boolean stopCalled;
 
+    public void enableBypass(boolean bypass) {
+      this.bypass = bypass;
+    }
+
+    public void resetStates() {
+      preCreateTableCalled = false;
+      postCreateTableCalled = false;
+      preDeleteTableCalled = false;
+      postDeleteTableCalled = false;
+      preModifyTableCalled = false;
+      postModifyTableCalled = false;
+      preAddColumnCalled = false;
+      postAddColumnCalled = false;
+      preModifyColumnCalled = false;
+      postModifyColumnCalled = false;
+      preDeleteColumnCalled = false;
+      postDeleteColumnCalled = false;
+      preEnableTableCalled = false;
+      postEnableTableCalled = false;
+      preDisableTableCalled = false;
+      postDisableTableCalled = false;
+      preMoveCalled= false;
+      postMoveCalled = false;
+      preAssignCalled = false;
+      postAssignCalled = false;
+      preUnassignCalled = false;
+      postUnassignCalled = false;
+      preBalanceCalled = false;
+      postBalanceCalled = false;
+      preBalanceSwitchCalled = false;
+      postBalanceSwitchCalled = false;
+    }
+
     @Override
     public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        HTableDescriptor desc, byte[][] splitKeys) throws IOException {
+        HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+      if (bypass) {
+        env.bypass();
+      }
       preCreateTableCalled = true;
     }
 
     @Override
     public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        HRegionInfo[] regions, boolean sync) throws IOException {
+        HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
       postCreateTableCalled = true;
     }
 
@@ -107,9 +144,16 @@ public class TestMasterObserver {
       return preCreateTableCalled && postCreateTableCalled;
     }
 
+    public boolean preCreateTableCalledOnly() {
+      return preCreateTableCalled && !postCreateTableCalled;
+    }
+
     @Override
     public void preDeleteTable(ObserverContext<MasterCoprocessorEnvironment> env,
         byte[] tableName) throws IOException {
+      if (bypass) {
+        env.bypass();
+      }
       preDeleteTableCalled = true;
     }
 
@@ -123,9 +167,16 @@ public class TestMasterObserver {
       return preDeleteTableCalled && postDeleteTableCalled;
     }
 
+    public boolean preDeleteTableCalledOnly() {
+      return preDeleteTableCalled && !postDeleteTableCalled;
+    }
+
     @Override
     public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> env,
         byte[] tableName, HTableDescriptor htd) throws IOException {
+      if (bypass) {
+        env.bypass();
+      }
       preModifyTableCalled = true;
     }
 
@@ -139,9 +190,16 @@ public class TestMasterObserver {
       return preModifyTableCalled && postModifyTableCalled;
     }
 
+    public boolean preModifyTableCalledOnly() {
+      return preModifyTableCalled && !postModifyTableCalled;
+    }
+
     @Override
     public void preAddColumn(ObserverContext<MasterCoprocessorEnvironment> env,
         byte[] tableName, HColumnDescriptor column) throws IOException {
+      if (bypass) {
+        env.bypass();
+      }
       preAddColumnCalled = true;
     }
 
@@ -155,9 +213,16 @@ public class TestMasterObserver {
       return preAddColumnCalled && postAddColumnCalled;
     }
 
+    public boolean preAddColumnCalledOnly() {
+      return preAddColumnCalled && !postAddColumnCalled;
+    }
+
     @Override
     public void preModifyColumn(ObserverContext<MasterCoprocessorEnvironment> env,
         byte[] tableName, HColumnDescriptor descriptor) throws IOException {
+      if (bypass) {
+        env.bypass();
+      }
       preModifyColumnCalled = true;
     }
 
@@ -171,9 +236,16 @@ public class TestMasterObserver {
       return preModifyColumnCalled && postModifyColumnCalled;
     }
 
+    public boolean preModifyColumnCalledOnly() {
+      return preModifyColumnCalled && !postModifyColumnCalled;
+    }
+
     @Override
     public void preDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> env,
         byte[] tableName, byte[] c) throws IOException {
+      if (bypass) {
+        env.bypass();
+      }
       preDeleteColumnCalled = true;
     }
 
@@ -187,9 +259,16 @@ public class TestMasterObserver {
       return preDeleteColumnCalled && postDeleteColumnCalled;
     }
 
+    public boolean preDeleteColumnCalledOnly() {
+      return preDeleteColumnCalled && !postDeleteColumnCalled;
+    }
+
     @Override
     public void preEnableTable(ObserverContext<MasterCoprocessorEnvironment> env,
         byte[] tableName) throws IOException {
+      if (bypass) {
+        env.bypass();
+      }
       preEnableTableCalled = true;
     }
 
@@ -203,9 +282,16 @@ public class TestMasterObserver {
       return preEnableTableCalled && postEnableTableCalled;
     }
 
+    public boolean preEnableTableCalledOnly() {
+      return preEnableTableCalled && !postEnableTableCalled;
+    }
+
     @Override
     public void preDisableTable(ObserverContext<MasterCoprocessorEnvironment> env,
         byte[] tableName) throws IOException {
+      if (bypass) {
+        env.bypass();
+      }
       preDisableTableCalled = true;
     }
 
@@ -219,10 +305,17 @@ public class TestMasterObserver {
       return preDisableTableCalled && postDisableTableCalled;
     }
 
+    public boolean preDisableTableCalledOnly() {
+      return preDisableTableCalled && !postDisableTableCalled;
+    }
+
     @Override
     public void preMove(ObserverContext<MasterCoprocessorEnvironment> env,
         HRegionInfo region, ServerName srcServer, ServerName destServer)
     throws UnknownRegionException {
+      if (bypass) {
+        env.bypass();
+      }
       preMoveCalled = true;
     }
 
@@ -237,15 +330,22 @@ public class TestMasterObserver {
       return preMoveCalled && postMoveCalled;
     }
 
+    public boolean preMoveCalledOnly() {
+      return preMoveCalled && !postMoveCalled;
+    }
+
     @Override
     public void preAssign(ObserverContext<MasterCoprocessorEnvironment> env,
-        final byte [] regionName, final boolean force) throws IOException {
+        final HRegionInfo regionInfo, final boolean force) throws IOException {
+      if (bypass) {
+        env.bypass();
+      }
       preAssignCalled = true;
     }
 
     @Override
     public void postAssign(ObserverContext<MasterCoprocessorEnvironment> env,
-        final HRegionInfo regionInfo) throws IOException {
+        final HRegionInfo regionInfo, final boolean force) throws IOException {
       postAssignCalled = true;
     }
 
@@ -253,9 +353,16 @@ public class TestMasterObserver {
       return preAssignCalled && postAssignCalled;
     }
 
+    public boolean preAssignCalledOnly() {
+      return preAssignCalled && !postAssignCalled;
+    }
+
     @Override
     public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> env,
-        final byte [] regionName, final boolean force) throws IOException {
+        final HRegionInfo regionInfo, final boolean force) throws IOException {
+      if (bypass) {
+        env.bypass();
+      }
       preUnassignCalled = true;
     }
 
@@ -269,9 +376,16 @@ public class TestMasterObserver {
       return preUnassignCalled && postUnassignCalled;
     }
 
+    public boolean preUnassignCalledOnly() {
+      return preUnassignCalled && !postUnassignCalled;
+    }
+
     @Override
     public void preBalance(ObserverContext<MasterCoprocessorEnvironment> env)
         throws IOException {
+      if (bypass) {
+        env.bypass();
+      }
       preBalanceCalled = true;
     }
 
@@ -285,9 +399,16 @@ public class TestMasterObserver {
       return preBalanceCalled && postBalanceCalled;
     }
 
+    public boolean preBalanceCalledOnly() {
+      return preBalanceCalled && !postBalanceCalled;
+    }
+
     @Override
     public boolean preBalanceSwitch(ObserverContext<MasterCoprocessorEnvironment> env, boolean b)
         throws IOException {
+      if (bypass) {
+        env.bypass();
+      }
       preBalanceSwitchCalled = true;
       return b;
     }
@@ -300,6 +421,10 @@ public class TestMasterObserver {
 
     public boolean wasBalanceSwitchCalled() {
       return preBalanceSwitchCalled && postBalanceSwitchCalled;
+    }
+
+    public boolean preBalanceSwitchCalledOnly() {
+      return preBalanceSwitchCalled && !postBalanceSwitchCalled;
     }
 
     @Override
@@ -384,21 +509,78 @@ public class TestMasterObserver {
     MasterCoprocessorHost host = master.getCoprocessorHost();
     CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
         CPMasterObserver.class.getName());
+    cp.enableBypass(true);
+    cp.resetStates();
     assertFalse("No table created yet", cp.wasCreateTableCalled());
 
     // create a table
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE);
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
     HBaseAdmin admin = UTIL.getHBaseAdmin();
+
+    admin.createTable(htd);
+    // preCreateTable can't bypass default action.
+    assertTrue("Test table should be created", cp.wasCreateTableCalled());
+
+    admin.disableTable(TEST_TABLE);
+    assertTrue(admin.isTableDisabled(TEST_TABLE));
+    // preDisableTable can't bypass default action.
+    assertTrue("Coprocessor should have been called on table disable",
+      cp.wasDisableTableCalled());
+
+    // enable
+    assertFalse(cp.wasEnableTableCalled());
+    admin.enableTable(TEST_TABLE);
+    assertTrue(admin.isTableEnabled(TEST_TABLE));
+    // preEnableTable can't bypass default action.
+    assertTrue("Coprocessor should have been called on table enable",
+      cp.wasEnableTableCalled());
+
+    admin.disableTable(TEST_TABLE);
+    assertTrue(admin.isTableDisabled(TEST_TABLE));
+
+    // modify table
+    htd.setMaxFileSize(512 * 1024 * 1024);
+    admin.modifyTable(TEST_TABLE, htd);
+    // preModifyTable can't bypass default action.
+    assertTrue("Test table should have been modified",
+      cp.wasModifyTableCalled());
+
+    // add a column family
+    admin.addColumn(TEST_TABLE, new HColumnDescriptor(TEST_FAMILY2));
+    assertTrue("New column family shouldn't have been added to test table",
+      cp.preAddColumnCalledOnly());
+
+    // modify a column family
+    HColumnDescriptor hcd1 = new HColumnDescriptor(TEST_FAMILY2);
+    hcd1.setMaxVersions(25);
+    admin.modifyColumn(TEST_TABLE, hcd1);
+    assertTrue("Second column family should be modified",
+      cp.preModifyColumnCalledOnly());
+
+    // delete table
+    admin.deleteTable(TEST_TABLE);
+    assertFalse("Test table should have been deleted",
+        admin.tableExists(TEST_TABLE));
+    // preDeleteTable can't bypass default action.
+    assertTrue("Coprocessor should have been called on table delete",
+      cp.wasDeleteTableCalled());
+
+
+    // turn off bypass, run the tests again
+    cp.enableBypass(false);
+    cp.resetStates();
+
     admin.createTable(htd);
     assertTrue("Test table should be created", cp.wasCreateTableCalled());
 
     // disable
     assertFalse(cp.wasDisableTableCalled());
+
     admin.disableTable(TEST_TABLE);
     assertTrue(admin.isTableDisabled(TEST_TABLE));
     assertTrue("Coprocessor should have been called on table disable",
-        cp.wasDisableTableCalled());
+      cp.wasDisableTableCalled());
 
     // modify table
     htd.setMaxFileSize(512 * 1024 * 1024);
@@ -455,6 +637,8 @@ public class TestMasterObserver {
     MasterCoprocessorHost host = master.getCoprocessorHost();
     CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
         CPMasterObserver.class.getName());
+    cp.enableBypass(false);
+    cp.resetStates();
 
     HTable table = UTIL.createTable(TEST_TABLE, TEST_FAMILY);
     UTIL.createMultiRegions(table, TEST_FAMILY);

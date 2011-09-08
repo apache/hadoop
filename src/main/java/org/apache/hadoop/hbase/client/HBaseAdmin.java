@@ -107,10 +107,10 @@ public class HBaseAdmin implements Abortable, Closeable {
         break;
       } catch (MasterNotRunningException mnre) {
         HConnectionManager.deleteStaleConnection(this.connection);
-        this.connection = HConnectionManager.getConnection(this.conf);        
+        this.connection = HConnectionManager.getConnection(this.conf);
       } catch (UndeclaredThrowableException ute) {
         HConnectionManager.deleteStaleConnection(this.connection);
-        this.connection = HConnectionManager.getConnection(this.conf);        
+        this.connection = HConnectionManager.getConnection(this.conf);
       }
       try { // Sleep
         Thread.sleep(getPauseTime(tries));
@@ -486,8 +486,23 @@ public class HBaseAdmin implements Abortable, Closeable {
           firstMetaServer.getRegionInfo().getRegionName(), scan);
         // Get a batch at a time.
         Result values = server.next(scannerId);
+
+        // let us wait until .META. table is updated and
+        // HMaster removes the table from its HTableDescriptors
         if (values == null) {
-          break;
+          boolean tableExists = false;
+          HTableDescriptor[] htds = getMaster().getHTableDescriptors();
+          if (htds != null && htds.length > 0) {
+            for (HTableDescriptor htd: htds) {
+              if (Bytes.equals(tableName, htd.getName())) {
+                tableExists = true;
+                break;
+              }
+            }
+          }
+          if (!tableExists) {
+            break;
+          }
         }
       } catch (IOException ex) {
         if(tries == numRetries - 1) {           // no more tries left

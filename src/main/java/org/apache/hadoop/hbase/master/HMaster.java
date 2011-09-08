@@ -922,7 +922,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     } else {
       dest = new ServerName(Bytes.toString(destServerName));
       if (this.cpHost != null) {
-        this.cpHost.preMove(p.getFirst(), p.getSecond(), dest);
+        if (this.cpHost.preMove(p.getFirst(), p.getSecond(), dest)) {
+          return;
+        }
       }
       RegionPlan rp = new RegionPlan(p.getFirst(), p.getSecond(), dest);
       LOG.info("Added move plan " + rp + ", running balancer");
@@ -939,18 +941,18 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     if (!isMasterRunning()) {
       throw new MasterNotRunningException();
     }
-    if (cpHost != null) {
-      cpHost.preCreateTable(hTableDescriptor, splitKeys);
-    }
+
     HRegionInfo [] newRegions = getHRegionInfos(hTableDescriptor, splitKeys);
+    if (cpHost != null) {
+      cpHost.preCreateTable(hTableDescriptor, newRegions);
+    }
 
     this.executorService.submit(new CreateTableHandler(this,
       this.fileSystemManager, this.serverManager, hTableDescriptor, conf,
       newRegions, catalogTracker, assignmentManager));
 
     if (cpHost != null) {
-      // TODO, remove sync parameter from postCreateTable method
-      cpHost.postCreateTable(newRegions, false);
+      cpHost.postCreateTable(hTableDescriptor, newRegions);
     }
   }
 
@@ -986,6 +988,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       cpHost.preDeleteTable(tableName);
     }
     this.executorService.submit(new DeleteTableHandler(tableName, this, this));
+
     if (cpHost != null) {
       cpHost.postDeleteTable(tableName);
     }
@@ -1006,7 +1009,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   public void addColumn(byte [] tableName, HColumnDescriptor column)
   throws IOException {
     if (cpHost != null) {
-      cpHost.preAddColumn(tableName, column);
+      if (cpHost.preAddColumn(tableName, column)) {
+        return;
+      }
     }
     new TableAddFamilyHandler(tableName, column, this, this).process();
     if (cpHost != null) {
@@ -1017,7 +1022,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   public void modifyColumn(byte [] tableName, HColumnDescriptor descriptor)
   throws IOException {
     if (cpHost != null) {
-      cpHost.preModifyColumn(tableName, descriptor);
+      if (cpHost.preModifyColumn(tableName, descriptor)) {
+        return;
+      }
     }
     new TableModifyFamilyHandler(tableName, descriptor, this, this).process();
     if (cpHost != null) {
@@ -1028,7 +1035,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   public void deleteColumn(final byte [] tableName, final byte [] c)
   throws IOException {
     if (cpHost != null) {
-      cpHost.preDeleteColumn(tableName, c);
+      if (cpHost.preDeleteColumn(tableName, c)) {
+        return;
+      }
     }
     new TableDeleteFamilyHandler(tableName, c, this, this).process();
     if (cpHost != null) {
@@ -1042,6 +1051,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     }
     this.executorService.submit(new EnableTableHandler(this, tableName,
       catalogTracker, assignmentManager, false));
+
     if (cpHost != null) {
       cpHost.postEnableTable(tableName);
     }
@@ -1053,6 +1063,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     }
     this.executorService.submit(new DisableTableHandler(this, tableName,
       catalogTracker, assignmentManager, false));
+
     if (cpHost != null) {
       cpHost.postDisableTable(tableName);
     }
@@ -1099,7 +1110,10 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     if (cpHost != null) {
       cpHost.preModifyTable(tableName, htd);
     }
-    this.executorService.submit(new ModifyTableHandler(tableName, htd, this, this));
+
+    this.executorService.submit(new ModifyTableHandler(tableName, htd, this,
+      this));
+
     if (cpHost != null) {
       cpHost.postModifyTable(tableName, htd);
     }
@@ -1319,17 +1333,17 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   @Override
   public void assign(final byte [] regionName, final boolean force)
   throws IOException {
-    if (cpHost != null) {
-      if (cpHost.preAssign(regionName, force)) {
-        return;
-      }
-    }
     Pair<HRegionInfo, ServerName> pair =
       MetaReader.getRegion(this.catalogTracker, regionName);
     if (pair == null) throw new UnknownRegionException(Bytes.toString(regionName));
+    if (cpHost != null) {
+      if (cpHost.preAssign(pair.getFirst(), force)) {
+        return;
+      }
+    }
     assignRegion(pair.getFirst());
     if (cpHost != null) {
-      cpHost.postAssign(pair.getFirst());
+      cpHost.postAssign(pair.getFirst(), force);
     }
   }
 
@@ -1340,15 +1354,15 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   @Override
   public void unassign(final byte [] regionName, final boolean force)
   throws IOException {
-    if (cpHost != null) {
-      if (cpHost.preUnassign(regionName, force)) {
-        return;
-      }
-    }
     Pair<HRegionInfo, ServerName> pair =
       MetaReader.getRegion(this.catalogTracker, regionName);
     if (pair == null) throw new UnknownRegionException(Bytes.toString(regionName));
     HRegionInfo hri = pair.getFirst();
+    if (cpHost != null) {
+      if (cpHost.preUnassign(hri, force)) {
+        return;
+      }
+    }
     if (force) this.assignmentManager.clearRegionFromTransition(hri);
     this.assignmentManager.unassign(hri, force);
     if (cpHost != null) {

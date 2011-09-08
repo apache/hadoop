@@ -32,12 +32,12 @@ import java.io.IOException;
 public class BaseMasterObserver implements MasterObserver {
   @Override
   public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HTableDescriptor desc, byte[][] splitKeys) throws IOException {
+      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
   }
 
   @Override
   public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HRegionInfo[] regions, boolean sync) throws IOException {
+      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
   }
 
   @Override
@@ -112,17 +112,17 @@ public class BaseMasterObserver implements MasterObserver {
 
   @Override
   public void preAssign(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      byte[] regionName, boolean force) throws IOException {
+      HRegionInfo regionInfo, boolean force) throws IOException {
   }
 
   @Override
   public void postAssign(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HRegionInfo regionInfo) throws IOException {
+      HRegionInfo regionInfo, boolean force) throws IOException {
   }
 
   @Override
   public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      byte[] regionName, boolean force) throws IOException {
+      HRegionInfo regionInfo, boolean force) throws IOException {
   }
 
   @Override

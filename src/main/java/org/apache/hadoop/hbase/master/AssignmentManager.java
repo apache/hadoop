@@ -2047,10 +2047,12 @@ public class AssignmentManager extends ZooKeeperListener {
             watcher.assignmentZNode);
       }
       for (String tableName : enablingTables) {
-        // Recover by calling DisableTableHandler
+        // Recover by calling EnableTableHandler
         LOG.info("The table " + tableName
             + " is in ENABLING state.  Hence recovering by moving the table"
             + " to ENABLED state.");
+        // enableTable in sync way during master startup,
+        // no need to invoke coprocessor
         new EnableTableHandler(this.master, tableName.getBytes(),
             catalogTracker, this, true).process();
       }
