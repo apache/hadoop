@@ -1236,6 +1236,9 @@ Release 0.23.0 - Unreleased
    MAPREDUCE-2844. Fixed display of nodes in UI. (Ravi Teja Ch N V via
    acmurthy) 
 
+   MAPREDUCE-2677. Fixed 404 for some links from HistoryServer. (Robert Evans
+   via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

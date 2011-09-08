@@ -25,11 +25,11 @@ import org.apache.hadoop.mapreduce.v2.app.webapp.AMParams;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryContext;
 import org.apache.hadoop.yarn.webapp.WebApp;
 
-public class HSWebApp extends WebApp implements AMParams {
+public class HsWebApp extends WebApp implements AMParams {
 
   private HistoryContext history;
 
-  public HSWebApp(HistoryContext history) {
+  public HsWebApp(HistoryContext history) {
     this.history = history;
   }
 
@@ -44,6 +44,7 @@ public class HSWebApp extends WebApp implements AMParams {
     route(pajoin("/attempts", JOB_ID, TASK_TYPE, ATTEMPT_STATE),
         HsController.class, "attempts");
     route(pajoin("/task", TASK_ID), HsController.class, "task");
+    route("/about", HsController.class, "about");
   }
 }
 

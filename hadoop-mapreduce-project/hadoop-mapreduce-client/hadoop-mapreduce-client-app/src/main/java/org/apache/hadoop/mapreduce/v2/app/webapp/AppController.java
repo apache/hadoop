@@ -31,9 +31,13 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.Controller;
+import org.apache.hadoop.yarn.webapp.View;
 
 import com.google.inject.Inject;
 
+/**
+ * This class renders the various pages that the web app supports.
+ */
 public class AppController extends Controller implements AMParams {
   final App app;
   
@@ -50,10 +54,16 @@ public class AppController extends Controller implements AMParams {
     this(app, conf, ctx, "am");
   }
 
+  /**
+   * Render the default(index.html) page for the Application Controller
+   */
   @Override public void index() {
     setTitle(join("MapReduce Application ", $(APP_ID)));
   }
 
+  /**
+   * Render the /info page with an overview of current application.
+   */
   public void info() {
     info("Application Master Overview").
       _("Application ID:", $(APP_ID)).
@@ -65,22 +75,52 @@ public class AppController extends Controller implements AMParams {
     render(InfoPage.class);
   }
 
+  /**
+   * @return The class that will render the /job page
+   */
+  protected Class<? extends View> jobPage() {
+    return JobPage.class;
+  }
+  
+  /**
+   * Render the /job page
+   */
   public void job() {
     requireJob();
-    render(JobPage.class);
+    render(jobPage());
   }
 
+  /**
+   * @return the class that will render the /jobcounters page
+   */
+  protected Class<? extends View> countersPage() {
+    return CountersPage.class;
+  }
+  
+  /**
+   * Render the /jobcounters page
+   */
   public void jobCounters() {
     requireJob();
-    if (app.job != null) {
+    if (app.getJob() != null) {
       setTitle(join("Counters for ", $(JOB_ID)));
     }
-    render(CountersPage.class);
+    render(countersPage());
   }
 
+  /**
+   * @return the class that will render the /tasks page
+   */
+  protected Class<? extends View> tasksPage() {
+    return TasksPage.class;
+  }
+  
+  /**
+   * Render the /tasks page
+   */
   public void tasks() {
     requireJob();
-    if (app.job != null) {
+    if (app.getJob() != null) {
       try {
         String tt = $(TASK_TYPE);
         tt = tt.isEmpty() ? "All" : StringUtils.capitalize(MRApps.taskType(tt).
@@ -90,20 +130,40 @@ public class AppController extends Controller implements AMParams {
         badRequest(e.getMessage());
       }
     }
-    render(TasksPage.class);
+    render(tasksPage());
   }
   
+  /**
+   * @return the class that will render the /task page
+   */
+  protected Class<? extends View> taskPage() {
+    return TaskPage.class;
+  }
+  
+  /**
+   * Render the /task page
+   */
   public void task() {
     requireTask();
-    if (app.task != null) {
+    if (app.getTask() != null) {
       setTitle(join("Attempts for ", $(TASK_ID)));
     }
-    render(TaskPage.class);
+    render(taskPage());
   }
 
+  /**
+   * @return the class that will render the /attempts page
+   */
+  protected Class<? extends View> attemptsPage() {
+    return AttemptsPage.class;
+  }
+  
+  /**
+   * Render the attempts page
+   */
   public void attempts() {
     requireJob();
-    if (app.job != null) {
+    if (app.getJob() != null) {
       try {
         String taskType = $(TASK_TYPE);
         if (taskType.isEmpty()) {
@@ -119,27 +179,38 @@ public class AppController extends Controller implements AMParams {
         badRequest(e.getMessage());
       }
     }
-    render(AttemptsPage.class);
+    render(attemptsPage());
   }
 
+  /**
+   * Render a BAD_REQUEST error.
+   * @param s the error message to include.
+   */
   void badRequest(String s) {
     setStatus(response().SC_BAD_REQUEST);
     setTitle(join("Bad request: ", s));
   }
 
+  /**
+   * Render a NOT_FOUND error.
+   * @param s the error message to include.
+   */
   void notFound(String s) {
     setStatus(response().SC_NOT_FOUND);
     setTitle(join("Not found: ", s));
   }
 
+  /**
+   * Ensure that a JOB_ID was passed into the page.
+   */
   void requireJob() {
     try {
       if ($(JOB_ID).isEmpty()) {
         throw new RuntimeException("missing job ID");
       }
       JobId jobID = MRApps.toJobID($(JOB_ID));
-      app.job = app.context.getJob(jobID);
-      if (app.job == null) {
+      app.setJob(app.context.getJob(jobID));
+      if (app.getJob() == null) {
         notFound($(JOB_ID));
       }
     } catch (Exception e) {
@@ -147,18 +218,21 @@ public class AppController extends Controller implements AMParams {
     }
   }
 
+  /**
+   * Ensure that a TASK_ID was passed into the page.
+   */
   void requireTask() {
     try {
       if ($(TASK_ID).isEmpty()) {
         throw new RuntimeException("missing task ID");
       }
       TaskId taskID = MRApps.toTaskID($(TASK_ID));
-      app.job = app.context.getJob(taskID.getJobId());
-      if (app.job == null) {
+      app.setJob(app.context.getJob(taskID.getJobId()));
+      if (app.getJob() == null) {
         notFound(MRApps.toString(taskID.getJobId()));
       } else {
-        app.task = app.job.getTask(taskID);
-        if (app.task == null) {
+        app.setTask(app.getJob().getTask(taskID));
+        if (app.getTask() == null) {
           notFound($(TASK_ID));
         }
       }

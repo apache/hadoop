@@ -16,34 +16,34 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.mapreduce.v2.app.webapp;
+package org.apache.hadoop.mapreduce.v2.hs.webapp;
+
+import org.apache.hadoop.mapreduce.v2.app.webapp.App;
+import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
+import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
 
-import static org.apache.hadoop.mapreduce.v2.app.webapp.AMWebApp.*;
-
-import org.apache.hadoop.mapreduce.v2.util.MRApps;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.*;
-import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
-
-public class NavBlock extends HtmlBlock {
+/**
+ * The navigation block for the history server
+ */
+public class HsNavBlock extends HtmlBlock {
   final App app;
 
-  @Inject NavBlock(App app) { this.app = app; }
+  @Inject HsNavBlock(App app) { this.app = app; }
 
+  /*
+   * (non-Javadoc)
+   * @see org.apache.hadoop.yarn.webapp.view.HtmlBlock#render(org.apache.hadoop.yarn.webapp.view.HtmlBlock.Block)
+   */
   @Override protected void render(Block html) {
-    String rmweb = $(RM_WEB);
     DIV<Hamlet> nav = html.
       div("#nav").
-        h3("Cluster").
+      h3("Application").
         ul().
-          li().a(url(rmweb, prefix(), "cluster"), "About")._().
-          li().a(url(rmweb, prefix(), "apps"), "Applications")._().
-          li().a(url(rmweb, prefix(), "scheduler"), "Scheduler")._()._().
-        h3("Application").
-        ul().
-          li().a(url("app/info"), "About")._().
+          li().a("about", "About")._().
           li().a(url("app"), "Jobs")._()._();
     if (app.getJob() != null) {
       String jobid = MRApps.toString(app.getJob().getID());
@@ -57,11 +57,10 @@ public class NavBlock extends HtmlBlock {
     }
     nav.
       h3("Tools").
-      ul().
-        li().a("/conf", "Configuration")._().
-        li().a("/logs", "Local logs")._().
-        li().a("/stacks", "Server stacks")._().
-        li().a("/metrics", "Server metrics")._()._()._().
+        ul().
+          li().a("/conf", "Configuration")._().
+          li().a("/stacks", "Server stacks")._().
+          li().a("/metrics", "Server metrics")._()._()._().
     div("#themeswitcher")._();
   }
 }

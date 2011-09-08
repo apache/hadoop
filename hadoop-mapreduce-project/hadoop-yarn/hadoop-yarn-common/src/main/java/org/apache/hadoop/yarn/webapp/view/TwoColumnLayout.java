@@ -18,21 +18,25 @@
 
 package org.apache.hadoop.yarn.webapp.view;
 
-import com.google.common.collect.Lists;
-import com.google.inject.Inject;
-import java.util.List;
+import static org.apache.hadoop.yarn.util.StringHelper.join;
 
-import static org.apache.hadoop.yarn.util.StringHelper.*;
-import static org.apache.hadoop.yarn.webapp.Params.*;
+import java.util.List;
 
 import org.apache.hadoop.yarn.webapp.SubView;
 
+import com.google.common.collect.Lists;
+
 /**
- * A simpler two column layout implementation. Works with resizable themes.
+ * A simpler two column layout implementation with a header, a navigation bar
+ * on the left, content on the right, and a footer. Works with resizable themes.
  * @see TwoColumnCssLayout
  */
 public class TwoColumnLayout extends HtmlPage {
 
+  /*
+   * (non-Javadoc)
+   * @see org.apache.hadoop.yarn.webapp.view.HtmlPage#render(org.apache.hadoop.yarn.webapp.hamlet.Hamlet.HTML)
+   */
   @Override protected void render(Page.HTML<_> html) {
     preHead(html);
     html.
@@ -65,28 +69,55 @@ public class TwoColumnLayout extends HtmlPage {
               _(content())._()._()._()._()._();
   }
 
+  /**
+   * Do what needs to be done before the header is rendered.  This usually
+   * involves setting page variables for Javascript and CSS rendering.
+   * @param html the html to use to render. 
+   */
   protected void preHead(Page.HTML<_> html) {
   }
 
+  /**
+   * Do what needs to be done after the header is rendered.
+   * @param html the html to use to render. 
+   */
   protected void postHead(Page.HTML<_> html) {
   }
 
+  /**
+   * @return the class that will render the header of the page.
+   */
   protected Class<? extends SubView> header() {
     return HeaderBlock.class;
   }
 
+  /**
+   * @return the class that will render the content of the page.
+   */
   protected Class<? extends SubView> content() {
     return LipsumBlock.class;
   }
 
+  /**
+   * @return the class that will render the navigation bar.
+   */
   protected Class<? extends SubView> nav() {
     return NavBlock.class;
   }
 
+  /**
+   * @return the class that will render the footer.
+   */
   protected Class<? extends SubView> footer() {
     return FooterBlock.class;
   }
 
+  /**
+   * Sets up a table to be a consistent style.
+   * @param html the HTML to use to render.
+   * @param tableId the ID of the table to set styles on.
+   * @param innerStyles any other styles to add to the table.
+   */
   protected void setTableStyles(Page.HTML<_> html, String tableId,
                                 String... innerStyles) {
     List<String> styles = Lists.newArrayList();

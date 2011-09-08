@@ -28,11 +28,27 @@ import org.apache.hadoop.mapreduce.v2.app.job.Task;
 @RequestScoped
 public class App {
   final AppContext context;
-  Job job;
-  Task task;
+  private Job job;
+  private Task task;
 
   @Inject
   App(AppContext ctx) {
     context = ctx;
+  }
+
+  void setJob(Job job) {
+    this.job = job;
+  }
+
+  public Job getJob() {
+    return job;
+  }
+
+  void setTask(Task task) {
+    this.task = task;
+  }
+
+  public Task getTask() {
+    return task;
   }
 }
