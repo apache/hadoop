@@ -101,6 +101,9 @@ Release 0.20.205.0 - unreleased
 
     HDFS-2300. TestFileAppend4 and TestMultiThreadedSync failure. (jitendra)
 
+    HDFS-1122. client block verification may result in blocks in 
+    DataBlockScanner prematurely. (Sam Rash via jitendra)
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via

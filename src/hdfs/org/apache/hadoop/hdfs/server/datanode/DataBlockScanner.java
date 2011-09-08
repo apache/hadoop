@@ -298,13 +298,34 @@ class DataBlockScanner implements Runnable {
     }
   }
   
-  void verifiedByClient(Block block) {
-    updateScanStatus(block, ScanType.REMOTE_READ, true);
+  /*
+   * A reader will try to indicate a block is verified and will add blocks to
+   * the DataBlockScanner before they are finished (due to concurrent readers).
+   * 
+   * fixed so a read verification can't add the block
+   */
+  synchronized void verifiedByClient(Block block) {
+    updateScanStatusInternal(block, ScanType.REMOTE_READ, true, true);
   }
   
-  private synchronized void updateScanStatus(Block block, 
-                                             ScanType type,
-                                             boolean scanOk) {
+  private synchronized void updateScanStatus(Block block, ScanType type,
+      boolean scanOk) {
+    updateScanStatusInternal(block, type, scanOk, false);
+  }
+      
+  /**
+   * @param block
+   *          - block to update status for
+   * @param type
+   *          - client, DN, ...
+   * @param scanOk
+   *          - result of scan
+   * @param updateOnly
+   *          - if true, cannot add a block, but only update an existing block
+   */
+  private synchronized void updateScanStatusInternal(Block block,
+      ScanType type, boolean scanOk, boolean updateOnly) {
+
     if (!isInitialized()) {
       return;
     }
@@ -313,6 +334,9 @@ class DataBlockScanner implements Runnable {
     if ( info != null ) {
       delBlockInfo(info);
     } else {
+      if (updateOnly) {
+        return;
+      }
       // It might already be removed. Thats ok, it will be caught next time.
       info = new BlockScanInfo(block);
     }
@@ -614,7 +638,7 @@ class DataBlockScanner implements Runnable {
       log.close();
     }
   }
-  
+
   synchronized void printBlockReport(StringBuilder buffer, 
                                      boolean summaryOnly) {
     long oneHour = 3600*1000;
