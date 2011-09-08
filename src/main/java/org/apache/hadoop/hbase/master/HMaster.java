@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
@@ -189,11 +188,6 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   private final ServerName serverName;
 
   private TableDescriptors tableDescriptors;
-  
-  // thread pool exceutor for timeout monitor. Passed from HMaster so that can
-  // be properly
-  // shudown.
-  private java.util.concurrent.ExecutorService threadPoolExecutorService;
 
   /**
    * Initializes the HMaster. The steps are as follows:
@@ -367,9 +361,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         this, conf.getInt("hbase.master.catalog.timeout", Integer.MAX_VALUE));
     this.catalogTracker.start();
 
-    threadPoolExecutorService = Executors.newCachedThreadPool();
     this.assignmentManager = new AssignmentManager(this, serverManager,
-        this.catalogTracker, this.executorService, threadPoolExecutorService);
+        this.catalogTracker, this.executorService);
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
     zooKeeper.registerListenerFirst(assignmentManager);
 

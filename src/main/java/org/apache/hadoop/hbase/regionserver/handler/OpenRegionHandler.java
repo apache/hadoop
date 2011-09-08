@@ -52,30 +52,20 @@ public class OpenRegionHandler extends EventHandler {
   // the total open. We'll fail the open if someone hijacks our znode; we can
   // tell this has happened if version is not as expected.
   private volatile int version = -1;
-  //version of the offline node that was set by the master
-  private volatile int versionOfOfflineNode = -1;
 
   public OpenRegionHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo,
       HTableDescriptor htd) {
-    this(server, rsServices, regionInfo, htd, EventType.M_RS_OPEN_REGION, -1);
-  }
-  public OpenRegionHandler(final Server server,
-      final RegionServerServices rsServices, HRegionInfo regionInfo,
-      HTableDescriptor htd, int versionOfOfflineNode) {
-    this(server, rsServices, regionInfo, htd, EventType.M_RS_OPEN_REGION,
-        versionOfOfflineNode);
+    this (server, rsServices, regionInfo, htd, EventType.M_RS_OPEN_REGION);
   }
 
   protected OpenRegionHandler(final Server server,
       final RegionServerServices rsServices, final HRegionInfo regionInfo,
-      final HTableDescriptor htd, EventType eventType,
-      final int versionOfOfflineNode) {
+      final HTableDescriptor htd, EventType eventType) {
     super(server, eventType);
     this.rsServices = rsServices;
     this.regionInfo = regionInfo;
     this.htd = htd;
-    this.versionOfOfflineNode = versionOfOfflineNode;
   }
 
   public HRegionInfo getRegionInfo() {
@@ -96,8 +86,7 @@ public class OpenRegionHandler extends EventHandler {
 
       // If fails, just return.  Someone stole the region from under us.
       // Calling transitionZookeeperOfflineToOpening initalizes this.version.
-      if (!transitionZookeeperOfflineToOpening(encodedName,
-          versionOfOfflineNode)) {
+      if (!transitionZookeeperOfflineToOpening(encodedName)) {
         LOG.warn("Region was hijacked? It no longer exists, encodedName=" +
           encodedName);
         return;
@@ -336,18 +325,15 @@ public class OpenRegionHandler extends EventHandler {
    * Transition ZK node from OFFLINE to OPENING.
    * @param encodedName Name of the znode file (Region encodedName is the znode
    * name).
-   * @param versionOfOfflineNode - version Of OfflineNode that needs to be compared
-   * before changing the node's state from OFFLINE 
    * @return True if successful transition.
    */
-  boolean transitionZookeeperOfflineToOpening(final String encodedName,
-      int versionOfOfflineNode) {
+  boolean transitionZookeeperOfflineToOpening(final String encodedName) {
     // TODO: should also handle transition from CLOSED?
     try {
       // Initialize the znode version.
-      this.version = ZKAssign.transitionNode(server.getZooKeeper(), regionInfo,
-          server.getServerName(), EventType.M_ZK_REGION_OFFLINE,
-          EventType.RS_ZK_REGION_OPENING, versionOfOfflineNode);
+      this.version =
+        ZKAssign.transitionNodeOpening(server.getZooKeeper(),
+          regionInfo, server.getServerName());
     } catch (KeeperException e) {
       LOG.error("Error transition from OFFLINE to OPENING for region=" +
         encodedName, e);

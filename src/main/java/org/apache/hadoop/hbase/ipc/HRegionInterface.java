@@ -333,7 +333,7 @@ public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortabl
    * @param region
    *          region to open
    * @return RegionOpeningState 
-   *         OPENED         - if region open request was successful.
+   *         OPENED - if region opened succesfully.
    *         ALREADY_OPENED - if the region was already opened. 
    *         FAILED_OPENING - if region opening failed.
    *
@@ -341,22 +341,6 @@ public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortabl
    */
   public RegionOpeningState openRegion(final HRegionInfo region) throws IOException;
 
-  /**
-   * Opens the specified region.
-   * @param region
-   *          region to open
-   * @param versionOfOfflineNode
-   *          the version of znode to compare when RS transitions the znode from
-   *          OFFLINE state.
-   * @return RegionOpeningState 
-   *         OPENED         - if region open request was successful.
-   *         ALREADY_OPENED - if the region was already opened. 
-   *         FAILED_OPENING - if region opening failed.
-   * @throws IOException
-   */
-  public RegionOpeningState openRegion(HRegionInfo region, int versionOfOfflineNode)
-      throws IOException;
-  
   /**
    * Opens the specified regions.
    * @param regions regions to open
