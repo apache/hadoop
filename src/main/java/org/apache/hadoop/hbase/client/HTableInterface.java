@@ -136,6 +136,12 @@ public interface HTableInterface {
    * @param family Column family to include in the {@link Result}.
    * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
+   * 
+   * @deprecated As of version 0.92 this method is deprecated without
+   * replacement.   
+   * getRowOrBefore is used internally to find entries in .META. and makes
+   * various assumptions about the table (which are true for .META. but not
+   * in general) to be efficient.
    */
   Result getRowOrBefore(byte[] row, byte[] family) throws IOException;
 

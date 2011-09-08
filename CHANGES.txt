@@ -475,6 +475,7 @@ Release 0.91.0 - Unreleased
    HBASE-4315  RS requestsPerSecond counter seems to be off (subramanian raghunathan)
    HBASE-4289  Move spinlock to SingleSizeCache rather than the slab allocator
                (Li Pi)
+   HBASE-4296  Deprecate HTable[Interface].getRowOrBefore(...) (Lars Hofhansl)
 
   NEW FEATURES
    HBASE-2001  Coprocessors: Colocate user code with regions (Mingjie Lai via
