@@ -562,6 +562,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
     by Jersey (Alejandro Abdelnur via atm)
 
+    HADOOP-7598. Fix smart-apply-patch.sh to handle patching from a sub
+    directory correctly. (Robert Evans via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
