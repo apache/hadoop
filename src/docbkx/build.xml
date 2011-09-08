@@ -12,8 +12,8 @@
     </para>
     <section xml:id="build.snappy">
         <title>Building in snappy compression support</title>
-        <p>Pass <code>-Dsnappy</code> to trigger the snappy maven profile for building
-            snappy native libs into hbase.</p>
+        <para>Pass <code>-Dsnappy</code> to trigger the snappy maven profile for building
+            snappy native libs into hbase.</para>
     </section>
 
     <section xml:id="mvn_repo">
