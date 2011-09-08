@@ -203,7 +203,6 @@ public class ZKAssign {
     ZKUtil.setData(zkw, node, data.getBytes());
   }
 
-
   /**
    * Creates or force updates an unassigned node to the OFFLINE state for the
    * specified region.
@@ -222,33 +221,103 @@ public class ZKAssign {
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.NodeExistsException if node already exists
    */
-  public static boolean createOrForceNodeOffline(ZooKeeperWatcher zkw,
-      HRegionInfo region, ServerName serverName)
+  public static int createOrForceNodeOffline(ZooKeeperWatcher zkw,
+      HRegionInfo region, ServerName serverName) throws KeeperException {
+    return createOrForceNodeOffline(zkw, region, serverName, false, true);
+  }
+
+  /**
+   * Creates or force updates an unassigned node to the OFFLINE state for the
+   * specified region.
+   * <p>
+   * Attempts to create the node but if it exists will force it to transition to
+   * and OFFLINE state.
+   * <p>
+   * Sets a watcher on the unassigned region node if the method is successful.
+   * 
+   * <p>
+   * This method should be used when assigning a region.
+   * 
+   * @param zkw
+   *          zk reference
+   * @param region
+   *          region to be created as offline
+   * @param serverName
+   *          server event originates from
+   * @param reassign
+   *          - true if invoked from timeout monitor, false otherwise
+   * @param allowCreation
+   *          - true if the node has to be created newly, false otherwise
+   * @throws KeeperException
+   *           if unexpected zookeeper exception
+   * @throws KeeperException.NodeExistsException
+   *           if node already exists
+   */
+  public static int createOrForceNodeOffline(ZooKeeperWatcher zkw,
+      HRegionInfo region, ServerName serverName,
+      boolean reassign, boolean allowCreation)
   throws KeeperException {
     LOG.debug(zkw.prefix("Creating (or updating) unassigned node for " +
       region.getEncodedName() + " with OFFLINE state"));
     RegionTransitionData data = new RegionTransitionData(
         EventType.M_ZK_REGION_OFFLINE, region.getRegionName(), serverName);
     String node = getNodeName(zkw, region.getEncodedName());
+    Stat stat = new Stat();
     zkw.sync(node);
     int version = ZKUtil.checkExists(zkw, node);
     if (version == -1) {
-      ZKUtil.createAndWatch(zkw, node, data.getBytes());
+      // If timeoutmonitor deducts a node to be in OPENING state but before it
+      // could
+      // transit to OFFLINE state if RS had opened the region then the Master
+      // deletes the
+      // assigned region znode. In that case the znode will not exist. So we
+      // should not
+      // create the znode again which will lead to double assignment.
+      if (reassign && !allowCreation) {
+        return -1;
+      }
+      return ZKUtil.createAndWatch(zkw, node, data.getBytes());
     } else {
-      if (!ZKUtil.setData(zkw, node, data.getBytes(), version)) {
-        return false;
+      RegionTransitionData curDataInZNode = ZKAssign.getDataNoWatch(zkw, region
+          .getEncodedName(), stat);
+      // Do not move the node to OFFLINE if znode is in any of the following
+      // state.
+      // Because these are already executed states.
+      if (reassign && null != curDataInZNode) {
+        EventType eventType = curDataInZNode.getEventType();
+        if (eventType.equals(EventType.RS_ZK_REGION_CLOSING)
+            || eventType.equals(EventType.RS_ZK_REGION_CLOSED)
+            || eventType.equals(EventType.RS_ZK_REGION_OPENED)) {
+          return -1;
+        }
+      }
+
+      boolean setData = false;
+      try {
+        setData = ZKUtil.setData(zkw, node, data.getBytes(), version);
+        // Setdata throws KeeperException which aborts the Master. So we are
+        // catching it here.
+        // If just before setting the znode to OFFLINE if the RS has made any
+        // change to the
+        // znode state then we need to return -1.
+      } catch (KeeperException kpe) {
+        LOG.info("Version mismatch while setting the node to OFFLINE state.");
+        return -1;
+      }
+      if (!setData) {
+        return -1;
       } else {
         // We successfully forced to OFFLINE, reset watch and handle if
         // the state changed in between our set and the watch
         RegionTransitionData curData =
-            ZKAssign.getData(zkw, region.getEncodedName());
+          ZKAssign.getData(zkw, region.getEncodedName());
         if (curData.getEventType() != data.getEventType()) {
           // state changed, need to process
-          return false;
+          return -1;
         }
       }
     }
-    return true;
+    return stat.getVersion() + 1;
   }
 
   /**
@@ -673,6 +742,19 @@ public class ZKAssign {
         "the node existed but was version " + stat.getVersion() +
         " not the expected version " + expectedVersion));
         return -1;
+    }// the below check ensure that double assignment doesnot happen.
+        // When the node is created for the first time then the expected version
+        // that is
+        // passed will be -1 and the version in znode will be 0.
+        // In all other cases the version in znode will be > 0.
+        else if (beginState.equals(EventType.M_ZK_REGION_OFFLINE)
+            && endState.equals(EventType.RS_ZK_REGION_OPENING)
+            && expectedVersion == -1 && stat.getVersion() != 0) {
+          LOG.warn(zkw.prefix("Attempt to transition the " + "unassigned node for "
+              + encoded + " from " + beginState + " to " + endState + " failed, "
+              + "the node existed but was version " + stat.getVersion()
+              + " not the expected version " + expectedVersion));
+          return -1;
     }
 
     // Verify it is in expected state
