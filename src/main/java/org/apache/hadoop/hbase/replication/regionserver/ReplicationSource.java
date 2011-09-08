@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.NavigableMap;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -55,6 +56,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.ClusterId;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
@@ -88,7 +90,7 @@ public class ReplicationSource extends Thread
   // should we replicate or not?
   private AtomicBoolean replicating;
   // id of the peer cluster this source replicates to
-  private String peerClusterId;
+  private String peerId;
   // The manager of all sources to which we ping back our progress
   private ReplicationSourceManager manager;
   // Should we stop everything?
@@ -109,7 +111,9 @@ public class ReplicationSource extends Thread
   private volatile Path currentPath;
   private FileSystem fs;
   // id of this cluster
-  private byte clusterId;
+  private UUID clusterId;
+  // id of the other cluster
+  private UUID peerClusterId;
   // total number of edits we replicated
   private long totalReplicatedEdits = 0;
   // The znode we currently play with
@@ -176,8 +180,14 @@ public class ReplicationSource extends Thread
     this.sleepForRetries =
         this.conf.getLong("replication.source.sleepforretries", 1000);
     this.fs = fs;
-    this.clusterId = Byte.valueOf(zkHelper.getClusterId());
     this.metrics = new ReplicationSourceMetrics(peerClusterZnode);
+
+    try {
+      this.clusterId = UUID.fromString(ClusterId.readClusterIdZNode(zkHelper
+          .getZookeeperWatcher()));
+    } catch (KeeperException ke) {
+      throw new IOException("Could not read cluster id", ke);
+    }
 
     // Finally look if this is a recovered queue
     this.checkIfQueueRecovered(peerClusterZnode);
@@ -188,7 +198,7 @@ public class ReplicationSource extends Thread
   private void checkIfQueueRecovered(String peerClusterZnode) {
     String[] parts = peerClusterZnode.split("-");
     this.queueRecovered = parts.length != 1;
-    this.peerClusterId = this.queueRecovered ?
+    this.peerId = this.queueRecovered ?
         parts[0] : peerClusterZnode;
     this.peerClusterZnode = peerClusterZnode;
     this.deadRegionServers = new String[parts.length-1];
@@ -204,11 +214,11 @@ public class ReplicationSource extends Thread
   private void chooseSinks() throws KeeperException {
     this.currentPeers.clear();
     List<ServerName> addresses =
-        this.zkHelper.getSlavesAddresses(peerClusterId);
+        this.zkHelper.getSlavesAddresses(peerId);
     Set<HServerAddress> setOfAddr = new HashSet<HServerAddress>();
     int nbPeers = (int) (Math.ceil(addresses.size() * ratio));
     LOG.info("Getting " + nbPeers +
-        " rs from peer cluster # " + peerClusterId);
+        " rs from peer cluster # " + peerId);
     for (int i = 0; i < nbPeers; i++) {
       HServerAddress address;
       // Make sure we get one address that we don't already have
@@ -235,6 +245,15 @@ public class ReplicationSource extends Thread
     if (this.stopper.isStopped()) {
       return;
     }
+    // delay this until we are in an asynchronous thread
+    try {
+      this.peerClusterId = UUID.fromString(ClusterId
+          .readClusterIdZNode(zkHelper.getPeerClusters().get(peerId).getZkw()));
+    } catch (KeeperException ke) {
+      this.terminate("Could not read peer's cluster id", ke);
+    }
+    LOG.info("Replicating "+clusterId + " -> " + peerClusterId);
+
     // If this is recovered, the queue is already full and the first log
     // normally has a position (unless the RS failed between 2 logs)
     if (this.queueRecovered) {
@@ -350,7 +369,7 @@ public class ReplicationSource extends Thread
         LOG.debug("Attempt to close connection failed", e);
       }
     }
-    LOG.debug("Source exiting " + peerClusterId);
+    LOG.debug("Source exiting " + peerId);
   }
 
   /**
@@ -371,18 +390,27 @@ public class ReplicationSource extends Thread
       this.metrics.logEditsReadRate.inc(1);
       seenEntries++;
       // Remove all KVs that should not be replicated
-      removeNonReplicableEdits(edit);
       HLogKey logKey = entry.getKey();
-      // Don't replicate catalog entries, if the WALEdit wasn't
-      // containing anything to replicate and if we're currently not set to replicate
-      if (!(Bytes.equals(logKey.getTablename(), HConstants.ROOT_TABLE_NAME) ||
-          Bytes.equals(logKey.getTablename(), HConstants.META_TABLE_NAME)) &&
-          edit.size() != 0 && replicating.get()) {
-        logKey.setClusterId(this.clusterId);
-        currentNbOperations += countDistinctRowKeys(edit);
-        currentNbEntries++;
-      } else {
-        this.metrics.logEditsFilteredRate.inc(1);
+      // don't replicate if the log entries originated in the peer
+      if (!logKey.getClusterId().equals(peerClusterId)) {
+        removeNonReplicableEdits(edit);
+        // Don't replicate catalog entries, if the WALEdit wasn't
+        // containing anything to replicate and if we're currently not set to replicate
+        if (!(Bytes.equals(logKey.getTablename(), HConstants.ROOT_TABLE_NAME) ||
+            Bytes.equals(logKey.getTablename(), HConstants.META_TABLE_NAME)) &&
+            edit.size() != 0 && replicating.get()) {
+          // Only set the clusterId if is a local key.
+          // This ensures that the originator sets the cluster id
+          // and all replicas retain the initial cluster id.
+          // This is *only* place where a cluster id other than the default is set.
+          if (HConstants.DEFAULT_CLUSTER_ID == logKey.getClusterId()) {
+            logKey.setClusterId(this.clusterId);
+          }
+          currentNbOperations += countDistinctRowKeys(edit);
+          currentNbEntries++;
+        } else {
+          this.metrics.logEditsFilteredRate.inc(1);
+        }
       }
       // Stop if too many entries or too big
       if ((this.reader.getPosition() - this.position)
@@ -523,13 +551,12 @@ public class ReplicationSource extends Thread
   protected void removeNonReplicableEdits(WALEdit edit) {
     NavigableMap<byte[], Integer> scopes = edit.getScopes();
     List<KeyValue> kvs = edit.getKeyValues();
-    for (int i = 0; i < edit.size(); i++) {
+    for (int i = edit.size()-1; i >= 0; i--) {
       KeyValue kv = kvs.get(i);
       // The scope will be null or empty if
       // there's nothing to replicate in that WALEdit
       if (scopes == null || !scopes.containsKey(kv.getFamily())) {
         kvs.remove(i);
-        i--;
       }
     }
   }
@@ -706,7 +733,7 @@ public class ReplicationSource extends Thread
   }
 
   public String getPeerClusterId() {
-    return this.peerClusterId;
+    return this.peerId;
   }
 
   public Path getCurrentPath() {

@@ -67,7 +67,6 @@ import org.apache.zookeeper.KeeperException;
 public class ReplicationAdmin implements Closeable {
 
   private final ReplicationZookeeper replicationZk;
-  private final Configuration configuration;
   private final HConnection connection;
 
   /**
@@ -81,7 +80,6 @@ public class ReplicationAdmin implements Closeable {
       throw new RuntimeException("hbase.replication isn't true, please " +
           "enable it in order to use replication");
     }
-    this.configuration = conf;
     this.connection = HConnectionManager.getConnection(conf);
     ZooKeeperWatcher zkw = this.connection.getZooKeeperWatcher();
     try {

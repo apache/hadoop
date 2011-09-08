@@ -162,7 +162,8 @@ public class TestHLogSplit {
     fs.mkdirs(regiondir);
     long now = System.currentTimeMillis();
     HLog.Entry entry =
-      new HLog.Entry(new HLogKey(encoded, HConstants.META_TABLE_NAME, 1, now),
+        new HLog.Entry(new HLogKey(encoded,
+            HConstants.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
       new WALEdit());
     Path p = HLogSplitter.getRegionSplitEditsPath(fs, entry, hbaseDir, true);
     String parentOfParent = p.getParent().getParent().getName();
@@ -1179,7 +1180,8 @@ public class TestHLogSplit {
     WALEdit edit = new WALEdit();
     seq++;
     edit.add(new KeyValue(row, family, qualifier, time, KeyValue.Type.Put, value));
-    return new HLog.Entry(new HLogKey(region, table, seq, time), edit);
+    return new HLog.Entry(new HLogKey(region, table, seq, time,
+        HConstants.DEFAULT_CLUSTER_ID), edit);
   }
 
 

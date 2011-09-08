@@ -93,8 +93,6 @@ public class ReplicationZookeeper {
   private final Configuration conf;
   // Is this cluster replicating at the moment?
   private AtomicBoolean replicating;
-  // Byte (stored as string here) that identifies this cluster
-  private String clusterId;
   // The key to our own cluster
   private String ourClusterKey;
   // Abortable
@@ -146,12 +144,8 @@ public class ReplicationZookeeper {
         conf.get("zookeeper.znode.replication", "replication");
     String peersZNodeName =
         conf.get("zookeeper.znode.replication.peers", "peers");
-    String repMasterZNodeName =
-        conf.get("zookeeper.znode.replication.master", "master");
     this.replicationStateNodeName =
         conf.get("zookeeper.znode.replication.state", "state");
-    String clusterIdZNodeName =
-        conf.get("zookeeper.znode.replication.clusterId", "clusterId");
     String rsZNodeName =
         conf.get("zookeeper.znode.replication.rs", "rs");
     this.ourClusterKey = ZKUtil.getZooKeeperClusterKey(this.conf);
@@ -162,11 +156,6 @@ public class ReplicationZookeeper {
     this.rsZNode = ZKUtil.joinZNode(replicationZNode, rsZNodeName);
     ZKUtil.createWithParents(this.zookeeper, this.rsZNode);
 
-    String znode = ZKUtil.joinZNode(this.replicationZNode, clusterIdZNodeName);
-    byte [] data = ZKUtil.getData(this.zookeeper, znode);
-    String idResult = Bytes.toString(data);
-    this.clusterId = idResult == null?
-      Byte.toString(HConstants.DEFAULT_CLUSTER_ID): idResult;
     // Set a tracker on replicationStateNodeNode
     this.statusTracker =
         new ReplicationStatusTracker(this.zookeeper, abortable);
@@ -699,15 +688,6 @@ public class ReplicationZookeeper {
 
   public void registerRegionServerListener(ZooKeeperListener listener) {
     this.zookeeper.registerListener(listener);
-  }
-
-  /**
-   * Get the identification of the cluster
-   *
-   * @return the id for the cluster
-   */
-  public String getClusterId() {
-    return this.clusterId;
   }
 
   /**

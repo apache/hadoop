@@ -170,8 +170,8 @@ public class TestReplicationSourceManager {
         hlog.rollWriter();
       }
       LOG.info(i);
-      HLogKey key = new HLogKey(hri.getRegionName(),
-        test, seq++, System.currentTimeMillis());
+      HLogKey key = new HLogKey(hri.getRegionName(), test, seq++,
+          System.currentTimeMillis(), HConstants.DEFAULT_CLUSTER_ID);
       hlog.append(hri, key, edit, htd);
     }
 
@@ -183,8 +183,8 @@ public class TestReplicationSourceManager {
     LOG.info(baseline + " and " + time);
 
     for (int i = 0; i < 3; i++) {
-      HLogKey key = new HLogKey(hri.getRegionName(),
-        test, seq++, System.currentTimeMillis());
+      HLogKey key = new HLogKey(hri.getRegionName(), test, seq++,
+          System.currentTimeMillis(), HConstants.DEFAULT_CLUSTER_ID);
       hlog.append(hri, key, edit, htd);
     }
 
@@ -195,8 +195,8 @@ public class TestReplicationSourceManager {
     manager.logPositionAndCleanOldLogs(manager.getSources().get(0).getCurrentPath(),
         "1", 0, false);
 
-    HLogKey key = new HLogKey(hri.getRegionName(),
-          test, seq++, System.currentTimeMillis());
+    HLogKey key = new HLogKey(hri.getRegionName(), test, seq++,
+        System.currentTimeMillis(), HConstants.DEFAULT_CLUSTER_ID);
     hlog.append(hri, key, edit, htd);
 
     assertEquals(1, manager.getHLogs().size());

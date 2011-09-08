@@ -765,7 +765,7 @@ public class TestHRegion extends HBaseTestCase {
     try {
       Map<byte[], List<KeyValue>> deleteMap = new HashMap<byte[], List<KeyValue>>();
       deleteMap.put(family, kvs);
-      region.delete(deleteMap, true);
+      region.delete(deleteMap, HConstants.DEFAULT_CLUSTER_ID, true);
     } catch (Exception e) {
       assertTrue("Family " +new String(family)+ " does not exist", false);
     }
@@ -776,7 +776,7 @@ public class TestHRegion extends HBaseTestCase {
     try {
       Map<byte[], List<KeyValue>> deleteMap = new HashMap<byte[], List<KeyValue>>();
       deleteMap.put(family, kvs);
-      region.delete(deleteMap, true);
+      region.delete(deleteMap, HConstants.DEFAULT_CLUSTER_ID, true);
     } catch (Exception e) {
       ok = true;
     }
@@ -1042,7 +1042,7 @@ public class TestHRegion extends HBaseTestCase {
 
     Map<byte[], List<KeyValue>> deleteMap = new HashMap<byte[], List<KeyValue>>();
     deleteMap.put(fam1, kvs);
-    region.delete(deleteMap, true);
+    region.delete(deleteMap, HConstants.DEFAULT_CLUSTER_ID, true);
 
     // extract the key values out the memstore:
     // This is kinda hacky, but better than nothing...

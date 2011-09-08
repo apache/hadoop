@@ -37,6 +37,7 @@ import java.util.NavigableSet;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -900,12 +901,13 @@ public class HLog implements Syncable {
    * @param now
    * @param regionName
    * @param tableName
+   * @param clusterId
    * @return New log key.
    */
-  protected HLogKey makeKey(byte[] regionName, byte[] tableName, long seqnum, long now) {
-    return new HLogKey(regionName, tableName, seqnum, now);
+  protected HLogKey makeKey(byte[] regionName, byte[] tableName, long seqnum,
+      long now, UUID clusterId) {
+    return new HLogKey(regionName, tableName, seqnum, now, clusterId);
   }
-
 
 
   /** Append an entry to the log.
@@ -945,6 +947,22 @@ public class HLog implements Syncable {
   }
 
   /**
+   * Only used in tests.
+   *
+   * @param info
+   * @param tableName
+   * @param edits
+   * @param now
+   * @param htd
+   * @throws IOException
+   */
+  public void append(HRegionInfo info, byte [] tableName, WALEdit edits,
+    final long now, HTableDescriptor htd)
+  throws IOException {
+    append(info, tableName, edits, HConstants.DEFAULT_CLUSTER_ID, now, htd);
+  }
+
+  /**
    * Append a set of edits to the log. Log edits are keyed by (encoded)
    * regionName, rowname, and log-sequence-id.
    *
@@ -964,39 +982,40 @@ public class HLog implements Syncable {
    * @param info
    * @param tableName
    * @param edits
+   * @param clusterId The originating clusterId for this edit (for replication)
    * @param now
    * @throws IOException
    */
-  public void append(HRegionInfo info, byte [] tableName, WALEdit edits,
-    final long now, HTableDescriptor htd)
-  throws IOException {
-    if (edits.isEmpty()) return;
-    if (this.closed) {
-      throw new IOException("Cannot append; log is closed");
+  public void append(HRegionInfo info, byte [] tableName, WALEdit edits, UUID clusterId,
+      final long now, HTableDescriptor htd)
+    throws IOException {
+      if (edits.isEmpty()) return;
+      if (this.closed) {
+        throw new IOException("Cannot append; log is closed");
+      }
+      synchronized (this.updateLock) {
+        long seqNum = obtainSeqNum();
+        // The 'lastSeqWritten' map holds the sequence number of the oldest
+        // write for each region (i.e. the first edit added to the particular
+        // memstore). . When the cache is flushed, the entry for the
+        // region being flushed is removed if the sequence number of the flush
+        // is greater than or equal to the value in lastSeqWritten.
+        // Use encoded name.  Its shorter, guaranteed unique and a subset of
+        // actual  name.
+        byte [] hriKey = info.getEncodedNameAsBytes();
+        this.lastSeqWritten.putIfAbsent(hriKey, seqNum);
+        HLogKey logKey = makeKey(hriKey, tableName, seqNum, now, clusterId);
+        doWrite(info, logKey, edits, htd);
+        this.numEntries.incrementAndGet();
+      }
+      // Sync if catalog region, and if not then check if that table supports
+      // deferred log flushing
+      if (info.isMetaRegion() ||
+          !htd.isDeferredLogFlush()) {
+        // sync txn to file system
+        this.sync();
+      }
     }
-    synchronized (this.updateLock) {
-      long seqNum = obtainSeqNum();
-      // The 'lastSeqWritten' map holds the sequence number of the oldest
-      // write for each region (i.e. the first edit added to the particular
-      // memstore). . When the cache is flushed, the entry for the
-      // region being flushed is removed if the sequence number of the flush
-      // is greater than or equal to the value in lastSeqWritten.
-      // Use encoded name.  Its shorter, guaranteed unique and a subset of
-      // actual  name.
-      byte [] hriKey = info.getEncodedNameAsBytes();
-      this.lastSeqWritten.putIfAbsent(hriKey, seqNum);
-      HLogKey logKey = makeKey(hriKey, tableName, seqNum, now);
-      doWrite(info, logKey, edits, htd);
-      this.numEntries.incrementAndGet();
-    }
-    // Sync if catalog region, and if not then check if that table supports
-    // deferred log flushing
-    if (info.isMetaRegion() ||
-        !htd.isDeferredLogFlush()) {
-      // sync txn to file system
-      this.sync();
-    }
-  }
 
   /**
    * This thread is responsible to call syncFs and buffer up the writers while
@@ -1295,7 +1314,7 @@ public class HLog implements Syncable {
         long now = System.currentTimeMillis();
         WALEdit edit = completeCacheFlushLogEdit();
         HLogKey key = makeKey(encodedRegionName, tableName, logSeqId,
-            System.currentTimeMillis());
+            System.currentTimeMillis(), HConstants.DEFAULT_CLUSTER_ID);
         this.writer.append(new Entry(key, edit));
         writeTime += System.currentTimeMillis() - now;
         writeOps++;

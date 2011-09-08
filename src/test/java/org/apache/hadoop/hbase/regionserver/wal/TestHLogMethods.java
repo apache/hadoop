@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
@@ -156,10 +157,11 @@ public class TestHLogMethods {
   private HLog.Entry createTestLogEntry(int i) {
     long seq = i;
     long now = i * 1000;
-    
+
     WALEdit edit = new WALEdit();
     edit.add(KeyValueTestUtil.create("row", "fam", "qual", 1234, "val"));
-    HLogKey key = new HLogKey(TEST_REGION, TEST_TABLE, seq, now);
+    HLogKey key = new HLogKey(TEST_REGION, TEST_TABLE, seq, now,
+        HConstants.DEFAULT_CLUSTER_ID);
     HLog.Entry entry = new HLog.Entry(key, edit);
     return entry;
   }

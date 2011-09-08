@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.UUID;
 
 
 /**
@@ -655,5 +656,27 @@ public class Put extends Operation
   public Put add(byte [] column, long ts, byte [] value) {
     byte [][] parts = KeyValue.parseColumn(column);
     return add(parts[0], parts[1], ts, value);
+  }
+
+  /**
+   * Set the replication custer id.
+   * @param clusterId
+   */
+  public void setClusterId(UUID clusterId) {
+    byte[] val = new byte[2*Bytes.SIZEOF_LONG];
+    Bytes.putLong(val, 0, clusterId.getMostSignificantBits());
+    Bytes.putLong(val, Bytes.SIZEOF_LONG, clusterId.getLeastSignificantBits());
+    setAttribute(HConstants.CLUSTER_ID_ATTR, val);
+  }
+
+  /**
+   * @return The replication cluster id.
+   */
+  public UUID getClusterId() {
+    byte[] attr = getAttribute(HConstants.CLUSTER_ID_ATTR);
+    if (attr == null) {
+      return HConstants.DEFAULT_CLUSTER_ID;
+    }
+    return new UUID(Bytes.toLong(attr,0), Bytes.toLong(attr, Bytes.SIZEOF_LONG));
   }
 }

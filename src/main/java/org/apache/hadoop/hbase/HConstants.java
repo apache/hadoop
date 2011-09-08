@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
@@ -203,6 +204,12 @@ public final class HConstants {
   /** Configuration key storing the cluster ID */
   public static final String CLUSTER_ID = "hbase.cluster.id";
 
+  /**
+   * Attribute used in Puts and Gets to indicate the originating
+   * cluster.
+   */
+  public static final String CLUSTER_ID_ATTR = "_c.id_";
+
   // Always store the location of the root table's HRegion.
   // This HRegion is never split.
 
@@ -364,7 +371,7 @@ public final class HConstants {
    * Default cluster ID, cannot be used to identify a cluster so a key with
    * this value means it wasn't meant for replication.
    */
-  public static final byte DEFAULT_CLUSTER_ID = 0;
+  public static final UUID DEFAULT_CLUSTER_ID = new UUID(0L,0L);
 
     /**
      * Parameter name for maximum number of bytes returned when calling a

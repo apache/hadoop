@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Delete;
@@ -106,6 +107,7 @@ public class ReplicationSink {
         if (kvs.get(0).isDelete()) {
           Delete delete = new Delete(kvs.get(0).getRow(),
               kvs.get(0).getTimestamp(), null);
+          delete.setClusterId(entry.getKey().getClusterId());
           for (KeyValue kv : kvs) {
             if (kv.isDeleteFamily()) {
               delete.deleteFamily(kv.getFamily());
@@ -126,10 +128,12 @@ public class ReplicationSink {
           byte[] lastKey = kvs.get(0).getRow();
           Put put = new Put(kvs.get(0).getRow(),
               kvs.get(0).getTimestamp());
+          put.setClusterId(entry.getKey().getClusterId());
           for (KeyValue kv : kvs) {
             if (!Bytes.equals(lastKey, kv.getRow())) {
               tableList.add(put);
               put = new Put(kv.getRow(), kv.getTimestamp());
+              put.setClusterId(entry.getKey().getClusterId());
             }
             put.add(kv.getFamily(), kv.getQualifier(), kv.getValue());
             lastKey = kv.getRow();
