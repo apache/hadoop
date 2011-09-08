@@ -18,19 +18,108 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 
+/**
+ * <p>The request sent by the <code>ApplicationMaster</code> to 
+ * <code>ResourceManager</code> on registration.</p>
+ * 
+ * <p>The registration includes details such as:
+ *   <ul>
+ *     <li>
+ *         {@link ApplicationAttemptId} being managed by the 
+ *         <code>ApplicationMaster</code>
+ *     </li>
+ *     <li>Hostname on which the AM is running.</li>
+ *     <li>RPC Port</li>
+ *     <li>Tracking URL</li>
+ *   </ul>
+ * </p>
+ * 
+ * @see AMRMProtocol#registerApplicationMaster(RegisterApplicationMasterRequest)
+ */
+@Public
+@Stable
 public interface RegisterApplicationMasterRequest {
 
+  /**
+   * Get the <code>ApplicationAttemptId</code> being managed by the 
+   * <code>ApplicationMaster</code>.
+   * @return <code>ApplicationAttemptId</code> being managed by the 
+   *         <code>ApplicationMaster</code>
+   */
+  @Public
+  @Stable
   ApplicationAttemptId getApplicationAttemptId();
+  
+  /**
+   * Set the <code>ApplicationAttemptId</code> being managed by the 
+   * <code>ApplicationMaster</code>.
+   * @param applicationAttemptId <code>ApplicationAttemptId</code> being managed  
+   *                             by the <code>ApplicationMaster</code>
+   */
+  @Public
+  @Stable
   void setApplicationAttemptId(ApplicationAttemptId applicationAttemptId);
 
+  /**
+   * Get the <em>host</em> on which the <code>ApplicationMaster</code> is 
+   * running.
+   * @return <em>host</em> on which the <code>ApplicationMaster</code> is running
+   */
+  @Public
+  @Stable
   String getHost();
+  
+  /**
+   * Set the <em>host</em> on which the <code>ApplicationMaster</code> is 
+   * running.
+   * @param host <em>host</em> on which the <code>ApplicationMaster</code> 
+   *             is running
+   */
+  @Private
+  @Unstable
   void setHost(String host);
 
+  /**
+   * Get the <em>RPC port</em> on which the <code>ApplicationMaster</code> 
+   * is responding. 
+   * @return the <em>RPC port<em> on which the <code>ApplicationMaster</code> is 
+   *         responding
+   */
+  @Public
+  @Stable
   int getRpcPort();
+  
+  /**
+   * Set the <em>RPC port<em> on which the <code>ApplicationMaster</code> is 
+   * responding.
+   * @param port <em>RPC port<em> on which the <code>ApplicationMaster</code> is 
+   *             responding
+   */
+  @Public
+  @Stable
   void setRpcPort(int port);
 
+  /**
+   * Get the <em>tracking URL</em> for the <code>ApplicationMaster</code>.
+   * @return <em>tracking URL</em> for the <code>ApplicationMaster</code>
+   */
+  @Public
+  @Stable
   String getTrackingUrl();
-  void setTrackingUrl(String string);
+  
+  /**
+   * Set the <em>tracking URL</em> for the <code>ApplicationMaster</code>.
+   * @param trackingUrl <em>tracking URL</em> for the 
+   *                    <code>ApplicationMaster</code>
+   */
+  @Public
+  @Stable
+  void setTrackingUrl(String trackingUrl);
 }

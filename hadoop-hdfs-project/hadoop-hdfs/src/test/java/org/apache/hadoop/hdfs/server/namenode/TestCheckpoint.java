@@ -45,13 +45,14 @@ import org.apache.hadoop.hdfs.DFSUtil.ErrorSimulator;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode.CheckpointStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
@@ -982,11 +983,12 @@ public class TestCheckpoint extends TestCase {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
         .format(true).build();
     NameNode nn = cluster.getNameNode();
+    NamenodeProtocols nnRpc = nn.getRpcServer();
 
     SecondaryNameNode secondary = startSecondaryNameNode(conf);
     // prepare checkpoint image
     secondary.doCheckpoint();
-    CheckpointSignature sig = nn.rollEditLog();
+    CheckpointSignature sig = nnRpc.rollEditLog();
     // manipulate the CheckpointSignature fields
     sig.setBlockpoolID("somerandomebpid");
     sig.clusterID = "somerandomcid";
@@ -1073,8 +1075,10 @@ public class TestCheckpoint extends TestCase {
         .nameNodePort(9928).build();
     Configuration snConf1 = new HdfsConfiguration(cluster.getConfiguration(0));
     Configuration snConf2 = new HdfsConfiguration(cluster.getConfiguration(1));
-    InetSocketAddress nn1RpcAddress = cluster.getNameNode(0).rpcAddress;
-    InetSocketAddress nn2RpcAddress = cluster.getNameNode(1).rpcAddress;
+    InetSocketAddress nn1RpcAddress =
+      cluster.getNameNode(0).getNameNodeAddress();
+    InetSocketAddress nn2RpcAddress =
+      cluster.getNameNode(1).getNameNodeAddress();
     String nn1 = nn1RpcAddress.getHostName() + ":" + nn1RpcAddress.getPort();
     String nn2 = nn2RpcAddress.getHostName() + ":" + nn2RpcAddress.getPort();
 
@@ -1212,7 +1216,7 @@ public class TestCheckpoint extends TestCase {
       CheckpointStorage spyImage1 = spyOnSecondaryImage(secondary1);
       DelayAnswer delayer = new DelayAnswer(LOG);
       Mockito.doAnswer(delayer).when(spyImage1)
-        .saveFSImageInAllDirs(Mockito.anyLong());
+        .saveFSImageInAllDirs(Mockito.<FSNamesystem>any(), Mockito.anyLong());
 
       // Set up a thread to do a checkpoint from the first 2NN
       DoCheckpointThread checkpointThread = new DoCheckpointThread(secondary1);
@@ -1444,9 +1448,9 @@ public class TestCheckpoint extends TestCase {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
           .format(true).build();
       
-      NameNode nn = cluster.getNameNode();
-      String fsName = NameNode.getHostPortString(nn.getHttpAddress());
-
+      NamenodeProtocols nn = cluster.getNameNodeRpc();
+      String fsName = NameNode.getHostPortString(
+          cluster.getNameNode().getHttpAddress());
 
       // Make a finalized log on the server side. 
       nn.rollEditLog();
@@ -1515,8 +1519,8 @@ public class TestCheckpoint extends TestCase {
 
       // Now primary NN experiences failure of a volume -- fake by
       // setting its current dir to a-x permissions
-      NameNode nn = cluster.getNameNode();
-      NNStorage storage = nn.getFSImage().getStorage();
+      NamenodeProtocols nn = cluster.getNameNodeRpc();
+      NNStorage storage = cluster.getNameNode().getFSImage().getStorage();
       StorageDirectory sd0 = storage.getStorageDir(0);
       StorageDirectory sd1 = storage.getStorageDir(1);
       
@@ -1590,8 +1594,8 @@ public class TestCheckpoint extends TestCase {
 
       // Now primary NN experiences failure of its only name dir -- fake by
       // setting its current dir to a-x permissions
-      NameNode nn = cluster.getNameNode();
-      NNStorage storage = nn.getFSImage().getStorage();
+      NamenodeProtocols nn = cluster.getNameNodeRpc();
+      NNStorage storage = cluster.getNameNode().getFSImage().getStorage();
       StorageDirectory sd0 = storage.getStorageDir(0);
       assertEquals(NameNodeDirType.IMAGE, sd0.getStorageDirType());
       currentDir = sd0.getCurrentDir();
@@ -1704,7 +1708,7 @@ public class TestCheckpoint extends TestCase {
       secondary.doCheckpoint();
 
       // Now primary NN saves namespace 3 times
-      NameNode nn = cluster.getNameNode();
+      NamenodeProtocols nn = cluster.getNameNodeRpc();
       nn.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       for (int i = 0; i < 3; i++) {
         nn.saveNamespace();

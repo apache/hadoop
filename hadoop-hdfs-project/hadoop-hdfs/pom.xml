@@ -296,13 +296,63 @@
             <exclude>src/test/all-tests</exclude>
             <exclude>src/test/resources/*.tgz</exclude>
             <exclude>src/test/resources/data*</exclude>
-            <exclude>src/test/resources/editStored*</exclude>
+            <exclude>src/test/resources/editsStored*</exclude>
             <exclude>src/test/resources/empty-file</exclude>
             <exclude>src/main/webapps/datanode/robots.txt</exclude>
             <exclude>src/main/docs/releasenotes.html</exclude>
             <exclude>src/contrib/**</exclude>
           </excludes>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>xprepare-package-hadoop-daemon</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <condition property="commons.daemon.os.name" value="darwin">
+                    <os name="Mac OS X"/>
+                </condition>
+                <condition property="commons.daemon.os.arch" value="universal">
+                    <os name="Mac OS X"/>
+                </condition>
+                <condition property="commons.daemon.os.name" value="linux">
+                    <os name="Linux" />
+                </condition>
+                <!-- Set commons.daemon.os.arch to either i686 or x86_64 for GNU/Linux -->
+                <condition property="commons.daemon.os.arch" value="x86_64">
+                    <os name="Linux" arch="amd64"/>
+                </condition>
+                <condition property="commons.daemon.os.arch" value="i686">
+                    <os name="Linux" /> <!-- This is a guess -->
+                </condition>
+                <property name="commons.daemon.tar.name"
+                          value="commons-daemon-${commons-daemon.version}-bin-${commons.daemon.os.name}-${commons.daemon.os.arch}.tar.gz"/>
+               
+                <property name="commons.daemon.download.dir"
+                          value="${project.build.directory}/downloads/commons-daemon"/>
+                <delete dir="${commons.daemon.download.dir}"/>
+                <mkdir dir="${commons.daemon.download.dir}"/>
+                <get src="http://archive.apache.org/dist/commons/daemon/binaries/${commons-daemon.version}/${commons.daemon.os.name}/${commons.daemon.tar.name}"
+                    dest="${commons.daemon.download.dir}/${commons.daemon.tar.name}" verbose="true" skipexisting="true"/>
+                <untar compression="gzip" src="${commons.daemon.download.dir}/${commons.daemon.tar.name}"
+                       dest="${commons.daemon.download.dir}"/>
+                <copy file="${commons.daemon.download.dir}/jsvc"
+                      todir="${project.build.directory}/${project.artifactId}-${project.version}/libexec"
+                      verbose="true"/>
+                <chmod perm="ugo+x" type="file">
+                  <fileset file="${project.build.directory}/${project.artifactId}-${project.version}/libexec/jsvc"/>
+                </chmod>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

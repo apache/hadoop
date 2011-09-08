@@ -103,7 +103,7 @@ public class TestDeadDatanode {
     dn.shutdown();
     waitForDatanodeState(reg.getStorageID(), false, 20000);
 
-    DatanodeProtocol dnp = cluster.getNameNode();
+    DatanodeProtocol dnp = cluster.getNameNodeRpc();
     
     ReceivedDeletedBlockInfo[] blocks = { new ReceivedDeletedBlockInfo(
         new Block(0), "") };

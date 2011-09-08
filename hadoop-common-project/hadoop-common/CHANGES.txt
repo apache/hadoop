@@ -2,6 +2,16 @@ Hadoop Change Log
 
 Trunk (unreleased changes)
 
+  IMPROVEMENTS
+
+    HADOOP-7595. Upgrade dependency to Avro 1.5.3. (Alejandro Abdelnur via atm)
+  HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)
+
+  BUGS
+
+    HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
+                 by Jersey (Alejandro Abdelnur via atm)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -347,6 +357,20 @@ Release 0.23.0 - Unreleased
     HADOOP-7547. Add generic type in WritableComparable subclasses.
     (Uma Maheswara Rao G via szetszwo)
 
+    HADOOP-7579. Rename package names from alfredo to auth.
+    (Alejandro Abdelnur via szetszwo)
+
+    HADOOP-7594. Support HTTP REST in HttpServer.  (szetszwo)
+
+    HADOOP-7552. FileUtil#fullyDelete doesn't throw IOE but lists it
+    in the throws clause. (eli)
+
+    HADOOP-7580. Add a version of getLocalPathForWrite to LocalDirAllocator
+    which doesn't create dirs. (Chris Douglas & Siddharth Seth via acmurthy) 
+
+    HADOOP-7507. Allow ganglia metrics to include the metrics system tags
+                 in the gmetric names. (Alejandro Abdelnur via todd)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
@@ -532,6 +556,12 @@ Release 0.23.0 - Unreleased
 
     HADOOP-7560. Change src layout to be heirarchical. (Alejandro Abdelnur
     via acmurthy)
+
+    HADOOP-7576. Fix findbugs warnings and javac warnings in hadoop-auth.
+    (szetszwo)
+
+    HADOOP-7593. Fix AssertionError in TestHttpServer.testMaxThreads().
+    (Uma Maheswara Rao G via szetszwo)
 
 Release 0.22.0 - Unreleased
 

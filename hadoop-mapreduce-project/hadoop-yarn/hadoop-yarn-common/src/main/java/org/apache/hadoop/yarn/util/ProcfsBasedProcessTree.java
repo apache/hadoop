@@ -221,8 +221,7 @@ public class ProcfsBasedProcessTree {
   }
 
   /** Verify that the given process id is same as its process group id.
-   * @param pidStr Process id of the to-be-verified-process
-   * @param procfsDir  Procfs root dir
+   * @return true if the process id matches else return false.
    */
   public boolean checkPidPgrpidForMatch() {
     return checkPidPgrpidForMatch(pid, PROCFS);

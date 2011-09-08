@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobPriority;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.JobStatus.State;
@@ -39,6 +40,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
+import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -279,13 +281,13 @@ public class TypeConverter {
   
   public static org.apache.hadoop.mapred.JobStatus fromYarn(
       JobReport jobreport, String jobFile, String trackingUrl) {
-    String user = null,  jobName = null;
     JobPriority jobPriority = JobPriority.NORMAL;
     return new org.apache.hadoop.mapred.JobStatus(fromYarn(jobreport.getJobId()),
         jobreport.getSetupProgress(), jobreport.getMapProgress(),
         jobreport.getReduceProgress(), jobreport.getCleanupProgress(),
         fromYarn(jobreport.getJobState()),
-        jobPriority, user, jobName, jobFile, trackingUrl);
+        jobPriority, jobreport.getUser(), jobreport.getJobName(),
+        jobFile, trackingUrl);
   }
   
   public static int fromYarn(JobState state) {
@@ -395,45 +397,51 @@ public class TypeConverter {
     return taskTrackers.toArray(new TaskTrackerInfo[nodes.size()]);
   }
 
-  public static JobStatus fromYarn(ApplicationReport application) {
+  public static JobStatus fromYarn(ApplicationReport application,
+      String jobFile) {
     String trackingUrl = application.getTrackingUrl();
     trackingUrl = trackingUrl == null ? "" : trackingUrl;
-
-    JobStatus jobStatus = 
+    JobStatus jobStatus =
       new JobStatus(
-          TypeConverter.fromYarn(application.getApplicationId()), 
-          0.0f, 0.0f, 0.0f, 0.0f, 
-          TypeConverter.fromYarn(application.getState()), 
-          org.apache.hadoop.mapreduce.JobPriority.NORMAL, 
-          application.getUser(), application.getName(), 
-          application.getQueue(), "", trackingUrl
-      ); 
+          TypeConverter.fromYarn(application.getApplicationId()),
+          0.0f, 0.0f, 0.0f, 0.0f,
+          TypeConverter.fromYarn(application.getState()),
+          org.apache.hadoop.mapreduce.JobPriority.NORMAL,
+          application.getUser(), application.getName(),
+          application.getQueue(), jobFile, trackingUrl
+      );
     jobStatus.setSchedulingInfo(trackingUrl); // Set AM tracking url
     jobStatus.setStartTime(application.getStartTime());
     return jobStatus;
   }
 
-  public static JobStatus[] fromYarnApps(List<ApplicationReport> applications) {
+  public static JobStatus[] fromYarnApps(List<ApplicationReport> applications,
+      Configuration conf) {
     List<JobStatus> jobStatuses = new ArrayList<JobStatus>();
     for (ApplicationReport application : applications) {
-      jobStatuses.add(TypeConverter.fromYarn(application));
+      // each applicationReport has its own jobFile
+      org.apache.hadoop.mapreduce.JobID jobId = 
+          TypeConverter.fromYarn(application.getApplicationId());
+      jobStatuses.add(TypeConverter.fromYarn(application,
+          MRApps.getJobFile(conf, application.getUser(), jobId)));
     }
     return jobStatuses.toArray(new JobStatus[jobStatuses.size()]);
   }
 
   
   public static QueueInfo fromYarn(org.apache.hadoop.yarn.api.records.QueueInfo 
-      queueInfo) {
+      queueInfo, Configuration conf) {
     return new QueueInfo(queueInfo.getQueueName(), 
         queueInfo.toString(), QueueState.RUNNING, 
-        TypeConverter.fromYarnApps(queueInfo.getApplications()));
+        TypeConverter.fromYarnApps(queueInfo.getApplications(), conf));
   }
   
   public static QueueInfo[] fromYarnQueueInfo(
-      List<org.apache.hadoop.yarn.api.records.QueueInfo> queues) {
+      List<org.apache.hadoop.yarn.api.records.QueueInfo> queues,
+      Configuration conf) {
     List<QueueInfo> queueInfos = new ArrayList<QueueInfo>(queues.size());
     for (org.apache.hadoop.yarn.api.records.QueueInfo queue : queues) {
-      queueInfos.add(TypeConverter.fromYarn(queue));
+      queueInfos.add(TypeConverter.fromYarn(queue, conf));
     }
     return queueInfos.toArray(new QueueInfo[queueInfos.size()]);
   }

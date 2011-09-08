@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.*;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -80,7 +81,7 @@ public class TestEditLog extends TestCase {
   static final int NUM_TRANSACTIONS = 100;
   static final int NUM_THREADS = 100;
   
-  private static final File TEST_DIR = new File(
+  static final File TEST_DIR = new File(
     System.getProperty("test.build.data","build/test/data"));
 
   /** An edits log with 3 edits from 0.20 - the result of
@@ -627,13 +628,23 @@ public class TestEditLog extends TestCase {
   }
   
   public void testCrashRecoveryEmptyLogOneDir() throws Exception {
-    doTestCrashRecoveryEmptyLog(false);
+    doTestCrashRecoveryEmptyLog(false, true);
   }
   
   public void testCrashRecoveryEmptyLogBothDirs() throws Exception {
-    doTestCrashRecoveryEmptyLog(true);
+    doTestCrashRecoveryEmptyLog(true, true);
+  }
+
+  public void testCrashRecoveryEmptyLogOneDirNoUpdateSeenTxId() 
+      throws Exception {
+    doTestCrashRecoveryEmptyLog(false, false);
   }
   
+  public void testCrashRecoveryEmptyLogBothDirsNoUpdateSeenTxId()
+      throws Exception {
+    doTestCrashRecoveryEmptyLog(true, false);
+  }
+
   /**
    * Test that the NN handles the corruption properly
    * after it crashes just after creating an edit log
@@ -646,8 +657,14 @@ public class TestEditLog extends TestCase {
    * will only be in one of the directories. In both cases, the
    * NN should fail to start up, because it's aware that txid 3
    * was reached, but unable to find a non-corrupt log starting there.
+   * @param updateTransactionIdFile if true update the seen_txid file.
+   * If false, the it will not be updated. This will simulate a case 
+   * where the NN crashed between creating the new segment and updating
+   * seen_txid. 
    */
-  private void doTestCrashRecoveryEmptyLog(boolean inBothDirs) throws Exception {
+  private void doTestCrashRecoveryEmptyLog(boolean inBothDirs, 
+                                           boolean updateTransactionIdFile) 
+      throws Exception {
     // start a cluster 
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
@@ -665,6 +682,14 @@ public class TestEditLog extends TestCase {
       // Make a truncated edits_3_inprogress
       File log = new File(currentDir,
           NNStorage.getInProgressEditsFileName(3));
+      NNStorage storage = new NNStorage(conf, 
+                                        Collections.<URI>emptyList(),
+                                        Lists.newArrayList(uri));
+      if (updateTransactionIdFile) {
+        storage.writeTransactionIdFileToStorage(3);
+      }
+      storage.close();
+
       new EditLogFileOutputStream(log, 1024).create();
       if (!inBothDirs) {
         break;
@@ -675,9 +700,9 @@ public class TestEditLog extends TestCase {
       cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(NUM_DATA_NODES).format(false).build();
       fail("Did not fail to start with all-corrupt logs");
-    } catch (IllegalStateException ise) {
+    } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
-          "No non-corrupt logs for txid 3", ise);
+          "No non-corrupt logs for txid 3", ioe);
     }
     cluster.shutdown();
   }
@@ -702,7 +727,17 @@ public class TestEditLog extends TestCase {
             
       reader = new FSEditLogOp.Reader(in, version);
     }
+  
+    @Override
+    public long getFirstTxId() throws IOException {
+      return HdfsConstants.INVALID_TXID;
+    }
     
+    @Override
+    public long getLastTxId() throws IOException {
+      return HdfsConstants.INVALID_TXID;
+    }
+  
     @Override
     public long length() throws IOException {
       return len;
@@ -852,6 +887,168 @@ public class TestEditLog extends TestCase {
     Mockito.doReturn(sds).when(storage).dirIterable(NameNodeDirType.EDITS);
     return storage;
   }
-  
-  
+
+  /** 
+   * Specification for a failure during #setupEdits
+   */
+  static class AbortSpec {
+    final int roll;
+    final int logindex;
+    
+    /**
+     * Construct the failure specification. 
+     * @param roll number to fail after. e.g. 1 to fail after the first roll
+     * @param loginfo index of journal to fail. 
+     */
+    AbortSpec(int roll, int logindex) {
+      this.roll = roll;
+      this.logindex = logindex;
+    }
+  }
+
+  final static int TXNS_PER_ROLL = 10;  
+  final static int TXNS_PER_FAIL = 2;
+    
+  /**
+   * Set up directories for tests. 
+   *
+   * Each rolled file is 10 txns long. 
+   * A failed file is 2 txns long.
+   * 
+   * @param editUris directories to create edit logs in
+   * @param numrolls number of times to roll the edit log during setup
+   * @param abortAtRolls Specifications for when to fail, see AbortSpec
+   */
+  public static NNStorage setupEdits(List<URI> editUris, int numrolls, 
+                                     AbortSpec... abortAtRolls)
+      throws IOException {
+    List<AbortSpec> aborts = new ArrayList<AbortSpec>(Arrays.asList(abortAtRolls));
+    NNStorage storage = new NNStorage(new Configuration(),
+                                      Collections.<URI>emptyList(),
+                                      editUris);
+    storage.format("test-cluster-id");
+    FSEditLog editlog = new FSEditLog(storage);    
+    // open the edit log and add two transactions
+    // logGenerationStamp is used, simply because it doesn't 
+    // require complex arguments.
+    editlog.open();
+    for (int i = 2; i < TXNS_PER_ROLL; i++) {
+      editlog.logGenerationStamp((long)0);
+    }
+    editlog.logSync();
+    
+    // Go into edit log rolling loop.
+    // On each roll, the abortAtRolls abort specs are 
+    // checked to see if an abort is required. If so the 
+    // the specified journal is aborted. It will be brought
+    // back into rotation automatically by rollEditLog
+    for (int i = 0; i < numrolls; i++) {
+      editlog.rollEditLog();
+      
+      editlog.logGenerationStamp((long)i);
+      editlog.logSync();
+
+      while (aborts.size() > 0 
+             && aborts.get(0).roll == (i+1)) {
+        AbortSpec spec = aborts.remove(0);
+        editlog.getJournals().get(spec.logindex).abort();
+      } 
+      
+      for (int j = 3; j < TXNS_PER_ROLL; j++) {
+        editlog.logGenerationStamp((long)i);
+      }
+      editlog.logSync();
+    }
+    editlog.close();
+
+    FSImageTestUtil.logStorageContents(LOG, storage);
+    return storage;
+  }
+
+  /** 
+   * Test loading an editlog which has had both its storage fail
+   * on alternating rolls. Two edit log directories are created.
+   * The first on fails on odd rolls, the second on even. Test
+   * that we are able to load the entire editlog regardless.
+   */
+  @Test
+  public void testAlternatingJournalFailure() throws IOException {
+    File f1 = new File(TEST_DIR + "/alternatingjournaltest0");
+    File f2 = new File(TEST_DIR + "/alternatingjournaltest1");
+
+    List<URI> editUris = ImmutableList.of(f1.toURI(), f2.toURI());
+    
+    NNStorage storage = setupEdits(editUris, 10,
+                                   new AbortSpec(1, 0),
+                                   new AbortSpec(2, 1),
+                                   new AbortSpec(3, 0),
+                                   new AbortSpec(4, 1),
+                                   new AbortSpec(5, 0),
+                                   new AbortSpec(6, 1),
+                                   new AbortSpec(7, 0),
+                                   new AbortSpec(8, 1),
+                                   new AbortSpec(9, 0),
+                                   new AbortSpec(10, 1));
+    long totaltxnread = 0;
+    FSEditLog editlog = new FSEditLog(storage);
+    long startTxId = 1;
+    Iterable<EditLogInputStream> editStreams = editlog.selectInputStreams(startTxId, 
+                                                                          TXNS_PER_ROLL*11);
+
+    for (EditLogInputStream edits : editStreams) {
+      FSEditLogLoader.EditLogValidation val = FSEditLogLoader.validateEditLog(edits);
+      long read = val.getNumTransactions();
+      LOG.info("Loading edits " + edits + " read " + read);
+      assertEquals(startTxId, val.getStartTxId());
+      startTxId += read;
+      totaltxnread += read;
+    }
+
+    editlog.close();
+    storage.close();
+    assertEquals(TXNS_PER_ROLL*11, totaltxnread);    
+  }
+
+  /** 
+   * Test loading an editlog with gaps. A single editlog directory
+   * is set up. On of the edit log files is deleted. This should
+   * fail when selecting the input streams as it will not be able 
+   * to select enough streams to load up to 4*TXNS_PER_ROLL.
+   * There should be 4*TXNS_PER_ROLL transactions as we rolled 3
+   * times. 
+   */
+  @Test
+  public void testLoadingWithGaps() throws IOException {
+    File f1 = new File(TEST_DIR + "/gaptest0");
+    List<URI> editUris = ImmutableList.of(f1.toURI());
+
+    NNStorage storage = setupEdits(editUris, 3);
+    
+    final long startGapTxId = 1*TXNS_PER_ROLL + 1;
+    final long endGapTxId = 2*TXNS_PER_ROLL;
+
+    File[] files = new File(f1, "current").listFiles(new FilenameFilter() {
+        public boolean accept(File dir, String name) {
+          if (name.startsWith(NNStorage.getFinalizedEditsFileName(startGapTxId, 
+                                  endGapTxId))) {
+            return true;
+          }
+          return false;
+        }
+      });
+    assertEquals(1, files.length);
+    assertTrue(files[0].delete());
+    
+    FSEditLog editlog = new FSEditLog(storage);
+    long startTxId = 1;
+    try {
+      Iterable<EditLogInputStream> editStreams 
+        = editlog.selectInputStreams(startTxId, 4*TXNS_PER_ROLL);
+      
+      fail("Should have thrown exception");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains(
+          "No non-corrupt logs for txid " + startGapTxId, ioe);
+    }
+  }
 }

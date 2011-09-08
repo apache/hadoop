@@ -26,8 +26,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
@@ -52,7 +52,7 @@ import org.apache.hadoop.net.NetUtils;
  * </ol>
  */
 @InterfaceAudience.Private
-public class BackupNode extends NameNode implements JournalProtocol {
+public class BackupNode extends NameNode {
   private static final String BN_ADDRESS_NAME_KEY = DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY;
   private static final String BN_ADDRESS_DEFAULT = DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_DEFAULT;
   private static final String BN_HTTP_ADDRESS_NAME_KEY = DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY;
@@ -95,18 +95,20 @@ public class BackupNode extends NameNode implements JournalProtocol {
   }
 
   @Override // NameNode
-  protected void setRpcServerAddress(Configuration conf) {
-    conf.set(BN_ADDRESS_NAME_KEY, getHostPortString(rpcAddress));
+  protected void setRpcServerAddress(Configuration conf,
+      InetSocketAddress addr) {
+    conf.set(BN_ADDRESS_NAME_KEY, getHostPortString(addr));
   }
   
   @Override // Namenode
-  protected void setRpcServiceServerAddress(Configuration conf) {
-    conf.set(BN_SERVICE_RPC_ADDRESS_KEY, getHostPortString(serviceRPCAddress));
+  protected void setRpcServiceServerAddress(Configuration conf,
+      InetSocketAddress addr) {
+    conf.set(BN_SERVICE_RPC_ADDRESS_KEY,  getHostPortString(addr));
   }
 
   @Override // NameNode
   protected InetSocketAddress getHttpServerAddress(Configuration conf) {
-    assert rpcAddress != null : "rpcAddress should be calculated first";
+    assert getNameNodeAddress() != null : "rpcAddress should be calculated first";
     String addr = conf.get(BN_HTTP_ADDRESS_NAME_KEY, BN_HTTP_ADDRESS_DEFAULT);
     return NetUtils.createSocketAddr(addr);
   }
@@ -120,6 +122,7 @@ public class BackupNode extends NameNode implements JournalProtocol {
   protected void loadNamesystem(Configuration conf) throws IOException {
     BackupImage bnImage = new BackupImage(conf);
     this.namesystem = new FSNamesystem(conf, bnImage);
+    bnImage.setNamesystem(namesystem);
     bnImage.recoverCreateRead();
   }
 
@@ -134,7 +137,7 @@ public class BackupNode extends NameNode implements JournalProtocol {
     // Backup node should never do lease recovery,
     // therefore lease hard limit should never expire.
     namesystem.leaseManager.setLeasePeriod(
-        FSConstants.LEASE_SOFTLIMIT_PERIOD, Long.MAX_VALUE);
+        HdfsConstants.LEASE_SOFTLIMIT_PERIOD, Long.MAX_VALUE);
     
     clusterId = nsInfo.getClusterID();
     blockPoolId = nsInfo.getBlockPoolID();
@@ -143,6 +146,12 @@ public class BackupNode extends NameNode implements JournalProtocol {
     registerWith(nsInfo);
     // Checkpoint daemon should start after the rpc server started
     runCheckpointDaemon(conf);
+  }
+
+  @Override
+  protected NameNodeRpcServer createRpcServer(Configuration conf)
+      throws IOException {
+    return new BackupNodeRpcServer(conf, this);
   }
 
   @Override // NameNode
@@ -177,48 +186,58 @@ public class BackupNode extends NameNode implements JournalProtocol {
     super.stop();
   }
 
-  
-  @Override
-  public long getProtocolVersion(String protocol, long clientVersion)
-      throws IOException {
-    if (protocol.equals(JournalProtocol.class.getName())) {
-      return JournalProtocol.versionID;
-    } else {
-      return super.getProtocolVersion(protocol, clientVersion);
+  static class BackupNodeRpcServer extends NameNodeRpcServer implements JournalProtocol {
+    private final String nnRpcAddress;
+    
+    private BackupNodeRpcServer(Configuration conf, BackupNode nn)
+        throws IOException {
+      super(conf, nn);
+      this.server.addProtocol(JournalProtocol.class, this);
+      nnRpcAddress = nn.nnRpcAddress;
+    }
+
+    @Override
+    public long getProtocolVersion(String protocol, long clientVersion)
+        throws IOException {
+      if (protocol.equals(JournalProtocol.class.getName())) {
+        return JournalProtocol.versionID;
+      } else {
+        return super.getProtocolVersion(protocol, clientVersion);
+      }
+    }
+
+    /////////////////////////////////////////////////////
+    // BackupNodeProtocol implementation for backup node.
+    /////////////////////////////////////////////////////
+    @Override
+    public void startLogSegment(NamenodeRegistration registration, long txid)
+        throws IOException {
+      nn.checkOperation(OperationCategory.JOURNAL);
+      verifyRequest(registration);
+        verifyRequest(registration);
+      
+        getBNImage().namenodeStartedLogSegment(txid);
+    }
+    
+    @Override
+    public void journal(NamenodeRegistration nnReg,
+        long firstTxId, int numTxns,
+        byte[] records) throws IOException {
+      nn.checkOperation(OperationCategory.JOURNAL);
+      verifyRequest(nnReg);
+      if(!nnRpcAddress.equals(nnReg.getAddress()))
+        throw new IOException("Journal request from unexpected name-node: "
+            + nnReg.getAddress() + " expecting " + nnRpcAddress);
+      getBNImage().journal(firstTxId, numTxns, records);
+    }
+
+    private BackupImage getBNImage() {
+      return (BackupImage)nn.getFSImage();
     }
   }
-
-  /////////////////////////////////////////////////////
-  // BackupNodeProtocol implementation for backup node.
-  /////////////////////////////////////////////////////
-
-  @Override
-  public void journal(NamenodeRegistration nnReg,
-      long firstTxId, int numTxns,
-      byte[] records) throws IOException {
-    checkOperation(OperationCategory.JOURNAL);
-    verifyRequest(nnReg);
-    if(!nnRpcAddress.equals(nnReg.getAddress()))
-      throw new IOException("Journal request from unexpected name-node: "
-          + nnReg.getAddress() + " expecting " + nnRpcAddress);
-    getBNImage().journal(firstTxId, numTxns, records);
-  }
-
-  @Override
-  public void startLogSegment(NamenodeRegistration registration, long txid)
-      throws IOException {
-    checkOperation(OperationCategory.JOURNAL);
-    verifyRequest(registration);
   
-    getBNImage().namenodeStartedLogSegment(txid);
-  }
-
   //////////////////////////////////////////////////////
   
-  
-  BackupImage getBNImage() {
-    return (BackupImage)getFSImage();
-  }
 
   boolean shouldCheckpointAtStartup() {
     FSImage fsImage = getFSImage();
@@ -330,9 +349,9 @@ public class BackupNode extends NameNode implements JournalProtocol {
       LOG.fatal(errorMsg);
       throw new IOException(errorMsg);
     }
-    assert FSConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion() :
+    assert HdfsConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion() :
       "Active and backup node layout versions must be the same. Expected: "
-      + FSConstants.LAYOUT_VERSION + " actual "+ nsInfo.getLayoutVersion();
+      + HdfsConstants.LAYOUT_VERSION + " actual "+ nsInfo.getLayoutVersion();
     return nsInfo;
   }
   

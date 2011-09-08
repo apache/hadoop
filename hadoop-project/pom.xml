@@ -74,6 +74,8 @@
 
     <distMgmtSnapshotsName>Apache Development Snapshot Repository</distMgmtSnapshotsName>
     <distMgmtSnapshotsUrl>https://repository.apache.org/content/repositories/snapshots</distMgmtSnapshotsUrl>
+
+    <commons-daemon.version>1.0.3</commons-daemon.version>
   </properties>
 
   <dependencyManagement>
@@ -106,7 +108,7 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-alfredo</artifactId>
+        <artifactId>hadoop-auth</artifactId>
         <version>${project.version}</version>
       </dependency>
 
@@ -166,6 +168,28 @@
         <artifactId>jetty-util</artifactId>
         <version>6.1.26</version>
       </dependency>
+
+      <dependency>
+        <groupId>asm</groupId>
+        <artifactId>asm</artifactId>
+        <version>3.2</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sun.jersey</groupId>
+        <artifactId>jersey-core</artifactId>
+        <version>1.8</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sun.jersey</groupId>
+        <artifactId>jersey-json</artifactId>
+        <version>1.8</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sun.jersey</groupId>
+        <artifactId>jersey-server</artifactId>
+        <version>1.8</version>
+      </dependency>
+
       <dependency>
         <groupId>tomcat</groupId>
         <artifactId>jasper-compiler</artifactId>
@@ -320,7 +344,7 @@
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-mapper-asl</artifactId>
-        <version>1.6.9</version>
+        <version>1.7.1</version>
       </dependency>
       <dependency>
         <groupId>org.aspectj</groupId>
@@ -340,12 +364,12 @@
       <dependency>
         <groupId>org.apache.avro</groupId>
         <artifactId>avro</artifactId>
-        <version>1.5.2</version>
+        <version>1.5.3</version>
       </dependency>
       <dependency>
         <groupId>org.apache.avro</groupId>
         <artifactId>avro-ipc</artifactId>
-        <version>1.5.2</version>
+        <version>1.5.3</version>
       </dependency>
       <dependency>
         <groupId>net.sf.kosmosfs</groupId>
@@ -365,7 +389,7 @@
       <dependency>
         <groupId>commons-daemon</groupId>
         <artifactId>commons-daemon</artifactId>
-        <version>1.0.1</version>
+        <version>${commons-daemon.version}</version>
       </dependency>
       <dependency>
         <groupId>com.jcraft</groupId>
@@ -471,7 +495,7 @@
         <plugin>
           <groupId>org.apache.avro</groupId>
           <artifactId>avro-maven-plugin</artifactId>
-          <version>1.5.2</version>
+          <version>1.5.3</version>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo.jspc</groupId>
@@ -487,6 +511,11 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-project-info-reports-plugin</artifactId>
           <version>2.4</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>exec-maven-plugin</artifactId>
+          <version>1.2</version>
         </plugin>
       </plugins>
     </pluginManagement>

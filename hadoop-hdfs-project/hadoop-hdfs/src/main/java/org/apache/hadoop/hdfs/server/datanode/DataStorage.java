@@ -43,15 +43,15 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
@@ -137,8 +137,8 @@ public class DataStorage extends Storage {
       // DN storage has been initialized, no need to do anything
       return;
     }
-    assert FSConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion() :
-      "Data-node version " + FSConstants.LAYOUT_VERSION + 
+    assert HdfsConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion() :
+      "Data-node version " + HdfsConstants.LAYOUT_VERSION + 
       " and name-node layout version " + nsInfo.getLayoutVersion() + 
       " must be the same.";
     
@@ -268,7 +268,7 @@ public class DataStorage extends Storage {
 
   void format(StorageDirectory sd, NamespaceInfo nsInfo) throws IOException {
     sd.clearDirectory(); // create directory
-    this.layoutVersion = FSConstants.LAYOUT_VERSION;
+    this.layoutVersion = HdfsConstants.LAYOUT_VERSION;
     this.clusterID = nsInfo.getClusterID();
     this.namespaceID = nsInfo.getNamespaceID();
     this.cTime = 0;
@@ -374,7 +374,7 @@ public class DataStorage extends Storage {
     }
     readProperties(sd);
     checkVersionUpgradable(this.layoutVersion);
-    assert this.layoutVersion >= FSConstants.LAYOUT_VERSION :
+    assert this.layoutVersion >= HdfsConstants.LAYOUT_VERSION :
       "Future version is not allowed";
     
     boolean federationSupported = 
@@ -397,7 +397,7 @@ public class DataStorage extends Storage {
     }
     
     // regular start up
-    if (this.layoutVersion == FSConstants.LAYOUT_VERSION 
+    if (this.layoutVersion == HdfsConstants.LAYOUT_VERSION 
         && this.cTime == nsInfo.getCTime())
       return; // regular startup
     // verify necessity of a distributed upgrade
@@ -406,7 +406,7 @@ public class DataStorage extends Storage {
     verifyDistributedUpgradeProgress(um, nsInfo);
     
     // do upgrade
-    if (this.layoutVersion > FSConstants.LAYOUT_VERSION
+    if (this.layoutVersion > HdfsConstants.LAYOUT_VERSION
         || this.cTime < nsInfo.getCTime()) {
       doUpgrade(sd, nsInfo);  // upgrade
       return;
@@ -482,7 +482,7 @@ public class DataStorage extends Storage {
     linkAllBlocks(tmpDir, new File(curBpDir, STORAGE_DIR_CURRENT));
     
     // 4. Write version file under <SD>/current
-    layoutVersion = FSConstants.LAYOUT_VERSION;
+    layoutVersion = HdfsConstants.LAYOUT_VERSION;
     clusterID = nsInfo.getClusterID();
     writeProperties(sd);
     
@@ -542,7 +542,7 @@ public class DataStorage extends Storage {
 
     // We allow rollback to a state, which is either consistent with
     // the namespace state or can be further upgraded to it.
-    if (!(prevInfo.getLayoutVersion() >= FSConstants.LAYOUT_VERSION
+    if (!(prevInfo.getLayoutVersion() >= HdfsConstants.LAYOUT_VERSION
           && prevInfo.getCTime() <= nsInfo.getCTime()))  // cannot rollback
       throw new InconsistentFSStateException(sd.getRoot(),
           "Cannot rollback to a newer state.\nDatanode previous state: LV = "

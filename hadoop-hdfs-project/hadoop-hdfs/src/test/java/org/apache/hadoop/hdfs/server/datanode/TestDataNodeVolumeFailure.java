@@ -38,10 +38,10 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.net.NetUtils;
 
@@ -144,7 +144,7 @@ public class TestDataNodeVolumeFailure {
     String bpid = cluster.getNamesystem().getBlockPoolId();
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(bpid);
     long[] bReport = dn.getFSDataset().getBlockReport(bpid).getBlockListAsLongs();
-    cluster.getNameNode().blockReport(dnR, bpid, bReport);
+    cluster.getNameNodeRpc().blockReport(dnR, bpid, bReport);
 
     // verify number of blocks and files...
     verify(filename, filesize);
@@ -216,7 +216,7 @@ public class TestDataNodeVolumeFailure {
    * @throws IOException
    */
   private void triggerFailure(String path, long size) throws IOException {
-    NameNode nn = cluster.getNameNode();
+    NamenodeProtocols nn = cluster.getNameNodeRpc();
     List<LocatedBlock> locatedBlocks =
       nn.getBlockLocations(path, 0, size).getLocatedBlocks();
     
@@ -265,8 +265,8 @@ public class TestDataNodeVolumeFailure {
     targetAddr = NetUtils.createSocketAddr(datanode.getName());
       
     s = new Socket();
-    s.connect(targetAddr, HdfsConstants.READ_TIMEOUT);
-    s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
+    s.connect(targetAddr, HdfsServerConstants.READ_TIMEOUT);
+    s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
 
     String file = BlockReaderFactory.getFileName(targetAddr, 
         "test-blockpoolid",
@@ -291,7 +291,7 @@ public class TestDataNodeVolumeFailure {
     throws IOException {
     int total = 0;
     
-    NameNode nn = cluster.getNameNode();
+    NamenodeProtocols nn = cluster.getNameNodeRpc();
     List<LocatedBlock> locatedBlocks = 
       nn.getBlockLocations(path, 0, size).getLocatedBlocks();
     //System.out.println("Number of blocks: " + locatedBlocks.size()); 

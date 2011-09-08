@@ -18,6 +18,42 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.yarn.api.ContainerManager;
+
+/**
+ * <p><code>LocalResourceType</code> specifies the <em>type</em>
+ * of a resource localized by the <code>NodeManager</code>.</p> 
+ *
+ * <p>The <em>type</em> can be one of:
+ *   <ul>
+ *     <li>
+ *       {@link #FILE} - Regular file i.e. uninterpreted bytes. 
+ *     </li>
+ *     <li>
+ *       {@link #ARCHIVE} - Archive, which is automatically unarchived by the 
+ *       <code>NodeManager</code>.
+ *     </li>
+ *   </ul>
+ * </p>
+ *
+ * @see LocalResource
+ * @see ContainerLaunchContext
+ * @see ApplicationSubmissionContext
+ * @see ContainerManager#startContainer(org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest)
+ */
+@Public
+@Stable
 public enum LocalResourceType {
-  ARCHIVE, FILE
+  
+  /**
+   * Archive, which is automatically unarchived by the <code>NodeManager</code>.
+   */
+  ARCHIVE,
+  
+  /**
+   * Regular file i.e. uninterpreted bytes.
+   */
+  FILE
 }

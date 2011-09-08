@@ -20,31 +20,142 @@ package org.apache.hadoop.yarn.api.records;
 
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
+
+/**
+ * <p>The response sent by the <code>ResourceManager</code> the  
+ * <code>ApplicationMaster</code> during resource negotiation.</p>
+ *
+ * <p>The response includes:
+ *   <ul>
+ *     <li>Response ID to track duplicate responses.</li>
+ *     <li>
+ *       A reboot flag to let the <code>ApplicationMaster</code> that its 
+ *       horribly out of sync and needs to reboot.</li>
+ *     <li>A list of newly allocated {@link Container}.</li>
+ *     <li>A list of completed {@link Container}.</li>
+ *     <li>
+ *       The available headroom for resources in the cluster for the
+ *       application. 
+ *     </li>
+ *   </ul>
+ * </p>
+ * 
+ * @see AMRMProtocol#allocate(AllocateRequest)
+ */
+@Public
+@Unstable
 public interface AMResponse {
+  /**
+   * Should the <code>ApplicationMaster</code> reboot for being horribly 
+   * out-of-sync with the <code>ResourceManager</code> as deigned by 
+   * {@link #getResponseId()}?
+   * 
+   * @return <code>true</code> if the <code>ApplicationMaster</code> should
+   *         reboot, <code>false</code> otherwise
+   */
+  @Public
+  @Stable
   public boolean getReboot();
+  
+  @Private
+  @Unstable
+  public void setReboot(boolean reboot);
+
+  /**
+   * Get the <em>last response id</em>.
+   * @return <em>last response id</em>
+   */
+  @Public
+  @Stable
   public int getResponseId();
   
+  @Private
+  @Unstable
+  public void setResponseId(int responseId);
+
+  /**
+   * Get the list of <em>newly allocated</em> <code>Container</code> by the 
+   * <code>ResourceManager</code>.
+   * @return list of <em>newly allocated</em> <code>Container</code>
+   */
+  @Public
+  @Stable
   public List<Container> getNewContainerList();
+
+  @Private
+  @Unstable
   public Container getNewContainer(int index);
+
+  @Private
+  @Unstable
   public int getNewContainerCount();
 
-  public void setReboot(boolean reboot);
-  public void setResponseId(int responseId);
-  
+  @Private
+  @Unstable
   public void addAllNewContainers(List<Container> containers);
+
+  @Private
+  @Unstable
   public void addNewContainer(Container container);
+
+  @Private
+  @Unstable
   public void removeNewContainer(int index);
+
+  @Private
+  @Unstable
   public void clearNewContainers();
   
-  public void setAvailableResources(Resource limit);
+  /**
+   * Get the <em>available headroom</em> for resources in the cluster for the 
+   * application.
+   * @return limit available headroom for resources in the cluster for the 
+   * application
+   */
+  @Public
+  @Stable
   public Resource getAvailableResources();
 
+  @Private
+  @Unstable
+  public void setAvailableResources(Resource limit);
+  
+  /**
+   * Get the list of <em>completed containers</em>.
+   * @return the list of <em>completed containers</em>
+   */
+  @Public
+  @Stable
   public List<Container> getFinishedContainerList();
+
+  @Private
+  @Unstable
   public Container getFinishedContainer(int index);
+
+  @Private
+  @Unstable
   public int getFinishedContainerCount();
   
+
+  @Private
+  @Unstable
   public void addAllFinishedContainers(List<Container> containers);
+
+  @Private
+  @Unstable
   public void addFinishedContainer(Container container);
+
+  @Private
+  @Unstable
   public void removeFinishedContainer(int index);
+
+  @Private
+  @Unstable
   public void clearFinishedContainers();
 }

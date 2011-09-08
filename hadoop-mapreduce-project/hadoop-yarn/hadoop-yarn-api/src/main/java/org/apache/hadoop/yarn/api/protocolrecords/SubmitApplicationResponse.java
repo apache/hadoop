@@ -18,6 +18,18 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.yarn.api.ClientRMProtocol;
+
+/**
+ * <p>The response sent by the <code>ResourceManager</code> to a client on
+ * application submission.</p>
+ * 
+ * @see ClientRMProtocol#submitApplication(SubmitApplicationRequest)
+ */
+@Public
+@Stable
 public interface SubmitApplicationResponse {
 
 }

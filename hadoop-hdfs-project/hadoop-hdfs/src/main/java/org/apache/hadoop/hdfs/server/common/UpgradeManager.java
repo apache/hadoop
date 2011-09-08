@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.SortedSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 
 /**
@@ -69,7 +69,7 @@ public abstract class UpgradeManager {
     currentUpgrades = getDistributedUpgrades();
     if(currentUpgrades == null) {
       // set new upgrade state
-      setUpgradeState(false, FSConstants.LAYOUT_VERSION);
+      setUpgradeState(false, HdfsConstants.LAYOUT_VERSION);
       return false;
     }
     Upgradeable curUO = currentUpgrades.first();
@@ -85,7 +85,7 @@ public abstract class UpgradeManager {
     return false;
   }
 
-  public abstract HdfsConstants.NodeType getType();
+  public abstract HdfsServerConstants.NodeType getType();
   public abstract boolean startUpgrade() throws IOException;
   public abstract void completeUpgrade() throws IOException;
 }

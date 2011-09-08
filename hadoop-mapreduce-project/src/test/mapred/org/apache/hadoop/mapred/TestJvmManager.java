@@ -59,7 +59,7 @@ public class TestJvmManager {
   }
 
   @After
-  public void tearDown() throws IOException {
+  public void tearDown() {
     FileUtil.fullyDelete(TEST_DIR);
   }
 

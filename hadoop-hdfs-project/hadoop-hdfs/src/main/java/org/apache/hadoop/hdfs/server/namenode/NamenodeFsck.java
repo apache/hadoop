@@ -48,7 +48,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NodeBase;
@@ -173,7 +173,7 @@ public class NamenodeFsck {
       out.println(msg);
       namenode.getNamesystem().logFsckEvent(path, remoteAddress);
 
-      final HdfsFileStatus file = namenode.getFileInfo(path);
+      final HdfsFileStatus file = namenode.getRpcServer().getFileInfo(path);
       if (file != null) {
 
         if (showCorruptFileBlocks) {
@@ -250,7 +250,8 @@ public class NamenodeFsck {
       res.totalDirs++;
       do {
         assert lastReturnedName != null;
-        thisListing = namenode.getListing(path, lastReturnedName, false);
+        thisListing = namenode.getRpcServer().getListing(
+            path, lastReturnedName, false);
         if (thisListing == null) {
           return;
         }
@@ -385,7 +386,7 @@ public class NamenodeFsck {
         break;
       case FIXING_DELETE:
         if (!isOpen)
-          namenode.delete(path, true);
+          namenode.getRpcServer().delete(path, true);
       }
     }
     if (showFiles) {
@@ -414,7 +415,8 @@ public class NamenodeFsck {
     String target = lostFound + fullName;
     String errmsg = "Failed to move " + fullName + " to /lost+found";
     try {
-      if (!namenode.mkdirs(target, file.getPermission(), true)) {
+      if (!namenode.getRpcServer().mkdirs(
+          target, file.getPermission(), true)) {
         LOG.warn(errmsg);
         return;
       }
@@ -502,8 +504,8 @@ public class NamenodeFsck {
       }
       try {
         s = new Socket();
-        s.connect(targetAddr, HdfsConstants.READ_TIMEOUT);
-        s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
+        s.connect(targetAddr, HdfsServerConstants.READ_TIMEOUT);
+        s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
         
         String file = BlockReaderFactory.getFileName(targetAddr, block.getBlockPoolId(),
             block.getBlockId());

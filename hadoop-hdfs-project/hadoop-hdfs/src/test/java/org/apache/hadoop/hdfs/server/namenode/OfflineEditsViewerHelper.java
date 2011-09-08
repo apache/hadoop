@@ -38,7 +38,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -172,7 +172,7 @@ public class OfflineEditsViewerHelper {
     long atime = mtime;
     dfs.setTimes(pathFileCreate, mtime, atime);
     // OP_SET_QUOTA 14
-    dfs.setQuota(pathDirectoryMkdir, 1000L, FSConstants.QUOTA_DONT_SET);
+    dfs.setQuota(pathDirectoryMkdir, 1000L, HdfsConstants.QUOTA_DONT_SET);
     // OP_RENAME 15
     fc.rename(pathFileCreate, pathFileMoved, Rename.NONE);
     // OP_CONCAT_DELETE 16
@@ -239,10 +239,10 @@ public class OfflineEditsViewerHelper {
         LOG.info("Innocuous exception", e);
       }
       locatedBlocks = DFSClientAdapter.callGetBlockLocations(
-          cluster.getNameNode(), filePath, 0L, bytes.length);
+          cluster.getNameNodeRpc(), filePath, 0L, bytes.length);
     } while (locatedBlocks.isUnderConstruction());
 
     // Force a roll so we get an OP_END_LOG_SEGMENT txn
-    return cluster.getNameNode().rollEditLog();
+    return cluster.getNameNodeRpc().rollEditLog();
   }
 }

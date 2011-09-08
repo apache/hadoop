@@ -35,15 +35,15 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
-import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 
-import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.NAME_NODE;
-import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.DATA_NODE;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType.NAME_NODE;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType.DATA_NODE;
 
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
@@ -51,7 +51,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.datanode.BlockPoolSliceStorage;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 
 /**
  * This class defines a number of static helper methods used by the
@@ -121,7 +121,7 @@ public class UpgradeUtilities {
                                    .manageNameDfsDirs(false)
                                    .build();
         
-      NameNode namenode = cluster.getNameNode();
+      NamenodeProtocols namenode = cluster.getNameNodeRpc();
       namenodeStorageNamespaceID = namenode.versionRequest().getNamespaceID();
       namenodeStorageFsscTime = namenode.versionRequest().getCTime();
       namenodeStorageClusterID = namenode.versionRequest().getClusterID();
@@ -504,7 +504,7 @@ public class UpgradeUtilities {
    * of the Namenode, whether it is running or not.
    */
   public static int getCurrentLayoutVersion() {
-    return FSConstants.LAYOUT_VERSION;
+    return HdfsConstants.LAYOUT_VERSION;
   }
   
   /**
@@ -517,7 +517,7 @@ public class UpgradeUtilities {
    */
   public static int getCurrentNamespaceID(MiniDFSCluster cluster) throws IOException {
     if (cluster != null) {
-      return cluster.getNameNode().versionRequest().getNamespaceID();
+      return cluster.getNameNodeRpc().versionRequest().getNamespaceID();
     }
     return namenodeStorageNamespaceID;
   }
@@ -528,7 +528,7 @@ public class UpgradeUtilities {
    */
   public static String getCurrentClusterID(MiniDFSCluster cluster) throws IOException {
     if (cluster != null) {
-      return cluster.getNameNode().versionRequest().getClusterID();
+      return cluster.getNameNodeRpc().versionRequest().getClusterID();
     }
     return namenodeStorageClusterID;
   }
@@ -539,7 +539,7 @@ public class UpgradeUtilities {
    */
   public static String getCurrentBlockPoolID(MiniDFSCluster cluster) throws IOException {
     if (cluster != null) {
-      return cluster.getNameNode().versionRequest().getBlockPoolID();
+      return cluster.getNameNodeRpc().versionRequest().getBlockPoolID();
     }
     return namenodeStorageBlockPoolID;
   }
@@ -554,7 +554,7 @@ public class UpgradeUtilities {
    */
   public static long getCurrentFsscTime(MiniDFSCluster cluster) throws IOException {
     if (cluster != null) {
-      return cluster.getNameNode().versionRequest().getCTime();
+      return cluster.getNameNodeRpc().versionRequest().getCTime();
     }
     return namenodeStorageFsscTime;
   }

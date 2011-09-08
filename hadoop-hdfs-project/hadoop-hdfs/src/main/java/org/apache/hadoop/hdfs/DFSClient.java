@@ -60,10 +60,10 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
-import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsProtoUtil;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -77,7 +77,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseP
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -156,14 +156,14 @@ public class DFSClient implements java.io.Closeable {
           DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY,
           DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT);
       confTime = conf.getInt(DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY,
-          HdfsConstants.WRITE_TIMEOUT);
+          HdfsServerConstants.WRITE_TIMEOUT);
       ioBufferSize = conf.getInt(
           CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY,
           CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT);
       bytesPerChecksum = conf.getInt(DFS_BYTES_PER_CHECKSUM_KEY,
           DFS_BYTES_PER_CHECKSUM_DEFAULT);
       socketTimeout = conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY,
-          HdfsConstants.READ_TIMEOUT);
+          HdfsServerConstants.READ_TIMEOUT);
       /** dfs.write.packet.size is an internal config variable */
       writePacketSize = conf.getInt(DFS_CLIENT_WRITE_PACKET_SIZE_KEY,
           DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
@@ -279,12 +279,12 @@ public class DFSClient implements java.io.Closeable {
    */
   int getDatanodeWriteTimeout(int numNodes) {
     return (dfsClientConf.confTime > 0) ?
-      (dfsClientConf.confTime + HdfsConstants.WRITE_TIMEOUT_EXTENSION * numNodes) : 0;
+      (dfsClientConf.confTime + HdfsServerConstants.WRITE_TIMEOUT_EXTENSION * numNodes) : 0;
   }
 
   int getDatanodeReadTimeout(int numNodes) {
     return dfsClientConf.socketTimeout > 0 ?
-        (HdfsConstants.READ_TIMEOUT_EXTENSION * numNodes +
+        (HdfsServerConstants.READ_TIMEOUT_EXTENSION * numNodes +
             dfsClientConf.socketTimeout) : 0;
   }
   
@@ -1046,7 +1046,7 @@ public class DFSClient implements java.io.Closeable {
 
           out = new DataOutputStream(
               new BufferedOutputStream(NetUtils.getOutputStream(sock), 
-                                       FSConstants.SMALL_BUFFER_SIZE));
+                                       HdfsConstants.SMALL_BUFFER_SIZE));
           in = new DataInputStream(NetUtils.getInputStream(sock));
 
           if (LOG.isDebugEnabled()) {
@@ -1225,7 +1225,7 @@ public class DFSClient implements java.io.Closeable {
   /**
    * Enter, leave or get safe mode.
    * 
-   * @see ClientProtocol#setSafeMode(FSConstants.SafeModeAction)
+   * @see ClientProtocol#setSafeMode(HdfsConstants.SafeModeAction)
    */
   public boolean setSafeMode(SafeModeAction action) throws IOException {
     return namenode.setSafeMode(action);
@@ -1293,7 +1293,7 @@ public class DFSClient implements java.io.Closeable {
   }
 
   /**
-   * @see ClientProtocol#distributedUpgradeProgress(FSConstants.UpgradeAction)
+   * @see ClientProtocol#distributedUpgradeProgress(HdfsConstants.UpgradeAction)
    */
   public UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action)
       throws IOException {
@@ -1392,10 +1392,10 @@ public class DFSClient implements java.io.Closeable {
   void setQuota(String src, long namespaceQuota, long diskspaceQuota) 
       throws IOException {
     // sanity check
-    if ((namespaceQuota <= 0 && namespaceQuota != FSConstants.QUOTA_DONT_SET &&
-         namespaceQuota != FSConstants.QUOTA_RESET) ||
-        (diskspaceQuota <= 0 && diskspaceQuota != FSConstants.QUOTA_DONT_SET &&
-         diskspaceQuota != FSConstants.QUOTA_RESET)) {
+    if ((namespaceQuota <= 0 && namespaceQuota != HdfsConstants.QUOTA_DONT_SET &&
+         namespaceQuota != HdfsConstants.QUOTA_RESET) ||
+        (diskspaceQuota <= 0 && diskspaceQuota != HdfsConstants.QUOTA_DONT_SET &&
+         diskspaceQuota != HdfsConstants.QUOTA_RESET)) {
       throw new IllegalArgumentException("Invalid values for quota : " +
                                          namespaceQuota + " and " + 
                                          diskspaceQuota);

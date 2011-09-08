@@ -18,10 +18,34 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 
+/**
+ * <p>The request sent by the client to the <code>ResourceManager</code>
+ * to abort a submitted application.</p>
+ * 
+ * <p>The request includes the {@link ApplicationId} of the application to be
+ * aborted.</p>
+ * 
+ * @see ClientRMProtocol#finishApplication(FinishApplicationRequest)
+ */
+@Public
+@Stable
 public interface FinishApplicationRequest {
+  /**
+   * Get the <code>ApplicationId</code> of the application to be aborted.
+   * @return <code>ApplicationId</code> of the application to be aborted
+   */
+  @Public
+  @Stable
   public abstract ApplicationId getApplicationId();
   
+  @Private
+  @Unstable
   public abstract void setApplicationId(ApplicationId applicationId);
 }

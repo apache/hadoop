@@ -132,6 +132,12 @@ public class GangliaContext extends AbstractMetricsContext {
     StringBuilder sb = new StringBuilder();
     sb.append(contextName);
     sb.append('.');
+
+    if (contextName.equals("jvm") && outRec.getTag("processName") != null) {
+      sb.append(outRec.getTag("processName"));
+      sb.append('.');
+    }
+
     sb.append(recordName);
     sb.append('.');
     int sbBaseLen = sb.length();

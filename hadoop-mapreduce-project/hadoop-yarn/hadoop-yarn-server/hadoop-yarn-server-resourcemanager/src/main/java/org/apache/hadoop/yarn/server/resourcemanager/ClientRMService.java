@@ -70,6 +70,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.client.ClientRMSecurityInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -195,9 +196,11 @@ public class ClientRMService extends AbstractService implements
       SubmitApplicationRequest request) throws YarnRemoteException {
     ApplicationSubmissionContext submissionContext = request
         .getApplicationSubmissionContext();
+    ApplicationId applicationId = null;
+    String user = null;
     try {
-      String user = UserGroupInformation.getCurrentUser().getShortUserName();
-      ApplicationId applicationId = submissionContext.getApplicationId();
+      user = UserGroupInformation.getCurrentUser().getShortUserName();
+      applicationId = submissionContext.getApplicationId();
       if (rmContext.getRMApps().get(applicationId) != null) {
         throw new IOException("Application with id " + applicationId
             + " is already present! Cannot add a duplicate!");
@@ -207,8 +210,13 @@ public class ClientRMService extends AbstractService implements
 
       LOG.info("Application with id " + applicationId.getId() + 
           " submitted by user " + user + " with " + submissionContext);
+      RMAuditLogger.logSuccess(user, AuditConstants.SUBMIT_APP_REQUEST,
+          "ClientRMService", applicationId);
     } catch (IOException ie) {
       LOG.info("Exception in submitting application", ie);
+      RMAuditLogger.logFailure(user, AuditConstants.SUBMIT_APP_REQUEST, 
+          ie.getMessage(), "ClientRMService",
+          "Exception in submitting application", applicationId);
       throw RPCUtil.getRemoteException(ie);
     }
 
@@ -228,6 +236,9 @@ public class ClientRMService extends AbstractService implements
       callerUGI = UserGroupInformation.getCurrentUser();
     } catch (IOException ie) {
       LOG.info("Error getting UGI ", ie);
+      RMAuditLogger.logFailure("UNKNOWN", AuditConstants.KILL_APP_REQUEST,
+          "UNKNOWN", "ClientRMService" , "Error getting UGI",
+          applicationId);
       throw RPCUtil.getRemoteException(ie);
     }
 
@@ -235,6 +246,10 @@ public class ClientRMService extends AbstractService implements
     // TODO: What if null
     if (!checkAccess(callerUGI, application.getUser(),
         ApplicationACL.MODIFY_APP)) {
+      RMAuditLogger.logFailure(callerUGI.getShortUserName(), 
+          AuditConstants.KILL_APP_REQUEST, 
+          "User doesn't have MODIFY_APP permissions", "ClientRMService",
+          AuditConstants.UNAUTHORIZED_USER, applicationId);
       throw RPCUtil.getRemoteException(new AccessControlException("User "
           + callerUGI.getShortUserName() + " cannot perform operation "
           + ApplicationACL.MODIFY_APP.name() + " on " + applicationId));
@@ -243,6 +258,8 @@ public class ClientRMService extends AbstractService implements
     this.rmContext.getDispatcher().getEventHandler().handle(
         new RMAppEvent(applicationId, RMAppEventType.KILL));
 
+    RMAuditLogger.logSuccess(callerUGI.getShortUserName(), 
+        AuditConstants.KILL_APP_REQUEST, "ClientRMService" , applicationId);
     FinishApplicationResponse response = recordFactory
         .newRecordInstance(FinishApplicationResponse.class);
     return response;

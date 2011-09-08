@@ -592,8 +592,7 @@ public class TestProcfsBasedProcessTree extends TestCase {
    * @param procfsRootDir root directory to create.
    * @throws IOException if could not delete the procfs root directory
    */
-  public static void setupProcfsRootDir(File procfsRootDir) 
-                                        throws IOException { 
+  public static void setupProcfsRootDir(File procfsRootDir) {
     // cleanup any existing process root dir.
     if (procfsRootDir.exists()) {
       assertTrue(FileUtil.fullyDelete(procfsRootDir));  

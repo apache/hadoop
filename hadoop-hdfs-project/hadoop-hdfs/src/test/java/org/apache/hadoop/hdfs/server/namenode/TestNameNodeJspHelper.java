@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
 import org.junit.Assert;
@@ -54,7 +55,7 @@ public class TestNameNodeJspHelper {
 
   @Test
   public void testDelegationToken() throws IOException, InterruptedException {
-    NameNode nn = cluster.getNameNode();
+    NamenodeProtocols nn = cluster.getNameNodeRpc();
     HttpServletRequest request = mock(HttpServletRequest.class);
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("auser");
     String tokenString = NamenodeJspHelper.getDelegationToken(nn, request,

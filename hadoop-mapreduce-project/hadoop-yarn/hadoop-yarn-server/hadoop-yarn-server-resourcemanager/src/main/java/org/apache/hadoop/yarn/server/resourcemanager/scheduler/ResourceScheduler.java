@@ -29,7 +29,7 @@ import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 
 /**
  * This interface is the one implemented by the schedulers. It mainly extends 
- * {@link ResourceListener} and {@link YarnScheduler}. 
+ * {@link YarnScheduler}. 
  *
  */
 @LimitedPrivate("yarn")

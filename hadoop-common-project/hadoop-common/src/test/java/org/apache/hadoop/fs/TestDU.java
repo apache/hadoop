@@ -29,7 +29,7 @@ public class TestDU extends TestCase {
   final static private File DU_DIR = new File(
       System.getProperty("test.build.data","/tmp"), "dutmp");
 
-  public void setUp() throws IOException {
+  public void setUp() {
       FileUtil.fullyDelete(DU_DIR);
       assertTrue(DU_DIR.mkdirs());
   }

@@ -46,13 +46,13 @@ public class NameNodeAdapter {
     return namenode.getNamesystem().getBlockLocations(
         src, offset, length, false, true);
   }
-
+  
   /**
    * Get the internal RPC server instance.
    * @return rpc server
    */
   public static Server getRpcServer(NameNode namenode) {
-    return namenode.server;
+    return ((NameNodeRpcServer)namenode.getRpcServer()).server;
   }
 
   public static DelegationTokenSecretManager getDtSecretManager(

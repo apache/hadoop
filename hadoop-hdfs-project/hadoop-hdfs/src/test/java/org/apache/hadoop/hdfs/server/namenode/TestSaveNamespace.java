@@ -41,8 +41,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.log4j.Level;
 import org.junit.Test;
@@ -79,7 +79,7 @@ public class TestSaveNamespace {
 
     public Void answer(InvocationOnMock invocation) throws Throwable {
       Object[] args = invocation.getArguments();
-      StorageDirectory sd = (StorageDirectory)args[0];
+      StorageDirectory sd = (StorageDirectory)args[1];
 
       if (count++ == 1) {
         LOG.info("Injecting fault for sd: " + sd);
@@ -106,7 +106,7 @@ public class TestSaveNamespace {
     Configuration conf = getConf();
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
-    FSNamesystem fsn = new FSNamesystem(conf);
+    FSNamesystem fsn = FSNamesystem.loadFromDisk(conf);
 
     // Replace the FSImage with a spy
     FSImage originalImage = fsn.dir.fsImage;
@@ -124,19 +124,22 @@ public class TestSaveNamespace {
     case SAVE_SECOND_FSIMAGE_RTE:
       // The spy throws a RuntimeException when writing to the second directory
       doAnswer(new FaultySaveImage(true)).
-        when(spyImage).saveFSImage((StorageDirectory)anyObject(), anyLong());
+        when(spyImage).saveFSImage(Mockito.eq(fsn),
+            (StorageDirectory)anyObject(), anyLong());
       shouldFail = false;
       break;
     case SAVE_SECOND_FSIMAGE_IOE:
       // The spy throws an IOException when writing to the second directory
       doAnswer(new FaultySaveImage(false)).
-        when(spyImage).saveFSImage((StorageDirectory)anyObject(), anyLong());
+        when(spyImage).saveFSImage(Mockito.eq(fsn),
+            (StorageDirectory)anyObject(), anyLong());
       shouldFail = false;
       break;
     case SAVE_ALL_FSIMAGES:
       // The spy throws IOException in all directories
       doThrow(new RuntimeException("Injected")).
-        when(spyImage).saveFSImage((StorageDirectory)anyObject(), anyLong());
+        when(spyImage).saveFSImage(Mockito.eq(fsn),
+            (StorageDirectory)anyObject(), anyLong());
       shouldFail = true;
       break;
     case WRITE_STORAGE_ALL:
@@ -184,7 +187,7 @@ public class TestSaveNamespace {
 
       // Start a new namesystem, which should be able to recover
       // the namespace from the previous incarnation.
-      fsn = new FSNamesystem(conf);
+      fsn = FSNamesystem.loadFromDisk(conf);
 
       // Make sure the image loaded including our edits.
       checkEditExists(fsn, 1);
@@ -209,7 +212,7 @@ public class TestSaveNamespace {
 
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
-    FSNamesystem fsn = new FSNamesystem(conf);
+    FSNamesystem fsn = FSNamesystem.loadFromDisk(conf);
 
     // Replace the FSImage with a spy
     FSImage originalImage = fsn.dir.fsImage;
@@ -263,7 +266,7 @@ public class TestSaveNamespace {
       // Start a new namesystem, which should be able to recover
       // the namespace from the previous incarnation.
       LOG.info("Loading new FSmage from disk.");
-      fsn = new FSNamesystem(conf);
+      fsn = FSNamesystem.loadFromDisk(conf);
 
       // Make sure the image loaded including our edit.
       LOG.info("Checking reloaded image.");
@@ -344,7 +347,7 @@ public class TestSaveNamespace {
     Configuration conf = getConf();
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
-    FSNamesystem fsn = new FSNamesystem(conf);
+    FSNamesystem fsn = FSNamesystem.loadFromDisk(conf);
 
     // Replace the FSImage with a spy
     final FSImage originalImage = fsn.dir.fsImage;
@@ -360,8 +363,9 @@ public class TestSaveNamespace {
         FSNamesystem.getNamespaceEditsDirs(conf));
 
     doThrow(new IOException("Injected fault: saveFSImage")).
-      when(spyImage).saveFSImage((StorageDirectory)anyObject(),
-                                 Mockito.anyLong());
+      when(spyImage).saveFSImage(
+          Mockito.eq(fsn), (StorageDirectory)anyObject(),
+          Mockito.anyLong());
 
     try {
       doAnEdit(fsn, 1);
@@ -390,7 +394,7 @@ public class TestSaveNamespace {
 
       // Start a new namesystem, which should be able to recover
       // the namespace from the previous incarnation.
-      fsn = new FSNamesystem(conf);
+      fsn = FSNamesystem.loadFromDisk(conf);
 
       // Make sure the image loaded including our edits.
       checkEditExists(fsn, 1);
@@ -406,7 +410,7 @@ public class TestSaveNamespace {
     Configuration conf = getConf();
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
-    FSNamesystem fsn = new FSNamesystem(conf);
+    FSNamesystem fsn = FSNamesystem.loadFromDisk(conf);
 
     try {
       doAnEdit(fsn, 1);
@@ -425,7 +429,7 @@ public class TestSaveNamespace {
 
       // Start a new namesystem, which should be able to recover
       // the namespace from the previous incarnation.
-      fsn = new FSNamesystem(conf);
+      fsn = FSNamesystem.loadFromDisk(conf);
 
       // Make sure the image loaded including our edits.
       checkEditExists(fsn, 1);
@@ -442,7 +446,7 @@ public class TestSaveNamespace {
     Configuration conf = getConf();
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
-    FSNamesystem fsn = new FSNamesystem(conf);
+    FSNamesystem fsn = FSNamesystem.loadFromDisk(conf);
 
     try {
       // We have a BEGIN_LOG_SEGMENT txn to start
@@ -464,7 +468,7 @@ public class TestSaveNamespace {
       assertEquals(5, fsn.getEditLog().getLastWrittenTxId());
       fsn = null;
       
-      fsn = new FSNamesystem(conf);
+      fsn = FSNamesystem.loadFromDisk(conf);
       // 1 more txn to start new segment on restart
       assertEquals(6, fsn.getEditLog().getLastWrittenTxId());
       

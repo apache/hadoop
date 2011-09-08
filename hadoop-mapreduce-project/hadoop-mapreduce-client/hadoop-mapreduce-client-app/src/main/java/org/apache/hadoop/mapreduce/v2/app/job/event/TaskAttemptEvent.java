@@ -28,7 +28,12 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 public class TaskAttemptEvent extends AbstractEvent<TaskAttemptEventType> {
 
   private TaskAttemptId attemptID;
-
+  
+  /**
+   * Create a new TaskAttemptEvent.
+   * @param id the id of the task attempt
+   * @param type the type of event that happened.
+   */
   public TaskAttemptEvent(TaskAttemptId id, TaskAttemptEventType type) {
     super(type);
     this.attemptID = id;
@@ -37,5 +42,4 @@ public class TaskAttemptEvent extends AbstractEvent<TaskAttemptEventType> {
   public TaskAttemptId getTaskAttemptID() {
     return attemptID;
   }
-
 }

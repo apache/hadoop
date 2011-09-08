@@ -55,6 +55,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
@@ -225,8 +227,15 @@ public class FifoScheduler implements ResourceScheduler {
 
     // Release containers
     for (ContainerId releasedContainer : release) {
-      containerCompleted(getRMContainer(releasedContainer), 
-          RMContainerEventType.RELEASED);
+      RMContainer rmContainer = getRMContainer(releasedContainer);
+      if (rmContainer == null) {
+         RMAuditLogger.logFailure(application.getUser(),
+             AuditConstants.RELEASE_CONTAINER, 
+             "Unauthorized access or invalid container", "FifoScheduler", 
+             "Trying to release container not owned by app or with invalid id",
+             application.getApplicationId(), releasedContainer);
+      }
+      containerCompleted(rmContainer, RMContainerEventType.RELEASED);
     }
 
     if (!ask.isEmpty()) {
@@ -642,6 +651,11 @@ public class FifoScheduler implements ResourceScheduler {
   @Lock(FifoScheduler.class)
   private synchronized void containerCompleted(RMContainer rmContainer,
       RMContainerEventType event) {
+    if (rmContainer == null) {
+      LOG.info("Null container completed...");
+      return;
+    }
+
     // Get the application for the finished container
     Container container = rmContainer.getContainer();
     ApplicationAttemptId applicationAttemptId = container.getId().getAppAttemptId();
@@ -725,7 +739,7 @@ public class FifoScheduler implements ResourceScheduler {
   private RMContainer getRMContainer(ContainerId containerId) {
     SchedulerApp application = 
         getApplication(containerId.getAppAttemptId());
-    return application.getRMContainer(containerId);
+    return (application == null) ? null : application.getRMContainer(containerId);
   }
 
 }

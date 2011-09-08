@@ -27,7 +27,7 @@ import java.lang.Math;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
@@ -124,7 +124,7 @@ class TransferFsImage {
   static void getFileServer(OutputStream outstream, File localfile,
       DataTransferThrottler throttler) 
     throws IOException {
-    byte buf[] = new byte[FSConstants.IO_FILE_BUFFER_SIZE];
+    byte buf[] = new byte[HdfsConstants.IO_FILE_BUFFER_SIZE];
     FileInputStream infile = null;
     try {
       infile = new FileInputStream(localfile);
@@ -139,7 +139,7 @@ class TransferFsImage {
           && localfile.getAbsolutePath().contains("fsimage")) {
           // Test sending image shorter than localfile
           long len = localfile.length();
-          buf = new byte[(int)Math.min(len/2, FSConstants.IO_FILE_BUFFER_SIZE)];
+          buf = new byte[(int)Math.min(len/2, HdfsConstants.IO_FILE_BUFFER_SIZE)];
           // This will read at most half of the image
           // and the rest of the image will be sent over the wire
           infile.read(buf);
@@ -179,7 +179,7 @@ class TransferFsImage {
   static MD5Hash getFileClient(String nnHostPort,
       String queryString, List<File> localPaths,
       NNStorage dstStorage, boolean getChecksum) throws IOException {
-    byte[] buf = new byte[FSConstants.IO_FILE_BUFFER_SIZE];
+    byte[] buf = new byte[HdfsConstants.IO_FILE_BUFFER_SIZE];
     String proto = UserGroupInformation.isSecurityEnabled() ? "https://" : "http://";
     StringBuilder str = new StringBuilder(proto+nnHostPort+"/getimage?");
     str.append(queryString);

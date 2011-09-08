@@ -62,7 +62,7 @@ public class RackResolver {
    * right resolver implementation.
    * @param conf
    * @param hostName
-   * @return
+   * @return node {@link Node} after resolving the hostname
    */
   public static Node resolve(Configuration conf, String hostName) {
     init(conf);
@@ -74,7 +74,7 @@ public class RackResolver {
    * network topology. This method doesn't initialize the class.
    * Call {@link #init(Configuration)} explicitly.
    * @param hostName
-   * @return
+   * @return node {@link Node} after resolving the hostname
    */
   public static Node resolve(String hostName) {
     if (!initCalled) {

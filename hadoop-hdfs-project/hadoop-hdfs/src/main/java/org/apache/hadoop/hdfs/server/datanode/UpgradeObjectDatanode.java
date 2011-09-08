@@ -18,8 +18,8 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeObject;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
@@ -36,8 +36,8 @@ public abstract class UpgradeObjectDatanode extends UpgradeObject implements Run
   private DataNode dataNode = null;
   private String bpid = null;
 
-  public HdfsConstants.NodeType getType() {
-    return HdfsConstants.NodeType.DATA_NODE;
+  public HdfsServerConstants.NodeType getType() {
+    return HdfsServerConstants.NodeType.DATA_NODE;
   }
 
   protected DataNode getDatanode() {
@@ -118,7 +118,7 @@ public abstract class UpgradeObjectDatanode extends UpgradeObject implements Run
     if(getUpgradeStatus() < 100) {
       DataNode.LOG.info("\n   Distributed upgrade for DataNode version " 
           + getVersion() + " to current LV " 
-          + FSConstants.LAYOUT_VERSION + " cannot be completed.");
+          + HdfsConstants.LAYOUT_VERSION + " cannot be completed.");
     }
 
     // Complete the upgrade by calling the manager method

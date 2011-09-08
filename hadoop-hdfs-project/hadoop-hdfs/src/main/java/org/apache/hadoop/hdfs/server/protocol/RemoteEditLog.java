@@ -22,15 +22,15 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Comparator;
 
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.io.Writable;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ComparisonChain;
 
 public class RemoteEditLog implements Writable, Comparable<RemoteEditLog> {
-  private long startTxId = FSConstants.INVALID_TXID;
-  private long endTxId = FSConstants.INVALID_TXID;
+  private long startTxId = HdfsConstants.INVALID_TXID;
+  private long endTxId = HdfsConstants.INVALID_TXID;
   
   public RemoteEditLog() {
   }

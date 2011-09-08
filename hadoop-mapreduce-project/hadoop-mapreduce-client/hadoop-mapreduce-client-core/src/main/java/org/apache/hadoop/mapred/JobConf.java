@@ -476,7 +476,6 @@ public class JobConf extends Configuration {
 
   /**
    * Use MRAsyncDiskService.moveAndDeleteAllVolumes instead.
-   * @see org.apache.hadoop.mapreduce.util.MRAsyncDiskService#cleanupAllVolumes()
    */
   @Deprecated
   public void deleteLocalFiles() throws IOException {

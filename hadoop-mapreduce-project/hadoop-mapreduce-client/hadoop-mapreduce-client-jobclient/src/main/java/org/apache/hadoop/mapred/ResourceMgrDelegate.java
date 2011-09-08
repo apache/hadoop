@@ -120,7 +120,7 @@ public class ResourceMgrDelegate {
       recordFactory.newRecordInstance(GetAllApplicationsRequest.class);
     GetAllApplicationsResponse response = 
       applicationsManager.getAllApplications(request);
-    return TypeConverter.fromYarnApps(response.getApplicationList());
+    return TypeConverter.fromYarnApps(response.getApplicationList(), this.conf);
   }
 
 
@@ -182,7 +182,7 @@ public class ResourceMgrDelegate {
       getQueueInfoRequest(queueName, true, false, false); 
       recordFactory.newRecordInstance(GetQueueInfoRequest.class);
     return TypeConverter.fromYarn(
-        applicationsManager.getQueueInfo(request).getQueueInfo());
+        applicationsManager.getQueueInfo(request).getQueueInfo(), this.conf);
   }
   
   private void getChildQueues(org.apache.hadoop.yarn.api.records.QueueInfo parent, 
@@ -216,7 +216,7 @@ public class ResourceMgrDelegate {
           getQueueInfoRequest(ROOT, false, true, true)).getQueueInfo();
     getChildQueues(rootQueue, queues);
 
-    return TypeConverter.fromYarnQueueInfo(queues);
+    return TypeConverter.fromYarnQueueInfo(queues, this.conf);
   }
 
 
@@ -229,7 +229,7 @@ public class ResourceMgrDelegate {
           getQueueInfoRequest(ROOT, false, true, false)).getQueueInfo();
     getChildQueues(rootQueue, queues);
 
-    return TypeConverter.fromYarnQueueInfo(queues);
+    return TypeConverter.fromYarnQueueInfo(queues, this.conf);
   }
 
   public QueueInfo[] getChildQueues(String parent) throws IOException,
@@ -242,7 +242,7 @@ public class ResourceMgrDelegate {
               getQueueInfoRequest(parent, false, true, false)).getQueueInfo();
         getChildQueues(parentQueue, queues);
         
-        return TypeConverter.fromYarnQueueInfo(queues);
+        return TypeConverter.fromYarnQueueInfo(queues, this.conf);
   }
 
   public String getStagingAreaDir() throws IOException, InterruptedException {

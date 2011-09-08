@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -47,6 +49,7 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class ControlledJob {
+  private static final Log LOG = LogFactory.getLog(ControlledJob.class);
 
   // A job will be in one of the following states
   public static enum State {SUCCESS, WAITING, RUNNING, READY, FAILED,
@@ -235,6 +238,17 @@ public class ControlledJob {
     job.killJob();
   }
   
+  public synchronized void failJob(String message) throws IOException, InterruptedException {
+    try {
+      if(job != null && this.state == State.RUNNING) {
+        job.killJob();
+      }
+    } finally {
+      this.state = State.FAILED;
+      this.message = message;
+    }
+  }
+  
   /**
    * Check the state of this running job. The state may 
    * remain the same, become SUCCESS or FAILED.
@@ -322,6 +336,7 @@ public class ControlledJob {
       job.submit();
       this.state = State.RUNNING;
     } catch (Exception ioe) {
+      LOG.info(getJobName()+" got an error while submitting ",ioe);
       this.state = State.FAILED;
       this.message = StringUtils.stringifyException(ioe);
     }

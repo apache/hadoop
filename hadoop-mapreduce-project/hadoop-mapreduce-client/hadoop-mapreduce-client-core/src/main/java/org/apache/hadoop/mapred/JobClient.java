@@ -49,7 +49,7 @@ import org.apache.hadoop.util.ToolRunner;
 
 /**
  * <code>JobClient</code> is the primary interface for the user-job to interact
- * with the {@link JobTracker}.
+ * with the cluster.
  * 
  * <code>JobClient</code> provides facilities to submit jobs, track their 
  * progress, access component-tasks' reports/logs, get the Map-Reduce cluster
@@ -72,7 +72,7 @@ import org.apache.hadoop.util.ToolRunner;
  *   on the distributed file-system. 
  *   </li>
  *   <li>
- *   Submitting the job to the <code>JobTracker</code> and optionally monitoring
+ *   Submitting the job to the cluster and optionally monitoring
  *   it's status.
  *   </li>
  * </ol></p>
@@ -152,7 +152,7 @@ public class JobClient extends CLI {
     /**
      * We store a JobProfile and a timestamp for when we last
      * acquired the job profile.  If the job is null, then we cannot
-     * perform any of the tasks.  The job might be null if the JobTracker
+     * perform any of the tasks.  The job might be null if the cluster
      * has completely forgotten about the job.  (eg, 24 hours after the
      * job completes.)
      */
@@ -348,7 +348,7 @@ public class JobClient extends CLI {
     }
     
     /**
-     * Fetch task completion events from jobtracker for this job. 
+     * Fetch task completion events from cluster for this job. 
      */
     public synchronized TaskCompletionEvent[] getTaskCompletionEvents(
         int startFrom) throws IOException {
@@ -429,7 +429,7 @@ public class JobClient extends CLI {
     
   /**
    * Build a job client with the given {@link JobConf}, and connect to the 
-   * default {@link JobTracker}.
+   * default cluster
    * 
    * @param conf the job configuration.
    * @throws IOException
@@ -440,7 +440,7 @@ public class JobClient extends CLI {
 
   /**
    * Build a job client with the given {@link Configuration}, 
-   * and connect to the default {@link JobTracker}.
+   * and connect to the default cluster
    * 
    * @param conf the configuration.
    * @throws IOException
@@ -450,7 +450,7 @@ public class JobClient extends CLI {
   }
 
   /**
-   * Connect to the default {@link JobTracker}.
+   * Connect to the default cluster
    * @param conf the job configuration.
    * @throws IOException
    */

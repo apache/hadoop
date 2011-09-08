@@ -29,7 +29,6 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
@@ -155,7 +154,7 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * Assign containers to applications in the queue or it's children (if any).
    * @param clusterResource the resource of the cluster.
    * @param node node on which resources are available
-   * @return
+   * @return the resource that is being assigned.
    */
   public Resource assignContainers(Resource clusterResource, SchedulerNode node);
   
@@ -191,7 +190,7 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * Update the cluster resource for queues as we add/remove nodes
    * @param clusterResource the current cluster resource
    */
-  public void updateResource(Resource clusterResource);
+  public void updateClusterResource(Resource clusterResource);
   
   /**
    * Recover the state of the queue

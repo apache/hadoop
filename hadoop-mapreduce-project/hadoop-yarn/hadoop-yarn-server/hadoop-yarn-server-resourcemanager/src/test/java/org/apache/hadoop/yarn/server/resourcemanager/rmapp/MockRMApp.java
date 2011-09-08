@@ -36,6 +36,9 @@ public class MockRMApp implements RMApp {
   RMAppState state = RMAppState.NEW;
   int failCount = 0;
   ApplicationId id;
+  String url = null;
+  StringBuilder diagnostics = new StringBuilder();
+  RMAppAttempt attempt;
 
   public MockRMApp(int newid, long time, RMAppState newState) {
     finish = time;
@@ -48,6 +51,11 @@ public class MockRMApp implements RMApp {
     user = userName;
   }
 
+  public MockRMApp(int newid, long time, RMAppState newState, String userName, String diag) {
+    this(newid, time, newState, userName);
+    this.diagnostics = new StringBuilder(diag);
+  }
+
   @Override
   public ApplicationId getApplicationId() {
     return id;
@@ -58,9 +66,17 @@ public class MockRMApp implements RMApp {
     return state;
   }
 
+  public void setState(RMAppState state) {
+    this.state = state;
+  }
+
   @Override
   public String getUser() {
     return user;
+  }
+
+  public void setUser(String user) {
+    this.user = user;
   }
 
   @Override
@@ -78,14 +94,26 @@ public class MockRMApp implements RMApp {
     return queue;
   }
 
+  public void setQueue(String queue) {
+    this.queue = queue;
+  }
+
   @Override
   public String getName() {
     return name;
   }
 
+  public void setName(String name) {
+    this.name = name;
+  }
+
   @Override
   public RMAppAttempt getCurrentAppAttempt() {
-    throw new UnsupportedOperationException("Not supported yet.");
+    return attempt;
+  }
+
+  public void setCurrentAppAttempt(RMAppAttempt attempt) {
+    this.attempt = attempt;
   }
 
   @Override
@@ -103,19 +131,35 @@ public class MockRMApp implements RMApp {
     return finish;
   }
 
+  public void setFinishTime(long time) {
+    this.finish = time;
+  }
+
   @Override
   public long getStartTime() {
     return start;
   }
 
+  public void setStartTime(long time) {
+    this.start = time;
+  }
+
   @Override
   public String getTrackingUrl() {
-    throw new UnsupportedOperationException("Not supported yet.");
+    return url;
+  }
+
+  public void setTrackingUrl(String url) {
+    this.url = url;
   }
 
   @Override
   public StringBuilder getDiagnostics() {
-    throw new UnsupportedOperationException("Not supported yet.");
+    return diagnostics;
+  }
+
+  public void setDiagnostics(String diag) {
+    this.diagnostics  = new StringBuilder(diag);
   }
 
   public void handle(RMAppEvent event) {

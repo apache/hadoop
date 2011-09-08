@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.app.launcher;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,11 +31,12 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.ShuffleHandler;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.app.AMConstants;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerLaunchedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
@@ -48,6 +50,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -179,6 +182,7 @@ public class ContainerLauncherImpl extends AbstractService implements
       this.event = event;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void run() {
       LOG.info("Processing the event " + event.toString());
@@ -208,15 +212,25 @@ public class ContainerLauncherImpl extends AbstractService implements
           StartContainerRequest startRequest = recordFactory
               .newRecordInstance(StartContainerRequest.class);
           startRequest.setContainerLaunchContext(containerLaunchContext);
-          proxy.startContainer(startRequest);
-
-          LOG.info("Returning from container-launch for " + taskAttemptID);
+          StartContainerResponse response = proxy.startContainer(startRequest);
+          ByteBuffer portInfo = response
+              .getServiceResponse(ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID);
+          int port = -1;
+          if(portInfo != null) {
+            port = ShuffleHandler.deserializeMetaData(portInfo);
+          }
+          LOG.info("Shuffle port returned by ContainerManager for "
+              + taskAttemptID + " : " + port);
+          
+          if(port < 0) {
+            throw new IllegalStateException("Invalid shuffle port number "
+                + port + " returned for " + taskAttemptID);
+          }
 
           // after launching, send launched event to task attempt to move
           // it from ASSIGNED to RUNNING state
           context.getEventHandler().handle(
-              new TaskAttemptEvent(taskAttemptID,
-                  TaskAttemptEventType.TA_CONTAINER_LAUNCHED));
+              new TaskAttemptContainerLaunchedEvent(taskAttemptID, port));
         } catch (Throwable t) {
           String message = "Container launch failed for " + containerID
               + " : " + StringUtils.stringifyException(t);

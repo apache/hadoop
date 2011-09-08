@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.tools.DFSck;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -481,7 +482,7 @@ public class TestFsck extends TestCase {
       }
 
       // wait for the namenode to see the corruption
-      final NameNode namenode = cluster.getNameNode();
+      final NamenodeProtocols namenode = cluster.getNameNodeRpc();
       CorruptFileBlocks corruptFileBlocks = namenode
           .listCorruptFileBlocks("/corruptData", null);
       int numCorrupt = corruptFileBlocks.getFiles().length;

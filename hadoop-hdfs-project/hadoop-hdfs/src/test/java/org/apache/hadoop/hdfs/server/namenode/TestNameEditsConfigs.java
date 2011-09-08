@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import junit.framework.TestCase;
 import java.io.*;
 import java.util.Random;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -80,10 +81,12 @@ public class TestNameEditsConfigs extends TestCase {
       assertTrue("Expect no images in " + dir, ins.foundImages.isEmpty());      
     }
 
+    List<FileJournalManager.EditLogFile> editlogs 
+      = FileJournalManager.matchEditLogs(new File(dir, "current").listFiles()); 
     if (shouldHaveEdits) {
-      assertTrue("Expect edits in " + dir, ins.foundEditLogs.size() > 0);
+      assertTrue("Expect edits in " + dir, editlogs.size() > 0);
     } else {
-      assertTrue("Expect no edits in " + dir, ins.foundEditLogs.isEmpty());
+      assertTrue("Expect no edits in " + dir, editlogs.isEmpty());
     }
   }
 

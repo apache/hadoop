@@ -26,7 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.junit.Test;
 
 import com.google.common.base.Joiner;
@@ -148,8 +148,8 @@ public class TestNNStorageRetentionFunctional {
 
   private static void doSaveNamespace(NameNode nn) throws IOException {
     LOG.info("Saving namespace...");
-    nn.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
-    nn.saveNamespace();
-    nn.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    nn.getRpcServer().setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    nn.getRpcServer().saveNamespace();
+    nn.getRpcServer().setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
   }
 }

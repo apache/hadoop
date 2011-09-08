@@ -50,7 +50,7 @@ public class ConverterUtils {
    * 
    * @param url
    *          url to convert
-   * @return
+   * @return path from {@link URL}
    * @throws URISyntaxException
    */
   public static Path getPathFromYarnURL(URL url) throws URISyntaxException {
@@ -63,8 +63,8 @@ public class ConverterUtils {
   
   /**
    * change from CharSequence to string for map key and value
-   * @param env
-   * @return
+   * @param env map for converting
+   * @return string,string map
    */
   public static Map<String, String> convertToString(
       Map<CharSequence, CharSequence> env) {

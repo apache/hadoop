@@ -18,9 +18,35 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 
+/**
+ * <p>The response sent by the <code>ResourceManager</code> to a client
+ * requesting an application report.</p>
+ * 
+ * <p>The response includes an {@link ApplicationReport} which has details such 
+ * as user, queue, name, host on which the <code>ApplicationMaster</code> is 
+ * running, RPC port, tracking URL, diagnostics, start time etc.</p>
+ * 
+ * @see ClientRMProtocol#getApplicationReport(GetApplicationReportRequest)
+ */
+@Public
+@Stable
 public interface GetApplicationReportResponse {
-  public abstract ApplicationReport getApplicationReport();
-  public abstract void setApplicationReport(ApplicationReport ApplicationReport);
+  /**
+   * Get the <code>ApplicationReport</code> for the application.
+   * @return <code>ApplicationReport</code> for the application
+   */
+  @Public
+  @Stable
+  public ApplicationReport getApplicationReport();
+  
+  @Private
+  @Unstable
+  public void setApplicationReport(ApplicationReport ApplicationReport);
 }

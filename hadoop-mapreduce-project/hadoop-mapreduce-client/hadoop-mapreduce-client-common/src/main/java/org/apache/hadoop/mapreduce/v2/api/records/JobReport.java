@@ -27,6 +27,8 @@ public interface JobReport {
   public abstract float getSetupProgress();
   public abstract long getStartTime();
   public abstract long getFinishTime();
+  public abstract String getUser();
+  public abstract String getJobName();
 
   public abstract void setJobId(JobId jobId);
   public abstract void setJobState(JobState jobState);
@@ -36,4 +38,6 @@ public interface JobReport {
   public abstract void setSetupProgress(float progress);
   public abstract void setStartTime(long startTime);
   public abstract void setFinishTime(long finishTime);
+  public abstract void setUser(String user);
+  public abstract void setJobName(String jobName);
 }

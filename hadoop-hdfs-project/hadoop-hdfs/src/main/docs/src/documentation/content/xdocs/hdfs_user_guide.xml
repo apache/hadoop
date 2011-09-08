@@ -505,7 +505,7 @@
       using <code>'bin/hadoop dfsadmin -safemode'</code> command. NameNode front
       page shows whether Safemode is on or off. A more detailed
       description and configuration is maintained as JavaDoc for
-      <a href="http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/dfs/NameNode.html#setSafeMode(org.apache.hadoop.dfs.FSConstants.SafeModeAction)"><code>setSafeMode()</code></a>.
+      <a href="http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/dfs/NameNode.html#setSafeMode(org.apache.hadoop.dfs.HdfsConstants.SafeModeAction)"><code>setSafeMode()</code></a>.
     </p>
     
    </section> <section> <title> fsck </title>

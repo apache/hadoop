@@ -285,8 +285,8 @@ public class Client {
         authMethod = AuthMethod.KERBEROS;
       }
       
-      header = new ConnectionHeader(protocol == null ? null : protocol
-          .getName(), ticket, authMethod);
+      header = 
+        new ConnectionHeader(RPC.getProtocolName(protocol), ticket, authMethod);
       
       if (LOG.isDebugEnabled())
         LOG.debug("Use " + authMethod + " authentication for protocol "

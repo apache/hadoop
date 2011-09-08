@@ -73,7 +73,7 @@ abstract class DfsServlet extends HttpServlet {
     // rpc
     NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
     if (nn != null) {
-      return nn;
+      return nn.getRpcServer();
     }
     InetSocketAddress nnAddr =
       NameNodeHttpServer.getNameNodeAddressFromContext(context);

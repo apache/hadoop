@@ -40,9 +40,9 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
-import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.RPC;
@@ -115,7 +115,7 @@ public class DFSAdmin extends FsShell {
 
     @Override
     public void run(Path path) throws IOException {
-      dfs.setQuota(path, FSConstants.QUOTA_RESET, FSConstants.QUOTA_DONT_SET);
+      dfs.setQuota(path, HdfsConstants.QUOTA_RESET, HdfsConstants.QUOTA_DONT_SET);
     }
   }
   
@@ -161,7 +161,7 @@ public class DFSAdmin extends FsShell {
 
     @Override
     public void run(Path path) throws IOException {
-      dfs.setQuota(path, quota, FSConstants.QUOTA_DONT_SET);
+      dfs.setQuota(path, quota, HdfsConstants.QUOTA_DONT_SET);
     }
   }
   
@@ -200,7 +200,7 @@ public class DFSAdmin extends FsShell {
 
     @Override
     public void run(Path path) throws IOException {
-      dfs.setQuota(path, FSConstants.QUOTA_DONT_SET, FSConstants.QUOTA_RESET);
+      dfs.setQuota(path, HdfsConstants.QUOTA_DONT_SET, HdfsConstants.QUOTA_RESET);
     }
   }
   
@@ -250,7 +250,7 @@ public class DFSAdmin extends FsShell {
 
     @Override
     public void run(Path path) throws IOException {
-      dfs.setQuota(path, FSConstants.QUOTA_DONT_SET, quota);
+      dfs.setQuota(path, HdfsConstants.QUOTA_DONT_SET, quota);
     }
   }
   
@@ -288,7 +288,7 @@ public class DFSAdmin extends FsShell {
       long used = ds.getUsed();
       long remaining = ds.getRemaining();
       long presentCapacity = used + remaining;
-      boolean mode = dfs.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_GET);
+      boolean mode = dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_GET);
       UpgradeStatusReport status = 
                       dfs.distributedUpgradeProgress(UpgradeAction.GET_STATUS);
 
@@ -361,17 +361,17 @@ public class DFSAdmin extends FsShell {
       printUsage("-safemode");
       return;
     }
-    FSConstants.SafeModeAction action;
+    HdfsConstants.SafeModeAction action;
     Boolean waitExitSafe = false;
 
     if ("leave".equalsIgnoreCase(argv[idx])) {
-      action = FSConstants.SafeModeAction.SAFEMODE_LEAVE;
+      action = HdfsConstants.SafeModeAction.SAFEMODE_LEAVE;
     } else if ("enter".equalsIgnoreCase(argv[idx])) {
-      action = FSConstants.SafeModeAction.SAFEMODE_ENTER;
+      action = HdfsConstants.SafeModeAction.SAFEMODE_ENTER;
     } else if ("get".equalsIgnoreCase(argv[idx])) {
-      action = FSConstants.SafeModeAction.SAFEMODE_GET;
+      action = HdfsConstants.SafeModeAction.SAFEMODE_GET;
     } else if ("wait".equalsIgnoreCase(argv[idx])) {
-      action = FSConstants.SafeModeAction.SAFEMODE_GET;
+      action = HdfsConstants.SafeModeAction.SAFEMODE_GET;
       waitExitSafe = true;
     } else {
       printUsage("-safemode");

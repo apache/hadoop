@@ -2,6 +2,10 @@ Hadoop MapReduce Change Log
 
 Trunk (unreleased changes)
 
+  IMPROVEMENTS
+
+    MAPREDUCE-2887 due to HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -225,6 +229,24 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-2701. app/Job.java needs UGI for the user that launched it.
     (Robert Evans via mahadev)
+
+    MAPREDUCE-2652. Enabled multiple NMs to be runnable on a single node by
+    making shuffle service port to be truely configurable. (Robert Evans via
+    vinodkv)
+
+    MAPREDUCE-2735. Add an applications summary log to ResourceManager.
+    (Thomas Graves via acmurthy) 
+
+    MAPREDUCE-2697. Enhance CapacityScheduler to cap concurrently running
+    applications per-queue & per-user. (acmurthy) 
+    Configuration changes:
+      add yarn.capacity-scheduler.maximum-am-resource-percent
+
+    MAPREDUCE-2774. Add startup message to ResourceManager & NodeManager on
+    startup. (Venu Gopala Rao via acmurthy) 
+
+    MAPREDUCE-2655. Add audit logs to ResourceManager and NodeManager. (Thomas
+    Graves via acmurthy)
 
   OPTIMIZATIONS
 
@@ -652,7 +674,6 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-279. Fix in MR-279 branch. Distributed cache bug fix to pass Terasort.
     (vinodkv)
      
-
     MAPREDUCE-279. Fix in MR-279 branch. Fix null pointer exception in kill task
     attempt (mahadev)
 
@@ -1155,6 +1176,51 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2885. Fix mapred-config.sh to look for hadoop-config.sh in
     HADOOP_COMMON_HOME/libexec. (acmurthy) 
 
+    MAPREDUCE-2893. Remove duplicate entry of YarnClientProtocolProvider in
+    ClientProtocolProvider services file. (Liang-Chi Hsieh via acmurthy) 
+
+    MAPREDUCE-2891. Javadoc for AMRMProtocol and related records. (acmurthy)
+
+    MAPREDUCE-2898. Javadoc for ContainerManager protocol and related records. 
+    (acmurthy)
+
+    MAPREDUCE-2904. Fixed bin/yarn to correctly include HDFS jars and
+    clean up of stale refs to pre-mavenized Hadoop Common and HDFS. 
+    (Sharad Agarwal and Arun C. Murthy via acmurthy)
+
+    MAPREDUCE-2737. Update the progress of jobs on client side. (Siddharth Seth
+    and Mahadev Konar via mahadev)
+
+    MAPREDUCE-2886. Fix Javadoc warnings in MapReduce. (mahadev)
+
+    MAPREDUCE-2897. Javadoc for ClientRMProtocol protocol and related records. 
+    (acmurthy)
+
+   MAPREDUCE-2916. Ivy build for MRv1 fails with bad organization for 
+   common daemon. (mahadev)
+
+   MAPREDUCE-2917. Fixed corner case in container reservation which led to
+   starvation and hung jobs. (acmurthy) 
+
+   MAPREDUCE-2756. Better error handling in JobControl for failed jobs.
+   (Robert Evans via acmurthy) 
+
+   MAPREDUCE-2716. MRReliabilityTest job fails because of missing
+   job-file. (Jeffrey Naisbitt via vinodkv)
+
+   MAPREDUCE-2882. TestLineRecordReader depends on ant jars. (todd)
+
+   MAPREDUCE-2687. Fix NodeManager to use the right version of
+   LocalDirAllocator.getLocalPathToWrite. (mahadev & acmurthy) 
+
+   MAPREDUCE-2800. Set final progress for tasks to ensure all task information
+   is correctly logged to JobHistory. (Siddharth Seth via acmurthy)
+
+   MAPREDUCE-2938. Log application submission failure in CapacityScheduler.
+   (acmurthy) 
+
+   MAPREDUCE-2948. Hadoop streaming test failure, post MR-2767 (mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -1178,6 +1244,8 @@ Release 0.22.0 - Unreleased
 
     MAPREDUCE-2169. Integrated Reed-Solomon code with RaidNode. (Ramkumar
     Vadali via schen)
+
+    MAPREDUCE-2936. Contrib Raid compilation broken after HDFS-1620. (vinodkv)
 
   IMPROVEMENTS
 
@@ -1726,6 +1794,8 @@ Release 0.22.0 - Unreleased
 
     MAPREDUCE-2571. CombineFileInputFormat.getSplits throws a
     java.lang.ArrayStoreException. (Bochun Bai via todd)
+
+    MAPREDUCE-2767. Remove Linux task-controller. (Milind Bhandarkar via shv)
 
 Release 0.21.1 - Unreleased
 

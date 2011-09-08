@@ -36,9 +36,9 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.log4j.Level;
@@ -350,7 +350,7 @@ public class TestEditLogRace {
     Configuration conf = getConf();
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
-    final FSNamesystem namesystem = new FSNamesystem(conf);
+    final FSNamesystem namesystem = FSNamesystem.loadFromDisk(conf);
 
     try {
       FSImage fsimage = namesystem.getFSImage();
@@ -448,7 +448,7 @@ public class TestEditLogRace {
     Configuration conf = getConf();
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
-    final FSNamesystem namesystem = new FSNamesystem(conf);
+    final FSNamesystem namesystem = FSNamesystem.loadFromDisk(conf);
 
     try {
       FSImage fsimage = namesystem.getFSImage();

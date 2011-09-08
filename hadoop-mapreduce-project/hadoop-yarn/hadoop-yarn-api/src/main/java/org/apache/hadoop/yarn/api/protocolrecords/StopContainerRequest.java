@@ -18,9 +18,33 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 
+/**
+ * <p>The request sent by the <code>ApplicationMaster</code> to the
+ * <code>NodeManager</code> to <em>stop</em> a container.</p>
+ * 
+ * @see ContainerManager#stopContainer(StopContainerRequest)
+ */
+@Public
+@Stable
 public interface StopContainerRequest {
+  /**
+   * Get the <code>ContainerId</code> of the container to be stopped.
+   * @return <code>ContainerId</code> of container to be stopped
+   */
+  @Public
+  @Stable
   ContainerId getContainerId();
+  
+  /**
+   * Set the <code>ContainerId</code> of the container to be stopped.
+   * @param containerId <code>ContainerId</code> of the container to be stopped
+   */
+  @Public
+  @Stable
   void setContainerId(ContainerId containerId);
 }

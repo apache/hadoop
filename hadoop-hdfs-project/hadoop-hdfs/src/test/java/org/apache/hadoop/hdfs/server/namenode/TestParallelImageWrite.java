@@ -29,7 +29,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 
 import java.util.Collections;
@@ -108,7 +108,7 @@ public class TestParallelImageWrite extends TestCase {
       files.cleanup(fs, dir);
       files.createFiles(fs, dir);
       fsn.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
-      cluster.getNameNode().saveNamespace();
+      cluster.getNameNodeRpc().saveNamespace();
       final String checkAfterModify = checkImages(fsn, numNamenodeDirs);
       assertFalse("Modified namespace should change fsimage contents. " +
           "was: " + checkAfterRestart + " now: " + checkAfterModify,

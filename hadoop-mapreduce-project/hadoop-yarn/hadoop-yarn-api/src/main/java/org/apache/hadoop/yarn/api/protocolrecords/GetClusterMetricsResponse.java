@@ -18,9 +18,32 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 
+/**
+ * <p>The response sent by the <code>ResourceManager</code> to a client
+ * requesting cluster metrics.<p>
+ * 
+ * @see YarnClusterMetrics
+ * @see ClientRMProtocol#getClusterMetrics(GetClusterMetricsRequest)
+ */
+@Public
+@Stable
 public interface GetClusterMetricsResponse {
-  public abstract YarnClusterMetrics getClusterMetrics();
-  public abstract void setClusterMetrics(YarnClusterMetrics metrics);
+  /**
+   * Get the <code>YarnClusterMetrics</code> for the cluster.
+   * @return <code>YarnClusterMetrics</code> for the cluster
+   */
+  @Public
+  @Stable
+  public YarnClusterMetrics getClusterMetrics();
+  
+  @Private
+  @Unstable
+  public void setClusterMetrics(YarnClusterMetrics metrics);
 }

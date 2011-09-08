@@ -18,9 +18,33 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 
+/**
+ * <p>The response sent by the <code>ResourceManager</code> to the client for 
+ * a request to a new {@link ApplicationId} for submitting applications.</p>
+ * 
+ * @see ClientRMProtocol#getNewApplicationId(GetNewApplicationIdRequest)
+ */
+@Public
+@Stable
 public interface GetNewApplicationIdResponse {
+  /**
+   * Get the <em>new</em> <code>ApplicationId</code> allocated by the 
+   * <code>ResourceManager</code>.
+   * @return <em>new</em> <code>ApplicationId</code> allocated by the 
+   *          <code>ResourceManager</code>
+   */
+  @Public
+  @Stable
   public abstract ApplicationId getApplicationId();
+
+  @Private
+  @Unstable
   public abstract void setApplicationId(ApplicationId applicationId);
 }

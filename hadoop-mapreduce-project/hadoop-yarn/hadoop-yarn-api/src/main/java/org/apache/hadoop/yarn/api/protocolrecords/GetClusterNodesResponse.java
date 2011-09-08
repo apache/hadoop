@@ -20,9 +20,36 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 
+/**
+ * <p>The response sent by the <code>ResourceManager</code> to a client
+ * requesting an {@link NodeReport} for all nodes.</p>
+ * 
+ * <p>The <code>NodeReport</code> contains per-node information such as 
+ * available resources, number of containers, tracking url, rack name, health
+ * status etc.
+ * 
+ * @see NodeReport
+ * @see ClientRMProtocol#getClusterNodes(GetClusterNodesRequest)
+ */
+@Public
+@Stable
 public interface GetClusterNodesResponse {
+  /**
+   * Get <code>NodeReport</code> for all nodes in the cluster.
+   * @return <code>NodeReport</code> for all nodes in the cluster
+   */
+  @Public
+  @Stable
   List<NodeReport> getNodeReports();
+  
+  @Private
+  @Unstable
   void setNodeReports(List<NodeReport> nodeReports);
 }

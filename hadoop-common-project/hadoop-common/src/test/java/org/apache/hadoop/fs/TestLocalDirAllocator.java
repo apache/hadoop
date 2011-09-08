@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -204,6 +205,35 @@ public class TestLocalDirAllocator extends TestCase {
       assertTrue( inDir5 + inDir6 == TRIALS);
         
     } finally {
+      rmBufferDirs();
+    }
+  }
+  
+  /** Two buffer dirs. The first dir does not exist & is on a read-only disk; 
+   * The second dir exists & is RW
+   * getLocalPathForWrite with checkAccess set to false should create a parent
+   * directory. With checkAccess true, the directory should not be created.
+   * @throws Exception
+   */
+  public void testLocalPathForWriteDirCreation() throws IOException {
+    try {
+      conf.set(CONTEXT, BUFFER_DIR[0] + "," + BUFFER_DIR[1]);
+      assertTrue(localFs.mkdirs(BUFFER_PATH[1]));
+      BUFFER_ROOT.setReadOnly();
+      Path p1 =
+          dirAllocator.getLocalPathForWrite("p1/x", SMALL_FILE_SIZE, conf);
+      assertTrue(localFs.getFileStatus(p1.getParent()).isDirectory());
+
+      Path p2 =
+          dirAllocator.getLocalPathForWrite("p2/x", SMALL_FILE_SIZE, conf,
+              false);
+      try {
+        localFs.getFileStatus(p2.getParent());
+      } catch (Exception e) {
+        assertEquals(e.getClass(), FileNotFoundException.class);
+      }
+    } finally {
+      Shell.execCommand(new String[] { "chmod", "u+w", BUFFER_DIR_ROOT });
       rmBufferDirs();
     }
   }

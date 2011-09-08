@@ -27,7 +27,7 @@ import java.nio.channels.FileChannel;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.io.IOUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -109,7 +109,7 @@ class EditLogFileOutputStream extends EditLogOutputStream {
   void create() throws IOException {
     fc.truncate(0);
     fc.position(0);
-    doubleBuf.getCurrentBuf().writeInt(FSConstants.LAYOUT_VERSION);
+    doubleBuf.getCurrentBuf().writeInt(HdfsConstants.LAYOUT_VERSION);
     setReadyToFlush();
     flush();
   }

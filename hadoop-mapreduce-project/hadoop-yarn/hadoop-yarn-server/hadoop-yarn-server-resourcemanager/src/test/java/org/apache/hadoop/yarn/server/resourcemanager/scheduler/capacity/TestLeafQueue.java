@@ -83,8 +83,12 @@ public class TestLeafQueue {
     
     csContext = mock(CapacitySchedulerContext.class);
     when(csContext.getConfiguration()).thenReturn(csConf);
-    when(csContext.getMinimumResourceCapability()).thenReturn(Resources.createResource(GB));
-    when(csContext.getMaximumResourceCapability()).thenReturn(Resources.createResource(16*GB));
+    when(csContext.getMinimumResourceCapability()).
+        thenReturn(Resources.createResource(GB));
+    when(csContext.getMaximumResourceCapability()).
+        thenReturn(Resources.createResource(16*GB));
+    when(csContext.getClusterResources()).
+        thenReturn(Resources.createResource(100 * 16 * GB));
     root = 
         CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
             queues, queues, 
@@ -447,7 +451,7 @@ public class TestLeafQueue {
     SchedulerNode node_0 = TestUtils.getMockNode(host_0, DEFAULT_RACK, 0, 4*GB);
     
     final int numNodes = 1;
-    Resource clusterResource = Resources.createResource(numNodes * (8*GB));
+    Resource clusterResource = Resources.createResource(numNodes * (4*GB));
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     
     // Setup resource-requests
@@ -503,6 +507,121 @@ public class TestLeafQueue {
     assertEquals(0*GB, app_1.getCurrentReservation().getMemory());
     assertEquals(4*GB, node_0.getUsedResource().getMemory());
   }
+  
+  @Test
+  public void testReservationExchange() throws Exception {
+
+    // Manipulate queue 'a'
+    LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
+    a.setUserLimitFactor(10);
+
+    // Users
+    final String user_0 = "user_0";
+    final String user_1 = "user_1";
+
+    // Submit applications
+    final ApplicationAttemptId appAttemptId_0 = 
+        TestUtils.getMockApplicationAttemptId(0, 0); 
+    SchedulerApp app_0 = 
+        new SchedulerApp(appAttemptId_0, user_0, a, rmContext, null);
+    a.submitApplication(app_0, user_0, A);
+
+    final ApplicationAttemptId appAttemptId_1 = 
+        TestUtils.getMockApplicationAttemptId(1, 0); 
+    SchedulerApp app_1 = 
+        new SchedulerApp(appAttemptId_1, user_1, a, rmContext, null);
+    a.submitApplication(app_1, user_1, A);  
+
+    // Setup some nodes
+    String host_0 = "host_0";
+    SchedulerNode node_0 = TestUtils.getMockNode(host_0, DEFAULT_RACK, 0, 4*GB);
+    
+    String host_1 = "host_1";
+    SchedulerNode node_1 = TestUtils.getMockNode(host_1, DEFAULT_RACK, 0, 4*GB);
+    
+    final int numNodes = 2;
+    Resource clusterResource = Resources.createResource(numNodes * (4*GB));
+    when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+    when(csContext.getMaximumResourceCapability()).thenReturn(
+        Resources.createResource(4*GB));
+    when(a.getMaximumAllocation()).thenReturn(Resources.createResource(4*GB));
+    when(a.getMinimumAllocationFactor()).thenReturn(0.25f); // 1G / 4G 
+    
+    // Setup resource-requests
+    Priority priority = TestUtils.createMockPriority(1);
+    app_0.updateResourceRequests(Collections.singletonList(
+            TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 2, priority,
+                recordFactory))); 
+
+    app_1.updateResourceRequests(Collections.singletonList(
+        TestUtils.createResourceRequest(RMNodeImpl.ANY, 4*GB, 1, priority,
+            recordFactory))); 
+
+    // Start testing...
+    
+    // Only 1 container
+    a.assignContainers(clusterResource, node_0);
+    assertEquals(1*GB, a.getUsedResources().getMemory());
+    assertEquals(1*GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
+
+    // Also 2nd -> minCapacity = 1024 since (.1 * 8G) < minAlloc, also
+    // you can get one container more than user-limit
+    a.assignContainers(clusterResource, node_0);
+    assertEquals(2*GB, a.getUsedResources().getMemory());
+    assertEquals(2*GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
+    
+    // Now, reservation should kick in for app_1
+    a.assignContainers(clusterResource, node_0);
+    assertEquals(6*GB, a.getUsedResources().getMemory()); 
+    assertEquals(2*GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
+    assertEquals(4*GB, app_1.getCurrentReservation().getMemory());
+    assertEquals(2*GB, node_0.getUsedResource().getMemory());
+    
+    // Now free 1 container from app_0 i.e. 1G, and re-reserve it
+    a.completedContainer(clusterResource, app_0, node_0, 
+        app_0.getLiveContainers().iterator().next(), RMContainerEventType.KILL);
+    a.assignContainers(clusterResource, node_0);
+    assertEquals(5*GB, a.getUsedResources().getMemory()); 
+    assertEquals(1*GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
+    assertEquals(4*GB, app_1.getCurrentReservation().getMemory());
+    assertEquals(1*GB, node_0.getUsedResource().getMemory());
+    assertEquals(1, app_1.getReReservations(priority));
+
+    // Re-reserve
+    a.assignContainers(clusterResource, node_0);
+    assertEquals(5*GB, a.getUsedResources().getMemory()); 
+    assertEquals(1*GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
+    assertEquals(4*GB, app_1.getCurrentReservation().getMemory());
+    assertEquals(1*GB, node_0.getUsedResource().getMemory());
+    assertEquals(2, app_1.getReReservations(priority));
+    
+    // Try to schedule on node_1 now, should *move* the reservation
+    a.assignContainers(clusterResource, node_1);
+    assertEquals(9*GB, a.getUsedResources().getMemory()); 
+    assertEquals(1*GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(4*GB, app_1.getCurrentConsumption().getMemory());
+    assertEquals(4*GB, app_1.getCurrentReservation().getMemory());
+    assertEquals(4*GB, node_1.getUsedResource().getMemory());
+    // Doesn't change yet... only when reservation is cancelled or a different
+    // container is reserved
+    assertEquals(2, app_1.getReReservations(priority)); 
+    
+    // Now finish another container from app_0 and see the reservation cancelled
+    a.completedContainer(clusterResource, app_0, node_0, 
+        app_0.getLiveContainers().iterator().next(), RMContainerEventType.KILL);
+    a.assignContainers(clusterResource, node_0);
+    assertEquals(4*GB, a.getUsedResources().getMemory());
+    assertEquals(0*GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(4*GB, app_1.getCurrentConsumption().getMemory());
+    assertEquals(0*GB, app_1.getCurrentReservation().getMemory());
+    assertEquals(0*GB, node_0.getUsedResource().getMemory());
+  }
+  
   
   
   @Test

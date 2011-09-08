@@ -28,7 +28,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -108,11 +108,11 @@ public class TestHDFSFileContextMainOperations extends
     Path dst2 = getTestRootPath(fc, "test/testOldRenameWithQuota/dstdir/dst2");
     createFile(src1);
     createFile(src2);
-    fs.setQuota(src1.getParent(), FSConstants.QUOTA_DONT_SET,
-        FSConstants.QUOTA_DONT_SET);
+    fs.setQuota(src1.getParent(), HdfsConstants.QUOTA_DONT_SET,
+        HdfsConstants.QUOTA_DONT_SET);
     fc.mkdir(dst1.getParent(), FileContext.DEFAULT_PERM, true);
 
-    fs.setQuota(dst1.getParent(), 2, FSConstants.QUOTA_DONT_SET);
+    fs.setQuota(dst1.getParent(), 2, HdfsConstants.QUOTA_DONT_SET);
     /* 
      * Test1: src does not exceed quota and dst has no quota check and hence 
      * accommodates rename
@@ -130,7 +130,7 @@ public class TestHDFSFileContextMainOperations extends
      * Test3: src exceeds quota and dst has *no* quota to accommodate rename
      */
     // src1 has no quota to accommodate new rename node
-    fs.setQuota(src1.getParent(), 1, FSConstants.QUOTA_DONT_SET);
+    fs.setQuota(src1.getParent(), 1, HdfsConstants.QUOTA_DONT_SET);
     oldRename(dst1, src1, false, true);
   }
   
@@ -143,11 +143,11 @@ public class TestHDFSFileContextMainOperations extends
     Path dst2 = getTestRootPath(fc, "test/testRenameWithQuota/dstdir/dst2");
     createFile(src1);
     createFile(src2);
-    fs.setQuota(src1.getParent(), FSConstants.QUOTA_DONT_SET,
-        FSConstants.QUOTA_DONT_SET);
+    fs.setQuota(src1.getParent(), HdfsConstants.QUOTA_DONT_SET,
+        HdfsConstants.QUOTA_DONT_SET);
     fc.mkdir(dst1.getParent(), FileContext.DEFAULT_PERM, true);
 
-    fs.setQuota(dst1.getParent(), 2, FSConstants.QUOTA_DONT_SET);
+    fs.setQuota(dst1.getParent(), 2, HdfsConstants.QUOTA_DONT_SET);
     /* 
      * Test1: src does not exceed quota and dst has no quota check and hence 
      * accommodates rename
@@ -170,7 +170,7 @@ public class TestHDFSFileContextMainOperations extends
      * rename to a destination that does not exist
      */
     // src1 has no quota to accommodate new rename node
-    fs.setQuota(src1.getParent(), 1, FSConstants.QUOTA_DONT_SET);
+    fs.setQuota(src1.getParent(), 1, HdfsConstants.QUOTA_DONT_SET);
     rename(dst1, src1, false, false, true, Rename.NONE);
     
     /*
@@ -179,9 +179,9 @@ public class TestHDFSFileContextMainOperations extends
      * is same as quota needed by src.
      */
     // src1 has no quota to accommodate new rename node
-    fs.setQuota(src1.getParent(), 100, FSConstants.QUOTA_DONT_SET);
+    fs.setQuota(src1.getParent(), 100, HdfsConstants.QUOTA_DONT_SET);
     createFile(src1);
-    fs.setQuota(src1.getParent(), 1, FSConstants.QUOTA_DONT_SET);
+    fs.setQuota(src1.getParent(), 1, HdfsConstants.QUOTA_DONT_SET);
     rename(dst1, src1, true, true, false, Rename.OVERWRITE);
   }
   
@@ -208,7 +208,7 @@ public class TestHDFSFileContextMainOperations extends
     createFile(dst1);
     
     // Set quota so that dst1 parent cannot allow under it new files/directories 
-    fs.setQuota(dst1.getParent(), 2, FSConstants.QUOTA_DONT_SET);
+    fs.setQuota(dst1.getParent(), 2, HdfsConstants.QUOTA_DONT_SET);
     // Free up quota for a subsequent rename
     fs.delete(dst1, true);
     oldRename(src1, dst1, true, false);
@@ -237,7 +237,7 @@ public class TestHDFSFileContextMainOperations extends
     createFile(dst1);
     
     // Set quota so that dst1 parent cannot allow under it new files/directories 
-    fs.setQuota(dst1.getParent(), 2, FSConstants.QUOTA_DONT_SET);
+    fs.setQuota(dst1.getParent(), 2, HdfsConstants.QUOTA_DONT_SET);
     // Free up quota for a subsequent rename
     fs.delete(dst1, true);
     rename(src1, dst1, true, true, false, Rename.OVERWRITE);

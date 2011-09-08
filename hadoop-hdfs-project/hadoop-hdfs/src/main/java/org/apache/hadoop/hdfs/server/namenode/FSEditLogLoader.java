@@ -27,7 +27,7 @@ import java.util.Arrays;
 import java.util.EnumMap;
 
 import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
@@ -274,14 +274,14 @@ public class FSEditLogLoader {
             SetNSQuotaOp setNSQuotaOp = (SetNSQuotaOp)op;
             fsDir.unprotectedSetQuota(setNSQuotaOp.src,
                                       setNSQuotaOp.nsQuota,
-                                      FSConstants.QUOTA_DONT_SET);
+                                      HdfsConstants.QUOTA_DONT_SET);
             break;
           }
           case OP_CLEAR_NS_QUOTA: {
             ClearNSQuotaOp clearNSQuotaOp = (ClearNSQuotaOp)op;
             fsDir.unprotectedSetQuota(clearNSQuotaOp.src,
-                                      FSConstants.QUOTA_RESET,
-                                      FSConstants.QUOTA_DONT_SET);
+                                      HdfsConstants.QUOTA_RESET,
+                                      HdfsConstants.QUOTA_DONT_SET);
             break;
           }
 
@@ -435,7 +435,7 @@ public class FSEditLogLoader {
     // The editlog must be emptied by restarting the namenode, before proceeding
     // with the upgrade.
     if (Storage.is203LayoutVersion(logVersion)
-        && logVersion != FSConstants.LAYOUT_VERSION) {
+        && logVersion != HdfsConstants.LAYOUT_VERSION) {
       String msg = "During upgrade failed to load the editlog version "
           + logVersion + " from release 0.20.203. Please go back to the old "
           + " release and restart the namenode. This empties the editlog "
@@ -446,24 +446,6 @@ public class FSEditLogLoader {
     }
   }
   
-  static EditLogValidation validateEditLog(File file) throws IOException {
-    EditLogFileInputStream in;
-    try {
-      in = new EditLogFileInputStream(file);
-    } catch (LogHeaderCorruptException corrupt) {
-      // If it's missing its header, this is equivalent to no transactions
-      FSImage.LOG.warn("Log at " + file + " has no valid header",
-          corrupt);
-      return new EditLogValidation(0, 0);
-    }
-    
-    try {
-      return validateEditLog(in);
-    } finally {
-      IOUtils.closeStream(in);
-    }
-  }
-
   /**
    * Return the number of valid transactions in the stream. If the stream is
    * truncated during the header, returns a value indicating that there are
@@ -473,12 +455,26 @@ public class FSEditLogLoader {
    *                     if the log does not exist)
    */
   static EditLogValidation validateEditLog(EditLogInputStream in) {
-    long numValid = 0;
     long lastPos = 0;
+    long firstTxId = HdfsConstants.INVALID_TXID;
+    long lastTxId = HdfsConstants.INVALID_TXID;
+    long numValid = 0;
     try {
+      FSEditLogOp op = null;
       while (true) {
         lastPos = in.getPosition();
-        if (in.readOp() == null) {
+        if ((op = in.readOp()) == null) {
+          break;
+        }
+        if (firstTxId == HdfsConstants.INVALID_TXID) {
+          firstTxId = op.txid;
+        }
+        if (lastTxId == HdfsConstants.INVALID_TXID
+            || op.txid == lastTxId + 1) {
+          lastTxId = op.txid;
+        } else {
+          FSImage.LOG.error("Out of order txid found. Found " + op.txid 
+                            + ", expected " + (lastTxId + 1));
           break;
         }
         numValid++;
@@ -489,16 +485,33 @@ public class FSEditLogLoader {
       FSImage.LOG.debug("Caught exception after reading " + numValid +
           " ops from " + in + " while determining its valid length.", t);
     }
-    return new EditLogValidation(lastPos, numValid);
+    return new EditLogValidation(lastPos, firstTxId, lastTxId);
   }
   
   static class EditLogValidation {
-    long validLength;
-    long numTransactions;
-    
-    EditLogValidation(long validLength, long numTransactions) {
+    private long validLength;
+    private long startTxId;
+    private long endTxId;
+     
+    EditLogValidation(long validLength, 
+                      long startTxId, long endTxId) {
       this.validLength = validLength;
-      this.numTransactions = numTransactions;
+      this.startTxId = startTxId;
+      this.endTxId = endTxId;
+    }
+    
+    long getValidLength() { return validLength; }
+    
+    long getStartTxId() { return startTxId; }
+    
+    long getEndTxId() { return endTxId; }
+    
+    long getNumTransactions() { 
+      if (endTxId == HdfsConstants.INVALID_TXID
+          || startTxId == HdfsConstants.INVALID_TXID) {
+        return 0;
+      }
+      return (endTxId - startTxId) + 1;
     }
   }
 

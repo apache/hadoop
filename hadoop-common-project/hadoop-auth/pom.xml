@@ -21,13 +21,12 @@
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
-  <artifactId>hadoop-alfredo</artifactId>
+  <artifactId>hadoop-auth</artifactId>
   <version>0.24.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
-  <name>Apache Hadoop Alfredo</name>
-  <description>Apache Hadoop Alfredo - Java HTTP SPNEGO</description>
-  <url>http://hadoop.apache.org/alfredo</url>
+  <name>Apache Hadoop Auth</name>
+  <description>Apache Hadoop Auth - Java HTTP SPNEGO</description>
 
   <properties>
     <maven.build.timestamp.format>yyyyMMdd</maven.build.timestamp.format>

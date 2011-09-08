@@ -43,7 +43,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceChildJVM;
-import org.apache.hadoop.mapred.ProgressSplitsBlock;
 import org.apache.hadoop.mapred.ShuffleHandler;
 import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.TaskAttemptContextImpl;
@@ -65,7 +64,6 @@ import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.api.records.Counter;
-import org.apache.hadoop.mapreduce.v2.api.records.CounterGroup;
 import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.Phase;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
@@ -80,6 +78,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskAttemptFetchFailureEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssignedEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerLaunchedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
@@ -126,7 +125,6 @@ import org.apache.hadoop.yarn.util.RackResolver;
 /**
  * Implementation of TaskAttempt interface.
  */
-@SuppressWarnings("all")
 public abstract class TaskAttemptImpl implements
     org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt,
       EventHandler<TaskAttemptEvent> {
@@ -159,6 +157,7 @@ public abstract class TaskAttemptImpl implements
   private long launchTime;
   private long finishTime;
   private WrappedProgressSplitsBlock progressSplitBlock;
+  private int shufflePort = -1;
 
   private static final CleanupContainerTransition CLEANUP_CONTAINER_TRANSITION =
     new CleanupContainerTransition();
@@ -596,13 +595,10 @@ public abstract class TaskAttemptImpl implements
 
       // Add shuffle token
       LOG.info("Putting shuffle token in serviceData");
-      DataOutputBuffer jobToken_dob = new DataOutputBuffer();
-      jobToken.write(jobToken_dob);
       container
           .setServiceData(
               ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID,
-              ByteBuffer.wrap(jobToken_dob.getData(), 0,
-                  jobToken_dob.getLength()));
+              ShuffleHandler.serializeServiceData(jobToken));
 
       MRApps.addToClassPath(container.getAllEnv(), getInitialClasspath());
     } catch (IOException e) {
@@ -779,6 +775,17 @@ public abstract class TaskAttemptImpl implements
     readLock.lock();
     try {
       return finishTime;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+
+  @Override
+  public int getShufflePort() {
+    readLock.lock();
+    try {
+      return shufflePort;
     } finally {
       readLock.unlock();
     }
@@ -1153,7 +1160,11 @@ public abstract class TaskAttemptImpl implements
       SingleArcTransition<TaskAttemptImpl, TaskAttemptEvent> {
     @Override
     public void transition(TaskAttemptImpl taskAttempt, 
-        TaskAttemptEvent event) {
+        TaskAttemptEvent evnt) {
+
+      TaskAttemptContainerLaunchedEvent event =
+        (TaskAttemptContainerLaunchedEvent) evnt;
+
       //set the launch time
       taskAttempt.launchTime = taskAttempt.clock.getTime();
       // register it to TaskAttemptListener so that it start listening
@@ -1186,6 +1197,7 @@ public abstract class TaskAttemptImpl implements
       //make remoteTask reference as null as it is no more needed
       //and free up the memory
       taskAttempt.remoteTask = null;
+      taskAttempt.shufflePort = event.getShufflePort();
       
       //tell the Task that attempt has started
       taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
@@ -1368,6 +1380,8 @@ public abstract class TaskAttemptImpl implements
       // for it
       taskAttempt.taskAttemptListener.unregister(
           taskAttempt.attemptId, taskAttempt.jvmID);
+      taskAttempt.reportedStatus.progress = 1.0f;
+      taskAttempt.updateProgressSplits();
       //send the cleanup event to containerLauncher
       taskAttempt.eventHandler.handle(new ContainerLauncherEvent(
           taskAttempt.attemptId, 

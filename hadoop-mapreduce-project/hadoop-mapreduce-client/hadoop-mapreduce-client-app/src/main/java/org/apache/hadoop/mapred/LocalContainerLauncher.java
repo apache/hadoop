@@ -44,6 +44,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.AMConstants;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobCounterUpdateEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerLaunchedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
@@ -198,9 +199,13 @@ public class LocalContainerLauncher extends AbstractService implements
           // after "launching," send launched event to task attempt to move
           // state from ASSIGNED to RUNNING (also nukes "remoteTask", so must
           // do getRemoteTask() call first)
+          
+          //There is no port number because we are not really talking to a task
+          // tracker.  The shuffle is just done through local files.  So the
+          // port number is set to -1 in this case.
           context.getEventHandler().handle(
-              new TaskAttemptEvent(attemptID,
-                  TaskAttemptEventType.TA_CONTAINER_LAUNCHED)); //FIXME:  race condition here?  or do we have same kind of lock on TA handler => MapTask can't send TA_UPDATE before TA_CONTAINER_LAUNCHED moves TA to RUNNING state?  (probably latter)
+              new TaskAttemptContainerLaunchedEvent(attemptID, -1));
+          //FIXME:  race condition here?  or do we have same kind of lock on TA handler => MapTask can't send TA_UPDATE before TA_CONTAINER_LAUNCHED moves TA to RUNNING state?  (probably latter)
 
           if (numMapTasks == 0) {
             doneWithMaps = true;

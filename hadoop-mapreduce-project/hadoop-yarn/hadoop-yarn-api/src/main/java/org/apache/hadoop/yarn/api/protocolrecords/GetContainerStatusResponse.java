@@ -18,9 +18,32 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 
+/**
+ * <p>The response sent by the <code>NodeManager</code> to the 
+ * <code>ApplicationMaster</code> when asked to obtainer <em>status</em> 
+ * of a container.</p>
+ * 
+ * @see ContainerManager#getContainerStatus(GetContainerStatusRequest)
+ */
+@Public
+@Stable
 public interface GetContainerStatusResponse {
+  /**
+   * Get the <code>ContainerStatus</code> of the container.
+   * @return <code>ContainerStatus</code> of the container
+   */
+  @Public
+  @Stable
   public abstract ContainerStatus getStatus();
+  
+  @Private
+  @Unstable
   public abstract void setStatus(ContainerStatus containerStatus);
 }

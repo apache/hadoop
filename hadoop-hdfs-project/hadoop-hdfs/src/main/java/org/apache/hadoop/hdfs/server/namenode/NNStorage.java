@@ -42,11 +42,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.UpgradeManager;
@@ -126,7 +126,7 @@ public class NNStorage extends Storage implements Closeable {
    * recent fsimage file. This does not include any transactions
    * that have since been written to the edit log.
    */
-  protected long mostRecentCheckpointTxId = FSConstants.INVALID_TXID;
+  protected long mostRecentCheckpointTxId = HdfsConstants.INVALID_TXID;
 
   /**
    * list of failed (and thus removed) storages
@@ -501,7 +501,7 @@ public class NNStorage extends Storage implements Closeable {
    * Format all available storage directories.
    */
   public void format(String clusterId) throws IOException {
-    this.layoutVersion = FSConstants.LAYOUT_VERSION;
+    this.layoutVersion = HdfsConstants.LAYOUT_VERSION;
     this.namespaceID = newNamespaceID();
     this.clusterID = clusterId;
     this.blockpoolID = newBlockPoolID();
@@ -574,7 +574,7 @@ public class NNStorage extends Storage implements Closeable {
    * This should only be used during upgrades.
    */
   String getDeprecatedProperty(String prop) {
-    assert getLayoutVersion() > FSConstants.LAYOUT_VERSION :
+    assert getLayoutVersion() > HdfsConstants.LAYOUT_VERSION :
       "getDeprecatedProperty should only be done when loading " +
       "storage from past versions during upgrade.";
     return deprecatedProperties.get(prop);
@@ -764,7 +764,7 @@ public class NNStorage extends Storage implements Closeable {
       if(upgradeManager.getDistributedUpgrades() != null)
         throw new IOException("\n   Distributed upgrade for NameNode version "
                               + upgradeManager.getUpgradeVersion()
-                              + " to current LV " + FSConstants.LAYOUT_VERSION
+                              + " to current LV " + HdfsConstants.LAYOUT_VERSION
                               + " is required.\n   Please restart NameNode"
                               + " with -upgrade option.");
     }
@@ -780,7 +780,7 @@ public class NNStorage extends Storage implements Closeable {
     writeAll();
     LOG.info("\n   Distributed upgrade for NameNode version "
              + upgradeManager.getUpgradeVersion() + " to current LV "
-             + FSConstants.LAYOUT_VERSION + " is initialized.");
+             + HdfsConstants.LAYOUT_VERSION + " is initialized.");
   }
 
   /**

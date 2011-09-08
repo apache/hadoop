@@ -375,11 +375,11 @@ public class TestBlockToken {
       Path filePath = new Path(fileName);
       FSDataOutputStream out = fs.create(filePath, (short) 1);
       out.write(new byte[1000]);
-      LocatedBlocks locatedBlocks = cluster.getNameNode().getBlockLocations(
+      LocatedBlocks locatedBlocks = cluster.getNameNodeRpc().getBlockLocations(
           fileName, 0, 1000);
       while (locatedBlocks.getLastLocatedBlock() == null) {
         Thread.sleep(100);
-        locatedBlocks = cluster.getNameNode().getBlockLocations(fileName, 0,
+        locatedBlocks = cluster.getNameNodeRpc().getBlockLocations(fileName, 0,
             1000);
       }
       Token<BlockTokenIdentifier> token = locatedBlocks.getLastLocatedBlock()

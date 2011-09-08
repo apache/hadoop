@@ -44,11 +44,14 @@ public class AuxServices extends AbstractService
   public static final String AUX_SERVICE_CLASS_FMT =
     "nodemanager.aux.service.%s.class";
   public final Map<String,AuxiliaryService> serviceMap;
+  public final Map<String,ByteBuffer> serviceMeta;
 
   public AuxServices() {
     super(AuxServices.class.getName());
     serviceMap =
       Collections.synchronizedMap(new HashMap<String,AuxiliaryService>());
+    serviceMeta =
+      Collections.synchronizedMap(new HashMap<String,ByteBuffer>());
     // Obtain services from configuration in init()
   }
 
@@ -63,6 +66,15 @@ public class AuxServices extends AbstractService
     return Collections.unmodifiableCollection(serviceMap.values());
   }
 
+  /**
+   * @return the meta data for all registered services, that have been started.
+   * If a service has not been started no metadata will be available. The key
+   * the the name of the service as defined in the configuration.
+   */
+  public Map<String, ByteBuffer> getMeta() {
+    return Collections.unmodifiableMap(serviceMeta);
+  }
+
   @Override
   public void init(Configuration conf) {
     Collection<String> auxNames = conf.getStringCollection(AUX_SERVICES);
@@ -75,7 +87,15 @@ public class AuxServices extends AbstractService
           throw new RuntimeException("No class defiend for " + sName);
         }
         AuxiliaryService s = ReflectionUtils.newInstance(sClass, conf);
-        // TODO better use use s.getName()?
+        // TODO better use s.getName()?
+        if(!sName.equals(s.getName())) {
+          LOG.warn("The Auxilurary Service named '"+sName+"' in the "
+                  +"configuration is for class "+sClass+" which has "
+                  +"a name of '"+s.getName()+"'. Because these are "
+                  +"not the same tools trying to send ServiceData and read "
+                  +"Service Meta Data may have issues unless the refer to "
+                  +"the name in the config.");
+        }
         addService(sName, s);
         s.init(conf);
       } catch (RuntimeException e) {
@@ -90,9 +110,15 @@ public class AuxServices extends AbstractService
   public void start() {
     // TODO fork(?) services running as configured user
     //      monitor for health, shutdown/restart(?) if any should die
-    for (Service service : serviceMap.values()) {
+    for (Map.Entry<String, AuxiliaryService> entry : serviceMap.entrySet()) {
+      AuxiliaryService service = entry.getValue();
+      String name = entry.getKey();
       service.start();
       service.register(this);
+      ByteBuffer meta = service.getMeta();
+      if(meta != null) {
+        serviceMeta.put(name, meta);
+      }
     }
     super.start();
   }
@@ -108,6 +134,7 @@ public class AuxServices extends AbstractService
           }
         }
         serviceMap.clear();
+        serviceMeta.clear();
       }
     } finally {
       super.stop();
@@ -146,6 +173,15 @@ public class AuxServices extends AbstractService
   public interface AuxiliaryService extends Service {
     void initApp(String user, ApplicationId appId, ByteBuffer data);
     void stopApp(ApplicationId appId);
+    /**
+     * Retreive metadata for this service.  This is likely going to be contact
+     * information so that applications can access the service remotely.  Ideally
+     * each service should provide a method to parse out the information to a usable
+     * class.  This will only be called after the services start method has finished.
+     * the result may be cached.
+     * @return metadata for this service that should be made avaiable to applications.
+     */
+    ByteBuffer getMeta();
   }
 
 }

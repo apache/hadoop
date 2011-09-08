@@ -22,6 +22,20 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.List;
+import java.net.InetSocketAddress;
+
+import java.net.SocketTimeoutException;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
+
+import org.apache.hadoop.ipc.Client;
+import org.apache.hadoop.ipc.ProtocolSignature;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.net.NetUtils;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -37,7 +51,8 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
@@ -48,6 +63,50 @@ import org.junit.Test;
  * This tests InterDataNodeProtocol for block handling. 
  */
 public class TestInterDatanodeProtocol {
+  private static final String ADDRESS = "0.0.0.0";
+  final static private int PING_INTERVAL = 1000;
+  final static private int MIN_SLEEP_TIME = 1000;
+  private static Configuration conf = new HdfsConfiguration();
+
+
+  private static class TestServer extends Server {
+    private boolean sleep;
+    private Class<? extends Writable> responseClass;
+
+    public TestServer(int handlerCount, boolean sleep) throws IOException {
+      this(handlerCount, sleep, LongWritable.class, null);
+    }
+
+    public TestServer(int handlerCount, boolean sleep,
+        Class<? extends Writable> paramClass,
+        Class<? extends Writable> responseClass)
+      throws IOException {
+      super(ADDRESS, 0, paramClass, handlerCount, conf);
+      this.sleep = sleep;
+      this.responseClass = responseClass;
+    }
+
+    @Override
+    public Writable call(String protocol, Writable param, long receiveTime)
+        throws IOException {
+      if (sleep) {
+        // sleep a bit
+        try {
+          Thread.sleep(PING_INTERVAL + MIN_SLEEP_TIME);
+        } catch (InterruptedException e) {}
+      }
+      if (responseClass != null) {
+        try {
+          return responseClass.newInstance();
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      } else {
+        return param;                               // echo param as result
+      }
+    }
+  }
+
   public static void checkMetaInfo(ExtendedBlock b, DataNode dn) throws IOException {
     Block metainfo = dn.data.getStoredBlock(b.getBlockPoolId(), b.getBlockId());
     Assert.assertEquals(b.getBlockId(), metainfo.getBlockId());
@@ -73,7 +132,6 @@ public class TestInterDatanodeProtocol {
    */
   @Test
   public void testBlockMetaDataInfo() throws Exception {
-    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
 
     try {
@@ -222,7 +280,6 @@ public class TestInterDatanodeProtocol {
    * */
   @Test
   public void testUpdateReplicaUnderRecovery() throws IOException {
-    final Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
 
     try {
@@ -289,6 +346,35 @@ public class TestInterDatanodeProtocol {
 
     } finally {
       if (cluster != null) cluster.shutdown();
+    }
+  }
+
+  /** Test to verify that InterDatanode RPC timesout as expected when
+   *  the server DN does not respond.
+   */
+  @Test
+  public void testInterDNProtocolTimeout() throws Exception {
+    final Server server = new TestServer(1, true);
+    server.start();
+
+    final InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    DatanodeID fakeDnId = new DatanodeID(
+        "localhost:" + addr.getPort(), "fake-storage", 0, addr.getPort());
+    DatanodeInfo dInfo = new DatanodeInfo(fakeDnId);
+    InterDatanodeProtocol proxy = null;
+
+    try {
+      proxy = DataNode.createInterDataNodeProtocolProxy(
+          dInfo, conf, 500);
+      proxy.initReplicaRecovery(null);
+      fail ("Expected SocketTimeoutException exception, but did not get.");
+    } catch (SocketTimeoutException e) {
+      DataNode.LOG.info("Got expected Exception: SocketTimeoutException" + e);
+    } finally {
+      if (proxy != null) {
+        RPC.stopProxy(proxy);
+      }
+      server.stop();
     }
   }
 }

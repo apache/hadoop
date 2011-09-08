@@ -33,7 +33,7 @@ public class TestTaskOutputSize {
       "/tmp"), "test");
 
   @After
-  public void tearDown() throws Exception {
+  public void tearDown() {
     FileUtil.fullyDelete(new File(rootDir.toString()));
   }
 

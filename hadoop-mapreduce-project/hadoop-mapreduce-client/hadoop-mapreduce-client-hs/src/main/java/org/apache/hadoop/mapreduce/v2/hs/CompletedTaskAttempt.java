@@ -146,4 +146,10 @@ public class CompletedTaskAttempt implements TaskAttempt {
   public long getFinishTime() {
     return report.getFinishTime();
   }
+
+  @Override
+  public int getShufflePort() {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
+
 }

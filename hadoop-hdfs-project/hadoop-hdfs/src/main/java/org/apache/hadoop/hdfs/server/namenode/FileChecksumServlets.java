@@ -38,7 +38,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeJspHelper;
@@ -120,7 +120,7 @@ public class FileChecksumServlets {
         new HdfsConfiguration(datanode.getConf());
       final int socketTimeout = conf.getInt(
           DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY,
-          HdfsConstants.READ_TIMEOUT);
+          HdfsServerConstants.READ_TIMEOUT);
       final SocketFactory socketFactory = NetUtils.getSocketFactory(conf,
           ClientProtocol.class);
       

@@ -18,9 +18,34 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 
+/**
+ * <p>The response sent by the <code>ResourceManager</code> to a client
+ * requesting information about queues in the system.</p>
+ *
+ * <p>The response includes a {@link QueueInfo} which has details such as
+ * queue name, used/total capacities, running applications, child queues etc
+ * .</p>
+ * 
+ * @see QueueInfo
+ * @see ClientRMProtocol#getQueueInfo(GetQueueInfoRequest)
+ */
+@Public
+@Stable
 public interface GetQueueInfoResponse {
+  /**
+   * Get the <code>QueueInfo</code> for the specified queue.
+   * @return <code>QueueInfo</code> for the specified queue
+   */
   QueueInfo getQueueInfo();
+  
+  @Private
+  @Unstable
   void setQueueInfo(QueueInfo queueInfo);
 }

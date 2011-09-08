@@ -317,15 +317,15 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
     }
 
     @Override
-    public Writable call(Class<?> protocol, Writable writableRequest,
+    public Writable call(String protocol, Writable writableRequest,
         long receiveTime) throws IOException {
       ProtoSpecificRequestWritable request = (ProtoSpecificRequestWritable) writableRequest;
       ProtoSpecificRpcRequest rpcRequest = request.message;
       String methodName = rpcRequest.getMethodName();
-      System.out.println("Call: protocol=" + protocol.getCanonicalName() + ", method="
+      System.out.println("Call: protocol=" + protocol + ", method="
           + methodName);
       if (verbose)
-        log("Call: protocol=" + protocol.getCanonicalName() + ", method="
+        log("Call: protocol=" + protocol + ", method="
             + methodName);
       MethodDescriptor methodDescriptor = service.getDescriptorForType()
           .findMethodByName(methodName);

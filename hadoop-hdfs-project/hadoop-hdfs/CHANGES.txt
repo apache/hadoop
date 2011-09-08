@@ -5,8 +5,30 @@ Trunk (unreleased changes)
     HDFS-395.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
                via hairong)
 
+  IMPROVEMENTS
+
+    HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)
+
+    HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
+               HdfsConstants. (Harsh J Chouraria via atm)
+    HDFS-2197. Refactor RPC call implementations out of NameNode class (todd)
+
+    HDFS-2018. Move all journal stream management code into one place.
+               (Ivan Kelly via jitendra)
+
+    HDFS-2223. Untangle depencencies between NN components (todd)
+
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
+
+    HDFS-2299. TestOfflineEditsViewer is failing on trunk. (Uma Maheswara Rao G
+               via atm)
+    HDFS-2310. TestBackupNode fails since HADOOP-7524 went in.
+               (Ivan Kelly via todd)
+
+    HDFS-2313. Rat excludes has a typo for excluding editsStored files. (atm)
+
+    HDFS-2314. MRV1 test compilation broken after HDFS-2197 (todd)
 
 Release 0.23.0 - Unreleased
 
@@ -687,6 +709,9 @@ Release 0.23.0 - Unreleased
     HDFS-2266.  Add Namesystem and SafeMode interfaces to avoid directly
     referring to FSNamesystem in BlockManager. (szetszwo)
 
+    HDFS-1217.  Change some NameNode methods from public to package private.
+    (Laxman via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
@@ -1003,6 +1028,9 @@ Release 0.23.0 - Unreleased
     HDFS-2286. DataXceiverServer logs AsynchronousCloseException at shutdown
     (todd)
 
+    HDFS-2289. Ensure jsvc is bundled with the HDFS distribution artifact.
+    (Alejandro Abdelnur via acmurthy) 
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.
@@ -1086,6 +1114,7 @@ Release 0.22.0 - Unreleased
     (jghoman)
 
     HDFS-1330. Make RPCs to DataNodes timeout. (hairong)
+    Added additional unit tests per HADOOP-6889. (John George via mattf)
 
     HDFS-202.  HDFS support of listLocatedStatus introduced in HADOOP-6870.
     HDFS piggyback block locations to each file status when listing a
@@ -1540,6 +1569,11 @@ Release 0.22.0 - Unreleased
 
     HDFS-1981. NameNode does not saveNamespace() when editsNew is empty.
     (Uma Maheswara Rao G via shv)
+
+    HDFS-2258. Reset lease limits to default values in TestLeaseRecovery2. (shv)
+
+    HDFS-2232. Generalize regular expressions in TestHDFSCLI.
+    (Plamen Jeliazkov via shv)
 
 Release 0.21.1 - Unreleased
     HDFS-1466. TestFcHdfsSymlink relies on /tmp/test not existing. (eli)

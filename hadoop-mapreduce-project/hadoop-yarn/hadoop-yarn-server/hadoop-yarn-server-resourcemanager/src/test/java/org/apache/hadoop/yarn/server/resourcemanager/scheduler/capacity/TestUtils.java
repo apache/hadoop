@@ -116,6 +116,13 @@ public class TestUtils {
     return request;
   }
   
+  public static ApplicationId getMockApplicationId(int appId) {
+    ApplicationId applicationId = mock(ApplicationId.class);
+    when(applicationId.getClusterTimestamp()).thenReturn(0L);
+    when(applicationId.getId()).thenReturn(appId);
+    return applicationId;
+  }
+  
   public static ApplicationAttemptId 
   getMockApplicationAttemptId(int appId, int attemptId) {
     ApplicationId applicationId = mock(ApplicationId.class);

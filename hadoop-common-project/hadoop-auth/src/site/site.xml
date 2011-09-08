@@ -11,7 +11,7 @@
  See the License for the specific language governing permissions and
  limitations under the License. See accompanying LICENSE file.
 -->
-<project name="Hadoop Alfredo">
+<project name="Hadoop Auth">
 
   <version position="right"/>
 

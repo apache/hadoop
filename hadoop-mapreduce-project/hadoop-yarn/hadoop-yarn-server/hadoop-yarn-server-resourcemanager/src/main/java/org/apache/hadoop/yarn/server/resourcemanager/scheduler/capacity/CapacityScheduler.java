@@ -46,6 +46,8 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
@@ -166,6 +168,11 @@ implements ResourceScheduler, CapacitySchedulerContext {
     return this.rmContext;
   }
 
+  @Override
+  public Resource getClusterResources() {
+    return clusterResource;
+  }
+  
   @Override
   public synchronized void reinitialize(Configuration conf,
       ContainerTokenSecretManager containerTokenSecretManager, RMContext rmContext) 
@@ -348,6 +355,8 @@ implements ResourceScheduler, CapacitySchedulerContext {
     try {
       queue.submitApplication(SchedulerApp, user, queueName);
     } catch (AccessControlException ace) {
+      LOG.info("Failed to submit application " + applicationAttemptId + 
+          " to queue " + queueName + " from user " + user, ace);
       this.rmContext.getDispatcher().getEventHandler().handle(
           new RMAppAttemptRejectedEvent(applicationAttemptId, 
               ace.toString()));
@@ -428,8 +437,15 @@ implements ResourceScheduler, CapacitySchedulerContext {
 
     // Release containers
     for (ContainerId releasedContainerId : release) {
-      completedContainer(getRMContainer(releasedContainerId), 
-          RMContainerEventType.RELEASED);
+      RMContainer rmContainer = getRMContainer(releasedContainerId);
+      if (rmContainer == null) {
+         RMAuditLogger.logFailure(application.getUser(),
+             AuditConstants.RELEASE_CONTAINER, 
+             "Unauthorized access or invalid container", "CapacityScheduler",
+             "Trying to release container not owned by app or with invalid id",
+             application.getApplicationId(), releasedContainerId);
+      }
+      completedContainer(rmContainer, RMContainerEventType.RELEASED);
     }
 
     synchronized (application) {
@@ -621,6 +637,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
   private synchronized void addNode(RMNode nodeManager) {
     this.nodes.put(nodeManager.getNodeID(), new SchedulerNode(nodeManager));
     Resources.addTo(clusterResource, nodeManager.getTotalCapability());
+    root.updateClusterResource(clusterResource);
     ++numNodeManagers;
     LOG.info("Added node " + nodeManager.getNodeAddress() + 
         " clusterResource: " + clusterResource);
@@ -629,6 +646,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
   private synchronized void removeNode(RMNode nodeInfo) {
     SchedulerNode node = this.nodes.get(nodeInfo.getNodeID());
     Resources.subtractFrom(clusterResource, nodeInfo.getTotalCapability());
+    root.updateClusterResource(clusterResource);
     --numNodeManagers;
 
     // Remove running containers

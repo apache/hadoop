@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -354,12 +353,9 @@ public abstract class FSImageTestUtil {
    */
   public static EditLogFile findLatestEditsLog(StorageDirectory sd)
   throws IOException {
-    FSImageTransactionalStorageInspector inspector =
-      new FSImageTransactionalStorageInspector();
-    inspector.inspectDirectory(sd);
-    
-    List<EditLogFile> foundEditLogs = Lists.newArrayList(
-        inspector.getEditLogFiles());
+    File currentDir = sd.getCurrentDir();
+    List<EditLogFile> foundEditLogs 
+      = Lists.newArrayList(FileJournalManager.matchEditLogs(currentDir.listFiles()));
     return Collections.max(foundEditLogs, EditLogFile.COMPARE_BY_START_TXID);
   }
 
@@ -410,5 +406,10 @@ public abstract class FSImageTestUtil {
         LOG.info("  file " + f.getAbsolutePath() + "; len = " + f.length());  
       }
     }
+  }
+  
+  /** get the fsImage*/
+  public static FSImage getFSImage(NameNode node) {
+    return node.getFSImage();
   }
 }

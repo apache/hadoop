@@ -52,6 +52,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobFinishEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssignedEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerLaunchedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
@@ -291,9 +292,11 @@ public class MRApp extends MRAppMaster {
     public void handle(ContainerLauncherEvent event) {
       switch (event.getType()) {
       case CONTAINER_REMOTE_LAUNCH:
+        //We are running locally so set the shuffle port to -1 
         getContext().getEventHandler().handle(
-            new TaskAttemptEvent(event.getTaskAttemptID(),
-                TaskAttemptEventType.TA_CONTAINER_LAUNCHED));
+            new TaskAttemptContainerLaunchedEvent(event.getTaskAttemptID(),
+                -1)
+            );
         
         attemptLaunched(event.getTaskAttemptID());
         break;

@@ -77,11 +77,18 @@ public abstract class ContainerExecutor implements Configurable {
       List<Path> localDirs)
     throws IOException, InterruptedException;
 
+
   /**
    * Launch the container on the node. This is a blocking call and returns only
    * when the container exits.
-   * 
-   * @param launchCtxt
+   * @param container the container to be launched
+   * @param nmPrivateContainerScriptPath the path for launch script
+   * @param nmPrivateTokensPath the path for tokens for the container
+   * @param user the user of the container
+   * @param appId the appId of the container
+   * @param containerWorkDir the work dir for the container
+   * @return the return status of the launch
+   * @throws IOException
    */
   public abstract int launchContainer(Container container,
       Path nmPrivateContainerScriptPath, Path nmPrivateTokensPath,

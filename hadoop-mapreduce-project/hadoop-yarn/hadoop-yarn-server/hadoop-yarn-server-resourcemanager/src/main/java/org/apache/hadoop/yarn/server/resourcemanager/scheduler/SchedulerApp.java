@@ -39,6 +39,8 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -73,7 +75,11 @@ public class SchedulerApp {
   final Map<Priority, Map<NodeId, RMContainer>> reservedContainers = 
       new HashMap<Priority, Map<NodeId, RMContainer>>();
   
-  Map<Priority, Integer> schedulingOpportunities = new HashMap<Priority, Integer>();
+  Map<Priority, Integer> schedulingOpportunities = 
+      new HashMap<Priority, Integer>();
+  
+  Map<Priority, Integer> reReservations =
+      new HashMap<Priority, Integer>();
 
   Resource currentReservation = recordFactory
       .newRecordInstance(Resource.class);
@@ -178,6 +184,10 @@ public class SchedulerApp {
     
     // Remove from the list of containers
     liveContainers.remove(rmContainer.getContainerId());
+
+    RMAuditLogger.logSuccess(getUser(), 
+        AuditConstants.RELEASE_CONTAINER, "SchedulerApp", 
+        getApplicationId(), containerId);
     
     // Update usage metrics 
     Resource containerResource = rmContainer.getContainer().getResource();
@@ -213,6 +223,9 @@ public class SchedulerApp {
           + " container=" + container.getId() + " host="
           + container.getNodeId().getHost() + " type=" + type);
     }
+    RMAuditLogger.logSuccess(getUser(), 
+        AuditConstants.ALLOC_CONTAINER, "SchedulerApp", 
+        getApplicationId(), container.getId());
 
     // Add it to allContainers list.
     newlyAllocatedContainers.add(rmContainer);
@@ -265,15 +278,15 @@ public class SchedulerApp {
   }
 
   synchronized public void resetSchedulingOpportunities(Priority priority) {
-    Integer schedulingOpportunities = this.schedulingOpportunities
-        .get(priority);
+    Integer schedulingOpportunities = 
+        this.schedulingOpportunities.get(priority);
     schedulingOpportunities = 0;
     this.schedulingOpportunities.put(priority, schedulingOpportunities);
   }
 
   synchronized public void addSchedulingOpportunity(Priority priority) {
-    Integer schedulingOpportunities = this.schedulingOpportunities
-        .get(priority);
+    Integer schedulingOpportunities = 
+        this.schedulingOpportunities.get(priority);
     if (schedulingOpportunities == null) {
       schedulingOpportunities = 0;
     }
@@ -282,13 +295,37 @@ public class SchedulerApp {
   }
 
   synchronized public int getSchedulingOpportunities(Priority priority) {
-    Integer schedulingOpportunities = this.schedulingOpportunities
-        .get(priority);
+    Integer schedulingOpportunities = 
+        this.schedulingOpportunities.get(priority);
     if (schedulingOpportunities == null) {
       schedulingOpportunities = 0;
       this.schedulingOpportunities.put(priority, schedulingOpportunities);
     }
     return schedulingOpportunities;
+  }
+
+  synchronized void resetReReservations(Priority priority) {
+    Integer reReservations = this.reReservations.get(priority);
+    reReservations = 0;
+    this.reReservations.put(priority, reReservations);
+  }
+
+  synchronized void addReReservation(Priority priority) {
+    Integer reReservations = this.reReservations.get(priority);
+    if (reReservations == null) {
+      reReservations = 0;
+    }
+    ++reReservations;
+    this.reReservations.put(priority, reReservations);
+  }
+
+  synchronized public int getReReservations(Priority priority) {
+    Integer reReservations = this.reReservations.get(priority);
+    if (reReservations == null) {
+      reReservations = 0;
+      this.reReservations.put(priority, reReservations);
+    }
+    return reReservations;
   }
 
   public synchronized int getNumReservedContainers(Priority priority) {
@@ -318,6 +355,12 @@ public class SchedulerApp {
               rmContext.getContainerAllocationExpirer());
         
       Resources.addTo(currentReservation, container.getResource());
+      
+      // Reset the re-reservation count
+      resetReReservations(priority);
+    } else {
+      // Note down the re-reservation
+      addReReservation(priority);
     }
     rmContainer.handle(new RMContainerReservedEvent(container.getId(), 
         container.getResource(), node.getNodeID(), priority));
@@ -347,6 +390,9 @@ public class SchedulerApp {
       this.reservedContainers.remove(priority);
     }
     
+    // Reset the re-reservation count
+    resetReReservations(priority);
+
     Resource resource = reservedContainer.getContainer().getResource();
     Resources.subtractFrom(currentReservation, resource);
 
@@ -360,7 +406,7 @@ public class SchedulerApp {
    * given <code>priority</code>?
    * @param node node to be checked
    * @param priority priority of reserved container
-   * @return
+   * @return true is reserved, false if not
    */
   public synchronized boolean isReserved(SchedulerNode node, Priority priority) {
     Map<NodeId, RMContainer> reservedContainers = 

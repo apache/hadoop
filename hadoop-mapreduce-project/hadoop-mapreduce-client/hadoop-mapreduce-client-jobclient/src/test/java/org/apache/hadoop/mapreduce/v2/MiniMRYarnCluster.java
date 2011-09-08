@@ -72,6 +72,8 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
     conf.setClass(String.format(AuxServices.AUX_SERVICE_CLASS_FMT,
         ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID), ShuffleHandler.class,
         Service.class);
+    // Non-standard shuffle port
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 8083);
     conf.setClass(NMConfig.NM_CONTAINER_EXECUTOR_CLASS,
         DefaultContainerExecutor.class, ContainerExecutor.class);
 
