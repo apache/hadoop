@@ -210,7 +210,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
     }
   }
 
-  protected void submitApplication(ApplicationSubmissionContext submissionContext) {
+  protected synchronized void submitApplication(ApplicationSubmissionContext submissionContext) {
     ApplicationId applicationId = submissionContext.getApplicationId();
     RMApp application = null;
     try {

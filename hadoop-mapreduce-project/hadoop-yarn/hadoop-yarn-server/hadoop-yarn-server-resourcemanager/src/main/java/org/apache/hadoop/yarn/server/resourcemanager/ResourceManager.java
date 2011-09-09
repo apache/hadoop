@@ -99,7 +99,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected NMLivelinessMonitor nmLivelinessMonitor;
   protected NodesListManager nodesListManager;
   private SchedulerEventDispatcher schedulerDispatcher;
-  private RMAppManager rmAppManager;
+  protected RMAppManager rmAppManager;
 
   private final AtomicBoolean shutdown = new AtomicBoolean(false);
   private WebApp webApp;
@@ -176,13 +176,13 @@ public class ResourceManager extends CompositeService implements Recoverable {
     masterService = createApplicationMasterService();
     addService(masterService) ;
 
-    clientRM = createClientRMService();
-    addService(clientRM);
-
     this.rmAppManager = createRMAppManager();
     // Register event handler for RMAppManagerEvents
     this.rmDispatcher.register(RMAppManagerEventType.class,
         this.rmAppManager);
+
+    clientRM = createClientRMService();
+    addService(clientRM);
     
     adminService = createAdminService();
     addService(adminService);
@@ -441,7 +441,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected ClientRMService createClientRMService() {
-    return new ClientRMService(this.rmContext, scheduler);
+    return new ClientRMService(this.rmContext, scheduler, this.rmAppManager);
   }
 
   protected ApplicationMasterService createApplicationMasterService() {

@@ -60,13 +60,9 @@ public class MockRM extends ResourceManager {
 
   public void waitForState(ApplicationId appId, RMAppState finalState) 
       throws Exception {
+    RMApp app = getRMContext().getRMApps().get(appId);
+    Assert.assertNotNull("app shouldn't be null", app);
     int timeoutSecs = 0;
-    RMApp app = null;
-    while ((app == null) && timeoutSecs++ < 20) {
-      app = getRMContext().getRMApps().get(appId);
-      Thread.sleep(500);
-    }
-    timeoutSecs = 0;
     while (!finalState.equals(app.getState()) &&
         timeoutSecs++ < 20) {
       System.out.println("App State is : " + app.getState() +
@@ -95,6 +91,7 @@ public class MockRM extends ResourceManager {
     req.setApplicationSubmissionContext(sub);
     
     client.submitApplication(req);
+    // make sure app is immediately available after submit
     waitForState(appId, RMAppState.ACCEPTED);
     return getRMContext().getRMApps().get(appId);
   }
@@ -131,7 +128,7 @@ public class MockRM extends ResourceManager {
 
   @Override
   protected ClientRMService createClientRMService() {
-    return new ClientRMService(getRMContext(), getResourceScheduler()) {
+    return new ClientRMService(getRMContext(), getResourceScheduler(), rmAppManager) {
       @Override
       public void start() {
         //override to not start rpc handler
