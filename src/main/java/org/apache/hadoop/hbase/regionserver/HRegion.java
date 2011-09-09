@@ -1641,23 +1641,17 @@ public class HRegion implements HeapSize { // , Writable{
       BatchOperationInProgress<Pair<Put, Integer>> batchOp) throws IOException {
     /* Run coprocessor pre hook outside of locks to avoid deadlock */
     if (coprocessorHost != null) {
-      List<Pair<Put, Integer>> ops =
-        new ArrayList<Pair<Put, Integer>>(batchOp.operations.length);
       for (int i = 0; i < batchOp.operations.length; i++) {
         Pair<Put, Integer> nextPair = batchOp.operations[i];
         Put put = nextPair.getFirst();
         Map<byte[], List<KeyValue>> familyMap = put.getFamilyMap();
         if (coprocessorHost.prePut(familyMap, put.getWriteToWAL())) {
           // pre hook says skip this Put
-          // adjust nextIndexToProcess if we skipped before it
-          if (batchOp.nextIndexToProcess > i) {
-            batchOp.nextIndexToProcess--;
-          }
-          continue;
+          // mark as success and skip below
+          batchOp.retCodeDetails[i] = new OperationStatus(
+              OperationStatusCode.SUCCESS);
         }
-        ops.add(nextPair);
       }
-      batchOp.operations = ops.toArray(new Pair[ops.size()]);
     }
 
     long now = EnvironmentEdgeManager.currentTimeMillis();
@@ -1686,6 +1680,13 @@ public class HRegion implements HeapSize { // , Writable{
         Map<byte[], List<KeyValue>> familyMap = put.getFamilyMap();
         // store the family map reference to allow for mutations
         familyMaps[lastIndexExclusive] = familyMap;
+
+        // skip anything that "ran" already
+        if (batchOp.retCodeDetails[lastIndexExclusive].getOperationStatusCode()
+            != OperationStatusCode.NOT_RUN) {
+          lastIndexExclusive++;
+          continue;
+        }
 
         // Check the families in the put. If bad, skip this one.
         try {
