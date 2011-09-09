@@ -572,12 +572,23 @@ public class MiniDFSCluster {
   }
 
   /**
+   * Restart namenode. Waits for exit from safemode.
+   */
+  public synchronized void restartNameNode()
+      throws IOException {
+    restartNameNode(true);
+  }
+  
+  /**
    * Restart namenode.
    */
-  public synchronized void restartNameNode() throws IOException {
+  public synchronized void restartNameNode(boolean waitSafemodeExit)
+      throws IOException {
     shutdownNameNode();
     nameNode = NameNode.createNameNode(new String[] {}, conf);
-    waitClusterUp();
+    if (waitSafemodeExit) {
+      waitClusterUp();
+    }
     System.out.println("Restarted the namenode");
     int failedCount = 0;
     while (true) {

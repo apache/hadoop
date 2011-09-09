@@ -206,4 +206,13 @@ class INodeFile extends INode {
         blocks, getPermissionStatus(),
         clientName, clientMachine, clientNode);
   }
+
+  /**
+   * Return the last block in this file, or null if there are no blocks.
+   */
+  Block getLastBlock() {
+    if (this.blocks == null || this.blocks.length == 0)
+      return null;
+    return this.blocks[this.blocks.length - 1];
+  }
 }

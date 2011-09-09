@@ -59,6 +59,33 @@ import org.mortbay.log.Log;
  *
  ***************************************************/
 public class FSDataset implements FSConstants, FSDatasetInterface {
+  
+
+  /** Find the metadata file for the specified block file.
+   * Return the generation stamp from the name of the metafile.
+   */
+  private static long getGenerationStampFromFile(File[] listdir, File blockFile) {
+    String blockName = blockFile.getName();
+    for (int j = 0; j < listdir.length; j++) {
+      String path = listdir[j].getName();
+      if (!path.startsWith(blockName)) {
+        continue;
+      }
+      String[] vals = path.split("_");
+      if (vals.length != 3) {     // blk, blkid, genstamp.meta
+        continue;
+      }
+      String[] str = vals[2].split("\\.");
+      if (str.length != 2) {
+        continue;
+      }
+      return Long.parseLong(str[0]);
+    }
+    DataNode.LOG.warn("Block " + blockFile + 
+                      " does not have a metafile!");
+    return Block.GRANDFATHER_GENERATION_STAMP;
+  }
+
 
   /**
    * A data structure than encapsulates a Block along with the full pathname
@@ -183,31 +210,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       return children[ lastChildIdx ].addBlock(b, src, true, false); 
     }
 
-    /** Find the metadata file for the specified block file.
-     * Return the generation stamp from the name of the metafile.
-     */
-    long getGenerationStampFromFile(File[] listdir, File blockFile) {
-      String blockName = blockFile.getName();
-      for (int j = 0; j < listdir.length; j++) {
-        String path = listdir[j].getName();
-        if (!path.startsWith(blockName)) {
-          continue;
-        }
-        String[] vals = path.split("_");
-        if (vals.length != 3) {     // blk, blkid, genstamp.meta
-          continue;
-        }
-        String[] str = vals[2].split("\\.");
-        if (str.length != 2) {
-          continue;
-        }
-        return Long.parseLong(str[0]);
-      }
-      DataNode.LOG.warn("Block " + blockFile + 
-                        " does not have a metafile!");
-      return Block.GRANDFATHER_GENERATION_STAMP;
-    }
-
     /**
      * Populate the given blockSet with any child blocks
      * found at this node.
@@ -223,7 +225,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       if (blockFiles != null) {
         for (int i = 0; i < blockFiles.length; i++) {
           if (Block.isBlockFilename(blockFiles[i])) {
-            long genStamp = getGenerationStampFromFile(blockFiles,
+            long genStamp = FSDataset.getGenerationStampFromFile(blockFiles,
                 blockFiles[i]);
             blockSet.add(new Block(blockFiles[i], blockFiles[i].length(),
                 genStamp));
@@ -247,7 +249,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       File blockFiles[] = dir.listFiles();
       for (int i = 0; i < blockFiles.length; i++) {
         if (Block.isBlockFilename(blockFiles[i])) {
-          long genStamp = getGenerationStampFromFile(blockFiles, blockFiles[i]);
+          long genStamp = FSDataset.getGenerationStampFromFile(blockFiles, blockFiles[i]);
           Block block = new Block(blockFiles[i], blockFiles[i].length(), genStamp);
           blockSet.add(new BlockAndFile(blockFiles[i].getAbsoluteFile(), block));
         }
@@ -265,7 +267,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       if (blockFiles != null) {
         for (int i = 0; i < blockFiles.length; i++) {
           if (Block.isBlockFilename(blockFiles[i])) {
-            long genStamp = getGenerationStampFromFile(blockFiles,
+            long genStamp = FSDataset.getGenerationStampFromFile(blockFiles,
                 blockFiles[i]);
             volumeMap.put(new Block(blockFiles[i], blockFiles[i].length(),
                 genStamp), new DatanodeBlockInfo(volume, blockFiles[i]));
@@ -383,7 +385,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       // should not be deleted.
       blocksBeingWritten = new File(parent, "blocksBeingWritten");
       if (blocksBeingWritten.exists()) {
-        if (supportAppends) {
+        if (supportAppends) {  
           recoverBlocksBeingWritten(blocksBeingWritten);
         } else {
           FileUtil.fullyDelete(blocksBeingWritten);
@@ -515,6 +517,35 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     void getBlockInfo(TreeSet<Block> blockSet) {
       dataDir.getBlockInfo(blockSet);
     }
+    
+    void getBlocksBeingWrittenInfo(TreeSet<Block> blockSet) {
+      if (blocksBeingWritten == null) {
+        return;
+      }
+      
+      File[] blockFiles = blocksBeingWritten.listFiles();
+      if (blockFiles == null) {
+        return;
+      }
+      
+      for (int i = 0; i < blockFiles.length; i++) {
+        if (!blockFiles[i].isDirectory()) {
+          // get each block in the blocksBeingWritten direcotry
+          if (Block.isBlockFilename(blockFiles[i])) {
+            long genStamp = 
+              FSDataset.getGenerationStampFromFile(blockFiles, blockFiles[i]);
+            Block block = 
+              new Block(blockFiles[i], blockFiles[i].length(), genStamp);
+            
+            // add this block to block set
+            blockSet.add(block);
+            if (DataNode.LOG.isDebugEnabled()) {
+              DataNode.LOG.debug("recoverBlocksBeingWritten for block " + block);
+            }
+          }
+        }
+      }
+    }
 
     void getVolumeMap(HashMap<Block, DatanodeBlockInfo> volumeMap) {
       dataDir.getVolumeMap(volumeMap, this);
@@ -546,8 +577,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
         if (DataNode.LOG.isDebugEnabled()) {
           DataNode.LOG.debug("recoverBlocksBeingWritten for block " + b.block);
         }
-        DataNode.getDataNode().notifyNamenodeReceivedBlock(b.block, 
-                               DataNode.EMPTY_DEL_HINT);
       }
     } 
     
@@ -655,6 +684,18 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       for (int idx = 0; idx < volumes.length; idx++) {
         volumes[idx].getVolumeMap(volumeMap);
       }
+    }
+    
+    synchronized void getBlocksBeingWrittenInfo(TreeSet<Block> blockSet) {
+      long startTime = System.currentTimeMillis();
+
+      for (int idx = 0; idx < volumes.length; idx++) {
+        volumes[idx].getBlocksBeingWrittenInfo(blockSet);
+      }
+      
+      long scanTime = (System.currentTimeMillis() - startTime)/1000;
+      DataNode.LOG.info("Finished generating blocks being written report for " +
+          volumes.length + " volumes in " + scanTime + " seconds");
     }
       
     /**
@@ -1508,6 +1549,20 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       }
     }
     return true;
+  }
+  
+  /**
+   * Return a table of blocks being written data
+   */
+  public Block[] getBlocksBeingWrittenReport() {
+    TreeSet<Block> blockSet = new TreeSet<Block>();
+    volumes.getBlocksBeingWrittenInfo(blockSet);
+    Block blockTable[] = new Block[blockSet.size()];
+    int i = 0;
+    for (Iterator<Block> it = blockSet.iterator(); it.hasNext(); i++) {
+      blockTable[i] = it.next();
+    }
+    return blockTable;
   }
   
   /**

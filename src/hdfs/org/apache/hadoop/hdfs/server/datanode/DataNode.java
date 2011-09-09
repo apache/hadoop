@@ -216,6 +216,7 @@ public class DataNode extends Configured
   int socketWriteTimeout = 0;  
   boolean transferToAllowed = true;
   int writePacketSize = 0;
+  private boolean supportAppends;
   boolean isBlockTokenEnabled;
   BlockTokenSecretManager blockTokenSecretManager;
   boolean isBlockTokenInitialized = false;
@@ -264,7 +265,7 @@ public class DataNode extends Configured
         DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY);
 
     datanodeObject = this;
-
+    supportAppends = conf.getBoolean("dfs.support.append", false);
     try {
       startDataNode(conf, dataDirs, resources);
     } catch (IOException ie) {
@@ -673,6 +674,12 @@ public class DataNode extends Configured
       dnRegistration.exportedKeys = ExportedBlockKeys.DUMMY_KEYS;
     }
 
+    if (supportAppends) {
+      Block[] bbwReport = data.getBlocksBeingWrittenReport();
+      long[] blocksBeingWritten = BlockListAsLongs
+          .convertToArrayLongs(bbwReport);
+      namenode.blocksBeingWrittenReport(dnRegistration, blocksBeingWritten);
+    }
     // random short delay - helps scatter the BR from all DNs
     scheduleBlockReport(initialBlockReportDelay);
   }

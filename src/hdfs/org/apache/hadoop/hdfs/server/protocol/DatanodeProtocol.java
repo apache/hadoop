@@ -110,6 +110,17 @@ public interface DatanodeProtocol extends VersionedProtocol {
    */
   public DatanodeCommand blockReport(DatanodeRegistration registration,
                                      long[] blocks) throws IOException;
+  
+  /**
+   * blocksBeingWrittenReport() tells the NameNode about the blocks-being-
+   * written information
+   * 
+   * @param registration
+   * @param blocks
+   * @throws IOException
+   */
+  public void blocksBeingWrittenReport(DatanodeRegistration registration,
+      long[] blocks) throws IOException;
     
   /**
    * blockReceived() allows the DataNode to tell the NameNode about
