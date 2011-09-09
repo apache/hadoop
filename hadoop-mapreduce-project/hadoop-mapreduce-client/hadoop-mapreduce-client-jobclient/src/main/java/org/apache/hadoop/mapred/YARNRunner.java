@@ -248,10 +248,11 @@ public class YARNRunner implements ClientProtocol {
     
     ApplicationReport appMaster = resMgrDelegate
         .getApplicationReport(applicationId);
+    String diagnostics = (appMaster == null ? "application report is null" : appMaster.getDiagnostics());
     if (appMaster == null || appMaster.getState() == ApplicationState.FAILED 
         || appMaster.getState() == ApplicationState.KILLED) {
       throw new IOException("Failed to run job : " + 
-        appMaster.getDiagnostics());
+        diagnostics);
     }
     return clientCache.getClient(jobId).getJobStatus(jobId);
   }

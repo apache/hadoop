@@ -170,10 +170,10 @@ class JobQueueClient extends Configured implements Tool {
    * registered with the {@link QueueManager}. Display of the Jobs is determine
    * by the boolean
    * 
-   * @throws IOException
+   * @throws IOException, InterruptedException
    */
   private void displayQueueInfo(String queue, boolean showJobs)
-      throws IOException {
+      throws IOException, InterruptedException {
     JobQueueInfo jobQueueInfo = jc.getQueueInfo(queue);
     
     if (jobQueueInfo == null) {
