@@ -565,6 +565,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7598. Fix smart-apply-patch.sh to handle patching from a sub
     directory correctly. (Robert Evans via acmurthy) 
 
+    HADOOP-7328. When a serializer class is missing, return null, not throw
+    an NPE. (Harsh J Chouraria via todd)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
