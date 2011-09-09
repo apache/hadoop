@@ -523,7 +523,7 @@ public class CLI extends Configured implements Tool {
     }
   }
   
-  protected void displayJobList(JobStatus[] jobs) 
+  public void displayJobList(JobStatus[] jobs) 
       throws IOException, InterruptedException {
     System.out.println("Total jobs:" + jobs.length);
     System.out.println("JobId\tState\tStartTime\t" +

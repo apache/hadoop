@@ -1248,6 +1248,9 @@ Release 0.23.0 - Unreleased
 
    MAPREDUCE-2975. Fixed YARNRunner to use YarnConfiguration rather than
    Configuration. (mahadev via acmurthy) 
+ 
+   MAPREDUCE-2971. ant build mapreduce fails protected access jc.displayJobList
+   (jobs) (Thomas Graves via mahadev)
 
 Release 0.22.0 - Unreleased
 
