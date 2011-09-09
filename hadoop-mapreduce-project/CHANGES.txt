@@ -1256,6 +1256,9 @@ Release 0.23.0 - Unreleased
 
    MAPREDUCE-2963. Fix hang in TestMRJobs. (Siddharth Seth via acmurthy) 
 
+   MAPREDUCE-2954. Fixed a deadlock in NM caused due to wrong synchronization
+   in protocol buffer records. (Siddharth Seth via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

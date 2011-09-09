@@ -18,72 +18,23 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
-
-import java.text.NumberFormat;
-
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProtoOrBuilder;
 
     
-public class ContainerIdPBImpl extends ProtoBase<ContainerIdProto> implements ContainerId {
+public class ContainerIdPBImpl extends ContainerId {
   ContainerIdProto proto = ContainerIdProto.getDefaultInstance();
   ContainerIdProto.Builder builder = null;
   boolean viaProto = false;
   
   private ApplicationId applicationId = null;
   private ApplicationAttemptId appAttemptId = null;
-  protected static final NumberFormat idFormat = NumberFormat.getInstance();
-  static {
-    idFormat.setGroupingUsed(false);
-    idFormat.setMinimumIntegerDigits(4);
-  }
-  
-  protected static final NumberFormat counterFormat = NumberFormat.getInstance();
-  static {
-    counterFormat.setGroupingUsed(false);
-    counterFormat.setMinimumIntegerDigits(6);
-  }
-  
-  // TODO: Why thread local?
-  // ^ NumberFormat instances are not threadsafe
-  private static final ThreadLocal<NumberFormat> appIdFormat = new ThreadLocal<NumberFormat>() {
-    @Override
-    public NumberFormat initialValue() {
-      NumberFormat fmt = NumberFormat.getInstance();
-      fmt.setGroupingUsed(false);
-      fmt.setMinimumIntegerDigits(4);
-      return fmt;
-    }
-  };
 
-  // TODO: fail the app submission if attempts are more than 10 or something
-  private static final ThreadLocal<NumberFormat> appAttemptIdFormat = new ThreadLocal<NumberFormat>() {
-    @Override
-    public NumberFormat initialValue() {
-      NumberFormat fmt = NumberFormat.getInstance();
-      fmt.setGroupingUsed(false);
-      fmt.setMinimumIntegerDigits(2);
-      return fmt;
-    }
-  };
-  // TODO: Why thread local?
-  // ^ NumberFormat instances are not threadsafe
-  private static final ThreadLocal<NumberFormat> containerIdFormat = new ThreadLocal<NumberFormat>() {
-    @Override
-    public NumberFormat initialValue() {
-      NumberFormat fmt = NumberFormat.getInstance();
-      fmt.setGroupingUsed(false);
-      fmt.setMinimumIntegerDigits(6);
-      return fmt;
-    }
-  };
-    
   public ContainerIdPBImpl() {
     builder = ContainerIdProto.newBuilder();
   }
@@ -93,14 +44,14 @@ public class ContainerIdPBImpl extends ProtoBase<ContainerIdProto> implements Co
     viaProto = true;
   }
   
-  public ContainerIdProto getProto() {
+  public synchronized ContainerIdProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
   }
 
-  private void mergeLocalToBuilder() {
+  private synchronized void mergeLocalToBuilder() {
     if (this.applicationId != null && !((ApplicationIdPBImpl)applicationId).getProto().equals(builder.getAppId())) {
       builder.setAppId(convertToProtoFormat(this.applicationId));
     }
@@ -109,7 +60,7 @@ public class ContainerIdPBImpl extends ProtoBase<ContainerIdProto> implements Co
     }
   }
 
-  private void mergeLocalToProto() {
+  private synchronized void mergeLocalToProto() {
     if (viaProto) 
       maybeInitBuilder();
     mergeLocalToBuilder();
@@ -117,7 +68,7 @@ public class ContainerIdPBImpl extends ProtoBase<ContainerIdProto> implements Co
     viaProto = true;
   }
 
-  private void maybeInitBuilder() {
+  private synchronized void maybeInitBuilder() {
     if (viaProto || builder == null) {
       builder = ContainerIdProto.newBuilder(proto);
     }
@@ -126,18 +77,18 @@ public class ContainerIdPBImpl extends ProtoBase<ContainerIdProto> implements Co
     
   
   @Override
-  public int getId() {
+  public synchronized int getId() {
     ContainerIdProtoOrBuilder p = viaProto ? proto : builder;
     return (p.getId());
   }
 
   @Override
-  public void setId(int id) {
+  public synchronized void setId(int id) {
     maybeInitBuilder();
     builder.setId((id));
   }
   @Override
-  public ApplicationId getAppId() {
+  public synchronized ApplicationId getAppId() {
     ContainerIdProtoOrBuilder p = viaProto ? proto : builder;
     if (this.applicationId != null) {
       return this.applicationId;
@@ -150,7 +101,7 @@ public class ContainerIdPBImpl extends ProtoBase<ContainerIdProto> implements Co
   }
 
   @Override
-  public ApplicationAttemptId getAppAttemptId() {
+  public synchronized ApplicationAttemptId getAppAttemptId() {
     ContainerIdProtoOrBuilder p = viaProto ? proto : builder;
     if (this.appAttemptId != null) {
       return this.appAttemptId;
@@ -163,7 +114,7 @@ public class ContainerIdPBImpl extends ProtoBase<ContainerIdProto> implements Co
   }
 
   @Override
-  public void setAppId(ApplicationId appId) {
+  public synchronized void setAppId(ApplicationId appId) {
     maybeInitBuilder();
     if (appId == null) 
       builder.clearAppId();
@@ -171,7 +122,7 @@ public class ContainerIdPBImpl extends ProtoBase<ContainerIdProto> implements Co
   }
 
   @Override
-  public void setAppAttemptId(ApplicationAttemptId atId) {
+  public synchronized void setAppAttemptId(ApplicationAttemptId atId) {
     maybeInitBuilder();
     if (atId == null) 
       builder.clearAppAttemptId();
@@ -192,43 +143,5 @@ public class ContainerIdPBImpl extends ProtoBase<ContainerIdProto> implements Co
 
   private ApplicationIdProto convertToProtoFormat(ApplicationId t) {
     return ((ApplicationIdPBImpl)t).getProto();
-  }
-
-  @Override
-  public int hashCode() {
-    return getProto().hashCode();
-  }
-
-  @Override
-  public boolean equals(Object other) {
-    if (other == null) {
-      return false;
-    }
-    if (other.getClass().isAssignableFrom(this.getClass())) {
-      return this.getProto().equals(this.getClass().cast(other).getProto());
-    }
-    return false;
-  }
-
-  @Override
-  public int compareTo(ContainerId other) {
-    if (this.getAppAttemptId().compareTo(other.getAppAttemptId()) == 0) {
-      return this.getId() - other.getId();
-    } else {
-      return this.getAppAttemptId().compareTo(other.getAppAttemptId());
-    }
-    
-  }
-  
-  @Override
-  public String toString() {
-    StringBuilder sb = new StringBuilder();
-    ApplicationId appId = getAppId();
-    sb.append("container_").append(appId.getClusterTimestamp()).append("_");
-    sb.append(appIdFormat.get().format(appId.getId())).append("_");
-    sb.append(appAttemptIdFormat.get().format(getAppAttemptId().
-        getAttemptId())).append("_");
-    sb.append(containerIdFormat.get().format(getId()));
-    return sb.toString();
   }
 }  

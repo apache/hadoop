@@ -20,13 +20,12 @@ package org.apache.hadoop.yarn.api.records.impl.pb;
 
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProtoOrBuilder;
 
 
     
-public class ApplicationIdPBImpl extends ProtoBase<ApplicationIdProto> implements ApplicationId {
+public class ApplicationIdPBImpl extends ApplicationId {
   ApplicationIdProto proto = ApplicationIdProto.getDefaultInstance();
   ApplicationIdProto.Builder builder = null;
   boolean viaProto = false;
@@ -40,13 +39,13 @@ public class ApplicationIdPBImpl extends ProtoBase<ApplicationIdProto> implement
     viaProto = true;
   }
 
-  public ApplicationIdProto getProto() {
+  public synchronized ApplicationIdProto getProto() {
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
   }
 
-  private void maybeInitBuilder() {
+  private synchronized void maybeInitBuilder() {
     if (viaProto || builder == null) {
       builder = ApplicationIdProto.newBuilder(proto);
     }
@@ -55,40 +54,25 @@ public class ApplicationIdPBImpl extends ProtoBase<ApplicationIdProto> implement
     
   
   @Override
-  public int getId() {
+  public synchronized int getId() {
     ApplicationIdProtoOrBuilder p = viaProto ? proto : builder;
     return (p.getId());
   }
 
   @Override
-  public void setId(int id) {
+  public synchronized void setId(int id) {
     maybeInitBuilder();
     builder.setId((id));
   }
   @Override
-  public long getClusterTimestamp() {
+  public synchronized long getClusterTimestamp() {
     ApplicationIdProtoOrBuilder p = viaProto ? proto : builder;
     return (p.getClusterTimestamp());
   }
 
   @Override
-  public void setClusterTimestamp(long clusterTimestamp) {
+  public synchronized void setClusterTimestamp(long clusterTimestamp) {
     maybeInitBuilder();
     builder.setClusterTimestamp((clusterTimestamp));
   }
-
-  @Override
-  public int compareTo(ApplicationId other) {
-    if (this.getId() - other.getId() == 0) {
-      return this.getClusterTimestamp() > other.getClusterTimestamp() ? 1 : 
-        this.getClusterTimestamp() < other.getClusterTimestamp() ? -1 : 0;
-    } else {
-      return this.getId() - other.getId();
-    }
-  }
-
-  @Override
-  public String toString() {
-    return "application_" + this.getClusterTimestamp() + "_" + this.getId();
-  }
-}  
+}
