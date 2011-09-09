@@ -257,6 +257,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-2690. Web-page for FifoScheduler. (Eric Payne via acmurthy) 
 
+    MAPREDUCE-2711. Update TestBlockPlacementPolicyRaid for the new namesystem
+    and block management APIs.  (szetszwo)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

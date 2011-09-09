@@ -17,33 +17,21 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.*;
-import java.util.*;
-
-import org.apache.hadoop.classification.*;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.hdfs.protocol.*;
-import org.apache.hadoop.hdfs.server.blockmanagement.*;
-import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.fs.UnresolvedLinkException;
 
 public class NameNodeRaidTestUtil {
-  public static void readLock(final FSDirectory dir) {
+  public static FSInodeInfo[] getFSInodeInfo(final FSNamesystem namesystem,
+      final String... files) throws UnresolvedLinkException {
+    final FSInodeInfo[] inodes = new FSInodeInfo[files.length];
+    final FSDirectory dir = namesystem.dir; 
     dir.readLock();
+    try {
+      for(int i = 0; i < files.length; i++) {
+        inodes[i] = dir.rootDir.getNode(files[i], true);
+      }
+      return inodes;
+    } finally {
+      dir.readUnlock();
+    }
   }
-
-  public static void readUnLock(final FSDirectory dir) {
-    dir.readUnlock();
-  }
-
-  public static FSInodeInfo getNode(final FSDirectory dir,
-      final String src, final boolean resolveLink
-      ) throws UnresolvedLinkException {
-    return dir.rootDir.getNode(src, resolveLink);
-  }
-
-//  public static NavigableMap<String, DatanodeDescriptor> getDatanodeMap(
-//      final FSNamesystem namesystem) {
-//    return namesystem.datanodeMap;
-//  }
 }
-
