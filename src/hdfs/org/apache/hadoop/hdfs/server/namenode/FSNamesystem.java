@@ -2241,11 +2241,17 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
         DatanodeDescriptor node =
           datanodeMap.get(newtargets[i].getStorageID());
         if (node != null) {
-          node.addBlock(newblockinfo);
+          if (closeFile) {
+            // If we aren't closing the file, we shouldn't add it to the
+            // block list for the node, since the block is still under
+            // construction there. (in getAdditionalBlock, for example
+            // we don't add to the block map for the targets)
+            node.addBlock(newblockinfo);
+          }
           descriptorsList.add(node);
         } else {
-          LOG.warn("commitBlockSynchronization included a target DN " +
-            newtargets[i] + " which is not known to DN. Ignoring.");
+          LOG.error("commitBlockSynchronization included a target DN " +
+            newtargets[i] + " which is not known to NN. Ignoring.");
         }
       }
       if (!descriptorsList.isEmpty()) {
@@ -3464,41 +3470,82 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       // then we need to do some special processing.
       storedBlock = blocksMap.getStoredBlockWithoutMatchingGS(block);
 
-      // If the block ID is valid, and it either (a) belongs to a file under
-      // construction, or (b) the reported genstamp is higher than what we
-      // know about, then we accept the block.
-      if (storedBlock != null && storedBlock.getINode() != null &&
-          (storedBlock.getGenerationStamp() <= block.getGenerationStamp() ||
-           storedBlock.getINode().isUnderConstruction())) {
-        NameNode.stateChangeLog.info("BLOCK* NameSystem.addStoredBlock: "
-          + "addStoredBlock request received for " + block + " on "
-          + node.getName() + " size " + block.getNumBytes()
-          + " and it belongs to a file under construction. ");
-      } else {
-        storedBlock = null;
+      if (storedBlock == null) {
+        return rejectAddStoredBlock(
+          block, node,
+          "Block not in blockMap with any generation stamp");
+      }
+
+      INodeFile inode = storedBlock.getINode();
+      if (inode == null) {
+        return rejectAddStoredBlock(
+          block, node,
+          "Block does not correspond to any file");
+      }
+
+      boolean reportedOldGS = block.getGenerationStamp() < storedBlock.getGenerationStamp();
+      boolean reportedNewGS = block.getGenerationStamp() > storedBlock.getGenerationStamp();
+      boolean underConstruction = inode.isUnderConstruction();
+      boolean isLastBlock = inode.getLastBlock() != null &&
+        inode.getLastBlock().getBlockId() == block.getBlockId();
+
+      // We can report a stale generation stamp for the last block under construction,
+      // we just need to make sure it ends up in targets.
+      if (reportedOldGS && !(underConstruction && isLastBlock)) {
+        return rejectAddStoredBlock(
+          block, node,
+          "Reported block has old generation stamp but is not the last block of " +
+          "an under-construction file. (current generation is " +
+          storedBlock.getGenerationStamp() + ")");
+      }
+
+      // Don't add blocks to the DN when they're part of the in-progress last block
+      // and have an inconsistent generation stamp. Instead just add them to targets
+      // for recovery purposes. They will get added to the node when
+      // commitBlockSynchronization runs
+      if (underConstruction && isLastBlock && (reportedOldGS || reportedNewGS)) {
+        NameNode.stateChangeLog.info(
+          "BLOCK* NameSystem.addStoredBlock: "
+          + "Targets updated: block " + block + " on " + node.getName() +
+          " is added as a target for block " + storedBlock + " with size " +
+          block.getNumBytes());
+        ((INodeFileUnderConstruction)inode).addTarget(node);
+        return block;
       }
     }
-    if(storedBlock == null || storedBlock.getINode() == null) {
-      // If this block does not belong to anyfile, then we are done.
-      NameNode.stateChangeLog.info("BLOCK* NameSystem.addStoredBlock: "
-                                   + "addStoredBlock request received for " 
-                                   + block + " on " + node.getName()
-                                   + " size " + block.getNumBytes()
-                                   + " But it does not belong to any file.");
-      addToInvalidates(block, node);
-      return block;
+
+    INodeFile fileINode = storedBlock.getINode();
+    if (fileINode == null) {
+      return rejectAddStoredBlock(
+        block, node,
+        "Block does not correspond to any file");
     }
-     
-    // add block to the data-node
-    boolean added = node.addBlock(storedBlock);
-    
     assert storedBlock != null : "Block must be stored by now";
 
+    // add block to the data-node
+    boolean added = node.addBlock(storedBlock);    
+
+
+    // Is the block being reported the last block of an underconstruction file?
+    boolean blockUnderConstruction = false;
+    if (fileINode.isUnderConstruction()) {
+      INodeFileUnderConstruction cons = (INodeFileUnderConstruction) fileINode;
+      Block last = fileINode.getLastBlock();
+      if (last == null) {
+        // This should never happen, but better to handle it properly than to throw
+        // an NPE below.
+        LOG.error("Null blocks for reported block=" + block + " stored=" + storedBlock +
+          " inode=" + fileINode);
+        return block;
+      }
+      blockUnderConstruction = last.equals(storedBlock);
+    }
+
+    // block == storedBlock when this addStoredBlock is the result of a block report
     if (block != storedBlock) {
       if (block.getNumBytes() >= 0) {
         long cursize = storedBlock.getNumBytes();
-        INodeFile file = (storedBlock != null) ? storedBlock.getINode() : null;
-        boolean underConstruction = (file == null ? false : file.isUnderConstruction());
+        INodeFile file = storedBlock.getINode();
         if (cursize == 0) {
           storedBlock.setNumBytes(block.getNumBytes());
         } else if (cursize != block.getNumBytes()) {
@@ -3507,43 +3554,39 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
                    " current size is " + cursize +
                    " reported size is " + block.getNumBytes());
           try {
-            if (cursize > block.getNumBytes()) {
+            if (cursize > block.getNumBytes() && !blockUnderConstruction) {
               // new replica is smaller in size than existing block.
               // Mark the new replica as corrupt.
-              if (!underConstruction) {
-                LOG.warn("Mark new replica " + block + " from " + node.getName() + 
-                    "as corrupt because its length is shorter than existing ones");
-                markBlockAsCorrupt(block, node);
-              }
+              LOG.warn("Mark new replica " + block + " from " + node.getName() + 
+                  "as corrupt because its length is shorter than existing ones");
+              markBlockAsCorrupt(block, node);
             } else {
               // new replica is larger in size than existing block.
-              // Mark pre-existing replicas as corrupt.
-              int numNodes = blocksMap.numNodes(block);
-              int count = 0;
-              DatanodeDescriptor nodes[] = new DatanodeDescriptor[numNodes];
-              Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(block);
-              for (; it != null && it.hasNext(); ) {
-                DatanodeDescriptor dd = it.next();
-                if (!dd.equals(node)) {
-                  nodes[count++] = dd;
+              if (!blockUnderConstruction) {
+                // Mark pre-existing replicas as corrupt.
+                int numNodes = blocksMap.numNodes(block);
+                int count = 0;
+                DatanodeDescriptor nodes[] = new DatanodeDescriptor[numNodes];
+                Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(block);
+                for (; it != null && it.hasNext();) {
+                  DatanodeDescriptor dd = it.next();
+                  if (!dd.equals(node)) {
+                    nodes[count++] = dd;
+                  }
                 }
-              }
-              for (int j = 0; j < count && !underConstruction; j++) {
-                LOG.warn("Mark existing replica " + block + " from " + node.getName() + 
-                " as corrupt because its length is shorter than the new one");
-                markBlockAsCorrupt(block, nodes[j]);
+                for (int j = 0; j < count; j++) {
+                  LOG.warn("Mark existing replica "
+                      + block
+                      + " from "
+                      + node.getName()
+                      + " as corrupt because its length is shorter than the new one");
+                  markBlockAsCorrupt(block, nodes[j]);
+                }
               }
               //
               // change the size of block in blocksMap
               //
-              storedBlock = blocksMap.getStoredBlock(block); //extra look up!
-              if (storedBlock == null) {
-                LOG.warn("Block " + block + 
-                   " reported from " + node.getName() + 
-                   " does not exist in blockMap. Surprise! Surprise!");
-              } else {
-                storedBlock.setNumBytes(block.getNumBytes());
-              }
+              storedBlock.setNumBytes(block.getNumBytes());
             }
           } catch (IOException e) {
             LOG.warn("Error in deleting bad block " + block + e);
@@ -3603,21 +3646,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     // if file is being actively written to, then do not check 
     // replication-factor here. It will be checked when the file is closed.
     //
-    INodeFile fileINode = null;
-    fileINode = storedBlock.getINode();
-    if (fileINode.isUnderConstruction()) {
+    if (blockUnderConstruction) {
       INodeFileUnderConstruction cons = (INodeFileUnderConstruction) fileINode;
-      Block[] blocks = fileINode.getBlocks();
-      // If this is the last block of this
-      // file, then set targets. This enables lease recovery to occur.
-      // This is especially important after a restart of the NN.
-      Block last = blocks[blocks.length-1];
-      if (last.equals(storedBlock)) {
-        Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(last);
-        for (int i = 0; it != null && it.hasNext(); i++) {
-          cons.addTarget(it.next());
-        }
-      }
+      cons.addTarget(node);
       return block;
     }
 

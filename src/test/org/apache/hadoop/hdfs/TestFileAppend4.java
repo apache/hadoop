@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSImageAdapter;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -110,6 +111,9 @@ public class TestFileAppend4 extends TestCase {
     // (for cluster.shutdown(); fs.close() idiom)
     conf.setInt("ipc.client.connect.max.retries", 1);
     conf.setInt("dfs.client.block.recovery.retries", 1);
+    // Delay blockReceived calls from DNs to be more similar to a real
+    // cluster. 10ms is enough so that client often gets there first.
+    conf.setInt("dfs.datanode.artificialBlockReceivedDelay", 10);
   }
 
   @Override
@@ -480,10 +484,12 @@ public class TestFileAppend4 extends TestCase {
       LOG.info("START second instance.");
 
       recoverFile(fs1);
+      LOG.info("Recovered file");
       
       // the 2 DNs with the larger sequence number should win
       BlockLocation[] bl = fs1.getFileBlockLocations(
           fs1.getFileStatus(file1), 0, BLOCK_SIZE);
+      LOG.info("Checking blocks");
       assertTrue("Should have one block", bl.length == 1);
       assertTrue("Should have 2 replicas for that block, not " + 
                  bl[0].getNames().length, bl[0].getNames().length == 2);  
@@ -491,6 +497,7 @@ public class TestFileAppend4 extends TestCase {
       assertFileSize(fs1, BLOCK_SIZE*3/4);
       checkFile(fs1, BLOCK_SIZE*3/4);
 
+      LOG.info("Checking replication");
       // verify that, over time, the block has been replicated to 3 DN
       cluster.getNameNode().getNamesystem().restartReplicationWork();
       waitForBlockReplication(fs1, file1.toString(), 3, 20);
@@ -1080,7 +1087,141 @@ public class TestFileAppend4 extends TestCase {
       return invocation.callRealMethod();
     }
   }
+  
+  /**
+   * Test that a file is not considered complete when it only has in-progress
+   * blocks. This ensures that when a block is appended to, it is converted
+   * back into the right kind of "in progress" state.
+   */
+  public void testNotPrematurelyComplete() throws Exception {
+    LOG.info("START");
+    cluster = new MiniDFSCluster(conf, 3, true, null);
+    FileSystem fs1 = cluster.getFileSystem();
+    try {
+      int halfBlock = (int)BLOCK_SIZE/2;
+      short rep = 3; // replication
+      assertTrue(BLOCK_SIZE%4 == 0);
 
+      file1 = new Path("/delayedReceiveBlock");
+
+      // write 1/2 block & close
+      stm = fs1.create(file1, true, (int)BLOCK_SIZE*2, rep, BLOCK_SIZE);
+      AppendTestUtil.write(stm, 0, halfBlock);
+      stm.close();
+
+      NameNode nn = cluster.getNameNode();
+      LOG.info("======== Appending");
+      stm = fs1.append(file1);
+      LOG.info("======== Writing");
+      AppendTestUtil.write(stm, 0, halfBlock/2);
+      LOG.info("======== Checking progress");
+      assertFalse(NameNodeAdapter.checkFileProgress(nn.namesystem, "/delayedReceiveBlock", true));
+      LOG.info("======== Closing");
+      stm.close();
+
+    } finally {
+      LOG.info("======== Cleaning up");
+      fs1.close();
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * Test that the restart of a DN and the subsequent pipeline recovery do not cause
+   * a file to become prematurely considered "complete". (ie that the block
+   * synchronization as part of pipeline recovery doesn't add the block to the
+   * nodes taking part in recovery)
+   */
+  public void testNotPrematurelyCompleteWithFailure() throws Exception {
+    LOG.info("START");
+    cluster = new MiniDFSCluster(conf, 3, true, null);
+    FileSystem fs1 = cluster.getFileSystem();
+    try {
+      int halfBlock = (int)BLOCK_SIZE/2;
+      short rep = 3; // replication
+      assertTrue(BLOCK_SIZE%4 == 0);
+
+      file1 = new Path("/delayedReceiveBlock");
+
+      // write 1/2 block & close
+      stm = fs1.create(file1, true, (int)BLOCK_SIZE*2, rep, BLOCK_SIZE);
+      AppendTestUtil.write(stm, 0, halfBlock);
+      stm.close();
+
+      NameNode nn = cluster.getNameNode();
+      LOG.info("======== Appending");
+      stm = fs1.append(file1);
+      LOG.info("======== Writing");
+      AppendTestUtil.write(stm, 0, halfBlock/4);
+
+      // restart one of the datanodes and wait for a few of its heartbeats
+      // so that it will report the recovered replica
+      MiniDFSCluster.DataNodeProperties dnprops = cluster.stopDataNode(0);
+      stm.sync();
+      assertTrue(cluster.restartDataNode(dnprops));
+      for (int i = 0; i < 2; i++) {
+        cluster.waitForDNHeartbeat(0, 3000);
+      }
+
+      AppendTestUtil.write(stm, 0, halfBlock/4);
+
+      LOG.info("======== Checking progress");
+      assertFalse(NameNodeAdapter.checkFileProgress(nn.namesystem, "/delayedReceiveBlock", true));
+      LOG.info("======== Closing");
+      stm.close();
+
+    } finally {
+      LOG.info("======== Cleaning up");
+      fs1.close();
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * Test that the restart of a DN and the subsequent pipeline recovery do not cause
+   * a file to become prematurely considered "complete", when it's a fresh file
+   * with no .append() called.
+   */
+  public void testNotPrematurelyCompleteWithFailureNotReopened() throws Exception {
+    LOG.info("START");
+    cluster = new MiniDFSCluster(conf, 3, true, null);
+    NameNode nn = cluster.getNameNode();
+    FileSystem fs1 = cluster.getFileSystem();
+    try {
+      short rep = 3; // replication
+
+      file1 = new Path("/delayedReceiveBlock");
+
+      stm = fs1.create(file1, true, (int)BLOCK_SIZE*2, rep, 64*1024*1024);
+      LOG.info("======== Writing");
+      AppendTestUtil.write(stm, 0, 1024*1024);
+
+      LOG.info("======== Waiting for a block allocation");
+      waitForBlockReplication(fs1, "/delayedReceiveBlock", 0, 3000);
+
+      LOG.info("======== Checking not complete");
+      assertFalse(NameNodeAdapter.checkFileProgress(nn.namesystem, "/delayedReceiveBlock", true));
+
+      // Stop one of the DNs, don't restart
+      MiniDFSCluster.DataNodeProperties dnprops = cluster.stopDataNode(0);
+
+      // Write some more data
+      AppendTestUtil.write(stm, 0, 1024*1024);
+
+      // Make sure we don't see the file as complete
+      LOG.info("======== Checking progress");
+      assertFalse(NameNodeAdapter.checkFileProgress(nn.namesystem, "/delayedReceiveBlock", true));
+      LOG.info("======== Closing");
+      stm.close();
+
+    } finally {
+      LOG.info("======== Cleaning up");
+      fs1.close();
+      cluster.shutdown();
+    }
+  }
+
+  
   /**
    * Mockito answer helper that will throw an exception a given number
    * of times before eventually succeding.

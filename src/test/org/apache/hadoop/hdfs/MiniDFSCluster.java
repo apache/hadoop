@@ -252,6 +252,10 @@ public class MiniDFSCluster {
     conf.setInt("dfs.replication", Math.min(replication, numDataNodes));
     conf.setInt("dfs.safemode.extension", 0);
     conf.setInt("dfs.namenode.decommission.interval", 3); // 3 second
+
+    // Set a small delay on blockReceived in the minicluster to approximate
+    // a real cluster a little better and suss out bugs.
+    conf.setInt("dfs.datanode.artificialBlockReceivedDelay", 5);
     
     // Format and clean out DataNode directories
     if (format) {

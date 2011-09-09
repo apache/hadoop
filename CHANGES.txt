@@ -113,6 +113,9 @@ Release 0.20.205.0 - unreleased
     HDFS-1779. After NameNode restart , Clients can not read partial files even after 
     client invokes Sync. (Uma Maheswara Rao G via jitendra)
 
+    HDFS-1197. Blocks are considered "complete" prematurely after 
+    commitBlockSynchronization or DN restart. (Todd Lipcon via jitendra)
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via
