@@ -82,6 +82,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.api.records.QueueState;
 
 @LimitedPrivate("yarn")
 @Evolving
@@ -144,6 +145,7 @@ public class FifoScheduler implements ResourceScheduler {
       queueInfo.setCapacity(100.0f);
       queueInfo.setMaximumCapacity(100.0f);
       queueInfo.setChildQueues(new ArrayList<QueueInfo>());
+      queueInfo.setQueueState(QueueState.RUNNING);
       return queueInfo;
     }
 

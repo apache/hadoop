@@ -245,6 +245,8 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2864. Normalize configuration variable names for YARN. (Robert
     Evans via acmurthy) 
 
+    MAPREDUCE-2690. Web-page for FifoScheduler. (Eric Payne via acmurthy) 
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

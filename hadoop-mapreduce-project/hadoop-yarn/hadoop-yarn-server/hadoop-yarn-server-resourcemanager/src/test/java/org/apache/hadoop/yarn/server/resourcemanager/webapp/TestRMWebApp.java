@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.junit.Test;
@@ -168,9 +169,38 @@ public class TestRMWebApp {
     conf.setCapacity(C13, 40);
   }
 
+  public static ResourceManager mockFifoRm(int apps, int racks, int nodes,
+                                       int mbsPerNode)
+  throws Exception {
+    ResourceManager rm = mock(ResourceManager.class);
+    RMContext rmContext = mockRMContext(apps, racks, nodes,
+        mbsPerNode);
+    ResourceScheduler rs = mockFifoScheduler();
+    when(rm.getResourceScheduler()).thenReturn(rs);
+    when(rm.getRMContext()).thenReturn(rmContext);
+    return rm;
+  }
+
+  public static FifoScheduler mockFifoScheduler() throws Exception {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    setupFifoQueueConfiguration(conf);
+
+    FifoScheduler fs = new FifoScheduler();
+    fs.reinitialize(conf, null, null);
+    return fs;
+  }
+
+  static void setupFifoQueueConfiguration(CapacitySchedulerConfiguration conf) {
+    // Define default queue
+    conf.setQueues("default", new String[] {"default"});
+    conf.setCapacity("default", 100);
+  }
+
   public static void main(String[] args) throws Exception {
     // For manual testing
     WebApps.$for("yarn", new TestRMWebApp()).at(8888).inDevMode().
         start(new RMWebApp(mockRm(101, 8, 8, 8*GiB))).joinThread();
+    WebApps.$for("yarn", new TestRMWebApp()).at(8888).inDevMode().
+        start(new RMWebApp(mockFifoRm(10, 1, 4, 8*GiB))).joinThread();
   }
 }
