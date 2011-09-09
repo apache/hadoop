@@ -104,6 +104,9 @@ Release 0.20.205.0 - unreleased
     HDFS-1122. client block verification may result in blocks in 
     DataBlockScanner prematurely. (Sam Rash via jitendra)
 
+    HADOOP-6722. NetUtils.connect should check that it hasn't connected a socket
+    to itself. (Todd Lipcon via suresh)
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via
