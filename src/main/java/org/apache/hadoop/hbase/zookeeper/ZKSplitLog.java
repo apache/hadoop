@@ -235,6 +235,8 @@ public class ZKSplitLog {
     public static AtomicLong tot_mgr_task_deleted = new AtomicLong(0);
     public static AtomicLong tot_mgr_resubmit_unassigned = new AtomicLong(0);
     public static AtomicLong tot_mgr_relist_logdir = new AtomicLong(0);
+    public static AtomicLong tot_mgr_resubmit_dead_server_task =
+      new AtomicLong(0);
 
 
 

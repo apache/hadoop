@@ -131,31 +131,6 @@ public class TestSplitLogManager {
     assertTrue(false);
   }
 
-  private int numRescanPresent() throws KeeperException {
-    int num = 0;
-    List<String> nodes = ZKUtil.listChildrenNoWatch(zkw, zkw.splitLogZNode);
-    for (String node : nodes) {
-      if (ZKSplitLog.isRescanNode(zkw,
-          ZKUtil.joinZNode(zkw.splitLogZNode, node))) {
-        num++;
-      }
-    }
-    return num;
-  }
-
-  private void setRescanNodeDone(int count) throws KeeperException {
-    List<String> nodes = ZKUtil.listChildrenNoWatch(zkw, zkw.splitLogZNode);
-    for (String node : nodes) {
-      String nodepath = ZKUtil.joinZNode(zkw.splitLogZNode, node);
-      if (ZKSplitLog.isRescanNode(zkw, nodepath)) {
-        ZKUtil.setData(zkw, nodepath,
-            TaskState.TASK_DONE.get("some-worker"));
-        count--;
-      }
-    }
-    assertEquals(0, count);
-  }
-
   private String submitTaskAndWait(TaskBatch batch, String name)
   throws KeeperException, InterruptedException {
     String tasknode = ZKSplitLog.getEncodedNodeName(zkw, name);
@@ -222,7 +197,6 @@ public class TestSplitLogManager {
     waitForCounter(tot_mgr_resubmit, 0, 1, to + 100);
     assertTrue(task.isUnassigned());
     waitForCounter(tot_mgr_rescan, 0, 1, to + 100);
-    assertEquals(1, numRescanPresent());
   }
 
   @Test
@@ -253,7 +227,6 @@ public class TestSplitLogManager {
     assertTrue(task.isOrphan());
     assertTrue(task.isUnassigned());
     assertTrue(ZKUtil.checkExists(zkw, tasknode) > version);
-    assertEquals(1, numRescanPresent());
   }
 
   @Test
@@ -286,7 +259,6 @@ public class TestSplitLogManager {
     ZKUtil.setData(zkw, tasknode, TaskState.TASK_OWNED.get("worker3"));
     waitForCounter(tot_mgr_heartbeat, 1, 2, 1000);
     waitForCounter(tot_mgr_resubmit_threshold_reached, 0, 1, to + 100);
-    assertEquals(2, numRescanPresent());
     Thread.sleep(to + 100);
     assertEquals(2L, tot_mgr_resubmit.get());
   }
@@ -311,16 +283,12 @@ public class TestSplitLogManager {
     waitForCounter(tot_mgr_resubmit, 0, 1, to + 100);
     int version1 = ZKUtil.checkExists(zkw, tasknode);
     assertTrue(version1 > version);
-    assertEquals(1, numRescanPresent());
     byte[] taskstate = ZKUtil.getData(zkw, tasknode);
     assertTrue(Arrays.equals(TaskState.TASK_UNASSIGNED.get("dummy-master"),
         taskstate));
 
-    setRescanNodeDone(1);
-
     waitForCounter(tot_mgr_rescan_deleted, 0, 1, 1000);
 
-    assertEquals(0, numRescanPresent());
     return;
   }
 
@@ -377,7 +345,6 @@ public class TestSplitLogManager {
     waitForCounter(tot_mgr_resubmit, 0, 1, 1000);
     int version1 = ZKUtil.checkExists(zkw, tasknode);
     assertTrue(version1 > version);
-    assertEquals(1, numRescanPresent());
 
     byte[] taskstate = ZKUtil.getData(zkw, tasknode);
     assertTrue(Arrays.equals(taskstate,
@@ -417,18 +384,38 @@ public class TestSplitLogManager {
           TaskState.TASK_OWNED.get("dummy-worker"));
     }
 
-    // since all the nodes in the system are not unassigned the
-    // unassigned_timeout must not have kicked in
-    assertEquals(0, numRescanPresent());
-
     // since we have stopped heartbeating the owned node therefore it should
     // get resubmitted
     LOG.info("waiting for manager to resubmit the orphan task");
     waitForCounter(tot_mgr_resubmit, 0, 1, to + 500);
-    assertEquals(1, numRescanPresent());
 
     // now all the nodes are unassigned. manager should post another rescan
     waitForCounter(tot_mgr_resubmit_unassigned, 0, 1, 2 * to + 500);
-    assertEquals(2, numRescanPresent());
+  }
+
+  @Test
+  public void testDeadWorker() throws Exception {
+    LOG.info("testDeadWorker");
+
+    conf.setLong("hbase.splitlog.max.resubmit", 0);
+    slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
+    slm.finishInitialization();
+    TaskBatch batch = new TaskBatch();
+
+    String tasknode = submitTaskAndWait(batch, "foo/1");
+    int version = ZKUtil.checkExists(zkw, tasknode);
+
+    ZKUtil.setData(zkw, tasknode, TaskState.TASK_OWNED.get("worker1"));
+    waitForCounter(tot_mgr_heartbeat, 0, 1, 1000);
+    slm.handleDeadWorker("worker1");
+    waitForCounter(tot_mgr_resubmit, 0, 1, 1000);
+    waitForCounter(tot_mgr_resubmit_dead_server_task, 0, 1, 1000);
+
+    int version1 = ZKUtil.checkExists(zkw, tasknode);
+    assertTrue(version1 > version);
+    byte[] taskstate = ZKUtil.getData(zkw, tasknode);
+    assertTrue(Arrays.equals(TaskState.TASK_UNASSIGNED.get("dummy-master"),
+        taskstate));
+    return;
   }
 }
