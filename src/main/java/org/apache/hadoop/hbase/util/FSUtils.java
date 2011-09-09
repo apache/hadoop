@@ -490,6 +490,20 @@ public abstract class FSUtils {
     return fs.exists(rootRegionDir);
   }
 
+  /**
+   * Checks if .tableinfo exists for given table
+   * 
+   * @param fs file system
+   * @param rootdir root directory of HBase installation
+   * @param tableName name of table
+   * @return true if exists
+   * @throws IOException
+   */
+  public static boolean tableInfoExists(FileSystem fs, Path rootdir,
+      String tableName) throws IOException {
+    Path tablePath = getTableInfoPath(rootdir, tableName);
+    return fs.exists(tablePath);
+  }
 
   /**
    * Compute HDFS blocks distribution of a given file, or a portion of the file

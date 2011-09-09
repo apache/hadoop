@@ -255,7 +255,7 @@ Release 0.91.0 - Unreleased
                TestMultiColumnScanner that caught it (Mikhail Bautin)
    HBASE-4007  distributed log splitting can get indefinitely stuck
                (Prakash Khemani)
-           
+   HBASE-4301  META migration from 0.90 to trunk fails (Subbu Iyer)
                
 
   IMPROVEMENTS

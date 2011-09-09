@@ -327,7 +327,16 @@ public class MasterFileSystem {
     if (!FSUtils.rootRegionExists(fs, rd)) {
       bootstrap(rd, c);
     }
+    createRootTableInfo(rd);
     return rd;
+  }
+
+  private void createRootTableInfo(Path rd) throws IOException {
+    // Create ROOT tableInfo if required.
+    if (!FSUtils.tableInfoExists(fs, rd,
+        Bytes.toString(HRegionInfo.ROOT_REGIONINFO.getTableName()))) {
+      FSUtils.createTableDescriptor(HTableDescriptor.ROOT_TABLEDESC, this.conf);
+    }
   }
 
   private static void bootstrap(final Path rd, final Configuration c)

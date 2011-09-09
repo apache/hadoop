@@ -252,19 +252,8 @@ public class MetaReader {
   throws IOException {
     HRegionInterface metaServer =
       catalogTracker.waitForMetaServerConnectionDefault();
-    Scan scan = new Scan();
-    if (startrow != null) scan.setStartRow(startrow);
-    scan.addFamily(HConstants.CATALOG_FAMILY);
-    long scannerid = metaServer.openScanner(
-        HRegionInfo.FIRST_META_REGIONINFO.getRegionName(), scan);
-    try {
-      Result data;
-      while((data = metaServer.next(scannerid)) != null) {
-        if (!data.isEmpty()) visitor.visit(data);
-      }
-    } finally {
-      metaServer.close(scannerid);
-    }
+    fullScan(metaServer, visitor,
+        HRegionInfo.FIRST_META_REGIONINFO.getRegionName(), startrow);
     return;
   }
 
@@ -622,7 +611,32 @@ public class MetaReader {
     return regions;
   }
 
-
+  /**
+   * Fully scan a given region, on a given server starting with given row.
+   * @param hRegionInterface region server
+   * @param visitor visitor
+   * @param regionName name of region
+   * @param startrow start row
+   * @throws IOException
+   */
+  public static void fullScan(HRegionInterface hRegionInterface,
+                              Visitor visitor, final byte[] regionName,
+                              byte[] startrow) throws IOException {
+    if (hRegionInterface == null) return;
+    Scan scan = new Scan();
+    if (startrow != null) scan.setStartRow(startrow);
+    scan.addFamily(HConstants.CATALOG_FAMILY);
+    long scannerid = hRegionInterface.openScanner(regionName, scan);
+    try {
+      Result data;
+      while((data = hRegionInterface.next(scannerid)) != null) {
+        if (!data.isEmpty()) visitor.visit(data);
+      }
+    } finally {
+      hRegionInterface.close(scannerid);
+    }
+    return;
+  }
 
 
   /**

@@ -914,7 +914,8 @@ public class HConnectionManager {
           // possible we got a region of a different table...
           if (!Bytes.equals(regionInfo.getTableName(), tableName)) {
             throw new TableNotFoundException(
-              "Table '" + Bytes.toString(tableName) + "' was not found.");
+                  "Table '" + Bytes.toString(tableName) + "' was not found, got: " +
+                  Bytes.toString(regionInfo.getTableName()) + ".");
           }
           if (regionInfo.isSplit()) {
             throw new RegionOfflineException("the only available region for" +

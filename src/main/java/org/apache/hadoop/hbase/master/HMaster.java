@@ -526,14 +526,15 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     if (!isMetaHRIUpdated()) {
       LOG.info("Meta has HRI with HTDs. Updating meta now.");
       try {
-        MetaEditor.updateMetaWithNewRegionInfo(this);
-        LOG.info("Meta updated with new HRI.");
+        MetaEditor.migrateRootAndMeta(this);
+        LOG.info("ROOT and Meta updated with new HRI.");
         return true;
       } catch (IOException e) {
-        throw new RuntimeException("Update Meta with nw HRI failed. Master startup aborted.");
+        throw new RuntimeException("Update ROOT/Meta with new HRI failed." +
+            "Master startup aborted.");
       }
     }
-    LOG.info("Meta already up-to date with new HRI.");
+    LOG.info("ROOT/Meta already up-to date with new HRI.");
     return true;
   }
 
@@ -976,7 +977,6 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     }
     return hRegionInfos;
   }
-
 
   private static boolean isCatalogTable(final byte [] tableName) {
     return Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME) ||

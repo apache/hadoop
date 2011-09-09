@@ -231,27 +231,23 @@ public class MetaEditor {
   }
 
   /**
-   * Updates the region information for the specified region in META.
+   * Update the metamigrated flag in -ROOT-.
    * @param catalogTracker
-   * @param regionInfo region to be updated in META
    * @throws IOException
    */
-  public static void updateRegionInfo(CatalogTracker catalogTracker,
-      HRegionInfo regionInfo)
-  throws IOException {
-    Put put = new Put(regionInfo.getRegionName());
-    addRegionInfo(put, regionInfo);
-    catalogTracker.waitForMetaServerConnectionDefault().put(
-        CatalogTracker.META_REGION, put);
-    LOG.info("Updated region " + regionInfo.getRegionNameAsString() + " in META");
-  }
-
-  public static void updateRootWithMetaMigrationStatus(CatalogTracker catalogTracker) throws IOException {
+  public static void updateRootWithMetaMigrationStatus(
+      CatalogTracker catalogTracker) throws IOException {
     updateRootWithMetaMigrationStatus(catalogTracker, true);
   }
 
-  public static void updateRootWithMetaMigrationStatus(CatalogTracker catalogTracker,
-                                                       boolean metaUpdated)
+  /**
+   * Update the metamigrated flag in -ROOT-.
+   * @param catalogTracker
+   * @param metaUpdated
+   * @throws IOException
+   */
+  public static void updateRootWithMetaMigrationStatus(
+      CatalogTracker catalogTracker, boolean metaUpdated)
       throws IOException {
     Put put = new Put(HRegionInfo.ROOT_REGIONINFO.getRegionName());
     addMetaUpdateStatus(put, metaUpdated);
@@ -260,6 +256,12 @@ public class MetaEditor {
     LOG.info("Updated -ROOT- row with metaMigrated status = " + metaUpdated);
   }
 
+  /**
+   * Update legacy META rows, removing HTD from HRI.
+   * @param masterServices
+   * @return
+   * @throws IOException
+   */
   public static List<HTableDescriptor> updateMetaWithNewRegionInfo(
       final MasterServices masterServices)
   throws IOException {
@@ -271,22 +273,71 @@ public class MetaEditor {
         HRegionInfo090x hrfm = getHRegionInfoForMigration(r);
         if (hrfm == null) return true;
         htds.add(hrfm.getTableDesc());
-        masterServices.getMasterFileSystem().createTableDescriptor(hrfm.getTableDesc());
-        HRegionInfo regionInfo = new HRegionInfo(hrfm);
-        LOG.debug(" MetaEditor.updatemeta RegionInfo = " + regionInfo.toString()
-        + " old HRI = " + hrfm.toString());
-        Put put = new Put(regionInfo.getRegionName());
-        put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-            Writables.getBytes(regionInfo));
-        masterServices.getCatalogTracker().waitForMetaServerConnectionDefault().put(
-            CatalogTracker.META_REGION, put);
-        LOG.info("Updated region " + regionInfo + " to META");
+        masterServices.getMasterFileSystem()
+          .createTableDescriptor(hrfm.getTableDesc());
+        updateHRI(masterServices.getCatalogTracker()
+            .waitForMetaServerConnectionDefault(),
+            hrfm, CatalogTracker.META_REGION);
         return true;
       }
     };
     MetaReader.fullScan(masterServices.getCatalogTracker(), v);
     updateRootWithMetaMigrationStatus(masterServices.getCatalogTracker());
     return htds;
+  }
+
+  /**
+   * Migrate root and meta to newer version. This updates the META and ROOT
+   * and removes the HTD from HRI.
+   * @param masterServices
+   * @throws IOException
+   */
+  public static void migrateRootAndMeta(final MasterServices masterServices)
+      throws IOException {
+    updateRootWithNewRegionInfo(masterServices);
+    updateMetaWithNewRegionInfo(masterServices);
+  }
+
+  /**
+   * Update the ROOT with new HRI. (HRI with no HTD)
+   * @param masterServices
+   * @return
+   * @throws IOException
+   */
+  public static List<HTableDescriptor> updateRootWithNewRegionInfo(
+      final MasterServices masterServices)
+  throws IOException {
+    final List<HTableDescriptor> htds = new ArrayList<HTableDescriptor>();
+    Visitor v = new Visitor() {
+      @Override
+      public boolean visit(Result r) throws IOException {
+        if (r ==  null || r.isEmpty()) return true;
+        HRegionInfo090x hrfm = getHRegionInfoForMigration(r);
+        if (hrfm == null) return true;
+        htds.add(hrfm.getTableDesc());
+        masterServices.getMasterFileSystem().createTableDescriptor(
+            hrfm.getTableDesc());
+        updateHRI(masterServices.getCatalogTracker()
+            .waitForRootServerConnectionDefault(),
+            hrfm, CatalogTracker.ROOT_REGION);
+        return true;
+      }
+    };
+    MetaReader.fullScan(
+        masterServices.getCatalogTracker().waitForRootServerConnectionDefault(),
+        v, HRegionInfo.ROOT_REGIONINFO.getRegionName(), null);
+    return htds;
+  }
+
+  private static void updateHRI(HRegionInterface hRegionInterface,
+                                HRegionInfo090x hRegionInfo090x, byte[] regionName)
+    throws IOException {
+    HRegionInfo regionInfo = new HRegionInfo(hRegionInfo090x);
+    Put put = new Put(regionInfo.getRegionName());
+    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+        Writables.getBytes(regionInfo));
+    hRegionInterface.put(regionName, put);
+    LOG.info("Updated region " + regionInfo + " to " + Bytes.toString(regionName));
   }
 
   public static HRegionInfo090x getHRegionInfoForMigration(
