@@ -36,10 +36,11 @@ public interface DataTransferProtocol {
    * when protocol changes. It is not very obvious. 
    */
   /*
-   * Version 19:
-   * A heartbeat is sent from the client to pipeline and then acked back
+   * Version 18:
+   *    Change the block packet ack protocol to include seqno,
+   *    numberOfReplies, reply0, reply1, ...
    */
-  public static final int DATA_TRANSFER_VERSION = 19;
+  public static final int DATA_TRANSFER_VERSION = 17;
 
   // Processed at datanode stream-handler
   public static final byte OP_WRITE_BLOCK = (byte) 80;

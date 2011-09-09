@@ -96,6 +96,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * it doesn't, we'll set this false and stop trying.
    */
   private volatile boolean serverSupportsHdfs630 = true;
+  private volatile boolean serverSupportsHdfs200 = true;
  
   public static ClientProtocol createNamenode(Configuration conf) throws IOException {
     return createNamenode(NameNode.getAddress(conf), conf);
@@ -1641,41 +1642,56 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           }
         }
       }
-
-      // if the file is under construction, then fetch size of last block
-      // from datanode.
-      if (newInfo.isUnderConstruction() && newInfo.locatedBlockCount() > 0) {
-        LocatedBlock last = newInfo.get(newInfo.locatedBlockCount()-1);
-        boolean lastBlockInFile = (last.getStartOffset() + 
-                                   last.getBlockSize() == 
-                                   newInfo.getFileLength()); 
-        if (lastBlockInFile && last.getLocations().length > 0) {
-          ClientDatanodeProtocol primary =  null;
-          DatanodeInfo primaryNode = last.getLocations()[0];
-          try {
-            primary = createClientDatanodeProtocolProxy(primaryNode, conf,
-                last.getBlock(), last.getBlockToken(), socketTimeout);
-            Block newBlock = primary.getBlockInfo(last.getBlock());
-            long newBlockSize = newBlock.getNumBytes();
-            long delta = newBlockSize - last.getBlockSize();
-            // if the size of the block on the datanode is different
-            // from what the NN knows about, the datanode wins!
-            last.getBlock().setNumBytes(newBlockSize);
-            long newlength = newInfo.getFileLength() + delta;
-            newInfo.setFileLength(newlength);
-            LOG.debug("DFSClient setting last block " + last + 
-                      " to length " + newBlockSize +
-                      " filesize is now " + newInfo.getFileLength());
-          } catch (IOException e) {
-            LOG.debug("DFSClient file " + src + 
-                      " is being concurrently append to" +
-                      " but datanode " + primaryNode.getHostName() +
-                      " probably does not have block " + last.getBlock());
-          }
-        }
-      }
+      updateBlockInfo(newInfo);
       this.locatedBlocks = newInfo;
       this.currentNode = null;
+    }
+    
+    /** 
+     * For files under construction, update the last block size based
+     * on the length of the block from the datanode.
+     */
+    private void updateBlockInfo(LocatedBlocks newInfo) {
+      if (!serverSupportsHdfs200 || !newInfo.isUnderConstruction()
+          || !(newInfo.locatedBlockCount() > 0)) {
+        return;
+      }
+
+      LocatedBlock last = newInfo.get(newInfo.locatedBlockCount() - 1);
+      boolean lastBlockInFile = (last.getStartOffset() + last.getBlockSize() == newInfo
+          .getFileLength());
+      if (!lastBlockInFile || last.getLocations().length <= 0) {
+        return;
+      }
+      ClientDatanodeProtocol primary = null;
+      DatanodeInfo primaryNode = last.getLocations()[0];
+      try {
+        primary = createClientDatanodeProtocolProxy(primaryNode, conf,
+            last.getBlock(), last.getBlockToken(), socketTimeout);
+        Block newBlock = primary.getBlockInfo(last.getBlock());
+        long newBlockSize = newBlock.getNumBytes();
+        long delta = newBlockSize - last.getBlockSize();
+        // if the size of the block on the datanode is different
+        // from what the NN knows about, the datanode wins!
+        last.getBlock().setNumBytes(newBlockSize);
+        long newlength = newInfo.getFileLength() + delta;
+        newInfo.setFileLength(newlength);
+        LOG.debug("DFSClient setting last block " + last + " to length "
+            + newBlockSize + " filesize is now " + newInfo.getFileLength());
+      } catch (IOException e) {
+        if (e.getMessage().startsWith(
+            "java.io.IOException: java.lang.NoSuchMethodException: "
+                + "org.apache.hadoop.hdfs.protocol"
+                + ".ClientDatanodeProtocol.getBlockInfo")) {
+          // We're talking to a server that doesn't implement HDFS-200.
+          serverSupportsHdfs200 = false;
+        } else {
+          LOG.debug("DFSClient file " + src
+              + " is being concurrently append to" + " but datanode "
+              + primaryNode.getHostName() + " probably does not have block "
+              + last.getBlock());
+        }
+      }
     }
     
     public synchronized long getFileLength() {

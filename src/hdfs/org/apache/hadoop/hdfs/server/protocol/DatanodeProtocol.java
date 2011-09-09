@@ -41,11 +41,13 @@ import org.apache.hadoop.security.KerberosInfo;
     clientPrincipal = DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY)
 public interface DatanodeProtocol extends VersionedProtocol {
   /**
-   * 26: nextGenerationStamp has a new parameter indicating if it is for
-   * NameNode initiated lease recovery or not
+   * 25: Serialized format of BlockTokenIdentifier changed to contain
+   *     multiple blocks within a single BlockTokenIdentifier
+   *     
+   *     (bumped to 25 to bring in line with trunk)
    */
-  public static final long versionID = 26L;
-
+  public static final long versionID = 25L;
+  
   // error code
   final static int NOTIFY = 0;
   final static int DISK_ERROR = 1; // there are still valid volumes on DN

@@ -161,6 +161,9 @@ Release 0.20.205.0 - unreleased
     HDFS-1242. Add test for appendFile() race solved in HDFS-142.
     (Todd Lipcon via jitendra)
 
+    HDFS-2320. Make 0.20-append protocol changes compatible with
+    0.20-secuirty. (suresh)
+
 Release 0.20.204.0 - 2011-8-25
 
   NEW FEATURES
