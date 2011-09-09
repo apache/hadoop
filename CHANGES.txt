@@ -329,6 +329,8 @@ Release 0.20.204.0 - 2011-8-25
 
     HDFS-2218. Disable TestHdfsProxy.testHdfsProxyInterface in automated test 
     suite for 0.20-security-204 release. (Matt Foley)
+    
+    HADOOP-7610. Fix for hadoop debian package (Eric Yang via gkesavan)
 
   IMPROVEMENTS
 
