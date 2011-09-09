@@ -1238,6 +1238,8 @@ Release 0.23.0 - Unreleased
    incorrectly assume application was gone by making submission synchronous
    for RMAppManager. (Thomas Graves via acmurthy) 
 
+   MAPREDUCE-2963. Fix hang in TestMRJobs. (Siddharth Seth via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
