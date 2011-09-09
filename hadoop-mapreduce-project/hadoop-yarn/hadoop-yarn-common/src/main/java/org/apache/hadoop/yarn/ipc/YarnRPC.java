@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 /**
  * Abstraction to get the RPC implementation for Yarn.
@@ -34,13 +35,6 @@ import org.apache.hadoop.yarn.YarnException;
 public abstract class YarnRPC {
   private static final Log LOG = LogFactory.getLog(YarnRPC.class);
   
-  public static final String RPC_CLASSNAME 
-      = "org.apache.hadoop.yarn.ipc.YarnRPC.classname";
-
-  //use the default as Hadoop RPC
-  public static final String DEFAULT_RPC 
-      = "org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC";
-
   public abstract Object getProxy(Class protocol, InetSocketAddress addr,
       Configuration conf);
 
@@ -50,10 +44,10 @@ public abstract class YarnRPC {
       int numHandlers);
 
   public static YarnRPC create(Configuration conf) {
-    LOG.info("Creating YarnRPC for " + conf.get(RPC_CLASSNAME));
-    String clazzName = conf.get(RPC_CLASSNAME);
+    LOG.info("Creating YarnRPC for " + conf.get(YarnConfiguration.IPC_RPC_IMPL));
+    String clazzName = conf.get(YarnConfiguration.IPC_RPC_IMPL);
     if (clazzName == null) {
-      clazzName = DEFAULT_RPC;
+      clazzName = YarnConfiguration.DEFAULT_IPC_RPC_IMPL;
     }
     try {
       return (YarnRPC) Class.forName(clazzName).newInstance();

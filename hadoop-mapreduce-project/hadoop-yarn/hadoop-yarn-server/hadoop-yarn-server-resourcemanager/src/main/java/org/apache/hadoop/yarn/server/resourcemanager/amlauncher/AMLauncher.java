@@ -33,7 +33,6 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
@@ -225,8 +224,8 @@ public class AMLauncher implements Runnable {
           new Token<ApplicationTokenIdentifier>(id,
               this.applicationTokenSecretManager);
       String schedulerAddressStr =
-          this.conf.get(YarnConfiguration.SCHEDULER_ADDRESS,
-              YarnConfiguration.DEFAULT_SCHEDULER_BIND_ADDRESS);
+          this.conf.get(YarnConfiguration.RM_SCHEDULER_ADDRESS,
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS);
       InetSocketAddress unresolvedAddr =
           NetUtils.createSocketAddr(schedulerAddressStr);
       String resolvedAddr =

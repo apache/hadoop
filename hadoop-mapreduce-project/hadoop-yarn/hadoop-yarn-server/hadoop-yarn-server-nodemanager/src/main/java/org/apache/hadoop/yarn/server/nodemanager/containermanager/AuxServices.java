@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.service.Service;
@@ -41,9 +42,6 @@ public class AuxServices extends AbstractService
 
   private static final Log LOG = LogFactory.getLog(AuxServices.class);
 
-  public static final String AUX_SERVICES = "nodemanager.auxiluary.services";
-  public static final String AUX_SERVICE_CLASS_FMT =
-    "nodemanager.aux.service.%s.class";
   public final Map<String,AuxiliaryService> serviceMap;
   public final Map<String,ByteBuffer> serviceMeta;
 
@@ -85,11 +83,12 @@ public class AuxServices extends AbstractService
 
   @Override
   public void init(Configuration conf) {
-    Collection<String> auxNames = conf.getStringCollection(AUX_SERVICES);
+    Collection<String> auxNames = conf.getStringCollection(
+        YarnConfiguration.NM_AUX_SERVICES);
     for (final String sName : auxNames) {
       try {
         Class<? extends AuxiliaryService> sClass = conf.getClass(
-              String.format(AUX_SERVICE_CLASS_FMT, sName), null,
+              String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, sName), null,
               AuxiliaryService.class);
         if (null == sClass) {
           throw new RuntimeException("No class defiend for " + sName);

@@ -44,7 +44,7 @@ public class ClientRMSecurityInfo extends SecurityInfo {
 
       @Override
       public String serverPrincipal() {
-        return YarnConfiguration.RM_SERVER_PRINCIPAL_KEY;
+        return YarnConfiguration.RM_PRINCIPAL;
       }
 
       @Override

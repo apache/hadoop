@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn;
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RpcClientFactory;
 import org.apache.hadoop.yarn.factories.RpcServerFactory;
 import org.apache.hadoop.yarn.factories.impl.pb.RpcClientFactoryPBImpl;
@@ -42,7 +43,7 @@ public class TestRpcFactoryProvider {
     Assert.assertEquals(RpcClientFactoryPBImpl.class, clientFactory.getClass());
     Assert.assertEquals(RpcServerFactoryPBImpl.class, serverFactory.getClass());
     
-    conf.set(RpcFactoryProvider.RPC_SERIALIZER_KEY, "writable");
+    conf.set(YarnConfiguration.IPC_SERIALIZER_TYPE, "writable");
     try {
       clientFactory = RpcFactoryProvider.getClientFactory(conf);
       Assert.fail("Expected an exception - unknown serializer");
@@ -55,8 +56,8 @@ public class TestRpcFactoryProvider {
     }
     
     conf = new Configuration();
-    conf.set(RpcFactoryProvider.RPC_CLIENT_FACTORY_CLASS_KEY, "NonExistantClass");
-    conf.set(RpcFactoryProvider.RPC_SERVER_FACTORY_CLASS_KEY, RpcServerFactoryPBImpl.class.getName());
+    conf.set(YarnConfiguration.IPC_CLIENT_FACTORY, "NonExistantClass");
+    conf.set(YarnConfiguration.IPC_SERVER_FACTORY, RpcServerFactoryPBImpl.class.getName());
     
     try {
       clientFactory = RpcFactoryProvider.getClientFactory(conf);

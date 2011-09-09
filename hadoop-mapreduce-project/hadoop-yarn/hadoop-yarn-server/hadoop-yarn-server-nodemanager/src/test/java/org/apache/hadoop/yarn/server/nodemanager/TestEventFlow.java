@@ -74,9 +74,9 @@ public class TestEventFlow {
     Context context = new NMContext();
 
     YarnConfiguration conf = new YarnConfiguration();
-    conf.set(NMConfig.NM_LOCAL_DIR, localDir.getAbsolutePath());
-    conf.set(NMConfig.NM_LOG_DIR, localLogDir.getAbsolutePath());
-    conf.set(NMConfig.REMOTE_USER_LOG_DIR, remoteLogDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogDir.getAbsolutePath());
 
     ContainerExecutor exec = new DefaultContainerExecutor();
     exec.setConf(conf);

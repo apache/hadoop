@@ -21,7 +21,7 @@ package org.apache.hadoop.mapreduce.v2.security.client;
 import java.lang.annotation.Annotation;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JHConfig;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.token.TokenInfo;
@@ -44,7 +44,7 @@ public class ClientHSSecurityInfo extends SecurityInfo {
 
       @Override
       public String serverPrincipal() {
-        return JHConfig.HS_SERVER_PRINCIPAL_KEY;
+        return JHAdminConfig.MR_HISTORY_PRINCIPAL;
       }
 
       @Override

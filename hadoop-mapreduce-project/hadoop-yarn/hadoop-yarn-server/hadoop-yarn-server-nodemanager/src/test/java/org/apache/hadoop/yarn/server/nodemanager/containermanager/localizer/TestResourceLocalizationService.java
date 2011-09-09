@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.URL;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -73,8 +74,6 @@ import static org.junit.Assert.*;
 
 import org.mockito.ArgumentMatcher;
 import static org.mockito.Mockito.*;
-
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.NM_LOCAL_DIR;
 
 public class TestResourceLocalizationService {
 
@@ -110,7 +109,7 @@ public class TestResourceLocalizationService {
         localDirs.add(lfs.makeQualified(new Path(basedir, i + "")));
         sDirs[i] = localDirs.get(i).toString();
       }
-      conf.setStrings(NM_LOCAL_DIR, sDirs);
+      conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS, sDirs);
 
       // initialize ResourceLocalizationService
       locService.init(conf);
@@ -149,7 +148,7 @@ public class TestResourceLocalizationService {
       localDirs.add(lfs.makeQualified(new Path(basedir, i + "")));
       sDirs[i] = localDirs.get(i).toString();
     }
-    conf.setStrings(NM_LOCAL_DIR, sDirs);
+    conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS, sDirs);
 
     Server ignore = mock(Server.class);
     DrainDispatcher dispatcher = new DrainDispatcher();

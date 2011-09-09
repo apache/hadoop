@@ -40,7 +40,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.server.nodemanager.NMConfig;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.AggregatedLogFormat.LogKey;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.AggregatedLogFormat.LogReader;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -106,8 +105,8 @@ public class LogDumper extends Configured implements Tool {
       return -1;
     } else {
       Path remoteRootLogDir =
-        new Path(getConf().get(NMConfig.REMOTE_USER_LOG_DIR,
-            NMConfig.DEFAULT_REMOTE_APP_LOG_DIR));
+        new Path(getConf().get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
       AggregatedLogFormat.LogReader reader =
           new AggregatedLogFormat.LogReader(getConf(),
               LogAggregationService.getRemoteNodeLogFileForApp(
@@ -151,8 +150,8 @@ public class LogDumper extends Configured implements Tool {
       dumpAllContainersLogs(ApplicationId appId, DataOutputStream out)
           throws IOException {
     Path remoteRootLogDir =
-        new Path(getConf().get(NMConfig.REMOTE_USER_LOG_DIR,
-            NMConfig.DEFAULT_REMOTE_APP_LOG_DIR));
+        new Path(getConf().get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
     Path remoteAppLogDir =
         LogAggregationService.getRemoteAppLogDir(remoteRootLogDir, appId);
     RemoteIterator<FileStatus> nodeFiles =

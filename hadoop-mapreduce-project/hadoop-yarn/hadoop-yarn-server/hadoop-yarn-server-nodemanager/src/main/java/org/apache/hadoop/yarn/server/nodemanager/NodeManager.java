@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.NM_CONTAINER_EXECUTOR_CLASS;
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.NM_KEYTAB;
-
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -42,7 +39,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.server.YarnServerConfig;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -82,8 +78,8 @@ public class NodeManager extends CompositeService {
   }
 
   protected void doSecureLogin() throws IOException {
-    SecurityUtil.login(getConfig(), NM_KEYTAB,
-        YarnServerConfig.NM_SERVER_PRINCIPAL_KEY);
+    SecurityUtil.login(getConfig(), YarnConfiguration.NM_KEYTAB,
+        YarnConfiguration.NM_PRINCIPAL);
   }
 
   @Override
@@ -92,7 +88,7 @@ public class NodeManager extends CompositeService {
     Context context = new NMContext();
 
     ContainerExecutor exec = ReflectionUtils.newInstance(
-        conf.getClass(NM_CONTAINER_EXECUTOR_CLASS,
+        conf.getClass(YarnConfiguration.NM_CONTAINER_EXECUTOR,
           DefaultContainerExecutor.class, ContainerExecutor.class), conf);
     DeletionService del = new DeletionService(exec);
     addService(del);

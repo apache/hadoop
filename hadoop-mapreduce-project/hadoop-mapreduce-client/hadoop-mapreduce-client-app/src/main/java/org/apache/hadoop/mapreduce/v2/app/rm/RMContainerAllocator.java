@@ -40,7 +40,6 @@ import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
-import org.apache.hadoop.mapreduce.v2.app.AMConstants;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobCounterUpdateEvent;
@@ -137,11 +136,11 @@ public class RMContainerAllocator extends RMContainerRequestor
         MRJobConfig.COMPLETED_MAPS_FOR_REDUCE_SLOWSTART, 
         DEFAULT_COMPLETED_MAPS_PERCENT_FOR_REDUCE_SLOWSTART);
     maxReduceRampupLimit = conf.getFloat(
-        AMConstants.REDUCE_RAMPUP_UP_LIMIT, 
-        AMConstants.DEFAULT_REDUCE_RAMP_UP_LIMIT);
+        MRJobConfig.MR_AM_JOB_REDUCE_RAMPUP_UP_LIMIT, 
+        MRJobConfig.DEFAULT_MR_AM_JOB_REDUCE_RAMP_UP_LIMIT);
     maxReducePreemptionLimit = conf.getFloat(
-        AMConstants.REDUCE_PREEMPTION_LIMIT,
-        AMConstants.DEFAULT_REDUCE_PREEMPTION_LIMIT);
+        MRJobConfig.MR_AM_JOB_REDUCE_PREEMPTION_LIMIT,
+        MRJobConfig.DEFAULT_MR_AM_JOB_REDUCE_PREEMPTION_LIMIT);
     RackResolver.init(conf);
   }
 

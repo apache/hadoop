@@ -34,13 +34,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
-import org.apache.hadoop.mapreduce.v2.app.AMConstants;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
@@ -117,7 +117,7 @@ public class DefaultSpeculator extends AbstractService implements
     try {
       // "yarn.mapreduce.job.task.runtime.estimator.class"
       Class<? extends TaskRuntimeEstimator> estimatorClass
-          = conf.getClass(AMConstants.TASK_RUNTIME_ESTIMATOR_CLASS,
+          = conf.getClass(MRJobConfig.MR_AM_TASK_ESTIMATOR,
                           LegacyTaskRuntimeEstimator.class,
                           TaskRuntimeEstimator.class);
 
@@ -128,16 +128,16 @@ public class DefaultSpeculator extends AbstractService implements
 
       estimator.contextualize(conf, context);
     } catch (InstantiationException ex) {
-      LOG.error("Can't make a speculation runtime extimator" + ex);
+      LOG.error("Can't make a speculation runtime extimator", ex);
       throw new YarnException(ex);
     } catch (IllegalAccessException ex) {
-      LOG.error("Can't make a speculation runtime extimator" + ex);
+      LOG.error("Can't make a speculation runtime extimator", ex);
       throw new YarnException(ex);
     } catch (InvocationTargetException ex) {
-      LOG.error("Can't make a speculation runtime extimator" + ex);
+      LOG.error("Can't make a speculation runtime extimator", ex);
       throw new YarnException(ex);
     } catch (NoSuchMethodException ex) {
-      LOG.error("Can't make a speculation runtime extimator" + ex);
+      LOG.error("Can't make a speculation runtime extimator", ex);
       throw new YarnException(ex);
     }
     

@@ -44,7 +44,6 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.RMNMSecurityInfoClass;
-import org.apache.hadoop.yarn.server.YarnServerConfig;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
@@ -102,8 +101,8 @@ public class ResourceTrackerService extends AbstractService implements
   @Override
   public synchronized void init(Configuration conf) {
     String resourceTrackerBindAddress =
-      conf.get(YarnServerConfig.RESOURCETRACKER_ADDRESS,
-          YarnServerConfig.DEFAULT_RESOURCETRACKER_BIND_ADDRESS);
+      conf.get(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+          YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS);
     resourceTrackerAddress = NetUtils.createSocketAddr(resourceTrackerBindAddress);
 
     RackResolver.init(conf);
@@ -123,8 +122,8 @@ public class ResourceTrackerService extends AbstractService implements
     this.server =
       rpc.getServer(ResourceTracker.class, this, resourceTrackerAddress,
           rtServerConf, null,
-          rtServerConf.getInt(RMConfig.RM_RESOURCE_TRACKER_THREADS, 
-              RMConfig.DEFAULT_RM_RESOURCE_TRACKER_THREADS));
+          rtServerConf.getInt(YarnConfiguration.RM_RESOURCE_TRACKER_CLIENT_THREAD_COUNT, 
+              YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_CLIENT_THREAD_COUNT));
     this.server.start();
 
   }

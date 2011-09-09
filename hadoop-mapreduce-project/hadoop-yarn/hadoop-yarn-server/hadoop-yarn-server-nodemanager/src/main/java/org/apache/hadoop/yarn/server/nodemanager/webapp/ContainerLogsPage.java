@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.DEFAULT_NM_LOG_DIR;
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.NM_LOG_DIR;
-
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -33,10 +30,10 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
-import org.apache.hadoop.yarn.server.nodemanager.NMConfig;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -64,7 +61,7 @@ public class ContainerLogsPage extends NMView {
     @Inject
     public ContainersLogsBlock(Configuration conf, Context context) {
       this.conf = conf;
-      this.logsSelector = new LocalDirAllocator(NMConfig.NM_LOG_DIR);
+      this.logsSelector = new LocalDirAllocator(YarnConfiguration.NM_LOG_DIRS);
       this.nmContext = context;
       this.recordFactory = RecordFactoryProvider.getRecordFactory(conf);
     }
@@ -176,7 +173,7 @@ public class ContainerLogsPage extends NMView {
     static List<File>
         getContainerLogDirs(Configuration conf, ContainerId containerId) {
       String[] logDirs =
-          conf.getStrings(NM_LOG_DIR, DEFAULT_NM_LOG_DIR);
+          conf.getStrings(YarnConfiguration.NM_LOG_DIRS, YarnConfiguration.DEFAULT_NM_LOG_DIRS);
       List<File> containerLogDirs = new ArrayList<File>(logDirs.length);
       for (String logDir : logDirs) {
         String appIdStr = ConverterUtils.toString(containerId.getAppId());

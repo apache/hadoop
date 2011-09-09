@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.DEFAULT_NM_BIND_ADDRESS;
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.NM_BIND_ADDRESS;
 import static org.apache.hadoop.yarn.service.Service.STATE.STARTED;
 
 import java.io.IOException;
@@ -31,7 +29,6 @@ import org.apache.avro.ipc.Server;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
@@ -67,7 +64,6 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
-import org.apache.hadoop.yarn.server.nodemanager.NMConfig;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
@@ -190,7 +186,7 @@ public class ContainerManagerImpl extends CompositeService implements
   @Override
   public void init(Configuration conf) {
     cmBindAddressStr = NetUtils.createSocketAddr(
-        conf.get(NM_BIND_ADDRESS, DEFAULT_NM_BIND_ADDRESS));
+        conf.get(YarnConfiguration.NM_ADDRESS, YarnConfiguration.DEFAULT_NM_ADDRESS));
     super.init(conf);
   }
 
@@ -214,8 +210,8 @@ public class ContainerManagerImpl extends CompositeService implements
     server =
         rpc.getServer(ContainerManager.class, this, cmBindAddressStr, cmConf,
             this.containerTokenSecretManager,
-            cmConf.getInt(NMConfig.NM_CONTAINER_MGR_THREADS, 
-                NMConfig.DEFAULT_NM_CONTAINER_MGR_THREADS));
+            cmConf.getInt(YarnConfiguration.NM_CONTAINER_MGR_THREAD_COUNT, 
+                YarnConfiguration.DEFAULT_NM_CONTAINER_MGR_THREAD_COUNT));
     LOG.info("ContainerManager started at " + cmBindAddressStr);
     server.start();
     super.start();

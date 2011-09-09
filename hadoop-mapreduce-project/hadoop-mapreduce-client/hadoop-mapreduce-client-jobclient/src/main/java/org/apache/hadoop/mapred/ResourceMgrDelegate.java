@@ -26,7 +26,6 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
@@ -59,7 +58,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationMaster;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
@@ -86,8 +84,8 @@ public class ResourceMgrDelegate {
     YarnRPC rpc = YarnRPC.create(conf);
     InetSocketAddress rmAddress =
         NetUtils.createSocketAddr(conf.get(
-            YarnConfiguration.APPSMANAGER_ADDRESS,
-            YarnConfiguration.DEFAULT_APPSMANAGER_BIND_ADDRESS));
+            YarnConfiguration.RM_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_ADDRESS));
     LOG.info("Connecting to ResourceManager at " + rmAddress);
     Configuration appsManagerServerConf = new Configuration(this.conf);
     appsManagerServerConf.setClass(

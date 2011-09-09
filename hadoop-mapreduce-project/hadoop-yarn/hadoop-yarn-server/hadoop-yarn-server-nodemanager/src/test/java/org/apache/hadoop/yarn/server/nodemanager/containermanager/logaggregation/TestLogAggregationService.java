@@ -47,11 +47,11 @@ import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedAppsEvent;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
-import org.apache.hadoop.yarn.server.nodemanager.NMConfig;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.AggregatedLogFormat.LogKey;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.AggregatedLogFormat.LogReader;
@@ -92,8 +92,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
   public void testLocalFileDeletionAfterUpload() throws IOException {
     this.delSrvc = new DeletionService(createContainerExecutor());
     this.delSrvc.init(conf);
-    this.conf.set(NMConfig.NM_LOG_DIR, localLogDir.getAbsolutePath());
-    this.conf.set(NMConfig.REMOTE_USER_LOG_DIR,
+    this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
+    this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         this.remoteRootLogDir.getAbsolutePath());
     LogAggregationService logAggregationService =
         new LogAggregationService(this.delSrvc);
@@ -140,8 +140,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
   @Test
   public void testNoContainerOnNode() {
-    this.conf.set(NMConfig.NM_LOG_DIR, localLogDir.getAbsolutePath());
-    this.conf.set(NMConfig.REMOTE_USER_LOG_DIR,
+    this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
+    this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         this.remoteRootLogDir.getAbsolutePath());
     LogAggregationService logAggregationService =
         new LogAggregationService(this.delSrvc);
@@ -173,8 +173,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
   @Test
   public void testMultipleAppsLogAggregation() throws IOException {
 
-    this.conf.set(NMConfig.NM_LOG_DIR, localLogDir.getAbsolutePath());
-    this.conf.set(NMConfig.REMOTE_USER_LOG_DIR,
+    this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
+    this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         this.remoteRootLogDir.getAbsolutePath());
     LogAggregationService logAggregationService =
         new LogAggregationService(this.delSrvc);

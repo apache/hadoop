@@ -59,7 +59,6 @@ import org.apache.hadoop.mapreduce.Cluster.JobTrackerStatus;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.mapreduce.v2.ClientConstants;
 import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
@@ -93,10 +92,6 @@ public class YARNRunner implements ClientProtocol {
 
   private static final Log LOG = LogFactory.getLog(YARNRunner.class);
 
-  public static final String YARN_AM_VMEM_MB =
-      "yarn.am.mapreduce.resource.mb";
-  private static final int DEFAULT_YARN_AM_VMEM_MB = 2048;
-  
   private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private ResourceMgrDelegate resMgrDelegate;
   private ClientCache clientCache;
@@ -273,7 +268,8 @@ public class YARNRunner implements ClientProtocol {
     ApplicationId applicationId = resMgrDelegate.getApplicationId();
     appContext.setApplicationId(applicationId);
     Resource capability = recordFactory.newRecordInstance(Resource.class);
-    capability.setMemory(conf.getInt(YARN_AM_VMEM_MB, DEFAULT_YARN_AM_VMEM_MB));
+    capability.setMemory(conf.getInt(MRJobConfig.MR_AM_VMEM_MB,
+        MRJobConfig.DEFAULT_MR_AM_VMEM_MB));
     LOG.info("AppMaster capability = " + capability);
     appContext.setMasterCapability(capability);
 
@@ -334,11 +330,11 @@ public class YARNRunner implements ClientProtocol {
     Vector<CharSequence> vargs = new Vector<CharSequence>(8);
     vargs.add(javaHome + "/bin/java");
     vargs.add("-Dhadoop.root.logger="
-        + conf.get(ClientConstants.MR_APPMASTER_LOG_OPTS,
-            ClientConstants.DEFAULT_MR_APPMASTER_LOG_OPTS) + ",console");
+        + conf.get(MRJobConfig.MR_AM_LOG_OPTS,
+            MRJobConfig.DEFAULT_MR_AM_LOG_OPTS) + ",console");
     
-    vargs.add(conf.get(ClientConstants.MR_APPMASTER_COMMAND_OPTS,
-        ClientConstants.DEFAULT_MR_APPMASTER_COMMAND_OPTS));
+    vargs.add(conf.get(MRJobConfig.MR_AM_COMMAND_OPTS,
+        MRJobConfig.DEFAULT_MR_AM_COMMAND_OPTS));
 
     // Add { job jar, MR app jar } to classpath.
     Map<String, String> environment = new HashMap<String, String>();

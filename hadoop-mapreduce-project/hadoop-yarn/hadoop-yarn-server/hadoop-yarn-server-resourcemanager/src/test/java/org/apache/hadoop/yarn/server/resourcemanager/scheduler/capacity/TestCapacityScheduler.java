@@ -30,9 +30,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.Application;
-import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.Task;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
@@ -55,7 +55,7 @@ public class TestCapacityScheduler {
     resourceManager = new ResourceManager(store);
     CapacitySchedulerConfiguration csConf = 
       new CapacitySchedulerConfiguration();
-    csConf.setClass(RMConfig.RESOURCE_SCHEDULER, 
+    csConf.setClass(YarnConfiguration.RM_SCHEDULER, 
         CapacityScheduler.class, ResourceScheduler.class);
     setupQueueConfiguration(csConf);
     resourceManager.init(csConf);

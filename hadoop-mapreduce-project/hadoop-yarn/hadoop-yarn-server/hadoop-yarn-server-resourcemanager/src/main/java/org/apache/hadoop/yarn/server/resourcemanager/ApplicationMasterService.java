@@ -90,8 +90,8 @@ public class ApplicationMasterService extends AbstractService implements
   @Override
   public void init(Configuration conf) {
     String bindAddress =
-      conf.get(YarnConfiguration.SCHEDULER_ADDRESS,
-          YarnConfiguration.DEFAULT_SCHEDULER_BIND_ADDRESS);
+      conf.get(YarnConfiguration.RM_SCHEDULER_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS);
     masterServiceAddress =  NetUtils.createSocketAddr(bindAddress);
     super.init(conf);
   }
@@ -105,8 +105,8 @@ public class ApplicationMasterService extends AbstractService implements
     this.server =
       rpc.getServer(AMRMProtocol.class, this, masterServiceAddress,
           serverConf, this.appTokenManager,
-          serverConf.getInt(RMConfig.RM_AM_THREADS, 
-              RMConfig.DEFAULT_RM_AM_THREADS));
+          serverConf.getInt(YarnConfiguration.RM_SCHEDULER_CLIENT_THREAD_COUNT, 
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT));
     this.server.start();
     super.start();
   }

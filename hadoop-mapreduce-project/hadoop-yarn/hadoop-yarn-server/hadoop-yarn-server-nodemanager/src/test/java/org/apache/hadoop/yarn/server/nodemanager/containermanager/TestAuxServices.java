@@ -27,6 +27,7 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServices;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
@@ -95,10 +96,10 @@ public class TestAuxServices {
   @Test
   public void testAuxEventDispatch() {
     Configuration conf = new Configuration();
-    conf.setStrings(AuxServices.AUX_SERVICES, new String[] { "Asrv", "Bsrv" });
-    conf.setClass(String.format(AuxServices.AUX_SERVICE_CLASS_FMT, "Asrv"),
+    conf.setStrings(YarnConfiguration.NM_AUX_SERVICES, new String[] { "Asrv", "Bsrv" });
+    conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, "Asrv"),
         ServiceA.class, Service.class);
-    conf.setClass(String.format(AuxServices.AUX_SERVICE_CLASS_FMT, "Bsrv"),
+    conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, "Bsrv"),
         ServiceB.class, Service.class);
     conf.setInt("A.expected.init", 1);
     conf.setInt("B.expected.stop", 1);
@@ -123,10 +124,10 @@ public class TestAuxServices {
   @Test
   public void testAuxServices() {
     Configuration conf = new Configuration();
-    conf.setStrings(AuxServices.AUX_SERVICES, new String[] { "Asrv", "Bsrv" });
-    conf.setClass(String.format(AuxServices.AUX_SERVICE_CLASS_FMT, "Asrv"),
+    conf.setStrings(YarnConfiguration.NM_AUX_SERVICES, new String[] { "Asrv", "Bsrv" });
+    conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, "Asrv"),
         ServiceA.class, Service.class);
-    conf.setClass(String.format(AuxServices.AUX_SERVICE_CLASS_FMT, "Bsrv"),
+    conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, "Bsrv"),
         ServiceB.class, Service.class);
     final AuxServices aux = new AuxServices();
     aux.init(conf);
@@ -154,10 +155,10 @@ public class TestAuxServices {
   @Test
   public void testAuxServicesMeta() {
     Configuration conf = new Configuration();
-    conf.setStrings(AuxServices.AUX_SERVICES, new String[] { "Asrv", "Bsrv" });
-    conf.setClass(String.format(AuxServices.AUX_SERVICE_CLASS_FMT, "Asrv"),
+    conf.setStrings(YarnConfiguration.NM_AUX_SERVICES, new String[] { "Asrv", "Bsrv" });
+    conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, "Asrv"),
         ServiceA.class, Service.class);
-    conf.setClass(String.format(AuxServices.AUX_SERVICE_CLASS_FMT, "Bsrv"),
+    conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, "Bsrv"),
         ServiceB.class, Service.class);
     final AuxServices aux = new AuxServices();
     aux.init(conf);
@@ -191,10 +192,10 @@ public class TestAuxServices {
   @Test
   public void testAuxUnexpectedStop() {
     Configuration conf = new Configuration();
-    conf.setStrings(AuxServices.AUX_SERVICES, new String[] { "Asrv", "Bsrv" });
-    conf.setClass(String.format(AuxServices.AUX_SERVICE_CLASS_FMT, "Asrv"),
+    conf.setStrings(YarnConfiguration.NM_AUX_SERVICES, new String[] { "Asrv", "Bsrv" });
+    conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, "Asrv"),
         ServiceA.class, Service.class);
-    conf.setClass(String.format(AuxServices.AUX_SERVICE_CLASS_FMT, "Bsrv"),
+    conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, "Bsrv"),
         ServiceB.class, Service.class);
     final AuxServices aux = new AuxServices();
     aux.init(conf);

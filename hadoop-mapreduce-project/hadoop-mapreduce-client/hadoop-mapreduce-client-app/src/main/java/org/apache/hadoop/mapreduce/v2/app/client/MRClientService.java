@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptResponse;
@@ -59,7 +60,6 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
-import org.apache.hadoop.mapreduce.v2.app.AMConstants;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
@@ -141,8 +141,8 @@ public class MRClientService extends AbstractService
     server =
         rpc.getServer(MRClientProtocol.class, protocolHandler, address,
             conf, secretManager,
-            conf.getInt(AMConstants.AM_JOB_CLIENT_THREADS, 
-                AMConstants.DEFAULT_AM_JOB_CLIENT_THREADS));
+            conf.getInt(MRJobConfig.MR_AM_JOB_CLIENT_THREAD_COUNT, 
+                MRJobConfig.DEFAULT_MR_AM_JOB_CLIENT_THREAD_COUNT));
     server.start();
     this.bindAddress =
         NetUtils.createSocketAddr(hostNameResolved.getHostAddress()

@@ -68,9 +68,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.YarnServerConfig;
-import org.apache.hadoop.yarn.server.nodemanager.NMConfig;
-import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -335,11 +332,11 @@ public class TestMRJobs {
     mrCluster.getConfig().set(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
-    mrCluster.getConfig().set(RMConfig.RM_KEYTAB, "/etc/krb5.keytab");
-    mrCluster.getConfig().set(NMConfig.NM_KEYTAB, "/etc/krb5.keytab");
-    mrCluster.getConfig().set(YarnConfiguration.RM_SERVER_PRINCIPAL_KEY,
+    mrCluster.getConfig().set(YarnConfiguration.RM_KEYTAB, "/etc/krb5.keytab");
+    mrCluster.getConfig().set(YarnConfiguration.NM_KEYTAB, "/etc/krb5.keytab");
+    mrCluster.getConfig().set(YarnConfiguration.RM_PRINCIPAL,
         "rm/sightbusy-lx@LOCALHOST");
-    mrCluster.getConfig().set(YarnServerConfig.NM_SERVER_PRINCIPAL_KEY,
+    mrCluster.getConfig().set(YarnConfiguration.NM_PRINCIPAL,
         "nm/sightbusy-lx@LOCALHOST");
     UserGroupInformation.setConfiguration(mrCluster.getConfig());
 

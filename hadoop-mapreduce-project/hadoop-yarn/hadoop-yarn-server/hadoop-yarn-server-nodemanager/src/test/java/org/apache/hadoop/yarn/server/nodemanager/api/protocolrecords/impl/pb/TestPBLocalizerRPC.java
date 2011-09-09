@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 
 import org.apache.avro.ipc.Server;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -39,7 +40,7 @@ public class TestPBLocalizerRPC {
 
   static RecordFactory createPBRecordFactory() {
     Configuration conf = new Configuration();
-    conf.set(RecordFactoryProvider.RPC_SERIALIZER_KEY, "protocolbuffers");
+    conf.set(YarnConfiguration.IPC_SERIALIZER_TYPE, "protocolbuffers");
     return RecordFactoryProvider.getRecordFactory(conf);
   }
 

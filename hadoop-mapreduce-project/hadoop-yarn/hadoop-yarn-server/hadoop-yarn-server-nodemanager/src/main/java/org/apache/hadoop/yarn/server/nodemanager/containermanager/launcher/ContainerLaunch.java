@@ -45,10 +45,10 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
-import org.apache.hadoop.yarn.server.nodemanager.NMConfig;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
@@ -79,7 +79,7 @@ public class ContainerLaunch implements Callable<Integer> {
     this.exec = exec;
     this.container = container;
     this.dispatcher = dispatcher;
-    this.logDirsSelector = new LocalDirAllocator(NMConfig.NM_LOG_DIR);
+    this.logDirsSelector = new LocalDirAllocator(YarnConfiguration.NM_LOG_DIRS);
   }
 
   @Override
@@ -125,7 +125,7 @@ public class ContainerLaunch implements Callable<Integer> {
 
       FileContext lfs = FileContext.getLocalFSFileContext();
       LocalDirAllocator lDirAllocator =
-          new LocalDirAllocator(NMConfig.NM_LOCAL_DIR); // TODO
+          new LocalDirAllocator(YarnConfiguration.NM_LOCAL_DIRS); // TODO
       Path nmPrivateContainerScriptPath =
           lDirAllocator.getLocalPathForWrite(
               ResourceLocalizationService.NM_PRIVATE_DIR + Path.SEPARATOR
@@ -152,8 +152,8 @@ public class ContainerLaunch implements Callable<Integer> {
       try {
         // /////////// Write out the container-script in the nmPrivate space.
         String[] localDirs =
-            this.conf.getStrings(NMConfig.NM_LOCAL_DIR,
-                NMConfig.DEFAULT_NM_LOCAL_DIR);
+            this.conf.getStrings(YarnConfiguration.NM_LOCAL_DIRS,
+                YarnConfiguration.DEFAULT_NM_LOCAL_DIRS);
         List<Path> appDirs = new ArrayList<Path>(localDirs.length);
         for (String localDir : localDirs) {
           Path usersdir = new Path(localDir, ContainerLocalizer.USERCACHE);

@@ -32,6 +32,7 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
@@ -221,7 +222,7 @@ public class MRApps extends Apps {
   private static final String STAGING_CONSTANT = ".staging";
   public static Path getStagingAreaDir(Configuration conf, String user) {
     return new Path(
-        conf.get(MRConstants.APPS_STAGING_DIR_KEY) +
+        conf.get(MRJobConfig.MR_AM_STAGING_DIR) + 
         Path.SEPARATOR + user + Path.SEPARATOR + STAGING_CONSTANT);
   }
 

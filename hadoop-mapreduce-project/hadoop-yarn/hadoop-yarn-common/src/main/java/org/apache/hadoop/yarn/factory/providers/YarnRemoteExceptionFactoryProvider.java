@@ -23,16 +23,12 @@ import java.lang.reflect.Method;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.YarnRemoteExceptionFactory;
 import org.apache.hadoop.yarn.factories.impl.pb.YarnRemoteExceptionFactoryPBImpl;
 
 public class YarnRemoteExceptionFactoryProvider {
 
-  public static final String RPC_SERIALIZER_KEY = "org.apache.yarn.ipc.rpc.serializer.property";
-  public static final String RPC_SERIALIZER_DEFAULT = "protocolbuffers";
-  
-  public static final String EXCEPTION_FACTORY_CLASS_KEY = "org.apache.yarn.ipc.exception.factory.class";
-  
   private YarnRemoteExceptionFactoryProvider() {
   }
   
@@ -40,13 +36,13 @@ public class YarnRemoteExceptionFactoryProvider {
     if (conf == null) {
       conf = new Configuration();
     }
-    String recordFactoryClassName = conf.get(EXCEPTION_FACTORY_CLASS_KEY);
+    String recordFactoryClassName = conf.get(YarnConfiguration.IPC_EXCEPTION_FACTORY);
     if (recordFactoryClassName == null) {
-      String serializer = conf.get(RPC_SERIALIZER_KEY, RPC_SERIALIZER_DEFAULT);
-      if (serializer.equals(RPC_SERIALIZER_DEFAULT)) {
+      String serializer = conf.get(YarnConfiguration.IPC_SERIALIZER_TYPE, YarnConfiguration.DEFAULT_IPC_SERIALIZER_TYPE);
+      if (serializer.equals(YarnConfiguration.DEFAULT_IPC_SERIALIZER_TYPE)) {
         return YarnRemoteExceptionFactoryPBImpl.get();
       } else {
-        throw new YarnException("Unknown serializer: [" + conf.get(RPC_SERIALIZER_KEY) + "]. Use keys: [" + EXCEPTION_FACTORY_CLASS_KEY + "] to specify Exception factory");
+        throw new YarnException("Unknown serializer: [" + conf.get(YarnConfiguration.IPC_SERIALIZER_TYPE) + "]. Use keys: [" + YarnConfiguration.IPC_EXCEPTION_FACTORY + "] to specify Exception factory");
       }
     } else {
       return (YarnRemoteExceptionFactory) getFactoryClassInstance(recordFactoryClassName);

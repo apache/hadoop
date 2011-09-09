@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.server.nodemanager.NMConfig;
 import org.apache.hadoop.yarn.webapp.Controller;
 
 import com.google.inject.Inject;

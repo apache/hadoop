@@ -33,8 +33,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.ShuffleHandler;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
-import org.apache.hadoop.mapreduce.v2.app.AMConstants;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerLaunchedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptDiagnosticsUpdateEvent;
@@ -102,7 +102,7 @@ public class ContainerLauncherImpl extends AbstractService implements
   public void start() {
     launcherPool =
         new ThreadPoolExecutor(getConfig().getInt(
-            AMConstants.CONTAINERLAUNCHER_THREADPOOL_SIZE, 10),
+            MRJobConfig.MR_AM_CONTAINERLAUNCHER_THREAD_COUNT, 10),
             Integer.MAX_VALUE, 1, TimeUnit.HOURS,
             new LinkedBlockingQueue<Runnable>());
     launcherPool.prestartAllCoreThreads(); // Wait for work.

@@ -38,8 +38,8 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
-import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.net.NetUtils;
@@ -184,9 +184,9 @@ public class JobHistoryUtils {
   public static String getConfiguredHistoryIntermediateDoneDirPrefix(
       Configuration conf) {
     String doneDirPrefix = conf
-        .get(JHConfig.HISTORY_INTERMEDIATE_DONE_DIR_KEY);
+        .get(JHAdminConfig.MR_HISTORY_INTERMEDIATE_DONE_DIR);
     if (doneDirPrefix == null) {
-      doneDirPrefix = conf.get(MRConstants.APPS_STAGING_DIR_KEY)
+      doneDirPrefix = conf.get(MRJobConfig.MR_AM_STAGING_DIR)
           + "/history/done_intermediate";
     }
     return doneDirPrefix;
@@ -199,9 +199,9 @@ public class JobHistoryUtils {
    */
   public static String getConfiguredHistoryServerDoneDirPrefix(
       Configuration conf) {
-    String doneDirPrefix = conf.get(JHConfig.HISTORY_DONE_DIR_KEY);
+    String doneDirPrefix = conf.get(JHAdminConfig.MR_HISTORY_DONE_DIR);
     if (doneDirPrefix == null) {
-      doneDirPrefix = conf.get(MRConstants.APPS_STAGING_DIR_KEY)
+      doneDirPrefix = conf.get(MRJobConfig.MR_AM_STAGING_DIR)
           + "/history/done";
     }
     return doneDirPrefix;
@@ -220,7 +220,7 @@ public class JobHistoryUtils {
   public static boolean shouldCreateNonUserDirectory(Configuration conf) {
     // Returning true by default to allow non secure single node clusters to work
     // without any configuration change.
-    return conf.getBoolean(JHConfig.CREATE_HISTORY_INTERMEDIATE_BASE_DIR_KEY, true); 
+    return conf.getBoolean(MRJobConfig.MR_AM_CREATE_JH_INTERMEDIATE_BASE_DIR, true); 
   }
 
   /**
@@ -478,8 +478,8 @@ public class JobHistoryUtils {
   public static String getHistoryUrl(Configuration conf, ApplicationId appId) 
        throws UnknownHostException {
   //construct the history url for job
-    String hsAddress = conf.get(JHConfig.HS_WEBAPP_BIND_ADDRESS,
-        JHConfig.DEFAULT_HS_WEBAPP_BIND_ADDRESS);
+    String hsAddress = conf.get(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
+        JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS);
     InetSocketAddress address = NetUtils.createSocketAddr(hsAddress);
     StringBuffer sb = new StringBuffer();
     if (address.getAddress().isAnyLocalAddress() || 

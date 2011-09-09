@@ -47,7 +47,6 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalRMInterface;
-import org.apache.hadoop.yarn.server.nodemanager.NMConfig;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdaterImpl;
@@ -129,10 +128,10 @@ public abstract class BaseContainerManagerTest {
     LOG.info("Created tmpDir in " + tmpDir.getAbsolutePath());
 
     String bindAddress = "0.0.0.0:5555";
-    conf.set(NMConfig.NM_BIND_ADDRESS, bindAddress);
-    conf.set(NMConfig.NM_LOCAL_DIR, localDir.getAbsolutePath());
-    conf.set(NMConfig.NM_LOG_DIR, localLogDir.getAbsolutePath());
-    conf.set(NMConfig.REMOTE_USER_LOG_DIR, remoteLogDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_ADDRESS, bindAddress);
+    conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogDir.getAbsolutePath());
 
     // Default delSrvc
     delSrvc = new DeletionService(exec) {
