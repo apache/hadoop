@@ -170,6 +170,8 @@ Release 0.20.205.0 - unreleased
     HDFS-2320. Make 0.20-append protocol changes compatible with
     0.20-secuirty. (suresh)
 
+    MAPREDUCE-2610. Make QueueAclsInfo public. (Joep Rottinghuis via acmurthy) 
+
 Release 0.20.204.0 - 2011-8-25
 
   NEW FEATURES
