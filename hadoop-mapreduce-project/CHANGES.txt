@@ -1247,6 +1247,10 @@ Release 0.23.0 - Unreleased
    MAPREDUCE-2937. Ensure reason for application failure is displayed to the
    user. (mahadev via acmurthy) 
 
+   MAPREDUCE-2953. Fix a race condition on submission which caused client to 
+   incorrectly assume application was gone by making submission synchronous
+   for RMAppManager. (Thomas Graves via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

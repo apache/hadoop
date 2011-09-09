@@ -91,6 +91,7 @@ public class ClientRMService extends AbstractService implements
   final private YarnScheduler scheduler;
   final private RMContext rmContext;
   private final AMLivelinessMonitor amLivelinessMonitor;
+  private final RMAppManager rmAppManager;
 
   private String clientServiceBindAddress;
   private Server server;
@@ -100,11 +101,13 @@ public class ClientRMService extends AbstractService implements
   private  ApplicationACLsManager aclsManager;
   private Map<ApplicationACL, AccessControlList> applicationACLs;
   
-  public ClientRMService(RMContext rmContext, YarnScheduler scheduler) {
+  public ClientRMService(RMContext rmContext, YarnScheduler scheduler,
+      RMAppManager rmAppManager) {
     super(ClientRMService.class.getName());
     this.scheduler = scheduler;
     this.rmContext = rmContext;
     this.amLivelinessMonitor = rmContext.getAMLivelinessMonitor();
+    this.rmAppManager = rmAppManager;
   }
   
   @Override
@@ -201,8 +204,10 @@ public class ClientRMService extends AbstractService implements
         throw new IOException("Application with id " + applicationId
             + " is already present! Cannot add a duplicate!");
       }
-      this.rmContext.getDispatcher().getEventHandler().handle(
-          new RMAppManagerSubmitEvent(submissionContext));
+      // This needs to be synchronous as the client can query 
+      // immediately following the submission to get the application status.
+      // So call handle directly and do not send an event.
+      rmAppManager.handle(new RMAppManagerSubmitEvent(submissionContext));
 
       LOG.info("Application with id " + applicationId.getId() + 
           " submitted by user " + user + " with " + submissionContext);
