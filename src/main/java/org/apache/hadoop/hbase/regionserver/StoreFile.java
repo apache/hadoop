@@ -1073,6 +1073,9 @@ public class StoreFile {
 
     private boolean passesBloomFilter(Scan scan,
         final SortedSet<byte[]> columns) {
+      if (!scan.isGetScan())
+        return true;
+
       BloomFilter bloomFilter = this.bloomFilter;
       if (bloomFilter == null) {
         return true;

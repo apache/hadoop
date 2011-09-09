@@ -130,7 +130,11 @@ public class ScanDeleteTracker implements DeleteTracker {
         // Next column case.
         deleteBuffer = null;
       } else {
-        //Should never happen, throw Exception
+        throw new IllegalStateException("isDelete failed: deleteBuffer="
+            + Bytes.toStringBinary(deleteBuffer, deleteOffset, deleteLength)
+            + ", qualifier="
+            + Bytes.toStringBinary(buffer, qualifierOffset, qualifierLength)
+            + ", timestamp=" + timestamp + ", comparison result: " + ret);
       }
     }
 

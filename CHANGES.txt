@@ -251,6 +251,8 @@ Release 0.91.0 - Unreleased
                (Jan Lukavsky)
    HBASE-4015  Refactor the TimeoutMonitor to make it less racy
                (ramkrishna.s.vasudevan)
+   HBASE-4350  Fix a Bloom filter bug introduced by HFile v2 and
+               TestMultiColumnScanner that caught it (Mikhail Bautin)
            
                
 
