@@ -73,15 +73,6 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
         addr, ticket, conf, factory, rpcTimeout)), false);
   }
 
-  @Override
-  public void stopProxy(Object proxy) {
-    try {
-      ((Invoker) Proxy.getInvocationHandler(proxy)).close();
-    } catch (IOException e) {
-      LOG.warn("Error while stopping " + proxy, e);
-    }
-  }
-
   private static class Invoker implements InvocationHandler, Closeable {
     private Map<String, Message> returnTypes = new ConcurrentHashMap<String, Message>();
     private boolean isClosed = false;

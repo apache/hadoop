@@ -30,6 +30,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.io.Closeable;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -219,7 +220,7 @@ public class WritableRpcEngine implements RpcEngine {
 
   private static ClientCache CLIENTS=new ClientCache();
   
-  private static class Invoker implements InvocationHandler {
+  private static class Invoker implements InvocationHandler, Closeable {
     private Client.ConnectionId remoteId;
     private Client client;
     private boolean isClosed = false;
@@ -250,7 +251,7 @@ public class WritableRpcEngine implements RpcEngine {
     }
     
     /* close the IPC client that's responsible for this invoker's RPCs */ 
-    synchronized private void close() {
+    synchronized public void close() {
       if (!isClosed) {
         isClosed = true;
         CLIENTS.stopClient(client);
@@ -281,15 +282,6 @@ public class WritableRpcEngine implements RpcEngine {
             factory, rpcTimeout));
     return new ProtocolProxy<T>(protocol, proxy, true);
   }
-
-  /**
-   * Stop this proxy and release its invoker's resource
-   * @param proxy the proxy to be stopped
-   */
-  public void stopProxy(Object proxy) {
-    ((Invoker)Proxy.getInvocationHandler(proxy)).close();
-  }
-
   
   /** Expert: Make multiple, parallel calls to a set of servers. */
   public Object[] call(Method method, Object[][] params,

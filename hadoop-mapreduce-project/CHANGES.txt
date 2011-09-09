@@ -4,7 +4,11 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
-    MAPREDUCE-2887 due to HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)
+    MAPREDUCE-2887 due to HADOOP-7524 Change RPC to allow multiple protocols
+                   including multuple versions of the same protocol (sanjay Radia)
+
+    MAPREDUCE-2934. MR portion of HADOOP-7607 - Simplify the RPC proxy cleanup
+                    process (atm)
 
   BUG FIXES
     MAPREDUCE-2784. [Gridmix] Bug fixes in ExecutionSummarizer and 
