@@ -1246,6 +1246,9 @@ Release 0.23.0 - Unreleased
    MAPREDUCE-2954. Fixed a deadlock in NM caused due to wrong synchronization
    in protocol buffer records. (Siddharth Seth via vinodkv)
 
+   MAPREDUCE-2975. Fixed YARNRunner to use YarnConfiguration rather than
+   Configuration. (mahadev via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

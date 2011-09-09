@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.junit.Before;
@@ -63,7 +64,7 @@ public class TestYARNRunner extends TestCase {
  
   private YARNRunner yarnRunner;
   private ResourceMgrDelegate resourceMgrDelegate;
-  private Configuration conf;
+  private YarnConfiguration conf;
   private ApplicationId appId;
   private JobID jobId;
   private File testWorkDir = 
@@ -74,7 +75,7 @@ public class TestYARNRunner extends TestCase {
   @Before
   public void setUp() throws Exception {
     resourceMgrDelegate = mock(ResourceMgrDelegate.class);
-    conf = new Configuration();
+    conf = new YarnConfiguration();
     yarnRunner = new YARNRunner(conf, resourceMgrDelegate);
     yarnRunner = spy(yarnRunner);
     submissionContext = mock(ApplicationSubmissionContext.class);

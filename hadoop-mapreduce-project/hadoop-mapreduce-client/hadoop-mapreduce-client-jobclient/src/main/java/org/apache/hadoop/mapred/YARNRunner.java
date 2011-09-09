@@ -101,18 +101,18 @@ public class YARNRunner implements ClientProtocol {
    * yarn
    * @param conf the configuration object for the client
    */
-  public YARNRunner(Configuration conf) {
-    this(conf, new ResourceMgrDelegate(conf));
+  public YARNRunner(YarnConfiguration conf) {
+   this(conf, new ResourceMgrDelegate(conf));
   }
 
   /**
-   * Similar to {@link #YARNRunner(Configuration)} but allowing injecting 
+   * Similar to {@link #YARNRunner(YarnConfiguration)} but allowing injecting 
    * {@link ResourceMgrDelegate}. Enables mocking and testing.
    * @param conf the configuration object for the client
    * @param resMgrDelegate the resourcemanager client handle.
    */
-  public YARNRunner(Configuration conf, ResourceMgrDelegate resMgrDelegate) {
-    this.conf = new YarnConfiguration(conf);
+  public YARNRunner(YarnConfiguration conf, ResourceMgrDelegate resMgrDelegate) {
+    this.conf = conf;
     try {
       this.resMgrDelegate = resMgrDelegate;
       this.clientCache = new ClientCache(this.conf,
