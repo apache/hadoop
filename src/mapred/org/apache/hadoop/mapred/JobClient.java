@@ -43,6 +43,7 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.filecache.DistributedCache;
@@ -76,6 +77,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -471,12 +473,47 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     }        
   }
 
-  private JobSubmissionProtocol createRPCProxy(InetSocketAddress addr,
+  private static JobSubmissionProtocol createRPCProxy(InetSocketAddress addr,
       Configuration conf) throws IOException {
     return (JobSubmissionProtocol) RPC.getProxy(JobSubmissionProtocol.class,
         JobSubmissionProtocol.versionID, addr, 
         UserGroupInformation.getCurrentUser(), conf,
         NetUtils.getSocketFactory(conf, JobSubmissionProtocol.class));
+  }
+
+  @InterfaceAudience.Private
+  public static class Renewer extends TokenRenewer {
+
+    @Override
+    public boolean handleKind(Text kind) {
+      return DelegationTokenIdentifier.MAPREDUCE_DELEGATION_KIND.equals(kind);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public long renew(Token<?> token, Configuration conf
+                      ) throws IOException, InterruptedException {
+      InetSocketAddress addr = 
+          NetUtils.createSocketAddr(token.getService().toString());
+      JobSubmissionProtocol jt = createRPCProxy(addr, conf);
+      return jt.renewDelegationToken((Token<DelegationTokenIdentifier>) token);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void cancel(Token<?> token, Configuration conf
+                       ) throws IOException, InterruptedException {
+      InetSocketAddress addr = 
+          NetUtils.createSocketAddr(token.getService().toString());
+      JobSubmissionProtocol jt = createRPCProxy(addr, conf);
+      jt.cancelDelegationToken((Token<DelegationTokenIdentifier>) token);
+    }
+
+    @Override
+    public boolean isManaged(Token<?> token) throws IOException {
+      return true;
+    }
+    
   }
 
   /**

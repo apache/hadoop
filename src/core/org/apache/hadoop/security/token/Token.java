@@ -22,9 +22,14 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.ServiceLoader;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
@@ -36,10 +41,12 @@ import org.apache.hadoop.io.WritableUtils;
  * The client-side form of the token.
  */
 public class Token<T extends TokenIdentifier> implements Writable {
+  public static final Log LOG = LogFactory.getLog(Token.class);
   private byte[] identifier;
   private byte[] password;
   private Text kind;
   private Text service;
+  private TokenRenewer renewer;
   
   /**
    * Construct a token given a token identifier and a secret manager for the
@@ -79,6 +86,17 @@ public class Token<T extends TokenIdentifier> implements Writable {
   }
 
   /**
+   * Clone a token.
+   * @param other the token to clone
+   */
+  public Token(Token<T> other) {
+    this.identifier = other.identifier;
+    this.password = other.password;
+    this.kind = other.kind;
+    this.service = other.service;
+  }
+
+  /**
    * Get the token identifier
    * @return the token identifier
    */
@@ -100,6 +118,16 @@ public class Token<T extends TokenIdentifier> implements Writable {
    */
   public Text getKind() {
     return kind;
+  }
+
+  /**
+   * Set the token kind. This is only intended to be used by services that
+   * wrap another service's token, such as HFTP wrapping HDFS.
+   * @param newKind
+   */
+  @InterfaceAudience.Private
+  public void setKind(Text newKind) {
+    kind = newKind;
   }
 
   /**
@@ -242,4 +270,88 @@ public class Token<T extends TokenIdentifier> implements Writable {
     buffer.append(service.toString());
     return buffer.toString();
   }
+  
+  private static ServiceLoader<TokenRenewer> renewers =
+      ServiceLoader.load(TokenRenewer.class);
+
+  private synchronized TokenRenewer getRenewer() throws IOException {
+    if (renewer != null) {
+      return renewer;
+    }
+    renewer = TRIVIAL_RENEWER;
+    for (TokenRenewer canidate: renewers) {
+      if (canidate.handleKind(this.kind)) {
+        renewer = canidate;
+        return renewer;
+      }
+    }
+    LOG.warn("No TokenRenewer defined for token kind " + this.kind);
+    return renewer;
+  }
+
+  /**
+   * Is this token managed so that it can be renewed or cancelled?
+   * @return true, if it can be renewed and cancelled.
+   */
+  public boolean isManaged() throws IOException {
+    return getRenewer().isManaged(this);
+  }
+
+  /**
+   * Renew this delegation token
+   * @return the new expiration time
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public long renew(Configuration conf
+                    ) throws IOException, InterruptedException {
+    return getRenewer().renew(this, conf);
+  }
+  
+  /**
+   * Cancel this delegation token
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public void cancel(Configuration conf
+                     ) throws IOException, InterruptedException {
+    getRenewer().cancel(this, conf);
+  }
+  
+  /**
+   * A trivial renewer for token kinds that aren't managed. Sub-classes need
+   * to implement getKind for their token kind.
+   */
+  public static class TrivialRenewer extends TokenRenewer {
+    
+    // define the kind for this renewer
+    protected Text getKind() {
+      return null;
+    }
+
+    @Override
+    public boolean handleKind(Text kind) {
+      return kind.equals(getKind());
+    }
+
+    @Override
+    public boolean isManaged(Token<?> token) {
+      return false;
+    }
+
+    @Override
+    public long renew(Token<?> token, Configuration conf) {
+      throw new UnsupportedOperationException("Token renewal is not supported "+
+                                              " for " + token.kind + " tokens");
+    }
+
+    @Override
+    public void cancel(Token<?> token, Configuration conf) throws IOException,
+        InterruptedException {
+      throw new UnsupportedOperationException("Token cancel is not supported " +
+          " for " + token.kind + " tokens");
+    }
+
+  }
+  private static final TokenRenewer TRIVIAL_RENEWER = new TrivialRenewer();
 }

@@ -270,7 +270,8 @@ public class SecurityUtil {
    * @return "ip:port"
    */
   static String buildDTAuthority(InetSocketAddress addr) {
-    return buildDTAuthority(addr.getAddress().getHostAddress(), addr.getPort());
+    String host= addr.getAddress().getHostAddress();
+    return buildDTAuthority(host, addr.getPort());
   }
   
   /**

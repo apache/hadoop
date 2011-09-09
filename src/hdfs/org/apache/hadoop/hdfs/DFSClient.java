@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.hdfs.DistributedFileSystem.DiskStatus;
 import org.apache.hadoop.hdfs.protocol.*;
@@ -42,6 +43,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.util.*;
 
 import org.apache.commons.logging.*;
@@ -298,17 +300,33 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     return result;
   }
 
+  /**
+   * Renew a delegation token
+   * @param token the token to renew
+   * @return the new expiration time
+   * @throws InvalidToken
+   * @throws IOException
+   * @deprecated Use Token.renew instead.
+   */
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
     try {
-      LOG.info("Renewing " + stringifyToken(token));
-      return namenode.renewDelegationToken(token);
+      return token.renew(conf);
+    } catch (InterruptedException ie) {
+      throw new RuntimeException("caught interrupted", ie);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(InvalidToken.class,
                                      AccessControlException.class);
     }
   }
 
+  /**
+   * Cancel a delegation token
+   * @param token the token to cancel
+   * @throws InvalidToken
+   * @throws IOException
+   * @deprecated Use Token.cancel instead.
+   */
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
     try {
@@ -320,6 +338,55 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     }
   }
   
+  @InterfaceAudience.Private
+  public static class Renewer extends TokenRenewer {
+    
+    @Override
+    public boolean handleKind(Text kind) {
+      return DelegationTokenIdentifier.HDFS_DELEGATION_KIND.equals(kind);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public long renew(Token<?> token, Configuration conf) throws IOException {
+      Token<DelegationTokenIdentifier> delToken = 
+          (Token<DelegationTokenIdentifier>) token;
+      LOG.info("Renewing " + stringifyToken(delToken));
+      ClientProtocol nn = 
+        createRPCNamenode(NameNode.getAddress(token.getService().toString()),
+                          conf, UserGroupInformation.getCurrentUser());
+      try {
+        return nn.renewDelegationToken(delToken);
+      } catch (RemoteException re) {
+        throw re.unwrapRemoteException(InvalidToken.class, 
+                                       AccessControlException.class);
+      }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void cancel(Token<?> token, Configuration conf) throws IOException {
+      Token<DelegationTokenIdentifier> delToken = 
+          (Token<DelegationTokenIdentifier>) token;
+      LOG.info("Cancelling " + stringifyToken(delToken));
+      ClientProtocol nn = 
+          createRPCNamenode(NameNode.getAddress(token.getService().toString()),
+                            conf, UserGroupInformation.getCurrentUser());
+        try {
+          nn.cancelDelegationToken(delToken);
+        } catch (RemoteException re) {
+          throw re.unwrapRemoteException(InvalidToken.class, 
+                                         AccessControlException.class);
+        }
+    }
+
+    @Override
+    public boolean isManaged(Token<?> token) throws IOException {
+      return true;
+    }
+    
+  }
+
   /**
    * Report corrupt blocks that were discovered by the client.
    */

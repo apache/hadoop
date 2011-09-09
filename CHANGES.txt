@@ -25,6 +25,9 @@ Release 0.20.205.0 - unreleased
     HDFS-1520. Lightweight NameNode operation recoverLease to trigger 
     lease recovery. (Hairong Kuang via dhruba)
 
+    MAPREDUCE-2764. Allow JobTracker to renew and cancel arbitrary token types,
+    including delegation tokens obtained via hftp. (omalley)
+
   BUG FIXES
 
     MAPREDUCE-2324. Removed usage of broken

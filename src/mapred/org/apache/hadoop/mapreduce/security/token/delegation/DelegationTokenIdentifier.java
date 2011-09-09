@@ -28,8 +28,9 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdenti
 //@InterfaceAudience.Private
 public class DelegationTokenIdentifier 
   extends AbstractDelegationTokenIdentifier {
-static final Text MAPREDUCE_DELEGATION_KIND = 
-  new Text("MAPREDUCE_DELEGATION_TOKEN");
+  
+  public static final Text MAPREDUCE_DELEGATION_KIND = 
+    new Text("MAPREDUCE_DELEGATION_TOKEN");
 
 /**
  * Create an empty delegation token identifier for reading into.
