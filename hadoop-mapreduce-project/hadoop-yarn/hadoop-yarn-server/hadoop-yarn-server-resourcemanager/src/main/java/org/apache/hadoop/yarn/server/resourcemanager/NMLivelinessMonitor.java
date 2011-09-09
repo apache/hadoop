@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
@@ -38,11 +39,11 @@ public class NMLivelinessMonitor extends AbstractLivelinessMonitor<NodeId> {
 
   public void init(Configuration conf) {
     super.init(conf);
-    setExpireInterval(conf.getInt(RMConfig.NM_EXPIRY_INTERVAL,
-        RMConfig.DEFAULT_NM_EXPIRY_INTERVAL));
+    setExpireInterval(conf.getInt(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_RM_NM_EXPIRY_INTERVAL_MS));
     setMonitorInterval(conf.getInt(
-        RMConfig.NMLIVELINESS_MONITORING_INTERVAL,
-        RMConfig.DEFAULT_NMLIVELINESS_MONITORING_INTERVAL));
+        YarnConfiguration.RM_NM_LIVENESS_MONITOR_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_RM_NM_LIVENESS_MONITOR_INTERVAL_MS));
   }
 
   @Override

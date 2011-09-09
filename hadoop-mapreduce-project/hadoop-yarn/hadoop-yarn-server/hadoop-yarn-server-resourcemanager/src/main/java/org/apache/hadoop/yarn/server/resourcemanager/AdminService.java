@@ -83,12 +83,12 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
   public void init(Configuration conf) {
     super.init(conf);
     String bindAddress =
-      conf.get(RMConfig.ADMIN_ADDRESS,
-          RMConfig.DEFAULT_ADMIN_BIND_ADDRESS);
+      conf.get(YarnConfiguration.RM_ADMIN_ADDRESS,
+          YarnConfiguration.RM_ADMIN_ADDRESS);
     masterServiceAddress =  NetUtils.createSocketAddr(bindAddress);
     adminAcl = 
       new AccessControlList(
-          conf.get(RMConfig.RM_ADMIN_ACL, RMConfig.DEFAULT_RM_ADMIN_ACL));
+          conf.get(YarnConfiguration.RM_ADMIN_ACL, YarnConfiguration.DEFAULT_RM_ADMIN_ACL));
   }
 
   public void start() {
@@ -100,8 +100,8 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
     this.server =
       rpc.getServer(RMAdminProtocol.class, this, masterServiceAddress,
           serverConf, null,
-          serverConf.getInt(RMConfig.RM_ADMIN_THREADS, 
-              RMConfig.DEFAULT_RM_ADMIN_THREADS));
+          serverConf.getInt(YarnConfiguration.RM_ADMIN_CLIENT_THREAD_COUNT, 
+              YarnConfiguration.DEFAULT_RM_ADMIN_CLIENT_THREAD_COUNT));
     this.server.start();
     super.start();
   }
@@ -219,7 +219,7 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
     Configuration conf = new Configuration();
     adminAcl = 
       new AccessControlList(
-          conf.get(RMConfig.RM_ADMIN_ACL, RMConfig.DEFAULT_RM_ADMIN_ACL));
+          conf.get(YarnConfiguration.RM_ADMIN_ACL, YarnConfiguration.DEFAULT_RM_ADMIN_ACL));
     RMAuditLogger.logSuccess(user.getShortUserName(), "refreshAdminAcls", 
         "AdminService");
 

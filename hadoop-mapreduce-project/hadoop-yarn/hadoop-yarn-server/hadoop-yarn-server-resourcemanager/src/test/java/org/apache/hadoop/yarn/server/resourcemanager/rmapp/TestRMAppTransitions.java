@@ -117,7 +117,7 @@ public class TestRMAppTransitions {
     String queue = MockApps.newQueue();
     Configuration conf = new YarnConfiguration();
     // ensure max retries set to known value
-    conf.setInt("yarn.server.resourcemanager.application.max.retries", maxRetries);
+    conf.setInt(YarnConfiguration.RM_AM_MAX_RETRIES, maxRetries);
     ApplicationSubmissionContext submissionContext = null; 
     String clientTokenStr = "bogusstring";
     ApplicationStore appStore = mock(ApplicationStore.class);

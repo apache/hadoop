@@ -28,6 +28,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
@@ -48,7 +49,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
 
   private static final Log LOG = LogFactory.getLog(RMAppManager.class);
 
-  private int completedAppsMax = RMConfig.DEFAULT_EXPIRE_APPLICATIONS_COMPLETED_MAX;
+  private int completedAppsMax = YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS;
   private LinkedList<ApplicationId> completedApps = new LinkedList<ApplicationId>();
 
   private final RMContext rmContext;
@@ -66,8 +67,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
     this.masterService = masterService;
     this.conf = conf;
     setCompletedAppsMax(conf.getInt(
-        RMConfig.EXPIRE_APPLICATIONS_COMPLETED_MAX,
-        RMConfig.DEFAULT_EXPIRE_APPLICATIONS_COMPLETED_MAX));
+        YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS,
+        YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS));
   }
 
   /**

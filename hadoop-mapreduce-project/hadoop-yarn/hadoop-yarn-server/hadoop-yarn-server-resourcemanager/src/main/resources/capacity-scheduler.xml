@@ -1,58 +1,79 @@
 <configuration>
 
   <property>
-    <name>yarn.capacity-scheduler.maximum-applications</name>
+    <name>yarn.scheduler.capacity.maximum-applications</name>
     <value>10000</value>
+    <description>Maximum number of applications that can be running.
+    </description>
   </property>
 
   <property>
-    <name>yarn.capacity-scheduler.maximum-am-resource-percent</name>
+    <name>yarn.scheduler.capacity.maximum-am-resource-percent</name>
     <value>0.1</value>
   </property>
 
   <property>
-    <name>yarn.capacity-scheduler.root.queues</name>
+    <name>yarn.scheduler.capacity.root.queues</name>
     <value>default</value>
+    <description>The queues at the this level (root is the root queue).
+    </description>
   </property>
 
   <property>
-    <name>yarn.capacity-scheduler.root.capacity</name>
+    <name>yarn.scheduler.capacity.root.capacity</name>
     <value>100</value>
+    <description>The total capacity as a percentage out of 100 for this queue.
+    If it has child queues then this includes their capacity as well.
+    The child queues capacity should add up to their parent queue's capacity
+    or less.</description>
   </property>
 
   <property>
-    <name>yarn.capacity-scheduler.root.acl_administer_queues</name>
+    <name>yarn.scheduler.capacity.root.acl_administer_queues</name>
     <value>*</value>
+    <description>The ACL for who can administer this queue. i.e.
+    change sub queue allocations.</description>
   </property>
 
   <property>
-    <name>yarn.capacity-scheduler.root.default.capacity</name>
+    <name>yarn.scheduler.capacity.root.default.capacity</name>
     <value>100</value>
+    <description>default queue target capacity.</description>
   </property>
 
   <property>
-    <name>yarn.capacity-scheduler.root.default.user-limit-factor</name>
+    <name>yarn.scheduler.capacity.root.default.user-limit-factor</name>
     <value>1</value>
+    <description>default queue user limit a percantage from 0.0 to 1.0.
+    </description>
   </property>
 
   <property>
-    <name>yarn.capacity-scheduler.root.default.maximum-capacity</name>
+    <name>yarn.scheduler.capacity.root.default.maximum-capacity</name>
     <value>-1</value>
+    <description>the maximum capacity of the default queue -1 disables.
+    </description>
   </property>
 
   <property>
-    <name>yarn.capacity-scheduler.root.default.state</name>
+    <name>yarn.scheduler.capacity.root.default.state</name>
     <value>RUNNING</value>
+    <description>The state of the default queue.  can be RUNNING or STOPPED
+    </description>
   </property>
 
   <property>
-    <name>yarn.capacity-scheduler.root.default.acl_submit_jobs</name>
+    <name>yarn.scheduler.capacity.root.default.acl_submit_jobs</name>
     <value>*</value>
+    <description>The ACL of who can submit jobs to the default queue.
+    </description>
   </property>
 
   <property>
-    <name>yarn.capacity-scheduler.root.default.acl_administer_jobs</name>
+    <name>yarn.scheduler.capacity.root.default.acl_administer_jobs</name>
     <value>*</value>
+    <description>The ACL of who can administer jobs on the default queue.
+    </description>
   </property>
 
 </configuration>

@@ -154,7 +154,7 @@ public class MRAppMaster extends CompositeService {
     // for an app later
     appName = conf.get(MRJobConfig.JOB_NAME, "<missing app name>");
 
-    if (conf.getBoolean(AMConstants.RECOVERY_ENABLE, false)
+    if (conf.getBoolean(MRJobConfig.MR_AM_JOB_RECOVERY_ENABLE, false)
          && startCount > 1) {
       LOG.info("Recovery is enabled. Will try to recover from previous life.");
       Recovery recoveryServ = new RecoveryService(appID, clock, startCount);
@@ -349,7 +349,7 @@ public class MRAppMaster extends CompositeService {
     try {
       speculatorClass
           // "yarn.mapreduce.job.speculator.class"
-          = conf.getClass(AMConstants.SPECULATOR_CLASS,
+          = conf.getClass(MRJobConfig.MR_AM_JOB_SPECULATOR,
                           DefaultSpeculator.class,
                           Speculator.class);
       Constructor<? extends Speculator> speculatorConstructor
@@ -360,19 +360,19 @@ public class MRAppMaster extends CompositeService {
       return result;
     } catch (InstantiationException ex) {
       LOG.error("Can't make a speculator -- check "
-          + AMConstants.SPECULATOR_CLASS + " " + ex);
+          + MRJobConfig.MR_AM_JOB_SPECULATOR, ex);
       throw new YarnException(ex);
     } catch (IllegalAccessException ex) {
       LOG.error("Can't make a speculator -- check "
-          + AMConstants.SPECULATOR_CLASS + " " + ex);
+          + MRJobConfig.MR_AM_JOB_SPECULATOR, ex);
       throw new YarnException(ex);
     } catch (InvocationTargetException ex) {
       LOG.error("Can't make a speculator -- check "
-          + AMConstants.SPECULATOR_CLASS + " " + ex);
+          + MRJobConfig.MR_AM_JOB_SPECULATOR, ex);
       throw new YarnException(ex);
     } catch (NoSuchMethodException ex) {
       LOG.error("Can't make a speculator -- check "
-          + AMConstants.SPECULATOR_CLASS + " " + ex);
+          + MRJobConfig.MR_AM_JOB_SPECULATOR, ex);
       throw new YarnException(ex);
     }
   }

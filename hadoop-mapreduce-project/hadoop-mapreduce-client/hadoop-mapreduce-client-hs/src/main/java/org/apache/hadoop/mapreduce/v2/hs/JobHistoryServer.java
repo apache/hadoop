@@ -24,7 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JHConfig;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnException;
@@ -68,8 +68,8 @@ public class JobHistoryServer extends CompositeService {
   }
 
   protected void doSecureLogin(Configuration conf) throws IOException {
-    SecurityUtil.login(conf, JHConfig.HS_KEYTAB_KEY,
-        JHConfig.HS_SERVER_PRINCIPAL_KEY);
+    SecurityUtil.login(conf, JHAdminConfig.MR_HISTORY_KEYTAB,
+        JHAdminConfig.MR_HISTORY_PRINCIPAL);
   }
 
   public static void main(String[] args) {

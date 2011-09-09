@@ -114,7 +114,7 @@ public class TestContainerTokenSecretManager {
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
     // Set AM expiry interval to be very long.
-    conf.setLong(YarnConfiguration.AM_EXPIRY_INTERVAL, 100000L);
+    conf.setLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, 100000L);
     UserGroupInformation.setConfiguration(conf);
     MiniYARNCluster yarnCluster =
         new MiniYARNCluster(TestContainerTokenSecretManager.class.getName());
@@ -183,8 +183,8 @@ public class TestContainerTokenSecretManager {
 
     // Ask for a container from the RM
     String schedulerAddressString =
-        conf.get(YarnConfiguration.SCHEDULER_ADDRESS,
-            YarnConfiguration.DEFAULT_SCHEDULER_BIND_ADDRESS);
+        conf.get(YarnConfiguration.RM_SCHEDULER_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS);
     final InetSocketAddress schedulerAddr =
         NetUtils.createSocketAddr(schedulerAddressString);
     ApplicationTokenIdentifier appTokenIdentifier =

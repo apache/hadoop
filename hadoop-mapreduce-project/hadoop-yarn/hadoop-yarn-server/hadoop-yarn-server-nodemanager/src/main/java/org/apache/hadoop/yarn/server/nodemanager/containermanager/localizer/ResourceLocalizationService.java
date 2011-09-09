@@ -50,18 +50,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.DEFAULT_MAX_PUBLIC_FETCH_THREADS;
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.DEFAULT_NM_CACHE_CLEANUP_MS;
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.DEFAULT_NM_LOCALIZER_BIND_ADDRESS;
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.DEFAULT_NM_LOCAL_DIR;
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.DEFAULT_NM_LOG_DIR;
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.DEFAULT_NM_TARGET_CACHE_MB;
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.NM_CACHE_CLEANUP_MS;
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.NM_LOCALIZER_BIND_ADDRESS;
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.NM_LOCAL_DIR;
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.NM_LOG_DIR;
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.NM_MAX_PUBLIC_FETCH_THREADS;
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.NM_TARGET_CACHE_MB;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -91,7 +79,6 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
-import org.apache.hadoop.yarn.server.nodemanager.NMConfig;
 import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocol;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalResourceStatus;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerAction;
@@ -154,7 +141,7 @@ public class ResourceLocalizationService extends AbstractService
     this.exec = exec;
     this.dispatcher = dispatcher;
     this.delService = delService;
-    this.localDirsSelector = new LocalDirAllocator(NMConfig.NM_LOCAL_DIR);
+    this.localDirsSelector = new LocalDirAllocator(YarnConfiguration.NM_LOCAL_DIRS);
     this.publicRsrc = new LocalResourcesTrackerImpl(null, dispatcher);
     this.cacheCleanup = new ScheduledThreadPoolExecutor(1);
   }
@@ -174,7 +161,7 @@ public class ResourceLocalizationService extends AbstractService
       // TODO queue deletions here, rather than NM init?
       FileContext lfs = getLocalFileContext(conf);
       String[] sLocalDirs =
-        conf.getStrings(NM_LOCAL_DIR, DEFAULT_NM_LOCAL_DIR);
+        conf.getStrings(YarnConfiguration.NM_LOCAL_DIRS, YarnConfiguration.DEFAULT_NM_LOCAL_DIRS);
 
       localDirs = new ArrayList<Path>(sLocalDirs.length);
       logDirs = new ArrayList<Path>(sLocalDirs.length);
@@ -193,7 +180,7 @@ public class ResourceLocalizationService extends AbstractService
         lfs.mkdir(sysdir, NM_PRIVATE_PERM, true);
         sysDirs.add(sysdir);
       }
-      String[] sLogdirs = conf.getStrings(NM_LOG_DIR, DEFAULT_NM_LOG_DIR);
+      String[] sLogdirs = conf.getStrings(YarnConfiguration.NM_LOG_DIRS, YarnConfiguration.DEFAULT_NM_LOG_DIRS);
       for (String sLogdir : sLogdirs) {
         Path logdir = new Path(sLogdir);
         logDirs.add(logdir);
@@ -206,11 +193,11 @@ public class ResourceLocalizationService extends AbstractService
     logDirs = Collections.unmodifiableList(logDirs);
     sysDirs = Collections.unmodifiableList(sysDirs);
     cacheTargetSize =
-      conf.getLong(NM_TARGET_CACHE_MB, DEFAULT_NM_TARGET_CACHE_MB) << 20;
+      conf.getLong(YarnConfiguration.NM_LOCALIZER_CACHE_TARGET_SIZE_MB, YarnConfiguration.DEFAULT_NM_LOCALIZER_CACHE_TARGET_SIZE_MB) << 20;
     cacheCleanupPeriod =
-      conf.getLong(NM_CACHE_CLEANUP_MS, DEFAULT_NM_CACHE_CLEANUP_MS);
+      conf.getLong(YarnConfiguration.NM_LOCALIZER_CACHE_CLEANUP_INTERVAL_MS, YarnConfiguration.DEFAULT_NM_LOCALIZER_CACHE_CLEANUP_INTERVAL_MS);
     localizationServerAddress = NetUtils.createSocketAddr(
-      conf.get(NM_LOCALIZER_BIND_ADDRESS, DEFAULT_NM_LOCALIZER_BIND_ADDRESS));
+      conf.get(YarnConfiguration.NM_LOCALIZER_ADDRESS, YarnConfiguration.DEFAULT_NM_LOCALIZER_ADDRESS));
     localizerTracker = new LocalizerTracker(conf);
     dispatcher.register(LocalizerEventType.class, localizerTracker);
     cacheCleanup.scheduleWithFixedDelay(new CacheCleanup(dispatcher),
@@ -244,8 +231,8 @@ public class ResourceLocalizationService extends AbstractService
     
     return rpc.getServer(LocalizationProtocol.class, this,
         localizationServerAddress, conf, secretManager, 
-        conf.getInt(NMConfig.NM_LOCALIZATION_THREADS, 
-            NMConfig.DEFAULT_NM_LOCALIZATION_THREADS));
+        conf.getInt(YarnConfiguration.NM_LOCALIZER_CLIENT_THREAD_COUNT, 
+            YarnConfiguration.DEFAULT_NM_LOCALIZER_CLIENT_THREAD_COUNT));
 
   }
 
@@ -496,7 +483,7 @@ public class ResourceLocalizationService extends AbstractService
     PublicLocalizer(Configuration conf) {
       this(conf, getLocalFileContext(conf),
            Executors.newFixedThreadPool(conf.getInt(
-               NM_MAX_PUBLIC_FETCH_THREADS, DEFAULT_MAX_PUBLIC_FETCH_THREADS)),
+               YarnConfiguration.NM_LOCALIZER_FETCH_THREAD_COUNT, YarnConfiguration.DEFAULT_NM_LOCALIZER_FETCH_THREAD_COUNT)),
            new HashMap<Future<Path>,LocalizerResourceRequestEvent>(),
            new HashMap<LocalResourceRequest,List<LocalizerResourceRequestEvent>>());
     }

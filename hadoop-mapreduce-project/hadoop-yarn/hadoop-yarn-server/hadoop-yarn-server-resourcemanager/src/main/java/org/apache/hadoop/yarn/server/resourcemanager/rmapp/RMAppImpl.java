@@ -37,9 +37,9 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
-import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
@@ -181,8 +181,8 @@ public class RMAppImpl implements RMApp {
     this.masterService = masterService;
     this.startTime = System.currentTimeMillis();
 
-    this.maxRetries = conf.getInt(RMConfig.AM_MAX_RETRIES,
-        RMConfig.DEFAULT_AM_MAX_RETRIES);
+    this.maxRetries = conf.getInt(YarnConfiguration.RM_AM_MAX_RETRIES,
+        YarnConfiguration.DEFAULT_RM_AM_MAX_RETRIES);
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();

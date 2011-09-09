@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -39,7 +40,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
-import org.apache.hadoop.yarn.server.nodemanager.NMConfig;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdaterImpl;
@@ -154,7 +154,7 @@ public class MiniYARNCluster extends CompositeService {
             new File(testWorkDir, MiniYARNCluster.this.getName() + "-localDir");
         localDir.mkdir();
         LOG.info("Created localDir in " + localDir.getAbsolutePath());
-        getConfig().set(NMConfig.NM_LOCAL_DIR, localDir.getAbsolutePath());
+        getConfig().set(YarnConfiguration.NM_LOCAL_DIRS, localDir.getAbsolutePath());
         File logDir =
             new File(testWorkDir, MiniYARNCluster.this.getName()
                 + "-logDir");
@@ -164,10 +164,10 @@ public class MiniYARNCluster extends CompositeService {
         logDir.mkdir();
         remoteLogDir.mkdir();
         LOG.info("Created logDir in " + logDir.getAbsolutePath());
-        getConfig().set(NMConfig.NM_LOG_DIR, logDir.getAbsolutePath());
-        getConfig().set(NMConfig.REMOTE_USER_LOG_DIR,
+        getConfig().set(YarnConfiguration.NM_LOG_DIRS, logDir.getAbsolutePath());
+        getConfig().set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
             remoteLogDir.getAbsolutePath());
-        getConfig().setInt(NMConfig.NM_VMEM_GB, 4); // By default AM + 2 containers
+        getConfig().setInt(YarnConfiguration.NM_VMEM_GB, 4); // By default AM + 2 containers
         nodeManager = new NodeManager() {
 
           @Override

@@ -94,7 +94,6 @@ import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerRequestEvent;
 import org.apache.hadoop.mapreduce.v2.app.speculate.SpeculatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleanupEvent;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JHConfig;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
@@ -981,8 +980,8 @@ public abstract class TaskAttemptImpl implements
     try {
       if (progressSplitBlock == null) {
         progressSplitBlock = new WrappedProgressSplitsBlock(conf.getInt(
-            JHConfig.JOBHISTORY_TASKPROGRESS_NUMBER_SPLITS_KEY,
-            WrappedProgressSplitsBlock.DEFAULT_NUMBER_PROGRESS_SPLITS));
+            MRJobConfig.MR_AM_NUM_PROGRESS_SPLITS,
+            MRJobConfig.DEFAULT_MR_AM_NUM_PROGRESS_SPLITS));
       }
       return progressSplitBlock;
     } finally {

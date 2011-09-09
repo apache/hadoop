@@ -40,7 +40,7 @@ public class CapacitySchedulerConfiguration extends Configuration {
   private static final String CS_CONFIGURATION_FILE = "capacity-scheduler.xml";
   
   @Private
-  public static final String PREFIX = "yarn.capacity-scheduler.";
+  public static final String PREFIX = "yarn.scheduler.capacity.";
   
   @Private
   public static final String DOT = ".";

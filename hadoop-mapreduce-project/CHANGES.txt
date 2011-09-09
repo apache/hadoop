@@ -252,6 +252,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2655. Add audit logs to ResourceManager and NodeManager. (Thomas
     Graves via acmurthy)
 
+    MAPREDUCE-2864. Normalize configuration variable names for YARN. (Robert
+    Evans via acmurthy) 
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

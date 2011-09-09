@@ -23,14 +23,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
 import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 
 public class StoreFactory {
   
   public static Store getStore(Configuration conf) {
     Store store = ReflectionUtils.newInstance(
-        conf.getClass(RMConfig.RM_STORE, 
+        conf.getClass(YarnConfiguration.RM_STORE, 
             MemStore.class, Store.class), 
             conf);
     return store;

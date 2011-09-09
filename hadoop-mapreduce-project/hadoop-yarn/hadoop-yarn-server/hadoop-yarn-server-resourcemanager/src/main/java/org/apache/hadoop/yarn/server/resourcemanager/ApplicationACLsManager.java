@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 @InterfaceAudience.Private
 public class ApplicationACLsManager {
@@ -36,7 +37,8 @@ public class ApplicationACLsManager {
   }
 
   public boolean areACLsEnabled() {
-    return conf.getBoolean(RMConfig.RM_ACLS_ENABLED, false);
+    return conf.getBoolean(YarnConfiguration.RM_ACL_ENABLE,
+        YarnConfiguration.DEFAULT_RM_ACL_ENABLE);
   }
 
   /**

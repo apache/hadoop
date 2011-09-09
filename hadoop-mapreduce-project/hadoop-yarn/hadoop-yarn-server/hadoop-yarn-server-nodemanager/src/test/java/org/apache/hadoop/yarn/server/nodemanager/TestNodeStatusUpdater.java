@@ -207,13 +207,13 @@ public class TestNodeStatusUpdater {
     };
 
     YarnConfiguration conf = new YarnConfiguration();
-    conf.setInt(NMConfig.NM_VMEM_GB, 5); // 5GB
-    conf.set(NMConfig.NM_BIND_ADDRESS, "127.0.0.1:12345");
-    conf.set(NMConfig.NM_LOCALIZER_BIND_ADDRESS, "127.0.0.1:12346");
-    conf.set(NMConfig.NM_LOG_DIR, new Path(basedir, "logs").toUri().getPath());
-    conf.set(NMConfig.REMOTE_USER_LOG_DIR, new Path(basedir, "remotelogs")
+    conf.setInt(YarnConfiguration.NM_VMEM_GB, 5); // 5GB
+    conf.set(YarnConfiguration.NM_ADDRESS, "127.0.0.1:12345");
+    conf.set(YarnConfiguration.NM_LOCALIZER_ADDRESS, "127.0.0.1:12346");
+    conf.set(YarnConfiguration.NM_LOG_DIRS, new Path(basedir, "logs").toUri().getPath());
+    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, new Path(basedir, "remotelogs")
         .toUri().getPath());
-    conf.set(NMConfig.NM_LOCAL_DIR, new Path(basedir, "nm0").toUri().getPath());
+    conf.set(YarnConfiguration.NM_LOCAL_DIRS, new Path(basedir, "nm0").toUri().getPath());
     nm.init(conf);
     new Thread() {
       public void run() {

@@ -37,12 +37,12 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.JobCounter;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.Counter;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JHConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -140,7 +140,7 @@ public class JobHistoryEventHandler extends AbstractService
         LOG.info("Creating intermediate history logDir: ["
             + doneDirPath
             + "] + based on conf. Should ideally be created by the JobHistoryServer: "
-            + JHConfig.CREATE_HISTORY_INTERMEDIATE_BASE_DIR_KEY);
+            + MRJobConfig.MR_AM_CREATE_JH_INTERMEDIATE_BASE_DIR);
           mkdir(
               doneDirFS,
               doneDirPath,
@@ -154,7 +154,7 @@ public class JobHistoryEventHandler extends AbstractService
           String message = "Not creating intermediate history logDir: ["
                 + doneDirPath
                 + "] based on conf: "
-                + JHConfig.CREATE_HISTORY_INTERMEDIATE_BASE_DIR_KEY
+                + MRJobConfig.MR_AM_CREATE_JH_INTERMEDIATE_BASE_DIR
                 + ". Either set to true or pre-create this directory with appropriate permissions";
         LOG.error(message);
         throw new YarnException(message);

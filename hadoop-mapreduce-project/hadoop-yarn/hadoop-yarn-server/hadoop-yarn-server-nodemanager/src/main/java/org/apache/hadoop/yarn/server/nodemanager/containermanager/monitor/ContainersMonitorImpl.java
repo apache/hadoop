@@ -29,11 +29,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
-import org.apache.hadoop.yarn.server.nodemanager.NMConfig;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
@@ -45,14 +45,6 @@ public class ContainersMonitorImpl extends AbstractService implements
   final static Log LOG = LogFactory
       .getLog(ContainersMonitorImpl.class);
 
-  private final static String MONITORING_INTERVAL_CONFIG_KEY =
-      NMConfig.NM_PREFIX + "containers-monitor.monitoring-interval";
-  public static final String RESOURCE_CALCULATOR_PLUGIN_CONFIG_KEY =
-      NMConfig.NM_PREFIX + "containers-monitor.resourcecalculatorplugin";
-  public static final String NM_RESERVED_PHYSICALMEMORY_MB =
-      NMConfig.NM_PREFIX + "reserved-physical-memory.mb";
-
-  private final static int MONITORING_INTERVAL_DEFAULT = 3000;
   private long monitoringInterval;
   private MonitoringThread monitoringThread;
 
@@ -96,11 +88,11 @@ public class ContainersMonitorImpl extends AbstractService implements
   @Override
   public synchronized void init(Configuration conf) {
     this.monitoringInterval =
-        conf.getLong(MONITORING_INTERVAL_CONFIG_KEY,
-            MONITORING_INTERVAL_DEFAULT);
+        conf.getLong(YarnConfiguration.NM_CONTAINER_MON_INTERVAL_MS,
+            YarnConfiguration.DEFAULT_NM_CONTAINER_MON_INTERVAL_MS);
 
     Class<? extends ResourceCalculatorPlugin> clazz =
-        conf.getClass(RESOURCE_CALCULATOR_PLUGIN_CONFIG_KEY, null,
+        conf.getClass(YarnConfiguration.NM_CONTAINER_MON_RESOURCE_CALCULATOR, null,
             ResourceCalculatorPlugin.class);
     this.resourceCalculatorPlugin =
         ResourceCalculatorPlugin.getResourceCalculatorPlugin(clazz, conf);
@@ -120,7 +112,7 @@ public class ContainersMonitorImpl extends AbstractService implements
 
     // ///////// Virtual memory configuration //////
     this.maxVmemAllottedForContainers =
-        conf.getLong(NMConfig.NM_VMEM_GB, NMConfig.DEFAULT_NM_VMEM_GB);
+        conf.getLong(YarnConfiguration.NM_VMEM_GB, YarnConfiguration.DEFAULT_NM_VMEM_GB);
     this.maxVmemAllottedForContainers =
         this.maxVmemAllottedForContainers * 1024 * 1024 * 1024L; //Normalize
 
@@ -131,7 +123,7 @@ public class ContainersMonitorImpl extends AbstractService implements
 
     // ///////// Physical memory configuration //////
     long reservedPmemOnNM =
-        conf.getLong(NM_RESERVED_PHYSICALMEMORY_MB, DISABLED_MEMORY_LIMIT);
+        conf.getLong(YarnConfiguration.NM_RESERVED_MEMORY_MB, DISABLED_MEMORY_LIMIT);
     reservedPmemOnNM =
         reservedPmemOnNM == DISABLED_MEMORY_LIMIT
             ? DISABLED_MEMORY_LIMIT

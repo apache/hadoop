@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RpcClientFactory;
 import org.apache.hadoop.yarn.factories.RpcServerFactory;
 import org.apache.hadoop.yarn.factories.impl.pb.RpcClientFactoryPBImpl;
@@ -35,13 +36,7 @@ import org.apache.hadoop.yarn.factories.impl.pb.RpcServerFactoryPBImpl;
  */
 public class RpcFactoryProvider {
   private static final Log LOG = LogFactory.getLog(RpcFactoryProvider.class);
-  //TODO Move these keys to CommonConfigurationKeys
-  public static final String RPC_SERIALIZER_KEY = "org.apache.yarn.ipc.rpc.serializer.property";
-  public static final String RPC_SERIALIZER_DEFAULT = "protocolbuffers";
 
-  public static final String RPC_CLIENT_FACTORY_CLASS_KEY = "org.apache.yarn.ipc.client.factory.class";
-  public static final String RPC_SERVER_FACTORY_CLASS_KEY = "org.apache.yarn.ipc.server.factory.class";
-  
   private RpcFactoryProvider() {
     
   }
@@ -51,12 +46,12 @@ public class RpcFactoryProvider {
     if (conf == null) {
       conf = new Configuration();
     }
-    String serverFactoryClassName = conf.get(RPC_SERVER_FACTORY_CLASS_KEY);
+    String serverFactoryClassName = conf.get(YarnConfiguration.IPC_SERVER_FACTORY);
     if (serverFactoryClassName == null) {
-      if (conf.get(RPC_SERIALIZER_KEY, RPC_SERIALIZER_DEFAULT).equals(RPC_SERIALIZER_DEFAULT)) {
+      if (conf.get(YarnConfiguration.IPC_SERIALIZER_TYPE, YarnConfiguration.DEFAULT_IPC_SERIALIZER_TYPE).equals(YarnConfiguration.DEFAULT_IPC_SERIALIZER_TYPE)) {
         return RpcServerFactoryPBImpl.get();
       } else {
-        throw new YarnException("Unknown serializer: [" + conf.get(RPC_SERIALIZER_KEY) + "]. Use keys: [" + RPC_CLIENT_FACTORY_CLASS_KEY + "][" + RPC_SERVER_FACTORY_CLASS_KEY + "] to specify factories");
+        throw new YarnException("Unknown serializer: [" + conf.get(YarnConfiguration.IPC_SERIALIZER_TYPE) + "]. Use keys: [" + YarnConfiguration.IPC_CLIENT_FACTORY + "][" + YarnConfiguration.IPC_SERVER_FACTORY + "] to specify factories");
       }
     } else {
       return (RpcServerFactory) getFactoryClassInstance(serverFactoryClassName);
@@ -64,12 +59,12 @@ public class RpcFactoryProvider {
   }
   
   public static RpcClientFactory getClientFactory(Configuration conf) {
-    String clientFactoryClassName = conf.get(RPC_CLIENT_FACTORY_CLASS_KEY);
+    String clientFactoryClassName = conf.get(YarnConfiguration.IPC_CLIENT_FACTORY);
     if (clientFactoryClassName == null) {
-      if (conf.get(RPC_SERIALIZER_KEY, RPC_SERIALIZER_DEFAULT).equals(RPC_SERIALIZER_DEFAULT)) {
+      if (conf.get(YarnConfiguration.IPC_SERIALIZER_TYPE, YarnConfiguration.DEFAULT_IPC_SERIALIZER_TYPE).equals(YarnConfiguration.DEFAULT_IPC_SERIALIZER_TYPE)) {
         return RpcClientFactoryPBImpl.get();
       } else {
-        throw new YarnException("Unknown serializer: [" + conf.get(RPC_SERIALIZER_KEY) + "]. Use keys: [" + RPC_CLIENT_FACTORY_CLASS_KEY + "][" + RPC_SERVER_FACTORY_CLASS_KEY + "] to specify factories");
+        throw new YarnException("Unknown serializer: [" + conf.get(YarnConfiguration.IPC_SERIALIZER_TYPE) + "]. Use keys: [" + YarnConfiguration.IPC_CLIENT_FACTORY + "][" + YarnConfiguration.IPC_SERVER_FACTORY + "] to specify factories");
       }
     } else {
       return(RpcClientFactory) getFactoryClassInstance(clientFactoryClassName);

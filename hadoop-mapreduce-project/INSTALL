@@ -56,12 +56,12 @@ export YARN_CONF_DIR=$HADOOP_CONF_DIR
 
 Step 9) Setup config: for running mapreduce applications, which now are in user land, you need to setup nodemanager with the following configuration in your yarn-site.xml before you start the nodemanager.
     <property>
-      <name>nodemanager.auxiluary.services</name>
+      <name>yarn.nodemanager.aux-services</name>
       <value>mapreduce.shuffle</value>
     </property>
 
     <property>
-      <name>nodemanager.aux.service.mapreduce.shuffle.class</name>
+      <name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
       <value>org.apache.hadoop.mapred.ShuffleHandler</value>
     </property>
 

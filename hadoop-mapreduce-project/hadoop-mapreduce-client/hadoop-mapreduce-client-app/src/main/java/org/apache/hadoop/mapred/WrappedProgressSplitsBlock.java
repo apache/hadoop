@@ -20,9 +20,6 @@ package org.apache.hadoop.mapred;
 
 // Workaround for ProgressSplitBlock being package access
 public class WrappedProgressSplitsBlock extends ProgressSplitsBlock {
-
-  public static final int DEFAULT_NUMBER_PROGRESS_SPLITS = 12;
-
   private WrappedPeriodicStatsAccumulator wrappedProgressWallclockTime;
   private WrappedPeriodicStatsAccumulator wrappedProgressCPUTime;
   private WrappedPeriodicStatsAccumulator wrappedProgressVirtualMemoryKbytes;

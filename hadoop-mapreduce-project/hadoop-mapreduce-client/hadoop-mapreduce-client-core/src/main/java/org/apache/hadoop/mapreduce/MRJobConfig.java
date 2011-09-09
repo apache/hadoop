@@ -301,4 +301,103 @@ public interface MRJobConfig {
     "mapreduce.ubertask.child.ulimit";     // or mapreduce.uber.ulimit?
   public static final String UBERTASK_ENV =
     "mapreduce.ubertask.child.env";        // or mapreduce.uber.env?
+
+  public static final String MR_PREFIX = "yarn.app.mapreduce.";
+
+  public static final String MR_AM_PREFIX = MR_PREFIX + "am.";
+
+  /** The staging directory for map reduce.*/
+  public static final String MR_AM_STAGING_DIR = 
+    MR_AM_PREFIX+"staging-dir";
+
+  /** The amount of memory the MR app master needs.*/
+  public static final String MR_AM_VMEM_MB =
+    MR_AM_PREFIX+"resource.mb";
+  public static final int DEFAULT_MR_AM_VMEM_MB = 2048;
+
+  /** Command line arguments passed to the MR app master.*/
+  public static final String MR_AM_COMMAND_OPTS =
+    MR_AM_PREFIX+"command-opts";
+  public static final String DEFAULT_MR_AM_COMMAND_OPTS = "-Xmx1536m";
+
+  /** Root Logging level passed to the MR app master.*/
+  public static final String MR_AM_LOG_OPTS = 
+    MR_AM_PREFIX+"log-opts";
+  public static final String DEFAULT_MR_AM_LOG_OPTS = "INFO";
+
+  /**The number of splits when reporting progress in MR*/
+  public static final String MR_AM_NUM_PROGRESS_SPLITS = 
+    MR_AM_PREFIX+"num-progress-splits";
+  public static final int DEFAULT_MR_AM_NUM_PROGRESS_SPLITS = 12;
+
+  /** Number of threads user to launch containers in the app master.*/
+  public static final String MR_AM_CONTAINERLAUNCHER_THREAD_COUNT =
+    MR_AM_PREFIX+"containerlauncher.thread-count";
+
+  /** Number of threads to handle job client RPC requests.*/
+  public static final String MR_AM_JOB_CLIENT_THREAD_COUNT =
+    MR_AM_PREFIX + "job.client.thread-count";
+  public static final int DEFAULT_MR_AM_JOB_CLIENT_THREAD_COUNT = 1;
+
+  /** Enable blacklisting of nodes in the job.*/
+  public static final String MR_AM_JOB_NODE_BLACKLISTING_ENABLE = 
+    MR_AM_PREFIX  + "job.node.blacklisting.enable";
+
+  /** Enable job recovery.*/
+  public static final String MR_AM_JOB_RECOVERY_ENABLE = 
+    MR_AM_PREFIX + "job.recovery.enable";
+
+  /** 
+   * Limit on the number of reducers that can be preempted to ensure that at
+   *  least one map task can run if it needs to. Percentage between 0.0 and 1.0
+   */
+  public static final String MR_AM_JOB_REDUCE_PREEMPTION_LIMIT = 
+    MR_AM_PREFIX  + "job.reduce.preemption.limit";
+  public static final float DEFAULT_MR_AM_JOB_REDUCE_PREEMPTION_LIMIT = 0.5f;
+
+  /**
+   * Limit reduces starting until a certain percentage of maps have finished.
+   *  Percentage between 0.0 and 1.0
+   */
+  public static final String MR_AM_JOB_REDUCE_RAMPUP_UP_LIMIT = 
+    MR_AM_PREFIX  + "job.reduce.rampup.limit";
+  public static final float DEFAULT_MR_AM_JOB_REDUCE_RAMP_UP_LIMIT = 0.5f;
+
+  /** The class that should be used for speculative execution calculations.*/
+  public static final String MR_AM_JOB_SPECULATOR =
+    MR_AM_PREFIX + "job.speculator.class";
+
+  /** Class used to estimate task resource needs.*/
+  public static final String MR_AM_TASK_ESTIMATOR =
+    MR_AM_PREFIX + "job.task.estimator.class";
+
+  /** The lambda value in the smoothing function of the task estimator.*/
+  public static final String MR_AM_TASK_ESTIMATOR_SMOOTH_LAMBDA_MS =
+    MR_AM_PREFIX
+    + "job.task.estimator.exponential.smooth.lambda-ms";
+
+  public static final long DEFAULT_MR_AM_TASK_ESTIMATOR_SMNOOTH_LAMBDA_MS = 
+  1000L * 60;
+
+  /** true if the smoothing rate should be exponential.*/
+  public static final String MR_AM_TASK_EXTIMATOR_EXPONENTIAL_RATE_ENABLE =
+    MR_AM_PREFIX + "job.task.estimator.exponential.smooth.rate";
+
+  /** The number of threads used to handle task RPC calls.*/
+  public static final String MR_AM_TASK_LISTENER_THREAD_COUNT =
+    MR_AM_PREFIX + "job.task.listener.thread-count";
+  public static final int DEFAULT_MR_AM_TASK_LISTENER_THREAD_COUNT = 10;
+
+  /** How often the AM should send heartbeats to the RM.*/
+  public static final String MR_AM_TO_RM_HEARTBEAT_INTERVAL_MS =
+    MR_AM_PREFIX + "scheduler.heartbeat.interval-ms";
+  public static final int DEFAULT_MR_AM_TO_RM_HEARTBEAT_INTERVAL_MS = 2000;
+
+  /**
+   * Boolean. Create the base dirs in the JobHistoryEventHandler
+   * Set to false for multi-user clusters.  This is an internal config that
+   * is set by the MR framework and read by it too.
+   */
+  public static final String MR_AM_CREATE_JH_INTERMEDIATE_BASE_DIR = 
+    MR_AM_PREFIX + "create-intermediate-jh-base-dir";
 }

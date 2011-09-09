@@ -202,7 +202,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected ResourceScheduler createScheduler() {
     return 
     ReflectionUtils.newInstance(
-        conf.getClass(RMConfig.RESOURCE_SCHEDULER, 
+        conf.getClass(YarnConfiguration.RM_SCHEDULER, 
             FifoScheduler.class, ResourceScheduler.class), 
         this.conf);
   }
@@ -384,8 +384,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   protected void startWepApp() {
     webApp = WebApps.$for("yarn", masterService).at(
-        conf.get(YarnConfiguration.RM_WEBAPP_BIND_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_WEBAPP_BIND_ADDRESS)).
+        conf.get(YarnConfiguration.RM_WEBAPP_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS)).
       start(new RMWebApp(this));
 
   }
@@ -415,8 +415,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
   
   protected void doSecureLogin() throws IOException {
-    SecurityUtil.login(conf, RMConfig.RM_KEYTAB,
-        YarnConfiguration.RM_SERVER_PRINCIPAL_KEY);
+    SecurityUtil.login(conf, YarnConfiguration.RM_KEYTAB,
+        YarnConfiguration.RM_PRINCIPAL);
   }
 
   @Override

@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.v2.util;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
@@ -113,7 +114,7 @@ public class TestMRApps {
 
   @Test public void testGetJobFileWithUser() {
     Configuration conf = new Configuration();
-    conf.set(MRConstants.APPS_STAGING_DIR_KEY, "/my/path/to/staging");
+    conf.set(MRJobConfig.MR_AM_STAGING_DIR, "/my/path/to/staging");
     String jobFile = MRApps.getJobFile(conf, "dummy-user", new JobID("dummy-job", 12345));
     assertNotNull("getJobFile results in null.", jobFile);
     assertEquals("jobFile with specified user is not as expected.",

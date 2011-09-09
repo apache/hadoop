@@ -47,7 +47,6 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.RMNMSecurityInfoClass;
-import org.apache.hadoop.yarn.server.YarnServerConfig;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
@@ -98,12 +97,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   @Override
   public synchronized void init(Configuration conf) {
     this.rmAddress =
-        conf.get(YarnServerConfig.RESOURCETRACKER_ADDRESS,
-            YarnServerConfig.DEFAULT_RESOURCETRACKER_BIND_ADDRESS);
+        conf.get(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+            YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS);
     this.heartBeatInterval =
-        conf.getLong(NMConfig.HEARTBEAT_INTERVAL,
-            NMConfig.DEFAULT_HEARTBEAT_INTERVAL);
-    int memory = conf.getInt(NMConfig.NM_VMEM_GB, NMConfig.DEFAULT_NM_VMEM_GB);
+        conf.getLong(YarnConfiguration.NM_TO_RM_HEARTBEAT_INTERVAL_MS,
+            YarnConfiguration.DEFAULT_NM_TO_RM_HEARTBEAT_INTERVAL_MS);
+    int memory = conf.getInt(YarnConfiguration.NM_VMEM_GB, YarnConfiguration.DEFAULT_NM_VMEM_GB);
     this.totalResource = recordFactory.newRecordInstance(Resource.class);
     this.totalResource.setMemory(memory * 1024);
     metrics.addResource(totalResource);
@@ -113,13 +112,13 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   @Override
   public void start() {
     String cmBindAddressStr =
-        getConfig().get(NMConfig.NM_BIND_ADDRESS,
-            NMConfig.DEFAULT_NM_BIND_ADDRESS);
+        getConfig().get(YarnConfiguration.NM_ADDRESS,
+            YarnConfiguration.DEFAULT_NM_ADDRESS);
     InetSocketAddress cmBindAddress =
         NetUtils.createSocketAddr(cmBindAddressStr);
     String httpBindAddressStr =
-      getConfig().get(NMConfig.NM_HTTP_BIND_ADDRESS,
-          NMConfig.DEFAULT_NM_HTTP_BIND_ADDRESS);
+      getConfig().get(YarnConfiguration.NM_WEBAPP_ADDRESS,
+          YarnConfiguration.DEFAULT_NM_WEBAPP_ADDRESS);
     InetSocketAddress httpBindAddress =
       NetUtils.createSocketAddr(httpBindAddressStr);
     try {

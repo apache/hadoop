@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.TestContainerManager;
 import org.junit.After;
 
@@ -119,13 +120,13 @@ public class TestContainerManagerWithLCE extends TestContainerManager {
 
   private boolean shouldRunTest() {
     return System
-        .getProperty(LinuxContainerExecutor.CONTAINER_EXECUTOR_EXEC_KEY) != null;
+        .getProperty(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH) != null;
   }
 
   @Override
   protected ContainerExecutor createContainerExecutor() {
-    super.conf.set(LinuxContainerExecutor.CONTAINER_EXECUTOR_EXEC_KEY, System
-        .getProperty(LinuxContainerExecutor.CONTAINER_EXECUTOR_EXEC_KEY));
+    super.conf.set(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, System
+        .getProperty(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH));
     LinuxContainerExecutor linuxContainerExecutor =
         new LinuxContainerExecutor();
     linuxContainerExecutor.setConf(super.conf);

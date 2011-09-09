@@ -33,6 +33,7 @@ import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
@@ -44,8 +45,6 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       .getLog(LinuxContainerExecutor.class);
 
   private String containerExecutorExe;
-  protected static final String CONTAINER_EXECUTOR_EXEC_KEY =
-    NMConfig.NM_PREFIX + "linux-container-executor.path";
   
   @Override
   public void setConf(Configuration conf) {
@@ -98,7 +97,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       new File(hadoopBin, "container-executor").getAbsolutePath();
     return null == conf
       ? defaultPath
-      : conf.get(CONTAINER_EXECUTOR_EXEC_KEY, defaultPath);
+      : conf.get(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, defaultPath);
   }
 
   @Override

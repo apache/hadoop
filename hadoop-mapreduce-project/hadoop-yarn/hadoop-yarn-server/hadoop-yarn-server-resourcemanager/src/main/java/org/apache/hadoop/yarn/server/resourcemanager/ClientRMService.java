@@ -31,7 +31,6 @@ import org.apache.avro.ipc.Server;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -58,10 +57,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
@@ -74,7 +71,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstant
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
@@ -114,8 +110,8 @@ public class ClientRMService extends AbstractService implements
   @Override
   public void init(Configuration conf) {
     clientServiceBindAddress =
-      conf.get(YarnConfiguration.APPSMANAGER_ADDRESS,
-          YarnConfiguration.DEFAULT_APPSMANAGER_BIND_ADDRESS);
+      conf.get(YarnConfiguration.RM_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_ADDRESS);
     clientBindAddress =
       NetUtils.createSocketAddr(clientServiceBindAddress);
 
@@ -138,8 +134,8 @@ public class ClientRMService extends AbstractService implements
       rpc.getServer(ClientRMProtocol.class, this,
             clientBindAddress,
             clientServerConf, null,
-            clientServerConf.getInt(RMConfig.RM_CLIENT_THREADS, 
-                RMConfig.DEFAULT_RM_CLIENT_THREADS));
+            clientServerConf.getInt(YarnConfiguration.RM_CLIENT_THREAD_COUNT, 
+                YarnConfiguration.DEFAULT_RM_CLIENT_THREAD_COUNT));
     this.server.start();
     super.start();
   }

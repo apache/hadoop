@@ -35,7 +35,6 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.admin.AdminSecurityInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
 import org.apache.hadoop.yarn.server.resourcemanager.api.RMAdminProtocol;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshNodesRequest;
@@ -146,8 +145,8 @@ public class RMAdmin extends Configured implements Tool {
 
     // Create the client
     final String adminAddress =
-      conf.get(RMConfig.ADMIN_ADDRESS,
-          RMConfig.DEFAULT_ADMIN_BIND_ADDRESS);
+      conf.get(YarnConfiguration.RM_ADMIN_ADDRESS,
+          YarnConfiguration.RM_ADMIN_ADDRESS);
     final YarnRPC rpc = YarnRPC.create(conf);
     
     if (UserGroupInformation.isSecurityEnabled()) {

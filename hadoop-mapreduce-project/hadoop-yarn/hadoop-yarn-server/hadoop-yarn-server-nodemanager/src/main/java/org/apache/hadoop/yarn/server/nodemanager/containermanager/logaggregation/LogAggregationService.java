@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation;
 
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.DEFAULT_NM_BIND_ADDRESS;
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.NM_BIND_ADDRESS;
-
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -43,12 +40,9 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
-import org.apache.hadoop.yarn.server.nodemanager.NMConfig;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.event.LogAggregatorAppFinishedEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.event.LogAggregatorAppStartedEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.event.LogAggregatorContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.event.LogAggregatorEvent;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -65,13 +59,6 @@ public class LogAggregationService extends AbstractService implements
   Path remoteRootLogDir;
   private String nodeFile;
 
-  static final String LOG_COMPRESSION_TYPE = NMConfig.NM_PREFIX
-      + "logaggregation.log_compression_type";
-  static final String DEFAULT_COMPRESSION_TYPE = "none";
-
-  private static final String LOG_RENTENTION_POLICY_CONFIG_KEY =
-      NMConfig.NM_PREFIX + "logaggregation.retain-policy";
-
   private final ConcurrentMap<ApplicationId, AppLogAggregator> appLogAggregators;
 
   private final ExecutorService threadPool;
@@ -86,17 +73,17 @@ public class LogAggregationService extends AbstractService implements
 
   public synchronized void init(Configuration conf) {
     this.localRootLogDirs =
-        conf.getStrings(NMConfig.NM_LOG_DIR, NMConfig.DEFAULT_NM_LOG_DIR);
+        conf.getStrings(YarnConfiguration.NM_LOG_DIRS, YarnConfiguration.DEFAULT_NM_LOG_DIRS);
     this.remoteRootLogDir =
-        new Path(conf.get(NMConfig.REMOTE_USER_LOG_DIR,
-            NMConfig.DEFAULT_REMOTE_APP_LOG_DIR));
+        new Path(conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
     super.init(conf);
   }
 
   @Override
   public synchronized void start() {
     String address =
-        getConfig().get(NM_BIND_ADDRESS, DEFAULT_NM_BIND_ADDRESS);
+        getConfig().get(YarnConfiguration.NM_ADDRESS, YarnConfiguration.DEFAULT_NM_ADDRESS);
     InetSocketAddress cmBindAddress = NetUtils.createSocketAddr(address);
     try {
       this.nodeFile =
