@@ -172,6 +172,9 @@ Release 0.20.205.0 - unreleased
 
     MAPREDUCE-2610. Make QueueAclsInfo public. (Joep Rottinghuis via acmurthy) 
 
+    MAPREDUCE-2915. Ensure LTC passes java.library.path. (Kihwal Lee via
+    acmurthy) 
+
 Release 0.20.204.0 - 2011-8-25
 
   NEW FEATURES

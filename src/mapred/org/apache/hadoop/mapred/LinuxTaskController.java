@@ -168,6 +168,8 @@ class LinuxTaskController extends TaskController {
     command.add(System.getProperty("java.class.path"));
     command.add("-Dhadoop.log.dir=" + TaskLog.getBaseLogDir());
     command.add("-Dhadoop.root.logger=INFO,console");
+    command.add("-Djava.library.path=" +
+                System.getProperty("java.library.path"));
     command.add(JobLocalizer.class.getName());  // main of JobLocalizer
     command.add(user);
     command.add(jobid);
