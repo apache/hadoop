@@ -475,7 +475,6 @@
       </div>
     </div>
     <div id="breadcrumbs">
-      #publishDate( "left" $decoration.publishDate $decoration.version )
       <div class="xright" style="padding-left: 8px; margin-top: -4px;">
         <form method="GET" action="http://search-hadoop.com/">
           <input type="text" style="width: 192px; height: 15px; font-size: inherit; border: 1px solid darkgray" name="q" value="Search wiki, mailing lists & more" onfocus="this.value=''"/>
@@ -483,7 +482,6 @@
           <button style="height: 20px; width: 60px;">Search</button>
         </form>
       </div>
-      <div class="xright">#links( $decoration.body.links )#publishDate( "right" $decoration.publishDate $decoration.version )</div>
       <div class="clear">
         <hr/>
       </div>
@@ -505,7 +503,7 @@
       <hr/>
     </div>
     <div id="footer">
-      <div class="xright">Copyright &#169;#copyright()All Rights Reserved.#publishDate( "bottom" $decoration.publishDate $decoration.version )</div>
+      <div class="xright"> #publishDate( "right" $decoration.publishDate $decoration.version )&nbsp;| Copyright &#169;#copyright()All Rights Reserved.  </div>
       <div class="clear">
         <hr/>
       </div>

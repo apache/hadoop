@@ -75,7 +75,20 @@ h4 {
 }
 
 #banner img {
-  margin: 10px;
+  padding: 10px;
+  margin: auto;
+  display: block;
+  background: none;
+  float: center;
+  height:;
+}
+
+#breadcrumbs {
+  background-image: url();
+}
+
+#footer {
+  border-top: 0px;
 }
 
 .frontpagebox {
