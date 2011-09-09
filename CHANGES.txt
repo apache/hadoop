@@ -570,6 +570,8 @@ Release 0.90.5 - Unreleased
                META/ROOT regions (todd)
    HBASE-4323  Add debug logging when AssignmentManager can't make a plan
                for a region (todd)
+   HBASE-4313  Refactor TestHBaseFsck to make adding individual hbck tests
+               easier (Jonathan Hsieh)
 
 Release 0.90.4 - August 10, 2011
 
