@@ -1231,6 +1231,9 @@ Release 0.23.0 - Unreleased
    MAPREDUCE-2677. Fixed 404 for some links from HistoryServer. (Robert Evans
    via acmurthy) 
 
+   MAPREDUCE-2937. Ensure reason for application failure is displayed to the
+   user. (mahadev via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
