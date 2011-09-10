@@ -59,6 +59,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.io.WritableWithSize;
+import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.util.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
@@ -1029,6 +1031,10 @@ public abstract class HBaseServer implements RpcServer {
       return hostAddress;
     }
 
+    public int getRemotePort() {
+      return remotePort;
+    }
+
     public void setLastContact(long lastContact) {
       this.lastContact = lastContact;
     }
@@ -1176,6 +1182,7 @@ public abstract class HBaseServer implements RpcServer {
   /** Handles queued calls . */
   private class Handler extends Thread {
     private final BlockingQueue<Call> myCallQueue;
+    private MonitoredRPCHandler status;
 
     public Handler(final BlockingQueue<Call> cq, int instanceNumber) {
       this.myCallQueue = cq;
@@ -1187,15 +1194,21 @@ public abstract class HBaseServer implements RpcServer {
         threadName = "PRI " + threadName;
       }
       this.setName(threadName);
+      this.status = TaskMonitor.get().createRPCStatus(threadName);
     }
 
     @Override
     public void run() {
       LOG.info(getName() + ": starting");
+      status.setStatus("starting");
       SERVER.set(HBaseServer.this);
       while (running) {
         try {
+          status.pause("Waiting for a call");
           Call call = myCallQueue.take(); // pop the queue; maybe blocked here
+          status.setStatus("Setting up call");
+          status.setConnection(call.connection.getHostAddress(), 
+              call.connection.getRemotePort());
 
           if (LOG.isDebugEnabled())
             LOG.debug(getName() + ": has #" + call.id + " from " +
@@ -1209,7 +1222,9 @@ public abstract class HBaseServer implements RpcServer {
           try {
             if (!started)
               throw new ServerNotRunningYetException("Server is not running yet");
-            value = call(call.connection.protocol, call.param, call.timestamp);             // make the call
+            // make the call
+            value = call(call.connection.protocol, call.param, call.timestamp, 
+                status);
           } catch (Throwable e) {
             LOG.debug(getName()+", call "+call+": error: " + e, e);
             errorClass = e.getClass().getName();

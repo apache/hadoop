@@ -25,6 +25,8 @@ ServerName rootLocation = null;
 ServerName metaLocation = null;
 List<ServerName> servers = null;
 boolean showAppendWarning = false;
+String filter = "general";
+String format = "html";
 </%args>
 <%import>
 java.util.*;
@@ -40,6 +42,10 @@ org.apache.hadoop.hbase.client.HBaseAdmin;
 org.apache.hadoop.hbase.client.HConnectionManager;
 org.apache.hadoop.hbase.HTableDescriptor;
 </%import>
+<%if format.equals("json") %>
+  <& ../common/TaskMonitorTmpl; filter = filter; format = "json" &>
+  <%java return; %>
+</%if>
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
@@ -94,7 +100,7 @@ org.apache.hadoop.hbase.HTableDescriptor;
 <tr><td>Zookeeper Quorum</td><td><% master.getZooKeeperWatcher().getQuorum() %></td><td>Addresses of all registered ZK servers. For more, see <a href="/zk.jsp">zk dump</a>.</td></tr>
 </table>
 
-<& ../common/TaskMonitorTmpl &>
+<& ../common/TaskMonitorTmpl; filter = filter &>
 
 <%if (rootLocation != null) %>
 <& catalogTables &>

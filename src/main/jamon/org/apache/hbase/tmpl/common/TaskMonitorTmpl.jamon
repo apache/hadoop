@@ -20,40 +20,74 @@ limitations under the License.
 <%import>
 java.util.*;
 org.apache.hadoop.hbase.monitoring.*;
+org.apache.hadoop.util.StringUtils;
 </%import>
 <%args>
 TaskMonitor taskMonitor = TaskMonitor.get();
+String filter = "general";
+String format = "html";
 </%args>
 <%java>
+List<? extends MonitoredTask> tasks = taskMonitor.getTasks();
+Iterator<? extends MonitoredTask> iter = tasks.iterator();
+// apply requested filter
+while (iter.hasNext()) {
+  MonitoredTask t = iter.next();
+  if (filter.equals("general")) {
+    if (t instanceof MonitoredRPCHandler)
+      iter.remove();
+  } else if (filter.equals("handler")) {
+    if (!(t instanceof MonitoredRPCHandler))
+      iter.remove();
+  } else if (filter.equals("rpc")) {
+    if (!(t instanceof MonitoredRPCHandler) || 
+        !((MonitoredRPCHandler) t).isRPCRunning())
+      iter.remove();
+  } else if (filter.equals("operation")) {
+    if (!(t instanceof MonitoredRPCHandler) || 
+        !((MonitoredRPCHandler) t).isOperationRunning())
+      iter.remove();
+  }
+}
 long now = System.currentTimeMillis();
-List<MonitoredTask> tasks = taskMonitor.getTasks();
 Collections.reverse(tasks);
-
+boolean first = true;
 </%java>
-<h2>Currently running tasks</h2>
-
-<%if tasks.isEmpty()%>
-No tasks currently running on this node.
+<%if format.equals("json")%>
+[<%for MonitoredTask task : tasks%><%if first%><%java>first = false;</%java><%else>,</%if><% task.toJSON() %></%for>]
 <%else>
+  <div style="float:right;">
+    <a href="?filter=all">Show All Monitored Tasks</a> |
+    <a href="?filter=general">Show non-RPC Tasks</a> |
+    <a href="?filter=handler">Show All RPC Handler Tasks</a> |
+    <a href="?filter=rpc">Show Active RPC Calls</a> |
+    <a href="?filter=operation">Show Client Operations</a> |
+    <a href="?format=json&filter=<% filter %>">View as JSON</a>
+  </div>
+  <h2>Recent tasks</h2>
+  <%if tasks.isEmpty()%>
+    No tasks currently running on this node.
+  <%else>
+    <table>
+    <tr>
+      <th>Start Time</th>
+      <th>Description</th>
+      <th>State</th>
+      <th>Status</th>
+    </tr>
+    <%for MonitoredTask task : tasks %>
+    <tr class="task-monitor-<% task.getState() %>">
+      <td><% new Date(task.getStartTime()) %></td>
+      <td><% task.getDescription() %></td>
+      <td><% task.getState() %>
+          (since <% StringUtils.formatTimeDiff(now, task.getStateTime()) %> ago)
+      </td>
+      <td><% task.getStatus() %>
+          (since <% StringUtils.formatTimeDiff(now, task.getStatusTime()) %> 
+          ago)</td>
+    </tr>
+    </%for>
+    </table>
 
-<table>
-<tr>
-  <th>Description</th>
-  <th>Status</th>
-  <th>Age</th>
-</tr>
-<%for MonitoredTask task : tasks %>
-<tr class="task-monitor-<% task.getState() %>">
-  <td><% task.getDescription() %></td>
-  </td>
-  <td><% task.getStatus() %></td>
-  <td><% (int)((now - task.getStartTime())/1000) %>s  
-  <%if task.getCompletionTimestamp() != -1%>
-  (Completed <% (now - task.getCompletionTimestamp())/1000 %>s ago)
   </%if>
-  </td>
-</tr>
-</%for>
-</table>
-
 </%if>

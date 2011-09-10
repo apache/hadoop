@@ -71,12 +71,23 @@ public class TaskMonitor {
         stat.getClass().getClassLoader(),
         new Class<?>[] { MonitoredTask.class },
         new PassthroughInvocationHandler<MonitoredTask>(stat));
-
     TaskAndWeakRefPair pair = new TaskAndWeakRefPair(stat, proxy);
     tasks.add(pair);
     return proxy;
   }
-  
+
+  public MonitoredRPCHandler createRPCStatus(String description) {
+    MonitoredRPCHandler stat = new MonitoredRPCHandlerImpl();
+    stat.setDescription(description);
+    MonitoredRPCHandler proxy = (MonitoredRPCHandler) Proxy.newProxyInstance(
+        stat.getClass().getClassLoader(),
+        new Class<?>[] { MonitoredRPCHandler.class },
+        new PassthroughInvocationHandler<MonitoredRPCHandler>(stat));
+    TaskAndWeakRefPair pair = new TaskAndWeakRefPair(stat, proxy);
+    tasks.add(pair);
+    return proxy;
+  }
+
   private synchronized void purgeExpiredTasks() {
     int size = 0;
     
@@ -107,11 +118,17 @@ public class TaskMonitor {
     }
   }
 
+  /**
+   * Produces a list containing copies of the current state of all non-expired 
+   * MonitoredTasks handled by this TaskMonitor.
+   * @return A complete list of MonitoredTasks.
+   */
   public synchronized List<MonitoredTask> getTasks() {
     purgeExpiredTasks();
     ArrayList<MonitoredTask> ret = Lists.newArrayListWithCapacity(tasks.size());
     for (TaskAndWeakRefPair pair : tasks) {
-      ret.add(pair.get());
+      MonitoredTask t = pair.get();
+      ret.add(t.clone());
     }
     return ret;
   }
@@ -181,7 +198,8 @@ public class TaskMonitor {
   }
   
   /**
-   * An InvocationHandler that simply passes through calls to the original object.
+   * An InvocationHandler that simply passes through calls to the original 
+   * object.
    */
   private static class PassthroughInvocationHandler<T> implements InvocationHandler {
     private T delegatee;

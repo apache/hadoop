@@ -25,3 +25,9 @@ tr.task-monitor-COMPLETE td {
 tr.task-monitor-ABORTED td {
   background-color: #ffa;
 }
+
+tr.task-monitor-WAITING td {
+  background-color: #ccc;
+  font-style: italic;
+}
++ 

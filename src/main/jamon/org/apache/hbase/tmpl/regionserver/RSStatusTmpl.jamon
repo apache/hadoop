@@ -19,6 +19,8 @@ limitations under the License.
 </%doc>
 <%args>
 HRegionServer regionServer;
+String filter = "general";
+String format = "html";
 </%args>
 <%import>
 java.util.*;
@@ -33,6 +35,10 @@ org.apache.hadoop.hbase.HServerInfo;
 org.apache.hadoop.hbase.HServerLoad;
 org.apache.hadoop.hbase.HRegionInfo;
 </%import>
+<%if format.equals("json") %>
+  <& ../common/TaskMonitorTmpl; filter = filter; format = "json" &>
+  <%java return; %>
+</%if>
 <%java>
   HServerInfo serverInfo = null;
   try {
@@ -73,7 +79,7 @@ org.apache.hadoop.hbase.HRegionInfo;
 <tr><td>Zookeeper Quorum</td><td><% regionServer.getZooKeeper().getQuorum() %></td><td>Addresses of all registered ZK servers</td></tr>
 </table>
 
-<& ../common/TaskMonitorTmpl &>
+<& ../common/TaskMonitorTmpl; filter = filter &>
 
 <h2>Online Regions</h2>
 <%if (onlineRegions != null && onlineRegions.size() > 0) %>

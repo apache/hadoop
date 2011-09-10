@@ -540,6 +540,7 @@ Release 0.91.0 - Unreleased
                (Riley Patterson)
    HBASE-4292  Add a debugging dump servlet to the master and regionserver
                (todd)
+   HBASE-4057  Implement HBase version of "show processlist" (Riley Patterson)
 
 Release 0.90.5 - Unreleased
 

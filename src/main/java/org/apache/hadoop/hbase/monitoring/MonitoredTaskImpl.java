@@ -19,19 +19,35 @@
  */
 package org.apache.hadoop.hbase.monitoring;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.codehaus.jackson.map.ObjectMapper;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 class MonitoredTaskImpl implements MonitoredTask {
   private long startTime;
-  private long completionTimestamp = -1;
+  private long statusTime;
+  private long stateTime;
   
-  private String status;
-  private String description;
+  private volatile String status;
+  private volatile String description;
   
-  private State state = State.RUNNING;
+  protected volatile State state = State.RUNNING;
   
   public MonitoredTaskImpl() {
     startTime = System.currentTimeMillis();
+    statusTime = startTime;
+    stateTime = startTime;
+  }
+
+  @Override
+  public synchronized MonitoredTaskImpl clone() {
+    try {
+      return (MonitoredTaskImpl) super.clone();
+    } catch (CloneNotSupportedException e) {
+      throw new AssertionError(); // Won't happen
+    }
   }
 
   @Override
@@ -48,6 +64,11 @@ class MonitoredTaskImpl implements MonitoredTask {
   public String getStatus() {
     return status;
   }
+
+  @Override
+  public long getStatusTime() {
+    return statusTime;
+  }
   
   @Override
   public State getState() {
@@ -55,27 +76,51 @@ class MonitoredTaskImpl implements MonitoredTask {
   }
   
   @Override
-  public long getCompletionTimestamp() {
-    return completionTimestamp;
+  public long getStateTime() {
+    return stateTime;
   }
   
   @Override
+  public long getCompletionTimestamp() {
+    if (state == State.COMPLETE || state == State.ABORTED) {
+      return stateTime;
+    }
+    return -1;
+  }
+
+  @Override
   public void markComplete(String status) {
-    state = State.COMPLETE;
+    setState(State.COMPLETE);
     setStatus(status);
-    completionTimestamp = System.currentTimeMillis();
+  }
+
+  @Override
+  public void pause(String msg) {
+    setState(State.WAITING);
+    setStatus(msg);
+  }
+
+  @Override
+  public void resume(String msg) {
+    setState(State.RUNNING);
+    setStatus(msg);
   }
 
   @Override
   public void abort(String msg) {
     setStatus(msg);
-    state = State.ABORTED;
-    completionTimestamp = System.currentTimeMillis();
+    setState(State.ABORTED);
   }
   
   @Override
   public void setStatus(String status) {
     this.status = status;
+    statusTime = System.currentTimeMillis();
+  }
+
+  protected void setState(State state) {
+    this.state = state;
+    stateTime = System.currentTimeMillis();
   }
 
   @Override
@@ -86,8 +131,7 @@ class MonitoredTaskImpl implements MonitoredTask {
   @Override
   public void cleanup() {
     if (state == State.RUNNING) {
-      state = State.ABORTED;
-      completionTimestamp = System.currentTimeMillis();
+      setState(State.ABORTED);
     }
   }
 
@@ -95,8 +139,41 @@ class MonitoredTaskImpl implements MonitoredTask {
    * Force the completion timestamp backwards so that
    * it expires now.
    */
-  @VisibleForTesting
-  void expireNow() {
-    completionTimestamp -= 180 * 1000;
+  public void expireNow() {
+    stateTime -= 180 * 1000;
   }
+
+  @Override
+  public Map<String, Object> toMap() {
+    Map<String, Object> map = new HashMap<String, Object>();
+    map.put("description", getDescription());
+    map.put("status", getStatus());
+    map.put("state", getState());
+    map.put("starttimems", getStartTime());
+    map.put("statustimems", getCompletionTimestamp());
+    map.put("statetimems", getCompletionTimestamp());
+    return map;
+  }
+
+  @Override
+  public String toJSON() throws IOException {
+    ObjectMapper mapper = new ObjectMapper();
+    return mapper.writeValueAsString(toMap());
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder(512);
+    sb.append(getDescription());
+    sb.append(": status=");
+    sb.append(getStatus());
+    sb.append(", state=");
+    sb.append(getState());
+    sb.append(", startTime=");
+    sb.append(getStartTime());
+    sb.append(", completionTime=");
+    sb.append(getCompletionTimestamp());
+    return sb.toString();
+  }
+
 }

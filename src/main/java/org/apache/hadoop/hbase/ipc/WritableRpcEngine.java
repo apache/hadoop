@@ -38,6 +38,7 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Objects;
@@ -316,7 +317,7 @@ class WritableRpcEngine implements RpcEngine {
 
     @Override
     public Writable call(Class<? extends VersionedProtocol> protocol,
-        Writable param, long receivedTime)
+        Writable param, long receivedTime, MonitoredRPCHandler status)
     throws IOException {
       try {
         Invocation call = (Invocation)param;
@@ -325,6 +326,9 @@ class WritableRpcEngine implements RpcEngine {
               "cause is a version mismatch between client and server.");
         }
         if (verbose) log("Call: " + call);
+        status.setRPC(call.getMethodName(), call.getParameters(), receivedTime);
+        status.setRPCPacket(param);
+        status.resume("Servicing call");
 
         Method method =
           protocol.getMethod(call.getMethodName(),
@@ -369,7 +373,8 @@ class WritableRpcEngine implements RpcEngine {
           // when tagging, we let TooLarge trump TooSmall to keep output simple
           // note that large responses will often also be slow.
           logResponse(call, (tooLarge ? "TooLarge" : "TooSlow"),
-              startTime, processingTime, qTime, responseSize);
+              status.getClient(), startTime, processingTime, qTime,
+              responseSize);
           // provides a count of log-reported slow responses
           if (tooSlow) {
             rpcMetrics.rpcSlowResponseTime.inc(processingTime);
@@ -407,13 +412,14 @@ class WritableRpcEngine implements RpcEngine {
      * client Operations.
      * @param call The call to log.
      * @param tag  The tag that will be used to indicate this event in the log.
+     * @param client          The address of the client who made this call.
      * @param startTime       The time that the call was initiated, in ms.
      * @param processingTime  The duration that the call took to run, in ms.
      * @param qTime           The duration that the call spent on the queue 
      *                        prior to being initiated, in ms.
      * @param responseSize    The size in bytes of the response buffer.
      */
-    private void logResponse(Invocation call, String tag,
+    private void logResponse(Invocation call, String tag, String clientAddress,
         long startTime, int processingTime, int qTime, long responseSize)
       throws IOException {
       Object params[] = call.getParameters();
@@ -425,6 +431,7 @@ class WritableRpcEngine implements RpcEngine {
       responseInfo.put("processingtimems", processingTime);
       responseInfo.put("queuetimems", qTime);
       responseInfo.put("responsesize", responseSize);
+      responseInfo.put("client", clientAddress);
       responseInfo.put("class", instance.getClass().getSimpleName());
       responseInfo.put("method", call.getMethodName());
       if (params.length == 2 && instance instanceof HRegionServer &&

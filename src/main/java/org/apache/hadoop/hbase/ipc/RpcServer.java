@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.ipc;
 import com.google.common.base.Function;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
+import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -48,7 +49,7 @@ public interface RpcServer {
    * @throws java.io.IOException e
    */
   Writable call(Class<? extends VersionedProtocol> protocol,
-      Writable param, long receiveTime)
+      Writable param, long receiveTime, MonitoredRPCHandler status)
       throws IOException;
 
   int getNumOpenConnections();

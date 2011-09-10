@@ -61,13 +61,17 @@ public class MasterStatusServlet extends HttpServlet {
     List<ServerName> servers = master.getServerManager().getOnlineServersList();
 
     response.setContentType("text/html");
-    new MasterStatusTmpl()
+    MasterStatusTmpl tmpl = new MasterStatusTmpl()
       .setFrags(frags)
       .setShowAppendWarning(shouldShowAppendWarning(conf))
       .setRootLocation(rootLocation)
       .setMetaLocation(metaLocation)
-      .setServers(servers)
-      .render(response.getWriter(),
+      .setServers(servers);
+    if (request.getParameter("filter") != null)
+      tmpl.setFilter(request.getParameter("filter"));
+    if (request.getParameter("format") != null)
+      tmpl.setFormat(request.getParameter("format"));
+    tmpl.render(response.getWriter(),
           master, admin);
   }
 

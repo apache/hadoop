@@ -44,13 +44,13 @@ public class TestTaskMonitor {
     
     // Mark it as finished
     task.markComplete("Finished!");
-    assertEquals(MonitoredTask.State.COMPLETE, taskFromTm.getState());
+    assertEquals(MonitoredTask.State.COMPLETE, task.getState());
     
     // It should still show up in the TaskMonitor list
     assertEquals(1, tm.getTasks().size());
     
     // If we mark its completion time back a few minutes, it should get gced
-    ((MonitoredTaskImpl)taskFromTm).expireNow();
+    task.expireNow();
     assertEquals(0, tm.getTasks().size());
   }
   

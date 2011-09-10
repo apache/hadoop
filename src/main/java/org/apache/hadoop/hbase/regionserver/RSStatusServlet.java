@@ -40,7 +40,12 @@ public class RSStatusServlet extends HttpServlet {
     assert hrs != null : "No RS in context!";
     
     resp.setContentType("text/html");
-    new RSStatusTmpl().render(resp.getWriter(), hrs);
+    RSStatusTmpl tmpl = new RSStatusTmpl();
+    if (req.getParameter("format") != null)
+      tmpl.setFormat(req.getParameter("format"));
+    if (req.getParameter("filter") != null)
+      tmpl.setFilter(req.getParameter("filter"));
+    tmpl.render(resp.getWriter(), hrs);
   }
 
 }
