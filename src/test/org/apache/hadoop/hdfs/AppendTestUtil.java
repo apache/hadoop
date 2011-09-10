@@ -38,7 +38,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /** Utilities for append-related tests */ 
-class AppendTestUtil {
+public class AppendTestUtil {
   /** For specifying the random number generator seed,
    *  change the following value:
    */
@@ -95,7 +95,7 @@ class AppendTestUtil {
     return DFSTestUtil.getFileSystemAs(ugi, conf);
   }
 
-  static void write(OutputStream out, int offset, int length) throws IOException {
+  public static void write(OutputStream out, int offset, int length) throws IOException {
     final byte[] bytes = new byte[length];
     for(int i = 0; i < length; i++) {
       bytes[i] = (byte)(offset + i);
@@ -103,7 +103,7 @@ class AppendTestUtil {
     out.write(bytes);
   }
   
-  static void check(FileSystem fs, Path p, long length) throws IOException {
+  public static void check(FileSystem fs, Path p, long length) throws IOException {
     int i = -1;
     try {
       final FileStatus status = fs.getFileStatus(p);

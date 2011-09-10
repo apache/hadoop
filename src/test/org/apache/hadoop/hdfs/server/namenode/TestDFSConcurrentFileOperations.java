@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -73,6 +74,7 @@ public class TestDFSConcurrentFileOperations extends TestCase {
     Configuration conf = new Configuration();
     
     conf.setLong("dfs.block.size", blockSize);
+    conf.setBoolean("dfs.support.append", true);
     
     init(conf);
     
@@ -81,22 +83,9 @@ public class TestDFSConcurrentFileOperations extends TestCase {
     Path srcPath = new Path(src);
     Path dstPath = new Path(dst);
     FSDataOutputStream fos = fs.create(srcPath);
-    
-    fos.write(DFSTestUtil.generateSequentialBytes(0, writeSize));
+   
+    AppendTestUtil.write(fos, 0, writeSize);
     fos.sync();
-    
-    LocatedBlocks blocks;
-    int i = 0;
-    do {
-      blocks = cluster
-        .getNameNode()
-        .getNamesystem()
-        .getBlockLocations(src, 0, writeSize);
-    } while (blocks.getLocatedBlocks().isEmpty() && ++i < 1000);
-    
-    assertTrue("failed to get block for file", i < 1000);
-
-    Block block = blocks.get(blocks.getLocatedBlocks().size()-1).getBlock();
     
     // renaming a file out from under a client will cause close to fail
     // and result in the lease remaining while the blocks are finalized on
@@ -110,7 +99,8 @@ public class TestDFSConcurrentFileOperations extends TestCase {
       //expected
     }
 
-    // simulate what lease recovery does--tries to update block and finalize
-    cluster.getDataNodes().get(0).updateBlock(block, block, true);
+    FileSystem fs2 = AppendTestUtil.createHdfsWithDifferentUsername(conf);
+    AppendTestUtil.recoverFile(cluster, fs2, dstPath);
+    AppendTestUtil.check(fs2, dstPath, writeSize);
   }
 }
