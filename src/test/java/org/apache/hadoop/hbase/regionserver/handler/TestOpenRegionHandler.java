@@ -19,30 +19,19 @@
  */
 package org.apache.hadoop.hbase.regionserver.handler;
 
+import static org.junit.Assert.*;
+
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.ipc.HBaseRpcMetrics;
-import org.apache.hadoop.hbase.regionserver.CompactionRequestor;
-import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -56,7 +45,7 @@ import org.junit.Test;
  * Test of the {@link OpenRegionHandler}.
  */
 public class TestOpenRegionHandler {
-  private static final Log LOG = LogFactory.getLog(TestOpenRegionHandler.class);
+  static final Log LOG = LogFactory.getLog(TestOpenRegionHandler.class);
   private final static HBaseTestingUtility HTU = new HBaseTestingUtility();
 
   @BeforeClass public static void before() throws Exception {
@@ -68,156 +57,6 @@ public class TestOpenRegionHandler {
   }
 
   /**
-   * Basic mock Server
-   */
-  static class MockServer implements Server {
-    boolean stopped = false;
-    final static ServerName NAME = new ServerName("MockServer", 123, -1);
-    final ZooKeeperWatcher zk;
-
-    MockServer() throws ZooKeeperConnectionException, IOException {
-      this.zk =  new ZooKeeperWatcher(HTU.getConfiguration(), NAME.toString(), this, true);
-    }
-
-    @Override
-    public void abort(String why, Throwable e) {
-      LOG.fatal("Abort why=" + why, e);
-      this.stopped = true;
-    }
-
-    @Override
-    public void stop(String why) {
-      LOG.debug("Stop why=" + why);
-      this.stopped = true;
-    }
-
-    @Override
-    public boolean isStopped() {
-      return this.stopped;
-    }
-
-    @Override
-    public Configuration getConfiguration() {
-      return HTU.getConfiguration();
-    }
-
-    @Override
-    public ZooKeeperWatcher getZooKeeper() {
-      return this.zk;
-    }
-
-    @Override
-    public CatalogTracker getCatalogTracker() {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    @Override
-    public ServerName getServerName() {
-      return NAME;
-    }
-  }
-
-  /**
-   * Basic mock region server services.
-   */
-  static class MockRegionServerServices implements RegionServerServices {
-    final Map<String, HRegion> regions = new HashMap<String, HRegion>();
-    boolean stopping = false;
-    Set<byte[]> rit = new HashSet<byte[]>();
-
-    @Override
-    public boolean removeFromOnlineRegions(String encodedRegionName) {
-      return this.regions.remove(encodedRegionName) != null;
-    }
-    
-    @Override
-    public HRegion getFromOnlineRegions(String encodedRegionName) {
-      return this.regions.get(encodedRegionName);
-    }
-    
-    @Override
-    public void addToOnlineRegions(HRegion r) {
-      this.regions.put(r.getRegionInfo().getEncodedName(), r);
-    }
-    
-    @Override
-    public void postOpenDeployTasks(HRegion r, CatalogTracker ct, boolean daughter)
-        throws KeeperException, IOException {
-    }
-    
-    @Override
-    public boolean isStopping() {
-      return this.stopping;
-    }
-    
-    @Override
-    public HLog getWAL() {
-      return null;
-    }
-
-    @Override
-    public HBaseRpcMetrics getRpcMetrics() {
-      return null;
-    }
-
-    @Override
-    public Set<byte[]> getRegionsInTransitionInRS() {
-      return rit;
-    }
-
-    @Override
-    public FlushRequester getFlushRequester() {
-      return null;
-    }
-    
-    @Override
-    public CompactionRequestor getCompactionRequester() {
-      return null;
-    }
-
-    @Override
-    public CatalogTracker getCatalogTracker() {
-      return null;
-    }
-
-    @Override
-    public ZooKeeperWatcher getZooKeeper() {
-      return null;
-    }
-    
-    public RegionServerAccounting getRegionServerAccounting() {
-      return null;
-    }
-
-    @Override
-    public ServerName getServerName() {
-      return null;
-    }
-
-    @Override
-    public Configuration getConfiguration() {
-      return null;
-    }
-
-    @Override
-    public void abort(String why, Throwable e) {
-       //no-op
-    }
-
-    @Override
-    public void stop(String why) {
-      //no-op
-    }
-
-    @Override
-    public boolean isStopped() {
-      return false;
-    }
-
-  };
-
-  /**
    * Test the openregionhandler can deal with its znode being yanked out from
    * under it.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-3627">HBASE-3627</a>
@@ -225,19 +64,19 @@ public class TestOpenRegionHandler {
    * @throws NodeExistsException
    * @throws KeeperException
    */
-  @Test public void testOpenRegionHandlerYankingRegionFromUnderIt()
+  @Test public void testYankingRegionFromUnderIt()
   throws IOException, NodeExistsException, KeeperException {
-    final Server server = new MockServer();
+    final Server server = new MockServer(HTU);
     final RegionServerServices rss = new MockRegionServerServices();
 
-    HTableDescriptor htd =
-      new HTableDescriptor("testOpenRegionHandlerYankingRegionFromUnderIt");
+    HTableDescriptor htd = new HTableDescriptor("TestOpenRegionHandler.java");
     final HRegionInfo hri =
       new HRegionInfo(htd.getName(), HConstants.EMPTY_END_ROW,
           HConstants.EMPTY_END_ROW);
     HRegion region =
          HRegion.createHRegion(hri, HBaseTestingUtility.getTestDir(), HTU
             .getConfiguration(), htd);
+    assertNotNull(region);
     OpenRegionHandler handler = new OpenRegionHandler(server, rss, hri, htd) {
       HRegion openRegion() {
         // Open region first, then remove znode as though it'd been hijacked.

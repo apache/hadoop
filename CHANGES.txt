@@ -563,6 +563,7 @@ Release 0.90.5 - Unreleased
                re-assigns it but the RS warns 'already online on this server'
                (Gaojinchao)
    HBASE-4294  HLogSplitter sleeps with 1-second granularity (todd)
+   HBASE-4270  IOE ignored during flush-on-close causes dataloss
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
