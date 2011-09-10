@@ -24,20 +24,13 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.UUID;
 
 /**
  * Used to perform Delete operations on a single row.
@@ -71,20 +64,9 @@ import java.util.UUID;
  * deleteFamily -- then you need to use the method overrides that take a
  * timestamp.  The constructor timestamp is not referenced.
  */
-public class Delete extends Operation
+public class Delete extends Mutation
   implements Writable, Row, Comparable<Row> {
   private static final byte DELETE_VERSION = (byte)3;
-
-  private byte [] row = null;
-  // This ts is only used when doing a deleteRow.  Anything less,
-  private long ts;
-  private long lockId = -1L;
-  private boolean writeToWAL = true;
-  private final Map<byte [], List<KeyValue>> familyMap =
-    new TreeMap<byte [], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
-
-  // a opaque blob that can be passed into a Delete. 
-  private Map<String, byte[]> attributes;
 
   /** Constructor for Writable.  DO NOT USE */
   public Delete() {
@@ -134,18 +116,6 @@ public class Delete extends Operation
     this.lockId = d.getLockId();
     this.familyMap.putAll(d.getFamilyMap());
     this.writeToWAL = d.writeToWAL;
-  }
-
-  public int compareTo(final Row d) {
-    return Bytes.compareTo(this.getRow(), d.getRow());
-  }
-
-  /**
-   * Method to check if the familyMap is empty
-   * @return true if empty, false otherwise
-   */
-  public boolean isEmpty() {
-    return familyMap.isEmpty();
   }
 
   /**
@@ -246,47 +216,6 @@ public class Delete extends Operation
   }
 
   /**
-   * Method for retrieving the delete's familyMap
-   * @return familyMap
-   */
-  public Map<byte [], List<KeyValue>> getFamilyMap() {
-    return this.familyMap;
-  }
-
-  /**
-   *  Method for retrieving the delete's row
-   * @return row
-   */
-  public byte [] getRow() {
-    return this.row;
-  }
-
-  /**
-   * Method for retrieving the delete's RowLock
-   * @return RowLock
-   */
-  public RowLock getRowLock() {
-    return new RowLock(this.row, this.lockId);
-  }
-
-  /**
-   * Method for retrieving the delete's lock ID.
-   *
-   * @return The lock ID.
-   */
-  public long getLockId() {
-	return this.lockId;
-  }
-
-  /**
-   * Method for retrieving the delete's timestamp
-   * @return timestamp
-   */
-  public long getTimeStamp() {
-    return this.ts;
-  }
-
-  /**
    * Set the timestamp of the delete.
    * 
    * @param timestamp
@@ -295,115 +224,12 @@ public class Delete extends Operation
     this.ts = timestamp;
   }
 
-  /**
-   * Sets arbitrary delete's attribute.
-   * In case value = null attribute is removed from the attributes map.
-   * @param name attribute name
-   * @param value attribute value
-   */
-  public void setAttribute(String name, byte[] value) {
-    if (attributes == null && value == null) {
-      return;
-    }
-
-    if (attributes == null) {
-      attributes = new HashMap<String, byte[]>();
-    }
-
-    if (value == null) {
-      attributes.remove(name);
-      if (attributes.isEmpty()) {
-        this.attributes = null;
-      }
-    } else {
-      attributes.put(name, value);
-    }
-  }
-
-  /**
-   * Gets put's attribute
-   * @param name attribute name
-   * @return attribute value if attribute is set, <tt>null</tt> otherwise
-   */
-  public byte[] getAttribute(String name) {
-    if (attributes == null) {
-      return null;
-    }
-    return attributes.get(name);
-  }
-
-  /**
-   * Gets all scan's attributes
-   * @return unmodifiable map of all attributes
-   */
-  public Map<String, byte[]> getAttributesMap() {
-    if (attributes == null) {
-      return Collections.emptyMap();
-    }
-    return Collections.unmodifiableMap(attributes);
-  }
-
-  /**
-   * Compile the column family (i.e. schema) information
-   * into a Map. Useful for parsing and aggregation by debugging,
-   * logging, and administration tools.
-   * @return Map
-   */
-  @Override
-  public Map<String, Object> getFingerprint() {
-    Map<String, Object> map = new HashMap<String, Object>();
-    List<String> families = new ArrayList<String>();
-    // ideally, we would also include table information, but that information
-    // is not stored in each Operation instance.
-    map.put("families", families);
-    for (Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
-      families.add(Bytes.toStringBinary(entry.getKey()));
-    }
-    return map;
-  }
-
-  /**
-   * Compile the details beyond the scope of getFingerprint (row, columns,
-   * timestamps, etc.) into a Map along with the fingerprinted information.
-   * Useful for debugging, logging, and administration tools.
-   * @param maxCols a limit on the number of columns output prior to truncation
-   * @return Map
-   */
   @Override
   public Map<String, Object> toMap(int maxCols) {
     // we start with the fingerprint map and build on top of it.
-    Map<String, Object> map = getFingerprint();
-    // replace the fingerprint's simple list of families with a 
-    // map from column families to lists of qualifiers and kv details
-    Map<String, List<Map<String, Object>>> columns =
-      new HashMap<String, List<Map<String, Object>>>();
-    map.put("families", columns);
-    map.put("row", Bytes.toStringBinary(this.row));
+    Map<String, Object> map = super.toMap(maxCols);
+    // why is put not doing this?
     map.put("ts", this.ts);
-    int colCount = 0;
-    // iterate through all column families affected by this Delete
-    for (Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
-      // map from this family to details for each kv affected within the family
-      List<Map<String, Object>> qualifierDetails =
-        new ArrayList<Map<String, Object>>();
-      columns.put(Bytes.toStringBinary(entry.getKey()), qualifierDetails);
-      colCount += entry.getValue().size();
-      if (maxCols <= 0) {
-        continue;
-      }
-      // add details for each kv
-      for (KeyValue kv : entry.getValue()) {
-        if (--maxCols <= 0 ) {
-          continue;
-        }
-        Map<String, Object> kvMap = kv.toStringMap();
-        // row and family information are already available in the bigger map
-        kvMap.remove("row");
-        kvMap.remove("family");
-        qualifierDetails.add(kvMap);
-      }
-    }
-    map.put("totalColumns", colCount);
     return map;
   }
 
@@ -433,15 +259,7 @@ public class Delete extends Operation
       this.familyMap.put(family, list);
     }
     if (version > 1) {
-      int numAttributes = in.readInt();
-      if (numAttributes > 0) {
-        this.attributes = new HashMap<String, byte[]>();
-        for(int i=0; i<numAttributes; i++) {
-          String name = WritableUtils.readString(in);
-          byte[] value = Bytes.readByteArray(in);
-          this.attributes.put(name, value);
-        }
-      }
+      readAttributes(in);
     }
   }
 
@@ -460,15 +278,7 @@ public class Delete extends Operation
         kv.write(out);
       }
     }
-    if (this.attributes == null) {
-      out.writeInt(0);
-    } else {
-      out.writeInt(this.attributes.size());
-      for (Map.Entry<String, byte[]> attr : this.attributes.entrySet()) {
-        WritableUtils.writeString(out, attr.getKey());
-        Bytes.writeByteArray(out, attr.getValue());
-      }
-    }
+    writeAttributes(out);
   }
 
   /**
@@ -497,43 +307,5 @@ public class Delete extends Operation
     byte [][] parts = KeyValue.parseColumn(column);
     this.deleteColumn(parts[0], parts[1], HConstants.LATEST_TIMESTAMP);
     return this;
-  }
-
-  /**
-   * @return true if edits should be applied to WAL, false if not
-   */
-  public boolean getWriteToWAL() {
-    return this.writeToWAL;
-  }
-
-  /**
-   * Set whether this Delete should be written to the WAL or not.
-   * Not writing the WAL means you may lose edits on server crash.
-   * @param write true if edits should be written to WAL, false if not
-   */
-  public void setWriteToWAL(boolean write) {
-    this.writeToWAL = write;
-  }
-
-  /**
-   * Set the replication custer id.
-   * @param clusterId
-   */
-  public void setClusterId(UUID clusterId) {
-    byte[] val = new byte[2*Bytes.SIZEOF_LONG];
-    Bytes.putLong(val, 0, clusterId.getMostSignificantBits());
-    Bytes.putLong(val, Bytes.SIZEOF_LONG, clusterId.getLeastSignificantBits());
-    setAttribute(HConstants.CLUSTER_ID_ATTR, val);
-  }
-
-  /**
-   * @return The replication cluster id.
-   */
-  public UUID getClusterId() {
-    byte[] attr = getAttribute(HConstants.CLUSTER_ID_ATTR);
-    if (attr == null) {
-      return HConstants.DEFAULT_CLUSTER_ID;
-    }
-    return new UUID(Bytes.toLong(attr,0), Bytes.toLong(attr, Bytes.SIZEOF_LONG));
   }
 }

@@ -26,13 +26,11 @@ import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableUtils;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,7 +63,7 @@ import java.util.TreeSet;
  * <p>
  * To add a filter, execute {@link #setFilter(Filter) setFilter}.
  */
-public class Get extends Operation
+public class Get extends OperationWithAttributes
   implements Writable, Row, Comparable<Row> {
   private static final byte GET_VERSION = (byte)2;
 
@@ -77,7 +75,6 @@ public class Get extends Operation
   private TimeRange tr = new TimeRange();
   private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
-  private Map<String, byte[]> attributes;
 
   /** Constructor for Writable.  DO NOT USE */
   public Get() {}
@@ -307,54 +304,6 @@ public class Get extends Operation
   }
 
   /**
-   * Sets arbitrary get's attribute.
-   * In case value = null attribute is removed from the attributes map.
-   * @param name attribute name
-   * @param value attribute value
-   */
-  public void setAttribute(String name, byte[] value) {
-    if (attributes == null && value == null) {
-      return;
-    }
-
-    if (attributes == null) {
-      attributes = new HashMap<String, byte[]>();
-    }
-
-    if (value == null) {
-      attributes.remove(name);
-      if (attributes.isEmpty()) {
-        this.attributes = null;
-      }
-    } else {
-      attributes.put(name, value);
-    }
-  }
-
-  /**
-   * Gets get's attribute
-   * @param name attribute name
-   * @return attribute value if attribute is set, <tt>null</tt> otherwise
-   */
-  public byte[] getAttribute(String name) {
-    if (attributes == null) {
-      return null;
-    }
-    return attributes.get(name);
-  }
-
-  /**
-   * Gets all scan's attributes
-   * @return unmodifiable map of all attributes
-   */
-  public Map<String, byte[]> getAttributesMap() {
-    if (attributes == null) {
-      return Collections.emptyMap();
-    }
-    return Collections.unmodifiableMap(attributes);
-  }
-
-  /**
    * Compile the table and column family (i.e. schema) information
    * into a String. Useful for parsing and aggregation by debugging,
    * logging, and administration tools.
@@ -462,15 +411,7 @@ public class Get extends Operation
       }
       this.familyMap.put(family, set);
     }
-    int numAttributes = in.readInt();
-    if (numAttributes > 0) {
-      this.attributes = new HashMap<String, byte[]>();
-      for(int i=0; i<numAttributes; i++) {
-        String name = WritableUtils.readString(in);
-        byte[] value = Bytes.readByteArray(in);
-        this.attributes.put(name, value);
-      }
-    }
+    readAttributes(in);
   }
 
   public void write(final DataOutput out)
@@ -503,15 +444,7 @@ public class Get extends Operation
         }
       }
     }
-    if (this.attributes == null) {
-      out.writeInt(0);
-    } else {
-      out.writeInt(this.attributes.size());
-      for (Map.Entry<String, byte[]> attr : this.attributes.entrySet()) {
-        WritableUtils.writeString(out, attr.getKey());
-        Bytes.writeByteArray(out, attr.getValue());
-      }
-    }    
+    writeAttributes(out);
   }
 
   @SuppressWarnings("unchecked")

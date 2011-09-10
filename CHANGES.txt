@@ -472,6 +472,8 @@ Release 0.91.0 - Unreleased
    HBASE-4342  Update Thrift to 0.7.0 (Moaz Reyad)
    HBASE-4260  Expose a command to manually trigger an HLog roll
                (ramkrishna.s.vasudevan)
+   HBASE-4347  Remove duplicated code from Put, Delete, Get, Scan, MultiPut
+               (Lars Hofhansl)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
