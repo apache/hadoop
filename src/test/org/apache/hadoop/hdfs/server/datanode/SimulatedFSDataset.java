@@ -690,7 +690,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   }
 
   @Override
-  public BlockRecoveryInfo getBlockRecoveryInfo(long blockId)
+  public BlockRecoveryInfo startBlockRecovery(long blockId)
       throws IOException {
     Block stored = getStoredBlock(blockId);
     return new BlockRecoveryInfo(stored, false);

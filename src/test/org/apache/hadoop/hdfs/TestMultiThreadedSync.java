@@ -67,39 +67,6 @@ public class TestMultiThreadedSync {
     toWrite = AppendTestUtil.randomBytes(seed, size);
   }
 
-  private class WriterThread extends Thread {
-    private final FSDataOutputStream stm;
-    private final AtomicReference<Throwable> thrown;
-    private final int numWrites;
-    private final CountDownLatch countdown;
-
-    public WriterThread(FSDataOutputStream stm,
-      AtomicReference<Throwable> thrown,
-      CountDownLatch countdown, int numWrites) {
-      this.stm = stm;
-      this.thrown = thrown;
-      this.numWrites = numWrites;
-      this.countdown = countdown;
-    }
-
-    public void run() {
-      try {
-        countdown.await();
-        for (int i = 0; i < numWrites && thrown.get() == null; i++) {
-          doAWrite();
-        }
-      } catch (Throwable t) {
-        thrown.compareAndSet(null, t);
-      }
-    }
-
-    private void doAWrite() throws IOException {
-      stm.write(toWrite);
-      stm.sync();
-    }
-  }
-
-
   @Test
   public void testMultipleSyncers() throws Exception {
     Configuration conf = new Configuration();
@@ -206,7 +173,7 @@ public class TestMultiThreadedSync {
     ArrayList<Thread> threads = new ArrayList<Thread>();
     AtomicReference<Throwable> thrown = new AtomicReference<Throwable>();
     for (int i = 0; i < numThreads; i++) {
-      Thread t = new WriterThread(stm, thrown, countdown, numWrites);
+      Thread t = new AppendTestUtil.WriterThread(stm, toWrite, thrown, countdown, numWrites);
       threads.add(t);
       t.start();
     }

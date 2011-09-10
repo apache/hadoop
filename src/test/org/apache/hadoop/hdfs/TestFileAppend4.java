@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSImageAdapter;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import static org.apache.hadoop.hdfs.AppendTestUtil.loseLeases;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -146,13 +147,6 @@ public class TestFileAppend4 extends TestCase {
     assertTrue(file1 + " should be replicated to " + rep + " datanodes, not " +
                actualRepl + ".", actualRepl == rep);
   }
-  
-  private void loseLeases(FileSystem whichfs) throws Exception {
-    LOG.info("leasechecker.interruptAndJoin()");
-    // lose the lease on the client
-    DistributedFileSystem dfs = (DistributedFileSystem)whichfs;
-    dfs.dfs.leasechecker.interruptAndJoin();
-  }
 
   /*
    * Recover file.
@@ -166,42 +160,7 @@ public class TestFileAppend4 extends TestCase {
    */
   private void recoverFile(final FileSystem fs) throws Exception {
     LOG.info("Recovering File Lease");
-
-    // set the soft limit to be 1 second so that the
-    // namenode triggers lease recovery upon append request
-    cluster.setLeasePeriod(1000, FSConstants.LEASE_HARDLIMIT_PERIOD);
-
-    // Trying recovery
-    int tries = 60;
-    boolean recovered = false;
-    FSDataOutputStream out = null;
-    while (!recovered && tries-- > 0) {
-      try {
-        out = fs.append(file1);
-        LOG.info("Successfully opened for appends");
-        recovered = true;
-      } catch (IOException e) {
-        LOG.info("Failed open for append, waiting on lease recovery");
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException ex) {
-          // ignore it and try again
-        }
-      }
-    }
-    if (out != null) {
-      try {
-        out.close();
-        LOG.info("Successfully obtained lease");
-      } catch (IOException e) {
-        LOG.info("Unable to close file after opening for appends. " + e);
-        recovered = false;
-      }
-//      out.close();
-    }
-    if (!recovered) {
-      fail((tries > 0) ? "Recovery failed" : "Recovery should take < 1 min");
-    }
+    AppendTestUtil.recoverFile(cluster, fs, file1);
     LOG.info("Past out lease recovery");
   }
   

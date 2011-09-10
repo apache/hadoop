@@ -21,15 +21,20 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /** Utilities for append-related tests */ 
@@ -114,4 +119,85 @@ class AppendTestUtil {
       throw new IOException("p=" + p + ", length=" + length + ", i=" + i, ioe);
     }
   }
+  
+  static class WriterThread extends Thread {
+    private final FSDataOutputStream stm;
+    private final AtomicReference<Throwable> thrown;
+    private final int numWrites;
+    private final CountDownLatch countdown;
+    private final byte[] toWrite;
+    private AtomicInteger numWritten = new AtomicInteger();
+    
+    public WriterThread(FSDataOutputStream stm,
+        byte[] toWrite,
+        AtomicReference<Throwable> thrown,
+        CountDownLatch countdown, int numWrites) {
+      this.toWrite = toWrite;
+      this.stm = stm;
+      this.thrown = thrown;
+      this.numWrites = numWrites;
+      this.countdown = countdown;
+    }
+  
+    public void run() {
+      try {
+        countdown.await();
+        for (int i = 0; i < numWrites && thrown.get() == null; i++) {
+          doAWrite();
+          numWritten.getAndIncrement();
+        }
+      } catch (Throwable t) {
+        thrown.compareAndSet(null, t);
+      }
+    }
+  
+    private void doAWrite() throws IOException {
+      stm.write(toWrite);
+      stm.sync();
+    }
+    
+    public int getNumWritten() {
+      return numWritten.get();
+    }
+  }
+
+  public static void loseLeases(FileSystem whichfs) throws Exception {
+    LOG.info("leasechecker.interruptAndJoin()");
+    // lose the lease on the client
+    DistributedFileSystem dfs = (DistributedFileSystem)whichfs;
+    dfs.dfs.leasechecker.interruptAndJoin();
+  }
+  
+  public static void recoverFile(MiniDFSCluster cluster, FileSystem fs,
+      Path file1) throws IOException {
+    
+    // set the soft limit to be 1 second so that the
+    // namenode triggers lease recovery upon append request
+    cluster.setLeasePeriod(1000, FSConstants.LEASE_HARDLIMIT_PERIOD);
+
+    // Trying recovery
+    int tries = 60;
+    boolean recovered = false;
+    FSDataOutputStream out = null;
+    while (!recovered && tries-- > 0) {
+      try {
+        out = fs.append(file1);
+        LOG.info("Successfully opened for appends");
+        recovered = true;
+      } catch (IOException e) {
+        LOG.info("Failed open for append, waiting on lease recovery");
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException ex) {
+          // ignore it and try again
+        }
+      }
+    }
+    if (out != null) {
+      out.close();
+    }
+    if (!recovered) {
+      throw new RuntimeException("Recovery failed");
+    }    
+  }  
 }

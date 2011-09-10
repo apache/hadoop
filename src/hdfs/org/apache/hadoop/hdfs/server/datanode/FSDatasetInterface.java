@@ -308,5 +308,5 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    */
   public boolean hasEnoughResource();
 
-  public BlockRecoveryInfo getBlockRecoveryInfo(long blockId) throws IOException;
+  public BlockRecoveryInfo startBlockRecovery(long blockId) throws IOException;
 }
