@@ -16,6 +16,8 @@ Trunk (unreleased changes)
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
                  by Jersey (Alejandro Abdelnur via atm)
 
+    HADOOP-7610. Fix for hadoop debian package (Eric Yang via gkesavan)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
