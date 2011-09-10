@@ -311,10 +311,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       LOG.info("Finished loading FSImage in " + timeTakenToLoadFSImage + " msecs");
       NameNode.getNameNodeMetrics().fsImageLoadTime.set(
                                 (int) timeTakenToLoadFSImage);
+      this.safeMode = new SafeModeInfo(conf);
     } else {
       this.dir = new FSDirectory(fsImage, this, conf);
+      this.safeMode = new SafeModeInfo(); // manual safe mode
     }
-    this.safeMode = new SafeModeInfo(conf);
     this.hostsReader = new HostsFileReader(conf.get("dfs.hosts",""),
                         conf.get("dfs.hosts.exclude",""));
     if (isBlockTokenEnabled) {

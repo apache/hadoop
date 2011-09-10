@@ -51,7 +51,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.util.ByteArray;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.security.UserGroupInformation;
 
 /*************************************************
  * FSDirectory stores the filesystem directory state.
@@ -156,6 +155,11 @@ class FSDirectory implements Closeable {
       fsImage.close();
       throw e;
     }
+    setReady();
+  }
+
+  void setReady() {
+    if(ready) return;
     writeLock();
     try {
       this.ready = true;

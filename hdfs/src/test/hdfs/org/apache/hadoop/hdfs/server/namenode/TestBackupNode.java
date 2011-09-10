@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -109,6 +110,7 @@ public class TestBackupNode extends TestCase {
   void testCheckpoint(StartupOption op) throws IOException {
     Path file1 = new Path("checkpoint.dat");
     Path file2 = new Path("checkpoint2.dat");
+    Path file3 = new Path("backup.dat");
 
     Configuration conf = new HdfsConfiguration();
     short replication = (short)conf.getInt("dfs.replication", 3);
@@ -178,6 +180,27 @@ public class TestBackupNode extends TestCase {
       //
       backup = startBackupNode(conf, op, 1);
       waitCheckpointDone(backup);
+
+      // Try BackupNode operations
+      InetSocketAddress add = backup.getNameNodeAddress();
+      // Write to BN
+      FileSystem bnFS = FileSystem.get(
+          new Path("hdfs://" + NameNode.getHostPortString(add)).toUri(), conf);
+      boolean canWrite = true;
+      try {
+        writeFile(bnFS, file3, replication);
+      } catch(IOException eio) {
+        LOG.info("Write to BN failed as expected: ", eio);
+        canWrite = false;
+      }
+      assertFalse("Write to BackupNode must be prohibited.", canWrite);
+
+      writeFile(fileSys, file3, replication);
+      checkFile(fileSys, file3, replication);
+      // should also be on BN right away
+      assertTrue("file3 does not exist on BackupNode",
+          op != StartupOption.BACKUP || bnFS.exists(file3));
+
     } catch(IOException e) {
       LOG.error("Error in TestBackupNode:", e);
       assertTrue(e.getLocalizedMessage(), false);

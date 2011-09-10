@@ -169,6 +169,11 @@ public class BackupNode extends NameNode {
     super.stop();
   }
 
+  @Override // NameNode
+  public boolean setSafeMode(SafeModeAction action) throws IOException {
+    throw new UnsupportedActionException("setSafeMode");
+  }
+
   /////////////////////////////////////////////////////
   // NamenodeProtocol implementation for backup node.
   /////////////////////////////////////////////////////

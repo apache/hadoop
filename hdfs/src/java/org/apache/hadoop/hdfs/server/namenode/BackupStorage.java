@@ -155,13 +155,13 @@ public class BackupStorage extends FSImage {
         throw new IOException("Could not locate checkpoint directories");
       StorageDirectory sdName = itImage.next();
       StorageDirectory sdEdits = itEdits.next();
-      getFSDirectoryRootLock().writeLock();
+      fsDir.writeLock();
       try { // load image under rootDir lock
         // make sure image checksum is verified against the expected value
         imageDigest = sig.imageDigest; 
         loadFSImage(FSImage.getImageFile(sdName, NameNodeFile.IMAGE));
       } finally {
-        getFSDirectoryRootLock().writeUnlock();
+        fsDir.writeUnlock();
       }
       loadFSEdits(sdEdits);
     }
@@ -170,6 +170,8 @@ public class BackupStorage extends FSImage {
     setStorageInfo(sig);
     imageDigest = sig.imageDigest;
     checkpointTime = sig.checkpointTime;
+    fsDir.setReady();
+    getFSNamesystem().setBlockTotal();
   }
 
   /**
@@ -178,10 +180,6 @@ public class BackupStorage extends FSImage {
    */
   void saveCheckpoint() throws IOException {
     saveNamespace(false);
-  }
-
-  private FSDirectory getFSDirectoryRootLock() {
-    return getFSNamesystem().dir;
   }
 
   static File getJSpoolDir(StorageDirectory sd) {

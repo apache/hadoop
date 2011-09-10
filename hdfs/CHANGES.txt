@@ -621,6 +621,8 @@ Release 0.22.0 - Unreleased
 
     HDFS-2280. BackupNode fails with MD5 checksum Exception. (shv)
 
+    HDFS-2285. BackupNode should reject requests to modify namespace. (shv)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
