@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker;
@@ -573,7 +574,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       for (BlockAndFile b : blockSet) {
         File f = b.pathfile;  // full path name of block file
         volumeMap.put(b.block, new DatanodeBlockInfo(this, f));
-        ongoingCreates.put(b.block, new ActiveFile(f));
+        ongoingCreates.put(b.block, ActiveFile.createStartupRecoveryFile(f));
         if (DataNode.LOG.isDebugEnabled()) {
           DataNode.LOG.debug("recoverBlocksBeingWritten for block " + b.block);
         }
@@ -767,19 +768,34 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     final File file;
     final List<Thread> threads = new ArrayList<Thread>(2);
     private volatile long visibleLength;
-
+    /**
+     * Set to true if this file was recovered during datanode startup.
+     * This may indicate that the file has been truncated (eg during
+     * underlying filesystem journal replay)
+     */
+    final boolean wasRecoveredOnStartup;
+    
     ActiveFile(File f, List<Thread> list) {
-      this(f);
+      this(f, false);
       if (list != null) {
         threads.addAll(list);
       }
       threads.add(Thread.currentThread());
     }
 
-    // no active threads associated with this ActiveFile
-    ActiveFile(File f) {
+    /**
+     * Create an ActiveFile from a file on disk during DataNode startup.
+     * This factory method is just to make it clear when the purpose
+     * of this constructor is.
+     */
+    public static ActiveFile createStartupRecoveryFile(File f) {
+      return new ActiveFile(f, true);
+    }
+
+    private ActiveFile(File f, boolean recovery) {
       file = f;
       visibleLength = f.length();
+      wasRecoveredOnStartup = recovery;
     }
 
     public long getVisibleLength() {
@@ -809,7 +825,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   }
 
   /** Find the corresponding meta data file from a given block file */
-  static File findMetaFile(final File blockFile) throws IOException {
+  public static File findMetaFile(final File blockFile) throws IOException {
     final String prefix = blockFile.getName() + "_";
     final File parent = blockFile.getParentFile();
     File[] matches = parent.listFiles(new FilenameFilter() {
@@ -1216,12 +1232,31 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
           + ") to newlen (=" + newlen + ")");
     }
 
+    if (newlen == 0) {
+      // Special case for truncating to 0 length, since there's no previous
+      // chunk.
+      RandomAccessFile blockRAF = new RandomAccessFile(blockFile, "rw");
+      try {
+        //truncate blockFile 
+        blockRAF.setLength(newlen);   
+      } finally {
+        blockRAF.close();
+      }
+      //update metaFile 
+      RandomAccessFile metaRAF = new RandomAccessFile(metaFile, "rw");
+      try {
+        metaRAF.setLength(BlockMetadataHeader.getHeaderSize());
+      } finally {
+        metaRAF.close();
+      }
+      return;
+    }
     DataChecksum dcs = BlockMetadataHeader.readHeader(metaFile).getChecksum(); 
     int checksumsize = dcs.getChecksumSize();
     int bpc = dcs.getBytesPerChecksum();
-    long n = (newlen - 1)/bpc + 1;
-    long newmetalen = BlockMetadataHeader.getHeaderSize() + n*checksumsize;
-    long lastchunkoffset = (n - 1)*bpc;
+    long newChunkCount = (newlen - 1)/bpc + 1;
+    long newmetalen = BlockMetadataHeader.getHeaderSize() + newChunkCount*checksumsize;
+    long lastchunkoffset = (newChunkCount - 1)*bpc;
     int lastchunksize = (int)(newlen - lastchunkoffset); 
     byte[] b = new byte[Math.max(lastchunksize, checksumsize)]; 
 
@@ -1907,5 +1942,33 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       }
       return info;
     }
+  }
+
+  @Override
+  public synchronized  BlockRecoveryInfo getBlockRecoveryInfo(long blockId) 
+      throws IOException {
+    Block stored = getStoredBlock(blockId);
+
+    if (stored == null) {
+      return null;
+    }
+    
+    ActiveFile activeFile = ongoingCreates.get(stored);
+    boolean isRecovery = (activeFile != null) && activeFile.wasRecoveredOnStartup;
+    
+    
+    BlockRecoveryInfo info = new BlockRecoveryInfo(
+        stored, isRecovery);
+    if (DataNode.LOG.isDebugEnabled()) {
+      DataNode.LOG.debug("getBlockMetaDataInfo successful block=" + stored +
+                " length " + stored.getNumBytes() +
+                " genstamp " + stored.getGenerationStamp());
+    }
+
+    // paranoia! verify that the contents of the stored block
+    // matches the block file on disk.
+    validateBlockMetadata(stored);
+
+    return info;
   }
 }

@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryInfo;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -686,5 +687,12 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   @Override
   public Block[] getBlocksBeingWrittenReport() {
     return null;
+  }
+
+  @Override
+  public BlockRecoveryInfo getBlockRecoveryInfo(long blockId)
+      throws IOException {
+    Block stored = getStoredBlock(blockId);
+    return new BlockRecoveryInfo(stored, false);
   }
 }

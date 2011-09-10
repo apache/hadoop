@@ -39,9 +39,16 @@ public abstract class FSDatasetTestUtil {
       throw new IOException("Can't find block file for block " +
                             block + " on DN " + dn);
     }
-    File metaFile = ds.findMetaFile(blockFile);
+    File metaFile = FSDataset.findMetaFile(blockFile);
     FSDataset.truncateBlock(blockFile, metaFile,
                             block.getNumBytes(), newLength);
+  }
+  
+  public static void truncateBlockFile(File blockFile, long newLength)
+    throws IOException {
+    File metaFile = FSDataset.findMetaFile(blockFile);
+    FSDataset.truncateBlock(blockFile, metaFile,
+                            blockFile.length(), newLength);    
   }
 
 }

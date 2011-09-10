@@ -2113,6 +2113,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    * @param lease The lease for the client creating the file
    */
   void internalReleaseLeaseOne(Lease lease, String src) throws IOException {
+    assert Thread.holdsLock(this);
+
     LOG.info("Recovering lease=" + lease + ", src=" + src);
 
     INodeFile iFile = dir.getFileINode(src);

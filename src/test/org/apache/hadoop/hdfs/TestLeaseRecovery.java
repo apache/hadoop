@@ -51,12 +51,22 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
     return m;
   }
 
+  public void testBlockSynchronization() throws Exception {
+    runTestBlockSynchronization(false);
+  }
+  public void testBlockSynchronizationWithZeroBlock() throws Exception {
+    runTestBlockSynchronization(true);
+  }
+
+
   /**
    * The following test first creates a file with a few blocks.
    * It randomly truncates the replica of the last block stored in each datanode.
    * Finally, it triggers block synchronization to synchronize all stored block.
+   * @param forceOneBlockToZero if true, will truncate one block to 0 length
    */
-  public void testBlockSynchronization() throws Exception {
+  public void runTestBlockSynchronization(boolean forceOneBlockToZero)
+  throws Exception {
     final int ORG_FILE_SIZE = 3000; 
     Configuration conf = new Configuration();
     conf.setLong("dfs.block.size", BLOCK_SIZE);
@@ -100,6 +110,9 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
       Integer[] newblocksizes = new Integer[REPLICATION_NUM];
       for(int i = 0; i < REPLICATION_NUM; i++) {
         newblocksizes[i] = AppendTestUtil.nextInt(lastblocksize);
+      }
+      if (forceOneBlockToZero) {
+        newblocksizes[0] = 0;
       }
       DataNode.LOG.info("newblocksizes = " + Arrays.asList(newblocksizes)); 
 

@@ -46,6 +46,12 @@ public interface InterDatanodeProtocol extends VersionedProtocol {
   BlockMetaDataInfo getBlockMetaDataInfo(Block block) throws IOException;
 
   /**
+   * @return the BlockRecoveryInfo for a block
+   * @return null if the block is not found
+   */
+  BlockRecoveryInfo getBlockRecoveryInfo(Block block) throws IOException;
+  
+  /**
    * Update the block to the new generation stamp and length.  
    */
   void updateBlock(Block oldblock, Block newblock, boolean finalize) throws IOException;

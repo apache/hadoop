@@ -116,6 +116,9 @@ Release 0.20.205.0 - unreleased
     HDFS-1197. Blocks are considered "complete" prematurely after 
     commitBlockSynchronization or DN restart. (Todd Lipcon via jitendra)
 
+    HDFS-1218. Blocks recovered on startup should be treated with lower 
+    priority during block synchronization. (Todd Lipcon via suresh)
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via
