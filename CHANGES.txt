@@ -125,6 +125,9 @@ Release 0.20.205.0 - unreleased
     HDFS-1252. Fix TestDFSConcurrentFileOperations.
     (Todd Lipcon via suresh).
 
+    HDFS-1260. Block lost when multiple DNs trying to recover it to different
+    genstamps. (Todd Lipcon via jitendra)
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via

@@ -1208,13 +1208,8 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     File oldMetaFile = findMetaFile(blockFile);
     long oldgs = parseGenerationStamp(blockFile, oldMetaFile);
     
-    //rename meta file to a tmp file
-    File tmpMetaFile = new File(oldMetaFile.getParent(),
-        oldMetaFile.getName()+"_tmp" + newblock.getGenerationStamp());
-    if (!oldMetaFile.renameTo(tmpMetaFile)){
-      throw new IOException("Cannot rename block meta file to " + tmpMetaFile);
-    }
-
+    // First validate the update
+    
     //update generation stamp
     if (oldgs > newblock.getGenerationStamp()) {
       throw new IOException("Cannot update block (id=" + newblock.getBlockId()
@@ -1227,6 +1222,16 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       throw new IOException("Cannot update block file (=" + blockFile
           + ") length from " + oldblock.getNumBytes() + " to " + newblock.getNumBytes());
     }
+
+    // Now perform the update
+
+    //rename meta file to a tmp file
+    File tmpMetaFile = new File(oldMetaFile.getParent(),
+        oldMetaFile.getName()+"_tmp" + newblock.getGenerationStamp());
+    if (!oldMetaFile.renameTo(tmpMetaFile)){
+      throw new IOException("Cannot rename block meta file to " + tmpMetaFile);
+    }
+
     if (newblock.getNumBytes() < oldblock.getNumBytes()) {
       truncateBlock(blockFile, tmpMetaFile, oldblock.getNumBytes(), newblock.getNumBytes());
     }

@@ -17,11 +17,18 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
+import org.apache.hadoop.hdfs.protocol.Block;
 
 public abstract class NameNodeAdapter {
   public static boolean checkFileProgress(FSNamesystem fsn, String path, boolean checkall) throws IOException {
     INodeFile f = fsn.dir.getFileINode(path);
     return fsn.checkFileProgress(f, checkall);
   }
+
+  public static long callNextGenerationStampForBlock(
+    FSNamesystem fsn, Block block, boolean fromNN) throws IOException {
+    return fsn.nextGenerationStampForBlock(block, fromNN);
+  }
+
 }
 
