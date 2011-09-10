@@ -36,6 +36,10 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <single   label="Single Node Setup"  href="single_node_setup.html" />
     <cluster  label="Cluster Setup"  href="cluster_setup.html" />
   </docs>  
+
+   <docs label="Guides">
+    <http_authentication label="Authentication for Hadoop HTTP web-consoles" href="HttpAuthentication.html"/>
+   </docs>
        
   <docs label="MapReduce">
     <mapred     label="MapReduce Tutorial"   href="mapred_tutorial.html" />

@@ -28,6 +28,9 @@ Release 0.20.205.0 - unreleased
     MAPREDUCE-2764. Allow JobTracker to renew and cancel arbitrary token types,
     including delegation tokens obtained via hftp. (omalley)
 
+	HADOOP-7119 add Kerberos HTTP SPNEGO authentication support to 
+	Hadoop JT/NN/DN/TT web-consoles backport from Trunk (sanjay)
+
   BUG FIXES
 
     MAPREDUCE-2324. Removed usage of broken
