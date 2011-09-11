@@ -56,12 +56,21 @@ public class DefaultTaskSelector extends TaskSelector {
   }
 
   @Override
-  public Task obtainNewMapTask(TaskTrackerStatus taskTracker, JobInProgress job)
-      throws IOException {
+  public Task obtainNewMapTask(TaskTrackerStatus taskTracker, JobInProgress job,
+      int localityLevel) throws IOException {
     ClusterStatus clusterStatus = taskTrackerManager.getClusterStatus();
     int numTaskTrackers = clusterStatus.getTaskTrackers();
-    return job.obtainNewMapTask(taskTracker, numTaskTrackers,
-        taskTrackerManager.getNumberOfUniqueHosts());
+    switch (localityLevel) {
+      case 1:
+        return job.obtainNewNodeLocalMapTask(taskTracker, numTaskTrackers,
+          taskTrackerManager.getNumberOfUniqueHosts());
+      case 2:
+        return job.obtainNewNodeOrRackLocalMapTask(taskTracker, numTaskTrackers,
+          taskTrackerManager.getNumberOfUniqueHosts());
+      default:
+        return job.obtainNewMapTask(taskTracker, numTaskTrackers,
+          taskTrackerManager.getNumberOfUniqueHosts());
+    }
   }
 
   @Override

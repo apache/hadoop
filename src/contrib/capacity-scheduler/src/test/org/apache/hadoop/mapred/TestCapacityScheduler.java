@@ -195,8 +195,8 @@ public class TestCapacityScheduler extends TestCase {
     }
 
     @Override
-    public Task obtainNewLocalMapTask(final TaskTrackerStatus tts, int clusterSize,
-        int ignored) throws IOException {
+    public Task obtainNewNodeOrRackLocalMapTask(final TaskTrackerStatus tts,
+        int clusterSize, int ignored) throws IOException {
       return obtainNewMapTask(tts, clusterSize, ignored);
     }
     
@@ -551,6 +551,12 @@ public class TestCapacityScheduler extends TestCase {
         statuses.add(tt.getStatus());
       }
       return statuses;
+    }
+
+    @Override
+    public boolean killTask(TaskAttemptID taskid, boolean shouldFail)
+      throws IOException {
+      return false;
     }
 
 

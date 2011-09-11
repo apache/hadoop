@@ -202,6 +202,9 @@ Release 0.20.205.0 - unreleased
     HADOOP-7599. Script improvements to setup a secure Hadoop cluster 
     (Eric Yang via ddas)
 
+    MAPREDUCE-2981. Backport FairScheduler from trunk. (Matei Zaharia via
+    acmurthy) 
+
 Release 0.20.204.0 - 2011-8-25
 
   NEW FEATURES

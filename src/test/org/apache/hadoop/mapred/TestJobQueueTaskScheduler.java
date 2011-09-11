@@ -60,7 +60,7 @@ public class TestJobQueueTaskScheduler extends TestCase {
     }
 
     @Override
-    public Task obtainNewLocalMapTask(TaskTrackerStatus tts, int clusterSize, 
+    public Task obtainNewNodeOrRackLocalMapTask(TaskTrackerStatus tts, int clusterSize, 
                                       int ignored) 
     throws IOException {
       return obtainNewMapTask(tts, clusterSize, ignored);
@@ -203,6 +203,12 @@ public class TestJobQueueTaskScheduler extends TestCase {
     
     public void failJob(JobInProgress job) {
       // do nothing
+    }
+
+    @Override
+    public boolean killTask(TaskAttemptID taskid, boolean shouldFail)
+      throws IOException {
+      return false;
     }
     
     // Test methods

@@ -1367,9 +1367,34 @@ public class JobInProgress {
     }
   }
   
-  public synchronized Task obtainNewLocalMapTask(TaskTrackerStatus tts,
-                                                     int clusterSize, 
+  public synchronized Task obtainNewNodeLocalMapTask(TaskTrackerStatus tts,
+                                                     int clusterSize,
                                                      int numUniqueHosts)
+  throws IOException {
+    if (!tasksInited) {
+      LOG.info("Cannot create task split for " + profile.getJobID());
+      try { throw new IOException("state = " + status.getRunState()); }
+      catch (IOException ioe) {ioe.printStackTrace();}
+      return null;
+    }
+
+    int target = findNewMapTask(tts, clusterSize, numUniqueHosts, 1, 
+                                status.mapProgress());
+    if (target == -1) {
+      return null;
+    }
+
+    Task result = maps[target].getTaskToRun(tts.getTrackerName());
+    if (result != null) {
+      addRunningTaskToTIP(maps[target], result.getTaskID(), tts, true);
+      resetSchedulingOpportunities();
+    }
+
+    return result;
+  }
+  
+  public synchronized Task obtainNewNodeOrRackLocalMapTask(
+      TaskTrackerStatus tts, int clusterSize, int numUniqueHosts)
   throws IOException {
     if (!tasksInited) {
       LOG.info("Cannot create task split for " + profile.getJobID());
@@ -3503,5 +3528,32 @@ public class JobInProgress {
     tokenStorage.writeTokenStorageFile(keysFile, jobtracker.getConf());
     LOG.info("jobToken generated and stored with users keys in "
         + keysFile.toUri().getPath());
+  }
+
+  /**
+   * Get the level of locality that a given task would have if launched on
+   * a particular TaskTracker. Returns 0 if the task has data on that machine,
+   * 1 if it has data on the same rack, etc (depending on number of levels in
+   * the network hierarchy).
+   */
+  int getLocalityLevel(TaskInProgress tip, TaskTrackerStatus tts) {
+    Node tracker = jobtracker.getNode(tts.getHost());
+    int level = this.maxLevel;
+    // find the right level across split locations
+    for (String local : maps[tip.getIdWithinJob()].getSplitLocations()) {
+      Node datanode = jobtracker.getNode(local);
+      int newLevel = this.maxLevel;
+      if (tracker != null && datanode != null) {
+        newLevel = getMatchingLevelForNodes(tracker, datanode);
+      }
+      if (newLevel < level) {
+        level = newLevel;
+        // an optimization
+        if (level == 0) {
+          break;
+        }
+      }
+    }
+    return level;
   }
 }
