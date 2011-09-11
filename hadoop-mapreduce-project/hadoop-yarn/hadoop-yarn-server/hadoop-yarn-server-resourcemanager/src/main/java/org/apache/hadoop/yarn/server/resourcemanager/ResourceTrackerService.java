@@ -20,10 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.crypto.SecretKey;
 
@@ -31,7 +27,6 @@ import org.apache.avro.ipc.Server;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.SecurityInfo;
@@ -252,7 +247,7 @@ public class ResourceTrackerService extends AbstractService implements
       // 4. Send status to RMNode, saving the latest response.
       this.rmContext.getDispatcher().getEventHandler().handle(
           new RMNodeStatusEvent(nodeId, remoteNodeStatus.getNodeHealthStatus(),
-              remoteNodeStatus.getAllContainers(), latestResponse));
+              remoteNodeStatus.getContainersStatuses(), latestResponse));
 
       nodeHeartBeatResponse.setHeartbeatResponse(latestResponse);
       return nodeHeartBeatResponse;

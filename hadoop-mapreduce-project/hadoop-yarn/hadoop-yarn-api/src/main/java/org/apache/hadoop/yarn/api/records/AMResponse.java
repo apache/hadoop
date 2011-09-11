@@ -86,32 +86,17 @@ public interface AMResponse {
    */
   @Public
   @Stable
-  public List<Container> getNewContainerList();
+  public List<Container> getAllocatedContainers();
 
-  @Private
-  @Unstable
-  public Container getNewContainer(int index);
+  /**
+   * Set the list of <em>newly allocated</em> <code>Container</code> by the 
+   * <code>ResourceManager</code>.
+   * @param containers list of <em>newly allocated</em> <code>Container</code>
+   */
+  @Public
+  @Stable
+  public void setAllocatedContainers(List<Container> containers);
 
-  @Private
-  @Unstable
-  public int getNewContainerCount();
-
-  @Private
-  @Unstable
-  public void addAllNewContainers(List<Container> containers);
-
-  @Private
-  @Unstable
-  public void addNewContainer(Container container);
-
-  @Private
-  @Unstable
-  public void removeNewContainer(int index);
-
-  @Private
-  @Unstable
-  public void clearNewContainers();
-  
   /**
    * Get the <em>available headroom</em> for resources in the cluster for the 
    * application.
@@ -127,35 +112,18 @@ public interface AMResponse {
   public void setAvailableResources(Resource limit);
   
   /**
-   * Get the list of <em>completed containers</em>.
-   * @return the list of <em>completed containers</em>
+   * Get the list of <em>completed containers' statuses</em>.
+   * @return the list of <em>completed containers' statuses</em>
    */
   @Public
   @Stable
-  public List<Container> getFinishedContainerList();
+  public List<ContainerStatus> getCompletedContainersStatuses();
 
-  @Private
-  @Unstable
-  public Container getFinishedContainer(int index);
-
-  @Private
-  @Unstable
-  public int getFinishedContainerCount();
-  
-
-  @Private
-  @Unstable
-  public void addAllFinishedContainers(List<Container> containers);
-
-  @Private
-  @Unstable
-  public void addFinishedContainer(Container container);
-
-  @Private
-  @Unstable
-  public void removeFinishedContainer(int index);
-
-  @Private
-  @Unstable
-  public void clearFinishedContainers();
+  /**
+   * Set the list of list of <em>completed containers' statuses</em>.
+   * @param containers list of <em>completed containers' statuses</em>
+   */
+  @Public
+  @Stable
+  public void setCompletedContainersStatuses(List<ContainerStatus> containers);
 }

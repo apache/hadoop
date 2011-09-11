@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -97,8 +98,8 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   //nodes on while this attempt's containers ran
   private final Set<NodeId> ranNodes = 
     new HashSet<NodeId>();
-  private final List<Container> justFinishedContainers = 
-    new ArrayList<Container>();
+  private final List<ContainerStatus> justFinishedContainers = 
+    new ArrayList<ContainerStatus>();
   private Container masterContainer;
 
   private float progress = 0;
@@ -333,7 +334,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   }
 
   @Override
-  public List<Container> getJustFinishedContainers() {
+  public List<ContainerStatus> getJustFinishedContainers() {
     this.readLock.lock();
     try {
       return this.justFinishedContainers;
@@ -343,11 +344,11 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   }
 
   @Override
-  public List<Container> pullJustFinishedContainers() {
+  public List<ContainerStatus> pullJustFinishedContainers() {
     this.writeLock.lock();
 
     try {
-      List<Container> returnList = new ArrayList<Container>(
+      List<ContainerStatus> returnList = new ArrayList<ContainerStatus>(
           this.justFinishedContainers.size());
       returnList.addAll(this.justFinishedContainers);
       this.justFinishedContainers.clear();
@@ -705,11 +706,13 @@ public class RMAppAttemptImpl implements RMAppAttempt {
 
       RMAppAttemptContainerFinishedEvent containerFinishedEvent
         = (RMAppAttemptContainerFinishedEvent) event;
-      Container container = containerFinishedEvent.getContainer();
+      ContainerStatus containerStatus = 
+          containerFinishedEvent.getContainerStatus();
 
       // Is this container the AmContainer? If the finished container is same as
       // the AMContainer, AppAttempt fails
-      if (appAttempt.masterContainer.getId().equals(container.getId())) {
+      if (appAttempt.masterContainer.getId().equals(
+          containerStatus.getContainerId())) {
         new FinalTransition(RMAppAttemptState.FAILED).transition(
             appAttempt, containerFinishedEvent);
         return RMAppAttemptState.FAILED;
@@ -718,7 +721,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       // Normal container.
 
       // Put it in completedcontainers list
-      appAttempt.justFinishedContainers.add(container);
+      appAttempt.justFinishedContainers.add(containerStatus);
       return RMAppAttemptState.RUNNING;
     }
   }

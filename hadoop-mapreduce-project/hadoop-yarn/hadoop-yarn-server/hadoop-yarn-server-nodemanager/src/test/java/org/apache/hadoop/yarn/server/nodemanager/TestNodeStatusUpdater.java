@@ -21,6 +21,10 @@ package org.apache.hadoop.yarn.server.nodemanager;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.logging.Log;
@@ -32,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -98,13 +103,30 @@ public class TestNodeStatusUpdater {
     ContainerId firstContainerID = recordFactory.newRecordInstance(ContainerId.class);
     ContainerId secondContainerID = recordFactory.newRecordInstance(ContainerId.class);
 
+    private Map<ApplicationId, List<ContainerStatus>> getAppToContainerStatusMap(
+        List<ContainerStatus> containers) {
+      Map<ApplicationId, List<ContainerStatus>> map =
+          new HashMap<ApplicationId, List<ContainerStatus>>();
+      for (ContainerStatus cs : containers) {
+        ApplicationId applicationId = cs.getContainerId().getAppId();
+        List<ContainerStatus> appContainers = map.get(applicationId);
+        if (appContainers == null) {
+          appContainers = new ArrayList<ContainerStatus>();
+          map.put(applicationId, appContainers);
+        }
+        appContainers.add(cs);
+      }
+      return map;
+    }
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request) throws YarnRemoteException {
       NodeStatus nodeStatus = request.getNodeStatus();
       LOG.info("Got heartbeat number " + heartBeatID);
       nodeStatus.setResponseId(heartBeatID++);
+      Map<ApplicationId, List<ContainerStatus>> appToContainers =
+          getAppToContainerStatusMap(nodeStatus.getContainersStatuses());
       if (heartBeatID == 1) {
-        Assert.assertEquals(0, nodeStatus.getAllContainers().size());
+        Assert.assertEquals(0, nodeStatus.getContainersStatuses().size());
 
         // Give a container to the NM.
         applicationID.setId(heartBeatID);
@@ -121,11 +143,9 @@ public class TestNodeStatusUpdater {
       } else if (heartBeatID == 2) {
         // Checks on the RM end
         Assert.assertEquals("Number of applications should only be one!", 1,
-            nodeStatus.getAllContainers().size());
+            nodeStatus.getContainersStatuses().size());
         Assert.assertEquals("Number of container for the app should be one!",
-            1, nodeStatus.getContainers(applicationID).size());
-        Assert.assertEquals(2, nodeStatus.getContainers(applicationID).get(0)
-            .getResource().getMemory());
+            1, appToContainers.get(applicationID).size());
 
         // Checks on the NM end
         ConcurrentMap<ContainerId, Container> activeContainers =
@@ -147,13 +167,9 @@ public class TestNodeStatusUpdater {
       } else if (heartBeatID == 3) {
         // Checks on the RM end
         Assert.assertEquals("Number of applications should only be one!", 1,
-            nodeStatus.getAllContainers().size());
+            appToContainers.size());
         Assert.assertEquals("Number of container for the app should be two!",
-            2, nodeStatus.getContainers(applicationID).size());
-        Assert.assertEquals(2, nodeStatus.getContainers(applicationID).get(0)
-            .getResource().getMemory());
-        Assert.assertEquals(3, nodeStatus.getContainers(applicationID).get(1)
-            .getResource().getMemory());
+            2, appToContainers.get(applicationID).size());
 
         // Checks on the NM end
         ConcurrentMap<ContainerId, Container> activeContainers =

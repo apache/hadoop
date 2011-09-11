@@ -36,7 +36,6 @@ import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.AMResponse;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -123,10 +122,11 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     availableResources = response.getAvailableResources();
 
     LOG.info("getResources() for " + applicationId + ":" + " ask="
-        + ask.size() + " release= " + release.size() + " newContainers="
-        + response.getNewContainerCount() + " finishedContainers="
-        + response.getFinishedContainerCount()
-        + " resourcelimit=" + availableResources);
+        + ask.size() + " release= " + release.size() + 
+        " newContainers=" + response.getAllocatedContainers().size() + 
+        " finishedContainers=" + 
+        response.getCompletedContainersStatuses().size() + 
+        " resourcelimit=" + availableResources);
 
     ask.clear();
     release.clear();

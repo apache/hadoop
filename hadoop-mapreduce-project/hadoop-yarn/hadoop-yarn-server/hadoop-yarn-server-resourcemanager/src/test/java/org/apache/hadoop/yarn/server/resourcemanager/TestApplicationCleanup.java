@@ -66,11 +66,11 @@ public class TestApplicationCleanup {
     //kick the scheduler
     nm1.nodeHeartbeat(true);
     List<Container> conts = am.allocate(new ArrayList<ResourceRequest>(),
-        new ArrayList<ContainerId>()).getNewContainerList();
+        new ArrayList<ContainerId>()).getAllocatedContainers();
     int contReceived = conts.size();
     while (contReceived < request) {
       conts = am.allocate(new ArrayList<ResourceRequest>(),
-          new ArrayList<ContainerId>()).getNewContainerList();
+          new ArrayList<ContainerId>()).getAllocatedContainers();
       contReceived += conts.size();
       Log.info("Got " + contReceived + " containers. Waiting to get " + request);
       Thread.sleep(2000);

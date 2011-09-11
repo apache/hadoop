@@ -19,22 +19,22 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 
 public class RMAppAttemptContainerFinishedEvent extends RMAppAttemptEvent {
 
-  private final Container container;
+  private final ContainerStatus containerStatus;
 
   public RMAppAttemptContainerFinishedEvent(ApplicationAttemptId appAttemptId, 
-      Container container) {
+      ContainerStatus containerStatus) {
     super(appAttemptId, RMAppAttemptEventType.CONTAINER_FINISHED);
-    this.container = container;
+    this.containerStatus = containerStatus;
   }
 
-  public Container getContainer() {
-    return this.container;
+  public ContainerStatus getContainerStatus() {
+    return this.containerStatus;
   }
 
 }

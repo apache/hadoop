@@ -30,13 +30,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.NodeHealthCheckerService;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -73,7 +73,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private String rmAddress;
   private Resource totalResource;
   private String containerManagerBindAddress;
-  private String nodeHttpAddress;
   private String hostName;
   private int containerManagerPort;
   private int httpPort;
@@ -127,7 +126,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       this.httpPort = httpBindAddress.getPort();
       this.containerManagerBindAddress =
           this.hostName + ":" + this.containerManagerPort;
-      this.nodeHttpAddress = this.hostName + ":" + this.httpPort;
       LOG.info("Configured ContainerManager Address is "
           + this.containerManagerBindAddress);
       // Registration has to be in start so that ContainerManager can get the
@@ -195,35 +193,28 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     nodeStatus.setNodeId(this.nodeId);
 
     int numActiveContainers = 0;
+    List<ContainerStatus> containersStatuses = new ArrayList<ContainerStatus>();
     for (Iterator<Entry<ContainerId, Container>> i =
         this.context.getContainers().entrySet().iterator(); i.hasNext();) {
       Entry<ContainerId, Container> e = i.next();
       ContainerId containerId = e.getKey();
       Container container = e.getValue();
 
-      List<org.apache.hadoop.yarn.api.records.Container> applicationContainers = nodeStatus
-          .getContainers(container.getContainerID().getAppId());
-      if (applicationContainers == null) {
-        applicationContainers = new ArrayList<org.apache.hadoop.yarn.api.records.Container>();
-        nodeStatus.setContainers(container.getContainerID().getAppId(),
-            applicationContainers);
-      }
-
       // Clone the container to send it to the RM
-      org.apache.hadoop.yarn.api.records.Container c = container.cloneAndGetContainer();
-      c.setNodeId(this.nodeId);
-      c.setNodeHttpAddress(this.nodeHttpAddress); // TODO: don't set everytime.
-      applicationContainers.add(c);
+      org.apache.hadoop.yarn.api.records.ContainerStatus containerStatus = 
+          container.cloneAndGetContainerStatus();
+      containersStatuses.add(containerStatus);
       ++numActiveContainers;
-      LOG.info("Sending out status for container: " + c);
+      LOG.info("Sending out status for container: " + containerStatus);
 
-      if (c.getState() == ContainerState.COMPLETE) {
+      if (containerStatus.getState() == ContainerState.COMPLETE) {
         // Remove
         i.remove();
 
         LOG.info("Removed completed container " + containerId);
       }
     }
+    nodeStatus.setContainersStatuses(containersStatuses);
 
     LOG.debug(this.containerManagerBindAddress + " sending out status for " + numActiveContainers
         + " containers");

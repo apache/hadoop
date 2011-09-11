@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -165,11 +166,14 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @param node node on which the container completed
    * @param container completed container, 
    *                  <code>null</code> if it was just a reservation
+   * @param containerStatus <code>ContainerStatus</code> for the completed 
+   *                        container
    * @param event event to be sent to the container
    */
   public void completedContainer(Resource clusterResource,
       SchedulerApp application, SchedulerNode node, 
-      RMContainer container, RMContainerEventType event);
+      RMContainer container, ContainerStatus containerStatus, 
+      RMContainerEventType event);
 
   /**
    * Get the number of applications in the queue.
