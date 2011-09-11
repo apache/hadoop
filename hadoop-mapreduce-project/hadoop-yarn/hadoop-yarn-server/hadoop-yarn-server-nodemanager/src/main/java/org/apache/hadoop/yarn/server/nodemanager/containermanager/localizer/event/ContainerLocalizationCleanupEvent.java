@@ -17,21 +17,33 @@
 */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event;
 
-import org.apache.hadoop.yarn.api.records.ContainerId;
+import java.util.Collection;
+import java.util.Map;
+
+import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalResourceRequest;
 
-public class ResourceReleaseEvent extends ResourceEvent {
+public class ContainerLocalizationCleanupEvent extends
+    ContainerLocalizationEvent {
 
-  private final ContainerId container;
+  private final Map<LocalResourceVisibility, Collection<LocalResourceRequest>> 
+    rsrc;
 
-  public ResourceReleaseEvent(LocalResourceRequest rsrc, 
-      ContainerId container) {
-    super(rsrc, ResourceEventType.RELEASE);
-    this.container = container;
+  /**
+   * Event requesting the cleanup of the rsrc.
+   * @param c
+   * @param rsrc
+   */
+  public ContainerLocalizationCleanupEvent(Container c,
+      Map<LocalResourceVisibility, Collection<LocalResourceRequest>> rsrc) {
+    super(LocalizationEventType.CLEANUP_CONTAINER_RESOURCES, c);
+    this.rsrc = rsrc;
   }
 
-  public ContainerId getContainer() {
-    return container;
+  public
+      Map<LocalResourceVisibility, Collection<LocalResourceRequest>>
+      getResources() {
+    return rsrc;
   }
-
 }

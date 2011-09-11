@@ -22,6 +22,7 @@ import java.io.File;
 
 import java.net.URISyntaxException;
 
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -43,6 +44,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -63,7 +65,6 @@ import org.apache.avro.ipc.Server;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
@@ -93,7 +94,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerResourceFailedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ApplicationLocalizationEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ContainerLocalizationEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ContainerLocalizationCleanupEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ContainerLocalizationRequestEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEventType;
@@ -101,6 +102,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerResourceRequestEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceLocalizedEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceReleaseEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceRequestEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerSecurityInfo;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenSecretManager;
@@ -198,7 +200,7 @@ public class ResourceLocalizationService extends AbstractService
       conf.getLong(YarnConfiguration.NM_LOCALIZER_CACHE_CLEANUP_INTERVAL_MS, YarnConfiguration.DEFAULT_NM_LOCALIZER_CACHE_CLEANUP_INTERVAL_MS);
     localizationServerAddress = NetUtils.createSocketAddr(
       conf.get(YarnConfiguration.NM_LOCALIZER_ADDRESS, YarnConfiguration.DEFAULT_NM_LOCALIZER_ADDRESS));
-    localizerTracker = new LocalizerTracker(conf);
+    localizerTracker = createLocalizerTracker(conf);
     dispatcher.register(LocalizerEventType.class, localizerTracker);
     cacheCleanup.scheduleWithFixedDelay(new CacheCleanup(dispatcher),
         cacheCleanupPeriod, cacheCleanupPeriod, TimeUnit.MILLISECONDS);
@@ -216,6 +218,10 @@ public class ResourceLocalizationService extends AbstractService
     LOG.info("Localizer started on port " + server.getPort());
     server.start();
     super.start();
+  }
+
+  LocalizerTracker createLocalizerTracker(Configuration conf) {
+    return new LocalizerTracker(conf);
   }
 
   Server createServer() {
@@ -252,6 +258,9 @@ public class ResourceLocalizationService extends AbstractService
   public void handle(LocalizationEvent event) {
     String userName;
     String appIDStr;
+    Container c;
+    Map<LocalResourceVisibility, Collection<LocalResourceRequest>> rsrcs;
+    LocalResourcesTracker tracker;
     // TODO: create log dir as $logdir/$user/$appId
     switch (event.getType()) {
     case INIT_APPLICATION_RESOURCES:
@@ -276,28 +285,16 @@ public class ResourceLocalizationService extends AbstractService
     case INIT_CONTAINER_RESOURCES:
       ContainerLocalizationRequestEvent rsrcReqs =
         (ContainerLocalizationRequestEvent) event;
-      Container c = rsrcReqs.getContainer();
+      c = rsrcReqs.getContainer();
       LocalizerContext ctxt = new LocalizerContext(
           c.getUser(), c.getContainerID(), c.getCredentials());
-      final LocalResourcesTracker tracker;
-      LocalResourceVisibility vis = rsrcReqs.getVisibility();
-      switch (vis) {
-      default:
-      case PUBLIC:
-        tracker = publicRsrc;
-        break;
-      case PRIVATE:
-        tracker = privateRsrc.get(c.getUser());
-        break;
-      case APPLICATION:
-        tracker =
-          appRsrc.get(ConverterUtils.toString(c.getContainerID().getAppId()));
-        break;
-      }
-      // We get separate events one each for all resources of one visibility. So
-      // all the resources in this event are of the same visibility.
-      for (LocalResourceRequest req : rsrcReqs.getRequestedResources()) {
-        tracker.handle(new ResourceRequestEvent(req, vis, ctxt));
+      rsrcs = rsrcReqs.getRequestedResources();
+      for (LocalResourceVisibility vis : rsrcs.keySet()) {
+        tracker = getLocalResourcesTracker(vis, c.getUser(), 
+            c.getContainerID().getAppId());
+        for (LocalResourceRequest req : rsrcs.get(vis)) {
+          tracker.handle(new ResourceRequestEvent(req, vis, ctxt));
+        }
       }
       break;
     case CACHE_CLEANUP:
@@ -311,14 +308,23 @@ public class ResourceLocalizationService extends AbstractService
       }
       break;
     case CLEANUP_CONTAINER_RESOURCES:
-      Container container =
-        ((ContainerLocalizationEvent)event).getContainer();
+      ContainerLocalizationCleanupEvent rsrcCleanup =
+        (ContainerLocalizationCleanupEvent) event;
+      c = rsrcCleanup.getContainer();
+      rsrcs = rsrcCleanup.getResources();
+      for (LocalResourceVisibility vis : rsrcs.keySet()) {
+        tracker = getLocalResourcesTracker(vis, c.getUser(), 
+            c.getContainerID().getAppId());
+        for (LocalResourceRequest req : rsrcs.get(vis)) {
+          tracker.handle(new ResourceReleaseEvent(req, c.getContainerID()));
+        }
+      }
 
       // Delete the container directories
-      userName = container.getUser();
-      String containerIDStr = container.toString();
+      userName = c.getUser();
+      String containerIDStr = c.toString();
       appIDStr =
-        ConverterUtils.toString(container.getContainerID().getAppId());
+        ConverterUtils.toString(c.getContainerID().getAppId());
       for (Path localDir : localDirs) {
 
         // Delete the user-owned container-dir
@@ -336,8 +342,7 @@ public class ResourceLocalizationService extends AbstractService
         delService.delete(null, containerSysDir,  new Path[] {});
       }
 
-      dispatcher.getEventHandler().handle(new ContainerEvent(
-            container.getContainerID(),
+      dispatcher.getEventHandler().handle(new ContainerEvent(c.getContainerID(),
             ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP));
       break;
     case DESTROY_APPLICATION_RESOURCES:
@@ -376,6 +381,19 @@ public class ResourceLocalizationService extends AbstractService
             application.getAppId(),
             ApplicationEventType.APPLICATION_RESOURCES_CLEANEDUP));
       break;
+    }
+  }
+
+  LocalResourcesTracker getLocalResourcesTracker(
+      LocalResourceVisibility visibility, String user, ApplicationId appId) {
+    switch (visibility) {
+      default:
+      case PUBLIC:
+        return publicRsrc;
+      case PRIVATE:
+        return privateRsrc.get(user);
+      case APPLICATION:
+        return appRsrc.get(ConverterUtils.toString(appId));
     }
   }
 
@@ -526,6 +544,7 @@ public class ResourceLocalizationService extends AbstractService
     }
 
     @Override
+    @SuppressWarnings("unchecked") // dispatcher not typed
     public void run() {
       try {
         // TODO shutdown, better error handling esp. DU
@@ -651,6 +670,7 @@ public class ResourceLocalizationService extends AbstractService
     }
 
     // TODO this sucks. Fix it later
+    @SuppressWarnings("unchecked") // dispatcher not typed
     LocalizerHeartbeatResponse update(
         List<LocalResourceStatus> remoteResourceStatuses) {
       LocalizerHeartbeatResponse response =
@@ -795,6 +815,7 @@ public class ResourceLocalizationService extends AbstractService
     }
 
     @Override
+    @SuppressWarnings("unchecked") // dispatcher not typed
     public void run() {
       dispatcher.getEventHandler().handle(
           new LocalizationEvent(LocalizationEventType.CACHE_CLEANUP));

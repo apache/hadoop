@@ -1269,6 +1269,9 @@ Release 0.23.0 - Unreleased
    MAPREDUCE-2971. ant build mapreduce fails protected access jc.displayJobList
    (jobs) (Thomas Graves via mahadev)
 
+   MAPREDUCE-2691. Finishing up the cleanup of distributed cache file resources
+   and related tests. (Siddharth Seth via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
