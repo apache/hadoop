@@ -39,6 +39,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -59,6 +60,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 
@@ -762,7 +764,11 @@ public class LeafQueue implements CSQueue {
       // Release
       Container container = rmContainer.getContainer();
       completedContainer(clusterResource, application, node, 
-          rmContainer, RMContainerEventType.RELEASED);
+          rmContainer, 
+          SchedulerUtils.createAbnormalContainerStatus(
+              container.getId(), 
+              SchedulerUtils.UNRESERVED_CONTAINER), 
+          RMContainerEventType.RELEASED);
       return container.getResource();
     }
 
@@ -1175,7 +1181,7 @@ public class LeafQueue implements CSQueue {
   @Override
   public void completedContainer(Resource clusterResource, 
       SchedulerApp application, SchedulerNode node, RMContainer rmContainer, 
-      RMContainerEventType event) {
+      ContainerStatus containerStatus, RMContainerEventType event) {
     if (application != null) {
       // Careful! Locking order is important!
       synchronized (this) {
@@ -1190,7 +1196,7 @@ public class LeafQueue implements CSQueue {
           application.unreserve(node, rmContainer.getReservedPriority());
           node.unreserveResource(application);
         } else {
-          application.containerCompleted(rmContainer, event);
+          application.containerCompleted(rmContainer, containerStatus, event);
           node.releaseContainer(container);
         }
 
@@ -1210,7 +1216,7 @@ public class LeafQueue implements CSQueue {
 
       // Inform the parent queue
       parent.completedContainer(clusterResource, application, 
-          node, rmContainer, event);
+          node, rmContainer, null, event);
     }
   }
 

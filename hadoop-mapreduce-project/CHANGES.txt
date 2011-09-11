@@ -264,6 +264,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2711. Update TestBlockPlacementPolicyRaid for the new namesystem
     and block management APIs.  (szetszwo)
 
+    MAPREDUCE-2933. Change allocate call to return ContainerStatus for
+    completed containers rather than Container. (acmurthy) 
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

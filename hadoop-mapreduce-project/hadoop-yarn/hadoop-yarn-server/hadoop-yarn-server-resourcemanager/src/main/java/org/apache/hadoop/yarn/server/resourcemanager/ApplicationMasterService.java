@@ -232,8 +232,8 @@ public class ApplicationMasterService extends AbstractService implements
       RMAppAttempt appAttempt = app.getRMAppAttempt(appAttemptId);
 
       AMResponse response = recordFactory.newRecordInstance(AMResponse.class);
-      response.addAllNewContainers(allocation.getContainers());
-      response.addAllFinishedContainers(appAttempt
+      response.setAllocatedContainers(allocation.getContainers());
+      response.setCompletedContainersStatuses(appAttempt
           .pullJustFinishedContainers());
       response.setResponseId(lastResponse.getResponseId() + 1);
       response.setAvailableResources(allocation.getResourceLimit());

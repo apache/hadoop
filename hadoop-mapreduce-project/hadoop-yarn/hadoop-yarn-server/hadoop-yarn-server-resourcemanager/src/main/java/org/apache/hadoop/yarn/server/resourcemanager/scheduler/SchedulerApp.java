@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -161,26 +162,21 @@ public class SchedulerApp {
             RMContainerEventType.LAUNCHED));
   }
 
-  public synchronized void killContainers(
-      SchedulerApp application) {
-  }
-
   synchronized public void containerCompleted(RMContainer rmContainer,
-      RMContainerEventType event) {
+      ContainerStatus containerStatus, RMContainerEventType event) {
     
     Container container = rmContainer.getContainer();
     ContainerId containerId = container.getId();
     
     // Inform the container
-    if (event.equals(RMContainerEventType.FINISHED)) {
-      // Have to send diagnostics for finished containers.
-      rmContainer.handle(new RMContainerFinishedEvent(containerId,
-          container.getContainerStatus()));
-    } else {
-      rmContainer.handle(new RMContainerEvent(containerId, event));
-    }
+    rmContainer.handle(
+        new RMContainerFinishedEvent(
+            containerId,
+            containerStatus, 
+            event)
+        );
     LOG.info("Completed container: " + rmContainer.getContainerId() + 
-        " in state: " + rmContainer.getState());
+        " in state: " + rmContainer.getState() + " event:" + event);
     
     // Remove from the list of containers
     liveContainers.remove(rmContainer.getContainerId());

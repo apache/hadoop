@@ -92,12 +92,12 @@ public class TestFifoScheduler {
 
     // kick the scheduler, 1 GB and 3 GB given to AM1 and AM2, remaining 0
     nm1.nodeHeartbeat(true);
-    while (am1Response.getNewContainerCount() < 1) {
+    while (am1Response.getAllocatedContainers().size() < 1) {
       LOG.info("Waiting for containers to be created for app 1...");
       Thread.sleep(1000);
       am1Response = am1.schedule();
     }
-    while (am2Response.getNewContainerCount() < 1) {
+    while (am2Response.getAllocatedContainers().size() < 1) {
       LOG.info("Waiting for containers to be created for app 2...");
       Thread.sleep(1000);
       am2Response = am2.schedule();
@@ -105,12 +105,12 @@ public class TestFifoScheduler {
     // kick the scheduler, nothing given remaining 2 GB.
     nm2.nodeHeartbeat(true);
 
-    List<Container> allocated1 = am1Response.getNewContainerList();
+    List<Container> allocated1 = am1Response.getAllocatedContainers();
     Assert.assertEquals(1, allocated1.size());
     Assert.assertEquals(1 * GB, allocated1.get(0).getResource().getMemory());
     Assert.assertEquals(nm1.getNodeId(), allocated1.get(0).getNodeId());
 
-    List<Container> allocated2 = am2Response.getNewContainerList();
+    List<Container> allocated2 = am2Response.getAllocatedContainers();
     Assert.assertEquals(1, allocated2.size());
     Assert.assertEquals(3 * GB, allocated2.get(0).getResource().getMemory());
     Assert.assertEquals(nm1.getNodeId(), allocated2.get(0).getNodeId());
@@ -137,7 +137,7 @@ public class TestFifoScheduler {
       Thread.sleep(1000);
     }
     Assert.assertEquals(1, attempt1.getJustFinishedContainers().size());
-    Assert.assertEquals(1, am1.schedule().getFinishedContainerList().size());
+    Assert.assertEquals(1, am1.schedule().getCompletedContainersStatuses().size());
     Assert.assertEquals(5 * GB, rm.getResourceScheduler().getUsedResource(
         nm1.getNodeId()).getMemory());
 

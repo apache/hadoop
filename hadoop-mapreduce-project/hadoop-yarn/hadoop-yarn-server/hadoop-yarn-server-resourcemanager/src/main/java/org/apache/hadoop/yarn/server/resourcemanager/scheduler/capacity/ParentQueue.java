@@ -37,6 +37,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
@@ -608,7 +609,7 @@ public class ParentQueue implements CSQueue {
   @Override
   public void completedContainer(Resource clusterResource,
       SchedulerApp application, SchedulerNode node, 
-      RMContainer rmContainer, RMContainerEventType event) {
+      RMContainer rmContainer, ContainerStatus containerStatus, RMContainerEventType event) {
     if (application != null) {
       // Careful! Locking order is important!
       // Book keeping
@@ -626,7 +627,7 @@ public class ParentQueue implements CSQueue {
       // Inform the parent
       if (parent != null) {
         parent.completedContainer(clusterResource, application, 
-            node, rmContainer, event);
+            node, rmContainer, null, event);
       }    
     }
   }

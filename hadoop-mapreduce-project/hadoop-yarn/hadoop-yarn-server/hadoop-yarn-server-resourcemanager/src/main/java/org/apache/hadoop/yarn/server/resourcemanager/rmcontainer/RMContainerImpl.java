@@ -92,7 +92,7 @@ public class RMContainerImpl implements RMContainer {
 
     // Transitions from RUNNING state
     .addTransition(RMContainerState.RUNNING, RMContainerState.COMPLETED,
-        RMContainerEventType.FINISHED, new ContainerCompletedTransition())
+        RMContainerEventType.FINISHED, new FinishedTransition())
     .addTransition(RMContainerState.RUNNING, RMContainerState.KILLED,
         RMContainerEventType.KILL, new KillTransition())
 
@@ -273,10 +273,16 @@ public class RMContainerImpl implements RMContainer {
 
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
+      RMContainerFinishedEvent finishedEvent = (RMContainerFinishedEvent) event;
+
+      // Update container-status for diagnostics. Today we completely
+      // replace it on finish. We may just need to update diagnostics.
+      container.container.setContainerStatus(finishedEvent
+          .getRemoteContainerStatus());
 
       // Inform AppAttempt
       container.eventHandler.handle(new RMAppAttemptContainerFinishedEvent(
-          container.appAttemptId, container.container));
+          container.appAttemptId, container.container.getContainerStatus()));
     }
   }
 
@@ -312,22 +318,4 @@ public class RMContainerImpl implements RMContainer {
     }
   }
 
-  private static final class ContainerCompletedTransition extends
-      FinishedTransition {
-
-    @Override
-    public void transition(RMContainerImpl container, RMContainerEvent event) {
-
-      RMContainerFinishedEvent finishedEvent = (RMContainerFinishedEvent) event;
-
-      // Update container-status for diagnostics. Today we completely
-      // replace it on finish. We may just need to update diagnostics.
-      // ^TODO
-      container.container.setContainerStatus(finishedEvent
-          .getRemoteContainerStatus());
-
-      // Inform appAttempt
-      super.transition(container, event);
-    }
-  }
 }

@@ -26,8 +26,8 @@ public class RMContainerFinishedEvent extends RMContainerEvent {
   private final ContainerStatus remoteContainerStatus;
 
   public RMContainerFinishedEvent(ContainerId containerId,
-      ContainerStatus containerStatus) {
-    super(containerId, RMContainerEventType.FINISHED);
+      ContainerStatus containerStatus, RMContainerEventType event) {
+    super(containerId, event);
     this.remoteContainerStatus = containerStatus;
   }
 

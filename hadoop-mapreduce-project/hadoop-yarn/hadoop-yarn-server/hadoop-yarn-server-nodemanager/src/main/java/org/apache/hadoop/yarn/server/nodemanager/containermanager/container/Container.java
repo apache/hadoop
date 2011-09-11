@@ -40,8 +40,6 @@ public interface Container extends EventHandler<ContainerEvent> {
 
   Map<Path,String> getLocalizedResources();
 
-  org.apache.hadoop.yarn.api.records.Container cloneAndGetContainer();
-
   ContainerStatus cloneAndGetContainerStatus();
 
   String toString();

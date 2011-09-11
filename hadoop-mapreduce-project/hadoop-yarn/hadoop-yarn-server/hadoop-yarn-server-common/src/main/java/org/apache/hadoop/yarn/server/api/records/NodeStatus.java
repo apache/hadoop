@@ -18,10 +18,8 @@
 package org.apache.hadoop.yarn.server.api.records;
 
 import java.util.List;
-import java.util.Map;
 
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 
@@ -31,17 +29,13 @@ public interface NodeStatus {
   public abstract NodeId getNodeId();
   public abstract int getResponseId();
   
-  public abstract Map<ApplicationId, List<Container>> getAllContainers();
-  public abstract List<Container> getContainers(ApplicationId key);
+  public abstract List<ContainerStatus> getContainersStatuses();
+  public abstract void setContainersStatuses(
+      List<ContainerStatus> containersStatuses);
 
   NodeHealthStatus getNodeHealthStatus();
   void setNodeHealthStatus(NodeHealthStatus healthStatus);
 
   public abstract void setNodeId(NodeId nodeId);
   public abstract void setResponseId(int responseId);
-  
-  public abstract void addAllContainers(Map<ApplicationId, List<Container>> containers);
-  public abstract void setContainers(ApplicationId key, List<Container> containers);
-  public abstract void removeContainers(ApplicationId key);
-  public abstract void clearContainers();
 }

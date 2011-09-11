@@ -327,24 +327,6 @@ public class ContainerImpl implements Container {
   }
 
   @Override
-  public
-      org.apache.hadoop.yarn.api.records.Container cloneAndGetContainer() {
-    this.readLock.lock();
-    try {
-      org.apache.hadoop.yarn.api.records.Container c =
-        recordFactory.newRecordInstance(
-            org.apache.hadoop.yarn.api.records.Container.class);
-      c.setId(this.launchContext.getContainerId());
-      c.setResource(this.launchContext.getResource());
-      c.setState(getCurrentState());
-      c.setContainerStatus(cloneAndGetContainerStatus());
-      return c;
-    } finally {
-      this.readLock.unlock();
-    }
-  }
-
-  @Override
   public ContainerLaunchContext getLaunchContext() {
     this.readLock.lock();
     try {
