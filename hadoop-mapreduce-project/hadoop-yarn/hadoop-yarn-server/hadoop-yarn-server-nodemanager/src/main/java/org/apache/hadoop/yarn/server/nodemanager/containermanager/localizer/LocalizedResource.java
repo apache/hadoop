@@ -120,7 +120,8 @@ public class LocalizedResource implements EventHandler<ResourceEvent> {
     for (ContainerId c : ref) {
       sb.append("(").append(c.toString()).append(")");
     }
-    sb.append("],").append(getTimestamp()).append("}");
+    sb.append("],").append(getTimestamp()).append(",")
+      .append(getState()).append("}");
     return sb.toString();
   }
 

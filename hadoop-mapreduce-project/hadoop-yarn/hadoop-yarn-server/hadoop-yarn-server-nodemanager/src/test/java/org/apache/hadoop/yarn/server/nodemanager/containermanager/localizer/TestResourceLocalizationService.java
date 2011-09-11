@@ -21,10 +21,17 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 import java.net.InetSocketAddress;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+
+import junit.framework.Assert;
 
 import org.apache.avro.ipc.Server;
 import org.apache.hadoop.conf.Configuration;
@@ -63,11 +70,15 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService.LocalizerTracker;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ApplicationLocalizationEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ContainerLocalizationCleanupEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ContainerLocalizationRequestEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerEventType;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.hadoop.yarn.util.Records;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -134,6 +145,190 @@ public class TestResourceLocalizationService {
 
   @Test
   @SuppressWarnings("unchecked") // mocked generics
+  public void testResourceRelease() throws Exception {
+    Configuration conf = new Configuration();
+    AbstractFileSystem spylfs =
+      spy(FileContext.getLocalFSFileContext().getDefaultFileSystem());
+    final FileContext lfs = FileContext.getFileContext(spylfs, conf);
+    doNothing().when(spylfs).mkdir(
+        isA(Path.class), isA(FsPermission.class), anyBoolean());
+
+    List<Path> localDirs = new ArrayList<Path>();
+    String[] sDirs = new String[4];
+    for (int i = 0; i < 4; ++i) {
+      localDirs.add(lfs.makeQualified(new Path(basedir, i + "")));
+      sDirs[i] = localDirs.get(i).toString();
+    }
+    conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS, sDirs);
+
+    Server ignore = mock(Server.class);
+    LocalizerTracker mockLocallilzerTracker = mock(LocalizerTracker.class);
+    DrainDispatcher dispatcher = new DrainDispatcher();
+    dispatcher.init(conf);
+    dispatcher.start();
+    EventHandler<ApplicationEvent> applicationBus = mock(EventHandler.class);
+    dispatcher.register(ApplicationEventType.class, applicationBus);
+    EventHandler<ContainerEvent> containerBus = mock(EventHandler.class);
+    dispatcher.register(ContainerEventType.class, containerBus);
+    //Ignore actual localization
+    EventHandler<LocalizerEvent> localizerBus = mock(EventHandler.class);
+    dispatcher.register(LocalizerEventType.class, localizerBus);
+
+    ContainerExecutor exec = mock(ContainerExecutor.class);
+    DeletionService delService = new DeletionService(exec);
+    delService.init(null);
+    delService.start();
+
+    ResourceLocalizationService rawService =
+      new ResourceLocalizationService(dispatcher, exec, delService);
+    ResourceLocalizationService spyService = spy(rawService);
+    doReturn(ignore).when(spyService).createServer();
+    doReturn(mockLocallilzerTracker).when(spyService).createLocalizerTracker(
+        isA(Configuration.class));
+    doReturn(lfs).when(spyService)
+        .getLocalFileContext(isA(Configuration.class));
+    try {
+      spyService.init(conf);
+      spyService.start();
+
+      final String user = "user0";
+      // init application
+      final Application app = mock(Application.class);
+      final ApplicationId appId =
+          BuilderUtils.newApplicationId(314159265358979L, 3);
+      when(app.getUser()).thenReturn(user);
+      when(app.getAppId()).thenReturn(appId);
+      spyService.handle(new ApplicationLocalizationEvent(
+          LocalizationEventType.INIT_APPLICATION_RESOURCES, app));
+      dispatcher.await();
+            
+      //Get a handle on the trackers after they're setup with INIT_APP_RESOURCES
+      LocalResourcesTracker appTracker =
+          spyService.getLocalResourcesTracker(
+              LocalResourceVisibility.APPLICATION, user, appId);
+      LocalResourcesTracker privTracker =
+          spyService.getLocalResourcesTracker(LocalResourceVisibility.PRIVATE,
+              user, appId);
+      LocalResourcesTracker pubTracker =
+          spyService.getLocalResourcesTracker(LocalResourceVisibility.PUBLIC,
+              user, appId);
+
+      // init container.
+      final Container c = getMockContainer(appId, 42);
+      
+      // init resources
+      Random r = new Random();
+      long seed = r.nextLong();
+      System.out.println("SEED: " + seed);
+      r.setSeed(seed);
+      
+      // Send localization requests for one resource of each type.
+      final LocalResource privResource = getPrivateMockedResource(r);
+      final LocalResourceRequest privReq =
+          new LocalResourceRequest(privResource);
+      
+      final LocalResource pubResource = getPublicMockedResource(r);
+      final LocalResourceRequest pubReq = new LocalResourceRequest(pubResource);
+      final LocalResource pubResource2 = getPublicMockedResource(r);
+      final LocalResourceRequest pubReq2 =
+          new LocalResourceRequest(pubResource2);
+      
+      final LocalResource appResource = getAppMockedResource(r);
+      final LocalResourceRequest appReq = new LocalResourceRequest(appResource);
+      
+      Map<LocalResourceVisibility, Collection<LocalResourceRequest>> req =
+          new HashMap<LocalResourceVisibility, 
+                      Collection<LocalResourceRequest>>();
+      req.put(LocalResourceVisibility.PRIVATE,
+          Collections.singletonList(privReq));
+      req.put(LocalResourceVisibility.PUBLIC,
+          Collections.singletonList(pubReq));
+      req.put(LocalResourceVisibility.APPLICATION,
+          Collections.singletonList(appReq));
+      
+      Map<LocalResourceVisibility, Collection<LocalResourceRequest>> req2 =
+        new HashMap<LocalResourceVisibility, 
+                    Collection<LocalResourceRequest>>();
+      req2.put(LocalResourceVisibility.PRIVATE,
+          Collections.singletonList(privReq));
+      req2.put(LocalResourceVisibility.PUBLIC,
+          Collections.singletonList(pubReq2));
+      
+      Set<LocalResourceRequest> pubRsrcs = new HashSet<LocalResourceRequest>();
+      pubRsrcs.add(pubReq);
+      pubRsrcs.add(pubReq2);
+      
+      // Send Request event
+      spyService.handle(new ContainerLocalizationRequestEvent(c, req));
+      spyService.handle(new ContainerLocalizationRequestEvent(c, req2));
+      dispatcher.await();
+
+      int privRsrcCount = 0;
+      for (LocalizedResource lr : privTracker) {
+        privRsrcCount++;
+        Assert.assertEquals("Incorrect reference count", 2, lr.getRefCount());
+        Assert.assertEquals(privReq, lr.getRequest());
+      }
+      Assert.assertEquals(1, privRsrcCount);
+
+      int pubRsrcCount = 0;
+      for (LocalizedResource lr : pubTracker) {
+        pubRsrcCount++;
+        Assert.assertEquals("Incorrect reference count", 1, lr.getRefCount());
+        pubRsrcs.remove(lr.getRequest());
+      }
+      Assert.assertEquals(0, pubRsrcs.size());
+      Assert.assertEquals(2, pubRsrcCount);
+
+      int appRsrcCount = 0;
+      for (LocalizedResource lr : appTracker) {
+        appRsrcCount++;
+        Assert.assertEquals("Incorrect reference count", 1, lr.getRefCount());
+        Assert.assertEquals(appReq, lr.getRequest());
+      }
+      Assert.assertEquals(1, appRsrcCount);
+      
+      //Send Cleanup Event
+      spyService.handle(new ContainerLocalizationCleanupEvent(c, req));
+      req2.remove(LocalResourceVisibility.PRIVATE);
+      spyService.handle(new ContainerLocalizationCleanupEvent(c, req2));
+      dispatcher.await();
+      
+      pubRsrcs.add(pubReq);
+      pubRsrcs.add(pubReq2);
+
+      privRsrcCount = 0;
+      for (LocalizedResource lr : privTracker) {
+        privRsrcCount++;
+        Assert.assertEquals("Incorrect reference count", 1, lr.getRefCount());
+        Assert.assertEquals(privReq, lr.getRequest());
+      }
+      Assert.assertEquals(1, privRsrcCount);
+
+      pubRsrcCount = 0;
+      for (LocalizedResource lr : pubTracker) {
+        pubRsrcCount++;
+        Assert.assertEquals("Incorrect reference count", 0, lr.getRefCount());
+        pubRsrcs.remove(lr.getRequest());
+      }
+      Assert.assertEquals(0, pubRsrcs.size());
+      Assert.assertEquals(2, pubRsrcCount);
+
+      appRsrcCount = 0;
+      for (LocalizedResource lr : appTracker) {
+        appRsrcCount++;
+        Assert.assertEquals("Incorrect reference count", 0, lr.getRefCount());
+        Assert.assertEquals(appReq, lr.getRequest());
+      }
+      Assert.assertEquals(1, appRsrcCount);
+    } finally {
+      dispatcher.stop();
+      delService.stop();
+    }
+  }
+  
+  @Test
+  @SuppressWarnings("unchecked") // mocked generics
   public void testLocalizationHeartbeat() throws Exception {
     Configuration conf = new Configuration();
     AbstractFileSystem spylfs =
@@ -175,9 +370,8 @@ public class TestResourceLocalizationService {
 
       // init application
       final Application app = mock(Application.class);
-      final ApplicationId appId = mock(ApplicationId.class);
-      when(appId.getClusterTimestamp()).thenReturn(314159265358979L);
-      when(appId.getId()).thenReturn(3);
+      final ApplicationId appId =
+          BuilderUtils.newApplicationId(314159265358979L, 3);
       when(app.getUser()).thenReturn("user0");
       when(app.getAppId()).thenReturn(appId);
       spyService.handle(new ApplicationLocalizationEvent(
@@ -205,11 +399,13 @@ public class TestResourceLocalizationService {
       doReturn(out).when(spylfs).createInternal(isA(Path.class),
           isA(EnumSet.class), isA(FsPermission.class), anyInt(), anyShort(),
           anyLong(), isA(Progressable.class), anyInt(), anyBoolean());
-      final LocalResource resource = getMockResource(r);
+      final LocalResource resource = getPrivateMockedResource(r);
       final LocalResourceRequest req = new LocalResourceRequest(resource);
-      spyService.handle(new ContainerLocalizationRequestEvent(
-                c, Collections.singletonList(req),
-                LocalResourceVisibility.PRIVATE));
+      Map<LocalResourceVisibility, Collection<LocalResourceRequest>> rsrcs =
+        new HashMap<LocalResourceVisibility, 
+                    Collection<LocalResourceRequest>>();
+      rsrcs.put(LocalResourceVisibility.PRIVATE, Collections.singletonList(req));
+      spyService.handle(new ContainerLocalizationRequestEvent(c, rsrcs));
       // Sigh. Thread init of private localizer not accessible
       Thread.sleep(500);
       dispatcher.await();
@@ -265,42 +461,44 @@ public class TestResourceLocalizationService {
     }
   }
 
-  static URL getPath(String path) {
-    URL uri = mock(org.apache.hadoop.yarn.api.records.URL.class);
-    when(uri.getScheme()).thenReturn("file");
-    when(uri.getHost()).thenReturn(null);
-    when(uri.getFile()).thenReturn(path);
-    return uri;
+  private static URL getPath(String path) {
+    URL url = BuilderUtils.newURL("file", null, 0, path);
+    return url;
   }
 
-  static LocalResource getMockResource(Random r) {
-    LocalResource rsrc = mock(LocalResource.class);
-
+  private static LocalResource getMockedResource(Random r, 
+      LocalResourceVisibility vis) {
     String name = Long.toHexString(r.nextLong());
-    URL uri = getPath("/local/PRIVATE/" + name);
-
-    when(rsrc.getResource()).thenReturn(uri);
-    when(rsrc.getSize()).thenReturn(r.nextInt(1024) + 1024L);
-    when(rsrc.getTimestamp()).thenReturn(r.nextInt(1024) + 2048L);
-    when(rsrc.getType()).thenReturn(LocalResourceType.FILE);
-    when(rsrc.getVisibility()).thenReturn(LocalResourceVisibility.PRIVATE);
+    URL url = getPath("/local/PRIVATE/" + name);
+    LocalResource rsrc =
+        BuilderUtils.newLocalResource(url, LocalResourceType.FILE, vis,
+            r.nextInt(1024) + 1024L, r.nextInt(1024) + 2048L);
     return rsrc;
   }
+  
+  private static LocalResource getAppMockedResource(Random r) {
+    return getMockedResource(r, LocalResourceVisibility.APPLICATION);
+  }
+  
+  private static LocalResource getPublicMockedResource(Random r) {
+    return getMockedResource(r, LocalResourceVisibility.PUBLIC);
+  }
+  
+  private static LocalResource getPrivateMockedResource(Random r) {
+    return getMockedResource(r, LocalResourceVisibility.PRIVATE);
+  }
 
-  static Container getMockContainer(ApplicationId appId, int id) {
+  private static Container getMockContainer(ApplicationId appId, int id) {
     Container c = mock(Container.class);
-    ApplicationAttemptId appAttemptId = Records.newRecord(ApplicationAttemptId.class);
-    appAttemptId.setApplicationId(appId);
-    appAttemptId.setAttemptId(1);
-    ContainerId cId = Records.newRecord(ContainerId.class);
-    cId.setAppAttemptId(appAttemptId);
-    cId.setAppId(appId);
-    cId.setId(id);
+    ApplicationAttemptId appAttemptId =
+        BuilderUtils.newApplicationAttemptId(appId, 1);
+    ContainerId cId = BuilderUtils.newContainerId(appAttemptId, id);
     when(c.getUser()).thenReturn("user0");
     when(c.getContainerID()).thenReturn(cId);
     Credentials creds = new Credentials();
     creds.addToken(new Text("tok" + id), getToken(id));
     when(c.getCredentials()).thenReturn(creds);
+    when(c.toString()).thenReturn(cId.toString());
     return c;
   }
 

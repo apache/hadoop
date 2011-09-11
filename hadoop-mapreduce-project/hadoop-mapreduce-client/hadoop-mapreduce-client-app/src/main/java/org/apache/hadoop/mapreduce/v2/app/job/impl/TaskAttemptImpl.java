@@ -711,7 +711,7 @@ public abstract class TaskAttemptImpl implements
         String linkName = name.toUri().getPath();
         container.setLocalResource(
             linkName,
-            BuilderUtils.newLocalResource(recordFactory,
+            BuilderUtils.newLocalResource(
                 p.toUri(), type, 
                 visibilities[i]
                   ? LocalResourceVisibility.PUBLIC

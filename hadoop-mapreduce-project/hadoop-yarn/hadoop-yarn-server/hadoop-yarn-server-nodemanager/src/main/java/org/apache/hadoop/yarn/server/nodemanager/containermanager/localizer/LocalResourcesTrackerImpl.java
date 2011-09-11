@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
  * {@link LocalResourceVisibility}.
  * 
  */
+
 class LocalResourcesTrackerImpl implements LocalResourcesTracker {
 
   static final Log LOG = LogFactory.getLog(LocalResourcesTrackerImpl.class);
@@ -83,7 +84,7 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
   @Override
   public boolean remove(LocalizedResource rem, DeletionService delService) {
     // current synchronization guaranteed by crude RLS event for cleanup
-    LocalizedResource rsrc = localrsrc.remove(rem.getRequest());
+    LocalizedResource rsrc = localrsrc.get(rem.getRequest());
     if (null == rsrc) {
       LOG.error("Attempt to remove absent resource: " + rem.getRequest() +
           " from " + getUser());
@@ -93,10 +94,11 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
         || ResourceState.DOWNLOADING.equals(rsrc.getState())
         || rsrc != rem) {
       // internal error
-      LOG.error("Attempt to remove resource with non-zero refcount");
+      LOG.error("Attempt to remove resource: " + rsrc + " with non-zero refcount");
       assert false;
       return false;
     }
+    localrsrc.remove(rem.getRequest());
     if (ResourceState.LOCALIZED.equals(rsrc.getState())) {
       delService.delete(getUser(), rsrc.getLocalPath());
     }
