@@ -19,18 +19,19 @@ package org.apache.hadoop.hdfs;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.channels.FileChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.nio.channels.FileChannel;
 import java.util.Random;
-import java.io.RandomAccessFile;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.net.*;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
@@ -41,9 +42,11 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.security.*;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.net.DNSToSwitchMapping;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.StaticMapping;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -323,6 +326,7 @@ public class MiniDFSCluster {
                              boolean manageDfsDirs, StartupOption operation, 
                              String[] racks, String[] hosts,
                              long[] simulatedCapacities) throws IOException {
+    conf.set("slave.host.name", "127.0.0.1");
 
     int curDatanodesNum = dataNodes.size();
     // for mincluster's the default initialDelay for BRs is 0
@@ -797,6 +801,18 @@ public class MiniDFSCluster {
     final String str = "hftp://" + conf.get("dfs.http.address");
     try {
       return (HftpFileSystem)FileSystem.get(new URI(str), conf); 
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
+  }
+
+  /**
+   * @return a {@link WebHdfsFileSystem} object.
+   */
+  public WebHdfsFileSystem getWebHdfsFileSystem() throws IOException {
+    final String str = WebHdfsFileSystem.SCHEME  + "://" + conf.get("dfs.http.address");
+    try {
+      return (WebHdfsFileSystem)FileSystem.get(new URI(str), conf); 
     } catch (URISyntaxException e) {
       throw new IOException(e);
     }

@@ -204,7 +204,7 @@ public class DistributedFileSystem extends FileSystem {
       Progressable progress) throws IOException {
 
     statistics.incrementWriteOps(1);
-    DFSOutputStream op = (DFSOutputStream)dfs.append(getPathName(f), bufferSize, progress);
+    final DFSOutputStream op = dfs.append(getPathName(f), bufferSize, progress);
     return new FSDataOutputStream(op, statistics, op.getInitialLen());
   }
 

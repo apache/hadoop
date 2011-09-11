@@ -646,7 +646,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * @throws IOException
    * @see ClientProtocol#append(String, String)
    */
-  OutputStream append(String src, int buffersize, Progressable progress
+  public DFSOutputStream append(String src, int buffersize, Progressable progress
       ) throws IOException {
     checkOpen();
     HdfsFileStatus stat = null;
@@ -660,7 +660,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                                      NSQuotaExceededException.class,
                                      DSQuotaExceededException.class);
     }
-    OutputStream result = new DFSOutputStream(src, buffersize, progress,
+    final DFSOutputStream result = new DFSOutputStream(src, buffersize, progress,
         lastBlock, stat, conf.getInt("io.bytes.per.checksum", 512));
     leasechecker.put(src, result);
     return result;
@@ -2415,7 +2415,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * datanode from the original pipeline. The DataStreamer now
    * starts sending packets from the dataQueue.
   ****************************************************************/
-  class DFSOutputStream extends FSOutputSummer implements Syncable {
+  public class DFSOutputStream extends FSOutputSummer implements Syncable {
     private Socket s;
     boolean closed = false;
   
@@ -3754,7 +3754,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     /**
      * Returns the size of a file as it was when this stream was opened
      */
-    long getInitialLen() {
+    public long getInitialLen() {
       return initialFileSize;
     }
   }

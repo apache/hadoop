@@ -301,7 +301,8 @@ public class HftpFileSystem extends FileSystem {
   @Override
   public FSDataInputStream open(Path f, int buffersize) throws IOException {
     final HttpURLConnection connection = openConnection(
-        "/data" + f.toUri().getPath(), "ugi=" + getUgiParameter());
+        "/data" + f.makeQualified(this).toUri().getPath(),
+        "ugi=" + getUgiParameter());
     final InputStream in;
     try {
       connection.setRequestMethod("GET");
