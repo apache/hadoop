@@ -1433,6 +1433,13 @@
     <mkdir dir="${dist.dir}/docs/api"/>
     <mkdir dir="${dist.dir}/docs/jdiff"/>
     <mkdir dir="${dist.dir}/sbin"/>
+    <mkdir dir="${dist.dir}/share/${name}/templates/conf"/>
+
+    <copy todir="${dist.dir}/share/${name}/templates/conf" includeEmptyDirs="false">
+      <fileset dir="${basedir}/src/packages/templates/conf">
+        <include name="*"/>
+      </fileset>
+    </copy>
 
     <copy todir="${dist.dir}/lib" includeEmptyDirs="false" flatten="true">
       <fileset dir="${common.ivy.lib.dir}"/>

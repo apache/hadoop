@@ -27,6 +27,7 @@ source /etc/default/hadoop-env.sh
 RETVAL=0
 PIDFILE="${HADOOP_PID_DIR}/hadoop-mapred-tasktracker.pid"
 desc="Hadoop tasktracker daemon"
+export HADOOP_PREFIX="/usr"
 
 start() {
   echo -n $"Starting $desc (hadoop-tasktracker): "

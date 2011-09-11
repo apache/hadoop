@@ -199,6 +199,9 @@ Release 0.20.205.0 - unreleased
     MAPREDUCE-2915. Ensure LTC passes java.library.path. (Kihwal Lee via
     acmurthy) 
 
+    HADOOP-7599. Script improvements to setup a secure Hadoop cluster 
+    (Eric Yang via ddas)
+
 Release 0.20.204.0 - 2011-8-25
 
   NEW FEATURES
