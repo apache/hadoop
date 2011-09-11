@@ -24,17 +24,19 @@ import java.security.PrivilegedExceptionAction;
 import javax.servlet.ServletContext;
 
 import org.apache.commons.logging.Log;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.hdfs.web.resources.Param;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
-
-import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * Encapsulates the HTTP server started by the NameNode. 
@@ -179,6 +181,11 @@ public class NameNodeHttpServer {
         FileChecksumServlets.RedirectServlet.class, false);
     httpServer.addInternalServlet("contentSummary", "/contentSummary/*",
         ContentSummaryServlet.class, false);
+
+    httpServer.addJerseyResourcePackage(
+        NamenodeWebHdfsMethods.class.getPackage().getName()
+        + ";" + Param.class.getPackage().getName(),
+        "/" + WebHdfsFileSystem.PATH_PREFIX + "/*");
   }
 
   public static FSImage getFsImageFromContext(ServletContext context) {
