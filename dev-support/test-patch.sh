@@ -566,8 +566,10 @@ checkFindbugsWarnings () {
     $FINDBUGS_HOME/bin/convertXmlToText -html \
       $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.xml \
       $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.html
-    JIRA_COMMENT_FOOTER="Findbugs warnings: $BUILD_URL/artifact/trunk/patchprocess/newPatchFindbugsWarnings${module_suffix}.html
+    if [[ $newFindbugsWarnings > 0 ]] ; then
+      JIRA_COMMENT_FOOTER="Findbugs warnings: $BUILD_URL/artifact/trunk/$(basename $BASEDIR)/patchprocess/newPatchFindbugsWarnings${module_suffix}.html
 $JIRA_COMMENT_FOOTER"
+    fi
   done
 
   ### if current warnings greater than OK_FINDBUGS_WARNINGS

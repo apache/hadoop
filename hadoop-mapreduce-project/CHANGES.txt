@@ -15,6 +15,10 @@ Trunk (unreleased changes)
     MAPREDUCE-2784. [Gridmix] Bug fixes in ExecutionSummarizer and 
     ResourceUsageMatcher. (amarrk)
 
+    MAPREDUCE-2978. Fixed test-patch to make Jenkins report correct number of
+    findBugs, correct links to findBugs artifacts and no links to the
+    artifacts when there are no warnings. (Tom White via vinodkv).
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
