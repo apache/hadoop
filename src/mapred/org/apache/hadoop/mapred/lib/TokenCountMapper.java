@@ -31,10 +31,7 @@ import org.apache.hadoop.mapred.Reporter;
 
 /** A {@link Mapper} that maps text values into <token,freq> pairs.  Uses
  * {@link StringTokenizer} to break text into tokens. 
- * @deprecated Use 
- *    {@link org.apache.hadoop.mapreduce.lib.map.TokenCounterMapper} instead.
  */
-@Deprecated
 public class TokenCountMapper<K> extends MapReduceBase
     implements Mapper<K, Text, Text, LongWritable> {
 

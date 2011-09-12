@@ -26,10 +26,7 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 
 /** A {@link Mapper} that swaps keys and values. 
- * @deprecated Use {@link org.apache.hadoop.mapreduce.lib.map.InverseMapper} 
- *   instead.
  */
-@Deprecated
 public class InverseMapper<K, V>
     extends MapReduceBase implements Mapper<K, V, V, K> {
 

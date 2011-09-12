@@ -52,10 +52,7 @@ import org.apache.hadoop.util.StringUtils;
  * Subclasses of <code>FileInputFormat</code> can also override the 
  * {@link #isSplitable(FileSystem, Path)} method to ensure input-files are
  * not split-up and are processed as a whole by {@link Mapper}s.
- * @deprecated Use {@link org.apache.hadoop.mapreduce.lib.input.FileInputFormat}
- *  instead.
  */
-@Deprecated
 public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
 
   public static final Log LOG =

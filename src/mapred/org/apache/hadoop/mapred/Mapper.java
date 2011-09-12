@@ -127,9 +127,7 @@ import org.apache.hadoop.io.compress.CompressionCodec;
  * @see MapReduceBase
  * @see MapRunnable
  * @see SequenceFile
- * @deprecated Use {@link org.apache.hadoop.mapreduce.Mapper} instead.
  */
-@Deprecated
 public interface Mapper<K1, V1, K2, V2> extends JobConfigurable, Closeable {
   
   /** 

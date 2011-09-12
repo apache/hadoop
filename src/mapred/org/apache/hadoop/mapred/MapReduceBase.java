@@ -29,7 +29,6 @@ import org.apache.hadoop.mapred.JobConfigurable;
  * <p>Provides default no-op implementations for a few methods, most non-trivial
  * applications need to override some of them.</p>
  */
-@Deprecated
 public class MapReduceBase implements Closeable, JobConfigurable {
 
   /** Default implementation that does nothing. */
