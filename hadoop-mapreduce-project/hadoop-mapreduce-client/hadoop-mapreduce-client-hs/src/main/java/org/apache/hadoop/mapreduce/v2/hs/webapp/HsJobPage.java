@@ -23,7 +23,6 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 
-import org.apache.hadoop.mapreduce.v2.app.webapp.JobBlock;
 import org.apache.hadoop.yarn.webapp.SubView;
 
 /**
@@ -46,9 +45,9 @@ public class HsJobPage extends HsView {
 
   /**
    * The content of this page is the JobBlock
-   * @return JobBlock.class
+   * @return HsJobBlock.class
    */
   @Override protected Class<? extends SubView> content() {
-    return JobBlock.class;
+    return HsJobBlock.class;
   }
 }

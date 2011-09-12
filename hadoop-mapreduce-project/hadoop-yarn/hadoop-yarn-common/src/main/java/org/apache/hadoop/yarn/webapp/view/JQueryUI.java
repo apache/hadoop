@@ -133,8 +133,12 @@ public class JQueryUI extends HtmlBlock {
         if (init.isEmpty()) {
           init = defaultInit;
         }
-        list.add(join("  $('#", id, "').dataTable(", init,
+        list.add(join(id,"DataTable =  $('#", id, "').dataTable(", init,
                       ").fnSetFilteringDelay(188);"));
+        String postInit = $(postInitID(DATATABLES, id));
+        if(!postInit.isEmpty()) {
+          list.add(postInit);
+        }
       }
     }
     String selector = $(DATATABLES_SELECTOR);
@@ -209,6 +213,10 @@ public class JQueryUI extends HtmlBlock {
 
   public static String initID(String name, String id) {
     return djoin(name, id, "init");
+  }
+  
+  public static String postInitID(String name, String id) {
+    return djoin(name, id, "postinit");
   }
 
   public static String initSelector(String name) {

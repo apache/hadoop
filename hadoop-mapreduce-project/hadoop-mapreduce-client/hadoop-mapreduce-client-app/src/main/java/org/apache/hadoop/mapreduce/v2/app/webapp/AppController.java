@@ -22,6 +22,8 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 
 import java.util.Locale;
 
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -187,7 +189,7 @@ public class AppController extends Controller implements AMParams {
    * @param s the error message to include.
    */
   void badRequest(String s) {
-    setStatus(response().SC_BAD_REQUEST);
+    setStatus(HttpServletResponse.SC_BAD_REQUEST);
     setTitle(join("Bad request: ", s));
   }
 
@@ -196,7 +198,7 @@ public class AppController extends Controller implements AMParams {
    * @param s the error message to include.
    */
   void notFound(String s) {
-    setStatus(response().SC_NOT_FOUND);
+    setStatus(HttpServletResponse.SC_NOT_FOUND);
     setTitle(join("Not found: ", s));
   }
 
