@@ -28,6 +28,7 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.KeyValue.MetaComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -149,6 +150,33 @@ public class TestKeyValue extends TestCase {
     metacomparisons(new KeyValue.MetaComparator());
   }
 
+  public void testBadMetaCompareSingleDelim() {
+    MetaComparator c = new KeyValue.MetaComparator();
+    long now = System.currentTimeMillis();
+    // meta keys values are not quite right.  A users can enter illegal values 
+    // from shell when scanning meta.
+    KeyValue a = new KeyValue(Bytes.toBytes("table,a1"), now);
+    KeyValue b = new KeyValue(Bytes.toBytes("table,a2"), now);
+    try {
+      c.compare(a, b);
+    } catch (IllegalArgumentException iae) { 
+      assertEquals(".META. key must have two ',' delimiters and have the following" +
+      		" format: '<table>,<key>,<etc>'", iae.getMessage());
+      return;
+    }
+    fail("Expected IllegalArgumentException");
+  }
+
+  public void testMetaComparatorTableKeysWithCommaOk() {
+    MetaComparator c = new KeyValue.MetaComparator();
+    long now = System.currentTimeMillis();
+    // meta keys values are not quite right.  A users can enter illegal values 
+    // from shell when scanning meta.
+    KeyValue a = new KeyValue(Bytes.toBytes("table,key,with,commas1,1234"), now);
+    KeyValue b = new KeyValue(Bytes.toBytes("table,key,with,commas2,0123"), now);
+    assertTrue(c.compare(a, b) < 0);
+  }
+  
   /**
    * Tests cases where rows keys have characters below the ','.
    * See HBASE-832

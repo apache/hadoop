@@ -1311,12 +1311,16 @@ public class KeyValue implements Writable, HeapSize {
     return index;
   }
 
+  /**
+   * This function is only used in Meta key comparisons so its error message 
+   * is specific for meta key errors.
+   */
   static int getRequiredDelimiterInReverse(final byte [] b,
       final int offset, final int length, final int delimiter) {
     int index = getDelimiterInReverse(b, offset, length, delimiter);
     if (index < 0) {
-      throw new IllegalArgumentException("No " + delimiter + " in <" +
-        Bytes.toString(b) + ">" + ", length=" + length + ", offset=" + offset);
+      throw new IllegalArgumentException(".META. key must have two '" + (char)delimiter + "' "
+        + "delimiters and have the following format: '<table>,<key>,<etc>'");
     }
     return index;
   }
