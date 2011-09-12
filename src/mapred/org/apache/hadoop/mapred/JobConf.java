@@ -100,9 +100,7 @@ import org.apache.hadoop.util.Tool;
  * @see ClusterStatus
  * @see Tool
  * @see DistributedCache
- * @deprecated Use {@link Configuration} instead
  */
-@Deprecated
 public class JobConf extends Configuration {
   
   private static final Log LOG = LogFactory.getLog(JobConf.class);

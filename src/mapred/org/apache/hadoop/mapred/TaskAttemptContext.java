@@ -19,11 +19,6 @@ package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.util.Progressable;
 
-/**
- * @deprecated Use {@link org.apache.hadoop.mapreduce.TaskAttemptContext}
- *   instead.
- */
-@Deprecated
 public class TaskAttemptContext 
        extends org.apache.hadoop.mapreduce.TaskAttemptContext {
   private Progressable progress;
