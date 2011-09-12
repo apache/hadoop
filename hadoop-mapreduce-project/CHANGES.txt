@@ -1264,6 +1264,9 @@ Release 0.23.0 - Unreleased
    MAPREDUCE-2749. Ensure NM registers with RM after starting all its services
    correctly. (Thomas Graves via acmurthy)
 
+   MAPREDUCE-2979. Removed the needless ClientProtocolProvider configuration
+   from the hadoop-mapreduce-client-core module. (Siddharth Seth via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
