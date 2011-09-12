@@ -536,6 +536,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7577. Add EventCounter wrapper to provide compatibility between
     metrics 1 and 2. (Joep Rottinghuis via shv)
 
+    HADOOP-7568. SequenceFile should not print into stdout.
+    (Plamen Jeliazkov via shv)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
