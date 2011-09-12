@@ -78,7 +78,7 @@ Prefix: %{_conf_dir}
 Prefix: %{_log_dir}
 Prefix: %{_pid_dir}
 Buildroot: %{_build_dir}
-Requires: sh-utils, textutils, /usr/sbin/useradd, /usr/sbin/usermod, /sbin/chkconfig, /sbin/service, jdk >= 1.6
+Requires: sh-utils, textutils, /usr/sbin/useradd, /usr/sbin/usermod, /sbin/chkconfig, /sbin/service
 AutoReqProv: no
 Provides: hadoop
 
@@ -149,8 +149,8 @@ fi
 %pre
 getent group hadoop 2>/dev/null >/dev/null || /usr/sbin/groupadd -r hadoop
 
-/usr/sbin/useradd --comment "Hadoop MapReduce" --shell /bin/bash -M -r --groups hadoop --home /tmp mapred 2> /dev/null || :
-/usr/sbin/useradd --comment "Hadoop HDFS" --shell /bin/bash -M -r --groups hadoop --home /tmp hdfs 2> /dev/null || :
+/usr/sbin/useradd --comment "Hadoop MapReduce" --shell /bin/bash -M -r -g hadoop --home /tmp mapred 2> /dev/null || :
+/usr/sbin/useradd --comment "Hadoop HDFS" --shell /bin/bash -M -r -g hadoop --home /tmp hdfs 2> /dev/null || :
 
 %post
 bash ${RPM_INSTALL_PREFIX0}/sbin/update-hadoop-env.sh \
@@ -191,4 +191,5 @@ bash ${RPM_INSTALL_PREFIX0}/sbin/update-hadoop-env.sh \
 %config(noreplace) %{_conf_dir}/ssl-server.xml.example
 %config(noreplace) %{_conf_dir}/taskcontroller.cfg
 %{_prefix}
+%attr(0755,root,root) %{_prefix}/libexec
 %attr(0755,root,root) /etc/rc.d/init.d

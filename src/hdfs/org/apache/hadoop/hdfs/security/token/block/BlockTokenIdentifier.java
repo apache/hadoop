@@ -24,10 +24,12 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumSet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
 public class BlockTokenIdentifier extends TokenIdentifier {
@@ -181,5 +183,13 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     if(cache == null) cache = super.getBytes();
     
     return cache;
+  }
+  
+  @InterfaceAudience.Private
+  public static class Renewer extends Token.TrivialRenewer {
+    @Override
+    protected Text getKind() {
+      return KIND_NAME;
+    }
   }
 }

@@ -84,7 +84,7 @@ public class FileDataServlet extends DfsServlet {
       // pick a random datanode
       return jspHelper.randomNode();
     }
-    return jspHelper.bestNode(blks.get(0));
+    return JspHelper.bestNode(blks.get(0));
   }
 
   /**

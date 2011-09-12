@@ -68,12 +68,8 @@ public class DefaultTaskController extends TaskController {
   @Override
   public void createLogDir(TaskAttemptID taskID, 
 		  			boolean isCleanup) throws IOException {
-	boolean b = TaskLog.createTaskAttemptLogDir(taskID, isCleanup, 
-	    		 		localStorage.getGoodLocalDirs());
-	if (!b) {
-	    LOG.warn("Creation of attempt log dir for " + taskID
-	                 + " failed. Ignoring");
-	}
+    TaskLog.createTaskAttemptLogDir(taskID, isCleanup, 
+                                    localStorage.getGoodLocalDirs());
   }
   
   /**
@@ -114,7 +110,7 @@ public class DefaultTaskController extends TaskController {
       }
       //read the configuration for the job
       FileSystem rawFs = FileSystem.getLocal(getConf()).getRaw();
-      long logSize = 0; //TODO: Ref BUG:2854624
+      long logSize = 0; //TODO MAPREDUCE-1100
       // get the JVM command line.
       String cmdLine = 
         TaskLog.buildCommandLine(setup, jvmArguments,

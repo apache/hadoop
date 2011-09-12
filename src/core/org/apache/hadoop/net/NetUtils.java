@@ -27,7 +27,9 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.net.ConnectException;
 import java.nio.channels.SocketChannel;
 import java.util.Map.Entry;
 import java.util.*;
@@ -405,6 +407,21 @@ public class NetUtils {
     } else {
       SocketIOWithTimeout.connect(ch, endpoint, timeout);
     }
+
+    // There is a very rare case allowed by the TCP specification, such that
+    // if we are trying to connect to an endpoint on the local machine,
+    // and we end up choosing an ephemeral port equal to the destination port,
+    // we will actually end up getting connected to ourself (ie any data we
+    // send just comes right back). This is only possible if the target
+    // daemon is down, so we'll treat it like connection refused.
+    if (socket.getLocalPort() == socket.getPort() &&
+        socket.getLocalAddress().equals(socket.getInetAddress())) {
+      LOG.info("Detected a loopback TCP socket, disconnecting it");
+      socket.close();
+      throw new ConnectException(
+        "Localhost targeted connection resulted in a loopback. " +
+        "No daemon is listening on the target port.");
+    }
   }
   
   /** 
@@ -443,7 +460,36 @@ public class NetUtils {
     }
     return hostNames;
   }
-  
+
+  /**
+   * Performs a sanity check on the list of hostnames/IPs to verify they at least
+   * appear to be valid.
+   * @param names - List of hostnames/IPs
+   * @throws UnknownHostException
+   */
+  public static void verifyHostnames(String[] names) throws UnknownHostException {
+    for (String name: names) {
+      if (name == null) {
+        throw new UnknownHostException("null hostname found");
+      }
+      // The first check supports URL formats (e.g. hdfs://, etc.). 
+      // java.net.URI requires a schema, so we add a dummy one if it doesn't
+      // have one already.
+      URI uri = null;
+      try {
+        uri = new URI(name);
+        if (uri.getHost() == null) {
+          uri = new URI("http://" + name);
+        }
+      } catch (URISyntaxException e) {
+        uri = null;
+      }
+      if (uri == null || uri.getHost() == null) {
+        throw new UnknownHostException(name + " is not a valid Inet address");
+      }
+    }
+  }
+
   /**
    * Checks if {@code host} is a local host name and return {@link InetAddress}
    * corresponding to that address.

@@ -1312,7 +1312,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     return localJobFile;
   }
 
-  private void launchTaskForJob(TaskInProgress tip, JobConf jobConf,
+  protected void launchTaskForJob(TaskInProgress tip, JobConf jobConf,
                                 RunningJob rjob) throws IOException {
     synchronized (tip) {
       jobConf.set(JobConf.MAPRED_LOCAL_DIR_PROPERTY,
@@ -2292,40 +2292,45 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     }
     return tip;
   }
+
   /**
    * Start a new task.
    * All exceptions are handled locally, so that we don't mess up the
    * task tracker.
    * @throws InterruptedException 
    */
-  void startNewTask(TaskInProgress tip) throws InterruptedException {
-    try {
-      RunningJob rjob = localizeJob(tip);
-      tip.getTask().setJobFile(rjob.localizedJobConf.toString());
-      // Localization is done. Neither rjob.jobConf nor rjob.ugi can be null
-      launchTaskForJob(tip, new JobConf(rjob.jobConf), rjob); 
-    } catch (Throwable e) {
-      String msg = ("Error initializing " + tip.getTask().getTaskID() + 
-                    ":\n" + StringUtils.stringifyException(e));
-      LOG.warn(msg);
-      tip.reportDiagnosticInfo(msg);
-      try {
-        tip.kill(true);
-        tip.cleanup(true);
-      } catch (IOException ie2) {
-        LOG.info("Error cleaning up " + tip.getTask().getTaskID(), ie2);
-      } catch (InterruptedException ie2) {
-        LOG.info("Error cleaning up " + tip.getTask().getTaskID(), ie2);
+  void startNewTask(final TaskInProgress tip) throws InterruptedException {
+    Thread launchThread = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          RunningJob rjob = localizeJob(tip);
+          tip.getTask().setJobFile(rjob.getLocalizedJobConf().toString());
+          // Localization is done. Neither rjob.jobConf nor rjob.ugi can be null
+          launchTaskForJob(tip, new JobConf(rjob.getJobConf()), rjob); 
+        } catch (Throwable e) {
+          String msg = ("Error initializing " + tip.getTask().getTaskID() + 
+                        ":\n" + StringUtils.stringifyException(e));
+          LOG.warn(msg);
+          tip.reportDiagnosticInfo(msg);
+          try {
+            tip.kill(true);
+            tip.cleanup(true);
+          } catch (IOException ie2) {
+            LOG.info("Error cleaning up " + tip.getTask().getTaskID(), ie2);
+          } catch (InterruptedException ie2) {
+            LOG.info("Error cleaning up " + tip.getTask().getTaskID(), ie2);
+          }
+          if (e instanceof Error) {
+            LOG.error("TaskLauncher error " + 
+                StringUtils.stringifyException(e));
+          }
+        }
       }
-        
-      // Careful! 
-      // This might not be an 'Exception' - don't handle 'Error' here!
-      if (e instanceof Error) {
-        throw ((Error) e);
-      }
-    }
+    });
+    launchThread.start();
   }
-  
+
   void addToMemoryManager(TaskAttemptID attemptId, boolean isMap,
                           JobConf conf) {
     if (isTaskMemoryManagerEnabled()) {
@@ -3507,6 +3512,10 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
 
     JobConf getJobConf() {
       return jobConf;
+    }
+
+    Path getLocalizedJobConf() {
+      return localizedJobConf;
     }
   }
 

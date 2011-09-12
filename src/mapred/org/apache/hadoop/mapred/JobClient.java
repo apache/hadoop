@@ -34,16 +34,16 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.UnknownHostException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
-import java.security.PrivilegedExceptionAction;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.filecache.DistributedCache;
@@ -54,7 +54,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
@@ -68,14 +67,17 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.split.JobSplitWriter;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -471,12 +473,47 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     }        
   }
 
-  private JobSubmissionProtocol createRPCProxy(InetSocketAddress addr,
+  private static JobSubmissionProtocol createRPCProxy(InetSocketAddress addr,
       Configuration conf) throws IOException {
     return (JobSubmissionProtocol) RPC.getProxy(JobSubmissionProtocol.class,
         JobSubmissionProtocol.versionID, addr, 
         UserGroupInformation.getCurrentUser(), conf,
         NetUtils.getSocketFactory(conf, JobSubmissionProtocol.class));
+  }
+
+  @InterfaceAudience.Private
+  public static class Renewer extends TokenRenewer {
+
+    @Override
+    public boolean handleKind(Text kind) {
+      return DelegationTokenIdentifier.MAPREDUCE_DELEGATION_KIND.equals(kind);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public long renew(Token<?> token, Configuration conf
+                      ) throws IOException, InterruptedException {
+      InetSocketAddress addr = 
+          NetUtils.createSocketAddr(token.getService().toString());
+      JobSubmissionProtocol jt = createRPCProxy(addr, conf);
+      return jt.renewDelegationToken((Token<DelegationTokenIdentifier>) token);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void cancel(Token<?> token, Configuration conf
+                       ) throws IOException, InterruptedException {
+      InetSocketAddress addr = 
+          NetUtils.createSocketAddr(token.getService().toString());
+      JobSubmissionProtocol jt = createRPCProxy(addr, conf);
+      jt.cancelDelegationToken((Token<DelegationTokenIdentifier>) token);
+    }
+
+    @Override
+    public boolean isManaged(Token<?> token) throws IOException {
+      return true;
+    }
+    
   }
 
   /**
@@ -1945,13 +1982,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     getDelegationToken(Text renewer) throws IOException, InterruptedException {
     Token<DelegationTokenIdentifier> result =
       jobSubmitClient.getDelegationToken(renewer);
-    InetSocketAddress addr = JobTracker.getAddress(getConf());
-    StringBuilder service = new StringBuilder();
-    service.append(NetUtils.normalizeHostName(addr.getAddress().
-                                              getHostAddress()));
-    service.append(':');
-    service.append(addr.getPort());
-    result.setService(new Text(service.toString()));
+    SecurityUtil.setTokenService(result, JobTracker.getAddress(getConf()));
     return result;
   }
 

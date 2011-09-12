@@ -18,6 +18,7 @@
   import="org.apache.hadoop.util.*"
   import="org.apache.hadoop.net.NetUtils"
   import="org.apache.hadoop.security.UserGroupInformation"
+  import="org.apache.hadoop.http.HtmlQuoting"
   import="java.text.DateFormat"
 %>
 
@@ -37,7 +38,7 @@
       noLink = true;
     }
 
-    String filename = req.getParameter("filename");
+    String filename = HtmlQuoting.unquoteHtmlChars(req.getParameter("filename"));
     if (filename == null) {
       out.print("Invalid input (file name absent)");
       return;
@@ -55,20 +56,20 @@
 
     if (!noLink) {
       out.print("<h3>Tail of File: ");
-      JspHelper.printPathWithLinks(filename, out, namenodeInfoPort, 
-                                   tokenString);
-	    out.print("</h3><hr>");
+      JspHelper.printPathWithLinks(HtmlQuoting.quoteHtmlChars(filename),
+                                   out, namenodeInfoPort, tokenString);
+      out.print("</h3><hr>");
       out.print("<a href=\"" + referrer + "\">Go Back to File View</a><hr>");
     }
     else {
-      out.print("<h3>" + filename + "</h3>");
+      out.print("<h3>" + HtmlQuoting.quoteHtmlChars(filename) + "</h3>");
     }
     out.print("<b>Chunk size to view (in bytes, up to file's DFS block size): </b>");
     out.print("<input type=\"text\" name=\"chunkSizeToView\" value=" +
               chunkSizeToView + " size=10 maxlength=10>");
     out.print("&nbsp;&nbsp;<input type=\"submit\" name=\"submit\" value=\"Refresh\"><hr>");
-    out.print("<input type=\"hidden\" name=\"filename\" value=\"" + filename +
-              "\">");
+    out.print("<input type=\"hidden\" name=\"filename\" value=\"" + 
+              HtmlQuoting.quoteHtmlChars(filename) + "\">");
     out.print("<input type=\"hidden\" name=\"namenodeInfoPort\" value=\"" + namenodeInfoPort +
     "\">");
     if (!noLink)

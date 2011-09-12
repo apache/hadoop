@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.mapreduce.TaskType;
 
 /**
  * A pluggable object for altering the weights of jobs in the fair scheduler,

@@ -18,12 +18,18 @@
 package org.apache.hadoop.net;
 
 import java.util.List;
+import java.net.UnknownHostException;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * An interface that should be implemented to allow pluggable 
  * DNS-name/IP-address to RackID resolvers.
  *
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface DNSToSwitchMapping {
   /**
    * Resolves a list of DNS-names/IP-addresses and returns back a list of
@@ -39,4 +45,5 @@ public interface DNSToSwitchMapping {
    * @return list of resolved network paths
    */
   public List<String> resolve(List<String> names);
+
 }

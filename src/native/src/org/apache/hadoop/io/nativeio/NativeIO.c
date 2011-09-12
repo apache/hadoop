@@ -266,6 +266,24 @@ cleanup:
   return jstr_username;
 }
 
+/**
+ * public static native void chmod(String path, int mode) throws IOException;
+ */
+JNIEXPORT void JNICALL
+Java_org_apache_hadoop_io_nativeio_NativeIO_chmod(
+  JNIEnv *env, jclass clazz, jstring j_path,
+  jint mode)
+{
+  const char *path = (*env)->GetStringUTFChars(env, j_path, NULL);
+  if (path == NULL) return; // JVM throws Exception for us
+
+  if (chmod(path, mode) != 0) {
+    throw_ioe(env, errno);
+  }
+
+  (*env)->ReleaseStringUTFChars(env, j_path, path);
+}
+
 /*
  * Throw a java.IO.IOException, generating the message from errno.
  */

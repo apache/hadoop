@@ -60,6 +60,7 @@ import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.UpgradeManager;
+import org.apache.hadoop.hdfs.util.AtomicFileOutputStream;
 
 /**
  * FSImage handles checkpointing and logging of the namespace edits.
@@ -111,7 +112,7 @@ public class FSImage extends Storage {
   }
   
   protected long checkpointTime = -1L;
-  private FSEditLog editLog = null;
+  protected FSEditLog editLog = null;
   private boolean isUpgradeFinalized = false;
   
   /**
@@ -233,10 +234,6 @@ public class FSImage extends Storage {
 
   File[] getEditsFiles() {
     return getFileNames(NameNodeFile.EDITS, NameNodeDirType.EDITS);
-  }
-
-  File[] getTimeFiles() {
-    return getFileNames(NameNodeFile.TIME, null);
   }
 
   /**
@@ -555,6 +552,8 @@ public class FSImage extends Storage {
       DataInputStream in = new DataInputStream(new FileInputStream(timeFile));
       try {
         timeStamp = in.readLong();
+      } catch (IOException e) {
+        LOG.info("Could not read fstime file in storage directory " + sd, e);
       } finally {
         in.close();
       }
@@ -595,9 +594,8 @@ public class FSImage extends Storage {
     if (checkpointTime < 0L)
       return; // do not write negative time
     File timeFile = getImageFile(sd, NameNodeFile.TIME);
-    if (timeFile.exists()) { timeFile.delete(); }
     DataOutputStream out = new DataOutputStream(
-                                                new FileOutputStream(timeFile));
+        new AtomicFileOutputStream(timeFile));
     try {
       out.writeLong(checkpointTime);
     } finally {
@@ -622,12 +620,13 @@ public class FSImage extends Storage {
         writeCheckpointTime(sd);
       } catch(IOException e) {
         // Close any edits stream associated with this dir and remove directory
-     if (sd.getStorageDirType().isOfType(NameNodeDirType.EDITS))
-       editLog.processIOError(sd);
-     
-   //add storage to the removed list
-     removedStorageDirs.add(sd);
-     it.remove();
+        if (sd.getStorageDirType().isOfType(NameNodeDirType.EDITS)) {
+          editLog.processIOError(sd);
+        }
+
+        //add storage to the removed list
+        removedStorageDirs.add(sd);
+        it.remove();
       }
     }
   }

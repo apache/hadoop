@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryInfo;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -66,6 +67,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   Configuration conf = null;
   
   static byte[] nullCrcFileData;
+
   {
     DataChecksum checksum = DataChecksum.newDataChecksum( DataChecksum.
                               CHECKSUM_NULL, 16*1024 );
@@ -265,7 +267,18 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     }
   }
 
-  public synchronized void finalizeBlock(Block b) throws IOException {
+  @Override
+  public void finalizeBlock(Block b) throws IOException {
+    finalizeBlockInternal(b, false);
+  }
+
+  @Override
+  public void finalizeBlockIfNeeded(Block b) throws IOException {
+    finalizeBlockInternal(b, true);    
+  }
+
+  private synchronized void finalizeBlockInternal(Block b, boolean refinalizeOk) 
+    throws IOException {
     BInfo binfo = blockMap.get(b);
     if (binfo == null) {
       throw new IOException("Finalizing a non existing block " + b);
@@ -312,6 +325,16 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       throw new IOException("Finalizing a non existing block " + b);
     }
     return binfo.getlength();
+  }
+
+  @Override
+  public long getVisibleLength(Block b) throws IOException {
+    return getLength(b);
+  }
+
+  @Override
+  public void setVisibleLength(Block b, long length) throws IOException {
+    //no-op
   }
 
   /** {@inheritDoc} */
@@ -381,7 +404,8 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   }
 
   public synchronized BlockWriteStreams writeToBlock(Block b, 
-                                            boolean isRecovery)
+                                            boolean isRecovery,
+                                            boolean isReplicationRequest)
                                             throws IOException {
     if (isValidBlock(b)) {
           throw new BlockAlreadyExistsException("Block " + b + 
@@ -658,5 +682,17 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   
   public boolean hasEnoughResource() {
     return true;
+  }
+
+  @Override
+  public Block[] getBlocksBeingWrittenReport() {
+    return null;
+  }
+
+  @Override
+  public BlockRecoveryInfo startBlockRecovery(long blockId)
+      throws IOException {
+    Block stored = getStoredBlock(blockId);
+    return new BlockRecoveryInfo(stored, false);
   }
 }

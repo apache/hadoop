@@ -17,6 +17,7 @@
   import="org.apache.hadoop.net.DNS"
   import="org.apache.hadoop.security.UserGroupInformation"
   import="org.apache.hadoop.util.*"
+  import="org.apache.hadoop.http.HtmlQuoting"
   import="java.text.DateFormat"
 %>
 <%!
@@ -28,7 +29,8 @@
                                           Configuration conf
                                          ) throws IOException, 
                                                   InterruptedException {
-    String dir = req.getParameter("dir");
+    String dir = HtmlQuoting.unquoteHtmlChars(req.getParameter("dir"));
+
     if (dir == null || dir.length() == 0) {
       out.print("Invalid input");
       return;
@@ -46,7 +48,8 @@
     String target = dir;
     if (!dfs.exists(target)) {
       out.print("<h3>File or directory : " + target + " does not exist</h3>");
-      JspHelper.printGotoForm(out, namenodeInfoPort, tokenString, target);
+      JspHelper.printGotoForm(out, namenodeInfoPort, tokenString, 
+                              HtmlQuoting.quoteHtmlChars(target));
     }
     else {
       if( !dfs.isDirectory(target) ) { // a file
@@ -90,15 +93,18 @@
                               "Block Size", "Modification Time",
                               "Permission", "Owner", "Group" };
       out.print("<h3>Contents of directory ");
-      JspHelper.printPathWithLinks(dir, out, namenodeInfoPort, tokenString);
+      JspHelper.printPathWithLinks(HtmlQuoting.quoteHtmlChars(dir), 
+                                   out, namenodeInfoPort, tokenString);
       out.print("</h3><hr>");
-      JspHelper.printGotoForm(out, namenodeInfoPort, tokenString, dir);
+      JspHelper.printGotoForm(out, namenodeInfoPort, tokenString, 
+                              HtmlQuoting.quoteHtmlChars(dir));
       out.print("<hr>");
 	
       File f = new File(dir);
       String parent;
       if ((parent = f.getParent()) != null)
-        out.print("<a href=\"" + req.getRequestURL() + "?dir=" + parent +
+        out.print("<a href=\"" + req.getRequestURL() +
+                  "?dir=" + URLEncoder.encode(parent, "UTF-8") +
                   "&namenodeInfoPort=" + namenodeInfoPort +
                   JspHelper.getDelegationTokenUrlParam(tokenString) +
                   "\">Go to parent directory</a><br>");

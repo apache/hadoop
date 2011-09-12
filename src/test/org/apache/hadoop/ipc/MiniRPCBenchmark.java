@@ -28,12 +28,12 @@ import java.util.Enumeration;
 
 import junit.framework.Assert;
 
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.KerberosInfo;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
@@ -203,8 +203,7 @@ public class MiniRPCBenchmark {
             token = p.getDelegationToken(new Text(RENEWER));
             currentUgi = UserGroupInformation.createUserForTesting(MINI_USER, 
                 GROUP_NAMES);
-            token.setService(new Text(addr.getAddress().getHostAddress() 
-                + ":" + addr.getPort()));
+            SecurityUtil.setTokenService(token, addr);
             currentUgi.addToken(token);
             return p;
           }

@@ -85,6 +85,13 @@ public class LocatedBlocks implements Writable {
   public boolean isUnderConstruction() {
     return underConstruction;
   }
+
+  /**
+   * Sets the file length of the file.
+   */
+  public void setFileLength(long length) {
+    this.fileLength = length;
+  }
   
   /**
    * Find block containing specified offset.

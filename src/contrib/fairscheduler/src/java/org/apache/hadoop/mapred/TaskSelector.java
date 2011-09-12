@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
 /**
  * A pluggable object for selecting tasks to run from a {@link JobInProgress} on
@@ -86,7 +87,7 @@ public abstract class TaskSelector implements Configurable {
    * @throws IOException 
    */
   public abstract Task obtainNewMapTask(TaskTrackerStatus taskTracker,
-      JobInProgress job) throws IOException;
+      JobInProgress job, int localityLevel) throws IOException;
 
   /**
    * Choose a reduce task to run from the given job on the given TaskTracker.

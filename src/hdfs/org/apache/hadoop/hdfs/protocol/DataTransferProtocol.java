@@ -65,7 +65,7 @@ public interface DataTransferProtocol {
   public static class PipelineAck implements Writable {
     private long seqno;
     private short replies[];
-    final public static PipelineAck HEART_BEAT = new PipelineAck(-1, new short[0]);
+    final public static long UNKOWN_SEQNO = -2; 
 
     /** default constructor **/
     public PipelineAck() {

@@ -36,6 +36,7 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.Vector;
+import java.net.UnknownHostException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -531,7 +532,8 @@ public class JobInProgress {
   }
   
   private Map<Node, List<TaskInProgress>> createCache(
-                                 TaskSplitMetaInfo[] splits, int maxLevel) {
+                                 TaskSplitMetaInfo[] splits, int maxLevel)
+                                 throws UnknownHostException {
     Map<Node, List<TaskInProgress>> cache = 
       new IdentityHashMap<Node, List<TaskInProgress>>(maxLevel);
     
@@ -658,7 +660,7 @@ public class JobInProgress {
    * thread so that split-computation doesn't block anyone.
    */
   public synchronized void initTasks() 
-  throws IOException, KillInterruptedException {
+  throws IOException, KillInterruptedException, UnknownHostException {
     if (tasksInited || isComplete()) {
       return;
     }
@@ -704,6 +706,11 @@ public class JobInProgress {
     }
     numMapTasks = splits.length;
 
+    // Sanity check the locations so we don't create/initialize unnecessary tasks
+    for (TaskSplitMetaInfo split : splits) {
+      NetUtils.verifyHostnames(split.getLocations());
+    }
+    
     jobtracker.getInstrumentation().addWaitingMaps(getJobID(), numMapTasks);
     jobtracker.getInstrumentation().addWaitingReduces(getJobID(), numReduceTasks);
     this.queueMetrics.addWaitingMaps(getJobID(), numMapTasks);
@@ -1360,9 +1367,34 @@ public class JobInProgress {
     }
   }
   
-  public synchronized Task obtainNewLocalMapTask(TaskTrackerStatus tts,
-                                                     int clusterSize, 
+  public synchronized Task obtainNewNodeLocalMapTask(TaskTrackerStatus tts,
+                                                     int clusterSize,
                                                      int numUniqueHosts)
+  throws IOException {
+    if (!tasksInited) {
+      LOG.info("Cannot create task split for " + profile.getJobID());
+      try { throw new IOException("state = " + status.getRunState()); }
+      catch (IOException ioe) {ioe.printStackTrace();}
+      return null;
+    }
+
+    int target = findNewMapTask(tts, clusterSize, numUniqueHosts, 1, 
+                                status.mapProgress());
+    if (target == -1) {
+      return null;
+    }
+
+    Task result = maps[target].getTaskToRun(tts.getTrackerName());
+    if (result != null) {
+      addRunningTaskToTIP(maps[target], result.getTaskID(), tts, true);
+      resetSchedulingOpportunities();
+    }
+
+    return result;
+  }
+  
+  public synchronized Task obtainNewNodeOrRackLocalMapTask(
+      TaskTrackerStatus tts, int clusterSize, int numUniqueHosts)
   throws IOException {
     if (!tasksInited) {
       LOG.info("Cannot create task split for " + profile.getJobID());
@@ -2438,16 +2470,6 @@ public class JobInProgress {
       return -1;
     }
 
-    long outSize = resourceEstimator.getEstimatedReduceInputSize();
-    long availSpace = tts.getResourceStatus().getAvailableSpace();
-    if(availSpace < outSize) {
-      LOG.warn("No room for reduce task. Node " + taskTracker + " has " +
-                availSpace + 
-               " bytes free; but we expect reduce input to take " + outSize);
-
-      return -1; //see if a different TIP might work better. 
-    }
-    
     // 1. check for a never-executed reduce tip
     // reducers don't have a cache and so pass -1 to explicitly call that out
     tip = findTaskFromList(nonRunningReduces, tts, numUniqueHosts, false);
@@ -3506,5 +3528,32 @@ public class JobInProgress {
     tokenStorage.writeTokenStorageFile(keysFile, jobtracker.getConf());
     LOG.info("jobToken generated and stored with users keys in "
         + keysFile.toUri().getPath());
+  }
+
+  /**
+   * Get the level of locality that a given task would have if launched on
+   * a particular TaskTracker. Returns 0 if the task has data on that machine,
+   * 1 if it has data on the same rack, etc (depending on number of levels in
+   * the network hierarchy).
+   */
+  int getLocalityLevel(TaskInProgress tip, TaskTrackerStatus tts) {
+    Node tracker = jobtracker.getNode(tts.getHost());
+    int level = this.maxLevel;
+    // find the right level across split locations
+    for (String local : maps[tip.getIdWithinJob()].getSplitLocations()) {
+      Node datanode = jobtracker.getNode(local);
+      int newLevel = this.maxLevel;
+      if (tracker != null && datanode != null) {
+        newLevel = getMatchingLevelForNodes(tracker, datanode);
+      }
+      if (newLevel < level) {
+        level = newLevel;
+        // an optimization
+        if (level == 0) {
+          break;
+        }
+      }
+    }
+    return level;
   }
 }

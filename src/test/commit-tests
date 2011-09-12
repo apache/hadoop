@@ -2,6 +2,9 @@
 **/TestAccessControlList.java
 **/TestArrayFile.java
 **/TestArrayWritable.java
+**/TestAuthenticationFilter.java
+**/TestAuthenticationToken.java
+**/TestAuthenticatedURL.java
 **/TestBloomMapFile.java
 **/TestBuffer.java
 **/TestBytesWritable.java
@@ -41,6 +44,8 @@
 **/TestMapWritable.java
 **/TestMD5Hash.java
 **/TestPath.java
+**/TestPseudoAuthenticator.java
+**/TestPseudoAuthenticationHandler.java
 **/TestRecordIO.java
 **/TestRecordVersioning.java
 **/TestReflectionUtils.java

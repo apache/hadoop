@@ -115,12 +115,12 @@ for var in PREFIX; do
 done
 
 ARCH=${ARCH:-i386}
-BIN_DIR=${BIN_DIR:-$PREFIX/share/hadoop/bin}
+BIN_DIR=${BIN_DIR:-$PREFIX/bin}
 CONF_DIR=${CONF_DIR:-$PREFIX/etc/hadoop}
 LIB_DIR=${LIB_DIR:-$PREFIX/lib}
 LOG_DIR=${LOG_DIR:-$PREFIX/var/log}
 PID_DIR=${PID_DIR:-$PREFIX/var/run}
-SBIN_DIR=${SBIN_DIR:-$PREFIX/share/hadoop/sbin}
+SBIN_DIR=${SBIN_DIR:-$PREFIX/sbin}
 UNINSTALL=${UNINSTALL:-0}
 
 if [ "${ARCH}" != "i386" ]; then
@@ -133,7 +133,9 @@ if [ "${UNINSTALL}" -eq "1" ]; then
     rm -rf ${PREFIX}/etc/hadoop
   fi
   rm -f /etc/default/hadoop-env.sh
-  rm -f /etc/profile.d/hadoop-env.sh
+  if [ -d /etc/profile.d ]; then
+    rm -f /etc/profile.d/hadoop-env.sh
+  fi
 else
   # Create symlinks
   if [ "${CONF_DIR}" != "${PREFIX}/etc/hadoop" ]; then
@@ -141,17 +143,13 @@ else
     ln -sf ${CONF_DIR} ${PREFIX}/etc/hadoop
   fi
   ln -sf ${CONF_DIR}/hadoop-env.sh /etc/default/hadoop-env.sh
-  ln -sf ${CONF_DIR}/hadoop-env.sh /etc/profile.d/hadoop-env.sh
+  if [ -d /etc/profile.d ]; then
+    ln -sf ${CONF_DIR}/hadoop-env.sh /etc/profile.d/hadoop-env.sh
+  fi
 
   mkdir -p ${LOG_DIR}
-  mkdir -p ${LOG_DIR}/hdfs
-  mkdir -p ${LOG_DIR}/mapred
   chown root:hadoop ${LOG_DIR}
-  chown hdfs ${LOG_DIR}/hdfs
-  chown mapred ${LOG_DIR}/mapred
-  chmod 755 ${LOG_DIR}
-  chmod 755 ${LOG_DIR}/hdfs
-  chmod 755 ${LOG_DIR}/mapred
+  chmod 775 ${LOG_DIR}
 
   if [ ! -d ${PID_DIR} ]; then
     mkdir -p ${PID_DIR}
@@ -162,7 +160,7 @@ else
   TFILE="/tmp/$(basename $0).$$.tmp"
   if [ -z "${JAVA_HOME}" ]; then
     if [ -e /etc/debian_version ]; then
-      JAVA_HOME=`update-alternatives --config java | grep java | cut -f2 -d':' | cut -f2 -d' ' | sed -e 's/\/bin\/java//'`
+      JAVA_HOME=/usr/lib/jvm/java-6-sun
     else
       JAVA_HOME=/usr/java/default
     fi
@@ -171,7 +169,7 @@ else
   HADOOP_LOG_DIR=${LOG_DIR}
   HADOOP_PID_DIR=${PID_DIR}
   HADOOP_PREFIX=${PREFIX}
-  HADOOP_HOME=${PREFIX}/share/hadoop
+  HADOOP_HOME=${PREFIX}
   template_generator ${PREFIX}/share/hadoop/templates/conf/hadoop-env.sh $TFILE
   cp ${TFILE} ${CONF_DIR}/hadoop-env.sh
   rm -f ${TFILE}

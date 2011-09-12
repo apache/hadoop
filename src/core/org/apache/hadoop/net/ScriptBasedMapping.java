@@ -114,7 +114,7 @@ implements Configurable
     
     return m;
   }
-  
+
   private String runResolveCommand(List<String> args) {
     int loopCount = 0;
     if (args.size() == 0) {

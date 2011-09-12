@@ -19,18 +19,19 @@ package org.apache.hadoop.hdfs;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.channels.FileChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.nio.channels.FileChannel;
 import java.util.Random;
-import java.io.RandomAccessFile;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.net.*;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
@@ -41,9 +42,11 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.security.*;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.net.DNSToSwitchMapping;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.StaticMapping;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -252,6 +255,10 @@ public class MiniDFSCluster {
     conf.setInt("dfs.replication", Math.min(replication, numDataNodes));
     conf.setInt("dfs.safemode.extension", 0);
     conf.setInt("dfs.namenode.decommission.interval", 3); // 3 second
+
+    // Set a small delay on blockReceived in the minicluster to approximate
+    // a real cluster a little better and suss out bugs.
+    conf.setInt("dfs.datanode.artificialBlockReceivedDelay", 5);
     
     // Format and clean out DataNode directories
     if (format) {
@@ -319,6 +326,7 @@ public class MiniDFSCluster {
                              boolean manageDfsDirs, StartupOption operation, 
                              String[] racks, String[] hosts,
                              long[] simulatedCapacities) throws IOException {
+    conf.set("slave.host.name", "127.0.0.1");
 
     int curDatanodesNum = dataNodes.size();
     // for mincluster's the default initialDelay for BRs is 0
@@ -572,12 +580,23 @@ public class MiniDFSCluster {
   }
 
   /**
+   * Restart namenode. Waits for exit from safemode.
+   */
+  public synchronized void restartNameNode()
+      throws IOException {
+    restartNameNode(true);
+  }
+  
+  /**
    * Restart namenode.
    */
-  public synchronized void restartNameNode() throws IOException {
+  public synchronized void restartNameNode(boolean waitSafemodeExit)
+      throws IOException {
     shutdownNameNode();
     nameNode = NameNode.createNameNode(new String[] {}, conf);
-    waitClusterUp();
+    if (waitSafemodeExit) {
+      waitClusterUp();
+    }
     System.out.println("Restarted the namenode");
     int failedCount = 0;
     while (true) {
@@ -788,6 +807,18 @@ public class MiniDFSCluster {
   }
 
   /**
+   * @return a {@link WebHdfsFileSystem} object.
+   */
+  public WebHdfsFileSystem getWebHdfsFileSystem() throws IOException {
+    final String str = WebHdfsFileSystem.SCHEME  + "://" + conf.get("dfs.http.address");
+    try {
+      return (WebHdfsFileSystem)FileSystem.get(new URI(str), conf); 
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
+  }
+
+  /**
    *  @return a {@link HftpFileSystem} object as specified user. 
    */
   public HftpFileSystem getHftpFileSystemAs(final String username,
@@ -853,6 +884,32 @@ public class MiniDFSCluster {
     return false;
   }
 
+  /**
+   * Wait for the given datanode to heartbeat once.
+   */
+  public void waitForDNHeartbeat(int dnIndex, long timeoutMillis)
+    throws IOException, InterruptedException {
+    DataNode dn = getDataNodes().get(dnIndex);
+    InetSocketAddress addr = new InetSocketAddress("localhost",
+                                                   getNameNodePort());
+    DFSClient client = new DFSClient(addr, conf);
+
+    long startTime = System.currentTimeMillis();
+    while (System.currentTimeMillis() < startTime + timeoutMillis) {
+      DatanodeInfo report[] = client.datanodeReport(DatanodeReportType.LIVE);
+
+      for (DatanodeInfo thisReport : report) {
+        if (thisReport.getStorageID().equals(
+              dn.dnRegistration.getStorageID())) {
+          if (thisReport.getLastUpdate() > startTime)
+            return;
+        }
+      }
+
+      Thread.sleep(500);
+    }
+  }
+  
   public void formatDataNodeDirs() throws IOException {
     base_dir = new File(System.getProperty("test.build.data", "build/test/data"), "dfs/");
     data_dir = new File(base_dir, "data");

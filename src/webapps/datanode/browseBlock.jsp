@@ -18,6 +18,7 @@
   import="org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager"
   import="org.apache.hadoop.security.UserGroupInformation"
   import="org.apache.hadoop.util.*"
+  import="org.apache.hadoop.http.HtmlQuoting"
   import="java.text.DateFormat"
 %>
 
@@ -66,7 +67,7 @@
       startOffset = 0;
     else startOffset = Long.parseLong(startOffsetStr);
     
-    String filename = req.getParameter("filename");
+    String filename = HtmlQuoting.unquoteHtmlChars(req.getParameter("filename"));
     if (filename == null || filename.length() == 0) {
       out.print("Invalid input");
       return;
@@ -159,7 +160,7 @@
                         locs[j].getInfoPort() +
                         "/browseBlock.jsp?blockId=" + Long.toString(blockId) +
                         "&blockSize=" + blockSize +
-               "&filename=" + URLEncoder.encode(filename, "UTF-8")+ 
+                        "&filename=" + URLEncoder.encode(filename, "UTF-8") +
                         "&datanodePort=" + datanodePort + 
                         "&genstamp=" + cur.getBlock().getGenerationStamp() + 
                         "&namenodeInfoPort=" + namenodeInfoPort +
@@ -190,12 +191,12 @@
     if (namenodeInfoPortStr != null)
       namenodeInfoPort = Integer.parseInt(namenodeInfoPortStr);
 
-    String filename = req.getParameter("filename");
+    String filename = HtmlQuoting.unquoteHtmlChars(req.getParameter("filename"));
     if (filename == null) {
       out.print("Invalid input (filename absent)");
       return;
     }
-    
+
     String blockIdStr = null;
     long blockId = 0;
     blockIdStr = req.getParameter("blockId");
@@ -263,11 +264,12 @@
     }
     datanodePort = Integer.parseInt(datanodePortStr);
     out.print("<h3>File: ");
-    JspHelper.printPathWithLinks(filename, out, namenodeInfoPort,
-                                 tokenString);
+    JspHelper.printPathWithLinks(HtmlQuoting.quoteHtmlChars(filename), 
+                                 out, namenodeInfoPort, tokenString);
     out.print("</h3><hr>");
     String parent = new File(filename).getParent();
-    JspHelper.printGotoForm(out, namenodeInfoPort, tokenString, parent);
+    JspHelper.printGotoForm(out, namenodeInfoPort, tokenString, 
+                            HtmlQuoting.quoteHtmlChars(parent));
     out.print("<hr>");
     out.print("<a href=\"http://" + req.getServerName() + ":" + 
               req.getServerPort() + 
@@ -382,7 +384,7 @@
                 "/browseBlock.jsp?blockId=" + prevBlockIdStr + 
                 "&blockSize=" + prevBlockSize + "&startOffset=" + 
                 prevStartOffset + 
-                "&filename=" + URLEncoder.encode(filename, "UTF-8") + 
+                "&filename=" + URLEncoder.encode(filename, "UTF-8") +
                 "&chunkSizeToView=" + chunkSizeToView +
                 "&genstamp=" + prevGenStamp +
                 "&datanodePort=" + prevDatanodePort +

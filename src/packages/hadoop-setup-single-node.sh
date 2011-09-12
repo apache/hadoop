@@ -136,10 +136,10 @@ SET_REBOOT=${SET_REBOOT:-y}
 
 if [ "${SET_CONFIG}" == "y" ]; then
   JAVA_HOME=${JAVA_HOME:-/usr/java/default}
-  HADOOP_NN_HOST=${HADOOP_NN_HOST:-hdfs://localhost:9000/}
+  HADOOP_NN_HOST=${HADOOP_NN_HOST:-localhost}
   HADOOP_NN_DIR=${HADOOP_NN_DIR:-/var/lib/hadoop/hdfs/namenode}
   HADOOP_DN_DIR=${HADOOP_DN_DIR:-/var/lib/hadoop/hdfs/datanode}
-  HADOOP_JT_HOST=${HADOOP_JT_HOST:-localhost:9001}
+  HADOOP_JT_HOST=${HADOOP_JT_HOST:-localhost}
   HADOOP_HDFS_DIR=${HADOOP_MAPRED_DIR:-/var/lib/hadoop/hdfs}
   HADOOP_MAPRED_DIR=${HADOOP_MAPRED_DIR:-/var/lib/hadoop/mapred}
   HADOOP_PID_DIR=${HADOOP_PID_DIR:-/var/run/hadoop}
@@ -147,15 +147,17 @@ if [ "${SET_CONFIG}" == "y" ]; then
   HADOOP_CONF_DIR=${HADOOP_CONF_DIR:-/etc/hadoop}
   HADOOP_REPLICATION=${HADOOP_RELICATION:-1}
   ${HADOOP_PREFIX}/sbin/hadoop-setup-conf.sh --auto \
+    --hdfs-user=hdfs \
+    --mapreduce-user=mapred \
     --conf-dir=${HADOOP_CONF_DIR} \
     --datanode-dir=${HADOOP_DN_DIR} \
     --hdfs-dir=${HADOOP_HDFS_DIR} \
-    --jobtracker-url=${HADOOP_JT_HOST} \
+    --jobtracker-host=${HADOOP_JT_HOST} \
     --log-dir=${HADOOP_LOG_DIR} \
     --pid-dir=${HADOOP_PID_DIR} \
     --mapred-dir=${HADOOP_MAPRED_DIR} \
     --namenode-dir=${HADOOP_NN_DIR} \
-    --namenode-url=${HADOOP_NN_HOST} \
+    --namenode-host=${HADOOP_NN_HOST} \
     --replication=${HADOOP_REPLICATION}
 fi
 

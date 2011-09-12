@@ -168,6 +168,8 @@ class LinuxTaskController extends TaskController {
     command.add(System.getProperty("java.class.path"));
     command.add("-Dhadoop.log.dir=" + TaskLog.getBaseLogDir());
     command.add("-Dhadoop.root.logger=INFO,console");
+    command.add("-Djava.library.path=" +
+                System.getProperty("java.library.path"));
     command.add(JobLocalizer.class.getName());  // main of JobLocalizer
     command.add(user);
     command.add(jobid);
@@ -204,7 +206,7 @@ class LinuxTaskController extends TaskController {
     ShellCommandExecutor shExec = null;
     try {
       FileSystem rawFs = FileSystem.getLocal(getConf()).getRaw();
-      long logSize = 0; //TODO, Ref BUG:2854624
+      long logSize = 0; //TODO MAPREDUCE-1100
       // get the JVM command line.
       String cmdLine = 
         TaskLog.buildCommandLine(setup, jvmArguments,

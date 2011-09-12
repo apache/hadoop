@@ -29,7 +29,7 @@ import org.apache.hadoop.io.WritableUtils;
  *  user.
  * 
  */
-class QueueAclsInfo implements Writable {
+public class QueueAclsInfo implements Writable {
 
   private String queueName;
   private String[] operations;
@@ -37,7 +37,7 @@ class QueueAclsInfo implements Writable {
    * Default constructor for QueueAclsInfo.
    * 
    */
-  QueueAclsInfo() {
+  public QueueAclsInfo() {
     
   }
 
@@ -49,20 +49,20 @@ class QueueAclsInfo implements Writable {
    * @param queue operations
    * 
    */
-  QueueAclsInfo(String queueName, String[] operations) {
+  public QueueAclsInfo(String queueName, String[] operations) {
     this.queueName = queueName;
     this.operations = operations;    
   }
 
-  String getQueueName() {
+  public String getQueueName() {
     return queueName;
   }
 
-  void setQueueName(String queueName) {
+  protected void setQueueName(String queueName) {
     this.queueName = queueName;
   }
 
-  String[] getOperations() {
+  public String[] getOperations() {
     return operations;
   }
 

@@ -57,8 +57,6 @@ public abstract class FSMainOperationsBaseTest  {
   private static String TEST_DIR_AXX = "test/hadoop/axx";
   private static int numBlocks = 2;
   
-  static  final String LOCAL_FS_ROOT_URI = "file:///tmp/test";
-  
   
   protected static FileSystem fSys;
   
@@ -78,7 +76,7 @@ public abstract class FSMainOperationsBaseTest  {
     }     
   };
   
-  private static byte[] data = getFileData(numBlocks,
+  protected static final byte[] data = getFileData(numBlocks,
       getDefaultBlockSize());
   
   @Before
@@ -89,7 +87,6 @@ public abstract class FSMainOperationsBaseTest  {
   @After
   public void tearDown() throws Exception {
     fSys.delete(new Path(getAbsoluteTestRootPath(fSys), new Path("test")), true);
-    fSys.delete(new Path(LOCAL_FS_ROOT_URI), true);
   }
   
   
@@ -165,7 +162,7 @@ public abstract class FSMainOperationsBaseTest  {
     
     // Try a URI
 
-    absoluteDir = new Path(LOCAL_FS_ROOT_URI + "/existingDir");
+    absoluteDir = new Path(fSys.getUri() + "/test/existingDir");
     fSys.mkdirs(absoluteDir);
     fSys.setWorkingDirectory(absoluteDir);
     Assert.assertEquals(absoluteDir, fSys.getWorkingDirectory());
@@ -585,7 +582,7 @@ public abstract class FSMainOperationsBaseTest  {
     writeReadAndDelete(getDefaultBlockSize() * 2);
   }
   
-  private void writeReadAndDelete(int len) throws IOException {
+  protected void writeReadAndDelete(int len) throws IOException {
     Path path = getTestRootPath(fSys, "test/hadoop/file");
     
     fSys.mkdirs(path.getParent());

@@ -47,4 +47,12 @@ public interface ClientDatanodeProtocol extends VersionedProtocol {
    */
   LocatedBlock recoverBlock(Block block, boolean keepLength,
       DatanodeInfo[] targets) throws IOException;
+
+  /** Returns a block object that contains the specified block object
+   * from the specified Datanode.
+   * @param block the specified block
+   * @return the Block object from the specified Datanode
+   * @throws IOException if the block does not exist
+   */
+  Block getBlockInfo(Block block) throws IOException;
 }

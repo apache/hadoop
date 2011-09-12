@@ -66,6 +66,7 @@ public interface DatanodeProtocol extends VersionedProtocol {
   final static int DNA_FINALIZE = 5;   // finalize previous upgrade
   final static int DNA_RECOVERBLOCK = 6;  // request a block recovery
   final static int DNA_ACCESSKEYUPDATE = 7;  // update access key
+  final static int DNA_BALANCERBANDWIDTHUPDATE = 8; // update balancer bandwidth
 
   /** 
    * Register Datanode.
@@ -109,6 +110,17 @@ public interface DatanodeProtocol extends VersionedProtocol {
    */
   public DatanodeCommand blockReport(DatanodeRegistration registration,
                                      long[] blocks) throws IOException;
+  
+  /**
+   * blocksBeingWrittenReport() tells the NameNode about the blocks-being-
+   * written information
+   * 
+   * @param registration
+   * @param blocks
+   * @throws IOException
+   */
+  public void blocksBeingWrittenReport(DatanodeRegistration registration,
+      long[] blocks) throws IOException;
     
   /**
    * blockReceived() allows the DataNode to tell the NameNode about
@@ -151,10 +163,14 @@ public interface DatanodeProtocol extends VersionedProtocol {
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException;
   
   /**
-   * @return the next GenerationStamp to be associated with the specified
-   * block. 
+   * Get the next GenerationStamp to be associated with the specified
+   * block.
+   * 
+   * @param block block
+   * @param fromNN if it is for lease recovery initiated by NameNode
+   * @return a new generation stamp
    */
-  public long nextGenerationStamp(Block block) throws IOException;
+  public long nextGenerationStamp(Block block, boolean fromNN) throws IOException;
 
   /**
    * Commit block synchronization in lease recovery

@@ -1132,6 +1132,14 @@
 </property>
 
 <property>
+  <name>mapred.combine.recordsBeforeProgress</name>
+  <value>10000</value>
+  <description> The number of records to process during combine output collection
+   before sending a progress notification to the TaskTracker.
+  </description>
+</property>
+
+<property>
   <name>mapred.merge.recordsBeforeProgress</name>
   <value>10000</value>
   <description> The number of records to process during merge before

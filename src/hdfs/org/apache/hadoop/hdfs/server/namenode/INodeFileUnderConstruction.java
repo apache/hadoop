@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.ArrayList;
 
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -25,7 +27,7 @@ import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 
 
 class INodeFileUnderConstruction extends INodeFile {
-  final String clientName;         // lease holder
+  String clientName;         // lease holder
   private final String clientMachine;
   private final DatanodeDescriptor clientNode; // if client is a cluster node too.
 
@@ -68,6 +70,10 @@ class INodeFileUnderConstruction extends INodeFile {
     return clientName;
   }
 
+  void setClientName(String newName) {
+    clientName = newName;
+  }
+
   String getClientMachine() {
     return clientMachine;
   }
@@ -90,6 +96,30 @@ class INodeFileUnderConstruction extends INodeFile {
 
   void setTargets(DatanodeDescriptor[] targets) {
     this.targets = targets;
+    this.primaryNodeIndex = -1;
+  }
+
+  /**
+   * add this target if it does not already exists
+   */
+  void addTarget(DatanodeDescriptor node) {
+    if (this.targets == null) {
+      this.targets = new DatanodeDescriptor[0];
+    }
+
+    for (int j = 0; j < this.targets.length; j++) {
+      if (this.targets[j].equals(node)) {
+        return;  // target already exists
+      }
+    }
+      
+    // allocate new data structure to store additional target
+    DatanodeDescriptor[] newt = new DatanodeDescriptor[targets.length + 1];
+    for (int i = 0; i < targets.length; i++) {
+      newt[i] = this.targets[i];
+    }
+    newt[targets.length] = node;
+    this.targets = newt;
     this.primaryNodeIndex = -1;
   }
 
@@ -132,10 +162,29 @@ class INodeFileUnderConstruction extends INodeFile {
 
   synchronized void setLastBlock(BlockInfo newblock, DatanodeDescriptor[] newtargets
       ) throws IOException {
-    if (blocks == null) {
+    if (blocks == null || blocks.length == 0) {
       throw new IOException("Trying to update non-existant block (newblock="
           + newblock + ")");
     }
+    BlockInfo oldLast = blocks[blocks.length - 1];
+    if (oldLast.getBlockId() != newblock.getBlockId()) {
+      // This should not happen - this means that we're performing recovery
+      // on an internal block in the file!
+      NameNode.stateChangeLog.error(
+        "Trying to commit block synchronization for an internal block on"
+        + " inode=" + this
+        + " newblock=" + newblock + " oldLast=" + oldLast);
+      throw new IOException("Trying to update an internal block of " +
+                            "pending file " + this);
+    }
+
+    if (oldLast.getGenerationStamp() > newblock.getGenerationStamp()) {
+      NameNode.stateChangeLog.warn(
+        "Updating last block " + oldLast + " of inode " +
+        "under construction " + this + " with a block that " +
+        "has an older generation stamp: " + newblock);
+    }
+
     blocks[blocks.length - 1] = newblock;
     setTargets(newtargets);
     lastRecoveryTime = 0;

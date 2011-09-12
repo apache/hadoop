@@ -135,6 +135,16 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws IOException if other errors occur.
    */
   public LocatedBlock append(String src, String clientName) throws IOException;
+  
+  /**
+   * Start lease recovery
+   * 
+   * @param src path of the file to start lease recovery
+   * @param clientName name of the current client
+   * @return true if the file is already closed
+   * @throws IOException
+   */
+  public boolean recoverLease(String src, String clientName) throws IOException;
 
   /**
    * Set replication for an existing file.
@@ -187,9 +197,25 @@ public interface ClientProtocol extends VersionedProtocol {
    * addBlock() allocates a new block and datanodes the block data
    * should be replicated to.
    * 
+   * @deprecated use the 3-arg form below
    * @return LocatedBlock allocated block information.
    */
   public LocatedBlock addBlock(String src, String clientName) throws IOException;
+
+  /**
+   * A client that wants to write an additional block to the 
+   * indicated filename (which must currently be open for writing)
+   * should call addBlock().  
+   *
+   * addBlock() allocates a new block and datanodes the block data
+   * should be replicated to.
+   *
+   * @param excludedNodes a list of nodes that should not be allocated
+   * 
+   * @return LocatedBlock allocated block information.
+   */
+  public LocatedBlock addBlock(String src, String clientName,
+                               DatanodeInfo[] excludedNodes) throws IOException;
 
   /**
    * The client is done writing data to the given filename, and would 
@@ -435,6 +461,15 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws IOException
    */
   public void metaSave(String filename) throws IOException;
+
+  /**
+   * Tell all datanodes to use a new, non-persistent bandwidth value for
+   * dfs.balance.bandwidthPerSec.
+   *
+   * @param bandwidth Blanacer bandwidth in bytes per second for this datanode.
+   * @throws IOException
+   */
+  public void setBalancerBandwidth(long bandwidth) throws IOException;
 
   /**
    * Get the file info for a specific file or directory.

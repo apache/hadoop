@@ -21,11 +21,11 @@ package org.apache.hadoop.fs;
 import java.io.*;
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileLock;
 import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.*;
+import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell;
@@ -258,6 +258,7 @@ public class RawLocalFileSystem extends FileSystem {
     if (pathToFile(src).renameTo(pathToFile(dst))) {
       return true;
     }
+    LOG.debug("Falling through to a copy of " + src + " to " + dst);
     return FileUtil.copy(this, src, this, dst, true, getConf());
   }
   
@@ -415,8 +416,8 @@ public class RawLocalFileSystem extends FileSystem {
       IOException e = null;
       try {
         StringTokenizer t = new StringTokenizer(
-            execCommand(new File(getPath().toUri()), 
-                        Shell.getGET_PERMISSION_COMMAND()));
+            FileUtil.execCommand(new File(getPath().toUri()), 
+                                 Shell.getGET_PERMISSION_COMMAND()));
         //expected format
         //-rw-------    1 username groupname ...
         String permission = t.nextToken();
@@ -466,11 +467,11 @@ public class RawLocalFileSystem extends FileSystem {
     }
 
     if (username == null) {
-      execCommand(pathToFile(p), Shell.SET_GROUP_COMMAND, groupname); 
+      FileUtil.execCommand(pathToFile(p), Shell.SET_GROUP_COMMAND, groupname); 
     } else {
       //OWNER[:[GROUP]]
       String s = username + (groupname == null? "": ":" + groupname);
-      execCommand(pathToFile(p), Shell.SET_OWNER_COMMAND, s);
+      FileUtil.execCommand(pathToFile(p), Shell.SET_OWNER_COMMAND, s);
     }
   }
 
@@ -479,65 +480,7 @@ public class RawLocalFileSystem extends FileSystem {
    */
   @Override
   public void setPermission(Path p, FsPermission permission
-      ) throws IOException {
-    FsAction user = permission.getUserAction();
-    FsAction group = permission.getGroupAction();
-    FsAction other = permission.getOtherAction();
-    
-    File f = pathToFile(p);
-    
-    // Fork chmod if group and other permissions are different...
-    if (group != other) {
-      execSetPermission(f, permission);
-      return;
-    }
-    
-    boolean rv = true;
-    
-    // read perms
-    rv = f.setReadable(group.implies(FsAction.READ), false);
-    checkReturnValue(rv, p, permission);
-    if (group.implies(FsAction.READ) != user.implies(FsAction.READ)) {
-      f.setReadable(user.implies(FsAction.READ), true);
-      checkReturnValue(rv, p, permission);
-    }
-
-    // write perms
-    rv = f.setWritable(group.implies(FsAction.WRITE), false);
-    checkReturnValue(rv, p, permission);
-    if (group.implies(FsAction.WRITE) != user.implies(FsAction.WRITE)) {
-      f.setWritable(user.implies(FsAction.WRITE), true);
-      checkReturnValue(rv, p, permission);
-    }
-
-    // exec perms
-    rv = f.setExecutable(group.implies(FsAction.EXECUTE), false);
-    checkReturnValue(rv, p, permission);
-    if (group.implies(FsAction.EXECUTE) != user.implies(FsAction.EXECUTE)) {
-      f.setExecutable(user.implies(FsAction.EXECUTE), true);
-      checkReturnValue(rv, p, permission);
-    }
-  }
-
-  private void checkReturnValue(boolean rv, Path p, FsPermission permission) 
-  throws IOException {
-    if (!rv) {
-      throw new IOException("Failed to set permissions of path: " + p + " to " + 
-                            String.format("%04o", permission.toShort()));
-    }
-  }
-  
-  private void execSetPermission(File f, FsPermission permission) 
-  throws IOException {
-    execCommand(f, Shell.SET_PERMISSION_COMMAND,
-        String.format("%04o", permission.toShort()));
-  }
-  
-  private static String execCommand(File f, String... cmd) throws IOException {
-    String[] args = new String[cmd.length + 1];
-    System.arraycopy(cmd, 0, args, 0, cmd.length);
-    args[cmd.length] = f.getCanonicalPath();
-    String output = Shell.execCommand(args);
-    return output;
+                            ) throws IOException {
+    FileUtil.setPermission(pathToFile(p), permission);
   }
 }

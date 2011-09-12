@@ -39,7 +39,11 @@ fi
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/../libexec/hadoop-config.sh
+if [ -e "$bin/../libexec/hadoop-config.sh" ]; then
+  . "$bin"/../libexec/hadoop-config.sh
+else
+  . "$bin/hadoop-config.sh"
+fi
 
 # get arguments
 startStop=$1
@@ -84,7 +88,13 @@ if [ "$HADOOP_LOG_DIR" = "" ]; then
   export HADOOP_LOG_DIR="$HADOOP_HOME/logs"
 fi
 mkdir -p "$HADOOP_LOG_DIR"
-chown $HADOOP_IDENT_STRING $HADOOP_LOG_DIR 
+touch $HADOOP_LOG_DIR/.hadoop_test > /dev/null 2>&1
+TEST_LOG_DIR=$?
+if [ "${TEST_LOG_DIR}" = "0" ]; then
+  rm -f $HADOOP_LOG_DIR/.hadoop_test
+else
+  chown $HADOOP_IDENT_STRING $HADOOP_LOG_DIR 
+fi
 
 if [ "$HADOOP_PID_DIR" = "" ]; then
   HADOOP_PID_DIR=/tmp

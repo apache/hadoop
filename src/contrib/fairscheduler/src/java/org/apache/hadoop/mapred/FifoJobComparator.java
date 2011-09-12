@@ -35,7 +35,8 @@ public class FifoJobComparator implements Comparator<JobInProgress> {
       }
     }
     if (res == 0) {
-      res = j1.hashCode() - j2.hashCode();
+      // If there is a tie, break it by job ID to get a deterministic order
+      res = j1.getJobID().compareTo(j2.getJobID());
     }
     return res;
   }

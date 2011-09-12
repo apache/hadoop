@@ -151,6 +151,23 @@
       rev="${jetty-util.version}"
       conf="jetty->master"/>
 
+    <dependency org="asm"
+      name="asm"
+      rev="${asm.version}"
+      conf="jetty->master"/>
+    <dependency org="com.sun.jersey"
+      name="jersey-core"
+      rev="${jersey-core.version}"
+      conf="jetty->master"/>
+    <dependency org="com.sun.jersey"
+      name="jersey-json"
+      rev="${jersey-json.version}"
+      conf="jetty->master"/>
+    <dependency org="com.sun.jersey"
+      name="jersey-server"
+      rev="${jersey-server.version}"
+      conf="jetty->master"/>
+
     <dependency org="tomcat"
       name="jasper-runtime"
       rev="${jasper.version}"

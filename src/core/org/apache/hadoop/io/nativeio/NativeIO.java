@@ -79,11 +79,13 @@ public class NativeIO {
   //TODO: fstat is an old implementation. Doesn't use the cache. This should be 
   //changed to use the cache.
   public static native Stat fstat(FileDescriptor fd) throws IOException;
+
   private static native long getUIDforFDOwnerforOwner(FileDescriptor fd) throws IOException;
   private static native String getUserName(long uid) throws IOException;
   /** Initialize the JNI method ID and class ID cache */
   private static native void initNative();
-  
+  /** Wrapper around chmod(2) */
+  public static native void chmod(String path, int mode) throws IOException;
   private static class CachedUid {
     final long timestamp;
     final String username;

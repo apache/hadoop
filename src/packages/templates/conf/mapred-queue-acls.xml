@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+<property>
+<name>mapred.queue.default.acl-submit-job</name>
+<value>*</value>
+</property>
+<property>
+<name>mapred.queue.default.acl-administer-jobs</name>
+<value>*</value>
+</property>
+</configuration>

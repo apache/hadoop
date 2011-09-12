@@ -102,7 +102,7 @@ public class LeaseManager {
   /**
    * Adds (or re-adds) the lease for the specified file.
    */
-  synchronized void addLease(String holder, String src) {
+  synchronized Lease addLease(String holder, String src) {
     Lease lease = getLease(holder);
     if (lease == null) {
       lease = new Lease(holder);
@@ -113,6 +113,7 @@ public class LeaseManager {
     }
     sortedLeasesByPath.put(src, lease);
     lease.paths.add(src);
+    return lease;
   }
 
   /**
@@ -130,6 +131,17 @@ public class LeaseManager {
         LOG.error(lease + " not found in sortedLeases");
       }
     }
+  }
+
+  /**
+   * Reassign lease for file src to the new holder.
+   */
+  synchronized Lease reassignLease(Lease lease, String src, String newHolder) {
+    assert newHolder != null : "new lease holder is null";
+    if (lease != null) {
+      removeLease(lease, src);
+    }
+    return addLease(newHolder, src);
   }
 
   /**
@@ -189,6 +201,12 @@ public class LeaseManager {
       this.holder = holder;
       renew();
     }
+
+    /** Get the holder of the lease */
+    public String getHolder() {
+      return holder;
+    }
+
     /** Only LeaseManager object can renew a lease */
     private void renew() {
       this.lastUpdate = FSNamesystem.now();
@@ -264,10 +282,6 @@ public class LeaseManager {
     
     Collection<String> getPaths() {
       return paths;
-    }
-
-    String getHolder() {
-    	return holder;
     }
 
     void replacePath(String oldpath, String newpath) {
@@ -362,7 +376,7 @@ public class LeaseManager {
   }
 
   /** Check the leases beginning from the oldest. */
-  private synchronized void checkLeases() {
+  synchronized void checkLeases() {
     for(; sortedLeases.size() > 0; ) {
       final Lease oldest = sortedLeases.first();
       if (!oldest.expiredHardLimit()) {
@@ -380,7 +394,7 @@ public class LeaseManager {
       oldest.getPaths().toArray(leasePaths);
       for(String p : leasePaths) {
         try {
-          fsnamesystem.internalReleaseLease(oldest, p);
+          fsnamesystem.internalReleaseLeaseOne(oldest, p);
         } catch (IOException e) {
           LOG.error("Cannot release the path "+p+" in the lease "+oldest, e);
           removing.add(p);

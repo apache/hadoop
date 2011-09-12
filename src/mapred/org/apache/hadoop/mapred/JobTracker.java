@@ -1257,7 +1257,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
        * Adds a task-attempt in the listener
        */
       private void processTaskAttempt(String taskAttemptId, 
-                                      JobHistory.TaskAttempt attempt) {
+                                      JobHistory.TaskAttempt attempt) 
+        throws UnknownHostException {
         TaskAttemptID id = TaskAttemptID.forName(taskAttemptId);
         
         // Check if the transaction for this attempt can be committed
@@ -1512,7 +1513,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     
     private void createTaskAttempt(JobInProgress job, 
                                    TaskAttemptID attemptId, 
-                                   JobHistory.TaskAttempt attempt) {
+                                   JobHistory.TaskAttempt attempt) 
+      throws UnknownHostException {
       TaskID id = attemptId.getTaskID();
       String type = attempt.get(Keys.TASK_TYPE);
       TaskInProgress tip = job.getTaskInProgress(id);
@@ -2165,6 +2167,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     this(conf, generateNewIdentifier());
   }
 
+  JobTracker(JobConf conf, QueueManager qm) 
+  throws IOException, InterruptedException {
+    this(conf, generateNewIdentifier(), new Clock(), qm);
+  }
+
   JobTracker(JobConf conf, Clock clock) 
   throws IOException, InterruptedException {
     this(conf, generateNewIdentifier(), clock);
@@ -2178,9 +2185,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   throws IOException, InterruptedException {   
     this(conf, identifier, new Clock());
   }
-  
+
   JobTracker(final JobConf conf, String identifier, Clock clock) 
   throws IOException, InterruptedException { 
+
+    this(conf, identifier, clock, new QueueManager(new Configuration(conf)));
+  } 
+  
+  JobTracker(final JobConf conf, String identifier, Clock clock, QueueManager qm) 
+  throws IOException, InterruptedException { 
+    this.queueManager = qm;
     this.clock = clock;
     // Set ports, start RPC servers, setup security policy etc.
     InetSocketAddress addr = getAddress(conf);
@@ -2271,10 +2285,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     // Read the hosts/exclude files to restrict access to the jobtracker.
     this.hostsReader = new HostsFileReader(conf.get("mapred.hosts", ""),
                                            conf.get("mapred.hosts.exclude", ""));
-
-    Configuration queuesConf = new Configuration(this.conf);
-    queueManager = new QueueManager(queuesConf);
-
     aclsManager = new ACLsManager(conf, new JobACLsManager(conf), queueManager);
 
     LOG.info("Starting jobtracker with owner as " +
@@ -3164,7 +3174,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * 
    * @param status Task Tracker's status
    */
-  private void addNewTracker(TaskTracker taskTracker) {
+  private void addNewTracker(TaskTracker taskTracker) throws UnknownHostException {
     TaskTrackerStatus status = taskTracker.getStatus();
     trackerExpiryQueue.add(status);
 
@@ -3188,7 +3198,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     trackers.add(taskTracker);
   }
 
-  public Node resolveAndAddToTopology(String name) {
+  public Node resolveAndAddToTopology(String name) throws UnknownHostException {
     List <String> tmpList = new ArrayList<String>(1);
     tmpList.add(name);
     List <String> rNameList = dnsToSwitchMapping.resolve(tmpList);
@@ -3631,7 +3641,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   private synchronized boolean processHeartbeat(
                                  TaskTrackerStatus trackerStatus, 
                                  boolean initialContact,
-                                 long timeStamp) {
+                                 long timeStamp) throws UnknownHostException {
 
     getInstrumentation().heartbeat();
 
@@ -3663,6 +3673,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           if (isBlacklisted(trackerName)) {
             faultyTrackers.incrBlacklistedTrackers(1);
           }
+          // This could now throw an UnknownHostException but only if the
+          // TaskTracker status itself has an invalid name
           addNewTracker(taskTracker);
         }
       }

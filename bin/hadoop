@@ -50,7 +50,16 @@
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/../libexec/hadoop-config.sh
+if [ "$HADOOP_HOME_WARN_SUPPRESS" == "" ] && [ "$HADOOP_HOME" != "" ]; then
+  echo "Warning: \$HADOOP_HOME is deprecated." 1>&2
+  echo 1>&2
+fi
+
+if [ -e "$bin"/../libexec/hadoop-config.sh ]; then
+  . "$bin"/../libexec/hadoop-config.sh
+else
+  . "$bin"/hadoop-config.sh
+fi
 
 cygwin=false
 case "`uname`" in
@@ -152,34 +161,58 @@ fi
 IFS=
 
 # for releases, add core hadoop jar & webapps to CLASSPATH
-if [ -d "$HADOOP_HOME/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_HOME
+if [ -e $HADOOP_PREFIX/share/hadoop/hadoop-core-* ]; then
+  # binary layout
+  if [ -d "$HADOOP_PREFIX/share/hadoop/webapps" ]; then
+    CLASSPATH=${CLASSPATH}:$HADOOP_PREFIX/share/hadoop
+  fi
+  for f in $HADOOP_PREFIX/share/hadoop/hadoop-core-*.jar; do
+    CLASSPATH=${CLASSPATH}:$f;
+  done
+
+  # add libs to CLASSPATH
+  for f in $HADOOP_PREFIX/share/hadoop/lib/*.jar; do
+    CLASSPATH=${CLASSPATH}:$f;
+  done
+
+  for f in $HADOOP_PREFIX/share/hadoop/lib/jsp-2.1/*.jar; do
+    CLASSPATH=${CLASSPATH}:$f;
+  done
+
+  for f in $HADOOP_PREFIX/share/hadoop/hadoop-tools-*.jar; do
+    TOOL_PATH=${TOOL_PATH}:$f;
+  done
+else
+  # tarball layout
+  if [ -d "$HADOOP_HOME/webapps" ]; then
+    CLASSPATH=${CLASSPATH}:$HADOOP_HOME
+  fi
+  for f in $HADOOP_HOME/hadoop-core-*.jar; do
+    CLASSPATH=${CLASSPATH}:$f;
+  done
+
+  # add libs to CLASSPATH
+  for f in $HADOOP_HOME/lib/*.jar; do
+    CLASSPATH=${CLASSPATH}:$f;
+  done
+
+  if [ -d "$HADOOP_HOME/build/ivy/lib/Hadoop/common" ]; then
+    for f in $HADOOP_HOME/build/ivy/lib/Hadoop/common/*.jar; do
+      CLASSPATH=${CLASSPATH}:$f;
+    done
+  fi
+
+  for f in $HADOOP_HOME/lib/jsp-2.1/*.jar; do
+    CLASSPATH=${CLASSPATH}:$f;
+  done
+
+  for f in $HADOOP_HOME/hadoop-tools-*.jar; do
+    TOOL_PATH=${TOOL_PATH}:$f;
+  done
+  for f in $HADOOP_HOME/build/hadoop-tools-*.jar; do
+    TOOL_PATH=${TOOL_PATH}:$f;
+  done
 fi
-for f in $HADOOP_HOME/hadoop-core-*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-
-# add libs to CLASSPATH
-for f in $HADOOP_HOME/lib/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-
-if [ -d "$HADOOP_HOME/build/ivy/lib/Hadoop/common" ]; then
-for f in $HADOOP_HOME/build/ivy/lib/Hadoop/common/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-fi
-
-for f in $HADOOP_HOME/lib/jsp-2.1/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-
-for f in $HADOOP_HOME/hadoop-tools-*.jar; do
-  TOOL_PATH=${TOOL_PATH}:$f;
-done
-for f in $HADOOP_HOME/build/hadoop-tools-*.jar; do
-  TOOL_PATH=${TOOL_PATH}:$f;
-done
 
 # add user-specified CLASSPATH last
 if [ "$HADOOP_USER_CLASSPATH_FIRST" = "" ] && [ "$HADOOP_CLASSPATH" != "" ]; then
@@ -293,9 +326,15 @@ if $cygwin; then
 fi
 # setup 'java.library.path' for native-hadoop code if necessary
 JAVA_LIBRARY_PATH=''
-if [ -d "${HADOOP_HOME}/build/native" -o -d "${HADOOP_HOME}/lib/native" ]; then
+if [ -d "${HADOOP_HOME}/build/native" -o -d "${HADOOP_HOME}/lib/native" -o -e "${HADOOP_PREFIX}/lib/libhadoop.a" ]; then
   JAVA_PLATFORM=`CLASSPATH=${CLASSPATH} ${JAVA} -Xmx32m ${HADOOP_JAVA_PLATFORM_OPTS} org.apache.hadoop.util.PlatformName | sed -e "s/ /_/g"`
   
+  if [ "$JAVA_PLATFORM" = "Linux-amd64-64" ]; then
+    JSVC_ARCH="amd64"
+  else
+    JSVC_ARCH="i386"
+  fi
+
   if [ -d "$HADOOP_HOME/build/native" ]; then
     JAVA_LIBRARY_PATH=${HADOOP_HOME}/build/native/${JAVA_PLATFORM}/lib
   fi
@@ -307,11 +346,11 @@ if [ -d "${HADOOP_HOME}/build/native" -o -d "${HADOOP_HOME}/lib/native" ]; then
       JAVA_LIBRARY_PATH=${HADOOP_HOME}/lib/native/${JAVA_PLATFORM}
     fi
   fi
-fi
-if [ -e "${HADOOP_PREFIX}/lib/libhadoop.a" ]; then
-  JAVA_LIBRARY_PATH=${HADOOP_PREFIX}/lib
-fi
 
+  if [ -e "${HADOOP_PREFIX}/lib/libhadoop.a" ]; then
+    JAVA_LIBRARY_PATH=${HADOOP_PREFIX}/lib
+  fi
+fi
 
 # cygwin path translation
 if $cygwin; then
@@ -340,17 +379,17 @@ if [ "$starting_secure_dn" = "true" ]; then
   if [ "$HADOOP_PID_DIR" = "" ]; then
     HADOOP_SECURE_DN_PID="/tmp/hadoop_secure_dn.pid"
   else
-   HADOOP_SECURE_DN_PID="$HADOOP_PID_DIR/hadoop_secure_dn.pid"
+    HADOOP_SECURE_DN_PID="$HADOOP_PID_DIR/hadoop_secure_dn.pid"
   fi
 
-  exec "$HADOOP_HOME/libexec/jsvc" -Dproc_$COMMAND -outfile "$HADOOP_LOG_DIR/jsvc.out" \
-                                                   -errfile "$HADOOP_LOG_DIR/jsvc.err" \
-                                                   -pidfile "$HADOOP_SECURE_DN_PID" \
-                                                   -nodetach \
-                                                   -user "$HADOOP_SECURE_DN_USER" \
-                                                   -cp "$CLASSPATH" \
-                                                   $JAVA_HEAP_MAX $HADOOP_OPTS \
-                                                   org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter "$@"
+  exec "$HADOOP_HOME/libexec/jsvc.${JSVC_ARCH}" -Dproc_$COMMAND -outfile "$HADOOP_LOG_DIR/jsvc.out" \
+                                                -errfile "$HADOOP_LOG_DIR/jsvc.err" \
+                                                -pidfile "$HADOOP_SECURE_DN_PID" \
+                                                -nodetach \
+                                                -user "$HADOOP_SECURE_DN_USER" \
+                                                -cp "$CLASSPATH" \
+                                                $JAVA_HEAP_MAX $HADOOP_OPTS \
+                                                org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter "$@"
 else
   # run it
   exec "$JAVA" -Dproc_$COMMAND $JAVA_HEAP_MAX $HADOOP_OPTS -classpath "$CLASSPATH" $CLASS "$@"

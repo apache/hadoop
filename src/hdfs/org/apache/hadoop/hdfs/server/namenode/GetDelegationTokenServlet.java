@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
@@ -75,9 +76,7 @@ public class GetDelegationTokenServlet extends DfsServlet {
           
           Token<DelegationTokenIdentifier> token = 
             nn.getDelegationToken(new Text(renewerFinal));
-          String s = NameNode.getAddress(conf).getAddress().getHostAddress()
-                     + ":" + NameNode.getAddress(conf).getPort();
-          token.setService(new Text(s));
+          SecurityUtil.setTokenService(token, NameNode.getAddress(conf));
           Credentials ts = new Credentials();
           ts.addToken(new Text(ugi.getShortUserName()), token);
           ts.write(dosFinal);

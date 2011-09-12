@@ -28,6 +28,7 @@ import java.io.OutputStream;
 
 
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryInfo;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -40,7 +41,7 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
  *
  */
 public interface FSDatasetInterface extends FSDatasetMBean {
-  
+
   
   /**
    * Returns the length of the metadata file of the specified block
@@ -49,7 +50,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @throws IOException
    */
   public long getMetaDataLength(Block b) throws IOException;
-  
+
   /**
    * This class provides the input stream and length of the metadata
    * of a block
@@ -92,6 +93,25 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @throws IOException
    */
   public long getLength(Block b) throws IOException;
+
+  /**
+   * Returns the specified block's visible length (has metadata for this)
+   * @param b
+   * @return   the specified block's visible length
+   * @throws IOException
+   */
+  public long getVisibleLength(Block b) throws IOException;
+
+  /**
+   * update the specified blocks visible meta data.  NOTE: only applies
+   * to blocks that are being written to.  If called on closed blocks,
+   * throws IOException
+   * 
+   * @param b block to update the length for
+   * @param length value to set visible length to
+   * @throws IOException if the block is not in ongoingCreates
+   */
+  public void setVisibleLength(Block b, long length) throws IOException;
 
   /**
    * @return the generation stamp stored with the block.
@@ -169,12 +189,14 @@ public interface FSDatasetInterface extends FSDatasetMBean {
   /**
    * Creates the block and returns output streams to write data and CRC
    * @param b
-   * @param isRecovery True if this is part of erro recovery, otherwise false
+   * @param isRecovery True if this is part of error recovery, otherwise false
+   * @param isReplicationRequest True if this is part of block replication request
    * @return a BlockWriteStreams object to allow writing the block data
    *  and CRC
    * @throws IOException
    */
-  public BlockWriteStreams writeToBlock(Block b, boolean isRecovery) throws IOException;
+  public BlockWriteStreams writeToBlock(Block b, boolean isRecovery, 
+                                        boolean isReplicationRequest) throws IOException;
 
   /**
    * Update the block to the new generation stamp and length.  
@@ -191,6 +213,14 @@ public interface FSDatasetInterface extends FSDatasetMBean {
   public void finalizeBlock(Block b) throws IOException;
 
   /**
+   * Finalizes the block previously opened for writing using writeToBlock 
+   * if not already finalized
+   * @param b
+   * @throws IOException
+   */
+  public void finalizeBlockIfNeeded(Block b) throws IOException;
+
+  /**
    * Unfinalizes the block previously opened for writing using writeToBlock.
    * The temporary file associated with this block is deleted.
    * @param b
@@ -200,9 +230,16 @@ public interface FSDatasetInterface extends FSDatasetMBean {
 
   /**
    * Returns the block report - the full list of blocks stored
+   * Returns only finalized blocks
    * @return - the block report - the full list of blocks stored
    */
   public Block[] getBlockReport();
+  
+  /**
+   * Returns the blocks being written report 
+   * @return - the blocks being written report
+   */
+  public Block[] getBlocksBeingWrittenReport();
 
   /**
    * Is the block valid?
@@ -228,7 +265,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
      * Stringifies the name of the storage
      */
   public String toString();
-  
+ 
   /**
    * Shutdown the FSDataset
    */
@@ -270,4 +307,6 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @return true if more then minimum valid volumes left in the FSDataSet
    */
   public boolean hasEnoughResource();
+
+  public BlockRecoveryInfo startBlockRecovery(long blockId) throws IOException;
 }
