@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -67,6 +68,7 @@ public abstract class BaseContainerManagerTest {
   protected static File localLogDir;
   protected static File remoteLogDir;
   protected static File tmpDir;
+  protected ContainerTokenSecretManager containerTokenSecretManager = new ContainerTokenSecretManager();
 
   protected final NodeManagerMetrics metrics = NodeManagerMetrics.create();
 
@@ -94,7 +96,7 @@ public abstract class BaseContainerManagerTest {
   protected String user = "nobody";
 
   protected NodeStatusUpdater nodeStatusUpdater = new NodeStatusUpdaterImpl(
-      context, new AsyncDispatcher(), null, metrics) {
+      context, new AsyncDispatcher(), null, metrics, this.containerTokenSecretManager) {
     @Override
     protected ResourceTracker getRMClient() {
       return new LocalRMInterface();
@@ -147,7 +149,7 @@ public abstract class BaseContainerManagerTest {
     exec = createContainerExecutor();
     containerManager =
         new ContainerManagerImpl(context, exec, delSrvc, nodeStatusUpdater,
-                                 metrics);
+                                 metrics, this.containerTokenSecretManager);
     containerManager.init(conf);
   }
 

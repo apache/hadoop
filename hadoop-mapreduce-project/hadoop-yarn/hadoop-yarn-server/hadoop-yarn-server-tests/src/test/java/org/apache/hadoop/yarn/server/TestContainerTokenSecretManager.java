@@ -82,6 +82,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.BeforeClass;
+import org.junit.AfterClass;
 import org.junit.Test;
 
 public class TestContainerTokenSecretManager {
@@ -94,6 +95,7 @@ public class TestContainerTokenSecretManager {
   private static final File localDir = new File("target",
       TestContainerTokenSecretManager.class.getName() + "-localDir")
       .getAbsoluteFile();
+  private static MiniYARNCluster yarnCluster;
 
   @BeforeClass
   public static void setup() throws AccessControlException,
@@ -102,6 +104,12 @@ public class TestContainerTokenSecretManager {
     localFS.delete(new Path(localDir.getAbsolutePath()), true);
     localDir.mkdir();
   }
+
+  @AfterClass
+  public static void teardown() { 
+    yarnCluster.stop();
+  }
+
 
   @Test
   public void test() throws IOException, InterruptedException {
@@ -116,7 +124,7 @@ public class TestContainerTokenSecretManager {
     // Set AM expiry interval to be very long.
     conf.setLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, 100000L);
     UserGroupInformation.setConfiguration(conf);
-    MiniYARNCluster yarnCluster =
+    yarnCluster =
         new MiniYARNCluster(TestContainerTokenSecretManager.class.getName());
     yarnCluster.init(conf);
     yarnCluster.start();

@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
@@ -84,8 +85,9 @@ public class TestEventFlow {
     Dispatcher dispatcher = new AsyncDispatcher();
     NodeHealthCheckerService healthChecker = null;
     NodeManagerMetrics metrics = NodeManagerMetrics.create();
+    ContainerTokenSecretManager containerTokenSecretManager =  new ContainerTokenSecretManager();
     NodeStatusUpdater nodeStatusUpdater =
-        new NodeStatusUpdaterImpl(context, dispatcher, healthChecker, metrics) {
+        new NodeStatusUpdaterImpl(context, dispatcher, healthChecker, metrics, containerTokenSecretManager) {
       @Override
       protected ResourceTracker getRMClient() {
         return new LocalRMInterface();
@@ -98,7 +100,7 @@ public class TestEventFlow {
     };
 
     DummyContainerManager containerManager =
-        new DummyContainerManager(context, exec, del, nodeStatusUpdater, metrics);
+        new DummyContainerManager(context, exec, del, nodeStatusUpdater, metrics, containerTokenSecretManager);
     containerManager.init(conf);
     containerManager.start();
 
