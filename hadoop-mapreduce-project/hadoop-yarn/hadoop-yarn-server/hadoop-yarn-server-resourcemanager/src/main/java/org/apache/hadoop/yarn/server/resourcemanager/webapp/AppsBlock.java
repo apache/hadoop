@@ -56,7 +56,7 @@ class AppsBlock extends HtmlBlock {
         tbody();
     int i = 0;
     for (RMApp app : list.apps.values()) {
-      String appId = Apps.toString(app.getApplicationId());
+      String appId = app.getApplicationId().toString();
       String trackingUrl = app.getTrackingUrl();
       String ui = trackingUrl == null || trackingUrl.isEmpty() ? "UNASSIGNED" :
           (app.getFinishTime() == 0 ? "ApplicationMaster" : "JobHistory");

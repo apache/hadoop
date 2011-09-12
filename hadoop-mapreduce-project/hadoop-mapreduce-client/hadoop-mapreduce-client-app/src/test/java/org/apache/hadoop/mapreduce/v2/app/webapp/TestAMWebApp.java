@@ -108,7 +108,7 @@ public class TestAMWebApp {
     Injector injector = WebAppTests.createMockInjector(AppContext.class, ctx);
     AppController controller = injector.getInstance(AppController.class);
     controller.index();
-    assertEquals(Apps.toString(ctx.appID), controller.get(APP_ID,""));
+    assertEquals(ctx.appID.toString(), controller.get(APP_ID,""));
   }
 
   @Test public void testAppView() {

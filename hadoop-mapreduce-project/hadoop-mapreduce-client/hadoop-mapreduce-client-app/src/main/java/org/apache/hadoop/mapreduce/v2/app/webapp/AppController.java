@@ -47,7 +47,7 @@ public class AppController extends Controller implements AMParams {
       String title) {
     super(ctx);
     this.app = app;
-    set(APP_ID, Apps.toString(app.context.getApplicationID()));
+    set(APP_ID, app.context.getApplicationID().toString());
     set(RM_WEB, YarnConfiguration.getRMWebAppURL(conf));
   }
 

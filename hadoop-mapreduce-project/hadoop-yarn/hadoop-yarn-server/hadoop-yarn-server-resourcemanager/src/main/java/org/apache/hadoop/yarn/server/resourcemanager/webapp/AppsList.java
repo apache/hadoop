@@ -60,7 +60,7 @@ class AppsList implements ToJSON {
       } else {
         out.append(",\n");
       }
-      String appID = Apps.toString(app.getApplicationId());
+      String appID = app.getApplicationId().toString();
       String trackingUrl = app.getTrackingUrl();
       String ui = trackingUrl == null ? "UNASSIGNED" :
           (app.getFinishTime() == 0 ? "ApplicationMaster" : "JobHistory");
