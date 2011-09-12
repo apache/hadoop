@@ -11,6 +11,7 @@ Trunk (unreleased changes)
                     process (atm)
 
   BUG FIXES
+
     MAPREDUCE-2784. [Gridmix] Bug fixes in ExecutionSummarizer and 
     ResourceUsageMatcher. (amarrk)
 
@@ -1274,6 +1275,9 @@ Release 0.23.0 - Unreleased
 
    MAPREDUCE-2691. Finishing up the cleanup of distributed cache file resources
    and related tests. (Siddharth Seth via vinodkv)
+
+   MAPREDUCE-2749. Ensure NM registers with RM after starting all its services
+   correctly. (Thomas Graves via acmurthy)
 
 Release 0.22.0 - Unreleased
 

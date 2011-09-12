@@ -29,6 +29,7 @@ import org.apache.hadoop.NodeHealthCheckerService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnException;
@@ -44,21 +45,24 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer;
+import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.service.Service;
 
 public class NodeManager extends CompositeService {
   private static final Log LOG = LogFactory.getLog(NodeManager.class);
   protected final NodeManagerMetrics metrics = NodeManagerMetrics.create();
+  protected ContainerTokenSecretManager containerTokenSecretManager;
 
   public NodeManager() {
     super(NodeManager.class.getName());
   }
 
   protected NodeStatusUpdater createNodeStatusUpdater(Context context,
-      Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
+      Dispatcher dispatcher, NodeHealthCheckerService healthChecker,
+      ContainerTokenSecretManager containerTokenSecretManager) {
     return new NodeStatusUpdaterImpl(context, dispatcher, healthChecker,
-                                     metrics);
+                                     metrics, containerTokenSecretManager);
   }
 
   protected NodeResourceMonitor createNodeResourceMonitor() {
@@ -67,9 +71,10 @@ public class NodeManager extends CompositeService {
 
   protected ContainerManagerImpl createContainerManager(Context context,
       ContainerExecutor exec, DeletionService del,
-      NodeStatusUpdater nodeStatusUpdater) {
+      NodeStatusUpdater nodeStatusUpdater, ContainerTokenSecretManager 
+      containerTokenSecretManager) {
     return new ContainerManagerImpl(context, exec, del, nodeStatusUpdater,
-                                    metrics);
+                                    metrics, containerTokenSecretManager);
   }
 
   protected WebServer createWebServer(Context nmContext,
@@ -87,6 +92,13 @@ public class NodeManager extends CompositeService {
 
     Context context = new NMContext();
 
+    // Create the secretManager if need be.
+    if (UserGroupInformation.isSecurityEnabled()) {
+      LOG.info("Security is enabled on NodeManager. "
+          + "Creating ContainerTokenSecretManager");
+      this.containerTokenSecretManager = new ContainerTokenSecretManager();
+    }
+
     ContainerExecutor exec = ReflectionUtils.newInstance(
         conf.getClass(YarnConfiguration.NM_CONTAINER_EXECUTOR,
           DefaultContainerExecutor.class, ContainerExecutor.class), conf);
@@ -102,18 +114,16 @@ public class NodeManager extends CompositeService {
       addService(healthChecker);
     }
 
-    // StatusUpdater should be added first so that it can start first. Once it
-    // contacts RM, does registration and gets tokens, then only
-    // ContainerManager can start.
     NodeStatusUpdater nodeStatusUpdater =
-        createNodeStatusUpdater(context, dispatcher, healthChecker);
-    addService(nodeStatusUpdater);
+        createNodeStatusUpdater(context, dispatcher, healthChecker, 
+        this.containerTokenSecretManager);
 
     NodeResourceMonitor nodeResourceMonitor = createNodeResourceMonitor();
     addService(nodeResourceMonitor);
 
     ContainerManagerImpl containerManager =
-        createContainerManager(context, exec, del, nodeStatusUpdater);
+        createContainerManager(context, exec, del, nodeStatusUpdater,
+        this.containerTokenSecretManager);
     addService(containerManager);
 
     Service webServer =
@@ -131,6 +141,10 @@ public class NodeManager extends CompositeService {
         });
 
     DefaultMetricsSystem.initialize("NodeManager");
+
+    // StatusUpdater should be added last so that it get started last 
+    // so that we make sure everything is up before registering with RM. 
+    addService(nodeStatusUpdater);
 
     super.init(conf);
     // TODO add local dirs to del

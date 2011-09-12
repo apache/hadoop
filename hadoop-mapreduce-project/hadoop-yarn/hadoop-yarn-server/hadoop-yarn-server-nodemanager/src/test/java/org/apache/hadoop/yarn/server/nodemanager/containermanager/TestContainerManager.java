@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
+import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Test;
 
@@ -281,8 +282,10 @@ public class TestContainerManager extends BaseContainerManagerTest {
     // Real del service
     delSrvc = new DeletionService(exec);
     delSrvc.init(conf);
+    ContainerTokenSecretManager containerTokenSecretManager = new 
+        ContainerTokenSecretManager();
     containerManager = new ContainerManagerImpl(context, exec, delSrvc,
-        nodeStatusUpdater, metrics);
+        nodeStatusUpdater, metrics, containerTokenSecretManager);
     containerManager.init(conf);
     containerManager.start();
 

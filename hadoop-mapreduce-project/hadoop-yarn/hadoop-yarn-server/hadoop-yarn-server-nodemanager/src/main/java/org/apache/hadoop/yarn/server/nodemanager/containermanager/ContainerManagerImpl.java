@@ -116,7 +116,8 @@ public class ContainerManagerImpl extends CompositeService implements
 
   public ContainerManagerImpl(Context context, ContainerExecutor exec,
       DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
-      NodeManagerMetrics metrics) {
+      NodeManagerMetrics metrics, ContainerTokenSecretManager 
+      containerTokenSecretManager) {
     super(ContainerManagerImpl.class.getName());
     this.context = context;
     dispatcher = new AsyncDispatcher();
@@ -131,12 +132,7 @@ public class ContainerManagerImpl extends CompositeService implements
     addService(containersLauncher);
 
     this.nodeStatusUpdater = nodeStatusUpdater;
-    // Create the secretManager if need be.
-    if (UserGroupInformation.isSecurityEnabled()) {
-      LOG.info("Security is enabled on NodeManager. "
-          + "Creating ContainerTokenSecretManager");
-      this.containerTokenSecretManager = new ContainerTokenSecretManager();
-    }
+    this.containerTokenSecretManager = containerTokenSecretManager;
 
     // Start configurable services
     auxiluaryServices = new AuxServices();
@@ -196,14 +192,6 @@ public class ContainerManagerImpl extends CompositeService implements
     // Enqueue user dirs in deletion context
 
     YarnRPC rpc = YarnRPC.create(getConfig());
-    if (UserGroupInformation.isSecurityEnabled()) {
-      // This is fine as status updater is started before ContainerManager and
-      // RM gives the shared secret in registration during StatusUpdter#start()
-      // itself.
-      this.containerTokenSecretManager.setSecretKey(
-          this.nodeStatusUpdater.getContainerManagerBindAddress(),
-          this.nodeStatusUpdater.getRMNMSharedSecret());
-    }
     Configuration cmConf = new Configuration(getConfig());
     cmConf.setClass(YarnConfiguration.YARN_SECURITY_INFO,
         ContainerManagerSecurityInfo.class, SecurityInfo.class);

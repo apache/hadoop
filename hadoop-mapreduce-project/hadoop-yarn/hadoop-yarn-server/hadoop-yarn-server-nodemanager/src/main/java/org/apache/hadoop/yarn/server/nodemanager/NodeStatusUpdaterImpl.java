@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -68,6 +69,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private final Context context;
   private final Dispatcher dispatcher;
 
+  private ContainerTokenSecretManager containerTokenSecretManager;
   private long heartBeatInterval;
   private ResourceTracker resourceTracker;
   private String rmAddress;
@@ -85,12 +87,14 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private final NodeManagerMetrics metrics;
 
   public NodeStatusUpdaterImpl(Context context, Dispatcher dispatcher,
-      NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
+      NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics, 
+      ContainerTokenSecretManager containerTokenSecretManager) {
     super(NodeStatusUpdaterImpl.class.getName());
     this.healthChecker = healthChecker;
     this.context = context;
     this.dispatcher = dispatcher;
     this.metrics = metrics;
+    this.containerTokenSecretManager = containerTokenSecretManager;
   }
 
   @Override
@@ -173,8 +177,18 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       this.secretKeyBytes = regResponse.getSecretKey().array();
     }
 
+    // do this now so that its set before we start heartbeating to RM
+    if (UserGroupInformation.isSecurityEnabled()) {
+      LOG.info("Security enabled - updating secret keys now");
+      // It is expected that status updater is started by this point and
+      // RM gives the shared secret in registration during StatusUpdater#start().
+      this.containerTokenSecretManager.setSecretKey(
+          this.getContainerManagerBindAddress(),
+          this.getRMNMSharedSecret());
+    }
     LOG.info("Registered with ResourceManager as " + this.containerManagerBindAddress
         + " with total resource of " + this.totalResource);
+
   }
 
   @Override
