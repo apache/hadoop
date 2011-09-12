@@ -289,11 +289,12 @@ public class ResourceLocalizationService extends AbstractService
       LocalizerContext ctxt = new LocalizerContext(
           c.getUser(), c.getContainerID(), c.getCredentials());
       rsrcs = rsrcReqs.getRequestedResources();
-      for (LocalResourceVisibility vis : rsrcs.keySet()) {
-        tracker = getLocalResourcesTracker(vis, c.getUser(), 
+      for (Map.Entry<LocalResourceVisibility, Collection<LocalResourceRequest>> e :
+           rsrcs.entrySet()) {
+        tracker = getLocalResourcesTracker(e.getKey(), c.getUser(), 
             c.getContainerID().getAppId());
-        for (LocalResourceRequest req : rsrcs.get(vis)) {
-          tracker.handle(new ResourceRequestEvent(req, vis, ctxt));
+        for (LocalResourceRequest req : e.getValue()) {
+          tracker.handle(new ResourceRequestEvent(req, e.getKey(), ctxt));
         }
       }
       break;
@@ -312,10 +313,11 @@ public class ResourceLocalizationService extends AbstractService
         (ContainerLocalizationCleanupEvent) event;
       c = rsrcCleanup.getContainer();
       rsrcs = rsrcCleanup.getResources();
-      for (LocalResourceVisibility vis : rsrcs.keySet()) {
-        tracker = getLocalResourcesTracker(vis, c.getUser(), 
+      for (Map.Entry<LocalResourceVisibility, Collection<LocalResourceRequest>> e :
+           rsrcs.entrySet()) {
+        tracker = getLocalResourcesTracker(e.getKey(), c.getUser(), 
             c.getContainerID().getAppId());
-        for (LocalResourceRequest req : rsrcs.get(vis)) {
+        for (LocalResourceRequest req : e.getValue()) {
           tracker.handle(new ResourceReleaseEvent(req, c.getContainerID()));
         }
       }

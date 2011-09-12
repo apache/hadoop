@@ -1267,6 +1267,9 @@ Release 0.23.0 - Unreleased
    MAPREDUCE-2979. Removed the needless ClientProtocolProvider configuration
    from the hadoop-mapreduce-client-core module. (Siddharth Seth via vinodkv)
 
+   MAPREDUCE-2985. Fixed findbugs warnings in ResourceLocalizationService.
+   (Thomas Graves via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
