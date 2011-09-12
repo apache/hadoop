@@ -24,7 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeAdapter;
 import org.apache.hadoop.hdfs.server.datanode.Replica;
@@ -111,7 +111,7 @@ public class TestPipelines {
       assertTrue("Replica on DN " + dn + " shouldn't be null", r != null);
       assertEquals("Should be RBW replica on " + dn
           + " after sequence of calls append()/write()/hflush()",
-          HdfsConstants.ReplicaState.RBW, r.getState());
+          HdfsServerConstants.ReplicaState.RBW, r.getState());
     }
     ofs.close();
   }

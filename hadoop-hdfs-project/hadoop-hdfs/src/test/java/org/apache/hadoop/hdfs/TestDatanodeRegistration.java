@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import java.net.InetSocketAddress;
 
-import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.DFSClient;
 import junit.framework.TestCase;

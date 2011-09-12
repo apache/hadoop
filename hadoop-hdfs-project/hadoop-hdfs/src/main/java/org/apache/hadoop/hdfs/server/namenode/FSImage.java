@@ -35,7 +35,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
@@ -44,8 +44,8 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageState;
 import org.apache.hadoop.hdfs.server.common.Util;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.FSImageStorageInspector.LoadPlan;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
@@ -227,11 +227,11 @@ public class FSImage implements Closeable {
     }
     if (startOpt != StartupOption.UPGRADE
         && layoutVersion < Storage.LAST_PRE_UPGRADE_LAYOUT_VERSION
-        && layoutVersion != FSConstants.LAYOUT_VERSION) {
+        && layoutVersion != HdfsConstants.LAYOUT_VERSION) {
       throw new IOException(
           "\nFile system image contains an old layout version " 
           + storage.getLayoutVersion() + ".\nAn upgrade to version "
-          + FSConstants.LAYOUT_VERSION + " is required.\n"
+          + HdfsConstants.LAYOUT_VERSION + " is required.\n"
           + "Please restart NameNode with -upgrade option.");
     }
     
@@ -349,7 +349,7 @@ public class FSImage implements Closeable {
     long oldCTime = storage.getCTime();
     storage.cTime = now();  // generate new cTime for the state
     int oldLV = storage.getLayoutVersion();
-    storage.layoutVersion = FSConstants.LAYOUT_VERSION;
+    storage.layoutVersion = HdfsConstants.LAYOUT_VERSION;
     
     List<StorageDirectory> errorSDs =
       Collections.synchronizedList(new ArrayList<StorageDirectory>());
@@ -423,7 +423,7 @@ public class FSImage implements Closeable {
     // Directories that don't have previous state do not rollback
     boolean canRollback = false;
     FSImage prevState = new FSImage(conf, getFSNamesystem());
-    prevState.getStorage().layoutVersion = FSConstants.LAYOUT_VERSION;
+    prevState.getStorage().layoutVersion = HdfsConstants.LAYOUT_VERSION;
     for (Iterator<StorageDirectory> it = storage.dirIterator(); it.hasNext();) {
       StorageDirectory sd = it.next();
       File prevDir = sd.getPreviousDir();
@@ -438,12 +438,12 @@ public class FSImage implements Closeable {
       // read and verify consistency of the prev dir
       prevState.getStorage().readPreviousVersionProperties(sd);
 
-      if (prevState.getLayoutVersion() != FSConstants.LAYOUT_VERSION) {
+      if (prevState.getLayoutVersion() != HdfsConstants.LAYOUT_VERSION) {
         throw new IOException(
           "Cannot rollback to storage version " +
           prevState.getLayoutVersion() +
           " using this version of the NameNode, which uses storage version " +
-          FSConstants.LAYOUT_VERSION + ". " +
+          HdfsConstants.LAYOUT_VERSION + ". " +
           "Please use the previous version of HDFS to perform the rollback.");
       }
       canRollback = true;

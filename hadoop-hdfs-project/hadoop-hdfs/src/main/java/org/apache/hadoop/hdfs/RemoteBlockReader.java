@@ -40,7 +40,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ClientReadStatus
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
@@ -394,7 +394,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
                                      throws IOException {
     // in and out will be closed when sock is closed (by the caller)
     final DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
-          NetUtils.getOutputStream(sock, HdfsConstants.WRITE_TIMEOUT)));
+          NetUtils.getOutputStream(sock, HdfsServerConstants.WRITE_TIMEOUT)));
     new Sender(out).readBlock(block, blockToken, clientName, startOffset, len);
     
     //
@@ -486,7 +486,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   void sendReadResult(Socket sock, Status statusCode) {
     assert !sentStatusCode : "already sent status code to " + sock;
     try {
-      OutputStream out = NetUtils.getOutputStream(sock, HdfsConstants.WRITE_TIMEOUT);
+      OutputStream out = NetUtils.getOutputStream(sock, HdfsServerConstants.WRITE_TIMEOUT);
       
       ClientReadStatusProto.newBuilder()
         .setStatus(statusCode)

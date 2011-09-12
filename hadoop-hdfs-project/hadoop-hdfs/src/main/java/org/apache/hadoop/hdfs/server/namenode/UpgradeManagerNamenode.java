@@ -19,9 +19,9 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.UpgradeManager;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
@@ -38,8 +38,8 @@ import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
  * and updates its status.
  */
 class UpgradeManagerNamenode extends UpgradeManager {
-  public HdfsConstants.NodeType getType() {
-    return HdfsConstants.NodeType.NAME_NODE;
+  public HdfsServerConstants.NodeType getType() {
+    return HdfsServerConstants.NodeType.NAME_NODE;
   }
 
   private final FSNamesystem namesystem;
@@ -66,7 +66,7 @@ class UpgradeManagerNamenode extends UpgradeManager {
     this.broadcastCommand = currentUpgrades.first().startUpgrade();
     NameNode.LOG.info("\n   Distributed upgrade for NameNode version " 
         + getUpgradeVersion() + " to current LV " 
-        + FSConstants.LAYOUT_VERSION + " is started.");
+        + HdfsConstants.LAYOUT_VERSION + " is started.");
     return true;
   }
 
@@ -75,7 +75,7 @@ class UpgradeManagerNamenode extends UpgradeManager {
     if(NameNode.LOG.isDebugEnabled()) {
       NameNode.LOG.debug("\n   Distributed upgrade for NameNode version " 
           + getUpgradeVersion() + " to current LV " 
-          + FSConstants.LAYOUT_VERSION + " is processing upgrade command: "
+          + HdfsConstants.LAYOUT_VERSION + " is processing upgrade command: "
           + command.getAction() + " status = " + getUpgradeStatus() + "%");
     }
     if(currentUpgrades == null) {
@@ -96,7 +96,7 @@ class UpgradeManagerNamenode extends UpgradeManager {
     curUO.completeUpgrade();
     NameNode.LOG.info("\n   Distributed upgrade for NameNode version " 
         + curUO.getVersion() + " to current LV " 
-        + FSConstants.LAYOUT_VERSION + " is complete.");
+        + HdfsConstants.LAYOUT_VERSION + " is complete.");
     // proceede with the next one
     currentUpgrades.remove(curUO);
     if(currentUpgrades.isEmpty()) { // all upgrades are done
@@ -110,7 +110,7 @@ class UpgradeManagerNamenode extends UpgradeManager {
 
   public synchronized void completeUpgrade() throws IOException {
     // set and write new upgrade state into disk
-    setUpgradeState(false, FSConstants.LAYOUT_VERSION);
+    setUpgradeState(false, HdfsConstants.LAYOUT_VERSION);
     namesystem.getFSImage().getStorage().writeAll();
     currentUpgrades = null;
     broadcastCommand = null;

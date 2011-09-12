@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
 
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 

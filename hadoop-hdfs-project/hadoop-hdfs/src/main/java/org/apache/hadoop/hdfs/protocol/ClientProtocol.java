@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
@@ -578,7 +578,7 @@ public interface ClientProtocol extends VersionedProtocol {
    * Return live datanodes if type is LIVE; dead datanodes if type is DEAD;
    * otherwise all datanodes if type is ALL.
    */
-  public DatanodeInfo[] getDatanodeReport(FSConstants.DatanodeReportType type)
+  public DatanodeInfo[] getDatanodeReport(HdfsConstants.DatanodeReportType type)
       throws IOException;
 
   /**
@@ -601,7 +601,7 @@ public interface ClientProtocol extends VersionedProtocol {
    * <p>
    * Safe mode is entered automatically at name node startup.
    * Safe mode can also be entered manually using
-   * {@link #setSafeMode(FSConstants.SafeModeAction) setSafeMode(SafeModeAction.SAFEMODE_GET)}.
+   * {@link #setSafeMode(HdfsConstants.SafeModeAction) setSafeMode(SafeModeAction.SAFEMODE_GET)}.
    * <p>
    * At startup the name node accepts data node reports collecting
    * information about block locations.
@@ -617,11 +617,11 @@ public interface ClientProtocol extends VersionedProtocol {
    * Then the name node leaves safe mode.
    * <p>
    * If safe mode is turned on manually using
-   * {@link #setSafeMode(FSConstants.SafeModeAction) setSafeMode(SafeModeAction.SAFEMODE_ENTER)}
+   * {@link #setSafeMode(HdfsConstants.SafeModeAction) setSafeMode(SafeModeAction.SAFEMODE_ENTER)}
    * then the name node stays in safe mode until it is manually turned off
-   * using {@link #setSafeMode(FSConstants.SafeModeAction) setSafeMode(SafeModeAction.SAFEMODE_LEAVE)}.
+   * using {@link #setSafeMode(HdfsConstants.SafeModeAction) setSafeMode(SafeModeAction.SAFEMODE_LEAVE)}.
    * Current state of the name node can be verified using
-   * {@link #setSafeMode(FSConstants.SafeModeAction) setSafeMode(SafeModeAction.SAFEMODE_GET)}
+   * {@link #setSafeMode(HdfsConstants.SafeModeAction) setSafeMode(SafeModeAction.SAFEMODE_GET)}
    * <h4>Configuration parameters:</h4>
    * <tt>dfs.safemode.threshold.pct</tt> is the threshold parameter.<br>
    * <tt>dfs.safemode.extension</tt> is the safe mode extension parameter.<br>
@@ -644,7 +644,7 @@ public interface ClientProtocol extends VersionedProtocol {
    *                   
    * @throws IOException
    */
-  public boolean setSafeMode(FSConstants.SafeModeAction action) 
+  public boolean setSafeMode(HdfsConstants.SafeModeAction action) 
       throws IOException;
 
   /**
@@ -685,7 +685,7 @@ public interface ClientProtocol extends VersionedProtocol {
   /**
    * Report distributed upgrade progress or force current upgrade to proceed.
    * 
-   * @param action {@link FSConstants.UpgradeAction} to perform
+   * @param action {@link HdfsConstants.UpgradeAction} to perform
    * @return upgrade status information or null if no upgrades are in progress
    * @throws IOException
    */
@@ -777,8 +777,8 @@ public interface ClientProtocol extends VersionedProtocol {
    * <br><br>
    *                       
    * The quota can have three types of values : (1) 0 or more will set 
-   * the quota to that value, (2) {@link FSConstants#QUOTA_DONT_SET}  implies 
-   * the quota will not be changed, and (3) {@link FSConstants#QUOTA_RESET} 
+   * the quota to that value, (2) {@link HdfsConstants#QUOTA_DONT_SET}  implies 
+   * the quota will not be changed, and (3) {@link HdfsConstants#QUOTA_RESET} 
    * implies the quota will be reset. Any other value is a runtime error.
    * 
    * @throws AccessControlException permission denied

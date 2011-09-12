@@ -28,7 +28,7 @@ import java.io.IOException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
@@ -140,8 +140,8 @@ public class BlockReaderTestUtil {
     DatanodeInfo[] nodes = testBlock.getLocations();
     targetAddr = NetUtils.createSocketAddr(nodes[0].getName());
     sock = new Socket();
-    sock.connect(targetAddr, HdfsConstants.READ_TIMEOUT);
-    sock.setSoTimeout(HdfsConstants.READ_TIMEOUT);
+    sock.connect(targetAddr, HdfsServerConstants.READ_TIMEOUT);
+    sock.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
 
     return BlockReaderFactory.newBlockReader(
       sock, targetAddr.toString()+ ":" + block.getBlockId(), block,

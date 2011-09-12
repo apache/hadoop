@@ -29,9 +29,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
  ************************************/
 
 @InterfaceAudience.Private
-public final class HdfsConstants {
+public final class HdfsServerConstants {
   /* Hidden constructor */
-  private HdfsConstants() { }
+  private HdfsServerConstants() { }
   
   /**
    * Type of the node

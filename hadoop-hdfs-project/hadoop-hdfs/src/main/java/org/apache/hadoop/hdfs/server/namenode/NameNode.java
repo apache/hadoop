@@ -55,12 +55,12 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
-import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
-import static org.apache.hadoop.hdfs.protocol.FSConstants.MAX_PATH_LENGTH;
-import static org.apache.hadoop.hdfs.protocol.FSConstants.MAX_PATH_DEPTH;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.MAX_PATH_LENGTH;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.MAX_PATH_DEPTH;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -68,8 +68,8 @@ import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
@@ -307,12 +307,12 @@ public class NameNode implements NamenodeProtocols {
           "Invalid URI for NameNode address (check %s): %s has no authority.",
           FileSystem.FS_DEFAULT_NAME_KEY, filesystemURI.toString()));
     }
-    if (!FSConstants.HDFS_URI_SCHEME.equalsIgnoreCase(
+    if (!HdfsConstants.HDFS_URI_SCHEME.equalsIgnoreCase(
         filesystemURI.getScheme())) {
       throw new IllegalArgumentException(String.format(
           "Invalid URI for NameNode address (check %s): %s is not of scheme '%s'.",
           FileSystem.FS_DEFAULT_NAME_KEY, filesystemURI.toString(),
-          FSConstants.HDFS_URI_SCHEME));
+          HdfsConstants.HDFS_URI_SCHEME));
     }
     return getAddress(authority);
   }
@@ -320,7 +320,7 @@ public class NameNode implements NamenodeProtocols {
   public static URI getUri(InetSocketAddress namenode) {
     int port = namenode.getPort();
     String portString = port == DEFAULT_PORT ? "" : (":"+port);
-    return URI.create(FSConstants.HDFS_URI_SCHEME + "://" 
+    return URI.create(HdfsConstants.HDFS_URI_SCHEME + "://" 
         + namenode.getHostName()+portString);
   }
 
@@ -1279,7 +1279,7 @@ public class NameNode implements NamenodeProtocols {
    * @throws IOException
    */
   void verifyVersion(int version) throws IOException {
-    if (version != FSConstants.LAYOUT_VERSION)
+    if (version != HdfsConstants.LAYOUT_VERSION)
       throw new IncorrectVersionException(version, "data node");
   }
     
@@ -1573,7 +1573,7 @@ public class NameNode implements NamenodeProtocols {
     DFSUtil.setGenericConf(conf, nameserviceId, NAMESERVICE_SPECIFIC_KEYS);
     
     if (conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY) != null) {
-      URI defaultUri = URI.create(FSConstants.HDFS_URI_SCHEME + "://"
+      URI defaultUri = URI.create(HdfsConstants.HDFS_URI_SCHEME + "://"
           + conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY));
       conf.set(FS_DEFAULT_NAME_KEY, defaultUri.toString());
     }

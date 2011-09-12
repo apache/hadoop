@@ -30,7 +30,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
@@ -162,7 +162,7 @@ class LeaseRenewer {
   /** The time in milliseconds that the map became empty. */
   private long emptyTime = Long.MAX_VALUE;
   /** A fixed lease renewal time period in milliseconds */
-  private long renewal = FSConstants.LEASE_SOFTLIMIT_PERIOD/2;
+  private long renewal = HdfsConstants.LEASE_SOFTLIMIT_PERIOD/2;
 
   /** A daemon for renewing lease */
   private Daemon daemon = null;
@@ -352,7 +352,7 @@ class LeaseRenewer {
 
     //update renewal time
     if (renewal == dfsc.getHdfsTimeout()/2) {
-      long min = FSConstants.LEASE_SOFTLIMIT_PERIOD;
+      long min = HdfsConstants.LEASE_SOFTLIMIT_PERIOD;
       for(DFSClient c : dfsclients) {
         if (c.getHdfsTimeout() > 0) {
           final long timeout = c.getHdfsTimeout();

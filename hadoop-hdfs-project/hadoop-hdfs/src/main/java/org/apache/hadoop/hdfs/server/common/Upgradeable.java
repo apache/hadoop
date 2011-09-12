@@ -42,7 +42,7 @@ public interface Upgradeable extends Comparable<Upgradeable> {
    * Get the type of the software component, which this object is upgrading.
    * @return type
    */
-  HdfsConstants.NodeType getType();
+  HdfsServerConstants.NodeType getType();
 
   /**
    * Description of the upgrade object for displaying.

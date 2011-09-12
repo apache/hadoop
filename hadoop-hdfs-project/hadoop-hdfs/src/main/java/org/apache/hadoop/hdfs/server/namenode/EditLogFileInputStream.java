@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.io.BufferedInputStream;
 import java.io.EOFException;
 import java.io.DataInputStream;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
 import org.apache.hadoop.io.IOUtils;
@@ -143,11 +143,11 @@ class EditLogFileInputStream extends EditLogInputStream {
       throw new LogHeaderCorruptException(
           "Reached EOF when reading log header");
     }
-    if (logVersion < FSConstants.LAYOUT_VERSION) { // future version
+    if (logVersion < HdfsConstants.LAYOUT_VERSION) { // future version
       throw new LogHeaderCorruptException(
           "Unexpected version of the file system log file: "
           + logVersion + ". Current version = "
-          + FSConstants.LAYOUT_VERSION + ".");
+          + HdfsConstants.LAYOUT_VERSION + ".");
     }
     assert logVersion <= Storage.LAST_UPGRADABLE_LAYOUT_VERSION :
       "Unsupported version " + logVersion;

@@ -68,7 +68,7 @@ import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsProtoUtil;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
@@ -83,9 +83,9 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -435,9 +435,9 @@ public class DataNode extends Configured
 
   private void initConfig(Configuration conf) {
     this.socketTimeout =  conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY,
-                                      HdfsConstants.READ_TIMEOUT);
+                                      HdfsServerConstants.READ_TIMEOUT);
     this.socketWriteTimeout = conf.getInt(DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY,
-                                          HdfsConstants.WRITE_TIMEOUT);
+                                          HdfsServerConstants.WRITE_TIMEOUT);
     /* Based on results on different platforms, we might need set the default 
      * to false on some of them. */
     this.transferToAllowed = conf.getBoolean(
@@ -619,7 +619,7 @@ public class DataNode extends Configured
     } else {
       ss = secureResources.getStreamingSocket();
     }
-    ss.setReceiveBufferSize(FSConstants.DEFAULT_DATA_SOCKET_SIZE); 
+    ss.setReceiveBufferSize(HdfsConstants.DEFAULT_DATA_SOCKET_SIZE); 
     // adjust machine name with the actual port
     int tmpPort = ss.getLocalPort();
     selfAddr = new InetSocketAddress(ss.getInetAddress().getHostAddress(),
@@ -752,9 +752,9 @@ public class DataNode extends Configured
         } catch (InterruptedException ie) {}
       }
       
-      assert FSConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion() :
+      assert HdfsConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion() :
         "Data-node and name-node layout versions must be the same."
-        + "Expected: "+ FSConstants.LAYOUT_VERSION 
+        + "Expected: "+ HdfsConstants.LAYOUT_VERSION 
         + " actual "+ nsInfo.getLayoutVersion();
       return nsInfo;
     }
@@ -798,7 +798,7 @@ public class DataNode extends Configured
       if (simulatedFSDataset) {
         initFsDataSet(conf, dataDirs);
         bpRegistration.setStorageID(getStorageId()); //same as DN
-        bpRegistration.storageInfo.layoutVersion = FSConstants.LAYOUT_VERSION;
+        bpRegistration.storageInfo.layoutVersion = HdfsConstants.LAYOUT_VERSION;
         bpRegistration.storageInfo.namespaceID = bpNSInfo.namespaceID;
         bpRegistration.storageInfo.clusterID = bpNSInfo.clusterID;
       } else {
@@ -1134,9 +1134,9 @@ public class DataNode extends Configured
         throw new IncorrectVersionException(nsBuildVer, "namenode", stBuildVer);
       }
 
-      if (FSConstants.LAYOUT_VERSION != bpNSInfo.getLayoutVersion()) {
+      if (HdfsConstants.LAYOUT_VERSION != bpNSInfo.getLayoutVersion()) {
         LOG.warn("Data-node and name-node layout versions must be " +
-          "the same. Expected: "+ FSConstants.LAYOUT_VERSION +
+          "the same. Expected: "+ HdfsConstants.LAYOUT_VERSION +
           " actual "+ bpNSInfo.getLayoutVersion());
         throw new IncorrectVersionException
           (bpNSInfo.getLayoutVersion(), "namenode");
@@ -1967,10 +1967,10 @@ public class DataNode extends Configured
         sock.setSoTimeout(targets.length * socketTimeout);
 
         long writeTimeout = socketWriteTimeout + 
-                            HdfsConstants.WRITE_TIMEOUT_EXTENSION * (targets.length-1);
+                            HdfsServerConstants.WRITE_TIMEOUT_EXTENSION * (targets.length-1);
         OutputStream baseStream = NetUtils.getOutputStream(sock, writeTimeout);
         out = new DataOutputStream(new BufferedOutputStream(baseStream,
-            FSConstants.SMALL_BUFFER_SIZE));
+            HdfsConstants.SMALL_BUFFER_SIZE));
         blockSender = new BlockSender(b, 0, b.getNumBytes(), 
             false, false, false, DataNode.this);
         DatanodeInfo srcNode = new DatanodeInfo(bpReg);

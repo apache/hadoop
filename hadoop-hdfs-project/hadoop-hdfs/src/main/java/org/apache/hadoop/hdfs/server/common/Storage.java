@@ -32,11 +32,11 @@ import java.util.Properties;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.util.VersionInfo;
 
@@ -434,10 +434,10 @@ public abstract class Storage extends StorageInfo {
 
       this.lock(); // lock storage if it exists
 
-      if (startOpt == HdfsConstants.StartupOption.FORMAT)
+      if (startOpt == HdfsServerConstants.StartupOption.FORMAT)
         return StorageState.NOT_FORMATTED;
 
-      if (startOpt != HdfsConstants.StartupOption.IMPORT) {
+      if (startOpt != HdfsServerConstants.StartupOption.IMPORT) {
         storage.checkOldLayoutStorage(this);
       }
 
@@ -866,7 +866,7 @@ public abstract class Storage extends StorageInfo {
    * @throws IOException
    */
   public void writeAll() throws IOException {
-    this.layoutVersion = FSConstants.LAYOUT_VERSION;
+    this.layoutVersion = HdfsConstants.LAYOUT_VERSION;
     for (Iterator<StorageDirectory> it = storageDirs.iterator(); it.hasNext();) {
       writeProperties(it.next());
     }
@@ -938,7 +938,7 @@ public abstract class Storage extends StorageInfo {
   protected void setLayoutVersion(Properties props, StorageDirectory sd)
       throws IncorrectVersionException, InconsistentFSStateException {
     int lv = Integer.parseInt(getProperty(props, sd, "layoutVersion"));
-    if (lv < FSConstants.LAYOUT_VERSION) { // future version
+    if (lv < HdfsConstants.LAYOUT_VERSION) { // future version
       throw new IncorrectVersionException(lv, "storage directory "
           + sd.root.getAbsolutePath());
     }

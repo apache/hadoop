@@ -39,7 +39,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -555,7 +555,7 @@ class FSImageFormat {
       DigestOutputStream fos = new DigestOutputStream(fout, digester);
       DataOutputStream out = new DataOutputStream(fos);
       try {
-        out.writeInt(FSConstants.LAYOUT_VERSION);
+        out.writeInt(HdfsConstants.LAYOUT_VERSION);
         out.writeInt(sourceNamesystem.getFSImage()
                      .getStorage().getNamespaceID()); // TODO bad dependency
         out.writeLong(fsDir.rootDir.numItemsInTree());
@@ -568,7 +568,7 @@ class FSImageFormat {
                  " using " + compression);
 
 
-        byte[] byteStore = new byte[4*FSConstants.MAX_PATH_LENGTH];
+        byte[] byteStore = new byte[4*HdfsConstants.MAX_PATH_LENGTH];
         ByteBuffer strbuf = ByteBuffer.wrap(byteStore);
         // save the root
         FSImageSerialization.saveINode2Image(fsDir.rootDir, out);

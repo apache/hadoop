@@ -37,7 +37,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -428,7 +428,7 @@ public class TestLeaseRecovery2 {
         cluster.getNameNode(), fileStr);
     
     assertFalse("original lease holder should not be the NN",
-        originalLeaseHolder.equals(HdfsConstants.NAMENODE_LEASE_HOLDER));
+        originalLeaseHolder.equals(HdfsServerConstants.NAMENODE_LEASE_HOLDER));
 
     // hflush file
     AppendTestUtil.LOG.info("hflush");
@@ -455,15 +455,15 @@ public class TestLeaseRecovery2 {
     cluster.setLeasePeriod(LONG_LEASE_PERIOD, SHORT_LEASE_PERIOD);
     
     // Make sure lease recovery begins.
-    Thread.sleep(HdfsConstants.NAMENODE_LEASE_RECHECK_INTERVAL * 2);
+    Thread.sleep(HdfsServerConstants.NAMENODE_LEASE_RECHECK_INTERVAL * 2);
     
-    assertEquals("lease holder should now be the NN", HdfsConstants.NAMENODE_LEASE_HOLDER,
+    assertEquals("lease holder should now be the NN", HdfsServerConstants.NAMENODE_LEASE_HOLDER,
         NameNodeAdapter.getLeaseHolderForPath(cluster.getNameNode(), fileStr));
     
     cluster.restartNameNode(false);
     
     assertEquals("lease holder should still be the NN after restart",
-        HdfsConstants.NAMENODE_LEASE_HOLDER,
+        HdfsServerConstants.NAMENODE_LEASE_HOLDER,
         NameNodeAdapter.getLeaseHolderForPath(cluster.getNameNode(), fileStr));
     
     // Let the DNs send heartbeats again.

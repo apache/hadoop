@@ -55,15 +55,15 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.UnsupportedActionException;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
@@ -306,13 +306,13 @@ public class Balancer {
       DataInputStream in = null;
       try {
         sock.connect(NetUtils.createSocketAddr(
-            target.datanode.getName()), HdfsConstants.READ_TIMEOUT);
+            target.datanode.getName()), HdfsServerConstants.READ_TIMEOUT);
         sock.setKeepAlive(true);
         out = new DataOutputStream( new BufferedOutputStream(
-            sock.getOutputStream(), FSConstants.IO_FILE_BUFFER_SIZE));
+            sock.getOutputStream(), HdfsConstants.IO_FILE_BUFFER_SIZE));
         sendRequest(out);
         in = new DataInputStream( new BufferedInputStream(
-            sock.getInputStream(), FSConstants.IO_FILE_BUFFER_SIZE));
+            sock.getInputStream(), HdfsConstants.IO_FILE_BUFFER_SIZE));
         receiveResponse(in);
         bytesMoved.inc(block.getNumBytes());
         LOG.info( "Moving block " + block.getBlock().getBlockId() +

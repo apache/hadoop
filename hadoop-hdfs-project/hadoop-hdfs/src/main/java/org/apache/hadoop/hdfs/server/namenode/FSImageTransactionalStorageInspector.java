@@ -35,7 +35,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
@@ -224,7 +224,7 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
       
       logGroup.planRecovery();
       
-      if (expectedTxId != FSConstants.INVALID_TXID && logStartTxId != expectedTxId) {
+      if (expectedTxId != HdfsConstants.INVALID_TXID && logStartTxId != expectedTxId) {
         throw new IOException("Expected next log group would start at txid " +
             expectedTxId + " but starts at txid " + logStartTxId);
       }
@@ -239,7 +239,7 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
       } else {
         // the log group was in-progress so we don't know what ID
         // the next group should start from.
-        expectedTxId = FSConstants.INVALID_TXID;
+        expectedTxId = HdfsConstants.INVALID_TXID;
       }
     }
     

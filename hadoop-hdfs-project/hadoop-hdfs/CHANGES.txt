@@ -682,6 +682,9 @@ Release 0.23.0 - Unreleased
     HDFS-1217.  Change some NameNode methods from public to package private.
     (Laxman via szetszwo)
 
+    HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
+               HdfsConstants. (Harsh J Chouraria via atm)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

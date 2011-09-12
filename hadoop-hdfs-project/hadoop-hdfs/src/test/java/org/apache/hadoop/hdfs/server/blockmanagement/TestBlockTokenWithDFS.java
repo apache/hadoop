@@ -49,7 +49,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.security.token.block.SecurityTestUtil;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
@@ -137,8 +137,8 @@ public class TestBlockTokenWithDFS {
       DatanodeInfo[] nodes = lblock.getLocations();
       targetAddr = NetUtils.createSocketAddr(nodes[0].getName());
       s = new Socket();
-      s.connect(targetAddr, HdfsConstants.READ_TIMEOUT);
-      s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
+      s.connect(targetAddr, HdfsServerConstants.READ_TIMEOUT);
+      s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
 
       String file = BlockReaderFactory.getFileName(targetAddr, 
           "test-blockpoolid", block.getBlockId());

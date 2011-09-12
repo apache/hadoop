@@ -41,7 +41,7 @@ import org.apache.commons.logging.Log;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Op;
@@ -53,7 +53,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumR
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.MetaDataInputStream;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.io.IOUtils;
@@ -86,7 +86,7 @@ class DataXceiver extends Receiver implements Runnable {
   public DataXceiver(Socket s, DataNode datanode, 
       DataXceiverServer dataXceiverServer) throws IOException {
     super(new DataInputStream(new BufferedInputStream(
-        NetUtils.getInputStream(s), FSConstants.SMALL_BUFFER_SIZE)));
+        NetUtils.getInputStream(s), HdfsConstants.SMALL_BUFFER_SIZE)));
 
     this.s = s;
     this.isLocal = s.getInetAddress().equals(s.getLocalAddress());
@@ -203,7 +203,7 @@ class DataXceiver extends Receiver implements Runnable {
     OutputStream baseStream = NetUtils.getOutputStream(s, 
         datanode.socketWriteTimeout);
     DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
-        baseStream, FSConstants.SMALL_BUFFER_SIZE));
+        baseStream, HdfsConstants.SMALL_BUFFER_SIZE));
     checkAccess(out, true, block, blockToken,
         Op.READ_BLOCK, BlockTokenSecretManager.AccessMode.READ);
   
@@ -329,7 +329,7 @@ class DataXceiver extends Receiver implements Runnable {
     final DataOutputStream replyOut = new DataOutputStream(
         new BufferedOutputStream(
             NetUtils.getOutputStream(s, datanode.socketWriteTimeout),
-            FSConstants.SMALL_BUFFER_SIZE));
+            HdfsConstants.SMALL_BUFFER_SIZE));
     checkAccess(replyOut, isClient, block, blockToken,
         Op.WRITE_BLOCK, BlockTokenSecretManager.AccessMode.WRITE);
 
@@ -364,16 +364,16 @@ class DataXceiver extends Receiver implements Runnable {
         mirrorSock = datanode.newSocket();
         try {
           int timeoutValue = datanode.socketTimeout
-              + (HdfsConstants.READ_TIMEOUT_EXTENSION * targets.length);
+              + (HdfsServerConstants.READ_TIMEOUT_EXTENSION * targets.length);
           int writeTimeout = datanode.socketWriteTimeout + 
-                      (HdfsConstants.WRITE_TIMEOUT_EXTENSION * targets.length);
+                      (HdfsServerConstants.WRITE_TIMEOUT_EXTENSION * targets.length);
           NetUtils.connect(mirrorSock, mirrorTarget, timeoutValue);
           mirrorSock.setSoTimeout(timeoutValue);
-          mirrorSock.setSendBufferSize(FSConstants.DEFAULT_DATA_SOCKET_SIZE);
+          mirrorSock.setSendBufferSize(HdfsConstants.DEFAULT_DATA_SOCKET_SIZE);
           mirrorOut = new DataOutputStream(
              new BufferedOutputStream(
                          NetUtils.getOutputStream(mirrorSock, writeTimeout),
-                         FSConstants.SMALL_BUFFER_SIZE));
+                         HdfsConstants.SMALL_BUFFER_SIZE));
           mirrorIn = new DataInputStream(NetUtils.getInputStream(mirrorSock));
 
           new Sender(mirrorOut).writeBlock(originalBlock, blockToken,
@@ -524,7 +524,7 @@ class DataXceiver extends Receiver implements Runnable {
     final MetaDataInputStream metadataIn = 
       datanode.data.getMetaDataInputStream(block);
     final DataInputStream checksumIn = new DataInputStream(new BufferedInputStream(
-        metadataIn, FSConstants.IO_FILE_BUFFER_SIZE));
+        metadataIn, HdfsConstants.IO_FILE_BUFFER_SIZE));
 
     updateCurrentThreadName("Getting checksum for block " + block);
     try {
@@ -603,7 +603,7 @@ class DataXceiver extends Receiver implements Runnable {
       OutputStream baseStream = NetUtils.getOutputStream(
           s, datanode.socketWriteTimeout);
       reply = new DataOutputStream(new BufferedOutputStream(
-          baseStream, FSConstants.SMALL_BUFFER_SIZE));
+          baseStream, HdfsConstants.SMALL_BUFFER_SIZE));
 
       // send status first
       writeResponse(SUCCESS, reply);
@@ -682,14 +682,14 @@ class DataXceiver extends Receiver implements Runnable {
       OutputStream baseStream = NetUtils.getOutputStream(proxySock, 
           datanode.socketWriteTimeout);
       proxyOut = new DataOutputStream(new BufferedOutputStream(baseStream,
-          FSConstants.SMALL_BUFFER_SIZE));
+          HdfsConstants.SMALL_BUFFER_SIZE));
 
       /* send request to the proxy */
       new Sender(proxyOut).copyBlock(block, blockToken);
 
       // receive the response from the proxy
       proxyReply = new DataInputStream(new BufferedInputStream(
-          NetUtils.getInputStream(proxySock), FSConstants.IO_FILE_BUFFER_SIZE));
+          NetUtils.getInputStream(proxySock), HdfsConstants.IO_FILE_BUFFER_SIZE));
       BlockOpResponseProto copyResponse = BlockOpResponseProto.parseFrom(
           HdfsProtoUtil.vintPrefixed(proxyReply));
 
