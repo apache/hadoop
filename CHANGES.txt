@@ -567,6 +567,7 @@ Release 0.90.5 - Unreleased
                (Gaojinchao)
    HBASE-4294  HLogSplitter sleeps with 1-second granularity (todd)
    HBASE-4270  IOE ignored during flush-on-close causes dataloss
+   HBASE-4180  HBase should check the isSecurityEnabled flag before login
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
