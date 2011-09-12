@@ -43,7 +43,7 @@ public class HsNavBlock extends HtmlBlock {
       div("#nav").
       h3("Application").
         ul().
-          li().a("about", "About")._().
+          li().a(url("about"), "About")._().
           li().a(url("app"), "Jobs")._()._();
     if (app.getJob() != null) {
       String jobid = MRApps.toString(app.getJob().getID());

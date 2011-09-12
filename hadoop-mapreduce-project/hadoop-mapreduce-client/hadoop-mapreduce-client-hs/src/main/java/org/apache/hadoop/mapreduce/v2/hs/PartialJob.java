@@ -46,6 +46,8 @@ public class PartialJob implements org.apache.hadoop.mapreduce.v2.app.job.Job {
     this.jobIndexInfo = jobIndexInfo;
     this.jobId = jobId;
     jobReport = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(JobReport.class);
+    jobReport.setStartTime(jobIndexInfo.getSubmitTime());
+    jobReport.setFinishTime(jobIndexInfo.getFinishTime());
   }
   
   @Override
@@ -142,7 +144,7 @@ public class PartialJob implements org.apache.hadoop.mapreduce.v2.app.job.Job {
   
   @Override
   public String getUserName() {
-    return null;
+    return jobIndexInfo.getUser();
   }
 
 }

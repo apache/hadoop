@@ -272,6 +272,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2933. Change allocate call to return ContainerStatus for
     completed containers rather than Container. (acmurthy) 
 
+    MAPREDUCE-2675. Reformat JobHistory Server main page to be more
+    useful. (Robert Joseph Evans via vinodkv).
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

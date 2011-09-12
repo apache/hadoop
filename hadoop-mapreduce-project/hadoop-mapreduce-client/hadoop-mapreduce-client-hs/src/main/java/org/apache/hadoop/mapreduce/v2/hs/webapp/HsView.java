@@ -18,11 +18,18 @@
 
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
-import org.apache.hadoop.mapreduce.v2.app.webapp.JobsBlock;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION_ID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.THEMESWITCHER_ID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.postInitID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
+
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.view.TwoColumnLayout;
 
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
 
 /**
  * A view that should be used as the base class for all history server pages.
@@ -36,6 +43,7 @@ public class HsView extends TwoColumnLayout {
     commonPreHead(html);
     set(DATATABLES_ID, "jobs");
     set(initID(DATATABLES, "jobs"), jobsTableInit());
+    set(postInitID(DATATABLES, "jobs"), jobsPostTableInit());
     setTableStyles(html, "jobs");
   }
 
@@ -64,7 +72,7 @@ public class HsView extends TwoColumnLayout {
    */
   @Override
   protected Class<? extends SubView> content() {
-    return JobsBlock.class;
+    return HsJobsBlock.class;
   }
   
   //TODO We need a way to move all of the javascript/CSS that is for a subview
@@ -76,9 +84,40 @@ public class HsView extends TwoColumnLayout {
    */
   private String jobsTableInit() {
     return tableInit().
-        append(",aoColumns:[{sType:'title-numeric'},").
-        append("null,null,{sType:'title-numeric', bSearchable:false},null,").
-        append("null,{sType:'title-numeric',bSearchable:false}, null, null]}").
+        append(",aoColumnDefs:[").
+        append("{'sType':'numeric', 'bSearchable': false, 'aTargets': [ 6 ] }").
+        append(",{'sType':'numeric', 'bSearchable': false, 'aTargets': [ 7 ] }").
+        append(",{'sType':'numeric', 'bSearchable': false, 'aTargets': [ 8 ] }").
+        append(",{'sType':'numeric', 'bSearchable': false, 'aTargets': [ 9 ] }").
+        append("]}").
         toString();
+  }
+  
+  /**
+   * @return javascript to add into the jquery block after the table has
+   *  been initialized. This code adds in per field filtering.
+   */
+  private String jobsPostTableInit() {
+    return "var asInitVals = new Array();\n" +
+    		   "$('tfoot input').keyup( function () \n{"+
+           "  jobsDataTable.fnFilter( this.value, $('tfoot input').index(this) );\n"+
+           "} );\n"+
+           "$('tfoot input').each( function (i) {\n"+
+           "  asInitVals[i] = this.value;\n"+
+           "} );\n"+
+           "$('tfoot input').focus( function () {\n"+
+           "  if ( this.className == 'search_init' )\n"+
+           "  {\n"+
+           "    this.className = '';\n"+
+           "    this.value = '';\n"+
+           "  }\n"+
+           "} );\n"+
+           "$('tfoot input').blur( function (i) {\n"+
+           "  if ( this.value == '' )\n"+
+           "  {\n"+
+           "    this.className = 'search_init';\n"+
+           "    this.value = asInitVals[$('tfoot input').index(this)];\n"+
+           "  }\n"+
+           "} );\n";
   }
 }
