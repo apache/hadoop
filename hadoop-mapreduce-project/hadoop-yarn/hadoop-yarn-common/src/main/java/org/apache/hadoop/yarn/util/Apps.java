@@ -33,10 +33,6 @@ public class Apps {
   public static final String APP = "app";
   public static final String ID = "ID";
 
-  public static String toString(ApplicationId id) {
-    return _join("app", id.getClusterTimestamp(), id.getId());
-  }
-
   public static ApplicationId toAppID(String aid) {
     Iterator<String> it = _split(aid).iterator();
     return toAppID(APP, aid, it);

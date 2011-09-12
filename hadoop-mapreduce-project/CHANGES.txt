@@ -1299,6 +1299,9 @@ Release 0.23.0 - Unreleased
    MAPREDUCE-2985. Fixed findbugs warnings in ResourceLocalizationService.
    (Thomas Graves via acmurthy)
 
+   MAPREDUCE-2874. Fix formatting of ApplicationId in web-ui. (Eric Payne via
+   acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
