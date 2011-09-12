@@ -75,7 +75,7 @@ public class GetDelegationTokenServlet extends DfsServlet {
           + ":" + NameNode.getAddress(conf).getPort();
 
           Token<DelegationTokenIdentifier> token = 
-            nn.getDelegationToken(new Text(renewerFinal));
+            nn.getRpcServer().getDelegationToken(new Text(renewerFinal));
           if(token == null) {
             throw new Exception("couldn't get the token for " +s);
           }

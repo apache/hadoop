@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -152,7 +153,7 @@ public class TestBlockUnderConstruction {
    */
   @Test
   public void testGetBlockLocations() throws IOException {
-    final NameNode namenode = cluster.getNameNode();
+    final NamenodeProtocols namenode = cluster.getNameNodeRpc();
     final Path p = new Path(BASE_DIR, "file2.dat");
     final String src = p.toString();
     final FSDataOutputStream out = TestFileCreation.createFile(hdfs, p, 3);

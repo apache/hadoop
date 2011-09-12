@@ -52,7 +52,7 @@ import org.apache.hadoop.net.NetUtils;
  * </ol>
  */
 @InterfaceAudience.Private
-public class BackupNode extends NameNode implements JournalProtocol {
+public class BackupNode extends NameNode {
   private static final String BN_ADDRESS_NAME_KEY = DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY;
   private static final String BN_ADDRESS_DEFAULT = DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_DEFAULT;
   private static final String BN_HTTP_ADDRESS_NAME_KEY = DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY;
@@ -95,18 +95,20 @@ public class BackupNode extends NameNode implements JournalProtocol {
   }
 
   @Override // NameNode
-  protected void setRpcServerAddress(Configuration conf) {
-    conf.set(BN_ADDRESS_NAME_KEY, getHostPortString(rpcAddress));
+  protected void setRpcServerAddress(Configuration conf,
+      InetSocketAddress addr) {
+    conf.set(BN_ADDRESS_NAME_KEY, getHostPortString(addr));
   }
   
   @Override // Namenode
-  protected void setRpcServiceServerAddress(Configuration conf) {
-    conf.set(BN_SERVICE_RPC_ADDRESS_KEY, getHostPortString(serviceRPCAddress));
+  protected void setRpcServiceServerAddress(Configuration conf,
+      InetSocketAddress addr) {
+    conf.set(BN_SERVICE_RPC_ADDRESS_KEY,  getHostPortString(addr));
   }
 
   @Override // NameNode
   protected InetSocketAddress getHttpServerAddress(Configuration conf) {
-    assert rpcAddress != null : "rpcAddress should be calculated first";
+    assert getNameNodeAddress() != null : "rpcAddress should be calculated first";
     String addr = conf.get(BN_HTTP_ADDRESS_NAME_KEY, BN_HTTP_ADDRESS_DEFAULT);
     return NetUtils.createSocketAddr(addr);
   }
@@ -145,6 +147,12 @@ public class BackupNode extends NameNode implements JournalProtocol {
     runCheckpointDaemon(conf);
   }
 
+  @Override
+  protected NameNodeRpcServer createRpcServer(Configuration conf)
+      throws IOException {
+    return new BackupNodeRpcServer(conf, this);
+  }
+
   @Override // NameNode
   public void stop() {
     if(checkpointManager != null) {
@@ -177,74 +185,83 @@ public class BackupNode extends NameNode implements JournalProtocol {
     super.stop();
   }
 
+  static class BackupNodeRpcServer extends NameNodeRpcServer implements JournalProtocol {
+    private final String nnRpcAddress;
+    
+    private BackupNodeRpcServer(Configuration conf, BackupNode nn)
+        throws IOException {
+      super(conf, nn);
+      nnRpcAddress = nn.nnRpcAddress;
+    }
+
+    @Override
+    public long getProtocolVersion(String protocol, long clientVersion)
+        throws IOException {
+      if (protocol.equals(JournalProtocol.class.getName())) {
+        return JournalProtocol.versionID;
+      } else {
+        return super.getProtocolVersion(protocol, clientVersion);
+      }
+    }
   
-  @Override
-  public long getProtocolVersion(String protocol, long clientVersion)
-      throws IOException {
-    if (protocol.equals(JournalProtocol.class.getName())) {
-      return JournalProtocol.versionID;
-    } else {
-      return super.getProtocolVersion(protocol, clientVersion);
+    /////////////////////////////////////////////////////
+    // NamenodeProtocol implementation for backup node.
+    /////////////////////////////////////////////////////
+    @Override // NamenodeProtocol
+    public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size)
+    throws IOException {
+      throw new UnsupportedActionException("getBlocks");
+    }
+  
+    // Only active name-node can register other nodes.
+    @Override // NamenodeProtocol
+    public NamenodeRegistration register(NamenodeRegistration registration
+    ) throws IOException {
+      throw new UnsupportedActionException("register");
+    }
+  
+    @Override // NamenodeProtocol
+    public NamenodeCommand startCheckpoint(NamenodeRegistration registration)
+    throws IOException {
+      throw new UnsupportedActionException("startCheckpoint");
+    }
+  
+    @Override // NamenodeProtocol
+    public void endCheckpoint(NamenodeRegistration registration,
+                              CheckpointSignature sig) throws IOException {
+      throw new UnsupportedActionException("endCheckpoint");
+    }  
+  
+    /////////////////////////////////////////////////////
+    // BackupNodeProtocol implementation for backup node.
+    /////////////////////////////////////////////////////
+  
+    @Override
+    public void journal(NamenodeRegistration nnReg,
+        long firstTxId, int numTxns,
+        byte[] records) throws IOException {
+      verifyRequest(nnReg);
+      if(!nnRpcAddress.equals(nnReg.getAddress()))
+        throw new IOException("Journal request from unexpected name-node: "
+            + nnReg.getAddress() + " expecting " + rpcAddress);
+      getBNImage().journal(firstTxId, numTxns, records);
+    }
+  
+    @Override
+    public void startLogSegment(NamenodeRegistration registration, long txid)
+        throws IOException {
+      verifyRequest(registration);
+    
+      getBNImage().namenodeStartedLogSegment(txid);
+    }
+    
+    private BackupImage getBNImage() {
+      return (BackupImage)nn.getFSImage();
     }
   }
-
-  /////////////////////////////////////////////////////
-  // NamenodeProtocol implementation for backup node.
-  /////////////////////////////////////////////////////
-  @Override // NamenodeProtocol
-  public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size)
-  throws IOException {
-    throw new UnsupportedActionException("getBlocks");
-  }
-
-  // Only active name-node can register other nodes.
-  @Override // NamenodeProtocol
-  public NamenodeRegistration register(NamenodeRegistration registration
-  ) throws IOException {
-    throw new UnsupportedActionException("register");
-  }
-
-  @Override // NamenodeProtocol
-  public NamenodeCommand startCheckpoint(NamenodeRegistration registration)
-  throws IOException {
-    throw new UnsupportedActionException("startCheckpoint");
-  }
-
-  @Override // NamenodeProtocol
-  public void endCheckpoint(NamenodeRegistration registration,
-                            CheckpointSignature sig) throws IOException {
-    throw new UnsupportedActionException("endCheckpoint");
-  }  
-
-  /////////////////////////////////////////////////////
-  // BackupNodeProtocol implementation for backup node.
-  /////////////////////////////////////////////////////
-
-  @Override
-  public void journal(NamenodeRegistration nnReg,
-      long firstTxId, int numTxns,
-      byte[] records) throws IOException {
-    verifyRequest(nnReg);
-    if(!nnRpcAddress.equals(nnReg.getAddress()))
-      throw new IOException("Journal request from unexpected name-node: "
-          + nnReg.getAddress() + " expecting " + nnRpcAddress);
-    getBNImage().journal(firstTxId, numTxns, records);
-  }
-
-  @Override
-  public void startLogSegment(NamenodeRegistration registration, long txid)
-      throws IOException {
-    verifyRequest(registration);
   
-    getBNImage().namenodeStartedLogSegment(txid);
-  }
-
   //////////////////////////////////////////////////////
   
-  
-  BackupImage getBNImage() {
-    return (BackupImage)getFSImage();
-  }
 
   boolean shouldCheckpointAtStartup() {
     FSImage fsImage = getFSImage();

@@ -74,9 +74,9 @@ public class TestNNMetricFilesInGetListingOps extends TestCase {
     createFile("/tmp1/t2", 3200, (short)3);
     createFile("/tmp2/t1", 3200, (short)3);
     createFile("/tmp2/t2", 3200, (short)3);
-    cluster.getNameNode().getListing("/tmp1", HdfsFileStatus.EMPTY_NAME, false);
+    cluster.getNameNodeRpc().getListing("/tmp1", HdfsFileStatus.EMPTY_NAME, false);
     assertCounter("FilesInGetListingOps", 2L, getMetrics(NN_METRICS));
-    cluster.getNameNode().getListing("/tmp2", HdfsFileStatus.EMPTY_NAME, false);
+    cluster.getNameNodeRpc().getListing("/tmp2", HdfsFileStatus.EMPTY_NAME, false);
     assertCounter("FilesInGetListingOps", 4L, getMetrics(NN_METRICS));
   }
 }

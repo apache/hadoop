@@ -684,6 +684,7 @@ Release 0.23.0 - Unreleased
 
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
                HdfsConstants. (Harsh J Chouraria via atm)
+    HDFS-2197. Refactor RPC call implementations out of NameNode class (todd)
 
   OPTIMIZATIONS
 

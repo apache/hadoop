@@ -239,10 +239,10 @@ public class OfflineEditsViewerHelper {
         LOG.info("Innocuous exception", e);
       }
       locatedBlocks = DFSClientAdapter.callGetBlockLocations(
-          cluster.getNameNode(), filePath, 0L, bytes.length);
+          cluster.getNameNodeRpc(), filePath, 0L, bytes.length);
     } while (locatedBlocks.isUnderConstruction());
 
     // Force a roll so we get an OP_END_LOG_SEGMENT txn
-    return cluster.getNameNode().rollEditLog();
+    return cluster.getNameNodeRpc().rollEditLog();
   }
 }

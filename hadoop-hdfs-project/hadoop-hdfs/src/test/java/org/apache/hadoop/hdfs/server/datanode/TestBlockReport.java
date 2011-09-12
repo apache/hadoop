@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -139,7 +138,7 @@ public class TestBlockReport {
     DataNode dn = cluster.getDataNodes().get(DN_N0);
     String poolId = cluster.getNamesystem().getBlockPoolId();
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
-    cluster.getNameNode().blockReport(dnR, poolId,
+    cluster.getNameNodeRpc().blockReport(dnR, poolId,
       new BlockListAsLongs(blocks, null).getBlockListAsLongs());
 
     List<LocatedBlock> blocksAfterReport =
@@ -181,9 +180,10 @@ public class TestBlockReport {
 
     List<ExtendedBlock> blocks2Remove = new ArrayList<ExtendedBlock>();
     List<Integer> removedIndex = new ArrayList<Integer>();
-    List<LocatedBlock> lBlocks = cluster.getNameNode().getBlockLocations(
-      filePath.toString(), FILE_START,
-      FILE_SIZE).getLocatedBlocks();
+    List<LocatedBlock> lBlocks =
+      cluster.getNameNodeRpc().getBlockLocations(
+          filePath.toString(), FILE_START,
+          FILE_SIZE).getLocatedBlocks();
 
     while (removedIndex.size() != 2) {
       int newRemoveIndex = rand.nextInt(lBlocks.size());
@@ -218,7 +218,7 @@ public class TestBlockReport {
     DataNode dn = cluster.getDataNodes().get(DN_N0);
     String poolId = cluster.getNamesystem().getBlockPoolId();
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
-    cluster.getNameNode().blockReport(dnR, poolId,
+    cluster.getNameNodeRpc().blockReport(dnR, poolId,
       new BlockListAsLongs(blocks, null).getBlockListAsLongs());
 
     BlockManagerTestUtil.getComputedDatanodeWork(cluster.getNamesystem()
@@ -258,7 +258,8 @@ public class TestBlockReport {
     DataNode dn = cluster.getDataNodes().get(DN_N0);
     String poolId = cluster.getNamesystem().getBlockPoolId();
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
-    DatanodeCommand dnCmd = cluster.getNameNode().blockReport(dnR, poolId,
+    DatanodeCommand dnCmd =
+      cluster.getNameNodeRpc().blockReport(dnR, poolId,
         new BlockListAsLongs(blocks, null).getBlockListAsLongs());
     if(LOG.isDebugEnabled()) {
       LOG.debug("Got the command: " + dnCmd);
@@ -310,7 +311,7 @@ public class TestBlockReport {
     DataNode dn = cluster.getDataNodes().get(DN_N1);
     String poolId = cluster.getNamesystem().getBlockPoolId();
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
-    cluster.getNameNode().blockReport(dnR, poolId,
+    cluster.getNameNodeRpc().blockReport(dnR, poolId,
         new BlockListAsLongs(blocks, null).getBlockListAsLongs());
     printStats();
     assertEquals("Wrong number of PendingReplication Blocks",
@@ -359,7 +360,7 @@ public class TestBlockReport {
     DataNode dn = cluster.getDataNodes().get(DN_N1);
     String poolId = cluster.getNamesystem().getBlockPoolId();
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
-    cluster.getNameNode().blockReport(dnR, poolId,
+    cluster.getNameNodeRpc().blockReport(dnR, poolId,
         new BlockListAsLongs(blocks, null).getBlockListAsLongs());
     printStats();
     assertEquals("Wrong number of Corrupted blocks",
@@ -381,7 +382,7 @@ public class TestBlockReport {
       LOG.debug("Done corrupting length of " + corruptedBlock.getBlockName());
     }
     
-    cluster.getNameNode().blockReport(dnR, poolId,
+    cluster.getNameNodeRpc().blockReport(dnR, poolId,
         new BlockListAsLongs(blocks, null).getBlockListAsLongs());
     printStats();
 
@@ -431,7 +432,7 @@ public class TestBlockReport {
       DataNode dn = cluster.getDataNodes().get(DN_N1);
       String poolId = cluster.getNamesystem().getBlockPoolId();
       DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
-      cluster.getNameNode().blockReport(dnR, poolId,
+      cluster.getNameNodeRpc().blockReport(dnR, poolId,
           new BlockListAsLongs(blocks, null).getBlockListAsLongs());
       printStats();
       assertEquals("Wrong number of PendingReplication blocks",
@@ -477,7 +478,7 @@ public class TestBlockReport {
       DataNode dn = cluster.getDataNodes().get(DN_N1);
       String poolId = cluster.getNamesystem().getBlockPoolId();
       DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
-      cluster.getNameNode().blockReport(dnR, poolId,
+      cluster.getNameNodeRpc().blockReport(dnR, poolId,
           new BlockListAsLongs(blocks, null).getBlockListAsLongs());
       printStats();
       assertEquals("Wrong number of PendingReplication blocks",
@@ -590,7 +591,7 @@ public class TestBlockReport {
     DFSTestUtil.createFile(fs, filePath, fileSize,
       REPL_FACTOR, rand.nextLong());
 
-    return locatedToBlocks(cluster.getNameNode()
+    return locatedToBlocks(cluster.getNameNodeRpc()
       .getBlockLocations(filePath.toString(), FILE_START,
         fileSize).getLocatedBlocks(), null);
   }
@@ -707,7 +708,8 @@ public class TestBlockReport {
   private Block findBlock(Path path, long size) throws IOException {
     Block ret;
       List<LocatedBlock> lbs =
-        cluster.getNameNode().getBlockLocations(path.toString(),
+        cluster.getNameNodeRpc()
+        .getBlockLocations(path.toString(),
           FILE_START, size).getLocatedBlocks();
       LocatedBlock lb = lbs.get(lbs.size() - 1);
 

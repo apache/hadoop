@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -100,6 +101,7 @@ public class NNThroughputBenchmark {
 
   static Configuration config;
   static NameNode nameNode;
+  static NamenodeProtocols nameNodeProto;
 
   NNThroughputBenchmark(Configuration conf) throws IOException, LoginException {
     config = conf;
@@ -119,6 +121,7 @@ public class NNThroughputBenchmark {
     // Start the NameNode
     String[] argv = new String[] {};
     nameNode = NameNode.createNameNode(argv, config);
+    nameNodeProto = nameNode.getRpcServer();
   }
 
   void close() throws IOException {
@@ -264,9 +267,9 @@ public class NNThroughputBenchmark {
     }
 
     void cleanUp() throws IOException {
-      nameNode.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+      nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
       if(!keepResults)
-        nameNode.delete(getBaseDir(), true);
+        nameNodeProto.delete(getBaseDir(), true);
     }
 
     int getNumOpsExecuted() {
@@ -397,7 +400,7 @@ public class NNThroughputBenchmark {
     void benchmarkOne() throws IOException {
       for(int idx = 0; idx < opsPerThread; idx++) {
         if((localNumOpsExecuted+1) % statsOp.ugcRefreshCount == 0)
-          nameNode.refreshUserToGroupsMappings();
+          nameNodeProto.refreshUserToGroupsMappings();
         long stat = statsOp.executeOp(daemonId, idx, arg1);
         localNumOpsExecuted++;
         localCumulativeTime += stat;
@@ -458,9 +461,9 @@ public class NNThroughputBenchmark {
      */
     long executeOp(int daemonId, int inputIdx, String ignore) 
     throws IOException {
-      nameNode.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+      nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
       long start = System.currentTimeMillis();
-      nameNode.delete(BASE_DIR_NAME, true);
+      nameNodeProto.delete(BASE_DIR_NAME, true);
       long end = System.currentTimeMillis();
       return end-start;
     }
@@ -522,7 +525,7 @@ public class NNThroughputBenchmark {
 
     void generateInputs(int[] opsPerThread) throws IOException {
       assert opsPerThread.length == numThreads : "Error opsPerThread.length"; 
-      nameNode.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+      nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
       // int generatedFileIdx = 0;
       LOG.info("Generate " + numOpsRequired + " intputs for " + getOpName());
       fileNames = new String[numThreads][];
@@ -554,12 +557,12 @@ public class NNThroughputBenchmark {
     throws IOException {
       long start = System.currentTimeMillis();
       // dummyActionNoSynch(fileIdx);
-      nameNode.create(fileNames[daemonId][inputIdx], FsPermission.getDefault(),
+      nameNodeProto.create(fileNames[daemonId][inputIdx], FsPermission.getDefault(),
                       clientName, new EnumSetWritable<CreateFlag>(EnumSet
               .of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true, replication, BLOCK_SIZE);
       long end = System.currentTimeMillis();
       for(boolean written = !closeUponCreate; !written; 
-        written = nameNode.complete(fileNames[daemonId][inputIdx],
+        written = nameNodeProto.complete(fileNames[daemonId][inputIdx],
                                     clientName, null));
       return end-start;
     }
@@ -627,11 +630,11 @@ public class NNThroughputBenchmark {
       }
       // use the same files for open
       super.generateInputs(opsPerThread);
-      if(nameNode.getFileInfo(opCreate.getBaseDir()) != null
-          && nameNode.getFileInfo(getBaseDir()) == null) {
-        nameNode.rename(opCreate.getBaseDir(), getBaseDir());
+      if(nameNodeProto.getFileInfo(opCreate.getBaseDir()) != null
+          && nameNodeProto.getFileInfo(getBaseDir()) == null) {
+        nameNodeProto.rename(opCreate.getBaseDir(), getBaseDir());
       }
-      if(nameNode.getFileInfo(getBaseDir()) == null) {
+      if(nameNodeProto.getFileInfo(getBaseDir()) == null) {
         throw new IOException(getBaseDir() + " does not exist.");
       }
     }
@@ -642,7 +645,7 @@ public class NNThroughputBenchmark {
     long executeOp(int daemonId, int inputIdx, String ignore) 
     throws IOException {
       long start = System.currentTimeMillis();
-      nameNode.getBlockLocations(fileNames[daemonId][inputIdx], 0L, BLOCK_SIZE);
+      nameNodeProto.getBlockLocations(fileNames[daemonId][inputIdx], 0L, BLOCK_SIZE);
       long end = System.currentTimeMillis();
       return end-start;
     }
@@ -670,7 +673,7 @@ public class NNThroughputBenchmark {
     long executeOp(int daemonId, int inputIdx, String ignore) 
     throws IOException {
       long start = System.currentTimeMillis();
-      nameNode.delete(fileNames[daemonId][inputIdx], false);
+      nameNodeProto.delete(fileNames[daemonId][inputIdx], false);
       long end = System.currentTimeMillis();
       return end-start;
     }
@@ -698,7 +701,7 @@ public class NNThroughputBenchmark {
     long executeOp(int daemonId, int inputIdx, String ignore) 
     throws IOException {
       long start = System.currentTimeMillis();
-      nameNode.getFileInfo(fileNames[daemonId][inputIdx]);
+      nameNodeProto.getFileInfo(fileNames[daemonId][inputIdx]);
       long end = System.currentTimeMillis();
       return end-start;
     }
@@ -740,7 +743,7 @@ public class NNThroughputBenchmark {
     long executeOp(int daemonId, int inputIdx, String ignore) 
     throws IOException {
       long start = System.currentTimeMillis();
-      nameNode.rename(fileNames[daemonId][inputIdx],
+      nameNodeProto.rename(fileNames[daemonId][inputIdx],
                       destNames[daemonId][inputIdx]);
       long end = System.currentTimeMillis();
       return end-start;
@@ -787,11 +790,11 @@ public class NNThroughputBenchmark {
 
     void register() throws IOException {
       // get versions from the namenode
-      nsInfo = nameNode.versionRequest();
+      nsInfo = nameNodeProto.versionRequest();
       dnRegistration.setStorageInfo(new DataStorage(nsInfo, ""));
       DataNode.setNewStorageID(dnRegistration);
       // register datanode
-      dnRegistration = nameNode.registerDatanode(dnRegistration);
+      dnRegistration = nameNodeProto.registerDatanode(dnRegistration);
     }
 
     /**
@@ -801,7 +804,7 @@ public class NNThroughputBenchmark {
     void sendHeartbeat() throws IOException {
       // register datanode
       // TODO:FEDERATION currently a single block pool is supported
-      DatanodeCommand[] cmds = nameNode.sendHeartbeat(dnRegistration,
+      DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration,
           DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED, 0, 0, 0);
       if(cmds != null) {
         for (DatanodeCommand cmd : cmds ) {
@@ -846,7 +849,7 @@ public class NNThroughputBenchmark {
     int replicateBlocks() throws IOException {
       // register datanode
       // TODO:FEDERATION currently a single block pool is supported
-      DatanodeCommand[] cmds = nameNode.sendHeartbeat(dnRegistration,
+      DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration,
           DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED, 0, 0, 0);
       if (cmds != null) {
         for (DatanodeCommand cmd : cmds) {
@@ -877,7 +880,7 @@ public class NNThroughputBenchmark {
           receivedDNReg.setStorageInfo(
                           new DataStorage(nsInfo, dnInfo.getStorageID()));
           receivedDNReg.setInfoPort(dnInfo.getInfoPort());
-          nameNode.blockReceived( receivedDNReg, 
+          nameNodeProto.blockReceived( receivedDNReg, 
                                   nameNode.getNamesystem().getBlockPoolId(),
                                   new Block[] {blocks[i]},
                                   new String[] {DataNode.EMPTY_DEL_HINT});
@@ -968,14 +971,14 @@ public class NNThroughputBenchmark {
       FileNameGenerator nameGenerator;
       nameGenerator = new FileNameGenerator(getBaseDir(), 100);
       String clientName = getClientName(007);
-      nameNode.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+      nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
       for(int idx=0; idx < nrFiles; idx++) {
         String fileName = nameGenerator.getNextFileName("ThroughputBench");
-        nameNode.create(fileName, FsPermission.getDefault(), clientName,
+        nameNodeProto.create(fileName, FsPermission.getDefault(), clientName,
             new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true, replication,
             BLOCK_SIZE);
         ExtendedBlock lastBlock = addBlocks(fileName, clientName);
-        nameNode.complete(fileName, clientName, lastBlock);
+        nameNodeProto.complete(fileName, clientName, lastBlock);
       }
       // prepare block reports
       for(int idx=0; idx < nrDatanodes; idx++) {
@@ -987,12 +990,12 @@ public class NNThroughputBenchmark {
     throws IOException {
       ExtendedBlock prevBlock = null;
       for(int jdx = 0; jdx < blocksPerFile; jdx++) {
-        LocatedBlock loc = nameNode.addBlock(fileName, clientName, prevBlock, null);
+        LocatedBlock loc = nameNodeProto.addBlock(fileName, clientName, prevBlock, null);
         prevBlock = loc.getBlock();
         for(DatanodeInfo dnInfo : loc.getLocations()) {
           int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getName());
           datanodes[dnIdx].addBlock(loc.getBlock().getLocalBlock());
-          nameNode.blockReceived(
+          nameNodeProto.blockReceived(
               datanodes[dnIdx].dnRegistration, 
               loc.getBlock().getBlockPoolId(),
               new Block[] {loc.getBlock().getLocalBlock()},
@@ -1013,7 +1016,7 @@ public class NNThroughputBenchmark {
       assert daemonId < numThreads : "Wrong daemonId.";
       TinyDatanode dn = datanodes[daemonId];
       long start = System.currentTimeMillis();
-      nameNode.blockReport(dn.dnRegistration, nameNode.getNamesystem()
+      nameNodeProto.blockReport(dn.dnRegistration, nameNode.getNamesystem()
           .getBlockPoolId(), dn.getBlockReportList());
       long end = System.currentTimeMillis();
       return end-start;
@@ -1146,7 +1149,7 @@ public class NNThroughputBenchmark {
         LOG.info("Datanode " + dn.getName() + " is decommissioned.");
       }
       excludeFile.close();
-      nameNode.refreshNodes();
+      nameNodeProto.refreshNodes();
     }
 
     /**
@@ -1160,8 +1163,8 @@ public class NNThroughputBenchmark {
       assert daemonId < numThreads : "Wrong daemonId.";
       long start = System.currentTimeMillis();
       // compute data-node work
-      int work = BlockManagerTestUtil.getComputedDatanodeWork(nameNode
-          .getNamesystem().getBlockManager());
+      int work = BlockManagerTestUtil.getComputedDatanodeWork(
+          nameNode.getNamesystem().getBlockManager());
       long end = System.currentTimeMillis();
       numPendingBlocks += work;
       if(work == 0)

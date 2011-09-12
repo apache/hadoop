@@ -100,7 +100,7 @@ public class TestPipelines {
     ofs.writeBytes("Some more stuff to write");
     ((DFSOutputStream) ofs.getWrappedStream()).hflush();
 
-    List<LocatedBlock> lb = cluster.getNameNode().getBlockLocations(
+    List<LocatedBlock> lb = cluster.getNameNodeRpc().getBlockLocations(
       filePath.toString(), FILE_SIZE - 1, FILE_SIZE).getLocatedBlocks();
 
     String bpid = cluster.getNamesystem().getBlockPoolId();

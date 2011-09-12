@@ -89,7 +89,7 @@ public class TestBalancerWithMultipleNameNodes {
       this.cluster = cluster;
       clients = new ClientProtocol[nNameNodes];
       for(int i = 0; i < nNameNodes; i++) {
-        clients[i] = cluster.getNameNode(i);
+        clients[i] = cluster.getNameNode(i).getRpcServer();
       }
       replication = (short)Math.max(1, nDataNodes - 1);
     }

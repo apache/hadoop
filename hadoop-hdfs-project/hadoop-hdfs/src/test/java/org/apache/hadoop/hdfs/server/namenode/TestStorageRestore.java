@@ -339,7 +339,7 @@ public class TestStorageRestore {
       
       // Simulate a 2NN beginning a checkpoint, but not finishing. This will
       // cause name1 to be restored.
-      cluster.getNameNode().rollEditLog();
+      cluster.getNameNodeRpc().rollEditLog();
       
       printStorages(fsImage);
       

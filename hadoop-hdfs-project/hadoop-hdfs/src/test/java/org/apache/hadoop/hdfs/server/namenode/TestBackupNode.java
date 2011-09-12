@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
@@ -128,12 +129,13 @@ public class TestBackupNode extends TestCase {
       fileSys = cluster.getFileSystem();
       backup = startBackupNode(conf, StartupOption.BACKUP, 1);
       
-      BackupImage bnImage = backup.getBNImage();
+      BackupImage bnImage = (BackupImage) backup.getFSImage();
       testBNInSync(cluster, backup, 1);
       
       // Force a roll -- BN should roll with NN.
       NameNode nn = cluster.getNameNode();
-      nn.rollEditLog();
+      NamenodeProtocols nnRpc = nn.getRpcServer();
+      nnRpc.rollEditLog();
       assertEquals(bnImage.getEditLog().getCurSegmentTxId(),
           nn.getFSImage().getEditLog().getCurSegmentTxId());
       
@@ -207,7 +209,9 @@ public class TestBackupNode extends TestCase {
           LOG.info("Checking for " + src + " on BN");
           try {
             boolean hasFile = backup.getNamesystem().getFileInfo(src, false) != null;
-            boolean txnIdMatch = backup.getTransactionID() == nn.getTransactionID();
+            boolean txnIdMatch =
+              backup.getRpcServer().getTransactionID() ==
+              nn.getRpcServer().getTransactionID();
             return hasFile && txnIdMatch;
           } catch (Exception e) {
             throw new RuntimeException(e);
@@ -264,7 +268,7 @@ public class TestBackupNode extends TestCase {
       //
       // Take a checkpoint
       //
-      long txid = cluster.getNameNode().getTransactionID();
+      long txid = cluster.getNameNodeRpc().getTransactionID();
       backup = startBackupNode(conf, op, 1);
       waitCheckpointDone(cluster, backup, txid);
     } catch(IOException e) {
@@ -300,18 +304,18 @@ public class TestBackupNode extends TestCase {
       // Take a checkpoint
       //
       backup = startBackupNode(conf, op, 1);
-      long txid = cluster.getNameNode().getTransactionID();
+      long txid = cluster.getNameNodeRpc().getTransactionID();
       waitCheckpointDone(cluster, backup, txid);
 
       for (int i = 0; i < 10; i++) {
         fileSys.mkdirs(new Path("file_" + i));
       }
 
-      txid = cluster.getNameNode().getTransactionID();
+      txid = cluster.getNameNodeRpc().getTransactionID();
       backup.doCheckpoint();
       waitCheckpointDone(cluster, backup, txid);
 
-      txid = cluster.getNameNode().getTransactionID();
+      txid = cluster.getNameNodeRpc().getTransactionID();
       backup.doCheckpoint();
       waitCheckpointDone(cluster, backup, txid);
 
