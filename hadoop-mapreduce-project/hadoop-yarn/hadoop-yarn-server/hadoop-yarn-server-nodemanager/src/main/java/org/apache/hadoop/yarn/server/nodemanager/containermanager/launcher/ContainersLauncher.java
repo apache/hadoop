@@ -103,7 +103,8 @@ public class ContainersLauncher extends AbstractService
     switch (event.getType()) {
       case LAUNCH_CONTAINER:
         Application app =
-          context.getApplications().get(containerId.getAppId());
+          context.getApplications().get(
+              containerId.getApplicationAttemptId().getApplicationId());
       ContainerLaunch launch =
           new ContainerLaunch(getConfig(), dispatcher, exec, app,
               event.getContainer());

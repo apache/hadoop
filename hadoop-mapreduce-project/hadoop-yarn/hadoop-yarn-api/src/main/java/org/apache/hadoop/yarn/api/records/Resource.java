@@ -18,10 +18,40 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.yarn.api.AMRMProtocol;
+
+/**
+ * <p><code>Resource</code> models a set of computer resources in the 
+ * cluster.</p>
+ * 
+ * <p>Currrently it only models <em>memory</em>.</p>
+ * 
+ * <p>Typically, applications request <code>Resource</code> of suitable
+ * capability to run their component tasks.</p>
+ * 
+ * @see ResourceRequest
+ * @see AMRMProtocol#allocate(org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest)
+ */
+@Public
+@Stable
 public interface Resource extends Comparable<Resource> {
+
+  /**
+   * Get <em>memory</em> of the resource.
+   * @return <em>memory</em> of the resource
+   */
+  @Public
+  @Stable
   public abstract int getMemory();
   
+  /**
+   * Set <em>memory</em> of the resource.
+   * @param memory <em>memory</em> of the resource
+   */
+  @Public
+  @Stable
   public abstract void setMemory(int memory);
-
   
 }

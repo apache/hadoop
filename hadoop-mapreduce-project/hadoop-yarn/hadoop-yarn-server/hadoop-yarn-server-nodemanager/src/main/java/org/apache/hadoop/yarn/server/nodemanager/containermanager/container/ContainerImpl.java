@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -53,9 +54,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.Conta
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncherEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalResourceRequest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ContainerLocalizationCleanupEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ContainerLocalizationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ContainerLocalizationRequestEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.event.LogAggregatorContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainerStartMonitoringEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainerStopMonitoringEvent;
@@ -75,7 +74,7 @@ public class ContainerImpl implements Container {
   private final Credentials credentials;
   private final NodeManagerMetrics metrics;
   private final ContainerLaunchContext launchContext;
-  private String exitCode = "NA";
+  private int exitCode = YarnConfiguration.INVALID_CONTAINER_EXIT_STATUS;
   private final StringBuilder diagnostics;
 
   private static final Log LOG = LogFactory.getLog(Container.class);
@@ -345,7 +344,7 @@ public class ContainerImpl implements Container {
       containerStatus.setState(getCurrentState());
       containerStatus.setContainerId(this.launchContext.getContainerId());
       containerStatus.setDiagnostics(diagnostics.toString());
-  	  containerStatus.setExitStatus(String.valueOf(exitCode));
+  	  containerStatus.setExitStatus(exitCode);
       return containerStatus;
     } finally {
       this.readLock.unlock();
@@ -360,7 +359,8 @@ public class ContainerImpl implements Container {
         metrics.completedContainer();
         NMAuditLogger.logSuccess(getUser(),
             AuditConstants.FINISH_SUCCESS_CONTAINER, "ContainerImpl",
-            getContainerID().getAppId(), getContainerID());
+            getContainerID().getApplicationAttemptId().getApplicationId(), 
+            getContainerID());
         break;
       case EXITED_WITH_FAILURE:
         metrics.endRunningContainer();
@@ -370,7 +370,8 @@ public class ContainerImpl implements Container {
         NMAuditLogger.logFailure(getUser(),
             AuditConstants.FINISH_FAILED_CONTAINER, "ContainerImpl",
             "Container failed with state: " + getContainerState(),
-            getContainerID().getAppId(), getContainerID());
+            getContainerID().getApplicationAttemptId().getApplicationId(), 
+            getContainerID());
         break;
       case CONTAINER_CLEANEDUP_AFTER_KILL:
         metrics.endRunningContainer();
@@ -379,13 +380,15 @@ public class ContainerImpl implements Container {
         metrics.killedContainer();
         NMAuditLogger.logSuccess(getUser(),
             AuditConstants.FINISH_KILLED_CONTAINER, "ContainerImpl",
-            getContainerID().getAppId(), getContainerID());
+            getContainerID().getApplicationAttemptId().getApplicationId(), 
+            getContainerID());
     }
 
     metrics.releaseContainer(getLaunchContext().getResource());
 
     // Inform the application
     ContainerId containerID = getContainerID();
+    @SuppressWarnings("rawtypes")
     EventHandler eventHandler = dispatcher.getEventHandler();
     eventHandler.handle(new ApplicationContainerFinishedEvent(containerID));
     // Remove the container from the resource-monitor
@@ -433,20 +436,21 @@ public class ContainerImpl implements Container {
       container.metrics.initingContainer();
 
       // Inform the AuxServices about the opaque serviceData
-      Map<String,ByteBuffer> csd = ctxt.getAllServiceData();
+      Map<String,ByteBuffer> csd = ctxt.getServiceData();
       if (csd != null) {
         // This can happen more than once per Application as each container may
         // have distinct service data
         for (Map.Entry<String,ByteBuffer> service : csd.entrySet()) {
           container.dispatcher.getEventHandler().handle(
               new AuxServicesEvent(AuxServicesEventType.APPLICATION_INIT,
-                ctxt.getUser(), ctxt.getContainerId().getAppId(),
+                ctxt.getUser(), 
+                ctxt.getContainerId().getApplicationAttemptId().getApplicationId(),
                 service.getKey().toString(), service.getValue()));
         }
       }
 
       // Send requests for public, private resources
-      Map<String,LocalResource> cntrRsrc = ctxt.getAllLocalResources();
+      Map<String,LocalResource> cntrRsrc = ctxt.getLocalResources();
       if (!cntrRsrc.isEmpty()) {
         try {
           for (Map.Entry<String,LocalResource> rsrc : cntrRsrc.entrySet()) {
@@ -562,7 +566,7 @@ public class ContainerImpl implements Container {
     @Override
     public void transition(ContainerImpl container, ContainerEvent event) {
       ContainerExitEvent exitEvent = (ContainerExitEvent) event;
-      container.exitCode = String.valueOf(exitEvent.getExitCode());
+      container.exitCode = exitEvent.getExitCode();
 
       // TODO: Add containerWorkDir to the deletion service.
       // TODO: Add containerOuputDir to the deletion service.
@@ -640,7 +644,7 @@ public class ContainerImpl implements Container {
     @Override
     public void transition(ContainerImpl container, ContainerEvent event) {
       ContainerExitEvent exitEvent = (ContainerExitEvent) event;
-      container.exitCode = String.valueOf(exitEvent.getExitCode());
+      container.exitCode = exitEvent.getExitCode();
 
       // The process/process-grp is killed. Decrement reference counts and
       // cleanup resources

@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.URL;
@@ -130,6 +131,20 @@ public class ConverterUtils {
     return appId;
   }
 
+  private static ApplicationAttemptId toApplicationAttemptId(
+      RecordFactory recordFactory,
+      Iterator<String> it) {
+    ApplicationId appId =
+        recordFactory.newRecordInstance(ApplicationId.class);
+    appId.setClusterTimestamp(Long.parseLong(it.next()));
+    appId.setId(Integer.parseInt(it.next()));
+    ApplicationAttemptId appAttemptId =
+        recordFactory.newRecordInstance(ApplicationAttemptId.class);
+    appAttemptId.setApplicationId(appId);
+    appAttemptId.setAttemptId(Integer.parseInt(it.next()));
+    return appAttemptId;
+  }
+
   public static String toString(ContainerId cId) {
     return cId.toString();
   }
@@ -138,10 +153,11 @@ public class ConverterUtils {
       String containerIdStr) {
     Iterator<String> it = _split(containerIdStr).iterator();
     it.next(); // prefix. TODO: Validate container prefix
-    ApplicationId appID = toApplicationId(recordFactory, it);
+    ApplicationAttemptId appAttemptID = 
+        toApplicationAttemptId(recordFactory, it);
     ContainerId containerId =
         recordFactory.newRecordInstance(ContainerId.class);
-    containerId.setAppId(appID);
+    containerId.setApplicationAttemptId(appAttemptID);
     containerId.setId(Integer.parseInt(it.next()));
     return containerId;
   }

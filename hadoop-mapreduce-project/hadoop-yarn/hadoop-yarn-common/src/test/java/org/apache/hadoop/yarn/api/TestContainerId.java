@@ -40,8 +40,7 @@ public class TestContainerId {
     ApplicationAttemptId appAttemptId =
         createAppAttemptId(appId, appAttemptIdInt);
     ContainerId containerId = Records.newRecord(ContainerId.class);
-    containerId.setAppAttemptId(appAttemptId);
-    containerId.setAppId(appId);
+    containerId.setApplicationAttemptId(appAttemptId);
     containerId.setId(containerIdInt);
     return containerId;
   }

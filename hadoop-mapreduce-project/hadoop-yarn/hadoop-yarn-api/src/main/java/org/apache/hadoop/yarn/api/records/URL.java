@@ -18,14 +18,77 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
+
+/**
+ * <p><code>URL</code> represents a serializable {@link java.net.URL}.</p>
+ */
+@Public
+@Evolving
 public interface URL {
+  
+  /**
+   * Get the scheme of the URL.
+   * @return scheme of the URL
+   */
+  @Public
+  @Evolving
   public abstract String getScheme();
+  
+  /**
+   * Set the scheme of the URL
+   * @param scheme scheme of the URL
+   */
+  @Public
+  @Evolving
+  public abstract void setScheme(String scheme);
+
+  /**
+   * Get the host of the URL.
+   * @return host of the URL
+   */
+  @Public
+  @Evolving
   public abstract String getHost();
+  
+  /**
+   * Set the host of the URL.
+   * @param host host of the URL
+   */
+  @Public
+  @Evolving
+  public abstract void setHost(String host);
+
+  /**
+   * Get the port of the URL.
+   * @return port of the URL
+   */
+  @Public
+  @Evolving
   public abstract int getPort();
+  
+  /**
+   * Set the port of the URL
+   * @param port port of the URL
+   */
+  @Public
+  @Evolving
+  public abstract void setPort(int port);
+
+  /**
+   * Get the file of the URL.
+   * @return file of the URL
+   */
+  @Public
+  @Evolving
   public abstract String getFile();
   
-  public abstract void setScheme(String scheme);
-  public abstract void setHost(String host);
-  public abstract void setPort(int port);
+  /**
+   * Set the file of the URL.
+   * @param file file of the URL
+   */
+  @Public
+  @Evolving
   public abstract void setFile(String file);
 }

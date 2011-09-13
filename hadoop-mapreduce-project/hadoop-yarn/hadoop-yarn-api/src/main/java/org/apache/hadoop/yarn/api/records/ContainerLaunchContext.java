@@ -22,10 +22,8 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ContainerManager;
 
 /**
@@ -121,100 +119,52 @@ public interface ContainerLaunchContext {
   void setContainerTokens(ByteBuffer containerToken);
 
   /**
-   * Get all <code>LocalResource</code> required by the container.
+   * Get <code>LocalResource</code> required by the container.
    * @return all <code>LocalResource</code> required by the container
    */
   @Public
   @Stable
-  Map<String, LocalResource> getAllLocalResources();
+  Map<String, LocalResource> getLocalResources();
   
-  @Private
-  @Unstable
-  LocalResource getLocalResource(String key);
-
   /**
-   * Add all <code>LocalResource</code> required by the container.
+   * Set <code>LocalResource</code> required by the container.
    * @param localResources <code>LocalResource</code> required by the container
    */
   @Public
   @Stable
-  void addAllLocalResources(Map<String, LocalResource> localResources);
-
-  @Private
-  @Unstable
-  void setLocalResource(String key, LocalResource value);
-
-  @Private
-  @Unstable
-  void removeLocalResource(String key);
-
-  @Private
-  @Unstable
-  void clearLocalResources();
+  void setLocalResources(Map<String, LocalResource> localResources);
 
   /**
-   * Get application-specific binary service data.
-   * @return application-specific binary service data
+   * Get application-specific binary <em>service data</em>.
+   * @return application-specific binary <em>service data</em>
    */
   @Public
   @Stable
-  Map<String, ByteBuffer> getAllServiceData();
-  
-  @Private
-  @Unstable
-  ByteBuffer getServiceData(String key);
-
-  /**
-   * Add add application-specific binary service data.
-   * @param serviceData application-specific binary service data
-   */
-  @Public
-  @Stable
-  void addAllServiceData(Map<String, ByteBuffer> serviceData);
-
-  @Private
-  @Unstable
-  void setServiceData(String key, ByteBuffer value);
-
-  @Private
-  @Unstable
-  void removeServiceData(String key);
-
-  @Private
-  @Unstable
-  void clearServiceData();
-
-  /**
-   * Get <em>environment variables</em> for the launched container.
-   * @return <em>environment variables</em> for the launched container
-   */
-  @Public
-  @Stable
-  Map<String, String> getAllEnv();
-  
-  @Private
-  @Unstable
-  String getEnv(String key);
+  Map<String, ByteBuffer> getServiceData();
   
   /**
-   * Add <em>environment variables</em> for the launched container.
-   * @param env <em>environment variables</em> for the launched container
+   * Set application-specific binary <em>service data</em>.
+   * @param serviceData application-specific binary <em>service data</em>
    */
   @Public
   @Stable
-  void addAllEnv(Map<String, String> env);
+  void setServiceData(Map<String, ByteBuffer> serviceData);
 
-  @Private
-  @Unstable
-  void setEnv(String key, String value);
-
-  @Private
-  @Unstable
-  void removeEnv(String key);
-
-  @Private
-  @Unstable
-  void clearEnv();
+  /**
+   * Get <em>environment variables</em> for the container.
+   * @return <em>environment variables</em> for the container
+   */
+  @Public
+  @Stable
+  Map<String, String> getEnv();
+    
+  /**
+   * Add <em>environment variables</em> for the container.
+   * @param environment <em>environment variables</em> for the container
+   */
+  @Public
+  @Stable
+  void setEnv(Map<String, String> environment);
 
   /**
    * Get the list of <em>commands</em> for launching the container.
@@ -222,15 +172,7 @@ public interface ContainerLaunchContext {
    */
   @Public
   @Stable
-  List<String> getCommandList();
-  
-  @Private
-  @Unstable
-  String getCommand(int index);
-  
-  @Private
-  @Unstable
-  int getCommandCount();
+  List<String> getCommands();
   
   /**
    * Add the list of <em>commands</em> for launching the container.
@@ -238,17 +180,6 @@ public interface ContainerLaunchContext {
    */
   @Public
   @Stable
-  void addAllCommands(List<String> commands);
+  void setCommands(List<String> commands);
   
-  @Private
-  @Unstable
-  void addCommand(String command);
-  
-  @Private
-  @Unstable
-  void removeCommand(int index);
-  
-  @Private
-  @Unstable
-  void clearCommands();
 }

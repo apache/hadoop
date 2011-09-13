@@ -580,14 +580,15 @@ implements ResourceScheduler, CapacitySchedulerContext {
     } else {
       LOG.info("Skipping scheduling since node " + nm + 
           " is reserved by application " + 
-          node.getReservedContainer().getContainerId().getAppId());
+          node.getReservedContainer().getContainerId().getApplicationAttemptId()
+          );
     }
 
   }
 
   private void containerLaunchedOnNode(ContainerId containerId, SchedulerNode node) {
     // Get the application for the finished container
-    ApplicationAttemptId applicationAttemptId = containerId.getAppAttemptId();
+    ApplicationAttemptId applicationAttemptId = containerId.getApplicationAttemptId();
     SchedulerApp application = getApplication(applicationAttemptId);
     if (application == null) {
       LOG.info("Unknown application: " + applicationAttemptId + 
@@ -704,7 +705,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
     Container container = rmContainer.getContainer();
     
     // Get the application for the finished container
-    ApplicationAttemptId applicationAttemptId = container.getId().getAppAttemptId();
+    ApplicationAttemptId applicationAttemptId = container.getId().getApplicationAttemptId();
     SchedulerApp application = getApplication(applicationAttemptId);
     if (application == null) {
       LOG.info("Container " + container + " of" +
@@ -739,7 +740,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
 
   private RMContainer getRMContainer(ContainerId containerId) {
     SchedulerApp application = 
-        getApplication(containerId.getAppAttemptId());
+        getApplication(containerId.getApplicationAttemptId());
     return (application == null) ? null : application.getRMContainer(containerId);
   }
 

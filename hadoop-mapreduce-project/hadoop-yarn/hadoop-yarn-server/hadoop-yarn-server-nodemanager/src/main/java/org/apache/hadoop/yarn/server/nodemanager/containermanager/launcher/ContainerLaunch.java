@@ -89,8 +89,8 @@ public class ContainerLaunch implements Callable<Integer> {
     final Map<Path,String> localResources = container.getLocalizedResources();
     String containerIdStr = ConverterUtils.toString(container.getContainerID());
     final String user = launchContext.getUser();
-    final Map<String,String> env = launchContext.getAllEnv();
-    final List<String> command = launchContext.getCommandList();
+    final Map<String,String> env = launchContext.getEnv();
+    final List<String> command = launchContext.getCommands();
     int ret = -1;
 
     try {
@@ -107,10 +107,9 @@ public class ContainerLaunch implements Callable<Integer> {
         newCmds.add(str.replace(ApplicationConstants.LOG_DIR_EXPANSION_VAR,
             containerLogDir.toUri().getPath()));
       }
-      launchContext.clearCommands();
-      launchContext.addAllCommands(newCmds);
+      launchContext.setCommands(newCmds);
 
-      Map<String, String> envs = launchContext.getAllEnv();
+      Map<String, String> envs = launchContext.getEnv();
       Map<String, String> newEnvs = new HashMap<String, String>(envs.size());
       for (Entry<String, String> entry : envs.entrySet()) {
         newEnvs.put(
@@ -119,8 +118,7 @@ public class ContainerLaunch implements Callable<Integer> {
                 ApplicationConstants.LOG_DIR_EXPANSION_VAR,
                 containerLogDir.toUri().getPath()));
       }
-      launchContext.clearEnv();
-      launchContext.addAllEnv(newEnvs);
+      launchContext.setEnv(newEnvs);
       // /////////////////////////// End of variable expansion
 
       FileContext lfs = FileContext.getLocalFSFileContext();
@@ -170,7 +168,7 @@ public class ContainerLaunch implements Callable<Integer> {
             containerWorkDir, FINAL_CONTAINER_TOKENS_FILE).toUri().getPath());
 
         writeLaunchEnv(containerScriptOutStream, env, localResources,
-            launchContext.getCommandList(), appDirs);
+            launchContext.getCommands(), appDirs);
         // /////////// End of writing out container-script
 
         // /////////// Write out the container-tokens in the nmPrivate space.

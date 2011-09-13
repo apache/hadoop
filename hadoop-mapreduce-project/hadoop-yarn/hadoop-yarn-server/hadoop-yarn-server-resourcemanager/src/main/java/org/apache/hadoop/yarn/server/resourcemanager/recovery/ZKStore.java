@@ -49,9 +49,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationSubmissionContextProto
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProto;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -180,7 +178,8 @@ public class ZKStore implements Store {
   }
 
   private String containerPathFromContainerId(ContainerId containerId) {
-    String appString = ConverterUtils.toString(containerId.getAppId());
+    String appString = ConverterUtils.toString(
+        containerId.getApplicationAttemptId().getApplicationId());
     return appString + "/" + containerId.getId();
   }
 
@@ -197,7 +196,10 @@ public class ZKStore implements Store {
       
       ContainerPBImpl containerPBImpl = (ContainerPBImpl) container;
       try {
-        zkClient.setData(APPS + ConverterUtils.toString(container.getId().getAppId()) +
+        zkClient.setData(APPS + 
+            ConverterUtils.toString(
+                container.getId().getApplicationAttemptId().getApplicationId()) 
+                +
             ZK_PATH_SEPARATOR + APP_MASTER_CONTAINER
             , containerPBImpl.getProto().toByteArray(), -1);
       } catch(InterruptedException ie) {

@@ -155,11 +155,15 @@ public class NodeManager implements ContainerManager {
   }
 
   @Override
-  synchronized public StartContainerResponse startContainer(StartContainerRequest request) throws YarnRemoteException {
-    ContainerLaunchContext containerLaunchContext = request.getContainerLaunchContext();
+  synchronized public StartContainerResponse startContainer(
+      StartContainerRequest request) 
+  throws YarnRemoteException {
+    ContainerLaunchContext containerLaunchContext = 
+        request.getContainerLaunchContext();
     
-    ApplicationId applicationId = containerLaunchContext.getContainerId()
-        .getAppId();
+    ApplicationId applicationId = 
+        containerLaunchContext.getContainerId().getApplicationAttemptId().
+        getApplicationId();
 
     List<Container> applicationContainers = containers.get(applicationId);
     if (applicationContainers == null) {
@@ -169,7 +173,8 @@ public class NodeManager implements ContainerManager {
     
     // Sanity check
     for (Container container : applicationContainers) {
-      if (container.getId().compareTo(containerLaunchContext.getContainerId()) == 0) {
+      if (container.getId().compareTo(containerLaunchContext.getContainerId()) 
+          == 0) {
         throw new IllegalStateException(
             "Container " + containerLaunchContext.getContainerId() + 
             " already setup on node " + containerManagerAddress);
@@ -209,7 +214,8 @@ public class NodeManager implements ContainerManager {
   synchronized public StopContainerResponse stopContainer(StopContainerRequest request) 
   throws YarnRemoteException {
     ContainerId containerID = request.getContainerId();
-    String applicationId = String.valueOf(containerID.getAppId().getId());
+    String applicationId = String.valueOf(
+        containerID.getApplicationAttemptId().getApplicationId().getId());
     
     // Mark the container as COMPLETE
     List<Container> applicationContainers = containers.get(applicationId);
@@ -259,7 +265,9 @@ public class NodeManager implements ContainerManager {
   @Override
   synchronized public GetContainerStatusResponse getContainerStatus(GetContainerStatusRequest request) throws YarnRemoteException {
     ContainerId containerId = request.getContainerId();
-    List<Container> appContainers = containers.get(containerId.getAppId());
+    List<Container> appContainers = 
+        containers.get(
+            containerId.getApplicationAttemptId().getApplicationId());
     Container container = null;
     for (Container c : appContainers) {
       if (c.getId().equals(containerId)) {

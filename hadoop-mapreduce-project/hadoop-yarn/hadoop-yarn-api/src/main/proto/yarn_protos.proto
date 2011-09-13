@@ -250,7 +250,7 @@ message ContainerStatusProto {
   optional ContainerIdProto container_id = 1;
   optional ContainerStateProto state = 2;
   optional string diagnostics = 3 [default = "N/A"];
-  optional string exit_status = 4 [default = "N/A"];
+  optional int32 exit_status = 4 [default = -1000];
 }
 
 

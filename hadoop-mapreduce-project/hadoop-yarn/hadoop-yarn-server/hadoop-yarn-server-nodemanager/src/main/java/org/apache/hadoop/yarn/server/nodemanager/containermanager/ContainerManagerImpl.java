@@ -250,7 +250,8 @@ public class ContainerManagerImpl extends CompositeService implements
     Container container =
         new ContainerImpl(this.dispatcher, launchContext, credentials, metrics);
     ContainerId containerID = launchContext.getContainerId();
-    ApplicationId applicationID = containerID.getAppId();
+    ApplicationId applicationID = 
+        containerID.getApplicationAttemptId().getApplicationId();
     if (context.getContainers().putIfAbsent(containerID, container) != null) {
       NMAuditLogger.logFailure(launchContext.getUser(), 
           AuditConstants.START_CONTAINER, "ContainerManagerImpl",
@@ -305,7 +306,8 @@ public class ContainerManagerImpl extends CompositeService implements
       NMAuditLogger.logFailure(userName,
           AuditConstants.STOP_CONTAINER, "ContainerManagerImpl",
           "Trying to stop unknown container!",
-          containerID.getAppId(), containerID);
+          containerID.getApplicationAttemptId().getApplicationId(), 
+          containerID);
       return response; // Return immediately.
     }
     dispatcher.getEventHandler().handle(
@@ -317,7 +319,8 @@ public class ContainerManagerImpl extends CompositeService implements
     // should be the same or should be rejected by auth before here. 
     NMAuditLogger.logSuccess(container.getUser(), 
         AuditConstants.STOP_CONTAINER, "ContainerManageImpl", 
-        containerID.getAppId(), containerID);
+        containerID.getApplicationAttemptId().getApplicationId(), 
+        containerID);
 
     // TODO: Move this code to appropriate place once kill_container is
     // implemented.

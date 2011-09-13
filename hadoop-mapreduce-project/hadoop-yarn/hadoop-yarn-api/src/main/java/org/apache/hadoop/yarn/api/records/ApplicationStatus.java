@@ -18,12 +18,21 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+
+/**
+ * <em>For internal use only...</em> 
+ */
+@Private
+@Unstable
 public interface ApplicationStatus {
   ApplicationAttemptId getApplicationAttemptId();
-  int getResponseId();
-  float getProgress();
-
   void setApplicationAttemptId(ApplicationAttemptId applicationAttemptId);
+  
+  int getResponseId();
   void setResponseId(int id);
+  
+  float getProgress();
   void setProgress(float progress);
 }

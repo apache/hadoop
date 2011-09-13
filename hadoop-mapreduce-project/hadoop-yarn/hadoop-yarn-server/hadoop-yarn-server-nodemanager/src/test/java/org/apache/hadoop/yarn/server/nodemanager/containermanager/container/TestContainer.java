@@ -418,7 +418,7 @@ public class TestContainer {
       } else {
         localResources = Collections.<String, LocalResource> emptyMap();
       }
-      when(ctxt.getAllLocalResources()).thenReturn(localResources);
+      when(ctxt.getLocalResources()).thenReturn(localResources);
 
       if (withServiceData) {
         Random r = new Random();
@@ -429,7 +429,7 @@ public class TestContainer {
       } else {
         serviceData = Collections.<String, ByteBuffer> emptyMap();
       }
-      when(ctxt.getAllServiceData()).thenReturn(serviceData);
+      when(ctxt.getServiceData()).thenReturn(serviceData);
 
       c = newContainer(dispatcher, ctxt);
       dispatcher.start();

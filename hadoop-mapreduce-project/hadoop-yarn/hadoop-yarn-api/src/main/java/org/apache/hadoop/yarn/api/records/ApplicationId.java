@@ -18,11 +18,47 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+
+/**
+ * <p><code>ApplicationId</code> represents the <em>globally unique</em> 
+ * identifier for an application.</p>
+ * 
+ * <p>The globally unique nature of the identifier is achieved by using the 
+ * <em>cluster timestamp</em> i.e. start-time of the 
+ * <code>ResourceManager</code> along with a monotonically increasing counter
+ * for the application.</p>
+ */
+@Public
+@Stable
 public abstract class ApplicationId implements Comparable<ApplicationId> {
+  
+  /**
+   * Get the short integer identifier of the <code>ApplicationId</code>
+   * which is unique for all applications started by a particular instance
+   * of the <code>ResourceManager</code>.
+   * @return short integer identifier of the <code>ApplicationId</code>
+   */
+  @Public
+  @Stable
   public abstract int getId();
+  
+  @Private
+  @Unstable
+  public abstract void setId(int id);
+  
+  /**
+   * Get the <em>start time</em> of the <code>ResourceManager</code> which is 
+   * used to generate globally unique <code>ApplicationId</code>.
+   * @return <em>start time</em> of the <code>ResourceManager</code>
+   */
   public abstract long getClusterTimestamp();
   
-  public abstract void setId(int id);
+  @Private
+  @Unstable
   public abstract void setClusterTimestamp(long clusterTimestamp);
   
   

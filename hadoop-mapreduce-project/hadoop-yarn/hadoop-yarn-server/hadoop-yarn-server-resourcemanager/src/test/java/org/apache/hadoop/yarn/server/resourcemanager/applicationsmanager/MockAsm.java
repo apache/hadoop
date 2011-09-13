@@ -27,19 +27,13 @@ import org.apache.hadoop.yarn.api.records.ApplicationMaster;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationStatus;
-import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
-import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.Records;
 
 import com.google.common.collect.Lists;
@@ -218,10 +212,10 @@ public abstract class MockAsm extends MockApps {
   }
 
   public static RMApp newApplication(int i) {
-    final ApplicationId id = newAppID(i);
+    final ApplicationAttemptId appAttemptId = newAppAttemptID(newAppID(i), 0);
     final Container masterContainer = Records.newRecord(Container.class);
     ContainerId containerId = Records.newRecord(ContainerId.class);
-    containerId.setAppId(id);
+    containerId.setApplicationAttemptId(appAttemptId);
     masterContainer.setId(containerId);
     masterContainer.setNodeHttpAddress("node:port");
     final String user = newUserName();
@@ -233,7 +227,7 @@ public abstract class MockAsm extends MockApps {
     return new ApplicationBase() {
       @Override
       public ApplicationId getApplicationId() {
-        return id;
+        return appAttemptId.getApplicationId();
       }
       @Override
       public String getUser() {

@@ -134,7 +134,8 @@ public class TestNodeStatusUpdater {
       Map<ApplicationId, List<ContainerStatus>> map =
           new HashMap<ApplicationId, List<ContainerStatus>>();
       for (ContainerStatus cs : containers) {
-        ApplicationId applicationId = cs.getContainerId().getAppId();
+        ApplicationId applicationId = 
+            cs.getContainerId().getApplicationAttemptId().getApplicationId();
         List<ContainerStatus> appContainers = map.get(applicationId);
         if (appContainers == null) {
           appContainers = new ArrayList<ContainerStatus>();
@@ -159,8 +160,7 @@ public class TestNodeStatusUpdater {
         // Give a container to the NM.
         applicationID.setId(heartBeatID);
         appAttemptID.setApplicationId(applicationID);
-        firstContainerID.setAppId(applicationID);
-        firstContainerID.setAppAttemptId(appAttemptID);
+        firstContainerID.setApplicationAttemptId(appAttemptID);
         firstContainerID.setId(heartBeatID);
         ContainerLaunchContext launchContext = recordFactory
             .newRecordInstance(ContainerLaunchContext.class);
@@ -184,8 +184,7 @@ public class TestNodeStatusUpdater {
         // Give another container to the NM.
         applicationID.setId(heartBeatID);
         appAttemptID.setApplicationId(applicationID);
-        secondContainerID.setAppId(applicationID);
-        secondContainerID.setAppAttemptId(appAttemptID);
+        secondContainerID.setApplicationAttemptId(appAttemptID);
         secondContainerID.setId(heartBeatID);
         ContainerLaunchContext launchContext = recordFactory
             .newRecordInstance(ContainerLaunchContext.class);

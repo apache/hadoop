@@ -25,7 +25,7 @@ public class ApplicationContainerFinishedEvent extends ApplicationEvent {
 
   public ApplicationContainerFinishedEvent(
       ContainerId containerID) {
-    super(containerID.getAppId(),
+    super(containerID.getApplicationAttemptId().getApplicationId(),
         ApplicationEventType.APPLICATION_CONTAINER_FINISHED);
     this.containerID = containerID;
   }

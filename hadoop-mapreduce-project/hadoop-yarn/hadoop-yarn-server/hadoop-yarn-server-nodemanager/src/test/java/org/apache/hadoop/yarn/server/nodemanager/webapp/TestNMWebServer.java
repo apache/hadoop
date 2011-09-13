@@ -112,7 +112,9 @@ public class TestNMWebServer {
       };
       nmContext.getContainers().put(containerId, container);
       //TODO: Gross hack. Fix in code.
-      nmContext.getApplications().get(containerId.getAppId()).getContainers()
+      ApplicationId applicationId = 
+          containerId.getApplicationAttemptId().getApplicationId();
+      nmContext.getApplications().get(applicationId).getContainers()
           .put(containerId, container);
       writeContainerLogs(conf, nmContext, containerId);
 

@@ -90,8 +90,11 @@ public class AggregatedLogFormat {
     public void write(DataOutputStream out) throws IOException {
       for (String rootLogDir : this.rootLogDirs) {
         File appLogDir =
-            new File(rootLogDir, ConverterUtils.toString(this.containerId
-                .getAppId()));
+            new File(rootLogDir, 
+                ConverterUtils.toString(
+                    this.containerId.getApplicationAttemptId().
+                        getApplicationId())
+                );
         File containerLogDir =
             new File(appLogDir, ConverterUtils.toString(this.containerId));
 

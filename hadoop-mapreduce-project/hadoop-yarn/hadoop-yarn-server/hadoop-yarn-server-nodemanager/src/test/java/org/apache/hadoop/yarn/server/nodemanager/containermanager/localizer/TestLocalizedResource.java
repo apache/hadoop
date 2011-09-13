@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -48,9 +49,12 @@ public class TestLocalizedResource {
     ApplicationId appId = mock(ApplicationId.class);
     when(appId.getClusterTimestamp()).thenReturn(314159265L);
     when(appId.getId()).thenReturn(3);
+    ApplicationAttemptId appAttemptId = mock(ApplicationAttemptId.class);
+    when(appAttemptId.getApplicationId()).thenReturn(appId);
+    when(appAttemptId.getAttemptId()).thenReturn(0);
     ContainerId container = mock(ContainerId.class);
     when(container.getId()).thenReturn(id);
-    when(container.getAppId()).thenReturn(appId);
+    when(container.getApplicationAttemptId()).thenReturn(appAttemptId);
     return container;
   }
 

@@ -31,7 +31,8 @@ import org.apache.hadoop.yarn.util.ProtoUtils;
 
 
     
-public class ContainerStatusPBImpl extends ProtoBase<ContainerStatusProto> implements ContainerStatus {
+public class ContainerStatusPBImpl extends ProtoBase<ContainerStatusProto> 
+implements ContainerStatus {
   ContainerStatusProto proto = ContainerStatusProto.getDefaultInstance();
   ContainerStatusProto.Builder builder = null;
   boolean viaProto = false;
@@ -116,13 +117,13 @@ public class ContainerStatusPBImpl extends ProtoBase<ContainerStatusProto> imple
     this.containerId = containerId;
   }
   @Override
-  public String getExitStatus() {
+  public int getExitStatus() {
     ContainerStatusProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getExitStatus());
+    return p.getExitStatus();
   }
 
   @Override
-  public void setExitStatus(String exitStatus) {
+  public void setExitStatus(int exitStatus) {
     maybeInitBuilder();
     builder.setExitStatus(exitStatus);
   }

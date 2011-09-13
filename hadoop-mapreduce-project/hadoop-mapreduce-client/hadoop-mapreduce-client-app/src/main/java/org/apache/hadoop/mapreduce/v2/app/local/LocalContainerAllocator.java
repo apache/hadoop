@@ -70,7 +70,7 @@ public class LocalContainerAllocator extends RMCommunicator
     if (event.getType() == ContainerAllocator.EventType.CONTAINER_REQ) {
       LOG.info("Processing the event " + event.toString());
       ContainerId cID = recordFactory.newRecordInstance(ContainerId.class);
-      cID.setAppId(appID);
+      cID.setApplicationAttemptId(applicationAttemptId);
       // use negative ids to denote that these are local. Need a better way ??
       cID.setId((-1) * containerCount.getAndIncrement());
       

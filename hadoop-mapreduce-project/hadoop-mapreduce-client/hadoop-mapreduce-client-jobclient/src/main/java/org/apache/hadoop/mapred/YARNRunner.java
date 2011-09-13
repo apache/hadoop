@@ -348,7 +348,6 @@ public class YARNRunner implements ClientProtocol {
 
     // Add { job jar, MR app jar } to classpath.
     Map<String, String> environment = new HashMap<String, String>();
-//    appContext.environment = new HashMap<CharSequence, CharSequence>();
     MRApps.setInitialClasspath(environment);
     MRApps.addToClassPath(environment, MRConstants.JOB_JAR);
     MRApps.addToClassPath(environment,

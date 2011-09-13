@@ -172,11 +172,13 @@ public class LogAggregationService extends AbstractService implements
     // A container is complete. Put this containers' logs up for aggregation if
     // this containers' logs are needed.
 
-    if (!this.appLogAggregators.containsKey(containerId.getAppId())) {
+    if (!this.appLogAggregators.containsKey(
+        containerId.getApplicationAttemptId().getApplicationId())) {
       throw new YarnException("Application is not initialized yet for "
           + containerId);
     }
-    this.appLogAggregators.get(containerId.getAppId())
+    this.appLogAggregators.get(
+        containerId.getApplicationAttemptId().getApplicationId())
         .startContainerLogAggregation(containerId, exitCode.equals("0"));
   }
 

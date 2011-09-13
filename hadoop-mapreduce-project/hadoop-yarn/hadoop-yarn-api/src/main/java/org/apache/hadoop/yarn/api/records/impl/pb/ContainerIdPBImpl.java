@@ -19,10 +19,8 @@
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProtoOrBuilder;
 
@@ -32,8 +30,7 @@ public class ContainerIdPBImpl extends ContainerId {
   ContainerIdProto.Builder builder = null;
   boolean viaProto = false;
   
-  private ApplicationId applicationId = null;
-  private ApplicationAttemptId appAttemptId = null;
+  private ApplicationAttemptId applicationAttemptId = null;
 
   public ContainerIdPBImpl() {
     builder = ContainerIdProto.newBuilder();
@@ -52,11 +49,10 @@ public class ContainerIdPBImpl extends ContainerId {
   }
 
   private synchronized void mergeLocalToBuilder() {
-    if (this.applicationId != null && !((ApplicationIdPBImpl)applicationId).getProto().equals(builder.getAppId())) {
-      builder.setAppId(convertToProtoFormat(this.applicationId));
-    }
-    if (this.appAttemptId != null && !((ApplicationAttemptIdPBImpl)appAttemptId).getProto().equals(builder.getAppAttemptId())) {
-      builder.setAppAttemptId(convertToProtoFormat(this.appAttemptId));
+    if (this.applicationAttemptId != null && !
+        ((ApplicationAttemptIdPBImpl)applicationAttemptId).getProto().equals(
+            builder.getAppAttemptId())) {
+      builder.setAppAttemptId(convertToProtoFormat(this.applicationAttemptId));
     }
   }
 
@@ -87,61 +83,36 @@ public class ContainerIdPBImpl extends ContainerId {
     maybeInitBuilder();
     builder.setId((id));
   }
-  @Override
-  public synchronized ApplicationId getAppId() {
-    ContainerIdProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.applicationId != null) {
-      return this.applicationId;
-    }
-    if (!p.hasAppId()) {
-      return null;
-    }
-    this.applicationId = convertFromProtoFormat(p.getAppId());
-    return this.applicationId;
-  }
+
 
   @Override
-  public synchronized ApplicationAttemptId getAppAttemptId() {
+  public synchronized ApplicationAttemptId getApplicationAttemptId() {
     ContainerIdProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.appAttemptId != null) {
-      return this.appAttemptId;
+    if (this.applicationAttemptId != null) {
+      return this.applicationAttemptId;
     }
     if (!p.hasAppAttemptId()) {
       return null;
     }
-    this.appAttemptId = convertFromProtoFormat(p.getAppAttemptId());
-    return this.appAttemptId;
+    this.applicationAttemptId = convertFromProtoFormat(p.getAppAttemptId());
+    return this.applicationAttemptId;
   }
 
   @Override
-  public synchronized void setAppId(ApplicationId appId) {
-    maybeInitBuilder();
-    if (appId == null) 
-      builder.clearAppId();
-    this.applicationId = appId;
-  }
-
-  @Override
-  public synchronized void setAppAttemptId(ApplicationAttemptId atId) {
+  public synchronized void setApplicationAttemptId(ApplicationAttemptId atId) {
     maybeInitBuilder();
     if (atId == null) 
       builder.clearAppAttemptId();
-    this.appAttemptId = atId;
+    this.applicationAttemptId = atId;
   }
 
-  private ApplicationAttemptIdPBImpl convertFromProtoFormat(ApplicationAttemptIdProto p) {
+  private ApplicationAttemptIdPBImpl convertFromProtoFormat(
+      ApplicationAttemptIdProto p) {
     return new ApplicationAttemptIdPBImpl(p);
   }
 
-  private ApplicationAttemptIdProto convertToProtoFormat(ApplicationAttemptId t) {
+  private ApplicationAttemptIdProto convertToProtoFormat(
+      ApplicationAttemptId t) {
     return ((ApplicationAttemptIdPBImpl)t).getProto();
-  }
-
-  private ApplicationIdPBImpl convertFromProtoFormat(ApplicationIdProto p) {
-    return new ApplicationIdPBImpl(p);
-  }
-
-  private ApplicationIdProto convertToProtoFormat(ApplicationId t) {
-    return ((ApplicationIdPBImpl)t).getProto();
   }
 }  
