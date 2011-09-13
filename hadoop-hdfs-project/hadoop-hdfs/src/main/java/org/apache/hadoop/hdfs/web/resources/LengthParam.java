@@ -17,29 +17,33 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
-/** The FileSystem path parameter. */
-public class UriFsPathParam extends StringParam {
+/** Length parameter. */
+public class LengthParam extends LongParam {
   /** Parameter name. */
-  public static final String NAME = "path";
+  public static final String NAME = "length";
+  /** Default parameter value. */
+  public static final String DEFAULT = NULL;
 
-  private static final Domain DOMAIN = new Domain(NAME, null);
+  private static final Domain DOMAIN = new Domain(NAME);
+
+  /**
+   * Constructor.
+   * @param value the parameter value.
+   */
+  public LengthParam(final Long value) {
+    super(DOMAIN, value);
+  }
 
   /**
    * Constructor.
    * @param str a string representation of the parameter value.
    */
-  public UriFsPathParam(String str) {
-    super(DOMAIN, str);
+  public LengthParam(final String str) {
+    this(DOMAIN.parse(str));
   }
 
   @Override
   public String getName() {
     return NAME;
-  }
-
-  /** @return the absolute path. */
-  public final String getAbsolutePath() {
-    final String path = getValue(); //The first / has been stripped out.
-    return path == null? null: "/" + path;
   }
 }

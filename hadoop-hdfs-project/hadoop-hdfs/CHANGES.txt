@@ -8,6 +8,8 @@ Trunk (unreleased changes)
     HDFS-2284. Add a new FileSystem, webhdfs://, for supporting write Http
     access to HDFS.  (szetszwo)
 
+    HDFS-2317. Support read access to HDFS in webhdfs.  (szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)

@@ -229,12 +229,11 @@ public class DistributedFileSystem extends FileSystem {
     return dfs.recoverLease(getPathName(f));
   }
 
-  @SuppressWarnings("deprecation")
   @Override
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
     statistics.incrementReadOps(1);
     return new DFSClient.DFSDataInputStream(
-          dfs.open(getPathName(f), bufferSize, verifyChecksum, statistics));
+          dfs.open(getPathName(f), bufferSize, verifyChecksum));
   }
 
   /** This optional operation is not yet supported. */
