@@ -29,6 +29,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -57,7 +59,6 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 public class TestCatalogJanitor {
-
   /**
    * Pseudo server for below tests.
    */
@@ -70,8 +71,7 @@ public class TestCatalogJanitor {
       this.c = htu.getConfiguration();
       // Set hbase.rootdir into test dir.
       FileSystem fs = FileSystem.get(this.c);
-      Path rootdir =
-        fs.makeQualified(HBaseTestingUtility.getTestDir(HConstants.HBASE_DIR));
+      Path rootdir = fs.makeQualified(new Path(this.c.get(HConstants.HBASE_DIR)));
       this.c.set(HConstants.HBASE_DIR, rootdir.toString());
       this.ct = Mockito.mock(CatalogTracker.class);
       HRegionInterface hri = Mockito.mock(HRegionInterface.class);
@@ -211,9 +211,7 @@ public class TestCatalogJanitor {
         @Override
         public HTableDescriptor get(String tablename)
         throws TableExistsException, FileNotFoundException, IOException {
-          HTableDescriptor htd = new HTableDescriptor("table");
-          htd.addFamily(new HColumnDescriptor("family"));
-          return htd;
+          return createHTableDescriptor();
         }
         
         @Override
@@ -255,12 +253,12 @@ public class TestCatalogJanitor {
   @Test
   public void testCleanParent() throws IOException {
     HBaseTestingUtility htu = new HBaseTestingUtility();
+    setRootDirAndCleanIt(htu, "testCleanParent");
     Server server = new MockServer(htu);
     MasterServices services = new MockMasterServices(server);
     CatalogJanitor janitor = new CatalogJanitor(server, services);
     // Create regions.
-    HTableDescriptor htd = new HTableDescriptor("table");
-    htd.addFamily(new HColumnDescriptor("family"));
+    HTableDescriptor htd = createHTableDescriptor();
     HRegionInfo parent =
       new HRegionInfo(htd.getName(), Bytes.toBytes("aaa"),
           Bytes.toBytes("eee"));
@@ -272,12 +270,7 @@ public class TestCatalogJanitor {
           Bytes.toBytes("eee"));
     // Test that when both daughter regions are in place, that we do not
     // remove the parent.
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
-    kvs.add(new KeyValue(parent.getRegionName(), HConstants.CATALOG_FAMILY,
-      HConstants.SPLITA_QUALIFIER, Writables.getBytes(splita)));
-    kvs.add(new KeyValue(parent.getRegionName(), HConstants.CATALOG_FAMILY,
-      HConstants.SPLITB_QUALIFIER, Writables.getBytes(splitb)));
-    Result r = new Result(kvs);
+    Result r = createResult(parent, splita, splitb);
     // Add a reference under splitA directory so we don't clear out the parent.
     Path rootdir = services.getMasterFileSystem().getRootDir();
     Path tabledir =
@@ -293,14 +286,161 @@ public class TestCatalogJanitor {
     assertFalse(janitor.cleanParent(parent, r));
     // Remove the reference file and try again.
     assertTrue(fs.delete(p, true));
-    // We will fail!!! Because split b is empty, which is right... we should
-    // not remove parent if daughters do not exist in fs.
-    assertFalse(janitor.cleanParent(parent, r));
-    // Put in place daughter dir for b... that should make it so parent gets
-    // cleaned up.
-    storedir = Store.getStoreHomedir(tabledir, splitb.getEncodedName(),
-      htd.getColumnFamilies()[0].getName());
-    assertTrue(fs.mkdirs(storedir));
     assertTrue(janitor.cleanParent(parent, r));
+  }
+
+  /**
+   * Make sure parent gets cleaned up even if daughter is cleaned up before it.
+   * @throws IOException
+   * @throws InterruptedException 
+   */
+  @Test
+  public void testParentCleanedEvenIfDaughterGoneFirst()
+  throws IOException, InterruptedException {
+    HBaseTestingUtility htu = new HBaseTestingUtility();
+    setRootDirAndCleanIt(htu, "testParentCleanedEvenIfDaughterGoneFirst");
+    Server server = new MockServer(htu);
+    MasterServices services = new MockMasterServices(server);
+    CatalogJanitor janitor = new CatalogJanitor(server, services);
+    final HTableDescriptor htd = createHTableDescriptor();
+
+    // Create regions: aaa->eee, aaa->ccc, aaa->bbb, bbb->ccc, etc.
+
+    // Parent
+    HRegionInfo parent = new HRegionInfo(htd.getName(), Bytes.toBytes("aaa"),
+      Bytes.toBytes("eee"));
+    // Sleep a second else the encoded name on these regions comes out
+    // same for all with same start key and made in same second.
+    Thread.sleep(1001);
+
+    // Daughter a
+    HRegionInfo splita = new HRegionInfo(htd.getName(), Bytes.toBytes("aaa"),
+      Bytes.toBytes("ccc"));
+    Thread.sleep(1001);
+    // Make daughters of daughter a; splitaa and splitab.
+    HRegionInfo splitaa = new HRegionInfo(htd.getName(), Bytes.toBytes("aaa"),
+      Bytes.toBytes("bbb"));
+    HRegionInfo splitab = new HRegionInfo(htd.getName(), Bytes.toBytes("bbb"),
+      Bytes.toBytes("ccc"));
+
+    // Daughter b
+    HRegionInfo splitb = new HRegionInfo(htd.getName(), Bytes.toBytes("ccc"),
+      Bytes.toBytes("eee"));
+    Thread.sleep(1001);
+    // Make Daughters of daughterb; splitba and splitbb.
+    HRegionInfo splitba = new HRegionInfo(htd.getName(), Bytes.toBytes("ccc"),
+      Bytes.toBytes("ddd"));
+    HRegionInfo splitbb = new HRegionInfo(htd.getName(), Bytes.toBytes("ddd"),
+      Bytes.toBytes("eee"));
+
+    // First test that our Comparator works right up in CatalogJanitor.
+    // Just fo kicks.
+    SortedMap<HRegionInfo, Result> regions =
+      new TreeMap<HRegionInfo, Result>(new CatalogJanitor.SplitParentFirstComparator());
+    // Now make sure that this regions map sorts as we expect it to.
+    regions.put(parent, createResult(parent, splita, splitb));
+    regions.put(splitb, createResult(splitb, splitba, splitbb));
+    regions.put(splita, createResult(splita, splitaa, splitab));
+    // Assert its properly sorted.
+    int index = 0;
+    for (Map.Entry<HRegionInfo, Result> e: regions.entrySet()) {
+      if (index == 0) {
+        assertTrue(e.getKey().getEncodedName().equals(parent.getEncodedName()));
+      } else if (index == 1) {
+        assertTrue(e.getKey().getEncodedName().equals(splita.getEncodedName()));
+      } else if (index == 2) {
+        assertTrue(e.getKey().getEncodedName().equals(splitb.getEncodedName()));
+      }
+      index++;
+    }
+
+    // Now play around with the cleanParent function.  Create a ref from splita
+    // up to the parent.
+    Path splitaRef =
+      createReferences(services, htd, parent, splita, Bytes.toBytes("ccc"), false);
+    // Make sure actual super parent sticks around because splita has a ref.
+    assertFalse(janitor.cleanParent(parent, regions.get(parent)));
+
+    //splitba, and split bb, do not have dirs in fs.  That means that if
+    // we test splitb, it should get cleaned up.
+    assertTrue(janitor.cleanParent(splitb, regions.get(splitb)));
+
+    // Now remove ref from splita to parent... so parent can be let go and so
+    // the daughter splita can be split (can't split if still references).
+    // BUT make the timing such that the daughter gets cleaned up before we
+    // can get a chance to let go of the parent.
+    FileSystem fs = FileSystem.get(htu.getConfiguration());
+    assertTrue(fs.delete(splitaRef, true));
+    // Create the refs from daughters of splita.
+    Path splitaaRef =
+      createReferences(services, htd, splita, splitaa, Bytes.toBytes("bbb"), false);
+    Path splitabRef =
+      createReferences(services, htd, splita, splitab, Bytes.toBytes("bbb"), true);
+
+    // Test splita.  It should stick around because references from splitab, etc.
+    assertFalse(janitor.cleanParent(splita, regions.get(splita)));
+
+    // Now clean up parent daughter first.  Remove references from its daughters.
+    assertTrue(fs.delete(splitaaRef, true));
+    assertTrue(fs.delete(splitabRef, true));
+    assertTrue(janitor.cleanParent(splita, regions.get(splita)));
+
+    // Super parent should get cleaned up now both splita and splitb are gone.
+    assertTrue(janitor.cleanParent(parent, regions.get(parent)));
+  }
+
+  private String setRootDirAndCleanIt(final HBaseTestingUtility htu,
+      final String subdir)
+  throws IOException {
+    Path testdir = HBaseTestingUtility.getTestDir(subdir);
+    FileSystem fs = FileSystem.get(htu.getConfiguration());
+    if (fs.exists(testdir)) assertTrue(fs.delete(testdir, true));
+    htu.getConfiguration().set(HConstants.HBASE_DIR, testdir.toString());
+    return htu.getConfiguration().get(HConstants.HBASE_DIR);
+  }
+
+  /**
+   * @param services Master services instance.
+   * @param htd
+   * @param parent
+   * @param daughter
+   * @param midkey
+   * @param top True if we are to write a 'top' reference.
+   * @return Path to reference we created.
+   * @throws IOException
+   */
+  private Path createReferences(final MasterServices services,
+      final HTableDescriptor htd, final HRegionInfo parent,
+      final HRegionInfo daughter, final byte [] midkey, final boolean top)
+  throws IOException {
+    Path rootdir = services.getMasterFileSystem().getRootDir();
+    Path tabledir = HTableDescriptor.getTableDir(rootdir, parent.getTableName());
+    Path storedir = Store.getStoreHomedir(tabledir, daughter.getEncodedName(),
+      htd.getColumnFamilies()[0].getName());
+    Reference ref = new Reference(midkey,
+      top? Reference.Range.top: Reference.Range.bottom);
+    long now = System.currentTimeMillis();
+    // Reference name has this format: StoreFile#REF_NAME_PARSER
+    Path p = new Path(storedir, Long.toString(now) + "." + parent.getEncodedName());
+    FileSystem fs = services.getMasterFileSystem().getFileSystem();
+    ref.write(fs, p);
+    return p;
+  }
+
+  private Result createResult(final HRegionInfo parent, final HRegionInfo a,
+      final HRegionInfo b)
+  throws IOException {
+    List<KeyValue> kvs = new ArrayList<KeyValue>();
+    kvs.add(new KeyValue(parent.getRegionName(), HConstants.CATALOG_FAMILY,
+      HConstants.SPLITA_QUALIFIER, Writables.getBytes(a)));
+    kvs.add(new KeyValue(parent.getRegionName(), HConstants.CATALOG_FAMILY,
+      HConstants.SPLITB_QUALIFIER, Writables.getBytes(b)));
+    return new Result(kvs);
+  }
+
+  private HTableDescriptor createHTableDescriptor() {
+    HTableDescriptor htd = new HTableDescriptor("t");
+    htd.addFamily(new HColumnDescriptor("f"));
+    return htd;
   }
 }

@@ -570,6 +570,8 @@ Release 0.90.5 - Unreleased
    HBASE-4180  HBase should check the isSecurityEnabled flag before login
    HBASE-4325  Improve error message when using STARTROW for meta scans
                (Jonathan Hsieh)
+   HBASE-4238  CatalogJanitor can clear a daughter that split before
+               processing its parent
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)

@@ -34,9 +34,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 
 
@@ -107,26 +106,7 @@ class CatalogJanitor extends Chore {
     // Keep Map of found split parents.  There are candidates for cleanup.
     // Use a comparator that has split parents come before its daughters.
     final Map<HRegionInfo, Result> splitParents =
-      new TreeMap<HRegionInfo, Result>(new Comparator<HRegionInfo> () {
-        @Override
-        public int compare(HRegionInfo left, HRegionInfo right) {
-          // This comparator differs from the one HRegionInfo in that it sorts
-          // parent before daughters.
-          if (left == null) return -1;
-          if (right == null) return 1;
-          // Same table name.
-          int result = Bytes.compareTo(left.getTableName(),
-            right.getTableName());
-          if (result != 0) return result;
-          // Compare start keys.
-          result = Bytes.compareTo(left.getStartKey(), right.getStartKey());
-          if (result != 0) return result;
-          // Compare end keys.
-          result = Bytes.compareTo(left.getEndKey(), right.getEndKey());
-          if (result != 0) return -result; // Flip the result so parent comes first.
-          return result;
-        }
-      });
+      new TreeMap<HRegionInfo, Result>(new SplitParentFirstComparator());
     // This visitor collects split parents and counts rows in the .META. table
     MetaReader.Visitor visitor = new MetaReader.Visitor() {
       @Override
@@ -153,6 +133,31 @@ class CatalogJanitor extends Chore {
     } else if (LOG.isDebugEnabled()) {
       LOG.debug("Scanned " + count.get() + " catalog row(s) and gc'd " + cleaned +
       " unreferenced parent region(s)");
+    }
+  }
+
+  /**
+   * Compare HRegionInfos in a way that has split parents sort BEFORE their
+   * daughters.
+   */
+  static class SplitParentFirstComparator implements Comparator<HRegionInfo> {
+    @Override
+    public int compare(HRegionInfo left, HRegionInfo right) {
+      // This comparator differs from the one HRegionInfo in that it sorts
+      // parent before daughters.
+      if (left == null) return -1;
+      if (right == null) return 1;
+      // Same table name.
+      int result = Bytes.compareTo(left.getTableName(),
+          right.getTableName());
+      if (result != 0) return result;
+      // Compare start keys.
+      result = Bytes.compareTo(left.getStartKey(), right.getStartKey());
+      if (result != 0) return result;
+      // Compare end keys.
+      result = Bytes.compareTo(left.getEndKey(), right.getEndKey());
+      if (result != 0) return -result; // Flip the result so parent comes first.
+      return result;
     }
   }
 
@@ -192,7 +197,7 @@ class CatalogJanitor extends Chore {
       checkDaughter(parent, rowContent, HConstants.SPLITA_QUALIFIER);
     Pair<Boolean, Boolean> b =
       checkDaughter(parent, rowContent, HConstants.SPLITB_QUALIFIER);
-    if ((a.getFirst() && !a.getSecond()) && (b.getFirst() && !b.getSecond())) {
+    if (hasNoReferences(a) && hasNoReferences(b)) {
       LOG.debug("Deleting region " + parent.getRegionNameAsString() +
         " because daughter splits no longer hold references");
       // This latter regionOffline should not be necessary but is done for now
@@ -211,7 +216,16 @@ class CatalogJanitor extends Chore {
     return result;
   }
 
-  
+  /**
+   * @param p A pair where the first boolean says whether or not the daughter
+   * region directory exists in the filesystem and then the second boolean says
+   * whether the daughter has references to the parent.
+   * @return True the passed <code>p</code> signifies no references.
+   */
+  private boolean hasNoReferences(final Pair<Boolean, Boolean> p) {
+    return !p.getFirst() || !p.getSecond();
+  }
+
   /**
    * See if the passed daughter has references in the filesystem to the parent
    * and if not, remove the note of daughter region in the parent row: its

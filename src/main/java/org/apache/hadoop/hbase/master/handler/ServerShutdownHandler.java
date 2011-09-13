@@ -308,6 +308,11 @@ public class ServerShutdownHandler extends EventHandler {
     if (isDaughterMissing(catalogTracker, daughter)) {
       LOG.info("Fixup; missing daughter " + daughter.getRegionNameAsString());
       MetaEditor.addDaughter(catalogTracker, daughter, null);
+
+      // TODO: Log WARN if the regiondir does not exist in the fs.  If its not
+      // there then something wonky about the split -- things will keep going
+      // but could be missing references to parent region.
+
       // And assign it.
       assignmentManager.assign(daughter, true);
     } else {
