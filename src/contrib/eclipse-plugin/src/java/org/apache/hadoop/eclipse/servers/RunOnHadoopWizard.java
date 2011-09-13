@@ -28,6 +28,7 @@ import org.apache.hadoop.eclipse.Activator;
 import org.apache.hadoop.eclipse.ErrorMessageDialog;
 import org.apache.hadoop.eclipse.server.HadoopServer;
 import org.apache.hadoop.eclipse.server.JarModule;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapred.JobConf;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
@@ -163,8 +164,13 @@ public class RunOnHadoopWizard extends Wizard {
       // confDir);
       File confFile = new File(confDir, "core-site.xml");
       FileOutputStream fos = new FileOutputStream(confFile);
-      conf.writeXml(fos);
-      fos.close();
+      try {
+        conf.writeXml(fos);
+        fos.close();
+        fos = null;
+      } finally {
+        IOUtils.closeStream(fos);
+      }
 
     } catch (IOException ioe) {
       ioe.printStackTrace();
